@@ -1,0 +1,39 @@
+SHELL = /bin/sh
+
+
+
+#mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+#CD_ROOT     := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
+CD_ROOT     = $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+
+SIGHT_ROOT  = ${CD_ROOT}/tools/sight
+
+CD_APP      = ${CD_ROOT}/app
+CD_PROFILER = ${CD_ROOT}/profiler
+CD_TOOLS    = ${CD_ROOT}/tools
+CD_RUNTIME  = ${CD_ROOT}/runtime
+CD_AUTOTUNER= ${CD_ROOT}/autotuner
+
+
+CD_PROFILER_CFLAGS = -I${CD_PROFILER}/lib 
+
+CD_PROFILER_LINKFLAGS = -L${CD_PROFILER}/lib/*o
+
+
+
+SIGHT_CFLAGS = -I${SIGHT_ROOT} \
+               -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
+               -I${SIGHT_ROOT}/widgets/papi/include
+
+SIGHT_LINKFLAGS = -L${SIGHT_ROOT} -lsight_structure \
+                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_cutils.so \
+                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_timing.so \
+                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_utils.so \
+                  -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
+                  ${SIGHT_ROOT}/tools/callpath/src/src/libcallpath.so \
+                  -Wl,-rpath ${SIGHT_ROOT}/tools/callpath/src/src \
+                  ${SIGHT_ROOT}/widgets/papi/lib/libpapi.a \
+                 -lpthread
+
+
+
