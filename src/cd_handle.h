@@ -348,13 +348,13 @@ class cd::CDHandle {
 
     // It returns sibling ID
     // type can be just int because color and task are int type
-    CDErrT AddChild(CD* cd_child);
-    CDErrT RemoveChild(CD* cd_child);	
+    CDErrT AddChild(CDHandle* cd_child);
+    CDErrT RemoveChild(CDHandle* cd_child);	
 
-    int Stop();
+    CDErrT Stop(void);
   
     /// Synchronize the CD object in every task of that CD.
-    bool Sync();
+    CDErrT Sync(void);
 
     uint64_t SetSystemBitVector(uint64_t error_name_mask, uint64_t error_loc_mask);
   public:

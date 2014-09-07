@@ -44,7 +44,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 using namespace std;
 
-
 // Actual CD Object only exists in a single node and in a single process.
 // Potentially copy of CD Object can exist but it should not be used directly. 
 //// We also need to think about when maintaining copy of CD objects, how are they going to be synchrnoized  (the values, and the entries and all that)
@@ -56,7 +55,6 @@ using namespace std;
 // Right now I am making single threaded version so don't consider CDHandle too much 
 // Complication will be delayed until we start developing multithreaded or multi node version.
 
-
 // TODO: Desgin decision on CD Tree
 // CD Tree: If CD tree is managed by N nodes, 
 // node (cd_id % N) is where we need to ask for insert, delete, and peek operations. 
@@ -64,16 +62,22 @@ using namespace std;
 // If every node that exists handles cd tree, then this means cd tree is always local. 
 // Root CD will, in this case, be located at Node 0 for example. 
  
-
 // TODO: how do we implement preempt stop function? 
 
-
+/// ISSUE Kyushick
+/// level+1 when we create children CDs.
+/// Originally we do that inside CD object creator, 
+/// but it can be inappropriate in some case.
+/// ex. cd object can be created by something else I guess..
+/// So I think it would be more desirable to increase level
+/// inside Create() 
 
 CD::CD()
 {
   cd_type_ = kStrict;	
-  name_ = const_cast<char*>("No Name");
+  name_    = const_cast<char*>("INITIAL_NAME");
   sys_detect_bit_vector_ = 0;
+
   // Assuming there is only one CD Object across the entire system we initilize cd_id info here.
   cd_id_ = CDID();
 
@@ -90,44 +94,38 @@ CD::CD( CDHandle* cd_parent,
         CDType cd_type, 
         uint64_t sys_bit_vector)
 {
-
   // FIXME: only acquire root handle when needed. 
   // Most of the time, this might not be required.
-  //cd_root_	= root; 
 
-  name_ = const_cast<char*>(name);
+  cd_type_	= cd_type;
+  name_     = const_cast<char*>(name);
+  // FIXME
+  sys_detect_bit_vector_ = sys_bit_vector;
 
-  cd_id_ = cd_id;
+  // FIXME 
+  // cd_id_ = 0; 
+  // We need to call which returns unique id for this cd. 
+  // the id is recommeneded to have pre-allocated sections per node. 
+  // This way, we don't need to have race condition to get unique id. 
+  // Instead local counter is used to get the unique id.
+  cd_id_    = cd_id;
 
   // Kyushick: Object ID should be unique for the copies of the same object?
   // For now, I decided it as an unique one
   cd_id_.object_id_++;
 
   // FIXME maybe call self generating function here?           
-  //cd_self_	= self;  //FIXME maybe call self generating function here?           
-  
-  cd_type_	= cd_type;
-
-  // FIXME
-  sys_detect_bit_vector_ = sys_bit_vector;
+  // cd_self_	= self;  //FIXME maybe call self generating function here?           
 
   // FIXME 
-//  cd_id_.level_ = parent_cd_id.level_ + 1;
+  // cd_id_.level_ = parent_cd_id.level_ + 1;
   // we need to get parent id ... 
   // but if they are not local, this might be hard to acquire.... 
   // perhaps we should assume that cd_id is always store in the handle ...
-  cd_id_ = cd_id;
- 
+	// Kyushick : if we pass cd_parent handle to the children CD object when we create it,
+	// this can be resolved. 
 
   Init();	
-
-  // FIXME 
-  //cd_id_ = 0; 
-  // We need to call which returns unique id for this cd. 
-  // the id is recommeneded to have pre-allocated sections per node. 
-  // This way, we don't need to have race condition to get unique id. 
-  // Instead local counter is used to get the unique id.
-
 }
 
 void CD::Initialize(CDHandle* cd_parent, 
@@ -136,61 +134,37 @@ void CD::Initialize(CDHandle* cd_parent,
 						        CDType cd_type, 
 						        uint64_t sys_bit_vector)
 {
-
-  // FIXME: only acquire root handle when needed. 
-  // Most of the time, this might not be required.
-  //cd_root_	= root; 
-
-  name_ = const_cast<char*>(name);
-
-  cd_id_ = cd_id;
-
-  // Kyushick: Object ID should be unique for the copies of the same object?
-  // For now, I decided it as an unique one
-  cd_id_.object_id_++;
-
-  // FIXME maybe call self generating function here?           
-  //cd_self_	= self;  //FIXME maybe call self generating function here?           
-  
   cd_type_	= cd_type;
-
-  // FIXME
+  name_     = const_cast<char*>(name);
+  cd_id_    = cd_id;
+  cd_id_.object_id_++;
   sys_detect_bit_vector_ = sys_bit_vector;
-
-  // FIXME 
-//  cd_id_.level_ = parent_cd_id.level_ + 1;
-  // we need to get parent id ... 
-  // but if they are not local, this might be hard to acquire.... 
-  // perhaps we should assume that cd_id is always store in the handle ...
-  cd_id_ = cd_id;
- 
-
   Init();	
-
-  // FIXME 
-  //cd_id_ = 0; 
-  // We need to call which returns unique id for this cd. 
-  // the id is recommeneded to have pre-allocated sections per node. 
-  // This way, we don't need to have race condition to get unique id. 
-  // Instead local counter is used to get the unique id.
-
 }
+
 void CD::Init()
 {
-  ctxt_prv_mode_= kExcludeStack; 
-  cd_exec_mode_        = kSuspension;
-  option_save_context_      = 0; 
+  ctxt_prv_mode_ = kExcludeStack; 
+  cd_exec_mode_  = kSuspension;
+  option_save_context_ = 0;
+#if _WORK 
 	path = Path("ssd", "hhd");
 	path.SetSSDPath("./SSDpath/");
   path.SetHDDPath("./HDDpath/");
 	InitOpenHDD();
 	InitOpenSSD();
-
+#endif
 //  cd_id_.domain_id_ = Util::GetCurrentDomainID();
 //  cd_id_.object_id_ = Util::GenerateCDObjectID();
 //  cd_id_.sequential_id_ = 0;
 }
 
+/// Kyushick:
+/// What if a process is just killed by some reason, and this method could not be invoked?
+/// Would it be safe to delete meta data and do proper operation when CD finish?
+/// Or how about defining virtual CDErrT DeleteCD() for ~CD() ??
+/// And if a process gets some signal for abort, it just call this DeleteCD() and
+/// inside this function, we explicitly call ~CD() 
 CD::~CD()
 {
   // Erase all the CDEntries
@@ -204,26 +178,26 @@ CD::~CD()
   //FIXME : This will be done at the CDHandle::Destroy()
 }
 
-CD* CD::Create( CDHandle* cd_parent, 
-                const char* name, 
-                const CDID& cd_id, 
-                CDType cd_type, 
-                uint64_t sys_bit_vector, 
-                CDErrT *cd_err)
+
+
+CD* CD::Create(CDHandle* cd_parent, 
+               const char* name, 
+               const CDID& cd_id, 
+               CDType cd_type, 
+               uint64_t sys_bit_vector, 
+               CDErrT *cd_err)
 {
   CD* new_cd = new CD(cd_parent, name, cd_id, cd_type, sys_bit_vector);
-//  if(error_happen()){
-//    *cd_err = 1;
-//  }
   return new_cd;
 }
     
 
-CDErrT CD::Destroy()
+CDErrT CD::Destroy(void)
 {
   CDErrT err=kOK;
 
 //GONG
+#if _WORK
 	//When we destroy a CD, we need to delete its log (preservation file)
   for(std::list<CDEntry>::iterator it = entry_directory_.begin(); 
 			it != entry_directory_.end() ; ++it) {
@@ -240,17 +214,13 @@ CDErrT CD::Destroy()
 		}
 
 	}	// for loop ends
+#endif
 
+  if(GetCDID().level_ != 0) { 	// non-root CD
 
-  if(GetCDID().level_ != 0) { 
-
-    // Mark that this is destroyed
-    // this->parent_->is_child_destroyed = true;
 
   } 
-  else {
-//    cout<<"#######Root CD??  "<< GetCDID().level_ <<", "<<GetCDID().node_id_.task_<<endl;
-//    getchar();
+  else {		// Root CD
 
   }
   
@@ -310,19 +280,16 @@ CDErrT CD::Destroy()
 // CDHandle will follow the standard interface. 
 CDErrT CD::Begin(bool collective, std::string label)
 {
-
   //  setjmp(jump_buffer_);
-  //getcontext(&ctxt_);
+  //  getcontext(&ctxt_);
 
-  if( cd_exec_mode_ != kReexecution ) {
+  if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
   }
   else {
     num_reexecution_++ ;
   }
-
-
 
   return kOK;
 }
@@ -728,7 +695,7 @@ CDErrT CD::Resume(void)
   return kOK;
 }
 
-CDErrT CD::AddChild(CD* cd_child) 
+CDErrT CD::AddChild(CDHandle* cd_child) 
 { 
 //  std::cout<<"sth wrong"<<std::endl; 
 //  getchar(); 
@@ -736,7 +703,7 @@ CDErrT CD::AddChild(CD* cd_child)
   return kOK;	
 }
 
-CDErrT CD::RemoveChild(CD* cd_child) 
+CDErrT CD::RemoveChild(CDHandle* cd_child) 
 {
 //  std::cout<<"sth wrong"<<std::endl; 
 //  getchar(); 
@@ -848,12 +815,10 @@ CDEntry* CD::InternalGetEntry(std::string entry_name)
 
 void CD::DeleteEntryDirectory(void)
 {
-/* RELEASE
   for(std::list<CDEntry>::iterator it = entry_directory_.begin();
       it != entry_directory_.end(); ++it) {
     it->Delete();
   }
-*/
 }
 
 

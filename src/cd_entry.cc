@@ -2,6 +2,13 @@
 
 using namespace cd;
 
+
+CDEntry::CDEntryErrT CDEntry::Delete(void)
+{
+	return kOK;
+}
+
+
 //GONG
 CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 //#else

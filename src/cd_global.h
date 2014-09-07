@@ -153,8 +153,10 @@ namespace cd {
 #define ROOT_COLOR MPI_COMM_WORLD
 //#define ROOT_COLOR 0
 
-/* ISSUE
- Kyushick : if we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?
+/* 
+ISSUE 1 (Kyushick)
+If we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?
+
 void Foo(void)
 {
 	double X, Y, Z;
@@ -180,8 +182,12 @@ A, B, C, D, E, F's life cycle will be up to the end of if-then statement.
 So, I guess the stack will grow/shrink a bit due to this if-then statement.
 So, if we setjmp or get context within this if-then statement's scope,
 I think there will be some problem...
+
+ISSUE 2 (Kyushick)
+We are increasing the number of reexecution inside Begin(). So, the point of time when we mark rollback point is not after Begin() but before Begin()
 */
-#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff()
+//#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff()
+#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
 #define CD_Complete(X) (X)->Complete()   
 
 

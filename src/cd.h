@@ -244,8 +244,8 @@ class cd::CD {
 
     void DeleteEntryDirectory(void);
 
-    virtual CDErrT AddChild(CD* cd_child);
-    virtual CDErrT RemoveChild(CD* cd_child);
+    virtual CDErrT AddChild(cd::CDHandle* cd_child);
+    virtual CDErrT RemoveChild(cd::CDHandle* cd_child);
     
  };
 
@@ -272,12 +272,12 @@ class cd::MasterCD : public cd::CD {
              uint64_t sys_bit_vector);
     virtual ~MasterCD();
 
-    virtual CDErrT Stop(cd::CDHandle* cd=NULL);
+    virtual CDErrT Stop(cd::CDHandle* cdh=NULL);
     virtual CDErrT Resume(void); // Does this make any sense?
     virtual CDErrT AddChild(cd::CDHandle* cd_child); 
     virtual CDErrT RemoveChild(cd::CDHandle* cd_child); 
     cd::CDHandle* cd_parent();
-    void 			set_cd_parent(cd::CDHandle* cd_parent);
+    void 		set_cd_parent(cd::CDHandle* cd_parent);
 };
 
 namespace cd {

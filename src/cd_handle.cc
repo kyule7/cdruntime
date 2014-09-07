@@ -329,7 +329,7 @@ CDHandle* CDHandle::Create( const char* name,
 //  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;;
   // Request to add me as a child to my parent
   // It could be a local execution or a remote one. 
-  ptr_cd_->AddChild(ptr_cd_);
+  ptr_cd_->AddChild(this);
 
   
   return new_cd;
@@ -503,7 +503,7 @@ CDHandle* CDHandle::Create( int color,
 //  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;;
   // Request to add me as a child to my parent
   // It could be a local execution or a remote one. 
-  ptr_cd_->AddChild(ptr_cd_);
+  ptr_cd_->AddChild(this);
 
   return new_cd;
 
@@ -529,7 +529,7 @@ CDHandle* CDHandle::Create (uint32_t  numchildren,
   CDPath.push_back(new_cd);
 //  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;;
 
-  ptr_cd_->AddChild(ptr_cd_);
+  ptr_cd_->AddChild(this);
 
   return new_cd;
 
@@ -593,7 +593,7 @@ CDErrT CDHandle::Destroy (bool collective)
 
 
   if(CDPath.size() > 1) {
-    GetParentCD(ptr_cd_->GetCDID())->RemoveChild(ptr_cd_);
+    GetParentCD(ptr_cd_->GetCDID())->RemoveChild(this);
   }
 
 #if _PROFILER
@@ -907,36 +907,34 @@ void CDHandle::SetMaster(int task)
 }
 
 /// Synchronize the CD object in every task of that CD.
-bool CDHandle::Sync() 
+CDErrT CDHandle::Sync() 
 {
   CDErrT err = INITIAL_ERR_VAL;
-#if _CD_MPI
-  err = MPI_Barrier(node_id_.color_);
-#endif
+//#if _CD_MPI
+  int mpi_err = MPI_Barrier(node_id_.color_);
+//#endif
+	if(mpi_err != 0) { 
+		err = kOK; 
+	}
   return err;
 }
 
-int CDHandle::Stop()
+CDErrT CDHandle::Stop()
 { return ptr_cd_->Stop(); }
 
-CDErrT CDHandle::AddChild(CD* cd_child)
+CDErrT CDHandle::AddChild(CDHandle* cd_child)
 {
   CDErrT err=INITIAL_ERR_VAL;
   ptr_cd_->AddChild(cd_child);
   return err;
 }
 
-CDErrT CDHandle::RemoveChild(CD* cd_child)  
+CDErrT CDHandle::RemoveChild(CDHandle* cd_child)  
 {
   CDErrT err=INITIAL_ERR_VAL;
   ptr_cd_->RemoveChild(cd_child);
   return err;
 }
-
-
-
-
-
 
 
 bool CDHandle::IsLocalObject()
