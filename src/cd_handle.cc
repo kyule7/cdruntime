@@ -177,7 +177,7 @@ CDHandle::CDHandle()
 CDHandle::CDHandle( CDHandle* parent, 
                     const char* name, 
                     const NodeID& node_id, 
-                    CDModeT cd_type, 
+                    CDType cd_type, 
                     uint64_t sys_bit_vector)
 {
 #if _PROFILER
@@ -235,7 +235,7 @@ CDHandle::CDHandle( CDHandle* parent,
 CDHandle::CDHandle( CDHandle* parent, 
                     const char* name, 
                     NodeID&& node_id, 
-                    CDModeT cd_type, 
+                    CDType cd_type, 
                     uint64_t sys_bit_vector)
 {
 #if _PROFILER
@@ -313,7 +313,7 @@ void CDHandle::Init(CD* ptr_cd, NodeID node_id)
 
 // Non-collective
 CDHandle* CDHandle::Create( const char* name, 
-                            CDModeT type, 
+                            CDType type, 
                             uint32_t error_name_mask, 
                             uint32_t error_loc_mask, 
                             CDErrT *error )
@@ -339,7 +339,7 @@ CDHandle* CDHandle::Create( const char* name,
 CDHandle* CDHandle::Create( int color, 
                             uint32_t num_children, 
                             const char* name, 
-                            CDModeT type, 
+                            CDType type, 
                             uint32_t error_name_mask, 
                             uint32_t error_loc_mask, 
                             CDErrT *error )
@@ -512,7 +512,7 @@ CDHandle* CDHandle::Create( int color,
 // Collective
 CDHandle* CDHandle::Create (uint32_t  numchildren,
                             const char* name, 
-                            CDModeT type, 
+                            CDType type, 
                             uint32_t error_name_mask, 
                             uint32_t error_loc_mask, 
                             CDErrT *error )
@@ -555,7 +555,7 @@ void CDHandle::SetColorAndTask(NodeID& new_node, const int& numchildren)
 CDHandle* CDHandle::CreateAndBegin( uint32_t color, 
                                     uint32_t num_tasks_in_color, 
                                     const char* name, 
-                                    CDModeT type, 
+                                    CDType type, 
                                     uint32_t error_name_mask, 
                                     uint32_t error_loc_mask, 
                                     CDErrT *error )
@@ -1067,7 +1067,7 @@ CDErrT CDHandle::SetPGASType (void *data_ptr, uint64_t len, CDPGASUsageT region_
   return kOK;
 }
 
-int CDHandle::context_preservation_mode()
+int CDHandle::ctxt_prv_mode()
 {
 /* RELEASE
   if( IsMaster() )
@@ -1096,7 +1096,7 @@ void CDHandle::CommitPreserveBuff()
      }
      else
      {
-        ptr_cd_->context_ = this->context_;
+        ptr_cd_->ctxt_ = this->ctxt_;
      }
  
   } 
@@ -1132,7 +1132,7 @@ ucontext_t* CDHandle::context()
 {
   if( IsMaster() ) {
 
-    return &ptr_cd_->context_;
+    return &ptr_cd_->ctxt_;
   }
   else {
     //FIXME: need to get the flag from remote

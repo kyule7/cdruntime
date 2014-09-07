@@ -73,7 +73,7 @@ int performance_test1()
   // START
 
 
-  CD_BEGIN(root); 
+  CD_Begin(root); 
   accumulate_cnt = 0;
   begin_cnt = getCounter();
   for( i= 0 ; i < NUM_TEST_BLOCKS; i++ )
@@ -92,7 +92,7 @@ int performance_test1()
   }
 
   //END
-  CD_COMPLETE(root);
+  CD_Complete(root);
   CD_Finalize();
 
 
@@ -128,7 +128,7 @@ int performance_test1()
 //  printf("CD Begin\n");
 ////  root->Begin();  
 ////  getcontext(&root->context_);
-//  CD_BEGIN(handle_cd); 
+//  CD_Begin(handle_cd); 
 //  
 //  printf("CD Preserving..\n");
 //  handle_cd.Preserve((char *)&a,4* sizeof(int), kCopy, "a");
@@ -141,7 +141,7 @@ int performance_test1()
 //	CDHandle handle_child = CD::Create(cd::kStrict, handle_cd);
 //	CD *child = handle_child.ptr_cd();
 //  printf("Child CD Begin\n");
-//  CD_BEGIN(handle_child); 
+//  CD_Begin(handle_child); 
 //  printf("child CD Preserving..\n");
 //  handle_child.Preserve((char *)&c,2* sizeof(int), kReference, "b", "a");
 //  handle_child.Preserve((char *)&e,2* sizeof(int), kReference, "a1", "b");
@@ -156,14 +156,14 @@ int performance_test1()
 //      CDHandle handle_child1 = CD::Create(cd::kStrict, handle_child);
 //      CD *child1 = handle_child1.ptr_cd();
 //      printf("Child CD Begin\n");
-//      CD_BEGIN(handle_child1); 
+//      CD_Begin(handle_child1); 
 //  printf("child CD Preserving..\n");
 //  handle_child1.Preserve((char *)&d, 2* sizeof(int), kReference, "a2", "a1");
 //
 //	CDHandle handle_child2 = CD::Create(cd::kStrict, handle_child1);
 //	CD *child2 = handle_child2.ptr_cd();
 //  printf("Child CD Begin\n");
-//  CD_BEGIN(handle_child2); 
+//  CD_Begin(handle_child2); 
 //  printf("child CD Preserving..\n");
 //  handle_child2.Preserve((char *)&e, 2* sizeof(int), kReference, "", "a2");
 //
@@ -175,16 +175,16 @@ int performance_test1()
 //}
 //
 //  printf("child CD Complete\n");
-//	CD_COMPLETE(handle_child2);
+//	CD_Complete(handle_child2);
 //  printf("child CD Destroy\n");
 //	CD::Destroy(child2);
 //  printf("child CD Complete\n");
-//	CD_COMPLETE(handle_child1);
+//	CD_Complete(handle_child1);
 //  printf("child CD Destroy\n");
 //	CD::Destroy(child1);
 //  printf("child CD Complete\n");
 //
-//	CD_COMPLETE(handle_child);
+//	CD_Complete(handle_child);
 //  printf("child CD Destroy\n");
 //CD::Destroy(child);
 //
@@ -252,7 +252,7 @@ int performance_test1()
 //
 //  printf("CD Complete\n");
 ////  root->Complete();
-//  CD_COMPLETE(handle_cd);
+//  CD_Complete(handle_cd);
 //
 //  printf("CD Destroy\n");
 //  CD::Destroy(root);
@@ -287,7 +287,7 @@ int test1()
   printf("CD Begin.........lol\n");
   //  root->Begin();  
   //  getcontext(&root->context_);
-  CD_BEGIN(root); 
+  CD_Begin(root); 
 
   printf("CD Preserving..\n");
   root->Preserve((char *)&a,4* sizeof(int));
@@ -355,7 +355,7 @@ int test1()
   }
   printf("CD Complete\n");
   //  root->Complete();
-  CD_COMPLETE(root);
+  CD_Complete(root);
 
   printf("CD Destroy\n");
   CD_Finalize();
@@ -417,7 +417,7 @@ int test1()
 //  printf("CD Begin\n");
 ////  root->Begin();  
 ////  getcontext(&root->context_);
-//  CD_BEGIN(handle_cd); 
+//  CD_Begin(handle_cd); 
 //  
 //  printf("CD Preserving..\n");
 //  handle_cd.Preserve((char *)&a,4* sizeof(int), kCopy, "a");
@@ -432,7 +432,7 @@ int test1()
 //	CDHandle handle_child = CD::Create(cd::kStrict, handle_cd);
 //	CD *child = handle_child.ptr_cd();
 //  printf("Child CD Begin\n");
-//  CD_BEGIN(handle_child); 
+//  CD_Begin(handle_child); 
 //  printf("child CD Preserving..\n");
 //	auto preserve_start = chrono::high_resolution_clock::now();
 ////  handle_child.Preserve((char *)&c,2* sizeof(int), kReference, "b", "a");
@@ -471,14 +471,14 @@ int test1()
 //	CDHandle handle_child1 = CD::Create(cd::kStrict, handle_child);
 //	CD *child1 = handle_child1.ptr_cd();
 //  printf("Child CD Begin\n");
-//  CD_BEGIN(handle_child1); 
+//  CD_Begin(handle_child1); 
 //  printf("child CD Preserving..\n");
 //  handle_child1.Preserve((char *)&d, 2* sizeof(int), kReference, "a2", "a1");
 //
 //	CDHandle handle_child2 = CD::Create(cd::kStrict, handle_child1);
 //	CD *child2 = handle_child2.ptr_cd();
 //  printf("Child CD Begin\n");
-//  CD_BEGIN(handle_child2); 
+//  CD_Begin(handle_child2); 
 //  printf("child CD Preserving..\n");
 //  handle_child2.Preserve((char *)&e, 2* sizeof(int), kReference, "", "a2");
 //
@@ -490,16 +490,16 @@ int test1()
 //}
 //
 //  printf("child CD Complete\n");
-//	CD_COMPLETE(handle_child2);
+//	CD_Complete(handle_child2);
 //  printf("child CD Destroy\n");
 //	CD::Destroy(child2);
 //  printf("child CD Complete\n");
-//	CD_COMPLETE(handle_child1);
+//	CD_Complete(handle_child1);
 //  printf("child CD Destroy\n");
 //	CD::Destroy(child1);
 //  printf("child CD Complete\n");
 //*/
-//	CD_COMPLETE(handle_child);
+//	CD_Complete(handle_child);
 //  printf("child CD Destroy\n");
 //CD::Destroy(child);
 //
@@ -567,7 +567,7 @@ int test1()
 //
 //  printf("CD Complete\n");
 ////  root->Complete();
-//  CD_COMPLETE(handle_cd);
+//  CD_Complete(handle_cd);
 //
 //  printf("CD Destroy\n");
 //  CD::Destroy(root);
@@ -598,14 +598,14 @@ int test2()
   printf("\n\ntest2 begins\n");
 
 	CDHandle* root = CD_Init();
-  CD_BEGIN(root); 
+  CD_Begin(root); 
   root->Preserve((char *)&a,4* sizeof(int), kCopy, "test2viareference");
 
   printf("Before modifying current value of a[0] %d a[1] %d\n", a[0], a[1]);
   a[0] = 99;  // now when child recovers it should see 3 instead of 99
   CDHandle* child=root->Create();
 //  CD *child= handle_cd_child.ptr_cd();
-  CD_BEGIN(child); 
+  CD_Begin(child); 
   child->Preserve((char *)&a,4* sizeof(int), kCopy, "nonamejusttest", "test2viareference",0);
   printf("Child CD begins a[0] %d a[1] %d\n", a[0], a[1]);
   if( iteration == 0 )
@@ -619,11 +619,11 @@ int test2()
     if(a[0] == 3 )
       test_result=1;
   }
-  CD_COMPLETE(child);
+  CD_Complete(child);
   child->Destroy();
 
  
-  CD_COMPLETE(root);
+  CD_Complete(root);
   CD_Finalize();
 
   if( test_result == 1 ) return kOK;
@@ -644,7 +644,7 @@ int test3()
 //  CDHandle handle_cd=CD::Create(cd::kStrict, no_parent);
 //  CD *root= handle_cd.ptr_cd();
 	CDHandle* root = CD_Init();
-  CD_BEGIN(root); 
+  CD_Begin(root); 
   root->Preserve((char *)&a,4* sizeof(int), kCopy, "test3viareference");
 
   printf("Before modifying current value of a[0] %d a[1] %d  a[2] %d a[3] %d \n", a[0], a[1], a[2], a[3]);
@@ -655,7 +655,7 @@ int test3()
 
   CDHandle* child=root->Create();
 //  CD *child= handle_cd_child.ptr_cd();
-  CD_BEGIN(child); 
+  CD_Begin(child); 
   child->Preserve((char *)&(a[1]),3* sizeof(int), kCopy, "nonamejusttest", "test3viareference",sizeof(int)*1);
   printf("Child CD begins a[0] %d a[1] %d a[2] %d a[3] %d  \n", a[0], a[1], a[2], a[3]);
   if( iteration == 0 )
@@ -677,11 +677,11 @@ int test3()
 
 
   }
-  CD_COMPLETE(child);
+  CD_Complete(child);
   child->Destroy();
 
  
-  CD_COMPLETE(root);
+  CD_Complete(root);
   root->Destroy();
   if( test_result == 1 ) return kOK;
   return kError;

@@ -87,7 +87,7 @@ CD::CD()
 CD::CD( CDHandle* cd_parent, 
         const char* name, 
         CDID cd_id, 
-        CDModeT cd_type, 
+        CDType cd_type, 
         uint64_t sys_bit_vector)
 {
 
@@ -130,10 +130,55 @@ CD::CD( CDHandle* cd_parent,
 
 }
 
+void CD::Initialize(CDHandle* cd_parent, 
+						        const char* name, 
+						        CDID cd_id, 
+						        CDType cd_type, 
+						        uint64_t sys_bit_vector)
+{
+
+  // FIXME: only acquire root handle when needed. 
+  // Most of the time, this might not be required.
+  //cd_root_	= root; 
+
+  name_ = const_cast<char*>(name);
+
+  cd_id_ = cd_id;
+
+  // Kyushick: Object ID should be unique for the copies of the same object?
+  // For now, I decided it as an unique one
+  cd_id_.object_id_++;
+
+  // FIXME maybe call self generating function here?           
+  //cd_self_	= self;  //FIXME maybe call self generating function here?           
+  
+  cd_type_	= cd_type;
+
+  // FIXME
+  sys_detect_bit_vector_ = sys_bit_vector;
+
+  // FIXME 
+//  cd_id_.level_ = parent_cd_id.level_ + 1;
+  // we need to get parent id ... 
+  // but if they are not local, this might be hard to acquire.... 
+  // perhaps we should assume that cd_id is always store in the handle ...
+  cd_id_ = cd_id;
+ 
+
+  Init();	
+
+  // FIXME 
+  //cd_id_ = 0; 
+  // We need to call which returns unique id for this cd. 
+  // the id is recommeneded to have pre-allocated sections per node. 
+  // This way, we don't need to have race condition to get unique id. 
+  // Instead local counter is used to get the unique id.
+
+}
 void CD::Init()
 {
-  context_preservation_mode_= kExcludeStack; 
-  cd_execution_mode_        = kSuspension;
+  ctxt_prv_mode_= kExcludeStack; 
+  cd_exec_mode_        = kSuspension;
   option_save_context_      = 0; 
 	path = Path("ssd", "hhd");
 	path.SetSSDPath("./SSDpath/");
@@ -162,7 +207,7 @@ CD::~CD()
 CD* CD::Create( CDHandle* cd_parent, 
                 const char* name, 
                 const CDID& cd_id, 
-                CDModeT cd_type, 
+                CDType cd_type, 
                 uint64_t sys_bit_vector, 
                 CDErrT *cd_err)
 {
@@ -176,7 +221,7 @@ CD* CD::Create( CDHandle* cd_parent,
 
 CDErrT CD::Destroy()
 {
-  int err=kOK;
+  CDErrT err=kOK;
 
 //GONG
 	//When we destroy a CD, we need to delete its log (preservation file)
@@ -211,7 +256,7 @@ CDErrT CD::Destroy()
   
   delete this;
 
-  return (CDErrT)err;
+  return err;
 }
 
 
@@ -219,7 +264,7 @@ CDErrT CD::Destroy()
 // need to provide a way to stop currently running task and then re-execute from some point. 
 
 //CDHandle CD::Create(enum CDType cd_type, CDHandle &parent)
-//CD* CD::Create(CDHandle* parent, const char* name, CDID new_cd_id, CDModeT cd_type, uint64_t sys_bit_vector)
+//CD* CD::Create(CDHandle* parent, const char* name, CDID new_cd_id, CDType cd_type, uint64_t sys_bit_vector)
 //{
 //  CD* new_cd = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
 //  return new_cd;
@@ -267,11 +312,11 @@ CDErrT CD::Begin(bool collective, std::string label)
 {
 
   //  setjmp(jump_buffer_);
-  //getcontext(&context_);
+  //getcontext(&ctxt_);
 
-  if( cd_execution_mode_ != kReexecution ) {
+  if( cd_exec_mode_ != kReexecution ) {
     num_reexecution_ = 0;
-    cd_execution_mode_ = kExecution;
+    cd_exec_mode_ = kExecution;
   }
   else {
     num_reexecution_++ ;
@@ -279,7 +324,7 @@ CDErrT CD::Begin(bool collective, std::string label)
 
 
 
-  return CDErrT::kOK;
+  return kOK;
 }
 
 
@@ -301,15 +346,15 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   /// We might modify this in the profiler to support the overlapped data among sequential CDs.
   DeleteEntryDirectory();
 
-  // TODO ASSERT( cd_execution_mode_  != kSuspension );
+  // TODO ASSERT( cd_exec_mode_  != kSuspension );
   // FIXME don't we have to wait for others to be completed?	
-  cd_execution_mode_ = kSuspension; 
+  cd_exec_mode_ = kSuspension; 
 /*
-  if( cd_execution_mode_ == kReexecution ) {
+  if( cd_exec_mode_ == kReexecution ) {
 
     }
 */
-  return CDErrT::kOK;
+  return kOK;
 }
 
 
@@ -341,13 +386,13 @@ CDErrT CD::Preserve(void* data,
   // FIXME MALLOC should use different ones than the ones for normal malloc
   // For example, it should bypass malloc wrap functions.
   // FIXME for now let's just use regular malloc call 
-  if(cd_execution_mode_ == kExecution ) {
+  if(cd_exec_mode_ == kExecution ) {
 
-    //return ((CDInternalErrT)kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? (CDErrT)kOK : (CDErrT)kError;
-    return (CDInternalErrT::kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? CDErrT::kOK : CDErrT::kError;
+    //return ((CDErrT)kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? (CDErrT)kOK : (CDErrT)kError;
+    return (kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? kOK : kError;
 
   }
-  else if(cd_execution_mode_ == kReexecution) {
+  else if(cd_exec_mode_ == kReexecution) {
 
     // it is in re-execution mode, so instead of preserving data, restore the data 
     // Two options, one is to do the job here, another is that just skip and do nothing here but do the restoration job in different place and go though all the CDEntry and call Restore() method. The later option seems to be more efficient but it is not clear that whether this brings some consistency issue as restoration is done at the very beginning while preservation was done one by one and sometimes there could be some computation in between the preservations.. (but wait is it true?)
@@ -362,9 +407,9 @@ CDErrT CD::Preserve(void* data,
 
       //Since we have reached the last point already now convert current execution mode into kExecution
       //	    printf("Now reached end of entry directory, now switching to normal execution mode\n");
-      cd_execution_mode_  = kExecution;		
+      cd_exec_mode_  = kExecution;		
   //  return InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
-      return (CDInternalErrT::kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? CDErrT::kOK : CDErrT::kError;
+      return (kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? kOK : kError;
     }
     else {
       //		 printf("Reexecution mode...\n");
@@ -379,17 +424,17 @@ CDErrT CD::Preserve(void* data,
 				if(cd_id_.level_==1) {	// HDD
 					bool _isOpenHDD = isOpenHDD();
 					if(!_isOpenHDD)	OpenHDD(); // set flag 'open_HDD' 			
-      		return (CDEntry::CDEntryErrT::kOK ==cd_entry.Restore(_isOpenHDD, &HDDlog))? CDErrT::kOK: CDErrT::kError;
+      		return (CDEntry::CDEntryErrT::kOK ==cd_entry.Restore(_isOpenHDD, &HDDlog))? kOK: kError;
 				}
 				else { // SSD
 					bool _isOpenSSD = isOpenSSD();
 					if(!_isOpenSSD)
 						OpenSSD(); // set flag 'open_SSD' 			
-      		return (CDEntry::CDEntryErrT::kOK ==cd_entry.Restore(_isOpenSSD, &SSDlog))? CDErrT::kOK: CDErrT::kError;
+      		return (CDEntry::CDEntryErrT::kOK ==cd_entry.Restore(_isOpenSSD, &SSDlog))? kOK : kError;
 				}
 			}
 			else {
-				return (CDEntry::CDEntryErrT::kOK ==cd_entry.Restore(open, &HDDlog))? CDErrT::kOK: CDErrT::kError;
+				return (CDEntry::CDEntryErrT::kOK ==cd_entry.Restore(open, &HDDlog))? kOK : kError;
 			}
     }
 
@@ -401,7 +446,7 @@ CDErrT CD::Preserve(void* data,
 
 
 
-CD::CDInternalErrT CD::InternalPreserve(void *data, 
+CDErrT CD::InternalPreserve(void *data, 
                                         uint64_t len_in_bytes, 
                                         uint32_t preserve_mask=kCopy, 
                                         const char *my_name=0, 
@@ -411,7 +456,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
                                         PreserveUseT data_usage=kUnsure)
 {
 
-  if(cd_execution_mode_  == kExecution ) {
+  if(cd_exec_mode_  == kExecution ) {
 
     // Now create entry and add to list structure.
 
@@ -592,7 +637,7 @@ int CD::Preserve(char* data_p, int data_l, enum preserveType prvTy, enum mediumL
 // Jinsuk: 02092014 are we going to leave this function? 
 //It seems like this may not be required. Or for optimization, we can do this. 
 //Bulk restoration might be more efficient than fine grained restoration for each block.
-int CD::Restore()
+CDErrT CD::Restore()
 {
 
 
@@ -624,7 +669,7 @@ int CD::Restore()
  *  (3)
  *
  */
-int CD::Detect()
+CDErrT CD::Detect()
 {
 
   return kOK;
@@ -640,12 +685,12 @@ CDErrT CD::Assert(bool test)
     Reexecute();
   }
 
-  return CDErrT::kOK;
+  return kOK;
 }
 
-int CD::Reexecute()
+CDErrT CD::Reexecute(void)
 {
-  cd_execution_mode_ = kReexecution; 
+  cd_exec_mode_ = kReexecution; 
 
   //TODO We need to make sure that all children has stopped before re-executing this CD.
   Stop();
@@ -653,24 +698,20 @@ int CD::Reexecute()
 //    this->StopAllChildren();
 
   //TODO We need to consider collective re-start. 
-  if(context_preservation_mode_ == kExcludeStack) {
+  if(ctxt_prv_mode_ == kExcludeStack) {
     printf("longjmp\n");
     longjmp(jump_buffer_, 1);
   }
-  else if (context_preservation_mode_ == kIncludeStack) {
+  else if (ctxt_prv_mode_ == kIncludeStack) {
     printf("setcontext\n");
-    setcontext(&context_); 
+    setcontext(&ctxt_); 
   }
 
   return kOK;
 }
 
-
-
-int CD::Stop()
+CDErrT CD::Stop(CDHandle* cdh)
 {
-
-
   //TODO Stop current CD.... here how? what needs to be done? 
   // may be wait for others to complete? wait for an event?
   //if current thread (which stop function is running) and the real cd's thread id is different, 
@@ -682,8 +723,12 @@ int CD::Stop()
   return kOK;
 }
 
+CDErrT CD::Resume(void)
+{
+  return kOK;
+}
 
-int CD::AddChild(CD* cd_child) 
+CDErrT CD::AddChild(CD* cd_child) 
 { 
 //  std::cout<<"sth wrong"<<std::endl; 
 //  getchar(); 
@@ -691,8 +736,7 @@ int CD::AddChild(CD* cd_child)
   return kOK;	
 }
 
-
-int CD::RemoveChild(CD* cd_child) 
+CDErrT CD::RemoveChild(CD* cd_child) 
 {
 //  std::cout<<"sth wrong"<<std::endl; 
 //  getchar(); 
@@ -700,18 +744,13 @@ int CD::RemoveChild(CD* cd_child)
   return kOK;
 }
 
-
-
 MasterCD::MasterCD()
-{
-
-  
-}
+{}
 
 MasterCD::MasterCD( CDHandle* cd_parent, 
                     const char* name, 
                     CDID cd_id, 
-                    CDModeT cd_type, 
+                    CDType cd_type, 
                     uint64_t sys_bit_vector)
   : CD(cd_parent, name, cd_id, cd_type, sys_bit_vector)
 {}
@@ -719,7 +758,7 @@ MasterCD::MasterCD( CDHandle* cd_parent,
 MasterCD::~MasterCD()
 {}
 
-int MasterCD::Stop(CDHandle cd)
+CDErrT MasterCD::Stop(CDHandle* cdh)
 {
 
 //  if(IsLocalObject()){
@@ -730,7 +769,7 @@ int MasterCD::Stop(CDHandle cd)
 //      std::list<CD>::iterator itend = cd_children_.end();
 //      while(1) {
 //        if(itstr < itend) {
-//          res += (*it).Stop();
+//          res += (*it).Stop(cdh);
 //        }
 //        if(res == cd_children_.size()) {
 //          break;
@@ -743,18 +782,14 @@ int MasterCD::Stop(CDHandle cd)
 //    }
 //  }
 //  else {
-//    // return RemoteStop(cd);
+//    // return RemoteStop(cdh);
 //  }
 
   return kOK;
 }
 
-int CD::Resume()
-{
-  return kOK;
-}
 
-int MasterCD::Resume()
+CDErrT MasterCD::Resume(void)
 {
   //FIXME: return value needs to be fixed 
 
@@ -767,7 +802,7 @@ int MasterCD::Resume()
 }
 
 
-int MasterCD::AddChild(CDHandle* cd_child) 
+CDErrT MasterCD::AddChild(CDHandle* cd_child) 
 {
   cd_children_.push_back(cd_child);
 
@@ -775,7 +810,7 @@ int MasterCD::AddChild(CDHandle* cd_child)
 }
 
 
-int MasterCD::RemoveChild(CDHandle* cd_child) 
+CDErrT MasterCD::RemoveChild(CDHandle* cd_child) 
 {
   //FIXME Not optimized operation. 
   // Search might be slow, perhaps change this to different data structure. 
@@ -786,7 +821,7 @@ int MasterCD::RemoveChild(CDHandle* cd_child)
 }
 
 
-CDHandle* MasterCD::cd_parent()
+CDHandle* MasterCD::cd_parent(void)
 {
   return cd_parent_;
 }
@@ -832,60 +867,10 @@ void CD::DeleteEntryDirectory(void)
  *
  */
 
-int CD::AddDetectFunc(void *() custom_detect_func)
-{
-
-  return kOK;
-}
-
-
+//int CD::AddDetectFunc(void *() custom_detect_func)
+//{
+//
+//  return kOK;
+//}
 
 
-
-
-
-void CD::Initialize( CDHandle* cd_parent, 
-        const char* name, 
-        CDID cd_id, 
-        CDModeT cd_type, 
-        uint64_t sys_bit_vector)
-{
-
-  // FIXME: only acquire root handle when needed. 
-  // Most of the time, this might not be required.
-  //cd_root_	= root; 
-
-  name_ = const_cast<char*>(name);
-
-  cd_id_ = cd_id;
-
-  // Kyushick: Object ID should be unique for the copies of the same object?
-  // For now, I decided it as an unique one
-  cd_id_.object_id_++;
-
-  // FIXME maybe call self generating function here?           
-  //cd_self_	= self;  //FIXME maybe call self generating function here?           
-  
-  cd_type_	= cd_type;
-
-  // FIXME
-  sys_detect_bit_vector_ = sys_bit_vector;
-
-  // FIXME 
-//  cd_id_.level_ = parent_cd_id.level_ + 1;
-  // we need to get parent id ... 
-  // but if they are not local, this might be hard to acquire.... 
-  // perhaps we should assume that cd_id is always store in the handle ...
-  cd_id_ = cd_id;
- 
-
-  Init();	
-
-  // FIXME 
-  //cd_id_ = 0; 
-  // We need to call which returns unique id for this cd. 
-  // the id is recommeneded to have pre-allocated sections per node. 
-  // This way, we don't need to have race condition to get unique id. 
-  // Instead local counter is used to get the unique id.
-
-}

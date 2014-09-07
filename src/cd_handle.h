@@ -200,7 +200,7 @@ class cd::CDHandle {
 
 
     //TODO copy these to CD async 
-    ucontext_t context_;
+    ucontext_t ctxt_;
     jmp_buf    jump_buffer_;
   
     CDHandle();
@@ -208,12 +208,12 @@ class cd::CDHandle {
     CDHandle( CDHandle* parent, 
               const char* name, 
               const NodeID& node_id, 
-              CDModeT cd_type, 
+              CDType cd_type, 
               uint64_t sys_bit_vector);
     CDHandle( CDHandle* parent, 
               const char* name, 
               NodeID&& node_id, 
-              CDModeT cd_type, 
+              CDType cd_type, 
               uint64_t sys_bit_vector);
 
     void Init(CD* ptr_cd, NodeID node_id); 
@@ -224,7 +224,7 @@ class cd::CDHandle {
 
     // Non-collective
     CDHandle* Create (const char* name=0, 
-                      CDModeT type=kStrict, 
+                      CDType type=kStrict, 
                       uint32_t error_name_mask=0, 
                       uint32_t error_loc_mask=0, 
                       CDErrT *error=0 );
@@ -233,14 +233,14 @@ class cd::CDHandle {
     CDHandle* Create (int color, 
                       uint32_t num_tasks_in_color, 
                       const char* name=0, 
-                      CDModeT type=kStrict, 
+                      CDType type=kStrict, 
                       uint32_t error_name_mask=0, 
                       uint32_t error_loc_mask=0, 
                       CDErrT *error=0 );
      // Collective
     CDHandle* Create (uint32_t  numchildren,
                       const char* name, 
-                      CDModeT type=kStrict, 
+                      CDType type=kStrict, 
                       uint32_t error_name_mask=0, 
                       uint32_t error_loc_mask=0, 
                       CDErrT *error=0 );
@@ -248,7 +248,7 @@ class cd::CDHandle {
     CDHandle* CreateAndBegin (uint32_t color=0, 
                               uint32_t num_tasks_in_color=0, 
                               const char* name=0, 
-                              CDModeT type=kStrict, 
+                              CDType type=kStrict, 
                               uint32_t error_name_mask=0, 
                               uint32_t error_loc_mask=0, 
                               CDErrT *error=0 );
@@ -375,7 +375,7 @@ class cd::CDHandle {
     int&      GetNodeID(void);
     int       GetTaskID(void);
     int       GetTaskSize(void);
-    int       context_preservation_mode(void);
+    int       ctxt_prv_mode(void);
     bool      operator==(const CDHandle &other) const ;
 
 

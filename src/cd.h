@@ -40,7 +40,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_entry.h"
 #include "util.h"
 #include "cd_id.h"
+
+#if _WORK
 #include "transaction.h"
+#endif
 
 #include <list>
 #include <vector>
@@ -51,6 +54,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <string>
 #include <setjmp.h>
 #include <ucontext.h>
+#include <map>
 #include <unordered_map>
 //#include <array>
 
@@ -58,58 +62,60 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //class cd::CDHandle;
 using namespace cd;
 
+/// TODO Implement serialize and deserialize of this instance
 class cd::CD {
+		/// The friends of CD class
     friend class cd::RegenObject;   
     friend class cd::CDEntry;   
   public:
-    // enumerators 
-    enum CDExecutionMode  {kExecution=0, kReexecution, kSuspension};
-    enum ContextPreservationMode {kExcludeStack=0, kIncludeStack};
-    enum CDInternalErrT { kOK=0, kExecutionModeError };	
-  //	enum ReturnValue { kOK = 0, kError};
-  //	enum PreservationType { kCopy =0, kReference, kRegeneration };
-    
+    /// CD class internal enumerators 
+    enum CDExecMode  {kExecution=0, kReexecution, kSuspension};
+    enum CtxtPrvMode {kExcludeStack=0, kIncludeStack};
+//    enum CDErrT { kOK=0, kExecutionModeError };	
   protected: 
     CDID cd_id_;
   public:
-    char* name_;
-//    std::string label_;
-    ucontext_t context_;
-    jmp_buf jump_buffer_;
-    ContextPreservationMode context_preservation_mode_;
-//FIXME
-//    CDID cd_id_parent_;
-//
-//  public:
-//    cd::CDHandle cd_parent();
-//    void set_cd_parent(cd::CDHandle parent);
-    CDType              cd_type_;
-    CDExecutionMode     cd_execution_mode_;
-    uint64_t            sys_detect_bit_vector_;
-    std::list<int*>     usr_detect_func_list_;  //custom_detect_func;
-    uint64_t            option_save_context_; 
+    std::vector<std::string> label_;
+    char* 					name_;
+    CDType          cd_type_;
 
-    // FIXME later this should be map or list, sometimes it might be better to have map structure 
-    // and sometimes list would be beneficial depending on how frequently search functionality is required.
-    // here define binary search tree structure... and then insert only the ones who has ref names.
+		/// Set rollback point and options
+    CtxtPrvMode 		ctxt_prv_mode_;
+    ucontext_t 			ctxt_;
+    jmp_buf 				jump_buffer_;
+    uint64_t        option_save_context_; 
+
+		/// Flag for normal execution or reexecution.
+    /// TODO: What if the pointer of the object has changed since it was created? 
+    /// This could be desaster if we are just relying on the address of the pointer to access CD object.
+    CDExecMode      cd_exec_mode_;
+    int 						num_reexecution_;
+
+		/// Detection-related meta data
+    uint64_t        sys_detect_bit_vector_;
+    std::list<int*> usr_detect_func_list_;  //custom_detect_func;
+//   	int (*AddDetectFunc)(void);
+
+    /// FIXME later this should be map or list, 
+		/// sometimes it might be better to have map structure 
+    /// Sometimes list would be beneficial depending on how frequently search functionality is required.
+    /// Here we define binary search tree structure... 
+		/// Then insert only the ones who has ref names.
     std::list<CDEntry> entry_directory_; 
     
-    // only the CDEntries that has refname will be pushed into this data structure for later quick search.
+    // Only CDEntries that has refname will be pushed into this data structure for later quick search.
     std::map<std::string, CDEntry> entry_directory_map_;   
     
-    // This shall be used for re-execution. We will restore the value one by one.
-    // Should not be CDEntry*. 
+    /// This shall be used for re-execution. 
+		/// We will restore the value one by one.
+    /// Should not be CDEntry*. 
     std::list<CDEntry>::iterator iterator_entry_;   
-
-    int num_reexecution_;
-    // TODO: What if the pointer of the object has changed since it was created? 
-    // This could be desaster if we are just relying on the address of the pointer to access CD object.
-  
   
     //	std::vector<cd_log> log_directory_;
     //	pthread_mutex_t mutex_;			//
     //	pthread_mutex_t log_directory_mutex_;
 
+#if _WORK
 	protected:
 		bool _OpenHDD, _OpenSSD;
 		Path path;
@@ -122,55 +128,54 @@ class cd::CD {
 		bool isOpenSSD()   { return _OpenSSD;  }
 		void OpenHDD()     { _OpenHDD = true;  }
 		void OpenSSD()     { _OpenSSD = true;  }
-	
-//		void Body();
+		void Body();
+#endif
 
   public:
     CD();
-    CD(CDType cd_type, CDHandle &parent);
-    CD(CDHandle* cd_parent, const char* name, CDID cd_id, CDModeT cd_type, uint64_t sys_bit_vector);
+
+		CD(cd::CDHandle* cd_parent, 
+		   const char* name, 
+		   CDID cd_id, 
+		   CDType cd_type, 
+		   uint64_t sys_bit_vector);
+
     virtual ~CD();
 
-		void Initialize(CDHandle* cd_parent, 
+		void Initialize(cd::CDHandle* cd_parent, 
 							      const char* name, 
 							      CDID cd_id, 
-							      CDModeT cd_type, 
+							      CDType cd_type, 
 							      uint64_t sys_bit_vector);
     void Init(void);
   
-   	int AddDetectFunc(void *() custom_detect_func);
-  
-    //TODO Implement serialize and deserialize of this instance
     CDID GetCDID() { return cd_id_; }
 
-    // TODO This should be moved to outside and inside the namespace cd
+// TODO This should be moved to outside and inside the namespace cd
+// Kyushick : Do we need this static Create method?
 //    static CDHandle Create(CDType cd_type, CDHandle &parent);
 //    static void Destroy(CD *cd);
-    CD* Create(CDHandle* cd_parent, 
+
+    CD* Create(cd::CDHandle* cd_parent, 
                const char* name, 
                const CDID& cd_id, 
-               CDModeT cd_type, 
+               CDType cd_type, 
                uint64_t sys_bit_vector, 
                CDErrT* cd_err);
-
     CDErrT Destroy();
-    CDErrT Begin(bool collective=true, std::string label="");
+
+    CDErrT Begin(bool collective=true, 
+								 std::string label="");
     CDErrT Complete(bool collective=true, 
                     bool update_preservations=true);
 
-//    CDErrT Peserve(int rank_id, 
-//                   char* data, 
-//                   int len_data, 
-//                   enum PreserveType preserve_type, 
-//                   enum MediumLevel medium_level);
 
-//  	int Preserve(const void* data, uint64_t len_in_bytes); 
-
-  //Jinsuk: Really simple preservation function. 
-  //This will use default storage 
-  //(can be set when creating this instance or later by calling set_ something function. 
+  /// Jinsuk: Really simple preservation function. 
+  /// This will use default storage. 
+  /// It can be set when creating this instance, 
+	/// or later by calling set_ something function. 
   
-    CDErrT Preserve(void *data,             // address in the local process 
+    CDErrT Preserve(void *data,             			// address in the local process 
                     uint64_t len_in_bytes,        // data size to preserve
                     uint32_t preserve_mask=kCopy, // preservation method
                     const char *my_name=0,        // data name
@@ -180,6 +185,9 @@ class cd::CD {
                     PreserveUseT data_usage=kUnsure);   // for optimization
   
     // Collective version
+		// Kyushick : Why do we need collective Preserve call as an API?
+		// I think we need collective method when CDs want to preserve data to Global file system
+		// So user set some medium type
     CDErrT Preserve(CDEvent &cd_event,            // Event object to synch
                     void *data_ptr, 
                     uint64_t len, 
@@ -190,8 +198,8 @@ class cd::CD {
                     const RegenObject *regen_object=0, 
                     PreserveUseT data_usage=kUnsure);
   
-    int Detect(); 
-    int Restore();
+    CDErrT Detect(); 
+    CDErrT Restore();
   
 //  DISCUSS: Jinsuk: About longjmp setjmp: By running some experiement, 
 //  I confirm that this only works when stack is just there. 
@@ -203,14 +211,13 @@ class cd::CD {
   
     CDErrT Assert(bool test);
   
-    int Reexecute();
+    CDErrT Reexecute(void);
   
     // Utilities -----------------------------------------------------
+    virtual CDErrT Stop(cd::CDHandle* cdh=NULL);
+    virtual CDErrT Resume(void);
   
-    virtual  int Stop();
-    virtual  int Resume();
-  
-    CDInternalErrT InternalPreserve(void *data, 
+    CDErrT InternalPreserve(void *data, 
                                     uint64_t len_in_bytes,
                                     uint32_t preserve_mask, 
                                     const char *my_name, 
@@ -237,81 +244,40 @@ class cd::CD {
 
     void DeleteEntryDirectory(void);
 
-    virtual int AddChild(CD* cd_child);
-    virtual int RemoveChild(CD* cd_child);
+    virtual CDErrT AddChild(CD* cd_child);
+    virtual CDErrT RemoveChild(CD* cd_child);
     
-//    virtual void StartProfile(void);
-//    virtual void FinishProfile(void);
-//    virtual void FinalizeViz(void);
-//#if _PROFILER
-//
-//    static graph* scopeGraph;
-//    static modularApp* ma;
-//
-//
-//
-//    //void InitProfile(std::string label="");
-//    virtual void GetLocalAvg(void);
-//    virtual void GetPrvData(void *data, 
-//                            uint64_t len_in_bytes,
-//                            uint32_t preserve_mask, 
-//                            const char *my_name, 
-//                            const char *ref_name, 
-//                            uint64_t ref_offset, 
-//                            const RegenObject * regen_object, 
-//                            PreserveUseT data_usage);
-//
-//    virtual void AddUsrProfile(std::string key, long val, int mode);
-//    virtual void InitViz();
-//
-//// FIXME
-//    virtual bool CheckCollectProfile(void);
-//    virtual void SetCollectProfile(bool flag);
-//#endif
  };
-
-
-
-
-
-
-
 
 
 class cd::MasterCD : public cd::CD {
   public:
-    // Link information of CD hierarchy   
-    // This is important data for MASTER among sibling mpi ranks (not sibling CDs) of each CD 
-    // Therefore, CDTree is generated with CD object. 
-    // parent CD object is always in the same process.
-    // But MASTER's parent CD object is in the MASTER process of parent CD.
-    // CDHandle cd_parent_ should be an accessor for this MASTER process.
-    // Regarding children CDs, this MASTER's CD has actual copy of the MASTER children's CD object.
-    // If children CD is gone, this MASTER CD sends children CD.
-    // So, when we create CDs, we should send MASTER CDHandle and its CD to its parent CD
+    /// Link information of CD hierarchy   
+    /// This is important data for MASTER among sibling mpi ranks (not sibling CDs) of each CD 
+    /// Therefore, CDTree is generated with CD object. 
+    /// parent CD object is always in the same process.
+    /// But MASTER's parent CD object is in the MASTER process of parent CD.
+    /// CDHandle cd_parent_ should be an accessor for this MASTER process.
+    /// Regarding children CDs, this MASTER's CD has actual copy of the MASTER children's CD object.
+    /// If children CD is gone, this MASTER CD sends children CD.
+    /// So, when we create CDs, we should send MASTER CDHandle and its CD to its parent CD
     std::list<cd::CDHandle*> cd_children_;
     cd::CDHandle*            cd_parent_;
 
-
-
     MasterCD();
-    MasterCD( CDHandle* cd_parent, 
-              const char* name, 
-              CDID cd_id, 
-              CDModeT cd_type, 
-              uint64_t sys_bit_vector);
+    MasterCD(cd::CDHandle* cd_parent, 
+             const char* name, 
+             CDID cd_id, 
+             CDType cd_type, 
+             uint64_t sys_bit_vector);
     virtual ~MasterCD();
-   
-//    virtual void StartProfile(void);
-//    virtual void FinishProfile(void);
-//    virtual void FinalizeViz(void);
 
-    virtual int Stop(CDHandle cd);
-    virtual int Resume(); // Does this make any sense?
-    virtual int AddChild(CDHandle* cd_child); 
-    virtual int RemoveChild(CDHandle* cd_child); 
-    CDHandle* cd_parent();
-    void set_cd_parent(CDHandle* cd_parent);
+    virtual CDErrT Stop(cd::CDHandle* cd=NULL);
+    virtual CDErrT Resume(void); // Does this make any sense?
+    virtual CDErrT AddChild(cd::CDHandle* cd_child); 
+    virtual CDErrT RemoveChild(cd::CDHandle* cd_child); 
+    cd::CDHandle* cd_parent();
+    void 			set_cd_parent(cd::CDHandle* cd_parent);
 };
 
 namespace cd {
