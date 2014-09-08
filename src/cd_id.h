@@ -46,9 +46,9 @@ extern uint64_t object_id;
 class CDID {
   public:
     uint64_t domain_id_;          // Some physical information is desired in CDID to maximize locality when needed
-    uint64_t level_;       // Level in the CD hierarhcy. It increases at Create() and destroys at Destroy.
+    uint64_t level_;              // Level in the CD hierarhcy. It increases at Create() and destroys at Destroy.
     uint64_t sibling_id_;
-    NodeID   node_id_; // Unique ID for each CD. It can be a communicator number. It increases at Create().
+    NodeID   node_id_;            // Unique ID for each CD. It can be a communicator number. It increases at Create().
                                   // node_id_.first means node (color)
                                   // node_id_.second means ID in that node (color)
                                   // For now, node_id_.second==0 is always MASTER.
@@ -62,7 +62,7 @@ class CDID {
     CDID(uint64_t level, const NodeID& new_node_id);
     CDID(uint64_t level, NodeID&& new_node_id);
 //    CDID(CDHandle* parent, const NodeID& new_node_id);
-//		CDID(CDHandle* parent, NodeID&& new_node_id);
+//    CDID(CDHandle* parent, NodeID&& new_node_id);
 
     CDID(const CDID& that);
     // should be in CDID.h

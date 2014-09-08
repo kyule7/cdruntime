@@ -100,6 +100,31 @@ class cd::Util
     { // This generates a unique file name that will be used for preservation. Per CD must be different, so we can refer to CDID and also 
       //hex address of the pointer we are preserving. -> This might not be a good thing when we recover actually the stack content can be different... is it? or is it not?  let's assume it does...
 
+//      const char *base_file_path = GetCDFilesPath(cd_id); 
+      const char* base_file_path = GetCDFilesPath();
+#ifdef _WORK 
+      sprintf(filename, "%s%lld.%lld.%lld.%lld.%lld.cd", base_file_path, (long long)cd_id.domain_id_, (long long)cd_id.node_id_.task_, (long long)cd_id.level_, (long long)cd_id.object_id_, (long long)cd_id.sequential_id_);
+#else
+      sprintf(filename, "%s%lld.%lld.%lld.%lld.%lld.%p.cd", base_file_path, (long long)cd_id.domain_id_, (long long)cd_id.node_id_.task_, (long long)cd_id.level_, (long long)cd_id.object_id_, (long long)cd_id.sequential_id_, addr);
+#endif
+    }
+#ifdef _WORK  
+    static void GetUniqueCDFileName(CDID &cd_id, void *addr, char *filename, std::string base_)
+    { // This generates a unique file name that will be used for preservation. Per CD must be different, so we can refer to CDID and also 
+      //hex address of the pointer we are preserving. -> This might not be a good thing when we recover actually the stack content can be different... is it? or is it not?  let's assume it does...
+
+//      const char *base_file_path = GetCDFilesPath(cd_id); 
+      const char* base_file_path = base_.c_str();
+      sprintf(filename, "%s%lld.%lld.%lld.%lld.%lld.cd", base_file_path, (long long)cd_id.domain_id_, (long long)cd_id.node_id_.task_, (long long)cd_id.level_, (long long)cd_id.object_id_, (long long)cd_id.sequential_id_);
+
+    }
+#endif
+
+/*
+    static void GetUniqueCDFileName(CDID &cd_id, void *addr, char *filename)
+    { // This generates a unique file name that will be used for preservation. Per CD must be different, so we can refer to CDID and also 
+      //hex address of the pointer we are preserving. -> This might not be a good thing when we recover actually the stack content can be different... is it? or is it not?  let's assume it does...
+
 //      const char *base_file_path = GetCDFilesPath(cd_id);	
       const char* base_file_path = GetCDFilesPath();
 //#ifdef GONG
@@ -127,7 +152,7 @@ class cd::Util
 
     }
 //#endif
-
+*/
 
 };
 

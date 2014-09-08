@@ -61,7 +61,9 @@ namespace cd {
   enum CDErrT       { kOK=0, 
 											kAlreadyInit, 
 											kError,
-										  kExecutionModeError
+										  kExecutionModeError,
+                      kOutOfMemory,
+                      kFileOpenError
 										};
 
   enum SysErrT      { kWhat=1 };
@@ -115,7 +117,10 @@ namespace cd {
 													REC, 
 													BODY, 
 													MAX_FORMAT };
-
+  enum PrvMediumT { kMemory=0,
+                    kHDD,
+                    kSSD,
+                    kPFS};
   //typedef CDID CDName;
 //  typedef CDType CDType;
   class CDNameT;
@@ -150,9 +155,10 @@ namespace cd {
 #define MAX_FILE_PATH 2048
 
 
-#define ROOT_COLOR MPI_COMM_WORLD
-//#define ROOT_COLOR 0
-
+//#define ROOT_COLOR MPI_COMM_WORLD
+//#define INITIAL_COLOR MPI_UNDEFINED
+#define ROOT_COLOR 0 
+#define INITIAL_COLOR 0
 /* 
 ISSUE 1 (Kyushick)
 If we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?

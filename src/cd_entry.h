@@ -63,7 +63,7 @@ class cd::CDEntry : public cd::Serializable
         src_data_.data_address =    
         }*/
   public:
-    enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError};
+//    enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError};
     
     CDEntry(){}
     CDEntry(const DataHandle src_data, const DataHandle dst_data, const char *my_name=0) 
@@ -97,7 +97,7 @@ class cd::CDEntry : public cd::Serializable
       ptr_cd_ = ptr_cd;
     }
 
-		CDEntryErrT Delete(void);
+		CDErrT Delete(void);
 
 //GONG
 #if _WORK
@@ -106,7 +106,7 @@ class cd::CDEntry : public cd::Serializable
 
 		public:
 		std::string my_name(){return name_;}
-		enum CDEntryErrT SaveMem()
+		CDErrT SaveMem()
 		{
       if(dst_data_.address_data() == NULL)
       {
@@ -128,17 +128,20 @@ class cd::CDEntry : public cd::Serializable
       return kOK;
 		}
 
-		CDEntryErrT SaveFile(std::string base_, bool open, struct tsn_log_struct *log)
+		CDErrT SaveFile(std::string base_, bool open, struct tsn_log_struct *log)
     {
       if( dst_data_.file_name() == NULL )
       {
         char *cd_file = new char[MAX_FILE_PATH];
-//        cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file, base_); // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-        cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
+        cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file, base_); 
+// assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
+//        cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); 
         dst_data_.set_file_name(cd_file);
       }
 		 	if(!open){
 				int ret;
+        printf("inside saveMem\n");
+        getchar();
 				ret = tsn_log_create_file(dst_data_.file_name());
 			  assert(ret>=0);	
 				ret = tsn_log_open_file(dst_data_.file_name(), TSN_LOG_READWRITE, log);
@@ -164,7 +167,7 @@ class cd::CDEntry : public cd::Serializable
 		}
 
 #else
-    enum CDEntryErrT Save()
+    CDErrT Save()
     {
       //Direction is from src_data_ to dst_data_
 
@@ -232,9 +235,9 @@ class cd::CDEntry : public cd::Serializable
 
 //GONG
 #if _WORK
-    CDEntryErrT Restore(bool open, struct tsn_log_struct *log);
+    CDErrT Restore(bool open, struct tsn_log_struct *log);
 #else
-    enum CDEntryErrT Restore();
+    CDErrT Restore();
 #endif
     bool isViaReference()
     {

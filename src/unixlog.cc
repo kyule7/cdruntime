@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
-
+#include <cassert>
 #include "unixlog.h"
 
 #if 1
@@ -164,6 +164,8 @@ int tsn_log_create_file(const char *logfilename)
     mode = S_IRUSR | S_IWUSR;
     fd = open(logfilename, flags, mode);
     if (fd < 0) {
+        printf("what? %d\n", fd);
+        printf("file: %s\n", logfilename);
         ret = fd;
         goto out;
     }
@@ -182,7 +184,8 @@ int tsn_log_create_file(const char *logfilename)
         write_zeroes(fd,
                      new_log_header.logfile_start_offset -
                      sizeof(new_log_header));
-
+    printf("sdfasdf %d\n", ret);
+    getchar();
 out_close:
     close(fd);
 out:

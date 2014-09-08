@@ -3,14 +3,14 @@
 using namespace cd;
 
 
-CDEntry::CDEntryErrT CDEntry::Delete(void)
+CDErrT CDEntry::Delete(void)
 {
 	return kOK;
 }
 
 
 //GONG
-CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
+CDErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 //#else
 //enum CDEntry::CDEntryErrT CDEntry::Restore()
 //#endif
@@ -90,6 +90,8 @@ std::cout<<"kOSFile file_name() : "<<dst_data_temp->file_name()<<" offset: "<<ds
 			ret = tsn_log_open_file(dst_data_temp->file_name(), TSN_LOG_READWRITE, log);
 			assert(ret>=0);	
 		}
+    assert(log);
+    assert(log->log_ops);
 		uint64_t bytes = log->log_ops->l_read(log, &lsn, src_data_.address_data(), src_data_.len());
 		std::cout<<lsn.lsn<<" "<<bytes<<" "<<open<<std::endl;
 		assert(bytes == src_data_.len());

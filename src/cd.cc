@@ -44,25 +44,24 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 using namespace std;
 
-// Actual CD Object only exists in a single node and in a single process.
-// Potentially copy of CD Object can exist but it should not be used directly. 
-//// We also need to think about when maintaining copy of CD objects, how are they going to be synchrnoized  (the values, and the entries and all that)
+/// Actual CD Object only exists in a single node and in a single process.
+/// Potentially copy of CD Object can exist but it should not be used directly. 
+/// We also need to think about when maintaining copy of CD objects, how are they going to be synchrnoized  (the values, and the entries and all that)
 
-// Handle would be an accessor to this object. (Kind of an interface for these)
-// If CD Object resides in current process then, it is act as pointer. 
-// If CD Object does not reside in current process, then it will do the appropriate things. 
+/// Handle would be an accessor to this object. (Kind of an interface for these)
+/// If CD Object resides in current process then, it is act as pointer. 
+/// If CD Object does not reside in current process, then it will do the appropriate things. 
 
-// Right now I am making single threaded version so don't consider CDHandle too much 
-// Complication will be delayed until we start developing multithreaded or multi node version.
+/// Right now I am making single threaded version so don't consider CDHandle too much 
+/// Complication will be delayed until we start developing multithreaded or multi node version.
 
-// TODO: Desgin decision on CD Tree
-// CD Tree: If CD tree is managed by N nodes, 
-// node (cd_id % N) is where we need to ask for insert, delete, and peek operations. 
-// Distributed over N nodes, and the guide line is cd_id. 
-// If every node that exists handles cd tree, then this means cd tree is always local. 
-// Root CD will, in this case, be located at Node 0 for example. 
- 
-// TODO: how do we implement preempt stop function? 
+/// TODO: Desgin decision on CD Tree
+/// CD Tree: If CD tree is managed by N nodes, 
+/// node (cd_id % N) is where we need to ask for insert, delete, and peek operations. 
+/// Distributed over N nodes, and the guide line is cd_id. 
+/// If every node that exists handles cd tree, then this means cd tree is always local. 
+/// Root CD will, in this case, be located at Node 0 for example. 
+/// TODO: how do we implement preempt stop function? 
 
 /// ISSUE Kyushick
 /// level+1 when we create children CDs.
@@ -74,7 +73,7 @@ using namespace std;
 
 CD::CD()
 {
-  cd_type_ = kStrict;	
+  cd_type_ = kStrict;  
   name_    = const_cast<char*>("INITIAL_NAME");
   sys_detect_bit_vector_ = 0;
 
@@ -85,7 +84,7 @@ CD::CD()
   // For now, I decided it as an unique one
   cd_id_.object_id_++;
 
-  Init();	
+  Init();  
 }
 
 CD::CD( CDHandle* cd_parent, 
@@ -97,7 +96,7 @@ CD::CD( CDHandle* cd_parent,
   // FIXME: only acquire root handle when needed. 
   // Most of the time, this might not be required.
 
-  cd_type_	= cd_type;
+  cd_type_  = cd_type;
   name_     = const_cast<char*>(name);
   // FIXME
   sys_detect_bit_vector_ = sys_bit_vector;
@@ -115,31 +114,31 @@ CD::CD( CDHandle* cd_parent,
   cd_id_.object_id_++;
 
   // FIXME maybe call self generating function here?           
-  // cd_self_	= self;  //FIXME maybe call self generating function here?           
+  // cd_self_  = self;  //FIXME maybe call self generating function here?           
 
   // FIXME 
   // cd_id_.level_ = parent_cd_id.level_ + 1;
   // we need to get parent id ... 
   // but if they are not local, this might be hard to acquire.... 
   // perhaps we should assume that cd_id is always store in the handle ...
-	// Kyushick : if we pass cd_parent handle to the children CD object when we create it,
-	// this can be resolved. 
+  // Kyushick : if we pass cd_parent handle to the children CD object when we create it,
+  // this can be resolved. 
 
-  Init();	
+  Init();  
 }
 
 void CD::Initialize(CDHandle* cd_parent, 
-						        const char* name, 
-						        CDID cd_id, 
-						        CDType cd_type, 
-						        uint64_t sys_bit_vector)
+                    const char* name, 
+                    CDID cd_id, 
+                    CDType cd_type, 
+                    uint64_t sys_bit_vector)
 {
-  cd_type_	= cd_type;
+  cd_type_  = cd_type;
   name_     = const_cast<char*>(name);
   cd_id_    = cd_id;
   cd_id_.object_id_++;
   sys_detect_bit_vector_ = sys_bit_vector;
-  Init();	
+  Init();  
 }
 
 void CD::Init()
@@ -148,12 +147,16 @@ void CD::Init()
   cd_exec_mode_  = kSuspension;
   option_save_context_ = 0;
 #if _WORK 
-	path = Path("ssd", "hhd");
-	path.SetSSDPath("./SSDpath/");
+  path = Path("ssd", "hhd");
+  path.SetSSDPath("./SSDpath/");
   path.SetHDDPath("./HDDpath/");
-	InitOpenHDD();
-	InitOpenSSD();
+  InitOpenHDD();
+  InitOpenSSD();
 #endif
+
+// Kyushick : I think we already initialize cd_id_ object inside cd object creator (outside of Init method)
+// So we do not have to get it here. 
+// I think this should be inside CDID object creator because there is no information to pass from CD object to CDID object
 //  cd_id_.domain_id_ = Util::GetCurrentDomainID();
 //  cd_id_.object_id_ = Util::GenerateCDObjectID();
 //  cd_id_.sequential_id_ = 0;
@@ -198,29 +201,29 @@ CDErrT CD::Destroy(void)
 
 //GONG
 #if _WORK
-	//When we destroy a CD, we need to delete its log (preservation file)
+  //When we destroy a CD, we need to delete its log (preservation file)
   for(std::list<CDEntry>::iterator it = entry_directory_.begin(); 
-			it != entry_directory_.end() ; ++it) {
+      it != entry_directory_.end() ; ++it) {
 
-		bool use_file = false;
-		if(cd_id_.level_<=1)	use_file = true;
-		if( use_file == true)  {
-			if(cd_id_.level_==1) { // HDD
-				it->CloseFile(&HDDlog);	
-			}
-			else { // SSD
-				it->CloseFile(&SSDlog);	
-			}
-		}
+    bool use_file = false;
+    if(cd_id_.level_<=1)  use_file = true;
+    if( use_file == true)  {
+      if(cd_id_.level_==1) { // HDD
+        it->CloseFile(&HDDlog);  
+      }
+      else { // SSD
+        it->CloseFile(&SSDlog);  
+      }
+    }
 
-	}	// for loop ends
+  }  // for loop ends
 #endif
 
-  if(GetCDID().level_ != 0) { 	// non-root CD
+  if(GetCDID().level_ != 0) {   // non-root CD
 
 
   } 
-  else {		// Root CD
+  else {    // Root CD
 
   }
   
@@ -230,47 +233,12 @@ CDErrT CD::Destroy(void)
 }
 
 
-// Let's say re-execution is being performed and thus all the children should be stopped, 
-// need to provide a way to stop currently running task and then re-execute from some point. 
-
-//CDHandle CD::Create(enum CDType cd_type, CDHandle &parent)
-//CD* CD::Create(CDHandle* parent, const char* name, CDID new_cd_id, CDType cd_type, uint64_t sys_bit_vector)
-//{
-//  CD* new_cd = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-//  return new_cd;
-
-//  CD* cd = new CD(cd_type, parent);
-  // level should be +1 to the parent's level id
-
-//  CDHandle self_handle;
-
-
-  // CD ID could be look like domain.level.object_unique_id.sequential_id 
-  // sequential_id is zero when the object have not yet begun. 
-  // after that for each begin() we increase sequential_id by one. 
-  // For collective begin, even though it gets called multiple times, just increase by one of course.
-
-//  self_handle.Initialize(cd,cd_id(), Util::GetCurrentTaskID(), Util::GetCurrentProcessID() ); 
-
-
-  //FIXME TODO Register this to CD Tree	
-
-
-  //	CDHandle self; // having self at CD instance does not make any sense. This will completely deleted.
-  //	self.set_cd(cd);
-
-  //self.set_cd_id(cd_id); // cd_id is unknown at this time. let's do this when CD::Begin() is called
-  //FIXME need to put rank id and process id	
-//  return self_handle;		
-//}
-
-/* ------------------------------------ Definition of class cd member function ---------------------------- */
-/* 	CD::begin()
- *	(1) Call all the user-defined error checking functions. 
+/*   CD::begin()
+ *  (1) Call all the user-defined error checking functions. 
  *      Jinsuk: Why should we call error checking function at the beginning?
  *      Kyushick: It doesn't have to. I wrote it long time ago, so explanation here might be quite old.
- *		Each error checking function should call its error handling function.(mostly restore() and reexec())	
- *	(2) 
+ *    Each error checking function should call its error handling function.(mostly restore() and reexec())  
+ *  (2) 
  *
  *  (3)
  *
@@ -278,11 +246,9 @@ CDErrT CD::Destroy(void)
 
 // Here we don't need to follow the exact CD API this is more like internal thing. 
 // CDHandle will follow the standard interface. 
-CDErrT CD::Begin(bool collective, std::string label)
+CDErrT CD::Begin(bool collective, const char* label)
 {
-  //  setjmp(jump_buffer_);
-  //  getcontext(&ctxt_);
-
+  cout<<"inside CD::Begin"<<endl;
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
@@ -294,10 +260,9 @@ CDErrT CD::Begin(bool collective, std::string label)
   return kOK;
 }
 
-
-/*  CD::complete()
+/*  CD::Complete()
  *  (1) Call all the user-defined error checking functions.
- *    Each error checking function should call its error handling function.(mostly restore() and reexec())  
+ *      Each error checking function should call its error handling function.(mostly restore() and reexec())  
  *  (2) 
  *
  *  (3)
@@ -305,6 +270,11 @@ CDErrT CD::Begin(bool collective, std::string label)
  */
 CDErrT CD::Complete(bool collective, bool update_preservations)
 {
+
+//  if( cd_exec_mode_ != kReexecution ) {
+//  }
+//  else {
+//  }
 
   // Increase sequential ID by one
   cd_id_.sequential_id_++;
@@ -314,13 +284,8 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   DeleteEntryDirectory();
 
   // TODO ASSERT( cd_exec_mode_  != kSuspension );
-  // FIXME don't we have to wait for others to be completed?	
+  // FIXME don't we have to wait for others to be completed?  
   cd_exec_mode_ = kSuspension; 
-/*
-  if( cd_exec_mode_ == kReexecution ) {
-
-    }
-*/
   return kOK;
 }
 
@@ -354,55 +319,91 @@ CDErrT CD::Preserve(void* data,
   // For example, it should bypass malloc wrap functions.
   // FIXME for now let's just use regular malloc call 
   if(cd_exec_mode_ == kExecution ) {
-
-    //return ((CDErrT)kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? (CDErrT)kOK : (CDErrT)kError;
-    return (kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? kOK : kError;
-
+//    return ((CDErrT)kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? (CDErrT)kOK : (CDErrT)kError;
+//    return (kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? kOK : kError;
+    return InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
   }
   else if(cd_exec_mode_ == kReexecution) {
-
-    // it is in re-execution mode, so instead of preserving data, restore the data 
-    // Two options, one is to do the job here, another is that just skip and do nothing here but do the restoration job in different place and go though all the CDEntry and call Restore() method. The later option seems to be more efficient but it is not clear that whether this brings some consistency issue as restoration is done at the very beginning while preservation was done one by one and sometimes there could be some computation in between the preservations.. (but wait is it true?)
+    // it is in re-execution mode, so instead of preserving data, restore the data.
+    // Two options, one is to do the job here, 
+    // another is that just skip and do nothing here but do the restoration job in different place, 
+    // and go though all the CDEntry and call Restore() method. 
+    // The later option seems to be more efficient but it is not clear that 
+    // whether this brings some consistency issue as restoration is done at the very beginning 
+    // while preservation was done one by one 
+    // and sometimes there could be some computation in between the preservations.. (but wait is it true?)
   
     // Jinsuk: Because we want to make sure the order is the same as preservation, we go with  Wait...... It does not make sense... 
-
     // Jinsuk: For now let's do nothing and just restore the entire directory at once.
-    // Jinsuk: Caveat: if user is going to read or write any memory space that will be eventually preserved, FIRST user need to preserve that region and use them. Otherwise current way of restoration won't work. Right now restore happens one by one. Everytime restore is called one entry is restored. 
+    // Jinsuk: Caveat: if user is going to read or write any memory space that will be eventually preserved, 
+    // FIRST user need to preserve that region and use them. 
+    // Otherwise current way of restoration won't work. 
+    // Right now restore happens one by one. 
+    // Everytime restore is called one entry is restored. 
     if( iterator_entry_ == entry_directory_.end() ) {
       //ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
-      // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. we reached the last preserve function call. 
+      // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
+      // we reached the last preserve function call. 
 
       //Since we have reached the last point already now convert current execution mode into kExecution
-      //	    printf("Now reached end of entry directory, now switching to normal execution mode\n");
-      cd_exec_mode_  = kExecution;		
+      //      printf("Now reached end of entry directory, now switching to normal execution mode\n");
+      cd_exec_mode_  = kExecution;    
   //  return InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
       return (kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? kOK : kError;
     }
     else {
-      //		 printf("Reexecution mode...\n");
+      //     printf("Reexecution mode...\n");
       CDEntry cd_entry = *iterator_entry_;
       iterator_entry_++;
-			bool use_file = (bool)ref_name;
-			bool open = true;
-//			if(cd_id_.level_<=1)
-//				use_file = true;
-			if( use_file == true) 
-      {
-				if(cd_id_.level_==1) {	// HDD
-					bool _isOpenHDD = isOpenHDD();
-					if(!_isOpenHDD)	OpenHDD(); // set flag 'open_HDD' 			
-      		return (CDEntry::CDEntryErrT::kOK ==cd_entry.Restore(_isOpenHDD, &HDDlog))? kOK: kError;
-				}
-				else { // SSD
-					bool _isOpenSSD = isOpenSSD();
-					if(!_isOpenSSD)
-						OpenSSD(); // set flag 'open_SSD' 			
-      		return (CDEntry::CDEntryErrT::kOK ==cd_entry.Restore(_isOpenSSD, &SSDlog))? kOK : kError;
-				}
-			}
-			else {
-				return (CDEntry::CDEntryErrT::kOK ==cd_entry.Restore(open, &HDDlog))? kOK : kError;
-			}
+#if _WORK
+      bool use_file = (bool)ref_name;
+      bool open = true;
+//      if(cd_id_.level_<=1)
+//        use_file = true;
+      if( use_file == true) {
+
+//        if(cd_id_.level_==1) {  // HDD
+//          bool _isOpenHDD = isOpenHDD();
+//          if(!_isOpenHDD)  
+//            OpenHDD(); // set flag 'open_HDD'       
+//          return cd_entry.Restore(_isOpenHDD, &HDDlog);
+//        }
+//        else { // SSD
+//          bool _isOpenSSD = isOpenSSD();
+//          if(!_isOpenSSD)
+//            OpenSSD(); // set flag 'open_SSD'       
+//          return cd_entry.Restore(_isOpenSSD, &SSDlog);
+//        }
+        switch(GetPlaceToPreserve()) {
+          case kMemory:
+            assert(0);
+            break;
+          case kHDD:
+//            bool _isOpenHDD = isOpenHDD();
+            if( !isOpenHDD() )  
+              OpenHDD(); // set flag 'open_HDD'       
+            return cd_entry.Restore(isOpenHDD(), &HDDlog);
+        
+          case kSSD:
+//            bool _isOpenSSD = isOpenSSD();
+            if( !isOpenSSD() )
+              OpenSSD(); // set flag 'open_SSD'       
+            return cd_entry.Restore(isOpenSSD(), &SSDlog);
+        
+          case kPFS:
+            assert(0);
+            break;
+          default:
+            break;
+        }
+
+      }
+      else {
+        return cd_entry.Restore(open, &HDDlog);
+      }
+#else
+      return cd_entry.Restore() kOK : kError;
+#endif
     }
 
   } // Reexecution ends
@@ -410,17 +411,21 @@ CDErrT CD::Preserve(void* data,
 
 }
 
-
+PrvMediumT CD::GetPlaceToPreserve()
+{
+  if(GetCDID().level_==1) return kHDD;
+  else return kSSD;
+}
 
 
 CDErrT CD::InternalPreserve(void *data, 
-                                        uint64_t len_in_bytes, 
-                                        uint32_t preserve_mask=kCopy, 
-                                        const char *my_name=0, 
-                                        const char *ref_name=0, 
-                                        uint64_t ref_offset=0, 
-                                        const RegenObject* regen_object=0, 
-                                        PreserveUseT data_usage=kUnsure)
+                            uint64_t len_in_bytes, 
+                            uint32_t preserve_mask=kCopy, 
+                            const char *my_name=0, 
+                            const char *ref_name=0, 
+                            uint64_t ref_offset=0, 
+                            const RegenObject* regen_object=0, 
+                            PreserveUseT data_usage=kUnsure)
 {
 
   if(cd_exec_mode_  == kExecution ) {
@@ -438,12 +443,12 @@ CDErrT CD::InternalPreserve(void *data,
     // Object itself will know better than class CD. 
     bool use_file =false;
 
-		// GONG
-		//storage mapping in preservation example:
-	  //If the level of cd <=2, we use files (HDD,SSD)
-	  //FIXME SL: Does this mapping seem reasonable? 	
-		if(cd_id_.level_<=1)
-			use_file = true;
+    // GONG
+    //storage mapping in preservation example:
+    //If the level of cd <=2, we use files (HDD,SSD)
+    //FIXME SL: Does this mapping seem reasonable?   
+    if(cd_id_.level_<=1)
+      use_file = true;
 
 
     if( ref_name == 0 ) {
@@ -467,30 +472,30 @@ CDErrT CD::InternalPreserve(void *data,
     CDEntry *cd_entry = new CDEntry(src_data, dst_data, my_name);
     if( ref_name != 0 ) {
     // if via reference
-      cd_entry->set_my_cd(this); // this required for tracking parent later.. this is needed only when via ref 	
+      cd_entry->set_my_cd(this); // this required for tracking parent later.. this is needed only when via ref   
     }
 
     if( ref_name == 0) { 
     // if it is not via reference then save right now!
 
-			// GONG
-			if( use_file == true) 
+      // GONG
+      if( use_file == true) 
       {
-				//FIXME: For now, we choose the storage medium according to CD level				
-				if(cd_id_.level_==1) { // HDD
-					bool _isOpenHDD = isOpenHDD();
-					if(!_isOpenHDD)	OpenHDD(); // set flag 'open_HDD' 			
-      		cd_entry->SaveFile(path.GetHDDPath(), _isOpenHDD, &HDDlog);
-				}
-				else { // SSD
-					bool _isOpenSSD = isOpenSSD();
-					if(!_isOpenSSD)	OpenSSD(); // set flag 'open_SSD' 			
-      		cd_entry->SaveFile(path.GetSSDPath(), _isOpenSSD, &SSDlog);
-				}
-			}
-			else {
-      	cd_entry->SaveMem();
-			}
+        //FIXME: For now, we choose the storage medium according to CD level        
+        if(cd_id_.level_==1) { // HDD
+          bool _isOpenHDD = isOpenHDD();
+          if(!_isOpenHDD)  OpenHDD(); // set flag 'open_HDD'       
+          cd_entry->SaveFile(path.GetHDDPath(), _isOpenHDD, &HDDlog);
+        }
+        else { // SSD
+          bool _isOpenSSD = isOpenSSD();
+          if(!_isOpenSSD)  OpenSSD(); // set flag 'open_SSD'       
+          cd_entry->SaveFile(path.GetSSDPath(), _isOpenSSD, &SSDlog);
+        }
+      }
+      else {
+        cd_entry->SaveMem();
+      }
 
       //cd_entry->Save();
     }
@@ -611,7 +616,7 @@ CDErrT CD::Restore()
   // this code section is for restoring all the cd entries at once. 
   // Now this is defunct. 
 
-  /*	for( std::list<CDEntry*>::iterator it = entry_directory_.begin(), it_end = entry_directory_.end(); it != it_end ; ++it)
+  /*  for( std::list<CDEntry*>::iterator it = entry_directory_.begin(), it_end = entry_directory_.end(); it != it_end ; ++it)
       {
       (*it)->Restore();
       } */
@@ -661,8 +666,11 @@ CDErrT CD::Reexecute(void)
 
   //TODO We need to make sure that all children has stopped before re-executing this CD.
   Stop();
-//  if( typeid(*this).name == "MasterCD" )
-//    this->StopAllChildren();
+
+//  if(IsMaster()){
+//  }
+//  else {
+//  }
 
   //TODO We need to consider collective re-start. 
   if(ctxt_prv_mode_ == kExcludeStack) {
@@ -677,6 +685,8 @@ CDErrT CD::Reexecute(void)
   return kOK;
 }
 
+// Let's say re-execution is being performed and thus all the children should be stopped, 
+// need to provide a way to stop currently running task and then re-execute from some point. 
 CDErrT CD::Stop(CDHandle* cdh)
 {
   //TODO Stop current CD.... here how? what needs to be done? 
@@ -700,7 +710,7 @@ CDErrT CD::AddChild(CDHandle* cd_child)
 //  std::cout<<"sth wrong"<<std::endl; 
 //  getchar(); 
   // Do nothing?
-  return kOK;	
+  return kOK;  
 }
 
 CDErrT CD::RemoveChild(CDHandle* cd_child) 
@@ -773,7 +783,7 @@ CDErrT MasterCD::AddChild(CDHandle* cd_child)
 {
   cd_children_.push_back(cd_child);
 
-  return kOK;	
+  return kOK;  
 }
 
 
@@ -838,4 +848,34 @@ void CD::DeleteEntryDirectory(void)
 //  return kOK;
 //}
 
+// Old version of Creat()
+//CDHandle CD::Create(enum CDType cd_type, CDHandle &parent)
+//CD* CD::Create(CDHandle* parent, const char* name, CDID new_cd_id, CDType cd_type, uint64_t sys_bit_vector)
+//{
+//  CD* new_cd = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
+//  return new_cd;
 
+//  CD* cd = new CD(cd_type, parent);
+  // level should be +1 to the parent's level id
+
+//  CDHandle self_handle;
+
+
+  // CD ID could be look like domain.level.object_unique_id.sequential_id 
+  // sequential_id is zero when the object have not yet begun. 
+  // after that for each begin() we increase sequential_id by one. 
+  // For collective begin, even though it gets called multiple times, just increase by one of course.
+
+//  self_handle.Initialize(cd,cd_id(), Util::GetCurrentTaskID(), Util::GetCurrentProcessID() ); 
+
+
+  //FIXME TODO Register this to CD Tree  
+
+
+  //  CDHandle self; // having self at CD instance does not make any sense. This will completely deleted.
+  //  self.set_cd(cd);
+
+  //self.set_cd_id(cd_id); // cd_id is unknown at this time. let's do this when CD::Begin() is called
+  //FIXME need to put rank id and process id  
+//  return self_handle;    
+//}

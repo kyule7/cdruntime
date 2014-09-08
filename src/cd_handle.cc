@@ -191,14 +191,14 @@ CDHandle::CDHandle( CDHandle* parent,
     // Generate CDID
     CDID new_cd_id(parent->ptr_cd_->GetCDID().level_ + 1, node_id_);
 
-  	/// Create CD object with new CDID
+    /// Create CD object with new CDID
     if( !IsMaster() ) {
       ptr_cd_  = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
     }
     else {
       MasterCD* ptr_cd  = new MasterCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
 //    MasterCD* ptr_cd  = (MasterCD*)DATA_MALLOC(sizeof(MasterCD));
-//		ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
+//    ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
       MasterCDPath.push_back(ptr_cd);
       ptr_cd_ = ptr_cd;
 //      if(is_visualized == false){
@@ -211,14 +211,14 @@ CDHandle::CDHandle( CDHandle* parent,
     // Generate CDID
     CDID new_cd_id(0, node_id_);
 
-  	/// Create CD object with new CDID
+    /// Create CD object with new CDID
     if( !IsMaster() ) {
       ptr_cd_  = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
     }
     else {
       MasterCD* ptr_cd  = new MasterCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
 //    MasterCD* ptr_cd  = (MasterCD*)DATA_MALLOC(sizeof(MasterCD));
-//		ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
+//    ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
       MasterCDPath.push_back(ptr_cd);
       ptr_cd_ = ptr_cd;
 //      if(is_visualized == false){
@@ -229,7 +229,7 @@ CDHandle::CDHandle( CDHandle* parent,
   }
 
   cout<<"\nCD Node is created : "<<node_id_<<"\n"<<endl;
-	assert(ptr_cd_ == 0);
+  assert(ptr_cd_ != 0);
 }
 
 CDHandle::CDHandle( CDHandle* parent, 
@@ -249,14 +249,14 @@ CDHandle::CDHandle( CDHandle* parent,
     // Generate CDID
     CDID new_cd_id(parent->ptr_cd_->GetCDID().level_ + 1, node_id_);
 
-  	/// Create CD object with new CDID
+    /// Create CD object with new CDID
     if( !IsMaster() ) {
       ptr_cd_  = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
     }
     else {
       MasterCD* ptr_cd  = new MasterCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
 //    MasterCD* ptr_cd  = (MasterCD*)DATA_MALLOC(sizeof(MasterCD));
-//		ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
+//    ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
       MasterCDPath.push_back(ptr_cd);
       ptr_cd_ = ptr_cd;
 //      if(is_visualized == false){
@@ -269,15 +269,15 @@ CDHandle::CDHandle( CDHandle* parent,
     // Generate CDID
     CDID new_cd_id(0, node_id_);
 
-  	/// Create CD object with new CDID
+    /// Create CD object with new CDID
     if( !IsMaster() ) {
       ptr_cd_  = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
     }
     else {
       MasterCD* ptr_cd  = new MasterCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-			assert(ptr_cd == nullptr);
+      assert(ptr_cd != nullptr);
 //      MasterCD* ptr_cd  = (MasterCD*)DATA_MALLOC(sizeof(MasterCD));
-//  		ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
+//      ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
       MasterCDPath.push_back(ptr_cd);
       ptr_cd_ = ptr_cd;
 //      if(is_visualized == false){
@@ -288,7 +288,8 @@ CDHandle::CDHandle( CDHandle* parent,
   }
 
   cout<<"\nCD Node is created : "<<node_id_<<"\n"<<endl;
-	assert(ptr_cd_ == 0);
+  cout<<"ptr_cd "<<ptr_cd_<<endl;
+  assert(ptr_cd_ != 0);
 }
 
 CDHandle::~CDHandle()
@@ -372,7 +373,7 @@ CDHandle* CDHandle::Create( int color,
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
 
 
-  NodeID new_node(MPI_UNDEFINED, 0, 0, 0);
+  NodeID new_node(INITIAL_COLOR, 0, 0, 0);
   
   // Split the node
   // (x,y,z)
@@ -640,7 +641,7 @@ CDErrT CDHandle::Begin (bool collective, const char* label)
   }
 //  cout << label << endl;
   cout<<11111<<endl;
-	getchar();
+  getchar();
 
 #if _PROFILER
   int onOff = 0;
@@ -678,12 +679,14 @@ CDErrT CDHandle::Begin (bool collective, const char* label)
   }
 #endif
 
-  assert(ptr_cd_ == 0);
+  assert(ptr_cd_ != 0);
 
 
-	cout<<22222<<endl;
-	getchar();
-  return ptr_cd_->Begin(collective, label);
+  cout<<22222<<"  "<<ptr_cd_<<"   "<<ptr_cd_->GetCDID().object_id_<<endl;
+  getchar();
+
+  CDErrT err = ptr_cd_->Begin(collective, label);
+  return err;
 }
 
 CDErrT CDHandle::Complete (bool collective, bool update_preservations)
@@ -910,12 +913,14 @@ void CDHandle::SetMaster(int task)
 CDErrT CDHandle::Sync() 
 {
   CDErrT err = INITIAL_ERR_VAL;
-//#if _CD_MPI
+#if _CD_MPI
   int mpi_err = MPI_Barrier(node_id_.color_);
-//#endif
-	if(mpi_err != 0) { 
-		err = kOK; 
-	}
+#else
+  int mpi_err = 1;
+#endif
+  if(mpi_err != 0) { 
+    err = kOK; 
+  }
   return err;
 }
 
@@ -1067,28 +1072,25 @@ CDErrT CDHandle::SetPGASType (void *data_ptr, uint64_t len, CDPGASUsageT region_
 
 int CDHandle::ctxt_prv_mode()
 {
-/* RELEASE
   if( IsMaster() )
   {
 
-    return (int)ptr_cd_->context_preservation_mode_;
+    return (int)ptr_cd_->ctxt_prv_mode_;
   }
   else
   {
     //FIXME: need to get the flag from remote
 
   }
- */
 
   return 0;
 }
 
 void CDHandle::CommitPreserveBuff()
 {
-/*  RELEASE 
   if( IsMaster() )
   {
-    if( ptr_cd_->context_preservation_mode_ == CD::kExcludeStack) 
+    if( ptr_cd_->ctxt_prv_mode_ == CD::kExcludeStack) 
      {
         memcpy(ptr_cd_->jump_buffer_, jump_buffer_, sizeof(jmp_buf));
      }
@@ -1103,7 +1105,6 @@ void CDHandle::CommitPreserveBuff()
     //FIXME: need to transfer the buffers to remote
 
   }
-*/
 }
 
 

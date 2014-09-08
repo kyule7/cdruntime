@@ -75,10 +75,10 @@ CDID::CDID(uint64_t level, NodeID&& new_node_id)
 //CDID::CDID(CDHandle* parent, const NodeID& new_node_id)
 //{
 //  if(parent != NULL) {
-//  	level_         = parent->ptr_cd_->GetCDID().level_ + 1;
+//    level_         = parent->ptr_cd_->GetCDID().level_ + 1;
 //  }
 //  else { // Root CD
-//  	level_         = 0;
+//    level_         = 0;
 //  }
 //  node_id_ = new_node_id;
 //  domain_id_     = 0; 
@@ -89,10 +89,10 @@ CDID::CDID(uint64_t level, NodeID&& new_node_id)
 //CDID::CDID(CDHandle* parent, NodeID&& new_node_id)
 //{
 //  if(parent != NULL) {
-//  	level_         = parent->ptr_cd_->GetCDID().level_ + 1;
+//    level_         = parent->ptr_cd_->GetCDID().level_ + 1;
 //  }
 //  else { // Root CD
-//  	level_         = 0;
+//    level_         = 0;
 //  }
 //  node_id_ = std::move(new_node_id);
 //  domain_id_     = 0; 

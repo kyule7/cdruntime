@@ -103,19 +103,19 @@ class cd::CDHandle {
     /// sight-related member data
 #if _ENABLE_MODULE
     /// All modules that are currently live
-		static std::list<module*>    mStack;
-		static modularApp*           ma;
+    static std::list<module*>    mStack;
+    static modularApp*           ma;
 #endif
 
 #if _ENABLE_HIERGRAPH
-		static std::list<hierGraph*> hgStack;
-		static hierGraphApp*         hga;
+    static std::list<hierGraph*> hgStack;
+    static hierGraphApp*         hga;
 #endif
 
 #if _ENABLE_SCOPE
     /// All scopes that are currently live
-		static std::list<scope*>     sStack;
-		static graph*                scopeGraph;
+    static std::list<scope*>     sStack;
+    static graph*                scopeGraph;
 #endif
 
 #if _ENABLE_ATTR
@@ -126,14 +126,14 @@ class cd::CDHandle {
 
 #if _ENABLE_CDNODE
     /// All CD Nodes that are currently live
-		static std::list<CDNode*>    cdStack;
+    static std::list<CDNode*>    cdStack;
 #endif
 
 #if _ENABLE_COMP
-		static std::vector<comparison*> compTagStack;
-		
-//		static std::vector<int> compKeyStack;
-//		static std::list<comparison*> compStack;
+    static std::vector<comparison*> compTagStack;
+    
+//    static std::vector<int> compKeyStack;
+//    static std::list<comparison*> compStack;
 #endif
 
     void InitProfile(std::string label="INITIAL_LABEL");
@@ -178,15 +178,15 @@ class cd::CDHandle {
     void DestroyModule(void);
 #endif
 #if _ENABLE_HIERGRAPH
-		void CreateHierGraph(void);
-		void DestroyHierGraph(void);
+    void CreateHierGraph(void);
+    void DestroyHierGraph(void);
 #endif
 #if _ENABLE_COMP
     void CreateComparison(void);
     void DestroyComparison(void);
 #endif
   
-	public:
+  public:
     void InitViz();
     void FinalizeViz(void);
 #endif
@@ -349,7 +349,7 @@ class cd::CDHandle {
     // It returns sibling ID
     // type can be just int because color and task are int type
     CDErrT AddChild(CDHandle* cd_child);
-    CDErrT RemoveChild(CDHandle* cd_child);	
+    CDErrT RemoveChild(CDHandle* cd_child);  
 
     CDErrT Stop(void);
   
