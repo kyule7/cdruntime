@@ -3,14 +3,14 @@
 using namespace cd;
 
 
-CDErrT CDEntry::Delete(void)
+CDEntry::CDEntryErrT CDEntry::Delete(void)
 {
-	return kOK;
+	return CDEntry::CDEntryErrT::kOK;
 }
 
 
 //GONG
-CDErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
+CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 //#else
 //enum CDEntry::CDEntryErrT CDEntry::Restore()
 //#endif
@@ -81,8 +81,8 @@ CDErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 	}
 	else if( dst_data_temp->handle_type() == DataHandle::kOSFile) 
 	{
-//GONG
-std::cout<<"kOSFile file_name() : "<<dst_data_temp->file_name()<<" offset: "<<dst_data_temp->ref_offset()<<std::endl;					
+    //GONG
+    std::cout<<"kOSFile file_name() : "<<dst_data_temp->file_name()<<" offset: "<<dst_data_temp->ref_offset()<<std::endl;					
 		if(!open){
 			int ret;
 //			ret = tsn_log_create_file(dst_data_temp->file_name());
@@ -117,7 +117,7 @@ std::cout<<"kOSFile file_name() : "<<dst_data_temp->file_name()<<" offset: "<<ds
 	}
 
 
-	return kOK;
+	return CDEntry::CDEntryErrT::kOK;
 	//Direction is from dst_data_ to src_data_
 
 }

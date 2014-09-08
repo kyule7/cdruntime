@@ -63,7 +63,7 @@ class cd::CDEntry : public cd::Serializable
         src_data_.data_address =    
         }*/
   public:
-//    enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError};
+    enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError};
     
     CDEntry(){}
     CDEntry(const DataHandle src_data, const DataHandle dst_data, const char *my_name=0) 
@@ -76,69 +76,66 @@ class cd::CDEntry : public cd::Serializable
 
     ~CDEntry()
     {
-
       //FIXME we need to delete allocated (preserved) space at some point, should we do it when entry is destroyed?  when is appropriate for now let's do it now.
-      if( dst_data_.address_data() != NULL )
-        DATA_FREE( dst_data_.address_data() ); 
-      if( dst_data_.file_name() != NULL )
-      {
+      if( dst_data_.address_data() != NULL ) {
+        DATA_FREE( dst_data_.address_data() );
+      }
+ 
+      if( dst_data_.file_name() != NULL )  {
         delete dst_data_.file_name(); 
       }
-
-    }
-    cd::CD *ptr_cd()
-    {
-      return ptr_cd_; 
-    }
-    void set_my_cd(cd::CD *ptr_cd)
-    {
-      //FIXME: currently it is assumed that my cd is always in the same memory space.
-      //In the future we might need a distributed CD structure. For example right now we have one list who handles all the CDEntries for that CD. But this list might need to be distributed if that CD spans among multiple threads. If we have that data structure the issue here will be solved anyways. 
-      ptr_cd_ = ptr_cd;
     }
 
-		CDErrT Delete(void);
+    // FIXME: currently it is assumed that my cd is always in the same memory space.
+    // In the future we might need a distributed CD structure. 
+    // For example right now we have one list who handles all the CDEntries for that CD. 
+    // But this list might need to be distributed if that CD spans among multiple threads. 
+    // If we have that data structure the issue here will be solved anyways. 
+    void set_my_cd(cd::CD* ptr_cd) { ptr_cd_ = ptr_cd; }
+    cd::CD* ptr_cd() { return ptr_cd_; }
+
+		CDEntryErrT Delete(void);
 
 //GONG
-#if _WORK
+//#if _WORK
 		private:
 		struct tsn_lsn_struct lsn, durable_lsn;
 
 		public:
-		std::string my_name(){return name_;}
-		CDErrT SaveMem()
+		std::string my_name() { return name_; }
+
+		CDEntryErrT SaveMem(void)
 		{
-      if(dst_data_.address_data() == NULL)
-      {
+      if(dst_data_.address_data() == NULL) {
         void *allocated_space;
         allocated_space = DATA_MALLOC(dst_data_.len() * sizeof(char));  // FIXME: Jinsuk we might want our own memory manager since we don't want to call malloc everytime we want small amount of additional memory. 
         dst_data_.set_address_data(allocated_space);
       }
+      else {
 
-
-      if(dst_data_.address_data() != NULL) 
-      {
-        memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len()); 
+        memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len());
+        if(false) { // Is there a way to check if memcpy is done well?
+          ERROR_MESSAGE("Not enough memory.");
+          assert(0);
+          return kOutOfMemory; 
+        }
       }
-      else 
-      {
-        return kOutOfMemory;
-        //  ERROR_MESSAGE("Not enough memory.");
-      }		
+
       return kOK;
 		}
 
-		CDErrT SaveFile(std::string base_, bool open, struct tsn_log_struct *log)
+		CDEntryErrT SaveFile(std::string base_, bool open, struct tsn_log_struct *log)
     {
-      if( dst_data_.file_name() == NULL )
-      {
-        char *cd_file = new char[MAX_FILE_PATH];
-        cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file, base_); 
-// assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-//        cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); 
-        dst_data_.set_file_name(cd_file);
+      // Get file name to write if it is currently NULL
+      if( dst_data_.file_name() == NULL ) {
+        // assume cd_id_ is unique (sequential cds will have different cd_id) 
+        // and address data is also unique by natural
+//        char *cd_file = new char[MAX_FILE_PATH];
+//        cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file, base_); 
+        dst_data_.set_file_name(cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), base_));
       }
-		 	if(!open){
+
+		 	if(!open) {
 				int ret;
         printf("inside saveMem\n");
         getchar();
@@ -166,8 +163,8 @@ class cd::CDEntry : public cd::Serializable
 			ret = tsn_log_destroy_file(dst_data_.file_name());	
 		}
 
-#else
-    CDErrT Save()
+//#else
+    CDEntryErrT Save()
     {
       //Direction is from src_data_ to dst_data_
 
@@ -176,10 +173,8 @@ class cd::CDEntry : public cd::Serializable
 
       //FIXME we need to distinguish whether this request is on Remote or local for both when using kOSFile or kMemory and do appropriate operations..
       //FIXME we need to distinguish whether this is to a reference....
-      if(dst_data_.handle_type() == DataHandle::kMemory)
-      {
-        if(dst_data_.address_data() == NULL)
-        {
+      if( dst_data_.handle_type() == DataHandle::kMemory ) {
+        if(dst_data_.address_data() == NULL) {
 
           void *allocated_space;
           allocated_space = DATA_MALLOC(dst_data_.len() * sizeof(char));  // FIXME: Jinsuk we might want our own memory manager since we don't want to call malloc everytime we want small amount of additional memory. 
@@ -189,34 +184,31 @@ class cd::CDEntry : public cd::Serializable
 
         }
 
-
-        if(dst_data_.address_data() != NULL) 
-        {
+        if(dst_data_.address_data() != NULL) {
           memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len()); 
         }
-        else 
-        {
+        else {
           return kOutOfMemory;
           //  ERROR_MESSAGE("Not enough memory.");
         }
       }
-      else if( dst_data_.handle_type() == DataHandle::kOSFile) 
-      {
-        if( dst_data_.file_name() == NULL )
-        {
+      else if( dst_data_.handle_type() == DataHandle::kOSFile ) {
+        if( dst_data_.file_name() == NULL ) {
           char *cd_file = new char[MAX_FILE_PATH];
-          cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
+          cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); 
+          // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
           dst_data_.set_file_name(cd_file);
         }
 
-        //FIXME	Jinsuk: we need to collect file writes and write as a chunk. We don't want to have too many files per one CD. So perhaps one file per chunk is okay.
+        // FIXME	Jinsuk: we need to collect file writes and write as a chunk. 
+        // We don't want to have too many files per one CD. So perhaps one file per chunk is okay.
 
         FILE *fp;
         //char filepath[1024]; 
-        //Util::GetCDFilePath(cd_id_, src_data.address_data(), filepath); // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
+        //Util::GetCDFilePath(cd_id_, src_data.address_data(), filepath); 
+        // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
         fp = fopen(dst_data_.file_name(), "w");
-        if( fp!= NULL )
-        {
+        if( fp!= NULL ) {
           fwrite(src_data_.address_data(), sizeof(char), src_data_.len(), fp);
           fclose(fp);
           return kOK;
@@ -228,16 +220,19 @@ class cd::CDEntry : public cd::Serializable
       return kOK;
 
     }
-#endif
+
+
+
+//#endif
 
     //FIXME We need another Restore function that would accept offset and length, so basically it will use dst_data_ as base and then offset and length is used to restore only partial of the original. This functionality is required for via reference to work. Basically when via reference is doing restoration, it will first try to find the entry it self by going up and look into parent's directories. After finding one, it will retrive the dst_data_ and then copy from them.
 
 
 //GONG
 #if _WORK
-    CDErrT Restore(bool open, struct tsn_log_struct *log);
+    CDEntryErrT Restore(bool open, struct tsn_log_struct *log);
 #else
-    CDErrT Restore();
+    CDEntryErrT Restore();
 #endif
     bool isViaReference()
     {

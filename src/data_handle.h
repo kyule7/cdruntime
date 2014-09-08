@@ -48,7 +48,7 @@ class cd::DataHandle : public cd::Serializable /*:public Serializable */// FIXME
 {
 
   public:
-    enum HandleType {kMemory = 0, kOSFile, kReference};
+    enum HandleType { kMemory = 0, kOSFile, kReference };
   private: 
     HandleType handle_type_;
 		NodeID node_id_;
@@ -61,7 +61,8 @@ class cd::DataHandle : public cd::Serializable /*:public Serializable */// FIXME
 
 
   public: 
-    DataHandle() : address_data_(0), len_(0), file_name_(0), ref_offset_(0) 
+    DataHandle() 
+      : address_data_(0), len_(0), file_name_(0), ref_offset_(0) 
     {
       handle_type_ = kMemory;
       //    address_data_ = NULL;
@@ -102,7 +103,7 @@ class cd::DataHandle : public cd::Serializable /*:public Serializable */// FIXME
     uint64_t    len()          { return len_; }
     HandleType  handle_type()  { return handle_type_; }
 
-    void        set_file_name(char *file_name)             { file_name_ = file_name; }
+    void        set_file_name(const char* file_name)       { file_name_ = const_cast<char*>(file_name); }
     void        set_ref_name(std::string ref_name)         { ref_name_ = ref_name; }
     void        set_ref_offset(uint64_t ref_offset)        { ref_offset_ = ref_offset; }
     void        set_address_data(const void *address_data) { address_data_ = (void*)address_data; }

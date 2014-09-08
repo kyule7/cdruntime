@@ -152,6 +152,8 @@ namespace cd {
 #define DATA_MALLOC malloc
 #define DATA_FREE free
 #define ERROR_MESSAGE(X) printf(X);
+#define PRINT_DEBUG(X) printf(X);
+#define PRINT_DEBUG2(X,Y) printf(X,Y);
 #define MAX_FILE_PATH 2048
 
 

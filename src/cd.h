@@ -71,7 +71,7 @@ class cd::CD {
     /// CD class internal enumerators 
     enum CDExecMode  {kExecution=0, kReexecution, kSuspension};
     enum CtxtPrvMode {kExcludeStack=0, kIncludeStack};
-//    enum CDErrT { kOK=0, kExecutionModeError };  
+    enum CDInternalErrT { kOK=0, kExecModeError, kEntryError };  
   protected: 
     CDID cd_id_;
   public:
