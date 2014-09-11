@@ -207,12 +207,12 @@ CDErrT CD::Destroy(void)
     bool use_file = false;
     if(cd_id_.level_<=1)  use_file = true;
     if( use_file == true)  {
-      if(cd_id_.level_==1) { // HDD
-        it->CloseFile(&HDDlog);  
-      }
-      else { // SSD
-        it->CloseFile(&SSDlog);  
-      }
+//      if(cd_id_.level_==1) { // HDD
+//        it->CloseFile(&HDDlog);  
+//      }
+//      else { // SSD
+//        it->CloseFile(&SSDlog);  
+//      }
     }
 
   }  // for loop ends
@@ -415,8 +415,9 @@ CDErrT CD::Preserve(void* data,
 
 PrvMediumT CD::GetPlaceToPreserve()
 {
-  if(GetCDID().level_==1) return kHDD;
-  else return kSSD;
+  return kMemory;
+//  if(GetCDID().level_==1) return kHDD;
+//  else return kSSD;
 }
 
 
@@ -468,8 +469,8 @@ CDErrT CD::Preserve(void* data,
       // we reached the last preserve function call. 
       // Since we have reached the last point already now convert current execution mode into kExecution
 
-//      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
-//      printf("Now reached end of entry directory, now switching to normal execution mode\n");
+      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
+      printf("Now reached end of entry directory, now switching to normal execution mode\n");
 
       cd_exec_mode_  = kExecution;    
       switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
@@ -486,45 +487,18 @@ CDErrT CD::Preserve(void* data,
       printf("Reexecution mode...\n");
       CDEntry cd_entry = *iterator_entry_;
       iterator_entry_++;
-//#ifdef _WORK 
-//      bool use_file = (bool)ref_name;
-//      bool open = true;
-////      if(cd_id_.level_<=1)
-////        use_file = true;
-//      if( use_file == true) { // preserve to OS file system
-//
-//        if(cd_id_.level_==1) {// HDD        
-//          bool _isOpenHDD = isOpenHDD();
-//          if(!_isOpenHDD)
-//            OpenHDD(); // set flag 'open_HDD'       
-//          return (CDEntry::CDEntryErrT::kOK ==cd_entry->Restore(_isOpenHDD, &HDDlog))? CDErrT::kOK: CDErrT::kError;
-//        }
-//        else { // SSD
-//          bool _isOpenSSD = isOpenSSD();
-//          if(!_isOpenSSD)
-//            OpenSSD(); // set flag 'open_SSD'       
-//          return (CDEntry::CDEntryErrT::kOK ==cd_entry->Restore(_isOpenSSD, &SSDlog))? CDErrT::kOK: CDErrT::kError;
-//        }
-//
-//      }
-//      else {  // not file
-//        return (CDEntry::CDEntryErrT::kOK ==cd_entry->Restore(open, &HDDlog))? CDErrT::kOK: CDErrT::kError;
-//      }
-//#else
-//      return (CDEntry::CDEntryErrT::kOK ==cd_entry->Restore())? CDErrT::kOK: CDErrT::kError;
-//#endif
 
       switch(GetPlaceToPreserve()) {
         case kMemory:
-          return (CDEntry::CDEntryErrT::kOK == cd_entry->Restore(true, &HDDlog))? CDErrT::kOK: CDErrT::kError;
+          return (CDEntry::CDEntryErrT::kOK == cd_entry.Restore(true, &HDDlog))? CDErrT::kOK: CDErrT::kError;
 
         case kHDD:
           if( !isOpenHDD() ) OpenHDD(); // set flag 'open_HDD'       
-          return (CDEntry::CDEntryErrT::kOK == cd_entry->Restore(isOpenHDD(), &HDDlog))? CDErrT::kOK: CDErrT::kError;
+          return (CDEntry::CDEntryErrT::kOK == cd_entry.Restore(isOpenHDD(), &HDDlog))? CDErrT::kOK: CDErrT::kError;
       
         case kSSD:
           if( !isOpenSSD() ) OpenSSD(); // set flag 'open_SSD'       
-          return (CDEntry::CDEntryErrT::kOK == cd_entry->Restore(isOpenSSD(), &SSDlog))? CDErrT::kOK: CDErrT::kError;
+          return (CDEntry::CDEntryErrT::kOK == cd_entry.Restore(isOpenSSD(), &SSDlog))? CDErrT::kOK: CDErrT::kError;
       
         case kPFS:
           assert(0);
@@ -542,13 +516,13 @@ CDErrT CD::Preserve(void* data,
 
 
 CD::CDInternalErrT CD::InternalPreserve(void *data, 
-                            uint64_t len_in_bytes, 
-                            uint32_t preserve_mask=kCopy, 
-                            const char *my_name=0, 
-                            const char *ref_name=0, 
-                            uint64_t ref_offset=0, 
-                            const RegenObject* regen_object=0, 
-                            PreserveUseT data_usage=kUnsure)
+                                        uint64_t len_in_bytes, 
+                                        uint32_t preserve_mask, 
+                                        const char *my_name, 
+                                        const char *ref_name, 
+                                        uint64_t ref_offset, 
+                                        const RegenObject* regen_object, 
+                                        PreserveUseT data_usage)
 {
 
   if(cd_exec_mode_  == kExecution ) {
@@ -591,6 +565,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
       dst_data.set_ref_offset(ref_offset);
     }
 
+    if(my_name==0) my_name = "INITIAL_ENTRY";
     CDEntry* cd_entry = new CDEntry(src_data, dst_data, my_name);
 
     entry_directory_.push_back(*cd_entry);  
@@ -598,7 +573,6 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
     if( my_name != 0 ) {
       entry_directory_map_.emplace(my_name, *cd_entry);    
     }
-
 
     if( ref_name != 0 ) { // via-reference
 
@@ -608,22 +582,20 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
     }
     else {                // via-copy, so it saves data right now!
 
-      PRINT_DEBUG2("\nPreservation via Copy to %s\n", GetPlaceToPreserve());
+      PRINT_DEBUG2("\nPreservation via Copy to %d\n", GetPlaceToPreserve());
       //cd_entry->Save();
       // GONG
       switch(GetPlaceToPreserve()) {
         case kMemory:
-          return (CDEntry::CDEntryErrT::kOK == cd_entry->SaveMem())? CDErrT::kOK: CDErrT::kError;
+          return (CDEntry::CDEntryErrT::kOK == cd_entry->SaveMem())? CDInternalErrT::kOK: CDInternalErrT::kEntryError;
 
         case kHDD:
-          bool _isOpenHDD = isOpenHDD();
-          if(!_isOpenHDD)  OpenHDD(); // set flag 'open_HDD'       
-          return (CDEntry::CDEntryErrT::kOK == cd_entry->SaveFile(path.GetHDDPath(), _isOpenHDD, &HDDlog))? CDErrT::kOK: CDErrT::kError;
+          if( !isOpenHDD() ) OpenHDD(); // set flag 'open_HDD'       
+          return (CDEntry::CDEntryErrT::kOK == cd_entry->SaveFile(path.GetHDDPath(), isOpenHDD(), &HDDlog))? CDInternalErrT::kOK: CDInternalErrT::kEntryError;
 
         case kSSD:
-          bool _isOpenSSD = isOpenSSD();
-          if(!_isOpenSSD)  OpenSSD(); // set flag 'open_SSD'       
-          return (CDEntry::CDEntryErrT::kOK == cd_entry->SaveFile(path.GetSSDPath(), _isOpenSSD, &SSDlog))? CDErrT::kOK: CDErrT::kError;
+          if( !isOpenSSD() ) OpenSSD(); // set flag 'open_SSD'       
+          return (CDEntry::CDEntryErrT::kOK == cd_entry->SaveFile(path.GetSSDPath(), isOpenSSD(), &SSDlog))? CDInternalErrT::kOK: CDInternalErrT::kEntryError;
 
         case kPFS:
           PRINT_DEBUG("\nPreservation to PFS which is not supported yet. ERROR\n");

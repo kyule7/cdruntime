@@ -50,11 +50,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 class cd::CDEntry : public cd::Serializable
 {
   private:
-    DataHandle src_data_;
-    DataHandle dst_data_;
-    CDID cd_id_;
-    std::string name_; // need a unique name to do via reference, this variable can be empty string when this is not needed 
-    cd::CD *ptr_cd_;
+    DataHandle  src_data_;
+    DataHandle  dst_data_;
+    // need a unique name to do via reference, this variable can be empty string when this is not needed
+    std::string name_;    
+    cd::CD*     ptr_cd_;
+    CDID        cd_id_;
+		struct tsn_lsn_struct lsn, durable_lsn;
+    cd::CDPreserveT preserve_type_; // already determined according to class 
+
     // perhaps here we accept Handles.... 
     /*  CDEntry(const void *source_data, uint64_t len)
         {
@@ -66,12 +70,13 @@ class cd::CDEntry : public cd::Serializable
     enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError};
     
     CDEntry(){}
-    CDEntry(const DataHandle src_data, const DataHandle dst_data, const char *my_name=0) 
+    CDEntry(const DataHandle& src_data, 
+            const DataHandle& dst_data, 
+            std::string entry_name="INITIAL_ENTRY") 
     {
       src_data_ = src_data;
       dst_data_ = dst_data;
-      if( my_name != 0 ) 
-        name_ = my_name;
+      name_     = entry_name;
     }
 
     ~CDEntry()
@@ -92,157 +97,31 @@ class cd::CDEntry : public cd::Serializable
     // But this list might need to be distributed if that CD spans among multiple threads. 
     // If we have that data structure the issue here will be solved anyways. 
     void set_my_cd(cd::CD* ptr_cd) { ptr_cd_ = ptr_cd; }
-    cd::CD* ptr_cd() { return ptr_cd_; }
+    cd::CD* ptr_cd()               { return ptr_cd_; }
 
 		CDEntryErrT Delete(void);
 
-//GONG
-//#if _WORK
-		private:
-		struct tsn_lsn_struct lsn, durable_lsn;
-
 		public:
-		std::string my_name() { return name_; }
+		std::string name() { return name_; }
+    bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }
 
-		CDEntryErrT SaveMem(void)
-		{
-      if(dst_data_.address_data() == NULL) {
-        void *allocated_space;
-        allocated_space = DATA_MALLOC(dst_data_.len() * sizeof(char));  // FIXME: Jinsuk we might want our own memory manager since we don't want to call malloc everytime we want small amount of additional memory. 
-        dst_data_.set_address_data(allocated_space);
-      }
-      else {
+    CDEntryErrT SaveMem(void);
+    CDEntryErrT SaveFile(std::string base, 
+                         bool open, 
+                         struct tsn_log_struct *log);
+    CDEntryErrT Save(void);
 
-        memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len());
-        if(false) { // Is there a way to check if memcpy is done well?
-          ERROR_MESSAGE("Not enough memory.");
-          assert(0);
-          return kOutOfMemory; 
-        }
-      }
-
-      return kOK;
-		}
-
-		CDEntryErrT SaveFile(std::string base_, bool open, struct tsn_log_struct *log)
-    {
-      // Get file name to write if it is currently NULL
-      if( dst_data_.file_name() == NULL ) {
-        // assume cd_id_ is unique (sequential cds will have different cd_id) 
-        // and address data is also unique by natural
-//        char *cd_file = new char[MAX_FILE_PATH];
-//        cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file, base_); 
-        dst_data_.set_file_name(cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), base_));
-      }
-
-		 	if(!open) {
-				int ret;
-        printf("inside saveMem\n");
-        getchar();
-				ret = tsn_log_create_file(dst_data_.file_name());
-			  assert(ret>=0);	
-				ret = tsn_log_open_file(dst_data_.file_name(), TSN_LOG_READWRITE, log);
-			  assert(ret>=0);	
-			}
-
-			uint64_t bytes = log->log_ops->l_write(log, src_data_.address_data(), src_data_.len(), &lsn);
-			std::cout<<lsn.lsn<<std::endl;
-			assert(bytes == src_data_.len());
-//			int err = log->log_ops->l_flush(log, &lsn, 1, &durable_lsn);
-//			assert(err);
-
-			return kOK;
-			
-		}
-
-		void CloseFile(struct tsn_log_struct *log)
-    {
-	 		int ret;
-			ret = tsn_log_close_file(log);
-			assert(ret>=0);
-			ret = tsn_log_destroy_file(dst_data_.file_name());	
-		}
-
-//#else
-    CDEntryErrT Save()
-    {
-      //Direction is from src_data_ to dst_data_
-
-      //FIXME Jinsuk: Just for now we assume everything works on memory
-      // What we need to do is that distinguish the medium type and then do operations appropriately
-
-      //FIXME we need to distinguish whether this request is on Remote or local for both when using kOSFile or kMemory and do appropriate operations..
-      //FIXME we need to distinguish whether this is to a reference....
-      if( dst_data_.handle_type() == DataHandle::kMemory ) {
-        if(dst_data_.address_data() == NULL) {
-
-          void *allocated_space;
-          allocated_space = DATA_MALLOC(dst_data_.len() * sizeof(char));  // FIXME: Jinsuk we might want our own memory manager since we don't want to call malloc everytime we want small amount of additional memory. 
+    void CloseFile(struct tsn_log_struct *log);
 
 
-          dst_data_.set_address_data(allocated_space);
+    //FIXME We need another Restore function that would accept offset and length, 
+    // so basically it will use dst_data_ as base and then offset and length is used to restore only partial of the original. 
+    // This functionality is required for via reference to work. Basically when via reference is doing restoration, 
+    // it will first try to find the entry it self by going up and look into parent's directories. 
+    // After finding one, it will retrive the dst_data_ and then copy from them.
 
-        }
-
-        if(dst_data_.address_data() != NULL) {
-          memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len()); 
-        }
-        else {
-          return kOutOfMemory;
-          //  ERROR_MESSAGE("Not enough memory.");
-        }
-      }
-      else if( dst_data_.handle_type() == DataHandle::kOSFile ) {
-        if( dst_data_.file_name() == NULL ) {
-          char *cd_file = new char[MAX_FILE_PATH];
-          cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); 
-          // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-          dst_data_.set_file_name(cd_file);
-        }
-
-        // FIXME	Jinsuk: we need to collect file writes and write as a chunk. 
-        // We don't want to have too many files per one CD. So perhaps one file per chunk is okay.
-
-        FILE *fp;
-        //char filepath[1024]; 
-        //Util::GetCDFilePath(cd_id_, src_data.address_data(), filepath); 
-        // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-        fp = fopen(dst_data_.file_name(), "w");
-        if( fp!= NULL ) {
-          fwrite(src_data_.address_data(), sizeof(char), src_data_.len(), fp);
-          fclose(fp);
-          return kOK;
-        }
-        else return kFileOpenError;
-      }
-
-
-      return kOK;
-
-    }
-
-
-
-//#endif
-
-    //FIXME We need another Restore function that would accept offset and length, so basically it will use dst_data_ as base and then offset and length is used to restore only partial of the original. This functionality is required for via reference to work. Basically when via reference is doing restoration, it will first try to find the entry it self by going up and look into parent's directories. After finding one, it will retrive the dst_data_ and then copy from them.
-
-
-//GONG
-#if _WORK
     CDEntryErrT Restore(bool open, struct tsn_log_struct *log);
-#else
     CDEntryErrT Restore();
-#endif
-    bool isViaReference()
-    {
-      return (dst_data_.handle_type() == DataHandle::kReference);
-
-    }
-
-    cd::CDPreserveT preserve_type_; // already determined according to class 
-
-
 
     virtual void * Serialize(uint64_t *len_in_bytes)
     {
@@ -257,7 +136,7 @@ class cd::CDEntry : public cd::Serializable
 
 
   private:
-
+  DataHandle* GetBuffer(void);
 };
 
 #endif

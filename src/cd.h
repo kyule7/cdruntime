@@ -45,6 +45,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "transaction.h"
 #endif
 
+#include <cassert>
 #include <list>
 #include <vector>
 #include <stdint.h>
@@ -126,8 +127,31 @@ class cd::CD {
     void InitOpenSSD() { _OpenSSD = false; }
     bool isOpenHDD()   { return _OpenHDD;  }
     bool isOpenSSD()   { return _OpenSSD;  }
-    void OpenHDD()     { _OpenHDD = true;  }
-    void OpenSSD()     { _OpenSSD = true;  }
+    void OpenHDD()     { 
+      char cmd[30];
+      sprintf(cmd, "mkdir -p %s", path.GetHDDPath().c_str());
+      int ret = system(cmd);
+      if( ret == -1 ) {
+        ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
+        assert(0);
+      }
+      else {
+        _OpenHDD = true;  
+      }
+      
+    }
+    void OpenSSD()     { 
+      char cmd[30];
+      sprintf(cmd, "mkdir -p %s", path.GetSSDPath().c_str());
+      int ret = system(cmd);
+      if( ret == -1 ) {
+        ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
+        assert(0);
+      }
+      else {
+        _OpenSSD = true;  
+      }
+    }
     void Body();
     PrvMediumT GetPlaceToPreserve(void);
 #endif
@@ -218,7 +242,7 @@ class cd::CD {
     virtual CDErrT Stop(cd::CDHandle* cdh=NULL);
     virtual CDErrT Resume(void);
   
-    CDErrT InternalPreserve(void *data, 
+    CDInternalErrT InternalPreserve(void *data, 
                                     uint64_t len_in_bytes,
                                     uint32_t preserve_mask, 
                                     const char *my_name, 

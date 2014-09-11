@@ -126,18 +126,22 @@ class cd::Util {
     // also HEX address of the pointer we are preserving. 
     // -> This might not be a good thing when we recover actually the stack content can be different... 
     // is it? or is it not?  let's assume it does...
-    char* GetUniqueCDFileName(CDID &cd_id, void *addr, std::string base_="INIT_STR") 
+    static char* GetUniqueCDFileName(CDID &cd_id, void *addr, const char* base_=0) 
     {
-      char* filename=NULL;
-      const char* base_file_path = base_.c_str();
-      if(base_file_path != "INIT_STR") base_file_path = GetCDFilesPath();
-      
+      char* filename = new char(100);
+      const char* base_file_path = base_;
+      if(base_file_path == 0) base_file_path = GetCDFilesPath();
+      printf("%s\n", base_); 
+      printf("%s\n", base_file_path);
+      getchar(); 
       sprintf(filename, "%s%lld.%lld.%lld.%lld.%lld.cd", base_file_path, 
                                               (long long)cd_id.domain_id_, 
                                               (long long)cd_id.node_id_.task_, 
                                               (long long)cd_id.level_, 
                                               (long long)cd_id.object_id_, 
                                               (long long)cd_id.sequential_id_);
+      printf("%s\n", filename);
+      getchar(); 
       return filename;
     }
 //#endif
@@ -184,8 +188,8 @@ class Path {
   	std::string _path_HDD;
 	public:
   	Path() {
-  		_path_SSD = "";
-  		_path_HDD = "";
+  		_path_SSD = "./SSD";
+  		_path_HDD = "./HDD";
   	}
   	Path(std::string ssd, std::string hdd) {
   		_path_SSD = ssd;
