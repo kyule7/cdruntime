@@ -50,7 +50,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // FIXME neet to inherit serializable object and that will handle serilization complication.
 class cd::DataHandle : public cd::Serializable {
   public:
-    enum HandleType { kMemory = 0, kOSFile, kReference };
+    enum HandleType { kMemory = 0, kOSFile, kReference, kSource };
   private: 
     HandleType  handle_type_;
 		NodeID      node_id_;
@@ -68,17 +68,19 @@ class cd::DataHandle : public cd::Serializable {
       : handle_type_(kMemory), address_data_(0), len_(0), file_name_(0), ref_name_("INITIAL_DATAHANDLE"), ref_offset_(0) {} 
 
     DataHandle(std::string ref_name, uint64_t ref_offset) 
-      : handle_type_(kReference), address_data_(0), len_(0), file_name_(0), ref_name_(ref_name), ref_offset_(ref_offset)
-    { 
-//      ref_name_ = ref_name.c_str(); 
-//      ref_offset_ = ref_offset;
-    }
+      : handle_type_(kReference), address_data_(0), len_(0), file_name_(0), ref_name_(ref_name), ref_offset_(ref_offset) {}
 
     DataHandle(char* file_name)
       : handle_type_(kOSFile), address_data_(0), len_(0), file_name_(file_name), ref_name_("INITIAL_DATAHANDLE"), ref_offset_(0) {}
 
     DataHandle(void* address_data, const uint64_t& len)
       : handle_type_(kMemory), address_data_(address_data), len_(len), file_name_(0), ref_name_("INITIAL_DATAHANDLE"), ref_offset_(0) {}
+
+    DataHandle(HandleType handle_type, void* address_data, const uint64_t& len)
+      : handle_type_(handle_type), address_data_(address_data), len_(len), file_name_(0), ref_name_("INITIAL_DATAHANDLE"), ref_offset_(0) {}
+
+    DataHandle(HandleType handle_type, void* address_data, const uint64_t& len, std::string ref_name, uint64_t ref_offset)
+      : handle_type_(handle_type), address_data_(address_data), len_(len), file_name_(0), ref_name_(ref_name), ref_offset_(ref_offset) {}
 
     ~DataHandle() {}
 
@@ -107,6 +109,16 @@ class cd::DataHandle : public cd::Serializable {
     {
       //STUB
       return;
+    }
+    DataHandle& operator=(const DataHandle& that) {
+      handle_type_ = that.handle_type_;
+  		node_id_     = that.node_id_;
+      address_data_= that.address_data_;
+      len_         = that.len_;
+      file_name_   = that.file_name_;
+      ref_name_    = that.ref_name_;
+      ref_offset_  = that.ref_offset_;
+      return *this;
     }
 };
 

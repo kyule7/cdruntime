@@ -35,7 +35,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <chrono>
 #include <stdio.h>
 #include <iostream>
+#include <mpi.h>
 #include "../../src/cd.h"
+#include "../../src/cds.h"
+#include "../../src/cd_handle.h"
 
 #define SIZE 655360 //10M?
 
@@ -43,9 +46,12 @@ using namespace cd;
 
 ucontext_t context;
 
+int  np = 0;
+int  mr = 0;
 
-#define NUM_TEST_BLOCKS 1000
-#define SIZE_BLOCK (25*1024)
+#define NUM_TEST_BLOCKS 10
+//#define SIZE_BLOCK (25*1024)
+#define SIZE_BLOCK (16)
 
 static __inline__ long long getCounter(void)
 {
@@ -280,10 +286,10 @@ int test1()
   int test_results[8] = {0,};
   int test_result = 0;
   int iteration = 0;
-  printf("\n\ntest1 begins\n");
+  printf("\n\n--------------------test1 begins-----------------------\n");
   printf("CD Create\n");
 //  CD *root= handle_cd.ptr_cd();// for now let's just get the pointer and use it directly
-	CDHandle* root = CD_Init();
+	CDHandle* root = CD_Init(np, mr);
   printf("CD Begin.........lol\n");
   //  root->Begin();  
   //  getcontext(&root->context_);
@@ -294,6 +300,8 @@ int test1()
   //root->Preserve((char *)&a,4* sizeof(int));
   root->Preserve((char *)&b,8* sizeof(int));
   //root->Preserve((char *)&b,8* sizeof(int));
+  printf("sizeof a : %d\n", sizeof(a)); getchar();
+  printf("sizeof b : %d\n", sizeof(b)); getchar();
 
   printf("Before Modify Current value of a[0]=%d a[1]=%d\n", a[0], a[1]);
   printf("Before Modify Current value of b[0]=%d b[1]=%d\n", b[0], b[1]);
@@ -324,34 +332,30 @@ int test1()
   printf("After Modify Current value of a[0]=%d\n", a[0]);
   printf("After Modify Current value of b[0]=%d\n", b[0]);
 
-  if( iteration== 0) 
-  {
-    printf("is now First error..\n");
+  if( iteration== 0) {
+    printf("\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n");
     iteration= 1;
     root->CDAssert(false);
-    //setcontext(&root->context_);
-
   }
 
-  // this point is to test whether execution mode becomes kExecution from this point, because before this preservation is called it should be in kReexecution mode
+  // this point is to test whether execution mode becomes kExecution from this point, 
+  // because before this preservation is called it should be in kReexecution mode
+  printf("sizeof c : %d\n", sizeof(c)); getchar();
   root->Preserve((char *)&c,8* sizeof(int));
-  if( iteration == 2)
-  {
-    if( c[0] == 5 )
-    {
+
+  if( iteration == 2)  {
+    if( c[0] == 5 ) {
       test_results[4] =1;
     }
-
   }
   printf("Before modifying current value of c[0] %d\n", c[0]);
   c[0] =77;
   printf("After modifying current value of c[0] %d\n", c[0]);
-  if(iteration ==1)
-  {
-    printf("is now Second error..\n");
+
+  if(iteration ==1) {
+    printf("\nis now Second error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n");
     iteration= 2;
     root->CDAssert(false);
-
   }
   printf("CD Complete\n");
   //  root->Complete();
@@ -362,11 +366,9 @@ int test1()
 
 
   // check the test result   
-  for( int i = 0; i < 5; i++ )
-  {
+  for( int i = 0; i < 5; i++ ) {
     printf("test_result[%d] = %d\n", i, test_results[i]);
-    if( test_results[i] != 1 )
-    {
+    if( test_results[i] != 1 ) {
       test_result = -1;
     }
   }
@@ -595,15 +597,15 @@ int test2()
   int test_result = 0;
   
   //CDHandle no_parent;  // not initialized and this means no parent
-  printf("\n\ntest2 begins\n");
-
-	CDHandle* root = CD_Init();
+  printf("\n\n---------------test2 begins-----------------------------\n");
+  CDErrT err;
+	CDHandle* root = CD_Init(np, mr);
   CD_Begin(root); 
   root->Preserve((char *)&a,4* sizeof(int), kCopy, "test2viareference");
 
   printf("Before modifying current value of a[0] %d a[1] %d\n", a[0], a[1]);
   a[0] = 99;  // now when child recovers it should see 3 instead of 99
-  CDHandle* child=root->Create();
+  CDHandle* child=root->Create(GetCurrentCD()->GetNodeID(), 8, "CD1", kStrict, 0, 0, &err);
 //  CD *child= handle_cd_child.ptr_cd();
   CD_Begin(child); 
   child->Preserve((char *)&a,4* sizeof(int), kCopy, "nonamejusttest", "test2viareference",0);
@@ -639,11 +641,11 @@ int test3()
   int iteration = 0;
   int test_result = 1;
   
+  printf("\n\n---------------test3 begins-----------------------------\n");
 //  CDHandle no_parent;  // not initialized and this means no parent
-  printf("\n\ntest3 begins\n");
 //  CDHandle handle_cd=CD::Create(cd::kStrict, no_parent);
 //  CD *root= handle_cd.ptr_cd();
-	CDHandle* root = CD_Init();
+	CDHandle* root = CD_Init(np, mr);
   CD_Begin(root); 
   root->Preserve((char *)&a,4* sizeof(int), kCopy, "test3viareference");
 
@@ -652,8 +654,8 @@ int test3()
   a[1] = 111;  // now when child recovers it should see 7 instead of 111 
   a[2] = 112;  
   a[3] = 113;  
-
-  CDHandle* child=root->Create();
+  CDErrT err;
+  CDHandle* child=root->Create(GetCurrentCD()->GetNodeID(), 8, "CD1", kStrict, 0, 0, &err);
 //  CD *child= handle_cd_child.ptr_cd();
   CD_Begin(child); 
   child->Preserve((char *)&(a[1]),3* sizeof(int), kCopy, "nonamejusttest", "test3viareference",sizeof(int)*1);
@@ -687,10 +689,16 @@ int test3()
   return kError;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+  int nprocs, myrank;
+  MPI_Init(&argc, &argv);
+  MPI_Comm_size(MPI_COMM_WORLD,  &nprocs);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  np = nprocs;
+  mr = myrank;
   int ret=0;
-  
+ 
  ret = test1();
  if( ret == kError ) printf("Error test1() failed\n");
 
@@ -712,6 +720,6 @@ int main()
  if( ret == kError ) printf("FAILED\n");
  else printf("PASSED\n");
 
-  performance_test1(); 
+//  performance_test1(); 
   return 0;
 }

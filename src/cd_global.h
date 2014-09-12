@@ -93,8 +93,8 @@ namespace cd {
 										};
 
   enum CDPreserveT  { kCopy=0, 
-											kReference, 
-											kRegeneration 
+											kRef, 
+											kRegen 
 										};
 
   enum CDType       { kStrict=0, 
@@ -157,10 +157,10 @@ namespace cd {
 #define MAX_FILE_PATH 2048
 
 
-//#define ROOT_COLOR MPI_COMM_WORLD
-//#define INITIAL_COLOR MPI_UNDEFINED
-#define ROOT_COLOR 0 
-#define INITIAL_COLOR 0
+#define ROOT_COLOR MPI_COMM_WORLD
+#define INITIAL_COLOR MPI_UNDEFINED
+//#define ROOT_COLOR 0 
+//#define INITIAL_COLOR 0
 /* 
 ISSUE 1 (Kyushick)
 If we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?

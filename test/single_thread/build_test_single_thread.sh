@@ -8,4 +8,4 @@ cd ../../src/
 make clean
 make
 cd ../test/single_thread
-g++  -std=gnu++0x -o test_single_thread ./test_single_thread.cc -L../../lib -lcds -Wl,-rpath ../../lib 
+mpic++  -std=gnu++0x -o test_single_thread ./test_single_thread.cc -L../../lib -Wl,-rpath ../../lib -lcds 

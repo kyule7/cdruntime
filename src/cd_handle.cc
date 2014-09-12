@@ -413,10 +413,10 @@ CDHandle* CDHandle::Create( int color,
   int new_num_y = num_y / num_children_y;
   int new_num_z = num_z / num_children_z;
 
-//  cout<<"num_children = "<< num_children 
-//  <<", num_x = "<< num_x 
-//  <<", new_children_x = "<< num_children_x 
-//  <<", new_num_x = "<< new_num_x <<"\n\n"<<endl; //getchar();
+  cout<<"CD : "<< ptr_cd()->name_<<"num_children = "<< num_children 
+  <<", num_x = "<< num_x 
+  <<", new_children_x = "<< num_children_x 
+  <<", new_num_x = "<< new_num_x <<"node size: "<<node_id_.size_<<"\n\n"<<endl; //getchar();
   Sync();
 //  cout<<"split check"<<endl;
   assert(num_x*num_y*num_z == node_id_.size_);
@@ -492,7 +492,7 @@ CDHandle* CDHandle::Create( int color,
   MPI_Comm_size(new_node.color_, &(new_node.size_));
   MPI_Comm_rank(new_node.color_, &(new_node.task_));
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
-  Sync();
+//  Sync();
 //  for(int i=0; i<node_id_.task_*100000; i++) { int a = 5 * 5; } 
 //  cout<<"[After] old: "<<node_id_<<", new: "<<new_node<<"\n"<<endl; //getchar();
 //  cout<<"New CD created : " << new_node <<endl; 
@@ -796,7 +796,7 @@ CDErrT CDHandle::Complete (bool collective, bool update_preservations)
 
 CDErrT CDHandle::Preserve ( void *data_ptr, 
                             uint64_t len, 
-                            uint32_t preserve_mask, 
+                            CDPreserveT preserve_mask, 
                             const char *my_name, 
                             const char *ref_name, 
                             uint64_t ref_offset, 
@@ -827,7 +827,7 @@ CDErrT CDHandle::Preserve ( void *data_ptr,
 CDErrT CDHandle::Preserve ( CDEvent &cd_event, 
                             void *data_ptr, 
                             uint64_t len, 
-                            uint32_t preserve_mask, 
+                            CDPreserveT preserve_mask, 
                             const char *my_name, 
                             const char *ref_name, 
                             uint64_t ref_offset, 
@@ -967,6 +967,8 @@ CDErrT CDHandle::CDAssert (bool test_true, const SysErrT *error_to_report)
     return ptr_cd_->Assert(test_true); 
   }
   else {
+    assert(ptr_cd_ != 0);
+    return ptr_cd_->Assert(test_true); 
     // It is at remote node so do something for that.
   }
 

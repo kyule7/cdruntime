@@ -49,6 +49,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 class cd::CDEntry : public cd::Serializable
 {
+//#if _DEBUG
+  friend class cd::CD;
+//#endif
   private:
     DataHandle  src_data_;
     DataHandle  dst_data_;
@@ -83,11 +86,11 @@ class cd::CDEntry : public cd::Serializable
     {
       //FIXME we need to delete allocated (preserved) space at some point, should we do it when entry is destroyed?  when is appropriate for now let's do it now.
       if( dst_data_.address_data() != NULL ) {
-        DATA_FREE( dst_data_.address_data() );
+//        DATA_FREE( dst_data_.address_data() );
       }
  
       if( dst_data_.file_name() != NULL )  {
-        delete dst_data_.file_name(); 
+//        delete dst_data_.file_name(); 
       }
     }
 
@@ -121,7 +124,7 @@ class cd::CDEntry : public cd::Serializable
     // After finding one, it will retrive the dst_data_ and then copy from them.
 
     CDEntryErrT Restore(bool open, struct tsn_log_struct *log);
-    CDEntryErrT Restore();
+    CDEntryErrT Restore(void);
 
     virtual void * Serialize(uint64_t *len_in_bytes)
     {
