@@ -49,6 +49,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 // FIXME neet to inherit serializable object and that will handle serilization complication.
 class cd::DataHandle : public cd::Serializable {
+  friend class cd::CDEntry;
   public:
     enum HandleType { kMemory = 0, kOSFile, kReference, kSource };
   private: 
@@ -58,54 +59,54 @@ class cd::DataHandle : public cd::Serializable {
     void*       address_data_;
     uint64_t    len_;
     //FILE
-    char*       file_name_;
+    std::string file_name_;
     //Reference
     std::string ref_name_;
     uint64_t    ref_offset_;
 
   public: 
     DataHandle() 
-      : handle_type_(kMemory), address_data_(0), len_(0), file_name_(0), ref_name_("INITIAL_DATAHANDLE"), ref_offset_(0) {} 
+      : handle_type_(kMemory), address_data_(0), len_(0), file_name_(), ref_name_(), ref_offset_(0) {} 
 
     DataHandle(std::string ref_name, uint64_t ref_offset) 
-      : handle_type_(kReference), address_data_(0), len_(0), file_name_(0), ref_name_(ref_name), ref_offset_(ref_offset) {}
+      : handle_type_(kReference), address_data_(0), len_(0), file_name_(), ref_name_(ref_name), ref_offset_(ref_offset) {}
 
-    DataHandle(char* file_name)
-      : handle_type_(kOSFile), address_data_(0), len_(0), file_name_(file_name), ref_name_("INITIAL_DATAHANDLE"), ref_offset_(0) {}
+    DataHandle(const char* file_name)
+      : handle_type_(kOSFile), address_data_(0), len_(0), file_name_(file_name), ref_name_(), ref_offset_(0) {}
 
     DataHandle(void* address_data, const uint64_t& len)
-      : handle_type_(kMemory), address_data_(address_data), len_(len), file_name_(0), ref_name_("INITIAL_DATAHANDLE"), ref_offset_(0) {}
+      : handle_type_(kMemory), address_data_(address_data), len_(len), file_name_(), ref_name_(), ref_offset_(0) {}
 
     DataHandle(HandleType handle_type, void* address_data, const uint64_t& len)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), file_name_(0), ref_name_("INITIAL_DATAHANDLE"), ref_offset_(0) {}
+      : handle_type_(handle_type), address_data_(address_data), len_(len), file_name_(), ref_name_(), ref_offset_(0) {}
 
     DataHandle(HandleType handle_type, void* address_data, const uint64_t& len, std::string ref_name, uint64_t ref_offset)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), file_name_(0), ref_name_(ref_name), ref_offset_(ref_offset) {}
+      : handle_type_(handle_type), address_data_(address_data), len_(len), file_name_(), ref_name_(ref_name), ref_offset_(ref_offset) {}
 
     ~DataHandle() {}
 
-    char*       file_name()    { return file_name_; }
+    std::string file_name()    { return file_name_; }
     std::string ref_name()     { return ref_name_; }
     uint64_t    ref_offset()   { return ref_offset_; }
     void*       address_data() { return address_data_; }
     uint64_t    len()          { return len_; }
     HandleType  handle_type()  { return handle_type_; }
 
-    void        set_file_name(const char* file_name)       { file_name_ = const_cast<char*>(file_name); }
-    void        set_ref_name(std::string ref_name)         { ref_name_ = ref_name; }
-    void        set_ref_offset(uint64_t ref_offset)        { ref_offset_ = ref_offset; }
+    void        set_file_name(const char* file_name)       { file_name_    = std::string(file_name); }
+    void        set_ref_name(std::string ref_name)         { ref_name_     = ref_name; }
+    void        set_ref_offset(uint64_t ref_offset)        { ref_offset_   = ref_offset; }
     void        set_address_data(const void* address_data) { address_data_ = (void*)address_data; }
     void        set_len(uint64_t len)                      { len_ = len; }
     void        set_handle_type(const HandleType& handle_type) { handle_type_=handle_type; }
 
   public: 
     //we need serialize deserialize interface here.
-    virtual void * Serialize(uint64_t *len_in_bytes)
+    virtual void * Serialize(uint64_t* len_in_bytes)
     {
       //STUB
       return 0;  
     }
-    virtual void Deserialize(void * object) 
+    virtual void Deserialize(void* object) 
     {
       //STUB
       return;

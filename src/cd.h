@@ -59,8 +59,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <unordered_map>
 //#include <array>
 
-//class cd::CDEntry;
-//class cd::CDHandle;
 using namespace cd;
 
 /// TODO Implement serialize and deserialize of this instance
@@ -77,7 +75,7 @@ class cd::CD {
     CDID cd_id_;
   public:
     std::vector<std::string> label_;
-    char*           name_;
+    std::string     name_;
     CDType          cd_type_;
 
     /// Set rollback point and options

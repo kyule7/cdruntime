@@ -44,21 +44,21 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
 CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool open, struct tsn_log_struct *log)
 {
   // Get file name to write if it is currently NULL
-  if( dst_data_.file_name() == NULL ) {
+  if( dst_data_.file_name_.empty() ) {
     // assume cd_id_ is unique (sequential cds will have different cd_id) 
     // and address data is also unique by natural
 //      char *cd_file = new char[MAX_FILE_PATH];
 //      cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file, base_); 
-    dst_data_.set_file_name(cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), base_.c_str()));
+    dst_data_.file_name_ = Util::GetUniqueCDFileName(cd_id_, src_data_.address_data());
   }
 
  	if(!open) {
 		int ret;
     printf("inside saveMem\n");
     getchar();
-		ret = tsn_log_create_file(dst_data_.file_name());
+		ret = tsn_log_create_file(dst_data_.file_name_.c_str());
 	  assert(ret>=0);	
-		ret = tsn_log_open_file(dst_data_.file_name(), TSN_LOG_READWRITE, log);
+		ret = tsn_log_open_file(dst_data_.file_name_.c_str(), TSN_LOG_READWRITE, log);
 	  assert(ret>=0);	
 	}
   assert(log);
@@ -104,11 +104,12 @@ CDEntry::CDEntryErrT CDEntry::Save(void)
 
   }
   else if( dst_data_.handle_type() == DataHandle::kOSFile ) {
-    if( dst_data_.file_name() == NULL ) {
-      char *cd_file = new char[MAX_FILE_PATH];
-      cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); 
+    if( dst_data_.file_name_.empty() ) {
+//      char *cd_file = new char[MAX_FILE_PATH];
+//      cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); 
+
       // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-      dst_data_.set_file_name(cd_file);
+      dst_data_.file_name_ = Util::GetUniqueCDFileName(cd_id_, src_data_.address_data());
     }
 
     // FIXME	Jinsuk: we need to collect file writes and write as a chunk. 
@@ -118,7 +119,7 @@ CDEntry::CDEntryErrT CDEntry::Save(void)
     //char filepath[1024]; 
     //Util::GetCDFilePath(cd_id_, src_data.address_data(), filepath); 
     // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-    fp = fopen(dst_data_.file_name(), "w");
+    fp = fopen(dst_data_.file_name_.c_str(), "w");
     if( fp!= NULL ) {
       fwrite(src_data_.address_data(), sizeof(char), src_data_.len(), fp);
       fclose(fp);
@@ -138,7 +139,7 @@ void CDEntry::CloseFile(struct tsn_log_struct *log)
 	int ret;
 	ret = tsn_log_close_file(log);
 	assert(ret>=0);
-	ret = tsn_log_destroy_file(dst_data_.file_name());	
+	ret = tsn_log_destroy_file(dst_data_.file_name_.c_str());	
 }
 
 DataHandle* CDEntry::GetBuffer() {
@@ -225,10 +226,9 @@ CDEntry::CDEntryErrT CDEntry::Restore(void)
 		//FIXME we need to collect file writes and write as a chunk. We don't want to have too many files per one CD.   
 
 		FILE *fp;
-		char *cd_file; 
 		//  Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); 
     // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-		cd_file = buffer->file_name();
+		const char* cd_file = buffer->file_name_.c_str();
 		fp = fopen(cd_file, "r");
 		if( fp!= NULL )	{
       if( buffer->ref_offset() != 0 ) fseek(fp, buffer->ref_offset(), SEEK_SET); 
@@ -298,9 +298,9 @@ CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 		//FIXME we need to collect file writes and write as a chunk. We don't want to have too many files per one CD.   
 
 		FILE *fp;
-		char *cd_file; 
+//		char *cd_file; 
 		//  Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-		cd_file = buffer->file_name();
+		const char* cd_file = buffer->file_name_.c_str();
 		fp = fopen(cd_file, "r");
 		if( fp!= NULL ) {
       if( buffer->ref_offset() != 0 )

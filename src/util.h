@@ -36,149 +36,105 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define _UTIL_H
 #include "cd_global.h"
 #include <sys/types.h>
-#include <cstring>
+#include <string>
 #include <unistd.h>
 #include <stdio.h>
 #include <iostream>
+#include <sstream>
+#include <streambuf>
+#include <string>
 #include "cd_id.h"
 // system specific or machine specific utils resides here.
+using namespace cd;
 
-class cd::Util {
-  public:
-    static uint64_t GetCurrentTaskID()
-    {
-      // STUB
+namespace cd {
 
-      return 0;
-    }
+class StringBuffer : public std::string {
+  std::ostringstream _stream;
+public:
+  StringBuffer() {}
+  StringBuffer(const std::string& initTxt) {
+  	_stream << initTxt;
+    assign(_stream.str());
+  }
+  
+  template <typename T>
+  StringBuffer& operator<<(T const& t) {
+    _stream << t;
+    assign(_stream.str());
+    return *this;
+  }
 
-    static pid_t GetCurrentProcessID()
-    {
-      //FIXME maybe it is the same task id 
-      return getpid();	
-    }
-
-    static uint64_t GetCurrentDomainID()
-    {
-      //STUB
-      return 0;
-    }
-
-    static uint64_t GetCurrentNodeID()
-    {
-
-      //STUB 
-      return 0;
-
-    }
-
-    static uint64_t GenerateCDObjectID() 
-    {
-      // STUB
-      // The policy for Generating CDID could be different . 
-      // But this should be unique
-      //FIXME for multithreaded version this is not safe 
-      // Assume we call this function one time, so we will have atomically increasing counter and this will be local to a process. 
-      // Within a process it will just use one counter. Check whether this is enough or not.
-      static uint64_t object_id=0;
-      return object_id++;
-
-    }
-
-    static const char * GetCDFilesPath()
-    {
-
-      //FIXME This should return appropriate path depending on configuration 
-      // and perhaps each node may have different path to store CD related files
-      return "./"; 
-
-    }
-
-    // This generates a unique file name that will be used for preservation. 
-    // Per CD must be different, so we can refer to CDID and 
-    // also HEX address of the pointer we are preserving. 
-    // -> This might not be a good thing when we recover actually the stack content can be different... 
-    // is it? or is it not?  let's assume it does...
-////    static void GetUniqueCDFileName(CDID &cd_id, void *addr, char *filename) 
-////    { 
-//////      const char *base_file_path = GetCDFilesPath(cd_id); 
-////      const char* base_file_path = GetCDFilesPath();
-//////#ifdef _WORK 
-////      sprintf(filename, "%s%lld.%lld.%lld.%lld.%lld.cd", base_file_path, 
-////                                              (long long)cd_id.domain_id_, 
-////                                              (long long)cd_id.node_id_.task_, 
-////                                              (long long)cd_id.level_, 
-////                                              (long long)cd_id.object_id_, 
-////                                              (long long)cd_id.sequential_id_);
-//////#else
-//////      sprintf(filename, "%s%lld.%lld.%lld.%lld.%lld.%p.cd", base_file_path, 
-//////                                                 (long long)cd_id.domain_id_, 
-//////                                                 (long long)cd_id.node_id_.task_, 
-//////                                                 (long long)cd_id.level_, 
-//////                                                 (long long)cd_id.object_id_, 
-//////                                                 (long long)cd_id.sequential_id_, addr);
-//////#endif
-////    }
-//#ifdef _WORK 
+  std::string GetString() const { 
+    return _stream.str(); 
+  }
  
-    // This generates a unique file name that will be used for preservation. 
-    // Per CD must be different, so we can refer to CDID and 
-    // also HEX address of the pointer we are preserving. 
-    // -> This might not be a good thing when we recover actually the stack content can be different... 
-    // is it? or is it not?  let's assume it does...
-    static char* GetUniqueCDFileName(CDID &cd_id, void *addr, const char* base_=0) 
-    {
-      char* filename = new char(100);
-      const char* base_file_path = base_;
-      if(base_file_path == 0) base_file_path = GetCDFilesPath();
-      printf("%s\n", base_); 
-      printf("%s\n", base_file_path);
-      getchar(); 
-      sprintf(filename, "%s%lld.%lld.%lld.%lld.%lld.cd", base_file_path, 
-                                              (long long)cd_id.domain_id_, 
-                                              (long long)cd_id.node_id_.task_, 
-                                              (long long)cd_id.level_, 
-                                              (long long)cd_id.object_id_, 
-                                              (long long)cd_id.sequential_id_);
-      printf("%s\n", filename);
-      getchar(); 
-      return filename;
-    }
-//#endif
+};
 
-/*
-    static void GetUniqueCDFileName(CDID &cd_id, void *addr, char *filename)
-    { // This generates a unique file name that will be used for preservation. Per CD must be different, so we can refer to CDID and also 
-      //hex address of the pointer we are preserving. -> This might not be a good thing when we recover actually the stack content can be different... is it? or is it not?  let's assume it does...
 
-//      const char *base_file_path = GetCDFilesPath(cd_id);	
-      const char* base_file_path = GetCDFilesPath();
-//#ifdef GONG
-			// GONG
-      sprintf(filename, "%s%lld.%lld.%lld.%lld.cd", 
-							base_file_path, (long long)cd_id.domain_id_,  
-							(long long)cd_id.level_, (long long)cd_id.object_id_, (long long)cd_id.sequential_id_);
-//#else
-//      sprintf(filename, "%s%lld.%lld.%lld.%lld.%p.cd", 
-//							base_file_path, (long long)cd_id.domain_id_,  
-//							(long long)cd_id.level_, (long long)cd_id.object_id_, (long long)cd_id.sequential_id_, addr);
-//#endif
-    }
-//#ifdef GONG		
-		//GONG
-    static void GetUniqueCDFileName(CDID &cd_id, void *addr, char *filename, std::string base_)
-    { // This generates a unique file name that will be used for preservation. Per CD must be different, so we can refer to CDID and also 
-      //hex address of the pointer we are preserving. -> This might not be a good thing when we recover actually the stack content can be different... is it? or is it not?  let's assume it does...
+class Util {
+public:
 
-//      const char *base_file_path = GetCDFilesPath(cd_id);	
-      const char* base_file_path = base_.c_str();
-      sprintf(filename, "%s%lld.%lld.%lld.%lld.cd", 
-							base_file_path, (long long)cd_id.domain_id_,  
-							(long long)cd_id.level_, (long long)cd_id.object_id_, (long long)cd_id.sequential_id_);
+static const char* GetBaseFilePath()
+{
+  //FIXME This should return appropriate path depending on configuration 
+  // and perhaps each node may have different path to store CD related files
+  return "./"; 
+}
 
-    }
-//#endif
-*/
+// This generates a unique file name that will be used for preservation. 
+// Per CD must be different, so we can refer to CDID and 
+// also HEX address of the pointer we are preserving. 
+// -> This might not be a good thing when we recover actually the stack content can be different... 
+// is it? or is it not?  let's assume it does...
+static std::string GetUniqueCDFileName(const CDID& cd_id, void* addr) 
+{
+  std::string base(GetBaseFilePath());
+  StringBuffer filename(base);
+  std::cout << filename.GetString() << std::endl << std::endl;
+  StringBuffer()<<filename << cd_id.domain_id_ << cd_id.level_ << cd_id.sibling_id_ << cd_id.object_id_ << cd_id.sequential_id_;
+  std::cout << filename.GetString() << std::endl << std::endl; getchar(); 
+  return filename.GetString();
+}
+
+static uint64_t GetCurrentTaskID()
+{
+  // STUB
+
+  return 0;
+}
+
+static pid_t GetCurrentProcessID()
+{
+  //FIXME maybe it is the same task id 
+  return getpid();	
+}
+
+static uint64_t GetCurrentDomainID()
+{
+  //STUB
+  return 0;
+}
+
+static uint64_t GetCurrentNodeID()
+{
+
+  //STUB 
+  return 0;
+
+}
+
+static uint64_t GenerateCDObjectID() 
+{
+  // STUB
+  // The policy for Generating CDID could be different . 
+  // But this should be unique
+  //FIXME for multithreaded version this is not safe 
+  // Assume we call this function one time, so we will have atomically increasing counter and this will be local to a process. 
+  // Within a process it will just use one counter. Check whether this is enough or not.
+  static uint64_t object_id=0;
+  return object_id++;
+}
 
 };
 
@@ -206,5 +162,6 @@ class Path {
   	}
 };
 
+} // namespace cd ends
 
 #endif

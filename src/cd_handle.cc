@@ -43,7 +43,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <assert.h>
 #include <utility>
 #include <math.h>
-#include <mpi.h>
+//#include <mpi.h>
 
 using namespace cd;
 using namespace std;
@@ -336,6 +336,86 @@ CDHandle* CDHandle::Create( const char* name,
   return new_cd;
 }
 
+/// Split the node
+/// (x,y,z)
+/// taskID = x + y * nx + z * (nx*ny)
+/// x = taskID % nx
+/// y = ( taskID % ny ) - x 
+/// z = r / (nx*ny)
+int CDHandle::SplitCD(int my_size, int num_children, int& new_color, int& new_task)
+{
+
+  int new_size = (int)((double)my_size / num_children);
+  int num_x = round(pow(node_id_.size_, 1/3.));
+  int num_y = num_x;
+  int num_z = num_x;
+
+  int num_children_x = 0;
+  if(num_children > 1)       num_children_x = round(pow(num_children, 1/3.));
+  else if(num_children == 1) num_children_x = 1;
+  else assert(0);
+
+  int num_children_y = num_children_x;
+  int num_children_z = num_children_x;
+
+  int new_num_x = num_x / num_children_x;
+  int new_num_y = num_y / num_children_y;
+  int new_num_z = num_z / num_children_z;
+
+  cout<<"CD : "<< ptr_cd()->name_<<"num_children = "<< num_children 
+  <<", num_x = "<< num_x 
+  <<", new_children_x = "<< num_children_x 
+  <<", new_num_x = "<< new_num_x <<"node size: "<<node_id_.size_<<"\n\n"<<endl; //getchar();
+
+//  cout<<"split check"<<endl;
+  assert(num_x*num_y*num_z == node_id_.size_);
+  assert(num_children_x * num_children_y * num_children_z == (int)num_children);
+  assert(new_num_x * new_num_y * new_num_z == new_size);
+  assert(num_x != 0);
+  assert(num_y != 0);
+  assert(num_z != 0);
+  assert(new_num_x != 0);
+  assert(new_num_y != 0);
+  assert(new_num_z != 0);
+  assert(num_children_x != 0);
+  assert(num_children_y != 0);
+  assert(num_children_z != 0);
+//  uint64_t num_y = (uint64_t)pow(new_node.size_, 1/3.);
+//  uint64_t num_z = (uint64_t)pow(new_node.size_, 1/3.);
+  
+  int taskID = GetTaskID();
+  int sz = num_x*num_y;
+  int Z = taskID / sz;
+  int tmp = taskID % sz;
+  int Y = tmp / num_x;
+  int X = tmp % num_x;
+
+
+//  cout<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
+//  cout<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
+  cout << "(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<")"<< endl; 
+
+  new_color = (int)(X / new_num_x + (Y / new_num_y)*num_children_x + (Z / new_num_z)*(num_children_x * num_children_y));
+  new_task  = (int)(X % new_num_x + (Y % new_num_y)*new_num_x      + (Z % new_num_z)*(new_num_x * new_num_y));
+  
+//  cout << "(color,task,size) = (" << new_node.color_ << ","<< new_node.task_ << "," << new_node.size_ <<") <-- "
+//       <<"(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<") -- (color,task,size) = (" << node_id_.color_ << ","<< node_id_.task_ << "," << node_id_.size_ <<")"
+//       << "ZZ : " << round((double)Z / new_num_z)
+//       << endl;
+//  getchar();
+
+  return 0;
+}
+
+
+int CDHandle::GetNewNodeID(NodeID& new_node)
+{
+  // just set the same as parent.
+  new_node.color_ = node_id_.color_;
+  new_node.task_  = 0;
+  new_node.size_  = 1;
+}
+
 // Collective
 CDHandle* CDHandle::Create( int color, 
                             uint32_t num_children, 
@@ -369,139 +449,39 @@ CDHandle* CDHandle::Create( int color,
   //  Essentially, making the key value zero for all processes of a given color means that 
   //  one doesn't really care about the rank-order of the processes in the new communicator.  
 
+  // Create CDHandle for multiple tasks (MPI rank or threads)
+
 //  Sync();
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
+  int new_size = (int)((double)node_id_.size_ / num_children);
+  int new_color, new_task = 0;
+  int err;
 
+//  Sync(); cout << "[Before] old: " << node_id_ <<", new: " << new_node << endl << endl; //getchar();
 
-  NodeID new_node(INITIAL_COLOR, 0, 0, 0);
-  
-  // Split the node
-  // (x,y,z)
-  // taskID = x + y * nx + z * (nx*ny)
-  // x = taskID % nx
-  // y = ( taskID % ny ) - x 
-  // z = r / (nx*ny)
-  int num_x = round(pow(node_id_.size_, 1/3.));
-  int num_y = num_x;
-  int num_z = num_x;
-  new_node.size_ = (int)(node_id_.size_ / num_children);
-//  cout<<"new node size = "<< new_node.size_<<endl;
-
-//  int new_num_x=0;
-//  if(num_node.size_ > 1) 
-//    new_num_x = round(pow(new_node.size_, 1/3.));
-//  else if(num_node.size_ == 1)
-//    new_num_x = 1;
-//  else
-//    assert(0);
-//    
-//  int new_num_y = new_num_x;
-//  int new_num_z = new_num_x;
-
-  int num_children_x = 0;
-  if(num_children > 1) 
-    num_children_x = round(pow(num_children, 1/3.));
-  else if(num_children == 1)
-    num_children_x = 1;
-  else
-    assert(0);
-
-  int num_children_y = num_children_x;
-  int num_children_z = num_children_x;
-
-  int new_num_x = num_x / num_children_x;
-  int new_num_y = num_y / num_children_y;
-  int new_num_z = num_z / num_children_z;
-
-  cout<<"CD : "<< ptr_cd()->name_<<"num_children = "<< num_children 
-  <<", num_x = "<< num_x 
-  <<", new_children_x = "<< num_children_x 
-  <<", new_num_x = "<< new_num_x <<"node size: "<<node_id_.size_<<"\n\n"<<endl; //getchar();
-  Sync();
-//  cout<<"split check"<<endl;
-  assert(num_x*num_y*num_z == node_id_.size_);
-  assert(num_children_x * num_children_y * num_children_z == (int)num_children);
-  assert(new_num_x * new_num_y * new_num_z == new_node.size_);
-  assert(num_x != 0);
-  assert(num_y != 0);
-  assert(num_z != 0);
-  assert(new_num_x != 0);
-  assert(new_num_y != 0);
-  assert(new_num_z != 0);
-  assert(num_children_x != 0);
-  assert(num_children_y != 0);
-  assert(num_children_z != 0);
-//  uint64_t num_y = (uint64_t)pow(new_node.size_, 1/3.);
-//  uint64_t num_z = (uint64_t)pow(new_node.size_, 1/3.);
-  
-  int taskID = GetTaskID();
-  int sz = num_x*num_y;
-  int Z = taskID / sz;
-  int tmp = taskID % sz;
-  int Y = tmp / num_x;
-  int X = tmp % num_x;
-
-
-/*
-  int X = taskID % num_x;
-  int Y = (taskID % num_y) - X;
-  int Z = round((double)taskID / (num_x * num_y));
-*/
-//  cout<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
-//  cout<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
-  cout << "(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<")"<< endl; Sync();
-//  getchar();
-  unsigned int new_color = (int)(X / new_num_x + (Y / new_num_y)*num_children_x + (Z / new_num_z)*(num_children_x * num_children_y));
-  new_node.task_  = (int)(X % new_num_x + (Y % new_num_y)*new_num_x      + (Z % new_num_z)*(new_num_x * new_num_y));
-  new_node.color_ = new_color;
-//  cout << "(color,task,size) = (" << new_node.color_ << ","<< new_node.task_ << "," << new_node.size_ <<") <-- "
-//       <<"(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<") -- (color,task,size) = (" << node_id_.color_ << ","<< node_id_.task_ << "," << node_id_.size_ <<")"
-//       << "ZZ : " << round((double)Z / new_num_z)
-//       << endl;
-//  getchar();
-
-/*
-  for(int z=0; z < new_num_z; ++z) {     // Z axis
-    
-    for(int y=0; y < new_num_y; ++y) {   // Y axis
-      
-      for(int x=0; x < new_num_x; ++x) { // X axis
-
-
-//    if(i*GetTaskSize()/num_children =< GetTaskID()
-//      && GetTaskID() < (i+1)*GetTaskSize()/num_children)
-//    {
-        X = X % new_num_x + (Y % new_num_y)*new_num_x + (Z % new_num_z)*nxny;
-        Y = (taskID % ny) - X;
-        Z = taskID / (nx*ny);
-
-        new_node.color_ = scale_i + j*scale_j + k;
-        new_node.task_  = taskID %  + j*scale_j + i*scale_i;
-//    }
-
-
-      }
-    }
+  NodeID new_node(INITIAL_COLOR, 0, new_size, 0);
+  if(num_children > 1) {
+    err = SplitCD(node_id_.size_, num_children, new_color, new_task);
+//  cout << "new_color: "<< new_color <<", new_task: " << new_task << endl << endl; //getchar();
+    err = GetNewNodeID(node_id_.color_, new_color, new_task, new_node);
   }
-*/  
-  // Create CDHandle for multiple tasks (MPI rank or threads)
-  new_color++;
-  Sync(); cout<<"[Before] old: "<<node_id_<<", new: "<<new_node<<"\n"<< "new_color : "<<new_color<<"\n"<<endl; //getchar();
+  else if(num_children == 1) {
+    err = GetNewNodeID(new_node);
+  }
+  else {
+    ERROR_MESSAGE("Number of children to create is wrong.\n");
+  }
 
-  MPI_Comm_split(node_id_.color_, new_color, new_node.task_, &(new_node.color_));
-  MPI_Comm_size(new_node.color_, &(new_node.size_));
-  MPI_Comm_rank(new_node.color_, &(new_node.task_));
-  // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
 //  Sync();
 //  for(int i=0; i<node_id_.task_*100000; i++) { int a = 5 * 5; } 
-//  cout<<"[After] old: "<<node_id_<<", new: "<<new_node<<"\n"<<endl; //getchar();
-//  cout<<"New CD created : " << new_node <<endl; 
-//  getchar();
+//  cout << "[After] old: " << node_id_ <<", new: " << new_node << endl << endl; //getchar();
 
+  // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CDHandle* new_cd = new CDHandle(this, name, new_node, type, sys_bit_vec);
 
   CDPath.push_back(new_cd);
-//  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;;
+//  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;
+
   // Request to add me as a child to my parent
   // It could be a local execution or a remote one. 
   ptr_cd_->AddChild(this);
@@ -872,25 +852,10 @@ bool CDHandle::operator==(const CDHandle &other) const
 char* CDHandle::GetName(void)
 {
   if(ptr_cd_ != NULL)
-    return ptr_cd_->name_;  
+    return const_cast<char*>(ptr_cd_->name_.c_str());  
   else
     assert(0);
 }
-
-//CDHandle* CDHandle::GetParent()
-//{
-//  if(ptr_cd_ != NULL) {
-//    //cout<<"level : " <<ptr_cd_->GetCDID().level_<<endl;
-//    //getchar();
-//    
-//    return CDPath.at(ptr_cd_->GetCDID().level_ - 1);
-//  }
-//  else {
-//    cout<< "ERROR in GetParent" <<endl;
-//    assert(0);
-//  }
-//}
-
 
 // FIXME
 bool CDHandle::IsMaster(void)

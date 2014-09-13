@@ -55,7 +55,8 @@ class cd::CDEntry : public cd::Serializable
   private:
     DataHandle  src_data_;
     DataHandle  dst_data_;
-    // need a unique name to do via reference, this variable can be empty string when this is not needed
+    // need a unique name to do via reference, 
+    // this variable can be empty string when this is not needed
     std::string name_;    
     cd::CD*     ptr_cd_;
     CDID        cd_id_;
@@ -89,7 +90,7 @@ class cd::CDEntry : public cd::Serializable
 //        DATA_FREE( dst_data_.address_data() );
       }
  
-      if( dst_data_.file_name() != NULL )  {
+      if( !dst_data_.file_name_.empty() )  {
 //        delete dst_data_.file_name(); 
       }
     }

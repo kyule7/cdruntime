@@ -73,11 +73,11 @@ using namespace std;
 /// inside Create() 
 
 CD::CD()
+//  : cd_type_(kStrict), name_("INITIAL_NAME"), sys_detect_bit_vector_(0)
 {
-  cd_type_ = kStrict;  
-  name_    = const_cast<char*>("INITIAL_NAME");
+  cd_type_ = kStrict; 
+  name_ = "INITIAL_NAME"; 
   sys_detect_bit_vector_ = 0;
-
   // Assuming there is only one CD Object across the entire system we initilize cd_id info here.
   cd_id_ = CDID();
 
@@ -88,31 +88,31 @@ CD::CD()
   Init();  
 }
 
-CD::CD( CDHandle* cd_parent, 
-        const char* name, 
-        CDID cd_id, 
-        CDType cd_type, 
-        uint64_t sys_bit_vector)
-{
   // FIXME: only acquire root handle when needed. 
   // Most of the time, this might not be required.
-  cd_type_  = cd_type;
-  name_     = const_cast<char*>(name);
-  // FIXME
-  sys_detect_bit_vector_ = sys_bit_vector;
-
+  // Kyushick : I cannot fully understand this comment....
+CD::CD(CDHandle* cd_parent, 
+       const char* name, 
+       CDID cd_id, 
+       CDType cd_type, 
+       uint64_t sys_bit_vector)
+//  : cd_type_(cd_type), name_(name), sys_detect_bit_vector_(0), cd_id_(cd_id)
+{
+  cd_type_ = cd_type; 
+  name_ = name; 
+  sys_detect_bit_vector_ = 0; 
+  cd_id_ = cd_id;
   // FIXME 
   // cd_id_ = 0; 
   // We need to call which returns unique id for this cd. 
   // the id is recommeneded to have pre-allocated sections per node. 
   // This way, we don't need to have race condition to get unique id. 
   // Instead local counter is used to get the unique id.
-  cd_id_    = cd_id;
 
   // Kyushick: Object ID should be unique for the copies of the same object?
   // For now, I decided it as an unique one
   cd_id_.object_id_++;
-
+  cout << "cd object is created " << cd_id_.object_id_++ <<endl;
   // FIXME maybe call self generating function here?           
   // cd_self_  = self;  //FIXME maybe call self generating function here?           
 
@@ -134,7 +134,7 @@ void CD::Initialize(CDHandle* cd_parent,
                     uint64_t sys_bit_vector)
 {
   cd_type_  = cd_type;
-  name_     = const_cast<char*>(name);
+  name_     = name;
   cd_id_    = cd_id;
   cd_id_.object_id_++;
   sys_detect_bit_vector_ = sys_bit_vector;
@@ -180,8 +180,6 @@ CD::~CD()
 //  cd_parent_->RemoveChild(this);
   //FIXME : This will be done at the CDHandle::Destroy()
 }
-
-
 
 CD* CD::Create(CDHandle* cd_parent, 
                const char* name, 
@@ -233,7 +231,7 @@ CDErrT CD::Destroy(void)
 }
 
 
-/*   CD::begin()
+/*   CD::Begin()
  *  (1) Call all the user-defined error checking functions. 
  *      Jinsuk: Why should we call error checking function at the beginning?
  *      Kyushick: It doesn't have to. I wrote it long time ago, so explanation here might be quite old.
@@ -551,9 +549,10 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
 
           CDEntry::CDEntryErrT err = cd_entry->SaveMem();
 
-          entry_directory_.emplace_back(*cd_entry); 
+          entry_directory_.push_back(*cd_entry); 
           // FIXME 
-          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
+//          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
+          if( ref_name != 0 ) entry_directory_map_[ref_name] = *cd_entry;
 
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK: CDInternalErrT::kEntryError;
         }
@@ -567,8 +566,10 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
           if( !isOpenHDD() ) OpenHDD(); // set flag 'open_HDD'       
           CDEntry::CDEntryErrT err = cd_entry->SaveFile(path.GetHDDPath(), isOpenHDD(), &HDDlog);
 
-          entry_directory_.emplace_back(*cd_entry);  
-          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
+          entry_directory_.push_back(*cd_entry); 
+ 
+//          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
+          if( ref_name != 0 ) entry_directory_map_[ref_name] = *cd_entry;
 
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
@@ -581,8 +582,10 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
 
           if( !isOpenSSD() ) OpenSSD(); // set flag 'open_SSD'       
           CDEntry::CDEntryErrT err = cd_entry->SaveFile(path.GetSSDPath(), isOpenSSD(), &SSDlog);
-          entry_directory_.emplace_back(*cd_entry);  
-          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
+          entry_directory_.push_back(*cd_entry);  
+
+//          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
+          if( ref_name != 0 ) entry_directory_map_[ref_name] = *cd_entry;
 
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
@@ -592,8 +595,9 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
                                  DataHandle(DataHandle::kOSFile, 0, len_in_bytes), 
                                  my_name);
           cd_entry->set_my_cd(this); 
-          entry_directory_.emplace_back(*cd_entry);  
-          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
+          entry_directory_.push_back(*cd_entry);  
+//          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
+          if( ref_name != 0 ) entry_directory_map_[ref_name] = *cd_entry;
           PRINT_DEBUG("\nPreservation to PFS which is not supported yet. ERROR\n");
           assert(0);
           break;
@@ -612,8 +616,9 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
                              DataHandle(DataHandle::kReference, 0, len_in_bytes, ref_name, ref_offset), 
                              my_name);
       cd_entry->set_my_cd(this); // this required for tracking parent later.. this is needed only when via ref
-      entry_directory_.emplace_back(*cd_entry);  
-      entry_directory_map_.emplace(ref_name, *cd_entry);
+      entry_directory_.push_back(*cd_entry);  
+//      entry_directory_map_.emplace(ref_name, *cd_entry);
+      entry_directory_map_[ref_name] = *cd_entry;
 
       return CDInternalErrT::kOK;
       

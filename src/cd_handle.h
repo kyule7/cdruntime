@@ -44,11 +44,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <array>
 #include <setjmp.h>
 #include <ucontext.h>
+#include "cd_mpi.h"
 
 #if _PROFILER
 #include "sight.h"
 #endif
-//#include "../../../../../blcr/blcr-0.8.5/include/libcr.h"
 
 
 // CDHandle is a global accessor to the CD object. 
@@ -357,6 +357,12 @@ class cd::CDHandle {
     CDErrT Sync(void);
 
     uint64_t SetSystemBitVector(uint64_t error_name_mask, uint64_t error_loc_mask);
+  private:
+    int SplitCD(int my_size, int num_children, int& new_color, int& new_task);
+    int GetNewNodeID(NodeID& new_node);
+    int GetNewNodeID(int my_color, int new_color, int new_task, NodeID& new_node){
+      return InternalGetNewNodeID(my_color, new_color, new_task, new_node);
+    }
   public:
     /// Do we need this?
     bool IsLocalObject(void);
