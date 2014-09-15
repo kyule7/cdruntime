@@ -32,24 +32,36 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 */
+#include "cd_log_handle.h"
+#include <stdio.h>
+#include <stdlib.h>
+using namespace cd;
 
-#ifndef _CD_MPI_H
-#define _CD_MPI_H
-#include <mpi.h>
-#include "node_id.h"
-
-namespace cd {
-  int InternalGetNewNodeID(int my_color, int new_color, int new_task, NodeID& new_node)
-  {
-    int err = 1;
-    int size = new_node.size_;
-    err = MPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
-    err = MPI_Comm_size(new_node.color_, &(new_node.size_));
-    err = MPI_Comm_rank(new_node.color_, &(new_node.task_));
+void CDLogHandle::OpenHDD(void)     
+{ 
+  char cmd[30];
+  sprintf(cmd, "mkdir -p %s", path.GetHDDPath().c_str());
+  int ret = system(cmd);
+  if( ret == -1 ) {
+    ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
+    assert(0);
+  }
+  else {
+    _OpenHDD = true;  
+  }
   
-    assert(size == new_node.size_);
-    return err;
+}
 
+void CDLogHandle::OpenSSD(void)     
+{ 
+  char cmd[30];
+  sprintf(cmd, "mkdir -p %s", path.GetSSDPath().c_str());
+  int ret = system(cmd);
+  if( ret == -1 ) {
+    ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
+    assert(0);
+  }
+  else {
+    _OpenSSD = true;  
   }
 }
-#endif

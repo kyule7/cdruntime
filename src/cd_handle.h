@@ -44,7 +44,27 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <array>
 #include <setjmp.h>
 #include <ucontext.h>
-#include "cd_mpi.h"
+
+#if _MPI_VER
+#include <mpi.h>
+#define _SINGLE_VER 0
+#elif _PGAS_VER
+//#include "cd_pgas.h"
+#define _SINGLE_VER 0
+#else
+#define _SINGLE_VER 1
+#endif
+
+//#if _MPI_VER
+//#include "cd_mpi.h"
+//#define _SINGLE_VER 0
+//#elif _PGAS_VER
+//#include "cd_pgas.h"
+//#define _SINGLE_VER 0
+//#else
+//#define _SINGLE_VER 1
+//#endif
+
 
 #if _PROFILER
 #include "sight.h"
@@ -359,10 +379,9 @@ class cd::CDHandle {
     uint64_t SetSystemBitVector(uint64_t error_name_mask, uint64_t error_loc_mask);
   private:
     int SplitCD(int my_size, int num_children, int& new_color, int& new_task);
-    int GetNewNodeID(NodeID& new_node);
-    int GetNewNodeID(int my_color, int new_color, int new_task, NodeID& new_node){
-      return InternalGetNewNodeID(my_color, new_color, new_task, new_node);
-    }
+    CDErrT GetNewNodeID(NodeID& new_node);
+    CDErrT GetNewNodeID(int my_color, int new_color, int new_task, NodeID& new_node);
+
   public:
     /// Do we need this?
     bool IsLocalObject(void);
@@ -388,12 +407,5 @@ class cd::CDHandle {
 
 };
 
-namespace cd {
-//  extern CDHandle* GetCurrentCD(void);
-//  extern CDHandle* GetRootCD(void);
-//
-//  extern CDHandle* CD_Init(int numproc, int myrank);
-//  extern void CD_Finalize();
-}
 
 #endif

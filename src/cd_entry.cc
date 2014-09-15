@@ -1,7 +1,43 @@
+/*
+Copyright 2014, The University of Texas at Austin 
+All rights reserved.
+
+THIS FILE IS PART OF THE CONTAINMENT DOMAINS RUNTIME LIBRARY
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met: 
+
+1. Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer. 
+
+2. Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution. 
+
+3. Neither the name of the copyright holder nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission. 
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+  COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include "cd_entry.h"
+#include "cd_path.h"
+
 #include <cassert>
 using namespace cd;
-
 
 CDEntry::CDEntryErrT CDEntry::Delete(void)
 {
@@ -18,9 +54,9 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
     void *allocated_space = DATA_MALLOC(dst_data_.len() * sizeof(char));
     // FIXME: Jinsuk we might want our own memory manager since we don't want to call malloc everytime we want small amount of additional memory. 
     dst_data_.set_address_data(allocated_space);
-    printf("....%d\n", dst_data_.len()*sizeof(char));
-    printf("allocated memory: %x\n", allocated_space);
-    printf("dst_data_: %x\n", dst_data_.address_data());
+//    printf("....%d\n", dst_data_.len()*sizeof(char));
+//    printf("allocated memory: %x\n", allocated_space);
+//    printf("dst_data_: %x\n", dst_data_.address_data());
     getchar();
   }
 //  else {
@@ -96,6 +132,7 @@ CDEntry::CDEntryErrT CDEntry::Save(void)
 
     if(dst_data_.address_data() != NULL) {
       memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len()); 
+      std::cout<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<std::endl<<std::endl;
     }
     else {
       return kOutOfMemory;
@@ -150,7 +187,8 @@ DataHandle* CDEntry::GetBuffer() {
     buffer = &real_dst_data;
     
     // FIXME: for now let's just search immediate parent only.  Let's extend this to more general way.
-		cd::CDHandle* parent_cd = GetParentCD(ptr_cd_->GetCDID());
+//		cd::CDHandle* parent_cd = GetParentCD(ptr_cd_->GetCDID());
+		cd::CDHandle* parent_cd = CDPath::GetParentCD();
 		if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
 
 		CDEntry* entry = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
@@ -170,7 +208,8 @@ DataHandle* CDEntry::GetBuffer() {
 				entry = p_cd->InternalGetEntry(entry->dst_data_.ref_name());
         if(entry == 0) assert(0);
 
-				parent_cd = GetParentCD(p_cd->GetCDID());
+//				parent_cd = GetParentCD(p_cd->GetCDID());
+				parent_cd = CDPath::GetParentCD();
         if(parent_cd == 0) assert(0);
 
 			} while( !entry->dst_data_.ref_name().empty() );
@@ -215,6 +254,8 @@ CDEntry::CDEntryErrT CDEntry::Restore(void)
 //      std::cout << "sizeof src "<< sizeof(src_data_.address_data()) << ", sizeof dst " <<sizeof(buffer->address_data())<<std::endl;
 			memcpy(src_data_.address_data(), (char *)buffer->address_data()+(buffer->ref_offset()), buffer->len()); 
       std::cout<<"memcpy succeeds"<<std::endl; getchar();
+
+      std::cout<<"memcpy "<< dst_data_.len() <<" size data from "<< dst_data_.address_data() << " to "<< src_data_.address_data() <<std::endl<<std::endl;
 		}
 		else {
 			ERROR_MESSAGE("Not enough memory.");
@@ -271,6 +312,8 @@ CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 		if(src_data_.address_data() != NULL) {
 			memcpy(src_data_.address_data(), 
             (char*)buffer->address_data() + (buffer->ref_offset()), buffer->len()); 
+
+      std::cout<<"memcpy "<< dst_data_.len() <<" size data from "<< dst_data_.address_data() << " to "<< src_data_.address_data() <<std::endl<<std::endl;
 		}
 		else {
 			ERROR_MESSAGE("Not enough memory.");

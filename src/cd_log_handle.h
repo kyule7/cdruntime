@@ -33,23 +33,58 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _CD_MPI_H
-#define _CD_MPI_H
-#include <mpi.h>
-#include "node_id.h"
+
+#ifndef _CD_LOG_HANDLE_H
+#define _CD_LOG_HANDLE_H
+
+#include "cd_global.h"
+#include "transaction.h"
+#define CDLog tsn_log_struct
+
+using namespace cd;
 
 namespace cd {
-  int InternalGetNewNodeID(int my_color, int new_color, int new_task, NodeID& new_node)
-  {
-    int err = 1;
-    int size = new_node.size_;
-    err = MPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
-    err = MPI_Comm_size(new_node.color_, &(new_node.size_));
-    err = MPI_Comm_rank(new_node.color_, &(new_node.task_));
-  
-    assert(size == new_node.size_);
-    return err;
 
-  }
-}
+class Path {
+public:
+	std::string _path_SSD;
+	std::string _path_HDD;
+public:
+	Path() {
+		_path_SSD = "./SSD";
+		_path_HDD = "./HDD";
+	}
+	Path(std::string ssd, std::string hdd) {
+		_path_SSD = ssd;
+		_path_HDD = hdd;
+	}
+	void SetSSDPath(std::string path_SSD) { _path_SSD = path_SSD; }
+	void SetHDDPath(std::string path_HDD) { _path_HDD = path_HDD; }
+	std::string GetSSDPath(void)          { return _path_SSD;     }
+	std::string GetHDDPath(void)          { return _path_HDD;     }
+	Path& operator=(const Path& that) {
+		_path_SSD = that._path_SSD;
+		_path_HDD = that._path_HDD;
+		return *this;
+	}
+};
+
+class CDLogHandle {
+public:
+  CDLog HDDlog;
+  CDLog SSDlog;
+  bool _OpenHDD, _OpenSSD;
+  Path path;
+public:
+  CDLogHandle() : _OpenHDD(false), _OpenSSD(false), path() {}
+  ~CDLogHandle() {}
+  void InitOpenHDD() { _OpenHDD = false; }
+  void InitOpenSSD() { _OpenSSD = false; }
+  bool isOpenHDD()   { return _OpenHDD;  }
+  bool isOpenSSD()   { return _OpenSSD;  }
+  void OpenHDD();     
+  void OpenSSD();     
+};
+
+} // namespace cd ends
 #endif

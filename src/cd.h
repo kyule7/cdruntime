@@ -40,7 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_entry.h"
 #include "util.h"
 #include "cd_id.h"
-
+#include "cd_log_handle.h"
 #if _WORK
 #include "transaction.h"
 #endif
@@ -117,49 +117,8 @@ class cd::CD {
     //  pthread_mutex_t mutex_;      //
     //  pthread_mutex_t log_directory_mutex_;
 
-#if _WORK
-  protected:
-    bool _OpenHDD, _OpenSSD;
-    Path path;
-  public:
-    tsn_log_struct HDDlog;
-    tsn_log_struct SSDlog;
-    void InitOpenHDD() { _OpenHDD = false; }
-    void InitOpenSSD() { _OpenSSD = false; }
-    bool isOpenHDD()   { return _OpenHDD;  }
-    bool isOpenSSD()   { return _OpenSSD;  }
-    void OpenHDD()     
-    { 
-      char cmd[30];
-      sprintf(cmd, "mkdir -p %s", path.GetHDDPath().c_str());
-      int ret = system(cmd);
-      if( ret == -1 ) {
-        ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
-        assert(0);
-      }
-      else {
-        _OpenHDD = true;  
-      }
-      
-    }
+    CDLogHandle log_handle_;
 
-    void OpenSSD()     
-    { 
-      char cmd[30];
-      sprintf(cmd, "mkdir -p %s", path.GetSSDPath().c_str());
-      int ret = system(cmd);
-      if( ret == -1 ) {
-        ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
-        assert(0);
-      }
-      else {
-        _OpenSSD = true;  
-      }
-    }
-
-    void Body();
-    PrvMediumT GetPlaceToPreserve(void);
-#endif
 
   public:
     CD();
@@ -246,6 +205,8 @@ class cd::CD {
     CDErrT Reexecute(void);
   
     // Utilities -----------------------------------------------------
+    PrvMediumT GetPlaceToPreserve(void);
+
     virtual CDErrT Stop(cd::CDHandle* cdh=NULL);
     virtual CDErrT Resume(void);
     virtual CDErrT AddChild(cd::CDHandle* cd_child);

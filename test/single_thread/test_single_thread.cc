@@ -35,12 +35,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <chrono>
 #include <stdio.h>
 #include <iostream>
-#include <mpi.h>
-#include "../../src/cd.h"
-#include "../../src/cds.h"
-#include "../../src/cd_handle.h"
+#include "cd.h"
+#include "cds.h"
+#include "cd_handle.h"
+#include "cd_path.h"
 
 #define SIZE 655360 //10M?
+#define LV1 1
 
 using namespace cd;
 
@@ -300,8 +301,8 @@ int test1()
   //root->Preserve((char *)&a,4* sizeof(int));
   root->Preserve((char *)&b,8* sizeof(int));
   //root->Preserve((char *)&b,8* sizeof(int));
-  printf("sizeof a : %d\n", sizeof(a)); getchar();
-  printf("sizeof b : %d\n", sizeof(b)); getchar();
+  printf("sizeof a : %d\t", sizeof(a)); getchar();
+  printf("sizeof b : %d\t", sizeof(b)); getchar();
 
   printf("Before Modify Current value of a[0]=%d a[1]=%d\n", a[0], a[1]);
   printf("Before Modify Current value of b[0]=%d b[1]=%d\n", b[0], b[1]);
@@ -605,7 +606,7 @@ int test2()
 
   printf("Before modifying current value of a[0] %d a[1] %d\n", a[0], a[1]);
   a[0] = 99;  // now when child recovers it should see 3 instead of 99
-  CDHandle* child=root->Create(GetCurrentCD()->GetNodeID(), 8, "CD1", kStrict, 0, 0, &err);
+  CDHandle* child=root->Create("CD1", kStrict, 0, 0, &err);
 //  CD *child= handle_cd_child.ptr_cd();
   CD_Begin(child); 
   child->Preserve((char *)&a,4* sizeof(int), kCopy, "nonamejusttest", "test2viareference",0);
@@ -655,7 +656,7 @@ int test3()
   a[2] = 112;  
   a[3] = 113;  
   CDErrT err;
-  CDHandle* child=root->Create(GetCurrentCD()->GetNodeID(), 8, "CD1", kStrict, 0, 0, &err);
+  CDHandle* child=root->Create("CD1", kStrict, 0, 0, &err);
 //  CD *child= handle_cd_child.ptr_cd();
   CD_Begin(child); 
   child->Preserve((char *)&(a[1]),3* sizeof(int), kCopy, "nonamejusttest", "test3viareference",sizeof(int)*1);
@@ -692,9 +693,6 @@ int test3()
 int main(int argc, char* argv[])
 {
   int nprocs, myrank;
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD,  &nprocs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
   np = nprocs;
   mr = myrank;
   int ret=0;

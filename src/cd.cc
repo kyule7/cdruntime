@@ -146,13 +146,13 @@ void CD::Init()
   ctxt_prv_mode_ = kExcludeStack; 
   cd_exec_mode_  = kSuspension;
   option_save_context_ = 0;
-#if _WORK 
-  path = Path("ssd", "hhd");
-  path.SetSSDPath("./SSDpath/");
-  path.SetHDDPath("./HDDpath/");
-  InitOpenHDD();
-  InitOpenSSD();
-#endif
+//#if _WORK 
+//  path = Path("ssd", "hhd");
+//  path.SetSSDPath("./SSDpath/");
+//  path.SetHDDPath("./HDDpath/");
+//  InitOpenHDD();
+//  InitOpenSSD();
+//#endif
 
 // Kyushick : I think we already initialize cd_id_ object inside cd object creator (outside of Init method)
 // So we do not have to get it here. 
@@ -198,24 +198,24 @@ CDErrT CD::Destroy(void)
   CDErrT err=CDErrT::kOK;
 
 //GONG
-#if _WORK
-  //When we destroy a CD, we need to delete its log (preservation file)
-  for(std::list<CDEntry>::iterator it = entry_directory_.begin(); 
-      it != entry_directory_.end() ; ++it) {
-
-    bool use_file = false;
-    if(cd_id_.level_<=1)  use_file = true;
-    if( use_file == true)  {
-//      if(cd_id_.level_==1) { // HDD
-//        it->CloseFile(&HDDlog);  
-//      }
-//      else { // SSD
-//        it->CloseFile(&SSDlog);  
-//      }
-    }
-
-  }  // for loop ends
-#endif
+//#if _WORK
+//  //When we destroy a CD, we need to delete its log (preservation file)
+//  for(std::list<CDEntry>::iterator it = entry_directory_.begin(); 
+//      it != entry_directory_.end() ; ++it) {
+//
+//    bool use_file = false;
+//    if(cd_id_.level_<=1)  use_file = true;
+//    if( use_file == true)  {
+////      if(cd_id_.level_==1) { // HDD
+////        it->CloseFile(&HDDlog);  
+////      }
+////      else { // SSD
+////        it->CloseFile(&SSDlog);  
+////      }
+//    }
+//
+//  }  // for loop ends
+//#endif
 
   if(GetCDID().level_ != 0) {   // non-root CD
 
@@ -563,8 +563,8 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
                                  my_name);
           cd_entry->set_my_cd(this); 
 
-          if( !isOpenHDD() ) OpenHDD(); // set flag 'open_HDD'       
-          CDEntry::CDEntryErrT err = cd_entry->SaveFile(path.GetHDDPath(), isOpenHDD(), &HDDlog);
+          if( !log_handle_.isOpenHDD() ) log_handle_.OpenHDD(); // set flag 'open_HDD'       
+          CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path.GetHDDPath(), log_handle_.isOpenHDD(), &(log_handle_.HDDlog));
 
           entry_directory_.push_back(*cd_entry); 
  
@@ -580,8 +580,8 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
                                  my_name);
           cd_entry->set_my_cd(this); 
 
-          if( !isOpenSSD() ) OpenSSD(); // set flag 'open_SSD'       
-          CDEntry::CDEntryErrT err = cd_entry->SaveFile(path.GetSSDPath(), isOpenSSD(), &SSDlog);
+          if( !log_handle_.isOpenSSD() ) log_handle_.OpenSSD(); // set flag 'open_SSD'       
+          CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path.GetSSDPath(), log_handle_.isOpenSSD(), &(log_handle_.SSDlog));
           entry_directory_.push_back(*cd_entry);  
 
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);

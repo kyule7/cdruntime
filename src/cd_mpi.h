@@ -39,6 +39,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "node_id.h"
 
 namespace cd {
-  int InternalGetNewNodeID(int my_color, int new_color, int new_task, NodeID& new_node);
+  int InternalGetNewNodeID(int my_color, int new_color, int new_task, NodeID& new_node)
+  {
+    int err = 1;
+    int size = new_node.size_;
+    err = MPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
+    err = MPI_Comm_size(new_node.color_, &(new_node.size_));
+    err = MPI_Comm_rank(new_node.color_, &(new_node.task_));
+  
+    assert(size == new_node.size_);
+    return err;
+
+  }
 }
 #endif

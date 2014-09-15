@@ -35,16 +35,24 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _CD_GLOBAL_H
 #define _CD_GLOBAL_H
-#include <cstdint>
+#include <stdint.h>
 #include <vector>
 #include <map>
 #include <iostream>
+#include <assert.h>
+
+#if _MPI_VER
+#include <mpi.h>
+#endif
+
+//#include "cd_path.h"
 //#include "cd_id.h"
 //#include "node_id.h"
 namespace cd {
   class CD;
   class MasterCD;
   class CDHandle;
+  class CDPath;
   class CDEntry;
   class DataHandle;
   class Serializable;
@@ -126,7 +134,8 @@ namespace cd {
   class CDNameT;
 
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
-  extern std::vector<CDHandle*> CDPath;
+//  extern std::vector<CDHandle*> CDPath;
+//  extern CDPath* CDPath::uniquePath_;
   extern std::vector<MasterCD*> MasterCDPath;
   extern bool is_visualized;
   extern int myTaskID;
@@ -140,11 +149,12 @@ namespace cd {
   extern void SetStatus(int flag);
   
 
-  extern CDHandle* GetCurrentCD(void);
-  extern CDHandle* GetRootCD(void);
-  extern CDHandle* GetParentCD(const CDID& cd_id);
+//  extern CDHandle* GetCurrentCD(void);
+//  extern CDHandle* GetRootCD(void);
+//  extern CDHandle* GetParentCD(const CDID& cd_id);
   extern CDHandle* CD_Init(int numproc=1, int myrank=0);
   extern void CD_Finalize();
+
 }
 
 
@@ -156,11 +166,14 @@ namespace cd {
 #define PRINT_DEBUG2(X,Y) printf(X,Y);
 #define MAX_FILE_PATH 2048
 
-
+#if _MPI_VER
 #define ROOT_COLOR MPI_COMM_WORLD
 #define INITIAL_COLOR MPI_UNDEFINED
-//#define ROOT_COLOR 0 
-//#define INITIAL_COLOR 0
+#else
+#define ROOT_COLOR 0 
+#define INITIAL_COLOR 0
+#endif
+
 /* 
 ISSUE 1 (Kyushick)
 If we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?

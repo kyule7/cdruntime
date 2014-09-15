@@ -40,16 +40,26 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include "node_id.h"
 //#include "cd_name_t.h"
 #include "util.h"
+#include "cd_path.h"
+
 #include <assert.h>
 #include <utility>
 #include <math.h>
-//#include <mpi.h>
+
+#if _MPI_VER
+#include <mpi.h>
+#endif
 
 using namespace cd;
+//using namespace cd::CDPath;
+
 using namespace std;
 
 std::map<uint64_t, int> cd::nodeMap;  // Unique CD Node ID - Communicator
-std::vector<CDHandle*>  cd::CDPath;
+CDPath* CDPath::uniquePath_;
+//std::vector<CDHandle*>  cd::CDPath;
+//CDPath* CDPath::uniquePath_;
+
 std::vector<MasterCD*>  cd::MasterCDPath;
 bool cd::is_visualized = false;
 int cd::myTaskID = 0;
@@ -108,14 +118,14 @@ ostream& cd::operator<<(ostream& str, const NodeID& node_id)
 void cd::SetStatus(int flag)
 { cd::status = flag; }
 
-CDHandle* cd::GetCurrentCD(void) 
-{ return cd::CDPath.back(); }
-
-CDHandle* cd::GetRootCD(void)    
-{ return cd::CDPath.front(); }
-
-CDHandle* cd::GetParentCD(const CDID& cd_id)
-{ return CDPath.at(cd_id.level_ - 1); }
+//CDHandle* cd::GetCurrentCD(void) 
+//{ return cd::CDPath.back(); }
+//
+//CDHandle* cd::GetRootCD(void)    
+//{ return cd::CDPath.front(); }
+//
+//CDHandle* cd::GetParentCD(const CDID& cd_id)
+//{ return CDPath.at(cd_id.level_ - 1); }
 
 
 /// CD_Init()
@@ -129,7 +139,7 @@ CDHandle* cd::CD_Init(int numTask, int myRank)
 {
   myTaskID = myRank; 
   CDHandle* root_cd = new CDHandle(NULL, "Root", NodeID(ROOT_COLOR, myRank, numTask, 0), kStrict, 0);
-  CDPath.push_back(root_cd);
+  CDPath::GetCDPath()->push_back(root_cd);
 
 #if _PROFILER
   root_cd->InitViz();
@@ -141,12 +151,12 @@ CDHandle* cd::CD_Init(int numTask, int myRank)
 
 void cd::CD_Finalize(void)
 {
-  assert(CDPath.size()==1); // There should be only on CD which is root CD
-  assert(CDPath.back()!=NULL);
-  GetRootCD()->Destroy();
+  assert(CDPath::GetCDPath()->size()==1); // There should be only on CD which is root CD
+  assert(CDPath::GetCDPath()->back()!=NULL);
+  CDPath::GetRootCD()->Destroy();
 
 #if _PROFILER
-  GetRootCD()->FinalizeViz();
+  CDPath::GetRootCD()->FinalizeViz();
 #endif
 
 }
@@ -275,7 +285,7 @@ CDHandle::CDHandle( CDHandle* parent,
     }
     else {
       MasterCD* ptr_cd  = new MasterCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-      assert(ptr_cd != nullptr);
+      assert(ptr_cd != NULL);
 //      MasterCD* ptr_cd  = (MasterCD*)DATA_MALLOC(sizeof(MasterCD));
 //      ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
       MasterCDPath.push_back(ptr_cd);
@@ -326,7 +336,7 @@ CDHandle* CDHandle::Create( const char* name,
 
   CDHandle* new_cd = new CDHandle(this, name, node_id_, type, sys_bit_vec);
 
-  CDPath.push_back(new_cd);
+  CDPath::GetCDPath()->push_back(new_cd);
 //  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;;
   // Request to add me as a child to my parent
   // It could be a local execution or a remote one. 
@@ -408,14 +418,40 @@ int CDHandle::SplitCD(int my_size, int num_children, int& new_color, int& new_ta
 }
 
 
-int CDHandle::GetNewNodeID(NodeID& new_node)
+CDErrT CDHandle::GetNewNodeID(NodeID& new_node)
 {
+  CDErrT err = kOK;
   // just set the same as parent.
   new_node.color_ = node_id_.color_;
   new_node.task_  = 0;
   new_node.size_  = 1;
+  return err;
 }
 
+CDErrT CDHandle::GetNewNodeID(int my_color, int new_color, int new_task, NodeID& new_node)
+{
+#if _MPI_VER
+    CDErrT err = kOK;
+    int size = new_node.size_;
+    MPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
+    MPI_Comm_size(new_node.color_, &(new_node.size_));
+    MPI_Comm_rank(new_node.color_, &(new_node.task_));
+  
+    assert(size == new_node.size_);
+    return err;
+#elif _PGAS_VER
+    CDErrT err = kOK;
+    int size = new_node.size_;
+  //  err = MPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
+  //  err = MPI_Comm_size(new_node.color_, &(new_node.size_));
+  //  err = MPI_Comm_rank(new_node.color_, &(new_node.task_));
+  
+  //  assert(size == new_node.size_);
+    return err;
+#else
+    return kOK;
+#endif
+}
 // Collective
 CDHandle* CDHandle::Create( int color, 
                             uint32_t num_children, 
@@ -455,7 +491,7 @@ CDHandle* CDHandle::Create( int color,
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
   int new_size = (int)((double)node_id_.size_ / num_children);
   int new_color, new_task = 0;
-  int err;
+  int err=0;
 
 //  Sync(); cout << "[Before] old: " << node_id_ <<", new: " << new_node << endl << endl; //getchar();
 
@@ -479,12 +515,16 @@ CDHandle* CDHandle::Create( int color,
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CDHandle* new_cd = new CDHandle(this, name, new_node, type, sys_bit_vec);
 
-  CDPath.push_back(new_cd);
+  CDPath::GetCDPath()->push_back(new_cd);
 //  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;
 
   // Request to add me as a child to my parent
   // It could be a local execution or a remote one. 
   ptr_cd_->AddChild(this);
+
+  if(err<0) {
+    ERROR_MESSAGE("CDHandle::Create failed.\n");
+  }
 
   return new_cd;
 
@@ -503,11 +543,11 @@ CDHandle* CDHandle::Create (uint32_t  numchildren,
   NodeID new_node_tmp, new_node;
   SetColorAndTask(new_node_tmp, numchildren);
 
-  MPI_Comm_split(node_id_.color_, new_node_tmp.color_, new_node_tmp.task_, &(new_node.color_));
-  MPI_Comm_size(new_node.color_, &(new_node.size_));
-  MPI_Comm_rank(new_node.color_, &(new_node.task_));
+//  MPI_Comm_split(node_id_.color_, new_node_tmp.color_, new_node_tmp.task_, &(new_node.color_));
+//  MPI_Comm_size(new_node.color_, &(new_node.size_));
+//  MPI_Comm_rank(new_node.color_, &(new_node.task_));
   CDHandle* new_cd = new CDHandle(this, name, new_node, type, sys_bit_vec);
-  CDPath.push_back(new_cd);
+  CDPath::GetCDPath()->push_back(new_cd);
 //  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;;
 
   ptr_cd_->AddChild(this);
@@ -562,7 +602,7 @@ CDErrT CDHandle::Destroy (bool collective)
   // It could be a local execution or a remote one.
   // These two should be atomic 
 
-  if(this != GetRootCD()) { 
+  if(this != CDPath::GetRootCD()) { 
 
     // Mark that this is destroyed
     // this->parent_->is_child_destroyed = true;
@@ -573,16 +613,17 @@ CDErrT CDHandle::Destroy (bool collective)
   }
 
 
-  if(CDPath.size() > 1) {
-    GetParentCD(ptr_cd_->GetCDID())->RemoveChild(this);
+  if(CDPath::GetCDPath()->size() > 1) {
+//    GetParentCD(ptr_cd_->GetCDID())->RemoveChild(this);
+    CDPath::GetParentCD()->RemoveChild(this);
   }
 
 #if _PROFILER
     FinishProfile();
 #endif 
  
-  assert(CDPath.size()>0);
-  assert(CDPath.back() != NULL);
+  assert(CDPath::GetCDPath()->size()>0);
+  assert(CDPath::GetCDPath()->back() != NULL);
 //  assert(MasterCDPath.size()>0);
 //  assert(MasterCDPath.back() != NULL);
 
@@ -592,7 +633,7 @@ CDErrT CDHandle::Destroy (bool collective)
   
 
   err = ptr_cd_->Destroy();
-  CDPath.pop_back();
+  CDPath::GetCDPath()->pop_back();
 
    
 
@@ -1331,7 +1372,7 @@ void CDHandle::GetPrvData(void *data,
   if(preserve_mask == kCopy){
 
     profile_data_[label_.first][PRV_COPY_DATA] += len_in_bytes;
-//    if( (this->parent_ != nullptr) && check_overlap(this->parent_, ref_name) ){
+//    if( (this->parent_ != NULL) && check_overlap(this->parent_, ref_name) ){
       /// Sequential overlapped accumulated data. It will be calculated to OVERLAPPED_DATA/PRV_COPY_DATA
       /// overlapped data: overlapped data that is preserved only via copy method.
 //      profile_data_[label_.first][OVERLAPPED_DATA] += len_in_bytes;
@@ -1409,7 +1450,7 @@ inline void CDHandle::CreateCDNode()
 
 inline void CDHandle::DestroyCDNode()
 {
-//  if(cdStack.back() != nullptr){
+//  if(cdStack.back() != NULL){
 //    cout<<"add new info"<<endl;
 ///*
 //    cdStack.back()->setStageNode( "preserve", "data_copy", profile_data_[label_.first]PRV_COPY_DATA]    );

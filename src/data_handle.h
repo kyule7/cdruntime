@@ -39,6 +39,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "node_id.h"
 #include "serializable.h"
 #include <string>
+
+
 // DataHandle can be copied by using = operator by default. Making of a copy of a handle is thus very easy. 
 // This object needs to support serialization and deserialization 
 // because runtime often times need to send this DataHandle object to remote node. 

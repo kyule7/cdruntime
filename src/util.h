@@ -138,29 +138,29 @@ static uint64_t GenerateCDObjectID()
 
 };
 
-class Path {
-  public:
-  	std::string _path_SSD;
-  	std::string _path_HDD;
-	public:
-  	Path() {
-  		_path_SSD = "./SSD";
-  		_path_HDD = "./HDD";
-  	}
-  	Path(std::string ssd, std::string hdd) {
-  		_path_SSD = ssd;
-  		_path_HDD = hdd;
-  	}
-  	void SetSSDPath(std::string path_SSD) { _path_SSD = path_SSD; }
-  	void SetHDDPath(std::string path_HDD) { _path_HDD = path_HDD; }
-  	std::string GetSSDPath(void)          { return _path_SSD;     }
-  	std::string GetHDDPath(void)          { return _path_HDD;     }
-  	Path& operator=(const Path& that) {
-  		_path_SSD = that._path_SSD;
-  		_path_HDD = that._path_HDD;
-  		return *this;
-  	}
-};
+//class Path {
+//  public:
+//  	std::string _path_SSD;
+//  	std::string _path_HDD;
+//	public:
+//  	Path() {
+//  		_path_SSD = "./SSD";
+//  		_path_HDD = "./HDD";
+//  	}
+//  	Path(std::string ssd, std::string hdd) {
+//  		_path_SSD = ssd;
+//  		_path_HDD = hdd;
+//  	}
+//  	void SetSSDPath(std::string path_SSD) { _path_SSD = path_SSD; }
+//  	void SetHDDPath(std::string path_HDD) { _path_HDD = path_HDD; }
+//  	std::string GetSSDPath(void)          { return _path_SSD;     }
+//  	std::string GetHDDPath(void)          { return _path_HDD;     }
+//  	Path& operator=(const Path& that) {
+//  		_path_SSD = that._path_SSD;
+//  		_path_HDD = that._path_HDD;
+//  		return *this;
+//  	}
+//};
 
 } // namespace cd ends
 
