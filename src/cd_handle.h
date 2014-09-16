@@ -45,6 +45,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <setjmp.h>
 #include <ucontext.h>
 
+#if _PROFILER
+#include "cd_profiler.h"
+#endif
+
 #if _MPI_VER
 #include <mpi.h>
 #define _SINGLE_VER 0
@@ -66,9 +70,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#endif
 
 
-#if _PROFILER
-#include "sight.h"
-#endif
 
 
 // CDHandle is a global accessor to the CD object. 
@@ -81,141 +82,22 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // and in that case, we should be careful of synchorizing the CD object to CDHandle
 using namespace cd;
 
-#if _PROFILER
-using namespace sight;
-using namespace sight::structure;
-#endif
+
 
 class cd::CDHandle {
   friend class cd::RegenObject;
   friend class cd::CD;
-
-#if _PROFILER
-
-    std::pair<std::string, int> label_;
-    uint64_t  sibling_id_;
-    uint64_t  level_;
-  
-    /// Profile-related meta data
-    std::map<std::string, std::array<uint64_t, MAX_PROFILE_DATA>> profile_data_;
-    bool     is_child_destroyed;
-    bool     collect_profile_;
-    bool usr_profile_enable;
-//    std::vector<std::pair<std::string, long>>  usr_profile;
-
-#if _ENABLE_HIERGRAPH
-    HG_context usr_profile_input;
-    HG_context usr_profile_output;
-#endif
-
-
-#if _ENABLE_MODULE
-    context usr_profile_input;
-    context usr_profile_output;
-#endif
-
-    /// Timer-related meta data
-    uint64_t this_point_;
-    uint64_t that_point_;
- 
-
- 
-    /// sight-related member data
-#if _ENABLE_MODULE
-    /// All modules that are currently live
-    static std::list<module*>    mStack;
-    static modularApp*           ma;
-#endif
-
-#if _ENABLE_HIERGRAPH
-    static std::list<hierGraph*> hgStack;
-    static hierGraphApp*         hga;
-#endif
-
-#if _ENABLE_SCOPE
-    /// All scopes that are currently live
-    static std::list<scope*>     sStack;
-    static graph*                scopeGraph;
-#endif
-
-#if _ENABLE_ATTR
-      static attrIf*               attrScope;
-      static std::list<attrAnd*>   attrStack;
-      static std::list<attr*>      attrValStack;
-#endif
-
-#if _ENABLE_CDNODE
-    /// All CD Nodes that are currently live
-    static std::list<CDNode*>    cdStack;
-#endif
-
-#if _ENABLE_COMP
-    static std::vector<comparison*> compTagStack;
-    
-//    static std::vector<int> compKeyStack;
-//    static std::list<comparison*> compStack;
-#endif
-
-    void InitProfile(std::string label="INITIAL_LABEL");
-
-    void GetLocalAvg(void);
-    void GetPrvData(void *data, 
-                    uint64_t len_in_bytes,
-                    uint32_t preserve_mask, 
-                    const char *my_name, 
-                    const char *ref_name, 
-                    uint64_t ref_offset, 
-                    const RegenObject * regen_object, 
-                    PreserveUseT data_usage);
-   
-    void SetUsrProfileInput(std::initializer_list<std::pair<std::string, long>> name_list);
-    void SetUsrProfileInput(std::pair<std::string, long> name_list);
-    void SetUsrProfileOutput(std::initializer_list<std::pair<std::string, long>> name_list);
-    void SetUsrProfileOutput(std::pair<std::string, long> name_list);
-    void AddUsrProfile(std::string key, long val, int mode);
-   
-    // FIXME
-    bool CheckCollectProfile(void);
-    void SetCollectProfile(bool flag);
-   
-    void StartProfile(void);
-    void FinishProfile(void);
-
-#if _ENABLE_CDNODE
-    void CreateCDNode(void);
-    void DestroyCDNode(void);
-#endif
-#if _ENABLE_SCOPE
-    void CreateScope(void);
-    void DestroyScope(void);
-#endif
-#if _ENABLE_ATTR
-    void CreateAttr(void);
-    void DestroyAttr(void);
-#endif
-#if _ENABLE_MODULE
-    void CreateModule(void);
-    void DestroyModule(void);
-#endif
-#if _ENABLE_HIERGRAPH
-    void CreateHierGraph(void);
-    void DestroyHierGraph(void);
-#endif
-#if _ENABLE_COMP
-    void CreateComparison(void);
-    void DestroyComparison(void);
-#endif
-  
-  public:
-    void InitViz();
-    void FinalizeViz(void);
-#endif
 
   private:
     CD*  ptr_cd_;
     NodeID node_id_;
 //    int  master_; 
     bool IsMaster_; 
+
+#if _PROFILER 
+    Profiler* profiler_;
+#endif
+
   public:
 
 
