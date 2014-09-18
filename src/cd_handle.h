@@ -132,7 +132,7 @@ class cd::CDHandle {
                       CDErrT *error=0 );
   
     // Collective
-    CDHandle* Create (int color, 
+    CDHandle* Create (const ColorT& color, 
                       uint32_t num_tasks_in_color, 
                       const char* name=0, 
                       CDType type=kStrict, 
@@ -147,7 +147,7 @@ class cd::CDHandle {
                       uint32_t error_loc_mask=0, 
                       CDErrT *error=0 );
  
-    CDHandle* CreateAndBegin (uint32_t color=0, 
+    CDHandle* CreateAndBegin (const ColorT& color, 
                               uint32_t num_tasks_in_color=0, 
                               const char* name=0, 
                               CDType type=kStrict, 
@@ -260,9 +260,13 @@ class cd::CDHandle {
 
     uint64_t SetSystemBitVector(uint64_t error_name_mask, uint64_t error_loc_mask);
   private:
-    int SplitCD(int my_size, int num_children, int& new_color, int& new_task);
+
+    int SplitCD(const int& my_size, const int& num_children, int& new_color, int& new_task, const int& new_size);
+//    int SplitCD(int my_size, int num_children, int& new_color, int& new_task, int& new_size);
     CDErrT GetNewNodeID(NodeID& new_node);
-    CDErrT GetNewNodeID(int my_color, int new_color, int new_task, NodeID& new_node);
+
+    CDErrT GetNewNodeID(const ColorT& my_color, const int& new_color, const int& new_task, NodeID& new_node);
+//    CDErrT GetNewNodeID(const ColorT& my_color, int& new_color, int& new_task, int& new_size, ColorT& new_comm);
 
   public:
     /// Do we need this?
@@ -279,7 +283,7 @@ class cd::CDHandle {
     void      SetCD(CD* ptr_cd);
     char*     GetName(void); 
     int       GetSeqID(void);
-    int&      GetNodeID(void);
+    ColorT&   GetNodeID(void);
     int       GetTaskID(void);
     int       GetTaskSize(void);
     int       ctxt_prv_mode(void);

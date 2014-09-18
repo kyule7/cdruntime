@@ -168,10 +168,12 @@ namespace cd {
 
 #if _MPI_VER
 #define ROOT_COLOR MPI_COMM_WORLD
-#define INITIAL_COLOR MPI_UNDEFINED
+#define INITIAL_COLOR MPI_COMM_NULL
+#define ColorT MPI_Comm
 #else
 #define ROOT_COLOR 0 
 #define INITIAL_COLOR 0
+#define ColorT MPI_Comm
 #endif
 
 /* 

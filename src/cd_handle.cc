@@ -130,8 +130,8 @@ CDHandle::CDHandle()
 {
 #if _PROFILER
   profiler_ = new CDProfiler();
-#else
-  profiler_ = new NullProfiler();
+//#else
+//  profiler_ = new NullProfiler();
 #endif
 
   IsMaster_ = false;
@@ -156,8 +156,8 @@ CDHandle::CDHandle( CDHandle* parent,
 
 #if _PROFILER
   profiler_ = new CDProfiler();
-#else
-  profiler_ = new NullProfiler();
+//#else
+//  profiler_ = new NullProfiler();
 #endif
 
   node_id_ = node_id;
@@ -216,8 +216,8 @@ CDHandle::CDHandle( CDHandle* parent,
 {
 #if _PROFILER
   profiler_ = new CDProfiler();
-#else
-  profiler_ = new NullProfiler();
+//#else
+//  profiler_ = new NullProfiler();
 #endif
 
   node_id_ = std::move(node_id);
@@ -320,10 +320,10 @@ CDHandle* CDHandle::Create( const char* name,
 /// x = taskID % nx
 /// y = ( taskID % ny ) - x 
 /// z = r / (nx*ny)
-int CDHandle::SplitCD(int my_size, int num_children, int& new_color, int& new_task)
+int CDHandle::SplitCD(const int& my_size, const int& num_children, int& new_color, int& new_task, const int& new_size)
 {
 
-  int new_size = (int)((double)my_size / num_children);
+//  new_size = (int)((double)my_size / num_children);
   int num_x = round(pow(node_id_.size_, 1/3.));
   int num_y = num_x;
   int num_z = num_x;
@@ -363,11 +363,17 @@ int CDHandle::SplitCD(int my_size, int num_children, int& new_color, int& new_ta
   
   int taskID = GetTaskID();
   int sz = num_x*num_y;
-  int Z = taskID / sz;
+  int Z = (double)taskID / sz;
   int tmp = taskID % sz;
-  int Y = tmp / num_x;
+  int Y = (double)tmp / num_x;
   int X = tmp % num_x;
 
+  cout<<"tmp = "<<tmp <<endl;
+  cout<<"taskID = "<<taskID <<endl;
+  cout<<"sz = "<<sz<<endl;
+  cout<<"X = "<<X<<endl;
+  cout<<"Y = "<<Y<<endl;
+  cout<<"Z = "<<Z<<endl;
 
 //  cout<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
 //  cout<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
@@ -376,14 +382,28 @@ int CDHandle::SplitCD(int my_size, int num_children, int& new_color, int& new_ta
   new_color = (int)(X / new_num_x + (Y / new_num_y)*num_children_x + (Z / new_num_z)*(num_children_x * num_children_y));
   new_task  = (int)(X % new_num_x + (Y % new_num_y)*new_num_x      + (Z % new_num_z)*(new_num_x * new_num_y));
   
-//  cout << "(color,task,size) = (" << new_node.color_ << ","<< new_node.task_ << "," << new_node.size_ <<") <-- "
+  cout << "(color,task,size) = (" << new_color << ","<< new_task << "," << new_size << ") <-- "<<endl;
 //       <<"(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<") -- (color,task,size) = (" << node_id_.color_ << ","<< node_id_.task_ << "," << node_id_.size_ <<")"
 //       << "ZZ : " << round((double)Z / new_num_z)
 //       << endl;
 //  getchar();
-
+  cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
+  ptr_cd_->GenerateTable(CDPath::GetRootCD()->node_id_.task_, new_color, new_task);
   return 0;
 }
+
+
+//CDErrT CDHandle::CD_Comm_Split(int group_id, int color, int key, int* new_group_id)
+//{
+////1) Get color and task from API
+////2) Using MPI_Allreduce(), get table for every color and task
+////3) Two contexts are allocated for all the comms to be created.  
+////   These same two contexts can be used for all created communicators 
+////   since the communicators will not overlap.
+////4) If the local process has a color of MPI_UNDEFINED, it can return a NULL comm.
+////5) The table entries that match the local process color are sorted by key/rank.
+////6) A group is created from the sorted list and a communicator is created with this group and the previously allocated contexts.
+//}
 
 
 CDErrT CDHandle::GetNewNodeID(NodeID& new_node)
@@ -396,16 +416,19 @@ CDErrT CDHandle::GetNewNodeID(NodeID& new_node)
   return err;
 }
 
-CDErrT CDHandle::GetNewNodeID(int my_color, int new_color, int new_task, NodeID& new_node)
+CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, const int& new_task, NodeID& new_node)
 {
 #if _MPI_VER
     CDErrT err = kOK;
-    int size = new_node.size_;
-    MPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
+    int new_size = new_node.size_;
+//    NodeID new_node;
+    cout<<"getnewnodeid() : my color : " << my_color <<endl;
+    cout<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color_: "<<new_node.color_<<endl;
+    MPI_Comm_split(my_color, new_color, new_task, &new_node.color_);
     MPI_Comm_size(new_node.color_, &(new_node.size_));
     MPI_Comm_rank(new_node.color_, &(new_node.task_));
   
-    assert(size == new_node.size_);
+    assert(new_size == new_node.size_);
     return err;
 #elif _PGAS_VER
     CDErrT err = kOK;
@@ -421,13 +444,13 @@ CDErrT CDHandle::GetNewNodeID(int my_color, int new_color, int new_task, NodeID&
 #endif
 }
 // Collective
-CDHandle* CDHandle::Create( int color, 
-                            uint32_t num_children, 
-                            const char* name, 
-                            CDType type, 
-                            uint32_t error_name_mask, 
-                            uint32_t error_loc_mask, 
-                            CDErrT *error )
+CDHandle* CDHandle::Create(const ColorT& color, 
+                           uint32_t num_children, 
+                           const char* name, 
+                           CDType type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask, 
+                           CDErrT *error )
 {
   // Create a new CDHandle and CD object
   // and populate its data structure correctly (CDID, etc...)
@@ -462,11 +485,11 @@ CDHandle* CDHandle::Create( int color,
   int err=0;
 
 //  Sync(); cout << "[Before] old: " << node_id_ <<", new: " << new_node << endl << endl; //getchar();
-
-  NodeID new_node(INITIAL_COLOR, 0, new_size, 0);
+  MPI_Comm new_comm;
+  NodeID new_node(new_comm, 0, new_size, 0);
   if(num_children > 1) {
-    err = SplitCD(node_id_.size_, num_children, new_color, new_task);
-//  cout << "new_color: "<< new_color <<", new_task: " << new_task << endl << endl; //getchar();
+    err = SplitCD(node_id_.size_, num_children, new_color, new_task, new_node.size_);
+  cout << "my color: " << node_id_.color_<<", new_color: "<< new_color <<", new_task: " << new_task << endl << endl; getchar();
     err = GetNewNodeID(node_id_.color_, new_color, new_task, new_node);
   }
   else if(num_children == 1) {
@@ -476,6 +499,7 @@ CDHandle* CDHandle::Create( int color,
     ERROR_MESSAGE("Number of children to create is wrong.\n");
   }
 
+  cout<<"~~~()()()~~~~~~~~~~~~~~~~~~~~~~"<<endl;
 //  Sync();
 //  for(int i=0; i<node_id_.task_*100000; i++) { int a = 5 * 5; } 
 //  cout << "[After] old: " << node_id_ <<", new: " << new_node << endl << endl; //getchar();
@@ -526,22 +550,22 @@ CDHandle* CDHandle::Create (uint32_t  numchildren,
 
 void CDHandle::SetColorAndTask(NodeID& new_node, const int& numchildren) 
 {
-  // mytask = a*x+b;
-  // a : color
-  // x : children node size (# of tasks in it)
-  // b : task ID of each children node
-  for(int i = 0; i < numchildren; ++i) {
-    if( i * node_id_.size_/numchildren <= node_id_.task_ && 
-        node_id_.task_ < (i + 1)* node_id_.size_/numchildren) {
-      new_node.color_ = i;
-      new_node.task_  = node_id_.task_ % numchildren;
-      new_node.size_  = node_id_.size_ / numchildren;
-      break;
-    }
-  }
+//  // mytask = a*x+b;
+//  // a : color
+//  // x : children node size (# of tasks in it)
+//  // b : task ID of each children node
+//  for(int i = 0; i < numchildren; ++i) {
+//    if( i * node_id_.size_/numchildren <= node_id_.task_ && 
+//        node_id_.task_ < (i + 1)* node_id_.size_/numchildren) {
+//      new_node.color_ = i;
+//      new_node.task_  = node_id_.task_ % numchildren;
+//      new_node.size_  = node_id_.size_ / numchildren;
+//      break;
+//    }
+//  }
 }
 
-CDHandle* CDHandle::CreateAndBegin( uint32_t color, 
+CDHandle* CDHandle::CreateAndBegin( const ColorT& color, 
                                     uint32_t num_tasks_in_color, 
                                     const char* name, 
                                     CDType type, 
@@ -735,7 +759,7 @@ CDErrT CDHandle::Preserve ( CDEvent &cd_event,
 CD*     CDHandle::ptr_cd(void)     { return ptr_cd_;         }
 NodeID& CDHandle::node_id(void)    { return node_id_;        }
 void    CDHandle::SetCD(CD* ptr_cd){ ptr_cd_=ptr_cd;         }
-int&    CDHandle::GetNodeID(void)  { return node_id_.color_; }
+ColorT&    CDHandle::GetNodeID(void)  { return node_id_.color_; }
 int     CDHandle::GetTaskID(void)  { return node_id_.task_;  }
 int     CDHandle::GetTaskSize(void){ return node_id_.size_;  }
 

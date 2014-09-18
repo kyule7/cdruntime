@@ -181,6 +181,19 @@ CD::~CD()
   //FIXME : This will be done at the CDHandle::Destroy()
 }
 
+// 
+void CD::GenerateTable(int rankID, int new_color, int new_task)
+{
+//  int sendBuf[3] = { rankID, new_color, new_task };
+//  int recvBuf[3] = { 0, 0, 0 };
+//  MPI_Gather(sendBuf, recvBuf, count, mpi_data_type, mpi_op, 
+}
+
+void MasterCD::GenerateTable(int rankID, int new_color, int new_task)
+{
+//  MPI_Gather(sendBuf, recvBuf, count, mpi_data_type, mpi_op, 
+}
+
 CD* CD::Create(CDHandle* cd_parent, 
                const char* name, 
                const CDID& cd_id, 

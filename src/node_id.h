@@ -43,14 +43,14 @@ namespace cd {
 class NodeID 
 {
   public:
-  int color_;
+  ColorT color_;
   int task_;
   int size_;
   uint64_t sibling_id_{0};
   NodeID() 
     : color_(0), task_(0), size_(-1), sibling_id_(0) 
   {}
-  NodeID(int color, int task, int size, uint64_t sibling_id)
+  NodeID(const ColorT& color, int task, int size, uint64_t sibling_id)
     : color_(color), task_(task), size_(size), sibling_id_(sibling_id)
   {}
   NodeID(const NodeID& that)

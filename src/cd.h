@@ -238,6 +238,7 @@ class cd::CD {
 
     void DeleteEntryDirectory(void);
     
+    virtual void GenerateTable(int rankID, int new_color, int new_task);
  };
 
 
@@ -273,6 +274,7 @@ class cd::MasterCD : public cd::CD {
     virtual CDErrT Resume(void); // Does this make any sense?
     virtual CDErrT AddChild(cd::CDHandle* cd_child); 
     virtual CDErrT RemoveChild(cd::CDHandle* cd_child); 
+    virtual void GenerateTable(int rankID, int new_color, int new_task);
 };
 
 
