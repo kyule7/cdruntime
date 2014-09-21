@@ -50,8 +50,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // Then entire serealization and deserialization will be implemented after Mar 1st. 
 
 // FIXME neet to inherit serializable object and that will handle serilization complication.
-class cd::DataHandle : public cd::Serializable {
-  friend class cd::CDEntry;
+namespace cd {
+
+class DataHandle : public Serializable {
+  friend class CDEntry;
   public:
     enum HandleType { kMemory = 0, kOSFile, kReference, kSource };
   private: 
@@ -87,12 +89,12 @@ class cd::DataHandle : public cd::Serializable {
 
     ~DataHandle() {}
 
-    std::string file_name()    { return file_name_; }
-    std::string ref_name()     { return ref_name_; }
-    uint64_t    ref_offset()   { return ref_offset_; }
-    void*       address_data() { return address_data_; }
-    uint64_t    len()          { return len_; }
-    HandleType  handle_type()  { return handle_type_; }
+    std::string file_name()    const { return file_name_; }
+    std::string ref_name()     const { return ref_name_; }
+    uint64_t    ref_offset()   const { return ref_offset_; }
+    void*       address_data() const { return address_data_; }
+    uint64_t    len()          const { return len_; }
+    HandleType  handle_type()  const { return handle_type_; }
 
     void        set_file_name(const char* file_name)       { file_name_    = std::string(file_name); }
     void        set_ref_name(std::string ref_name)         { ref_name_     = ref_name; }
@@ -123,7 +125,11 @@ class cd::DataHandle : public cd::Serializable {
       ref_offset_  = that.ref_offset_;
       return *this;
     }
+
 };
 
+std::ostream& operator<<(std::ostream& str, const DataHandle& dh);
+
+}
 
 #endif

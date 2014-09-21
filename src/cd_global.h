@@ -50,7 +50,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include "node_id.h"
 namespace cd {
   class CD;
-  class MasterCD;
+  class HeadCD;
   class CDHandle;
   class CDPath;
   class CDEntry;
@@ -136,7 +136,7 @@ namespace cd {
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
 //  extern std::vector<CDHandle*> CDPath;
 //  extern CDPath* CDPath::uniquePath_;
-  extern std::vector<MasterCD*> MasterCDPath;
+  extern std::vector<HeadCD*> HeadCDPath;
   extern bool is_visualized;
   extern int myTaskID;
   // This could be different from MPI program to PGAS program

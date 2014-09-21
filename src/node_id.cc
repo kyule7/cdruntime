@@ -39,7 +39,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 using namespace cd;
 
-std::ostream& operator<<(std::ostream& str, const NodeID& node_id)
+//std::ostream& operator<<(std::ostream& str, const NodeID& node_id)
+//{
+//  return str<< '(' << node_id.color_ << ", " << node_id.task_in_color_ << "/" << node_id.size_ << ')';
+//}
+
+std::ostream& cd::operator<<(std::ostream& str, const NodeID& node_id)
 {
-  return str<< '(' << node_id.color_ << ", " << node_id.task_ << "/" << node_id.size_ << ')';
+  return str << '(' 
+             << node_id.color_ << ", " 
+             << node_id.task_in_color_ << "/" << node_id.size_ 
+             << ')';
 }

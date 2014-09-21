@@ -51,8 +51,8 @@ public:
 	std::string _path_HDD;
 public:
 	Path() {
-		_path_SSD = "./SSD";
-		_path_HDD = "./HDD";
+		_path_SSD = "./SSD/";
+		_path_HDD = "./HDD/";
 	}
 	Path(std::string ssd, std::string hdd) {
 		_path_SSD = ssd;

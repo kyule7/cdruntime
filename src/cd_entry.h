@@ -59,7 +59,7 @@ class cd::CDEntry : public cd::Serializable
     // this variable can be empty string when this is not needed
     std::string name_;    
     cd::CD*     ptr_cd_;
-    CDID        cd_id_;
+//    CDID        cd_id_;
 		struct tsn_lsn_struct lsn, durable_lsn;
     cd::CDPreserveT preserve_type_; // already determined according to class 
 

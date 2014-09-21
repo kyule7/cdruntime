@@ -40,38 +40,36 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <utility>
 namespace cd {
 
-class NodeID 
-{
-  public:
+class NodeID {
+public:
   ColorT color_;
-  int task_;
+  int task_in_color_;
   int size_;
-  uint64_t sibling_id_{0};
+public:
   NodeID() 
-    : color_(0), task_(0), size_(-1), sibling_id_(0) 
+    : color_(0), task_in_color_(0), size_(-1) 
   {}
   NodeID(const ColorT& color, int task, int size, uint64_t sibling_id)
-    : color_(color), task_(task), size_(size), sibling_id_(sibling_id)
+    : color_(color), task_in_color_(task), size_(size)
   {}
   NodeID(const NodeID& that)
-    : color_(that.color_), task_(that.task_), size_(that.size_), sibling_id_(that.sibling_id_)
+    : color_(that.color_), task_in_color_(that.task_in_color_), size_(that.size_)
   {}
   NodeID(NodeID&& that)
-    : task_(that.task_), size_(that.size_), sibling_id_(that.sibling_id_)
+    : task_in_color_(that.task_in_color_), size_(that.size_)
   {
     color_ = std::move(that.color_);
   }
   NodeID& operator=(const NodeID& that) {
     color_      = (that.color_);
-    task_       = (that.task_);
+    task_in_color_       = (that.task_in_color_);
     size_       = (that.size_);
-    sibling_id_ = that.sibling_id_;
-    return *this;
+     return *this;
   }
   
 };
 
 std::ostream& operator<<(std::ostream& str, const NodeID& node_id);
 
-}
+} // namespace cd ends
 #endif

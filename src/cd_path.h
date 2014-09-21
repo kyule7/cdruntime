@@ -92,8 +92,16 @@ public:
   
   static CDHandle* GetParentCD(void)
   { 
-    if(uniquePath_ != NULL) {
-      return uniquePath_->at(uniquePath_->size()-1); 
+    if(uniquePath_ != NULL && uniquePath_->size()>1) {
+      return uniquePath_->at(uniquePath_->size()-2); 
+    }
+    else return NULL;
+  }
+
+  static CDHandle* GetParentCD(int current_level)
+  { 
+    if(uniquePath_ != NULL && uniquePath_->size()>1) {
+      return uniquePath_->at(current_level-2); 
     }
     else return NULL;
   }

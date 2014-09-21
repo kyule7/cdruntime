@@ -47,7 +47,7 @@ CDID::CDID() // TODO Initialize member values to zero or something,
 {
   domain_id_     = 0; 
   level_         = 0;
-  sibling_id_    = 0;
+  rank_in_level_    = 0;
 //      task_id_       = 0;
   sequential_id_ = 0;
 }
@@ -57,7 +57,7 @@ CDID::CDID(uint64_t level, const NodeID& new_node_id)
 {
   domain_id_     = 0; 
   level_         = level;
-  sibling_id_    = 0;
+  rank_in_level_    = 0;
   node_id_ = new_node_id;
   sequential_id_ = 0;
 }
@@ -67,7 +67,7 @@ CDID::CDID(uint64_t level, NodeID&& new_node_id)
 {
   domain_id_     = 0; 
   level_         = level;
-  sibling_id_    = 0;
+  rank_in_level_    = 0;
   node_id_ = std::move(new_node_id);
   sequential_id_ = 0;
 }
@@ -82,7 +82,7 @@ CDID::CDID(uint64_t level, NodeID&& new_node_id)
 //  }
 //  node_id_ = new_node_id;
 //  domain_id_     = 0; 
-//  sibling_id_    = 0;
+//  rank_in_level_    = 0;
 //  sequential_id_ = 0;
 //}
 //
@@ -96,7 +96,7 @@ CDID::CDID(uint64_t level, NodeID&& new_node_id)
 //  }
 //  node_id_ = std::move(new_node_id);
 //  domain_id_     = 0; 
-//  sibling_id_    = 0;
+//  rank_in_level_    = 0;
 //  sequential_id_ = 0;
 //}
 
@@ -105,7 +105,7 @@ CDID::CDID(const CDID& that)
 {
   domain_id_      = that.domain_id_;
   level_         = that.level_;
-  sibling_id_    = 0;
+  rank_in_level_    = 0;
   node_id_       = that.node_id_;
   sequential_id_ = that.sequential_id_;
 }
@@ -137,6 +137,7 @@ CDID& CDID::operator=(const CDID& that)
 
 std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
 {
+//  return str<< "Level: "<< cd_id.level_ << ", CDNode" << cd_id.node_id_.color_ << ", Obj# " << cd_id.object_id_ << ", Seq# " << cd_id.sequential_id_;
   return str<< "Level: "<< cd_id.level_ << ", CDNode" << cd_id.node_id_.color_ << ", Obj# " << cd_id.object_id_ << ", Seq# " << cd_id.sequential_id_;
 }
 

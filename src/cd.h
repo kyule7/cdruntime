@@ -242,7 +242,7 @@ class cd::CD {
  };
 
 
-class cd::MasterCD : public cd::CD {
+class cd::HeadCD : public cd::CD {
   public:
     /// Link information of CD hierarchy   
     /// This is important data for MASTER among sibling mpi ranks
@@ -259,13 +259,13 @@ class cd::MasterCD : public cd::CD {
     std::list<cd::CDHandle*> cd_children_;
     cd::CDHandle*            cd_parent_;
 
-    MasterCD();
-    MasterCD(cd::CDHandle* cd_parent, 
+    HeadCD();
+    HeadCD(cd::CDHandle* cd_parent, 
              const char* name, 
              CDID cd_id, 
              CDType cd_type, 
              uint64_t sys_bit_vector);
-    virtual ~MasterCD();
+    virtual ~HeadCD();
 
     cd::CDHandle*  cd_parent(void);
     void           set_cd_parent(cd::CDHandle* cd_parent);

@@ -91,8 +91,8 @@ class cd::CDHandle {
   private:
     CD*  ptr_cd_;
     NodeID node_id_;
-//    int  master_; 
-    bool IsMaster_; 
+    ColorT head_; 
+    bool IsHead_; 
 
 #if _PROFILER 
     Profiler* profiler_;
@@ -273,8 +273,8 @@ class cd::CDHandle {
     bool IsLocalObject(void);
 
     /// Check if this CD object (*ptr_cd_) is the MASTER CD object
-    bool IsMaster(void);
-    void SetMaster(int task);
+    bool IsHead(void);
+    void SetHead(int task);
 
     // Accessors
 //    CDHandle* GetParent(void);

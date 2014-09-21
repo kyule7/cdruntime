@@ -112,7 +112,7 @@ CD::CD(CDHandle* cd_parent,
   // Kyushick: Object ID should be unique for the copies of the same object?
   // For now, I decided it as an unique one
   cd_id_.object_id_++;
-  cout << "cd object is created " << cd_id_.object_id_++ <<endl;
+//  cout << "cd object is created " << cd_id_.object_id_++ <<endl;
   // FIXME maybe call self generating function here?           
   // cd_self_  = self;  //FIXME maybe call self generating function here?           
 
@@ -189,7 +189,7 @@ void CD::GenerateTable(int rankID, int new_color, int new_task)
 //  MPI_Gather(sendBuf, recvBuf, count, mpi_data_type, mpi_op, 
 }
 
-void MasterCD::GenerateTable(int rankID, int new_color, int new_task)
+void HeadCD::GenerateTable(int rankID, int new_color, int new_task)
 {
 //  MPI_Gather(sendBuf, recvBuf, count, mpi_data_type, mpi_op, 
 }
@@ -452,7 +452,7 @@ CDErrT CD::Preserve(void* data,
   // FIXME for now let's just use regular malloc call 
 
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
-
+    cout<<"my_name "<< my_name<<endl;
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : return CDErrT::kOK;
       case CDInternalErrT::kExecModeError : return CDErrT::kError;
@@ -492,9 +492,9 @@ CDErrT CD::Preserve(void* data,
  
     }
     else {  // abnormal case
-      return CDErrT::kOK;
+      //return CDErrT::kOK;
 
-      cout<< "Something wrong in Reexecution!!!"<<endl<<endl; assert(0); 
+      cout<< "Something wrong in Reexecution!!!"<<endl<<endl;  
       // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
       // we reached the last preserve function call. 
       // Since we have reached the last point already now convert current execution mode into kExecution
@@ -565,9 +565,13 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
           entry_directory_.push_back(*cd_entry); 
           // FIXME 
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
-          if( ref_name != 0 ) entry_directory_map_[ref_name] = *cd_entry;
-
-          return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK: CDInternalErrT::kEntryError;
+          if( ref_name != 0 ) {
+            entry_directory_map_[ref_name] = *cd_entry;
+            std::cout <<"internal preserve... ref_name : "<<ref_name
+                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
+                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+          }
+          return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
         case kHDD: {
           PRINT_DEBUG("kHDD ----------------------------------\n");
@@ -582,7 +586,12 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
           entry_directory_.push_back(*cd_entry); 
  
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
-          if( ref_name != 0 ) entry_directory_map_[ref_name] = *cd_entry;
+          if( ref_name != 0 ) {
+            entry_directory_map_[ref_name] = *cd_entry;
+            std::cout <<"internal preserve... ref_name : "<<ref_name
+                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
+                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+          }
 
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
@@ -598,8 +607,14 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
           entry_directory_.push_back(*cd_entry);  
 
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
-          if( ref_name != 0 ) entry_directory_map_[ref_name] = *cd_entry;
+          if( ref_name != 0 ) {
+            entry_directory_map_[ref_name] = *cd_entry;
+            std::cout <<"internal preserve... ref_name : "<<entry_directory_map_[ref_name].dst_data_.ref_name()
+                      <<", value : "<<*(reinterpret_cast<int*>(entry_directory_map_[ref_name].dst_data_.address_data())) 
+                      <<", address: " <<entry_directory_map_[ref_name].dst_data_.address_data()
+                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
 
+          }
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
         case kPFS: {
@@ -631,7 +646,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
       cd_entry->set_my_cd(this); // this required for tracking parent later.. this is needed only when via ref
       entry_directory_.push_back(*cd_entry);  
 //      entry_directory_map_.emplace(ref_name, *cd_entry);
-      entry_directory_map_[ref_name] = *cd_entry;
+//      entry_directory_map_[ref_name] = *cd_entry;
 
       return CDInternalErrT::kOK;
       
@@ -769,11 +784,13 @@ CDErrT CD::Restore()
       } */
 
   // what we need to do here is just reset the iterator to the beginning of the list.
-  cout<<"CD::Restore()"<<endl;
+//  cout<<"CD::Restore()"<<endl;
   iterator_entry_ = entry_directory_.begin();
-  cout<<"entry dir size : "<<entry_directory_.size()<<", entry dir map size : "<<entry_directory_map_.size()<<endl;
-  cout<<"dst addr : "<<iterator_entry_->dst_data_.address_data()<<", size: "<<iterator_entry_->dst_data_.len()<< endl<<endl;
-  assert(iterator_entry_->dst_data_.address_data() != 0);
+//  cout<<"entry dir size : "<<entry_directory_.size()<<", entry dir map size : "<<entry_directory_map_.size()<<endl;
+//  cout<<"dst addr : "<<iterator_entry_->dst_data_.address_data()<<", size: "<<iterator_entry_->dst_data_.len()<< endl<<endl;
+
+//  assert(iterator_entry_->dst_data_.address_data() != 0);
+
   //TODO currently we only have one iterator. This should be maintined to figure out the order. 
   // In case we need to find reference name quickly we will maintain seperate structure such as binary search tree and each item will have CDEntry *.
 
@@ -818,7 +835,7 @@ CDErrT CD::Reexecute(void)
   //TODO We need to make sure that all children has stopped before re-executing this CD.
   Stop();
 
-//  if(IsMaster()){
+//  if(IsHead()){
 //  }
 //  else {
 //  }
@@ -872,10 +889,10 @@ CDErrT CD::RemoveChild(CDHandle* cd_child)
   return CDErrT::kOK;
 }
 
-MasterCD::MasterCD()
+HeadCD::HeadCD()
 {}
 
-MasterCD::MasterCD( CDHandle* cd_parent, 
+HeadCD::HeadCD( CDHandle* cd_parent, 
                     const char* name, 
                     CDID cd_id, 
                     CDType cd_type, 
@@ -883,10 +900,10 @@ MasterCD::MasterCD( CDHandle* cd_parent,
   : CD(cd_parent, name, cd_id, cd_type, sys_bit_vector)
 {}
 
-MasterCD::~MasterCD()
+HeadCD::~HeadCD()
 {}
 
-CDErrT MasterCD::Stop(CDHandle* cdh)
+CDErrT HeadCD::Stop(CDHandle* cdh)
 {
 
 //  if(IsLocalObject()){
@@ -917,7 +934,7 @@ CDErrT MasterCD::Stop(CDHandle* cdh)
 }
 
 
-CDErrT MasterCD::Resume(void)
+CDErrT HeadCD::Resume(void)
 {
   //FIXME: return value needs to be fixed 
 
@@ -930,7 +947,7 @@ CDErrT MasterCD::Resume(void)
 }
 
 
-CDErrT MasterCD::AddChild(CDHandle* cd_child) 
+CDErrT HeadCD::AddChild(CDHandle* cd_child) 
 {
   cd_children_.push_back(cd_child);
 
@@ -938,7 +955,7 @@ CDErrT MasterCD::AddChild(CDHandle* cd_child)
 }
 
 
-CDErrT MasterCD::RemoveChild(CDHandle* cd_child) 
+CDErrT HeadCD::RemoveChild(CDHandle* cd_child) 
 {
   //FIXME Not optimized operation. 
   // Search might be slow, perhaps change this to different data structure. 
@@ -949,12 +966,12 @@ CDErrT MasterCD::RemoveChild(CDHandle* cd_child)
 }
 
 
-CDHandle* MasterCD::cd_parent(void)
+CDHandle* HeadCD::cd_parent(void)
 {
   return cd_parent_;
 }
 
-void MasterCD::set_cd_parent(CDHandle* cd_parent)
+void HeadCD::set_cd_parent(CDHandle* cd_parent)
 {
   cd_parent_ = cd_parent;
 }
@@ -965,7 +982,11 @@ void MasterCD::set_cd_parent(CDHandle* cd_parent)
 CDEntry* CD::InternalGetEntry(std::string entry_name) 
 {
   try {
-    return &entry_directory_map_.at(entry_name.c_str());   
+    CDEntry& cd_entry = entry_directory_map_.find(entry_name.c_str())->second;
+    
+    std::cout<<"[InternalGetEntry] ref_name: " <<entry_directory_map_[entry_name.c_str()].dst_data_.address_data()
+             << ", address: " <<entry_directory_map_[entry_name.c_str()].dst_data_.address_data()<< std::endl;
+    return &cd_entry;
     // vector::at throws an out-of-range
   }
   catch (const std::out_of_range &oor) {
@@ -976,7 +997,7 @@ CDEntry* CD::InternalGetEntry(std::string entry_name)
 
 void CD::DeleteEntryDirectory(void)
 {
-  cout<<"Delete Entry In"<<endl; getchar();
+//  cout<<"Delete Entry In"<<endl; getchar();
   for(std::list<CDEntry>::iterator it = entry_directory_.begin();
       it != entry_directory_.end(); ++it) {
     it->Delete();
@@ -988,7 +1009,7 @@ void CD::DeleteEntryDirectory(void)
     it->second.Delete();
     //entry_directory_map_.erase(it);
   }
-  cout<<"Delete Entry Out"<<endl; getchar();
+//  cout<<"Delete Entry Out"<<endl; getchar();
 }
 
 
