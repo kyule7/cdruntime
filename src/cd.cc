@@ -478,7 +478,7 @@ CDErrT CD::Preserve(void* data,
     // Everytime restore is called one entry is restored.
     if( iterator_entry_ != entry_directory_.end() ) { // normal case
 
-      printf("Reexecution mode start...\n");
+//      printf("Reexecution mode start...\n");
 
       CDEntry cd_entry = *iterator_entry_;
       ++iterator_entry_;
@@ -545,7 +545,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
     // Object itself will know better than class CD. 
 
     CDEntry* cd_entry = 0;
-    if(my_name==0) my_name = "INITIAL_ENTRY";
+//    if(my_name==0) my_name = "INITIAL_ENTRY";
 
     // Get cd_entry
     if( preserve_mask == kCopy ) {                // via-copy, so it saves data right now!
@@ -565,9 +565,9 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
           entry_directory_.push_back(*cd_entry); 
           // FIXME 
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
-          if( ref_name != 0 ) {
-            entry_directory_map_[ref_name] = *cd_entry;
-            std::cout <<"internal preserve... ref_name : "<<ref_name
+          if( my_name != 0 ) {
+            entry_directory_map_[my_name] = cd_entry;
+            std::cout <<"internal preserve... my_name : "<<my_name
                       <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
                       <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
           }
@@ -586,9 +586,9 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
           entry_directory_.push_back(*cd_entry); 
  
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
-          if( ref_name != 0 ) {
-            entry_directory_map_[ref_name] = *cd_entry;
-            std::cout <<"internal preserve... ref_name : "<<ref_name
+          if( my_name != 0 ) {
+            entry_directory_map_[my_name] = cd_entry;
+            std::cout <<"internal preserve... my_name : "<<my_name
                       <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
                       <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
           }
@@ -607,11 +607,11 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
           entry_directory_.push_back(*cd_entry);  
 
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
-          if( ref_name != 0 ) {
-            entry_directory_map_[ref_name] = *cd_entry;
-            std::cout <<"internal preserve... ref_name : "<<entry_directory_map_[ref_name].dst_data_.ref_name()
-                      <<", value : "<<*(reinterpret_cast<int*>(entry_directory_map_[ref_name].dst_data_.address_data())) 
-                      <<", address: " <<entry_directory_map_[ref_name].dst_data_.address_data()
+          if( my_name != 0 ) {
+            entry_directory_map_[my_name] = cd_entry;
+            std::cout <<"internal preserve... my_name : "<<entry_directory_map_[my_name]->name()
+                      <<", value : "<<*(reinterpret_cast<int*>(entry_directory_map_[my_name]->dst_data_.address_data())) 
+                      <<", address: " <<entry_directory_map_[my_name]->dst_data_.address_data()
                       <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
 
           }
@@ -625,7 +625,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
           cd_entry->set_my_cd(this); 
           entry_directory_.push_back(*cd_entry);  
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
-          if( ref_name != 0 ) entry_directory_map_[ref_name] = *cd_entry;
+          if( my_name != 0 ) entry_directory_map_[my_name] = cd_entry;
           PRINT_DEBUG("\nPreservation to PFS which is not supported yet. ERROR\n");
           assert(0);
           break;
@@ -982,12 +982,20 @@ void HeadCD::set_cd_parent(CDHandle* cd_parent)
 CDEntry* CD::InternalGetEntry(std::string entry_name) 
 {
   try {
-    CDEntry& cd_entry = entry_directory_map_.find(entry_name.c_str())->second;
-    
-    std::cout<<"[InternalGetEntry] ref_name: " <<entry_directory_map_[entry_name.c_str()].dst_data_.address_data()
-             << ", address: " <<entry_directory_map_[entry_name.c_str()].dst_data_.address_data()<< std::endl;
-    return &cd_entry;
-    // vector::at throws an out-of-range
+    auto it = entry_directory_map_.find(entry_name.c_str());
+    if(it == entry_directory_map_.end()) {
+      std::cout<<"[InternalGetEntry] There is no entry for reference of "<< entry_name.c_str() 
+               <<" at CD level " << GetCDID().level_ << std::endl;
+      //getchar();
+      return NULL;
+    }
+    else {
+      CDEntry* cd_entry = entry_directory_map_.find(entry_name.c_str())->second;
+      
+      std::cout<<"[InternalGetEntry] ref_name: " <<entry_directory_map_[entry_name.c_str()]->dst_data_.address_data()
+               << ", address: " <<entry_directory_map_[entry_name.c_str()]->dst_data_.address_data()<< std::endl;
+      return cd_entry;
+    }
   }
   catch (const std::out_of_range &oor) {
     //std::cerr << "Out of Range error: " << oor.what() << '\n';
@@ -1004,11 +1012,10 @@ void CD::DeleteEntryDirectory(void)
     //entry_directory_.erase(it);
   }
 
-  for(std::map<std::string, CDEntry>::iterator it = entry_directory_map_.begin();
-      it != entry_directory_map_.end(); ++it) {
-    it->second.Delete();
-    //entry_directory_map_.erase(it);
-  }
+//  for(std::map<std::string, CDEntry*>::iterator it = entry_directory_map_.begin();
+//      it != entry_directory_map_.end(); ++it) {
+//    //entry_directory_map_.erase(it);
+//  }
 //  cout<<"Delete Entry Out"<<endl; getchar();
 }
 

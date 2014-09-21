@@ -63,7 +63,7 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
 //    printf("This one shouldn't be called!!!\n\n");
 //    assert(0);
     memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len());
-    std::cout << "--------------------------------\n Saved Data "<<name_.c_str()<<" : " << *(reinterpret_cast<int*>(dst_data_.address_data())) << " at " << dst_data_.address_data() <<" (Memory)\n--------------------------- \n" << std::cout; getchar();
+    std::cout << "--------------------------------\n Saved Data "<<name_.c_str()<<" : " << *(reinterpret_cast<int*>(dst_data_.address_data())) << " at " << dst_data_.address_data() <<" (Memory)\n--------------------------- \n" << std::cout; //getchar();
 //    std::cout<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<std::endl<<std::endl;
 
     if(false) { // Is there a way to check if memcpy is done well?
@@ -199,19 +199,23 @@ DataHandle* CDEntry::GetBuffer() {
 
 
 	if( dst_data_.handle_type() == DataHandle::kReference) {  // Restoration from reference
-    std::cout<< "GetBuffer, reference"<<std::endl; getchar();
+    std::cout<< "GetBuffer, reference"<<std::endl; //getchar();
     buffer = &real_dst_data;
     
     // FIXME: for now let's just search immediate parent only.  Let's extend this to more general way.
 //		cd::CDHandle* parent_cd = GetParentCD(ptr_cd_->GetCDID());
+
 		cd::CDHandle* parent_cd = CDPath::GetParentCD();
-    std::cout<<"parent name: "<<parent_cd->GetName()<<std::endl;
-
     CDEntry* entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
-    std::cout<<"parent dst addr : "<<entry_tmp->dst_data_.address_data()
-              << " parent ref name : "<<entry_tmp->dst_data_.ref_name()<<std::endl;
 
-		if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
+    std::cout<<"parent name: "<<parent_cd->GetName()<<std::endl;
+    if(entry_tmp != NULL) { 
+      std::cout << "parent dst addr : " << entry_tmp->dst_data_.address_data()
+                << ", parent entry name : " << entry_tmp->dst_data_.ref_name()<<std::endl;
+    } else {
+      std::cout<<"there is no reference in parent level"<<std::endl;
+    }
+//		if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
 
 //		CDEntry* entry = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
 //		std::cout <<"ref name: "    << entry->dst_data_.ref_name() 
@@ -229,15 +233,15 @@ DataHandle* CDEntry::GetBuffer() {
                   << ", at level: " << entry->ptr_cd()->GetCDID().level_<<std::endl;
 
         if(entry != NULL) {
-          std::cout<<"here??"<<std::endl;
-          goto out;
+          std::cout<<"I got my reference here!!"<<std::endl;
+          break;
         }
         else {
 				  parent_cd = CDPath::GetParentCD(ptr_cd()->GetCDID().level_);
-          std::cout<<parent_cd<< " "<< NULL << std::endl;
+          std::cout<< "Gotta go to upper level! -> " << parent_cd->GetName() << " at level "<< parent_cd->ptr_cd()->GetCDID().level_ << std::endl;
         }
-			} while( parent_cd != NULL );
-out:
+			} 
+
       std::cout<<"here?? 2"<<std::endl;
        
 			//lsn = entry->lsn;
@@ -261,7 +265,7 @@ out:
 
 	}
   else {  // Restoration from memory or file system. Just use the current dst_data_ for it.
-    std::cout<<"GetBuffer :: kCopy "<<std::endl; getchar();
+    std::cout<<"GetBuffer :: kCopy "<<std::endl; //getchar();
     buffer = &dst_data_;
     dst_data_.address_data();
   }
@@ -285,7 +289,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(void)
       assert( src_data_.len() == buffer->len() );
 //      std::cout << "sizeof src "<< sizeof(src_data_.address_data()) << ", sizeof dst " <<sizeof(buffer->address_data())<<std::endl;
 			memcpy(src_data_.address_data(), (char *)buffer->address_data()+(buffer->ref_offset()), buffer->len()); 
-      std::cout<<"memcpy succeeds"<<std::endl; getchar();
+      std::cout<<"memcpy succeeds"<<std::endl; //getchar();
 
       std::cout<<"memcpy "<< dst_data_.len() <<" size data from "<< dst_data_.address_data() << " to "<< src_data_.address_data() <<std::endl<<std::endl;
 		}

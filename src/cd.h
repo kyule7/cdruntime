@@ -106,7 +106,7 @@ class cd::CD {
     
     // Only CDEntries that has refname 
     // will be pushed into this data structure for later quick search.
-    std::map<std::string, CDEntry> entry_directory_map_;   
+    std::map<std::string, CDEntry*> entry_directory_map_;   
     
     /// This shall be used for re-execution. 
     /// We will restore the value one by one.

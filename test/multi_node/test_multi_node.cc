@@ -52,9 +52,10 @@ ucontext_t context;
 int  np = 0;
 int  mr = 0;
 
-#define NUM_TEST_BLOCKS 10
-//#define SIZE_BLOCK (25*1024)
-#define SIZE_BLOCK (16)
+//#define NUM_TEST_BLOCKS 10
+#define NUM_TEST_BLOCKS 1000
+#define SIZE_BLOCK (25*1024)  //100,000kByte
+//#define SIZE_BLOCK (16)
 
 static __inline__ long long getCounter(void)
 {
@@ -82,13 +83,14 @@ int performance_test1()
   // START
 
 
-  CD_Begin(root); 
+  CD_Begin(root);
+ 
   accumulate_cnt = 0;
   begin_cnt = getCounter();
   for( i= 0 ; i < NUM_TEST_BLOCKS; i++ )
   {
 //    printf("%d\n",i);
-    root->Preserve((char *)a[i],SIZE_BLOCK * sizeof(int));
+    root->Preserve(a[i], SIZE_BLOCK*sizeof(int));
   }
   end_cnt = getCounter();
   printf("Time elapsed:%lld\n",end_cnt - begin_cnt);
@@ -593,7 +595,7 @@ int test_preservation_via_ref()
   CDErrT err;
 	CDHandle* root = CD_Init(np, mr);
   CD_Begin(root); 
-  root->Preserve(a, sizeof(a), kCopy, "test2viareference", "a");
+  root->Preserve(a, sizeof(a), kCopy, "a");
 
   printf("Before modifying current value of a[0] %d a[1] %d\n", a[0], a[1]);
   a[0] = 99;  // now when child recovers it should see 3 instead of 99
@@ -627,7 +629,7 @@ int test_preservation_via_ref()
 }
 
 // Test basic via reference with partial update scheme.
-int test3()
+int test_preservation_via_referenence_partial_update()
 {
   int a[4]= {3,7,9,10};
   int b[8]= {1,0,};
@@ -635,13 +637,13 @@ int test3()
   int num_reexecution = 0;
   int test_result = 1;
   
-  printf("\n\n---------------test3 begins-----------------------------\n");
+  printf("\n\n---------------test_preservation_via_referenence_partial_update begins-----------------------------\n");
 //  CDHandle no_parent;  // not initialized and this means no parent
 //  CDHandle handle_cd=CD::Create(cd::kStrict, no_parent);
 //  CD *root= handle_cd.ptr_cd();
 	CDHandle* root = CD_Init(np, mr);
   CD_Begin(root); 
-  root->Preserve((char *)&a,4* sizeof(int), kCopy, "test3viareference");
+  root->Preserve(a, sizeof(a), kCopy, "a");
 
   printf("Before modifying current value of a[0] %d a[1] %d  a[2] %d a[3] %d \n", a[0], a[1], a[2], a[3]);
   a[0] = 99;  // now when child recovers it should see 99 after recovery of child
@@ -650,15 +652,15 @@ int test3()
   a[3] = 113;  
   CDErrT err;
   CDHandle* child=root->Create(CDPath::GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
-//  CD *child= handle_cd_child.ptr_cd();
   CD_Begin(child); 
-  child->Preserve((char *)&(a[1]),3* sizeof(int), kCopy, "nonamejusttest", "test3viareference",sizeof(int)*1);
+  child->Preserve(&(a[1]), 3*sizeof(int), kRef, "a", "a", sizeof(int));
   printf("Child CD begins a[0] %d a[1] %d a[2] %d a[3] %d  \n", a[0], a[1], a[2], a[3]);
 
   if( num_reexecution == 0 ) {
     num_reexecution = 1;
 	  child->CDAssert(false);
   }
+
   if( num_reexecution == 1 )
   {
     if(a[0] != 99 )
@@ -669,8 +671,6 @@ int test3()
       test_result=0;
     if(a[3] != 10 )
       test_result=0;
-
-
   }
   CD_Complete(child);
   child->Destroy();
@@ -708,12 +708,15 @@ int main(int argc, char* argv[])
   if( ret == kError ) printf("test_preservation_via_reference FAILED\n");
   else printf("test_preservation_via_reference PASSED\n");
  
-   printf("\ntest3() \n\n"); 
-  ret = test3();
-  if( ret == kError ) printf("test3 FAILED\n");
-  else printf("test3 PASSED\n");
+  printf("\ntest_preservation_via_referenence_partial_update() \n\n"); 
+  ret = test_preservation_via_referenence_partial_update();
+  if( ret == kError ) printf("test_preservation_via_referenence_partial_update FAILED\n");
+  else printf("test_preservation_via_referenence_partial_update PASSED\n");
 
-//  performance_test1();
+
+  printf("\n\n------------ performance test 1 ---------------\n\n");  getchar();
+  performance_test1();
+
   MPI_Finalize(); 
   return 0;
 }

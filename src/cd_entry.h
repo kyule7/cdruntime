@@ -76,11 +76,12 @@ class cd::CDEntry : public cd::Serializable
     CDEntry(){}
     CDEntry(const DataHandle& src_data, 
             const DataHandle& dst_data, 
-            std::string entry_name="INITIAL_ENTRY") 
+            const char* entry_name) 
     {
       src_data_ = src_data;
       dst_data_ = dst_data;
-      name_     = entry_name;
+      if(entry_name == 0) name_.clear();
+      else name_ = entry_name;
     }
 
     ~CDEntry()
@@ -101,12 +102,12 @@ class cd::CDEntry : public cd::Serializable
     // But this list might need to be distributed if that CD spans among multiple threads. 
     // If we have that data structure the issue here will be solved anyways. 
     void set_my_cd(cd::CD* ptr_cd) { ptr_cd_ = ptr_cd; }
-    cd::CD* ptr_cd()               { return ptr_cd_; }
+    cd::CD* ptr_cd()              const { return ptr_cd_; }
 
 		CDEntryErrT Delete(void);
 
 		public:
-		std::string name() { return name_; }
+		std::string name() const { return name_.c_str(); }
     bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }
 
     CDEntryErrT SaveMem(void);
