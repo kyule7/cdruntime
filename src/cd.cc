@@ -430,7 +430,8 @@ CDErrT CD::Preserve(void* data,
 
 PrvMediumT CD::GetPlaceToPreserve()
 {
-  return kMemory;
+//  return kMemory;
+  return kSSD;
 //  if(GetCDID().level_==1) return kHDD;
 //  else return kSSD;
 }
@@ -609,10 +610,12 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
           if( my_name != 0 ) {
             entry_directory_map_[my_name] = cd_entry;
+            assert(entry_directory_map_[my_name]);
+            assert(entry_directory_map_[my_name]->src_data_.address_data());
             std::cout <<"internal preserve... my_name : "<<entry_directory_map_[my_name]->name()
-                      <<", value : "<<*(reinterpret_cast<int*>(entry_directory_map_[my_name]->dst_data_.address_data())) 
-                      <<", address: " <<entry_directory_map_[my_name]->dst_data_.address_data()
-                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+                      <<", value : "<<*(reinterpret_cast<int*>(entry_directory_map_[my_name]->src_data_.address_data())) 
+                      <<", address: " <<entry_directory_map_[my_name]->src_data_.address_data()
+                      <<", address: " <<cd_entry->src_data_.address_data()<< std::endl;
 
           }
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;

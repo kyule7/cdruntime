@@ -53,7 +53,7 @@ int  np = 0;
 int  mr = 0;
 
 //#define NUM_TEST_BLOCKS 10
-#define NUM_TEST_BLOCKS 1000
+#define NUM_TEST_BLOCKS 10
 #define SIZE_BLOCK (25*1024)  //100,000kByte
 //#define SIZE_BLOCK (16)
 

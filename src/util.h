@@ -87,7 +87,7 @@ static const char* GetBaseFilePath()
 // also HEX address of the pointer we are preserving. 
 // -> This might not be a good thing when we recover actually the stack content can be different... 
 // is it? or is it not?  let's assume it does...
-static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath) 
+static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, const char* data_name) 
 {
 //  std::string base(GetBaseFilePath());
   std::string base(basepath);
@@ -95,7 +95,7 @@ static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath)
 //  StringBuffer filename(std::string(base));
 //
   std::cout << "base file name: "<< filename.GetString() << std::endl << std::endl;
-  filename << cd_id.level_ << '.' << cd_id.rank_in_level_ << '.' << cd_id.object_id_ << '.' << cd_id.sequential_id_ << '.' << cd_id.node_id_.task_in_color_;
+  filename << cd_id.level_ << '.' << cd_id.rank_in_level_ << '.' << cd_id.object_id_ << '.' << cd_id.sequential_id_ << '.' << cd_id.node_id_.task_in_color_ << '.' << data_name << ".cd";
   std::cout << "file name for this cd: "<< filename.GetString() << std::endl << std::endl; getchar(); 
   return filename.GetString();
 //  return "./";

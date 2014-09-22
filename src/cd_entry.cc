@@ -42,6 +42,26 @@ using namespace cd;
 CDEntry::CDEntryErrT CDEntry::Delete(void)
 {
   // Do something
+
+  if( dst_data_.address_data() != NULL ) {
+    DATA_FREE( dst_data_.address_data() );
+    printf("free preserved data\n"); 
+//    getchar();
+  }
+
+  if( !dst_data_.file_name_.empty() )  {
+    printf("erase file start!\n"); getchar();
+//    delete dst_data_.file_name(); 
+    char cmd[30];
+    sprintf(cmd, "rm %s", dst_data_.file_name_.c_str());
+    int ret = system(cmd);
+    printf("erase the file of preserved data\n"); 
+    if( ret == -1 ) {
+      ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
+      assert(0);
+    }
+  }
+
 	return CDEntry::CDEntryErrT::kOK;
 }
 
@@ -80,21 +100,37 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
 CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen, struct tsn_log_struct *log)
 {
   // Get file name to write if it is currently NULL
+  char* str; 
   if( dst_data_.file_name_.empty() ) {
     // assume cd_id_ is unique (sequential cds will have different cd_id) 
     // and address data is also unique by natural
 //      char *cd_file = new char[MAX_FILE_PATH];
 //      cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file, base_); 
-    dst_data_.file_name_ = Util::GetUniqueCDFileName(ptr_cd_->GetCDID(), base_.c_str());
+    const char* data_name;
+    str = new char[30];
+    if(name_.empty()) {
+      sprintf(str, "%d", rand());
+      data_name = str;
+    }
+    else  {
+      data_name = name_.c_str();
+    }
+
+    dst_data_.file_name_ = Util::GetUniqueCDFileName(ptr_cd_->GetCDID(), base_.c_str(), data_name);
   }
 
   FILE *fp = fopen(dst_data_.file_name_.c_str(), "w");
   if( fp!= NULL ) {
     fwrite(src_data_.address_data(), sizeof(char), src_data_.len(), fp);
     fclose(fp);
+
+    printf("we write a file \n");
+    getchar();
+
     return kOK;
   }
   else return kFileOpenError;
+
 
 
 //
@@ -155,8 +191,11 @@ CDEntry::CDEntryErrT CDEntry::Save(void)
 //      char *cd_file = new char[MAX_FILE_PATH];
 //      cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); 
 
+
+
+
       // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-      dst_data_.file_name_ = Util::GetUniqueCDFileName(ptr_cd_->GetCDID(), "kOSFILE");
+//      dst_data_.file_name_ = Util::GetUniqueCDFileName(ptr_cd_->GetCDID(), "kOSFILE");
     }
 
     // FIXME	Jinsuk: we need to collect file writes and write as a chunk. 
@@ -249,10 +288,10 @@ DataHandle* CDEntry::GetBuffer() {
       DataHandle& tmp = entry->dst_data_; 
       buffer = &tmp;
 
-      std::cout<<"addr "<<entry->dst_data_.address_data()<<std::endl; 
-      std::cout<<"addr "<<buffer->address_data()<<std::endl; 
-			std::cout <<"[Buffer] ref name: "    << buffer->ref_name() 
-                <<", value: "<<*(reinterpret_cast<int*>(buffer->address_data())) << std::endl;
+//      std::cout<<"addr "<<entry->dst_data_.address_data()<<std::endl; 
+//      std::cout<<"addr "<<buffer->address_data()<<std::endl; 
+//			std::cout <<"[Buffer] ref name: "    << buffer->ref_name() 
+//                <<", value: "<<*(reinterpret_cast<int*>(buffer->address_data())) << std::endl;
       buffer->set_ref_offset(dst_data_.ref_offset() );   
       // length could be different in case we want to describe only part of the preserved entry.
       buffer->set_len(dst_data_.len());     
