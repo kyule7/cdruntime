@@ -430,8 +430,8 @@ CDErrT CD::Preserve(void* data,
 
 PrvMediumT CD::GetPlaceToPreserve()
 {
-//  return kMemory;
-  return kSSD;
+  return kMemory;
+//  return kSSD;
 //  if(GetCDID().level_==1) return kHDD;
 //  else return kSSD;
 }
