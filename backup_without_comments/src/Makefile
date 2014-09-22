@@ -3,6 +3,8 @@ MPI_VER_VAR = 0
 PGAS_VER_VAR = 0
 SINGLE_VER_VAR = 0
 
+MEMORY = 0
+
 ifeq ($(MPI_VER_VAR), 0)
 CC=g++
 else
@@ -11,7 +13,8 @@ endif
 CFLAGS=-g -fPIC -Wall -std=gnu++0x 
 LDFLAGS=
 CDFLAGS=-D_MPI_VER=$(MPI_VER_VAR) -D_PGAS_VER=$(PGAS_VER_VAR) -D_SINGLE_VER=$(SINGLE_VER_VAR) \
-        -D_DEBUG=$(DEBUG_VAR)
+        -D_DEBUG=$(DEBUG_VAR) \
+        -D_MEMORY=$(MEMORY)
 SOURCES= $(wildcard *.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 LIBOUTPUT=../lib/libcds.so
