@@ -41,9 +41,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <iostream>
 #include <assert.h>
 
-#if _MPI_VER
+//#if _MPI_VER
 #include <mpi.h>
-#endif
+//#endif
 
 //#include "cd_path.h"
 //#include "cd_id.h"

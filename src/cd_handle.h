@@ -51,12 +51,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #if _MPI_VER
 #include <mpi.h>
-#define _SINGLE_VER 0
+//#define _SINGLE_VER 0
 #elif _PGAS_VER
 //#include "cd_pgas.h"
-#define _SINGLE_VER 0
+//#define _SINGLE_VER 0
 #else
-#define _SINGLE_VER 1
+//#define _SINGLE_VER 1
 #endif
 
 //#if _MPI_VER
