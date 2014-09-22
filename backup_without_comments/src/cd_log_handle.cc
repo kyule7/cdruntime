@@ -1,4 +1,3 @@
-
 /*
 Copyright 2014, The University of Texas at Austin 
 All rights reserved.
@@ -33,21 +32,36 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 */
-
-
-#include "node_id.h"
-
+#include "cd_log_handle.h"
+#include <stdio.h>
+#include <stdlib.h>
 using namespace cd;
 
-//std::ostream& operator<<(std::ostream& str, const NodeID& node_id)
-//{
-//  return str<< '(' << node_id.color_ << ", " << node_id.task_in_color_ << "/" << node_id.size_ << ')';
-//}
+void CDLogHandle::OpenHDD(void)     
+{ 
+  char cmd[30];
+  sprintf(cmd, "mkdir -p %s", path.GetHDDPath().c_str());
+  int ret = system(cmd);
+  if( ret == -1 ) {
+    ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
+    assert(0);
+  }
+  else {
+    _OpenHDD = true;  
+  }
+  
+}
 
-std::ostream& cd::operator<<(std::ostream& str, const NodeID& node_id)
-{
-  return str << '(' 
-             << node_id.color_ << ", " 
-             << node_id.task_in_color_ << "/" << node_id.size_ 
-             << ')';
+void CDLogHandle::OpenSSD(void)     
+{ 
+  char cmd[30];
+  sprintf(cmd, "mkdir -p %s", path.GetSSDPath().c_str());
+  int ret = system(cmd);
+  if( ret == -1 ) {
+    ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
+    assert(0);
+  }
+  else {
+    _OpenSSD = true;  
+  }
 }

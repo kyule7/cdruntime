@@ -1,4 +1,3 @@
-
 /*
 Copyright 2014, The University of Texas at Austin 
 All rights reserved.
@@ -35,19 +34,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 
-#include "node_id.h"
+#ifndef _RDTSC_H
+#define _RDTSC_H
+#include <stdint.h>
 
-using namespace cd;
-
-//std::ostream& operator<<(std::ostream& str, const NodeID& node_id)
-//{
-//  return str<< '(' << node_id.color_ << ", " << node_id.task_in_color_ << "/" << node_id.size_ << ')';
-//}
-
-std::ostream& cd::operator<<(std::ostream& str, const NodeID& node_id)
+static __inline__ uint64_t rdtsc(void)
 {
-  return str << '(' 
-             << node_id.color_ << ", " 
-             << node_id.task_in_color_ << "/" << node_id.size_ 
-             << ')';
+  unsigned hi, lo;
+  __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+  return ((uint64_t)lo) | (((uint64_t)hi) << 32);
 }
+
+
+#endif

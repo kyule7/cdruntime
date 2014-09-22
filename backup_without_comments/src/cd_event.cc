@@ -1,4 +1,3 @@
-
 /*
 Copyright 2014, The University of Texas at Austin 
 All rights reserved.
@@ -35,19 +34,94 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 
-#include "node_id.h"
+#include "cd_event.h"
+#include <unistd.h>
+
 
 using namespace cd;
 
-//std::ostream& operator<<(std::ostream& str, const NodeID& node_id)
-//{
-//  return str<< '(' << node_id.color_ << ", " << node_id.task_in_color_ << "/" << node_id.size_ << ')';
-//}
 
-std::ostream& cd::operator<<(std::ostream& str, const NodeID& node_id)
+CDEvent::CDEvent() : event_(0) , current_pos_(0) 
 {
-  return str << '(' 
-             << node_id.color_ << ", " 
-             << node_id.task_in_color_ << "/" << node_id.size_ 
-             << ')';
+  InitEvent();
+}
+
+CDEvent::~CDEvent()
+{
+  DestroyEvent();
+}
+
+void CDEvent::InitEvent()
+{
+  if( event_ == 0 )
+  {
+    event_ = new uint32_t[SIZE_EVENT_ARRAY];
+  }
+}
+void CDEvent::DestroyEvent()
+{
+  if( event_ != 0) 
+  {
+    delete [] event_;
+  }
+}
+uint32_t CDEvent::AddEvent()
+{
+  uint32_t ret_prepare_pos = current_pos_;	
+  uint32_t converted_pos = current_pos_ / sizeof(uint32_t);
+  if( len_event_ < converted_pos) 
+  {
+    //FIXME need to allocate additional memory and then probably memcpy ? the original one? let's check this out.	
+
+
+  }
+
+  SetEvent(current_pos_);
+  current_pos_++;
+  return ret_prepare_pos;
+
+}
+void CDEvent::ResetEvent(uint32_t pos)
+{
+  //x& = ~(1u <<3);
+  // check if we need larger array.
+  uint32_t converted_pos = pos / sizeof(uint32_t);
+  uint32_t offset = pos % sizeof(uint32_t);
+
+  event_[converted_pos] &= ~(1u << offset);
+
+}
+void CDEvent::SetEvent(uint32_t pos)
+{
+  // x|= (1u << 3);  // 4th bit set
+  uint32_t converted_pos = pos / sizeof(uint32_t);
+  uint32_t offset = pos % sizeof(uint32_t);
+
+
+  event_[converted_pos] |= (1u << offset);
+}
+
+bool CDEvent::Test()
+{
+  if( current_pos_ == 0 ) return false;
+  uint32_t end= current_pos_/ sizeof(uint32_t);
+  for( uint32_t i = 0 ; i < end ; i++ )
+  {
+    if( event_[i] != 0 ) 
+    {
+      return false;
+    }
+
+  }
+  return true;
+}
+
+
+CDErrT CDEvent::Wait()
+{
+  while(!Test())
+  {
+    usleep(0);
+  }
+  return kOK;
 }

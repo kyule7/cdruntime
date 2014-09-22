@@ -1,4 +1,3 @@
-
 /*
 Copyright 2014, The University of Texas at Austin 
 All rights reserved.
@@ -35,19 +34,21 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 
-#include "node_id.h"
+#ifndef _CD_NAME_T_H
+#define _CD_NAME_T_H
 
-using namespace cd;
-
-//std::ostream& operator<<(std::ostream& str, const NodeID& node_id)
-//{
-//  return str<< '(' << node_id.color_ << ", " << node_id.task_in_color_ << "/" << node_id.size_ << ')';
-//}
-
-std::ostream& cd::operator<<(std::ostream& str, const NodeID& node_id)
+class cd::CDNameT
 {
-  return str << '(' 
-             << node_id.color_ << ", " 
-             << node_id.task_in_color_ << "/" << node_id.size_ 
-             << ')';
-}
+  public:
+    CDNameT()
+    {
+
+    }
+    ~CDNameT()
+    {
+
+    }
+ 
+};
+
+#endif 

@@ -1,4 +1,3 @@
-
 /*
 Copyright 2014, The University of Texas at Austin 
 All rights reserved.
@@ -34,20 +33,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef _REGEN_OBJECT_H
+#define _REGEN_OBJECT_H
 
-#include "node_id.h"
+#include "cd_global.h" 
 
-using namespace cd;
-
-//std::ostream& operator<<(std::ostream& str, const NodeID& node_id)
-//{
-//  return str<< '(' << node_id.color_ << ", " << node_id.task_in_color_ << "/" << node_id.size_ << ')';
-//}
-
-std::ostream& cd::operator<<(std::ostream& str, const NodeID& node_id)
+class cd::RegenObject 
 {
-  return str << '(' 
-             << node_id.color_ << ", " 
-             << node_id.task_in_color_ << "/" << node_id.size_ 
-             << ')';
-}
+
+  protected:
+    virtual void Regenerate(CDHandle &handle);//TODO Is this needs to be a CDHandle or CD? If our policy is not to expose CD object directly then CDHandle is the one?
+};
+
+
+#endif

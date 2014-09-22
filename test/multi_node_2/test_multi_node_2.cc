@@ -63,9 +63,11 @@ int main(int argc, char* argv[])
   MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
+  printf("Before init...\n");
   CDHandle* cd_root = CD_Init(nprocs, myrank);
+  printf("After init...\n");
   cd_root->Begin(true, "Root begun");
-
+  printf("Root Begun...\n");
   para_range(1, NN, nprocs, myrank, &ista, &iend);
   
   CDHandle* cd1 = CDPath::GetCurrentCD()->Create(CDPath::GetCurrentCD()->GetNodeID(), 8, "CD1", kStrict, 0, 0, &err);

@@ -167,8 +167,8 @@ namespace cd {
 #define PRINT_DEBUG(X) printf(X);
 #define PRINT_DEBUG2(X,Y) printf(X,Y);
 #else
-#define PRINT_DEBUG(X) printf(X);
-#define PRINT_DEBUG2(X,Y) printf(X,Y);
+#define PRINT_DEBUG(X) (X);
+#define PRINT_DEBUG2(X,Y) (X,Y);
 #endif
 
 #define MAX_FILE_PATH 2048
@@ -180,7 +180,7 @@ namespace cd {
 #else
 #define ROOT_COLOR 0 
 #define INITIAL_COLOR 0
-#define ColorT MPI_Comm
+#define ColorT int
 #endif
 
 /* 

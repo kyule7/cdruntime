@@ -1,4 +1,3 @@
-
 /*
 Copyright 2014, The University of Texas at Austin 
 All rights reserved.
@@ -34,20 +33,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef _SERIALIZABLE_H
+#define _SERIALIZABLE_H
+#include "cd_global.h"
 
-#include "node_id.h"
-
-using namespace cd;
-
-//std::ostream& operator<<(std::ostream& str, const NodeID& node_id)
-//{
-//  return str<< '(' << node_id.color_ << ", " << node_id.task_in_color_ << "/" << node_id.size_ << ')';
-//}
-
-std::ostream& cd::operator<<(std::ostream& str, const NodeID& node_id)
+class cd::Serializable
 {
-  return str << '(' 
-             << node_id.color_ << ", " 
-             << node_id.task_in_color_ << "/" << node_id.size_ 
-             << ')';
-}
+  public:
+    virtual void *Serialize(uint64_t *len_in_bytes)=0;
+    virtual void Deserialize(void *object)=0;
+
+};
+#endif

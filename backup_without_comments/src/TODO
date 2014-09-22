@@ -1,0 +1,20 @@
+Todos.
+Please do not delete the history.
+
+
+
+
+04/24/2014 MEMO
++ Via Reference Needs to be implemented
+++ When transfering CDEntry, do not do the deep copy. 
+++ 
+
++ RegenObject Functionality should be tested
+
++ Preemption needs to be implemented (Timer based looks viable). In general, it should support remote preservation (somebody calls preserve via CDHandle for preservation to the current CD which is located at remote node) / remote InternalGetEntry execution / etc  / so basically remote execution seamlessly
+
++ To make the longjump happen, we decided to go with polling in all API calls, so basically stop will take effect at the moment when CD API is called. 04/29/2014 . This scheme probably also require API changes on MPI or GASNET because you may not want to send errorneous data to be sent outside no further?
+
++ Traversing the tree. Searching ref_name. Go to parent and then look for the name if it is not found go one level up until it is found. JINSUK:PARTLY DONE, PARNET's PARENT is not implemented
+
++ Restore or preserve to remote node. For example, when Restore function is called it will need to figure out whether the address is pointing to local node or remote node. If it is remote node, proper copy over network should be provided.

@@ -370,26 +370,26 @@ int CDHandle::SplitCD(const int& my_size, const int& num_children, int& new_colo
   int Y = (double)tmp / num_x;
   int X = tmp % num_x;
 
-  cout<<"tmp = "<<tmp <<endl;
-  cout<<"taskID = "<<taskID <<endl;
-  cout<<"sz = "<<sz<<endl;
-  cout<<"X = "<<X<<endl;
-  cout<<"Y = "<<Y<<endl;
-  cout<<"Z = "<<Z<<endl;
-
-  cout<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
-  cout<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
-  cout << "(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<")"<< endl; 
+//  cout<<"tmp = "<<tmp <<endl;
+//  cout<<"taskID = "<<taskID <<endl;
+//  cout<<"sz = "<<sz<<endl;
+//  cout<<"X = "<<X<<endl;
+//  cout<<"Y = "<<Y<<endl;
+//  cout<<"Z = "<<Z<<endl;
+//
+//  cout<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
+//  cout<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
+//  cout << "(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<")"<< endl; 
 
   new_color = (int)(X / new_num_x + (Y / new_num_y)*num_children_x + (Z / new_num_z)*(num_children_x * num_children_y));
   new_task  = (int)(X % new_num_x + (Y % new_num_y)*new_num_x      + (Z % new_num_z)*(new_num_x * new_num_y));
   
-  cout << "(color,task,size) = (" << new_color << ","<< new_task << "," << new_size << ") <-- "<<endl;
+//  cout << "(color,task,size) = (" << new_color << ","<< new_task << "," << new_size << ") <-- "<<endl;
 //       <<"(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<") -- (color,task,size) = (" << node_id_.color_ << ","<< node_id_.task_in_color_ << "," << node_id_.size_ <<")"
 //       << "ZZ : " << round((double)Z / new_num_z)
 //       << endl;
 //  getchar();
-  cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
+//  cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
   ptr_cd_->GenerateTable(CDPath::GetRootCD()->node_id_.task_in_color_, new_color, new_task);
   return 0;
 }

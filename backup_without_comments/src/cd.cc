@@ -256,7 +256,7 @@ CDErrT CD::Destroy(void)
 // CDHandle will follow the standard interface. 
 CDErrT CD::Begin(bool collective, const char* label)
 {
-  cout<<"inside CD::Begin"<<endl;
+//  cout<<"inside CD::Begin"<<endl;
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
@@ -430,8 +430,11 @@ CDErrT CD::Preserve(void* data,
 
 PrvMediumT CD::GetPlaceToPreserve()
 {
+#if _MEMORY
   return kMemory;
-//  return kSSD;
+#else
+  return kHDD;
+#endif
 //  if(GetCDID().level_==1) return kHDD;
 //  else return kSSD;
 }
@@ -453,7 +456,7 @@ CDErrT CD::Preserve(void* data,
   // FIXME for now let's just use regular malloc call 
 
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
-    cout<<"my_name "<< my_name<<endl;
+//    cout<<"my_name "<< my_name<<endl;
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : return CDErrT::kOK;
       case CDInternalErrT::kExecModeError : return CDErrT::kError;
@@ -495,13 +498,13 @@ CDErrT CD::Preserve(void* data,
     else {  // abnormal case
       //return CDErrT::kOK;
 
-      cout<< "Something wrong in Reexecution!!!"<<endl<<endl;  
+//      cout<< "Something wrong in Reexecution!!!"<<endl<<endl;  
       // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
       // we reached the last preserve function call. 
       // Since we have reached the last point already now convert current execution mode into kExecution
 
       ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
-      printf("Now reached end of entry directory, now switching to normal execution mode\n");
+//      printf("Now reached end of entry directory, now switching to normal execution mode\n");
 
       cd_exec_mode_  = kExecution;    
       switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
@@ -513,7 +516,7 @@ CDErrT CD::Preserve(void* data,
 
     }
 
-    printf("Reexecution mode finished...\n");
+//    printf("Reexecution mode finished...\n");
   }   // Re-execution mode ends
   else {  // Suspension mode
     // Is it okay ?
@@ -568,9 +571,9 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
           if( my_name != 0 ) {
             entry_directory_map_[my_name] = cd_entry;
-            std::cout <<"internal preserve... my_name : "<<my_name
-                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+//            std::cout <<"internal preserve... my_name : "<<my_name
+//                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
+//                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
           }
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
@@ -589,9 +592,9 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
           if( my_name != 0 ) {
             entry_directory_map_[my_name] = cd_entry;
-            std::cout <<"internal preserve... my_name : "<<my_name
-                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+//            std::cout <<"internal preserve... my_name : "<<my_name
+//                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
+//                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
           }
 
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
@@ -612,10 +615,10 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
             entry_directory_map_[my_name] = cd_entry;
             assert(entry_directory_map_[my_name]);
             assert(entry_directory_map_[my_name]->src_data_.address_data());
-            std::cout <<"internal preserve... my_name : "<<entry_directory_map_[my_name]->name()
-                      <<", value : "<<*(reinterpret_cast<int*>(entry_directory_map_[my_name]->src_data_.address_data())) 
-                      <<", address: " <<entry_directory_map_[my_name]->src_data_.address_data()
-                      <<", address: " <<cd_entry->src_data_.address_data()<< std::endl;
+//            std::cout <<"internal preserve... my_name : "<<entry_directory_map_[my_name]->name()
+//                      <<", value : "<<*(reinterpret_cast<int*>(entry_directory_map_[my_name]->src_data_.address_data())) 
+//                      <<", address: " <<entry_directory_map_[my_name]->src_data_.address_data()
+//                      <<", address: " <<cd_entry->src_data_.address_data()<< std::endl;
 
           }
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
@@ -845,11 +848,11 @@ CDErrT CD::Reexecute(void)
 
   //TODO We need to consider collective re-start. 
   if(ctxt_prv_mode_ == kExcludeStack) {
-    printf("longjmp\n");
+    printf("\nlongjmp\n\n");
     longjmp(jump_buffer_, 1);
   }
   else if (ctxt_prv_mode_ == kIncludeStack) {
-    printf("setcontext\n");
+    printf("\nsetcontext\n\n");
     setcontext(&ctxt_); 
   }
 
@@ -987,16 +990,16 @@ CDEntry* CD::InternalGetEntry(std::string entry_name)
   try {
     auto it = entry_directory_map_.find(entry_name.c_str());
     if(it == entry_directory_map_.end()) {
-      std::cout<<"[InternalGetEntry] There is no entry for reference of "<< entry_name.c_str() 
-               <<" at CD level " << GetCDID().level_ << std::endl;
+//      std::cout<<"[InternalGetEntry] There is no entry for reference of "<< entry_name.c_str() 
+//               <<" at CD level " << GetCDID().level_ << std::endl;
       //getchar();
       return NULL;
     }
     else {
       CDEntry* cd_entry = entry_directory_map_.find(entry_name.c_str())->second;
       
-      std::cout<<"[InternalGetEntry] ref_name: " <<entry_directory_map_[entry_name.c_str()]->dst_data_.address_data()
-               << ", address: " <<entry_directory_map_[entry_name.c_str()]->dst_data_.address_data()<< std::endl;
+//      std::cout<<"[InternalGetEntry] ref_name: " <<entry_directory_map_[entry_name.c_str()]->dst_data_.address_data()
+//               << ", address: " <<entry_directory_map_[entry_name.c_str()]->dst_data_.address_data()<< std::endl;
       return cd_entry;
     }
   }
@@ -1012,7 +1015,6 @@ void CD::DeleteEntryDirectory(void)
   for(std::list<CDEntry>::iterator it = entry_directory_.begin();
       it != entry_directory_.end(); ++it) {
     it->Delete();
-    //entry_directory_.erase(it);
   }
 
 //  for(std::map<std::string, CDEntry*>::iterator it = entry_directory_map_.begin();

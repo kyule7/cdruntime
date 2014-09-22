@@ -1,4 +1,3 @@
-
 /*
 Copyright 2014, The University of Texas at Austin 
 All rights reserved.
@@ -35,19 +34,37 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 
-#include "node_id.h"
+#ifndef _CD_EVENT_H
+#define _CD_EVENT_H
 
-using namespace cd;
+#define SIZE_EVENT_ARRAY 64  // allocate 32bit * 64 memory. If we need more we allocate additional 32bit * 64 
+// TODO This part should be carefully designed for better efficiency
+#include "cd_global.h"
+#include <stdint.h>
 
-//std::ostream& operator<<(std::ostream& str, const NodeID& node_id)
-//{
-//  return str<< '(' << node_id.color_ << ", " << node_id.task_in_color_ << "/" << node_id.size_ << ')';
-//}
-
-std::ostream& cd::operator<<(std::ostream& str, const NodeID& node_id)
+class cd::CDEvent
 {
-  return str << '(' 
-             << node_id.color_ << ", " 
-             << node_id.task_in_color_ << "/" << node_id.size_ 
-             << ')';
-}
+  protected:
+    uint32_t *event_;
+    uint32_t current_pos_;
+    uint32_t len_event_;
+
+  public:
+    CDEvent();
+    ~CDEvent();
+    // Using bitset perhaps if we would like to use this to represent the case where multiple async function needs to be completed before we do something? Or is this something that we do not want anyways? Assuming we use this, would it cause too much contention? Perhaps, no?
+
+    //	uint32_t event_;
+    void InitEvent();
+    uint32_t AddEvent();
+    void ResetEvent(uint32_t pos);
+    void SetEvent(uint32_t pos);
+    void DestroyEvent();
+
+public:
+    bool Test();
+    CDErrT Wait();
+
+};
+
+#endif 
