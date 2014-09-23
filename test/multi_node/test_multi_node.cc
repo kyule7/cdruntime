@@ -36,13 +36,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdio.h>
 #include <iostream>
 #include <mpi.h>
-#include "cd.h"
 #include "cds.h"
-#include "cd_handle.h"
-#include "cd_path.h"
 
 #define SIZE 655360 //10M?
-#define LV1 1 
+#define LV1 8 
 
 using namespace cd;
 using namespace std;
