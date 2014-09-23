@@ -46,49 +46,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <utility>
 #include <math.h>
 
-#if _MPI_VER
-#include <mpi.h>
-#endif
-
-
-
 using namespace cd;
-//using namespace cd::CDPath;
-
 using namespace std;
 
-std::map<uint64_t, int> cd::nodeMap;  // Unique CD Node ID - Communicator
-CDPath* CDPath::uniquePath_;
-//std::vector<CDHandle*>  cd::CDPath;
-//CDPath* CDPath::uniquePath_;
 
-std::vector<HeadCD*>  cd::HeadCDPath;
-bool cd::is_visualized = false;
 int cd::myTaskID = 0;
-int cd::status = 0;
 
 // Global functions -------------------------------------------------------
-//ostream& cd::operator<<(ostream& str, const NodeID& node_id)
-//{
-//  return str << '(' 
-//             << node_id.color_ << ", " 
-//             << node_id.task_in_color_ << "/" << node_id.size_ 
-//             << ')';
-//}
-
-void cd::SetStatus(int flag)
-{ cd::status = flag; }
-
-//CDHandle* cd::GetCurrentCD(void) 
-//{ return cd::CDPath.back(); }
-//
-//CDHandle* cd::GetRootCD(void)    
-//{ return cd::CDPath.front(); }
-//
-//CDHandle* cd::GetParentCD(const CDID& cd_id)
-//{ return CDPath.at(cd_id.level_ - 1); }
-
-
 /// CD_Init()
 /// Create the data structure that CD object and CDHandle object are going to use.
 /// For example, CDEntry object or CDHandle object or CD object itself.
@@ -108,7 +72,6 @@ CDHandle* cd::CD_Init(int numTask, int myRank)
 #endif
 
   return root_cd;
-
 }
 
 void cd::CD_Finalize(void)
@@ -122,7 +85,6 @@ void cd::CD_Finalize(void)
 #endif
 
   CDPath::GetRootCD()->Destroy();
-
 }
 
 // CDHandle Member Methods ------------------------------------------------------------
@@ -925,8 +887,8 @@ CDEntry* CDHandle::InternalGetEntry(std::string entry_name)
 }
 
 void CDHandle::Recover (uint32_t error_name_mask, 
-              uint32_t error_loc_mask, 
-              std::vector< SysErrT > errors)
+                        uint32_t error_loc_mask, 
+                        std::vector<SysErrT> errors)
 {
   // STUB
 }
@@ -939,15 +901,11 @@ CDErrT CDHandle::SetPGASType (void *data_ptr, uint64_t len, CDPGASUsageT region_
 
 int CDHandle::ctxt_prv_mode()
 {
-  if( IsHead() )
-  {
-
+  if( IsHead() ) {
     return (int)ptr_cd_->ctxt_prv_mode_;
   }
-  else
-  {
+  else {
     //FIXME: need to get the flag from remote
-
   }
 
   return 0;
@@ -955,22 +913,17 @@ int CDHandle::ctxt_prv_mode()
 
 void CDHandle::CommitPreserveBuff()
 {
-  if( IsHead() )
-  {
-    if( ptr_cd_->ctxt_prv_mode_ == CD::kExcludeStack) 
-     {
+  if( IsHead() ) {
+    if( ptr_cd_->ctxt_prv_mode_ == CD::kExcludeStack) {
         memcpy(ptr_cd_->jump_buffer_, jump_buffer_, sizeof(jmp_buf));
      }
-     else
-     {
+     else {
         ptr_cd_->ctxt_ = this->ctxt_;
      }
  
   } 
-  else
-  {
+  else {
     //FIXME: need to transfer the buffers to remote
-
   }
 }
 
@@ -981,13 +934,17 @@ uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_l
 {
   uint64_t sys_bit_vec = 0;
   if(error_name_mask == 0) {
+
   }
   else {
+
   }
 
   if(error_loc_mask == 0) {
+
   }
   else {
+
   }
   return sys_bit_vec;
 }
