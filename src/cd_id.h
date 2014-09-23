@@ -42,18 +42,39 @@ using namespace cd;
 namespace cd{
 
 extern uint64_t object_id;
+/*
+CDID is for naming uniquely one of the CDs. 
+So, it is a logical ID of our CD semantic which is independent on any other execution environment.
+We can represent a CD with level and rank_in_a_level in the CD tree graph. 
+So, these two numbers are needed, but they are not sufficient. 
+One CD may create non-collectively, and just create one child CD, 
+it does not reflect this new CD with this level and rank_in_level. 
+To differentiate it, we need object_id which is unique ID in local address space. 
+This local address space’s ID can be global with the combination of level+rank_in_a_level.
+But it is still not sufficient, because we are reusing CD object by Begin/Complete. 
+So in this case, we need sequential_id which is corresponding to the version number of a CD object.
+We may need domain_id which is about physical location of the CDs, 
+but we do not work on it, so do not use this for now.
+it does not contain any information to access one of the processes (mpi ranks) which are belonging to one CD. 
+So, we need this information to access a CD. 
+Color is a kind of group number or an arbitrary type indicating a group of tasks corresponding to a CD.
+task_in_a_color means an ID to access a task in that color. 
+(ex. rank ID of a communicator in MPI context. Communicator corresponds to color_). 
+size means the number of tasks in that color. With these three information, we can access to any tasks.
 
+Q. # of sibing CDs should be here?
+
+*/
 class CDID {
   public:
     uint64_t domain_id_;          // Some physical information is desired in CDID to maximize locality when needed
     uint64_t level_;              // Level in the CD hierarhcy. It increases at Create() and destroys at Destroy.
     uint64_t rank_in_level_;
     NodeID   node_id_;            // Unique ID for each CD. It can be a communicator number. It increases at Create().
-                                  // node_id_.first means node (color)
-                                  // node_id_.second means ID in that node (color)
-                                  // For now, node_id_.second==0 is always MASTER.
-                                  // But it can be more nicely managed distribuing MASTER for one process.
-//    static uint64_t task_id_;     // MPI rank ID / Thread ID. It is not increased at runtime but given at Init() in the beginning.
+                                  // node_id_.color_ means a CD (color)
+                                  // node_id_.task_in_color_ means task ID in that CD task group (color)
+                                  // For now, node_id_.color_==0 is always Head.
+                                  // But it can be more nicely managed distribuing Head for one process.
     static uint64_t object_id_;   // This will be local and unique within a process. It increases at creator or Create().
     uint64_t sequential_id_;      // # of Begin/Complete pairs of each CD object. It increases at Begin()
     
@@ -61,8 +82,6 @@ class CDID {
 
     CDID(uint64_t level, const NodeID& new_node_id);
     CDID(uint64_t level, NodeID&& new_node_id);
-//    CDID(CDHandle* parent, const NodeID& new_node_id);
-//    CDID(CDHandle* parent, NodeID&& new_node_id);
 
     CDID(const CDID& that);
     // should be in CDID.h

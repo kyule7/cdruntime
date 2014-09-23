@@ -49,9 +49,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 class cd::CDEntry : public cd::Serializable
 {
-//#if _DEBUG
   friend class cd::CD;
-//#endif
   private:
     DataHandle  src_data_;
     DataHandle  dst_data_;

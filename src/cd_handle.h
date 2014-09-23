@@ -44,6 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <array>
 #include <setjmp.h>
 #include <ucontext.h>
+#include <functional>
 
 #if _PROFILER
 #include "cd_profiler.h"
@@ -57,6 +58,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // (If node_id_.first is different, that means there is something wrong!)
 // That means that CD object was newly given from somewhere,
 // and in that case, we should be careful of synchorizing the CD object to CDHandle
+// 09.22.2014 Kyushick: The above comment is written long time ago, so may be confusing to understand the current design.
+
 using namespace cd;
 
 class cd::CDHandle {
@@ -66,8 +69,10 @@ class cd::CDHandle {
   private:
     CD*    ptr_cd_;
     NodeID node_id_;
-    ColorT head_; 
-    bool   IsHead_; 
+
+    // task ID of head in this CD.
+    // If current task is head of current CD, than it is the same as node_id_.task_
+    int  head_; 
 
 #if _PROFILER 
     Profiler* profiler_;
@@ -78,24 +83,25 @@ class cd::CDHandle {
     //TODO copy these to CD async 
     ucontext_t ctxt_;
     jmp_buf    jump_buffer_;
-  
+
+    // Default Constructor
     CDHandle();
 
-    CDHandle( CDHandle* parent, 
-              const char* name, 
-              const NodeID& node_id, 
-              CDType cd_type, 
-              uint64_t sys_bit_vector);
-    CDHandle( CDHandle* parent, 
-              const char* name, 
-              NodeID&& node_id, 
-              CDType cd_type, 
-              uint64_t sys_bit_vector);
+    // Constructor
+    CDHandle(CDHandle* parent, 
+             const char* name, 
+             const NodeID& node_id, 
+             CDType cd_type, 
+             uint64_t sys_bit_vector);
+
+    // Constructor (for rvalue reference type of node_id)
+    CDHandle(CDHandle* parent, 
+             const char* name, 
+             NodeID&& node_id, 
+             CDType cd_type, 
+             uint64_t sys_bit_vector);
 
    ~CDHandle(); 
-
-  // API List 0.1
-  // Should Create/Destroy, Begin/Complete be static??
 
     // Non-collective
     CDHandle* Create(const char* name=0, 
@@ -112,7 +118,7 @@ class cd::CDHandle {
                      uint32_t error_name_mask=0, 
                      uint32_t error_loc_mask=0, 
                      CDErrT *error=0 );
-     // Collective
+    // Collective
     CDHandle* Create(uint32_t  numchildren,
                      const char* name, 
                      CDType type=kStrict, 
@@ -120,6 +126,7 @@ class cd::CDHandle {
                      uint32_t error_loc_mask=0, 
                      CDErrT *error=0 );
  
+    // Collective
     CDHandle* CreateAndBegin(const ColorT& color, 
                              uint32_t num_tasks_in_color=0, 
                              const char* name=0, 
@@ -132,27 +139,29 @@ class cd::CDHandle {
     
     CDErrT Begin(bool collective=true, 
                  const char* label=0);
+
     CDErrT Complete(bool collective=true, 
                     bool update_preservations=false);
   
-    CDErrT Preserve ( void *data_ptr=0, 
-                      uint64_t len=0, 
-                      CDPreserveT preserve_mask=kCopy, 
-                      const char *my_name=0, 
-                      const char *ref_name=0, 
-                      uint64_t ref_offset=0, 
-                      const RegenObject *regen_object=0, 
-                      PreserveUseT data_usage=kUnsure );
-  
-    CDErrT Preserve ( CDEvent &cd_event, 
-                      void *data_ptr=0, 
-                      uint64_t len=0, 
-                      CDPreserveT preserve_mask=kCopy, 
-                      const char *my_name=0, 
-                      const char *ref_name=0, 
-                      uint64_t ref_offset=0, 
-                      const RegenObject *regen_object=0, 
-                      PreserveUseT data_usage=kUnsure );
+    // Non-collective
+    CDErrT Preserve(void *data_ptr=0, 
+                    uint64_t len=0, 
+                    CDPreserveT preserve_mask=kCopy, 
+                    const char *my_name=0, 
+                    const char *ref_name=0, 
+                    uint64_t ref_offset=0, 
+                    const RegenObject *regen_object=0, 
+                    PreserveUseT data_usage=kUnsure );
+    // Collective (not implemented yet)
+    CDErrT Preserve(CDEvent &cd_event, 
+                    void *data_ptr=0, 
+                    uint64_t len=0, 
+                    CDPreserveT preserve_mask=kCopy, 
+                    const char *my_name=0, 
+                    const char *ref_name=0, 
+                    uint64_t ref_offset=0, 
+                    const RegenObject *regen_object=0, 
+                    PreserveUseT data_usage=kUnsure );
   
 // if Regen were to registered from a remote node to a actual CD Object, 
 // it will need to serialize the Regen object and then finally send the object wait... 
@@ -200,32 +209,56 @@ class cd::CDHandle {
     void CommitPreserveBuff(void);
 
   private:  // Internal use -------------------------------------------------------------
-    void Init(CD* ptr_cd, NodeID node_id); 
+    // Initialize for CDHandle object.
+//    void Init(CD* ptr_cd, NodeID node_id);
+
+    // Search CDEntry with entry_name given. It is needed when its children preserve data via reference and search through its ancestors. If it cannot find in current CD object, it outputs NULL 
     cd::CDEntry* InternalGetEntry(std::string entry_name);
-    void InternalReexecute (void);
-    void InternalEscalate ( uint32_t error_name_mask, 
-                            uint32_t error_loc_mask, 
-                            std::vector< SysErrT > errors);
 
-    // It returns sibling ID
-    // type can be just int because color and task are int type
+    
+//    void InternalReexecute (void);
+//    void InternalEscalate ( uint32_t error_name_mask, 
+//                            uint32_t error_loc_mask, 
+//                            std::vector< SysErrT > errors);
+
+    // Add children CD to my CD
     CDErrT AddChild(CDHandle* cd_child);
-    CDErrT RemoveChild(CDHandle* cd_child);  
 
+    // Delete a child CD in my children CD list
+    CDErrT RemoveChild(CDHandle* cd_child);  
+    
+    // Stop every task in this CD
     CDErrT Stop(void);
   
-    /// Synchronize the CD object in every task of that CD.
+    /// Synchronize every task of this CD.
     CDErrT Sync(void);
 
+    // Set bit vector for error types to handle in this CD.
     uint64_t SetSystemBitVector(uint64_t error_name_mask, 
                                 uint64_t error_loc_mask);
 
-    int SplitCD(const int& my_size, 
-                const int& num_children, 
-                int& new_color, 
-                int& new_task, 
-                const int& new_size);
+    // Split CD to create children CD. So, it is basically re-indexing for task group for children CDs. By default it splits the task group of this CD in three dimension.
+    // # of children to split
+    // Current task ID (NodeID::task_in_level_)
+    // Current size of task group (NodeID::size_) 
+    // are required to split.
+    // It populates new_color, new_task appropriately.
+    // By default it splits the task group of this CD in three dimension.
+    // This default split function is defined in cd_handle.cc (SplitCD_3D())
+    void RegisterSplitMethod(std::function<int(const int& my_task_id,
+                                               const int& my_size,
+                                               const int& num_children,
+                                               int& new_color, 
+                                               int& new_task)> split_func);
 
+    // function object that will be set to some appropriate split strategy
+    std::function<int(const int& my_task_id, 
+                      const int& my_size, 
+                      const int& num_children, 
+                      int& new_color, 
+                      int& new_task)> SplitCD;
+
+    // Get NodeID with given new_color and new_task
     CDErrT GetNewNodeID(NodeID& new_node);
     CDErrT GetNewNodeID(const ColorT& my_color, 
                         const int& new_color, 
@@ -235,9 +268,8 @@ class cd::CDHandle {
     /// Do we need this?
     bool IsLocalObject(void);
 
-    /// Check if this CD object (*ptr_cd_) is the MASTER CD object
+    // Select Head among task group that are corresponding to one CD.
     void SetHead(int task);
-//    void SetColorAndTask(NodeID& new_node, const int& numchildren);
 
   public:
     bool IsHead(void);

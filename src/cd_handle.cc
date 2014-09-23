@@ -37,8 +37,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd.h"
 #include "cd_entry.h"
 #include "cd_id.h"
-//#include "node_id.h"
-//#include "cd_name_t.h"
 #include "util.h"
 #include "cd_path.h"
 
@@ -49,8 +47,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 using namespace std;
 
-
-int cd::myTaskID = 0;
+CDPath* CDPath::uniquePath_;
+//int cd::myTaskID = 0;
 
 // Global functions -------------------------------------------------------
 /// CD_Init()
@@ -62,7 +60,7 @@ int cd::myTaskID = 0;
 /// Register Root CD
 CDHandle* cd::CD_Init(int numTask, int myRank)
 {
-  myTaskID = myRank;
+//  myTaskID = myRank;
   CDHandle* root_cd = new CDHandle(NULL, "Root", NodeID(ROOT_COLOR, myRank, numTask, 0), kStrict, 0);
   CDPath::GetCDPath()->push_back(root_cd);
 
@@ -89,6 +87,12 @@ void cd::CD_Finalize(void)
 
 // CDHandle Member Methods ------------------------------------------------------------
 
+int SplitCD_3D(const int& my_task_id, 
+               const int& my_size, 
+               const int& num_children, 
+               int& new_color, 
+               int& new_task);
+
 CDHandle::CDHandle()
   : ptr_cd_(0), node_id_()
 {
@@ -97,8 +101,7 @@ CDHandle::CDHandle()
 //#else
 //  profiler_ = new NullProfiler();
 #endif
-
-  IsHead_ = false;
+  SplitCD = &SplitCD_3D;
   
 }
 
@@ -110,7 +113,7 @@ CDHandle::CDHandle()
 /// CDID set up. ptr_cd_ set up. parent_cd_ set up. children_cd_ will be set up later by children's Create call.
 /// sibling ID set up, cd_info set up
 /// clear children list
-/// request to add me as a children to parent (to MASTER CD object)
+/// request to add me as a children to parent (to Head CD object)
 CDHandle::CDHandle( CDHandle* parent, 
                     const char* name, 
                     const NodeID& node_id, 
@@ -118,6 +121,7 @@ CDHandle::CDHandle( CDHandle* parent,
                     uint64_t sys_bit_vector)
 {
 
+  SplitCD = &SplitCD_3D;
 #if _PROFILER
   profiler_ = new CDProfiler();
 //#else
@@ -139,7 +143,7 @@ CDHandle::CDHandle( CDHandle* parent,
       HeadCD* ptr_cd  = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
 //    HeadCD* ptr_cd  = (HeadCD*)DATA_MALLOC(sizeof(HeadCD));
 //    ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
-      HeadCDPath.push_back(ptr_cd);
+//      HeadCDPath.push_back(ptr_cd);
       ptr_cd_ = ptr_cd;
 //      if(is_visualized == false){
 //        ptr_cd->InitViz();
@@ -157,14 +161,7 @@ CDHandle::CDHandle( CDHandle* parent,
     }
     else {
       HeadCD* ptr_cd  = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-//    HeadCD* ptr_cd  = (HeadCD*)DATA_MALLOC(sizeof(HeadCD));
-//    ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
-      HeadCDPath.push_back(ptr_cd);
       ptr_cd_ = ptr_cd;
-//      if(is_visualized == false){
-//        ptr_cd->InitViz();
-//        is_visualized = true;
-//      }
     }
   }
 
@@ -178,6 +175,7 @@ CDHandle::CDHandle( CDHandle* parent,
                     CDType cd_type, 
                     uint64_t sys_bit_vector)
 {
+  SplitCD = &SplitCD_3D;
 #if _PROFILER
   profiler_ = new CDProfiler();
 //#else
@@ -197,14 +195,7 @@ CDHandle::CDHandle( CDHandle* parent,
     }
     else {
       HeadCD* ptr_cd  = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-//    HeadCD* ptr_cd  = (HeadCD*)DATA_MALLOC(sizeof(HeadCD));
-//    ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
-      HeadCDPath.push_back(ptr_cd);
       ptr_cd_ = ptr_cd;
-//      if(is_visualized == false){
-//        ptr_cd->InitViz();
-//        is_visualized = true;
-//      }
     }
   }
   else { // Root CD
@@ -218,14 +209,7 @@ CDHandle::CDHandle( CDHandle* parent,
     else {
       HeadCD* ptr_cd  = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
       assert(ptr_cd != NULL);
-//      HeadCD* ptr_cd  = (HeadCD*)DATA_MALLOC(sizeof(HeadCD));
-//      ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
-      HeadCDPath.push_back(ptr_cd);
       ptr_cd_ = ptr_cd;
-//      if(is_visualized == false){
-//        ptr_cd->InitViz();
-//        is_visualized = true;
-//      }
     }
   }
 
@@ -236,7 +220,7 @@ CDHandle::CDHandle( CDHandle* parent,
 
 CDHandle::~CDHandle()
 {
-  // request to delete me in the children list to parent (to MASTER CD object)
+  // request to delete me in the children list to parent (to Head CD object)
   if(ptr_cd_ != NULL) {
     // We should do this at Destroy(), not creator?
 //    RemoveChild(this);
@@ -247,12 +231,11 @@ CDHandle::~CDHandle()
 
 }
 
-void CDHandle::Init(CD* ptr_cd, NodeID node_id)
-{ 
-  // CDHandle *parent
-  ptr_cd_    = ptr_cd;
-  node_id_  = node_id;
-}
+//void CDHandle::Init(CD* ptr_cd, NodeID node_id)
+//{ 
+//  ptr_cd_    = ptr_cd;
+//  node_id_  = node_id;
+//}
 
 // Non-collective
 CDHandle* CDHandle::Create( const char* name, 
@@ -284,11 +267,15 @@ CDHandle* CDHandle::Create( const char* name,
 /// x = taskID % nx
 /// y = ( taskID % ny ) - x 
 /// z = r / (nx*ny)
-int CDHandle::SplitCD(const int& my_size, const int& num_children, int& new_color, int& new_task, const int& new_size)
+int SplitCD_3D(const int& my_task_id, 
+               const int& my_size, 
+               const int& num_children, 
+               int& new_color, 
+               int& new_task)
 {
-
-//  new_size = (int)((double)my_size / num_children);
-  int num_x = round(pow(node_id_.size_, 1/3.));
+  // Get current task group size
+  int new_size = (int)((double)my_size / num_children);
+  int num_x = round(pow(my_size, 1/3.));
   int num_y = num_x;
   int num_z = num_x;
 
@@ -307,10 +294,10 @@ int CDHandle::SplitCD(const int& my_size, const int& num_children, int& new_colo
 //  cout<<"CD : "<< ptr_cd()->name_<<"num_children = "<< num_children 
 //  <<", num_x = "<< num_x 
 //  <<", new_children_x = "<< num_children_x 
-//  <<", new_num_x = "<< new_num_x <<"node size: "<<node_id_.size_<<"\n\n"<<endl; //getchar();
+//  <<", new_num_x = "<< new_num_x <<"node size: "<<my_size<<"\n\n"<<endl; //getchar();
 
 //  cout<<"split check"<<endl;
-  assert(num_x*num_y*num_z == node_id_.size_);
+  assert(num_x*num_y*num_z == my_size);
   assert(num_children_x * num_children_y * num_children_z == (int)num_children);
   assert(new_num_x * new_num_y * new_num_z == new_size);
   assert(num_x != 0);
@@ -322,10 +309,8 @@ int CDHandle::SplitCD(const int& my_size, const int& num_children, int& new_colo
   assert(num_children_x != 0);
   assert(num_children_y != 0);
   assert(num_children_z != 0);
-//  uint64_t num_y = (uint64_t)pow(new_node.size_, 1/3.);
-//  uint64_t num_z = (uint64_t)pow(new_node.size_, 1/3.);
   
-  int taskID = GetTaskID();
+  int taskID = my_task_id; // Get current task ID
   int sz = num_x*num_y;
   int Z = (double)taskID / sz;
   int tmp = taskID % sz;
@@ -347,14 +332,20 @@ int CDHandle::SplitCD(const int& my_size, const int& num_children, int& new_colo
   new_task  = (int)(X % new_num_x + (Y % new_num_y)*new_num_x      + (Z % new_num_z)*(new_num_x * new_num_y));
   
   cout << "(color,task,size) = (" << new_color << ","<< new_task << "," << new_size << ") <-- "<<endl;
-//       <<"(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<") -- (color,task,size) = (" << node_id_.color_ << ","<< node_id_.task_in_color_ << "," << node_id_.size_ <<")"
+//       <<"(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<") -- (color,task,size) = (" << GetCurrentCD()->GetColor() << ","<< my_task_id << "," << my_size <<")"
 //       << "ZZ : " << round((double)Z / new_num_z)
 //       << endl;
 //  getchar();
-  cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
-  ptr_cd_->GenerateTable(CDPath::GetRootCD()->node_id_.task_in_color_, new_color, new_task);
   return 0;
 }
+
+
+void CDHandle::RegisterSplitMethod(std::function<int(const int& my_task_id,
+                                                     const int& my_size,
+                                                     const int& num_children,
+                                                     int& new_color, 
+                                                     int& new_task)> split_func)
+{ SplitCD = split_func; }
 
 
 //CDErrT CDHandle::CD_Comm_Split(int group_id, int color, int key, int* new_group_id)
@@ -407,12 +398,10 @@ CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, cons
 {
 #if _MPI_VER
     CDErrT err = kOK;
-    int new_size = new_node.size_;
 //    cout<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color_: "<<new_node.color_<<endl;
     MPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
     MPI_Comm_size(new_node.color_, &(new_node.size_));
     MPI_Comm_rank(new_node.color_, &(new_node.task_in_color_));
-    assert(new_size == new_node.size_);
 //    Sync();
 //    TestMPIFunc(node_id_.color_, node_id_.task_in_color_);
 //    Sync();
@@ -488,8 +477,9 @@ CDHandle* CDHandle::Create(const ColorT& color,
 
 //  cout << "[Before] old: " << node_id_ <<", new: " << new_node << endl << endl; //getchar();
   if(num_children > 1) {
-    err = SplitCD(node_id_.size_, num_children, new_color, new_task, new_node.size_);
+    err = SplitCD(node_id_.task_in_color_, node_id_.size_, num_children, new_color, new_task);
     err = GetNewNodeID(node_id_.color_, new_color, new_task, new_node);
+    assert(new_size == new_node.size_);
   }
   else if(num_children == 1) {
     err = GetNewNodeID(new_node);
@@ -544,7 +534,7 @@ CDHandle* CDHandle::CreateAndBegin(const ColorT& color,
   return NULL;
 }
 
-CDErrT CDHandle::Destroy (bool collective)
+CDErrT CDHandle::Destroy(bool collective)
 {
   CDErrT err;
  
@@ -578,9 +568,9 @@ CDErrT CDHandle::Destroy (bool collective)
 //  assert(HeadCDPath.size()>0);
 //  assert(HeadCDPath.back() != NULL);
 
-  if(IsHead()) {
-    HeadCDPath.pop_back();
-  }
+//  if(IsHead()) {
+//    HeadCDPath.pop_back();
+//  }
   
 
   err = ptr_cd_->Destroy();
@@ -594,7 +584,6 @@ CDErrT CDHandle::Destroy (bool collective)
 
 CDErrT CDHandle::Begin(bool collective, const char* label)
 {
-  SetStatus(1);
 
   //TODO It is illegal to call a collective Begin() on a CD that was created without a collective Create()??
   if ( collective ) {
@@ -614,7 +603,6 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 
 CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 {
-  SetStatus(0);
 
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
@@ -689,9 +677,9 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
     assert(ptr_cd_ != 0);
     // TODO CDEvent object need to be handled separately, 
     // this is essentially shared object among multiple nodes.
-    return ptr_cd_->Preserve( data_ptr, len, preserve_mask, 
-                              my_name, ref_name, ref_offset, 
-                              regen_object, data_usage );
+    return ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+                             my_name, ref_name, ref_offset, 
+                             regen_object, data_usage );
   }
   else {
     // It is at remote node so do something for that.
@@ -731,29 +719,28 @@ char* CDHandle::GetName(void)
 // FIXME
 bool CDHandle::IsHead(void)
 {
-  return IsHead_;
+  return (head_ == node_id_.task_in_color_);
 }
 
 // FIXME
-// For now task_id_==0 is always MASTER which is not good!
+// For now task_id_==0 is always Head which is not good!
 void CDHandle::SetHead(int task)
 {
 //  cout<<"In SetHead, Newly born CDHandle's Task# is "<<task<<endl;
-  if(task == 0)
-    IsHead_ = true;
-  else
-    IsHead_ = false;
+  head_ = 0;
 }
 
 /// Synchronize the CD object in every task of that CD.
 CDErrT CDHandle::Sync() 
 {
   CDErrT err = INITIAL_ERR_VAL;
-#if _CD_MPI
+
+#if _MPI_VER
   int mpi_err = MPI_Barrier(node_id_.color_);
 #else
   int mpi_err = 1;
 #endif
+
   if(mpi_err != 0) { 
     err = kOK; 
   }
@@ -776,7 +763,6 @@ CDErrT CDHandle::RemoveChild(CDHandle* cd_child)
   ptr_cd_->RemoveChild(cd_child);
   return err;
 }
-
 
 bool CDHandle::IsLocalObject()
 {
@@ -823,7 +809,7 @@ CDErrT CDHandle::CDAssertFail (bool test_true, const SysErrT *error_to_report)
   return kOK;
 }
 
-CDErrT CDHandle::CDAssertNotify (bool test_true, const SysErrT *error_to_report)
+CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 {
   if( IsHead() ) {
     // STUB
@@ -835,9 +821,9 @@ CDErrT CDHandle::CDAssertNotify (bool test_true, const SysErrT *error_to_report)
   return kOK;
 }
 
-std::vector< SysErrT > CDHandle::Detect (CDErrT *err_ret_val)
+std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 {
-  std::vector< SysErrT > ret_prepare;
+  std::vector<SysErrT> ret_prepare;
 
   return ret_prepare;
 

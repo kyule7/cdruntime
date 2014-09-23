@@ -291,6 +291,7 @@ int test_preservation_via_copy()
   printf("\n\n--------------------test1 begins-----------------------\n");
   printf("CD Create\n");
 //  CD *root= handle_cd.ptr_cd();// for now let's just get the pointer and use it directly
+
 	CDHandle* root = CD_Init(np, mr);
   printf("CD Begin.........lol\n");
   //  root->Begin();  
@@ -302,8 +303,8 @@ int test_preservation_via_copy()
   //root->Preserve((char *)&a,4* sizeof(int));
   root->Preserve(b, sizeof(b), kCopy, "b", "b");
   //root->Preserve((char *)&b,8* sizeof(int));
-  printf("sizeof a : %d\t", sizeof(a)); getchar();
-  printf("sizeof b : %d\t", sizeof(b)); getchar();
+  printf("sizeof a : %d\t", sizeof(a)); //getchar();
+  printf("sizeof b : %d\t", sizeof(b)); //getchar();
 
   printf("Before Modify Current value of a[0]=%d a[1]=%d\n", a[0], a[1]);
   printf("Before Modify Current value of b[0]=%d b[1]=%d\n", b[0], b[1]);
@@ -338,7 +339,7 @@ int test_preservation_via_copy()
   // this point is to test whether execution mode becomes kExecution from this point, 
   // because before this preservation is called it should be in kReexecution mode
   root->Preserve(c, sizeof(c), kCopy, "c", "c");
-  printf("sizeof c : %d\n", sizeof(c)); getchar();
+  printf("sizeof c : %d\n", sizeof(c)); //getchar();
 
   if( num_reexecution == 2)  {
     if( c[0] == 5 ) {
@@ -458,7 +459,7 @@ int test_preservation_via_copy_2()
   child->Preserve((char *)c10, SIZE*sizeof(int64_t));
 	auto preserve_end = chrono::high_resolution_clock::now();
 	chrono::duration<double> elapsed_seconds = preserve_end - preserve_start;
-	cout<<endl<<"Elapsed preservation time: "<<elapsed_seconds.count()<<"s"<<endl<<endl; getchar();
+	cout<<endl<<"Elapsed preservation time: "<<elapsed_seconds.count()<<"s"<<endl<<endl; //getchar();
 
 	printf("Before c[0]=%d c[1]=%d iter:%d\n", e[0], e[1], num_reexecution_);
   if(num_reexecution_ == 0){
@@ -562,7 +563,7 @@ printf("After e[0]=%d e[1]=%d iter:%d\n", e[0], e[1], num_reexecution_);
   printf("CD Destroy\n");
   CD_Finalize();
 
-  printf("\n-- Test Result Check! ----------------------------\n"); getchar();
+  printf("\n-- Test Result Check! ----------------------------\n"); //getchar();
   // check the test result   
   for( int i = 0; i < 5; i++ ) {
     printf("test_result[%d] = %d\n", i, test_results[i]);
@@ -571,7 +572,7 @@ printf("After e[0]=%d e[1]=%d iter:%d\n", e[0], e[1], num_reexecution_);
     }
   }
 
-  printf("\n-- Test Result : %d ----------------------------\n", test_result); getchar();
+  printf("\n-- Test Result : %d ----------------------------\n", test_result); //getchar();
   if( test_result == -1 ) 
     return kError;
   else
@@ -689,11 +690,9 @@ int main(int argc, char* argv[])
   mr = myrank;
   int ret=0;
  
-//  ret = test_preservation_via_copy()
-//  if( ret == kError ) printf("Error test1() failed\n");
  
  
-//  printf("\ntest1() \n\n"); 
+//  printf("\ntest_preservation_via_copy() \n\n"); 
 //  ret = test_preservation_via_copy();
 //  if( ret == kError ) printf("test via copy FAILED\n");
 //  else printf("test via copy PASSED\n");
@@ -711,8 +710,8 @@ int main(int argc, char* argv[])
   else printf("test_preservation_via_referenence_partial_update PASSED\n");
 
 
-  printf("\n\n------------ performance test 1 ---------------\n\n");  getchar();
-  performance_test1();
+//  printf("\n\n------------ performance test 1 ---------------\n\n");  //getchar();
+//  performance_test1();
 
   MPI_Finalize(); 
   return 0;

@@ -42,7 +42,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 
 namespace cd {
-
+/*
+NodeID is a class for access to a task in one CD. 
+Color is a kind of group number or an arbitrary type indicating a group of tasks corresponding to a CD.
+task_in_a_color means an ID to access a task in that color. 
+(ex. rank ID of a communicator in MPI context. Communicator corresponds to color_). 
+size means the number of tasks in that color. With these three information, we can access to any tasks.
+*/
 class NodeID {
 public:
   ColorT color_;
