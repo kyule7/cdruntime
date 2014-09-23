@@ -36,18 +36,33 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_GLOBAL_H
 #define _CD_GLOBAL_H
 #include <stdint.h>
+#include <assert.h>
+#include <iostream>
 #include <vector>
 #include <map>
-#include <iostream>
-#include <assert.h>
 
-#if _MPI_VER
+
+// This could be different from MPI program to PGAS program
+// key is the unique ID from 0 for each CD node.
+// value is the unique ID for mpi communication group or thread group.
+// For MPI, there is a communicator number so it is the group ID,
+// For PGAS, there should be a group ID, or we should generate it. 
+#if _MPI_VER 
 #include <mpi.h>
+
+#define ROOT_COLOR MPI_COMM_WORLD
+#define INITIAL_COLOR MPI_COMM_NULL
+typedef MPI_Comm ColorT;
+
+#else
+
+#define ROOT_COLOR 0 
+#define INITIAL_COLOR 0
+typedef int ColorT;
+
 #endif
 
-//#include "cd_path.h"
-//#include "cd_id.h"
-//#include "node_id.h"
+
 namespace cd {
   class CD;
   class HeadCD;
@@ -58,7 +73,6 @@ namespace cd {
   class Serializable;
   class NodeID;
   class CDID;
-  class Regen;
   class Packer; 
   class Unpacker; 
   class Util;
@@ -125,38 +139,22 @@ namespace cd {
 													REC, 
 													BODY, 
 													MAX_FORMAT };
+
   enum PrvMediumT { kMemory=0,
                     kHDD,
                     kSSD,
                     kPFS};
-  //typedef CDID CDName;
-//  typedef CDType CDType;
+
   class CDNameT;
 
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
-//  extern std::vector<CDHandle*> CDPath;
-//  extern CDPath* CDPath::uniquePath_;
-  extern std::vector<HeadCD*> HeadCDPath;
-  extern bool is_visualized;
-  extern int myTaskID;
-  // This could be different from MPI program to PGAS program
-  // key is the unique ID from 0 for each CD node.
-  // value is the unique ID for mpi communication group or thread group.
-  // For MPI, there is a communicator number so it is the group ID,
-  // For PGAS, there should be a group ID, or we should generate it. 
-  extern std::map<uint64_t, int> nodeMap;
-  extern int status;
-  extern void SetStatus(int flag);
-  
 
-//  extern CDHandle* GetCurrentCD(void);
-//  extern CDHandle* GetRootCD(void);
-//  extern CDHandle* GetParentCD(const CDID& cd_id);
+//  extern int myTaskID;
+
   extern CDHandle* CD_Init(int numproc=1, int myrank=0);
   extern void CD_Finalize();
 
 }
-
 
 #define INITIAL_ERR_VAL kOK
 #define DATA_MALLOC malloc
@@ -164,24 +162,18 @@ namespace cd {
 #define ERROR_MESSAGE(X) printf(X);
 
 #if _DEBUG
+
 #define PRINT_DEBUG(X) printf(X);
 #define PRINT_DEBUG2(X,Y) printf(X,Y);
+
 #else
+
 #define PRINT_DEBUG(X) printf(X);
 #define PRINT_DEBUG2(X,Y) printf(X,Y);
+
 #endif
 
 #define MAX_FILE_PATH 2048
-
-#if _MPI_VER
-#define ROOT_COLOR MPI_COMM_WORLD
-#define INITIAL_COLOR MPI_COMM_NULL
-#define ColorT MPI_Comm
-#else
-#define ROOT_COLOR 0 
-#define INITIAL_COLOR 0
-#define ColorT int
-#endif
 
 /* 
 ISSUE 1 (Kyushick)
@@ -216,7 +208,11 @@ I think there will be some problem...
 ISSUE 2 (Kyushick)
 We are increasing the number of reexecution inside Begin(). So, the point of time when we mark rollback point is not after Begin() but before Begin()
 */
+
 //#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff()
+
+// Macros for setjump / getcontext
+// So users should call this in their application, not call cd_handle->Begin().
 #define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
 #define CD_Complete(X) (X)->Complete()   
 
