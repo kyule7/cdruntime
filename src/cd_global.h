@@ -79,6 +79,7 @@ namespace cd {
   class CDEvent;
   class RegenObject;	
   class RecoverObject;
+  class SysErrT;
 
   enum CDErrT       { kOK=0, 
 											kAlreadyInit, 
@@ -88,7 +89,7 @@ namespace cd {
                       kFileOpenError
 										};
 
-  enum SysErrT      { kWhat=1 };
+//  enum SysErrT      { kWhat=1 };
 
   enum SysErrLoc    { kIntraCore=1, 
 											kCore=2, 

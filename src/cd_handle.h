@@ -37,6 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define _CD_HANDLE_H
 #include "cd_global.h"
 #include "node_id.h"
+#include "sys_err_t.h"
 #include "cd_name_t.h"
 #include <stdint.h>
 #include <vector>

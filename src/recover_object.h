@@ -36,12 +36,19 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _RECOVER_OBJECT_H
 #define _RECOVER_OBJECT_H
 
-#include "cd_global.h" 
+#include "cd_global.h"
+#include "cd.h"
+ 
+namespace cd {
 
-class cd::RecoverObject 
-{
 
+class RecoverObject {
+public:
+  virtual void Recover(CD* cd, uint64_t error_name_mask, uint64_t error_location_mask, std::vector<SysErrT> errors); 
+  virtual void Recover(CD* cd, uint64_t error_name_mask=0, uint64_t error_location_mask=0); 
 };
+
+}
 
 
 #endif

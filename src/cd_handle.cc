@@ -914,8 +914,6 @@ void CDHandle::CommitPreserveBuff()
 }
 
 
-
-
 uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_loc_mask)
 {
   uint64_t sys_bit_vec = 0;

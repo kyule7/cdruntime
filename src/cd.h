@@ -41,6 +41,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "util.h"
 #include "cd_id.h"
 #include "cd_log_handle.h"
+#include "recover_object.h"
 #if _WORK
 #include "transaction.h"
 #endif
@@ -66,7 +67,8 @@ using namespace cd;
 class cd::CD {
     /// The friends of CD class
     friend class cd::RegenObject;   
-    friend class cd::CDEntry;   
+    friend class cd::CDEntry;  
+    friend class cd::RecoverObject; 
   public:
     /// CD class internal enumerators 
     enum CDExecMode  {kExecution=0, 
@@ -85,6 +87,7 @@ class cd::CD {
 
   protected: 
     CDID cd_id_;
+    RecoverObject* recoverObj_;
   public:
 
     // Label for Begin/Complete pair. It is mainly for Loop interation.
@@ -148,7 +151,7 @@ update the preserved data.
 |      |            |          |I copied app data for preservation     | Modification is not fine becuase  | 
 |  2   |      O     |     X    |and also allow reference from          | my children CD may refer to my    |
 |______|____________|__________|my_children.___________________________|_preserved_data.___________________| 
-|      |            |          |I do not have a copy of app data       | Modification is not               |
+|      |            |          |I do not have a copy of app data       | Modification is not allowed       |
 |  3   |      O     |     O    |but will refer to my ancestor's entry  |                                   |
 |______|____________|__________|and_also_allow_reference_from_children_|___________________________________|
 */
@@ -292,6 +295,16 @@ update the preserved data.
     // Actual malloced data or created file for the preservation is deleted in this routine. 
     void DeleteEntryDirectory(void);
     
+    CDInternalErrT RegisterDetection(uint32_t system_name_mask, 
+                                     uint32_t system_loc_mask);
+
+    CDInternalErrT RegisterRecovery(uint32_t error_name_mask, 
+                                    uint32_t error_loc_mask, 
+                                    RecoverObject *recover_object=0);
+  
+    CDInternalErrT RegisterRecovery(uint32_t error_name_mask, 
+                                    uint32_t error_loc_mask, 
+                                    CDErrT(*recovery_func)(std::vector< SysErrT > errors)=0);
  };
 
 

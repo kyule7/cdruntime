@@ -85,6 +85,8 @@ CD::CD()
   // For now, I decided it as an unique one
   cd_id_.object_id_++;
 
+  recoverObj_ = new RecoverObject;
+
   Init();  
 }
 
@@ -123,6 +125,8 @@ CD::CD(CDHandle* cd_parent,
   // perhaps we should assume that cd_id is always store in the handle ...
   // Kyushick : if we pass cd_parent handle to the children CD object when we create it,
   // this can be resolved. 
+
+  recoverObj_ = new RecoverObject;
 
   Init();  
 }
@@ -812,13 +816,34 @@ CDErrT CD::Assert(bool test)
 
   if(test == false) {
     //Restore the data  (for now just do only this no other options for recovery)
-    Restore();
-    Reexecute();
+    recoverObj_->Recover(this); 
   }
 
   return CDErrT::kOK;
 }
 
+CD::CDInternalErrT CD::RegisterDetection(uint32_t system_name_mask, 
+                                     uint32_t system_loc_mask)
+{
+  // STUB
+  return CDInternalErrT::kOK;
+} 
+
+CD::CDInternalErrT CD::RegisterRecovery(uint32_t error_name_mask, 
+                                    uint32_t error_loc_mask, 
+                                    RecoverObject *recover_object)
+{
+  recoverObj_ = recover_object;
+  return CDInternalErrT::kOK;
+}
+
+CD::CDInternalErrT CD::RegisterRecovery(uint32_t error_name_mask, 
+                                    uint32_t error_loc_mask, 
+                                    CDErrT(*recovery_func)(std::vector< SysErrT > errors))
+{
+  // STUB
+  return CDInternalErrT::kOK;
+}
 CDErrT CD::Reexecute(void)
 {
   cd_exec_mode_ = kReexecution; 
