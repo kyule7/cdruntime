@@ -182,7 +182,7 @@ void CommLog::InitInternal(unsigned long num_threads_in_cd)
 //    log_table_reexec_pos_[ii] = 0;
 //  }
 //}
-//
+
 
 CommLogErrT CommLog::InitAlloc()
 {
