@@ -44,15 +44,17 @@ CommLog::CommLog()
 {
 }
 
-void CommLog::Init(CD* my_cd, unsigned long num_threads_in_cd)
+CommLog::CommLog(CD* my_cd, unsigned long num_threads_in_cd)
+  :queue_size_unit_(1024), table_size_unit_(100), child_log_size_unit_(1024)
 {
   my_cd_ = my_cd;
   InitInternal(num_threads_in_cd);
 }
 
 
-void CommLog::Init(CD* my_cd, unsigned long num_threads_in_cd, 
+CommLog::CommLog(CD* my_cd, unsigned long num_threads_in_cd, 
     unsigned long queue_size_unit, unsigned long table_size_unit)
+  :child_log_size_unit_(1024)
 {
   my_cd_ = my_cd;
   queue_size_unit_ = queue_size_unit;
@@ -61,7 +63,7 @@ void CommLog::Init(CD* my_cd, unsigned long num_threads_in_cd,
 }
 
 
-void CommLog::Init(CD* my_cd, unsigned long num_threads_in_cd, 
+CommLog::CommLog(CD* my_cd, unsigned long num_threads_in_cd, 
     unsigned long queue_size_unit, unsigned long table_size_unit, 
     unsigned long child_log_size_unit)
 {

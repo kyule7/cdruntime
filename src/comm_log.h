@@ -50,6 +50,12 @@ class cd::CommLog {
   public:
     CommLog();
 
+    CommLog(CD* my_cd, unsigned long num_threads_in_cd);
+    CommLog(CD* my_cd, unsigned long num_threads_in_cd, 
+        unsigned long queue_size_unit, unsigned long table_size_unit);
+    CommLog(CD* my_cd, unsigned long num_threads_in_cd, unsigned long queue_size_unit, 
+        unsigned long table_size_unit, unsigned long child_log_size_unit);
+
     ~CommLog();
 
     // add cd_id
@@ -78,12 +84,6 @@ class cd::CommLog {
     CommLogErrT UnpackLogs(char * src_ptr);
 
     void Print();
-
-    void Init(CD* my_cd, unsigned long num_threads_in_cd);
-    void Init(CD* my_cd, unsigned long num_threads_in_cd, 
-        unsigned long queue_size_unit, unsigned long table_size_unit);
-    void Init(CD* my_cd, unsigned long num_threads_in_cd, unsigned long queue_size_unit, 
-        unsigned long table_size_unit, unsigned long child_log_size_unit);
 
     //// In re-executation, when a CD is created, need to trigger this init
     //// This init will not allocate any space for table and queue,

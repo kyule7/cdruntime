@@ -88,6 +88,12 @@ CD::CD()
   recoverObj_ = new RecoverObject;
 
   Init();  
+
+  // SZ
+  // create instance for comm_log_ptr_
+  // FIXME: currently only 1 threads per CD, 
+  //        need a variable in CD object to state number of threads
+  comm_log_ptr_ = new CommLog(this, 1);
 }
 
   // FIXME: only acquire root handle when needed. 
@@ -114,7 +120,7 @@ CD::CD(CDHandle* cd_parent,
   // Kyushick: Object ID should be unique for the copies of the same object?
   // For now, I decided it as an unique one
   cd_id_.object_id_++;
-//  cout << "cd object is created " << cd_id_.object_id_++ <<endl;
+  // cout << "cd object is created " << cd_id_.object_id_++ <<endl;
   // FIXME maybe call self generating function here?           
   // cd_self_  = self;  //FIXME maybe call self generating function here?           
 
@@ -129,6 +135,12 @@ CD::CD(CDHandle* cd_parent,
   recoverObj_ = new RecoverObject;
 
   Init();  
+
+  // SZ
+  // create instance for comm_log_ptr_
+  // FIXME: currently only 1 threads per CD, 
+  //        need a variable in CD object to state number of threads
+  comm_log_ptr_ = new CommLog(this, 1);
 }
 
 void CD::Initialize(CDHandle* cd_parent, 
