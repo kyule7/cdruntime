@@ -85,14 +85,14 @@ class cd::CommLog {
     void Init(CD* my_cd, unsigned long num_threads_in_cd, unsigned long queue_size_unit, 
         unsigned long table_size_unit, unsigned long child_log_size_unit);
 
-    // In re-executation, when a CD is created, need to trigger this init
-    // This init will not allocate any space for table and queue,
-    // because when unpacking data, the space will be allocated..
-    void ReInit(CD* my_cd, unsigned long num_threads_in_cd);
-    void ReInit(CD* my_cd, unsigned long num_threads_in_cd, 
-        unsigned long queue_size_unit, unsigned long table_size_unit);
-    void ReInit(CD* my_cd, unsigned long num_threads_in_cd, unsigned long queue_size_unit, 
-        unsigned long table_size_unit, unsigned long child_log_size_unit);
+    //// In re-executation, when a CD is created, need to trigger this init
+    //// This init will not allocate any space for table and queue,
+    //// because when unpacking data, the space will be allocated..
+    //void ReInit(CD* my_cd, unsigned long num_threads_in_cd);
+    //void ReInit(CD* my_cd, unsigned long num_threads_in_cd, 
+    //    unsigned long queue_size_unit, unsigned long table_size_unit);
+    //void ReInit(CD* my_cd, unsigned long num_threads_in_cd, unsigned long queue_size_unit, 
+    //    unsigned long table_size_unit, unsigned long child_log_size_unit);
 
   private:
     CommLogErrT InitAlloc();

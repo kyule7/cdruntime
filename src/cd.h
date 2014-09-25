@@ -61,6 +61,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <functional>
 //#include <array>
 
+//SZ
+#include "comm_log.h"
+
 using namespace cd;
 
 /// TODO Implement serialize and deserialize of this instance
@@ -165,9 +168,13 @@ update the preserved data.
     //  pthread_mutex_t mutex_;      //
     //  pthread_mutex_t log_directory_mutex_;
 
+    // SZ: please change the following name, otherwise it will be confused
+    //     communication logging handler
     // handler for log-related things
     CDLogHandle log_handle_;
 
+    //SZ
+    cd::CommLog * comm_log_ptr_;
 
   public:
     CD();
@@ -305,6 +312,12 @@ update the preserved data.
     CDInternalErrT RegisterRecovery(uint32_t error_name_mask, 
                                     uint32_t error_loc_mask, 
                                     CDErrT(*recovery_func)(std::vector< SysErrT > errors)=0);
+
+    //SZ
+    CommLogErrT CommLogCheckAlloc(unsigned long length)
+    {
+      return comm_log_ptr_->CheckChildLogAlloc(length);
+    }
  };
 
 

@@ -145,3 +145,35 @@ std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
 //{
 //  return str<< '(' << node_id.color_ << ", " << node_id.task_ << "/" << node_id.size_ << ')';
 //}
+
+
+
+//SZ: reload '==' operator
+bool CDID::operator==(const CDID &other) const {
+  bool domain_id = (other.domain_id_ == this->domain_id_);
+  //SZ: TODO: need to figure out how to match node_id_
+  //bool node_id = (other.node_id_ == this->node_id_);
+  //bool task_id = (other.task_id_ == this->task_id_);
+
+  bool rank_in_level = (other.rank_in_level_ == this->rank_in_level_);
+  bool level = (other.level_ == this->level_);
+  bool sequential_id = (other.sequential_id_ == this->sequential_id_);
+
+  //return (domain_id && node_id && task_id && level && sequential_id);
+  return (domain_id && level && sequential_id && rank_in_level);
+}
+
+//SZ: print function
+void CDID::Print ()
+{
+  std::cout << "CDID information:" << std::endl;
+  std::cout << "    domain_id_: " << domain_id_ << std::endl;
+  std::cout << "    rank_in_level_: " << rank_in_level_ << std::endl;
+  //std::cout << "    node_id_: " << node_id_ << std::endl;
+  //std::cout << "    task_id_: " << task_id_ << std::endl;
+
+  std::cout << "    level_: " << level_ << std::endl;
+  std::cout << "    object_id_: " << object_id_ << std::endl;
+  std::cout << "    sequential_id_: " << sequential_id_ << std::endl;
+}
+

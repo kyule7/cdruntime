@@ -73,34 +73,34 @@ void CommLog::Init(CD* my_cd, unsigned long num_threads_in_cd,
 }
 
 
-void CommLog::ReInit(CD* my_cd, unsigned long num_threads_in_cd)
-{
-  my_cd_ = my_cd;
-  ReInitInternal(num_threads_in_cd);
-}
-
-
-void CommLog::ReInit(CD* my_cd, unsigned long num_threads_in_cd, 
-    unsigned long queue_size_unit, unsigned long table_size_unit)
-{
-  my_cd_ = my_cd;
-  queue_size_unit_ = queue_size_unit;
-  table_size_unit_ = table_size_unit;
-  ReInitInternal(num_threads_in_cd);
-}
-
-
-void CommLog::ReInit(CD* my_cd, unsigned long num_threads_in_cd, 
-    unsigned long queue_size_unit, unsigned long table_size_unit, 
-    unsigned long child_log_size_unit)
-{
-  my_cd_ = my_cd;
-  queue_size_unit_ = queue_size_unit;
-  table_size_unit_ = table_size_unit;
-  child_log_size_unit_ = child_log_size_unit;
-  ReInitInternal(num_threads_in_cd);
-}
-
+//void CommLog::ReInit(CD* my_cd, unsigned long num_threads_in_cd)
+//{
+//  my_cd_ = my_cd;
+//  ReInitInternal(num_threads_in_cd);
+//}
+//
+//
+//void CommLog::ReInit(CD* my_cd, unsigned long num_threads_in_cd, 
+//    unsigned long queue_size_unit, unsigned long table_size_unit)
+//{
+//  my_cd_ = my_cd;
+//  queue_size_unit_ = queue_size_unit;
+//  table_size_unit_ = table_size_unit;
+//  ReInitInternal(num_threads_in_cd);
+//}
+//
+//
+//void CommLog::ReInit(CD* my_cd, unsigned long num_threads_in_cd, 
+//    unsigned long queue_size_unit, unsigned long table_size_unit, 
+//    unsigned long child_log_size_unit)
+//{
+//  my_cd_ = my_cd;
+//  queue_size_unit_ = queue_size_unit;
+//  table_size_unit_ = table_size_unit;
+//  child_log_size_unit_ = child_log_size_unit;
+//  ReInitInternal(num_threads_in_cd);
+//}
+//
 
 CommLog::~CommLog()
 {
@@ -122,45 +122,67 @@ void CommLog::InitInternal(unsigned long num_threads_in_cd)
 
   child_log_ptr_ = NULL;
 
-  log_table_reexec_pos_ = NULL;
-
-  CommLogErrT ret = InitAlloc();
-  if (ret == kCommLogInitFailed)
+  // if forward execution
+  if (my_cd_->cd_exec_mode_ == CD::kExecution)
   {
-    ERROR_MESSAGE("Communication Logs Initialization Failed!");
+    // space for log_table_reexec_pos_ will be allocated in reexecution
+    log_table_reexec_pos_ = NULL;
+
+    // allocate space for log table and log queue
+    CommLogErrT ret = InitAlloc();
+    if (ret == kCommLogInitFailed)
+    {
+      ERROR_MESSAGE("Communication Logs Initialization Failed!");
+    }
+  }
+  else if (my_cd_->cd_exec_mode_ == CD::kReexecution)
+  {
+    // in reexecution mode, allocate space and initialize log_table_reexec_pos_
+    log_table_reexec_pos_ = new unsigned long [num_threads_in_cd_];
+    if (log_table_reexec_pos_ == NULL) 
+    {
+      ERROR_MESSAGE
+        ("Error: Cannot allocate space for log_table_reexec_pos_ in ReInitInternal() function!\n");
+      //return kCommLogInitFailed;
+    }
+
+    for (unsigned long ii=0; ii<num_threads_in_cd_;ii++)
+    {
+      log_table_reexec_pos_[ii] = 0;
+    }
   }
 
 }
 
 
-void CommLog::ReInitInternal(unsigned long num_threads_in_cd)
-{
-  num_threads_in_cd_ = num_threads_in_cd;
-
-  log_queue_.queue_size_ = 0;
-  log_queue_.cur_pos_ = 0;
-  log_queue_.base_ptr_ = NULL;
-
-  log_table_.table_size_ = 0;
-  log_table_.cur_pos_ = 0;
-  log_table_.base_ptr_ = NULL;
-
-  child_log_ptr_ = NULL;
-
-  log_table_reexec_pos_ = new unsigned long [num_threads_in_cd_];
-  if (log_table_reexec_pos_ == NULL) 
-  {
-    ERROR_MESSAGE
-      ("Error: Cannot allocate space for log_table_reexec_pos_ in ReInitInternal() function!\n");
-    //return kCommLogInitFailed;
-  }
-
-  for (unsigned long ii=0; ii<num_threads_in_cd_;ii++)
-  {
-    log_table_reexec_pos_[ii] = 0;
-  }
-}
-
+//void CommLog::ReInitInternal(unsigned long num_threads_in_cd)
+//{
+//  num_threads_in_cd_ = num_threads_in_cd;
+//
+//  log_queue_.queue_size_ = 0;
+//  log_queue_.cur_pos_ = 0;
+//  log_queue_.base_ptr_ = NULL;
+//
+//  log_table_.table_size_ = 0;
+//  log_table_.cur_pos_ = 0;
+//  log_table_.base_ptr_ = NULL;
+//
+//  child_log_ptr_ = NULL;
+//
+//  log_table_reexec_pos_ = new unsigned long [num_threads_in_cd_];
+//  if (log_table_reexec_pos_ == NULL) 
+//  {
+//    ERROR_MESSAGE
+//      ("Error: Cannot allocate space for log_table_reexec_pos_ in ReInitInternal() function!\n");
+//    //return kCommLogInitFailed;
+//  }
+//
+//  for (unsigned long ii=0; ii<num_threads_in_cd_;ii++)
+//  {
+//    log_table_reexec_pos_[ii] = 0;
+//  }
+//}
+//
 
 CommLogErrT CommLog::InitAlloc()
 {
@@ -346,7 +368,7 @@ CommLogErrT CommLog::PackAndPushLogs(CD* parent_cd)
 
   // TODO: this is ugly, what about a tmp_ptr to pack and then copy to parent??
   // pack logs to parent's child_log_ptr_
-  PackLogs(&(parent_cd->comm_log_), length);
+  PackLogs(parent_cd->comm_log_ptr_, length);
 
   return kCommLogOK;
 }
@@ -356,10 +378,10 @@ CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
 {
   if (dst_cl_ptr == NULL) return kCommLogError;
 
-  DEBUG_PRINT("dst_cl_ptr=%p\n", dst_cl_ptr);
-  DEBUG_PRINT("dst_cl_ptr->child_log_ptr_=%p\n", dst_cl_ptr->child_log_ptr_);
-  DEBUG_PRINT("before: child_log_size_= %ld\n", dst_cl_ptr->child_log_size_);
-  DEBUG_PRINT("before: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
+  PRINT_DEBUG("dst_cl_ptr=%p\n", dst_cl_ptr);
+  PRINT_DEBUG("dst_cl_ptr->child_log_ptr_=%p\n", dst_cl_ptr->child_log_ptr_);
+  PRINT_DEBUG("before: child_log_size_= %ld\n", dst_cl_ptr->child_log_size_);
+  PRINT_DEBUG("before: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
 
   unsigned long size;
   //[SIZE]
@@ -367,44 +389,44 @@ CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
   memcpy (&(dst_cl_ptr->child_log_ptr_[dst_cl_ptr->child_log_cur_pos_]), 
       &length, size);
   dst_cl_ptr->child_log_cur_pos_ += size;
-  DEBUG_PRINT("After size: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
+  PRINT_DEBUG("After size: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
 
   //[CDID]
   size = sizeof(CDID);
-  CDID tmp_cd_id = my_cd_->cd_id();
+  CDID tmp_cd_id = my_cd_->GetCDID();
   memcpy (&(dst_cl_ptr->child_log_ptr_[dst_cl_ptr->child_log_cur_pos_]), 
       &(tmp_cd_id), size);
   dst_cl_ptr->child_log_cur_pos_ += size;
-  DEBUG_PRINT("After CDID: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
+  PRINT_DEBUG("After CDID: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
 
   //[Table] meta data
   size = sizeof(struct LogTable);
   memcpy (&(dst_cl_ptr->child_log_ptr_[dst_cl_ptr->child_log_cur_pos_]), 
       &log_table_, size);
   dst_cl_ptr->child_log_cur_pos_ += size;
-  DEBUG_PRINT("After table meta data: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
+  PRINT_DEBUG("After table meta data: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
 
   //[Table] data
   size = sizeof(struct LogTableElement)*log_table_.cur_pos_;
   memcpy (&(dst_cl_ptr->child_log_ptr_[dst_cl_ptr->child_log_cur_pos_]), 
       log_table_.base_ptr_, size);
   dst_cl_ptr->child_log_cur_pos_ += size;
-  DEBUG_PRINT("After table data: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
+  PRINT_DEBUG("After table data: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
 
   //[Queue] meta data
   size = sizeof(struct LogQueue);
   memcpy (&(dst_cl_ptr->child_log_ptr_[dst_cl_ptr->child_log_cur_pos_]), 
       &log_queue_, size);
   dst_cl_ptr->child_log_cur_pos_ += size;
-  DEBUG_PRINT("After queue meta data: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
+  PRINT_DEBUG("After queue meta data: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
 
   //[Queue] data
   size = sizeof(char)*log_queue_.cur_pos_;
   memcpy (&(dst_cl_ptr->child_log_ptr_[dst_cl_ptr->child_log_cur_pos_]), 
       log_queue_.base_ptr_, size);
   dst_cl_ptr->child_log_cur_pos_ += size;
-  DEBUG_PRINT("After queue data: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
-  DEBUG_PRINT("After: child_log_size_= %ld\n", dst_cl_ptr->child_log_size_);
+  PRINT_DEBUG("After queue data: child_log_cur_pos_ = %ld\n", dst_cl_ptr->child_log_cur_pos_);
+  PRINT_DEBUG("After: child_log_size_= %ld\n", dst_cl_ptr->child_log_size_);
 
   return kCommLogOK;
 }
@@ -457,7 +479,7 @@ CommLogErrT CommLog::FindNextTableElement(unsigned long id, unsigned long * inde
 
 void CommLog::Print()
 {
-  my_cd_->cd_id().Print();
+  my_cd_->GetCDID().Print();
 
   printf("\nUnits:\n");
   printf("queue_size_unit_ = %ld\n", queue_size_unit_);
@@ -502,9 +524,9 @@ void CommLog::Print()
 CommLogErrT CommLog::UnpackLogsToChildCD(CD* child_cd)
 {
   char * src_ptr;
-  FindChildLogs(child_cd->cd_id(), &src_ptr);
+  FindChildLogs(child_cd->GetCDID(), &src_ptr);
 
-  (child_cd->comm_log_).UnpackLogs(src_ptr);
+  (child_cd->comm_log_ptr_)->UnpackLogs(src_ptr);
 
   return kCommLogOK;
 }
@@ -535,7 +557,7 @@ CommLogErrT CommLog::UnpackLogs(char * src_ptr)
   CDID cd_id;
   size = sizeof(CDID);
   memcpy(&cd_id, src_ptr+index, size);
-  if (!(cd_id==my_cd_->cd_id()))
+  if (!(cd_id==my_cd_->GetCDID()))
   {
     ERROR_MESSAGE("Pass wrong log data to unpack!\n");
     return kCommLogError;
