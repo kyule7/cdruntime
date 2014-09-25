@@ -42,6 +42,7 @@ using namespace cd;
 CommLog::CommLog()
   :queue_size_unit_(1024), table_size_unit_(100), child_log_size_unit_(1024)
 {
+
 }
 
 CommLog::CommLog(CD* my_cd, unsigned long num_threads_in_cd)
