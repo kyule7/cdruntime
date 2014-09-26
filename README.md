@@ -1,13 +1,18 @@
-CD runtime system framework                             Modified date: 09.26.2014
+CD runtime system framework																											Modified date: 09.26.2014
 
 
 [Introduction]
 
 This repository is Containment Domain (CD) runtime system libraries. This consists of four subdirectories.
+
 1. src : it contains the source code of runtime system.
+
 2. lib : it contains shared objects.
+
 3. doc : it contains the document of runtime system.
+
 4. tools : it contains the tools running with CD runtime system.
+
 5. test : it contains the example codes that is annotated with CD libraris.
 
 
