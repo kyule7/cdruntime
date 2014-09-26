@@ -1,6 +1,8 @@
 CD runtime system framework                             Modified date: 09.26.2014
 
+
 [Introduction]
+
 This repository is Containment Domain (CD) runtime system libraries. This consists of four subdirectories.
 src : it contains the source code of runtime system.
 lib : it contains shared objects.
@@ -12,8 +14,11 @@ test : it contains the example codes that is annotated with CD libraris.
 [Job allocation of runtime system development]
 
 Song - Communication logging
+
 Kyushick - Overall runtime system operations
+
 Jinsuk - Overall runtime system operations
+
 Seong-lyong - Libc logging 
 
 
@@ -39,7 +44,7 @@ Generate OS Error Signals from separate process? (Kyushick: I think what normall
 
 8. (Kyushick) More interactive visualization of CD runtime system with sight. Need to work on the front-end part of Sight to generate viz-related log file that is appropriate to layout engine which is being developed by Hoa in Utah university.
 
-9. 
+
 
 
 
