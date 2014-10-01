@@ -1,0 +1,29 @@
+! what does CD::Initialize do? What is its difference from CD constructor?? And it seems nowhere uses CD::Initialize.
+
+! how to handle escalation??
+* for now we do not support escalation
+* and for now if an error happens but child does set the detector, then child will not know an error happens, but parent can detect the error and roll back when context comes back to parent
+** this seems to waste a lot of time and resources, should detect the error earlier and roll back earlier
+
+! recoverobj can be overwritten by programmers, so stop all children and change execution mode needs to happen outside recoverobj
+
+! should cd_parent_ inside CD object, not HeadCD object??
+
+! should HeadCD object has its own complete functions? as it has to coordinate all other CD objects for complete.
+
+! if there is only one task inside a CD, will that be a CD object or HeadCD object???
+* it seems that we should make it CD object to avoid some unneeded checks and coordination...
+
+! should we have a non-collective version of CDHandle??
+
+! some comments on SetHead and IsHead functions...
+
+! how to efficiently represent a CDID
+* need a process_id_ to represent which address space a cd resides in
+
+! inside CD class need to have a function to test if cd_parent is in local address space or not..
+* add function IsParentLocal inside CD class, but for now always returns yes...
+
+! should we change the PRINT_DEBUG to DEBUG_PRINT??
+
+! inside CDHandle constructor, it does not call CD::Create, but instead it directly calls CD constructor..
