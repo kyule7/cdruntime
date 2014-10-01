@@ -724,6 +724,9 @@ bool CDHandle::IsHead(void)
 
 // FIXME
 // For now task_id_==0 is always Head which is not good!
+// SZ: shouldn't this task assign head_ = (task==0); ???
+//     and IsHead is just check if (head_ == 1), 
+//     otherwise each time you check IsHead you need to access node_id_.task_in_color_..
 void CDHandle::SetHead(int task)
 {
 //  cout<<"In SetHead, Newly born CDHandle's Task# is "<<task<<endl;

@@ -88,6 +88,12 @@ class cd::CD {
                           kEntryError 
                         };  
 
+    //SZ
+    // TODO: need to think through where we should change this log mode
+    enum CDCommLogMode { kGenerateLog=0,
+                         kReplayLog
+                      };
+
   protected: 
     CDID cd_id_;
     RecoverObject* recoverObj_;
@@ -175,6 +181,10 @@ update the preserved data.
 
     //SZ
     cd::CommLog * comm_log_ptr_;
+    CDCommLogMode comm_log_mode_;
+    
+    //SZ: moved from HeadCD class
+    cd::CDHandle*            cd_parent_;
 
   public:
     CD();
@@ -318,6 +328,14 @@ update the preserved data.
     {
       return comm_log_ptr_->CheckChildLogAlloc(length);
     }
+
+    //SZ 
+    bool IsParentLocal()
+    {
+      //FIXME: for now assuming cd_parent_ is always local
+      //       need to implement inside CDID object to test if parent is local, such as using process_id_
+      return 1;
+    }
  };
 
 
@@ -335,7 +353,9 @@ class cd::HeadCD : public cd::CD {
     /// So, when we create CDs, 
     /// we should send Head CDHandle and its CD to its parent CD
     std::list<cd::CDHandle*> cd_children_;
-    cd::CDHandle*            cd_parent_;
+
+    ////SZ: move to CD class
+    //cd::CDHandle*            cd_parent_;
 
     HeadCD();
     HeadCD(cd::CDHandle* cd_parent, 

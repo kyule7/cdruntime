@@ -50,6 +50,7 @@ class cd::CommLog {
   public:
     CommLog();
 
+    CommLog(CD* my_cd);
     CommLog(CD* my_cd, unsigned long num_threads_in_cd);
     CommLog(CD* my_cd, unsigned long num_threads_in_cd, 
         unsigned long queue_size_unit, unsigned long table_size_unit);
@@ -146,9 +147,11 @@ class cd::CommLog {
     // TODO: is there a way not to make this public?? 
     // allocate child_log_ptr_ when pushing data to parents
     // pack all children's log data and then copy into child_log_ptr array
-    char * child_log_ptr_ = NULL;
-    unsigned long child_log_size_;
-    unsigned long child_log_cur_pos_;
+    struct ChildLogQueue{
+      char * base_ptr_ = NULL;
+      unsigned long size_;
+      unsigned long cur_pos_;
+    } child_log_;
 };
 
 #endif

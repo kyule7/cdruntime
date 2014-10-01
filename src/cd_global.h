@@ -173,7 +173,7 @@ namespace cd {
 
 //SZ: change the following macro to accept multiple arguments
 //#define ERROR_MESSAGE(X) printf(X);
-#define ERROR_MESSAGE(...) {printf(__VA_ARGS__);}
+#define ERROR_MESSAGE(...) {printf("\nError: ");printf(__VA_ARGS__);}
 //#ifdef DEBUG
 //#define DEBUG_PRINT(...) {printf(__VA_ARGS__);}
 //#else

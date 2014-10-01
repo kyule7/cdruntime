@@ -90,10 +90,14 @@ CD::CD()
   Init();  
 
   // SZ
+  // if no parent assigned, then means this is root, so log mode will be kGenerateLog at creation point
+  comm_log_mode_ = kGenerateLog;
+
+  // SZ
   // create instance for comm_log_ptr_
-  // FIXME: currently only 1 threads per CD, 
-  //        need a variable in CD object to state number of threads
-  comm_log_ptr_ = new CommLog(this, 1);
+  // by default, comm_log is per thread per CD, but the semantics can support
+  // multiple threads per comm_log
+  comm_log_ptr_ = new CommLog(this);
 }
 
   // FIXME: only acquire root handle when needed. 
@@ -137,10 +141,15 @@ CD::CD(CDHandle* cd_parent,
   Init();  
 
   // SZ
+  // inherit parent's comm_log_mode_ 
+  comm_log_mode_ = cd_parent->ptr_cd()->comm_log_mode_;
+
+  // SZ
   // create instance for comm_log_ptr_
-  // FIXME: currently only 1 threads per CD, 
-  //        need a variable in CD object to state number of threads
-  comm_log_ptr_ = new CommLog(this, 1);
+  // by default, comm_log is per thread per CD, but the semantics can support
+  // multiple threads per comm_log
+  comm_log_ptr_ = new CommLog(this);
+
 }
 
 void CD::Initialize(CDHandle* cd_parent, 
@@ -206,6 +215,18 @@ CD* CD::Create(CDHandle* cd_parent,
                CDErrT *cd_err)
 {
   CD* new_cd = new CD(cd_parent, name, cd_id, cd_type, sys_bit_vector);
+
+  //SZ: if in reexecution, need to unpack logs to childs
+  if (new_cd->IsParentLocal())
+  {
+    comm_log_ptr_->UnpackLogsToChildCD(new_cd);
+  }
+  else
+  {
+    //SZ: FIXME: need to figure out a way to unpack logs if child is not in the same address space with parent
+    PRINT_DEBUG("Should not be here to unpack logs!!\n");
+  }
+  
   return new_cd;
 }
     
@@ -295,6 +316,19 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   // TODO ASSERT( cd_exec_mode_  != kSuspension );
   // FIXME don't we have to wait for others to be completed?  
   cd_exec_mode_ = kSuspension; 
+
+  // SZ: pack logs and push to parent
+  // FIXME: cd_parent_ is not a member of CD class, but inside HeadCD class, should fix this...
+  // FIXME: what if cd_parent_ is in another address space??
+  if (IsParentLocal())
+  {
+    this->comm_log_ptr_->PackAndPushLogs(cd_parent_->ptr_cd_);
+  }
+  else 
+  {
+    //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
+    PRINT_DEBUG("Should not come to here...\n");
+  }
   return CDErrT::kOK;
 }
 
@@ -827,6 +861,10 @@ CDErrT CD::Assert(bool test)
 {
 
   if(test == false) {
+    // SZ
+    // TODO: may need to change cd_exec_mode_ and stop all children here too???
+    comm_log_mode_ = kReplayLog;  
+
     //Restore the data  (for now just do only this no other options for recovery)
     recoverObj_->Recover(this); 
   }
@@ -858,7 +896,12 @@ CD::CDInternalErrT CD::RegisterRecovery(uint32_t error_name_mask,
 }
 CDErrT CD::Reexecute(void)
 {
+  // SZ: FIXME: this is not safe because programmers may have their own RecoverObj
+  //            we need to change the cd_exec_mode_ and comm_log_mode_ outside this function
   cd_exec_mode_ = kReexecution; 
+
+  // SZ
+  comm_log_mode_ = kReplayLog;  
 
   //TODO We need to make sure that all children has stopped before re-executing this CD.
   Stop();
