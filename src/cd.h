@@ -183,8 +183,8 @@ update the preserved data.
     cd::CommLog * comm_log_ptr_;
     CDCommLogMode comm_log_mode_;
     
-    //SZ: moved from HeadCD class
-    cd::CDHandle*            cd_parent_;
+    ////SZ: attempted to move from HeadCD class, but we can use CDPath class
+    //cd::CDHandle*            cd_parent_;
 
   public:
     CD();
@@ -354,8 +354,7 @@ class cd::HeadCD : public cd::CD {
     /// we should send Head CDHandle and its CD to its parent CD
     std::list<cd::CDHandle*> cd_children_;
 
-    ////SZ: move to CD class
-    //cd::CDHandle*            cd_parent_;
+    cd::CDHandle*            cd_parent_;
 
     HeadCD();
     HeadCD(cd::CDHandle* cd_parent, 
