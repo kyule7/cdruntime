@@ -14,8 +14,6 @@
 ! if there is only one task inside a CD, will that be a CD object or HeadCD object???
 * it seems that we should make it CD object to avoid some unneeded checks and coordination...
 
-! should we have a non-collective version of CDHandle??
-
 ! some comments on SetHead and IsHead functions...
 
 ! how to efficiently represent a CDID
