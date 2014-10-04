@@ -46,7 +46,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // In the bigger picture there are [Table] section in the beginning and then [Data] section.  In [Table] section we can see where the data is located.
 
 using namespace cd;
-  Packer::Packer() 
+Packer::Packer() 
 : table_size_(0), data_size_(0), used_table_size_(0), used_data_size_(0)
 {
   table_grow_unit_ = 2048; // What is the rate of growth for the table.  There are optimum size, if this is too big then initial effort is too big, if it is too small, then later realloc might happen more often.
@@ -71,8 +71,7 @@ using namespace cd;
 }
 
 
-
-  Packer::Packer(unsigned long table_grow_unit, unsigned long data_grow_unit) 
+Packer::Packer(unsigned long table_grow_unit, unsigned long data_grow_unit) 
 : table_size_(0), data_size_(0), used_table_size_(0), used_data_size_(0)
 {
   table_grow_unit_ = table_grow_unit;
@@ -117,7 +116,6 @@ char *Packer::GetTotalData(unsigned long &total_data_size)
 }
 
 
-
 unsigned int Packer::ClearData()
 {
 
@@ -142,14 +140,11 @@ unsigned int Packer::ClearData()
 }
 
 
-
 void Packer::SetBufferGrow(unsigned long table_grow_unit, unsigned long data_grow_unit) 
 {
   table_grow_unit_ = table_grow_unit;
   data_grow_unit_ = data_grow_unit;
-
 }
-
 
 
 void Packer::WriteWord(char *dst_buffer,unsigned long value)

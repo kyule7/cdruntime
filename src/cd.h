@@ -189,12 +189,19 @@ update the preserved data.
   
     CDID GetCDID(void) { return cd_id_; }
 
-    CD* Create(cd::CDHandle* cd_parent, 
-               const char* name, 
-               const CDID& cd_id, 
-               CDType cd_type, 
-               uint64_t sys_bit_vector, 
-               CDErrT* cd_err);
+    CDHandle* Create(CDHandle* parent, 
+                     const char* name, 
+                     const CDID& child_cd_id, 
+                     CDType cd_type, 
+                     uint64_t sys_bit_vector, 
+                     CDInternalErrT* cd_err=0);
+
+    static CDHandle* CreateRootCD(CDHandle* parent, 
+                     const char* name, 
+                     CDID&& child_cd_id, 
+                     CDType cd_type, 
+                     uint64_t sys_bit_vector, 
+                     CD::CDInternalErrT *cd_internal_err=0);
 
     CDErrT Destroy();
 
@@ -305,6 +312,13 @@ update the preserved data.
     CDInternalErrT RegisterRecovery(uint32_t error_name_mask, 
                                     uint32_t error_loc_mask, 
                                     CDErrT(*recovery_func)(std::vector< SysErrT > errors)=0);
+
+    
+    CDNameT& GetCDName(void)  { return cd_id_.cd_name_; }
+
+    bool IsHead(void) const { 
+      return cd_id_.IsHead();
+    }
  };
 
 

@@ -233,7 +233,7 @@ DataHandle* CDEntry::GetBuffer() {
   DataHandle real_dst_data;
 
 	std::cout <<"ref name: "    << dst_data_.ref_name() 
-            << ", at level: " << ptr_cd()->GetCDID().level_<<std::endl;
+            << ", at level: " << ptr_cd()->GetCDID().level()<<std::endl;
 
 
 
@@ -258,7 +258,7 @@ DataHandle* CDEntry::GetBuffer() {
 
 //		CDEntry* entry = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
 //		std::cout <<"ref name: "    << entry->dst_data_.ref_name() 
-//              << ", at level: " << entry->ptr_cd()->GetCDID().level_<<std::endl;
+//              << ", at level: " << entry->ptr_cd()->GetCDID().level()<<std::endl;
 //		if( entry != 0 ) {
 
       //Here, we search Parent's entry and Parent's Parent's entry and so on.
@@ -269,15 +269,15 @@ DataHandle* CDEntry::GetBuffer() {
 			while( parent_cd != NULL ) {
 		    entry = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
 				std::cout <<"ref name: "    << entry->dst_data_.ref_name() 
-                  << ", at level: " << entry->ptr_cd()->GetCDID().level_<<std::endl;
+                  << ", at level: " << entry->ptr_cd()->GetCDID().level()<<std::endl;
 
         if(entry != NULL) {
           std::cout<<"I got my reference here!!"<<std::endl;
           break;
         }
         else {
-				  parent_cd = CDPath::GetParentCD(ptr_cd()->GetCDID().level_);
-          std::cout<< "Gotta go to upper level! -> " << parent_cd->GetName() << " at level "<< parent_cd->ptr_cd()->GetCDID().level_ << std::endl;
+				  parent_cd = CDPath::GetParentCD(ptr_cd()->GetCDID().level());
+          std::cout<< "Gotta go to upper level! -> " << parent_cd->GetName() << " at level "<< parent_cd->ptr_cd()->GetCDID().level() << std::endl;
         }
 			} 
 
@@ -436,3 +436,21 @@ CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 	//Direction is from dst_data_ to src_data_
 
 }
+
+
+
+
+void* Serialize(uint64_t* len_in_bytes)
+{
+//  packer_.Add(id, length, position);
+  return 0;  
+}
+void Deserialize(void* object) 
+{
+  //STUB
+  return;
+}
+
+
+
+

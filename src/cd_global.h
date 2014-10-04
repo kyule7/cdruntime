@@ -51,17 +51,21 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <mpi.h>
 
 #define ROOT_COLOR MPI_COMM_WORLD
+#define ROOT_HEAD_ID 0
 #define INITIAL_COLOR MPI_COMM_NULL
 typedef MPI_Comm ColorT;
 
 #else
 
 #define ROOT_COLOR 0 
+#define ROOT_HEAD_ID 0
 #define INITIAL_COLOR 0
 typedef int ColorT;
 
 #endif
 
+#define INVALID_TASK_ID -1
+#define INVALID_HEAD_ID -1
 
 namespace cd {
   class CD;
@@ -75,7 +79,7 @@ namespace cd {
   class CDID;
   class Packer; 
   class Unpacker; 
-  class Util;
+//  class Util;
   class CDEvent;
   class RegenObject;	
   class RecoverObject;
@@ -154,6 +158,7 @@ namespace cd {
 
   extern CDHandle* CD_Init(int numproc=1, int myrank=0);
   extern void CD_Finalize();
+//  extern uint64_t Util::gen_object_id_=0;
 
 }
 

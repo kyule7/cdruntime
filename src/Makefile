@@ -8,7 +8,7 @@ CC=g++
 else
 CC=mpic++
 endif
-CFLAGS=-g -fPIC -Wall -std=gnu++0x 
+CFLAGS=-g -fPIC -Wall -std=gnu++0x -fmax-errors=2 
 LDFLAGS=
 CDFLAGS=-D_MPI_VER=$(MPI_VER_VAR) -D_PGAS_VER=$(PGAS_VER_VAR) -D_SINGLE_VER=$(SINGLE_VER_VAR) \
         -D_DEBUG=$(DEBUG_VAR)
