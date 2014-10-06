@@ -41,20 +41,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
     
 struct LogTableElement {
-  unsigned long id_;  // this id_ is thread/task id related
+  //unsigned long id_;  // this id_ is thread/task id related
   unsigned long pos_; // starting position of logged data in log_queue_
   unsigned long length_; // length of logged data
 };
     
 class cd::CommLog {
   public:
-    CommLog();
+    //CommLog();
 
-    CommLog(CD* my_cd);
-    CommLog(CD* my_cd, unsigned long num_threads_in_cd);
-    CommLog(CD* my_cd, unsigned long num_threads_in_cd, 
+    CommLog(CD* my_cd, CommLogMode comm_log_mode);
+    //CommLog(CD* my_cd, CommLogMode comm_log_mode, unsigned long num_threads_in_cd);
+    CommLog(CD* my_cd, CommLogMode comm_log_mode, 
         unsigned long queue_size_unit, unsigned long table_size_unit);
-    CommLog(CD* my_cd, unsigned long num_threads_in_cd, unsigned long queue_size_unit, 
+    CommLog(CD* my_cd, CommLogMode comm_log_mode, unsigned long queue_size_unit, 
         unsigned long table_size_unit, unsigned long child_log_size_unit);
 
     ~CommLog();
@@ -65,14 +65,15 @@ class cd::CommLog {
       my_cd_ = my_cd;
     }
 
-    // TODO: should create a wrapper for LogData and ReadData
+    // wrapper for LogData and ReadData
+    CommLogErrT AccessLog(void * data_ptr, unsigned long data_length);
+
     // log new data into the queue
     // need to check if running out queues
-    // id is thread-related ids
-    CommLogErrT LogData(unsigned long id, void * data_ptr, unsigned long data_length);
+    CommLogErrT LogData(void * data_ptr, unsigned long data_length);
 
-    CommLogErrT ReadData(unsigned long id, void * buffer, unsigned long * length);
-    CommLogErrT FindNextTableElement(unsigned long id, unsigned long * index);
+    CommLogErrT ReadData(void * buffer, unsigned long length);
+    //CommLogErrT FindNextTableElement(unsigned long * index);
 
     // push logs to parent
     CommLogErrT PackAndPushLogs(CD * parent_cd);
@@ -83,6 +84,18 @@ class cd::CommLog {
     CommLogErrT UnpackLogsToChildCD(CD* child_cd);
     CommLogErrT FindChildLogs(CDID child_cd_id, char** src_ptr);
     CommLogErrT UnpackLogs(char * src_ptr);
+
+    void ReInit();
+
+    CommLogMode GetCommLogMode()
+    {
+      return comm_log_mode_;
+    }
+
+    void SetCommLogMode(CommLogMode comm_log_mode)
+    {
+      comm_log_mode_ = comm_log_mode;
+    }
 
     void Print();
 
@@ -100,23 +113,26 @@ class cd::CommLog {
 
     // internal function, called by constructor, and used to allocate first log queue
     // and initialize all parameters
-    void InitInternal(unsigned long num_threads_in_cd);
-
-    void ReInitInternal(unsigned long num_threads_in_cd);
+    void InitInternal();
 
     CommLogErrT IncreaseLogTableSize();
     CommLogErrT IncreaseLogQueueSize();
 
-    CommLogErrT WriteLogTable (unsigned long id, void * data_ptr, unsigned long data_length);
-    CommLogErrT WriteLogQueue (unsigned long id, void * data_ptr, unsigned long data_length);
+    CommLogErrT WriteLogTable (void * data_ptr, unsigned long data_length);
+    CommLogErrT WriteLogQueue (void * data_ptr, unsigned long data_length);
     
 
   private:
     CD* my_cd_;
-    unsigned long num_threads_in_cd_;
+    //SZ: as we have multiple CD objects for multi threads CDs,
+    //    so we not need to consider the case that multiple threads are in the same CD
+    //unsigned long num_threads_in_cd_;
     unsigned long queue_size_unit_;
     unsigned long table_size_unit_;
     unsigned long child_log_size_unit_;
+
+    CommLogMode comm_log_mode_;
+
 
     // struct to describe current address and bound address of a log queue
     struct LogQueue {
@@ -140,7 +156,7 @@ class cd::CommLog {
       unsigned long table_size_;
     } log_table_;
 
-    unsigned long * log_table_reexec_pos_=NULL;
+    unsigned long log_table_reexec_pos_;
 
 
   public:

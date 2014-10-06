@@ -92,11 +92,13 @@ class CDID {
 
     CDID& operator=(const CDID& that);
 
+#ifdef szhang
     //SZ: reload '==' operator
     bool operator==(const CDID &other) const ;
 
     //SZ: print function
     void Print ();
+#endif
 };
 
 std::ostream& operator<<(std::ostream& str, const CDID& cd_id);

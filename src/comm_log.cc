@@ -39,47 +39,57 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 using namespace cd;
 
-CommLog::CommLog()
-  :queue_size_unit_(1024), table_size_unit_(100), child_log_size_unit_(1024)
-{
-  InitInternal(1);
-}
+//CommLog::CommLog()
+//  :queue_size_unit_(1024), table_size_unit_(100), child_log_size_unit_(1024)
+//{
+//  InitInternal(1);
+//}
 
-CommLog::CommLog(CD* my_cd)
-  :queue_size_unit_(1024), table_size_unit_(100), child_log_size_unit_(1024)
-{
-  my_cd_ = my_cd;
-  InitInternal(1);
-}
-
-CommLog::CommLog(CD* my_cd, unsigned long num_threads_in_cd)
+CommLog::CommLog(CD* my_cd, 
+                 CommLogMode comm_log_mode)
   :queue_size_unit_(1024), table_size_unit_(100), child_log_size_unit_(1024)
 {
   my_cd_ = my_cd;
-  InitInternal(num_threads_in_cd);
+  comm_log_mode_ = comm_log_mode;
+  InitInternal();
 }
 
+//CommLog::CommLog(CD* my_cd, 
+//                 CommLogMode comm_log_mode)
+//  :queue_size_unit_(1024), table_size_unit_(100), child_log_size_unit_(1024)
+//{
+//  my_cd_ = my_cd;
+//  comm_log_mode_ = comm_log_mode;
+//  InitInternal();
+//}
+//
 
-CommLog::CommLog(CD* my_cd, unsigned long num_threads_in_cd, 
-    unsigned long queue_size_unit, unsigned long table_size_unit)
+CommLog::CommLog(CD* my_cd, 
+                 CommLogMode comm_log_mode, 
+                 unsigned long queue_size_unit, 
+                 unsigned long table_size_unit)
   :child_log_size_unit_(1024)
 {
   my_cd_ = my_cd;
+  comm_log_mode_ = comm_log_mode;
   queue_size_unit_ = queue_size_unit;
   table_size_unit_ = table_size_unit;
-  InitInternal(num_threads_in_cd);
+  InitInternal();
 }
 
 
-CommLog::CommLog(CD* my_cd, unsigned long num_threads_in_cd, 
-    unsigned long queue_size_unit, unsigned long table_size_unit, 
-    unsigned long child_log_size_unit)
+CommLog::CommLog(CD* my_cd, 
+                 CommLogMode comm_log_mode, 
+                 unsigned long queue_size_unit, 
+                 unsigned long table_size_unit, 
+                 unsigned long child_log_size_unit)
 {
   my_cd_ = my_cd;
+  comm_log_mode_ = comm_log_mode;
   queue_size_unit_ = queue_size_unit;
   table_size_unit_ = table_size_unit;
   child_log_size_unit_ = child_log_size_unit;
-  InitInternal(num_threads_in_cd);
+  InitInternal();
 }
 
 
@@ -89,10 +99,8 @@ CommLog::~CommLog()
 }
 
 
-void CommLog::InitInternal(unsigned long num_threads_in_cd)
+void CommLog::InitInternal()
 {
-  num_threads_in_cd_ = num_threads_in_cd;
-
   log_queue_.queue_size_ = 0;
   log_queue_.cur_pos_ = 0;
   log_queue_.base_ptr_ = NULL;
@@ -104,15 +112,8 @@ void CommLog::InitInternal(unsigned long num_threads_in_cd)
   child_log_.base_ptr_ = NULL;
 
   // if forward execution
-  if (my_cd_->comm_log_mode_ == CD::kGenerateLog)
+  if (comm_log_mode_ == kGenerateLog)
   {
-    if (log_table_reexec_pos_ != NULL)
-    {
-      ERROR_MESSAGE("log_table_reexec_pos_ not NULL at init point!\n");
-    }
-    // space for log_table_reexec_pos_ will be allocated in reexecution
-    log_table_reexec_pos_ = NULL;
-
     // allocate space for log table and log queue
     CommLogErrT ret = InitAlloc();
     if (ret == kCommLogInitFailed)
@@ -120,23 +121,19 @@ void CommLog::InitInternal(unsigned long num_threads_in_cd)
       ERROR_MESSAGE("Communication Logs Initialization Failed!\n");
     }
   }
-  else if (my_cd_->comm_log_mode_ == CD::kReplayLog)
+  else if (comm_log_mode_ == kReplayLog)
   {
-    // in reexecution mode, allocate space and initialize log_table_reexec_pos_
-    log_table_reexec_pos_ = new unsigned long [num_threads_in_cd_];
-    if (log_table_reexec_pos_ == NULL) 
-    {
-      ERROR_MESSAGE
-        ("Cannot allocate space for log_table_reexec_pos_ in ReInitInternal() function!\n");
-      //return kCommLogInitFailed;
-    }
-
-    for (unsigned long ii=0; ii<num_threads_in_cd_;ii++)
-    {
-      log_table_reexec_pos_[ii] = 0;
-    }
+    log_table_reexec_pos_ = 0;
   }
 
+}
+
+
+// ReInit is called when a CD wants to reexecute
+void CommLog::ReInit()
+{
+  comm_log_mode_ = kReplayLog;
+  log_table_reexec_pos_ = 0;
 }
 
 
@@ -157,20 +154,8 @@ CommLogErrT CommLog::InitAlloc()
     log_table_.table_size_ = table_size_unit_;
   }
 
-  if (log_table_reexec_pos_ == NULL)
-  {
-    log_table_reexec_pos_ = new unsigned long [num_threads_in_cd_];
-    if (log_table_reexec_pos_ == NULL) return kCommLogInitFailed;
-
-    // Init array to all 0s
-    for (unsigned long ii=0; ii<num_threads_in_cd_;ii++)
-    {
-      log_table_reexec_pos_[ii] = 0;
-    }
-  }
-
   // TODO: why need the following check again? This follows how Jinsuk implemented Packer class
-  if (log_queue_.base_ptr_==NULL || log_table_.base_ptr_==NULL || log_table_reexec_pos_==NULL)
+  if (log_queue_.base_ptr_==NULL || log_table_.base_ptr_==NULL)
   {
     return kCommLogError;
   }
@@ -179,30 +164,56 @@ CommLogErrT CommLog::InitAlloc()
 }
 
 
-// need programmer to provide a thread related id when logging data
-CommLogErrT CommLog::LogData(unsigned long id, void * data_ptr, unsigned long data_length)
+CommLogErrT CommLog::AccessLog(void * data_ptr, unsigned long data_length)
+{
+  CommLogErrT ret=kCommLogOK;
+  if (comm_log_mode_ == kGenerateLog)
+  {
+    ret = LogData(data_ptr, data_length);
+  }
+  else if (comm_log_mode_ == kReplayLog)
+  {
+    ret = ReadData(data_ptr, data_length);
+    if (ret == kCommLogCommLogModeFlip)
+    {
+      //SZ
+      //TODO: what should happen here??
+    }
+  }
+  else {
+    ERROR_MESSAGE("Unknown comm_log_mode_ (%d) in AccessLog!\n", comm_log_mode_);
+    ret = kCommLogError;
+  }
+  return ret;
+}
+
+
+CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length)
 {
   CommLogErrT ret;
+
   //TODO: should also log accessed address??
   // add one element in the log_table_
-  ret = WriteLogTable(id, data_ptr, data_length);
+  ret = WriteLogTable(data_ptr, data_length);
   if (ret == kCommLogAllocFailed) 
   {
     ERROR_MESSAGE("Log Table Realloc Failed!\n");
+    return ret;
   }
 
   // write data into the queue
-  ret = WriteLogQueue(id, data_ptr, data_length);
+  ret = WriteLogQueue(data_ptr, data_length);
   if (ret == kCommLogAllocFailed) 
   {
     ERROR_MESSAGE("Log Queue Realloc Failed!\n");
+    return ret;
   }
 
   return kCommLogOK;
 }
 
 
-CommLogErrT CommLog::WriteLogTable (unsigned long id, void * data_ptr, unsigned long data_length)
+CommLogErrT CommLog::WriteLogTable (void * data_ptr, unsigned long data_length)
 {
   CommLogErrT ret;
   if (log_table_.cur_pos_ >= log_table_.table_size_) 
@@ -211,7 +222,7 @@ CommLogErrT CommLog::WriteLogTable (unsigned long id, void * data_ptr, unsigned 
     if (ret == kCommLogAllocFailed) return ret;
   }
 
-  log_table_.base_ptr_[log_table_.cur_pos_].id_ = id;
+  //log_table_.base_ptr_[log_table_.cur_pos_].id_ = id;
   log_table_.base_ptr_[log_table_.cur_pos_].pos_ = log_queue_.cur_pos_;
   log_table_.base_ptr_[log_table_.cur_pos_].length_ = data_length;
   log_table_.cur_pos_++;
@@ -220,7 +231,7 @@ CommLogErrT CommLog::WriteLogTable (unsigned long id, void * data_ptr, unsigned 
 }
 
 
-CommLogErrT CommLog::WriteLogQueue (unsigned long id, void * data_ptr, unsigned long data_length)
+CommLogErrT CommLog::WriteLogQueue (void * data_ptr, unsigned long data_length)
 {
   CommLogErrT ret;
   if (log_queue_.cur_pos_ + data_length >= log_queue_.queue_size_)
@@ -390,48 +401,49 @@ CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
 
 
 // input parameter
-CommLogErrT CommLog::ReadData(unsigned long id, void * buffer, unsigned long * length)
+CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
 {
-  CommLogErrT ret;
-  unsigned long index;
-  ret = FindNextTableElement(id, &index);
-  if (ret != kCommLogOK) return ret;
+  if (log_table_.cur_pos_ == 0)
+  {
+    ERROR_MESSAGE("Empty logs!\n");
+    return kCommLogError;
+  }
 
-  *length = log_table_.base_ptr_[index].length_;
+  if (length != log_table_.base_ptr_[log_table_reexec_pos_].length_)
+  {
+    ERROR_MESSAGE("Wrong length when read data from logs\n");
+    return kCommLogError;
+  }
+
   memcpy(buffer, 
-      log_queue_.base_ptr_+log_table_.base_ptr_[index].pos_,
-      log_table_.base_ptr_[index].length_);
+      log_queue_.base_ptr_+log_table_.base_ptr_[log_table_reexec_pos_].pos_,
+      log_table_.base_ptr_[log_table_reexec_pos_].length_);
 
-  log_table_reexec_pos_[id] = index+1;
-  return kCommLogOK;
-}
-
-
-CommLogErrT CommLog::FindNextTableElement(unsigned long id, unsigned long * index)
-{
-  if (log_table_reexec_pos_[id] == log_table_.cur_pos_)
+  log_table_reexec_pos_++;
+  if (log_table_reexec_pos_ == log_table_.cur_pos_)
   {
-    ERROR_MESSAGE("Reach end of log_table_ for id(%ld)\n", id);
-    return kCommLogError;
-  }
+    PRINT_DEBUG("Reach end of log_table_!\n");
 
-  unsigned long ii;
-  for (ii=log_table_reexec_pos_[id];ii<log_table_.cur_pos_;ii++)
-  {
-    if (log_table_.base_ptr_[ii].id_ == id) 
-    {
-      *index = ii;
-      break;
-    }
-  }
-  if (ii == log_table_.cur_pos_)
-  {
-    ERROR_MESSAGE("No next table element found for id(%ld) in log_table_\n", id);
-    return kCommLogError;
+    comm_log_mode_ = kGenerateLog;
+    return kCommLogCommLogModeFlip;
   }
 
   return kCommLogOK;
 }
+
+
+//CommLogErrT CommLog::FindNextTableElement(unsigned long * index)
+//{
+//  if (log_table_reexec_pos_ == log_table_.cur_pos_)
+//  {
+//    PRINT_DEBUG("Reach end of log_table_!\n");
+//
+//    comm_log_mode_ = kGenerateLog;
+//    return kCommLogCommLogModeFlip;
+//  }
+//
+//  return kCommLogOK;
+//}
 
 
 void CommLog::Print()
@@ -452,22 +464,12 @@ void CommLog::Print()
   for (ii=0;ii<log_table_.cur_pos_;ii++)
   {
     printf("log_table_.base_ptr_[%ld]:\n", ii);
-    printf("id_=%ld, pos_=%ld, length_=%ld\n\n"
-        ,log_table_.base_ptr_[ii].id_
+    printf("pos_=%ld, length_=%ld\n\n"
         ,log_table_.base_ptr_[ii].pos_
         ,log_table_.base_ptr_[ii].length_);
   }
 
-  printf ("num_threads_in_cd_ = %ld\n", num_threads_in_cd_);
-  printf ("log_table_reexec_pos_ = %p\n", log_table_reexec_pos_);
-
-  if (log_table_reexec_pos_ != NULL)
-  {
-    for (ii=0;ii<num_threads_in_cd_;ii++)
-    {
-      printf("log_table_reexec_pos_[%ld]=%ld\n", ii, log_table_reexec_pos_[ii]);
-    }
-  }
+  printf ("log_table_reexec_pos_ = %ld\n", log_table_reexec_pos_);
 
   printf("\nlog_queue_:\n");
   printf("base_ptr_ = %p\n", log_queue_.base_ptr_);

@@ -148,6 +148,7 @@ std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
 
 
 
+#ifdef szhang
 //SZ: reload '==' operator
 bool CDID::operator==(const CDID &other) const {
   bool domain_id = (other.domain_id_ == this->domain_id_);
@@ -176,4 +177,5 @@ void CDID::Print ()
   std::cout << "    object_id_: " << object_id_ << std::endl;
   std::cout << "    sequential_id_: " << sequential_id_ << std::endl;
 }
+#endif
 

@@ -61,8 +61,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <functional>
 //#include <array>
 
+#ifdef szhang
 //SZ
 #include "comm_log.h"
+#endif
 
 using namespace cd;
 
@@ -87,12 +89,6 @@ class cd::CD {
                           kExecModeError, 
                           kEntryError 
                         };  
-
-    //SZ
-    // TODO: need to think through where we should change this log mode
-    enum CDCommLogMode { kGenerateLog=0,
-                         kReplayLog
-                      };
 
   protected: 
     CDID cd_id_;
@@ -179,12 +175,13 @@ update the preserved data.
     // handler for log-related things
     CDLogHandle log_handle_;
 
+#ifdef szhang
     //SZ
     cd::CommLog * comm_log_ptr_;
-    CDCommLogMode comm_log_mode_;
     
-    ////SZ: attempted to move from HeadCD class, but we can use CDPath class
-    //cd::CDHandle*            cd_parent_;
+    //SZ: attempted to move from HeadCD class, but we can use CDPath class
+    cd::CDHandle*            cd_parent_;
+#endif
 
   public:
     CD();
@@ -323,6 +320,7 @@ update the preserved data.
                                     uint32_t error_loc_mask, 
                                     CDErrT(*recovery_func)(std::vector< SysErrT > errors)=0);
 
+#ifdef szhang
     //SZ
     CommLogErrT CommLogCheckAlloc(unsigned long length)
     {
@@ -336,6 +334,14 @@ update the preserved data.
       //       need to implement inside CDID object to test if parent is local, such as using process_id_
       return 1;
     }
+
+    //SZ
+    //FIXME: need to change the following to use CDPath class to find parent's cd handle
+    CDHandle* GetParentHandle()
+    {
+      return cd_parent_;
+    }
+#endif
  };
 
 

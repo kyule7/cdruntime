@@ -80,8 +80,10 @@ namespace cd {
   class RegenObject;	
   class RecoverObject;
   class SysErrT;
+#ifdef szhang
   //SZ
   class CommLog;
+#endif
 
   enum CDErrT       { kOK=0, 
 											kAlreadyInit, 
@@ -148,13 +150,22 @@ namespace cd {
                     kSSD,
                     kPFS};
 
+#ifdef szhang
   //SZ
   enum CommLogErrT {kCommLogOK=0, 
                     kCommLogInitFailed, 
                     kCommLogAllocFailed,
                     kCommLogChildLogAllocFailed, 
+                    kCommLogReInitFailed,
+                    kCommLogCommLogModeFlip,
                     kCommLogError};
   
+  //SZ
+  enum CommLogMode { kGenerateLog=0,
+                       kReplayLog
+                    };
+#endif
+
 
   class CDNameT;
 

@@ -89,15 +89,12 @@ CD::CD()
 
   Init();  
 
-  // SZ
-  // if no parent assigned, then means this is root, so log mode will be kGenerateLog at creation point
-  comm_log_mode_ = kGenerateLog;
-
+#ifdef szhang
   // SZ
   // create instance for comm_log_ptr_
-  // by default, comm_log is per thread per CD, but the semantics can support
-  // multiple threads per comm_log
-  comm_log_ptr_ = new CommLog(this);
+  // if no parent assigned, then means this is root, so log mode will be kGenerateLog at creation point
+  comm_log_ptr_ = new CommLog(this, kGenerateLog);
+#endif
 }
 
   // FIXME: only acquire root handle when needed. 
@@ -140,16 +137,12 @@ CD::CD(CDHandle* cd_parent,
 
   Init();  
 
-  // SZ
-  // inherit parent's comm_log_mode_ 
-  comm_log_mode_ = cd_parent->ptr_cd()->comm_log_mode_;
-
+#ifdef szhang
   // SZ
   // create instance for comm_log_ptr_
-  // by default, comm_log is per thread per CD, but the semantics can support
-  // multiple threads per comm_log
-  comm_log_ptr_ = new CommLog(this);
-
+  // comm_log is per thread per CD
+  comm_log_ptr_ = new CommLog(this, cd_parent->ptr_cd()->comm_log_ptr_->GetCommLogMode());
+#endif
 }
 
 void CD::Initialize(CDHandle* cd_parent, 
@@ -216,16 +209,21 @@ CD* CD::Create(CDHandle* cd_parent,
 {
   CD* new_cd = new CD(cd_parent, name, cd_id, cd_type, sys_bit_vector);
 
+#ifdef szhang
   //SZ: if in reexecution, need to unpack logs to childs
-  if (new_cd->IsParentLocal())
+  if (new_cd->comm_log_ptr_->GetCommLogMode() == kReplayLog)
   {
-    comm_log_ptr_->UnpackLogsToChildCD(new_cd);
+    if (new_cd->IsParentLocal())
+    {
+      comm_log_ptr_->UnpackLogsToChildCD(new_cd);
+    }
+    else
+    {
+      //SZ: FIXME: need to figure out a way to unpack logs if child is not in the same address space with parent
+      PRINT_DEBUG("Should not be here to unpack logs!!\n");
+    }
   }
-  else
-  {
-    //SZ: FIXME: need to figure out a way to unpack logs if child is not in the same address space with parent
-    PRINT_DEBUG("Should not be here to unpack logs!!\n");
-  }
+#endif
   
   return new_cd;
 }
@@ -317,18 +315,23 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   // FIXME don't we have to wait for others to be completed?  
   cd_exec_mode_ = kSuspension; 
 
+#ifdef szhang
   // SZ: pack logs and push to parent
-  // FIXME: cd_parent_ is not a member of CD class, but inside HeadCD class, should fix this...
-  // FIXME: what if cd_parent_ is in another address space??
   if (IsParentLocal())
   {
-    this->comm_log_ptr_->PackAndPushLogs(cd_parent_->ptr_cd_);
+    this->comm_log_ptr_->PackAndPushLogs(GetParentHandle()->ptr_cd_);
+
+    //SZ: parent need to copy the CommLogMode because child may reach end of logs and CommLogMode flips
+    //TODO: need to coordinate with other child CDs, and what if some completed CDs reach end of logs, 
+    //      but others do not...
+    GetParentHandle()->ptr_cd_->comm_log_ptr_->SetCommLogMode(this->comm_log_ptr_->GetCommLogMode());
   }
   else 
   {
     //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
     PRINT_DEBUG("Should not come to here...\n");
   }
+#endif
   return CDErrT::kOK;
 }
 
@@ -862,8 +865,9 @@ CDErrT CD::Assert(bool test)
 
   if(test == false) {
     // SZ
-    // TODO: may need to change cd_exec_mode_ and stop all children here too???
-    comm_log_mode_ = kReplayLog;  
+    // FIXME: need to create a function to change:
+    //        cd_exec_mode_ and stop all children 
+    //        also change CommLog::comm_log_mode_
 
     //Restore the data  (for now just do only this no other options for recovery)
     recoverObj_->Recover(this); 
@@ -900,8 +904,12 @@ CDErrT CD::Reexecute(void)
   //            we need to change the cd_exec_mode_ and comm_log_mode_ outside this function
   cd_exec_mode_ = kReexecution; 
 
+#ifdef szhang
   // SZ
-  comm_log_mode_ = kReplayLog;  
+  //// change the comm_log_mode_ into CommLog class
+  //comm_log_mode_ = kReplayLog;  
+  comm_log_ptr_->ReInit();
+#endif
 
   //TODO We need to make sure that all children has stopped before re-executing this CD.
   Stop();
