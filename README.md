@@ -55,3 +55,12 @@ Need to work on the front-end part of Sight to generate viz-related log file tha
 
 
 
+<<<<<<< HEAD
+=======
+1. First of all, you should compile "Sight" at ./tools/sight
+2. If you want to run application with profiler, go to ./app and do make
+   Currently, there is only lulesh to run.
+
+
+
+>>>>>>> comm_log

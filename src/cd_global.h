@@ -80,6 +80,10 @@ namespace cd {
   class RegenObject;	
   class RecoverObject;
   class SysErrT;
+#ifdef szhang
+  //SZ
+  class CommLog;
+#endif
 
   enum CDErrT       { kOK=0, 
 											kAlreadyInit, 
@@ -146,6 +150,23 @@ namespace cd {
                     kSSD,
                     kPFS};
 
+#ifdef szhang
+  //SZ
+  enum CommLogErrT {kCommLogOK=0, 
+                    kCommLogInitFailed, 
+                    kCommLogAllocFailed,
+                    kCommLogChildLogAllocFailed, 
+                    kCommLogReInitFailed,
+                    kCommLogCommLogModeFlip,
+                    kCommLogError};
+  
+  //SZ
+  enum CommLogMode { kGenerateLog=0,
+                       kReplayLog
+                    };
+#endif
+
+
   class CDNameT;
 
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
@@ -160,16 +181,30 @@ namespace cd {
 #define INITIAL_ERR_VAL kOK
 #define DATA_MALLOC malloc
 #define DATA_FREE free
-#define ERROR_MESSAGE(X) printf(X);
+
+//SZ: change the following macro to accept multiple arguments
+//#define ERROR_MESSAGE(X) printf(X);
+#define ERROR_MESSAGE(...) {printf("\nError: ");printf(__VA_ARGS__);}
+//#ifdef DEBUG
+//#define DEBUG_PRINT(...) {printf(__VA_ARGS__);}
+//#else
+//#define DEBUG_PRINT(...) {}
+//#endif
+
+
 
 #if _DEBUG
 
-#define PRINT_DEBUG(X) printf(X);
+//SZ: change the following macro to 
+//#define PRINT_DEBUG(X) printf(X);
+#define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
 #define PRINT_DEBUG2(X,Y) printf(X,Y);
 
 #else
 
-#define PRINT_DEBUG(X) printf(X);
+//SZ
+//#define PRINT_DEBUG(X) printf(X);
+#define PRINT_DEBUG(...) {}
 #define PRINT_DEBUG2(X,Y) printf(X,Y);
 
 #endif

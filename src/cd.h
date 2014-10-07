@@ -61,6 +61,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <functional>
 //#include <array>
 
+#ifdef szhang
+//SZ
+#include "comm_log.h"
+#endif
+
 using namespace cd;
 
 /// TODO Implement serialize and deserialize of this instance
@@ -165,9 +170,18 @@ update the preserved data.
     //  pthread_mutex_t mutex_;      //
     //  pthread_mutex_t log_directory_mutex_;
 
+    // SZ: please change the following name, otherwise it will be confused
+    //     communication logging handler
     // handler for log-related things
     CDLogHandle log_handle_;
 
+#ifdef szhang
+    //SZ
+    cd::CommLog * comm_log_ptr_;
+    
+    //SZ: attempted to move from HeadCD class, but we can use CDPath class
+    cd::CDHandle*            cd_parent_;
+#endif
 
   public:
     CD();
@@ -305,6 +319,29 @@ update the preserved data.
     CDInternalErrT RegisterRecovery(uint32_t error_name_mask, 
                                     uint32_t error_loc_mask, 
                                     CDErrT(*recovery_func)(std::vector< SysErrT > errors)=0);
+
+#ifdef szhang
+    //SZ
+    CommLogErrT CommLogCheckAlloc(unsigned long length)
+    {
+      return comm_log_ptr_->CheckChildLogAlloc(length);
+    }
+
+    //SZ 
+    bool IsParentLocal()
+    {
+      //FIXME: for now assuming cd_parent_ is always local
+      //       need to implement inside CDID object to test if parent is local, such as using process_id_
+      return 1;
+    }
+
+    //SZ
+    //FIXME: need to change the following to use CDPath class to find parent's cd handle
+    CDHandle* GetParentHandle()
+    {
+      return cd_parent_;
+    }
+#endif
  };
 
 
@@ -322,6 +359,7 @@ class cd::HeadCD : public cd::CD {
     /// So, when we create CDs, 
     /// we should send Head CDHandle and its CD to its parent CD
     std::list<cd::CDHandle*> cd_children_;
+
     cd::CDHandle*            cd_parent_;
 
     HeadCD();

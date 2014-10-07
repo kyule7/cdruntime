@@ -88,6 +88,13 @@ CD::CD()
   recoverObj_ = new RecoverObject;
 
   Init();  
+
+#ifdef szhang
+  // SZ
+  // create instance for comm_log_ptr_
+  // if no parent assigned, then means this is root, so log mode will be kGenerateLog at creation point
+  comm_log_ptr_ = new CommLog(this, kGenerateLog);
+#endif
 }
 
   // FIXME: only acquire root handle when needed. 
@@ -114,7 +121,7 @@ CD::CD(CDHandle* cd_parent,
   // Kyushick: Object ID should be unique for the copies of the same object?
   // For now, I decided it as an unique one
   cd_id_.object_id_++;
-//  cout << "cd object is created " << cd_id_.object_id_++ <<endl;
+  // cout << "cd object is created " << cd_id_.object_id_++ <<endl;
   // FIXME maybe call self generating function here?           
   // cd_self_  = self;  //FIXME maybe call self generating function here?           
 
@@ -129,6 +136,13 @@ CD::CD(CDHandle* cd_parent,
   recoverObj_ = new RecoverObject;
 
   Init();  
+
+#ifdef szhang
+  // SZ
+  // create instance for comm_log_ptr_
+  // comm_log is per thread per CD
+  comm_log_ptr_ = new CommLog(this, cd_parent->ptr_cd()->comm_log_ptr_->GetCommLogMode());
+#endif
 }
 
 void CD::Initialize(CDHandle* cd_parent, 
@@ -194,6 +208,23 @@ CD* CD::Create(CDHandle* cd_parent,
                CDErrT *cd_err)
 {
   CD* new_cd = new CD(cd_parent, name, cd_id, cd_type, sys_bit_vector);
+
+#ifdef szhang
+  //SZ: if in reexecution, need to unpack logs to childs
+  if (new_cd->comm_log_ptr_->GetCommLogMode() == kReplayLog)
+  {
+    if (new_cd->IsParentLocal())
+    {
+      comm_log_ptr_->UnpackLogsToChildCD(new_cd);
+    }
+    else
+    {
+      //SZ: FIXME: need to figure out a way to unpack logs if child is not in the same address space with parent
+      PRINT_DEBUG("Should not be here to unpack logs!!\n");
+    }
+  }
+#endif
+  
   return new_cd;
 }
     
@@ -283,6 +314,24 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   // TODO ASSERT( cd_exec_mode_  != kSuspension );
   // FIXME don't we have to wait for others to be completed?  
   cd_exec_mode_ = kSuspension; 
+
+#ifdef szhang
+  // SZ: pack logs and push to parent
+  if (IsParentLocal())
+  {
+    this->comm_log_ptr_->PackAndPushLogs(GetParentHandle()->ptr_cd_);
+
+    //SZ: parent need to copy the CommLogMode because child may reach end of logs and CommLogMode flips
+    //TODO: need to coordinate with other child CDs, and what if some completed CDs reach end of logs, 
+    //      but others do not...
+    GetParentHandle()->ptr_cd_->comm_log_ptr_->SetCommLogMode(this->comm_log_ptr_->GetCommLogMode());
+  }
+  else 
+  {
+    //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
+    PRINT_DEBUG("Should not come to here...\n");
+  }
+#endif
   return CDErrT::kOK;
 }
 
@@ -815,6 +864,11 @@ CDErrT CD::Assert(bool test)
 {
 
   if(test == false) {
+    // SZ
+    // FIXME: need to create a function to change:
+    //        cd_exec_mode_ and stop all children 
+    //        also change CommLog::comm_log_mode_
+
     //Restore the data  (for now just do only this no other options for recovery)
     recoverObj_->Recover(this); 
   }
@@ -846,7 +900,16 @@ CD::CDInternalErrT CD::RegisterRecovery(uint32_t error_name_mask,
 }
 CDErrT CD::Reexecute(void)
 {
+  // SZ: FIXME: this is not safe because programmers may have their own RecoverObj
+  //            we need to change the cd_exec_mode_ and comm_log_mode_ outside this function
   cd_exec_mode_ = kReexecution; 
+
+#ifdef szhang
+  // SZ
+  //// change the comm_log_mode_ into CommLog class
+  //comm_log_mode_ = kReplayLog;  
+  comm_log_ptr_->ReInit();
+#endif
 
   //TODO We need to make sure that all children has stopped before re-executing this CD.
   Stop();
