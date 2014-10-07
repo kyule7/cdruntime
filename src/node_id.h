@@ -50,32 +50,46 @@ task_in_a_color means an ID to access a task in that color.
 size means the number of tasks in that color. With these three information, we can access to any tasks.
 */
 class NodeID {
-public:
+friend class CDHandle;
   ColorT color_;
   int task_in_color_;
+  int head_;
   int size_;
 public:
   NodeID() 
-    : color_(0), task_in_color_(0), size_(-1) 
+    : color_(0), task_in_color_(0), head_(0), size_(-1) 
   {}
-  NodeID(const ColorT& color, int task, int size, uint64_t sibling_id)
-    : color_(color), task_in_color_(task), size_(size)
+  NodeID(const ColorT& color, int task, int head, int size)
+    : color_(color), task_in_color_(task), head_(head), size_(size)
   {}
   NodeID(const NodeID& that)
-    : color_(that.color_), task_in_color_(that.task_in_color_), size_(that.size_)
+    : color_(that.color()), task_in_color_(that.task_in_color()), head_(that.head()), size_(that.size())
   {}
-  NodeID(NodeID&& that)
-    : task_in_color_(that.task_in_color_), size_(that.size_)
-  {
-    color_ = std::move(that.color_);
-  }
+  ~NodeID(){}
   NodeID& operator=(const NodeID& that) {
-    color_      = (that.color_);
-    task_in_color_       = (that.task_in_color_);
-    size_       = (that.size_);
-     return *this;
+    color_         = that.color();
+    task_in_color_ = that.task_in_color();
+    head_          = that.head();
+    size_          = that.size();
+    return *this;
   }
-  
+  void init_node_id(ColorT color, int task_in_color, int head, int size)
+  {
+    color_ = color;
+    task_in_color_ = task_in_color;
+    if(head == INVALID_HEAD_ID) {
+      head_ = 0;
+    } else {
+      head_ = head;
+    }
+    size_ = size;
+  } 
+  void set_head(int head) { head_ = head; } 
+  ColorT color(void) const { return color_; }
+  int task_in_color(void) const { return task_in_color_; }
+  int head(void) const { return head_; }
+  int size(void) const { return size_; }
+  bool IsHead(void) const { return head_ == task_in_color_; }
 };
 
 std::ostream& operator<<(std::ostream& str, const NodeID& node_id);

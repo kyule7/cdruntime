@@ -37,18 +37,51 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_NAME_T_H
 #define _CD_NAME_T_H
 
-class cd::CDNameT
-{
-  public:
-    CDNameT()
-    {
+#include <ostream>
 
-    }
-    ~CDNameT()
-    {
+namespace cd {
 
-    }
+class CDNameT {
+  // Level in the CD hierarhcy. It increases at Create() and destroys at Destroy.
+	uint32_t level_;  
+  uint32_t rank_in_level_;
+  uint32_t size_;    // The number of sibling CDs
+public:
+  CDNameT()
+    : level_(0), rank_in_level_(0), size_(0) {}
+    
+  CDNameT(uint64_t level, uint64_t rank_in_level=0, uint64_t size=1)
+    : level_(level), rank_in_level_(rank_in_level), size_(size)
+  {}
+
+  uint32_t level(void)         const { return level_; }
+  uint32_t rank_in_level(void) const { return rank_in_level_; }
+  uint32_t size(void)          const { return size_; }
+  CDNameT(const CDNameT& parent_cdname, int num_children=1, int color=0)
+  {
+    level_         = parent_cdname.level() + 1;
+    rank_in_level_ = num_children*(parent_cdname.rank_in_level()) + color;
+    size_          = num_children;
+  }
+
+  CDNameT(CDNameT&& that) {
+    level_         = that.level();
+    rank_in_level_ = that.rank_in_level();
+    size_          = that.size();
+  }
+
+  ~CDNameT()
+  {}
  
+  CDNameT& operator=(CDNameT& that) {
+    level_         = that.level();
+    rank_in_level_ = that.rank_in_level();
+    size_          = that.size();
+    return *this;
+  }
 };
 
+std::ostream& operator<<(std::ostream& str, const CDNameT& cd_name);
+
+} // namespace cd ends
 #endif 

@@ -95,6 +95,7 @@ class DataHandle : public Serializable {
     void*       address_data() const { return address_data_; }
     uint64_t    len()          const { return len_; }
     HandleType  handle_type()  const { return handle_type_; }
+    NodeID      node_id()      const { return node_id_; }
 
     void        set_file_name(const char* file_name)       { file_name_    = std::string(file_name); }
     void        set_ref_name(std::string ref_name)         { ref_name_     = ref_name; }
@@ -116,13 +117,13 @@ class DataHandle : public Serializable {
       return;
     }
     DataHandle& operator=(const DataHandle& that) {
-      handle_type_ = that.handle_type_;
-  		node_id_     = that.node_id_;
-      address_data_= that.address_data_;
-      len_         = that.len_;
-      file_name_   = that.file_name_;
-      ref_name_    = that.ref_name_;
-      ref_offset_  = that.ref_offset_;
+      handle_type_ = that.handle_type();
+  		node_id_     = that.node_id();
+      address_data_= that.address_data();
+      len_         = that.len();
+      file_name_   = that.file_name();
+      ref_name_    = that.ref_name();
+      ref_offset_  = that.ref_offset();
       return *this;
     }
 

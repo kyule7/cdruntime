@@ -47,7 +47,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <assert.h>
 #include "unixlog.h"
 
-class cd::CDEntry : public cd::Serializable
+class cd::CDEntry //: public cd::Serializable
 {
   friend class cd::CD;
   private:
@@ -57,7 +57,6 @@ class cd::CDEntry : public cd::Serializable
     // this variable can be empty string when this is not needed
     std::string name_;    
     cd::CD*     ptr_cd_;
-//    CDID        cd_id_;
 		struct tsn_lsn_struct lsn, durable_lsn;
     cd::CDPreserveT preserve_type_; // already determined according to class 
 
@@ -100,11 +99,11 @@ class cd::CDEntry : public cd::Serializable
     // But this list might need to be distributed if that CD spans among multiple threads. 
     // If we have that data structure the issue here will be solved anyways. 
     void set_my_cd(cd::CD* ptr_cd) { ptr_cd_ = ptr_cd; }
-    cd::CD* ptr_cd()              const { return ptr_cd_; }
+    cd::CD* ptr_cd() const { return ptr_cd_; }
 
 		CDEntryErrT Delete(void);
 
-		public:
+  public:
 		std::string name() const { return name_.c_str(); }
     bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }
 
@@ -126,20 +125,15 @@ class cd::CDEntry : public cd::Serializable
     CDEntryErrT Restore(bool open, struct tsn_log_struct *log);
     CDEntryErrT Restore(void);
 
-    virtual void * Serialize(uint64_t *len_in_bytes)
-    {
-      //STUB
-      return 0;  
-    }
-    virtual void Deserialize(void * object) 
-    {
-      //STUB
-      return;
-    }
+//    virtual void * Serialize(uint64_t *len_in_bytes) { std::cout << "This is STUP" << len_in_bytes << std::endl;}
+//
+//    virtual void Deserialize(void * object) {std::cout << "This is STUP" << object<< std::endl;}
 
+  
+  
 
   private:
-  DataHandle* GetBuffer(void);
+    DataHandle* GetBuffer(void);
 };
 
 #endif

@@ -46,7 +46,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 using namespace cd;
 using namespace std;
-
+uint64_t Util::gen_object_id_=0;
 CDPath* CDPath::uniquePath_;
 //int cd::myTaskID = 0;
 
@@ -61,16 +61,18 @@ CDPath* CDPath::uniquePath_;
 CDHandle* cd::CD_Init(int numTask, int myRank)
 {
 //  myTaskID = myRank;
-  CDHandle* root_cd = new CDHandle(NULL, "Root", NodeID(ROOT_COLOR, myRank, numTask, 0), kStrict, 0);
-  CDPath::GetCDPath()->push_back(root_cd);
+//  CDHandle* root_cd = new CDHandle(NULL, "Root", NodeID(ROOT_COLOR, myRank, numTask, 0), kStrict, 0);
+  CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myRank, ROOT_HEAD_ID, numTask)), kStrict, 0);
+  CDPath::GetCDPath()->push_back(root_cd_handle);
 
 #if _PROFILER
   // Profiler-related  
-  root_cd->profiler_->InitViz();
+  root_cd_handle->profiler_->InitViz();
 #endif
 
-  return root_cd;
+  return root_cd_handle;
 }
+
 
 void cd::CD_Finalize(void)
 {
@@ -114,66 +116,8 @@ CDHandle::CDHandle()
 /// sibling ID set up, cd_info set up
 /// clear children list
 /// request to add me as a children to parent (to Head CD object)
-CDHandle::CDHandle( CDHandle* parent, 
-                    const char* name, 
-                    const NodeID& node_id, 
-                    CDType cd_type, 
-                    uint64_t sys_bit_vector)
-{
-
-  SplitCD = &SplitCD_3D;
-#if _PROFILER
-  profiler_ = new CDProfiler();
-//#else
-//  profiler_ = new NullProfiler();
-#endif
-
-  node_id_ = node_id;
-  SetHead(node_id_.task_in_color_);
-
-  if(parent != NULL) { 
-    // Generate CDID
-    CDID new_cd_id(parent->ptr_cd_->GetCDID().level_ + 1, node_id_);
-
-    /// Create CD object with new CDID
-    if( !IsHead() ) {
-      ptr_cd_  = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-    }
-    else {
-      HeadCD* ptr_cd  = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-//    HeadCD* ptr_cd  = (HeadCD*)DATA_MALLOC(sizeof(HeadCD));
-//    ptr_cd->Initialize(NULL, name, new_cd_id, cd_type, sys_bit_vector);
-//      HeadCDPath.push_back(ptr_cd);
-      ptr_cd_ = ptr_cd;
-//      if(is_visualized == false){
-//        ptr_cd->InitViz();
-//        is_visualized = true;
-//      }
-    }
-  }
-  else { // Root CD
-    // Generate CDID
-    CDID new_cd_id(0, node_id_);
-
-    /// Create CD object with new CDID
-    if( !IsHead() ) {
-      ptr_cd_  = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-    }
-    else {
-      HeadCD* ptr_cd  = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-      ptr_cd_ = ptr_cd;
-    }
-  }
-
-//  cout<<"\nCD Node is created : "<<node_id_<<"\n"<<endl;
-  assert(ptr_cd_ != 0);
-}
-
-CDHandle::CDHandle( CDHandle* parent, 
-                    const char* name, 
-                    NodeID&& node_id, 
-                    CDType cd_type, 
-                    uint64_t sys_bit_vector)
+CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id) 
+  : ptr_cd_(ptr_cd), node_id_(node_id)
 {
   SplitCD = &SplitCD_3D;
 #if _PROFILER
@@ -181,41 +125,6 @@ CDHandle::CDHandle( CDHandle* parent,
 //#else
 //  profiler_ = new NullProfiler();
 #endif
-
-  node_id_ = std::move(node_id);
-  SetHead(node_id_.task_in_color_);
-
-  if(parent != NULL) { 
-    // Generate CDID
-    CDID new_cd_id(parent->ptr_cd_->GetCDID().level_ + 1, node_id_);
-
-    /// Create CD object with new CDID
-    if( !IsHead() ) {
-      ptr_cd_  = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-    }
-    else {
-      HeadCD* ptr_cd  = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-      ptr_cd_ = ptr_cd;
-    }
-  }
-  else { // Root CD
-    // Generate CDID
-    CDID new_cd_id(0, node_id_);
-
-    /// Create CD object with new CDID
-    if( !IsHead() ) {
-      ptr_cd_  = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-    }
-    else {
-      HeadCD* ptr_cd  = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
-      assert(ptr_cd != NULL);
-      ptr_cd_ = ptr_cd;
-    }
-  }
-
-//  cout<<"\nCD Node is created : "<<node_id_<<"\n"<<endl;
-//  cout<<"ptr_cd "<<ptr_cd_<<endl;
-  assert(ptr_cd_ != 0);
 }
 
 CDHandle::~CDHandle()
@@ -228,37 +137,42 @@ CDHandle::~CDHandle()
   else {  // There is no CD for this CDHandle!!
 
   }
-
 }
 
-//void CDHandle::Init(CD* ptr_cd, NodeID node_id)
-//{ 
-//  ptr_cd_    = ptr_cd;
-//  node_id_  = node_id;
-//}
+void CDHandle::Init(CD* ptr_cd, const NodeID& node_id)
+{ 
+  ptr_cd_   = ptr_cd;
+  node_id_  = node_id;
+}
 
 // Non-collective
-CDHandle* CDHandle::Create( const char* name, 
-                            CDType type, 
-                            uint32_t error_name_mask, 
-                            uint32_t error_loc_mask, 
-                            CDErrT *error )
+CDHandle* CDHandle::Create(const char* name, 
+                           CDType cd_type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask, 
+                           CDErrT *error )
 {
   // Create CDHandle for a local node
   // Create a new CDHandle and CD object
   // and populate its data structure correctly (CDID, etc...)
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
-
-  CDHandle* new_cd = new CDHandle(this, name, node_id_, type, sys_bit_vec);
-
-  CDPath::GetCDPath()->push_back(new_cd);
-//  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;;
-  // Request to add me as a child to my parent
-  // It could be a local execution or a remote one. 
-  ptr_cd_->AddChild(this);
-
   
-  return new_cd;
+  NodeID new_node_id(node_id_.color(), INVALID_TASK_ID, INVALID_HEAD_ID, node_id_.size());
+  GetNewNodeID(new_node_id);
+  SetHead(new_node_id);
+
+
+  // Generate CDID
+  CDNameT new_cd_name(ptr_cd_->GetCDName());
+
+  // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
+  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec);
+
+  CDPath::GetCDPath()->push_back(new_cd_handle);
+
+//  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;
+  
+  return new_cd_handle;
 }
 
 /// Split the node
@@ -365,9 +279,7 @@ CDErrT CDHandle::GetNewNodeID(NodeID& new_node)
 {
   CDErrT err = kOK;
   // just set the same as parent.
-  new_node.color_ = node_id_.color_;
-  new_node.task_in_color_  = 0;
-  new_node.size_  = 1;
+  new_node.init_node_id(node_id_.color(), 0, INVALID_HEAD_ID,1);
   return err;
 }
 
@@ -398,18 +310,18 @@ CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, cons
 {
 #if _MPI_VER
     CDErrT err = kOK;
-//    cout<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color_: "<<new_node.color_<<endl;
+//    cout<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
     MPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
-    MPI_Comm_size(new_node.color_, &(new_node.size_));
-    MPI_Comm_rank(new_node.color_, &(new_node.task_in_color_));
+    MPI_Comm_size(new_node.color(), &(new_node.size_));
+    MPI_Comm_rank(new_node.color(), &(new_node.task_in_color_));
 //    Sync();
-//    TestMPIFunc(node_id_.color_, node_id_.task_in_color_);
+//    TestMPIFunc(node_id_.color(), node_id_.task_in_color());
 //    Sync();
 //    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
 //    if(new_color == 0) 
 //      cout<<"\n--------PRE DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
 //
-//    TestMPIFunc(new_node.color_, new_color);
+//    TestMPIFunc(new_node.color(), new_color);
 //
 //    Sync();
 //    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
@@ -418,12 +330,8 @@ CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, cons
     return err;
 #elif _PGAS_VER
     CDErrT err = kOK;
-    int size = new_node.size_;
-  //  err = MPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
-  //  err = MPI_Comm_size(new_node.color_, &(new_node.size_));
-  //  err = MPI_Comm_rank(new_node.color_, &(new_node.task_in_color_));
-  
-  //  assert(size == new_node.size_);
+    int size = new_node.size();
+//    assert(size == new_node.size());
     return err;
 #else
     return kOK;
@@ -435,7 +343,7 @@ CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, cons
 CDHandle* CDHandle::Create(const ColorT& color,
                            uint32_t  num_children,
                            const char* name, 
-                           CDType type, 
+                           CDType cd_type, 
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
                            CDErrT *error )
@@ -468,70 +376,74 @@ CDHandle* CDHandle::Create(const ColorT& color,
 
 //  Sync();
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
-  int new_size = (int)((double)node_id_.size_ / num_children);
+  int new_size = (int)((double)node_id_.size() / num_children);
   int new_color, new_task = 0;
   int err=0;
 
   ColorT new_comm;
-  NodeID new_node(new_comm, 0, new_size, 0);
+  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, new_size);
 
-//  cout << "[Before] old: " << node_id_ <<", new: " << new_node << endl << endl; //getchar();
+//  cout << "[Before] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //getchar();
   if(num_children > 1) {
-    err = SplitCD(node_id_.task_in_color_, node_id_.size_, num_children, new_color, new_task);
-    err = GetNewNodeID(node_id_.color_, new_color, new_task, new_node);
-    assert(new_size == new_node.size_);
+    err = SplitCD(node_id_.task_in_color(), node_id_.size(), num_children, new_color, new_task);
+    err = GetNewNodeID(node_id_.color(), new_color, new_task, new_node_id);
+    assert(new_size == new_node_id.size());
   }
   else if(num_children == 1) {
-    err = GetNewNodeID(new_node);
+    err = GetNewNodeID(new_node_id);
   }
   else {
     ERROR_MESSAGE("Number of children to create is wrong.\n");
   }
 
 //  Sync();
-//  for(int i=0; i<node_id_.task_in_color_*100000; i++) { int a = 5 * 5; } 
-//  cout << "[After] old: " << node_id_ <<", new: " << new_node << endl << endl; //getchar();
+//  for(int i=0; i<node_id_.task_in_color()*100000; i++) { int a = 5 * 5; } 
+//  cout << "[After] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //getchar();
+
+  SetHead(new_node_id);
+
+  // Generate CDID
+  CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
-  CDHandle* new_cd = new CDHandle(this, name, new_node, type, sys_bit_vec);
+  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec);
 
-  CDPath::GetCDPath()->push_back(new_cd);
+  CDPath::GetCDPath()->push_back(new_cd_handle);
 
-  // Request to add me as a child to my parent
-  // It could be a local execution or a remote one. 
-  ptr_cd_->AddChild(this);
+//  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;
 
   if(err<0) {
     ERROR_MESSAGE("CDHandle::Create failed.\n"); assert(0);
   }
 
-  return new_cd;
+  return new_cd_handle;
 }
+
 
 // Collective
 CDHandle* CDHandle::Create(uint32_t num_children, 
                            const char* name, 
-                           CDType type, 
+                           CDType cd_type, 
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
                            CDErrT *error )
 {
-  return Create(GetNodeID(), num_children, name, type, error_name_mask, error_loc_mask, error);
+  return Create(GetNodeID(), num_children, name, cd_type, error_name_mask, error_loc_mask, error);
 }
 
 
 CDHandle* CDHandle::CreateAndBegin(const ColorT& color, 
                                    uint32_t num_children, 
                                    const char* name, 
-                                   CDType type, 
+                                   CDType cd_type, 
                                    uint32_t error_name_mask, 
                                    uint32_t error_loc_mask, 
                                    CDErrT *error )
 {
-  CDHandle* new_cdh = Create(color, num_children, name, type, error_name_mask, error_loc_mask, error);
+  CDHandle* new_cdh = Create(color, num_children, name, cd_type, error_name_mask, error_loc_mask, error);
   new_cdh->Begin(false, name);
 
-  return NULL;
+  return new_cdh;
 }
 
 CDErrT CDHandle::Destroy(bool collective)
@@ -565,13 +477,6 @@ CDErrT CDHandle::Destroy(bool collective)
 
   assert(CDPath::GetCDPath()->size()>0);
   assert(CDPath::GetCDPath()->back() != NULL);
-//  assert(HeadCDPath.size()>0);
-//  assert(HeadCDPath.back() != NULL);
-
-//  if(IsHead()) {
-//    HeadCDPath.pop_back();
-//  }
-  
 
   err = ptr_cd_->Destroy();
   CDPath::GetCDPath()->pop_back();
@@ -689,26 +594,26 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
 }
 
 
-CD*     CDHandle::ptr_cd(void)     { return ptr_cd_;         }
+CD*     CDHandle::ptr_cd(void)    const { return ptr_cd_;         }
 NodeID& CDHandle::node_id(void)    { return node_id_;        }
 void    CDHandle::SetCD(CD* ptr_cd){ ptr_cd_=ptr_cd;         }
-ColorT&    CDHandle::GetNodeID(void)  { return node_id_.color_; }
-int     CDHandle::GetTaskID(void)  { return node_id_.task_in_color_;  }
-int     CDHandle::GetTaskSize(void){ return node_id_.size_;  }
+ColorT  CDHandle::GetNodeID(void)  const { return node_id_.color(); }
+int     CDHandle::GetTaskID(void)  const{ return node_id_.task_in_color();  }
+int     CDHandle::GetTaskSize(void) const{ return node_id_.size();  }
 
-int CDHandle::GetSeqID() 
-{ return ptr_cd_->GetCDID().sequential_id_; }
+int CDHandle::GetSeqID() const 
+{ return ptr_cd_->GetCDID().sequential_id(); }
 
 bool CDHandle::operator==(const CDHandle &other) const 
 {
-  bool ptr_cd = (other.ptr_cd_ == this->ptr_cd_);
-  bool color  = (other.node_id_.color_  == this->node_id_.color_);
-  bool task   = (other.node_id_.task_in_color_   == this->node_id_.task_in_color_);
-  bool size   = (other.node_id_.size_   == this->node_id_.size_);
+  bool ptr_cd = (other.ptr_cd() == ptr_cd_);
+  bool color  = (other.node_id_.color()  == node_id_.color());
+  bool task   = (other.node_id_.task_in_color()   == node_id_.task_in_color());
+  bool size   = (other.node_id_.size()   == node_id_.size());
   return (ptr_cd && color && task && size);
 }
 
-char* CDHandle::GetName(void)
+char* CDHandle::GetName(void) const
 {
   if(ptr_cd_ != NULL)
     return const_cast<char*>(ptr_cd_->name_.c_str());  
@@ -717,20 +622,19 @@ char* CDHandle::GetName(void)
 }
 
 // FIXME
-bool CDHandle::IsHead(void)
+bool CDHandle::IsHead(void) const
 {
-  return (head_ == node_id_.task_in_color_);
+  return node_id_.IsHead();
 }
 
 // FIXME
 // For now task_id_==0 is always Head which is not good!
-// SZ: shouldn't this task assign head_ = (task==0); ???
-//     and IsHead is just check if (head_ == 1), 
-//     otherwise each time you check IsHead you need to access node_id_.task_in_color_..
-void CDHandle::SetHead(int task)
+void CDHandle::SetHead(NodeID& new_node_id)
 {
 //  cout<<"In SetHead, Newly born CDHandle's Task# is "<<task<<endl;
-  head_ = 0;
+
+  // head is always task id 0 for now
+  new_node_id.set_head(0);
 }
 
 /// Synchronize the CD object in every task of that CD.
@@ -739,7 +643,7 @@ CDErrT CDHandle::Sync()
   CDErrT err = INITIAL_ERR_VAL;
 
 #if _MPI_VER
-  int mpi_err = MPI_Barrier(node_id_.color_);
+  int mpi_err = MPI_Barrier(node_id_.color());
 #else
   int mpi_err = 1;
 #endif

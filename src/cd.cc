@@ -126,7 +126,7 @@ CD::CD(CDHandle* cd_parent,
   // cd_self_  = self;  //FIXME maybe call self generating function here?           
 
   // FIXME 
-  // cd_id_.level_ = parent_cd_id.level_ + 1;
+  // cd_id_.level() = parent_cd_id.level() + 1;
   // we need to get parent id ... 
   // but if they are not local, this might be hard to acquire.... 
   // perhaps we should assume that cd_id is always store in the handle ...
@@ -199,15 +199,51 @@ CD::~CD()
   //FIXME : This will be done at the CDHandle::Destroy()
 }
 
-
-CD* CD::Create(CDHandle* cd_parent, 
-               const char* name, 
-               const CDID& cd_id, 
-               CDType cd_type, 
-               uint64_t sys_bit_vector, 
-               CDErrT *cd_err)
+CDHandle* CD::Create(CDHandle* parent, 
+                     const char* name, 
+                     const CDID& child_cd_id, 
+                     CDType cd_type, 
+                     uint64_t sys_bit_vector, 
+                     CD::CDInternalErrT *cd_internal_err)
 {
-  CD* new_cd = new CD(cd_parent, name, cd_id, cd_type, sys_bit_vector);
+
+  /// Create CD object with new CDID
+  CDHandle* new_cd_handle = NULL;
+  if( !child_cd_id.IsHead() ) {
+    CD* new_cd = new CD(parent, name, child_cd_id, cd_type, sys_bit_vector);
+    new_cd_handle = new CDHandle(new_cd, child_cd_id.node_id());
+  }
+  else {
+    CD* new_cd = new HeadCD(parent, name, child_cd_id, cd_type, sys_bit_vector);
+    new_cd_handle = new CDHandle(new_cd, child_cd_id.node_id());
+  }
+  assert(new_cd_handle != NULL);
+
+  this->AddChild(new_cd_handle);
+
+  return new_cd_handle;
+  /// Send entry_directory_map_ to HeadCD
+//  GatherEntryDirMapToHead();
+}
+
+CDHandle* CD::CreateRootCD(CDHandle* parent, 
+                     const char* name, 
+                     CDID&& root_cd_id, 
+                     CDType cd_type, 
+                     uint64_t sys_bit_vector, 
+                     CD::CDInternalErrT *cd_internal_err)
+{
+  /// Create CD object with new CDID
+  CDHandle* new_cd_handle = NULL;
+  if( !root_cd_id.IsHead() ) {
+    CD* new_cd = new CD(parent, name, root_cd_id, cd_type, sys_bit_vector);
+    new_cd_handle = new CDHandle(new_cd, root_cd_id.node_id());
+  }
+  else {
+    CD* new_cd = new HeadCD(parent, name, root_cd_id, cd_type, sys_bit_vector);
+    new_cd_handle = new CDHandle(new_cd, root_cd_id.node_id());
+  }
+  assert(new_cd_handle != NULL);
 
 #ifdef szhang
   //SZ: if in reexecution, need to unpack logs to childs
@@ -225,9 +261,13 @@ CD* CD::Create(CDHandle* cd_parent,
   }
 #endif
   
-  return new_cd;
+//  AddChild(new_cd_handle);
+
+  return new_cd_handle;
+  /// Send entry_directory_map_ to HeadCD
+//  GatherEntryDirMapToHead();
 }
-    
+
 
 CDErrT CD::Destroy(void)
 {
@@ -240,9 +280,9 @@ CDErrT CD::Destroy(void)
 //      it != entry_directory_.end() ; ++it) {
 //
 //    bool use_file = false;
-//    if(cd_id_.level_<=1)  use_file = true;
+//    if(cd_id_.level()<=1)  use_file = true;
 //    if( use_file == true)  {
-////      if(cd_id_.level_==1) { // HDD
+////      if(cd_id_.level()==1) { // HDD
 ////        it->CloseFile(&HDDlog);  
 ////      }
 ////      else { // SSD
@@ -253,7 +293,7 @@ CDErrT CD::Destroy(void)
 //  }  // for loop ends
 //#endif
 
-  if(GetCDID().level_ != 0) {   // non-root CD
+  if(GetCDID().level() != 0) {   // non-root CD
 
 
   } 
@@ -306,6 +346,9 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 
   // Increase sequential ID by one
   cd_id_.sequential_id_++;
+  
+//  /// Send entry_directory_map_ to HeadCD
+//  GatherEntryDirMapToHead();
 
   /// It deletes entry directory in the CD (for every Complete() call). 
   /// We might modify this in the profiler to support the overlapped data among sequential CDs.
@@ -335,6 +378,13 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   return CDErrT::kOK;
 }
 
+//CD::CDInternalErrT CD::GatherEntryDirMapToHead()
+//{
+//  char sendBuf[SEND_BUF_SIZE];
+//  char recvBuf[num_sibling][SEND_BUF_SIZE];
+//
+//  MPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
+//}
 
 /*  CD::preserve(char* data_p, int data_l, enum preserveType prvTy, enum mediumLevel medLvl)
  *  Register data information to preserve if needed.
@@ -415,11 +465,11 @@ CDErrT CD::Preserve(void* data,
 #if _WORK
       bool use_file = (bool)ref_name;
       bool open = true;
-//      if(cd_id_.level_<=1)
+//      if(cd_id_.level()<=1)
 //        use_file = true;
       if( use_file == true) {
 
-//        if(cd_id_.level_==1) {  // HDD
+//        if(cd_id_.level()==1) {  // HDD
 //          bool _isOpenHDD = isOpenHDD();
 //          if(!_isOpenHDD)  
 //            OpenHDD(); // set flag 'open_HDD'       
@@ -473,7 +523,7 @@ PrvMediumT CD::GetPlaceToPreserve()
 {
   return kMemory;
 //  return kSSD;
-//  if(GetCDID().level_==1) return kHDD;
+//  if(GetCDID().level()==1) return kHDD;
 //  else return kSSD;
 }
 
@@ -977,7 +1027,9 @@ HeadCD::HeadCD( CDHandle* cd_parent,
                     CDType cd_type, 
                     uint64_t sys_bit_vector)
   : CD(cd_parent, name, cd_id, cd_type, sys_bit_vector)
-{}
+{
+//  cd_parent_ = cd_parent;
+}
 
 HeadCD::~HeadCD()
 {}
@@ -1064,7 +1116,7 @@ CDEntry* CD::InternalGetEntry(std::string entry_name)
     auto it = entry_directory_map_.find(entry_name.c_str());
     if(it == entry_directory_map_.end()) {
       std::cout<<"[InternalGetEntry] There is no entry for reference of "<< entry_name.c_str() 
-               <<" at CD level " << GetCDID().level_ << std::endl;
+               <<" at CD level " << GetCDID().level() << std::endl;
       //getchar();
       return NULL;
     }

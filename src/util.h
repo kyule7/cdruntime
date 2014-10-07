@@ -71,9 +71,11 @@ public:
  
 };
 
+//extern uint64_t Util::gen_object_id_;
 
 class Util {
 public:
+	static uint64_t gen_object_id_;
 
 static const char* GetBaseFilePath()
 {
@@ -95,7 +97,7 @@ static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, 
 //  StringBuffer filename(std::string(base));
 //
   std::cout << "base file name: "<< filename.GetString() << std::endl << std::endl;
-  filename << cd_id.level_ << '.' << cd_id.rank_in_level_ << '.' << cd_id.object_id_ << '.' << cd_id.sequential_id_ << '.' << cd_id.node_id_.task_in_color_ << '.' << data_name << ".cd";
+  filename << cd_id.level() << '.' << cd_id.rank_in_level() << '.' << cd_id.object_id() << '.' << cd_id.sequential_id() << '.' << cd_id.task_in_color() << '.' << data_name << ".cd";
   std::cout << "file name for this cd: "<< filename.GetString() << std::endl << std::endl; getchar(); 
   return filename.GetString();
 //  return "./";
@@ -136,35 +138,13 @@ static uint64_t GenerateCDObjectID()
   //FIXME for multithreaded version this is not safe 
   // Assume we call this function one time, so we will have atomically increasing counter and this will be local to a process. 
   // Within a process it will just use one counter. Check whether this is enough or not.
-  static uint64_t object_id=0;
-  return object_id++;
+//  static uint64_t object_id=0;
+  return gen_object_id_++;
 }
 
 };
 
-//class Path {
-//  public:
-//  	std::string _path_SSD;
-//  	std::string _path_HDD;
-//	public:
-//  	Path() {
-//  		_path_SSD = "./SSD";
-//  		_path_HDD = "./HDD";
-//  	}
-//  	Path(std::string ssd, std::string hdd) {
-//  		_path_SSD = ssd;
-//  		_path_HDD = hdd;
-//  	}
-//  	void SetSSDPath(std::string path_SSD) { _path_SSD = path_SSD; }
-//  	void SetHDDPath(std::string path_HDD) { _path_HDD = path_HDD; }
-//  	std::string GetSSDPath(void)          { return _path_SSD;     }
-//  	std::string GetHDDPath(void)          { return _path_HDD;     }
-//  	Path& operator=(const Path& that) {
-//  		_path_SSD = that._path_SSD;
-//  		_path_HDD = that._path_HDD;
-//  		return *this;
-//  	}
-//};
+//uint64_t Util::gen_object_id_=0;
 
 } // namespace cd ends
 

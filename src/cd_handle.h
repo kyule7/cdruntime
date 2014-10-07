@@ -73,7 +73,6 @@ class cd::CDHandle {
 
     // task ID of head in this CD.
     // If current task is head of current CD, than it is the same as node_id_.task_
-    int  head_; 
 
 #if _PROFILER 
     Profiler* profiler_;
@@ -89,24 +88,13 @@ class cd::CDHandle {
     CDHandle();
 
     // Constructor
-    CDHandle(CDHandle* parent, 
-             const char* name, 
-             const NodeID& node_id, 
-             CDType cd_type, 
-             uint64_t sys_bit_vector);
-
-    // Constructor (for rvalue reference type of node_id)
-    CDHandle(CDHandle* parent, 
-             const char* name, 
-             NodeID&& node_id, 
-             CDType cd_type, 
-             uint64_t sys_bit_vector);
+    CDHandle(CD* ptr_cd, const NodeID& node_id);
 
    ~CDHandle(); 
 
     // Non-collective
     CDHandle* Create(const char* name=0, 
-                     CDType type=kStrict, 
+                     CDType cd_type=kStrict, 
                      uint32_t error_name_mask=0, 
                      uint32_t error_loc_mask=0, 
                      CDErrT *error=0 );
@@ -115,14 +103,14 @@ class cd::CDHandle {
     CDHandle* Create(const ColorT& color, 
                      uint32_t num_tasks_in_color, 
                      const char* name=0, 
-                     CDType type=kStrict, 
+                     CDType cd_type=kStrict, 
                      uint32_t error_name_mask=0, 
                      uint32_t error_loc_mask=0, 
                      CDErrT *error=0 );
     // Collective
     CDHandle* Create(uint32_t  numchildren,
                      const char* name, 
-                     CDType type=kStrict, 
+                     CDType cd_type=kStrict, 
                      uint32_t error_name_mask=0, 
                      uint32_t error_loc_mask=0, 
                      CDErrT *error=0 );
@@ -131,7 +119,7 @@ class cd::CDHandle {
     CDHandle* CreateAndBegin(const ColorT& color, 
                              uint32_t num_tasks_in_color=0, 
                              const char* name=0, 
-                             CDType type=kStrict, 
+                             CDType cd_type=kStrict, 
                              uint32_t error_name_mask=0, 
                              uint32_t error_loc_mask=0, 
                              CDErrT *error=0 );
@@ -211,7 +199,7 @@ class cd::CDHandle {
 
   private:  // Internal use -------------------------------------------------------------
     // Initialize for CDHandle object.
-//    void Init(CD* ptr_cd, NodeID node_id);
+    void Init(CD* ptr_cd, const NodeID& node_id);
 
     // Search CDEntry with entry_name given. It is needed when its children preserve data via reference and search through its ancestors. If it cannot find in current CD object, it outputs NULL 
     cd::CDEntry* InternalGetEntry(std::string entry_name);
@@ -270,19 +258,19 @@ class cd::CDHandle {
     bool IsLocalObject(void);
 
     // Select Head among task group that are corresponding to one CD.
-    void SetHead(int task);
+    void SetHead(NodeID& new_node_id);
 
   public:
-    bool IsHead(void);
+    bool IsHead(void) const;
     // Accessors
-    CD*       ptr_cd(void); 
-    NodeID&   node_id(void);  
+    CD*       ptr_cd(void) const; 
+    NodeID&   node_id(void) ;  
     void      SetCD(CD* ptr_cd);
-    char*     GetName(void); 
-    int       GetSeqID(void);
-    ColorT&   GetNodeID(void);
-    int       GetTaskID(void);
-    int       GetTaskSize(void);
+    char*     GetName(void) const; 
+    int       GetSeqID(void) const;
+    ColorT    GetNodeID(void) const;
+    int       GetTaskID(void) const;
+    int       GetTaskSize(void) const;
     int       ctxt_prv_mode(void);
     bool      operator==(const CDHandle &other) const ;
 

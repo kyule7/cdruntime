@@ -37,11 +37,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define _CD_ID_H
 #include "cd_global.h"
 #include "node_id.h"
+#include "cd_name_t.h"
+
 using namespace cd;
 
 namespace cd{
 
-extern uint64_t object_id;
+//extern uint64_t object_id_;
 /*
 CDID is for naming uniquely one of the CDs. 
 So, it is a logical ID of our CD semantic which is independent on any other execution environment.
@@ -67,26 +69,34 @@ Q. # of sibing CDs should be here?
 */
 class CDID {
   public:
-    uint64_t domain_id_;          // Some physical information is desired in CDID to maximize locality when needed
-    uint64_t level_;              // Level in the CD hierarhcy. It increases at Create() and destroys at Destroy.
-    uint64_t rank_in_level_;
-    NodeID   node_id_;            // Unique ID for each CD. It can be a communicator number. It increases at Create().
-                                  // node_id_.color_ means a CD (color)
-                                  // node_id_.task_in_color_ means task ID in that CD task group (color)
-                                  // For now, node_id_.color_==0 is always Head.
-                                  // But it can be more nicely managed distribuing Head for one process.
-    static uint64_t object_id_;   // This will be local and unique within a process. It increases at creator or Create().
-    uint64_t sequential_id_;      // # of Begin/Complete pairs of each CD object. It increases at Begin()
-    
-    CDID(); // TODO Initialize member values to zero or something, for now I will put just zero but this is less efficient.
+		// Some physical information is desired in CDID to maximize locality when needed
+    uint32_t domain_id_; 
 
-    CDID(uint64_t level, const NodeID& new_node_id);
-    CDID(uint64_t level, NodeID&& new_node_id);
+		CDNameT  cd_name_;
 
+    // Unique ID for each CD. It can be a communicator number. It increases at Create().
+    // node_id_.color_ means a CD (color)
+    // node_id_.task_in_color_ means task ID in that CD task group (color)
+    // For now, node_id_.color_==0 is always Head.
+    // But it can be more nicely managed distribuing Head for one process.
+		NodeID   node_id_;
+
+		// This will be local and unique within a process. It increases at creator or Create().
+    uint32_t object_id_; // This will be local and unique within a process. It increases at creator or Create().
+
+		// # of Begin/Complete pairs of each CD object. It increases at Begin()
+    uint32_t sequential_id_;      
+
+    // TODO Initialize member values to zero or something, for now I will put just zero but this is less efficient.
+    CDID(); 
+    CDID(const CDNameT& cd_name, const NodeID& new_node_id);
+
+//    CDID(CDNameT&& cd_name, NodeID&& new_node_id);
     CDID(const CDID& that);
+
     // should be in CDID.h
     // old_cd_id should be passed by value
-    void UpdateCDID(uint64_t parent_level, const NodeID& new_node_id);
+//    void UpdateCDID(uint64_t parent_level, const NodeID& new_node_id);
 
     void SetCDID(const NodeID& new_node_id);
 
@@ -99,6 +109,20 @@ class CDID {
     //SZ: print function
     void Print ();
 #endif
+    
+    uint32_t level(void)         const { return cd_name_.level(); }
+    uint32_t rank_in_level(void) const { return cd_name_.rank_in_level(); }
+    uint32_t sibling_count(void) const { return cd_name_.size(); }
+    ColorT   color(void)         const { return node_id_.color(); }
+    int      task_in_color(void) const { return node_id_.task_in_color(); }
+    int      head(void)          const { return node_id_.head(); }
+    int      task_count(void)    const { return node_id_.size(); }
+    int      object_id(void)     const { return object_id_; }
+    int      sequential_id(void) const { return sequential_id_; }
+    int      domain_id(void)     const { return domain_id_; }
+    CDNameT  cd_name(void)       const { return cd_name_; }
+    NodeID   node_id(void)       const { return node_id_; }
+    bool     IsHead(void)        const { return node_id_.IsHead(); }
 };
 
 std::ostream& operator<<(std::ostream& str, const CDID& cd_id);
