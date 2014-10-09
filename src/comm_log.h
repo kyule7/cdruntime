@@ -87,6 +87,9 @@ class cd::CommLog {
 
     void ReInit();
 
+    // Reset is called when a CD completes, so next CD_Begin can reuse all the allocated space
+    void Reset();
+
     CommLogMode GetCommLogMode()
     {
       return comm_log_mode_;

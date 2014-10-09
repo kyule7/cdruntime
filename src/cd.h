@@ -179,8 +179,8 @@ update the preserved data.
     //SZ
     cd::CommLog * comm_log_ptr_;
     
-    //SZ: attempted to move from HeadCD class, but we can use CDPath class
-    cd::CDHandle*            cd_parent_;
+    ////SZ: attempted to move from HeadCD class, but we can use CDPath class
+    //cd::CDHandle*            cd_parent_;
 #endif
 
   public:
@@ -329,25 +329,11 @@ update the preserved data.
 
 #ifdef szhang
     //SZ
-    CommLogErrT CommLogCheckAlloc(unsigned long length)
-    {
-      return comm_log_ptr_->CheckChildLogAlloc(length);
-    }
-
+    CommLogErrT CommLogCheckAlloc(unsigned long length);
     //SZ 
-    bool IsParentLocal()
-    {
-      //FIXME: for now assuming cd_parent_ is always local
-      //       need to implement inside CDID object to test if parent is local, such as using process_id_
-      return 1;
-    }
-
+    bool IsParentLocal();
     //SZ
-    //FIXME: need to change the following to use CDPath class to find parent's cd handle
-    CDHandle* GetParentHandle()
-    {
-      return cd_parent_;
-    }
+    CDHandle* GetParentHandle();
 #endif
     
     CDNameT& GetCDName(void)  { return cd_id_.cd_name_; }

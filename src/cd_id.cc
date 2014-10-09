@@ -46,18 +46,18 @@ using namespace cd;
 //for now I will put just zero but this is less efficient.
 
 CDID::CDID() 
-	: domain_id_(0), sequential_id_(0)
+  : domain_id_(0), sequential_id_(0)
 {}
 
 CDID::CDID(const CDNameT& cd_name, const NodeID& new_node_id)
-	: cd_name_(cd_name), node_id_(new_node_id)
+  : cd_name_(cd_name), node_id_(new_node_id)
 {
   domain_id_ = 0;
   sequential_id_ = 0;
 
 }
 //CDID::CDID(CDNameT&& cd_name, NodeID&& new_node_id)
-//	: cd_name_(std::move(cd_name)), node_id_(std::move(node_id)), domain_id_(0), sequential_id_(0)
+//  : cd_name_(std::move(cd_name)), node_id_(std::move(node_id)), domain_id_(0), sequential_id_(0)
 //{}
 CDID::CDID(const CDID& that)
   : cd_name_(that.cd_name()), node_id_(that.node_id())
@@ -69,10 +69,10 @@ CDID::CDID(const CDID& that)
 // old_cd_id should be passed by value
 //void CDID::UpdateCDID(const CDNameT& cd_name, const NodeID& node_id)
 //{
-//  object_id_ 		 = Util::GenObjectID();
+//  object_id_     = Util::GenObjectID();
 //  sequential_id_ = 0;
-//	cd_name_ 			 = cd_name;
-//  node_id_ 			 = node_id;
+//  cd_name_       = cd_name;
+//  node_id_       = node_id;
 //}
 
 void CDID::SetCDID(const NodeID& node_id)
@@ -131,19 +131,16 @@ std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
 //}
 
 #ifdef szhang
-//SZ: reload '==' operator
+//FIXME: need to fix this operator....
 bool CDID::operator==(const CDID &other) const {
   bool domain_id = (other.domain_id_ == this->domain_id_);
-  //SZ: TODO: need to figure out how to match node_id_
-  //bool node_id = (other.node_id_ == this->node_id_);
-  //bool task_id = (other.task_id_ == this->task_id_);
 
-  bool rank_in_level = (other.rank_in_level_ == this->rank_in_level_);
-  bool level = (other.level_ == this->level_);
+  //bool rank_in_level = (other.rank_in_level_ == this->rank_in_level_);
+  //bool level = (other.level_ == this->level_);
   bool sequential_id = (other.sequential_id_ == this->sequential_id_);
 
   //return (domain_id && node_id && task_id && level && sequential_id);
-  return (domain_id && level && sequential_id && rank_in_level);
+  return (domain_id && sequential_id);
 }
 
 //SZ: print function
@@ -151,11 +148,11 @@ void CDID::Print ()
 {
   std::cout << "CDID information:" << std::endl;
   std::cout << "    domain_id_: " << domain_id_ << std::endl;
-  std::cout << "    rank_in_level_: " << rank_in_level_ << std::endl;
+  //std::cout << "    rank_in_level_: " << rank_in_level_ << std::endl;
   //std::cout << "    node_id_: " << node_id_ << std::endl;
   //std::cout << "    task_id_: " << task_id_ << std::endl;
 
-  std::cout << "    level_: " << level_ << std::endl;
+  //std::cout << "    level_: " << level_ << std::endl;
   std::cout << "    object_id_: " << object_id_ << std::endl;
   std::cout << "    sequential_id_: " << sequential_id_ << std::endl;
 }

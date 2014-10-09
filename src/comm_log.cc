@@ -95,6 +95,27 @@ CommLog::CommLog(CD* my_cd,
 
 CommLog::~CommLog()
 {
+  //destroy all allocated memory
+  //log_table_
+  if (log_table_.base_ptr_ != NULL) 
+  {
+    PRINT_DEBUG("delete log_table_.base_ptr_\n");
+    delete log_table_.base_ptr_;
+  }
+
+  //log_queue_
+  if (log_queue_.base_ptr_ != NULL)
+  {
+    PRINT_DEBUG("delete log_queue_.base_ptr_\n");
+    delete log_queue_.base_ptr_;
+  }
+
+  //child_log_
+  if (child_log_.base_ptr_ != NULL)
+  {
+    PRINT_DEBUG("delete child_log_.base_ptr_\n");
+    delete child_log_.base_ptr_;
+  }
   
 }
 
@@ -109,7 +130,11 @@ void CommLog::InitInternal()
   log_table_.cur_pos_ = 0;
   log_table_.base_ptr_ = NULL;
 
+  child_log_.size_ = 0;
+  child_log_.cur_pos_ = 0;
   child_log_.base_ptr_ = NULL;
+
+  log_table_reexec_pos_ = 0;
 
   // if forward execution
   if (comm_log_mode_ == kGenerateLog)
@@ -121,10 +146,10 @@ void CommLog::InitInternal()
       ERROR_MESSAGE("Communication Logs Initialization Failed!\n");
     }
   }
-  else if (comm_log_mode_ == kReplayLog)
-  {
-    log_table_reexec_pos_ = 0;
-  }
+  //// in kReplayLog mode, no allocation because unpack will allocate data...
+  //else if (comm_log_mode_ == kReplayLog)
+  //{
+  //}
 
 }
 
@@ -324,14 +349,14 @@ CommLogErrT CommLog::CheckChildLogAlloc(unsigned long length)
 CommLogErrT CommLog::PackAndPushLogs(CD* parent_cd)
 {
   // calculate length of data copy
-  // pack format is [SIZE][CDID][Table][Queue]
+  // pack format is [SIZE][CDID][Table][Queue][ChildLogQueue]
   unsigned long length;
   length = sizeof(unsigned long) + sizeof(CDID) // SIZE + CDID
          + sizeof(struct LogTable) + sizeof(struct LogTableElement)*log_table_.cur_pos_ //Table
-         + sizeof(struct LogQueue) + sizeof(char)*log_queue_.cur_pos_; // Queue
+         + sizeof(struct LogQueue) + sizeof(char)*log_queue_.cur_pos_ // Queue
+         + sizeof(struct ChildLogQueue) + sizeof(char)*child_log_.cur_pos_; // ChildLogQueue
 
   // check parent's queue availability
-  // TODO: check alloc??
   parent_cd->CommLogCheckAlloc(length);
 
   // TODO: this is ugly, what about a tmp_ptr to pack and then copy to parent??
@@ -394,6 +419,21 @@ CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
       log_queue_.base_ptr_, size);
   dst_cl_ptr->child_log_.cur_pos_ += size;
   PRINT_DEBUG("After queue data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+
+  //[Queue] meta data
+  size = sizeof(struct ChildLogQueue);
+  memcpy (&(dst_cl_ptr->child_log_.base_ptr_[dst_cl_ptr->child_log_.cur_pos_]), 
+      &child_log_, size);
+  dst_cl_ptr->child_log_.cur_pos_ += size;
+  PRINT_DEBUG("After child queue meta data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+
+  //[ChildLogQueue] data
+  size = sizeof(char)*child_log_.cur_pos_;
+  memcpy (&(dst_cl_ptr->child_log_.base_ptr_[dst_cl_ptr->child_log_.cur_pos_]), 
+      child_log_.base_ptr_, size);
+  dst_cl_ptr->child_log_.cur_pos_ += size;
+  PRINT_DEBUG("After child log queue data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+
   PRINT_DEBUG("After: child_log_.size_= %ld\n", dst_cl_ptr->child_log_.size_);
 
   return kCommLogOK;
@@ -476,6 +516,11 @@ void CommLog::Print()
   printf("cur_pos_ = %ld\n", log_queue_.cur_pos_);
   printf("queue_size_ = %ld\n", log_queue_.queue_size_);
 
+  printf("\nchild_log_:\n");
+  printf("base_ptr_ = %p\n", child_log_.base_ptr_);
+  printf("cur_pos_ = %ld\n", child_log_.cur_pos_);
+  printf("size_ = %ld\n", child_log_.size_);
+
   printf("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 }
 
@@ -536,7 +581,10 @@ CommLogErrT CommLog::UnpackLogs(char * src_ptr)
     ERROR_MESSAGE("Cannot allocate space for log_table_.base_ptr_!\n");
     return kCommLogError;
   }
-  delete log_table_.base_ptr_;
+
+  //// should not delete the base_ptr_, in case accidentally delete something else
+  //// if running correctly, base_ptr_ should not be allocated any space yet...
+  //delete log_table_.base_ptr_;
   log_table_.base_ptr_ = tmp_ptr;
 
   size = sizeof(struct LogTableElement)*log_table_.cur_pos_;
@@ -556,11 +604,30 @@ CommLogErrT CommLog::UnpackLogs(char * src_ptr)
     ERROR_MESSAGE("Cannot allocate space for log_table_.base_ptr_!\n");
     return kCommLogError;
   }
-  delete log_queue_.base_ptr_;
+  //delete log_queue_.base_ptr_;
   log_queue_.base_ptr_ = tmp_queue_ptr;
 
   size = sizeof(char) * log_queue_.cur_pos_;
   memcpy(log_queue_.base_ptr_, src_ptr+index, size);
+  index += size;
+
+  // [ChildLogQueue] meta data
+  size = sizeof(struct ChildLogQueue);
+  memcpy(&child_log_, src_ptr+index, size);
+  index += size;
+
+  // [ChildLogQueue] data
+  char * tmp_child_log_ptr = new char [child_log_.size_];
+  if (tmp_child_log_ptr == NULL)
+  {
+    ERROR_MESSAGE("Cannot allocate space for log_table_.base_ptr_!\n");
+    return kCommLogError;
+  }
+  //delete child_log_.base_ptr_;
+  child_log_.base_ptr_ = tmp_child_log_ptr;
+
+  size = sizeof(char) * child_log_.cur_pos_;
+  memcpy(child_log_.base_ptr_, src_ptr+index, size);
   index += size;
 
   // sanity check
@@ -601,3 +668,9 @@ CommLogErrT CommLog::FindChildLogs(CDID child_cd_id, char** src_ptr)
 }
 
 
+void CommLog::Reset()
+{
+  log_table_.cur_pos_ = 0;
+  log_queue_.cur_pos_ = 0;
+  child_log_.cur_pos_ = 0;
+}

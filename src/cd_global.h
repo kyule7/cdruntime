@@ -81,7 +81,7 @@ namespace cd {
   class Unpacker; 
 //  class Util;
   class CDEvent;
-  class RegenObject;	
+  class RegenObject;  
   class RecoverObject;
   class SysErrT;
 #ifdef szhang
@@ -90,64 +90,64 @@ namespace cd {
 #endif
 
   enum CDErrT       { kOK=0, 
-											kAlreadyInit, 
-											kError,
-										  kExecutionModeError,
+                      kAlreadyInit, 
+                      kError,
+                      kExecutionModeError,
                       kOutOfMemory,
                       kFileOpenError
-										};
+                    };
 
 //  enum SysErrT      { kWhat=1 };
 
   enum SysErrLoc    { kIntraCore=1, 
-											kCore=2, 
-											kProc=4, 
-											kNode=8, 
-											kModule=16, 
-											kCabinet=32, 
-											kCabinetGroup=64, 
-											kSystem=128 
-										};
+                      kCore=2, 
+                      kProc=4, 
+                      kNode=8, 
+                      kModule=16, 
+                      kCabinet=32, 
+                      kCabinetGroup=64, 
+                      kSystem=128 
+                    };
 
   enum SysErrName   { kSoftMem=1, 
-											kDegradedMem=2, 
-											kSoftComm=4, 
-											kDegradedComm=8, 
-											kSoftComp=16, 
-											kDegradedResource=32, 
-											kHardResource=64, 
-											kFileSys=128 
-										};
+                      kDegradedMem=2, 
+                      kSoftComm=4, 
+                      kDegradedComm=8, 
+                      kSoftComp=16, 
+                      kDegradedResource=32, 
+                      kHardResource=64, 
+                      kFileSys=128 
+                    };
 
   enum CDPGASUsageT { kShared=1, 
-											KPrivate 
-										};
+                      KPrivate 
+                    };
 
   enum CDPreserveT  { kCopy=0, 
-											kRef, 
-											kRegen 
-										};
+                      kRef, 
+                      kRegen 
+                    };
 
   enum CDType       { kStrict=0, 
-											kRelaxed };
+                      kRelaxed };
 
   enum PreserveUseT { kUnsure=0, 
-											kReadOnly=1, 
-											kReadWrite=2 };
+                      kReadOnly=1, 
+                      kReadWrite=2 };
 
-	/// Profile-related enumerator
-	enum ProfileType      { LOOP_COUNT, 
-													EXEC_CYCLE, 
-													PRV_COPY_DATA, 
-													PRV_REF_DATA, 
-													OVERLAPPED_DATA, 
-													SYSTEM_BIT_VECTOR, 
-													MAX_PROFILE_DATA };
+  /// Profile-related enumerator
+  enum ProfileType      { LOOP_COUNT, 
+                          EXEC_CYCLE, 
+                          PRV_COPY_DATA, 
+                          PRV_REF_DATA, 
+                          OVERLAPPED_DATA, 
+                          SYSTEM_BIT_VECTOR, 
+                          MAX_PROFILE_DATA };
 
-	enum ProfileFormat    { PRV, 
-													REC, 
-													BODY, 
-													MAX_FORMAT };
+  enum ProfileFormat    { PRV, 
+                          REC, 
+                          BODY, 
+                          MAX_FORMAT };
 
   enum PrvMediumT { kMemory=0,
                     kHDD,
@@ -222,22 +222,22 @@ If we do if-else statement here and make a scope { } for that, does it make its 
 
 void Foo(void)
 {
-	double X, Y, Z;
-	...
-	if (IsTrue == true) { 
-		int A, B, C, D;
-		...
-		...
-		A = B + C; B = D * A;
-		...
-	} 
-	else {
-		int E, F;
-		...
-		E = F * E;
-		...
-	}
-	...
+  double X, Y, Z;
+  ...
+  if (IsTrue == true) { 
+    int A, B, C, D;
+    ...
+    ...
+    A = B + C; B = D * A;
+    ...
+  } 
+  else {
+    int E, F;
+    ...
+    E = F * E;
+    ...
+  }
+  ...
 }
 
 there will be Foo's local scope in the stack and what about A, B, C, D, E, F ??

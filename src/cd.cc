@@ -44,6 +44,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 using namespace std;
 
+#ifdef szhang
+#include "cd_path.h"
+#endif
+
 /// Actual CD Object only exists in a single node and in a single process.
 /// Potentially copy of CD Object can exist but it should not be used directly. 
 /// We also need to think about when maintaining copy of CD objects, 
@@ -93,6 +97,7 @@ CD::CD()
   // SZ
   // create instance for comm_log_ptr_
   // if no parent assigned, then means this is root, so log mode will be kGenerateLog at creation point
+  PRINT_DEBUG("Inside CD constructor, creating CommLog with mode kGenerateLog\n");
   comm_log_ptr_ = new CommLog(this, kGenerateLog);
 #endif
 }
@@ -141,7 +146,19 @@ CD::CD(CDHandle* cd_parent,
   // SZ
   // create instance for comm_log_ptr_
   // comm_log is per thread per CD
-  comm_log_ptr_ = new CommLog(this, cd_parent->ptr_cd()->comm_log_ptr_->GetCommLogMode());
+  // if cd_parent is not NULL, then inherit comm log mode from parent,
+  // otherwise means current cd is a root cd, so comm log mode is to generate log
+  PRINT_DEBUG("Inside CD constructor, creating CommLog with cd_parent = %p\n", cd_parent);
+  if (cd_parent != NULL)
+  {
+    PRINT_DEBUG("With cd_parent = %p, creating CommLog with mode %d\n", cd_parent, cd_parent->ptr_cd()->comm_log_ptr_->GetCommLogMode());
+    comm_log_ptr_ = new CommLog(this, cd_parent->ptr_cd()->comm_log_ptr_->GetCommLogMode());
+  }
+  else 
+  {
+    PRINT_DEBUG("With cd_parent = NULL, creating CommLog with mode kGenerateLog\n");
+    comm_log_ptr_ = new CommLog(this, kGenerateLog);
+  }
 #endif
 }
 
@@ -197,6 +214,15 @@ CD::~CD()
   // Request to add me as a child to my parent
 //  cd_parent_->RemoveChild(this);
   //FIXME : This will be done at the CDHandle::Destroy()
+
+#ifdef szhang
+  //Delete comm_log_ptr_
+  if (comm_log_ptr_ != NULL)
+  {
+    PRINT_DEBUG("Delete comm_log_ptr_\n");
+    delete comm_log_ptr_;
+  }
+#endif
 }
 
 CDHandle* CD::Create(CDHandle* parent, 
@@ -209,18 +235,38 @@ CDHandle* CD::Create(CDHandle* parent,
 
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
+  CD* new_cd=NULL;
   if( !child_cd_id.IsHead() ) {
-    CD* new_cd = new CD(parent, name, child_cd_id, cd_type, sys_bit_vector);
+    new_cd = new CD(parent, name, child_cd_id, cd_type, sys_bit_vector);
     new_cd_handle = new CDHandle(new_cd, child_cd_id.node_id());
   }
   else {
-    CD* new_cd = new HeadCD(parent, name, child_cd_id, cd_type, sys_bit_vector);
+    new_cd = new HeadCD(parent, name, child_cd_id, cd_type, sys_bit_vector);
     new_cd_handle = new CDHandle(new_cd, child_cd_id.node_id());
   }
   assert(new_cd_handle != NULL);
 
   this->AddChild(new_cd_handle);
 
+////SZ: unpack/pack logs at the boundary of begin/complete...
+////TODO: this may be a performance bottleneck, and needed to be optimized...
+//#ifdef szhang
+//  //SZ: if in reexecution, need to unpack logs to childs
+//  if (new_cd->comm_log_ptr_->GetCommLogMode() == kReplayLog)
+//  {
+//    PRINT_DEBUG("With comm log mode = kReplayLog, unpack logs to children\n");
+//    if (new_cd->IsParentLocal())
+//    {
+//      comm_log_ptr_->UnpackLogsToChildCD(new_cd);
+//    }
+//    else
+//    {
+//      //SZ: FIXME: need to figure out a way to unpack logs if child is not in the same address space with parent
+//      PRINT_DEBUG("Should not be here to unpack logs!!\n");
+//    }
+//  }
+//#endif
+  
   return new_cd_handle;
   /// Send entry_directory_map_ to HeadCD
 //  GatherEntryDirMapToHead();
@@ -245,22 +291,6 @@ CDHandle* CD::CreateRootCD(CDHandle* parent,
   }
   assert(new_cd_handle != NULL);
 
-#ifdef szhang
-  //SZ: if in reexecution, need to unpack logs to childs
-  if (new_cd->comm_log_ptr_->GetCommLogMode() == kReplayLog)
-  {
-    if (new_cd->IsParentLocal())
-    {
-      comm_log_ptr_->UnpackLogsToChildCD(new_cd);
-    }
-    else
-    {
-      //SZ: FIXME: need to figure out a way to unpack logs if child is not in the same address space with parent
-      PRINT_DEBUG("Should not be here to unpack logs!!\n");
-    }
-  }
-#endif
-  
 //  AddChild(new_cd_handle);
 
   return new_cd_handle;
@@ -319,7 +349,29 @@ CDErrT CD::Destroy(void)
 // CDHandle will follow the standard interface. 
 CDErrT CD::Begin(bool collective, const char* label)
 {
-  cout<<"inside CD::Begin"<<endl;
+  //cout<<"inside CD::Begin"<<endl;
+  PRINT_DEBUG("inside CD::Begin\n");
+
+#ifdef szhang
+  //SZ: if in reexecution, need to unpack logs to childs
+  if (GetParentHandle()!=NULL)
+  {
+    if (GetParentHandle()->ptr_cd_->comm_log_ptr_->GetCommLogMode() == kReplayLog)
+    {
+      PRINT_DEBUG("With comm log mode = kReplayLog, unpack logs to children\n");
+      if (IsParentLocal())
+      {
+        GetParentHandle()->ptr_cd_->comm_log_ptr_->UnpackLogsToChildCD(this);
+      }
+      else
+      {
+        //SZ: FIXME: need to figure out a way to unpack logs if child is not in the same address space with parent
+        PRINT_DEBUG("Should not be here to unpack logs!!\n");
+      }
+    }
+  }
+#endif
+
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
@@ -360,19 +412,34 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 
 #ifdef szhang
   // SZ: pack logs and push to parent
-  if (IsParentLocal())
+  if (GetParentHandle()!=NULL)
   {
-    this->comm_log_ptr_->PackAndPushLogs(GetParentHandle()->ptr_cd_);
+    if (IsParentLocal())
+    {
+      comm_log_ptr_->PackAndPushLogs(GetParentHandle()->ptr_cd_);
+    #ifdef _DEBUG
+      printf("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
+      printf("\nchild comm_log print:\n");
+      comm_log_ptr_->Print();
+    #endif
 
-    //SZ: parent need to copy the CommLogMode because child may reach end of logs and CommLogMode flips
-    //TODO: need to coordinate with other child CDs, and what if some completed CDs reach end of logs, 
-    //      but others do not...
-    GetParentHandle()->ptr_cd_->comm_log_ptr_->SetCommLogMode(this->comm_log_ptr_->GetCommLogMode());
-  }
-  else 
-  {
-    //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
-    PRINT_DEBUG("Should not come to here...\n");
+      //SZ: parent need to copy the CommLogMode because child may reach end of logs and CommLogMode flips
+      //TODO: need to coordinate with other child CDs, and what if some completed CDs reach end of logs, 
+      //      but others do not...
+      GetParentHandle()->ptr_cd_->comm_log_ptr_->SetCommLogMode(this->comm_log_ptr_->GetCommLogMode());
+    #ifdef _DEBUG
+      printf("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
+      printf("parent comm_log print:\n");
+      GetParentHandle()->ptr_cd_->comm_log_ptr_->Print();
+    #endif
+
+      comm_log_ptr_->Reset();
+    }
+    else 
+    {
+      //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
+      PRINT_DEBUG("Should not come to here...\n");
+    }
   }
 #endif
   return CDErrT::kOK;
@@ -1198,3 +1265,27 @@ void CD::DeleteEntryDirectory(void)
   //FIXME need to put rank id and process id  
 //  return self_handle;    
 //}
+
+
+#ifdef szhang
+//SZ
+CommLogErrT CD::CommLogCheckAlloc(unsigned long length)
+{
+  return comm_log_ptr_->CheckChildLogAlloc(length);
+}
+
+//SZ 
+bool CD::IsParentLocal()
+{
+  //FIXME: for now assuming cd_parent_ is always local
+  //       need to implement inside CDID object to test if parent is local, such as using process_id_
+  return 1;
+}
+
+//SZ
+//FIXME: need to change the following to use CDPath class to find parent's cd handle
+CDHandle* CD::GetParentHandle()
+{
+  return CDPath::GetParentCD();
+}
+#endif

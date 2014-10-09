@@ -69,22 +69,22 @@ Q. # of sibing CDs should be here?
 */
 class CDID {
   public:
-		// Some physical information is desired in CDID to maximize locality when needed
+    // Some physical information is desired in CDID to maximize locality when needed
     uint32_t domain_id_; 
 
-		CDNameT  cd_name_;
+    CDNameT  cd_name_;
 
     // Unique ID for each CD. It can be a communicator number. It increases at Create().
     // node_id_.color_ means a CD (color)
     // node_id_.task_in_color_ means task ID in that CD task group (color)
     // For now, node_id_.color_==0 is always Head.
     // But it can be more nicely managed distribuing Head for one process.
-		NodeID   node_id_;
+    NodeID   node_id_;
 
-		// This will be local and unique within a process. It increases at creator or Create().
+    // This will be local and unique within a process. It increases at creator or Create().
     uint32_t object_id_; // This will be local and unique within a process. It increases at creator or Create().
 
-		// # of Begin/Complete pairs of each CD object. It increases at Begin()
+    // # of Begin/Complete pairs of each CD object. It increases at Begin()
     uint32_t sequential_id_;      
 
     // TODO Initialize member values to zero or something, for now I will put just zero but this is less efficient.
