@@ -73,11 +73,15 @@ public:
   ~CDNameT()
   {}
  
-  CDNameT& operator=(CDNameT& that) {
+  CDNameT& operator=(const CDNameT& that) {
     level_         = that.level();
     rank_in_level_ = that.rank_in_level();
     size_          = that.size();
     return *this;
+  }
+
+  bool operator==(const CDNameT& that) const {
+    return (level_ == that.level()) && (rank_in_level_ == that.rank_in_level()) && (size_ == that.size());
   }
 };
 

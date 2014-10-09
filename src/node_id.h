@@ -66,6 +66,7 @@ public:
     : color_(that.color()), task_in_color_(that.task_in_color()), head_(that.head()), size_(that.size())
   {}
   ~NodeID(){}
+
   NodeID& operator=(const NodeID& that) {
     color_         = that.color();
     task_in_color_ = that.task_in_color();
@@ -73,6 +74,13 @@ public:
     size_          = that.size();
     return *this;
   }
+
+  bool operator==(const NodeID& that) const {
+    return (color_ == that.color()) && (task_in_color_ == that.task_in_color()) && (size_ == that.size());
+  }
+
+
+
   void init_node_id(ColorT color, int task_in_color, int head, int size)
   {
     color_ = color;

@@ -1077,9 +1077,10 @@ void CD::DeleteEntryDirectory(void)
 {
 //  cout<<"Delete Entry In"<<endl; getchar();
   for(std::list<CDEntry>::iterator it = entry_directory_.begin();
-      it != entry_directory_.end(); ++it) {
+      it != entry_directory_.end(); ) {
     it->Delete();
-    //entry_directory_.erase(it);
+    entry_directory_map_.erase(it->name());
+    entry_directory_.erase(it++);
   }
 
 //  for(std::map<std::string, CDEntry*>::iterator it = entry_directory_map_.begin();

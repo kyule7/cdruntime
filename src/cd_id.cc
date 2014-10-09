@@ -89,6 +89,13 @@ CDID& CDID::operator=(const CDID& that)
 }
 
 
+bool CDID::operator==(const CDID& that) const
+{
+  return (node_id_ == that.node_id()) && (cd_name_ == that.cd_name()) && (object_id_ == that.object_id()) && (sequential_id_ == that.sequential_id());
+
+}
+
+
 std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
 {
 //  return str<< "Level: "<< cd_id.level_ << ", CDNode" << cd_id.node_id_.color_ << ", Obj# " << cd_id.object_id_ << ", Seq# " << cd_id.sequential_id_;
