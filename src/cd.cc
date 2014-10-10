@@ -95,7 +95,7 @@ CD::CD()
   // Kyushick : I cannot fully understand this comment....
 CD::CD(CDHandle* cd_parent, 
        const char* name, 
-       CDID cd_id, 
+       const CDID& cd_id, 
        CDType cd_type, 
        uint64_t sys_bit_vector)
 //  : cd_type_(cd_type), name_(name), sys_detect_bit_vector_(0), cd_id_(cd_id)
@@ -336,7 +336,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //  char sendBuf[SEND_BUF_SIZE];
 //  char recvBuf[num_sibling][SEND_BUF_SIZE];
 //
-//  MPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
+////  MPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
 //}
 
 /*  CD::preserve(char* data_p, int data_l, enum preserveType prvTy, enum mediumLevel medLvl)
@@ -525,10 +525,10 @@ CDErrT CD::Preserve(void* data,
 
 //      printf("Reexecution mode start...\n");
 
-      CDEntry cd_entry = *iterator_entry_;
+      CDEntry *cd_entry = &*iterator_entry_;
       ++iterator_entry_;
 
-      switch( cd_entry.Restore() ) {
+      switch( cd_entry->Restore() ) {
         case CDEntry::CDEntryErrT::kOK            : return CDErrT::kOK; 
         case CDEntry::CDEntryErrT::kOutOfMemory   : return CDErrT::kError;
         case CDEntry::CDEntryErrT::kFileOpenError : return CDErrT::kError;
@@ -962,7 +962,7 @@ HeadCD::HeadCD()
 
 HeadCD::HeadCD( CDHandle* cd_parent, 
                     const char* name, 
-                    CDID cd_id, 
+                    const CDID& cd_id, 
                     CDType cd_type, 
                     uint64_t sys_bit_vector)
   : CD(cd_parent, name, cd_id, cd_type, sys_bit_vector)
@@ -1078,6 +1078,15 @@ void CD::DeleteEntryDirectory(void)
 //  cout<<"Delete Entry In"<<endl; getchar();
   for(std::list<CDEntry>::iterator it = entry_directory_.begin();
       it != entry_directory_.end(); ) {
+
+//    uint32_t entry_len=0;
+//    void *ser_entry = it->Serialize(entry_len);
+//
+//    std::cout << "ser entry : "<< ser_entry << std::endl;
+//    CDEntry new_entry;
+//    std::cout << "\n\n--------------------------------\n"<<std::endl;
+//    new_entry.Deserialize(ser_entry);
+
     it->Delete();
     entry_directory_map_.erase(it->name());
     entry_directory_.erase(it++);

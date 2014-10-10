@@ -57,17 +57,28 @@ public:
   uint32_t level(void)         const { return level_; }
   uint32_t rank_in_level(void) const { return rank_in_level_; }
   uint32_t size(void)          const { return size_; }
-  CDNameT(const CDNameT& parent_cdname, int num_children=1, int color=0)
+  CDNameT(const CDNameT& parent_cdname, int num_children, int color)
   {
     level_         = parent_cdname.level() + 1;
     rank_in_level_ = num_children*(parent_cdname.rank_in_level()) + color;
     size_          = num_children;
+  }
+  CDNameT(const CDNameT& that)
+  {
+    level_         = that.level();
+    rank_in_level_ = that.rank_in_level();
+    size_          = that.size();
   }
 
   CDNameT(CDNameT&& that) {
     level_         = that.level();
     rank_in_level_ = that.rank_in_level();
     size_          = that.size();
+  }
+
+  void IncLevel(void) 
+  {
+    level_++;
   }
 
   ~CDNameT()

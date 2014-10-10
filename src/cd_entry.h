@@ -47,26 +47,26 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <assert.h>
 #include "unixlog.h"
 
-class cd::CDEntry //: public cd::Serializable
+class cd::CDEntry : public cd::Serializable
 {
   friend class cd::CD;
   private:
-    DataHandle  src_data_;
-    DataHandle  dst_data_;
+    enum { 
+      ENTRY_PACKER_NAME=0,
+//      ENTRY_PACKER_PTRCD,
+      ENTRY_PACKER_PRESERVETYPE,
+      ENTRY_PACKER_SRC,
+      ENTRY_PACKER_DST 
+    };
     // need a unique name to do via reference, 
     // this variable can be empty string when this is not needed
     std::string name_;    
     cd::CD*     ptr_cd_;
-		struct tsn_lsn_struct lsn, durable_lsn;
+    DataHandle  src_data_;
+    DataHandle  dst_data_;
     cd::CDPreserveT preserve_type_; // already determined according to class 
+//		struct tsn_lsn_struct lsn, durable_lsn;
 
-    // perhaps here we accept Handles.... 
-    /*  CDEntry(const void *source_data, uint64_t len)
-        {
-        src_data_ = new DataHandleDRAM; 
-
-        src_data_.data_address =    
-        }*/
   public:
     enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError};
     
@@ -125,9 +125,66 @@ class cd::CDEntry //: public cd::Serializable
     CDEntryErrT Restore(bool open, struct tsn_log_struct *log);
     CDEntryErrT Restore(void);
 
-//    virtual void * Serialize(uint64_t *len_in_bytes) { std::cout << "This is STUP" << len_in_bytes << std::endl;}
-//
-//    virtual void Deserialize(void * object) {std::cout << "This is STUP" << object<< std::endl;}
+    void *Serialize(uint32_t &len_in_bytes) 
+    {
+
+      std::cout << "\nCD Entry Serialize\n" << std::endl;
+      Packer entry_packer;
+//      uint32_t ptr_cd_packed_len=0;
+//      void *ptr_cd_packed_p = ptr_cd_->Serialize(ptr_cd_packed_len);
+
+      uint32_t src_packed_len=0;
+      std::cout << "\nsrc Serialize\n" << std::endl;
+      void *src_packed_p = src_data_.Serialize(src_packed_len);
+      uint32_t dst_packed_len=0;
+      std::cout << "\ndst Serialize\n" << std::endl;
+      void *dst_packed_p = dst_data_.Serialize(dst_packed_len);
+//      assert(ptr_cd_packed_len != 0);
+      assert(src_packed_len != 0);
+      assert(dst_packed_len != 0);
+
+      entry_packer.Add(ENTRY_PACKER_NAME, name_.size()+1, const_cast<char*>(name_.c_str())); // string.size() + 1 is for '\0'
+//      entry_packer.Add(ENTRY_PACKER_PTRCD, ptr_cd_packed_len, ptr_cd_packed_p);
+
+      entry_packer.Add(ENTRY_PACKER_PRESERVETYPE, sizeof(cd::CDPreserveT), &preserve_type_);
+      entry_packer.Add(ENTRY_PACKER_SRC, src_packed_len, src_packed_p);
+      entry_packer.Add(ENTRY_PACKER_DST, dst_packed_len, dst_packed_p); 
+      std::cout << "\nCD Entry Serialize Done\n" << std::endl;
+
+      return entry_packer.GetTotalData(len_in_bytes);  
+ 
+    }
+
+    void Deserialize(void * object)
+    {
+      
+      std::cout << "\nCD Entry Deserialize\nobject : " << object <<std::endl;
+      Unpacker entry_unpacker;
+      uint32_t return_size=0;
+      uint32_t dwGetID=0;
+      void *src_unpacked=0;
+      void *dst_unpacked=0;
+
+      //char* unpacked_entry_name=0;
+      char *unpacked_entry_name = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+      name_ = unpacked_entry_name;
+      std::cout << "1st unpacked thing in data_handle : " << name_ << ", return size : " << return_size << std::endl;
+
+      entry_unpacker.GetNext(&preserve_type_, object, dwGetID, return_size);
+      std::cout << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;
+
+      std::cout << "\nBefore call GetNext for src data handle\tobject : " << object <<std::endl;
+      entry_unpacker.GetNext(src_unpacked, object, dwGetID, return_size);
+      std::cout << "\nBefore call GetNext for dst data handle\tobject : " << object <<std::endl<<std::endl;
+      entry_unpacker.GetNext(dst_unpacked, object, dwGetID, return_size);
+      std::cout << "\nBefore call src_data.Deserialize\tobject : " << object <<std::endl;
+      src_data_.Deserialize(src_unpacked);
+      dst_data_.Deserialize(dst_unpacked);
+
+
+      std::cout << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;
+      std::cout << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
+    }
 
   
   

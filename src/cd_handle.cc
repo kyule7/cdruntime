@@ -164,7 +164,7 @@ CDHandle* CDHandle::Create(const char* name,
 
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName());
-
+  new_cd_name.IncLevel();
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec);
 

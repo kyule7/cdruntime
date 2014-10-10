@@ -36,9 +36,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _NODE_ID_H
 #define _NODE_ID_H
 #include "cd_global.h"
+#include "serializable.h"
+#include "packer.h"
+#include "unpacker.h"
 #include <ostream>
 #include <utility>
-
 
 
 namespace cd {
@@ -49,8 +51,15 @@ task_in_a_color means an ID to access a task in that color.
 (ex. rank ID of a communicator in MPI context. Communicator corresponds to color_). 
 size means the number of tasks in that color. With these three information, we can access to any tasks.
 */
-class NodeID {
+class NodeID : public Serializable {
 friend class CDHandle;
+  enum { 
+    NODEID_PACKER_COLOR=0,
+    NODEID_PACKER_TASK_IN_COLOR,
+    NODEID_PACKER_HEAD,
+    NODEID_PACKER_SIZE 
+  };
+ 
   ColorT color_;
   int task_in_color_;
   int head_;
@@ -98,6 +107,36 @@ public:
   int head(void) const { return head_; }
   int size(void) const { return size_; }
   bool IsHead(void) const { return head_ == task_in_color_; }
+
+  void * Serialize(uint32_t& len_in_bytes)
+  {
+    std::cout << "\nNode ID Serialize\n" << std::endl;
+    Packer node_id_packer;
+    node_id_packer.Add(NODEID_PACKER_COLOR, sizeof(ColorT), &color_);
+    node_id_packer.Add(NODEID_PACKER_TASK_IN_COLOR, sizeof(int), &task_in_color_);
+    node_id_packer.Add(NODEID_PACKER_HEAD, sizeof(int), &head_);
+    node_id_packer.Add(NODEID_PACKER_SIZE, sizeof(int), &size_);
+    std::cout << "\nNode ID Serialize Done\n" << std::endl;
+    return node_id_packer.GetTotalData(len_in_bytes);  
+  }
+
+  void Deserialize(void* object) 
+  {
+    std::cout << "\nNode ID Deserialize\n" << std::endl;
+    Unpacker node_id_unpacker;
+    uint32_t return_size;
+    uint32_t dwGetID;
+    node_id_unpacker.GetNext(&color_, object, dwGetID, return_size);
+    std::cout << "first unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    node_id_unpacker.GetNext(&task_in_color_, object, dwGetID, return_size);
+    std::cout << "second unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    node_id_unpacker.GetNext(&head_, object, dwGetID, return_size);
+    std::cout << "third unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    node_id_unpacker.GetNext(&size_, object, dwGetID, return_size);
+    std::cout << "fourth unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+  }
+
+
 };
 
 std::ostream& operator<<(std::ostream& str, const NodeID& node_id);

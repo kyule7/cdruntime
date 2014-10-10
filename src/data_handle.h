@@ -38,8 +38,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_global.h"
 #include "node_id.h"
 #include "serializable.h"
+#include "packer.h"
+#include "unpacker.h"
 #include <string>
-
+#include <cstring>
 
 // DataHandle can be copied by using = operator by default. Making of a copy of a handle is thus very easy. 
 // This object needs to support serialization and deserialization 
@@ -56,7 +58,17 @@ class DataHandle : public Serializable {
   friend class CDEntry;
   public:
     enum HandleType { kMemory = 0, kOSFile, kReference, kSource };
-  private: 
+  private:
+    enum { 
+      DATA_PACKER_NODE_ID=0,
+      DATA_PACKER_HANDLE_TYPE,
+      DATA_PACKER_ADDRESS,
+      DATA_PACKER_LEN, 
+      DATA_PACKER_FILENAME, 
+      DATA_PACKER_REFNAME, 
+      DATA_PACKER_REFOFFSET
+    };
+
     HandleType  handle_type_;
 		NodeID      node_id_;
     //DRAM
@@ -106,16 +118,57 @@ class DataHandle : public Serializable {
 
   public: 
     //we need serialize deserialize interface here.
-    virtual void * Serialize(uint64_t* len_in_bytes)
+    void *Serialize(uint32_t& len_in_bytes)
     {
-      //STUB
-      return 0;  
+      std::cout << "\nData Handle Serialize\n" << std::endl;
+      Packer data_packer;
+      uint32_t node_id_packed_len=0;
+      void *node_id_packed_p = node_id_.Serialize(node_id_packed_len);
+      assert(node_id_packed_len != 0);
+      data_packer.Add(DATA_PACKER_NODE_ID, node_id_packed_len, node_id_packed_p);
+      data_packer.Add(DATA_PACKER_HANDLE_TYPE, sizeof(HandleType), &handle_type_);
+      data_packer.Add(DATA_PACKER_ADDRESS, sizeof(void*), &address_data_);
+      data_packer.Add(DATA_PACKER_LEN, sizeof(uint64_t), &len_);
+      data_packer.Add(DATA_PACKER_FILENAME, file_name_.size()+1, const_cast<char*>(file_name_.c_str())); // string.size() + 1 is for '\0'
+      data_packer.Add(DATA_PACKER_REFNAME, ref_name_.size()+1, const_cast<char*>(ref_name_.c_str())); // string.size() + 1 is for '\0'
+      data_packer.Add(DATA_PACKER_REFOFFSET, sizeof(uint64_t), &ref_offset_); 
+      std::cout << "\nData Handle Serialize Done\n" << std::endl;
+      return data_packer.GetTotalData(len_in_bytes);  
     }
-    virtual void Deserialize(void* object) 
+    void Deserialize(void* object) 
     {
-      //STUB
-      return;
+      std::cout << "\nData Handle Deserialize\n" << object << std::endl;
+      Unpacker data_unpacker;
+      uint32_t return_size;
+      uint32_t dwGetID;
+      void *node_id_unpacked=0;
+
+      data_unpacker.GetNext(node_id_unpacked, object, dwGetID, return_size);
+      std::cout << "Before Deserialize node_id"<<std::endl;
+      node_id_.Deserialize(node_id_unpacked);
+      std::cout << "1st unpacked thing in data_handle : " << node_id_ << ", return size : " << return_size << std::endl;
+      data_unpacker.GetNext(&handle_type_, object, dwGetID, return_size);
+      std::cout << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;
+      data_unpacker.GetNext(&address_data_, object, dwGetID, return_size);
+      std::cout << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;
+      data_unpacker.GetNext(&len_, object, dwGetID, return_size);
+      std::cout << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
+
+
+      char* unpacked_file_name=0;
+      char* unpacked_ref_name=0;
+      data_unpacker.GetNext((void*)unpacked_file_name, object, dwGetID, return_size);
+      std::cout << "5th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
+      data_unpacker.GetNext((void*)unpacked_ref_name, object, dwGetID, return_size);
+      std::cout << "6th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
+
+      file_name_ = unpacked_file_name;
+      ref_name_ = unpacked_ref_name;
+
+      data_unpacker.GetNext(&ref_offset_, object, dwGetID, return_size);
+      std::cout << "7th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
     }
+
     DataHandle& operator=(const DataHandle& that) {
       handle_type_ = that.handle_type();
   		node_id_     = that.node_id();

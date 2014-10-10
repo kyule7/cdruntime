@@ -62,29 +62,31 @@ class cd::Unpacker
     virtual ~Unpacker();
 
 
-    char *GetAt(const char *src_data, unsigned long find_id, unsigned long &return_size, unsigned long &dwGetID); 
-    char *GetAt(const char *src_data, unsigned long find_id, unsigned long &return_size);
+    char *GetAt(const char *src_data, uint32_t find_id, uint32_t &return_size, uint32_t &dwGetID); 
+    char *GetAt(const char *src_data, uint32_t find_id, uint32_t &return_size);
 
 
 
-    unsigned long GetAt(const char *src_data, unsigned long find_id, void *return_data);
+    uint32_t GetAt(const char *src_data, uint32_t find_id, void *return_data);
 
 
-    char *GetNext(const char *src_data,  unsigned long &dwGetID, unsigned long &return_size);  
+    char *GetNext(char *src_data,  uint32_t &dwGetID, uint32_t &return_size);  
 
+    void *GetNext(void *str_return_data, void *src_data,  uint32_t &return_id, uint32_t &return_size);
     void SeekInit();
 
 
 
 
   private:
-    unsigned long table_size_;
-    unsigned long cur_pos_;  
-    unsigned long reading_pos_;
+    uint32_t table_size_;
+    uint32_t cur_pos_;  
+    uint32_t reading_pos_;
 
   private:
-    unsigned long GetWord(const char *src_data);
+    uint32_t GetWord(const char *src_data);
 
+    uint32_t GetWord(void *src_data);
 
 };
 
