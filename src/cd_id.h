@@ -103,12 +103,10 @@ class CDID {
     CDID& operator=(const CDID& that);
 
 #ifdef szhang
-    //SZ: reload '==' operator
-    bool operator==(const CDID &other) const ;
-
     //SZ: print function
     void Print ();
 #endif
+    bool operator==(const CDID& that) const;
     
     uint32_t level(void)         const { return cd_name_.level(); }
     uint32_t rank_in_level(void) const { return cd_name_.rank_in_level(); }
@@ -117,9 +115,9 @@ class CDID {
     int      task_in_color(void) const { return node_id_.task_in_color(); }
     int      head(void)          const { return node_id_.head(); }
     int      task_count(void)    const { return node_id_.size(); }
-    int      object_id(void)     const { return object_id_; }
-    int      sequential_id(void) const { return sequential_id_; }
-    int      domain_id(void)     const { return domain_id_; }
+    uint32_t object_id(void)     const { return object_id_; }
+    uint32_t sequential_id(void) const { return sequential_id_; }
+    uint32_t domain_id(void)     const { return domain_id_; }
     CDNameT  cd_name(void)       const { return cd_name_; }
     NodeID   node_id(void)       const { return node_id_; }
     bool     IsHead(void)        const { return node_id_.IsHead(); }

@@ -39,6 +39,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <ostream>
 
+#ifdef szhang
+#include "cd_global.h"
+#endif
+
 namespace cd {
 
 class CDNameT {
@@ -62,22 +66,31 @@ public:
     level_         = parent_cdname.level() + 1;
     rank_in_level_ = num_children*(parent_cdname.rank_in_level()) + color;
     size_          = num_children;
+
+    PRINT_DEBUG("Here inside CDNameT with parent:\n");
+    PRINT_DEBUG("level_=%lu, rank_in_level_=%lu, size_=%lu\n", 
+        (unsigned long)level_, (unsigned long)rank_in_level_, (unsigned long)size_);
   }
 
-  CDNameT(CDNameT&& that) {
-    level_         = that.level();
-    rank_in_level_ = that.rank_in_level();
-    size_          = that.size();
-  }
+  ////SZ
+  //CDNameT(CDNameT&& that) {
+  //  level_         = that.level();
+  //  rank_in_level_ = that.rank_in_level();
+  //  size_          = that.size();
+  //}
 
   ~CDNameT()
   {}
  
-  CDNameT& operator=(CDNameT& that) {
+  CDNameT& operator=(const CDNameT& that) {
     level_         = that.level();
     rank_in_level_ = that.rank_in_level();
     size_          = that.size();
     return *this;
+  }
+
+  bool operator==(const CDNameT& that) const {
+    return (level_ == that.level()) && (rank_in_level_ == that.rank_in_level()) && (size_ == that.size());
   }
 };
 

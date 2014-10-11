@@ -33,6 +33,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifdef szhang
+
 #include "comm_log.h"
 #include "cd.h"
 #include <string.h>
@@ -99,24 +101,25 @@ CommLog::~CommLog()
   //log_table_
   if (log_table_.base_ptr_ != NULL) 
   {
-    PRINT_DEBUG("delete log_table_.base_ptr_\n");
+    PRINT_DEBUG("delete log_table_.base_ptr_ (%p)\n", log_table_.base_ptr_);
     delete log_table_.base_ptr_;
   }
 
   //log_queue_
   if (log_queue_.base_ptr_ != NULL)
   {
-    PRINT_DEBUG("delete log_queue_.base_ptr_\n");
+    PRINT_DEBUG("delete log_queue_.base_ptr_ (%p)\n", log_queue_.base_ptr_);
     delete log_queue_.base_ptr_;
   }
 
   //child_log_
   if (child_log_.base_ptr_ != NULL)
   {
-    PRINT_DEBUG("delete child_log_.base_ptr_\n");
+    PRINT_DEBUG("delete child_log_.base_ptr_ (%p)\n", child_log_.base_ptr_);
     delete child_log_.base_ptr_;
   }
   
+  PRINT_DEBUG("Reach the end of CommLog destructor...\n");
 }
 
 
@@ -215,6 +218,8 @@ CommLogErrT CommLog::AccessLog(void * data_ptr, unsigned long data_length)
 
 CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length)
 {
+  PRINT_DEBUG("LogData of address (%p) and length(%ld)\n", data_ptr, data_length);
+
   CommLogErrT ret;
 
   //TODO: should also log accessed address??
@@ -259,9 +264,9 @@ CommLogErrT CommLog::WriteLogTable (void * data_ptr, unsigned long data_length)
 CommLogErrT CommLog::WriteLogQueue (void * data_ptr, unsigned long data_length)
 {
   CommLogErrT ret;
-  if (log_queue_.cur_pos_ + data_length >= log_queue_.queue_size_)
+  if (log_queue_.cur_pos_ + data_length > log_queue_.queue_size_)
   {
-    ret = IncreaseLogQueueSize();
+    ret = IncreaseLogQueueSize(data_length);
     if (ret == kCommLogAllocFailed) return ret;
   }
 
@@ -295,9 +300,17 @@ CommLogErrT CommLog::IncreaseLogTableSize()
 }
 
 
-CommLogErrT CommLog::IncreaseLogQueueSize()
+// increase log queue size to hold data of size of "length"
+CommLogErrT CommLog::IncreaseLogQueueSize(unsigned long length)
 {
-  char * tmp_ptr = new char [log_queue_.queue_size_ + queue_size_unit_];
+  unsigned long required_length = ((log_queue_.cur_pos_+length)/queue_size_unit_+1)*queue_size_unit_;
+  if (required_length <= log_queue_.queue_size_)
+  {
+    ERROR_MESSAGE("Inside IncreaseLogQueueSize, required_length (%ld) is smaller than log_queue_.queue_size_ (%ld)!!\n",
+                  required_length, log_queue_.queue_size_);
+    return kCommLogError;
+  }
+  char * tmp_ptr = new char [required_length];
   if (tmp_ptr == NULL) return kCommLogAllocFailed;
 
   // copy old data in
@@ -310,7 +323,7 @@ CommLogErrT CommLog::IncreaseLogQueueSize()
   log_queue_.base_ptr_ = tmp_ptr;
 
   // increase queue_size_
-  log_queue_.queue_size_ += queue_size_unit_;
+  log_queue_.queue_size_ = required_length;
 
   return kCommLogOK;
 }
@@ -432,7 +445,7 @@ CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
   memcpy (&(dst_cl_ptr->child_log_.base_ptr_[dst_cl_ptr->child_log_.cur_pos_]), 
       child_log_.base_ptr_, size);
   dst_cl_ptr->child_log_.cur_pos_ += size;
-  PRINT_DEBUG("After child log queue data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+  PRINT_DEBUG("After child queue data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
 
   PRINT_DEBUG("After: child_log_.size_= %ld\n", dst_cl_ptr->child_log_.size_);
 
@@ -443,6 +456,8 @@ CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
 // input parameter
 CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
 {
+  PRINT_DEBUG("ReadData to address (%p) and length(%ld)\n", buffer, length);
+
   if (log_table_.cur_pos_ == 0)
   {
     ERROR_MESSAGE("Empty logs!\n");
@@ -462,9 +477,9 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
   log_table_reexec_pos_++;
   if (log_table_reexec_pos_ == log_table_.cur_pos_)
   {
-    PRINT_DEBUG("Reach end of log_table_!\n");
-
     comm_log_mode_ = kGenerateLog;
+
+    PRINT_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
     return kCommLogCommLogModeFlip;
   }
 
@@ -489,6 +504,8 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
 void CommLog::Print()
 {
   my_cd_->GetCDID().Print();
+
+  printf("\ncomm_log_mode_=%d\n", comm_log_mode_);
 
   printf("\nUnits:\n");
   printf("queue_size_unit_ = %ld\n", queue_size_unit_);
@@ -646,13 +663,26 @@ CommLogErrT CommLog::FindChildLogs(CDID child_cd_id, char** src_ptr)
   unsigned long tmp_index=0;
   unsigned long length;
   CDID cd_id;
+  #ifdef _DEBUG
+  PRINT_DEBUG("Inside FindChildLogs to print CDID wanted:\n");
+  child_cd_id.Print();
+  #endif
+
   while(tmp_index < child_log_.cur_pos_)
   {
     memcpy(&length, child_log_.base_ptr_+tmp_index, sizeof(unsigned long));
     memcpy(&cd_id, child_log_.base_ptr_+tmp_index+sizeof(unsigned long), sizeof(CDID));
 
     //SZ: reloaded '==' operator for CDID class
-    if (cd_id == child_cd_id) break;
+    #ifdef _DEBUG
+    PRINT_DEBUG("Temp CDID got:\n");
+    cd_id.Print();
+    #endif
+    if (cd_id == child_cd_id) 
+    {
+      PRINT_DEBUG("Find the correct children logs\n");
+      break;
+    }
     tmp_index += length;
   }
 
@@ -674,3 +704,5 @@ void CommLog::Reset()
   log_queue_.cur_pos_ = 0;
   child_log_.cur_pos_ = 0;
 }
+
+#endif

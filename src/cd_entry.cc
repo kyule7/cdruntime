@@ -232,8 +232,8 @@ DataHandle* CDEntry::GetBuffer() {
   DataHandle* buffer=0;
   DataHandle real_dst_data;
 
-	std::cout <<"ref name: "    << dst_data_.ref_name() 
-            << ", at level: " << ptr_cd()->GetCDID().level()<<std::endl;
+//	std::cout <<"ref name: "    << dst_data_.ref_name() 
+//            << ", at level: " << ptr_cd()->GetCDID().level()<<std::endl;
 
 
 
@@ -268,7 +268,7 @@ DataHandle* CDEntry::GetBuffer() {
       CDEntry* entry = NULL;
 			while( parent_cd != NULL ) {
 		    entry = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
-				std::cout <<"ref name: "    << entry->dst_data_.ref_name() 
+				std::cout <<"current entry name : "<< entry->name() << " with ref name : "    << entry->dst_data_.ref_name() 
                   << ", at level: " << entry->ptr_cd()->GetCDID().level()<<std::endl;
 
         if(entry != NULL) {

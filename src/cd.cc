@@ -222,6 +222,10 @@ CD::~CD()
     PRINT_DEBUG("Delete comm_log_ptr_\n");
     delete comm_log_ptr_;
   }
+  else 
+  {
+    PRINT_DEBUG("NULL comm_log_ptr_ pointer, this CD should be root CD or strict CD...\n");
+  }
 #endif
 }
 
@@ -1205,9 +1209,10 @@ void CD::DeleteEntryDirectory(void)
 {
 //  cout<<"Delete Entry In"<<endl; getchar();
   for(std::list<CDEntry>::iterator it = entry_directory_.begin();
-      it != entry_directory_.end(); ++it) {
+      it != entry_directory_.end(); ) {
     it->Delete();
-    //entry_directory_.erase(it);
+    entry_directory_map_.erase(it->name());
+    entry_directory_.erase(it++);
   }
 
 //  for(std::map<std::string, CDEntry*>::iterator it = entry_directory_map_.begin();
@@ -1287,5 +1292,33 @@ bool CD::IsParentLocal()
 CDHandle* CD::GetParentHandle()
 {
   return CDPath::GetParentCD();
+}
+
+//SZ
+CommLogErrT CD::LogData(void *data_ptr, unsigned long length)
+{
+  if (comm_log_ptr_ == NULL)
+  {
+    ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to log data!\n");
+    return kCommLogError;
+  }
+  return comm_log_ptr_->LogData(data_ptr, length);
+}
+
+//SZ
+CommLogErrT CD::ReadData(void *data_ptr, unsigned long length)
+{
+  if (comm_log_ptr_ == NULL)
+  {
+    ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to read data!\n");
+    return kCommLogError;
+  }
+  return comm_log_ptr_->ReadData(data_ptr, length);
+}
+
+//SZ
+CommLogMode CD::GetCommLogMode()
+{
+  return comm_log_ptr_->GetCommLogMode();
 }
 #endif

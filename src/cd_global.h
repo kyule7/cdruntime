@@ -187,9 +187,10 @@ namespace cd {
 #define DATA_MALLOC malloc
 #define DATA_FREE free
 
-//SZ: change the following macro to accept multiple arguments
+//SZ: change the following macro to 1) add "Error: " before all error messages,
+//    2) accept multiple arguments, and 3) assert(0) in ERROR_MESSAGE
 //#define ERROR_MESSAGE(X) printf(X);
-#define ERROR_MESSAGE(...) {printf("\nError: ");printf(__VA_ARGS__);}
+#define ERROR_MESSAGE(...) {printf("\nError: ");printf(__VA_ARGS__);assert(0);}
 //#ifdef DEBUG
 //#define DEBUG_PRINT(...) {printf(__VA_ARGS__);}
 //#else

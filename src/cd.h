@@ -329,11 +329,18 @@ update the preserved data.
 
 #ifdef szhang
     //SZ
+    //FIXME: no function should return CommLogErrT, change to CD error types...
     CommLogErrT CommLogCheckAlloc(unsigned long length);
     //SZ 
     bool IsParentLocal();
     //SZ
     CDHandle* GetParentHandle();
+    //SZ
+    CommLogErrT LogData(void *data_ptr, unsigned long length);
+    //SZ
+    CommLogErrT ReadData(void *data_ptr, unsigned long length);
+    //SZ
+    CommLogMode GetCommLogMode();
 #endif
     
     CDNameT& GetCDName(void)  { return cd_id_.cd_name_; }

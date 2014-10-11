@@ -119,7 +119,7 @@ class cd::CommLog {
     void InitInternal();
 
     CommLogErrT IncreaseLogTableSize();
-    CommLogErrT IncreaseLogQueueSize();
+    CommLogErrT IncreaseLogQueueSize(unsigned long length);
 
     CommLogErrT WriteLogTable (void * data_ptr, unsigned long data_length);
     CommLogErrT WriteLogQueue (void * data_ptr, unsigned long data_length);
