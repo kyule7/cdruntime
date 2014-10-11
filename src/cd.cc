@@ -474,8 +474,8 @@ CDErrT CD::Preserve(void* data,
 
 PrvMediumT CD::GetPlaceToPreserve()
 {
-  return kMemory;
-//  return kSSD;
+//  return kMemory;
+  return kSSD;
 //  if(GetCDID().level()==1) return kHDD;
 //  else return kSSD;
 }
@@ -1079,14 +1079,30 @@ void CD::DeleteEntryDirectory(void)
   for(std::list<CDEntry>::iterator it = entry_directory_.begin();
       it != entry_directory_.end(); ) {
 
-//    uint32_t entry_len=0;
-//    void *ser_entry = it->Serialize(entry_len);
-//
-//    std::cout << "ser entry : "<< ser_entry << std::endl;
-//    CDEntry new_entry;
-//    std::cout << "\n\n--------------------------------\n"<<std::endl;
-//    new_entry.Deserialize(ser_entry);
+    uint32_t entry_len=0;
+    void *ser_entry = it->Serialize(entry_len);
 
+    std::cout << "ser entry : "<< ser_entry << std::endl;
+    CDEntry new_entry;
+    std::cout << "\n\n--------------------------------\n"<<std::endl;
+    new_entry.Deserialize(ser_entry);
+    cout << "before!!!! " << (it->src_data_).address_data()<<endl<<endl;
+    cout << "\n\n\nafter!!!! " << new_entry.src_data_.address_data()<<endl;
+
+    cout << "before!!!! " << it->name() <<endl<<endl;
+    cout << "\n\n\nafter!!!! " << new_entry.name()<<endl;
+    cout << (*it == new_entry) << endl;
+/*
+    uint32_t data_handle_len=0;
+
+    void *ser_data_handle = (it->src_data_).Serialize(data_handle_len);
+    DataHandle new_data_handle;
+    new_data_handle.Deserialize(ser_data_handle);
+
+    std::cout <<"\n\n\noriginal : "<<(it->src_data_).file_name() << std::endl;
+    std::cout <<"unpacked : "<<new_data_handle.file_name() << std::endl << std::endl;
+    getchar();
+*/
     it->Delete();
     entry_directory_map_.erase(it->name());
     entry_directory_.erase(it++);

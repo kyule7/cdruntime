@@ -65,7 +65,7 @@ class cd::Packer
     Packer(uint32_t table_grow_unit, uint32_t data_grow_unit);
     virtual ~Packer();
 
-    virtual uint32_t Add(uint32_t id, uint32_t length, const void *position);
+    virtual uint32_t Add(uint32_t id, uint32_t length, void *position);
     virtual char *GetTotalData(uint32_t &total_data_size);
 
 

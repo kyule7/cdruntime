@@ -116,6 +116,13 @@ class DataHandle : public Serializable {
     void        set_len(uint64_t len)                      { len_ = len; }
     void        set_handle_type(const HandleType& handle_type) { handle_type_=handle_type; }
 
+
+    bool operator==(const DataHandle& that) const {
+      return (handle_type_ == that.handle_type_) && (node_id_ == that.node_id_) 
+             && ( address_data_== that.address_data_) && (len_ == that.len_) 
+             && (file_name_ == that.file_name_) && (ref_name_ == that.ref_name_) 
+             && (ref_offset_ == that.ref_offset_);
+    }
   public: 
     //we need serialize deserialize interface here.
     void *Serialize(uint32_t& len_in_bytes)
@@ -128,6 +135,7 @@ class DataHandle : public Serializable {
       data_packer.Add(DATA_PACKER_NODE_ID, node_id_packed_len, node_id_packed_p);
       data_packer.Add(DATA_PACKER_HANDLE_TYPE, sizeof(HandleType), &handle_type_);
       data_packer.Add(DATA_PACKER_ADDRESS, sizeof(void*), &address_data_);
+      std::cout << "address data is packed : "<< address_data_ << "\n\n" << std::endl; //getchar();
       data_packer.Add(DATA_PACKER_LEN, sizeof(uint64_t), &len_);
       data_packer.Add(DATA_PACKER_FILENAME, file_name_.size()+1, const_cast<char*>(file_name_.c_str())); // string.size() + 1 is for '\0'
       data_packer.Add(DATA_PACKER_REFNAME, ref_name_.size()+1, const_cast<char*>(ref_name_.c_str())); // string.size() + 1 is for '\0'
@@ -143,29 +151,34 @@ class DataHandle : public Serializable {
       uint32_t dwGetID;
       void *node_id_unpacked=0;
 
-      data_unpacker.GetNext(node_id_unpacked, object, dwGetID, return_size);
+      node_id_unpacked = data_unpacker.GetNext((char *)object, dwGetID, return_size);
       std::cout << "Before Deserialize node_id"<<std::endl;
       node_id_.Deserialize(node_id_unpacked);
       std::cout << "1st unpacked thing in data_handle : " << node_id_ << ", return size : " << return_size << std::endl;
-      data_unpacker.GetNext(&handle_type_, object, dwGetID, return_size);
+
+      handle_type_ = *(HandleType *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
       std::cout << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;
-      data_unpacker.GetNext(&address_data_, object, dwGetID, return_size);
+
+      void *tmp_address_data = data_unpacker.GetNext((char *)object, dwGetID, return_size);
+      memcpy(&address_data_, tmp_address_data, sizeof(void *));
       std::cout << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;
-      data_unpacker.GetNext(&len_, object, dwGetID, return_size);
+
+      len_ = *(uint64_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
       std::cout << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
 
 
       char* unpacked_file_name=0;
       char* unpacked_ref_name=0;
-      data_unpacker.GetNext((void*)unpacked_file_name, object, dwGetID, return_size);
+      unpacked_file_name = (char *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
       std::cout << "5th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
-      data_unpacker.GetNext((void*)unpacked_ref_name, object, dwGetID, return_size);
+
+      unpacked_ref_name = (char *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
       std::cout << "6th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
 
       file_name_ = unpacked_file_name;
       ref_name_ = unpacked_ref_name;
 
-      data_unpacker.GetNext(&ref_offset_, object, dwGetID, return_size);
+      ref_offset_ = *(uint64_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
       std::cout << "7th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
     }
 

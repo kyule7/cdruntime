@@ -104,8 +104,25 @@ class cd::CDEntry : public cd::Serializable
 		CDEntryErrT Delete(void);
 
   public:
-		std::string name() const { return name_.c_str(); }
+		std::string name() const { return name_; }
     bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }
+
+    CDEntry& operator=(const CDEntry& that) {
+      name_ = that.name_;    
+      src_data_ = that.src_data_;
+      dst_data_ = that.dst_data_;
+      preserve_type_ = that.preserve_type_;
+      return *this;
+    }
+
+    bool operator==(const CDEntry& that) const {
+      return (name_ == that.name_) && (src_data_ == that.src_data_) 
+             && (dst_data_ == that.dst_data_) && (preserve_type_ == that.preserve_type_);
+    }
+
+
+
+
 
     CDEntryErrT SaveMem(void);
     CDEntryErrT SaveFile(std::string base, 
@@ -143,10 +160,15 @@ class cd::CDEntry : public cd::Serializable
       assert(src_packed_len != 0);
       assert(dst_packed_len != 0);
 
+      std::cout << "\npacked entry_name_ is :\t " << name_.c_str() <<std::endl<<std::endl;
       entry_packer.Add(ENTRY_PACKER_NAME, name_.size()+1, const_cast<char*>(name_.c_str())); // string.size() + 1 is for '\0'
 //      entry_packer.Add(ENTRY_PACKER_PTRCD, ptr_cd_packed_len, ptr_cd_packed_p);
+      
+      std::cout << "\npacked preserve_type_ is :\t " << preserve_type_ <<std::endl<<std::endl;
 
       entry_packer.Add(ENTRY_PACKER_PRESERVETYPE, sizeof(cd::CDPreserveT), &preserve_type_);
+
+      std::cout << "\npacked src_packed_ is :\t " << src_packed_p <<std::endl<<std::endl;
       entry_packer.Add(ENTRY_PACKER_SRC, src_packed_len, src_packed_p);
       entry_packer.Add(ENTRY_PACKER_DST, dst_packed_len, dst_packed_p); 
       std::cout << "\nCD Entry Serialize Done\n" << std::endl;
@@ -168,22 +190,26 @@ class cd::CDEntry : public cd::Serializable
       //char* unpacked_entry_name=0;
       char *unpacked_entry_name = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
       name_ = unpacked_entry_name;
-      std::cout << "1st unpacked thing in data_handle : " << name_ << ", return size : " << return_size << std::endl;
+      std::cout << "unpacked entry_name_ is :\t " << unpacked_entry_name <<std::endl;
+      std::cout << "1st unpacked thing in data_handle : " << name_ << ", return size : " << return_size << std::endl<< std::endl;
 
-      entry_unpacker.GetNext(&preserve_type_, object, dwGetID, return_size);
-      std::cout << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;
+      preserve_type_ = *(cd::CDPreserveT *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+      std::cout << "unpacked preserve_type_ is :\t " << preserve_type_ <<std::endl;
+      std::cout << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl << std::endl;
 
       std::cout << "\nBefore call GetNext for src data handle\tobject : " << object <<std::endl;
-      entry_unpacker.GetNext(src_unpacked, object, dwGetID, return_size);
-      std::cout << "\nBefore call GetNext for dst data handle\tobject : " << object <<std::endl<<std::endl;
-      entry_unpacker.GetNext(dst_unpacked, object, dwGetID, return_size);
+      src_unpacked = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+      std::cout << "\nBefore call GetNext for dst data handle\tobject : " << object <<std::endl;
+      std::cout << "src_unpacked is :\t " << src_unpacked <<std::endl;
+      std::cout << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl << std::endl;
+
+
+      dst_unpacked = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
       std::cout << "\nBefore call src_data.Deserialize\tobject : " << object <<std::endl;
+      std::cout << "dst_unpacked is :\t " << dst_unpacked <<std::endl;
+      std::cout << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
       src_data_.Deserialize(src_unpacked);
       dst_data_.Deserialize(dst_unpacked);
-
-
-      std::cout << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;
-      std::cout << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
     }
 
   

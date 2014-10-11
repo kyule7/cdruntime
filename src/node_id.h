@@ -126,13 +126,16 @@ public:
     Unpacker node_id_unpacker;
     uint32_t return_size;
     uint32_t dwGetID;
-    node_id_unpacker.GetNext(&color_, object, dwGetID, return_size);
+    color_ = *(ColorT *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
     std::cout << "first unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
-    node_id_unpacker.GetNext(&task_in_color_, object, dwGetID, return_size);
+
+    task_in_color_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
     std::cout << "second unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
-    node_id_unpacker.GetNext(&head_, object, dwGetID, return_size);
+
+    head_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
     std::cout << "third unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
-    node_id_unpacker.GetNext(&size_, object, dwGetID, return_size);
+
+    size_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
     std::cout << "fourth unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
   }
 

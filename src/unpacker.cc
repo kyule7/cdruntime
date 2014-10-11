@@ -120,26 +120,30 @@ char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_s
   char *str_return_data;
   uint32_t id, size, pos;
 
-    std::cout << "Unpacker::GetNext"<<std::endl;
-    std::cout << "src_data : " << (void *)src_data << ", return_id : " << return_id << ", return_size : "<< return_size << std::endl; getchar(); 
+    std::cout << "==========================================================\nUnpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_size)"<<std::endl;
+//    std::cout << "src_data : " << (void *)src_data << ", return_id : " << return_id << ", return_size : "<< return_size << std::endl; getchar(); 
 
   table_size_ = GetWord(src_data);
   std::cout << "table size : " << table_size_ << std::endl;
   if( cur_pos_ < table_size_ )
   {
-    id = GetWord( src_data + cur_pos_ );
-    size = GetWord(src_data + cur_pos_ + 4);
-    pos  = GetWord(src_data + cur_pos_ + 8);
+    id   = GetWord( src_data + cur_pos_ );
+    size = GetWord( src_data + cur_pos_ + 4);
+    pos  = GetWord( src_data + cur_pos_ + 8);
     str_return_data = new char[size];
     
-    std::cout << "id: "<< id << " ("<< (void *)((char *)src_data + cur_pos_) <<"), size : " << size << " (" <<  (void *)((char *)src_data + cur_pos_+4) <<"), pos : " << pos << " ("<< (void *)((char *)src_data + cur_pos_+8)<<")"<<std::endl; getchar(); 
-    std::cout << "---"<< std::endl;
+    std::cout << "[Get Info from table] id: "<< id << " ("<< (void *)((char *)src_data + cur_pos_) <<"), size : " << size << " (" <<  (void *)((char *)src_data + cur_pos_+4) <<"), pos : " << pos << " ("<< (void *)((char *)src_data + cur_pos_+8)<<")"<<std::endl; 
+    std::cout << "Bring data from " << (void *)((char *)src_data+table_size_+pos) << " to "<< (void *)str_return_data << std::endl;  
 
-    memcpy(str_return_data, src_data+table_size_+pos, size);  
+    memcpy(str_return_data, src_data+table_size_+pos, size); 
+
+    std::cout << " Read Data is "<< (char *)str_return_data << std::endl;
+ 
     return_id = id;
     return_size = size;
     cur_pos_ +=12;
 
+    std::cout << "=========================================================="<<std::endl; //getchar();
     return str_return_data;
   }
   else
@@ -149,8 +153,8 @@ char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_s
 void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint32_t &return_id, uint32_t &return_size)
 {
   
-    std::cout << "Unpacker::GetNext"<<std::endl;
-    std::cout << "str_return_data: "<< str_return_data << ", src_data : " << src_data << ", return_id : " << return_id << ", return_size : "<< return_size << std::endl; getchar(); 
+    std::cout << "==========================================================\nUnpacker::GetNext"<<std::endl;
+//    std::cout << "str_return_data: "<< str_return_data << ", src_data : " << src_data << ", return_id : " << return_id << ", return_size : "<< return_size << std::endl; getchar(); 
   uint32_t id, size, pos;
 
 
@@ -158,16 +162,20 @@ void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint32_t &return
 
   if( cur_pos_ < table_size_ )
   {
-    id = GetWord( (char *)src_data + cur_pos_ );
-    size = GetWord( (char *)src_data + cur_pos_ + 4);
-    pos  = GetWord( (char *)src_data + cur_pos_ + 8);
-    str_return_data = new char[size];
-    std::cout << "id: "<< id << ", size : " << size << ", pos : " << pos << std::endl;  
-    std::cout << "id: "<< id << " ("<< (void *)((char *)src_data + cur_pos_) <<"), size : " << size << " (" <<  (void *)((char *)src_data + cur_pos_+4) <<"), pos : " << pos << " ("<< (void *)((char *)src_data + cur_pos_+8)<<")"<<std::endl; getchar(); 
-    memcpy(str_return_data, (char *)src_data+table_size_+pos, size);  
+    id   = GetWord( (char *)src_data + cur_pos_ );
+    size = GetWord( (char *)src_data + cur_pos_ + 4 );
+    pos  = GetWord( (char *)src_data + cur_pos_ + 8 );
+    std::cout << "[Get Info from table] id: "<< id << " ("<< (void *)((char *)src_data + cur_pos_) <<"), size : " << size << " (" <<  (void *)((char *)src_data + cur_pos_+4) <<"), pos : " << pos << " ("<< (void *)((char *)src_data + cur_pos_+8)<<")"<<std::endl; 
+    std::cout << "Bring data from " << (void *)((char *)src_data+table_size_+pos) << " to "<< str_return_data << std::endl;  
+    memcpy(str_return_data, (char *)src_data+table_size_+pos, size); 
+
+
+    std::cout << " Read Data is "<< (char *)str_return_data << std::endl;
+ 
     return_id = id;
     return_size = size;
     cur_pos_ +=12;
+    std::cout << "=========================================================="<<std::endl; //getchar();
 
     return str_return_data;
   }
@@ -183,7 +191,7 @@ void Unpacker::SeekInit()
 
 uint32_t Unpacker::GetWord(void *src_data)
 {
-  std::cout << "uint32_t Unpacker::GetWord(void *src_data) "<< (void *)src_data << std::endl;
+//  std::cout << "uint32_t Unpacker::GetWord(void *src_data) "<< (void *)src_data << std::endl;
   uint32_t return_value;
   memcpy( &return_value, src_data, sizeof(uint32_t) );
   return return_value;
@@ -191,7 +199,7 @@ uint32_t Unpacker::GetWord(void *src_data)
 
 uint32_t Unpacker::GetWord(const char *src_data)
 {
-  std::cout << "uint32_t Unpacker::GetWord(const char *src_data) " << (void *)src_data <<  std::endl;
+//  std::cout << "uint32_t Unpacker::GetWord(const char *src_data) " << (void *)src_data <<  std::endl;
   uint32_t return_value;
   memcpy( &return_value, src_data, sizeof(uint32_t) );
   return return_value;
