@@ -198,15 +198,15 @@ namespace cd {
 //#define DEBUG_PRINT(...) {}
 //#endif
 
-#ifdef szhang
-extern FILE * fp;
-#endif
+//SZ: when testing MPI functions, print to files is easier
+//#ifdef szhang
+//extern FILE * fp;
+//#endif
 
 
 #if _DEBUG
-  //SZ: FIXME: tmp to change debug print to print to files
-  //#define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
-  #define PRINT_DEBUG(...) {fprintf(fp, __VA_ARGS__);}
+  #define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
+  //#define PRINT_DEBUG(...) {fprintf(fp, __VA_ARGS__);}
   #define PRINT_DEBUG2(X,Y) printf(X,Y);
 #else
   #define PRINT_DEBUG(...) {}
