@@ -198,22 +198,19 @@ namespace cd {
 //#define DEBUG_PRINT(...) {}
 //#endif
 
+#ifdef szhang
+extern FILE * fp;
+#endif
 
 
 #if _DEBUG
-
-//SZ: change the following macro to 
-//#define PRINT_DEBUG(X) printf(X);
-#define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
-#define PRINT_DEBUG2(X,Y) printf(X,Y);
-
+  //SZ: FIXME: tmp to change debug print to print to files
+  //#define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
+  #define PRINT_DEBUG(...) {fprintf(fp, __VA_ARGS__);}
+  #define PRINT_DEBUG2(X,Y) printf(X,Y);
 #else
-
-//SZ
-//#define PRINT_DEBUG(X) printf(X);
-#define PRINT_DEBUG(...) {}
-#define PRINT_DEBUG2(X,Y) printf(X,Y);
-
+  #define PRINT_DEBUG(...) {}
+  #define PRINT_DEBUG2(X,Y) printf(X,Y);
 #endif
 
 #define MAX_FILE_PATH 2048

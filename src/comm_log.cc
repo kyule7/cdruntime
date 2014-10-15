@@ -547,40 +547,40 @@ void CommLog::Print()
 {
   my_cd_->GetCDID().Print();
 
-  printf("\ncomm_log_mode_=%d\n", comm_log_mode_);
+  PRINT_DEBUG("\ncomm_log_mode_=%d\n", comm_log_mode_);
 
-  printf("\nUnits:\n");
-  printf("queue_size_unit_ = %ld\n", queue_size_unit_);
-  printf("table_size_unit_ = %ld\n", table_size_unit_);
-  printf("child_log_size_unit_ = %ld\n", child_log_size_unit_);
+  PRINT_DEBUG("\nUnits:\n");
+  PRINT_DEBUG("queue_size_unit_ = %ld\n", queue_size_unit_);
+  PRINT_DEBUG("table_size_unit_ = %ld\n", table_size_unit_);
+  PRINT_DEBUG("child_log_size_unit_ = %ld\n", child_log_size_unit_);
 
-  printf("\nlog_table_:\n");
-  printf("base_ptr_ = %p\n", log_table_.base_ptr_);
-  printf("cur_pos_ = %ld\n", log_table_.cur_pos_);
-  printf("table_size_ = %ld\n", log_table_.table_size_);
+  PRINT_DEBUG("\nlog_table_:\n");
+  PRINT_DEBUG("base_ptr_ = %p\n", log_table_.base_ptr_);
+  PRINT_DEBUG("cur_pos_ = %ld\n", log_table_.cur_pos_);
+  PRINT_DEBUG("table_size_ = %ld\n", log_table_.table_size_);
   
   unsigned long ii;
   for (ii=0;ii<log_table_.cur_pos_;ii++)
   {
-    printf("log_table_.base_ptr_[%ld]:\n", ii);
-    printf("pos_=%ld, length_=%ld\n\n"
+    PRINT_DEBUG("log_table_.base_ptr_[%ld]:\n", ii);
+    PRINT_DEBUG("pos_=%ld, length_=%ld\n\n"
         ,log_table_.base_ptr_[ii].pos_
         ,log_table_.base_ptr_[ii].length_);
   }
 
-  printf ("log_table_reexec_pos_ = %ld\n", log_table_reexec_pos_);
+  PRINT_DEBUG ("log_table_reexec_pos_ = %ld\n", log_table_reexec_pos_);
 
-  printf("\nlog_queue_:\n");
-  printf("base_ptr_ = %p\n", log_queue_.base_ptr_);
-  printf("cur_pos_ = %ld\n", log_queue_.cur_pos_);
-  printf("queue_size_ = %ld\n", log_queue_.queue_size_);
+  PRINT_DEBUG("\nlog_queue_:\n");
+  PRINT_DEBUG("base_ptr_ = %p\n", log_queue_.base_ptr_);
+  PRINT_DEBUG("cur_pos_ = %ld\n", log_queue_.cur_pos_);
+  PRINT_DEBUG("queue_size_ = %ld\n", log_queue_.queue_size_);
 
-  printf("\nchild_log_:\n");
-  printf("base_ptr_ = %p\n", child_log_.base_ptr_);
-  printf("cur_pos_ = %ld\n", child_log_.cur_pos_);
-  printf("size_ = %ld\n", child_log_.size_);
+  PRINT_DEBUG("\nchild_log_:\n");
+  PRINT_DEBUG("base_ptr_ = %p\n", child_log_.base_ptr_);
+  PRINT_DEBUG("cur_pos_ = %ld\n", child_log_.cur_pos_);
+  PRINT_DEBUG("size_ = %ld\n", child_log_.size_);
 
-  printf("\nnew_log_generated_ = %d\n\n", new_log_generated_);
+  PRINT_DEBUG("\nnew_log_generated_ = %d\n\n", new_log_generated_);
 }
 
 
@@ -610,9 +610,6 @@ CommLogErrT CommLog::UnpackLogs(char * src_ptr)
     ERROR_MESSAGE("NULL src_ptr to unpack logs\n");
     return kCommLogError;
   }
-
-  // set comm_log_mode_ to kReplayLogs
-  comm_log_mode_ = kReplayLog;
 
   unsigned long length;
   unsigned long index;

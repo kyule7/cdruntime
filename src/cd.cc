@@ -412,6 +412,7 @@ CDErrT CD::Begin(bool collective, const char* label)
         PRINT_DEBUG("With comm log mode = kReplayLog, unpack logs to children\n");
         if (IsParentLocal())
         {
+          comm_log_ptr_->SetCommLogMode(kReplayLog);
           CommLogErrT ret;
           ret = GetParentHandle()->ptr_cd_->comm_log_ptr_->UnpackLogsToChildCD(this);
           if (ret == kCommLogChildLogNotFound)
@@ -462,8 +463,8 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
           PRINT_DEBUG("Pushing logs to parent...\n");
           comm_log_ptr_->PackAndPushLogs(GetParentHandle()->ptr_cd_);
         #ifdef _DEBUG
-          printf("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
-          printf("\nchild comm_log print:\n");
+          PRINT_DEBUG("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
+          PRINT_DEBUG("\nchild comm_log print:\n");
           comm_log_ptr_->Print();
         #endif
 
@@ -475,9 +476,10 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
           {
             GetParentHandle()->ptr_cd_->comm_log_ptr_->SetCommLogMode(kGenerateLog);
           }
+          GetParentHandle()->ptr_cd_->comm_log_ptr_->SetNewLogGenerated(true);
         #ifdef _DEBUG
-          printf("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
-          printf("parent comm_log print:\n");
+          PRINT_DEBUG("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
+          PRINT_DEBUG("parent comm_log print:\n");
           GetParentHandle()->ptr_cd_->comm_log_ptr_->Print();
         #endif
         }
@@ -590,13 +592,13 @@ CDErrT CD::Preserve(void* data,
       // we reached the last preserve function call. 
 
       //Since we have reached the last point already now convert current execution mode into kExecution
-      //      printf("Now reached end of entry directory, now switching to normal execution mode\n");
+      //      PRINT_DEBUG("Now reached end of entry directory, now switching to normal execution mode\n");
       cd_exec_mode_  = kExecution;    
   //  return InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
       return (kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? kOK : kError;
     }
     else {
-      //     printf("Reexecution mode...\n");
+      //     PRINT_DEBUG("Reexecution mode...\n");
       CDEntry cd_entry = *iterator_entry_;
       iterator_entry_++;
 #if _WORK
@@ -707,7 +709,7 @@ CDErrT CD::Preserve(void* data,
     // Everytime restore is called one entry is restored.
     if( iterator_entry_ != entry_directory_.end() ) { // normal case
 
-//      printf("Reexecution mode start...\n");
+//      PRINT_DEBUG("Reexecution mode start...\n");
 
       CDEntry *cd_entry = &*iterator_entry_;
       ++iterator_entry_;
@@ -729,7 +731,7 @@ CDErrT CD::Preserve(void* data,
       // Since we have reached the last point already now convert current execution mode into kExecution
 
       ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
-      printf("Now reached end of entry directory, now switching to normal execution mode\n");
+      PRINT_DEBUG("Now reached end of entry directory, now switching to normal execution mode\n");
 
       cd_exec_mode_  = kExecution;    
       switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
@@ -741,7 +743,7 @@ CDErrT CD::Preserve(void* data,
 
     }
 
-    printf("Reexecution mode finished...\n");
+    PRINT_DEBUG("Reexecution mode finished...\n");
   }   // Re-execution mode ends
   else {  // Suspension mode
     // Is it okay ?
@@ -1113,11 +1115,11 @@ CDErrT CD::Reexecute(void)
 
   //TODO We need to consider collective re-start. 
   if(ctxt_prv_mode_ == kExcludeStack) {
-    printf("longjmp\n");
+    PRINT_DEBUG("longjmp\n");
     longjmp(jump_buffer_, 1);
   }
   else if (ctxt_prv_mode_ == kIncludeStack) {
-    printf("setcontext\n");
+    PRINT_DEBUG("setcontext\n");
     setcontext(&ctxt_); 
   }
 

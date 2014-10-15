@@ -143,19 +143,19 @@ std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
 //SZ: print function
 void CDID::Print ()
 {
-  std::cout << "CDID information:" << std::endl;
-  std::cout << "    domain_id_: " << domain_id_ << std::endl;
-  std::cout << "    object_id_: " << object_id_ << std::endl;
-  std::cout << "    sequential_id_: " << sequential_id_ << std::endl;
+  PRINT_DEBUG("CDID information:\n");
+  PRINT_DEBUG("    domain_id_: %ld\n"     , (unsigned long)domain_id_);
+  PRINT_DEBUG("    object_id_: %ld\n"     , (unsigned long)object_id_);
+  PRINT_DEBUG("    sequential_id_: %ld\n" , (unsigned long)sequential_id_);
 
-  std::cout << "    level: " << level() << std::endl;
-  std::cout << "    rank_in_level: " << rank_in_level() << std::endl;
-  std::cout << "    sibling_count: " << sibling_count() << std::endl;
+  PRINT_DEBUG("    level: %ld\n"          , (unsigned long)level());
+  PRINT_DEBUG("    rank_in_level: %ld\n"  , (unsigned long)rank_in_level());
+  PRINT_DEBUG("    sibling_count: %ld\n"  , (unsigned long)sibling_count());
 
-  std::cout << "    task_count: " << task_count() << std::endl;
-  std::cout << "    task_in_color: " << task_in_color() << std::endl;
-  std::cout << "    head: " << head() << std::endl;
-  std::cout << "    IsHead: " << IsHead() << std::endl;
+  PRINT_DEBUG("    task_count: %d\n"      , task_count());
+  PRINT_DEBUG("    task_in_color: %d\n"   , task_in_color());
+  PRINT_DEBUG("    head: %d\n"            , head());
+  PRINT_DEBUG("    IsHead: %d\n"          , IsHead());
 }
 #endif
 

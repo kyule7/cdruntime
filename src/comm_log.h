@@ -90,6 +90,11 @@ class cd::CommLog {
       return new_log_generated_;
     }
 
+    void SetNewLogGenerated(bool new_log_generated)
+    {
+      new_log_generated_ = new_log_generated;
+    }
+
     void ReInit();
 
     // Reset is called when a CD completes, so next CD_Begin can reuse all the allocated space
