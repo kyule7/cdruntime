@@ -44,7 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 using namespace std;
 
-#ifdef szhang
+#ifdef comm_log
 #include "cd_path.h"
 #endif
 
@@ -93,7 +93,7 @@ CD::CD()
 
   Init();  
 
-#ifdef szhang
+#ifdef comm_log
   // SZ
   // create instance for comm_log_ptr_ for relaxed CDs
   // if no parent assigned, then means this is root, so log mode will be kGenerateLog at creation point
@@ -145,7 +145,7 @@ CD::CD(CDHandle* cd_parent,
 
   Init();  
 
-#ifdef szhang
+#ifdef comm_log
   // SZ
   // create instance for comm_log_ptr_
   // comm_log is per thread per CD
@@ -250,7 +250,7 @@ CD::~CD()
 //  cd_parent_->RemoveChild(this);
   //FIXME : This will be done at the CDHandle::Destroy()
 
-#ifdef szhang
+#ifdef comm_log
   //Delete comm_log_ptr_
   if (comm_log_ptr_ != NULL)
   {
@@ -289,7 +289,7 @@ CDHandle* CD::Create(CDHandle* parent,
 
 ////SZ: unpack/pack logs at the boundary of begin/complete...
 ////TODO: this may be a performance bottleneck, and needed to be optimized...
-//#ifdef szhang
+//#ifdef comm_log
 //  //SZ: if in reexecution, need to unpack logs to childs
 //  if (new_cd->comm_log_ptr_->GetCommLogMode() == kReplayLog)
 //  {
@@ -362,7 +362,7 @@ CDErrT CD::Destroy(void)
 //  }  // for loop ends
 //#endif
 
-#ifdef szhang
+#ifdef comm_log
   if (GetParentHandle()!=NULL)
   {
     GetParentHandle()->ptr_cd_->child_seq_id_ = cd_id_.sequential_id();
@@ -398,7 +398,7 @@ CDErrT CD::Begin(bool collective, const char* label)
   //cout<<"inside CD::Begin"<<endl;
   PRINT_DEBUG("inside CD::Begin\n");
 
-#ifdef szhang
+#ifdef comm_log
   //SZ: if in reexecution, need to unpack logs to childs
   if (GetParentHandle()!=NULL)
   {
@@ -449,7 +449,7 @@ CDErrT CD::Begin(bool collective, const char* label)
  */
 CDErrT CD::Complete(bool collective, bool update_preservations)
 {
-#ifdef szhang
+#ifdef comm_log
   // SZ: pack logs and push to parent
   if (GetParentHandle()!=NULL)
   {
@@ -1093,7 +1093,7 @@ CDErrT CD::Reexecute(void)
   //            we need to change the cd_exec_mode_ and comm_log_mode_ outside this function
   cd_exec_mode_ = kReexecution; 
 
-#ifdef szhang
+#ifdef comm_log
   // SZ
   //// change the comm_log_mode_ into CommLog class
   //comm_log_mode_ = kReplayLog;  
@@ -1370,7 +1370,7 @@ void CD::DeleteEntryDirectory(void)
 //}
 
 
-#ifdef szhang
+#ifdef comm_log
 //SZ
 CommLogErrT CD::CommLogCheckAlloc(unsigned long length)
 {

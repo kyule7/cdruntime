@@ -62,7 +62,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <functional>
 //#include <array>
 
-#ifdef szhang
+#ifdef comm_log
 //SZ
 #include "comm_log.h"
 #endif
@@ -190,7 +190,7 @@ update the preserved data.
     // handler for log-related things
     CDLogHandle log_handle_;
 
-#ifdef szhang
+#ifdef comm_log
     //SZ
     cd::CommLog * comm_log_ptr_=NULL;
 
@@ -344,7 +344,7 @@ update the preserved data.
                                     uint32_t error_loc_mask, 
                                     CDErrT(*recovery_func)(std::vector< SysErrT > errors)=0);
 
-#ifdef szhang
+#ifdef comm_log
     //SZ
     //FIXME: no function should return CommLogErrT, change to CD error types...
     CommLogErrT CommLogCheckAlloc(unsigned long length);

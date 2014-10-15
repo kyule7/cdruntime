@@ -139,7 +139,7 @@ std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
 //  sequential_id_ = 0;
 //}
 
-#ifdef szhang
+#ifdef comm_log
 //SZ: print function
 void CDID::Print ()
 {

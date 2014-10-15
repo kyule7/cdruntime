@@ -102,7 +102,7 @@ class CDID {
 
     CDID& operator=(const CDID& that);
 
-#ifdef szhang
+#ifdef comm_log
     //SZ: print function
     void Print ();
     void SetSequentialID(uint32_t seq_id) {sequential_id_ = seq_id;}

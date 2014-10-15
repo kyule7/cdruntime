@@ -84,7 +84,7 @@ namespace cd {
   class RegenObject;  
   class RecoverObject;
   class SysErrT;
-#ifdef szhang
+#ifdef comm_log
   //SZ
   class CommLog;
 #endif
@@ -154,7 +154,7 @@ namespace cd {
                     kSSD,
                     kPFS};
 
-#ifdef szhang
+#ifdef comm_log
   //SZ
   enum CommLogErrT {kCommLogOK=0, 
                     kCommLogInitFailed, 
@@ -199,12 +199,13 @@ namespace cd {
 //#endif
 
 //SZ: when testing MPI functions, print to files is easier
-//#ifdef szhang
+//#ifdef comm_log
 //extern FILE * fp;
 //#endif
 
 
 #if _DEBUG
+  //SZ: change to this if want to compile test_comm_log.cc
   #define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
   //#define PRINT_DEBUG(...) {fprintf(fp, __VA_ARGS__);}
   #define PRINT_DEBUG2(X,Y) printf(X,Y);

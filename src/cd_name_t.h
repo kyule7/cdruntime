@@ -39,10 +39,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <ostream>
 
-#ifdef szhang
-#include "cd_global.h"
-#endif
-
 namespace cd {
 
 class CDNameT {
