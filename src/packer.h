@@ -37,7 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define _PACKER_H
 
 #include "cd_global.h"
-
+#include "cstdint"
 /*
 
    We have two main section. One section is Table section, it is kind of header where it locates where the data is, and shows the length of data element.
@@ -62,39 +62,39 @@ class cd::Packer
     enum PackerErrT {kOK =0, kMallocFailed, kReallocFailed};
 
     Packer();
-    Packer(unsigned long table_grow_unit, unsigned long data_grow_unit);
+    Packer(uint32_t table_grow_unit, uint32_t data_grow_unit);
     virtual ~Packer();
 
-    virtual unsigned int Add(unsigned long id, unsigned long length, const void *position);
-    virtual char *GetTotalData(unsigned long &total_data_size);
+    virtual uint32_t Add(uint32_t id, uint32_t length, void *position);
+    virtual char *GetTotalData(uint32_t &total_data_size);
 
 
 
-    virtual void SetBufferGrow( unsigned long table_grow_unit, unsigned long data_grow_unit);
-
-
-
-  private:
-    unsigned int ClearData();
-    unsigned int AddData(unsigned long id, unsigned long length, unsigned long position, char *ptr_data);
-    unsigned int CheckAlloc();
-    unsigned int CheckRealloc(unsigned long length);
-    void WriteWord(char *dst_buffer,unsigned long value);
-    void WriteData(char *ptr_data, unsigned long length, unsigned long position);
+    virtual void SetBufferGrow( uint32_t table_grow_unit, uint32_t data_grow_unit);
 
 
 
   private:
+    uint32_t ClearData();
+    uint32_t AddData(uint32_t id, uint32_t length, uint32_t position, char *ptr_data);
+    uint32_t CheckAlloc();
+    uint32_t CheckRealloc(uint32_t length);
+    void WriteWord(char *dst_buffer,uint32_t value);
+    void WriteData(char *ptr_data, uint32_t length, uint32_t position);
 
-    unsigned long table_grow_unit_;  // Growth unit is used when we need to increase the memory allocation size. This scheme is needed because we don't know how much will be needed at the beginning.  
-    unsigned long data_grow_unit_;   // This is the same as above but it is for the data section.  (Two section exist) 
 
-    unsigned long table_size_;   //Current table size.
-    unsigned long data_size_; 
-    unsigned long used_table_size_; 
-    unsigned long used_data_size_; 
 
-    unsigned long alloc_flag_;
+  private:
+
+    uint32_t table_grow_unit_;  // Growth unit is used when we need to increase the memory allocation size. This scheme is needed because we don't know how much will be needed at the beginning.  
+    uint32_t data_grow_unit_;   // This is the same as above but it is for the data section.  (Two section exist) 
+
+    uint32_t table_size_;   //Current table size.
+    uint32_t data_size_; 
+    uint32_t used_table_size_; 
+    uint32_t used_data_size_; 
+
+    uint32_t alloc_flag_;
 
     char *ptr_table_;
     char *ptr_data_;

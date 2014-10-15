@@ -84,16 +84,16 @@ CDID& CDID::operator=(const CDID& that)
 {
   domain_id_     = that.domain_id();
   sequential_id_ = that.sequential_id();
-  object_id_     = that.object_id();
+  cd_name_       = that.cd_name();
+  node_id_       = that.node_id();
+//  object_id_     = that.object_id();
   return *this;
 }
 
 
 bool CDID::operator==(const CDID& that) const
 {
-  //SZ
-  //return (node_id_ == that.node_id()) && (cd_name_ == that.cd_name()) && (object_id_ == that.object_id()) && (sequential_id_ == that.sequential_id());
-  return (node_id_ == that.node_id()) && (cd_name_ == that.cd_name()) && (sequential_id_ == that.sequential_id());
+  return (node_id_ == that.node_id()) && (cd_name_ == that.cd_name()) &&  (sequential_id_ == that.sequential_id());
 
 }
 

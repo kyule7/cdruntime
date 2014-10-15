@@ -105,6 +105,7 @@ class CDID {
 #ifdef szhang
     //SZ: print function
     void Print ();
+    void SetSequentialID(uint32_t seq_id) {sequential_id_ = seq_id;}
 #endif
     bool operator==(const CDID& that) const;
     

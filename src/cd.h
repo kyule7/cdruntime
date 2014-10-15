@@ -42,6 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_id.h"
 #include "cd_log_handle.h"
 #include "recover_object.h"
+#include "serializable.h"
 #if _WORK
 #include "transaction.h"
 #endif
@@ -69,11 +70,25 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 
 /// TODO Implement serialize and deserialize of this instance
-class cd::CD {
+class cd::CD : public cd::Serializable {
     /// The friends of CD class
     friend class cd::RegenObject;   
     friend class cd::CDEntry;  
-    friend class cd::RecoverObject; 
+    friend class cd::RecoverObject;
+    enum { 
+      CD_PACKER_NAME=0,
+      CD_PACKER_CDID,
+      CD_PACKER_LABEL,
+      CD_PACKER_CDTYPE,
+      CD_PACKER_NUMREEXEC,
+      CD_PACKER_BITVECTOR,
+      CD_PACKER_JMPBUFFER,
+      CD_PACKER_CTXT,
+      CD_PACKER_CTXTMOD,
+      CD_PACKER_CTXTOPT,
+      CD_PACKER_DETECTFUNC,
+      CD_PACKER_RECOVERFUNC
+    };
   public:
     /// CD class internal enumerators 
     enum CDExecMode  {kExecution=0, 
@@ -177,7 +192,9 @@ update the preserved data.
 
 #ifdef szhang
     //SZ
-    cd::CommLog * comm_log_ptr_;
+    cd::CommLog * comm_log_ptr_=NULL;
+
+    uint32_t child_seq_id_;
     
     ////SZ: attempted to move from HeadCD class, but we can use CDPath class
     //cd::CDHandle*            cd_parent_;
@@ -188,7 +205,7 @@ update the preserved data.
 
     CD(cd::CDHandle* cd_parent, 
        const char* name, 
-       CDID cd_id, 
+       const CDID& cd_id, 
        CDType cd_type, 
        uint64_t sys_bit_vector);
 
@@ -341,6 +358,8 @@ update the preserved data.
     CommLogErrT ReadData(void *data_ptr, unsigned long length);
     //SZ
     CommLogMode GetCommLogMode();
+    //SZ
+    bool IsNewLogGenerated();
 #endif
     
     CDNameT& GetCDName(void)  { return cd_id_.cd_name_; }
@@ -348,6 +367,17 @@ update the preserved data.
     bool IsHead(void) const { 
       return cd_id_.IsHead();
     }
+
+    void *Serialize(uint32_t& len_in_bytes)
+    {
+      return NULL;  
+    }
+  
+    void Deserialize(void* object) 
+    {
+    }
+
+
  };
 
 
@@ -371,7 +401,7 @@ class cd::HeadCD : public cd::CD {
     HeadCD();
     HeadCD(cd::CDHandle* cd_parent, 
              const char* name, 
-             CDID cd_id, 
+             const CDID& cd_id, 
              CDType cd_type, 
              uint64_t sys_bit_vector);
     virtual ~HeadCD();
@@ -383,7 +413,15 @@ class cd::HeadCD : public cd::CD {
     virtual CDErrT Resume(void); // Does this make any sense?
     virtual CDErrT AddChild(cd::CDHandle* cd_child); 
     virtual CDErrT RemoveChild(cd::CDHandle* cd_child); 
-};
 
+    void *Serialize(uint32_t& len_in_bytes)
+    {
+      return NULL;  
+    }
+  
+    void Deserialize(void* object) 
+    {
+    }
+};
 
 #endif

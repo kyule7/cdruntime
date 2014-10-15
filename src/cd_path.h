@@ -76,34 +76,42 @@ public:
 
   static CDHandle* GetCurrentCD(void) 
   { 
-    if(uniquePath_ != NULL) {
-      return uniquePath_->back(); 
+    if(uniquePath_ != NULL ) {
+      if( !uniquePath_->empty() ) {
+        return uniquePath_->back(); 
+      }
     }
-    else return NULL;
+    return NULL;
   }
   
   static CDHandle* GetRootCD(void)    
   { 
     if(uniquePath_ != NULL) { 
-      return uniquePath_->front(); 
+      if( !uniquePath_->empty() ) {
+        return uniquePath_->front(); 
+      }
     }
-    else return NULL;
+    return NULL;
   }
   
   static CDHandle* GetParentCD(void)
   { 
-    if(uniquePath_ != NULL && uniquePath_->size()>1) {
-      return uniquePath_->at(uniquePath_->size()-2); 
+    if(uniquePath_ != NULL) {
+      if( uniquePath_->size() > 1 ) {
+        return uniquePath_->at(uniquePath_->size()-2); 
+      }
     }
-    else return NULL;
+    return NULL;
   }
 
   static CDHandle* GetParentCD(int current_level)
   { 
-    if(uniquePath_ != NULL && uniquePath_->size()>1) {
-      return uniquePath_->at(current_level-2); 
+    if(uniquePath_ != NULL ) {
+      if( uniquePath_->size() > 1 ) {
+        return uniquePath_->at(current_level-2); 
+      }
     }
-    else return NULL;
+    return NULL;
   }
 
 };

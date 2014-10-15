@@ -95,10 +95,13 @@ CD::CD()
 
 #ifdef szhang
   // SZ
-  // create instance for comm_log_ptr_
+  // create instance for comm_log_ptr_ for relaxed CDs
   // if no parent assigned, then means this is root, so log mode will be kGenerateLog at creation point
-  PRINT_DEBUG("Inside CD constructor, creating CommLog with mode kGenerateLog\n");
-  comm_log_ptr_ = new CommLog(this, kGenerateLog);
+  assert(comm_log_ptr_ == NULL);
+  PRINT_DEBUG("Inside CD constructor, as root CD (no parent) is strict CD, not creating CommLog object\n");
+
+  PRINT_DEBUG("Set child_seq_id_ to 0\n");
+  child_seq_id_ = 0;
 #endif
 }
 
@@ -107,7 +110,7 @@ CD::CD()
   // Kyushick : I cannot fully understand this comment....
 CD::CD(CDHandle* cd_parent, 
        const char* name, 
-       CDID cd_id, 
+       const CDID& cd_id, 
        CDType cd_type, 
        uint64_t sys_bit_vector)
 //  : cd_type_(cd_type), name_(name), sys_detect_bit_vector_(0), cd_id_(cd_id)
@@ -151,13 +154,45 @@ CD::CD(CDHandle* cd_parent,
   PRINT_DEBUG("Inside CD constructor, creating CommLog with cd_parent = %p\n", cd_parent);
   if (cd_parent != NULL)
   {
-    PRINT_DEBUG("With cd_parent = %p, creating CommLog with mode %d\n", cd_parent, cd_parent->ptr_cd()->comm_log_ptr_->GetCommLogMode());
-    comm_log_ptr_ = new CommLog(this, cd_parent->ptr_cd()->comm_log_ptr_->GetCommLogMode());
+    // Only create CommLog object for relaxed CDs
+    assert(comm_log_ptr_ == NULL);
+    if (cd_type_ == kRelaxed)
+    {
+      //SZ: if parent is a relaxed CD, then copy comm_log_mode from parent
+      if (cd_parent->ptr_cd()->cd_type_ == kRelaxed)
+      {
+        CommLogMode parent_log_mode = cd_parent->ptr_cd()->comm_log_ptr_->GetCommLogMode();
+        PRINT_DEBUG("With cd_parent (%p) relaxed CD, creating CommLog with parent's mode %d\n", cd_parent, parent_log_mode);
+        comm_log_ptr_ = new CommLog(this, parent_log_mode);
+      }
+      //SZ: if parent is a strict CD, then child CD is always in kGenerateLog mode at creation point
+      else
+      {
+        PRINT_DEBUG("With cd_parent (%p) strict CD, creating CommLog with kGenerateLog mode\n", cd_parent);
+        comm_log_ptr_ = new CommLog(this, kGenerateLog);
+      }
+    }
+
+    // set child's child_seq_id_  to 0 
+    PRINT_DEBUG("Set child's child_seq_id_ to 0\n");
+    child_seq_id_ = 0;
+
+    uint32_t tmp_seq_id = cd_parent->ptr_cd()->child_seq_id_;
+    PRINT_DEBUG("With cd_parent = %p, set child's seq_id_ to parent's child_seq_id_(%d)\n", cd_parent, tmp_seq_id);
+    cd_id_.SetSequentialID(tmp_seq_id);
   }
   else 
   {
-    PRINT_DEBUG("With cd_parent = NULL, creating CommLog with mode kGenerateLog\n");
-    comm_log_ptr_ = new CommLog(this, kGenerateLog);
+    // Only create CommLog object for relaxed CDs
+    assert(comm_log_ptr_ == NULL);
+    if (cd_type_ == kRelaxed)
+    {
+      PRINT_DEBUG("With cd_parent = NULL, creating CommLog with mode kGenerateLog\n");
+      comm_log_ptr_ = new CommLog(this, kGenerateLog);
+    }
+
+    PRINT_DEBUG("Set child's child_seq_id_ to 0\n");
+    child_seq_id_ = 0;
   }
 #endif
 }
@@ -224,7 +259,7 @@ CD::~CD()
   }
   else 
   {
-    PRINT_DEBUG("NULL comm_log_ptr_ pointer, this CD should be root CD or strict CD...\n");
+    PRINT_DEBUG("NULL comm_log_ptr_ pointer, this CD should be strict CD...\n");
   }
 #endif
 }
@@ -327,6 +362,13 @@ CDErrT CD::Destroy(void)
 //  }  // for loop ends
 //#endif
 
+#ifdef szhang
+  if (GetParentHandle()!=NULL)
+  {
+    GetParentHandle()->ptr_cd_->child_seq_id_ = cd_id_.sequential_id();
+  }
+#endif
+
   if(GetCDID().level() != 0) {   // non-root CD
 
 
@@ -360,17 +402,29 @@ CDErrT CD::Begin(bool collective, const char* label)
   //SZ: if in reexecution, need to unpack logs to childs
   if (GetParentHandle()!=NULL)
   {
-    if (GetParentHandle()->ptr_cd_->comm_log_ptr_->GetCommLogMode() == kReplayLog)
+    // Only need to if for both parent and child are relaxed CDs, 
+    // if child is relaxed but parent is strict, then create the CommLog object with kGenerateLog mode
+    // if child is strict, then do not need to do anything for comm_log_ptr_...
+    if(GetParentHandle()->ptr_cd_->cd_type_ == kRelaxed && cd_type_ == kRelaxed)
     {
-      PRINT_DEBUG("With comm log mode = kReplayLog, unpack logs to children\n");
-      if (IsParentLocal())
+      if (GetParentHandle()->ptr_cd_->comm_log_ptr_->GetCommLogMode() == kReplayLog)
       {
-        GetParentHandle()->ptr_cd_->comm_log_ptr_->UnpackLogsToChildCD(this);
-      }
-      else
-      {
-        //SZ: FIXME: need to figure out a way to unpack logs if child is not in the same address space with parent
-        PRINT_DEBUG("Should not be here to unpack logs!!\n");
+        PRINT_DEBUG("With comm log mode = kReplayLog, unpack logs to children\n");
+        if (IsParentLocal())
+        {
+          CommLogErrT ret;
+          ret = GetParentHandle()->ptr_cd_->comm_log_ptr_->UnpackLogsToChildCD(this);
+          if (ret == kCommLogChildLogNotFound)
+          {
+            // need to reallocate table and data array...
+            comm_log_ptr_->Realloc();
+          }
+        }
+        else
+        {
+          //SZ: FIXME: need to figure out a way to unpack logs if child is not in the same address space with parent
+          PRINT_DEBUG("Should not be here to unpack logs!!\n");
+        }
       }
     }
   }
@@ -394,6 +448,50 @@ CDErrT CD::Begin(bool collective, const char* label)
  */
 CDErrT CD::Complete(bool collective, bool update_preservations)
 {
+#ifdef szhang
+  // SZ: pack logs and push to parent
+  if (GetParentHandle()!=NULL)
+  {
+    if (cd_type_ == kRelaxed)
+    {
+      if (IsParentLocal())
+      {
+        //SZ: TODO: here...
+        if (IsNewLogGenerated() && GetParentHandle()->ptr_cd_->cd_type_ == kRelaxed)
+        {
+          PRINT_DEBUG("Pushing logs to parent...\n");
+          comm_log_ptr_->PackAndPushLogs(GetParentHandle()->ptr_cd_);
+        #ifdef _DEBUG
+          printf("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
+          printf("\nchild comm_log print:\n");
+          comm_log_ptr_->Print();
+        #endif
+
+          //SZ: if parent is in kReplayLog mode, but child has flipped back to kGenerateLog,
+          //    then parent needs to flip back to kGenerateLog 
+          //FIXME: need to coordinate with other child CDs, and what if some completed CDs reach end of logs, 
+          //      but others do not...
+          if (GetParentHandle()->ptr_cd_->comm_log_ptr_->GetCommLogMode()==kReplayLog && comm_log_ptr_->GetCommLogMode()==kGenerateLog)
+          {
+            GetParentHandle()->ptr_cd_->comm_log_ptr_->SetCommLogMode(kGenerateLog);
+          }
+        #ifdef _DEBUG
+          printf("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
+          printf("parent comm_log print:\n");
+          GetParentHandle()->ptr_cd_->comm_log_ptr_->Print();
+        #endif
+        }
+
+        comm_log_ptr_->Reset();
+      }
+      else 
+      {
+        //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
+        PRINT_DEBUG("Should not come to here...\n");
+      }
+    }
+  }
+#endif
 
 //  if( cd_exec_mode_ != kReexecution ) {
 //  }
@@ -414,38 +512,6 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   // FIXME don't we have to wait for others to be completed?  
   cd_exec_mode_ = kSuspension; 
 
-#ifdef szhang
-  // SZ: pack logs and push to parent
-  if (GetParentHandle()!=NULL)
-  {
-    if (IsParentLocal())
-    {
-      comm_log_ptr_->PackAndPushLogs(GetParentHandle()->ptr_cd_);
-    #ifdef _DEBUG
-      printf("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
-      printf("\nchild comm_log print:\n");
-      comm_log_ptr_->Print();
-    #endif
-
-      //SZ: parent need to copy the CommLogMode because child may reach end of logs and CommLogMode flips
-      //TODO: need to coordinate with other child CDs, and what if some completed CDs reach end of logs, 
-      //      but others do not...
-      GetParentHandle()->ptr_cd_->comm_log_ptr_->SetCommLogMode(this->comm_log_ptr_->GetCommLogMode());
-    #ifdef _DEBUG
-      printf("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
-      printf("parent comm_log print:\n");
-      GetParentHandle()->ptr_cd_->comm_log_ptr_->Print();
-    #endif
-
-      comm_log_ptr_->Reset();
-    }
-    else 
-    {
-      //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
-      PRINT_DEBUG("Should not come to here...\n");
-    }
-  }
-#endif
   return CDErrT::kOK;
 }
 
@@ -454,7 +520,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //  char sendBuf[SEND_BUF_SIZE];
 //  char recvBuf[num_sibling][SEND_BUF_SIZE];
 //
-//  MPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
+////  MPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
 //}
 
 /*  CD::preserve(char* data_p, int data_l, enum preserveType prvTy, enum mediumLevel medLvl)
@@ -592,8 +658,8 @@ CDErrT CD::Preserve(void* data,
 
 PrvMediumT CD::GetPlaceToPreserve()
 {
-  return kMemory;
-//  return kSSD;
+//  return kMemory;
+  return kSSD;
 //  if(GetCDID().level()==1) return kHDD;
 //  else return kSSD;
 }
@@ -643,10 +709,10 @@ CDErrT CD::Preserve(void* data,
 
 //      printf("Reexecution mode start...\n");
 
-      CDEntry cd_entry = *iterator_entry_;
+      CDEntry *cd_entry = &*iterator_entry_;
       ++iterator_entry_;
 
-      switch( cd_entry.Restore() ) {
+      switch( cd_entry->Restore() ) {
         case CDEntry::CDEntryErrT::kOK            : return CDErrT::kOK; 
         case CDEntry::CDEntryErrT::kOutOfMemory   : return CDErrT::kError;
         case CDEntry::CDEntryErrT::kFileOpenError : return CDErrT::kError;
@@ -1029,7 +1095,12 @@ CDErrT CD::Reexecute(void)
   // SZ
   //// change the comm_log_mode_ into CommLog class
   //comm_log_mode_ = kReplayLog;  
-  comm_log_ptr_->ReInit();
+  if (cd_type_ == kRelaxed)
+    comm_log_ptr_->ReInit();
+  
+  //SZ: reset to child_seq_id_ = 0 
+  PRINT_DEBUG("Reset child_seq_id_ to 0 at the point of re-execution\n");
+  child_seq_id_ = 0;
 #endif
 
   //TODO We need to make sure that all children has stopped before re-executing this CD.
@@ -1094,7 +1165,7 @@ HeadCD::HeadCD()
 
 HeadCD::HeadCD( CDHandle* cd_parent, 
                     const char* name, 
-                    CDID cd_id, 
+                    const CDID& cd_id, 
                     CDType cd_type, 
                     uint64_t sys_bit_vector)
   : CD(cd_parent, name, cd_id, cd_type, sys_bit_vector)
@@ -1210,6 +1281,31 @@ void CD::DeleteEntryDirectory(void)
 //  cout<<"Delete Entry In"<<endl; getchar();
   for(std::list<CDEntry>::iterator it = entry_directory_.begin();
       it != entry_directory_.end(); ) {
+
+    uint32_t entry_len=0;
+    void *ser_entry = it->Serialize(entry_len);
+
+    std::cout << "ser entry : "<< ser_entry << std::endl;
+    CDEntry new_entry;
+    std::cout << "\n\n--------------------------------\n"<<std::endl;
+    new_entry.Deserialize(ser_entry);
+    cout << "before!!!! " << (it->src_data_).address_data()<<endl<<endl;
+    cout << "\n\n\nafter!!!! " << new_entry.src_data_.address_data()<<endl;
+
+    cout << "before!!!! " << it->name() <<endl<<endl;
+    cout << "\n\n\nafter!!!! " << new_entry.name()<<endl;
+    cout << (*it == new_entry) << endl;
+/*
+    uint32_t data_handle_len=0;
+
+    void *ser_data_handle = (it->src_data_).Serialize(data_handle_len);
+    DataHandle new_data_handle;
+    new_data_handle.Deserialize(ser_data_handle);
+
+    std::cout <<"\n\n\noriginal : "<<(it->src_data_).file_name() << std::endl;
+    std::cout <<"unpacked : "<<new_data_handle.file_name() << std::endl << std::endl;
+    getchar();
+*/
     it->Delete();
     entry_directory_map_.erase(it->name());
     entry_directory_.erase(it++);
@@ -1320,5 +1416,11 @@ CommLogErrT CD::ReadData(void *data_ptr, unsigned long length)
 CommLogMode CD::GetCommLogMode()
 {
   return comm_log_ptr_->GetCommLogMode();
+}
+
+//SZ
+bool CD::IsNewLogGenerated()
+{
+  return comm_log_ptr_->IsNewLogGenerated();
 }
 #endif

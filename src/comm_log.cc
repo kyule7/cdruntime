@@ -139,6 +139,8 @@ void CommLog::InitInternal()
 
   log_table_reexec_pos_ = 0;
 
+  new_log_generated_ = false;
+
   // if forward execution
   if (comm_log_mode_ == kGenerateLog)
   {
@@ -192,6 +194,34 @@ CommLogErrT CommLog::InitAlloc()
 }
 
 
+CommLogErrT CommLog::Realloc()
+{
+  log_queue_.queue_size_ = 0;
+  log_queue_.cur_pos_ = 0;
+  log_queue_.base_ptr_ = NULL;
+
+  log_table_.table_size_ = 0;
+  log_table_.cur_pos_ = 0;
+  log_table_.base_ptr_ = NULL;
+
+  child_log_.size_ = 0;
+  child_log_.cur_pos_ = 0;
+  child_log_.base_ptr_ = NULL;
+
+  log_table_reexec_pos_ = 0;
+
+  new_log_generated_ = false;
+
+  CommLogErrT ret = InitAlloc();
+  if (ret != kCommLogOK)
+  {
+    ERROR_MESSAGE("Comm Log reallocation failed!\n");
+  }
+
+  return kCommLogOK;
+}
+
+
 CommLogErrT CommLog::AccessLog(void * data_ptr, unsigned long data_length)
 {
   CommLogErrT ret=kCommLogOK;
@@ -205,7 +235,8 @@ CommLogErrT CommLog::AccessLog(void * data_ptr, unsigned long data_length)
     if (ret == kCommLogCommLogModeFlip)
     {
       //SZ
-      //TODO: what should happen here??
+      //TODO: what should acctually happen here??
+      ret = LogData(data_ptr, data_length);
     }
   }
   else {
@@ -238,6 +269,8 @@ CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length)
     ERROR_MESSAGE("Log Queue Realloc Failed!\n");
     return ret;
   }
+
+  new_log_generated_ = true;
 
   return kCommLogOK;
 }
@@ -458,15 +491,24 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
 {
   PRINT_DEBUG("ReadData to address (%p) and length(%ld)\n", buffer, length);
 
+  // reached end of logs, and need to return back and log data again...
+  if (log_table_reexec_pos_ == log_table_.cur_pos_)
+  {
+    comm_log_mode_ = kGenerateLog;
+
+    PRINT_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
+    return kCommLogCommLogModeFlip;
+  }
+  
   if (log_table_.cur_pos_ == 0)
   {
-    ERROR_MESSAGE("Empty logs!\n");
+    ERROR_MESSAGE("Attempt to read from empty logs!\n");
     return kCommLogError;
   }
 
   if (length != log_table_.base_ptr_[log_table_reexec_pos_].length_)
   {
-    ERROR_MESSAGE("Wrong length when read data from logs\n");
+    ERROR_MESSAGE("Wrong length when read data from logs: %ld wanted but %ld expected!!\n", length, log_table_.base_ptr_[log_table_reexec_pos_].length_);
     return kCommLogError;
   }
 
@@ -475,13 +517,13 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
       log_table_.base_ptr_[log_table_reexec_pos_].length_);
 
   log_table_reexec_pos_++;
-  if (log_table_reexec_pos_ == log_table_.cur_pos_)
-  {
-    comm_log_mode_ = kGenerateLog;
+  //if (log_table_reexec_pos_ == log_table_.cur_pos_)
+  //{
+  //  comm_log_mode_ = kGenerateLog;
 
-    PRINT_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
-    return kCommLogCommLogModeFlip;
-  }
+  //  PRINT_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
+  //  return kCommLogCommLogModeFlip;
+  //}
 
   return kCommLogOK;
 }
@@ -538,14 +580,18 @@ void CommLog::Print()
   printf("cur_pos_ = %ld\n", child_log_.cur_pos_);
   printf("size_ = %ld\n", child_log_.size_);
 
-  printf("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+  printf("\nnew_log_generated_ = %d\n\n", new_log_generated_);
 }
 
 
 CommLogErrT CommLog::UnpackLogsToChildCD(CD* child_cd)
 {
   char * src_ptr;
-  FindChildLogs(child_cd->GetCDID(), &src_ptr);
+  CommLogErrT ret = FindChildLogs(child_cd->GetCDID(), &src_ptr);
+  if (ret != kCommLogOK)
+  {
+    return ret;
+  }
 
   (child_cd->comm_log_ptr_)->UnpackLogs(src_ptr);
 
@@ -564,6 +610,9 @@ CommLogErrT CommLog::UnpackLogs(char * src_ptr)
     ERROR_MESSAGE("NULL src_ptr to unpack logs\n");
     return kCommLogError;
   }
+
+  // set comm_log_mode_ to kReplayLogs
+  comm_log_mode_ = kReplayLog;
 
   unsigned long length;
   unsigned long index;
@@ -673,7 +722,6 @@ CommLogErrT CommLog::FindChildLogs(CDID child_cd_id, char** src_ptr)
     memcpy(&length, child_log_.base_ptr_+tmp_index, sizeof(unsigned long));
     memcpy(&cd_id, child_log_.base_ptr_+tmp_index+sizeof(unsigned long), sizeof(CDID));
 
-    //SZ: reloaded '==' operator for CDID class
     #ifdef _DEBUG
     PRINT_DEBUG("Temp CDID got:\n");
     cd_id.Print();
@@ -688,8 +736,8 @@ CommLogErrT CommLog::FindChildLogs(CDID child_cd_id, char** src_ptr)
 
   if (tmp_index >= child_log_.cur_pos_)
   {
-    ERROR_MESSAGE("Could not find correspondent child logs!\n");
-    return kCommLogError;
+    PRINT_DEBUG("Warning: Could not find correspondent child logs, child may not push any logs yet...\n");
+    return kCommLogChildLogNotFound;
   }
 
   *src_ptr = child_log_.base_ptr_+tmp_index;
@@ -698,11 +746,18 @@ CommLogErrT CommLog::FindChildLogs(CDID child_cd_id, char** src_ptr)
 }
 
 
+// this function is used when a cd complete to prepare for next begin
 void CommLog::Reset()
 {
   log_table_.cur_pos_ = 0;
   log_queue_.cur_pos_ = 0;
   child_log_.cur_pos_ = 0;
+
+  log_table_reexec_pos_ = 0;
+
+  new_log_generated_ = false;
+
+  comm_log_mode_ = kGenerateLog;
 }
 
 #endif

@@ -51,10 +51,10 @@ Unpacker::~Unpacker()
 
 }
 
-char *Unpacker::GetAt(const char *src_data, unsigned long find_id, unsigned long &return_size, unsigned long &return_id)
+char *Unpacker::GetAt(const char *src_data, uint32_t find_id, uint32_t &return_size, uint32_t &return_id)
 {
   char *str_return_data;
-  unsigned long id, size, pos;
+  uint32_t id, size, pos;
 
   reading_pos_=0;
   table_size_ = GetWord(src_data + reading_pos_);
@@ -66,7 +66,7 @@ char *Unpacker::GetAt(const char *src_data, unsigned long find_id, unsigned long
     if( id == find_id )  
 
     {
-      size = GetWord(src_data + reading_pos_ + 4); // FIXME: Currently assumed unsigned long is 4 bytes long.
+      size = GetWord(src_data + reading_pos_ + 4); // FIXME: Currently assumed uint32_t is 4 bytes long.
       pos  = GetWord(src_data + reading_pos_ + 8);
       str_return_data = new char[size];
       memcpy(str_return_data, src_data+table_size_+pos, size); 
@@ -91,11 +91,11 @@ char *Unpacker::GetAt(const char *src_data, unsigned long find_id, unsigned long
   }
 }
 
-unsigned long Unpacker::GetAt(const char *src_data, unsigned long find_id, void *return_data)
+uint32_t Unpacker::GetAt(const char *src_data, uint32_t find_id, void *return_data)
 {
-  unsigned long id=0;
+  uint32_t id=0;
   char *pData;
-  unsigned long return_size;
+  uint32_t return_size;
   pData = GetAt(src_data, find_id, return_size, id);
   if( pData != NULL)
   {
@@ -109,30 +109,73 @@ unsigned long Unpacker::GetAt(const char *src_data, unsigned long find_id, void 
   }
 }
 
-char *Unpacker::GetAt(const char *src_data, unsigned long find_id, unsigned long &return_size)
+char *Unpacker::GetAt(const char *src_data, uint32_t find_id, uint32_t &return_size)
 {
-  unsigned long id;
+  uint32_t id;
   return GetAt(src_data,find_id,return_size,id);
 }
 
-char *Unpacker::GetNext(const char *src_data,  unsigned long &return_id, unsigned long &return_size)
+char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_size)
 {
   char *str_return_data;
-  unsigned long id, size, pos;
+  uint32_t id, size, pos;
+
+    std::cout << "==========================================================\nUnpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_size)"<<std::endl;
+//    std::cout << "src_data : " << (void *)src_data << ", return_id : " << return_id << ", return_size : "<< return_size << std::endl; getchar(); 
+
+  table_size_ = GetWord(src_data);
+  std::cout << "table size : " << table_size_ << std::endl;
+  if( cur_pos_ < table_size_ )
+  {
+    id   = GetWord( src_data + cur_pos_ );
+    size = GetWord( src_data + cur_pos_ + 4);
+    pos  = GetWord( src_data + cur_pos_ + 8);
+    str_return_data = new char[size];
+    
+    std::cout << "[Get Info from table] id: "<< id << " ("<< (void *)((char *)src_data + cur_pos_) <<"), size : " << size << " (" <<  (void *)((char *)src_data + cur_pos_+4) <<"), pos : " << pos << " ("<< (void *)((char *)src_data + cur_pos_+8)<<")"<<std::endl; 
+    std::cout << "Bring data from " << (void *)((char *)src_data+table_size_+pos) << " to "<< (void *)str_return_data << std::endl;  
+
+    memcpy(str_return_data, src_data+table_size_+pos, size); 
+
+    std::cout << " Read Data is "<< (char *)str_return_data << std::endl;
+ 
+    return_id = id;
+    return_size = size;
+    cur_pos_ +=12;
+
+    std::cout << "=========================================================="<<std::endl; //getchar();
+    return str_return_data;
+  }
+  else
+    return NULL;
+}
+
+void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint32_t &return_id, uint32_t &return_size)
+{
+  
+    std::cout << "==========================================================\nUnpacker::GetNext"<<std::endl;
+//    std::cout << "str_return_data: "<< str_return_data << ", src_data : " << src_data << ", return_id : " << return_id << ", return_size : "<< return_size << std::endl; getchar(); 
+  uint32_t id, size, pos;
 
 
   table_size_ = GetWord(src_data);
 
   if( cur_pos_ < table_size_ )
   {
-    id = GetWord( src_data + cur_pos_ );
-    size = GetWord(src_data + cur_pos_ + 4);
-    pos  = GetWord(src_data + cur_pos_ + 8);
-    str_return_data = new char[size];
-    memcpy(str_return_data, src_data+table_size_+pos, size);  
+    id   = GetWord( (char *)src_data + cur_pos_ );
+    size = GetWord( (char *)src_data + cur_pos_ + 4 );
+    pos  = GetWord( (char *)src_data + cur_pos_ + 8 );
+    std::cout << "[Get Info from table] id: "<< id << " ("<< (void *)((char *)src_data + cur_pos_) <<"), size : " << size << " (" <<  (void *)((char *)src_data + cur_pos_+4) <<"), pos : " << pos << " ("<< (void *)((char *)src_data + cur_pos_+8)<<")"<<std::endl; 
+    std::cout << "Bring data from " << (void *)((char *)src_data+table_size_+pos) << " to "<< str_return_data << std::endl;  
+    memcpy(str_return_data, (char *)src_data+table_size_+pos, size); 
+
+
+    std::cout << " Read Data is "<< (char *)str_return_data << std::endl;
+ 
     return_id = id;
     return_size = size;
     cur_pos_ +=12;
+    std::cout << "=========================================================="<<std::endl; //getchar();
 
     return str_return_data;
   }
@@ -140,14 +183,24 @@ char *Unpacker::GetNext(const char *src_data,  unsigned long &return_id, unsigne
     return NULL;
 }
 
+
 void Unpacker::SeekInit()
 {
   cur_pos_ = 4;
 }
 
-unsigned long Unpacker::GetWord(const char *src_data)
+uint32_t Unpacker::GetWord(void *src_data)
 {
-  unsigned long return_value;
-  memcpy( &return_value, src_data, sizeof(unsigned long) );
+//  std::cout << "uint32_t Unpacker::GetWord(void *src_data) "<< (void *)src_data << std::endl;
+  uint32_t return_value;
+  memcpy( &return_value, src_data, sizeof(uint32_t) );
+  return return_value;
+}
+
+uint32_t Unpacker::GetWord(const char *src_data)
+{
+//  std::cout << "uint32_t Unpacker::GetWord(const char *src_data) " << (void *)src_data <<  std::endl;
+  uint32_t return_value;
+  memcpy( &return_value, src_data, sizeof(uint32_t) );
   return return_value;
 }

@@ -162,6 +162,7 @@ namespace cd {
                     kCommLogChildLogAllocFailed, 
                     kCommLogReInitFailed,
                     kCommLogCommLogModeFlip,
+                    kCommLogChildLogNotFound,
                     kCommLogError};
   
   //SZ

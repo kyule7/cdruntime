@@ -85,6 +85,11 @@ class cd::CommLog {
     CommLogErrT FindChildLogs(CDID child_cd_id, char** src_ptr);
     CommLogErrT UnpackLogs(char * src_ptr);
 
+    bool IsNewLogGenerated()
+    {
+      return new_log_generated_;
+    }
+
     void ReInit();
 
     // Reset is called when a CD completes, so next CD_Begin can reuse all the allocated space
@@ -101,6 +106,8 @@ class cd::CommLog {
     }
 
     void Print();
+
+    CommLogErrT Realloc();
 
     //// In re-executation, when a CD is created, need to trigger this init
     //// This init will not allocate any space for table and queue,
@@ -160,6 +167,9 @@ class cd::CommLog {
     } log_table_;
 
     unsigned long log_table_reexec_pos_;
+
+    // to state if new logs are generated in current CD
+    bool new_log_generated_ = false;
 
 
   public:

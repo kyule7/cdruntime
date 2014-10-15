@@ -439,18 +439,19 @@ CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 
 
 
-
-void* Serialize(uint64_t* len_in_bytes)
+/*
+void* CDEntry::Serialize(uint32_t* len_in_bytes)
 {
-//  packer_.Add(id, length, position);
+//  Packer entry_packer;
+//  entry_packer.Add(id, sizeof(DataHandle), &src_data_);
   return 0;  
 }
-void Deserialize(void* object) 
+void CDEntry::Deserialize(void* object) 
 {
   //STUB
   return;
 }
-
+*/
 
 
 
