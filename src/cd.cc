@@ -457,7 +457,6 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     {
       if (IsParentLocal())
       {
-        //SZ: TODO: here...
         if (IsNewLogGenerated() && GetParentHandle()->ptr_cd_->cd_type_ == kRelaxed)
         {
           PRINT_DEBUG("Pushing logs to parent...\n");
@@ -468,15 +467,18 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
           comm_log_ptr_->Print();
         #endif
 
-          //SZ: if parent is in kReplayLog mode, but child has flipped back to kGenerateLog,
-          //    then parent needs to flip back to kGenerateLog 
-          //FIXME: need to coordinate with other child CDs, and what if some completed CDs reach end of logs, 
-          //      but others do not...
-          if (GetParentHandle()->ptr_cd_->comm_log_ptr_->GetCommLogMode()==kReplayLog && comm_log_ptr_->GetCommLogMode()==kGenerateLog)
+          //SZ: when child pushes logs to parent, parent has new log generated...
+          GetParentHandle()->ptr_cd_->comm_log_ptr_->SetNewLogGenerated(true);
+          
+          ////SZ: if parent is in kReplayLog mode, but child has flipped back to kGenerateLog,
+          ////    then parent needs to flip back to kGenerateLog 
+          ////FIXME: need to coordinate with other child CDs, and what if some completed CDs reach end of logs, 
+          ////      but others do not...
+          //if (GetParentHandle()->ptr_cd_->comm_log_ptr_->GetCommLogMode()==kReplayLog && comm_log_ptr_->GetCommLogMode()==kGenerateLog)
+          if (comm_log_ptr_->GetCommLogMode()==kGenerateLog)
           {
             GetParentHandle()->ptr_cd_->comm_log_ptr_->SetCommLogMode(kGenerateLog);
           }
-          GetParentHandle()->ptr_cd_->comm_log_ptr_->SetNewLogGenerated(true);
         #ifdef _DEBUG
           PRINT_DEBUG("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
           PRINT_DEBUG("parent comm_log print:\n");

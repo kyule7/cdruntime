@@ -198,7 +198,7 @@ namespace cd {
 //#define DEBUG_PRINT(...) {}
 //#endif
 
-//SZ: when testing MPI functions, print to files is easier
+////SZ: when testing MPI functions, print to files is easier
 //#ifdef comm_log
 //extern FILE * fp;
 //#endif
