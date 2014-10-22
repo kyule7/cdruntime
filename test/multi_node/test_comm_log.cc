@@ -44,12 +44,12 @@ using namespace std;
 ucontext_t context;
 
 #define SIZE_C 1025
-//#define PRINTF printf
-#define PRINTF(...) {fprintf(fp, __VA_ARGS__);}
+#define PRINTF(...) {printf("%d:",myrank);printf(__VA_ARGS__);}
+//#define PRINTF(...) {fprintf(fp, __VA_ARGS__);}
 
 FILE *fp;
 
-int test_comm_log_relaxed(CDHandle * root)
+int test_comm_log_relaxed(CDHandle * root, int myrank)
 {
 
   int num_reexec = 0;
@@ -380,7 +380,7 @@ int test_comm_log_relaxed(CDHandle * root)
 }
 
 
-int test_comm_log_combined(CDHandle * root)
+int test_comm_log_combined(CDHandle * root, int myrank)
 {
 
   int num_reexec = 0;
@@ -609,11 +609,15 @@ int main(int argc, char* argv[])
   PRINTF("\n\nInit cd runtime and create root CD.\n\n");
   CDHandle * root = CD_Init(nprocs, myrank);
 
+  int num_reexec = 0;
+
   PRINTF("Root CD begin...\n");
   CD_Begin(root);
 
   PRINTF("root CD information...\n");
   root->ptr_cd()->GetCDID().Print();
+
+  int flag = 1;
 
   PRINTF("\n");
   PRINTF("------------------------------------------------------------------------------------\n");
@@ -621,7 +625,7 @@ int main(int argc, char* argv[])
 
   int ret=0;
   PRINTF("\nTest relaxed comm logging relaxed functionality...\n");
-  ret = test_comm_log_relaxed(root);
+  ret = test_comm_log_relaxed(root, myrank);
 
   PRINTF("\n\nResults:\n");
   if (ret == kError) 
@@ -639,7 +643,7 @@ int main(int argc, char* argv[])
 
   ret = 0;
   PRINTF("\nTest combined comm logging relaxed functionality...\n");
-  ret = test_comm_log_combined(root);
+  ret = test_comm_log_combined(root, myrank);
 
   PRINTF("\n\nResults:\n");
   if (ret == kError) 
@@ -659,12 +663,12 @@ int main(int argc, char* argv[])
   if (myrank%2 == 0)
   {
     PRINTF("\n%d:Test relaxed comm logging relaxed functionality...\n", myrank);
-    ret = test_comm_log_relaxed(root);
+    ret = test_comm_log_relaxed(root, myrank);
   }
   else if (myrank%2 != 0)
   {
     PRINTF("\n%d:Test combined comm logging relaxed functionality...\n", myrank);
-    ret = test_comm_log_combined(root);
+    ret = test_comm_log_combined(root, myrank);
   }
 
   PRINTF("\n\nResults:\n");
@@ -680,6 +684,13 @@ int main(int argc, char* argv[])
   PRINTF("\n");
   PRINTF("------------------------------------------------------------------------------------\n");
   PRINTF("------------------------------------------------------------------------------------\n");
+  
+  //if (num_reexec == 0)
+  //{
+  //  PRINTF("Insert error in root CD...\n");
+  //  num_reexec++;
+  //  root->CDAssert(false);
+  //}
   
   PRINTF("Complete root CD...\n");
   CD_Complete(root);

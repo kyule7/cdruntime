@@ -139,7 +139,6 @@ std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
 //  sequential_id_ = 0;
 //}
 
-#ifdef comm_log
 //SZ: print function
 void CDID::Print ()
 {
@@ -157,5 +156,4 @@ void CDID::Print ()
   PRINT_DEBUG("    head: %d\n"            , head());
   PRINT_DEBUG("    IsHead: %d\n"          , IsHead());
 }
-#endif
 

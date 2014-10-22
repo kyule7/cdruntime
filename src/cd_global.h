@@ -198,16 +198,20 @@ namespace cd {
 //#define DEBUG_PRINT(...) {}
 //#endif
 
-////SZ: when testing MPI functions, print to files is easier
-//#ifdef comm_log
-//extern FILE * fp;
-//#endif
+//SZ: when testing MPI functions, print to files is easier
+#ifdef comm_log
+extern FILE * fp;
+#endif
 
 
 #if _DEBUG
   //SZ: change to this if want to compile test_comm_log.cc
-  #define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
-  //#define PRINT_DEBUG(...) {fprintf(fp, __VA_ARGS__);}
+  #ifdef comm_log
+    #define PRINT_DEBUG(...) {fprintf(fp, __VA_ARGS__);}
+  #else
+    #define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
+  #endif
+
   #define PRINT_DEBUG2(X,Y) printf(X,Y);
 #else
   #define PRINT_DEBUG(...) {}

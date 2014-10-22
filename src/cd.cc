@@ -98,7 +98,6 @@ CD::CD()
   // create instance for comm_log_ptr_ for relaxed CDs
   // if no parent assigned, then means this is root, so log mode will be kGenerateLog at creation point
   assert(comm_log_ptr_ == NULL);
-  PRINT_DEBUG("Inside CD constructor, as root CD (no parent) is strict CD, not creating CommLog object\n");
 
   PRINT_DEBUG("Set child_seq_id_ to 0\n");
   child_seq_id_ = 0;
@@ -151,7 +150,6 @@ CD::CD(CDHandle* cd_parent,
   // comm_log is per thread per CD
   // if cd_parent is not NULL, then inherit comm log mode from parent,
   // otherwise means current cd is a root cd, so comm log mode is to generate log
-  PRINT_DEBUG("Inside CD constructor, creating CommLog with cd_parent = %p\n", cd_parent);
   if (cd_parent != NULL)
   {
     // Only create CommLog object for relaxed CDs

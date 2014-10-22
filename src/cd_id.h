@@ -102,9 +102,9 @@ class CDID {
 
     CDID& operator=(const CDID& that);
 
-#ifdef comm_log
     //SZ: print function
     void Print ();
+#ifdef comm_log
     void SetSequentialID(uint32_t seq_id) {sequential_id_ = seq_id;}
 #endif
     bool operator==(const CDID& that) const;
