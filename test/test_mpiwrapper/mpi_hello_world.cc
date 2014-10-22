@@ -38,6 +38,8 @@ int main(int argc, char** argv)
     return 0;
   }
 
+  PRINTF("sizeof(int)=%d, and sizeof(MPI_INT)=%d\n", (int)sizeof(int), (int)sizeof(MPI_INT));
+
   PRINTF("\n\nInit cd runtime and create root CD.\n\n");
   CDHandle * root = CD_Init(nprocs, myrank);
 
@@ -80,6 +82,15 @@ int main(int argc, char** argv)
       child1_0->CDAssert(false);
     }
 
+    MPI_Recv(&message, 1, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
+    PRINTF("Received message=%d\n",message);
+
+    PRINTF("Print level 1 child CD comm_log_ptr info...\n");
+    if (child1_0->ptr_cd()->cd_type_ == kRelaxed)
+      child1_0->ptr_cd()->comm_log_ptr_->Print();
+    else
+      PRINTF("NULL pointer for strict CD!\n");
+
     PRINTF("Complete child CD of level 1 ...\n");
     CD_Complete(child1_0);
 
@@ -104,6 +115,8 @@ int main(int argc, char** argv)
     MPI_Recv(&message, 1, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
     PRINTF("Received message=%d\n",message);
     MPI_Send(&myrank, 1, MPI_INT, partner, 1, MPI_COMM_WORLD);
+    int tmp = myrank+1;
+    MPI_Send(&tmp, 1, MPI_INT, partner, 1, MPI_COMM_WORLD);
 
     PRINTF("Print level 1 child CD comm_log_ptr info...\n");
     if (child1_1->ptr_cd()->cd_type_ == kRelaxed)

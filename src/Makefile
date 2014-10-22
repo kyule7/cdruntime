@@ -33,6 +33,6 @@ $(LIBOUTPUT): $(OBJECTS)
 	 ${CC} -shared -Wl,-soname,libcds.so -o ${LIBOUTPUT} ${OBJECTS} ${LDFLAGS}
 
 clean:
-	rm $(LIBOUTPUT) $(OBJECTS)
+	rm -rf $(LIBOUTPUT) $(OBJECTS)
 
 
