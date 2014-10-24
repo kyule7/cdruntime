@@ -794,19 +794,19 @@ CDErrT CDHandle::SetPGASType (void *data_ptr, uint64_t len, CDPGASUsageT region_
 
 int CDHandle::ctxt_prv_mode()
 {
-  if( IsHead() ) {
+  //if( IsHead() ) {
     return (int)ptr_cd_->ctxt_prv_mode_;
-  }
-  else {
-    //FIXME: need to get the flag from remote
-  }
+  //}
+  //else {
+  //  //FIXME: need to get the flag from remote
+  //}
 
   return 0;
 }
 
 void CDHandle::CommitPreserveBuff()
 {
-  if( IsHead() ) {
+  //if( IsHead() ) {
     if( ptr_cd_->ctxt_prv_mode_ == CD::kExcludeStack) {
         memcpy(ptr_cd_->jump_buffer_, jump_buffer_, sizeof(jmp_buf));
      }
@@ -814,10 +814,10 @@ void CDHandle::CommitPreserveBuff()
         ptr_cd_->ctxt_ = this->ctxt_;
      }
  
-  } 
-  else {
-    //FIXME: need to transfer the buffers to remote
-  }
+  //} 
+  //else {
+  //  //FIXME: need to transfer the buffers to remote
+  //}
 }
 
 

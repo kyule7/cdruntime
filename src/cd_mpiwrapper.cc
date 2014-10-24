@@ -43,7 +43,26 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 int MPI_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
 {
   PRINT_DEBUG("here inside MPI_Send\n");
-  PMPI_Send(buf, count, datatype, dest, tag, comm);
+
+  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
+  {
+    PMPI_Send(buf, count, datatype, dest, tag, comm);
+
+    PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
+    cur_cd->ptr_cd()->LogData(&buf, sizeof(buf));
+  }
+  else
+  {
+    PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
+    CommLogErrT ret = cur_cd->ptr_cd()->ReadData(&buf, sizeof(buf));
+    if (ret == kCommLogCommLogModeFlip)
+    {
+      PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
+      PMPI_Send(buf, count, datatype, dest, tag, comm);
+      cur_cd->ptr_cd()->LogData(&buf, sizeof(buf));
+    }
+  }
 
   return 0;
 }
