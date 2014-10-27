@@ -16,7 +16,7 @@ SOURCES= $(wildcard *.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 LIBOUTPUT=../lib/libcds.so
 
-all: $(SOURCES) $(LIBOUTPUT) cd_malloc.so
+all: $(SOURCES) $(LIBOUTPUT) cd_malloc.so libc_rn.so
 
 
 .cc.o:
@@ -36,7 +36,10 @@ $(LIBOUTPUT): $(OBJECTS)
 cd_malloc.so:
 	g++ -std=gnu++0x -fPIC -Wall -ldl -Dcomm_log -o cd_malloc.so -shared cd_malloc.cc -L../lib -Wl,-rpath ../lib
 
+libc_rn.so:
+	g++ -std=gnu++0x -fPIC -Wall -ldl -Dcomm_log -o libc_rn.so -shared libc_rn.cc -L../lib -Wl,-rpath ../lib
+
 clean:
-	rm -rf $(LIBOUTPUT) $(OBJECTS)
+	rm -rf cd_malloc.so libc_rn.so $(LIBOUTPUT) $(OBJECTS)
 
 

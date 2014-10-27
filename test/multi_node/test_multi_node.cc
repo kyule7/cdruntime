@@ -296,7 +296,8 @@ int test_preservation_via_copy()
   //  root->Begin();  
   //  getcontext(&root->context_);
   CD_Begin(root); 
-
+//GONG
+  srand(time(NULL));
   printf("CD Preserving..\n");
   root->Preserve(a, sizeof(a), kCopy, "a", "a");
   //root->Preserve((char *)&a,4* sizeof(int));
@@ -318,9 +319,10 @@ int test_preservation_via_copy()
   
   int *test_realloc = new int[10];
   test_realloc = (int*) realloc(test_realloc, 20*sizeof(int));
-  test_realloc[0] = rand();
-  test_realloc[11] = rand();
-  
+  test_realloc[0] = random();
+  test_realloc[11] = random();
+
+  printf("rand value check : %i\t%i\t%i\t%i\t%i\n", test_malloc[0], test_calloc[0], test_valloc[0], test_realloc[0], test_realloc[11]);
   printf("Before Modify Current value of a[0]=%d a[1]=%d\n", a[0], a[1]);
   printf("Before Modify Current value of b[0]=%d b[1]=%d\n", b[0], b[1]);
 
