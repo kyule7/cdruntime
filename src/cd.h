@@ -193,6 +193,8 @@ update the preserved data.
 #ifdef comm_log
     //SZ
     cd::CommLog * comm_log_ptr_=NULL;
+    //GONG
+    cd::CommLog * libc_log_ptr_=NULL;
 
     uint32_t child_seq_id_;
     

@@ -178,6 +178,8 @@ CD::CD(CDHandle* cd_parent,
     uint32_t tmp_seq_id = cd_parent->ptr_cd()->child_seq_id_;
     PRINT_DEBUG("With cd_parent = %p, set child's seq_id_ to parent's child_seq_id_(%d)\n", cd_parent, tmp_seq_id);
     cd_id_.SetSequentialID(tmp_seq_id);
+    //GONG
+    libc_log_ptr_ = new CommLog(this, kGenerateLog);
   }
   else 
   {
@@ -188,6 +190,8 @@ CD::CD(CDHandle* cd_parent,
       PRINT_DEBUG("With cd_parent = NULL, creating CommLog with mode kGenerateLog\n");
       comm_log_ptr_ = new CommLog(this, kGenerateLog);
     }
+    //GONG:
+    libc_log_ptr_ = new CommLog(this, kGenerateLog);
 
     PRINT_DEBUG("Set child's child_seq_id_ to 0\n");
     child_seq_id_ = 0;
@@ -211,6 +215,8 @@ void CD::Initialize(CDHandle* cd_parent,
 
 void CD::Init()
 {
+  //GONG
+  app_side = false;
   ctxt_prv_mode_ = kExcludeStack; 
   cd_exec_mode_  = kSuspension;
   option_save_context_ = 0;
@@ -228,6 +234,9 @@ void CD::Init()
 //  cd_id_.domain_id_ = Util::GetCurrentDomainID();
 //  cd_id_.object_id_ = Util::GenerateCDObjectID();
 //  cd_id_.sequential_id_ = 0;
+
+  //GONG
+  app_side = true;
 }
 
 /// Kyushick:
@@ -447,6 +456,8 @@ CDErrT CD::Begin(bool collective, const char* label)
  */
 CDErrT CD::Complete(bool collective, bool update_preservations)
 {
+//GONG
+app_side = false;
 #ifdef comm_log
   // SZ: pack logs and push to parent
   if (GetParentHandle()!=NULL)
@@ -514,6 +525,8 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   // FIXME don't we have to wait for others to be completed?  
   cd_exec_mode_ = kSuspension; 
 
+//GONG
+app_side = true;
   return CDErrT::kOK;
 }
 
@@ -677,6 +690,8 @@ CDErrT CD::Preserve(void* data,
                     const RegenObject* regen_object, 
                     PreserveUseT data_usage)
 {
+  //GONG
+  app_side = false;
 
   // FIXME MALLOC should use different ones than the ones for normal malloc
   // For example, it should bypass malloc wrap functions.
@@ -685,9 +700,18 @@ CDErrT CD::Preserve(void* data,
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
     cout<<"my_name "<< my_name<<endl;
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
-      case CDInternalErrT::kOK            : return CDErrT::kOK;
-      case CDInternalErrT::kExecModeError : return CDErrT::kError;
-      case CDInternalErrT::kEntryError    : return CDErrT::kError;
+      case CDInternalErrT::kOK            : 
+              //GONG
+              app_side = true;
+              return CDErrT::kOK;
+      case CDInternalErrT::kExecModeError :
+              //GONG
+              app_side = true;
+              return CDErrT::kError;
+      case CDInternalErrT::kEntryError    : 
+              //GONG
+              app_side = true;
+              return CDErrT::kError;
       default : assert(0);
     }
 
@@ -715,14 +739,25 @@ CDErrT CD::Preserve(void* data,
       ++iterator_entry_;
 
       switch( cd_entry->Restore() ) {
-        case CDEntry::CDEntryErrT::kOK            : return CDErrT::kOK; 
-        case CDEntry::CDEntryErrT::kOutOfMemory   : return CDErrT::kError;
-        case CDEntry::CDEntryErrT::kFileOpenError : return CDErrT::kError;
+        case CDEntry::CDEntryErrT::kOK            : 
+                //GONG
+                app_side = true;
+                return CDErrT::kOK; 
+        case CDEntry::CDEntryErrT::kOutOfMemory   : 
+                //GONG
+                app_side = true;
+                return CDErrT::kError;
+        case CDEntry::CDEntryErrT::kFileOpenError : 
+                //GONG
+                app_side = true;
+                return CDErrT::kError;
         default : assert(0);
       }
  
     }
     else {  // abnormal case
+      //GONG
+      app_side = false;
       //return CDErrT::kOK;
 
       cout<< "Something wrong in Reexecution!!!"<<endl<<endl;  
@@ -730,14 +765,23 @@ CDErrT CD::Preserve(void* data,
       // we reached the last preserve function call. 
       // Since we have reached the last point already now convert current execution mode into kExecution
 
-      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
+//      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
       PRINT_DEBUG("Now reached end of entry directory, now switching to normal execution mode\n");
 
       cd_exec_mode_  = kExecution;    
       switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
-        case CDInternalErrT::kOK            : return CDErrT::kOK;
-        case CDInternalErrT::kExecModeError : return CDErrT::kError;
-        case CDInternalErrT::kEntryError    : return CDErrT::kError;
+        case CDInternalErrT::kOK            : 
+  //GONG
+  app_side = false;
+                return CDErrT::kOK;
+        case CDInternalErrT::kExecModeError : 
+  //GONG
+  app_side = false;
+                return CDErrT::kError;
+        case CDInternalErrT::kEntryError    : 
+  //GONG
+  app_side = false;
+                return CDErrT::kError;
         default : assert(0);
       }
 
@@ -752,6 +796,8 @@ CDErrT CD::Preserve(void* data,
     
 
   }
+  //GONG
+  app_side = true;
   
   return kError; // we should not encounter this point
 }
@@ -1103,6 +1149,12 @@ CDErrT CD::Reexecute(void)
   //SZ: reset to child_seq_id_ = 0 
   PRINT_DEBUG("Reset child_seq_id_ to 0 at the point of re-execution\n");
   child_seq_id_ = 0;
+  //GONG
+  if(libc_log_ptr_!=NULL){
+    libc_log_ptr_->ReInit();
+    PRINT_DEBUG("reset log_table_reexec_pos_\n");
+    //  libc_log_ptr_->Print();
+  }
 #endif
 
   //TODO We need to make sure that all children has stopped before re-executing this CD.
@@ -1287,15 +1339,15 @@ void CD::DeleteEntryDirectory(void)
     uint32_t entry_len=0;
     void *ser_entry = it->Serialize(entry_len);
 
-    std::cout << "ser entry : "<< ser_entry << std::endl;
+//    std::cout << "ser entry : "<< ser_entry << std::endl;
     CDEntry new_entry;
-    std::cout << "\n\n--------------------------------\n"<<std::endl;
+//    std::cout << "\n\n--------------------------------\n"<<std::endl;
     new_entry.Deserialize(ser_entry);
-    cout << "before!!!! " << (it->src_data_).address_data()<<endl<<endl;
-    cout << "\n\n\nafter!!!! " << new_entry.src_data_.address_data()<<endl;
+//    cout << "before!!!! " << (it->src_data_).address_data()<<endl<<endl;
+//    cout << "\n\n\nafter!!!! " << new_entry.src_data_.address_data()<<endl;
 
-    cout << "before!!!! " << it->name() <<endl<<endl;
-    cout << "\n\n\nafter!!!! " << new_entry.name()<<endl;
+//    cout << "before!!!! " << it->name() <<endl<<endl;
+//    cout << "\n\n\nafter!!!! " << new_entry.name()<<endl;
     cout << (*it == new_entry) << endl;
 /*
     uint32_t data_handle_len=0;

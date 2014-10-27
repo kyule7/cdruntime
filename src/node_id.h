@@ -110,33 +110,33 @@ public:
 
   void * Serialize(uint32_t& len_in_bytes)
   {
-    std::cout << "\nNode ID Serialize\n" << std::endl;
+    //std::cout << "\nNode ID Serialize\n" << std::endl;
     Packer node_id_packer;
     node_id_packer.Add(NODEID_PACKER_COLOR, sizeof(ColorT), &color_);
     node_id_packer.Add(NODEID_PACKER_TASK_IN_COLOR, sizeof(int), &task_in_color_);
     node_id_packer.Add(NODEID_PACKER_HEAD, sizeof(int), &head_);
     node_id_packer.Add(NODEID_PACKER_SIZE, sizeof(int), &size_);
-    std::cout << "\nNode ID Serialize Done\n" << std::endl;
+    //std::cout << "\nNode ID Serialize Done\n" << std::endl;
     return node_id_packer.GetTotalData(len_in_bytes);  
   }
 
   void Deserialize(void* object) 
   {
-    std::cout << "\nNode ID Deserialize\n" << std::endl;
+    //std::cout << "\nNode ID Deserialize\n" << std::endl;
     Unpacker node_id_unpacker;
     uint32_t return_size;
     uint32_t dwGetID;
     color_ = *(ColorT *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    std::cout << "first unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    //std::cout << "first unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
 
     task_in_color_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    std::cout << "second unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    //std::cout << "second unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
 
     head_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    std::cout << "third unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    //std::cout << "third unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
 
     size_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    std::cout << "fourth unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    //std::cout << "fourth unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
   }
 
 

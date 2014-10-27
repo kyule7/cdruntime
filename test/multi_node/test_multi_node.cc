@@ -289,9 +289,8 @@ int test_preservation_via_copy()
   int test_result = 0;
   int num_reexecution = 0;
   printf("\n\n--------------------test1 begins-----------------------\n");
-  printf("CD Create\n");
 //  CD *root= handle_cd.ptr_cd();// for now let's just get the pointer and use it directly
-
+  printf("CD Create\n");
 	CDHandle* root = CD_Init(np, mr);
   printf("CD Begin.........lol\n");
   //  root->Begin();  
@@ -302,12 +301,17 @@ int test_preservation_via_copy()
   root->Preserve(a, sizeof(a), kCopy, "a", "a");
   //root->Preserve((char *)&a,4* sizeof(int));
   root->Preserve(b, sizeof(b), kCopy, "b", "b");
+  MPI_Barrier(MPI_COMM_WORLD);
   //root->Preserve((char *)&b,8* sizeof(int));
-  printf("sizeof a : %d\t", sizeof(a)); //getchar();
-  printf("sizeof b : %d\t", sizeof(b)); //getchar();
-
+//  printf("sizeof a : %d\t", sizeof(a)); //getchar();
+//  printf("sizeof b : %d\t", sizeof(b)); //getchar();
+  printf("test_malloc here\n");
+  int *test_malloc = new int[10];
+  test_malloc[0] = rand();
   printf("Before Modify Current value of a[0]=%d a[1]=%d\n", a[0], a[1]);
   printf("Before Modify Current value of b[0]=%d b[1]=%d\n", b[0], b[1]);
+  printf("test_malloc_1 here\n");
+  int *test_malloc_1 = new int[10];
 
   if( num_reexecution == 1) {
     if( a[0] == 3 ) {
@@ -328,18 +332,22 @@ int test_preservation_via_copy()
   a[0] =2;
   b[0] =5;
   printf("After Modify Current value of a[0]=%d\n", a[0]);
-  printf("After Modify Current value of b[0]=%d\n", b[0]);
-
+  printf("After Modify Current value of b[0]=%d==app_side?  %i\n\n", b[0], app_side);
+  MPI_Barrier(MPI_COMM_WORLD);
+  
   if( num_reexecution == 0) {
     printf("\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n");
     num_reexecution = 1;
+  MPI_Barrier(MPI_COMM_WORLD);
     root->CDAssert(false);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
   printf("\n\n--------------Corruption for c begins ----------------------------\n\n");
   // this point is to test whether execution mode becomes kExecution from this point, 
   // because before this preservation is called it should be in kReexecution mode
   root->Preserve(c, sizeof(c), kCopy, "c", "c");
   printf("sizeof c : %d\n", sizeof(c)); //getchar();
+  MPI_Barrier(MPI_COMM_WORLD);
 
   if( num_reexecution == 2)  {
     if( c[0] == 5 ) {
@@ -692,13 +700,13 @@ int main(int argc, char* argv[])
  
  
  
-//  printf("\ntest_preservation_via_copy() \n\n"); 
-//  ret = test_preservation_via_copy();
-//  if( ret == kError ) printf("test via copy FAILED\n");
-//  else printf("test via copy PASSED\n");
+  printf("\ntest_preservation_via_copy() \n\n"); 
+  ret = test_preservation_via_copy();
+  if( ret == kError ) printf("test via copy FAILED\n");
+  else printf("test via copy PASSED\n");
  
  
- 
+/* 
   printf("\ntest_preservation_via_referenence \n\n"); 
   ret = test_preservation_via_ref();
   if( ret == kError ) printf("test_preservation_via_reference FAILED\n");
@@ -708,7 +716,7 @@ int main(int argc, char* argv[])
   ret = test_preservation_via_referenence_partial_update();
   if( ret == kError ) printf("test_preservation_via_referenence_partial_update FAILED\n");
   else printf("test_preservation_via_referenence_partial_update PASSED\n");
-
+*/
 
 //  printf("\n\n------------ performance test 1 ---------------\n\n");  //getchar();
 //  performance_test1();

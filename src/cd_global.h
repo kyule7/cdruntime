@@ -67,6 +67,9 @@ typedef int ColorT;
 #define INVALID_TASK_ID -1
 #define INVALID_HEAD_ID -1
 
+//GONG: global variable to represent the current context for malloc wrapper
+extern bool app_side;
+
 namespace cd {
   class CD;
   class HeadCD;

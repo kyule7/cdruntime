@@ -45,17 +45,17 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
 
   if( dst_data_.address_data() != NULL ) {
     DATA_FREE( dst_data_.address_data() );
-    printf("free preserved data\n"); 
+//    printf("free preserved data\n"); 
 //    getchar();
   }
 
   if( !dst_data_.file_name_.empty() )  {
-    printf("erase file start!\n"); getchar();
+//    printf("erase file start!\n"); getchar();
 //    delete dst_data_.file_name(); 
     char cmd[30];
     sprintf(cmd, "rm %s", dst_data_.file_name_.c_str());
     int ret = system(cmd);
-    printf("erase the file of preserved data\n"); 
+ //   printf("erase the file of preserved data\n"); 
     if( ret == -1 ) {
       ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
       assert(0);
@@ -83,7 +83,7 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
 //    printf("This one shouldn't be called!!!\n\n");
 //    assert(0);
     memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len());
-    std::cout << "--------------------------------\n Saved Data "<<name_.c_str()<<" : " << *(reinterpret_cast<int*>(dst_data_.address_data())) << " at " << dst_data_.address_data() <<" (Memory)\n--------------------------- \n" << std::cout; //getchar();
+//    std::cout << "--------------------------------\n Saved Data "<<name_.c_str()<<" : " << *(reinterpret_cast<int*>(dst_data_.address_data())) << " at " << dst_data_.address_data() <<" (Memory)\n--------------------------- \n" << std::cout; //getchar();
 //    std::cout<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<std::endl<<std::endl;
 
     if(false) { // Is there a way to check if memcpy is done well?
@@ -124,8 +124,8 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen, struct ts
     fwrite(src_data_.address_data(), sizeof(char), src_data_.len(), fp);
     fclose(fp);
 
-    printf("we write a file \n");
-    getchar();
+//    printf("we write a file \n");
+//    getchar();
 
     return kOK;
   }
@@ -178,7 +178,7 @@ CDEntry::CDEntryErrT CDEntry::Save(void)
 
     if(dst_data_.address_data() != NULL) {
       memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len()); 
-      std::cout<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<std::endl<<std::endl;
+//      std::cout<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<std::endl<<std::endl;
     }
     else {
       return kOutOfMemory;
@@ -238,15 +238,15 @@ DataHandle* CDEntry::GetBuffer() {
 
 
 	if( dst_data_.handle_type() == DataHandle::kReference) {  // Restoration from reference
-    std::cout<< "GetBuffer, reference"<<std::endl; //getchar();
+//    std::cout<< "GetBuffer, reference"<<std::endl; //getchar();
     buffer = &real_dst_data;
     
     // FIXME: for now let's just search immediate parent only.  Let's extend this to more general way.
 //		cd::CDHandle* parent_cd = GetParentCD(ptr_cd_->GetCDID());
 
 		cd::CDHandle* parent_cd = CDPath::GetParentCD();
+/*    
     CDEntry* entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
-
     std::cout<<"parent name: "<<parent_cd->GetName()<<std::endl;
     if(entry_tmp != NULL) { 
       std::cout << "parent dst addr : " << entry_tmp->dst_data_.address_data()
@@ -254,6 +254,7 @@ DataHandle* CDEntry::GetBuffer() {
     } else {
       std::cout<<"there is no reference in parent level"<<std::endl;
     }
+*/
 //		if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
 
 //		CDEntry* entry = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
@@ -268,20 +269,20 @@ DataHandle* CDEntry::GetBuffer() {
       CDEntry* entry = NULL;
 			while( parent_cd != NULL ) {
 		    entry = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
-				std::cout <<"current entry name : "<< entry->name() << " with ref name : "    << entry->dst_data_.ref_name() 
-                  << ", at level: " << entry->ptr_cd()->GetCDID().level()<<std::endl;
+//				std::cout <<"current entry name : "<< entry->name() << " with ref name : "    << entry->dst_data_.ref_name() 
+//                  << ", at level: " << entry->ptr_cd()->GetCDID().level()<<std::endl;
 
         if(entry != NULL) {
-          std::cout<<"I got my reference here!!"<<std::endl;
+//          std::cout<<"I got my reference here!!"<<std::endl;
           break;
         }
         else {
 				  parent_cd = CDPath::GetParentCD(ptr_cd()->GetCDID().level());
-          std::cout<< "Gotta go to upper level! -> " << parent_cd->GetName() << " at level "<< parent_cd->ptr_cd()->GetCDID().level() << std::endl;
+//          std::cout<< "Gotta go to upper level! -> " << parent_cd->GetName() << " at level "<< parent_cd->ptr_cd()->GetCDID().level() << std::endl;
         }
 			} 
 
-      std::cout<<"here?? 2"<<std::endl;
+//      std::cout<<"here?? 2"<<std::endl;
        
 			//lsn = entry->lsn;
 			
@@ -304,7 +305,7 @@ DataHandle* CDEntry::GetBuffer() {
 
 	}
   else {  // Restoration from memory or file system. Just use the current dst_data_ for it.
-    std::cout<<"GetBuffer :: kCopy "<<std::endl; //getchar();
+//    std::cout<<"GetBuffer :: kCopy "<<std::endl; //getchar();
     buffer = &dst_data_;
     dst_data_.address_data();
   }
@@ -313,7 +314,7 @@ DataHandle* CDEntry::GetBuffer() {
 
 CDEntry::CDEntryErrT CDEntry::Restore(void)
 {
-  std::cout<<"CDEntry::Restore(void)"<<std::endl;
+//  std::cout<<"CDEntry::Restore(void)"<<std::endl;
   // Populate buffer
   DataHandle* buffer = GetBuffer();
   if(buffer == 0) { ERROR_MESSAGE("GetBuffer failed.\n"); assert(0); }
@@ -321,16 +322,16 @@ CDEntry::CDEntryErrT CDEntry::Restore(void)
 	//FIXME we need to distinguish whether this request is on Remote or local for both 
   // when using kOSFile or kMemory and do appropriate operations..
 	if(buffer->handle_type() == DataHandle::kMemory)	{
-    std::cout<<"CDEntry::Restore -> kMemory"<<std::endl;
+//    std::cout<<"CDEntry::Restore -> kMemory"<<std::endl;
 		if(src_data_.address_data() != NULL) {
-      std::cout << src_data_.len() << " - " << buffer->len() << ", offset : "<<buffer->ref_offset() << std::endl;
-      std::cout << src_data_.address_data() << " - " << buffer->address_data() << std::endl;
+//      std::cout << src_data_.len() << " - " << buffer->len() << ", offset : "<<buffer->ref_offset() << std::endl;
+//      std::cout << src_data_.address_data() << " - " << buffer->address_data() << std::endl;
       assert( src_data_.len() == buffer->len() );
 //      std::cout << "sizeof src "<< sizeof(src_data_.address_data()) << ", sizeof dst " <<sizeof(buffer->address_data())<<std::endl;
 			memcpy(src_data_.address_data(), (char *)buffer->address_data()+(buffer->ref_offset()), buffer->len()); 
-      std::cout<<"memcpy succeeds"<<std::endl; //getchar();
+//      std::cout<<"memcpy succeeds"<<std::endl; //getchar();
 
-      std::cout<<"memcpy "<< dst_data_.len() <<" size data from "<< dst_data_.address_data() << " to "<< src_data_.address_data() <<std::endl<<std::endl;
+//      std::cout<<"memcpy "<< dst_data_.len() <<" size data from "<< dst_data_.address_data() << " to "<< src_data_.address_data() <<std::endl<<std::endl;
 		}
 		else {
 			ERROR_MESSAGE("Not enough memory.");
@@ -338,7 +339,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(void)
 
 	}
 	else if( buffer->handle_type() == DataHandle::kOSFile)	{
-    std::cout<<"CDEntry::Restore -> kOSFile"<<std::endl;
+//    std::cout<<"CDEntry::Restore -> kOSFile"<<std::endl;
 		//FIXME we need to collect file writes and write as a chunk. We don't want to have too many files per one CD.   
 
 		FILE *fp;
