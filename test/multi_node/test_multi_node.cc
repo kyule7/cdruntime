@@ -308,10 +308,21 @@ int test_preservation_via_copy()
   printf("test_malloc here\n");
   int *test_malloc = new int[10];
   test_malloc[0] = rand();
+  printf("test_calloc here\n");
+  int *test_calloc = (int*) calloc(10,sizeof(int));
+  test_calloc[0] = rand();
+  printf("test_valloc here\n");
+  int *test_valloc = (int*) valloc(10*sizeof(int));
+  test_valloc[0] = rand();
+  printf("test_realloc here\n");
+  
+  int *test_realloc = new int[10];
+  test_realloc = (int*) realloc(test_realloc, 20*sizeof(int));
+  test_realloc[0] = rand();
+  test_realloc[11] = rand();
+  
   printf("Before Modify Current value of a[0]=%d a[1]=%d\n", a[0], a[1]);
   printf("Before Modify Current value of b[0]=%d b[1]=%d\n", b[0], b[1]);
-  printf("test_malloc_1 here\n");
-  int *test_malloc_1 = new int[10];
 
   if( num_reexecution == 1) {
     if( a[0] == 3 ) {

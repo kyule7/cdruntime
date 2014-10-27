@@ -7,9 +7,19 @@
 
 bool app_side;
 typedef void*(*Malloc)(size_t size);
-//static Malloc real_malloc = NULL;
 
 using namespace cd;
+
+//GONG: Is free() required?
+void free(void *p)
+{
+  static void(*real_free)(void*);
+  if(!real_free)
+  {
+    real_free = (void(*)(void *)) dlsym(RTLD_NEXT, "free");
+  }
+  real_free(p);
+}
 
 void* real_malloc_(size_t size)
 {
@@ -20,7 +30,7 @@ void* real_malloc_(size_t size)
 
 CD* logable_execmode(bool *logable_, bool *execmode)
 {
-//  printf("logable_execmode\n");      
+  printf("logable_execmode\n");      
   CDHandle* current = CDPath::GetCurrentCD();
 	CD* c_CD;
 	if(current==NULL){
@@ -90,12 +100,129 @@ else{
 	return p;
 } 
 
-/*
-void *malloc(size_t size)
+
+static void* temp_calloc(size_t num, size_t size)
 {
-  void *p;
-  p = real_malloc_(size);
-  printf("CD runtime malloc(%ld) = %p\n", size, p);	
+  printf("empty calloc is called\n");
+  return NULL;
+}
+
+extern "C" void *calloc(size_t num, size_t size)
+{
+  static void * (*real_calloc)(size_t,size_t) = 0;
+  void *p;    
+  if(!real_calloc)
+  {
+    real_calloc = temp_calloc;
+    real_calloc = (void*(*)(size_t, size_t)) dlsym(RTLD_NEXT, "calloc");
+  }
+  if(app_side){
+    bool logable  = false;
+    bool reexecute = false;
+    CD* c_CD = logable_execmode(&logable, &reexecute);
+	  if(logable){
+	  //GONG: Determine whether we call real_calloc w/ logging return value or get return value stored in logs
+		  if(reexecute){
+			  c_CD->libc_log_ptr_->ReadData(&p, size);
+			  printf("RE-EXECUTE MODE calloc(%ld) = %p\n", size, p);
+  		}
+  		else
+  		{
+        p = real_calloc(num,size);
+   		  printf("EXECUTE MODE calloc(%ld) = %p\n", size, p);
+   	    c_CD->libc_log_ptr_->LogData(&p, size);
+	    }
+	  }
+	  else
+	  {
+      p = real_calloc(num,size);
+		  printf("NORMAL calloc(%ld) = %p\n", size, p);	
+	  }
+  }
+  else{
+    //NEVER invoke functions that internally invoke calloc again (e.g., printf()) in order to aviod infinite calloc loop
+    p = real_calloc(num,size);
+  }	        
   return p;
 }
-*/
+
+                  
+void *valloc(size_t size)
+{
+  void *p;    
+  static void * (*real_valloc)(size_t);
+  if(!real_valloc)
+  {
+    real_valloc = (void*(*)(size_t)) dlsym(RTLD_NEXT, "valloc");
+  }
+  if(app_side){
+    bool logable  = false;
+    bool reexecute = false;
+    CD* c_CD = logable_execmode(&logable, &reexecute);
+	  if(logable){
+	  //GONG: Determine whether we call real_valloc w/ logging return value or get return value stored in logs
+		  if(reexecute){
+			  c_CD->libc_log_ptr_->ReadData(&p, size);
+			  printf("RE-EXECUTE MODE valloc(%ld) = %p\n", size, p);
+  		}
+  		else
+  		{
+        p = real_valloc(size);
+   		  printf("EXECUTE MODE valloc(%ld) = %p\n", size, p);
+   	    c_CD->libc_log_ptr_->LogData(&p, size);
+	    }
+	  }
+	  else
+	  {
+      p = real_valloc(size);
+		  printf("NORMAL valloc(%ld) = %p\n", size, p);	
+	  }
+  }
+  else{
+    p = real_valloc(size);
+		printf("CD runtime side valloc(%ld) = %p\n", size, p);	
+  }	          
+  return p;
+}
+
+
+void *realloc(void* ptr, size_t size)
+{
+  void *p;    
+  static void * (*real_realloc)(void*,size_t);
+  if(!real_realloc)
+  {
+    real_realloc = (void*(*)(void*,size_t)) dlsym(RTLD_NEXT, "realloc");
+  }
+  if(app_side){
+    bool logable  = false;
+    bool reexecute = false;
+    CD* c_CD = logable_execmode(&logable, &reexecute);
+	  if(logable){
+	  //GONG: Determine whether we call real_realloc w/ logging return value or get return value stored in logs
+		  if(reexecute){
+			  c_CD->libc_log_ptr_->ReadData(&p, size);
+			  printf("RE-EXECUTE MODE realloc(%ld) = %p\n", size, p);
+  		}
+  		else
+  		{
+        p = real_realloc(ptr,size);
+   		  printf("EXECUTE MODE realloc(%ld) = %p\n", size, p);
+   	    c_CD->libc_log_ptr_->LogData(&p, size);
+	    }
+	  }
+	  else
+	  {
+      p = real_realloc(ptr,size);
+		  printf("NORMAL realloc(%ld) = %p\n", size, p);	
+	  }
+  }
+  else{
+    p = real_realloc(ptr,size);
+		printf("CD runtime side realloc(%ld) = %p\n", size, p);	
+  }	          
+  return p;
+}
+
+
+
