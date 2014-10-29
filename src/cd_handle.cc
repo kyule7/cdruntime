@@ -60,6 +60,9 @@ CDPath* CDPath::uniquePath_;
 /// Register Root CD
 CDHandle* cd::CD_Init(int numTask, int myRank)
 {
+  //GONG
+  app_side = false;
+//  printf("app_side = false in cd::CD_Init\n");
 //  myTaskID = myRank;
 //  CDHandle* root_cd = new CDHandle(NULL, "Root", NodeID(ROOT_COLOR, myRank, numTask, 0), kStrict, 0);
   CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myRank, ROOT_HEAD_ID, numTask)), kStrict, 0);
@@ -70,12 +73,18 @@ CDHandle* cd::CD_Init(int numTask, int myRank)
   root_cd_handle->profiler_->InitViz();
 #endif
 
+  //GONG
+//  printf("app_side = true in cd::CD_Init\n");
+  app_side = true;
   return root_cd_handle;
 }
 
 
 void cd::CD_Finalize(void)
 {
+  //GONG:
+  app_side = false;
+
   assert(CDPath::GetCDPath()->size()==1); // There should be only on CD which is root CD
   assert(CDPath::GetCDPath()->back()!=NULL);
 
@@ -85,6 +94,9 @@ void cd::CD_Finalize(void)
 #endif
 
   CDPath::GetRootCD()->Destroy();
+
+  //GONG
+  app_side = true;
 }
 
 // CDHandle Member Methods ------------------------------------------------------------
@@ -152,6 +164,10 @@ CDHandle* CDHandle::Create(const char* name,
                            uint32_t error_loc_mask, 
                            CDErrT *error )
 {
+  //GONG
+  app_side = false;
+//  printf("app_side = false in CDHandle::Create\n");
+        
   // Create CDHandle for a local node
   // Create a new CDHandle and CD object
   // and populate its data structure correctly (CDID, etc...)
@@ -172,6 +188,9 @@ CDHandle* CDHandle::Create(const char* name,
 
 //  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;
   
+  //GONG
+//  printf("app_side = true in CDHandle::Create\n");
+  app_side = true;
   return new_cd_handle;
 }
 

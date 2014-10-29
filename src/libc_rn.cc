@@ -47,16 +47,17 @@ int rand()
   
   if(app_side){
     bool logable  = false;
-    bool reexecute = false;
-    CD* c_CD = logable_execmode(&logable, &reexecute);
+    CD* c_CD = IsLogable(&logable);
 	  if(logable){
-		  if(reexecute){
+      if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
 			  c_CD->libc_log_ptr_->ReadData(&i, size);
+			PRINT_DEBUG("libc_log_ptr_: %p\tRE-EXECUTE MODE rand(%ld) = %p\n", c_CD->libc_log_ptr_, size, i);
   		}
   		else
   		{
         i = real_rand();
    	    c_CD->libc_log_ptr_->LogData(&i, size);
+			PRINT_DEBUG("libc_log_ptr_: %p\t -EXECUTE MODE rand(%ld) = %p\n", c_CD->libc_log_ptr_, size, i);
 	    }
 	  }
 	  else

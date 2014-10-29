@@ -77,15 +77,19 @@ class cd::CommLog {
 
     // push logs to parent
     CommLogErrT PackAndPushLogs(CD * parent_cd);
+    //GONG: duplicated for libc logging
+    CommLogErrT PackAndPushLogs_libc(CD * parent_cd);
     CommLogErrT PackLogs(CommLog * parent_cl_ptr, unsigned long length);
     CommLogErrT CheckChildLogAlloc(unsigned long length);
 
     // copy logs to children cds
     CommLogErrT UnpackLogsToChildCD(CD* child_cd);
+    //GONG: duplicated for libc logging
+    CommLogErrT UnpackLogsToChildCD_libc(CD* child_cd);
     CommLogErrT FindChildLogs(CDID child_cd_id, char** src_ptr);
     CommLogErrT UnpackLogs(char * src_ptr);
 
-    bool IsNewLogGenerated()
+    bool IsNewLogGenerated_()
     {
       return new_log_generated_;
     }

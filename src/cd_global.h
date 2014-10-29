@@ -201,21 +201,21 @@ namespace cd {
 //#define DEBUG_PRINT(...) {}
 //#endif
 
-//SZ: when testing MPI functions, print to files is easier
-#ifdef comm_log 
-#ifdef _DEBUG
-extern FILE * fp;
-#endif
-#endif
+////SZ: when testing MPI functions, print to files is easier
+//#ifdef comm_log 
+//#ifdef _DEBUG
+//extern FILE * fp;
+//#endif
+//#endif
 
 
 #if _DEBUG
-  //SZ: change to this if want to compile test_comm_log.cc
-  #ifdef comm_log
-    #define PRINT_DEBUG(...) {fprintf(fp, __VA_ARGS__);}
-  #else
+  ////SZ: change to this if want to compile test_comm_log.cc
+  //#ifdef comm_log
+  //  #define PRINT_DEBUG(...) {fprintf(fp, __VA_ARGS__);}
+  //#else
     #define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
-  #endif
+  //#endif
 
   #define PRINT_DEBUG2(X,Y) printf(X,Y);
 #else
@@ -263,7 +263,7 @@ We are increasing the number of reexecution inside Begin(). So, the point of tim
 
 // Macros for setjump / getcontext
 // So users should call this in their application, not call cd_handle->Begin().
-#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
+#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_); (X)->CommitPreserveBuff(); (X)->Begin();
 #define CD_Complete(X) (X)->Complete()   
 
 

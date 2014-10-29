@@ -282,6 +282,7 @@ int performance_test1()
 int test_preservation_via_copy()
 {
 
+  CDErrT err;
   int a[4]= {3,0,};
   int b[8]= {1,0,};
   int c[8]= {5,};
@@ -297,32 +298,38 @@ int test_preservation_via_copy()
   //  getcontext(&root->context_);
   CD_Begin(root); 
 //GONG
-  srand(time(NULL));
-  printf("CD Preserving..\n");
-  root->Preserve(a, sizeof(a), kCopy, "a", "a");
-  //root->Preserve((char *)&a,4* sizeof(int));
-  root->Preserve(b, sizeof(b), kCopy, "b", "b");
-  MPI_Barrier(MPI_COMM_WORLD);
-  //root->Preserve((char *)&b,8* sizeof(int));
-//  printf("sizeof a : %d\t", sizeof(a)); //getchar();
-//  printf("sizeof b : %d\t", sizeof(b)); //getchar();
+//  printf("CD Preserving..\n");
+  
+  
+  printf("create child CD\n");
+  CDHandle* child=root->Create("CD1", kStrict, 0, 0, &err);
+  printf("Child CD Begin\n");
+  CD_Begin(child); 
+  printf("child CD Preserving..\n");
+  child->Preserve(a, sizeof(a), kCopy, "a", "a");
+  child->Preserve(b, sizeof(b), kCopy, "b", "b");
+  
   printf("test_malloc here\n");
   int *test_malloc = new int[10];
   test_malloc[0] = rand();
   printf("test_calloc here\n");
   int *test_calloc = (int*) calloc(10,sizeof(int));
   test_calloc[0] = rand();
+  
+  printf("child CD Complete..\n");
+  CD_Complete(child);
+  
+  CD_Begin(child);
+
   printf("test_valloc here\n");
   int *test_valloc = (int*) valloc(10*sizeof(int));
   test_valloc[0] = rand();
   printf("test_realloc here\n");
-  
   int *test_realloc = new int[10];
-  test_realloc = (int*) realloc(test_realloc, 20*sizeof(int));
-  test_realloc[0] = random();
-  test_realloc[11] = random();
-
-  printf("rand value check : %i\t%i\t%i\t%i\t%i\n", test_malloc[0], test_calloc[0], test_valloc[0], test_realloc[0], test_realloc[11]);
+  test_realloc = (int*) realloc(test_realloc, 10*sizeof(int));
+  test_realloc[0] = rand();
+  printf("rand value check : %i\t%i\t%i\t%i\t%i\n", test_malloc[0], test_calloc[0], test_valloc[0], test_realloc[0], test_realloc[9]);
+  
   printf("Before Modify Current value of a[0]=%d a[1]=%d\n", a[0], a[1]);
   printf("Before Modify Current value of b[0]=%d b[1]=%d\n", b[0], b[1]);
 
@@ -346,15 +353,17 @@ int test_preservation_via_copy()
   b[0] =5;
   printf("After Modify Current value of a[0]=%d\n", a[0]);
   printf("After Modify Current value of b[0]=%d==app_side?  %i\n\n", b[0], app_side);
-  MPI_Barrier(MPI_COMM_WORLD);
   
-  if( num_reexecution == 0) {
+  if( num_reexecution == 0 ){
     printf("\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n");
     num_reexecution = 1;
-  MPI_Barrier(MPI_COMM_WORLD);
-    root->CDAssert(false);
+    child->CDAssert(false);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  printf("Complete child CD\n");
+  child->Complete();
+  printf("Destroy child CD\n");
+  child->Destroy();
+
   printf("\n\n--------------Corruption for c begins ----------------------------\n\n");
   // this point is to test whether execution mode becomes kExecution from this point, 
   // because before this preservation is called it should be in kReexecution mode

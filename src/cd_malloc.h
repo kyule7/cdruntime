@@ -48,7 +48,7 @@ typedef void*(*Malloc)(size_t size);
 using namespace cd;
 
  
-CD* logable_execmode(bool *logable_, bool *execmode);
+CD* IsLogable(bool *logable_);
 
 
 #endif

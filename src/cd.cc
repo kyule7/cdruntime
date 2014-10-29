@@ -215,8 +215,6 @@ void CD::Initialize(CDHandle* cd_parent,
 
 void CD::Init()
 {
-  //GONG
-  app_side = false;
   ctxt_prv_mode_ = kExcludeStack; 
   cd_exec_mode_  = kSuspension;
   option_save_context_ = 0;
@@ -235,8 +233,6 @@ void CD::Init()
 //  cd_id_.object_id_ = Util::GenerateCDObjectID();
 //  cd_id_.sequential_id_ = 0;
 
-  //GONG
-  app_side = true;
 }
 
 /// Kyushick:
@@ -278,7 +274,6 @@ CDHandle* CD::Create(CDHandle* parent,
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err)
 {
-
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
   CD* new_cd=NULL;
@@ -402,7 +397,9 @@ CDErrT CD::Destroy(void)
 // CDHandle will follow the standard interface. 
 CDErrT CD::Begin(bool collective, const char* label)
 {
-  //cout<<"inside CD::Begin"<<endl;
+  //GONG
+//  printf("app_side = false in CD::Begin\n");
+  app_side = false;
   PRINT_DEBUG("inside CD::Begin\n");
 
 #ifdef comm_log
@@ -435,6 +432,27 @@ CDErrT CD::Begin(bool collective, const char* label)
         }
       }
     }
+    //GONG: as long as parent CD is in replay(check with ), child CD needs to unpack logs
+    if(GetParentHandle()->ptr_cd_->libc_log_ptr_->GetCommLogMode() == kReplayLog){
+      PRINT_DEBUG("unpack logs to children - replay mode\n");
+      //the same issue as above: address space 
+      if (IsParentLocal())
+      {
+          libc_log_ptr_->SetCommLogMode(kReplayLog);
+          CommLogErrT ret;
+          ret = GetParentHandle()->ptr_cd_->libc_log_ptr_->UnpackLogsToChildCD_libc(this);
+          if (ret == kCommLogChildLogNotFound)
+          {
+            // need to reallocate table and data array...
+            libc_log_ptr_->Realloc();
+          }
+        }
+        else
+        {
+          PRINT_DEBUG("Should not be here to unpack logs!! - libc\n");
+        }
+    }
+
   }
 #endif
 
@@ -445,7 +463,9 @@ CDErrT CD::Begin(bool collective, const char* label)
   else {
     num_reexecution_++ ;
   }
-
+  //GONG
+//  printf("app_side = true in CD::Begin\n");
+  app_side = true;
   return CDErrT::kOK;
 }
 
@@ -456,8 +476,9 @@ CDErrT CD::Begin(bool collective, const char* label)
  */
 CDErrT CD::Complete(bool collective, bool update_preservations)
 {
-//GONG
-app_side = false;
+  //GONG
+  app_side = false;
+  //printf("app_side = false in CD::Complete\n");
 #ifdef comm_log
   // SZ: pack logs and push to parent
   if (GetParentHandle()!=NULL)
@@ -504,6 +525,30 @@ app_side = false;
       }
     }
   }
+  //GONG
+  if(GetParentHandle()!=NULL)
+  {
+    if(IsParentLocal())
+    {
+      if(IsNewLogGenerated_libc())
+      {
+        PRINT_DEBUG("Pushing logs to parent...\n");
+        libc_log_ptr_->PackAndPushLogs_libc(GetParentHandle()->ptr_cd_);
+        //libc_log_ptr_->Print();
+        GetParentHandle()->ptr_cd_->libc_log_ptr_->SetNewLogGenerated(true);
+        if(libc_log_ptr_->GetCommLogMode()==kGenerateLog)
+        {
+          GetParentHandle()->ptr_cd_->libc_log_ptr_->SetCommLogMode(kGenerateLog);
+        }
+      //GetParentHandle()->ptr_cd_->libc_log_ptr_->Print();
+        libc_log_ptr_->Reset();
+      }
+    }
+    else
+    {
+      PRINT_DEBUG("parent and child are in different memory space - libc\n");
+    }
+  }
 #endif
 
 //  if( cd_exec_mode_ != kReexecution ) {
@@ -525,8 +570,9 @@ app_side = false;
   // FIXME don't we have to wait for others to be completed?  
   cd_exec_mode_ = kSuspension; 
 
-//GONG
-app_side = true;
+  //GONG
+  //printf("app_side = true in CD::Complete\n");
+  app_side = true;
   return CDErrT::kOK;
 }
 
@@ -692,6 +738,7 @@ CDErrT CD::Preserve(void* data,
 {
   //GONG
   app_side = false;
+  //printf("app_side = false in CD::Preserve\n");
 
   // FIXME MALLOC should use different ones than the ones for normal malloc
   // For example, it should bypass malloc wrap functions.
@@ -702,14 +749,17 @@ CDErrT CD::Preserve(void* data,
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : 
               //GONG
+              //printf("app_side = true in CD::Preserve\n");
               app_side = true;
               return CDErrT::kOK;
       case CDInternalErrT::kExecModeError :
               //GONG
+              //printf("app_side = true in CD::Preserve\n");
               app_side = true;
               return CDErrT::kError;
       case CDInternalErrT::kEntryError    : 
               //GONG
+              //printf("app_side = true in CD::Preserve\n");
               app_side = true;
               return CDErrT::kError;
       default : assert(0);
@@ -741,14 +791,17 @@ CDErrT CD::Preserve(void* data,
       switch( cd_entry->Restore() ) {
         case CDEntry::CDEntryErrT::kOK            : 
                 //GONG
+                //printf("app_side = true in CD::Preserve - re-ex\n");
                 app_side = true;
                 return CDErrT::kOK; 
         case CDEntry::CDEntryErrT::kOutOfMemory   : 
                 //GONG
+                //printf("app_side = true in CD::Preserve - re-ex\n");
                 app_side = true;
                 return CDErrT::kError;
         case CDEntry::CDEntryErrT::kFileOpenError : 
                 //GONG
+                //printf("app_side = true in CD::Preserve - re-ex\n");
                 app_side = true;
                 return CDErrT::kError;
         default : assert(0);
@@ -756,8 +809,6 @@ CDErrT CD::Preserve(void* data,
  
     }
     else {  // abnormal case
-      //GONG
-      app_side = false;
       //return CDErrT::kOK;
 
       cout<< "Something wrong in Reexecution!!!"<<endl<<endl;  
@@ -772,14 +823,17 @@ CDErrT CD::Preserve(void* data,
       switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
         case CDInternalErrT::kOK            : 
   //GONG
+              //printf("app_side = true in CD::Preserve - abnormal\n");
   app_side = false;
                 return CDErrT::kOK;
         case CDInternalErrT::kExecModeError : 
   //GONG
+              //printf("app_side = true in CD::Preserve - abnormal\n");
   app_side = false;
                 return CDErrT::kError;
         case CDInternalErrT::kEntryError    : 
   //GONG
+              //printf("app_side = true in CD::Preserve - abnormal\n");
   app_side = false;
                 return CDErrT::kError;
         default : assert(0);
@@ -797,6 +851,7 @@ CDErrT CD::Preserve(void* data,
 
   }
   //GONG
+              //printf("app_side = true in CD::Preserve - kError\n");
   app_side = true;
   
   return kError; // we should not encounter this point
@@ -1149,6 +1204,7 @@ CDErrT CD::Reexecute(void)
   //SZ: reset to child_seq_id_ = 0 
   PRINT_DEBUG("Reset child_seq_id_ to 0 at the point of re-execution\n");
   child_seq_id_ = 0;
+
   //GONG
   if(libc_log_ptr_!=NULL){
     libc_log_ptr_->ReInit();
@@ -1428,6 +1484,11 @@ CommLogErrT CD::CommLogCheckAlloc(unsigned long length)
 {
   return comm_log_ptr_->CheckChildLogAlloc(length);
 }
+//GONG
+CommLogErrT CD::CommLogCheckAlloc_libc(unsigned long length)
+{
+  return libc_log_ptr_->CheckChildLogAlloc(length);
+}
 
 //SZ 
 bool CD::IsParentLocal()
@@ -1471,10 +1532,21 @@ CommLogMode CD::GetCommLogMode()
 {
   return comm_log_ptr_->GetCommLogMode();
 }
+//GONG
+CommLogMode CD::GetCommLogMode_libc()
+{
+  return libc_log_ptr_->GetCommLogMode();
+}
 
 //SZ
 bool CD::IsNewLogGenerated()
 {
-  return comm_log_ptr_->IsNewLogGenerated();
+  return comm_log_ptr_->IsNewLogGenerated_();
+}
+
+//GONG
+bool CD::IsNewLogGenerated_libc()
+{
+  return libc_log_ptr_->IsNewLogGenerated_();
 }
 #endif

@@ -350,6 +350,8 @@ update the preserved data.
     //SZ
     //FIXME: no function should return CommLogErrT, change to CD error types...
     CommLogErrT CommLogCheckAlloc(unsigned long length);
+    //GONG: duplicated for libc logging
+    CommLogErrT CommLogCheckAlloc_libc(unsigned long length);
     //SZ 
     bool IsParentLocal();
     //SZ
@@ -360,8 +362,12 @@ update the preserved data.
     CommLogErrT ReadData(void *data_ptr, unsigned long length);
     //SZ
     CommLogMode GetCommLogMode();
+    //GONG: duplicated for libc
+    CommLogMode GetCommLogMode_libc();
     //SZ
     bool IsNewLogGenerated();
+    //GONG: duplicated for libc
+    bool IsNewLogGenerated_libc();
 #endif
     
     CDNameT& GetCDName(void)  { return cd_id_.cd_name_; }

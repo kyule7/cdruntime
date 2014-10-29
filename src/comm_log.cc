@@ -411,7 +411,26 @@ CommLogErrT CommLog::PackAndPushLogs(CD* parent_cd)
 
   return kCommLogOK;
 }
+//GONG
+CommLogErrT CommLog::PackAndPushLogs_libc(CD* parent_cd)
+{
+  // calculate length of data copy
+  // pack format is [SIZE][CDID][Table][Queue][ChildLogQueue]
+  unsigned long length;
+  length = sizeof(unsigned long) + sizeof(CDID) // SIZE + CDID
+         + sizeof(struct LogTable) + sizeof(struct LogTableElement)*log_table_.cur_pos_ //Table
+         + sizeof(struct LogQueue) + sizeof(char)*log_queue_.cur_pos_ // Queue
+         + sizeof(struct ChildLogQueue) + sizeof(char)*child_log_.cur_pos_; // ChildLogQueue
 
+  // check parent's queue availability
+  parent_cd->CommLogCheckAlloc_libc(length);
+
+  // TODO: this is ugly, what about a tmp_ptr to pack and then copy to parent??
+  // pack logs to parent's child_log_.base_ptr_
+  PackLogs(parent_cd->libc_log_ptr_, length);
+
+  return kCommLogOK;
+}
 
 CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
 {
@@ -490,7 +509,7 @@ CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
 CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
 {
   PRINT_DEBUG("ReadData to address (%p) and length(%ld)\n", buffer, length);
-
+  PRINT_DEBUG("reexec_pos_: %li\t cur_pos_: %li\n",log_table_reexec_pos_,log_table_.cur_pos_ );
   // reached end of logs, and need to return back and log data again...
   if (log_table_reexec_pos_ == log_table_.cur_pos_)
   {
@@ -595,6 +614,22 @@ CommLogErrT CommLog::UnpackLogsToChildCD(CD* child_cd)
 
   (child_cd->comm_log_ptr_)->UnpackLogs(src_ptr);
 
+  return kCommLogOK;
+}
+//GONG
+CommLogErrT CommLog::UnpackLogsToChildCD_libc(CD* child_cd)
+{
+  char * src_ptr;
+  CommLogErrT ret = FindChildLogs(child_cd->GetCDID(), &src_ptr);
+  if (ret != kCommLogOK)
+  {
+    return ret;
+  }
+
+  (child_cd->libc_log_ptr_)->UnpackLogs(src_ptr);
+  //GONG
+  child_cd->libc_log_ptr_->log_table_reexec_pos_ = 0;
+  child_cd->libc_log_ptr_->Print();
   return kCommLogOK;
 }
 
