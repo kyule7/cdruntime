@@ -278,7 +278,7 @@ CDErrT CD::Destroy(void)
 }
 
 
-/*   CD::Begin()
+/*  CD::Begin()
  *  (1) Call all the user-defined error checking functions. 
  *      Jinsuk: Why should we call error checking function at the beginning?
  *      Kyushick: It doesn't have to. I wrote it long time ago, so explanation here might be quite old.
@@ -330,14 +330,124 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   cd_exec_mode_ = kSuspension; 
   return CDErrT::kOK;
 }
+/*
 
-//CD::CDInternalErrT CD::GatherEntryDirMapToHead()
-//{
-//  char sendBuf[SEND_BUF_SIZE];
-//  char recvBuf[num_sibling][SEND_BUF_SIZE];
-//
-////  MPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
-//}
+CD::CDInternalErrT HeadCD::RequestDataMove(int sender, int receiver, const char *found_ref_name)
+{
+  while( found_entry_list is empty ) {
+    CDEntry entry = cur_entry_in_found_entry_list;
+    int msg_for_sender0 = receiver;
+    char* msg_for_sender1 = found_ref_name;
+    int msg_for_receiver = sender;
+    
+    MPI_Send(receiver, head, msg_for_receiver); // it will go to receiver
+    MPI_Send(sender, head, msg_for_sender0);    // it will go to sender
+  }
+}
+
+
+CD::CDInternalErrT CD::RequestDataMove(int sender, int receiver, const char *found_ref_name)
+{
+
+  MPI_Recv(me, head, msg); // this task will know if I am sender or receiver with this msg from head.
+
+  if( am_I_sender() ){
+    MPI_Send(receiver_from_msg, me, msg);
+  } else {
+    MPI_Recv(me, sender_from_msg, msg);
+  }
+
+}
+
+CD::CDInternalErrT CD::EntrySearch()
+{
+  if( !IsHead() ) {
+    // Request HeadCD to find the entry in the entry directory
+    // It is enough to send just ref_name to Head
+
+  } 
+  else { // HeadCD
+
+    // Receive requests from the other tasks and find entry with ref_name
+    // If it find ref_name it calls, RequestDataMovement(Sender, Receiver)
+    // Receiver will be the requester for EntrySearch()
+
+  }
+
+  RequestDataMove(found_entry_list);
+  ForwardEntryToParent(unfound_entry_list);
+}
+
+
+CD::CDInternalErrT CD::GatherEntryDirMapToHead()
+{
+  char sendBuf[SEND_BUF_SIZE];
+  char recvBuf[num_sibling][SEND_BUF_SIZE];
+
+//  MPI_Allreduce(); // Get the number of entry search requests for HeadCD
+
+  if( !IsHead() ) {
+
+    uint32_t entry_count=0;
+
+    void *packed_entry_dir_p = SerializeEntryDir(entry_count);
+    
+    MPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
+
+  } 
+  else { // HeadCD
+    
+    MPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
+
+    void *entry_object = getEntryObjFromBuf();
+
+    std::vector<CDEntry> entry_dir = DeserializeEntryDir(entry_object);
+
+  }
+
+  return CD::CDInternalErrT::kOK;
+}
+*/
+
+
+/*
+void *CD::SerializeEntryDir(uint32_t& entry_count) 
+{
+  Packer entry_dir_packer;
+  uint32_t len_in_bytes=0;
+
+  for(auto it=entry_directory_.begin(); it!=entry_directory_.end(); ++it) {
+    uint32_t entry_len=0;
+    void *packed_entry_p=0;
+    if( !it->name().empty() ){ 
+      packed_entry_p = it->Serialize(entry_len);
+      entry_dir_packer.Add(entry_count++, entry_len, packed_entry_p);
+      len_in_bytes += entry_len;
+    }
+  }
+  
+  return entry_dir_packer.GetTotalData(len_in_bytes);
+}
+
+
+std::vector<CDEntry> CD::DeserializeEntryDir(void *object) 
+{
+  std::vector<CDEntry> entry_dir;
+  Unpacker entry_dir_unpacker;
+  void *unpacked_entry_p=0;
+  uint32_t dwGetID=0;
+  uint32_t return_size=0;
+  while(1) {
+    unpacked_entry_p = entry_dir_unpacker.GetNext((char *)object, dwGetID, return_size);
+    if(unpacked_entry_p == NULL) break;
+    cd_entry.Deserialize(unpacked_entry_p);
+    entry_dir.push_back(cd_entry);
+  }
+
+  return entry_dir;  
+}
+*/
+
 
 /*  CD::preserve(char* data_p, int data_l, enum preserveType prvTy, enum mediumLevel medLvl)
  *  Register data information to preserve if needed.

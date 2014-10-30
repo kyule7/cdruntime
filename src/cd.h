@@ -132,7 +132,10 @@ class cd::CD : public cd::Serializable {
 
     // Registered user-defined error detection routine
     std::list<std::function<int(void)>> usr_detect_func_list_;  //custom_detect_func;
-    
+
+    // Shared variable related
+    static int *pending_req_;
+    static int *local_mailbox_;
 
     /// FIXME later this should be map or list, 
     /// sometimes it might be better to have map structure 
@@ -363,6 +366,9 @@ class cd::HeadCD : public cd::CD {
     /// we should send Head CDHandle and its CD to its parent CD
     std::list<cd::CDHandle*> cd_children_;
     cd::CDHandle*            cd_parent_;
+
+    // event related
+    int *mailbox_;
 
     HeadCD();
     HeadCD(cd::CDHandle* cd_parent, 
