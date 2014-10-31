@@ -541,8 +541,8 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
           GetParentHandle()->ptr_cd_->libc_log_ptr_->SetCommLogMode(kGenerateLog);
         }
       //GetParentHandle()->ptr_cd_->libc_log_ptr_->Print();
-        libc_log_ptr_->Reset();
       }
+      libc_log_ptr_->Reset();
     }
     else
     {

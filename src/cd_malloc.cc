@@ -120,10 +120,19 @@ if(app_side){
 }
 else{
 		p = real_malloc_(size);
-//		PRINT_DEBUG("CD runtime malloc(%ld) = %p\n", size, p);	
+		PRINT_DEBUG("CD runtime malloc(%ld) = %p\n", size, p);	
 }	
 	return p;
 } 
+
+/*
+void* malloc(size_t size)
+{
+  void* p = real_malloc_(size);
+  printf("malloc(%ld) = %p\n", size, p);
+  return p;
+}
+  */
 
 
 static void* temp_calloc(size_t num, size_t size)

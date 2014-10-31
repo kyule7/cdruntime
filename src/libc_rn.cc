@@ -51,13 +51,13 @@ int rand()
 	  if(logable){
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
 			  c_CD->libc_log_ptr_->ReadData(&i, size);
-			PRINT_DEBUG("libc_log_ptr_: %p\tRE-EXECUTE MODE rand(%ld) = %p\n", c_CD->libc_log_ptr_, size, i);
+			PRINT_DEBUG("libc_log_ptr_: %p\tRE-EXECUTE MODE rand(%i) = %i\n", c_CD->libc_log_ptr_, size, i);
   		}
   		else
   		{
         i = real_rand();
    	    c_CD->libc_log_ptr_->LogData(&i, size);
-			PRINT_DEBUG("libc_log_ptr_: %p\t -EXECUTE MODE rand(%ld) = %p\n", c_CD->libc_log_ptr_, size, i);
+			PRINT_DEBUG("libc_log_ptr_: %p\t -EXECUTE MODE rand(%i) = %i\n", c_CD->libc_log_ptr_, size, i);
 	    }
 	  }
 	  else

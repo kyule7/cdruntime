@@ -628,7 +628,7 @@ CommLogErrT CommLog::UnpackLogsToChildCD_libc(CD* child_cd)
 
   (child_cd->libc_log_ptr_)->UnpackLogs(src_ptr);
   //GONG
-  child_cd->libc_log_ptr_->log_table_reexec_pos_ = 0;
+//  child_cd->libc_log_ptr_->log_table_reexec_pos_ = 0;
   child_cd->libc_log_ptr_->Print();
   return kCommLogOK;
 }
