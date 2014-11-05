@@ -368,7 +368,7 @@ int test_preservation_via_copy()
   // this point is to test whether execution mode becomes kExecution from this point, 
   // because before this preservation is called it should be in kReexecution mode
   root->Preserve(c, sizeof(c), kCopy, "c", "c");
-  printf("sizeof c : %d\n", sizeof(c)); //getchar();
+  printf("sizeof c : %d\n", (int)sizeof(c)); //getchar();
   MPI_Barrier(MPI_COMM_WORLD);
 
   if( num_reexecution == 2)  {

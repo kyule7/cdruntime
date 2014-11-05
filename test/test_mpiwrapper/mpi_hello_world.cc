@@ -2,8 +2,8 @@
 #include <mpi.h>
 #include "cds.h"
 
-//#define PRINTF(...) {printf("%d:",myrank);printf(__VA_ARGS__);}
-#define PRINTF(...) {fprintf(fp, __VA_ARGS__);}
+#define PRINTF(...) {printf("%d:",myrank);printf(__VA_ARGS__);}
+//#define PRINTF(...) {fprintf(fp, __VA_ARGS__);}
 
 FILE *fp;
 
