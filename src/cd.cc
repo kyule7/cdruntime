@@ -584,8 +584,8 @@ CDErrT CD::Preserve(void* data,
 
 PrvMediumT CD::GetPlaceToPreserve()
 {
-//  return kMemory;
-  return kSSD;
+  return kMemory;
+//  return kSSD;
 //  if(GetCDID().level()==1) return kHDD;
 //  else return kSSD;
 }
@@ -654,7 +654,7 @@ CDErrT CD::Preserve(void* data,
       // we reached the last preserve function call. 
       // Since we have reached the last point already now convert current execution mode into kExecution
 
-      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
+//      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
       printf("Now reached end of entry directory, now switching to normal execution mode\n");
 
       cd_exec_mode_  = kExecution;    
@@ -1006,6 +1006,8 @@ CD::CDInternalErrT CD::RegisterRecovery(uint32_t error_name_mask,
   // STUB
   return CDInternalErrT::kOK;
 }
+
+
 CDErrT CD::Reexecute(void)
 {
   cd_exec_mode_ = kReexecution; 
@@ -1189,6 +1191,8 @@ void CD::DeleteEntryDirectory(void)
   for(std::list<CDEntry>::iterator it = entry_directory_.begin();
       it != entry_directory_.end(); ) {
 
+
+/* Serializer test
     uint32_t entry_len=0;
     void *ser_entry = it->Serialize(entry_len);
 
@@ -1202,6 +1206,9 @@ void CD::DeleteEntryDirectory(void)
     cout << "before!!!! " << it->name() <<endl<<endl;
     cout << "\n\n\nafter!!!! " << new_entry.name()<<endl;
     cout << (*it == new_entry) << endl;
+*/
+
+
 /*
     uint32_t data_handle_len=0;
 

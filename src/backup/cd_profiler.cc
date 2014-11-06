@@ -43,9 +43,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace sight;
 using namespace cd;
 
-std::list<Viz*> CDProfiler::vizStack_;
 std::list<module*>     Module::mStack;
-//modularApp*            Module::ma;
+modularApp*            Module::ma;
 
 
 #if _ENABLE_HIERGRAPH
@@ -167,6 +166,15 @@ void CDProfiler::InitViz()
 
 //  cout<< "\n---------------- Initialize Visualization --------------\n" <<endl;
   //getchar();
+  
+//  if(!CDPath.empty()){
+//    cout<<"\nMasterCD  "<< GetCDID().level_ <<" : ("<< GetRootCD()->GetNodeID() <<", "<< GetRootCD()->GetTaskID() <<")"<<endl;
+//    getchar();
+//  }
+//  else {
+//    cout<<"\nMasterCD  "<< GetCDID().level_ <<" : ("<< 0 <<", "<< 0 <<")"<<endl;
+//    getchar();
+//  }
 
   //SightInit(txt()<<"CDs", txt()<<"dbg_CDs_"<<GetCDID().node_id().color()<<"_"<< GetCDID().node_id().task_in_color() );
   SightInit(txt()<<"CDs", txt()<<"dbg_CDs_"<< CDPath::GetRootCD()->GetTaskID() );
@@ -182,75 +190,59 @@ void CDProfiler::InitViz()
   newVizObj = new Attribute();
   newVizObj->Init();
   vizStack_.push_back(new Attribute());
-  sightObj_count_++;
 #endif
 
 #if _ENABLE_COMP
   newVizObj = new Comparison();
   newVizObj->Init();
   vizStack_.push_back(new Comparison());
-  sightObj_count_++;
 #endif
 
 #if _ENABLE_MODULE
-  cout << "create module init " <<endl; getchar();
   newVizObj = new Module();
   newVizObj->Init();
-  cout << "vizStack size: "<<vizStack_.size() << endl;
-
   vizStack_.push_back(new Module());
-  sightObj_count_++;
-  cout << "vizStack size: "<<vizStack_.size() << endl;
 #endif
 
 #if _ENABLE_HIERGRAPH
   newVizObj = new HierGraph();
   newVizObj->Init();
   vizStack_.push_back(new HierGraph());
-  sightObj_count_++;
 #endif
 
 #if _ENABLE_SCOPE
   newVizObj = new Scope();
   newVizObj->Init();
   vizStack_.push_back(new Scope());
-  sightObj_count_++;
 #elif _ENABLE_SCOPEGRAPH
   newVizObj = new ScopeGraph();
   newVizObj->Init();
   vizStack_.push_back(new ScopeGraph());
-  sightObj_count_++;
 #endif
 
 #if _ENABLE_CDNODE
   newVizObj = new CDNode();
   newVizObj->Init();
   vizStack_.push_back(new CDNode());
-  sightObj_count_++;
 #endif
 
 }
 
 void CDProfiler::FinalizeViz(void)
 {
-  cout<< "\n---------------- Finalize Visualization --------------\n" <<endl;
+//  cout<< "\n---------------- Finalize Visualization --------------\n" <<endl;
 
   // Only root should call this (inside CD_Finalize)
   if( CDPath::GetCurrentCD() != CDPath::GetRootCD() ) assert(0);
 
   // Destroy SightObj
-  cout << "reached here? becore while in FinalizeViz() "<<vizStack_.size() << endl;
-//  while( sightObj_count_ > 0) {
-//    assert(vizStack_.size()>0);
-//    assert(vizStack_.back() != NULL);
-//    vizStack_.back()->Finalize();
-//    cout << "delete viz"<<endl;
-//    cout << "vizStack size: "<<vizStack_.size() << endl;
-//    delete vizStack_.back();
-//    vizStack_.pop_back();
-//    cout << "vizStack size: "<<vizStack_.size() << endl;
-//    sightObj_count_--;
-//  }
+  while( !vizStack_.empty() ) {
+    assert(vizStack_.size()>0);
+    assert(vizStack_.back() != NULL);
+    vizStack_.back()->Finalize();
+    delete vizStack_.back();
+    vizStack_.pop_back();
+  }
 }
 
 
@@ -264,43 +256,30 @@ void CDProfiler::StartProfile()
   /// Timer on
   this->this_point_ = rdtsc();
 
-  sightObj_count_ = 0;
-  
 #if _ENABLE_ATTR
   vizStack_.push_back(new Attribute());
-  sightObj_count_++;
 #endif
 
 #if _ENABLE_COMP
   vizStack_.push_back(new Comparison());
-  sightObj_count_++;
 #endif
 
 #if _ENABLE_MODULE
-  cout << "\ncreate module " <<endl; getchar();
-  cout << "vizStack size: "<<vizStack_.size() << endl;
   vizStack_.push_back(new Module());
-  cout << "vizStack size: "<<vizStack_.size() << endl<<endl;
-  vizStack_.back()->Create();
-  sightObj_count_++;
 #endif
 
 #if _ENABLE_HIERGRAPH
   vizStack_.push_back(new HierGraph());
-  sightObj_count_++;
 #endif
 
 #if _ENABLE_SCOPE
   vizStack_.push_back(new Scope());
-  sightObj_count_++;
 #elif _ENABLE_SCOPEGRAPH
   vizStack_.push_back(new ScopeGraph());
-  sightObj_count_++;
 #endif
 
 #if _ENABLE_CDNODE
   vizStack_.push_back(new CDNode());
-  sightObj_count_++;
 #endif
 
 }
@@ -328,19 +307,13 @@ void CDProfiler::FinishProfile(void) // it is called in Destroy()
   (profile_data_)[label_.first][EXEC_CYCLE] += (that_point_) - (this_point_);
 
   // Destroy SightObj
-  cout << "reached here? becore while in FinishProfile() "<<vizStack_.size() << endl;
-  cout << "++++++++++++++++++++" << endl;
-  while(  sightObj_count_ > 0) {
+  while( !vizStack_.empty() ) {
     cout << "destroy sightobj" << endl; getchar();
     assert(vizStack_.size()>0);
     assert(vizStack_.back() != NULL);
-    cout << "delete viz"<<endl;
-    cout << "vizStack size: "<<vizStack_.size() << endl;
     vizStack_.back()->Destroy();
     delete vizStack_.back();
     vizStack_.pop_back();
-    cout << "vizStack size: "<<vizStack_.size() << endl;
-    sightObj_count_--;
   }
 }
 
@@ -396,18 +369,43 @@ void CDProfiler::GetLocalAvg(void)
 //  }
 }
 
+void Module::SetUsrProfileInput(std::pair<std::string, long> name_list)
+{
+  AddUsrProfile(name_list.first, name_list.second, 0);
+}
 
+void Module::SetUsrProfileInput(std::initializer_list<std::pair<std::string, long>> name_list)
+{
+  for(auto il = name_list.begin() ;
+      il != name_list.end(); ++il) {
+    AddUsrProfile(il->first, il->second, 0);
+  }
+}
 
+void Module::SetUsrProfileOutput(std::pair<std::string, long> name_list)
+{
+  AddUsrProfile(name_list.first, name_list.second, 1);
+}
 
+void Module::SetUsrProfileOutput(std::initializer_list<std::pair<std::string, long>> name_list)
+{
+  for(auto il = name_list.begin() ;
+      il != name_list.end(); ++il) {
+  
+    AddUsrProfile(il->first, il->second, 1);
+  }
+}
 
-
-
-
-
-
-
-
-
+void Module::AddUsrProfile(std::string key, long val, int mode)
+{
+  if(mode == 0) {
+    usr_profile_input.add(key, val);
+  }
+  else if(mode == 1){
+    usr_profile_output.add(key, val);
+  }
+  usr_profile_enable = true;
+}
 // -------------- CD Node -----------------------------------------------------------------------------
 
 void CDNode::Create(void)
@@ -491,10 +489,10 @@ void Scope::Destroy(void)
 void Module::Create(void)
 {
   std::pair<std::string, int> label = CDPath::GetCurrentCD()->profiler_->label();
-  cout<<"CreateModule call"<<endl;
+//  cout<<"CreateModule call"<<endl;
   NodeID node_id = CDPath::GetCurrentCD()->node_id();
   if(usr_profile_enable==false) {
-    cout<<"\n[[[[Module object created]]]]"<<endl<<endl; getchar();
+//    cout<<11111<<endl<<endl; getchar();
     module* m = new module( instance(txt()<<CDPath::GetCurrentCD()->GetName(), 1, 1), 
                             inputs(port(context("cd_id", (int)node_id.color(), 
                                                 "sequential_id", (int)(CDPath::GetCurrentCD()->ptr_cd()->GetCDID().sequential_id()),
@@ -523,75 +521,24 @@ void Module::Destroy(void)
   CDProfiler *profiler = (CDProfiler*)(CDPath::GetCurrentCD()->profiler_);
   std::map<std::string, uint64_t*> profile_data = profiler->profile_data_;
   std::pair<std::string, int> label = CDPath::GetCurrentCD()->profiler_->label();
-  cout<<"DestroyModule call"<<endl;
+//  cout<<"DestroyModule call"<<endl;
 //  dbg << " ]]] Module Test -- "<<this->this_cd_->cd_id_<<", #mStack="<<mStack.size()<<endl;
   assert(mStack.size()>0);
   assert(mStack.back() != NULL);
-  cout << "reach?" << endl;
   mStack.back()->setOutCtxt(0, context("data_copy=", (long)(profile_data[label.first][PRV_COPY_DATA]),
                                        "data_overlapped=", (long)(profile_data[label.first][OVERLAPPED_DATA]),
                                        "data_ref=" , (long)(profile_data[label.first][PRV_REF_DATA])));
-
   if(usr_profile_enable) {
     mStack.back()->setOutCtxt(1, usr_profile_output);
   }
-
-
 /*
   mStack.back()->setOutCtxt(1, context("sequential id =" , (long)profile_data_[label_.first][PRV_REF_DATA],
                                        "execution cycle=", (long)profile_data_[label_.first][PRV_COPY_DATA],
                                        "estimated error rate=", (long)profile_data_[label_.first][OVERLAPPED_DATA]));
 */
-
-
-  cout << "\n before delete ]]]]]]]]]]]\n"<<endl;
   delete mStack.back();
-  cout << "\n after delete ]]]]]]]]]]]\n"<<endl;
   mStack.pop_back();
 }
-
-
-void Module::SetUsrProfileInput(std::pair<std::string, long> name_list)
-{
-  AddUsrProfile(name_list.first, name_list.second, 0);
-}
-
-void Module::SetUsrProfileInput(std::initializer_list<std::pair<std::string, long>> name_list)
-{
-  for(auto il = name_list.begin() ;
-      il != name_list.end(); ++il) {
-    AddUsrProfile(il->first, il->second, 0);
-  }
-}
-
-void Module::SetUsrProfileOutput(std::pair<std::string, long> name_list)
-{
-  AddUsrProfile(name_list.first, name_list.second, 1);
-}
-
-void Module::SetUsrProfileOutput(std::initializer_list<std::pair<std::string, long>> name_list)
-{
-  for(auto il = name_list.begin() ;
-      il != name_list.end(); ++il) {
-  
-    AddUsrProfile(il->first, il->second, 1);
-  }
-}
-
-void Module::AddUsrProfile(std::string key, long val, int mode)
-{
-  if(mode == 0) {
-    usr_profile_input.add(key, val);
-  }
-  else if(mode == 1){
-    usr_profile_output.add(key, val);
-  }
-  usr_profile_enable = true;
-}
-
-
-
-
 
 // -------------- Comparison --------------------------------------------------------------------------
 void Comparison::Create(void)

@@ -36,10 +36,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_handle.h"
 #include "cd.h"
 #include "cd_entry.h"
+#include <mpi.h> 
 #include "cd_id.h"
 #include "util.h"
 #include "cd_path.h"
-
 #include <assert.h>
 #include <utility>
 #include <math.h>
@@ -48,6 +48,9 @@ using namespace cd;
 using namespace std;
 uint64_t Util::gen_object_id_=0;
 CDPath* CDPath::uniquePath_;
+
+DebugStream cd::dbgStream;
+CDFlagT *CDHandle::pendingReq_; 
 //int cd::myTaskID = 0;
 
 // Global functions -------------------------------------------------------
@@ -62,6 +65,10 @@ CDHandle* cd::CD_Init(int numTask, int myRank)
 {
 //  myTaskID = myRank;
 //  CDHandle* root_cd = new CDHandle(NULL, "Root", NodeID(ROOT_COLOR, myRank, numTask, 0), kStrict, 0);
+  dbgStream << "Great!"<<endl; getchar();
+#if _MPI_VER
+  MPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &CDHandle::pendingReq_);
+#endif
   CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myRank, ROOT_HEAD_ID, numTask)), kStrict, 0);
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
@@ -76,15 +83,19 @@ CDHandle* cd::CD_Init(int numTask, int myRank)
 
 void cd::CD_Finalize(void)
 {
-  assert(CDPath::GetCDPath()->size()==1); // There should be only on CD which is root CD
-  assert(CDPath::GetCDPath()->back()!=NULL);
+//  assert(CDPath::GetCDPath()->size()==1); // There should be only on CD which is root CD
+//  assert(CDPath::GetCDPath()->back()!=NULL);
 
 #if _PROFILER
   // Profiler-related  
   CDPath::GetRootCD()->profiler_->FinalizeViz();
 #endif
 
-  CDPath::GetRootCD()->Destroy();
+#if _MPI_VER
+  MPI_Free_mem(CDHandle::pendingReq_);
+#endif
+  
+//  CDPath::GetRootCD()->Destroy();
 }
 
 // CDHandle Member Methods ------------------------------------------------------------
@@ -100,8 +111,8 @@ CDHandle::CDHandle()
 {
 #if _PROFILER
   profiler_ = new CDProfiler();
-//#else
-//  profiler_ = new NullProfiler();
+#else
+  //profiler_ = new NullProfiler();
 #endif
   SplitCD = &SplitCD_3D;
   
@@ -122,8 +133,8 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
   SplitCD = &SplitCD_3D;
 #if _PROFILER
   profiler_ = new CDProfiler();
-//#else
-//  profiler_ = new NullProfiler();
+#else
+  //profiler_ = new NullProfiler();
 #endif
 }
 
@@ -472,7 +483,10 @@ CDErrT CDHandle::Destroy(bool collective)
   }
 
 #if _PROFILER
-  profiler_->FinishProfile();
+  cout << "calling finish profiler" <<endl;
+  //if(ptr_cd()->cd_exec_mode_ == 0) { 
+    profiler_->FinishProfile();
+  //}
 #endif
 
   assert(CDPath::GetCDPath()->size()>0);
@@ -497,7 +511,12 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 
 #if _PROFILER
   // Profile-related
-  profiler_->GetProfile();
+  cout << "calling get profile" <<endl; getchar();
+  if(ptr_cd()->cd_exec_mode_ == 0) { 
+    if(label == NULL) label = "INITIAL_LABEL";
+    cout << "label "<< label <<endl; getchar();
+    profiler_->GetProfile(label);
+  }
 #endif
 
   assert(ptr_cd_ != 0);
@@ -513,8 +532,11 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   assert(ptr_cd_ != 0);
 
 #if _PROFILER
+  cout << "calling collect profile" <<endl; getchar();
   // Profile-related
-  profiler_->CollectProfile();
+//  if(ptr_cd()->cd_exec_mode_ == 0) { 
+    profiler_->CollectProfile();
+//  }
 #endif
 
 //FIXME
@@ -553,7 +575,9 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   /// Accumulated volume of data to be preserved for Sequential CDs. 
   /// It will be averaged out with the number of seq. CDs.
 #if _PROFILER
-  profiler_->GetPrvData(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
+  if(ptr_cd()->cd_exec_mode_ == 0) { 
+    profiler_->GetPrvData(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
+  }
 #endif
 
 //  if( IsHead() ) {

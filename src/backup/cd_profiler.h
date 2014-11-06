@@ -41,15 +41,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_global.h"
 #include "cd_handle.h"
 #include <array>
-#include <vector>
-#include <list>
 #include <cstdint>
 #include "sight.h"
 
 using namespace cd;
 using namespace sight;
 using namespace sight::structure;
-#define LabelT std::pair<std::string, int>
 
 class Viz;
 
@@ -71,7 +68,7 @@ public:
   virtual void FinishProfile(void)=0;
   virtual void InitViz(void)=0;
   virtual void FinalizeViz(void)=0;
-  virtual LabelT label(void)=0;
+  virtual std::pair<std::string, int> label(void)=0;
 };
 
 class NullProfiler : public Profiler {
@@ -92,13 +89,13 @@ public:
   void FinishProfile(void) {}
   void InitViz(void) {}
   void FinalizeViz(void) {}
-  LabelT label(void) {return LabelT();}
+  std::pair<std::string, int> label(void) {return std::pair<std::string, int>();}
 };
 
 class CDProfiler : public Profiler {
   /// sight-related member data
-  static std::list<Viz*> vizStack_;
-  LabelT label_;
+  std::vector<Viz*> vizStack_;
+  std::pair<std::string, int> label_;
   uint64_t  sibling_id_;
   uint64_t  level_;
 
@@ -108,7 +105,7 @@ class CDProfiler : public Profiler {
   bool collect_profile_;
   bool usr_profile_enable;
 //  std::vector<std::pair<std::string, long>>  usr_profile;
-  int sightObj_count_;
+
 
   /// Timer-related meta data
   uint64_t this_point_;
@@ -145,8 +142,7 @@ public:
   void FinishProfile(void);
   void InitViz(void);
   void FinalizeViz(void);
-  LabelT label() { return label_; }
-
+  std::pair<std::string, int> label() { return label_; }
 private:
   void GetLocalAvg(void);
   // FIXME
@@ -166,7 +162,7 @@ public:
 class Module : public Viz {
   /// All modules that are currently live
   static std::list<module*> mStack;
-  
+  static modularApp*        ma;
 
   context usr_profile_input;
   context usr_profile_output;
@@ -177,11 +173,11 @@ public:
   void Destroy(void);
   void Init(void) {
     /// modularApp exists only one, and is created at init stage
-//    ma = new modularApp("CD Modular App");
+    ma = new modularApp("CD Modular App");
   }
   void Finalize(void) {
-//    assert(ma);
-//    delete ma;
+    assert(ma);
+    delete ma;
   }
   void SetUsrProfileInput(std::pair<std::string, long> name_list);
   void SetUsrProfileInput(std::initializer_list<std::pair<std::string, long>> name_list);

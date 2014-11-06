@@ -54,7 +54,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define ROOT_HEAD_ID 0
 #define INITIAL_COLOR MPI_COMM_NULL
 typedef MPI_Comm ColorT;
-
+typedef int CDFlagT;
 #else
 
 #define ROOT_COLOR 0 
@@ -156,6 +156,57 @@ namespace cd {
 
 //  extern int myTaskID;
 
+  class DebugBuf: public std::streambuf {
+
+    std::streambuf *baseBuf_;
+
+  public:
+  
+    virtual ~DebugBuf() {};
+   
+    DebugBuf() {
+      init(NULL);
+    }
+
+    DebugBuf(std::streambuf* baseBuf) {
+      init(baseBuf);
+    }
+
+    void init(std::streambuf* baseBuf) {
+      baseBuf = baseBuf;
+    }
+  
+  private:
+  
+    virtual int overflow(int in) {
+      return in;
+    }
+  
+    virtual std::streamsize xsputn(const char *s, std::streamsize in) {
+      return in;
+    }
+  
+   
+    virtual int sync() {
+      return 0;
+    }
+  }; 
+  
+  
+  
+  class DebugStream : public std::ostream {
+  
+    DebugBuf dbg_buf_;
+  
+  public:
+    DebugStream()
+      : std::ostream(&dbg_buf_) {}
+
+  }; 
+  
+  extern DebugStream dbgStream;
+
+
   extern CDHandle* CD_Init(int numproc=1, int myrank=0);
   extern void CD_Finalize();
 //  extern uint64_t Util::gen_object_id_=0;
@@ -178,6 +229,8 @@ namespace cd {
 #define PRINT_DEBUG2(X,Y) printf(X,Y);
 
 #endif
+
+#define dout clog
 
 #define MAX_FILE_PATH 2048
 

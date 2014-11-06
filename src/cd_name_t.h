@@ -94,6 +94,10 @@ public:
   bool operator==(const CDNameT& that) const {
     return (level_ == that.level()) && (rank_in_level_ == that.rank_in_level()) && (size_ == that.size());
   }
+
+  uint64_t GetCDName(void) const { 
+    return ((level_ << 16) | rank_in_level_);
+  }
 };
 
 std::ostream& operator<<(std::ostream& str, const CDNameT& cd_name);

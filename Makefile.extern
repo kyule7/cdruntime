@@ -20,7 +20,6 @@ CD_LINKFLAGS = -Wl,-rpath ${CD_LIB} \
 SIGHT_CFLAGS = -I${SIGHT_ROOT} \
                -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
                -I${SIGHT_ROOT}/widgets/papi/include\
-               -I${SIGHT_ROOT}/widgets/libmsr/include \
                -I${SIGHT_ROOT}/widgets \
                -I${SIGHT_ROOT}/tools/boost_1_55_0
 SIGHT_LINKFLAGS_NORPATH = -L${SIGHT_ROOT} -lsight_structure \
@@ -28,7 +27,6 @@ SIGHT_LINKFLAGS_NORPATH = -L${SIGHT_ROOT} -lsight_structure \
                   -L${SIGHT_ROOT}/tools/callpath/src/src -lcallpath \
                   -L${SIGHT_ROOT}/widgets/papi/lib -lpapi \
                   -L${SIGHT_ROOT}/widgets/gsl/lib -lgsl -lgslcblas \
-                  -L${SIGHT_ROOT}/widgets/libmsr/lib -lmsr \
                   -lpthread
 SIGHT_LINKFLAGS = \
                   -Wl,-rpath ${SIGHT_ROOT} \
@@ -42,10 +40,16 @@ SIGHT_LINKFLAGS = \
                   ${SIGHT_ROOT}/widgets/gsl/lib/libgsl.so \
                   ${SIGHT_ROOT}/widgets/gsl/lib/libgslcblas.so \
                   -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib \
-                  ${SIGHT_ROOT}/widgets/libmsr/lib/libmsr.so \
-                  -Wl,-rpath ${SIGHT_ROOT}/widgets/libmsr/lib \
                   -lpthread
  
+
+
+RAPL_ENABLED = 0
+ifeq (${RAPL_ENABLED}, 1)
+SIGHT_CFLAGS += -I${SIGHT_ROOT}/widgets/libmsr/include
+SIGHT_LINKFLAGS += ${SIGHT_ROOT}/widgets/libmsr/lib/libmsr.so \
+                    -Wl,-rpath ${SIGHT_ROOT}/widgets/libmsr/lib
+endif
 # Flags to use when linking a version of slayout that include object files
 # for additional widgets and capabilities
 

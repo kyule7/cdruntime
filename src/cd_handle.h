@@ -74,11 +74,12 @@ class cd::CDHandle {
     // task ID of head in this CD.
     // If current task is head of current CD, than it is the same as node_id_.task_
 
+
+  public:
+    static CDFlagT *pendingReq_;
 #if _PROFILER 
     Profiler* profiler_;
 #endif
-
-  public:
 
     //TODO copy these to CD async 
     ucontext_t ctxt_;
