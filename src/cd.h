@@ -104,7 +104,9 @@ class cd::CD : public cd::Serializable {
     CDID cd_id_;
     RecoverObject* recoverObj_;
   public:
-
+#if _MPI_VER
+    CDMailBoxT *mailbox_;
+#endif
     // Label for Begin/Complete pair. It is mainly for Loop interation.
     // The Begin/Complete pair that has the same computation will have the same label_
     // and we can optimize CD with this label_ later.
@@ -133,9 +135,6 @@ class cd::CD : public cd::Serializable {
     // Registered user-defined error detection routine
     std::list<std::function<int(void)>> usr_detect_func_list_;  //custom_detect_func;
 
-    // Shared variable related
-    static int *pending_req_;
-    static int *local_mailbox_;
 
     /// FIXME later this should be map or list, 
     /// sometimes it might be better to have map structure 
@@ -197,6 +196,8 @@ update the preserved data.
        uint64_t sys_bit_vector);
 
     virtual ~CD();
+//    CDInternalErrT CreateInternalMemory(CD *cd_ptr, const CDID& new_cd_id);
+//    CDInternalErrT DestroyInternalMemory(CD *cd_ptr);
 
     void Initialize(cd::CDHandle* cd_parent, 
                     const char* name, 
@@ -216,12 +217,12 @@ update the preserved data.
 
     static CDHandle* CreateRootCD(CDHandle* parent, 
                      const char* name, 
-                     CDID&& child_cd_id, 
+                     const CDID& child_cd_id, 
                      CDType cd_type, 
                      uint64_t sys_bit_vector, 
-                     CD::CDInternalErrT *cd_internal_err=0);
+                     CD::CDInternalErrT *cd_internal_err);
 
-    CDErrT Destroy();
+    virtual CDErrT Destroy(void);
 
     CDErrT Begin(bool collective=true, 
                  const char* label=0);
@@ -288,7 +289,16 @@ update the preserved data.
     virtual CDErrT Resume(void);
     virtual CDErrT AddChild(cd::CDHandle* cd_child);
     virtual CDErrT RemoveChild(cd::CDHandle* cd_child);
-  
+
+
+    static CDInternalErrT InternalCreate(CDHandle* parent, 
+                     const char* name, 
+                     const CDID& child_cd_id, 
+                     CDType cd_type, 
+                     uint64_t sys_bit_vector, 
+                     CDHandle** new_cd_handle);
+
+    CDInternalErrT InternalDestroy(void);
     CDInternalErrT InternalPreserve(void *data, 
                                     uint64_t len_in_bytes,
                                     CDPreserveT preserve_mask, 
@@ -368,7 +378,11 @@ class cd::HeadCD : public cd::CD {
     cd::CDHandle*            cd_parent_;
 
     // event related
-    int *mailbox_;
+#if _MPI_VER
+    CDFlagT *event_flag_;
+    CDFlagT *family_event_flag_;
+    CDMailBoxT *family_mailbox_;
+#endif
 
     HeadCD();
     HeadCD(cd::CDHandle* cd_parent, 
@@ -381,10 +395,13 @@ class cd::HeadCD : public cd::CD {
     cd::CDHandle*  cd_parent(void);
     void           set_cd_parent(cd::CDHandle* cd_parent);
 
+    virtual CDErrT Destroy(void);
     virtual CDErrT Stop(cd::CDHandle* cdh=NULL);
     virtual CDErrT Resume(void); // Does this make any sense?
     virtual CDErrT AddChild(cd::CDHandle* cd_child); 
     virtual CDErrT RemoveChild(cd::CDHandle* cd_child); 
+//    CDInternalErrT CreateInternalMemory(HeadCD *cd_ptr, const CDID& new_cd_id);
+//    CDInternalErrT DestroyInternalMemory(HeadCD *cd_ptr);
 
     void *Serialize(uint32_t& len_in_bytes)
     {

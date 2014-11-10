@@ -55,6 +55,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define INITIAL_COLOR MPI_COMM_NULL
 typedef MPI_Comm ColorT;
 typedef int CDFlagT;
+typedef MPI_Win CDMailBoxT;
 #else
 
 #define ROOT_COLOR 0 
@@ -66,7 +67,7 @@ typedef int ColorT;
 
 #define INVALID_TASK_ID -1
 #define INVALID_HEAD_ID -1
-
+#define NUM_FLAGS 1024
 namespace cd {
   class CD;
   class HeadCD;

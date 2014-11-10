@@ -83,7 +83,9 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
 //    printf("This one shouldn't be called!!!\n\n");
 //    assert(0);
     memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len());
-    std::cout << "--------------------------------\n Saved Data "<<name_.c_str()<<" : " << *(reinterpret_cast<int*>(dst_data_.address_data())) << " at " << dst_data_.address_data() <<" (Memory)\n--------------------------- \n" << std::cout; //getchar();
+
+    std::cout << "\tSaved Data "<<name_.c_str()<<" : " << *(reinterpret_cast<int*>(dst_data_.address_data())) << " at " << dst_data_.address_data() <<" (Memory)" << std::endl; //getchar();
+
 //    std::cout<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<std::endl<<std::endl;
 
     if(false) { // Is there a way to check if memcpy is done well?

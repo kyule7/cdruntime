@@ -86,6 +86,7 @@ CD::CD()
   cd_id_.object_id_++;
 
   recoverObj_ = new RecoverObject;
+  
 
   Init();  
 }
@@ -127,6 +128,7 @@ CD::CD(CDHandle* cd_parent,
   // this can be resolved. 
 
   recoverObj_ = new RecoverObject;
+
 
   Init();  
 }
@@ -195,15 +197,22 @@ CDHandle* CD::Create(CDHandle* parent,
 
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
-  if( !child_cd_id.IsHead() ) {
-    CD* new_cd = new CD(parent, name, child_cd_id, cd_type, sys_bit_vector);
-    new_cd_handle = new CDHandle(new_cd, child_cd_id.node_id());
-  }
-  else {
-    CD* new_cd = new HeadCD(parent, name, child_cd_id, cd_type, sys_bit_vector);
-    new_cd_handle = new CDHandle(new_cd, child_cd_id.node_id());
-  }
+
+//  if( !child_cd_id.IsHead() ) {
+//    CD* new_cd = new CD(parent, name, child_cd_id, cd_type, sys_bit_vector);
+//    new_cd_handle = new CDHandle(new_cd, child_cd_id.node_id());
+//  }
+//  else {
+//    HeadCD* new_cd = new HeadCD(parent, name, child_cd_id, cd_type, sys_bit_vector);
+//    new_cd_handle = new CDHandle(new_cd, child_cd_id.node_id());
+//  }
+//  assert(new_cd_handle != NULL);
+
+
+
+  *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
+
 
   this->AddChild(new_cd_handle);
 
@@ -214,7 +223,7 @@ CDHandle* CD::Create(CDHandle* parent,
 
 CDHandle* CD::CreateRootCD(CDHandle* parent, 
                      const char* name, 
-                     CDID&& root_cd_id, 
+                     const CDID& root_cd_id, 
                      CDType cd_type, 
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err)
@@ -222,19 +231,22 @@ CDHandle* CD::CreateRootCD(CDHandle* parent,
 
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
-  if( !root_cd_id.IsHead() ) {
-    CD* new_cd = new CD(parent, name, root_cd_id, cd_type, sys_bit_vector);
-    new_cd_handle = new CDHandle(new_cd, root_cd_id.node_id());
-  }
-  else {
-    CD* new_cd = new HeadCD(parent, name, root_cd_id, cd_type, sys_bit_vector);
-    new_cd_handle = new CDHandle(new_cd, root_cd_id.node_id());
-  }
+
+//  if( !root_cd_id.IsHead() ) {
+//    CD* new_cd = new CD(parent, name, root_cd_id, cd_type, sys_bit_vector);
+//    new_cd_handle = new CDHandle(new_cd, root_cd_id.node_id());
+//  }
+//  else {
+//    HeadCD* new_cd = new HeadCD(parent, name, root_cd_id, cd_type, sys_bit_vector);
+//    new_cd_handle = new CDHandle(new_cd, root_cd_id.node_id());
+//  }
+//  assert(new_cd_handle != NULL);
+
+  *cd_internal_err = InternalCreate(parent, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
-
-//  AddChild(new_cd_handle);
-
   return new_cd_handle;
+
+
   /// Send entry_directory_map_ to HeadCD
 //  GatherEntryDirMapToHead();
 }
@@ -242,7 +254,86 @@ CDHandle* CD::CreateRootCD(CDHandle* parent,
 
 CDErrT CD::Destroy(void)
 {
+  cout << "~~~~~~~~~~~~~~~~~~~~~"<<endl;
   CDErrT err=CDErrT::kOK;
+  InternalDestroy();
+
+  delete mailbox_;
+
+  return err;
+}
+
+ 
+CD::CDInternalErrT 
+CD::InternalCreate(CDHandle* parent, 
+                   const char* name, 
+                   const CDID& new_cd_id, 
+                   CDType cd_type, 
+                   uint64_t sys_bit_vector, 
+                   CDHandle** new_cd_handle)
+{
+  if( !new_cd_id.IsHead() ) {
+    CD *new_cd     = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
+
+    // Create memory region where RDMA is enabled
+#if _MPI_VER
+    int task_count = new_cd_id.task_count();
+    cout << "in CD::Create Internal Memory"<<endl;
+    new_cd->mailbox_ = new CDMailBoxT[task_count];
+    for(int i=0; i<task_count; ++i) {
+      MPI_Win_create(NULL, 0, 1,
+                     MPI_INFO_NULL, new_cd_id.color(), &((new_cd->mailbox_)[i]));
+    }
+#endif
+
+    *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
+  }
+  else {
+    HeadCD *new_cd = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
+
+    // Create memory region where RDMA is enabled
+    cout << "HeadCD create internal memory " << endl;
+    int task_count = new_cd_id.task_count();
+
+#if _MPI_VER
+    MPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
+                  MPI_INFO_NULL, &(new_cd->event_flag_));
+    new_cd->mailbox_ = new CDMailBoxT[task_count];
+  
+    cout << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
+    for(int i=0; i<task_count; ++i) {
+      MPI_Win_create(&((new_cd->event_flag_)[i]), 1, sizeof(CDFlagT),
+                     MPI_INFO_NULL, new_cd_id.color(), &((new_cd->mailbox_)[i]));
+    }
+
+//    AttachChildCD(new_cd);
+#endif
+    
+    *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
+  }
+
+  return CDInternalErrT::kOK;
+}
+
+// FIXME 11092014
+void AttachChildCD(HeadCD *new_cd)
+{
+  
+}
+
+inline CD::CDInternalErrT CD::InternalDestroy(void)
+{
+
+  cout << "in CD::Destroy Internal Memory"<<endl;
+
+#if _MPI_VER
+  int task_count = cd_id_.task_count();
+  cout << "mpi win free for "<< task_count << " mailboxes"<<endl;
+
+  for(int i=0; i<task_count; ++i) {
+    MPI_Win_free(&(mailbox_[i]));
+  }
+#endif
 
 //GONG
 //#if _WORK
@@ -271,11 +362,13 @@ CDErrT CD::Destroy(void)
   else {    // Root CD
 
   }
+
   
   delete this;
+  return CDInternalErrT::kOK;
 
-  return err;
 }
+
 
 
 /*  CD::Begin()
@@ -607,7 +700,7 @@ CDErrT CD::Preserve(void* data,
   // FIXME for now let's just use regular malloc call 
 
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
-    cout<<"my_name "<< my_name<<endl;
+//    cout<<"my_name "<< my_name<<endl;
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : return CDErrT::kOK;
       case CDInternalErrT::kExecModeError : return CDErrT::kError;
@@ -709,7 +802,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
 
       switch(GetPlaceToPreserve()) {
         case kMemory: {
-          PRINT_DEBUG("kMemory ----------------------------------\n");
+          PRINT_DEBUG("[kMemory] ------------------------------------------\n");
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes), 
                                  DataHandle(DataHandle::kMemory, 0, len_in_bytes), 
                                  my_name);
@@ -726,6 +819,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
                       <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
                       <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
           }
+          PRINT_DEBUG("-------------------------------------------------\n");
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
         case kHDD: {
@@ -747,6 +841,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
                       <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
                       <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
           }
+          PRINT_DEBUG("-------------------------------------------------\n");
 
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
@@ -772,6 +867,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
                       <<", address: " <<cd_entry->src_data_.address_data()<< std::endl;
 
           }
+          PRINT_DEBUG("-------------------------------------------------\n");
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
         case kPFS: {
@@ -785,6 +881,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
           if( my_name != 0 ) entry_directory_map_[my_name] = cd_entry;
           PRINT_DEBUG("\nPreservation to PFS which is not supported yet. ERROR\n");
           assert(0);
+          PRINT_DEBUG("-------------------------------------------------\n");
           break;
         }
         default:
@@ -1070,7 +1167,8 @@ CDErrT CD::RemoveChild(CDHandle* cd_child)
 }
 
 HeadCD::HeadCD()
-{}
+{
+}
 
 HeadCD::HeadCD( CDHandle* cd_parent, 
                     const char* name, 
@@ -1082,8 +1180,148 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //  cd_parent_ = cd_parent;
 }
 
+
+//CD::CDInternalErrT CD::CreateInternalMemory(CD *cd_ptr, const CDID& new_cd_id)
+//{
+//  int task_count = new_cd_id.task_count();
+//  cout << "in CD::Create Internal Memory"<<endl;
+//  if(task_count > 1) {
+//    for(int i=0; i<task_count; ++i) {
+//    
+//      MPI_Win_create(NULL, 0, 1,
+//                     MPI_INFO_NULL, new_cd_id.color(), &((cd_ptr->mailbox_)[i]));
+//  
+//    }
+//  }
+//  else {
+//    cout << "CD::mpi win create for "<< task_count << " mailboxes"<<endl;
+//    MPI_Win_create(NULL, 0, 1,
+//                   MPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
+//    
+//  }
+//
+//  return CD::CDInternalErrT::kOK;
+//}
+//
+//
+//CD::CDInternalErrT CD::DestroyInternalMemory(CD *cd_ptr)
+//{
+//
+//  cout << "in CD::Destroy Internal Memory"<<endl;
+//  int task_count = cd_id_.task_count();
+//  if(task_count > 1) {
+//    cout << "mpi win free for "<< task_count << " mailboxes"<<endl;
+//    for(int i=0; i<task_count; ++i) {
+//      cout << i << endl;
+//      MPI_Win_free(&(cd_ptr->mailbox_[i]));
+//    }
+//  }
+//  else {
+//    cout << "mpi win free for one mailbox"<<endl;
+//    MPI_Win_free(cd_ptr->mailbox_);
+//  }
+//
+//  return CD::CDInternalErrT::kOK;
+//}
+
+//CD::CDInternalErrT HeadCD::CreateInternalMemory(HeadCD *cd_ptr, const CDID& new_cd_id)
+//{
+//  cout << "HeadCD create internal memory " << endl;
+//  int task_count = new_cd_id.task_count();
+//#if _MPI_VER
+////  if(new_cd_id.color() == MPI_COMM_WORLD) {
+////    cout << "\n\nthis is root! " << task_count << "\n\n"<<endl;
+////    MPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
+////                  MPI_INFO_NULL, &event_flag_);
+////    mailbox_ = new CDMailBoxT[task_count];
+////    for(int i=0; i<task_count; ++i) {
+////      MPI_Win_create(&((event_flag_)[i]), 1, sizeof(CDFlagT),
+////                     MPI_INFO_NULL, MPI_COMM_WORLD, &((mailbox_)[i]));
+////    }
+////
+////
+////    exit(-1);
+////    return CD::CDInternalErrT::kOK;
+////  }
+//
+//  MPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
+//                MPI_INFO_NULL, &(cd_ptr->event_flag_));
+//
+//  if(task_count > 1) {
+//
+//    cout << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
+//    mailbox_ = new CDMailBoxT[task_count];
+//    for(int i=0; i<task_count; ++i) {
+//      MPI_Win_create(&((cd_ptr->event_flag_)[i]), 1, sizeof(CDFlagT),
+//                     MPI_INFO_NULL, new_cd_id.color(), &((cd_ptr->mailbox_)[i]));
+//    }
+//
+////      MPI_Win_create(event_flag_, task_count, sizeof(CDFlagT),
+////                     MPI_INFO_NULL, new_cd_id.color(), mailbox_);
+//
+//  }
+//  else {
+//    cout << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
+//    MPI_Win_create(cd_ptr->event_flag_, task_count, sizeof(CDFlagT),
+//                   MPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
+//    
+//  }
+//
+////  MPI_Win_allocate(task_count*sizeof(CDFlagT), sizeof(CDFlagT), MPI_INFO_NULL, new_cd_id.color(), &event_flag_, &mailbox_);
+//  //getchar();
+//#endif
+//  return CD::CDInternalErrT::kOK;
+//}
+//
+//CD::CDInternalErrT HeadCD::DestroyInternalMemory(HeadCD *cd_ptr)
+//{
+//#if _MPI_VER
+//  cout << "in HeadCD::Destroy"<<endl;
+//  int task_count = cd_id_.task_count();
+//  if(task_count > 1) {
+//    cout << "HeadCD mpi win free for "<< task_count << " mailboxes"<<endl;
+//    for(int i=0; i<task_count; ++i) {
+//      cout << i << endl;
+//      MPI_Win_free(&(cd_ptr->mailbox_[i]));
+//    }
+//  }
+//  else {
+//    cout << "HeadCD mpi win free for one mailbox"<<endl;
+//    MPI_Win_free(cd_ptr->mailbox_);
+//  }
+//  MPI_Free_mem(cd_ptr->event_flag_);
+//
+//
+//
+////  MPI_Win_free(&mailbox_);
+//#endif
+//  return CD::CDInternalErrT::kOK;
+//}
+
+
+
+
+
+
 HeadCD::~HeadCD()
-{}
+{
+//  DestroyInternalMemory();
+}
+
+CDErrT HeadCD::Destroy(void)
+{
+  CDErrT err=CDErrT::kOK;
+
+  InternalDestroy();
+
+#if _MPI_VER
+  cout << "HeadCD::Destroy"<<endl;
+  MPI_Free_mem(event_flag_);
+#endif
+
+
+  return err;
+}
 
 CDErrT HeadCD::Stop(CDHandle* cdh)
 {

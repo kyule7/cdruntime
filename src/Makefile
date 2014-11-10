@@ -26,7 +26,7 @@ MAKE_ARGS = CD_ROOT=${CD_ROOT} SIGHT_ROOT=${SIGHT_ROOT} \
 ifeq ($(MPI_VER_VAR), 0)
 CC=g++
 else
-CC=mpig++
+CC=mpic++
 endif
 ERR_FLAGS=-Wall #-fmax-errors=2
 

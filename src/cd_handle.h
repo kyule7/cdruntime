@@ -76,7 +76,11 @@ class cd::CDHandle {
 
 
   public:
-    static CDFlagT *pendingReq_;
+#if _MPI_VER
+    static CDFlagT *pendingFlag_;
+    static CDMailBoxT pendingWindow_;
+#endif
+
 #if _PROFILER 
     Profiler* profiler_;
 #endif

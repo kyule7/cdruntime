@@ -36,7 +36,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_handle.h"
 #include "cd.h"
 #include "cd_entry.h"
-#include <mpi.h> 
 #include "cd_id.h"
 #include "util.h"
 #include "cd_path.h"
@@ -50,7 +49,13 @@ uint64_t Util::gen_object_id_=0;
 CDPath* CDPath::uniquePath_;
 
 DebugStream cd::dbgStream;
-CDFlagT *CDHandle::pendingReq_; 
+
+#if _MPI_VER
+CDFlagT *CDHandle::pendingFlag_; 
+CDMailBoxT CDHandle::pendingWindow_;
+#endif
+//CDFlagT *CDHandle::pendingFlag_; 
+//CDMailBoxT CDHandle::pendingWindow_;
 //int cd::myTaskID = 0;
 
 // Global functions -------------------------------------------------------
@@ -65,11 +70,14 @@ CDHandle* cd::CD_Init(int numTask, int myRank)
 {
 //  myTaskID = myRank;
 //  CDHandle* root_cd = new CDHandle(NULL, "Root", NodeID(ROOT_COLOR, myRank, numTask, 0), kStrict, 0);
-  dbgStream << "Great!"<<endl; getchar();
+  dbgStream << "Great!"<<endl; //getchar();
+
 #if _MPI_VER
-  MPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &CDHandle::pendingReq_);
+  MPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &CDHandle::pendingFlag_);
+  MPI_Win_create(CDHandle::pendingFlag_, 1, sizeof(CDFlagT), MPI_INFO_NULL, MPI_COMM_WORLD, &CDHandle::pendingWindow_);
 #endif
-  CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myRank, ROOT_HEAD_ID, numTask)), kStrict, 0);
+  CD::CDInternalErrT internal_err;
+  CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myRank, ROOT_HEAD_ID, numTask)), kStrict, 0, &internal_err);
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
 #if _PROFILER
@@ -92,7 +100,8 @@ void cd::CD_Finalize(void)
 #endif
 
 #if _MPI_VER
-  MPI_Free_mem(CDHandle::pendingReq_);
+  MPI_Win_free(&CDHandle::pendingWindow_);
+  MPI_Free_mem(CDHandle::pendingFlag_);
 #endif
   
 //  CDPath::GetRootCD()->Destroy();
@@ -177,7 +186,8 @@ CDHandle* CDHandle::Create(const char* name,
   CDNameT new_cd_name(ptr_cd_->GetCDName());
   new_cd_name.IncLevel();
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
-  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec);
+  CD::CDInternalErrT internal_err;
+  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec, &internal_err);
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
 
@@ -242,21 +252,21 @@ int SplitCD_3D(const int& my_task_id,
   int Y = (double)tmp / num_x;
   int X = tmp % num_x;
 
-  cout<<"tmp = "<<tmp <<endl;
-  cout<<"taskID = "<<taskID <<endl;
-  cout<<"sz = "<<sz<<endl;
-  cout<<"X = "<<X<<endl;
-  cout<<"Y = "<<Y<<endl;
-  cout<<"Z = "<<Z<<endl;
-
-  cout<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
-  cout<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
-  cout << "(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<")"<< endl; 
+//  cout<<"tmp = "<<tmp <<endl;
+//  cout<<"taskID = "<<taskID <<endl;
+//  cout<<"sz = "<<sz<<endl;
+//  cout<<"X = "<<X<<endl;
+//  cout<<"Y = "<<Y<<endl;
+//  cout<<"Z = "<<Z<<endl;
+//
+//  cout<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
+//  cout<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
+//  cout << "(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<")"<< endl; 
 
   new_color = (int)(X / new_num_x + (Y / new_num_y)*num_children_x + (Z / new_num_z)*(num_children_x * num_children_y));
   new_task  = (int)(X % new_num_x + (Y % new_num_y)*new_num_x      + (Z % new_num_z)*(new_num_x * new_num_y));
   
-  cout << "(color,task,size) = (" << new_color << ","<< new_task << "," << new_size << ") <-- "<<endl;
+//  cout << "(color,task,size) = (" << new_color << ","<< new_task << "," << new_size << ") <-- "<<endl;
 //       <<"(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<") -- (color,task,size) = (" << GetCurrentCD()->GetColor() << ","<< my_task_id << "," << my_size <<")"
 //       << "ZZ : " << round((double)Z / new_num_z)
 //       << endl;
@@ -396,7 +406,9 @@ CDHandle* CDHandle::Create(const ColorT& color,
 
 //  cout << "[Before] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //getchar();
   if(num_children > 1) {
+    cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<cout; //getchar();
     err = SplitCD(node_id_.task_in_color(), node_id_.size(), num_children, new_color, new_task);
+    cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<cout; //getchar();
     err = GetNewNodeID(node_id_.color(), new_color, new_task, new_node_id);
     assert(new_size == new_node_id.size());
   }
@@ -415,9 +427,11 @@ CDHandle* CDHandle::Create(const ColorT& color,
 
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
+//  cout<<"~~~~~~~~before create cd obj~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<cout; //getchar();
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
-  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec);
+  CD::CDInternalErrT internal_err;
+  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec, &internal_err);
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
 
@@ -511,10 +525,10 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 
 #if _PROFILER
   // Profile-related
-  cout << "calling get profile" <<endl; getchar();
+  cout << "calling get profile" <<endl; //getchar();
   if(ptr_cd()->cd_exec_mode_ == 0) { 
     if(label == NULL) label = "INITIAL_LABEL";
-    cout << "label "<< label <<endl; getchar();
+    cout << "label "<< label <<endl; //getchar();
     profiler_->GetProfile(label);
   }
 #endif
@@ -532,7 +546,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   assert(ptr_cd_ != 0);
 
 #if _PROFILER
-  cout << "calling collect profile" <<endl; getchar();
+  cout << "calling collect profile" <<endl; //getchar();
   // Profile-related
 //  if(ptr_cd()->cd_exec_mode_ == 0) { 
     profiler_->CollectProfile();

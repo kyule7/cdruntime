@@ -156,7 +156,7 @@ static int str_tsn_log_record(char *const s, const size_t n,
 //    };
 
 //    char *kv_format = (char*) "lsn=%lu prev=%lu next_undo=%lu tsnid=%lu tsnid=%s";
-    char *tbl_format = (char*) "%10lu P%10lu N%10lu %10lu %s";
+//    char *tbl_format = (char*) "%10lu P%10lu N%10lu %10lu %s";
   return 0;
 //    return snprintf(s, n,
 //                    tbl_format,
