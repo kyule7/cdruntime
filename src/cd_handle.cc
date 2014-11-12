@@ -335,6 +335,7 @@ CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, cons
     MPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
     MPI_Comm_size(new_node.color(), &(new_node.size_));
     MPI_Comm_rank(new_node.color(), &(new_node.task_in_color_));
+    MPI_Comm_group(new_node.color(), &(new_node.task_group_));
 //    Sync();
 //    TestMPIFunc(node_id_.color(), node_id_.task_in_color());
 //    Sync();
@@ -424,7 +425,6 @@ CDHandle* CDHandle::Create(const ColorT& color,
 //  cout << "[After] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //getchar();
 
   SetHead(new_node_id);
-
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
 //  cout<<"~~~~~~~~before create cd obj~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<cout; //getchar();
@@ -432,6 +432,14 @@ CDHandle* CDHandle::Create(const ColorT& color,
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
   CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec, &internal_err);
+
+//  if(IsHead()) {
+//    if(new_node_id.IsHead()) {
+//      int child_heads[num_children];
+//      // send child_cd_name.rank_in_level_ of heads of children CDs
+//      MPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
+//    }
+//  }
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
 

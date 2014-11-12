@@ -54,6 +54,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define ROOT_HEAD_ID 0
 #define INITIAL_COLOR MPI_COMM_NULL
 typedef MPI_Comm ColorT;
+typedef MPI_Group GroupT;
 typedef int CDFlagT;
 typedef MPI_Win CDMailBoxT;
 #else
@@ -62,6 +63,7 @@ typedef MPI_Win CDMailBoxT;
 #define ROOT_HEAD_ID 0
 #define INITIAL_COLOR 0
 typedef int ColorT;
+typedef int GroupT;
 
 #endif
 

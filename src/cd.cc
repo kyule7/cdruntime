@@ -258,7 +258,9 @@ CDErrT CD::Destroy(void)
   CDErrT err=CDErrT::kOK;
   InternalDestroy();
 
+#if _MPI_VER
   delete mailbox_;
+#endif
 
   return err;
 }
@@ -291,11 +293,12 @@ CD::InternalCreate(CDHandle* parent,
   else {
     HeadCD *new_cd = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
 
+#if _MPI_VER
+
     // Create memory region where RDMA is enabled
     cout << "HeadCD create internal memory " << endl;
     int task_count = new_cd_id.task_count();
 
-#if _MPI_VER
     MPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
                   MPI_INFO_NULL, &(new_cd->event_flag_));
     new_cd->mailbox_ = new CDMailBoxT[task_count];
@@ -357,14 +360,13 @@ inline CD::CDInternalErrT CD::InternalDestroy(void)
 
   if(GetCDID().level() != 0) {   // non-root CD
 
-
   } 
   else {    // Root CD
 
   }
-
   
   delete this;
+
   return CDInternalErrT::kOK;
 
 }
@@ -1155,6 +1157,10 @@ CDErrT CD::AddChild(CDHandle* cd_child)
 //  std::cout<<"sth wrong"<<std::endl; 
 //  getchar(); 
   // Do nothing?
+  if(cd_child->IsHead()) {
+    //Send it to Head
+  }
+
   return CDErrT::kOK;  
 }
 
@@ -1164,6 +1170,14 @@ CDErrT CD::RemoveChild(CDHandle* cd_child)
 //  getchar(); 
   // Do nothing?
   return CDErrT::kOK;
+}
+
+//FIXME 11112014
+void RegisterMeToParentHeadCD(int taskID)
+{
+  
+//  MPI_Put(&taskID, 1, MPI_INTEGER, cd_id().node_id().head(), target_disp, target_count, MPI_INTEGER, &win);
+
 }
 
 HeadCD::HeadCD()
@@ -1177,6 +1191,7 @@ HeadCD::HeadCD( CDHandle* cd_parent,
                     uint64_t sys_bit_vector)
   : CD(cd_parent, name, cd_id, cd_type, sys_bit_vector)
 {
+  RegisterMeToParentHeadCD(cd_id.task_in_color());
 //  cd_parent_ = cd_parent;
 }
 
@@ -1367,13 +1382,48 @@ CDErrT HeadCD::Resume(void)
 }
 
 
-CDErrT HeadCD::AddChild(CDHandle* cd_child) 
+CDErrT HeadCD::AddChild(CDHandle *cd_child) 
 {
-  cd_children_.push_back(cd_child);
+  if(cd_child->IsHead()) {
+    cout << "It is not desirable to let the same task be head twice!" << endl;
+//    cd_children_.push_back(cd_child->ptr_cd()->cd_id().task());
+
+//    GatherChildHead();
+  }
 
   return CDErrT::kOK;  
 }
 
+
+//FIXME 11112014
+//void CD::GatherChildHead(const CDID& child_cd_id)
+//{
+//#if _MPI_VER
+//
+//  // Gather heads of children CDs
+//  int send_buf;
+//  int send_count;
+//  int recv_buf[cd_id().sibling_count()];
+//  int recv_count;
+//
+//  MPI_Send(, send_count, MPI_INTEGER, recv_buf, recv_count, MPI_INTEGER, cd_id().node_id().head(), cd_id().color());
+//
+//#endif
+//}
+//
+//void Head::GatherChildHead(void)
+//{
+//#if _MPI_VER
+//
+//  // Gather heads of children CDs
+//  int recv_buf[cd_id().sibling_count()];
+//  MPI_Status status;
+//  for(int i=1; i<cd_id().sibling_count(); ++i) {
+//    MPI_Recv(&(recv_buf[i]), 1, MPI_INTEGER, MPI_ANY_SOURCE, 0, cd_id().color(), &status);
+//  }
+//
+//#endif
+//}
 
 CDErrT HeadCD::RemoveChild(CDHandle* cd_child) 
 {

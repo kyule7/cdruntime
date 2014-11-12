@@ -67,6 +67,7 @@ friend class CDHandle;
   int task_in_color_;
   int head_;
   int size_;
+  GroupT task_group_;
 public:
   NodeID() 
     : color_(0), task_in_color_(0), head_(0), size_(-1) 
