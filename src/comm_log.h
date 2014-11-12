@@ -73,6 +73,7 @@ class cd::CommLog {
     CommLogErrT LogData(void * data_ptr, unsigned long data_length);
 
     CommLogErrT ReadData(void * buffer, unsigned long length);
+    CommLogErrT ProbeData(void * buffer, unsigned long length);
     //CommLogErrT FindNextTableElement(unsigned long * index);
 
     // push logs to parent

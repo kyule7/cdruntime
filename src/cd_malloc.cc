@@ -128,7 +128,7 @@ else{
 
 
 
-/*
+
 static void* temp_calloc(size_t num, size_t size)
 {
   PRINT_DEBUG("empty calloc is called\n");
@@ -253,9 +253,9 @@ void *realloc(void* ptr, size_t size)
 */
 
 
-void* malloc(size_t size)
-{
-  void* p = real_malloc_(size);
-//  printf("malloc(%ld) = %p\n", size, p);
-  return p;
-}
+//void* malloc(size_t size)
+//{
+//  void* p = real_malloc_(size);
+////  printf("malloc(%ld) = %p\n", size, p);
+//  return p;
+//}

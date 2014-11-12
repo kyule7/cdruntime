@@ -536,13 +536,38 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
       log_table_.base_ptr_[log_table_reexec_pos_].length_);
 
   log_table_reexec_pos_++;
-  //if (log_table_reexec_pos_ == log_table_.cur_pos_)
-  //{
-  //  comm_log_mode_ = kGenerateLog;
 
-  //  PRINT_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
-  //  return kCommLogCommLogModeFlip;
-  //}
+  return kCommLogOK;
+}
+
+
+// input parameter
+CommLogErrT CommLog::ProbeData(void * buffer, unsigned long length)
+{
+  PRINT_DEBUG("Inside ProbeData!\n");
+  PRINT_DEBUG("reexec_pos_: %li\t cur_pos_: %li\n",log_table_reexec_pos_,log_table_.cur_pos_ );
+  // reached end of logs, and need to return back and log data again...
+  if (log_table_reexec_pos_ == log_table_.cur_pos_)
+  {
+    comm_log_mode_ = kGenerateLog;
+
+    PRINT_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
+    return kCommLogCommLogModeFlip;
+  }
+  
+  if (log_table_.cur_pos_ == 0)
+  {
+    ERROR_MESSAGE("Attempt to read from empty logs!\n");
+    return kCommLogError;
+  }
+
+  if (length != log_table_.base_ptr_[log_table_reexec_pos_].length_)
+  {
+    ERROR_MESSAGE("Wrong length when read data from logs: %ld wanted but %ld expected!!\n", length, log_table_.base_ptr_[log_table_reexec_pos_].length_);
+    return kCommLogError;
+  }
+
+  log_table_reexec_pos_++;
 
   return kCommLogOK;
 }

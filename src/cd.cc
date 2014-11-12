@@ -1517,6 +1517,17 @@ CommLogErrT CD::LogData(void *data_ptr, unsigned long length)
 }
 
 //SZ
+CommLogErrT CD::ProbeData(void *data_ptr, unsigned long length)
+{
+  if (comm_log_ptr_ == NULL)
+  {
+    ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to read data!\n");
+    return kCommLogError;
+  }
+  return comm_log_ptr_->ProbeData(data_ptr, length);
+}
+
+//SZ
 CommLogErrT CD::ReadData(void *data_ptr, unsigned long length)
 {
   if (comm_log_ptr_ == NULL)

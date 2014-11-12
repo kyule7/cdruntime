@@ -359,6 +359,8 @@ update the preserved data.
     //SZ
     CommLogErrT LogData(void *data_ptr, unsigned long length);
     //SZ
+    CommLogErrT ProbeData(void *data_ptr, unsigned long length);
+    //SZ
     CommLogErrT ReadData(void *data_ptr, unsigned long length);
     //SZ
     CommLogMode GetCommLogMode();
