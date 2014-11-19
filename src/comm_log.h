@@ -41,9 +41,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
     
 struct LogTableElement {
-  //unsigned long id_;  // this id_ is thread/task id related
   unsigned long pos_; // starting position of logged data in log_queue_
   unsigned long length_; // length of logged data
+  bool completed_;
+  unsigned long flag_;
 };
     
 class cd::CommLog {
@@ -65,12 +66,12 @@ class cd::CommLog {
       my_cd_ = my_cd;
     }
 
-    // wrapper for LogData and ReadData
-    CommLogErrT AccessLog(void * data_ptr, unsigned long data_length);
-
+    CommLogErrT ProbeAndLogData(void *request);
     // log new data into the queue
     // need to check if running out queues
-    CommLogErrT LogData(void * data_ptr, unsigned long data_length);
+    CommLogErrT LogData(void * data_ptr, 
+                      unsigned long data_length, 
+                      bool completed=true);
 
     CommLogErrT ReadData(void * buffer, unsigned long length);
     CommLogErrT ProbeData(void * buffer, unsigned long length);
@@ -138,8 +139,10 @@ class cd::CommLog {
     CommLogErrT IncreaseLogTableSize();
     CommLogErrT IncreaseLogQueueSize(unsigned long length);
 
-    CommLogErrT WriteLogTable (void * data_ptr, unsigned long data_length);
-    CommLogErrT WriteLogQueue (void * data_ptr, unsigned long data_length);
+    CommLogErrT WriteLogTable (void * data_ptr, 
+                              unsigned long data_length, 
+                              bool completed);
+    CommLogErrT WriteLogQueue (void * data_ptr, unsigned long data_length, bool completed);
     
 
   private:

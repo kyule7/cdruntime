@@ -7,7 +7,9 @@
 
 FILE *fp;
 
-int main(int argc, char** argv)
+
+// test blocking p2p communication and barriers
+int test_bp2p(int argc, char** argv)
 {
   int partner; 
   double message, message2;
@@ -41,8 +43,8 @@ int main(int argc, char** argv)
     return 0;
   }
 
-  PRINTF("sizeof(int)=%d, sizeof(MPI_INT)=%d, and sizeof(MPI_CHAR)=%d\n", 
-      (int)sizeof(int), (int)sizeof(MPI_INT), (int)sizeof(MPI_CHAR));
+  PRINTF("sizeof(int)=%d, sizeof(MPI_INT)=%d, and sizeof(MPI_Request*)=%d\n", 
+      (int)sizeof(int), (int)sizeof(MPI_INT), (int)sizeof(MPI_Request*));
 
   PRINTF("\n\nInit cd runtime and create root CD.\n\n");
   CDHandle * root = CD_Init(nprocs, myrank);
@@ -134,6 +136,12 @@ int main(int argc, char** argv)
       child1_0->CDAssert(false);
     }
 
+    PRINTF("Barrier1\n");
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    PRINTF("Barrier2\n");
+    MPI_Barrier(MPI_COMM_WORLD);
+
     PRINTF("Print level 1 child CD comm_log_ptr info...\n");
     if (child1_0->ptr_cd()->cd_type_ == kRelaxed)
       child1_0->ptr_cd()->comm_log_ptr_->Print();
@@ -209,6 +217,20 @@ int main(int argc, char** argv)
       child1_1->CDAssert(false);
     }
 
+    PRINTF("Barrier1\n");
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // insert error
+    if (num_reexec < 2)
+    {
+      PRINTF("Insert error #%d...\n", num_reexec);
+      num_reexec++;
+      child1_1->CDAssert(false);
+    }
+
+    PRINTF("Barrier2\n");
+    MPI_Barrier(MPI_COMM_WORLD);
+
     PRINTF("Print level 1 child CD comm_log_ptr info...\n");
     if (child1_1->ptr_cd()->cd_type_ == kRelaxed)
       child1_1->ptr_cd()->comm_log_ptr_->Print();
@@ -237,4 +259,10 @@ int main(int argc, char** argv)
   MPI_Finalize();
 
   return 0;
+}
+
+int main(int argc, char **argv)
+{
+  int ret = test_bp2p(argc, argv);
+  return ret;
 }

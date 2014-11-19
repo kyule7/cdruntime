@@ -1506,14 +1506,26 @@ CDHandle* CD::GetParentHandle()
 }
 
 //SZ
-CommLogErrT CD::LogData(void *data_ptr, unsigned long length)
+CommLogErrT CD::ProbeAndLogData(void *request)
 {
   if (comm_log_ptr_ == NULL)
   {
     ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to log data!\n");
     return kCommLogError;
   }
-  return comm_log_ptr_->LogData(data_ptr, length);
+  return comm_log_ptr_->ProbeAndLogData(request);
+}
+
+//SZ
+CommLogErrT CD::LogData(void *data_ptr, unsigned long length, 
+                      bool completed)
+{
+  if (comm_log_ptr_ == NULL)
+  {
+    ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to log data!\n");
+    return kCommLogError;
+  }
+  return comm_log_ptr_->LogData(data_ptr, length, completed);
 }
 
 //SZ

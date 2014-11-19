@@ -357,7 +357,10 @@ update the preserved data.
     //SZ
     CDHandle* GetParentHandle();
     //SZ
-    CommLogErrT LogData(void *data_ptr, unsigned long length);
+    CommLogErrT ProbeAndLogData(void *request);
+    //SZ
+    CommLogErrT LogData(void *data_ptr, unsigned long length, 
+                      bool completed=true);
     //SZ
     CommLogErrT ProbeData(void *data_ptr, unsigned long length);
     //SZ

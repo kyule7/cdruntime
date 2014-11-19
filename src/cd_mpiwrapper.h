@@ -40,6 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdio.h>
 #include <mpi.h>
 
+// blocking p2p communication
 int MPI_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 int MPI_Ssend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 int MPI_Rsend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
@@ -51,6 +52,13 @@ int MPI_Sendrecv(void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, 
 int MPI_Sendrecv_replace(void *buf, int count, MPI_Datatype datatype, int dest, int sendtag,
                         int source, int recvtag, MPI_Comm comm, MPI_Status *status);
 
+// non-blocking p2p communication
+int MPI_Isend(void *buf, int count, MPI_Datatype datatype, int dest, 
+            int tag, MPI_Comm comm, MPI_Request *request);
+int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int src, 
+            int tag, MPI_Comm comm, MPI_Request *request);
+
+int MPI_Wait(MPI_Request *request, MPI_Status *status);
 
 #endif
 
