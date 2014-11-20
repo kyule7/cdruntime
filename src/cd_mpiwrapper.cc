@@ -555,9 +555,10 @@ int MPI_Gather(void *sendbuf,
                MPI_Comm comm)
 {
   int mpi_ret = 0;
-  int myrank;
+  int myrank, size;
   MPI_Comm_rank(comm, &myrank);
-  PRINT_DEBUG("myrank=%d\n", myrank);
+  MPI_Comm_size(comm, &size);
+  PRINT_DEBUG("myrank=%d, size=%d\n", myrank, size);
 
   CDHandle * cur_cd = CDPath::GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -566,7 +567,7 @@ int MPI_Gather(void *sendbuf,
 
     PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
     if (myrank == root){
-      cur_cd->ptr_cd()->LogData(recvbuf, recvcnt*sizeof(recvtype));
+      cur_cd->ptr_cd()->LogData(recvbuf, size*recvcnt*sizeof(recvtype));
     }
     else {
       cur_cd->ptr_cd()->LogData(sendbuf, 0);
@@ -577,7 +578,7 @@ int MPI_Gather(void *sendbuf,
     PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
     CommLogErrT ret;
     if (myrank == root){
-      ret = cur_cd->ptr_cd()->ReadData(recvbuf, recvcnt*sizeof(recvtype));
+      ret = cur_cd->ptr_cd()->ReadData(recvbuf, size*recvcnt*sizeof(recvtype));
     }
     else{
       ret = cur_cd->ptr_cd()->ProbeData(sendbuf, 0);
@@ -588,7 +589,7 @@ int MPI_Gather(void *sendbuf,
       PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
       mpi_ret = PMPI_Gather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
       if (myrank == root) {
-        cur_cd->ptr_cd()->LogData(recvbuf, recvcnt*sizeof(recvtype));
+        cur_cd->ptr_cd()->LogData(recvbuf, size*recvcnt*sizeof(recvtype));
       }
       else {
         cur_cd->ptr_cd()->LogData(sendbuf, 0);
@@ -671,5 +672,153 @@ int MPI_Gatherv(void *sendbuf,
   return mpi_ret;
 }
 
+
+// MPI_Allgather
+int MPI_Allgather(void *sendbuf,
+                  int sendcnt,
+                  MPI_Datatype sendtype,
+                  void *recvbuf,
+                  int recvcnt,
+                  MPI_Datatype recvtype,
+                  MPI_Comm comm)
+{
+  int mpi_ret = 0;
+  int size;
+  MPI_Comm_size(comm, &size);
+  PRINT_DEBUG("size=%d\n", size);
+
+  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
+  {
+    mpi_ret = PMPI_Allgather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
+
+    PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
+    cur_cd->ptr_cd()->LogData(recvbuf, size*recvcnt*sizeof(recvtype));
+  }
+  else
+  {
+    PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
+    CommLogErrT ret = cur_cd->ptr_cd()->ReadData(recvbuf, size*recvcnt*sizeof(recvtype));
+    if (ret == kCommLogCommLogModeFlip)
+    {
+      PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
+      mpi_ret = PMPI_Allgather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
+      cur_cd->ptr_cd()->LogData(recvbuf, size*recvcnt*sizeof(recvtype));
+    }
+  }
+
+  return mpi_ret;
+}
+
+
+// MPI_Gatherv
+int MPI_Allgatherv(void *sendbuf,
+                   int sendcnt,
+                   MPI_Datatype sendtype,
+                   void *recvbuf,
+                   int *recvcnts,
+                   int *displs,
+                   MPI_Datatype recvtype,
+                   MPI_Comm comm)
+{
+  int mpi_ret = 0;
+  int size;
+  MPI_Comm_size(comm, &size);
+  PRINT_DEBUG("size=%d\n", size);
+
+  // calculate length of recv array
+  long totalcnts=0;
+  int i;
+  for (i=0;i<size;i++)
+  {
+    totalcnts += recvcnts[i];
+  }
+  for (i=0;i<size;i++)
+  {
+    if (totalcnts < displs[i]+recvcnts[i])
+      totalcnts = displs[i]+recvcnts[i];
+  }
+  PRINT_DEBUG("totalcnts = %ld\n", totalcnts);
+
+  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
+  {
+    mpi_ret = PMPI_Allgatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, comm);
+
+    PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
+    cur_cd->ptr_cd()->LogData(recvbuf, totalcnts*sizeof(recvtype));
+  }
+  else
+  {
+    PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
+    CommLogErrT ret = cur_cd->ptr_cd()->ReadData(recvbuf, totalcnts*sizeof(recvtype));
+
+    if (ret == kCommLogCommLogModeFlip)
+    {
+      PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
+      mpi_ret = PMPI_Allgatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, comm);
+
+      cur_cd->ptr_cd()->LogData(recvbuf, totalcnts*sizeof(recvtype));
+    }
+  }
+
+  return mpi_ret;
+}
+
+
+// MPI_Reduce
+int MPI_Reduce(void *sendbuf,
+               void *recvbuf, 
+               int count,
+               MPI_Datatype datatype,
+               MPI_Op op, 
+               int root,
+               MPI_Comm comm)
+{
+  int mpi_ret = 0;
+  int myrank, size;
+  MPI_Comm_rank(comm, &myrank);
+  MPI_Comm_size(comm, &size);
+  PRINT_DEBUG("myrank=%d, size=%d\n", myrank, size);
+
+  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
+  {
+    mpi_ret = PMPI_Reduce(sendbuf, recvbuf, count, datatype, op, root, comm);
+
+    PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
+    if (myrank == root){
+      cur_cd->ptr_cd()->LogData(recvbuf, count*sizeof(datatype));
+    }
+    else {
+      cur_cd->ptr_cd()->LogData(sendbuf, 0);
+    }
+  }
+  else
+  {
+    PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
+    CommLogErrT ret;
+    if (myrank == root){
+      ret = cur_cd->ptr_cd()->ReadData(recvbuf, count*sizeof(datatype));
+    }
+    else{
+      ret = cur_cd->ptr_cd()->ProbeData(sendbuf, 0);
+    }
+
+    if (ret == kCommLogCommLogModeFlip)
+    {
+      PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
+      mpi_ret = PMPI_Reduce(sendbuf, recvbuf, count, datatype, op, root, comm);
+      if (myrank == root) {
+        cur_cd->ptr_cd()->LogData(recvbuf, count*sizeof(datatype));
+      }
+      else {
+        cur_cd->ptr_cd()->LogData(sendbuf, 0);
+      }
+    }
+  }
+
+  return mpi_ret;
+}
 
 #endif
