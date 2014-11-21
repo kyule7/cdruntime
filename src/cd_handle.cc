@@ -81,7 +81,7 @@ CDHandle* cd::CD_Init(int numTask, int myRank)
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
 #if _PROFILER
-  // Profiler-related  
+  // Profiler-related
   root_cd_handle->profiler_->InitViz();
 #endif
 
@@ -412,6 +412,7 @@ CDHandle* CDHandle::Create(const ColorT& color,
     cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<cout; //getchar();
     err = GetNewNodeID(node_id_.color(), new_color, new_task, new_node_id);
     assert(new_size == new_node_id.size());
+
   }
   else if(num_children == 1) {
     err = GetNewNodeID(new_node_id);
@@ -429,17 +430,194 @@ CDHandle* CDHandle::Create(const ColorT& color,
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
 //  cout<<"~~~~~~~~before create cd obj~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<cout; //getchar();
 
+//  if(IsHead()) {
+//    // Create window to get head info of children CDs.
+//    MPI_Win_create();
+//  }
+//  else {
+//    MPI_Win_create();
+//  }
+
+
+#if _MPI_VER
+  // Get the children CD's head information and the total size of entry from each task in the CD.
+  int send_buf[2]={0,0};
+  int task_count = node_id().size();
+  int recv_buf[task_count][2]; 
+  if(new_node_id.IsHead()) {
+    send_buf[0] = node_id().task_in_color();
+  } else {
+    send_buf[0] = -1;
+  }
+  send_buf[1] = ptr_cd()->remote_entry_directory_map_.size();
+
+  MPI_Allgather(send_buf, 2, MPI_INTEGER, 
+                recv_buf, 2, MPI_INTEGER, 
+                node_id().color());
+
+//  // Calculate the array of head_rank, and head_rank_count from recv_buf[evennum]. 
+//  int head_rank_count;
+//  for(int i=0; i<
+//
+//
+//  if(IsHead() && new_node_id.IsHead()) {
+//    head_rank_count = num_children;
+//  }
+//  else {
+//    head_rank_count = num_children+1;
+//  }
+//
+//  int head_rank[head_rank_count]; 
+//  if(IsHead()) {
+//
+//    MPI_Group_incl(node_id_.task_group_, head_rank_count, head_rank, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group())); 
+//
+    
+    cout << "\nremote entry check\n" << endl;
+    for(int k=0; k<task_count; ++k ) {
+      cout <<recv_buf[k][0] << " " << recv_buf[k][1] << endl;
+    }
+    cout << "\n" << endl; getchar();
+//  }
+//  else{
+//
+//    if(new_node_id.IsHead()) {
+//      // Calculate the array of group 
+//      MPI_Group_incl(node_id_.task_group_, head_rank_count, head_rank, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group())); 
+//
+//    }
+//
+//  }
+//
+//  // Calculate the array of displacement and entry_count at each task from recv_buf[oddnum].
+//  // Calculate recv count and displacement for entries of each task's remote entries.
+//  int entry_size;
+//  int entry_count[task_count];
+//  int entry_disp[task_count];
+//
+//  char *serialized_entries;
+//  char *entries_to_be_deserialized;
+//
+//  if(!IsHead()) {
+//    // Serialize all the entries in CD.
+//    serialized_entries = ptr_cd_->SerializeEntryDir(uint32_t& entry_count);
+//  }
+//
+//  MPI_Gatherv(serialized_entries, entry_size, MPI_BYTE, 
+//              entries_to_be_deserialized, entry_count, entry_disp, MPI_BYTE, 
+//              node_id().head(), node_id().color());
+//
+//  if(IsHead()) {  // Current task is head. It receives children CDs' head info and entry info of every task in the CD.
+//    // Deserialize the entries received from the other tasks in current CD's task group.
+//    while(ptr < entry_disp[task_count-1] + entry_count[task_count-1]) { // it is the last position
+//      ptr_cd_->DeserializeEntryDir(entries_to_be_deserialized + entry_disp[i]);
+//    }
+//  }
+//
+//  cout << "\n\n\nasdfasdfsadf\n\n"<< endl <<endl;
+//  getchar();
+#endif
+
+
+
+
+
+
+//  if(!IsHead()) {
+//    // Serialize all the entries in CD.
+//
+////    void *buffer = ptr_cd_->SerializeEntryDir(uint32_t& entry_count);
+//
+//    void *buffer=NULL;
+//    Packer entry_dir_packer;
+//    uint32_t len_in_bytes=0;
+//    uint32_t entry_count=0;
+//    void *packed_entry_p=NULL;
+//    
+//    int task_id=0;
+//    if(new_node_id.IsHead()) {
+//      task_id = new_node_id.task_in_color();
+//    } else {
+//      task_id = -1;
+//    }
+//
+//    packed_entry_p = (void *)&task_id;
+//    entry_dir_packer.Add(entry_count++, sizeof(int), packed_entry_p);
+//  
+//    for(auto it=remote_entry_directory_.begin(); it!=remote_entry_directory_.end(); ++it) {
+//      uint32_t entry_len=0;
+//      packed_entry_p=NULL;
+//      if( !it->name().empty() ){
+//        // entry_len is output of Serialize 
+//        packed_entry_p = it->Serialize(entry_len);
+//        entry_dir_packer.Add(entry_count++, entry_len, packed_entry_p); // Add(id, len, datap)
+//        len_in_bytes += entry_len;
+//      }
+//    }
+//    
+//    buffer = entry_dir_packer.GetTotalData(len_in_bytes);
+//
+//
+//    MPI_Gather(send_buf, 1, MPI_BYTE, task_id_buffer, 1, MPI_BYTE, node_id().head(), node_id().color());
+//  }
+//  else {  // Current task is head. It receives children CDs' head info and entry info of every task in the CD.
+//    char *recv_buf;
+//    MPI_Gather(send_buf, 1, MPI_BYTE, recv_buf, 1, MPI_BYTE, node_id().head(), node_id().color());
+//
+//    // Deserialize the entries received from the other tasks in current CD's task group.
+//    ptr_cd_->DeserializeEntryDir(recv_buf);
+//
+//    std::vector<CDEntry> entry_dir;
+//    Unpacker entry_dir_unpacker;
+//    void *unpacked_entry_p=0;
+//    uint32_t dwGetID=0;
+//    uint32_t return_size=0;
+//    int child_heads[num_children];
+//    child_heads[0] = node_id().task_in_color();
+//
+//
+//    while(1) {
+//      unpacked_entry_p = entry_dir_unpacker.GetNext((char *)recv_buf, dwGetID, return_size);
+//      if(unpacked_entry_p == NULL) break;
+//      cd_entry.Deserialize(unpacked_entry_p);
+//      entry_dir.push_back(cd_entry);
+//    }
+//
+////    MPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
+//
+//  }
+//
+//
+//
+//  int task_id_buffer[node_id().size()];
+//  int task_id = node_id().task_in_color();
+//  int null_id = 0;
+//  if(new_node_id.IsHead()) {
+//    MPI_Gather(&task_id, 1, MPI_INTEGER, task_id_buffer, 1, MPI_INTEGER, node_id().head(), node_id().color());
+//  }
+//  else {
+//    MPI_Gather(&null_id, 1, MPI_INTEGER, task_id_buffer, 1, MPI_INTEGER, node_id().head(), node_id().color());
+//  }
+//  if(IsHead()) {
+//    for(int i=0; i<node_id().size(); ++i) {
+//      cout << "\n\n"<<task_id_buffer[i] <<" ";
+//    }
+//  }
+//  cout << "\n\n\n\n" << endl; getchar();
+////    if(new_node_id.IsHead()) {
+////      int child_heads[num_children];
+////      // send child_cd_name.rank_in_level_ of heads of children CDs
+////      MPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
+////    }
+//
+////  ptr_cd_->family_mailbox_
+//
+//
+
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
   CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec, &internal_err);
 
-//  if(IsHead()) {
-//    if(new_node_id.IsHead()) {
-//      int child_heads[num_children];
-//      // send child_cd_name.rank_in_level_ of heads of children CDs
-//      MPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
-//    }
-//  }
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
 
@@ -584,7 +762,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 
 CDErrT CDHandle::Preserve(void *data_ptr, 
                           uint64_t len, 
-                          CDPreserveT preserve_mask, 
+                          uint32_t preserve_mask, 
                           const char *my_name, 
                           const char *ref_name, 
                           uint64_t ref_offset, 
@@ -604,7 +782,8 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 
 //  if( IsHead() ) {
     assert(ptr_cd_ != 0);
-    return ptr_cd_->Preserve(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
+    bool ref_remote = preserve_mask >> 3;
+    return ptr_cd()->Preserve(data_ptr, len, (CDPreserveT)(preserve_mask & 3), my_name, ref_name, ref_offset, ref_remote, regen_object, data_usage);
 //  }
 //  else {
 //    // It is at remote node so do something for that.
@@ -617,7 +796,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 CDErrT CDHandle::Preserve(CDEvent &cd_event, 
                           void *data_ptr, 
                           uint64_t len, 
-                          CDPreserveT preserve_mask, 
+                          uint32_t preserve_mask, 
                           const char *my_name, 
                           const char *ref_name, 
                           uint64_t ref_offset, 
@@ -628,8 +807,9 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
     assert(ptr_cd_ != 0);
     // TODO CDEvent object need to be handled separately, 
     // this is essentially shared object among multiple nodes.
-    return ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
-                             my_name, ref_name, ref_offset, 
+    bool ref_remote = preserve_mask >> 3;
+    return ptr_cd()->Preserve(data_ptr, len, (CDPreserveT)(preserve_mask & 3), 
+                             my_name, ref_name, ref_offset, ref_remote, 
                              regen_object, data_usage );
   }
   else {
@@ -832,11 +1012,11 @@ void CDHandle::Recover (uint32_t error_name_mask,
   // STUB
 }
 
-CDErrT CDHandle::SetPGASType (void *data_ptr, uint64_t len, CDPGASUsageT region_type)
-{
-   // STUB
-  return kOK;
-}
+//CDErrT CDHandle::SetPGASType (void *data_ptr, uint64_t len, CDPGASUsageT region_type)
+//{
+//   // STUB
+//  return kOK;
+//}
 
 int CDHandle::ctxt_prv_mode()
 {

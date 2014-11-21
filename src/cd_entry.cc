@@ -49,11 +49,11 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
 //    getchar();
   }
 
-  if( !dst_data_.file_name_.empty() )  {
+  if( dst_data_.handle_type() == DataHandle::kOSFile )  {
     printf("erase file start!\n"); getchar();
 //    delete dst_data_.file_name(); 
     char cmd[30];
-    sprintf(cmd, "rm %s", dst_data_.file_name_.c_str());
+    sprintf(cmd, "rm %s", dst_data_.file_name_);
     int ret = system(cmd);
     printf("erase the file of preserved data\n"); 
     if( ret == -1 ) {
@@ -84,7 +84,7 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
 //    assert(0);
     memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len());
 
-    std::cout << "\tSaved Data "<<name_.c_str()<<" : " << *(reinterpret_cast<int*>(dst_data_.address_data())) << " at " << dst_data_.address_data() <<" (Memory)" << std::endl; //getchar();
+    std::cout << "\tSaved Data "<<tag2str[entry_tag_]<<" : " << *(reinterpret_cast<int*>(dst_data_.address_data())) << " at " << dst_data_.address_data() <<" (Memory)" << std::endl; //getchar();
 
 //    std::cout<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<std::endl<<std::endl;
 
@@ -103,25 +103,26 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen, struct ts
 {
   // Get file name to write if it is currently NULL
   char* str; 
-  if( dst_data_.file_name_.empty() ) {
+  if( !strcmp(dst_data_.file_name_, INIT_FILE_PATH) ) {
     // assume cd_id_ is unique (sequential cds will have different cd_id) 
     // and address data is also unique by natural
 //      char *cd_file = new char[MAX_FILE_PATH];
 //      cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file, base_); 
     const char* data_name;
     str = new char[30];
-    if(name_.empty()) {
+    if(entry_tag_ == 0) {
       sprintf(str, "%d", rand());
       data_name = str;
     }
     else  {
-      data_name = name_.c_str();
+      data_name = tag2str[entry_tag_].c_str();
     }
 
-    dst_data_.file_name_ = Util::GetUniqueCDFileName(ptr_cd_->GetCDID(), base_.c_str(), data_name);
+    const char *file_name = Util::GetUniqueCDFileName(ptr_cd_->GetCDID(), base_.c_str(), data_name).c_str();
+    strcpy(dst_data_.file_name_, file_name); 
   }
 
-  FILE *fp = fopen(dst_data_.file_name_.c_str(), "w");
+  FILE *fp = fopen(dst_data_.file_name_, "w");
   if( fp!= NULL ) {
     fwrite(src_data_.address_data(), sizeof(char), src_data_.len(), fp);
     fclose(fp);
@@ -189,7 +190,7 @@ CDEntry::CDEntryErrT CDEntry::Save(void)
 
   }
   else if( dst_data_.handle_type() == DataHandle::kOSFile ) {
-    if( dst_data_.file_name_.empty() ) {
+    if( !strcmp(dst_data_.file_name_, INIT_FILE_PATH) ) {
 //      char *cd_file = new char[MAX_FILE_PATH];
 //      cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); 
 
@@ -207,7 +208,7 @@ CDEntry::CDEntryErrT CDEntry::Save(void)
     //char filepath[1024]; 
     //Util::GetCDFilePath(cd_id_, src_data.address_data(), filepath); 
     // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-    fp = fopen(dst_data_.file_name_.c_str(), "w");
+    fp = fopen(dst_data_.file_name_, "w");
     if( fp!= NULL ) {
       fwrite(src_data_.address_data(), sizeof(char), src_data_.len(), fp);
       fclose(fp);
@@ -227,7 +228,7 @@ void CDEntry::CloseFile(struct tsn_log_struct *log)
 	int ret;
 	ret = tsn_log_close_file(log);
 	assert(ret>=0);
-	ret = tsn_log_destroy_file(dst_data_.file_name_.c_str());	
+	ret = tsn_log_destroy_file(dst_data_.file_name_);	
 }
 
 DataHandle* CDEntry::GetBuffer() {
@@ -346,7 +347,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(void)
 		FILE *fp;
 		//  Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); 
     // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-		const char* cd_file = buffer->file_name_.c_str();
+		const char* cd_file = buffer->file_name_;
 		fp = fopen(cd_file, "r");
 		if( fp!= NULL )	{
       if( buffer->ref_offset() != 0 ) fseek(fp, buffer->ref_offset(), SEEK_SET); 
@@ -420,7 +421,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 		FILE *fp;
 //		char *cd_file; 
 		//  Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-		const char* cd_file = buffer->file_name_.c_str();
+		const char* cd_file = buffer->file_name_;
 		fp = fopen(cd_file, "r");
 		if( fp!= NULL ) {
       if( buffer->ref_offset() != 0 )

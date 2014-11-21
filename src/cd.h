@@ -151,8 +151,11 @@ class cd::CD : public cd::Serializable {
     std::list<CDEntry> entry_directory_; 
     
     // Only CDEntries that has refname will be pushed into this data structure for later quick search.
-    std::map<std::string, CDEntry*> entry_directory_map_;   
-    
+    std::map<uint64_t, CDEntry*> entry_directory_map_;   
+   
+    // These are entry directory for preservation via reference 
+    // in the case that the preserved copy resides in a remote node. 
+    std::map<uint64_t, CDEntry*> remote_entry_directory_map_;   
 /*  
 09.23.2014 
 It is not complete yet. I am thinking of some way to implement like cd_advance semantic which should allow
@@ -208,7 +211,7 @@ update the preserved data.
   
     CDID GetCDID(void) { return cd_id_; }
 
-    CDHandle* Create(CDHandle* parent, 
+    virtual CDHandle* Create(CDHandle* parent, 
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
@@ -242,6 +245,7 @@ update the preserved data.
                     const char *my_name=0,        // data name
                     const char *ref_name=0,       // reference name
                     uint64_t ref_offset=0,        // reference offset
+                    bool ref_remote=false,        // reference offset
                     const RegenObject * regen_object=0, // regen object
                     PreserveUseT data_usage=kUnsure);   // for optimization
   
@@ -256,6 +260,7 @@ update the preserved data.
                     const char *my_name=0, 
                     const char *ref_name=0, 
                     uint64_t ref_offset=0, 
+                    bool ref_remote=false,        // reference offset
                     const RegenObject *regen_object=0, 
                     PreserveUseT data_usage=kUnsure);
   
@@ -302,10 +307,11 @@ update the preserved data.
     CDInternalErrT InternalPreserve(void *data, 
                                     uint64_t len_in_bytes,
                                     CDPreserveT preserve_mask, 
-                                    const char *my_name, 
+                                    std::string my_name, 
                                     const char *ref_name, 
                                     uint64_t ref_offset, 
-                                    const RegenObject * regen_object, 
+                                    bool ref_remote,
+                                    const RegenObject *regen_object, 
                                     PreserveUseT data_usage);
   
     // copy should happen for the part that is needed.. 
@@ -348,12 +354,15 @@ update the preserved data.
       return cd_id_.IsHead();
     }
 
-    void *Serialize(uint32_t& len_in_bytes)
+//    virtual void *SerializeEntryDir(uint32_t& entry_count); 
+//    virtual std::vector<CDEntry> DeserializeEntryDir(void *object);
+
+    virtual void *Serialize(uint32_t& len_in_bytes)
     {
       return NULL;  
     }
   
-    void Deserialize(void* object) 
+    virtual void Deserialize(void* object) 
     {
     }
 
@@ -380,9 +389,11 @@ class cd::HeadCD : public cd::CD {
     // event related
 #if _MPI_VER
     CDFlagT *event_flag_;
+
     CDFlagT *family_event_flag_;
     CDMailBoxT *family_mailbox_;
 #endif
+
 
     HeadCD();
     HeadCD(cd::CDHandle* cd_parent, 
@@ -392,9 +403,14 @@ class cd::HeadCD : public cd::CD {
              uint64_t sys_bit_vector);
     virtual ~HeadCD();
 
-    cd::CDHandle*  cd_parent(void);
-    void           set_cd_parent(cd::CDHandle* cd_parent);
-
+    cd::CDHandle *cd_parent(void);
+    void set_cd_parent(cd::CDHandle* cd_parent);
+    virtual CDHandle *Create(CDHandle* parent, 
+                             const char* name, 
+                             const CDID& child_cd_id, 
+                             CDType cd_type, 
+                             uint64_t sys_bit_vector, 
+                             CDInternalErrT* cd_err=0);
     virtual CDErrT Destroy(void);
     virtual CDErrT Stop(cd::CDHandle* cdh=NULL);
     virtual CDErrT Resume(void); // Does this make any sense?
@@ -402,6 +418,9 @@ class cd::HeadCD : public cd::CD {
     virtual CDErrT RemoveChild(cd::CDHandle* cd_child); 
 //    CDInternalErrT CreateInternalMemory(HeadCD *cd_ptr, const CDID& new_cd_id);
 //    CDInternalErrT DestroyInternalMemory(HeadCD *cd_ptr);
+
+//    void *SerializeEntryDir(uint32_t& entry_count); 
+//    std::vector<CDEntry> DeserializeEntryDir(void *object);
 
     void *Serialize(uint32_t& len_in_bytes)
     {
@@ -412,5 +431,6 @@ class cd::HeadCD : public cd::CD {
     {
     }
 };
+
 
 #endif

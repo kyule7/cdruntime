@@ -60,7 +60,7 @@ class cd::CDEntry : public cd::Serializable
     };
     // need a unique name to do via reference, 
     // this variable can be empty string when this is not needed
-    std::string name_;    
+    uint64_t    entry_tag_;    
     cd::CD*     ptr_cd_;
     DataHandle  src_data_;
     DataHandle  dst_data_;
@@ -73,12 +73,15 @@ class cd::CDEntry : public cd::Serializable
     CDEntry(){}
     CDEntry(const DataHandle& src_data, 
             const DataHandle& dst_data, 
-            const char* entry_name) 
+            const std::string& entry_name) 
     {
       src_data_ = src_data;
       dst_data_ = dst_data;
-      if(entry_name == 0) name_.clear();
-      else name_ = entry_name;
+      if(entry_name.empty()) entry_tag_ = 0;
+      else {
+        entry_tag_ = str_hash(entry_name);
+        tag2str[entry_tag_] = entry_name;
+      }
     }
 
     ~CDEntry()
@@ -88,9 +91,6 @@ class cd::CDEntry : public cd::Serializable
 //        DATA_FREE( dst_data_.address_data() );
       }
  
-      if( !dst_data_.file_name_.empty() )  {
-//        delete dst_data_.file_name(); 
-      }
     }
 
     // FIXME: currently it is assumed that my cd is always in the same memory space.
@@ -104,11 +104,11 @@ class cd::CDEntry : public cd::Serializable
 		CDEntryErrT Delete(void);
 
   public:
-		std::string name() const { return name_; }
+		std::string name() const { return tag2str[entry_tag_]; }
     bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }
 
     CDEntry& operator=(const CDEntry& that) {
-      name_ = that.name_;    
+      entry_tag_ = that.entry_tag_;    
       src_data_ = that.src_data_;
       dst_data_ = that.dst_data_;
       preserve_type_ = that.preserve_type_;
@@ -116,12 +116,9 @@ class cd::CDEntry : public cd::Serializable
     }
 
     bool operator==(const CDEntry& that) const {
-      return (name_ == that.name_) && (src_data_ == that.src_data_) 
+      return (entry_tag_ == that.entry_tag_) && (src_data_ == that.src_data_) 
              && (dst_data_ == that.dst_data_) && (preserve_type_ == that.preserve_type_);
     }
-
-
-
 
 
     CDEntryErrT SaveMem(void);
@@ -160,8 +157,9 @@ class cd::CDEntry : public cd::Serializable
       assert(src_packed_len != 0);
       assert(dst_packed_len != 0);
 
-      std::cout << "\npacked entry_name_ is :\t " << name_.c_str() <<std::endl<<std::endl;
-      entry_packer.Add(ENTRY_PACKER_NAME, name_.size()+1, const_cast<char*>(name_.c_str())); // string.size() + 1 is for '\0'
+      std::cout << "\npacked entry_entry_tag_ is :\t " << entry_tag_ <<std::endl<<std::endl;
+      uint64_t str_key = entry_tag_;
+      entry_packer.Add(ENTRY_PACKER_NAME, sizeof(str_key), &str_key); 
 //      entry_packer.Add(ENTRY_PACKER_PTRCD, ptr_cd_packed_len, ptr_cd_packed_p);
       
       std::cout << "\npacked preserve_type_ is :\t " << preserve_type_ <<std::endl<<std::endl;
@@ -177,7 +175,7 @@ class cd::CDEntry : public cd::Serializable
  
     }
 
-    void Deserialize(void * object)
+    void Deserialize(void *object)
     {
       
       std::cout << "\nCD Entry Deserialize\nobject : " << object <<std::endl;
@@ -187,11 +185,9 @@ class cd::CDEntry : public cd::Serializable
       void *src_unpacked=0;
       void *dst_unpacked=0;
 
-      //char* unpacked_entry_name=0;
-      char *unpacked_entry_name = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      name_ = unpacked_entry_name;
-      std::cout << "unpacked entry_name_ is :\t " << unpacked_entry_name <<std::endl;
-      std::cout << "1st unpacked thing in data_handle : " << name_ << ", return size : " << return_size << std::endl<< std::endl;
+      uint64_t entry_tag_ = *(uint64_t *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+      std::cout << "unpacked entry_entry_tag_ is :\t " << entry_tag_ <<" <-> " << tag2str[entry_tag_] <<std::endl;
+      std::cout << "1st unpacked thing in data_handle : " << entry_tag_ << ", return size : " << return_size << std::endl<< std::endl;
 
       preserve_type_ = *(cd::CDPreserveT *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
       std::cout << "unpacked preserve_type_ is :\t " << preserve_type_ <<std::endl;

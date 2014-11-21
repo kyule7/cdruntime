@@ -40,7 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <iostream>
 #include <vector>
 #include <map>
-
+#include <functional>
 
 // This could be different from MPI program to PGAS program
 // key is the unique ID from 0 for each CD node.
@@ -118,13 +118,14 @@ namespace cd {
 											kFileSys=128 
 										};
 
-  enum CDPGASUsageT { kShared=1, 
-											KPrivate 
-										};
+//  enum CDPGASUsageT { kShared=1, 
+//											KPrivate 
+//										};
 
-  enum CDPreserveT  { kCopy=0, 
-											kRef, 
-											kRegen 
+  enum CDPreserveT  { kCopy=1, 
+											kRef=2, 
+											kRegen=4,
+                      kShared=8, 
 										};
 
   enum CDType       { kStrict=0, 
@@ -208,7 +209,8 @@ namespace cd {
   }; 
   
   extern DebugStream dbgStream;
-
+  extern std::map<uint64_t, std::string> tag2str;
+  extern std::hash<std::string> str_hash;
 
   extern CDHandle* CD_Init(int numproc=1, int myrank=0);
   extern void CD_Finalize();
@@ -235,8 +237,8 @@ namespace cd {
 
 #define dout clog
 
-#define MAX_FILE_PATH 2048
-
+#define MAX_FILE_PATH 64
+#define INIT_FILE_PATH "INITIAL_FILE_PATH"
 /* 
 ISSUE 1 (Kyushick)
 If we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?

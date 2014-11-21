@@ -140,17 +140,17 @@ class cd::CDHandle {
     // Non-collective
     CDErrT Preserve(void *data_ptr=0, 
                     uint64_t len=0, 
-                    CDPreserveT preserve_mask=kCopy, 
+                    uint32_t preserve_mask=kCopy, 
                     const char *my_name=0, 
                     const char *ref_name=0, 
-                    uint64_t ref_offset=0, 
+                    uint64_t ref_offset=0,
                     const RegenObject *regen_object=0, 
                     PreserveUseT data_usage=kUnsure );
     // Collective (not implemented yet)
     CDErrT Preserve(CDEvent &cd_event, 
                     void *data_ptr=0, 
                     uint64_t len=0, 
-                    CDPreserveT preserve_mask=kCopy, 
+                    uint32_t preserve_mask=kCopy, 
                     const char *my_name=0, 
                     const char *ref_name=0, 
                     uint64_t ref_offset=0, 
@@ -196,9 +196,9 @@ class cd::CDHandle {
                  uint32_t error_loc_mask, 
                  std::vector< SysErrT > errors);
 
-    CDErrT SetPGASType(void *data_ptr, 
-                       uint64_t len, 
-                       CDPGASUsageT region_type=kShared);
+//    CDErrT SetPGASType(void *data_ptr, 
+//                       uint64_t len, 
+//                       CDPGASUsageT region_type=kShared);
   
     void CommitPreserveBuff(void);
 
