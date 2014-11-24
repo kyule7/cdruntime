@@ -64,7 +64,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifdef comm_log
 //SZ
-#include "comm_log.h"
+#include "cd_comm_log.h"
 #endif
 
 using namespace cd;

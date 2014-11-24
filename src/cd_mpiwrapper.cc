@@ -38,7 +38,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_mpiwrapper.h"
 #include "cd_path.h"
 #include "cd_global.h"
-#include "comm_log.h"
+#include "cd_comm_log.h"
 
 // ------------------------------------------------------------------------------------------------------------
 // blocking p2p communication

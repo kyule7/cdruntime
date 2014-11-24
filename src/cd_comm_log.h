@@ -33,8 +33,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _COMM_LOG_H 
-#define _COMM_LOG_H
+#ifndef _CD_COMM_LOG_H 
+#define _CD_COMM_LOG_H
 
 #include "cd_global.h"
 #include "cd_id.h"
