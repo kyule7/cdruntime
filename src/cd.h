@@ -373,6 +373,8 @@ update the preserved data.
     bool IsNewLogGenerated();
     //GONG: duplicated for libc
     bool IsNewLogGenerated_libc();
+    //SZ
+    CDType GetCDType() {return cd_type_;}
 #endif
     
     CDNameT& GetCDName(void)  { return cd_id_.cd_name_; }
