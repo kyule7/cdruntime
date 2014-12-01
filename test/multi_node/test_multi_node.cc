@@ -46,6 +46,8 @@ using namespace std;
 using namespace chrono;
 ucontext_t context;
 
+FILE *fp;
+
 int  np = 0;
 int  mr = 0;
 
@@ -352,7 +354,7 @@ int test_preservation_via_copy()
   a[0] =2;
   b[0] =5;
   printf("After Modify Current value of a[0]=%d\n", a[0]);
-  printf("After Modify Current value of b[0]=%d==app_side?  %i\n\n", b[0], app_side);
+//  printf("After Modify Current value of b[0]=%d==app_side?  %i\n\n", b[0], app_side);
   
   if( num_reexecution == 0 ){
     printf("\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n");

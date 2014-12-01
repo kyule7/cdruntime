@@ -35,7 +35,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_malloc.h"
 
-/*
+
 int rand()
 {
 //  printf("inside of rand()\n");
@@ -76,7 +76,7 @@ void srand()
 {
 
 }
-*/
+
 /*
 long random()
 {
