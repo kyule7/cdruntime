@@ -41,10 +41,10 @@
 #define SEM "MYSEM"
 #define  MASTER		0
 
-#define SIXTY_FOUR_MB 64000000
+#define SIXTY_FOUR_MB 6400000
 #define SIXTY_FOUR_B  64
 
-#define MSG_SIZE SIXTY_FOUR_MB
+#define MSG_SIZE SIXTY_FOUR_B
 
 int main(int argc, char *argv[])
 {
@@ -118,26 +118,6 @@ int main(int argc, char *argv[])
         } else {
            printf("001 cr_init() succeeded\n");
         }
-       
-        /*data = crut_aprintf("aaaa");
-        data2 = malloc(5);
-        data2[0] = 'a';
-        data2[1] = 'a';
-        data2[2] = 'a';
-        data2[3] = 'a';
-        data2[4] = '\0';
- 
-        big_array = (char *)malloc(1000000 * sizeof(char));
-        big_array[0] = 5;
-        big_array[100] = 100;
-        printf("data: %s\n", data);
-        printf("data2: %s\n", data2);
-        printf("big_array[0]: %d\n", big_array[0]);
-        printf("big_array[100]: %d\n", big_array[100]);
-       
-        printf("mem_excl result: %d\n", cr_mem_excl((char*) data, 5));
-        printf("mem_excl result2: %d\n", cr_mem_excl((char*) data2, 5));
-        printf("mem_excl result3: %d\n", cr_mem_excl((char*) big_array, 1000000 * sizeof(char)));*/
         
         /* Send buffer init */
 
@@ -187,9 +167,8 @@ int main(int argc, char *argv[])
 
           MPI_Win_complete(win);
 
-          //MPI_Send(&taskid, 1, MPI_INT, partner, 1, MPI_COMM_WORLD);
           MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
-          printf("NON BLOCKING RECEIVE COMPLETE!!!!\n");
+          printf("RECEIVE ACROSS RESTART COMPLETE!!!!\n");
 
           MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
           printf("RESTART PASSED!!!!\n");
@@ -200,18 +179,12 @@ int main(int argc, char *argv[])
           snprintf(cmd, sizeof(cmd), "cr_restart -p %d %s", my_pid, filename);
           system(cmd);
         }
-       
-        /*printf("data: %s\n", data);
-        printf("data2: %s\n", data2);
-        printf("data: %p\n", data);
-        printf("data2: %p\n", data2);
-        printf("big_array[0]: %d\n", big_array[0]);
-        printf("big_array[100]: %d\n", big_array[100]);*/
+
 
     } else if (taskid < numtasks/2) {
         destrank = partner = taskid + numtasks/2;
 
-        MPI_Win_create(recv_buf, 4*sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win);
+        MPI_Win_create(recv_buf, MSG_SIZE*sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win);
         MPI_Group_incl(comm_group, 1, &destrank, &group);
 
         MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
