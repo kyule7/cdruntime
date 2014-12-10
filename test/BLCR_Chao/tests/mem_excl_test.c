@@ -44,7 +44,7 @@
 #define SIXTY_FOUR_MB 6400000
 #define SIXTY_FOUR_B  64
 
-#define MSG_SIZE SIXTY_FOUR_B
+#define MSG_SIZE SIXTY_FOUR_MB
 
 int main(int argc, char *argv[])
 {
@@ -102,8 +102,8 @@ int main(int argc, char *argv[])
         MPI_Group_incl(comm_group, 1, &destrank, &group);
         MPI_Win_start(group, 0, win);
 
-        MPI_Send(send_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD);
-        MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
+        //MPI_Send(send_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD);
+        //MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
 
         my_pid = getpid();
         filename = crut_aprintf("context.%d", my_pid);
@@ -124,9 +124,9 @@ int main(int argc, char *argv[])
         send_buf[0] = 1;
         send_buf[1] = 2;
 
-        printf("MPI_Isend\n");
-        MPI_Isend(send_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &req[0]); // nonblocking
-        printf("MPI_Isend complete\n");
+        //printf("MPI_Isend\n");
+        //MPI_Isend(send_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &req[0]); // nonblocking
+        //printf("MPI_Isend complete\n");
 
 
         MPI_Put(&send_buf[0], 1, MPI_INT, partner, 0, 1, MPI_INT, win);
@@ -168,10 +168,10 @@ int main(int argc, char *argv[])
           MPI_Win_complete(win);
 
           MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
-          printf("RECEIVE ACROSS RESTART COMPLETE!!!!\n");
+          //printf("RECEIVE ACROSS RESTART COMPLETE!!!!\n");
 
-          MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
-          printf("RESTART PASSED!!!!\n");
+          //MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
+          //printf("RESTART PASSED!!!!\n");
         } else if (rc == 0) {
           printf("CONTINUE!!!\n");
           printf("waiting to restart\n");
@@ -187,12 +187,12 @@ int main(int argc, char *argv[])
         MPI_Win_create(recv_buf, MSG_SIZE*sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win);
         MPI_Group_incl(comm_group, 1, &destrank, &group);
 
-        MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
-        MPI_Send(send_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD);
+        //MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
+        //MPI_Send(send_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD);
 
-        printf("slave MPI_Isend\n");
-        MPI_Isend(send_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &req[1]); // nonblocking
-        printf("slave MPI_Isend complete\n");
+        //printf("slave MPI_Isend\n");
+        //MPI_Isend(send_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &req[1]); // nonblocking
+        //printf("slave MPI_Isend complete\n");
 
         printf("WAITING BEFORE RECEIVING DATA\n");
 
@@ -200,9 +200,9 @@ int main(int argc, char *argv[])
 
         printf("OUT OF WAIT\n");
 
-        MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
+        //MPI_Recv(recv_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD, &status);
         
-        printf("RECEIVED MESSAGE\n");
+        //printf("RECEIVED MESSAGE\n");
 
         MPI_Send(send_msg, MSG_SIZE, MPI_INT, partner, 1, MPI_COMM_WORLD);
 
