@@ -41,28 +41,28 @@ using namespace cd;
 
 CD* IsLogable(bool *logable_)
 {
-  PRINT_DEBUG("logable_execmode\n");      
+//  PRINT_LIBC("logable_execmode\n");      
   CDHandle* current = CDPath::GetCurrentCD();
 	CD* c_CD;
 	if(current==NULL){
-		PRINT_DEBUG("\tbefore root CD\n");
+		PRINT_LIBC("\tbefore root CD\n");
 	}
 	else
 	{
 		c_CD = current->ptr_cd();
 		if(c_CD == NULL)
 		{
-			PRINT_DEBUG("\tCD object associated with CD handle\n");
+//			PRINT_LIBC("\tCD object associated with CD handle\n");
 		}
 		else
 		{
 			if(c_CD->libc_log_ptr_ == NULL)
 			{
-				PRINT_DEBUG("\tno libc_log in current CD\n");
+				PRINT_LIBC("\tno libc_log in current CD\n");
 			}
 			else 
 			{
-				PRINT_DEBUG("\tnow we have libc_log object\n");
+//				PRINT_LIBC("\tnow we have libc_log object\n");
 				*logable_ = true;
 			}
 		}
@@ -83,7 +83,7 @@ void free(void *p)
 
 void* real_malloc_(size_t size)
 {
-//	PRINT_DEBUG("inside of real_malloc_()\n");
+//	PRINT_LIBC("inside of real_malloc_()\n");
 	Malloc real_malloc = (Malloc)dlsym(RTLD_NEXT, "malloc");
 	return real_malloc(size);
 }
@@ -92,7 +92,7 @@ void* real_malloc_(size_t size)
 void* malloc(size_t size)
 {
 	void* p;
-//  PRINT_DEBUG("app side?? %d\n", app_side);
+//  PRINT_LIBC("app side?? %d\n", app_side);
 ///GONG: libc logging takes care of only "application-side" malloc, malloc (both explicitly and internally) called in application.
 if(app_side){
 	bool logable  = false;
@@ -103,41 +103,35 @@ if(app_side){
 	//GONG: Determine whether we call real_malloc w/ logging return value or get return value stored in logs
     if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
 			c_CD->libc_log_ptr_->ReadData(&p, size);
-			PRINT_DEBUG("libc_log_ptr_: %p\tRE-EXECUTE MODE malloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
+			PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE malloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
 		}
 		else
 		{
 			p = real_malloc_(size);
-			PRINT_DEBUG("libc_log_ptr_: %p\t - EXECUTE MODE malloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
+			PRINT_LIBC("libc_log_ptr_: %p\t - EXECUTE MODE malloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
 		  c_CD->libc_log_ptr_->LogData(&p, size);
 		}
 	}
 	else
 	{
 		p = real_malloc_(size);
-		PRINT_DEBUG("NORMAL malloc(%ld) = %p\n", size, p);	
+		PRINT_LIBC("NORMAL malloc(%ld) = %p\n", size, p);	
 	}
 }
 else{
 		p = real_malloc_(size);
-		PRINT_DEBUG("CD runtime malloc(%ld) = %p\n", size, p);	
+//		PRINT_LIBC("CD runtime malloc(%ld) = %p\n", size, p);	
 }	
 	return p;
 } 
 
-/*
-void* malloc(size_t size)
-{
-  void* p = real_malloc_(size);
-  printf("malloc(%ld) = %p\n", size, p);
-  return p;
-}
-  */
+
+
 
 
 static void* temp_calloc(size_t num, size_t size)
 {
-  PRINT_DEBUG("empty calloc is called\n");
+  PRINT_LIBC("empty calloc is called\n");
   return NULL;
 }
 
@@ -157,23 +151,23 @@ extern "C" void *calloc(size_t num, size_t size)
 	  //GONG: Determine whether we call real_calloc w/ logging return value or get return value stored in logs
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
 			  c_CD->libc_log_ptr_->ReadData(&p, size);
-			  PRINT_DEBUG("RE-EXECUTE MODE calloc(%ld) = %p\n", size, p);
+			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   		}
   		else
   		{
         p = real_calloc(num,size);
-   		  PRINT_DEBUG("EXECUTE MODE calloc(%ld) = %p\n", size, p);
+			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
    	    c_CD->libc_log_ptr_->LogData(&p, size);
 	    }
 	  }
 	  else
 	  {
       p = real_calloc(num,size);
-		  PRINT_DEBUG("NORMAL calloc(%ld) = %p\n", size, p);	
+		  PRINT_LIBC("NORMAL calloc(%ld) = %p\n", size, p);	
 	  }
   }
   else{
-    //NEVER invoke functions that internally invoke calloc again (e.g., PRINT_DEBUG()) in order to aviod infinite calloc loop
+    //NEVER invoke functions that internally invoke calloc again (e.g., PRINT_LIBC()) in order to aviod infinite calloc loop
     p = real_calloc(num,size);
   }	        
   return p;
@@ -194,25 +188,25 @@ void *valloc(size_t size)
 	  if(logable){
 	  //GONG: Determine whether we call real_valloc w/ logging return value or get return value stored in logs
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
-			  PRINT_DEBUG("RE-EXECUTE MODE valloc(%ld) = %p\n", size, p);
 			  c_CD->libc_log_ptr_->ReadData(&p, size);
+			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE valloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   		}
   		else
   		{
         p = real_valloc(size);
-   		  PRINT_DEBUG("EXECUTE MODE valloc(%ld) = %p\n", size, p);
+			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE valloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
    	    c_CD->libc_log_ptr_->LogData(&p, size);
 	    }
 	  }
 	  else
 	  {
       p = real_valloc(size);
-		  PRINT_DEBUG("NORMAL valloc(%ld) = %p\n", size, p);	
+		  PRINT_LIBC("NORMAL valloc(%ld) = %p\n", size, p);	
 	  }
   }
   else{
     p = real_valloc(size);
-//		PRINT_DEBUG("CD runtime side valloc(%ld) = %p\n", size, p);	
+//		PRINT_LIBC("CD runtime side valloc(%ld) = %p\n", size, p);	
   }	          
   return p;
 }
@@ -233,27 +227,37 @@ void *realloc(void* ptr, size_t size)
 	  //GONG: Determine whether we call real_realloc w/ logging return value or get return value stored in logs
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
 			  c_CD->libc_log_ptr_->ReadData(&p, size);
-			  PRINT_DEBUG("RE-EXECUTE MODE realloc(%ld) = %p\n", size, p);
+//			  PRINT_LIBC("RE-EXECUTE MODE realloc(%ld) = %p\n", size, p);
+			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE realloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   		}
   		else
   		{
         p = real_realloc(ptr,size);
-   		  PRINT_DEBUG("EXECUTE MODE realloc(%ld) = %p\n", size, p);
+//   		  PRINT_LIBC("EXECUTE MODE realloc(%ld) = %p\n", size, p);
+			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE realloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
    	    c_CD->libc_log_ptr_->LogData(&p, size);
 	    }
 	  }
 	  else
 	  {
       p = real_realloc(ptr,size);
-		  PRINT_DEBUG("NORMAL realloc(%ld) = %p\n", size, p);	
+		  PRINT_LIBC("NORMAL realloc(%ld) = %p\n", size, p);	
 	  }
   }
   else{
     p = real_realloc(ptr,size);
-//		PRINT_DEBUG("CD runtime side realloc(%ld) = %p\n", size, p);	
+//		PRINT_LIBC("CD runtime side realloc(%ld) = %p\n", size, p);	
   }	          
   return p;
 }
 
 
 
+
+
+//void* malloc(size_t size)
+//{
+//  void* p = real_malloc_(size);
+////  printf("malloc(%ld) = %p\n", size, p);
+//  return p;
+//}

@@ -75,7 +75,8 @@ int rand()
 void srand()
 {
 
-}        
+}
+
 /*
 long random()
 {

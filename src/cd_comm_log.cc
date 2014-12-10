@@ -35,7 +35,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifdef comm_log
 
-#include "comm_log.h"
+#include "cd_comm_log.h"
 #include "cd.h"
 #include <string.h>
 
@@ -222,32 +222,14 @@ CommLogErrT CommLog::Realloc()
 }
 
 
-CommLogErrT CommLog::AccessLog(void * data_ptr, unsigned long data_length)
+CommLogErrT CommLog::ProbeAndLogData(void *request)
 {
-  CommLogErrT ret=kCommLogOK;
-  if (comm_log_mode_ == kGenerateLog)
-  {
-    ret = LogData(data_ptr, data_length);
-  }
-  else if (comm_log_mode_ == kReplayLog)
-  {
-    ret = ReadData(data_ptr, data_length);
-    if (ret == kCommLogCommLogModeFlip)
-    {
-      //SZ
-      //TODO: what should acctually happen here??
-      ret = LogData(data_ptr, data_length);
-    }
-  }
-  else {
-    ERROR_MESSAGE("Unknown comm_log_mode_ (%d) in AccessLog!\n", comm_log_mode_);
-    ret = kCommLogError;
-  }
-  return ret;
+  return kCommLogOK;
 }
 
 
-CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length)
+CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length, 
+                          bool completed)
 {
   PRINT_DEBUG("LogData of address (%p) and length(%ld)\n", data_ptr, data_length);
 
@@ -255,7 +237,7 @@ CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length)
 
   //TODO: should also log accessed address??
   // add one element in the log_table_
-  ret = WriteLogTable(data_ptr, data_length);
+  ret = WriteLogTable(data_ptr, data_length, completed);
   if (ret == kCommLogAllocFailed) 
   {
     ERROR_MESSAGE("Log Table Realloc Failed!\n");
@@ -263,7 +245,7 @@ CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length)
   }
 
   // write data into the queue
-  ret = WriteLogQueue(data_ptr, data_length);
+  ret = WriteLogQueue(data_ptr, data_length, completed);
   if (ret == kCommLogAllocFailed) 
   {
     ERROR_MESSAGE("Log Queue Realloc Failed!\n");
@@ -276,7 +258,8 @@ CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length)
 }
 
 
-CommLogErrT CommLog::WriteLogTable (void * data_ptr, unsigned long data_length)
+CommLogErrT CommLog::WriteLogTable (void * data_ptr, unsigned long data_length, 
+                                  bool completed)
 {
   CommLogErrT ret;
   if (log_table_.cur_pos_ >= log_table_.table_size_) 
@@ -285,16 +268,17 @@ CommLogErrT CommLog::WriteLogTable (void * data_ptr, unsigned long data_length)
     if (ret == kCommLogAllocFailed) return ret;
   }
 
-  //log_table_.base_ptr_[log_table_.cur_pos_].id_ = id;
   log_table_.base_ptr_[log_table_.cur_pos_].pos_ = log_queue_.cur_pos_;
   log_table_.base_ptr_[log_table_.cur_pos_].length_ = data_length;
+  log_table_.base_ptr_[log_table_.cur_pos_].completed_ = completed;
+  log_table_.base_ptr_[log_table_.cur_pos_].flag_ = (unsigned long) data_ptr;
   log_table_.cur_pos_++;
 
   return kCommLogOK;
 }
 
 
-CommLogErrT CommLog::WriteLogQueue (void * data_ptr, unsigned long data_length)
+CommLogErrT CommLog::WriteLogQueue (void * data_ptr, unsigned long data_length, bool completed)
 {
   CommLogErrT ret;
   if (log_queue_.cur_pos_ + data_length > log_queue_.queue_size_)
@@ -304,7 +288,10 @@ CommLogErrT CommLog::WriteLogQueue (void * data_ptr, unsigned long data_length)
   }
 
   // TODO: check memcpy success??
-  memcpy (log_queue_.base_ptr_+log_queue_.cur_pos_, data_ptr, data_length);
+  if (completed)
+  {
+    memcpy (log_queue_.base_ptr_+log_queue_.cur_pos_, data_ptr, data_length);
+  }
   log_queue_.cur_pos_ += data_length;
 
   return kCommLogOK;
@@ -531,35 +518,67 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
     return kCommLogError;
   }
 
+  // if not completed, return kCommLogError, and needs to escalate
+  if (log_table_.base_ptr_[log_table_reexec_pos_].completed_==false)
+  {
+    PRINT_DEBUG("Not completed non-blocking send function, needs to escalate...\n");
+    ERROR_MESSAGE("Should never be here, because non-blocking send/recv will never call this function...\n");
+    return kCommLogError;
+  }
+
+  //PRINT_DEBUG("before memcpy...\n");
+  //Print();
+
   memcpy(buffer, 
       log_queue_.base_ptr_+log_table_.base_ptr_[log_table_reexec_pos_].pos_,
       log_table_.base_ptr_[log_table_reexec_pos_].length_);
 
-  log_table_reexec_pos_++;
-  //if (log_table_reexec_pos_ == log_table_.cur_pos_)
-  //{
-  //  comm_log_mode_ = kGenerateLog;
+  //PRINT_DEBUG("after memcpy...\n");
+  //Print();
 
-  //  PRINT_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
-  //  return kCommLogCommLogModeFlip;
-  //}
+  log_table_reexec_pos_++;
 
   return kCommLogOK;
 }
 
 
-//CommLogErrT CommLog::FindNextTableElement(unsigned long * index)
-//{
-//  if (log_table_reexec_pos_ == log_table_.cur_pos_)
-//  {
-//    PRINT_DEBUG("Reach end of log_table_!\n");
-//
-//    comm_log_mode_ = kGenerateLog;
-//    return kCommLogCommLogModeFlip;
-//  }
-//
-//  return kCommLogOK;
-//}
+// input parameter
+CommLogErrT CommLog::ProbeData(void * buffer, unsigned long length)
+{
+  PRINT_DEBUG("Inside ProbeData!\n");
+  PRINT_DEBUG("reexec_pos_: %li\t cur_pos_: %li\n",log_table_reexec_pos_,log_table_.cur_pos_ );
+  // reached end of logs, and need to return back and log data again...
+  if (log_table_reexec_pos_ == log_table_.cur_pos_)
+  {
+    comm_log_mode_ = kGenerateLog;
+
+    PRINT_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
+    return kCommLogCommLogModeFlip;
+  }
+  
+  if (log_table_.cur_pos_ == 0)
+  {
+    ERROR_MESSAGE("Attempt to read from empty logs!\n");
+    return kCommLogError;
+  }
+
+  if (length != log_table_.base_ptr_[log_table_reexec_pos_].length_)
+  {
+    ERROR_MESSAGE("Wrong length when read data from logs: %ld wanted but %ld expected!!\n", length, log_table_.base_ptr_[log_table_reexec_pos_].length_);
+    return kCommLogError;
+  }
+
+  // if not completed, return kCommLogError, and needs to escalate
+  if (log_table_.base_ptr_[log_table_reexec_pos_].completed_==false)
+  {
+    PRINT_DEBUG("Not completed non-blocking send function, needs to escalate...\n");
+    return kCommLogError;
+  }
+
+  log_table_reexec_pos_++;
+
+  return kCommLogOK;
+}
 
 
 void CommLog::Print()
@@ -582,9 +601,11 @@ void CommLog::Print()
   for (ii=0;ii<log_table_.cur_pos_;ii++)
   {
     PRINT_DEBUG("log_table_.base_ptr_[%ld]:\n", ii);
-    PRINT_DEBUG("pos_=%ld, length_=%ld\n\n"
+    PRINT_DEBUG("pos_=%ld, length_=%ld, completed_=%d, flag_=%lx\n\n"
         ,log_table_.base_ptr_[ii].pos_
-        ,log_table_.base_ptr_[ii].length_);
+        ,log_table_.base_ptr_[ii].length_
+        ,log_table_.base_ptr_[ii].completed_
+        ,log_table_.base_ptr_[ii].flag_);
   }
 
   PRINT_DEBUG ("log_table_reexec_pos_ = %ld\n", log_table_reexec_pos_);

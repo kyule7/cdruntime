@@ -64,7 +64,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifdef comm_log
 //SZ
-#include "comm_log.h"
+#include "cd_comm_log.h"
 #endif
 
 using namespace cd;
@@ -357,7 +357,12 @@ update the preserved data.
     //SZ
     CDHandle* GetParentHandle();
     //SZ
-    CommLogErrT LogData(void *data_ptr, unsigned long length);
+    CommLogErrT ProbeAndLogData(void *request);
+    //SZ
+    CommLogErrT LogData(void *data_ptr, unsigned long length, 
+                      bool completed=true);
+    //SZ
+    CommLogErrT ProbeData(void *data_ptr, unsigned long length);
     //SZ
     CommLogErrT ReadData(void *data_ptr, unsigned long length);
     //SZ
@@ -368,6 +373,8 @@ update the preserved data.
     bool IsNewLogGenerated();
     //GONG: duplicated for libc
     bool IsNewLogGenerated_libc();
+    //SZ
+    CDType GetCDType() {return cd_type_;}
 #endif
     
     CDNameT& GetCDName(void)  { return cd_id_.cd_name_; }
