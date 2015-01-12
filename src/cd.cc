@@ -101,6 +101,10 @@ CD::CD()
 
   PRINT_DEBUG("Set child_seq_id_ to 0\n");
   child_seq_id_ = 0;
+
+  // init incomplete_log_
+  incomplete_log_size_ = incomplete_log_size_unit_;
+  incomplete_log_.resize(incomplete_log_size_);
 #endif
 }
 
@@ -196,6 +200,10 @@ CD::CD(CDHandle* cd_parent,
     PRINT_DEBUG("Set child's child_seq_id_ to 0\n");
     child_seq_id_ = 0;
   }
+
+  // init incomplete_log_
+  incomplete_log_size_ = incomplete_log_size_unit_;
+  incomplete_log_.resize(incomplete_log_size_);
 #endif
 }
 
@@ -289,25 +297,6 @@ CDHandle* CD::Create(CDHandle* parent,
 
   this->AddChild(new_cd_handle);
 
-////SZ: unpack/pack logs at the boundary of begin/complete...
-////TODO: this may be a performance bottleneck, and needed to be optimized...
-//#ifdef comm_log
-//  //SZ: if in reexecution, need to unpack logs to childs
-//  if (new_cd->comm_log_ptr_->GetCommLogMode() == kReplayLog)
-//  {
-//    PRINT_DEBUG("With comm log mode = kReplayLog, unpack logs to children\n");
-//    if (new_cd->IsParentLocal())
-//    {
-//      comm_log_ptr_->UnpackLogsToChildCD(new_cd);
-//    }
-//    else
-//    {
-//      //SZ: FIXME: need to figure out a way to unpack logs if child is not in the same address space with parent
-//      PRINT_DEBUG("Should not be here to unpack logs!!\n");
-//    }
-//  }
-//#endif
-  
   return new_cd_handle;
   /// Send entry_directory_map_ to HeadCD
 //  GatherEntryDirMapToHead();
@@ -523,6 +512,43 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
         //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
         PRINT_DEBUG("Should not come to here...\n");
       }
+    }
+
+    // push incomplete_log_
+    if (IsParentLocal() && incomplete_log_.size()!=0)
+    {
+      //vector<struct IncompleteLogEntry> *pincomplog 
+      //                                    = &(GetParentHandle()->ptr_cd_->incomplete_log_);
+      CD* ptmp = GetParentHandle()->ptr_cd_;
+
+      // push incomplete logs to parent
+      ptmp->incomplete_log_.insert(ptmp->incomplete_log_.end(),
+                                   incomplete_log_.begin(),
+                                   incomplete_log_.end());
+
+      ////delete all invalid incomplete log entries in all ancestors
+      //while (ptmp)
+      //{
+      //  if (ptmp->incomplete_log_.size()!=0){
+      //    for (it=ptmp->incomplete_log_.begin();it!=ptmp->incomplete_log_.end();it++){
+      //      if (it->valid_ == false){
+      //        ptmp->incomplete_log_.erase(it);
+      //      }
+      //    }
+      //  }
+      //  if (ptmp->GetParentHandle()!=NULL){
+      //    ptmp=ptmp->GetParentHandle()->ptr_cd_;
+      //  }
+      //  else{
+      //    ptmp=NULL;
+      //    break;
+      //  }
+      //}
+    }
+    else if (!IsParentLocal())
+    {
+      //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
+      PRINT_DEBUG("Should not come to here...\n");
     }
   }
   //GONG
@@ -1506,26 +1532,144 @@ CDHandle* CD::GetParentHandle()
 }
 
 //SZ
-CommLogErrT CD::ProbeAndLogData(void *request)
+// find incomplete logs to find out buf address and length
+// read data from logs, and then copy data to buf
+CommLogErrT CD::ProbeAndReadData(unsigned long flag)
 {
-  if (comm_log_ptr_ == NULL)
+  // look for the entry in incomplete_log_
+  int found = 0;
+  std::vector<struct IncompleteLogEntry>::iterator it;
+  CD* tmp_cd = this;
+  for (it=incomplete_log_.begin(); it!=incomplete_log_.end(); it++)
   {
-    ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to log data!\n");
-    return kCommLogError;
+    if (it->flag_ == flag) 
+    {
+      found = 1;
+      PRINT_DEBUG("Found the entry in incomplete_log_\n");
+      break;
+    }
   }
-  return comm_log_ptr_->ProbeAndLogData(request);
+
+  if (found == 0)
+  {
+    // recursively go up to search parent's incomplete_log_
+    while (GetParentHandle()!=NULL)
+    {
+      tmp_cd = GetParentHandle()->ptr_cd_; 
+      for (it = tmp_cd->incomplete_log_.begin(); 
+           it != tmp_cd->incomplete_log_.end(); 
+           it++)
+      {
+        //FIXME: potential bug, what if two MPI_Wait within one CD using the same request??
+        //       e.g. begin, irecv, wait, irecv, wait, complete
+        if (it->flag_ == flag){
+          found = 1;
+          PRINT_DEBUG("Found the entry in incomplete_log_\n");
+          break;
+        }
+      }
+      if (found){
+        break;
+      }
+    }
+
+    if (!found)
+    {
+      ERROR_MESSAGE("Do not find corresponding Isend/Irecv incomplete log!!\n")
+    }
+  }
+  return kCommLogOK;
+}
+
+//SZ
+CommLogErrT CD::ProbeAndLogData(unsigned long flag)
+{
+  // look for the entry in incomplete_log_
+  int found = 0;
+  std::vector<struct IncompleteLogEntry>::iterator it;
+  CD* tmp_cd = this;
+  for (it=incomplete_log_.begin(); it!=incomplete_log_.end(); it++)
+  {
+    if (it->flag_ == flag) 
+    {
+      found = 1;
+      PRINT_DEBUG("Found the entry in incomplete_log_\n");
+      break;
+    }
+  }
+
+  if (found == 0)
+  {
+    // recursively go up to search parent's incomplete_log_
+    while (GetParentHandle()!=NULL)
+    {
+      tmp_cd = GetParentHandle()->ptr_cd_; 
+      for (it = tmp_cd->incomplete_log_.begin(); 
+           it != tmp_cd->incomplete_log_.end(); 
+           it++)
+      {
+        if (it->flag_ == flag){
+          found = 1;
+          PRINT_DEBUG("Found the entry in incomplete_log_\n");
+          break;
+        }
+      }
+      if (found){
+        break;
+      }
+    }
+
+    if (!found)
+    {
+      ERROR_MESSAGE("Do not find corresponding Isend/Irecv incomplete log!!\n")
+    }
+  }
+  
+  // ProbeAndLogData for comm_log_ptr_ if relaxed CD
+  if (comm_log_ptr_ != NULL)
+  {
+    // ProbeAndLogData:
+    // 1) change Isend/Irecv entry to complete state if there is any
+    // 2) log data if Irecv
+    bool found = comm_log_ptr_->ProbeAndLogData(it->addr_, it->length_, flag, it->isrecv_);
+    if (!found)
+    {
+      CD* tmp_cd = this;
+      while (tmp_cd->GetParentHandle() != NULL)
+      {
+        if (tmp_cd->GetParentHandle()->ptr_cd()->cd_type_==kRelaxed)
+        {
+          found = GetParentHandle()->ptr_cd()->comm_log_ptr_
+            ->ProbeAndLogDataPacked(it->addr_, it->length_, flag, it->isrecv_);
+          if (found)
+            break;
+        }
+        else {
+          break;
+        }
+      }
+      if (!found)
+      {
+        PRINT_DEBUG("Possible bug: not found the incomplete logs...\n");
+      }
+    }
+  }
+
+  // delete the incomplete log entry
+  tmp_cd->incomplete_log_.erase(it);
+  return kCommLogOK;
 }
 
 //SZ
 CommLogErrT CD::LogData(void *data_ptr, unsigned long length, 
-                      bool completed)
+                      bool completed, unsigned long flag, bool isrecv)
 {
   if (comm_log_ptr_ == NULL)
   {
     ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to log data!\n");
     return kCommLogError;
   }
-  return comm_log_ptr_->LogData(data_ptr, length, completed);
+  return comm_log_ptr_->LogData(data_ptr, length, completed, flag, isrecv);
 }
 
 //SZ

@@ -222,22 +222,112 @@ CommLogErrT CommLog::Realloc()
 }
 
 
-CommLogErrT CommLog::ProbeAndLogData(void *request)
+bool CommLog::ProbeAndLogData(void * addr, 
+                              unsigned long length,
+                              unsigned long flag,
+                              bool isrecv)
 {
-  return kCommLogOK;
+  unsigned long pos;
+  bool found = false;
+  // change entry incompleted entry to completed if there is any
+  // and associate it with the data
+  for (pos=0; pos<log_table_.cur_pos_; pos++)
+  {
+    if (log_table_.base_ptr_[pos].flag_ == flag)
+    {
+      // change log table
+      // length stored is length from isend/irecv, so length should match here...
+      assert(log_table_.base_ptr_[pos].length_ == length);
+      log_table_.base_ptr_[pos].completed_ = true;
+
+      // change log queue
+      if (length!=0)
+      {
+        // copy data into the place that reserved..
+        memcpy(log_queue_.base_ptr_+log_queue_.cur_pos_, addr, length);
+      }
+
+      found = true;
+      break;
+    }
+  }
+
+  return found;
+}
+
+
+bool CommLog::ProbeAndLogDataPacked(void * addr, 
+                                    unsigned long length,
+                                    unsigned long flag,
+                                    bool isrecv)
+{
+  // 1) find the corresponding log entry in child_log_
+  // 2) assert length 
+  // 3) find corresponding log queue address and copy data in
+  // 4) change incomplete flag to complete
+
+  bool found = false;
+  unsigned long inner_index=0, tmp_index, index=0;
+  unsigned long tmp_length=0;
+  struct LogTable tmp_log_table;
+  struct LogTableElement * tmp_table_ptr;
+  char * dest_addr;
+  while (index < child_log_.cur_pos_)
+  {
+    inner_index = index;
+    memcpy(&tmp_length, child_log_.base_ptr_+inner_index, sizeof(unsigned long));
+    inner_index += sizeof(unsigned long);
+    inner_index += sizeof(CDID);
+    memcpy(&tmp_log_table, child_log_.base_ptr_+inner_index, sizeof(struct LogTable));
+    // find corresponding entry information
+    inner_index += sizeof(struct LogTable);
+    tmp_index = 0;
+    tmp_table_ptr = (struct LogTableElement *) (child_log_.base_ptr_+inner_index);
+    while (tmp_index < tmp_log_table.cur_pos_)
+    {
+      if (tmp_table_ptr->flag_ == flag){
+        // if found the corresponding log entry
+        assert(tmp_table_ptr->length_ = length);
+        found = true;
+        break;
+      }
+
+      tmp_index++;
+      tmp_table_ptr++;
+    }
+
+    if (found)
+    {
+      // find corresponding queue space to store data
+      inner_index += sizeof(struct LogTableElement)*tmp_log_table.cur_pos_;
+      inner_index += sizeof(struct LogQueue);
+      dest_addr = (char*)(child_log_.base_ptr_+inner_index+tmp_table_ptr->pos_);
+
+      // copy data in
+      memcpy(dest_addr, addr, sizeof(char)*length);
+
+      // change incomplete status to complete
+      tmp_table_ptr->completed_ = true;
+    
+      break;
+    }
+
+    // jump to next packed log
+    index += tmp_length;
+  }
+
+  return found;
 }
 
 
 CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length, 
-                          bool completed)
+                          bool completed, unsigned long flag, bool isrecv)
 {
   PRINT_DEBUG("LogData of address (%p) and length(%ld)\n", data_ptr, data_length);
 
   CommLogErrT ret;
 
-  //TODO: should also log accessed address??
-  // add one element in the log_table_
-  ret = WriteLogTable(data_ptr, data_length, completed);
+  ret = WriteLogTable(data_ptr, data_length, completed, flag);
   if (ret == kCommLogAllocFailed) 
   {
     ERROR_MESSAGE("Log Table Realloc Failed!\n");
@@ -245,11 +335,27 @@ CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length,
   }
 
   // write data into the queue
-  ret = WriteLogQueue(data_ptr, data_length, completed);
-  if (ret == kCommLogAllocFailed) 
+  if (data_length!=0)
   {
-    ERROR_MESSAGE("Log Queue Realloc Failed!\n");
-    return ret;
+    ret = WriteLogQueue(data_ptr, data_length, completed);
+    if (ret == kCommLogAllocFailed) 
+    {
+      ERROR_MESSAGE("Log Queue Realloc Failed!\n");
+      return ret;
+    }
+  }
+
+  // insert one incomplete_log_entry_ to incomplete_log_
+  if (!completed)
+  {
+    // append one entry at the end of my_cd_->incomplete_log_
+    struct IncompleteLogEntry tmp_log_entry;
+    tmp_log_entry.addr_ = data_ptr;
+    tmp_log_entry.length_ = (unsigned long) data_length;
+    tmp_log_entry.flag_ = (unsigned long) flag;
+    tmp_log_entry.complete_ = false;
+    tmp_log_entry.isrecv_ = isrecv;
+    my_cd_->incomplete_log_.push_back(tmp_log_entry);
   }
 
   new_log_generated_ = true;
@@ -259,7 +365,7 @@ CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length,
 
 
 CommLogErrT CommLog::WriteLogTable (void * data_ptr, unsigned long data_length, 
-                                  bool completed)
+                                  bool completed, unsigned long flag)
 {
   CommLogErrT ret;
   if (log_table_.cur_pos_ >= log_table_.table_size_) 
@@ -271,7 +377,7 @@ CommLogErrT CommLog::WriteLogTable (void * data_ptr, unsigned long data_length,
   log_table_.base_ptr_[log_table_.cur_pos_].pos_ = log_queue_.cur_pos_;
   log_table_.base_ptr_[log_table_.cur_pos_].length_ = data_length;
   log_table_.base_ptr_[log_table_.cur_pos_].completed_ = completed;
-  log_table_.base_ptr_[log_table_.cur_pos_].flag_ = (unsigned long) data_ptr;
+  log_table_.base_ptr_[log_table_.cur_pos_].flag_ = flag;
   log_table_.cur_pos_++;
 
   return kCommLogOK;
@@ -288,9 +394,9 @@ CommLogErrT CommLog::WriteLogQueue (void * data_ptr, unsigned long data_length, 
   }
 
   // TODO: check memcpy success??
-  if (completed)
+  if (completed && data_length!=0)
   {
-    memcpy (log_queue_.base_ptr_+log_queue_.cur_pos_, data_ptr, data_length);
+    memcpy(log_queue_.base_ptr_+log_queue_.cur_pos_, data_ptr, data_length);
   }
   log_queue_.cur_pos_ += data_length;
 
@@ -526,15 +632,9 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
     return kCommLogError;
   }
 
-  //PRINT_DEBUG("before memcpy...\n");
-  //Print();
-
   memcpy(buffer, 
       log_queue_.base_ptr_+log_table_.base_ptr_[log_table_reexec_pos_].pos_,
       log_table_.base_ptr_[log_table_reexec_pos_].length_);
-
-  //PRINT_DEBUG("after memcpy...\n");
-  //Print();
 
   log_table_reexec_pos_++;
 
@@ -637,6 +737,7 @@ CommLogErrT CommLog::UnpackLogsToChildCD(CD* child_cd)
 
   return kCommLogOK;
 }
+
 //GONG
 CommLogErrT CommLog::UnpackLogsToChildCD_libc(CD* child_cd)
 {
@@ -653,7 +754,6 @@ CommLogErrT CommLog::UnpackLogsToChildCD_libc(CD* child_cd)
   child_cd->libc_log_ptr_->Print();
   return kCommLogOK;
 }
-
 
 CommLogErrT CommLog::UnpackLogs(char * src_ptr)
 {

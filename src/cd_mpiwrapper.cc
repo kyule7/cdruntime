@@ -40,9 +40,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_global.h"
 #include "cd_comm_log.h"
 
-// ------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------
 // blocking p2p communication
-// ------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------
 
 // blocking send: this one will return when the buffer is ready to reuse, but not guarantee messages
 // have been received, because small messages may be copied into internal buffers
@@ -407,9 +407,9 @@ int MPI_Sendrecv_replace(void *buf,
 }
 
 
-// ------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------
 // non-blocking p2p communication
-// ------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------
 
 // non-blocking send
 int MPI_Isend(void *buf, 
@@ -432,17 +432,17 @@ int MPI_Isend(void *buf,
       mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
-      cur_cd->ptr_cd()->LogData(request, 0, false);
+      cur_cd->ptr_cd()->LogData(buf, 0, false, (unsigned long)request, 0);
     }
     else
     {
       PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
-      CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(request, 0);
+      CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(buf, 0);
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
         mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
-        cur_cd->ptr_cd()->LogData(request, 0, false);
+        cur_cd->ptr_cd()->LogData(buf, 0, false, (unsigned long)request, 0);
       }
       else if (ret == kCommLogError)
       {
@@ -479,17 +479,17 @@ int MPI_Irecv(void *buf,
       mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
-      cur_cd->ptr_cd()->LogData(&request, sizeof(request), false);
+      cur_cd->ptr_cd()->LogData(buf, count*sizeof(datatype), false, (unsigned long)request, 1);
     }
     else
     {
       PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
-      CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(&request, sizeof(request));
+      CommLogErrT ret = cur_cd->ptr_cd()->ReadData(buf, count*sizeof(datatype));
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
         mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
-        cur_cd->ptr_cd()->LogData(&request, sizeof(request), false);
+        cur_cd->ptr_cd()->LogData(buf, count*sizeof(datatype), false, (unsigned long)request, 1);
       }
       else if (ret == kCommLogError)
       {
@@ -520,19 +520,19 @@ int MPI_Wait(MPI_Request *request,
       mpi_ret = PMPI_Wait(request, status);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
-      //TODO: here
-      cur_cd->ptr_cd()->ProbeAndLogData(request);
+      cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)request);
     }
     else
     {
       PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
-      CommLogErrT ret = kCommLogOK;
-      //CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(&request, sizeof(request));
+      //TODO: here
+      CommLogErrT ret = cur_cd->ptr_cd()->ProbeAndReadData((unsigned long)request);
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
+        PRINT_DEBUG("Should not come here because error happens between Isend/Irecv and WaitXXX...\n");
         mpi_ret = PMPI_Wait(request, status);
-        //cur_cd->ptr_cd()->LogData(&request, sizeof(request), false);
+        cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)request);
       }
       else if (ret == kCommLogError)
       {
@@ -543,15 +543,18 @@ int MPI_Wait(MPI_Request *request,
   else
   {
     mpi_ret = PMPI_Wait(request, status);
+    // delete incomplete entries...
+    // FIXME: why should delete incomplete entries here???
+    cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)request);
   }
 
   return mpi_ret;
 }
 
 
-// ------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------
 // collective communication
-// ------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------
 
 // MPI_Barrier
 int MPI_Barrier (MPI_Comm comm)

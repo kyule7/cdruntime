@@ -65,6 +65,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifdef comm_log
 //SZ
 #include "cd_comm_log.h"
+#include <vector>
+
+// data structure to store incompleted log entries
+struct IncompleteLogEntry{
+  void * addr_;
+  unsigned long length_;
+  unsigned long flag_;
+  bool complete_;
+  bool isrecv_;
+  //bool valid_;
+};
 #endif
 
 using namespace cd;
@@ -197,6 +208,10 @@ update the preserved data.
     cd::CommLog * libc_log_ptr_=NULL;
 
     uint32_t child_seq_id_;
+
+    unsigned long incomplete_log_size_unit_=100;
+    unsigned long incomplete_log_size_;
+    std::vector<struct IncompleteLogEntry> incomplete_log_;
     
     ////SZ: attempted to move from HeadCD class, but we can use CDPath class
     //cd::CDHandle*            cd_parent_;
@@ -357,10 +372,13 @@ update the preserved data.
     //SZ
     CDHandle* GetParentHandle();
     //SZ
-    CommLogErrT ProbeAndLogData(void *request);
+    CommLogErrT ProbeAndLogData(unsigned long flag);
+    //SZ
+    CommLogErrT ProbeAndReadData(unsigned long flag);
     //SZ
     CommLogErrT LogData(void *data_ptr, unsigned long length, 
-                      bool completed=true);
+                      bool completed=true, unsigned long flag=0,
+                      bool isrecv=0);
     //SZ
     CommLogErrT ProbeData(void *data_ptr, unsigned long length);
     //SZ

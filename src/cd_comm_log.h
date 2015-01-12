@@ -66,12 +66,21 @@ class cd::CommLog {
       my_cd_ = my_cd;
     }
 
-    CommLogErrT ProbeAndLogData(void *request);
+    bool ProbeAndLogData(void* addr, 
+                         unsigned long length, 
+                         unsigned long flag,
+                         bool isrecv);
+    bool ProbeAndLogDataPacked(void* addr, 
+                               unsigned long length, 
+                               unsigned long flag,
+                               bool isrecv);
     // log new data into the queue
     // need to check if running out queues
     CommLogErrT LogData(void * data_ptr, 
-                      unsigned long data_length, 
-                      bool completed=true);
+                        unsigned long data_length, 
+                        bool completed=true,
+                        unsigned long flag=0,
+                        bool isrecv=0);
 
     CommLogErrT ReadData(void * buffer, unsigned long length);
     CommLogErrT ProbeData(void * buffer, unsigned long length);
@@ -141,8 +150,11 @@ class cd::CommLog {
 
     CommLogErrT WriteLogTable (void * data_ptr, 
                               unsigned long data_length, 
-                              bool completed);
-    CommLogErrT WriteLogQueue (void * data_ptr, unsigned long data_length, bool completed);
+                              bool completed,
+                              unsigned long flag);
+    CommLogErrT WriteLogQueue (void * data_ptr, 
+                               unsigned long data_length,
+                               bool completed);
     
 
   private:
