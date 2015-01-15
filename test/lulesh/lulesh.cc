@@ -1341,11 +1341,11 @@ void CalcHourglassControlForElems(Domain& domain,
 
       /* Do a check for negative volumes */
       if ( domain.v(i) <= Real_t(0.0) ) {
-#if USE_MPI         
-         MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
-#else
-         exit(VolumeError);
-#endif
+//#if USE_MPI         
+//         MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+//#else
+//         exit(VolumeError);
+//#endif
       }  // check ends
 
 #if _CD
@@ -1426,11 +1426,11 @@ void CalcVolumeForceForElems(Domain& domain)
 #pragma omp parallel for firstprivate(numElem)
       for ( Index_t k=0 ; k<numElem ; ++k ) {
          if (determ[k] <= Real_t(0.0)) {
-#if USE_MPI            
-            MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
-#else
-            exit(VolumeError);
-#endif
+//#if USE_MPI            
+//            MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+//#else
+//            exit(VolumeError);
+//#endif
          }
       }
 
@@ -2189,11 +2189,11 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
         // See if any volumes are negative, and take appropriate action.
         if (vnew[k] <= Real_t(0.0))
         {
-#if USE_MPI           
-           MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
-#else
-           exit(VolumeError);
-#endif
+//#if USE_MPI           
+//           MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+//#else
+//           exit(VolumeError);
+//#endif
         }
       }
 
@@ -2693,11 +2693,11 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
       }
 
       if(idx >= 0) {
-#if USE_MPI         
-         MPI_Abort(MPI_COMM_WORLD, QStopError) ;
-#else
-         exit(QStopError);
-#endif
+//#if USE_MPI         
+//         MPI_Abort(MPI_COMM_WORLD, QStopError) ;
+//#else
+//         exit(QStopError);
+//#endif
       }
 
 #if _CD
@@ -3267,11 +3267,11 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
                 vc = eosvmax ;
           }
           if (vc <= 0.) {
-#if USE_MPI             
-             MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
-#else
-             exit(VolumeError);
-#endif
+//#if USE_MPI             
+//             MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+//#else
+//             exit(VolumeError);
+//#endif
           }
 
 #if _CD

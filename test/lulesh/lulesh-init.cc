@@ -295,11 +295,11 @@ Domain::SetupThreadSupportStructures()
       if ((clv < 0) || (clv > numElem()*8)) {
 	fprintf(stderr,
 		"AllocateNodeElemIndexes(): nodeElemCornerList entry out of range!\n");
-#if USE_MPI
-	MPI_Abort(MPI_COMM_WORLD, -1);
-#else
-	exit(-1);
-#endif
+//#if USE_MPI
+//	MPI_Abort(MPI_COMM_WORLD, -1);
+//#else
+//	exit(-1);
+//#endif
       }
     }
 
@@ -657,27 +657,27 @@ void InitMeshDecomp(Int_t numRanks, Int_t myRank,
    testProcs = Int_t(cbrt(Real_t(numRanks))+0.5) ;
    if (testProcs*testProcs*testProcs != numRanks) {
       printf("Num processors must be a cube of an integer (1, 8, 27, ...)\n") ;
-#if USE_MPI      
-      MPI_Abort(MPI_COMM_WORLD, -1) ;
-#else
-      exit(-1);
-#endif
+//#if USE_MPI      
+//      MPI_Abort(MPI_COMM_WORLD, -1) ;
+//#else
+//      exit(-1);
+//#endif
    }
    if (sizeof(Real_t) != 4 && sizeof(Real_t) != 8) {
       printf("MPI operations only support float and double right now...\n");
-#if USE_MPI      
-      MPI_Abort(MPI_COMM_WORLD, -1) ;
-#else
-      exit(-1);
-#endif
+//#if USE_MPI      
+//      MPI_Abort(MPI_COMM_WORLD, -1) ;
+//#else
+//      exit(-1);
+//#endif
    }
    if (MAX_FIELDS_PER_MPI_COMM > CACHE_COHERENCE_PAD_REAL) {
       printf("corner element comm buffers too small.  Fix code.\n") ;
-#if USE_MPI      
-      MPI_Abort(MPI_COMM_WORLD, -1) ;
-#else
-      exit(-1);
-#endif
+//#if USE_MPI      
+//      MPI_Abort(MPI_COMM_WORLD, -1) ;
+//#else
+//      exit(-1);
+//#endif
    }
 
    dx = testProcs ;
@@ -687,11 +687,11 @@ void InitMeshDecomp(Int_t numRanks, Int_t myRank,
    // temporary test
    if (dx*dy*dz != numRanks) {
       printf("error -- must have as many domains as procs\n") ;
-#if USE_MPI      
-      MPI_Abort(MPI_COMM_WORLD, -1) ;
-#else
-      exit(-1);
-#endif
+//#if USE_MPI      
+//      MPI_Abort(MPI_COMM_WORLD, -1) ;
+//#else
+//      exit(-1);
+//#endif
    }
    Int_t remainder = dx*dy*dz % numRanks ;
    if (myRank < remainder) {
