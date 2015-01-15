@@ -16,7 +16,7 @@ SOURCES= $(wildcard *.cc)
 OBJECTS=$(SOURCES:.cc=.o)
 LIBOUTPUT=../lib/libcds.so
 
-all: $(SOURCES) $(LIBOUTPUT) 
+all: $(SOURCES) $(LIBOUTPUT)
 #	cd_malloc.so libc_rn.so
 
 
@@ -31,7 +31,7 @@ all: $(SOURCES) $(LIBOUTPUT)
 
 $(LIBOUTPUT): $(OBJECTS) 
 	 @echo "\nBuilding .so file for executable \n"
-	 ${CC} -shared -Wl,-soname,libcds.so -o ${LIBOUTPUT} ${OBJECTS} ${LDFLAGS}
+	 ${CC} -shared -Wl,-soname,libcds.so -o ${LIBOUTPUT} ${OBJECTS} ${LDFLAGS} -ldl
 
 
 #cd_malloc.so:
@@ -41,6 +41,6 @@ $(LIBOUTPUT): $(OBJECTS)
 #	g++ -std=gnu++0x -fPIC -Wall -ldl -Dcomm_log -o libc_rn.so -shared libc_rn.cc -L../lib -Wl,-rpath ../lib
 
 clean:
-	rm -rf cd_malloc.so libc_rn.so $(LIBOUTPUT) $(OBJECTS)
+	rm -rf $(LIBOUTPUT) $(OBJECTS)
 
 

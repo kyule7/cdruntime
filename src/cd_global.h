@@ -212,7 +212,7 @@ extern FILE * fp;
 #if _DEBUG
   //SZ: change to this if want to compile test_comm_log.cc
   #ifdef comm_log
-    #define PRINT_DEBUG(...) {fprintf(fp, __VA_ARGS__);}
+    #define PRINT_DEBUG(...) {fprintf(fp,__VA_ARGS__);}
   #else
     #define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
   #endif
@@ -222,6 +222,8 @@ extern FILE * fp;
   #define PRINT_DEBUG(...) {}
   #define PRINT_DEBUG2(X,Y) printf(X,Y);
 #endif
+
+#define PRINT_LIBC(...) {printf(__VA_ARGS__);}
 
 #define MAX_FILE_PATH 2048
 

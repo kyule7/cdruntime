@@ -771,7 +771,7 @@ CDErrT CD::Preserve(void* data,
   // FIXME for now let's just use regular malloc call 
 
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
-    cout<<"my_name "<< my_name<<endl;
+//    cout<<"my_name "<< my_name<<endl;
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : 
               //GONG
@@ -837,7 +837,7 @@ CDErrT CD::Preserve(void* data,
     else {  // abnormal case
       //return CDErrT::kOK;
 
-      cout<< "Something wrong in Reexecution!!!"<<endl<<endl;  
+//      cout<< "Something wrong in Reexecution!!!"<<endl<<endl;  
       // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
       // we reached the last preserve function call. 
       // Since we have reached the last point already now convert current execution mode into kExecution
@@ -908,7 +908,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
     // Get cd_entry
     if( preserve_mask == kCopy ) {                // via-copy, so it saves data right now!
 
-      PRINT_DEBUG2("\nPreservation via Copy to %d(memory or file)\n", GetPlaceToPreserve());
+      PRINT_DEBUG("\nPreservation via Copy to %d(memory or file)\n", GetPlaceToPreserve());
 
       switch(GetPlaceToPreserve()) {
         case kMemory: {
@@ -925,9 +925,9 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
           if( my_name != 0 ) {
             entry_directory_map_[my_name] = cd_entry;
-            std::cout <<"internal preserve... my_name : "<<my_name
-                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+//            std::cout <<"internal preserve... my_name : "<<my_name
+//                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
+//                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
           }
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
@@ -946,9 +946,9 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
           if( my_name != 0 ) {
             entry_directory_map_[my_name] = cd_entry;
-            std::cout <<"internal preserve... my_name : "<<my_name
-                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+//            std::cout <<"internal preserve... my_name : "<<my_name
+//                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
+//                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
           }
 
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
@@ -969,10 +969,10 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
             entry_directory_map_[my_name] = cd_entry;
             assert(entry_directory_map_[my_name]);
             assert(entry_directory_map_[my_name]->src_data_.address_data());
-            std::cout <<"internal preserve... my_name : "<<entry_directory_map_[my_name]->name()
-                      <<", value : "<<*(reinterpret_cast<int*>(entry_directory_map_[my_name]->src_data_.address_data())) 
-                      <<", address: " <<entry_directory_map_[my_name]->src_data_.address_data()
-                      <<", address: " <<cd_entry->src_data_.address_data()<< std::endl;
+//            std::cout <<"internal preserve... my_name : "<<entry_directory_map_[my_name]->name()
+//                      <<", value : "<<*(reinterpret_cast<int*>(entry_directory_map_[my_name]->src_data_.address_data())) 
+//                      <<", address: " <<entry_directory_map_[my_name]->src_data_.address_data()
+//                      <<", address: " <<cd_entry->src_data_.address_data()<< std::endl;
 
           }
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
@@ -997,7 +997,7 @@ CD::CDInternalErrT CD::InternalPreserve(void *data,
     }
     else if( preserve_mask == kRef ) { // via-reference
 
-      PRINT_DEBUG2("\nPreservation via %d (reference)\n", GetPlaceToPreserve());
+      PRINT_DEBUG("\nPreservation via %d (reference)\n", GetPlaceToPreserve());
 
       // set handle type and ref_name/ref_offset
       cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes), 
@@ -1393,16 +1393,16 @@ CDEntry* CD::InternalGetEntry(std::string entry_name)
   try {
     auto it = entry_directory_map_.find(entry_name.c_str());
     if(it == entry_directory_map_.end()) {
-      std::cout<<"[InternalGetEntry] There is no entry for reference of "<< entry_name.c_str() 
-               <<" at CD level " << GetCDID().level() << std::endl;
+//      std::cout<<"[InternalGetEntry] There is no entry for reference of "<< entry_name.c_str() 
+//               <<" at CD level " << GetCDID().level() << std::endl;
       //getchar();
       return NULL;
     }
     else {
       CDEntry* cd_entry = entry_directory_map_.find(entry_name.c_str())->second;
       
-      std::cout<<"[InternalGetEntry] ref_name: " <<entry_directory_map_[entry_name.c_str()]->dst_data_.address_data()
-               << ", address: " <<entry_directory_map_[entry_name.c_str()]->dst_data_.address_data()<< std::endl;
+//      std::cout<<"[InternalGetEntry] ref_name: " <<entry_directory_map_[entry_name.c_str()]->dst_data_.address_data()
+//               << ", address: " <<entry_directory_map_[entry_name.c_str()]->dst_data_.address_data()<< std::endl;
       return cd_entry;
     }
   }
@@ -1430,7 +1430,7 @@ void CD::DeleteEntryDirectory(void)
 
 //    cout << "before!!!! " << it->name() <<endl<<endl;
 //    cout << "\n\n\nafter!!!! " << new_entry.name()<<endl;
-    cout << (*it == new_entry) << endl;
+//    cout << (*it == new_entry) << endl;
 /*
     uint32_t data_handle_len=0;
 
