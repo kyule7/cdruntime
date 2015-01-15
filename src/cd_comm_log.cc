@@ -356,6 +356,9 @@ CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length,
     tmp_log_entry.complete_ = false;
     tmp_log_entry.isrecv_ = isrecv;
     my_cd_->incomplete_log_.push_back(tmp_log_entry);
+#if _DEBUG
+    my_cd_->PrintIncompleteLog();
+#endif
   }
 
   new_log_generated_ = true;
@@ -865,7 +868,7 @@ CommLogErrT CommLog::FindChildLogs(CDID child_cd_id, char** src_ptr)
   unsigned long tmp_index=0;
   unsigned long length;
   CDID cd_id;
-  #ifdef _DEBUG
+  #if _DEBUG
   PRINT_DEBUG("Inside FindChildLogs to print CDID wanted:\n");
   child_cd_id.Print();
   #endif
@@ -875,7 +878,7 @@ CommLogErrT CommLog::FindChildLogs(CDID child_cd_id, char** src_ptr)
     memcpy(&length, child_log_.base_ptr_+tmp_index, sizeof(unsigned long));
     memcpy(&cd_id, child_log_.base_ptr_+tmp_index+sizeof(unsigned long), sizeof(CDID));
 
-    #ifdef _DEBUG
+    #if _DEBUG
     PRINT_DEBUG("Temp CDID got:\n");
     cd_id.Print();
     #endif

@@ -525,8 +525,7 @@ int MPI_Wait(MPI_Request *request,
     else
     {
       PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
-      //TODO: here
-      CommLogErrT ret = cur_cd->ptr_cd()->ProbeAndReadData((unsigned long)request);
+      CommLogErrT ret = cur_cd->ptr_cd()->ReadData(request,0);
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
@@ -544,7 +543,6 @@ int MPI_Wait(MPI_Request *request,
   {
     mpi_ret = PMPI_Wait(request, status);
     // delete incomplete entries...
-    // FIXME: why should delete incomplete entries here???
     cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)request);
   }
 

@@ -373,8 +373,8 @@ update the preserved data.
     CDHandle* GetParentHandle();
     //SZ
     CommLogErrT ProbeAndLogData(unsigned long flag);
-    //SZ
-    CommLogErrT ProbeAndReadData(unsigned long flag);
+    ////SZ
+    //CommLogErrT ProbeAndReadData(unsigned long flag);
     //SZ
     CommLogErrT LogData(void *data_ptr, unsigned long length, 
                       bool completed=true, unsigned long flag=0,
@@ -393,6 +393,8 @@ update the preserved data.
     bool IsNewLogGenerated_libc();
     //SZ
     CDType GetCDType() {return cd_type_;}
+    //SZ
+    void PrintIncompleteLog();
 #endif
     
     CDNameT& GetCDName(void)  { return cd_id_.cd_name_; }

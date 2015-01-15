@@ -203,7 +203,7 @@ namespace cd {
 
 //SZ: when testing MPI functions, print to files is easier
 #ifdef comm_log 
-#ifdef _DEBUG
+#if _DEBUG
 extern FILE * fp;
 #endif
 #endif

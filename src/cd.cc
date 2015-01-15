@@ -102,9 +102,9 @@ CD::CD()
   PRINT_DEBUG("Set child_seq_id_ to 0\n");
   child_seq_id_ = 0;
 
-  // init incomplete_log_
-  incomplete_log_size_ = incomplete_log_size_unit_;
-  incomplete_log_.resize(incomplete_log_size_);
+  //// init incomplete_log_
+  //incomplete_log_size_ = incomplete_log_size_unit_;
+  //incomplete_log_.resize(incomplete_log_size_);
 #endif
 }
 
@@ -201,9 +201,9 @@ CD::CD(CDHandle* cd_parent,
     child_seq_id_ = 0;
   }
 
-  // init incomplete_log_
-  incomplete_log_size_ = incomplete_log_size_unit_;
-  incomplete_log_.resize(incomplete_log_size_);
+  //// init incomplete_log_
+  //incomplete_log_size_ = incomplete_log_size_unit_;
+  //incomplete_log_.resize(incomplete_log_size_);
 #endif
 }
 
@@ -480,7 +480,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
         {
           PRINT_DEBUG("Pushing logs to parent...\n");
           comm_log_ptr_->PackAndPushLogs(GetParentHandle()->ptr_cd_);
-        #ifdef _DEBUG
+        #if _DEBUG
           PRINT_DEBUG("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
           PRINT_DEBUG("\nchild comm_log print:\n");
           comm_log_ptr_->Print();
@@ -498,7 +498,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
           {
             GetParentHandle()->ptr_cd_->comm_log_ptr_->SetCommLogMode(kGenerateLog);
           }
-        #ifdef _DEBUG
+        #if _DEBUG
           PRINT_DEBUG("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
           PRINT_DEBUG("parent comm_log print:\n");
           GetParentHandle()->ptr_cd_->comm_log_ptr_->Print();
@@ -1525,15 +1525,13 @@ bool CD::IsParentLocal()
 }
 
 //SZ
-//FIXME: need to change the following to use CDPath class to find parent's cd handle
 CDHandle* CD::GetParentHandle()
 {
   return CDPath::GetParentCD();
 }
 
+#if 0
 //SZ
-// find incomplete logs to find out buf address and length
-// read data from logs, and then copy data to buf
 CommLogErrT CD::ProbeAndReadData(unsigned long flag)
 {
   // look for the entry in incomplete_log_
@@ -1580,6 +1578,7 @@ CommLogErrT CD::ProbeAndReadData(unsigned long flag)
   }
   return kCommLogOK;
 }
+#endif
 
 //SZ
 CommLogErrT CD::ProbeAndLogData(unsigned long flag)
@@ -1653,6 +1652,8 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
         PRINT_DEBUG("Possible bug: not found the incomplete logs...\n");
       }
     }
+    // need to log that wait op completes 
+    comm_log_ptr_->LogData((MPI_Request*)flag, 0);
   }
 
   // delete the incomplete log entry
@@ -1715,5 +1716,30 @@ bool CD::IsNewLogGenerated()
 bool CD::IsNewLogGenerated_libc()
 {
   return libc_log_ptr_->IsNewLogGenerated_();
+}
+
+
+//SZ
+//  struct IncompleteLogEntry{
+//    void * addr_;
+//    unsigned long length_;
+//    unsigned long flag_;
+//    bool complete_;
+//    bool isrecv_;
+//  };
+void CD::PrintIncompleteLog()
+{
+  if (incomplete_log_.size()==0) return;
+  PRINT_DEBUG("incomplete_log_.size()=%ld\n", incomplete_log_.size());
+  for (std::vector<struct IncompleteLogEntry>::iterator ii=incomplete_log_.begin();
+        ii != incomplete_log_.end(); ii++)
+  {
+    PRINT_DEBUG("\nPrint Incomplete Log information:\n");
+    PRINT_DEBUG("    addr_=%p\n", ii->addr_);
+    PRINT_DEBUG("    length_=%ld\n", ii->length_);
+    PRINT_DEBUG("    flag_=%ld\n", ii->flag_);
+    PRINT_DEBUG("    complete_=%d\n", ii->complete_);
+    PRINT_DEBUG("    isrecv_=%d\n", ii->isrecv_);
+  }
 }
 #endif
