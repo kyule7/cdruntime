@@ -45,12 +45,12 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
 
   if( dst_data_.address_data() != NULL ) {
     DATA_FREE( dst_data_.address_data() );
-    printf("free preserved data\n"); 
+//    printf("free preserved data\n"); 
 //    getchar();
   }
 
   if( dst_data_.handle_type() == DataHandle::kOSFile )  {
-    printf("erase file start!\n"); getchar();
+    printf("erase file start!\n"); //getchar();
 //    delete dst_data_.file_name(); 
     char cmd[30];
     sprintf(cmd, "rm %s", dst_data_.file_name_);
@@ -128,7 +128,7 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen, struct ts
     fclose(fp);
 
     printf("we write a file \n");
-    getchar();
+    //getchar();
 
     return kOK;
   }

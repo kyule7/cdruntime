@@ -77,9 +77,9 @@ std::vector<comparison*> Comparison::compTagStack;
 void CDProfiler::GetProfile(const char *label)  // it is called in Begin()
 {
   int onOff = 0;
-  cout << "label check "<< label_.first << " " << label << endl; getchar();
+  cout << "label check "<< label_.first << " " << label << endl; //getchar();
   if(CDPath::GetCurrentCD()->ptr_cd()->GetCDID().sequential_id_ < 2) onOff = 1;
-    cout<<"GetProfile------   \t"<<label_.first << " - " << label << endl; getchar();
+    cout<<"GetProfile------   \t"<<label_.first << " - " << label << endl; //getchar();
 
   if(label_.first != label) { 
     // diff
@@ -193,7 +193,7 @@ void CDProfiler::InitViz()
 #endif
 
 #if _ENABLE_MODULE
-  cout << "create module init " <<endl; getchar();
+  cout << "create module init " <<endl; //getchar();
   newVizObj = new Module();
   newVizObj->Init();
   cout << "vizStack size: "<<vizStack_.size() << endl;
@@ -257,7 +257,7 @@ void CDProfiler::FinalizeViz(void)
 void CDProfiler::StartProfile()
 {
 
-  cout<< "\n\t-------- Start Profile --------\n" <<endl; getchar();
+  cout<< "\n\t-------- Start Profile --------\n" <<endl; //getchar();
 
   profile_data_[label_.first] = new uint64_t(MAX_PROFILE_DATA);
 // Profile starts -- ATTR | COMP | MODULE | SCOPE | CDNODE -- 
@@ -277,7 +277,7 @@ void CDProfiler::StartProfile()
 #endif
 
 #if _ENABLE_MODULE
-  cout << "\ncreate module " <<endl; getchar();
+  cout << "\ncreate module " <<endl; //getchar();
   cout << "vizStack size: "<<vizStack_.size() << endl;
   vizStack_.push_back(new Module());
   cout << "vizStack size: "<<vizStack_.size() << endl<<endl;
@@ -311,7 +311,7 @@ void CDProfiler::FinishProfile(void) // it is called in Destroy()
 {
 
   cout<< "\n\t-------- Finish Profile --------\n" <<endl;
-  getchar();
+  //getchar();
 
 // Profile starts -- COMP | MODULE | SCOPE | CDNODE -- 
 
@@ -331,7 +331,7 @@ void CDProfiler::FinishProfile(void) // it is called in Destroy()
   cout << "reached here? becore while in FinishProfile() "<<vizStack_.size() << endl;
   cout << "++++++++++++++++++++" << endl;
   while(  sightObj_count_ > 0) {
-    cout << "destroy sightobj" << endl; getchar();
+    cout << "destroy sightobj" << endl; //getchar();
     assert(vizStack_.size()>0);
     assert(vizStack_.back() != NULL);
     cout << "delete viz"<<endl;
@@ -395,16 +395,6 @@ void CDProfiler::GetLocalAvg(void)
 //    profile_data_[label_.first][i] /= profile_data_[label_.first][LOOP_COUNT];
 //  }
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -490,13 +480,14 @@ void Scope::Destroy(void)
 // -------------- Module ------------------------------------------------------------------------------
 void Module::Create(void)
 {
+  CDHandle *cdh = CDPath::GetCurrentCD();
   std::pair<std::string, int> label = CDPath::GetCurrentCD()->profiler_->label();
   cout<<"CreateModule call"<<endl;
   NodeID node_id = CDPath::GetCurrentCD()->node_id();
   if(usr_profile_enable==false) {
-    cout<<"\n[[[[Module object created]]]]"<<endl<<endl; getchar();
-    module* m = new module( instance(txt()<<CDPath::GetCurrentCD()->GetName(), 1, 1), 
-                            inputs(port(context("cd_id", (int)node_id.color(), 
+    cout<<"\n[[[[Module object created]]]]"<<endl<<endl; //getchar();
+    module* m = new module( instance(txt()<<label.first<<"_"<<CDPath::GetCurrentCD()->ptr_cd()->GetCDID().cd_name().GetCDName(), 1, 1), 
+                            inputs(port(context("cd_id", CDPath::GetCurrentCD()->ptr_cd()->GetCDID().cd_name().GetCDName(), 
                                                 "sequential_id", (int)(CDPath::GetCurrentCD()->ptr_cd()->GetCDID().sequential_id()),
                                                 "label", label.first,
                                                 "processID", (int)node_id.task_in_color()))),
@@ -506,7 +497,7 @@ void Module::Create(void)
   else {
   
 //    cout<<22222<<endl<<endl; getchar();
-    module* m = new module( instance(txt()<<label.first<<"_"<<node_id.color(), 2, 2), 
+    module* m = new module( instance(txt()<<label.first<<"_"<<CDPath::GetCurrentCD()->ptr_cd()->GetCDID().cd_name().GetCDName(), 2, 2), 
                             inputs(port(context("cd_id", txt()<<node_id.task_in_color(), 
                                                 "sequential_id", (int)(CDPath::GetCurrentCD()->ptr_cd()->GetCDID().sequential_id()))),
                                    port(usr_profile_input)),

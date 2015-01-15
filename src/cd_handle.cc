@@ -477,7 +477,7 @@ CDHandle* CDHandle::Create(const ColorT& color,
     for(int k=0; k<task_count; ++k ) {
       cout <<recv_buf[k][0] << " " << recv_buf[k][1] << endl;
     }
-    cout << "\n" << endl; getchar();
+    cout << "\n" << endl; //getchar();
 //  }
 //  else{
 //

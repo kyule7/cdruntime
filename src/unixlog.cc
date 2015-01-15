@@ -185,7 +185,7 @@ int tsn_log_create_file(const char *logfilename)
                      new_log_header.logfile_start_offset -
                      sizeof(new_log_header));
     printf("sdfasdf %d\n", ret);
-    getchar();
+    //getchar();
 out_close:
     close(fd);
 out:

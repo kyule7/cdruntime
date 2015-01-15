@@ -104,7 +104,8 @@ CD::CD(CDHandle* cd_parent,
 //  : cd_type_(cd_type), name_(name), sys_detect_bit_vector_(0), cd_id_(cd_id)
 {
   cd_type_ = cd_type; 
-  name_ = name; 
+  if(name != NULL)
+    name_ = name; 
   sys_detect_bit_vector_ = 0; 
   cd_id_ = cd_id;
   // FIXME 
@@ -866,7 +867,7 @@ CD::InternalPreserve(void *data,
 
     CDEntry* cd_entry = 0;
 //    if(my_name==0) my_name = "INITIAL_ENTRY";
-    cout << "preserve remote check\npreserve_mask : "<< preserve_mask << " " << ref_remote << endl; getchar();
+    cout << "preserve remote check\npreserve_mask : "<< preserve_mask << " " << ref_remote << endl; //getchar();
     // Get cd_entry
     if( preserve_mask == kCopy ) {                // via-copy, so it saves data right now!
 
@@ -874,7 +875,7 @@ CD::InternalPreserve(void *data,
 
       switch(GetPlaceToPreserve()) {
         case kMemory: {
-          PRINT_DEBUG("[kMemory] ------------------------------------------\n");
+//          PRINT_DEBUG("[kMemory] ------------------------------------------\n");
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes), 
                                  DataHandle(DataHandle::kMemory, 0, len_in_bytes), 
                                  my_name);
@@ -887,19 +888,19 @@ CD::InternalPreserve(void *data,
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
           if( !my_name.empty() ) {
             entry_directory_map_[str_hash(my_name)] = cd_entry;
-            std::cout <<"register local entry_dir. my_name : "<<my_name
-                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+//            std::cout <<"register local entry_dir. my_name : "<<my_name
+//                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
+//                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
             if(ref_remote) {
               remote_entry_directory_map_[str_hash(my_name)] = cd_entry;
-              std::cout <<"register remote entry_dir. my_name : "<<my_name
-                        <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-                        <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+//              std::cout <<"register remote entry_dir. my_name : "<<my_name
+//                        <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
+//                        <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
 
 
             }
           }
-          PRINT_DEBUG("-------------------------------------------------\n");
+//          PRINT_DEBUG("-------------------------------------------------\n");
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
         case kHDD: {

@@ -98,7 +98,7 @@ static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, 
 //
   std::cout << "base file name: "<< filename.GetString() << std::endl << std::endl;
   filename << cd_id.level() << '.' << cd_id.rank_in_level() << '.' << cd_id.object_id() << '.' << cd_id.sequential_id() << '.' << cd_id.task_in_color() << '.' << data_name << ".cd";
-  std::cout << "file name for this cd: "<< filename.GetString() << std::endl << std::endl; getchar(); 
+  std::cout << "file name for this cd: "<< filename.GetString() << std::endl << std::endl; //getchar(); 
   return filename.GetString();
 //  return "./";
 }

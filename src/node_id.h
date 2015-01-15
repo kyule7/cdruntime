@@ -110,7 +110,9 @@ public:
   int task_in_color(void) const { return task_in_color_; }
   int head(void) const { return head_; }
   int size(void) const { return size_; }
-  bool IsHead(void) const { return head_ == task_in_color_; }
+  bool IsHead(void) const { 
+    std::cout << "head : " << head_ << ", task: " << task_in_color_ << std::endl; //getchar();
+return head_ == task_in_color_; }
 
   void * Serialize(uint32_t& len_in_bytes)
   {

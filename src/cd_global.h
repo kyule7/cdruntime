@@ -47,9 +47,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // value is the unique ID for mpi communication group or thread group.
 // For MPI, there is a communicator number so it is the group ID,
 // For PGAS, there should be a group ID, or we should generate it. 
-#if _MPI_VER 
-#include <mpi.h>
 
+//#if _MPI_VER 
+#include <mpi.h>
 #define ROOT_COLOR MPI_COMM_WORLD
 #define ROOT_HEAD_ID 0
 #define INITIAL_COLOR MPI_COMM_NULL
@@ -57,15 +57,15 @@ typedef MPI_Comm ColorT;
 typedef MPI_Group GroupT;
 typedef int CDFlagT;
 typedef MPI_Win CDMailBoxT;
-#else
-
-#define ROOT_COLOR 0 
-#define ROOT_HEAD_ID 0
-#define INITIAL_COLOR 0
-typedef int ColorT;
-typedef int GroupT;
-
-#endif
+//#else
+//
+//#define ROOT_COLOR 0 
+//#define ROOT_HEAD_ID 0
+//#define INITIAL_COLOR 0
+//typedef int ColorT;
+//typedef int GroupT;
+//
+//#endif
 
 #define INVALID_TASK_ID -1
 #define INVALID_HEAD_ID -1

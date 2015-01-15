@@ -210,7 +210,7 @@ void Release(T **ptr)
 inline void DumpPreserve(void)
 {
 //   int tmp[(int)(1000/(CDPath::GetCurrentCD()->ptr_cd()->GetCDID().level_ + 1))] = {0};
-   int* tmp = new int(1000/(CDPath::GetCurrentCD()->ptr_cd()->GetCDID().level_+1));
+   int* tmp = new int(1000/(CDPath::GetCurrentCD()->ptr_cd()->GetCDID().level()+1));
    CDPath::GetCurrentCD()->Preserve(tmp, sizeof(tmp), kCopy, "tmp", 0, 0, 0, kUnsure);
    delete tmp;
 }
@@ -354,7 +354,6 @@ void CollectDomainNodesToElemNodes(Domain &domain,
 #if _CD
    CDPath::GetCurrentCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -1780,8 +1779,8 @@ Real_t CalcElemVolume( const Real_t x0, const Real_t x1,
 {
 
 #if _CD
-   CDHandle* cdh = CDPath::GetCurrentCD();
-   CD_Begin(cdh);
+//   CDHandle* cdh = CDPath::GetCurrentCD();
+//   CD_Begin(cdh);
 ///true, "CalcElemVolume");
 //   CDPath::GetCurrentCD()->Preserve(&x0, sizeof(x0), kCopy, "x0", 0, 0, 0, kUnsure);
 #endif
@@ -1857,8 +1856,7 @@ Real_t CalcElemVolume( const Real_t x0, const Real_t x1,
 
 #if _CD
 //   CDPath::GetCurrentCD()->Detect();
-   CD_Complete(cdh);
-;
+//   CD_Complete(cdh);
 #endif
 
   return volume ;
@@ -3750,6 +3748,9 @@ int main(int argc, char *argv[])
 
 #if _CD
    CDHandle* root_cd = CD_Init(numRanks, myRank);
+   std::cout << root_cd->ptr_cd() << std::endl; 
+   std::cout << "task: " << root_cd->GetTaskID() << std::endl; 
+   //getchar();
 //   if(CDPath.empty())
 //    printf("huh?\n");
 //   else
@@ -3791,7 +3792,7 @@ int main(int argc, char *argv[])
 //debug to see region sizes
 #if _DEBUG
    for(Int_t i = 0; i < locDom->numReg(); i++)
-      std::cout << "region" << i + 1<< "size" << locDom->regElemSize(i) <<std::endl;
+      std::cout << "region: " << i + 1<< ", size: " << locDom->regElemSize(i) <<std::endl;
 #endif
 
 #if _CD
@@ -3862,7 +3863,7 @@ int main(int argc, char *argv[])
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);
    }
-
+   getchar();
 #if _CD
    root_cd->Detect();
    root_cd->Complete();
