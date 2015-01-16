@@ -105,7 +105,9 @@ class cd::CD : public cd::Serializable {
     RecoverObject* recoverObj_;
   public:
 #if _MPI_VER
+#if _KL
     CDMailBoxT *mailbox_;
+#endif
 #endif
     // Label for Begin/Complete pair. It is mainly for Loop interation.
     // The Begin/Complete pair that has the same computation will have the same label_
@@ -388,10 +390,12 @@ class cd::HeadCD : public cd::CD {
 
     // event related
 #if _MPI_VER
+#if _KL
     CDFlagT *event_flag_;
 
     CDFlagT *family_event_flag_;
     CDMailBoxT *family_mailbox_;
+#endif
 #endif
 
 

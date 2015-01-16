@@ -51,8 +51,10 @@ CDPath* CDPath::uniquePath_;
 DebugStream cd::dbgStream;
 
 #if _MPI_VER
+#if _KL
 CDFlagT *CDHandle::pendingFlag_; 
 CDMailBoxT CDHandle::pendingWindow_;
+#endif
 #endif
 //CDFlagT *CDHandle::pendingFlag_; 
 //CDMailBoxT CDHandle::pendingWindow_;
@@ -73,8 +75,10 @@ CDHandle* cd::CD_Init(int numTask, int myRank)
   dbgStream << "Great!"<<endl; //getchar();
 
 #if _MPI_VER
+#if _KL
   MPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &CDHandle::pendingFlag_);
   MPI_Win_create(CDHandle::pendingFlag_, 1, sizeof(CDFlagT), MPI_INFO_NULL, MPI_COMM_WORLD, &CDHandle::pendingWindow_);
+#endif
 #endif
   CD::CDInternalErrT internal_err;
   CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myRank, ROOT_HEAD_ID, numTask)), kStrict, 0, &internal_err);
@@ -100,8 +104,10 @@ void cd::CD_Finalize(void)
 #endif
 
 #if _MPI_VER
+#if _KL
   MPI_Win_free(&CDHandle::pendingWindow_);
   MPI_Free_mem(CDHandle::pendingFlag_);
+#endif
 #endif
   
 //  CDPath::GetRootCD()->Destroy();
@@ -350,6 +356,7 @@ CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, cons
 //    if(new_color == 0) 
 //      cout<<"\n--------DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
     return err;
+
 #elif _PGAS_VER
     CDErrT err = kOK;
     int size = new_node.size();
@@ -440,6 +447,7 @@ CDHandle* CDHandle::Create(const ColorT& color,
 
 
 #if _MPI_VER
+#if _KL
   // Get the children CD's head information and the total size of entry from each task in the CD.
   int send_buf[2]={0,0};
   int task_count = node_id().size();
@@ -516,6 +524,7 @@ CDHandle* CDHandle::Create(const ColorT& color,
 //
 //  cout << "\n\n\nasdfasdfsadf\n\n"<< endl <<endl;
 //  getchar();
+#endif
 #endif
 
 
@@ -712,11 +721,11 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 #if _PROFILER
   // Profile-related
   cout << "calling get profile" <<endl; //getchar();
-  if(ptr_cd()->cd_exec_mode_ == 0) { 
+//  if(ptr_cd()->cd_exec_mode_ == 0) { 
     if(label == NULL) label = "INITIAL_LABEL";
     cout << "label "<< label <<endl; //getchar();
     profiler_->GetProfile(label);
-  }
+//  }
 #endif
 
   assert(ptr_cd_ != 0);
@@ -917,15 +926,20 @@ return true;
 
 CDErrT CDHandle::CDAssert (bool test_true, const SysErrT *error_to_report)
 {
-  if( IsHead() ) {
+//  if( IsHead() ) {
     assert(ptr_cd_ != 0);
-    return ptr_cd_->Assert(test_true); 
-  }
-  else {
-    assert(ptr_cd_ != 0);
-    return ptr_cd_->Assert(test_true); 
-    // It is at remote node so do something for that.
-  }
+#if _PROFILER
+//    if(!test_true) {
+//      profiler_->ClearSightObj();
+//    }
+#endif
+    return ptr_cd_->Assert(test_true);
+//  }
+//  else {
+//    assert(ptr_cd_ != 0);
+//    return ptr_cd_->Assert(test_true); 
+//    // It is at remote node so do something for that.
+//  }
 
   return kOK;
 }
@@ -1025,12 +1039,14 @@ int CDHandle::ctxt_prv_mode()
 
 void CDHandle::CommitPreserveBuff()
 {
+//  if(ptr_cd_->cd_exec_mode_ ==CD::kExecution){
   if( ptr_cd_->ctxt_prv_mode_ == CD::kExcludeStack) {
     memcpy(ptr_cd_->jump_buffer_, jump_buffer_, sizeof(jmp_buf));
   }
   else {
     ptr_cd_->ctxt_ = this->ctxt_;
   }
+//  }
 }
 
 

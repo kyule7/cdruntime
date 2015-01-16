@@ -10,55 +10,23 @@ CD_LIB      = ${CD_ROOT}/lib
 CD_AUTOTUNER= ${CD_ROOT}/autotuner
 
 
-CD_SRC_CFLAGS = -I${CD_SRC} 
+CD_SRC_CFLAGS = -I${CD_SRC} #-I${SIGHT_ROOT}/widgets 
 
 CD_LINKFLAGS = -Wl,-rpath ${CD_LIB} \
                ${CD_LIB}/libcds.so \
                -L${CD_LIB} -lcds 
 
 
-#SIGHT_CFLAGS = -I${SIGHT_ROOT} \
-#               -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
-#               -I${SIGHT_ROOT}/widgets/papi/include\
-#               -I${SIGHT_ROOT}/widgets \
-#               -I${SIGHT_ROOT}/tools/boost_1_55_0
 
-#SIGHT_CFLAGS = -I${SIGHT_ROOT} -I${SIGHT_ROOT}/widgets -I${SIGHT_ROOT}/widgets/parallel \
-#               -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
-#               -I${SIGHT_ROOT}/widgets/papi/include\
-#               -I${SIGHT_ROOT}/widgets/libmsr/include
 
-SIGHT_CFLAGS = -fopenmp -g -ggdb -fPIC -I${SIGHT_ROOT} -I${SIGHT_ROOT}/widgets -I${SIGHT_ROOT}/attributes -I${SIGHT_ROOT}/widgets/parallel \
-                -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
-                -I${SIGHT_ROOT}/tools/boost_1_55_0 \
-                -I${SIGHT_ROOT}/widgets/papi/include 
-
-SIGHT_LINKFLAGS_NORPATH = -L${SIGHT_ROOT} -lsight_structure \
-                  -L${SIGHT_ROOT}/tools/adept-utils/lib -ladept_cutils -ladept_timing -ladept_utils \
-                  -L${SIGHT_ROOT}/tools/callpath/src/src -lcallpath \
-                  -L${SIGHT_ROOT}/widgets/papi/lib -lpapi \
-                  -L${SIGHT_ROOT}/widgets/gsl/lib -lgsl -lgslcblas \
-                  -lpthread
-#SIGHT_LINKFLAGS = \
-#                  -Wl,-rpath ${SIGHT_ROOT} \
-#                  -L${SIGHT_ROOT} -lsight_structure \
-#                  -L${SIGHT_ROOT}/tools/adept-utils/lib -ladept_cutils -ladept_timing -ladept_utils \
-#                  -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
-#                  -L${SIGHT_ROOT}/tools/callpath/src/src -lcallpath \
-#                  -Wl,-rpath ${SIGHT_ROOT}/tools/callpath/src/src \
-#                  -L${SIGHT_ROOT}/widgets/papi/lib -lpapi \
-#                  -Wl,-rpath ${SIGHT_ROOT}/widgets/papi/lib \
-#                  ${SIGHT_ROOT}/widgets/gsl/lib/libgsl.so \
-#                  ${SIGHT_ROOT}/widgets/gsl/lib/libgslcblas.so \
-#                  -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib \
-#                  -lpthread
- 
+SIGHT_CFLAGS = -I${SIGHT_ROOT} \
+               -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
+               -I${SIGHT_ROOT}/widgets \
+               -I${SIGHT_ROOT}/widgets/papi/include\
+               -I${SIGHT_ROOT}/tools/boost_1_55_0
 SIGHT_LINKFLAGS = \
-                  -L${SIGHT_ROOT} -lsight_structure \
                   -Wl,-rpath ${SIGHT_ROOT} \
-                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_cutils.so \
-                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_timing.so \
-                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_utils.so \
+                  -L${SIGHT_ROOT} -lsight_structure \
                   -L${SIGHT_ROOT}/tools/adept-utils/lib -ladept_cutils -ladept_timing -ladept_utils \
                   -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
                   -L${SIGHT_ROOT}/tools/callpath/src/src -lcallpath \
@@ -70,21 +38,81 @@ SIGHT_LINKFLAGS = \
                   -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib \
                   -lpthread
 
+
+
+
+
+
+
+#
+##SIGHT_CFLAGS = -I${SIGHT_ROOT} \
+##               -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
+##               -I${SIGHT_ROOT}/widgets/papi/include\
+##               -I${SIGHT_ROOT}/widgets \
+##               -I${SIGHT_ROOT}/tools/boost_1_55_0
+#
+##SIGHT_CFLAGS = -I${SIGHT_ROOT} -I${SIGHT_ROOT}/widgets -I${SIGHT_ROOT}/widgets/parallel \
+##               -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
+##               -I${SIGHT_ROOT}/widgets/papi/include\
+##               -I${SIGHT_ROOT}/widgets/libmsr/include
+#
+#SIGHT_CFLAGS = -fopenmp -g -ggdb -fPIC -I${SIGHT_ROOT} -I${SIGHT_ROOT}/widgets -I${SIGHT_ROOT}/attributes -I${SIGHT_ROOT}/widgets/parallel \
+#                -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
+#                -I${SIGHT_ROOT}/tools/boost_1_55_0 \
+#                -I${SIGHT_ROOT}/widgets/papi/include 
+#
+#SIGHT_LINKFLAGS_NORPATH = -L${SIGHT_ROOT} -lsight_structure \
+#                  -L${SIGHT_ROOT}/tools/adept-utils/lib -ladept_cutils -ladept_timing -ladept_utils \
+#                  -L${SIGHT_ROOT}/tools/callpath/src/src -lcallpath \
+#                  -L${SIGHT_ROOT}/widgets/papi/lib -lpapi \
+#                  -L${SIGHT_ROOT}/widgets/gsl/lib -lgsl -lgslcblas \
+#                  -lpthread
+##SIGHT_LINKFLAGS = \
+##                  -Wl,-rpath ${SIGHT_ROOT} \
+##                  -L${SIGHT_ROOT} -lsight_structure \
+##                  -L${SIGHT_ROOT}/tools/adept-utils/lib -ladept_cutils -ladept_timing -ladept_utils \
+##                  -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
+##                  -L${SIGHT_ROOT}/tools/callpath/src/src -lcallpath \
+##                  -Wl,-rpath ${SIGHT_ROOT}/tools/callpath/src/src \
+##                  -L${SIGHT_ROOT}/widgets/papi/lib -lpapi \
+##                  -Wl,-rpath ${SIGHT_ROOT}/widgets/papi/lib \
+##                  ${SIGHT_ROOT}/widgets/gsl/lib/libgsl.so \
+##                  ${SIGHT_ROOT}/widgets/gsl/lib/libgslcblas.so \
+##                  -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib \
+##                  -lpthread
+# 
 #SIGHT_LINKFLAGS = \
-#                  -L${SIGHT_ROOT} -lsight_structure -Wl,-rpath ${SIGHT_ROOT} \
+#                  -L${SIGHT_ROOT} -lsight_structure \
+#                  -Wl,-rpath ${SIGHT_ROOT} \
 #                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_cutils.so \
 #                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_timing.so \
 #                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_utils.so \
+#                  -L${SIGHT_ROOT}/tools/adept-utils/lib -ladept_cutils -ladept_timing -ladept_utils \
 #                  -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
-#                  ${SIGHT_ROOT}/tools/callpath/src/src/libcallpath.so \
+#                  -L${SIGHT_ROOT}/tools/callpath/src/src -lcallpath \
 #                  -Wl,-rpath ${SIGHT_ROOT}/tools/callpath/src/src \
 #                  -L${SIGHT_ROOT}/widgets/papi/lib -lpapi \
 #                  -Wl,-rpath ${SIGHT_ROOT}/widgets/papi/lib \
 #                  ${SIGHT_ROOT}/widgets/gsl/lib/libgsl.so \
 #                  ${SIGHT_ROOT}/widgets/gsl/lib/libgslcblas.so \
 #                  -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib \
-#	          -lpthread
-#                  #-L ${PNMPI_PATH}lib -lpnmpi -Wl,-rpath,${PNMPI_PATH}
+#                  -lpthread
+#
+##SIGHT_LINKFLAGS = \
+##                  -L${SIGHT_ROOT} -lsight_structure -Wl,-rpath ${SIGHT_ROOT} \
+##                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_cutils.so \
+##                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_timing.so \
+##                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_utils.so \
+##                  -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
+##                  ${SIGHT_ROOT}/tools/callpath/src/src/libcallpath.so \
+##                  -Wl,-rpath ${SIGHT_ROOT}/tools/callpath/src/src \
+##                  -L${SIGHT_ROOT}/widgets/papi/lib -lpapi \
+##                  -Wl,-rpath ${SIGHT_ROOT}/widgets/papi/lib \
+##                  ${SIGHT_ROOT}/widgets/gsl/lib/libgsl.so \
+##                  ${SIGHT_ROOT}/widgets/gsl/lib/libgslcblas.so \
+##                  -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib \
+##	          -lpthread
+##                  #-L ${PNMPI_PATH}lib -lpnmpi -Wl,-rpath,${PNMPI_PATH}
 
 RAPL_ENABLED = 0
 ifeq (${RAPL_ENABLED}, 1)

@@ -72,6 +72,7 @@ public:
   virtual void InitViz(void)=0;
   virtual void FinalizeViz(void)=0;
   virtual LabelT label(void)=0;
+  virtual void ClearSightObj(void)=0;
 };
 
 class NullProfiler : public Profiler {
@@ -146,6 +147,7 @@ public:
   void InitViz(void);
   void FinalizeViz(void);
   LabelT label() { return label_; }
+  void ClearSightObj(void);
 
 private:
   void GetLocalAvg(void);
@@ -154,35 +156,27 @@ private:
   void SetCollectProfile(bool flag);
 };
 
+
+// The family of Viz class are all wrapper for sight-related widgets.
+// There are multiple kinds of widgets in sight which performs differently with its own purpose.
+// From the perspective of CDs, it manages every sight objects with an unified interface which is Viz class,
+// and when we want a specific visualization with a new widget in sight, we simply inherit Viz class to extend it.
+// By default, there are hiergraph (flowgraph) / module / scope / graph / comparison / attribute widgets supported by CDs.
 class Viz {
 public:
-  virtual void Create(void)=0;
-  virtual void Destroy(void)=0;
-  virtual void Init(void) { }
-  virtual void Finalize(void) { }
-  
+  Viz(void) {}
+  virtual ~Viz(void) {}
 };
 
 class Module : public Viz {
   /// All modules that are currently live
-  static std::list<module*> mStack;
-  
-
+  module *m;
   context usr_profile_input;
   context usr_profile_output;
   bool usr_profile_enable;
 public:
-  Module() : usr_profile_enable(false) {}
-  void Create(void);
-  void Destroy(void);
-  void Init(void) {
-    /// modularApp exists only one, and is created at init stage
-//    ma = new modularApp("CD Modular App");
-  }
-  void Finalize(void) {
-//    assert(ma);
-//    delete ma;
-  }
+  Module(bool usr_profile_en=false);
+  ~Module(void);
   void SetUsrProfileInput(std::pair<std::string, long> name_list);
   void SetUsrProfileInput(std::initializer_list<std::pair<std::string, long>> name_list);
   void SetUsrProfileOutput(std::pair<std::string, long> name_list);
@@ -190,92 +184,54 @@ public:
   void AddUsrProfile(std::string key, long val, int mode);
 };
 
-#if _ENABLE_HIERGRAPH
 class HierGraph : public Viz {
-//  static std::list<flowgraph*> hgStack;
-  static flowgraph* fg;
-
-//  HG_context usr_profile_input;
-//  HG_context usr_profile_output;
-//  bool usr_profile_enable;
+  static flowgraph *fg;
 public:
-  HierGraph() ;//: usr_profile_enable(false)
-  void Create(void);
-  void Destroy(void);
-  void Init(void) {
-    /// modularApp exists only one, and is created at init stage
-    fg = new flowgraph("CD Hierarchical Graph App");
-  }
-  void Finalize(void) {
-    assert(fg);
-    delete fg;
-  }
+  HierGraph(void);
+  ~HierGraph(void);
 };
-#endif
 
 class Attribute : public Viz {
-  static attrIf*             attrScope;
-  static std::list<attrAnd*> attrStack;
-  static std::list<attr*>    attrValStack;
-
+  static attrIf *attrScope;
+  attrAnd *attrKey;
+  attr    *attrVal;
 public:
-  void Create(void);
-  void Destroy(void);
-  void Init(void) {
-    attrValStack.push_back(new attr("INIT", 1));
-    attrScope = new attrIf(new attrEQ("INIT", 1));
-  }
-  void Finalize(void) {
-    assert(attrScope);
-    delete attrScope;
-  
-    assert(attrValStack.size()>0);
-    assert(attrValStack.back() != NULL);
-    delete attrValStack.back();
-    attrValStack.pop_back();
-  }
+  Attribute(void);
+  ~Attribute(void);
 };
 
 class Comparison : public Viz {
-
-  static std::vector<comparison*> compTagStack;
+  comparison *compTag;
 //  static std::vector<int> compKeyStack;
 //  static std::list<comparison*> compStack;
 public:
-  void Create(void);
-  void Destroy(void);
+  Comparison(void);
+  ~Comparison(void);
 };
 
 class CDNode : public Viz {
   /// All CD Nodes that are currently live
-  static std::list<CDNode*> cdStack;
+  CDNode *cdViz;
 public:
-  void Create(void);
-  void Destroy(void);
+  CDNode(void);
+  ~CDNode(void);
 };
 
 class Scope : public Viz {
 protected:
   /// All scopes that are currently live
-  static std::list<scope*> sStack;
+  scope *s;
 public:
-  void Create(void);
-  void Destroy(void);
+  Scope(void);
+  ~Scope(void);
 };
 
 class ScopeGraph : public Scope {
   static graph* scopeGraph;
+  scope *prv_s;
 public:
-  void Create(void);
-  void Destroy(void);
-  void Init(void) {
-    /// graph exists only one. It is created at init stage
-    scopeGraph = new graph();
-  }
-  void Finalize(void) {
-    assert(scopeGraph);
-    delete scopeGraph;
-  }
+  ScopeGraph(void);
+  ~ScopeGraph(void);
 };
 
 #endif

@@ -48,24 +48,29 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // For MPI, there is a communicator number so it is the group ID,
 // For PGAS, there should be a group ID, or we should generate it. 
 
-//#if _MPI_VER 
+#if _MPI_VER 
 #include <mpi.h>
 #define ROOT_COLOR MPI_COMM_WORLD
 #define ROOT_HEAD_ID 0
 #define INITIAL_COLOR MPI_COMM_NULL
 typedef MPI_Comm ColorT;
 typedef MPI_Group GroupT;
+#else
+
+#define ROOT_COLOR 0 
+#define ROOT_HEAD_ID 0
+#define INITIAL_COLOR 0
+typedef int ColorT;
+typedef int GroupT;
+
+#endif
+
+#if _MPI_VER
+#if _KL
 typedef int CDFlagT;
 typedef MPI_Win CDMailBoxT;
-//#else
-//
-//#define ROOT_COLOR 0 
-//#define ROOT_HEAD_ID 0
-//#define INITIAL_COLOR 0
-//typedef int ColorT;
-//typedef int GroupT;
-//
-//#endif
+#endif
+#endif
 
 #define INVALID_TASK_ID -1
 #define INVALID_HEAD_ID -1
@@ -277,7 +282,8 @@ We are increasing the number of reexecution inside Begin(). So, the point of tim
 
 // Macros for setjump / getcontext
 // So users should call this in their application, not call cd_handle->Begin().
-#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
+//#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
+#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
 #define CD_Complete(X) (X)->Complete()   
 
 

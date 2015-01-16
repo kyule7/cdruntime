@@ -152,7 +152,7 @@ void CD::Initialize(CDHandle* cd_parent,
 
 void CD::Init()
 {
-  ctxt_prv_mode_ = kExcludeStack; 
+  ctxt_prv_mode_ = kIncludeStack; 
   cd_exec_mode_  = kSuspension;
   option_save_context_ = 0;
 //#if _WORK 
@@ -262,7 +262,9 @@ CDErrT CD::Destroy(void)
   InternalDestroy();
 
 #if _MPI_VER
+#if _KL
   delete mailbox_;
+#endif
 #endif
 
   return err;
@@ -282,6 +284,7 @@ CD::InternalCreate(CDHandle* parent,
 
     // Create memory region where RDMA is enabled
 #if _MPI_VER
+#if _KL
     int task_count = new_cd_id.task_count();
     cout << "in CD::Create Internal Memory. task count is "<< task_count <<endl;
     new_cd->mailbox_ = new CDMailBoxT[task_count];
@@ -290,6 +293,7 @@ CD::InternalCreate(CDHandle* parent,
                      MPI_INFO_NULL, new_cd_id.color(), &((new_cd->mailbox_)[i]));
     }
 #endif
+#endif
 
     *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
   }
@@ -297,7 +301,7 @@ CD::InternalCreate(CDHandle* parent,
     HeadCD *new_cd = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
 
 #if _MPI_VER
-
+#if _KL
     // Create memory region where RDMA is enabled
     cout << "HeadCD create internal memory " << endl;
     int task_count = new_cd_id.task_count();
@@ -313,6 +317,7 @@ CD::InternalCreate(CDHandle* parent,
     }
 
 //    AttachChildCD(new_cd);
+#endif
 #endif
     
     *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
@@ -333,12 +338,14 @@ inline CD::CDInternalErrT CD::InternalDestroy(void)
   cout << "in CD::Destroy Internal Memory"<<endl;
 
 #if _MPI_VER
+#if _KL
   int task_count = cd_id_.task_count();
   cout << "mpi win free for "<< task_count << " mailboxes"<<endl;
 
   for(int i=0; i<task_count; ++i) {
     MPI_Win_free(&(mailbox_[i]));
   }
+#endif
 #endif
 
 //GONG
@@ -1225,7 +1232,7 @@ CDErrT CD::Reexecute(void)
     printf("longjmp\n");
     longjmp(jump_buffer_, 1);
   }
-  else if (ctxt_prv_mode_ == kIncludeStack) {
+  else if (ctxt_prv_mode_ == kExcludeStack) {
     printf("setcontext\n");
     setcontext(&ctxt_); 
   }
@@ -1467,8 +1474,10 @@ CDErrT HeadCD::Destroy(void)
   InternalDestroy();
 
 #if _MPI_VER
+#if _KL
   cout << "HeadCD::Destroy"<<endl;
   MPI_Free_mem(event_flag_);
+#endif
 #endif
 
 

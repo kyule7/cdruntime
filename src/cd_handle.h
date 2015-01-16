@@ -77,8 +77,10 @@ class cd::CDHandle {
 
   public:
 #if _MPI_VER
+#if _KL
     static CDFlagT *pendingFlag_;
     static CDMailBoxT pendingWindow_;
+#endif
 #endif
 
 #if _PROFILER 
