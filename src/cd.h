@@ -106,6 +106,7 @@ class cd::CD : public cd::Serializable {
   public:
 #if _MPI_VER
 #if _KL
+    // Every mailbox resides in head 
     CDMailBoxT *mailbox_;
 #endif
 #endif

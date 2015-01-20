@@ -265,6 +265,8 @@ CDErrT CD::Destroy(void)
 
 #if _MPI_VER
 #if _KL
+  cout << "destroyed cds" << endl;
+//  MPI_Win_free(mailbox_);
   delete mailbox_;
 #endif
 #endif

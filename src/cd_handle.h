@@ -78,6 +78,7 @@ class cd::CDHandle {
   public:
 #if _MPI_VER
 #if _KL
+    // This flag is unique for each process. 
     static CDFlagT *pendingFlag_;
     static CDMailBoxT pendingWindow_;
 #endif

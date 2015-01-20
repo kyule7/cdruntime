@@ -1,7 +1,7 @@
 include ../Makefile.extern
 
 DEBUG_VAR = 0
-MPI_VER_VAR = 0
+MPI_VER_VAR = 1
 PGAS_VER_VAR = 0
 SINGLE_VER_VAR = 0
 
@@ -28,14 +28,15 @@ MAKE_ARGS = CD_ROOT=${CD_ROOT} SIGHT_ROOT=${SIGHT_ROOT} \
 ifeq ($(MPI_VER_VAR), 0)
 CC=g++
 else
-CC=mpig++
+CC=mpic++
 endif
 ERR_FLAGS=-Wall #-fmax-errors=2
 
 CFLAGS  = -g -fPIC -std=gnu++0x ${ERR_FLAGS} 
 LDFLAGS = #${SIGHT_LINKFLAGS}
 CDS_FLAGS=-D_MPI_VER=$(MPI_VER_VAR) -D_PGAS_VER=$(PGAS_VER_VAR) -D_SINGLE_VER=$(SINGLE_VER_VAR) \
-        -D_DEBUG=$(DEBUG_VAR) ${PROFILER_FLAGS} 
+        -D_DEBUG=$(DEBUG_VAR) ${PROFILER_FLAGS} \
+        -D_KL=1 
 
 
 ifeq ($(PROFILER_ENABLED), 1)
