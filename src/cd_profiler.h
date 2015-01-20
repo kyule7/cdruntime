@@ -110,7 +110,7 @@ class CDProfiler : public Profiler {
   bool usr_profile_enable;
 //  std::vector<std::pair<std::string, long>>  usr_profile;
   int sightObj_count_;
-
+  std::map<sight::structure::dbgStream*, int> sightObj_mark_;
   /// Timer-related meta data
   uint64_t this_point_;
   uint64_t that_point_;
@@ -164,8 +164,14 @@ private:
 // By default, there are hiergraph (flowgraph) / module / scope / graph / comparison / attribute widgets supported by CDs.
 class Viz {
 public:
-  Viz(void) {}
-  virtual ~Viz(void) {}
+  Viz(void) {
+    std::cout << "Viz is called" << std::endl; //getchar();
+
+  }
+  virtual ~Viz(void) {
+    std::cout << "~Viz is called" << std::endl;
+  }
+  virtual sightObj *GetSightObj()=0;
 };
 
 class Module : public Viz {
@@ -182,13 +188,16 @@ public:
   void SetUsrProfileOutput(std::pair<std::string, long> name_list);
   void SetUsrProfileOutput(std::initializer_list<std::pair<std::string, long>> name_list);
   void AddUsrProfile(std::string key, long val, int mode);
+  sightObj *GetSightObj() { return m; }
 };
 
 class HierGraph : public Viz {
+public:
   static flowgraph *fg;
 public:
   HierGraph(void);
   ~HierGraph(void);
+  sightObj *GetSightObj() { return fg; }
 };
 
 class Attribute : public Viz {
@@ -198,6 +207,7 @@ class Attribute : public Viz {
 public:
   Attribute(void);
   ~Attribute(void);
+  sightObj *GetSightObj() { return attrVal; }
 };
 
 class Comparison : public Viz {
@@ -207,6 +217,7 @@ class Comparison : public Viz {
 public:
   Comparison(void);
   ~Comparison(void);
+  sightObj *GetSightObj() { return compTag; }
 };
 
 class CDNode : public Viz {
@@ -218,15 +229,17 @@ public:
 };
 
 class Scope : public Viz {
-protected:
+public:
   /// All scopes that are currently live
   scope *s;
 public:
   Scope(void);
   ~Scope(void);
+  sightObj *GetSightObj() { return s; }
 };
 
 class ScopeGraph : public Scope {
+public:
   static graph* scopeGraph;
   scope *prv_s;
 public:

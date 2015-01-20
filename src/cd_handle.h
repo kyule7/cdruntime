@@ -89,8 +89,8 @@ class cd::CDHandle {
 
     //TODO copy these to CD async 
     ucontext_t ctxt_;
-    jmp_buf    jump_buffer_;
-
+    jmp_buf    jmp_buffer_;
+    int jmp_val_;
     // Default Constructor
     CDHandle();
 

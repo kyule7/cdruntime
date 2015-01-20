@@ -123,7 +123,8 @@ class cd::CD : public cd::Serializable {
     /// Set rollback point and options
     CtxtPrvMode     ctxt_prv_mode_;
     ucontext_t      ctxt_;
-    jmp_buf         jump_buffer_;
+    jmp_buf         jmp_buffer_;
+    int             jmp_val_;
     uint64_t        option_save_context_; 
 
     /// Flag for normal execution or reexecution.

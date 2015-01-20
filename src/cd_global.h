@@ -41,7 +41,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <vector>
 #include <map>
 #include <functional>
-
+#include <csetjmp>
 // This could be different from MPI program to PGAS program
 // key is the unique ID from 0 for each CD node.
 // value is the unique ID for mpi communication group or thread group.
@@ -278,12 +278,12 @@ ISSUE 2 (Kyushick)
 We are increasing the number of reexecution inside Begin(). So, the point of time when we mark rollback point is not after Begin() but before Begin()
 */
 
-//#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff()
+//#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff()
 
 // Macros for setjump / getcontext
 // So users should call this in their application, not call cd_handle->Begin().
-//#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
-#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
+//#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
+#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
 #define CD_Complete(X) (X)->Complete()   
 
 

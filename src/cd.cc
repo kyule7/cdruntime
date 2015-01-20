@@ -38,8 +38,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_id.h"
 //#include "data_handle.h"
 #include "cd_entry.h"
+#include "cd_path.h"
 #include <stdexcept>
 #include <typeinfo>
+#include <csetjmp>
 
 using namespace cd;
 using namespace std;
@@ -152,7 +154,7 @@ void CD::Initialize(CDHandle* cd_parent,
 
 void CD::Init()
 {
-  ctxt_prv_mode_ = kIncludeStack; 
+  ctxt_prv_mode_ = kExcludeStack; 
   cd_exec_mode_  = kSuspension;
   option_save_context_ = 0;
 //#if _WORK 
@@ -1230,9 +1232,10 @@ CDErrT CD::Reexecute(void)
   //TODO We need to consider collective re-start. 
   if(ctxt_prv_mode_ == kExcludeStack) {
     printf("longjmp\n");
-    longjmp(jump_buffer_, 1);
+    cout << jmp_buffer_ << endl; //getchar();
+    longjmp(jmp_buffer_, jmp_val_);
   }
-  else if (ctxt_prv_mode_ == kExcludeStack) {
+  else if (ctxt_prv_mode_ == kIncludeStack) {
     printf("setcontext\n");
     setcontext(&ctxt_); 
   }

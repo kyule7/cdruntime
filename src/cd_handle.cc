@@ -713,6 +713,7 @@ CDErrT CDHandle::Destroy(bool collective)
 CDErrT CDHandle::Begin(bool collective, const char* label)
 {
 
+//  cout << jmp_buffer_ << endl; getchar();
   //TODO It is illegal to call a collective Begin() on a CD that was created without a collective Create()??
   if ( collective ) {
     // Sync();
@@ -785,7 +786,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   /// It will be averaged out with the number of seq. CDs.
 #if _PROFILER
   if(ptr_cd()->cd_exec_mode_ == 0) { 
-    profiler_->GetPrvData(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
+//    profiler_->GetPrvData(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
   }
 #endif
 
@@ -1041,7 +1042,11 @@ void CDHandle::CommitPreserveBuff()
 {
 //  if(ptr_cd_->cd_exec_mode_ ==CD::kExecution){
   if( ptr_cd_->ctxt_prv_mode_ == CD::kExcludeStack) {
-    memcpy(ptr_cd_->jump_buffer_, jump_buffer_, sizeof(jmp_buf));
+//  cout << "Commit jmp buffer!" << endl; getchar();
+//  cout << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << ", size: "<< sizeof(jmp_buf) << endl; getchar();
+    memcpy(ptr_cd_->jmp_buffer_, jmp_buffer_, sizeof(jmp_buf));
+    ptr_cd_->jmp_val_ = jmp_val_;
+//  cout << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << endl; getchar();
   }
   else {
     ptr_cd_->ctxt_ = this->ctxt_;
@@ -1087,7 +1092,7 @@ jmp_buf* CDHandle::jump_buffer()
 {
   if( IsHead() ) {
 
-    return &ptr_cd_->jump_buffer_;
+    return &ptr_cd_->jmp_buffer_;
   }
   else {
     //FIXME: need to get the flag from remote
