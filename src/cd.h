@@ -69,7 +69,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 // data structure to store incompleted log entries
 struct IncompleteLogEntry{
-  void * addr_;
+  //void * addr_;
+  unsigned long addr_;
   unsigned long length_;
   unsigned long flag_;
   bool complete_;
@@ -376,11 +377,11 @@ update the preserved data.
     ////SZ
     //CommLogErrT ProbeAndReadData(unsigned long flag);
     //SZ
-    CommLogErrT LogData(void *data_ptr, unsigned long length, 
+    CommLogErrT LogData(const void *data_ptr, unsigned long length, 
                       bool completed=true, unsigned long flag=0,
                       bool isrecv=0);
     //SZ
-    CommLogErrT ProbeData(void *data_ptr, unsigned long length);
+    CommLogErrT ProbeData(const void *data_ptr, unsigned long length);
     //SZ
     CommLogErrT ReadData(void *data_ptr, unsigned long length);
     //SZ

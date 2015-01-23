@@ -54,6 +54,7 @@ int MPI_Send(void *buf,
              int tag, 
              MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret=0;
   PRINT_DEBUG("here inside MPI_Send\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -87,6 +88,7 @@ int MPI_Send(void *buf,
     mpi_ret = PMPI_Send(buf, count, datatype, dest, tag, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -99,6 +101,7 @@ int MPI_Ssend(void *buf,
               int tag, 
               MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret=0;
   PRINT_DEBUG("here inside MPI_Ssend\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -133,6 +136,7 @@ int MPI_Ssend(void *buf,
     mpi_ret = PMPI_Ssend(buf, count, datatype, dest, tag, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -146,6 +150,7 @@ int MPI_Rsend(void *buf,
               int tag, 
               MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret=0;
   PRINT_DEBUG("here inside MPI_Rsend\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -180,6 +185,7 @@ int MPI_Rsend(void *buf,
     mpi_ret = PMPI_Rsend(buf, count, datatype, dest, tag, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -193,6 +199,7 @@ int MPI_Bsend(void *buf,
               int tag, 
               MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret=0;
   PRINT_DEBUG("here inside MPI_Bsend\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -227,6 +234,7 @@ int MPI_Bsend(void *buf,
     mpi_ret = PMPI_Bsend(buf, count, datatype, dest, tag, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -240,6 +248,7 @@ int MPI_Recv(void *buf,
              MPI_Comm comm, 
              MPI_Status *status)
 {
+  app_side = false;
   int mpi_ret=0;
   PRINT_DEBUG("here inside MPI_Recv\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -271,6 +280,7 @@ int MPI_Recv(void *buf,
     mpi_ret = PMPI_Recv(buf, count, datatype, src, tag, comm, status);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -289,6 +299,7 @@ int MPI_Sendrecv(void *sendbuf,
                  MPI_Comm comm, 
                  MPI_Status *status)
 {
+  app_side = false;
   int mpi_ret=0;
   PRINT_DEBUG("here inside MPI_Sendrecv\n");
   PRINT_DEBUG("sendbuf=%p, &sendbuf=%p\n", sendbuf, &sendbuf);
@@ -341,6 +352,7 @@ int MPI_Sendrecv(void *sendbuf,
                             recvbuf, recvcount, recvtype, source, recvtag, comm, status);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -356,6 +368,7 @@ int MPI_Sendrecv_replace(void *buf,
                          MPI_Comm comm, 
                          MPI_Status *status)
 {
+  app_side = false;
   int mpi_ret=0;
   PRINT_DEBUG("here inside MPI_Recv\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -403,6 +416,7 @@ int MPI_Sendrecv_replace(void *buf,
     mpi_ret = PMPI_Sendrecv_replace(buf, count, datatype, dest, sendtag, source, recvtag, comm, status);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -420,6 +434,7 @@ int MPI_Isend(void *buf,
               MPI_Comm comm, 
               MPI_Request *request)
 {
+  app_side = false;
   int mpi_ret=0;
   PRINT_DEBUG("here inside MPI_Isend\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -455,6 +470,7 @@ int MPI_Isend(void *buf,
     mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -467,6 +483,7 @@ int MPI_Irecv(void *buf,
               MPI_Comm comm, 
               MPI_Request *request)
 {
+  app_side = false;
   int mpi_ret=0;
   PRINT_DEBUG("here inside MPI_Irecv\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -502,6 +519,7 @@ int MPI_Irecv(void *buf,
     mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -509,6 +527,7 @@ int MPI_Irecv(void *buf,
 int MPI_Wait(MPI_Request *request, 
              MPI_Status *status)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Wait\n");
 
@@ -546,6 +565,7 @@ int MPI_Wait(MPI_Request *request,
     cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)request);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -557,9 +577,10 @@ int MPI_Wait(MPI_Request *request,
 // MPI_Barrier
 int MPI_Barrier (MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret=0;
   PRINT_DEBUG("here inside MPI_Barrier\n");
-  PRINT_DEBUG("comm=%p, &comm=%p\n", comm, &comm);
+  PRINT_DEBUG("comm=%x, &comm=%p\n", comm, &comm);
 
   CDHandle * cur_cd = CDPath::GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
@@ -588,6 +609,7 @@ int MPI_Barrier (MPI_Comm comm)
     mpi_ret = PMPI_Barrier(comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -598,6 +620,7 @@ int MPI_Bcast (void *buffer,
                int root,
                MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret=0;
   PRINT_DEBUG("here inside MPI_Bcast\n");
 
@@ -628,11 +651,12 @@ int MPI_Bcast (void *buffer,
     mpi_ret = PMPI_Bcast(buffer, count, datatype, root, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
 // MPI_Gather
-int MPI_Gather(void *sendbuf,
+int MPI_Gather(const void *sendbuf,
                int sendcnt,
                MPI_Datatype sendtype,
                void *recvbuf,
@@ -641,6 +665,7 @@ int MPI_Gather(void *sendbuf,
                int root, 
                MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Gather\n");
 
@@ -692,6 +717,7 @@ int MPI_Gather(void *sendbuf,
     mpi_ret = PMPI_Gather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -707,6 +733,7 @@ int MPI_Gatherv(void *sendbuf,
                 int root, 
                 MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Gatherv\n");
 
@@ -773,6 +800,7 @@ int MPI_Gatherv(void *sendbuf,
     mpi_ret = PMPI_Gatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, root, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -786,6 +814,7 @@ int MPI_Allgather(void *sendbuf,
                   MPI_Datatype recvtype,
                   MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Allgather\n");
 
@@ -820,6 +849,7 @@ int MPI_Allgather(void *sendbuf,
     mpi_ret = PMPI_Allgather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -834,6 +864,7 @@ int MPI_Allgatherv(void *sendbuf,
                    MPI_Datatype recvtype,
                    MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Allgatherv\n");
 
@@ -884,6 +915,7 @@ int MPI_Allgatherv(void *sendbuf,
     mpi_ret = PMPI_Allgatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -897,6 +929,7 @@ int MPI_Reduce(void *sendbuf,
                int root,
                MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Reduce\n");
 
@@ -949,6 +982,7 @@ int MPI_Reduce(void *sendbuf,
     mpi_ret = PMPI_Reduce(sendbuf, recvbuf, count, datatype, op, root, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -961,6 +995,7 @@ int MPI_Allreduce(void *sendbuf,
                   MPI_Op op, 
                   MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Allreduce\n");
 
@@ -992,6 +1027,7 @@ int MPI_Allreduce(void *sendbuf,
     mpi_ret = PMPI_Allreduce(sendbuf, recvbuf, count, datatype, op, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -1005,6 +1041,7 @@ int MPI_Alltoall(void *sendbuf,
                  MPI_Datatype recvtype,
                  MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Alltoall\n");
 
@@ -1039,6 +1076,7 @@ int MPI_Alltoall(void *sendbuf,
     mpi_ret = PMPI_Alltoall(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -1054,6 +1092,7 @@ int MPI_Alltoallv(void *sendbuf,
                   MPI_Datatype recvtype,
                   MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Alltoallv\n");
 
@@ -1108,6 +1147,7 @@ int MPI_Alltoallv(void *sendbuf,
                              recvbuf, recvcnts, rdispls, recvtype, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -1122,6 +1162,7 @@ int MPI_Scatter(void *sendbuf,
                 int root, 
                 MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Scatter\n");
 
@@ -1153,6 +1194,7 @@ int MPI_Scatter(void *sendbuf,
     mpi_ret = PMPI_Scatter(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -1168,6 +1210,7 @@ int MPI_Scatterv(void *sendbuf,
                  int root, 
                  MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Scatterv\n");
 
@@ -1202,6 +1245,7 @@ int MPI_Scatterv(void *sendbuf,
                             recvbuf, recvcnt, recvtype, root, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -1214,6 +1258,7 @@ int MPI_Reduce_scatter(void *sendbuf,
                        MPI_Op op,
                        MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Reduce_scatter\n");
 
@@ -1249,6 +1294,7 @@ int MPI_Reduce_scatter(void *sendbuf,
     mpi_ret = PMPI_Reduce_scatter(sendbuf, recvbuf, recvcnts, datatype, op, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 
@@ -1261,6 +1307,7 @@ int MPI_Scan(void *sendbuf,
              MPI_Op op,
              MPI_Comm comm)
 {
+  app_side = false;
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Scan\n");
 
@@ -1293,6 +1340,7 @@ int MPI_Scan(void *sendbuf,
     mpi_ret = PMPI_Scan(sendbuf, recvbuf, count, datatype, op, comm);
   }
 
+  app_side = true;
   return mpi_ret;
 }
 

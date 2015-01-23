@@ -3,10 +3,78 @@
 #include <mpi.h>
 #include "cds.h"
 
-//#define PRINTF(...) {printf("%d:",rank);printf(__VA_ARGS__);}
-#define PRINTF(...) {fprintf(fp, __VA_ARGS__);}
+#define PRINTF(...) {printf("%d:",rank);printf(__VA_ARGS__);}
+//#define PRINTF(...) {fprintf(fp, __VA_ARGS__);}
 
 FILE *fp;
+
+// test basic
+int test_basic( int argc, char **argv )
+{
+  MPI_Comm comm;
+  int rank, size;
+  int num_reexec = 0;
+
+  //MPI_Init( &argc, &argv );
+  comm = MPI_COMM_WORLD;
+  /* Determine the sender and receiver */
+  MPI_Comm_rank( comm, &rank );
+  MPI_Comm_size( comm, &size );
+
+  PRINTF("\n\n...............Test Basics...............\n\n");
+  PRINTF("\n\nInit cd runtime and create root CD.\n\n");
+  CDHandle * root = CD_Init(size, rank);
+
+  PRINTF("Root CD begin...\n");
+  CD_Begin(root);
+
+  PRINTF("\n--------------------------------------------------------------\n");
+
+  PRINTF("Create child cd of level 1 ...\n");
+  CDHandle * child1_0 = root->Create("CD1_0", kRelaxed, 0, 0, NULL);
+
+  PRINTF("Begin child cd of level 1 ...\n");
+  CD_Begin(child1_0);
+
+  PRINTF("Print level 1 child CD comm_log_ptr info...\n");
+  if (child1_0->ptr_cd()->cd_type_ == kRelaxed)
+    child1_0->ptr_cd()->comm_log_ptr_->Print();
+  else
+    PRINTF("NULL pointer for strict CD!\n");
+
+  // insert error
+  if (rank%3==0 && num_reexec < 1)
+  {
+    PRINTF("Insert error #%d...\n", num_reexec);
+    num_reexec++;
+    child1_0->CDAssert(false);
+  }
+
+  PRINTF("Print level 1 child CD comm_log_ptr info...\n");
+  if (child1_0->ptr_cd()->cd_type_ == kRelaxed)
+    child1_0->ptr_cd()->comm_log_ptr_->Print();
+  else
+    PRINTF("NULL pointer for strict CD!\n");
+
+  PRINTF("Complete child CD of level 1 ...\n");
+  CD_Complete(child1_0);
+
+  PRINTF("Destroy child CD of level 1 ...\n");
+  child1_0->Destroy();
+
+  PRINTF("\n--------------------------------------------------------------\n");
+
+  PRINTF("Complete root CD...\n");
+  CD_Complete(root);
+
+  PRINTF("Destroy root CD and finalize the runtime...\n");
+  CD_Finalize();
+
+  //fclose(fp);
+
+  //MPI_Finalize();
+  return 0;
+}
 
 /* Gather data from a vector to contiguous */
 
@@ -1876,48 +1944,52 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
 
   MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-  char name[20]; 
-  sprintf(name, "tmp.out.%d", rank);
-  fp = fopen(name, "w");
-  if (fp == NULL)
-  {
-    printf("cannot open new file (%p)!\n", name);
-    return 1;
-  }
+  //// open tmp.out.* file
+  //char name[20]; 
+  //sprintf(name, "tmp.out.%d", rank);
+  //fp = fopen(name, "w");
+  //if (fp == NULL)
+  //{
+  //  printf("cannot open new file (%p)!\n", name);
+  //  return 1;
+  //}
 
+  //ret = test_basic(argc, argv);
+  
   ret = test_gather(argc, argv);
   
-  //// test_gatherv requires 4 processes
-  //ret = test_gatherv(argc, argv);
+  ////// test_gatherv requires 4 processes
+  ////ret = test_gatherv(argc, argv);
 
-  ret = test_bcast(argc, argv);
+  //ret = test_bcast(argc, argv);
 
-  //// test_allgather requires at least 10 processes
-  //ret = test_allgather(argc, argv);
+  ////// test_allgather requires at least 10 processes
+  ////ret = test_allgather(argc, argv);
 
-  //// test_allgatherv requires 10 processes
-  //ret = test_allgatherv(argc, argv);
+  ////// test_allgatherv requires 10 processes
+  ////ret = test_allgatherv(argc, argv);
 
-  ret = test_reduce(argc, argv);
-  
-  ret = test_allreduce(argc, argv);
-  
-  ret = test_alltoall(argc, argv);
-  
-  ret = test_alltoallv(argc, argv);
-  
-  // at most MAX_PROCESSES (default is 10) ranks
-  ret = test_scatter(argc, argv);
-  
-  ret = test_scatterv(argc, argv);
-  
-  ret = test_reduce_scatter(argc, argv);
-  
-  ret = test_scan(argc, argv);
+  //ret = test_reduce(argc, argv);
+  //
+  //ret = test_allreduce(argc, argv);
+  //
+  //ret = test_alltoall(argc, argv);
+  //
+  //ret = test_alltoallv(argc, argv);
+  //
+  //// at most MAX_PROCESSES (default is 10) ranks
+  //ret = test_scatter(argc, argv);
+  //
+  //ret = test_scatterv(argc, argv);
+  //
+  //ret = test_reduce_scatter(argc, argv);
+  //
+  //ret = test_scan(argc, argv);
 
   MPI_Finalize();
   
-  fclose(fp);
+  //// close tmp.out.* file
+  //fclose(fp);
 
   return ret;
 }

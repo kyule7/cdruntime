@@ -173,14 +173,20 @@ CommLogErrT CommLog::InitAlloc()
   if (log_queue_.base_ptr_ == NULL)
   {
     log_queue_.base_ptr_ = new char [queue_size_unit_];
-    if (log_queue_.base_ptr_ == NULL) return kCommLogInitFailed;
+    if (log_queue_.base_ptr_ == NULL) 
+    {
+      return kCommLogInitFailed;
+    }
     log_queue_.queue_size_ = queue_size_unit_;
   }
 
   if (log_table_.base_ptr_ == NULL)
   {
     log_table_.base_ptr_ = new struct LogTableElement [table_size_unit_];
-    if (log_table_.base_ptr_ == NULL) return kCommLogInitFailed;
+    if (log_table_.base_ptr_ == NULL) 
+    {
+      return kCommLogInitFailed;
+    }
     log_table_.table_size_ = table_size_unit_;
   }
 
@@ -272,6 +278,7 @@ bool CommLog::ProbeAndLogDataPacked(void * addr,
   struct LogTable tmp_log_table;
   struct LogTableElement * tmp_table_ptr;
   char * dest_addr;
+
   while (index < child_log_.cur_pos_)
   {
     inner_index = index;
@@ -320,9 +327,11 @@ bool CommLog::ProbeAndLogDataPacked(void * addr,
 }
 
 
-CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length, 
+CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length, 
                           bool completed, unsigned long flag, bool isrecv)
 {
+  bool tmp_app_side = app_side;
+  app_side = false;
   PRINT_DEBUG("LogData of address (%p) and length(%ld)\n", data_ptr, data_length);
 
   CommLogErrT ret;
@@ -350,7 +359,7 @@ CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length,
   {
     // append one entry at the end of my_cd_->incomplete_log_
     struct IncompleteLogEntry tmp_log_entry;
-    tmp_log_entry.addr_ = data_ptr;
+    tmp_log_entry.addr_ = (unsigned long) data_ptr;
     tmp_log_entry.length_ = (unsigned long) data_length;
     tmp_log_entry.flag_ = (unsigned long) flag;
     tmp_log_entry.complete_ = false;
@@ -363,11 +372,12 @@ CommLogErrT CommLog::LogData(void * data_ptr, unsigned long data_length,
 
   new_log_generated_ = true;
 
+  app_side = tmp_app_side;
   return kCommLogOK;
 }
 
 
-CommLogErrT CommLog::WriteLogTable (void * data_ptr, unsigned long data_length, 
+CommLogErrT CommLog::WriteLogTable (const void * data_ptr, unsigned long data_length, 
                                   bool completed, unsigned long flag)
 {
   CommLogErrT ret;
@@ -387,7 +397,7 @@ CommLogErrT CommLog::WriteLogTable (void * data_ptr, unsigned long data_length,
 }
 
 
-CommLogErrT CommLog::WriteLogQueue (void * data_ptr, unsigned long data_length, bool completed)
+CommLogErrT CommLog::WriteLogQueue (const void * data_ptr, unsigned long data_length, bool completed)
 {
   CommLogErrT ret;
   if (log_queue_.cur_pos_ + data_length > log_queue_.queue_size_)
@@ -646,7 +656,7 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
 
 
 // input parameter
-CommLogErrT CommLog::ProbeData(void * buffer, unsigned long length)
+CommLogErrT CommLog::ProbeData(const void * buffer, unsigned long length)
 {
   PRINT_DEBUG("Inside ProbeData!\n");
   PRINT_DEBUG("reexec_pos_: %li\t cur_pos_: %li\n",log_table_reexec_pos_,log_table_.cur_pos_ );

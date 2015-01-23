@@ -76,14 +76,14 @@ class cd::CommLog {
                                bool isrecv);
     // log new data into the queue
     // need to check if running out queues
-    CommLogErrT LogData(void * data_ptr, 
+    CommLogErrT LogData(const void * data_ptr, 
                         unsigned long data_length, 
                         bool completed=true,
                         unsigned long flag=0,
                         bool isrecv=0);
 
     CommLogErrT ReadData(void * buffer, unsigned long length);
-    CommLogErrT ProbeData(void * buffer, unsigned long length);
+    CommLogErrT ProbeData(const void * buffer, unsigned long length);
     //CommLogErrT FindNextTableElement(unsigned long * index);
 
     // push logs to parent
@@ -148,11 +148,11 @@ class cd::CommLog {
     CommLogErrT IncreaseLogTableSize();
     CommLogErrT IncreaseLogQueueSize(unsigned long length);
 
-    CommLogErrT WriteLogTable (void * data_ptr, 
+    CommLogErrT WriteLogTable (const void * data_ptr, 
                               unsigned long data_length, 
                               bool completed,
                               unsigned long flag);
-    CommLogErrT WriteLogQueue (void * data_ptr, 
+    CommLogErrT WriteLogQueue (const void * data_ptr, 
                                unsigned long data_length,
                                bool completed);
     

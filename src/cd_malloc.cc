@@ -102,14 +102,16 @@ if(app_side){
 //	CD* c_CD = current->ptr_cd();
 	//GONG: Determine whether we call real_malloc w/ logging return value or get return value stored in logs
     if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
-			c_CD->libc_log_ptr_->ReadData(&p, size);
+      //SZ
+			c_CD->libc_log_ptr_->ReadData(p, size);
 			PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE malloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
 		}
 		else
 		{
 			p = real_malloc_(size);
 			PRINT_LIBC("libc_log_ptr_: %p\t - EXECUTE MODE malloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
-		  c_CD->libc_log_ptr_->LogData(&p, size);
+      //SZ
+		  c_CD->libc_log_ptr_->LogData(p, size);
 		}
 	}
 	else

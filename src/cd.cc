@@ -1630,7 +1630,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
     // ProbeAndLogData:
     // 1) change Isend/Irecv entry to complete state if there is any
     // 2) log data if Irecv
-    bool found = comm_log_ptr_->ProbeAndLogData(it->addr_, it->length_, flag, it->isrecv_);
+    bool found = comm_log_ptr_->ProbeAndLogData((void*)(it->addr_), it->length_, flag, it->isrecv_);
     if (!found)
     {
       CD* tmp_cd = this;
@@ -1639,7 +1639,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
         if (tmp_cd->GetParentHandle()->ptr_cd()->cd_type_==kRelaxed)
         {
           found = GetParentHandle()->ptr_cd()->comm_log_ptr_
-            ->ProbeAndLogDataPacked(it->addr_, it->length_, flag, it->isrecv_);
+            ->ProbeAndLogDataPacked((void*)(it->addr_), it->length_, flag, it->isrecv_);
           if (found)
             break;
         }
@@ -1662,7 +1662,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 }
 
 //SZ
-CommLogErrT CD::LogData(void *data_ptr, unsigned long length, 
+CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, 
                       bool completed, unsigned long flag, bool isrecv)
 {
   if (comm_log_ptr_ == NULL)
@@ -1674,7 +1674,7 @@ CommLogErrT CD::LogData(void *data_ptr, unsigned long length,
 }
 
 //SZ
-CommLogErrT CD::ProbeData(void *data_ptr, unsigned long length)
+CommLogErrT CD::ProbeData(const void *data_ptr, unsigned long length)
 {
   if (comm_log_ptr_ == NULL)
   {
@@ -1721,7 +1721,7 @@ bool CD::IsNewLogGenerated_libc()
 
 //SZ
 //  struct IncompleteLogEntry{
-//    void * addr_;
+//    unsigned long addr_;
 //    unsigned long length_;
 //    unsigned long flag_;
 //    bool complete_;
@@ -1735,7 +1735,7 @@ void CD::PrintIncompleteLog()
         ii != incomplete_log_.end(); ii++)
   {
     PRINT_DEBUG("\nPrint Incomplete Log information:\n");
-    PRINT_DEBUG("    addr_=%p\n", ii->addr_);
+    PRINT_DEBUG("    addr_=%lx\n", ii->addr_);
     PRINT_DEBUG("    length_=%ld\n", ii->length_);
     PRINT_DEBUG("    flag_=%ld\n", ii->flag_);
     PRINT_DEBUG("    complete_=%d\n", ii->complete_);

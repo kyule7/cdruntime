@@ -619,71 +619,71 @@ int main(int argc, char* argv[])
 
   int flag = 1;
 
-  //PRINTF("\n");
-  //PRINTF("------------------------------------------------------------------------------------\n");
-  //PRINTF("------------------------------------------------------------------------------------\n");
+  PRINTF("\n");
+  PRINTF("------------------------------------------------------------------------------------\n");
+  PRINTF("------------------------------------------------------------------------------------\n");
 
-  //int ret=0;
-  //PRINTF("\nTest relaxed comm logging relaxed functionality...\n");
-  //ret = test_comm_log_relaxed(root, myrank);
+  int ret=0;
+  PRINTF("\nTest relaxed comm logging relaxed functionality...\n");
+  ret = test_comm_log_relaxed(root, myrank);
 
-  //PRINTF("\n\nResults:\n");
-  //if (ret == kError) 
-  //{
-  //  PRINTF("relaxed comm log test failed!\n");
-  //}
-  //else
-  //{
-  //  PRINTF("relaxed comm log test passed!\n");
-  //}
+  PRINTF("\n\nResults:\n");
+  if (ret == kError) 
+  {
+    PRINTF("relaxed comm log test failed!\n");
+  }
+  else
+  {
+    PRINTF("relaxed comm log test passed!\n");
+  }
  
-  //PRINTF("\n");
-  //PRINTF("------------------------------------------------------------------------------------\n");
-  //PRINTF("------------------------------------------------------------------------------------\n");
+  PRINTF("\n");
+  PRINTF("------------------------------------------------------------------------------------\n");
+  PRINTF("------------------------------------------------------------------------------------\n");
 
-  //ret = 0;
-  //PRINTF("\nTest combined comm logging relaxed functionality...\n");
-  //ret = test_comm_log_combined(root, myrank);
+  ret = 0;
+  PRINTF("\nTest combined comm logging relaxed functionality...\n");
+  ret = test_comm_log_combined(root, myrank);
 
-  //PRINTF("\n\nResults:\n");
-  //if (ret == kError) 
-  //{
-  //  PRINTF("combined comm log test failed!\n");
-  //}
-  //else
-  //{
-  //  PRINTF("combined comm log test passed!\n");
-  //}
+  PRINTF("\n\nResults:\n");
+  if (ret == kError) 
+  {
+    PRINTF("combined comm log test failed!\n");
+  }
+  else
+  {
+    PRINTF("combined comm log test passed!\n");
+  }
  
-  //PRINTF("\n");
-  //PRINTF("------------------------------------------------------------------------------------\n");
-  //PRINTF("------------------------------------------------------------------------------------\n");
+  PRINTF("\n");
+  PRINTF("------------------------------------------------------------------------------------\n");
+  PRINTF("------------------------------------------------------------------------------------\n");
 
-  //ret = 0;
-  //if (myrank%2 == 0)
-  //{
-  //  PRINTF("\n%d:Test relaxed comm logging relaxed functionality...\n", myrank);
-  //  ret = test_comm_log_relaxed(root, myrank);
-  //}
-  //else if (myrank%2 != 0)
-  //{
-  //  PRINTF("\n%d:Test combined comm logging relaxed functionality...\n", myrank);
-  //  ret = test_comm_log_combined(root, myrank);
-  //}
+  ret = 0;
+  if (myrank%2 == 0)
+  {
+    PRINTF("\n%d:Test relaxed comm logging relaxed functionality...\n", myrank);
+    ret = test_comm_log_relaxed(root, myrank);
+  }
+  else if (myrank%2 != 0)
+  {
+    PRINTF("\n%d:Test combined comm logging relaxed functionality...\n", myrank);
+    ret = test_comm_log_combined(root, myrank);
+  }
 
-  //PRINTF("\n\nResults:\n");
-  //if (ret == kError) 
-  //{
-  //  PRINTF("final comm log test failed!\n");
-  //}
-  //else
-  //{
-  //  PRINTF("final comm log test passed!\n");
-  //}
+  PRINTF("\n\nResults:\n");
+  if (ret == kError) 
+  {
+    PRINTF("final comm log test failed!\n");
+  }
+  else
+  {
+    PRINTF("final comm log test passed!\n");
+  }
 
-  //PRINTF("\n");
-  //PRINTF("------------------------------------------------------------------------------------\n");
-  //PRINTF("------------------------------------------------------------------------------------\n");
+  PRINTF("\n");
+  PRINTF("------------------------------------------------------------------------------------\n");
+  PRINTF("------------------------------------------------------------------------------------\n");
   
   if (num_reexec < 2)
   {
