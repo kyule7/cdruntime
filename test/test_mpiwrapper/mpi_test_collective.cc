@@ -904,7 +904,7 @@ int test_reduce( int argc, char **argv )
       PRINTF("NULL pointer for strict CD!\n");
 
     // insert error
-    if (rank%3==0 && num_reexec < 2)
+    if ((rank%3==0 && num_reexec<2) || (count==512 && num_reexec<3))
     {
       PRINTF("Insert error #%d...\n", num_reexec);
       num_reexec++;
@@ -1276,7 +1276,7 @@ int test_alltoallv( int argc, char **argv )
     sbuf[i] = i + 100*rank;
     rbuf[i] = -i;
   }
-  PRINTF("\nbefore MPI_Alltoall communication:");
+  PRINTF("\nbefore MPI_Alltoallv communication:");
   PRINTF("\nsbuf information:");
   for (i=0; i<size*size; i++) {
     if (i%size==0) PRINTF("\n");
@@ -1317,7 +1317,7 @@ int test_alltoallv( int argc, char **argv )
   MPI_Alltoallv( sbuf, sendcounts, sdispls, MPI_INT,
                  rbuf, recvcounts, rdispls, MPI_INT, comm );
 
-  PRINTF("\nafter MPI_Alltoall communication:");
+  PRINTF("\nafter MPI_Alltoallv communication:");
   PRINTF("\nsbuf information:");
   for (i=0; i<size*size; i++) {
     if (i%size==0) PRINTF("\n");
@@ -1989,37 +1989,36 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  //ret = test_basic(argc, argv);
+  ret = test_basic(argc, argv);
   
-  //ret = test_gather(argc, argv);
+  ret = test_gather(argc, argv);
   
-  ////// test_gatherv requires 4 processes
-  ////ret = test_gatherv(argc, argv);
+  //// test_gatherv requires 4 processes
+  //ret = test_gatherv(argc, argv);
 
-  //ret = test_bcast(argc, argv);
+  ret = test_bcast(argc, argv);
 
-  ////// test_allgather requires at least 10 processes
-  ////ret = test_allgather(argc, argv);
+  //// test_allgather requires at least MAX_PROCESSES (default is 10) processes
+  //ret = test_allgather(argc, argv);
 
-  // test_allgatherv requires 10 processes
-  ret = test_allgatherv(argc, argv);
+  //// test_allgatherv requires MAX_PROCESSES (default is 10) processes
+  //ret = test_allgatherv(argc, argv);
 
-  //ret = test_reduce(argc, argv);
-  //
-  //ret = test_allreduce(argc, argv);
-  //
-  //ret = test_alltoall(argc, argv);
-  //
-  //ret = test_alltoallv(argc, argv);
-  //
-  //// at most MAX_PROCESSES (default is 10) ranks
-  //ret = test_scatter(argc, argv);
-  //
-  //ret = test_scatterv(argc, argv);
-  //
-  //ret = test_reduce_scatter(argc, argv);
-  //
-  //ret = test_scan(argc, argv);
+  ret = test_reduce(argc, argv);
+  
+  ret = test_allreduce(argc, argv);
+  
+  ret = test_alltoall(argc, argv);
+  
+  ret = test_alltoallv(argc, argv);
+  
+  ret = test_scatter(argc, argv);
+  
+  ret = test_scatterv(argc, argv);
+  
+  ret = test_reduce_scatter(argc, argv);
+  
+  ret = test_scan(argc, argv);
 
   MPI_Finalize();
   

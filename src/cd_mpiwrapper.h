@@ -105,7 +105,7 @@ int MPI_Allgatherv(const void *sendbuf,
                    MPI_Datatype recvtype,
                    MPI_Comm comm);
 
-int MPI_Reduce(void *sendbuf,
+int MPI_Reduce(const void *sendbuf,
                void *recvbuf, 
                int count,
                MPI_Datatype datatype,
@@ -113,14 +113,14 @@ int MPI_Reduce(void *sendbuf,
                int root,
                MPI_Comm comm);
 
-int MPI_Allreduce(void *sendbuf,
+int MPI_Allreduce(const void *sendbuf,
                   void *recvbuf, 
                   int count,
                   MPI_Datatype datatype,
                   MPI_Op op, 
                   MPI_Comm comm);
 
-int MPI_Alltoall(void *sendbuf,
+int MPI_Alltoall(const void *sendbuf,
                  int sendcnt,
                  MPI_Datatype sendtype,
                  void *recvbuf,
@@ -128,17 +128,17 @@ int MPI_Alltoall(void *sendbuf,
                  MPI_Datatype recvtype,
                  MPI_Comm comm);
 
-int MPI_Alltoallv(void *sendbuf,
-                  int *sendcnts,
-                  int *sdispls,
+int MPI_Alltoallv(const void *sendbuf,
+                  const int *sendcnts,
+                  const int *sdispls,
                   MPI_Datatype sendtype,
                   void *recvbuf,
-                  int *recvcnts,
-                  int *rdispls,
+                  const int *recvcnts,
+                  const int *rdispls,
                   MPI_Datatype recvtype,
                   MPI_Comm comm);
 
-int MPI_Scatter(void *sendbuf,
+int MPI_Scatter(const void *sendbuf,
                 int sendcnt,
                 MPI_Datatype sendtype,
                 void *recvbuf,
@@ -147,9 +147,9 @@ int MPI_Scatter(void *sendbuf,
                 int root, 
                 MPI_Comm comm);
 
-int MPI_Scatterv(void *sendbuf,
-                 int *sendcnts,
-                 int *displs,
+int MPI_Scatterv(const void *sendbuf,
+                 const int *sendcnts,
+                 const int *displs,
                  MPI_Datatype sendtype,
                  void *recvbuf,
                  int recvcnt,
@@ -157,14 +157,14 @@ int MPI_Scatterv(void *sendbuf,
                  int root, 
                  MPI_Comm comm);
 
-int MPI_Reduce_scatter(void *sendbuf,
+int MPI_Reduce_scatter(const void *sendbuf,
                        void *recvbuf,
-                       int *recvcnts,
+                       const int *recvcnts,
                        MPI_Datatype datatype,
                        MPI_Op op,
                        MPI_Comm comm);
 
-int MPI_Scan(void *sendbuf,
+int MPI_Scan(const void *sendbuf,
              void *recvbuf,
              int count,
              MPI_Datatype datatype,
