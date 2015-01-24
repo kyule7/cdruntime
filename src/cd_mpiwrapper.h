@@ -78,17 +78,17 @@ int MPI_Gather(void *sendbuf,
                int root, 
                MPI_Comm comm);
 
-int MPI_Gatherv(void *sendbuf,
+int MPI_Gatherv(const void *sendbuf,
                 int sendcnt,
                 MPI_Datatype sendtype,
                 void *recvbuf,
-                int *recvcnts,
-                int *displs,
+                const int *recvcnts,
+                const int *displs,
                 MPI_Datatype recvtype,
                 int root, 
                 MPI_Comm comm);
 
-int MPI_Allgather(void *sendbuf,
+int MPI_Allgather(const void *sendbuf,
                   int sendcnt,
                   MPI_Datatype sendtype,
                   void *recvbuf,
@@ -96,12 +96,12 @@ int MPI_Allgather(void *sendbuf,
                   MPI_Datatype recvtype,
                   MPI_Comm comm);
 
-int MPI_Allgatherv(void *sendbuf,
+int MPI_Allgatherv(const void *sendbuf,
                    int sendcnt,
                    MPI_Datatype sendtype,
                    void *recvbuf,
-                   int *recvcnts,
-                   int *displs,
+                   const int *recvcnts,
+                   const int *displs,
                    MPI_Datatype recvtype,
                    MPI_Comm comm);
 

@@ -3,8 +3,8 @@
 #include <mpi.h>
 #include "cds.h"
 
-#define PRINTF(...) {printf("%d:",rank);printf(__VA_ARGS__);}
-//#define PRINTF(...) {fprintf(fp, __VA_ARGS__);}
+//#define PRINTF(...) {printf("%d:",rank);printf(__VA_ARGS__);}
+#define PRINTF(...) {fprintf(fp, __VA_ARGS__);}
 
 FILE *fp;
 
@@ -453,7 +453,7 @@ int test_bcast( int argc, char **argv )
 }
 
 // test MPI_Allgather
-#define MAX_PROCESSES 20
+#define MAX_PROCESSES 10
 int test_allgather( int argc, char **argv )
 {
   int num_reexec = 0;
@@ -461,6 +461,7 @@ int test_allgather( int argc, char **argv )
   int rank, size;
   int i,j;
   int table[MAX_PROCESSES][MAX_PROCESSES];
+  int recv_table[MAX_PROCESSES][MAX_PROCESSES];
   int errors=0;
   int participants;
 
@@ -505,7 +506,10 @@ int test_allgather( int argc, char **argv )
   PRINTF("Application initialization...\n");
   for (i=0; i<MAX_PROCESSES;i++)
     for (j=0; j<MAX_PROCESSES; j++)
+    {
       table[i][j] = i+j;
+      recv_table[i][j] = i+j;
+    }
 
   // real computation starts...
   PRINTF("Application computation starts...\n");
@@ -517,6 +521,7 @@ int test_allgather( int argc, char **argv )
     PRINTF("Number of processors must be at least %d\n", MAX_PROCESSES);
     MPI_Abort( MPI_COMM_WORLD, 1 );
   }
+
   if ( (rank < participants) ) {
     /* Determine what rows are my responsibility */
     int block_size = MAX_PROCESSES / participants;
@@ -528,12 +533,27 @@ int test_allgather( int argc, char **argv )
     for (i=begin_row; i<end_row ;i++)
       for (j=0; j<MAX_PROCESSES; j++)
         table[i][j] = rank + 10;
+
+    PRINTF("\nRecv Table information (recv_table[%d][%d]) before MPI_Allgather:\n", MAX_PROCESSES, MAX_PROCESSES);
+    for (i=0; i<MAX_PROCESSES;i++){
+      for (j=0; j<MAX_PROCESSES; j++)
+        PRINTF("%3d\t",recv_table[i][j]);
+      PRINTF("\n");
+    }
     /* Everybody gets the gathered table */
     MPI_Allgather(&table[begin_row][0], send_count, MPI_INT, 
-                  &table[0][0], recv_count, MPI_INT, MPI_COMM_WORLD);
+                  &recv_table[0][0], recv_count, MPI_INT, MPI_COMM_WORLD);
+
+    PRINTF("\nRecv Table information (recv_table[%d][%d]) after MPI_Allgather:\n", MAX_PROCESSES, MAX_PROCESSES);
+    for (i=0; i<MAX_PROCESSES;i++){
+      for (j=0; j<MAX_PROCESSES; j++)
+        PRINTF("%3d\t",recv_table[i][j]);
+      PRINTF("\n");
+    }
+
     /* Everybody should have the same table now, */
     for (i=0; i<MAX_PROCESSES;i++) {
-      if ( (table[i][0] - table[i][MAX_PROCESSES-1] !=0) ) 
+      if ( (recv_table[i][0] - recv_table[i][MAX_PROCESSES-1] !=0) ) 
         errors++;
     }
   } 
@@ -569,7 +589,14 @@ int test_allgather( int argc, char **argv )
     PRINTF("\nTable information (table[%d][%d]):\n", MAX_PROCESSES, MAX_PROCESSES);
     for (i=0; i<MAX_PROCESSES;i++){
       for (j=0; j<MAX_PROCESSES; j++)
-        PRINTF("%d\t",table[i][j]);
+        PRINTF("%3d\t",table[i][j]);
+      PRINTF("\n");
+    }
+
+    PRINTF("\nRecv Table information (recv_table[%d][%d]):\n", MAX_PROCESSES, MAX_PROCESSES);
+    for (i=0; i<MAX_PROCESSES;i++){
+      for (j=0; j<MAX_PROCESSES; j++)
+        PRINTF("%3d\t",recv_table[i][j]);
       PRINTF("\n");
     }
   }
@@ -602,6 +629,7 @@ int test_allgatherv( int argc, char **argv )
   // application definitions
   int i,j;
   int table[MAX_PROCESSES][MAX_PROCESSES];
+  int recv_table[MAX_PROCESSES][MAX_PROCESSES];
   int errors=0;
   int participants;
   int displs[MAX_PROCESSES];
@@ -648,11 +676,15 @@ int test_allgatherv( int argc, char **argv )
   PRINTF("Application initialization...\n");
   for (i=0; i<MAX_PROCESSES;i++)
     for (j=0; j<MAX_PROCESSES; j++)
+    {
       table[i][j] = i+j;
-  PRINTF("\nTable information (table[%d][%d]) after initialization:\n", MAX_PROCESSES, MAX_PROCESSES);
+      recv_table[i][j] = i+j;
+    }
+
+  PRINTF("\nTable information (recv_table[%d][%d]) after initialization:\n", MAX_PROCESSES, MAX_PROCESSES);
   for (i=0; i<MAX_PROCESSES;i++){
     for (j=0; j<MAX_PROCESSES; j++)
-      PRINTF("%3d\t",table[i][j]);
+      PRINTF("%3d\t",recv_table[i][j]);
     PRINTF("\n");
   }
 
@@ -686,18 +718,18 @@ int test_allgatherv( int argc, char **argv )
 
     /* Everybody gets the gathered data */
     MPI_Allgatherv(&table[begin_row][0], send_count, MPI_INT, 
-                  &table[0][0], recv_counts, displs, MPI_INT, MPI_COMM_WORLD);
+                  &recv_table[0][0], recv_counts, displs, MPI_INT, MPI_COMM_WORLD);
     /* Everybody should have the same table now.
        The entries are:
        Table[i][j] = (i/block_size) + 10;
     */
 
     for (i=0; i<MAX_PROCESSES;i++) 
-      if ( (table[i][0] - table[i][MAX_PROCESSES-1] !=0) ) 
+      if ( (recv_table[i][0] - recv_table[i][MAX_PROCESSES-1] !=0) ) 
         errors++;
     for (i=0; i<MAX_PROCESSES;i++) {
       for (j=0; j<MAX_PROCESSES;j++) {
-        if (table[i][j] != (i/block_size) + 10) errors++;
+        if (recv_table[i][j] != (i/block_size) + 10) errors++;
       }
     }
     if (errors) {
@@ -705,9 +737,12 @@ int test_allgatherv( int argc, char **argv )
       for (i=0; i<MAX_PROCESSES;i++) {
         PRINTF("\n");
         for (j=0; j<MAX_PROCESSES; j++)
-          PRINTF("%3d\t",table[i][j]);
+          PRINTF("%3d\t",recv_table[i][j]);
       }
       PRINTF("\n");
+    }
+    else{
+      PRINTF("\n!!! NO Error!!!\n");
     }
   } 
 
@@ -735,10 +770,10 @@ int test_allgatherv( int argc, char **argv )
   if (errors)
   {
     PRINTF("[%d] done with ERRORS(%d)!\n", rank, errors);
-    PRINTF("\nTable information (table[%d][%d]):\n", MAX_PROCESSES, MAX_PROCESSES);
+    PRINTF("\nTable information (recv_table[%d][%d]):\n", MAX_PROCESSES, MAX_PROCESSES);
     for (i=0; i<MAX_PROCESSES;i++){
       for (j=0; j<MAX_PROCESSES; j++)
-        PRINTF("%3d\t",table[i][j]);
+        PRINTF("%3d\t",recv_table[i][j]);
       PRINTF("\n");
     }
   }
@@ -746,10 +781,10 @@ int test_allgatherv( int argc, char **argv )
   {
     PRINTF("\n!!! No Error !!!\n");
 
-    PRINTF("\nTable information (table[%d][%d]):\n", MAX_PROCESSES, MAX_PROCESSES);
+    PRINTF("\nTable information (recv_table[%d][%d]):\n", MAX_PROCESSES, MAX_PROCESSES);
     for (i=0; i<MAX_PROCESSES;i++){
       for (j=0; j<MAX_PROCESSES; j++)
-        PRINTF("%d\t",table[i][j]);
+        PRINTF("%d\t",recv_table[i][j]);
       PRINTF("\n");
     }
   }
@@ -1944,19 +1979,19 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
 
   MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-  //// open tmp.out.* file
-  //char name[20]; 
-  //sprintf(name, "tmp.out.%d", rank);
-  //fp = fopen(name, "w");
-  //if (fp == NULL)
-  //{
-  //  printf("cannot open new file (%p)!\n", name);
-  //  return 1;
-  //}
+  // open tmp.out.* file
+  char name[20]; 
+  sprintf(name, "tmp.out.%d", rank);
+  fp = fopen(name, "w");
+  if (fp == NULL)
+  {
+    printf("cannot open new file (%p)!\n", name);
+    return 1;
+  }
 
   //ret = test_basic(argc, argv);
   
-  ret = test_gather(argc, argv);
+  //ret = test_gather(argc, argv);
   
   ////// test_gatherv requires 4 processes
   ////ret = test_gatherv(argc, argv);
@@ -1966,8 +2001,8 @@ int main(int argc, char** argv)
   ////// test_allgather requires at least 10 processes
   ////ret = test_allgather(argc, argv);
 
-  ////// test_allgatherv requires 10 processes
-  ////ret = test_allgatherv(argc, argv);
+  // test_allgatherv requires 10 processes
+  ret = test_allgatherv(argc, argv);
 
   //ret = test_reduce(argc, argv);
   //
@@ -1988,8 +2023,8 @@ int main(int argc, char** argv)
 
   MPI_Finalize();
   
-  //// close tmp.out.* file
-  //fclose(fp);
+  // close tmp.out.* file
+  fclose(fp);
 
   return ret;
 }
