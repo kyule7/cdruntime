@@ -47,7 +47,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // blocking send: this one will return when the buffer is ready to reuse, but not guarantee messages
 // have been received, because small messages may be copied into internal buffers
 // this function is thread-safe
-int MPI_Send(void *buf, 
+int MPI_Send(const void *buf, 
              int count, 
              MPI_Datatype datatype, 
              int dest, 
@@ -94,7 +94,7 @@ int MPI_Send(void *buf,
 
 // synchronous send: the send will complete until the corresponding receive has been posted
 // note: this function is thread-safe
-int MPI_Ssend(void *buf, 
+int MPI_Ssend(const void *buf, 
               int count, 
               MPI_Datatype datatype, 
               int dest, 
@@ -143,7 +143,7 @@ int MPI_Ssend(void *buf,
 // ready send: this function can only be called when user is sure receive call has been posted
 // this function may save some handshakes for communication in some MPI implementations
 // note: this function is thread-safe
-int MPI_Rsend(void *buf, 
+int MPI_Rsend(const void *buf, 
               int count, 
               MPI_Datatype datatype, 
               int dest, 
@@ -192,7 +192,7 @@ int MPI_Rsend(void *buf,
 // basic send with user-provided buffering, need buffer attach/detach
 // messages are guaranteed to arrive only after buffer detach
 // note: this function is thread-safe
-int MPI_Bsend(void *buf, 
+int MPI_Bsend(const void *buf, 
               int count, 
               MPI_Datatype datatype, 
               int dest, 
@@ -286,7 +286,7 @@ int MPI_Recv(void *buf,
 
 // send and recv a message
 // this function is thread-safe
-int MPI_Sendrecv(void *sendbuf, 
+int MPI_Sendrecv(const void *sendbuf, 
                  int sendcount, 
                  MPI_Datatype sendtype, 
                  int dest, 
