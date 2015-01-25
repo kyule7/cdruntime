@@ -42,23 +42,29 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <assert.h>
 #include <utility>
 #include <math.h>
+#include <fstream>
 
 using namespace cd;
 using namespace std;
 uint64_t Util::gen_object_id_=0;
 CDPath* CDPath::uniquePath_;
 
-DebugStream cd::dbgStream;
+#if _DEBUG
+std::ostringstream cd::dbg;
+#endif
 
 #if _MPI_VER
 #if _KL
 CDFlagT *CDHandle::pendingFlag_; 
-CDMailBoxT CDHandle::pendingWindow_;
-#endif
-#endif
-//CDFlagT *CDHandle::pendingFlag_; 
 //CDMailBoxT CDHandle::pendingWindow_;
-//int cd::myTaskID = 0;
+#endif
+#endif
+int cd::myTaskID = 0;
+
+//StringBuffer &operator<<(StringBuffer &str_buf, const std::ostream &t) {
+//  str_buf._stream << t;
+//  return str_buf;
+//}
 
 // Global functions -------------------------------------------------------
 /// CD_Init()
@@ -70,16 +76,17 @@ CDMailBoxT CDHandle::pendingWindow_;
 /// Register Root CD
 CDHandle* cd::CD_Init(int numTask, int myRank)
 {
-//  myTaskID = myRank;
+  myTaskID = myRank;
 //  CDHandle* root_cd = new CDHandle(NULL, "Root", NodeID(ROOT_COLOR, myRank, numTask, 0), kStrict, 0);
-  dbgStream << "Great!"<<endl; //getchar();
-
 #if _MPI_VER
 #if _KL
   MPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &CDHandle::pendingFlag_);
-  MPI_Win_create(CDHandle::pendingFlag_, 1, sizeof(CDFlagT), MPI_INFO_NULL, MPI_COMM_WORLD, &CDHandle::pendingWindow_);
+  // Initialize pending flag
+  *CDHandle::pendingFlag_ = 0;
+//  MPI_Win_create(CDHandle::pendingFlag_, 1, sizeof(CDFlagT), MPI_INFO_NULL, MPI_COMM_WORLD, &CDHandle::pendingWindow_);
 #endif
 #endif
+
   CD::CDInternalErrT internal_err;
   CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myRank, ROOT_HEAD_ID, numTask)), kStrict, 0, &internal_err);
   CDPath::GetCDPath()->push_back(root_cd_handle);
@@ -92,8 +99,27 @@ CDHandle* cd::CD_Init(int numTask, int myRank)
   return root_cd_handle;
 }
 
+void cd::WriteDbgStream(std::ostringstream *oss)
+{
+#if _DEBUG
+  std::string output_filename("./output/output_");
+  output_filename = output_filename + string(to_string(myTaskID));
+  std::ofstream out_file_cd(output_filename.c_str());
 
-void cd::CD_Finalize(void)
+  out_file_cd << dbg.str() << endl;
+  out_file_cd.close();
+
+  output_filename.clear();
+  output_filename  = "./output/output_app_";
+  output_filename = output_filename + string(to_string(myTaskID));
+  std::ofstream out_file_app(output_filename.c_str());
+
+  out_file_app << oss->str() << endl;
+  out_file_app.close();
+#endif
+}
+
+void cd::CD_Finalize(std::ostringstream *oss)
 {
 //  assert(CDPath::GetCDPath()->size()==1); // There should be only on CD which is root CD
 //  assert(CDPath::GetCDPath()->back()!=NULL);
@@ -105,12 +131,15 @@ void cd::CD_Finalize(void)
 
 #if _MPI_VER
 #if _KL
-  MPI_Win_free(&CDHandle::pendingWindow_);
+//  MPI_Win_free(&CDHandle::pendingWindow_);
   MPI_Free_mem(CDHandle::pendingFlag_);
 #endif
 #endif
   
 //  CDPath::GetRootCD()->Destroy();
+#if _DEBUG
+  if(oss != NULL) WriteDbgStream(oss);
+#endif
 }
 
 // CDHandle Member Methods ------------------------------------------------------------
@@ -130,6 +159,10 @@ CDHandle::CDHandle()
   //profiler_ = new NullProfiler();
 #endif
   SplitCD = &SplitCD_3D;
+  if(node_id().size() > 1)
+    MPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), MPI_INFO_NULL, MPI_COMM_WORLD, &pendingWindow_);
+  else
+    cout << "KL : size is 1" << endl;
   
 }
 
@@ -151,6 +184,10 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
 #else
   //profiler_ = new NullProfiler();
 #endif
+  if(node_id_.size() > 1)
+    MPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), MPI_INFO_NULL, MPI_COMM_WORLD, &pendingWindow_);
+  else
+    cout << "KL : size is 1" << endl;
 }
 
 CDHandle::~CDHandle()
@@ -163,6 +200,10 @@ CDHandle::~CDHandle()
   else {  // There is no CD for this CDHandle!!
 
   }
+  if(node_id_.size() > 1)
+    MPI_Win_free(&pendingWindow_);
+  else
+    cout << "KL : size is 1" << endl;
 }
 
 void CDHandle::Init(CD* ptr_cd, const NodeID& node_id)
@@ -197,7 +238,7 @@ CDHandle* CDHandle::Create(const char* name,
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
 
-//  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;
+//  dbg<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;
   
   return new_cd_handle;
 }
@@ -232,12 +273,12 @@ int SplitCD_3D(const int& my_task_id,
   int new_num_y = num_y / num_children_y;
   int new_num_z = num_z / num_children_z;
 
-//  cout<<"CD : "<< ptr_cd()->name_<<"num_children = "<< num_children 
+//  dbg<<"CD : "<< ptr_cd()->name_<<"num_children = "<< num_children 
 //  <<", num_x = "<< num_x 
 //  <<", new_children_x = "<< num_children_x 
-//  <<", new_num_x = "<< new_num_x <<"node size: "<<my_size<<"\n\n"<<endl; //getchar();
+//  <<", new_num_x = "<< new_num_x <<"node size: "<<my_size<<"\n\n"<<endl; //dbgBreak();
 
-//  cout<<"split check"<<endl;
+//  dbg<<"split check"<<endl;
   assert(num_x*num_y*num_z == my_size);
   assert(num_children_x * num_children_y * num_children_z == (int)num_children);
   assert(new_num_x * new_num_y * new_num_z == new_size);
@@ -258,25 +299,25 @@ int SplitCD_3D(const int& my_task_id,
   int Y = (double)tmp / num_x;
   int X = tmp % num_x;
 
-//  cout<<"tmp = "<<tmp <<endl;
-//  cout<<"taskID = "<<taskID <<endl;
-//  cout<<"sz = "<<sz<<endl;
-//  cout<<"X = "<<X<<endl;
-//  cout<<"Y = "<<Y<<endl;
-//  cout<<"Z = "<<Z<<endl;
+//  dbg<<"tmp = "<<tmp <<endl;
+//  dbg<<"taskID = "<<taskID <<endl;
+//  dbg<<"sz = "<<sz<<endl;
+//  dbg<<"X = "<<X<<endl;
+//  dbg<<"Y = "<<Y<<endl;
+//  dbg<<"Z = "<<Z<<endl;
 //
-//  cout<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
-//  cout<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
-//  cout << "(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<")"<< endl; 
+//  dbg<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
+//  dbg<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
+//  dbg << "(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<")"<< endl; 
 
   new_color = (int)(X / new_num_x + (Y / new_num_y)*num_children_x + (Z / new_num_z)*(num_children_x * num_children_y));
   new_task  = (int)(X % new_num_x + (Y % new_num_y)*new_num_x      + (Z % new_num_z)*(new_num_x * new_num_y));
   
-//  cout << "(color,task,size) = (" << new_color << ","<< new_task << "," << new_size << ") <-- "<<endl;
+//  dbg << "(color,task,size) = (" << new_color << ","<< new_task << "," << new_size << ") <-- "<<endl;
 //       <<"(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<") -- (color,task,size) = (" << GetCurrentCD()->GetColor() << ","<< my_task_id << "," << my_size <<")"
 //       << "ZZ : " << round((double)Z / new_num_z)
 //       << endl;
-//  getchar();
+//  dbgBreak();
   return 0;
 }
 
@@ -319,17 +360,17 @@ void TestMPIFunc(const ColorT& new_color, const int& color_for_split)
 //    sendBuf[i] += color_for_split-1;
 
   for(int i=0; i<color_for_split*100000; i++) { int a = 5 * 5; } 
-  cout<<"\n-------------------------------------------------------------------\n"<<endl;
-  cout<<new_color<<"[Before Allreduce-----]\nsendBuf : {"<<sendBuf[0]<<", "<<sendBuf[1]<<", "<<sendBuf[2]<<"}"<<endl;
-  cout<<"recvBuf : {"<<recvBuf[0]<<", "<<recvBuf[1]<<", "<<recvBuf[2]<<"}"<<endl;
+  dbg<<"\n-------------------------------------------------------------------\n"<<endl;
+  dbg<<new_color<<"[Before Allreduce-----]\nsendBuf : {"<<sendBuf[0]<<", "<<sendBuf[1]<<", "<<sendBuf[2]<<"}"<<endl;
+  dbg<<"recvBuf : {"<<recvBuf[0]<<", "<<recvBuf[1]<<", "<<recvBuf[2]<<"}"<<endl;
 
   MPI_Allreduce(sendBuf, recvBuf, 3, MPI_INT, MPI_SUM, new_color);
 //  MPI_Barrier(MPI_COMM_WORLD); 
   for(int i=0; i<color_for_split*100000; i++) { int a = 5 * 5; } 
-  cout<< new_color<<"[After Allreduce-----]\nsendBuf : {"<<sendBuf[0]<<", "<<sendBuf[1]<<", "<<sendBuf[2]<<"}"<<endl;
-  cout<<"recvBuf : {"<<recvBuf[0]<<", "<<recvBuf[1]<<", "<<recvBuf[2]<<"}"<<endl;
-  cout<<"\n-------------------------------------------------------------------\n"<<endl;
-  //getchar();
+  dbg<< new_color<<"[After Allreduce-----]\nsendBuf : {"<<sendBuf[0]<<", "<<sendBuf[1]<<", "<<sendBuf[2]<<"}"<<endl;
+  dbg<<"recvBuf : {"<<recvBuf[0]<<", "<<recvBuf[1]<<", "<<recvBuf[2]<<"}"<<endl;
+  dbg<<"\n-------------------------------------------------------------------\n"<<endl;
+  //dbgBreak();
 */
 }
 
@@ -337,7 +378,7 @@ CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, cons
 {
 #if _MPI_VER
     CDErrT err = kOK;
-//    cout<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
+//    dbg<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
     MPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
     MPI_Comm_size(new_node.color(), &(new_node.size_));
     MPI_Comm_rank(new_node.color(), &(new_node.task_in_color_));
@@ -347,14 +388,14 @@ CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, cons
 //    Sync();
 //    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
 //    if(new_color == 0) 
-//      cout<<"\n--------PRE DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
+//      dbg<<"\n--------PRE DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
 //
 //    TestMPIFunc(new_node.color(), new_color);
 //
 //    Sync();
 //    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
 //    if(new_color == 0) 
-//      cout<<"\n--------DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
+//      dbg<<"\n--------DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
     return err;
 
 #elif _PGAS_VER
@@ -412,11 +453,11 @@ CDHandle* CDHandle::Create(const ColorT& color,
   ColorT new_comm;
   NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, new_size);
 
-//  cout << "[Before] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //getchar();
+//  dbg << "[Before] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //dbgBreak();
   if(num_children > 1) {
-    cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<cout; //getchar();
+    dbg<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<dbg; //dbgBreak();
     err = SplitCD(node_id_.task_in_color(), node_id_.size(), num_children, new_color, new_task);
-    cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<cout; //getchar();
+    dbg<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<dbg; //dbgBreak();
     err = GetNewNodeID(node_id_.color(), new_color, new_task, new_node_id);
     assert(new_size == new_node_id.size());
 
@@ -430,198 +471,15 @@ CDHandle* CDHandle::Create(const ColorT& color,
 
 //  Sync();
 //  for(int i=0; i<node_id_.task_in_color()*100000; i++) { int a = 5 * 5; } 
-//  cout << "[After] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //getchar();
+//  dbg << "[After] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //dbgBreak();
 
   SetHead(new_node_id);
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
-//  cout<<"~~~~~~~~before create cd obj~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<cout; //getchar();
-
-//  if(IsHead()) {
-//    // Create window to get head info of children CDs.
-//    MPI_Win_create();
-//  }
-//  else {
-//    MPI_Win_create();
-//  }
+//  dbg<<"~~~~~~~~before create cd obj~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<dbg; //dbgBreak();
 
 
-#if _MPI_VER
-#if _KL
-  // Get the children CD's head information and the total size of entry from each task in the CD.
-  int send_buf[2]={0,0};
-  int task_count = node_id().size();
-  int recv_buf[task_count][2]; 
-  if(new_node_id.IsHead()) {
-    send_buf[0] = node_id().task_in_color();
-  } else {
-    send_buf[0] = -1;
-  }
-  send_buf[1] = ptr_cd()->remote_entry_directory_map_.size();
-
-  MPI_Allgather(send_buf, 2, MPI_INTEGER, 
-                recv_buf, 2, MPI_INTEGER, 
-                node_id().color());
-
-//  // Calculate the array of head_rank, and head_rank_count from recv_buf[evennum]. 
-//  int head_rank_count;
-//  for(int i=0; i<
-//
-//
-//  if(IsHead() && new_node_id.IsHead()) {
-//    head_rank_count = num_children;
-//  }
-//  else {
-//    head_rank_count = num_children+1;
-//  }
-//
-//  int head_rank[head_rank_count]; 
-//  if(IsHead()) {
-//
-//    MPI_Group_incl(node_id_.task_group_, head_rank_count, head_rank, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group())); 
-//
-    
-    cout << "\nremote entry check\n" << endl;
-    for(int k=0; k<task_count; ++k ) {
-      cout <<recv_buf[k][0] << " " << recv_buf[k][1] << endl;
-    }
-    cout << "\n" << endl; getchar();
-//  }
-//  else{
-//
-//    if(new_node_id.IsHead()) {
-//      // Calculate the array of group 
-//      MPI_Group_incl(node_id_.task_group_, head_rank_count, head_rank, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group())); 
-//
-//    }
-//
-//  }
-//
-//  // Calculate the array of displacement and entry_count at each task from recv_buf[oddnum].
-//  // Calculate recv count and displacement for entries of each task's remote entries.
-//  int entry_size;
-//  int entry_count[task_count];
-//  int entry_disp[task_count];
-//
-//  char *serialized_entries;
-//  char *entries_to_be_deserialized;
-//
-//  if(!IsHead()) {
-//    // Serialize all the entries in CD.
-//    serialized_entries = ptr_cd_->SerializeEntryDir(uint32_t& entry_count);
-//  }
-//
-//  MPI_Gatherv(serialized_entries, entry_size, MPI_BYTE, 
-//              entries_to_be_deserialized, entry_count, entry_disp, MPI_BYTE, 
-//              node_id().head(), node_id().color());
-//
-//  if(IsHead()) {  // Current task is head. It receives children CDs' head info and entry info of every task in the CD.
-//    // Deserialize the entries received from the other tasks in current CD's task group.
-//    while(ptr < entry_disp[task_count-1] + entry_count[task_count-1]) { // it is the last position
-//      ptr_cd_->DeserializeEntryDir(entries_to_be_deserialized + entry_disp[i]);
-//    }
-//  }
-//
-//  cout << "\n\n\nasdfasdfsadf\n\n"<< endl <<endl;
-//  getchar();
-#endif
-#endif
-
-
-
-
-
-
-//  if(!IsHead()) {
-//    // Serialize all the entries in CD.
-//
-////    void *buffer = ptr_cd_->SerializeEntryDir(uint32_t& entry_count);
-//
-//    void *buffer=NULL;
-//    Packer entry_dir_packer;
-//    uint32_t len_in_bytes=0;
-//    uint32_t entry_count=0;
-//    void *packed_entry_p=NULL;
-//    
-//    int task_id=0;
-//    if(new_node_id.IsHead()) {
-//      task_id = new_node_id.task_in_color();
-//    } else {
-//      task_id = -1;
-//    }
-//
-//    packed_entry_p = (void *)&task_id;
-//    entry_dir_packer.Add(entry_count++, sizeof(int), packed_entry_p);
-//  
-//    for(auto it=remote_entry_directory_.begin(); it!=remote_entry_directory_.end(); ++it) {
-//      uint32_t entry_len=0;
-//      packed_entry_p=NULL;
-//      if( !it->name().empty() ){
-//        // entry_len is output of Serialize 
-//        packed_entry_p = it->Serialize(entry_len);
-//        entry_dir_packer.Add(entry_count++, entry_len, packed_entry_p); // Add(id, len, datap)
-//        len_in_bytes += entry_len;
-//      }
-//    }
-//    
-//    buffer = entry_dir_packer.GetTotalData(len_in_bytes);
-//
-//
-//    MPI_Gather(send_buf, 1, MPI_BYTE, task_id_buffer, 1, MPI_BYTE, node_id().head(), node_id().color());
-//  }
-//  else {  // Current task is head. It receives children CDs' head info and entry info of every task in the CD.
-//    char *recv_buf;
-//    MPI_Gather(send_buf, 1, MPI_BYTE, recv_buf, 1, MPI_BYTE, node_id().head(), node_id().color());
-//
-//    // Deserialize the entries received from the other tasks in current CD's task group.
-//    ptr_cd_->DeserializeEntryDir(recv_buf);
-//
-//    std::vector<CDEntry> entry_dir;
-//    Unpacker entry_dir_unpacker;
-//    void *unpacked_entry_p=0;
-//    uint32_t dwGetID=0;
-//    uint32_t return_size=0;
-//    int child_heads[num_children];
-//    child_heads[0] = node_id().task_in_color();
-//
-//
-//    while(1) {
-//      unpacked_entry_p = entry_dir_unpacker.GetNext((char *)recv_buf, dwGetID, return_size);
-//      if(unpacked_entry_p == NULL) break;
-//      cd_entry.Deserialize(unpacked_entry_p);
-//      entry_dir.push_back(cd_entry);
-//    }
-//
-////    MPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
-//
-//  }
-//
-//
-//
-//  int task_id_buffer[node_id().size()];
-//  int task_id = node_id().task_in_color();
-//  int null_id = 0;
-//  if(new_node_id.IsHead()) {
-//    MPI_Gather(&task_id, 1, MPI_INTEGER, task_id_buffer, 1, MPI_INTEGER, node_id().head(), node_id().color());
-//  }
-//  else {
-//    MPI_Gather(&null_id, 1, MPI_INTEGER, task_id_buffer, 1, MPI_INTEGER, node_id().head(), node_id().color());
-//  }
-//  if(IsHead()) {
-//    for(int i=0; i<node_id().size(); ++i) {
-//      cout << "\n\n"<<task_id_buffer[i] <<" ";
-//    }
-//  }
-//  cout << "\n\n\n\n" << endl; getchar();
-////    if(new_node_id.IsHead()) {
-////      int child_heads[num_children];
-////      // send child_cd_name.rank_in_level_ of heads of children CDs
-////      MPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
-////    }
-//
-////  ptr_cd_->family_mailbox_
-//
-//
+//  CollectHeadInfoAndEntry(); 
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
@@ -630,7 +488,7 @@ CDHandle* CDHandle::Create(const ColorT& color,
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
 
-//  cout<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;
+//  dbg<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;
 
   if(err<0) {
     ERROR_MESSAGE("CDHandle::Create failed.\n"); assert(0);
@@ -692,7 +550,7 @@ CDErrT CDHandle::Destroy(bool collective)
   }
 
 #if _PROFILER
-  cout << "calling finish profiler" <<endl;
+  dbg << "calling finish profiler" <<endl;
   //if(ptr_cd()->cd_exec_mode_ == 0) { 
     profiler_->FinishProfile();
   //}
@@ -702,6 +560,7 @@ CDErrT CDHandle::Destroy(bool collective)
   assert(CDPath::GetCDPath()->back() != NULL);
 
   err = ptr_cd_->Destroy();
+  delete CDPath::GetCDPath()->back();
   CDPath::GetCDPath()->pop_back();
 
    
@@ -713,7 +572,7 @@ CDErrT CDHandle::Destroy(bool collective)
 CDErrT CDHandle::Begin(bool collective, const char* label)
 {
 
-//  cout << jmp_buffer_ << endl; getchar();
+//  dbg << jmp_buffer_ << endl; dbgBreak();
   //TODO It is illegal to call a collective Begin() on a CD that was created without a collective Create()??
   if ( collective ) {
     // Sync();
@@ -721,10 +580,10 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 
 #if _PROFILER
   // Profile-related
-  cout << "calling get profile" <<endl; //getchar();
+  dbg << "calling get profile" <<endl; //dbgBreak();
 //  if(ptr_cd()->cd_exec_mode_ == 0) { 
     if(label == NULL) label = "INITIAL_LABEL";
-    cout << "label "<< label <<endl; //getchar();
+    dbg << "label "<< label <<endl; //dbgBreak();
     profiler_->GetProfile(label);
 //  }
 #endif
@@ -742,7 +601,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   assert(ptr_cd_ != 0);
 
 #if _PROFILER
-  cout << "calling collect profile" <<endl; //getchar();
+  dbg << "calling collect profile" <<endl; //dbgBreak();
   // Profile-related
 //  if(ptr_cd()->cd_exec_mode_ == 0) { 
     profiler_->CollectProfile();
@@ -867,7 +726,7 @@ bool CDHandle::IsHead(void) const
 // For now task_id_==0 is always Head which is not good!
 void CDHandle::SetHead(NodeID& new_node_id)
 {
-//  cout<<"In SetHead, Newly born CDHandle's Task# is "<<task<<endl;
+//  dbg<<"In SetHead, Newly born CDHandle's Task# is "<<task<<endl;
 
   // head is always task id 0 for now
   new_node_id.set_head(0);
@@ -972,6 +831,12 @@ CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 {
   std::vector<SysErrT> ret_prepare;
+  dbg << "Detect at Level : " << ptr_cd()->GetCDID().level() << ", my node : " << node_id() << endl; getchar();
+  MPI_Win_fence(0, pendingWindow_);
+  if(GetTaskID() == 3)
+    SetMailBox(CDEventT::kFailure);
+  MPI_Win_fence(0, pendingWindow_);
+  CheckMailBox();
 
   return ret_prepare;
 
@@ -1042,11 +907,11 @@ void CDHandle::CommitPreserveBuff()
 {
 //  if(ptr_cd_->cd_exec_mode_ ==CD::kExecution){
   if( ptr_cd_->ctxt_prv_mode_ == CD::kExcludeStack) {
-//  cout << "Commit jmp buffer!" << endl; getchar();
-//  cout << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << ", size: "<< sizeof(jmp_buf) << endl; getchar();
+//  dbg << "Commit jmp buffer!" << endl; dbgBreak();
+//  dbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << ", size: "<< sizeof(jmp_buf) << endl; dbgBreak();
     memcpy(ptr_cd_->jmp_buffer_, jmp_buffer_, sizeof(jmp_buf));
     ptr_cd_->jmp_val_ = jmp_val_;
-//  cout << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << endl; getchar();
+//  dbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << endl; dbgBreak();
   }
   else {
     ptr_cd_->ctxt_ = this->ctxt_;
@@ -1072,6 +937,105 @@ uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_l
 
   }
   return sys_bit_vec;
+}
+
+int CDHandle::CheckMailBox(void)
+{
+  int ret=0;
+  dbg << "\n\n\n========================================\nI am Head? " << IsHead() << endl;
+  if(IsHead()) {
+    dbg << "I am Head. Task : " << myTaskID << ", Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< ", Node ID: " <<node_id_<<endl;
+    ret = InternalCheckMailBox();
+  }
+  return ret;
+}
+
+int CDHandle::InternalCheckMailBox(void)
+{
+  int ret=0;
+  int event = *pendingFlag_;
+  dbg << "\nCheckMailBox " << myTaskID << ", flag : " << *pendingFlag_ << endl;
+  switch(event) {
+    case CDEventT::kFine :
+      dbg << "CD Event kOK" << endl;
+      break;
+    case CDEventT::kFailure :
+      dbg << "CD Event kFailure" << endl;
+      
+      break;
+    case CDEventT::kAllStop :
+      dbg << "CD Event kAllStop" << endl;
+
+      break;
+    case CDEventT::kAllResume :
+      dbg << "CD Event kAllResume" << endl;
+
+      break;
+    case CDEventT::kEntryReqeust :
+      dbg << "CD Event kEntryRequest" << endl;
+
+      break;
+    case CDEventT::kEntrySearch :
+      dbg << "CD Event kEntrySearch" << endl;
+
+      break;
+    case CDEventT::kEntrySend :
+      dbg << "CD Event kEntrySend" << endl;
+
+      break;
+    case CDEventT::kEscalate :
+      dbg << "CD Event kEscalate" << endl;
+
+      break;
+    default:
+      dbg << "CD Event default" << endl;
+
+      break;
+  }
+  return ret;
+
+
+}
+
+
+int CDHandle::SetMailBox(CDEventT event)
+{
+  int ret=0;
+  int val = 4;
+  switch(event) {
+    case CDEventT::kFine :
+      dbg << "Set CD Event kFine" << endl;
+      break;
+    case CDEventT::kFailure :
+      dbg << "Set CD Event kFailure. Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< endl;
+      MPI_Accumulate(&val, 1, MPI_INT, 0, 0, 1, MPI_INT, MPI_SUM, pendingWindow_);
+      dbg << "Accumulate" << endl; getchar();
+      break;
+    case CDEventT::kAllStop :
+      dbg << "Set CD Event kAllStop" << endl;
+
+      break;
+    case CDEventT::kAllResume :
+
+      break;
+    case CDEventT::kEntryReqeust :
+
+      break;
+    case CDEventT::kEntrySearch :
+
+      break;
+    case CDEventT::kEntrySend :
+
+      break;
+    case CDEventT::kEscalate :
+
+      break;
+    default:
+
+      break;
+  }
+
+  return ret;
 }
 
 

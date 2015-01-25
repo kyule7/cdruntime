@@ -46,6 +46,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 using namespace std;
 
+
+
 std::hash<std::string> cd::str_hash;
 std::map<uint64_t, std::string> cd::tag2str;
 /// Actual CD Object only exists in a single node and in a single process.
@@ -120,7 +122,7 @@ CD::CD(CDHandle* cd_parent,
   // Kyushick: Object ID should be unique for the copies of the same object?
   // For now, I decided it as an unique one
   cd_id_.object_id_++;
-//  cout << "cd object is created " << cd_id_.object_id_++ <<endl;
+//  dbg << "cd object is created " << cd_id_.object_id_++ <<endl;
   // FIXME maybe call self generating function here?           
   // cd_self_  = self;  //FIXME maybe call self generating function here?           
 
@@ -227,11 +229,11 @@ CDHandle* CD::Create(CDHandle* parent,
 }
 
 CDHandle* CD::CreateRootCD(CDHandle* parent, 
-                     const char* name, 
-                     const CDID& root_cd_id, 
-                     CDType cd_type, 
-                     uint64_t sys_bit_vector, 
-                     CD::CDInternalErrT *cd_internal_err)
+                           const char* name, 
+                           const CDID& root_cd_id, 
+                           CDType cd_type, 
+                           uint64_t sys_bit_vector, 
+                           CD::CDInternalErrT *cd_internal_err)
 {
 
   /// Create CD object with new CDID
@@ -259,15 +261,14 @@ CDHandle* CD::CreateRootCD(CDHandle* parent,
 
 CDErrT CD::Destroy(void)
 {
-  cout << "~~~~~~~~~~~~~~~~~~~~~"<<endl;
+  dbg << "~~~~~~~~~~~~~~~~~~~~~"<<endl;
   CDErrT err=CDErrT::kOK;
   InternalDestroy();
 
 #if _MPI_VER
 #if _KL
-  cout << "destroyed cds" << endl;
+  dbg << "destroyed cds" << endl;
 //  MPI_Win_free(mailbox_);
-  delete mailbox_;
 #endif
 #endif
 
@@ -283,6 +284,8 @@ CD::InternalCreate(CDHandle* parent,
                    uint64_t sys_bit_vector, 
                    CDHandle** new_cd_handle)
 {
+  dbg << "dbg: Internal Create... Level : " << new_cd_id.level()<< ", node : "<< new_cd_id.node_id() << endl; dbgBreak();
+//  dbg << dbg.str() << endl; dbgBreak();
   if( !new_cd_id.IsHead() ) {
     CD *new_cd     = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
 
@@ -290,12 +293,12 @@ CD::InternalCreate(CDHandle* parent,
 #if _MPI_VER
 #if _KL
     int task_count = new_cd_id.task_count();
-    cout << "in CD::Create Internal Memory. task count is "<< task_count <<endl;
-    new_cd->mailbox_ = new CDMailBoxT[task_count];
-    for(int i=0; i<task_count; ++i) {
+    dbg << "in CD::Create Internal Memory. task count is "<< task_count <<endl;
+//    new_cd->mailbox_ = new CDMailBoxT[task_count];
+//    for(int i=0; i<task_count; ++i) {
       MPI_Win_create(NULL, 0, 1,
-                     MPI_INFO_NULL, new_cd_id.color(), &((new_cd->mailbox_)[i]));
-    }
+                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
+//    }
 #endif
 #endif
 
@@ -307,18 +310,18 @@ CD::InternalCreate(CDHandle* parent,
 #if _MPI_VER
 #if _KL
     // Create memory region where RDMA is enabled
-    cout << "HeadCD create internal memory " << endl;
+    dbg << "HeadCD create internal memory " << endl;
     int task_count = new_cd_id.task_count();
 
-    MPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
+    MPI_Alloc_mem(task_count*sizeof(CDFlagT), 
                   MPI_INFO_NULL, &(new_cd->event_flag_));
-    new_cd->mailbox_ = new CDMailBoxT[task_count];
+//    new_cd->mailbox_ = new CDMailBoxT[task_count];
   
-    cout << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
-    for(int i=0; i<task_count; ++i) {
-      MPI_Win_create(&((new_cd->event_flag_)[i]), 1, sizeof(CDFlagT),
-                     MPI_INFO_NULL, new_cd_id.color(), &((new_cd->mailbox_)[i]));
-    }
+    dbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
+//    for(int i=0; i<task_count; ++i) {
+      MPI_Win_create(new_cd->event_flag_, task_count*sizeof(CDFlagT), sizeof(CDFlagT),
+                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
+//    }
 
 //    AttachChildCD(new_cd);
 #endif
@@ -326,7 +329,8 @@ CD::InternalCreate(CDHandle* parent,
     
     *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
   }
-
+  
+  dbg << "after KL : " << new_cd_id.node_id() << " -- " << (*new_cd_handle)->node_id() << endl;
   return CDInternalErrT::kOK;
 }
 
@@ -339,16 +343,19 @@ void AttachChildCD(HeadCD *new_cd)
 inline CD::CDInternalErrT CD::InternalDestroy(void)
 {
 
-  cout << "in CD::Destroy Internal Memory"<<endl;
+  dbg << "in CD::Destroy Internal Memory"<<endl;
 
 #if _MPI_VER
 #if _KL
   int task_count = cd_id_.task_count();
-  cout << "mpi win free for "<< task_count << " mailboxes"<<endl;
+  dbg << "mpi win free for "<< task_count << " mailboxes"<<endl;
+  
+//  for(int i=0; i<task_count; ++i) {
+//    MPI_Win_free(&mailbox_);
+//  }
 
-  for(int i=0; i<task_count; ++i) {
-    MPI_Win_free(&(mailbox_[i]));
-  }
+
+
 #endif
 #endif
 
@@ -399,7 +406,7 @@ inline CD::CDInternalErrT CD::InternalDestroy(void)
 // CDHandle will follow the standard interface. 
 CDErrT CD::Begin(bool collective, const char* label)
 {
-  cout<<"inside CD::Begin"<<endl;
+  dbg<<"inside CD::Begin"<<endl;
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
@@ -767,7 +774,7 @@ CDErrT CD::Preserve(void* data,
   // FIXME for now let's just use regular malloc call 
 
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
-//    cout<<"my_name "<< my_name<<endl;
+//    dbg<<"my_name "<< my_name<<endl;
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, ref_remote, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : return CDErrT::kOK;
       case CDInternalErrT::kExecModeError : return CDErrT::kError;
@@ -809,7 +816,7 @@ CDErrT CD::Preserve(void* data,
     else {  // abnormal case
       //return CDErrT::kOK;
 
-      cout<< "Something wrong in Reexecution!!!"<<endl<<endl;  
+      dbg<< "Something wrong in Reexecution!!!"<<endl<<endl;  
       // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
       // we reached the last preserve function call. 
       // Since we have reached the last point already now convert current execution mode into kExecution
@@ -869,7 +876,7 @@ CD::InternalPreserve(void *data,
 {
 
   if(cd_exec_mode_  == kExecution ) { // Normal case
-    PRINT_DEBUG("\nNormal execution mode (internal preservation call)\n");
+    dbg<< "\nNormal execution mode (internal preservation call)\n"<<endl;
 
     // Now create entry and add to list structure.
     //FIXME Jinsuk: we don't have the way to determine the storage   
@@ -878,15 +885,15 @@ CD::InternalPreserve(void *data,
 
     CDEntry* cd_entry = 0;
 //    if(my_name==0) my_name = "INITIAL_ENTRY";
-    cout << "preserve remote check\npreserve_mask : "<< preserve_mask << " " << ref_remote << endl; //getchar();
+    dbg << "preserve remote check\npreserve_mask : "<< preserve_mask << " " << ref_remote << endl; //dbgBreak();
     // Get cd_entry
     if( preserve_mask == kCopy ) {                // via-copy, so it saves data right now!
 
-      PRINT_DEBUG2("\nPreservation via Copy to %d(memory or file)\n", GetPlaceToPreserve());
+      dbg << "\nPreservation via Copy to %d(memory or file)\n" << GetPlaceToPreserve() << endl;
 
       switch(GetPlaceToPreserve()) {
         case kMemory: {
-//          PRINT_DEBUG("[kMemory] ------------------------------------------\n");
+//          dbg<<"[kMemory] ------------------------------------------\n" << endl;
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes), 
                                  DataHandle(DataHandle::kMemory, 0, len_in_bytes), 
                                  my_name);
@@ -899,23 +906,22 @@ CD::InternalPreserve(void *data,
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
           if( !my_name.empty() ) {
             entry_directory_map_[str_hash(my_name)] = cd_entry;
-//            std::cout <<"register local entry_dir. my_name : "<<my_name
+//            dbg <<"register local entry_dir. my_name : "<<my_name
 //                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-//                      <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+//                      <<", address: " <<cd_entry->dst_data_.address_data()<< endl;
             if(ref_remote) {
               remote_entry_directory_map_[str_hash(my_name)] = cd_entry;
-//              std::cout <<"register remote entry_dir. my_name : "<<my_name
+//              dbg <<"register remote entry_dir. my_name : "<<my_name
 //                        <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-//                        <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+//                        <<", address: " <<cd_entry->dst_data_.address_data()<< endl;
 
 
             }
           }
-//          PRINT_DEBUG("-------------------------------------------------\n");
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
         case kHDD: {
-          PRINT_DEBUG("kHDD ----------------------------------\n");
+          dbg << "kHDD ----------------------------------\n" << endl;
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes), 
                                  DataHandle(DataHandle::kOSFile, 0, len_in_bytes), 
                                  my_name);
@@ -931,25 +937,24 @@ CD::InternalPreserve(void *data,
           if( !my_name.empty() ) {
             if(!ref_remote) {
               entry_directory_map_[str_hash(my_name)] = cd_entry;
-              std::cout <<"register local entry_dir. my_name : "<<my_name
+              dbg <<"register local entry_dir. my_name : "<<my_name
                         <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-                        <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+                        <<", address: " <<cd_entry->dst_data_.address_data()<< endl;
             }
             else {
               remote_entry_directory_map_[str_hash(my_name)] = cd_entry;
-              std::cout <<"register remote entry_dir. my_name : "<<my_name
+              dbg <<"register remote entry_dir. my_name : "<<my_name
                         <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-                        <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+                        <<", address: " <<cd_entry->dst_data_.address_data()<< endl;
             }
           }
 
 
-          PRINT_DEBUG("-------------------------------------------------\n");
 
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
         case kSSD: {
-          PRINT_DEBUG("kSSD ----------------------------------\n");
+          dbg <<"kSSD ----------------------------------\n" << endl;
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes), 
                                  DataHandle(DataHandle::kOSFile, 0, len_in_bytes), 
                                  my_name);
@@ -965,27 +970,26 @@ CD::InternalPreserve(void *data,
               entry_directory_map_[str_hash(my_name)] = cd_entry;
               assert(entry_directory_map_[str_hash(my_name)]);
               assert(entry_directory_map_[str_hash(my_name)]->src_data_.address_data());
-              std::cout <<"internal local entry_dir. my_name : "<<entry_directory_map_[str_hash(my_name)]->name()
+              dbg <<"internal local entry_dir. my_name : "<<entry_directory_map_[str_hash(my_name)]->name()
                         <<", value : "<<*(reinterpret_cast<int*>(entry_directory_map_[str_hash(my_name)]->src_data_.address_data())) 
                         <<", address: " <<entry_directory_map_[str_hash(my_name)]->src_data_.address_data()
-                        <<", address: " <<cd_entry->src_data_.address_data()<< std::endl;
+                        <<", address: " <<cd_entry->src_data_.address_data()<< endl;
             }
             else {
               remote_entry_directory_map_[str_hash(my_name)] = cd_entry;
               assert(remote_entry_directory_map_[str_hash(my_name)]);
               assert(remote_entry_directory_map_[str_hash(my_name)]->src_data_.address_data());
-              std::cout <<"register remote entry_dir. my_name : "<<my_name
+              dbg <<"register remote entry_dir. my_name : "<<my_name
                         <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-                        <<", address: " <<cd_entry->dst_data_.address_data()<< std::endl;
+                        <<", address: " <<cd_entry->dst_data_.address_data()<< endl;
 
             }
           }
 
-          PRINT_DEBUG("-------------------------------------------------\n");
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
         case kPFS: {
-          PRINT_DEBUG("kPFS ----------------------------------\n");
+          dbg << "kPFS ----------------------------------\n"<< endl;
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes), 
                                  DataHandle(DataHandle::kOSFile, 0, len_in_bytes), 
                                  my_name);
@@ -993,9 +997,8 @@ CD::InternalPreserve(void *data,
           entry_directory_.push_back(*cd_entry);  
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
           if( !my_name.empty() ) entry_directory_map_[str_hash(my_name)] = cd_entry;
-          PRINT_DEBUG("\nPreservation to PFS which is not supported yet. ERROR\n");
+          dbg << "\nPreservation to PFS which is not supported yet. ERROR\n" << endl;
           assert(0);
-          PRINT_DEBUG("-------------------------------------------------\n");
           break;
         }
         default:
@@ -1005,7 +1008,7 @@ CD::InternalPreserve(void *data,
     }
     else if( preserve_mask == kRef ) { // via-reference
 
-      PRINT_DEBUG2("\nPreservation via %d (reference)\n", GetPlaceToPreserve());
+      dbg << "\nPreservation via %d (reference)\n" << GetPlaceToPreserve() << endl;
 
       // set handle type and ref_name/ref_offset
       cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes), 
@@ -1027,18 +1030,18 @@ CD::InternalPreserve(void *data,
       
     }
 
-    PRINT_DEBUG("\nUnsupported preservation type\n");
+    dbg << "\nUnsupported preservation type\n" << endl;
     assert(0);
     return CDInternalErrT::kEntryError;
 
   }
   else { // Abnormal case
-    PRINT_DEBUG("\nReexecution mode (internal preservation call) which is wrong, it outputs kExecModeError\n");
+    dbg << "\nReexecution mode (internal preservation call) which is wrong, it outputs kExecModeError\n" << endl;
     assert(0);
   }
 
   // In the normal case, it should not reach this point. It is an error.
-  PRINT_DEBUG("\nkExecModeError\n");
+  dbg << "\nkExecModeError\n" << endl;
   assert(0);
   return kExecModeError; 
 }
@@ -1152,10 +1155,10 @@ CDErrT CD::Restore()
       } */
 
   // what we need to do here is just reset the iterator to the beginning of the list.
-//  cout<<"CD::Restore()"<<endl;
+//  dbg<<"CD::Restore()"<<endl;
   iterator_entry_ = entry_directory_.begin();
-//  cout<<"entry dir size : "<<entry_directory_.size()<<", entry dir map size : "<<entry_directory_map_.size()<<endl;
-//  cout<<"dst addr : "<<iterator_entry_->dst_data_.address_data()<<", size: "<<iterator_entry_->dst_data_.len()<< endl<<endl;
+//  dbg<<"entry dir size : "<<entry_directory_.size()<<", entry dir map size : "<<entry_directory_map_.size()<<endl;
+//  dbg<<"dst addr : "<<iterator_entry_->dst_data_.address_data()<<", size: "<<iterator_entry_->dst_data_.len()<< endl<<endl;
 
 //  assert(iterator_entry_->dst_data_.address_data() != 0);
 
@@ -1234,7 +1237,7 @@ CDErrT CD::Reexecute(void)
   //TODO We need to consider collective re-start. 
   if(ctxt_prv_mode_ == kExcludeStack) {
     printf("longjmp\n");
-    cout << jmp_buffer_ << endl; //getchar();
+    dbg << jmp_buffer_ << endl; //dbgBreak();
     longjmp(jmp_buffer_, jmp_val_);
   }
   else if (ctxt_prv_mode_ == kIncludeStack) {
@@ -1267,8 +1270,8 @@ CDErrT CD::Resume(void)
 
 CDErrT CD::AddChild(CDHandle* cd_child) 
 { 
-//  std::cout<<"sth wrong"<<std::endl; 
-//  getchar(); 
+//  dbg<<"sth wrong"<<endl; 
+//  dbgBreak(); 
   // Do nothing?
   if(cd_child->IsHead()) {
     //Send it to Head
@@ -1279,8 +1282,8 @@ CDErrT CD::AddChild(CDHandle* cd_child)
 
 CDErrT CD::RemoveChild(CDHandle* cd_child) 
 {
-//  std::cout<<"sth wrong"<<std::endl; 
-//  getchar(); 
+//  dbg<<"sth wrong"<<endl; 
+//  dbgBreak(); 
   // Do nothing?
   return CDErrT::kOK;
 }
@@ -1312,7 +1315,7 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //CD::CDInternalErrT CD::CreateInternalMemory(CD *cd_ptr, const CDID& new_cd_id)
 //{
 //  int task_count = new_cd_id.task_count();
-//  cout << "in CD::Create Internal Memory"<<endl;
+//  dbg << "in CD::Create Internal Memory"<<endl;
 //  if(task_count > 1) {
 //    for(int i=0; i<task_count; ++i) {
 //    
@@ -1322,7 +1325,7 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //    }
 //  }
 //  else {
-//    cout << "CD::mpi win create for "<< task_count << " mailboxes"<<endl;
+//    dbg << "CD::mpi win create for "<< task_count << " mailboxes"<<endl;
 //    MPI_Win_create(NULL, 0, 1,
 //                   MPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
 //    
@@ -1335,17 +1338,17 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //CD::CDInternalErrT CD::DestroyInternalMemory(CD *cd_ptr)
 //{
 //
-//  cout << "in CD::Destroy Internal Memory"<<endl;
+//  dbg << "in CD::Destroy Internal Memory"<<endl;
 //  int task_count = cd_id_.task_count();
 //  if(task_count > 1) {
-//    cout << "mpi win free for "<< task_count << " mailboxes"<<endl;
+//    dbg << "mpi win free for "<< task_count << " mailboxes"<<endl;
 //    for(int i=0; i<task_count; ++i) {
-//      cout << i << endl;
+//      dbg << i << endl;
 //      MPI_Win_free(&(cd_ptr->mailbox_[i]));
 //    }
 //  }
 //  else {
-//    cout << "mpi win free for one mailbox"<<endl;
+//    dbg << "mpi win free for one mailbox"<<endl;
 //    MPI_Win_free(cd_ptr->mailbox_);
 //  }
 //
@@ -1354,11 +1357,11 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 
 //CD::CDInternalErrT HeadCD::CreateInternalMemory(HeadCD *cd_ptr, const CDID& new_cd_id)
 //{
-//  cout << "HeadCD create internal memory " << endl;
+//  dbg << "HeadCD create internal memory " << endl;
 //  int task_count = new_cd_id.task_count();
 //#if _MPI_VER
 ////  if(new_cd_id.color() == MPI_COMM_WORLD) {
-////    cout << "\n\nthis is root! " << task_count << "\n\n"<<endl;
+////    dbg << "\n\nthis is root! " << task_count << "\n\n"<<endl;
 ////    MPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
 ////                  MPI_INFO_NULL, &event_flag_);
 ////    mailbox_ = new CDMailBoxT[task_count];
@@ -1377,7 +1380,7 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //
 //  if(task_count > 1) {
 //
-//    cout << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
+//    dbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
 //    mailbox_ = new CDMailBoxT[task_count];
 //    for(int i=0; i<task_count; ++i) {
 //      MPI_Win_create(&((cd_ptr->event_flag_)[i]), 1, sizeof(CDFlagT),
@@ -1389,14 +1392,14 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //
 //  }
 //  else {
-//    cout << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
+//    dbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
 //    MPI_Win_create(cd_ptr->event_flag_, task_count, sizeof(CDFlagT),
 //                   MPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
 //    
 //  }
 //
 ////  MPI_Win_allocate(task_count*sizeof(CDFlagT), sizeof(CDFlagT), MPI_INFO_NULL, new_cd_id.color(), &event_flag_, &mailbox_);
-//  //getchar();
+//  //dbgBreak();
 //#endif
 //  return CD::CDInternalErrT::kOK;
 //}
@@ -1404,17 +1407,17 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //CD::CDInternalErrT HeadCD::DestroyInternalMemory(HeadCD *cd_ptr)
 //{
 //#if _MPI_VER
-//  cout << "in HeadCD::Destroy"<<endl;
+//  dbg << "in HeadCD::Destroy"<<endl;
 //  int task_count = cd_id_.task_count();
 //  if(task_count > 1) {
-//    cout << "HeadCD mpi win free for "<< task_count << " mailboxes"<<endl;
+//    dbg << "HeadCD mpi win free for "<< task_count << " mailboxes"<<endl;
 //    for(int i=0; i<task_count; ++i) {
-//      cout << i << endl;
+//      dbg << i << endl;
 //      MPI_Win_free(&(cd_ptr->mailbox_[i]));
 //    }
 //  }
 //  else {
-//    cout << "HeadCD mpi win free for one mailbox"<<endl;
+//    dbg << "HeadCD mpi win free for one mailbox"<<endl;
 //    MPI_Win_free(cd_ptr->mailbox_);
 //  }
 //  MPI_Free_mem(cd_ptr->event_flag_);
@@ -1480,7 +1483,7 @@ CDErrT HeadCD::Destroy(void)
 
 #if _MPI_VER
 #if _KL
-  cout << "HeadCD::Destroy"<<endl;
+  dbg << "HeadCD::Destroy"<<endl;
   MPI_Free_mem(event_flag_);
 #endif
 #endif
@@ -1536,7 +1539,7 @@ CDErrT HeadCD::Resume(void)
 CDErrT HeadCD::AddChild(CDHandle *cd_child) 
 {
   if(cd_child->IsHead()) {
-    cout << "It is not desirable to let the same task be head twice!" << endl;
+    dbg << "It is not desirable to let the same task be head twice!" << endl;
 //    cd_children_.push_back(cd_child->ptr_cd()->cd_id().task());
 
 //    GatherChildHead();
@@ -1606,27 +1609,27 @@ CDEntry* CD::InternalGetEntry(std::string entry_name)
     auto it = entry_directory_map_.find(str_hash(entry_name));
     auto jt = remote_entry_directory_map_.find(str_hash(entry_name));
     if(it == entry_directory_map_.end() && jt == remote_entry_directory_map_.end()) {
-      std::cout<<"[InternalGetEntry] There is no entry for reference of "<< entry_name.c_str() 
-               <<" at CD level " << GetCDID().level() << std::endl;
-      //getchar();
+      dbg<<"[InternalGetEntry] There is no entry for reference of "<< entry_name.c_str() 
+               <<" at CD level " << GetCDID().level() << endl;
+      //dbgBreak();
       return NULL;
     }
     else if(it != entry_directory_map_.end()) {
       CDEntry* cd_entry = entry_directory_map_.find(str_hash(entry_name))->second;
       
-      std::cout<<"[InternalGetEntry] ref_name: " <<entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()
-               << ", address: " <<entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()<< std::endl;
+      dbg<<"[InternalGetEntry] ref_name: " <<entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()
+               << ", address: " <<entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()<< endl;
       return cd_entry;
     }
     else if(jt != remote_entry_directory_map_.end()) {
       CDEntry* cd_entry = remote_entry_directory_map_.find(str_hash(entry_name))->second;
       
-      std::cout<<"[InternalGetEntry] ref_name: " <<remote_entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()
-               << ", address: " <<remote_entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()<< std::endl;
+      dbg<<"[InternalGetEntry] ref_name: " <<remote_entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()
+               << ", address: " <<remote_entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()<< endl;
       return cd_entry;
     }
     else {
-      cout << "ERROR: there is the same name of entry in entry_directory_map and remote_entry_directory_map.\n"<< endl;
+      dbg << "ERROR: there is the same name of entry in entry_directory_map and remote_entry_directory_map.\n"<< endl;
       assert(0);
     }
   }
@@ -1638,7 +1641,7 @@ CDEntry* CD::InternalGetEntry(std::string entry_name)
 
 void CD::DeleteEntryDirectory(void)
 {
-//  cout<<"Delete Entry In"<<endl; getchar();
+//  dbg<<"Delete Entry In"<<endl; dbgBreak();
   for(std::list<CDEntry>::iterator it = entry_directory_.begin();
       it != entry_directory_.end(); ) {
 
@@ -1647,16 +1650,16 @@ void CD::DeleteEntryDirectory(void)
     uint32_t entry_len=0;
     void *ser_entry = it->Serialize(entry_len);
 
-    std::cout << "ser entry : "<< ser_entry << std::endl;
+    dbg << "ser entry : "<< ser_entry << endl;
     CDEntry new_entry;
-    std::cout << "\n\n--------------------------------\n"<<std::endl;
+    dbg << "\n\n--------------------------------\n"<<endl;
     new_entry.Deserialize(ser_entry);
-    cout << "before!!!! " << (it->src_data_).address_data()<<endl<<endl;
-    cout << "\n\n\nafter!!!! " << new_entry.src_data_.address_data()<<endl;
+    dbg << "before!!!! " << (it->src_data_).address_data()<<endl<<endl;
+    dbg << "\n\n\nafter!!!! " << new_entry.src_data_.address_data()<<endl;
 
-    cout << "before!!!! " << it->name() <<endl<<endl;
-    cout << "\n\n\nafter!!!! " << new_entry.name()<<endl;
-    cout << (*it == new_entry) << endl;
+    dbg << "before!!!! " << it->name() <<endl<<endl;
+    dbg << "\n\n\nafter!!!! " << new_entry.name()<<endl;
+    dbg << (*it == new_entry) << endl;
 */
 
 
@@ -1667,9 +1670,9 @@ void CD::DeleteEntryDirectory(void)
     DataHandle new_data_handle;
     new_data_handle.Deserialize(ser_data_handle);
 
-    std::cout <<"\n\n\noriginal : "<<(it->src_data_).file_name() << std::endl;
-    std::cout <<"unpacked : "<<new_data_handle.file_name() << std::endl << std::endl;
-    getchar();
+    dbg <<"\n\n\noriginal : "<<(it->src_data_).file_name() << endl;
+    dbg <<"unpacked : "<<new_data_handle.file_name() << endl << endl;
+    dbgBreak();
 */
     it->Delete();
     entry_directory_map_.erase(str_hash(it->name()));
@@ -1681,7 +1684,7 @@ void CD::DeleteEntryDirectory(void)
 //      it != entry_directory_map_.end(); ++it) {
 //    //entry_directory_map_.erase(it);
 //  }
-//  cout<<"Delete Entry Out"<<endl; getchar();
+//  dbg<<"Delete Entry Out"<<endl; dbgBreak();
 }
 
 

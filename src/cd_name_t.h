@@ -39,6 +39,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <ostream>
 
+using std::endl;
+
 namespace cd {
 
 class CDNameT {

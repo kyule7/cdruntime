@@ -164,7 +164,7 @@ Additional BSD Notice
 //#include "cds.h"
 #include "cds.h"
 using namespace cd;
-#define NUM_CDS_IN_LEVEL_1   1
+#define NUM_CDS_IN_LEVEL_1   8
 #define NUM_CDS_IN_LEVEL_2   1
 #define NUM_CDS_IN_LEVEL_3_0 1
 #define NUM_CDS_IN_LEVEL_3_1 1
@@ -3791,8 +3791,8 @@ int main(int argc, char *argv[])
 
 //debug to see region sizes
 #if _DEBUG
-   for(Int_t i = 0; i < locDom->numReg(); i++)
-      std::cout << "region: " << i + 1<< ", size: " << locDom->regElemSize(i) <<std::endl;
+//   for(Int_t i = 0; i < locDom->numReg(); i++)
+//      std::cout << "region: " << i + 1<< ", size: " << locDom->regElemSize(i) <<std::endl;
 #endif
 
 #if _CD
@@ -3863,7 +3863,6 @@ int main(int argc, char *argv[])
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);
    }
-   getchar();
 #if _CD
    root_cd->Detect();
    root_cd->Complete();

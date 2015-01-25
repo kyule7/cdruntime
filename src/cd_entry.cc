@@ -38,6 +38,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <cassert>
 using namespace cd;
+using namespace std;
 
 CDEntry::CDEntryErrT CDEntry::Delete(void)
 {
@@ -45,17 +46,17 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
 
   if( dst_data_.address_data() != NULL ) {
     DATA_FREE( dst_data_.address_data() );
-//    printf("free preserved data\n"); 
-//    getchar();
+//    dbg << "free preserved data\n" << endl; 
+//    dbgBreak();
   }
 
   if( dst_data_.handle_type() == DataHandle::kOSFile )  {
-    printf("erase file start!\n"); //getchar();
+    dbg << "erase file start!\n" << endl; //dbgBreak();
 //    delete dst_data_.file_name(); 
     char cmd[30];
     sprintf(cmd, "rm %s", dst_data_.file_name_);
     int ret = system(cmd);
-    printf("erase the file of preserved data\n"); 
+    dbg << "erase the file of preserved data\n" << endl; 
     if( ret == -1 ) {
       ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
       assert(0);
@@ -69,24 +70,24 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
 
 CDEntry::CDEntryErrT CDEntry::SaveMem(void)
 {
-//  std::cout<< "SaveMem(void) this: " << this<<std::endl;
+//  dbg<< "SaveMem(void) this: " << this<<endl;
   if(dst_data_.address_data() == NULL) {
     void *allocated_space = DATA_MALLOC(dst_data_.len() * sizeof(char));
     // FIXME: Jinsuk we might want our own memory manager since we don't want to call malloc everytime we want small amount of additional memory. 
     dst_data_.set_address_data(allocated_space);
-//    printf("....%d\n", dst_data_.len()*sizeof(char));
-//    printf("allocated memory: %x\n", allocated_space);
-//    printf("dst_data_: %x\n", dst_data_.address_data());
-//    getchar();
+//    dbg <<"..." << dst_data_.len()*sizeof(char) << endl;;
+//    dbg << "allocated memory: " << allocated_space << endl;
+//    dbg << "dst_data_: " << dst_data_.address_data() << endl;
+//    dbgBreak();
   }
 //  else {
-//    printf("This one shouldn't be called!!!\n\n");
+//    dbg << "This one shouldn't be called!!!\n\n" << endl;
 //    assert(0);
     memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len());
 
-    std::cout << "\tSaved Data "<<tag2str[entry_tag_]<<" : " << *(reinterpret_cast<int*>(dst_data_.address_data())) << " at " << dst_data_.address_data() <<" (Memory)" << std::endl; //getchar();
+    dbg << "\tSaved Data "<<tag2str[entry_tag_]<<" : " << *(reinterpret_cast<int*>(dst_data_.address_data())) << " at " << dst_data_.address_data() <<" (Memory)" << endl; //dbgBreak();
 
-//    std::cout<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<std::endl<<std::endl;
+//    dbg<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<endl<<endl;
 
     if(false) { // Is there a way to check if memcpy is done well?
       ERROR_MESSAGE("Not enough memory.");
@@ -127,8 +128,8 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen, struct ts
     fwrite(src_data_.address_data(), sizeof(char), src_data_.len(), fp);
     fclose(fp);
 
-    printf("we write a file \n");
-    //getchar();
+    dbg << "we write a file \n" << endl;
+    //dbgBreak();
 
     return kOK;
   }
@@ -139,8 +140,8 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen, struct ts
 //
 // 	if(!isOpen) {
 //		int ret;
-//    printf("inside saveMem\n");
-//    getchar();
+//    dbg << "inside saveMem\n" << endl;
+//    dbgBreak();
 //		ret = tsn_log_create_file(dst_data_.file_name_.c_str());
 //	  assert(ret>=0);	
 //		ret = tsn_log_open_file(dst_data_.file_name_.c_str(), TSN_LOG_READWRITE, log);
@@ -149,7 +150,7 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen, struct ts
 //  assert(log);
 //  assert(log->log_ops);
 //	uint64_t bytes = log->log_ops->l_write(log, src_data_.address_data(), src_data_.len(), &lsn);
-//	std::cout<<lsn.lsn<<std::endl;
+//	dbg<<lsn.lsn<<endl;
 //	assert(bytes == src_data_.len());
 //		int err = log->log_ops->l_flush(log, &lsn, 1, &durable_lsn);
 //		assert(err);
@@ -181,7 +182,7 @@ CDEntry::CDEntryErrT CDEntry::Save(void)
 
     if(dst_data_.address_data() != NULL) {
       memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len()); 
-      std::cout<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<std::endl<<std::endl;
+      dbg<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<endl<<endl;
     }
     else {
       return kOutOfMemory;
@@ -235,13 +236,13 @@ DataHandle* CDEntry::GetBuffer() {
   DataHandle* buffer=0;
   DataHandle real_dst_data;
 
-//	std::cout <<"ref name: "    << dst_data_.ref_name() 
-//            << ", at level: " << ptr_cd()->GetCDID().level()<<std::endl;
+//	dbg <<"ref name: "    << dst_data_.ref_name() 
+//            << ", at level: " << ptr_cd()->GetCDID().level()<<endl;
 
 
 
 	if( dst_data_.handle_type() == DataHandle::kReference) {  // Restoration from reference
-    std::cout<< "GetBuffer, reference"<<std::endl; //getchar();
+    dbg<< "GetBuffer, reference"<<endl; //dbgBreak();
     buffer = &real_dst_data;
     
     // FIXME: for now let's just search immediate parent only.  Let's extend this to more general way.
@@ -250,18 +251,18 @@ DataHandle* CDEntry::GetBuffer() {
 		cd::CDHandle* parent_cd = CDPath::GetParentCD();
     CDEntry* entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
 
-    std::cout<<"parent name: "<<parent_cd->GetName()<<std::endl;
+    dbg<<"parent name: "<<parent_cd->GetName()<<endl;
     if(entry_tmp != NULL) { 
-      std::cout << "parent dst addr : " << entry_tmp->dst_data_.address_data()
-                << ", parent entry name : " << entry_tmp->dst_data_.ref_name()<<std::endl;
+      dbg << "parent dst addr : " << entry_tmp->dst_data_.address_data()
+                << ", parent entry name : " << entry_tmp->dst_data_.ref_name()<<endl;
     } else {
-      std::cout<<"there is no reference in parent level"<<std::endl;
+      dbg<<"there is no reference in parent level"<<endl;
     }
 //		if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
 
 //		CDEntry* entry = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
-//		std::cout <<"ref name: "    << entry->dst_data_.ref_name() 
-//              << ", at level: " << entry->ptr_cd()->GetCDID().level()<<std::endl;
+//		dbg <<"ref name: "    << entry->dst_data_.ref_name() 
+//              << ", at level: " << entry->ptr_cd()->GetCDID().level()<<endl;
 //		if( entry != 0 ) {
 
       //Here, we search Parent's entry and Parent's Parent's entry and so on.
@@ -271,30 +272,30 @@ DataHandle* CDEntry::GetBuffer() {
       CDEntry* entry = NULL;
 			while( parent_cd != NULL ) {
 		    entry = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
-				std::cout <<"current entry name : "<< entry->name() << " with ref name : "    << entry->dst_data_.ref_name() 
-                  << ", at level: " << entry->ptr_cd()->GetCDID().level()<<std::endl;
+				dbg <<"current entry name : "<< entry->name() << " with ref name : "    << entry->dst_data_.ref_name() 
+                  << ", at level: " << entry->ptr_cd()->GetCDID().level()<<endl;
 
         if(entry != NULL) {
-          std::cout<<"I got my reference here!!"<<std::endl;
+          dbg<<"I got my reference here!!"<<endl;
           break;
         }
         else {
 				  parent_cd = CDPath::GetParentCD(ptr_cd()->GetCDID().level());
-          std::cout<< "Gotta go to upper level! -> " << parent_cd->GetName() << " at level "<< parent_cd->ptr_cd()->GetCDID().level() << std::endl;
+          dbg<< "Gotta go to upper level! -> " << parent_cd->GetName() << " at level "<< parent_cd->ptr_cd()->GetCDID().level() << endl;
         }
 			} 
 
-      std::cout<<"here?? 2"<<std::endl;
+      dbg<<"here?? 2"<<endl;
        
 			//lsn = entry->lsn;
 			
       DataHandle& tmp = entry->dst_data_; 
       buffer = &tmp;
 
-//      std::cout<<"addr "<<entry->dst_data_.address_data()<<std::endl; 
-//      std::cout<<"addr "<<buffer->address_data()<<std::endl; 
-//			std::cout <<"[Buffer] ref name: "    << buffer->ref_name() 
-//                <<", value: "<<*(reinterpret_cast<int*>(buffer->address_data())) << std::endl;
+//      dbg<<"addr "<<entry->dst_data_.address_data()<<endl; 
+//      dbg<<"addr "<<buffer->address_data()<<endl; 
+//			dbg <<"[Buffer] ref name: "    << buffer->ref_name() 
+//                <<", value: "<<*(reinterpret_cast<int*>(buffer->address_data())) << endl;
       buffer->set_ref_offset(dst_data_.ref_offset() );   
       // length could be different in case we want to describe only part of the preserved entry.
       buffer->set_len(dst_data_.len());     
@@ -307,7 +308,7 @@ DataHandle* CDEntry::GetBuffer() {
 
 	}
   else {  // Restoration from memory or file system. Just use the current dst_data_ for it.
-    std::cout<<"GetBuffer :: kCopy "<<std::endl; //getchar();
+    dbg<<"GetBuffer :: kCopy "<<endl; //dbgBreak();
     buffer = &dst_data_;
     dst_data_.address_data();
   }
@@ -316,7 +317,7 @@ DataHandle* CDEntry::GetBuffer() {
 
 CDEntry::CDEntryErrT CDEntry::Restore(void)
 {
-  std::cout<<"CDEntry::Restore(void)"<<std::endl;
+  dbg<<"CDEntry::Restore(void)"<<endl;
   // Populate buffer
   DataHandle* buffer = GetBuffer();
   if(buffer == 0) { ERROR_MESSAGE("GetBuffer failed.\n"); assert(0); }
@@ -324,16 +325,16 @@ CDEntry::CDEntryErrT CDEntry::Restore(void)
 	//FIXME we need to distinguish whether this request is on Remote or local for both 
   // when using kOSFile or kMemory and do appropriate operations..
 	if(buffer->handle_type() == DataHandle::kMemory)	{
-    std::cout<<"CDEntry::Restore -> kMemory"<<std::endl;
+    dbg<<"CDEntry::Restore -> kMemory"<<endl;
 		if(src_data_.address_data() != NULL) {
-      std::cout << src_data_.len() << " - " << buffer->len() << ", offset : "<<buffer->ref_offset() << std::endl;
-      std::cout << src_data_.address_data() << " - " << buffer->address_data() << std::endl;
+      dbg << src_data_.len() << " - " << buffer->len() << ", offset : "<<buffer->ref_offset() << endl;
+      dbg << src_data_.address_data() << " - " << buffer->address_data() << endl;
       assert( src_data_.len() == buffer->len() );
-//      std::cout << "sizeof src "<< sizeof(src_data_.address_data()) << ", sizeof dst " <<sizeof(buffer->address_data())<<std::endl;
+//      dbg << "sizeof src "<< sizeof(src_data_.address_data()) << ", sizeof dst " <<sizeof(buffer->address_data())<<endl;
 			memcpy(src_data_.address_data(), (char *)buffer->address_data()+(buffer->ref_offset()), buffer->len()); 
-      std::cout<<"memcpy succeeds"<<std::endl; //getchar();
+      dbg<<"memcpy succeeds"<<endl; //dbgBreak();
 
-      std::cout<<"memcpy "<< dst_data_.len() <<" size data from "<< dst_data_.address_data() << " to "<< src_data_.address_data() <<std::endl<<std::endl;
+      dbg<<"memcpy "<< dst_data_.len() <<" size data from "<< dst_data_.address_data() << " to "<< src_data_.address_data() <<endl<<endl;
 		}
 		else {
 			ERROR_MESSAGE("Not enough memory.");
@@ -341,7 +342,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(void)
 
 	}
 	else if( buffer->handle_type() == DataHandle::kOSFile)	{
-    std::cout<<"CDEntry::Restore -> kOSFile"<<std::endl;
+    dbg<<"CDEntry::Restore -> kOSFile"<<endl;
 		//FIXME we need to collect file writes and write as a chunk. We don't want to have too many files per one CD.   
 
 		FILE *fp;
@@ -386,12 +387,12 @@ CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 	//FIXME we need to distinguish whether this request is on Remote or local for both when using kOSFile or kMemory and do appropriate operations..
 	if(buffer->handle_type() == DataHandle::kMemory) {
     assert(buffer!=NULL);
-    std::cout<<buffer<<" " <<buffer->address_data() << " "<< buffer->ref_offset() << " "<< buffer->len()<<std::endl;
+    dbg<<buffer<<" " <<buffer->address_data() << " "<< buffer->ref_offset() << " "<< buffer->len()<<endl;
 		if(src_data_.address_data() != NULL) {
 			memcpy(src_data_.address_data(), 
             (char*)buffer->address_data() + (buffer->ref_offset()), buffer->len()); 
 
-      std::cout<<"memcpy "<< dst_data_.len() <<" size data from "<< dst_data_.address_data() << " to "<< src_data_.address_data() <<std::endl<<std::endl;
+      dbg<<"memcpy "<< dst_data_.len() <<" size data from "<< dst_data_.address_data() << " to "<< src_data_.address_data() <<endl<<endl;
 		}
 		else {
 			ERROR_MESSAGE("Not enough memory.");
@@ -400,7 +401,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 	}
 	else if( buffer->handle_type() == DataHandle::kOSFile) {
 // FIXME: GONG
-//    std::cout<<"kOSFile file_name() : "<<buffer->file_name()<<" offset: "<<buffer->ref_offset()<<std::endl;					
+//    dbg<<"kOSFile file_name() : "<<buffer->file_name()<<" offset: "<<buffer->ref_offset()<<endl;					
 //		if(!open){
 //			int ret;
 //			ret = tsn_log_create_file(buffer->file_name());
@@ -411,7 +412,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 //    assert(log);
 //    assert(log->log_ops);
 //		uint64_t bytes = log->log_ops->l_read(log, &lsn, src_data_.address_data(), src_data_.len());
-//		std::cout<<lsn.lsn<<" "<<bytes<<" "<<open<<std::endl;
+//		dbg<<lsn.lsn<<" "<<bytes<<" "<<open<<endl;
 //		assert(bytes == src_data_.len());
 
 

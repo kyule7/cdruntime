@@ -38,6 +38,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdint.h>
 #include <assert.h>
 #include <iostream>
+#include <string>
+#include <sstream>
 #include <vector>
 #include <map>
 #include <functional>
@@ -75,7 +77,19 @@ typedef MPI_Win CDMailBoxT;
 #define INVALID_TASK_ID -1
 #define INVALID_HEAD_ID -1
 #define NUM_FLAGS 1024
+
+
 namespace cd {
+
+static inline void nullFunc(void) {}
+#if _DEBUG
+  extern std::ostringstream dbg;
+#define dbgBreak nullFunc
+#else
+#define dbg std::cout
+#define dbgBreak nullFunc
+#endif
+
   class CD;
   class HeadCD;
   class CDHandle;
@@ -159,11 +173,20 @@ namespace cd {
                     kSSD,
                     kPFS};
 
+  enum CDEventT { kFine=0,
+                  kFailure=1,
+                  kAllStop=2,
+                  kAllResume=4,
+                  kEntryReqeust=8,
+                  kEntrySearch=16,
+                  kEntrySend=32,
+                  kEscalate=64 };
+
   class CDNameT;
 
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
 
-//  extern int myTaskID;
+  extern int myTaskID;
 
   class DebugBuf: public std::streambuf {
 
@@ -203,22 +226,14 @@ namespace cd {
   
   
   
-  class DebugStream : public std::ostream {
-  
-    DebugBuf dbg_buf_;
-  
-  public:
-    DebugStream()
-      : std::ostream(&dbg_buf_) {}
 
-  }; 
-  
-  extern DebugStream dbgStream;
+
   extern std::map<uint64_t, std::string> tag2str;
   extern std::hash<std::string> str_hash;
 
   extern CDHandle* CD_Init(int numproc=1, int myrank=0);
-  extern void CD_Finalize();
+  extern void CD_Finalize(std::ostringstream *oss=NULL);
+  extern void WriteDbgStream(std::ostringstream *oss=NULL);
 //  extern uint64_t Util::gen_object_id_=0;
 
 }
@@ -282,8 +297,8 @@ We are increasing the number of reexecution inside Begin(). So, the point of tim
 
 // Macros for setjump / getcontext
 // So users should call this in their application, not call cd_handle->Begin().
-//#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
-#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
+#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
+//#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
 #define CD_Complete(X) (X)->Complete()   
 
 

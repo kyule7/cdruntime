@@ -107,7 +107,7 @@ class cd::CD : public cd::Serializable {
 #if _MPI_VER
 #if _KL
     // Every mailbox resides in head 
-    CDMailBoxT *mailbox_;
+    CDMailBoxT mailbox_;
 #endif
 #endif
     // Label for Begin/Complete pair. It is mainly for Loop interation.
@@ -395,8 +395,8 @@ class cd::HeadCD : public cd::CD {
 #if _KL
     CDFlagT *event_flag_;
 
-    CDFlagT *family_event_flag_;
-    CDMailBoxT *family_mailbox_;
+//    CDFlagT *family_event_flag_;
+//    CDMailBoxT *family_mailbox_;
 #endif
 #endif
 

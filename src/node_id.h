@@ -42,6 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <ostream>
 #include <utility>
 
+using std::endl;
 
 namespace cd {
 /*
@@ -111,38 +112,38 @@ public:
   int head(void) const { return head_; }
   int size(void) const { return size_; }
   bool IsHead(void) const { 
-    std::cout << "head : " << head_ << ", task: " << task_in_color_ << std::endl; //getchar();
+    dbg << "head : " << head_ << ", task: " << task_in_color_ << endl; //getchar();
 return head_ == task_in_color_; }
 
   void * Serialize(uint32_t& len_in_bytes)
   {
-    std::cout << "\nNode ID Serialize\n" << std::endl;
+    dbg << "\nNode ID Serialize\n" << endl;
     Packer node_id_packer;
     node_id_packer.Add(NODEID_PACKER_COLOR, sizeof(ColorT), &color_);
     node_id_packer.Add(NODEID_PACKER_TASK_IN_COLOR, sizeof(int), &task_in_color_);
     node_id_packer.Add(NODEID_PACKER_HEAD, sizeof(int), &head_);
     node_id_packer.Add(NODEID_PACKER_SIZE, sizeof(int), &size_);
-    std::cout << "\nNode ID Serialize Done\n" << std::endl;
+    dbg << "\nNode ID Serialize Done\n" << endl;
     return node_id_packer.GetTotalData(len_in_bytes);  
   }
 
   void Deserialize(void* object) 
   {
-    std::cout << "\nNode ID Deserialize\n" << std::endl;
+    dbg << "\nNode ID Deserialize\n" << endl;
     Unpacker node_id_unpacker;
     uint32_t return_size;
     uint32_t dwGetID;
     color_ = *(ColorT *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    std::cout << "first unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    dbg << "first unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
 
     task_in_color_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    std::cout << "second unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    dbg << "second unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
 
     head_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    std::cout << "third unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    dbg << "third unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
 
     size_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    std::cout << "fourth unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    dbg << "fourth unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
   }
 
 

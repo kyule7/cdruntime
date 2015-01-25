@@ -49,27 +49,6 @@ using namespace cd;
 
 namespace cd {
 
-class StringBuffer : public std::string {
-  std::ostringstream _stream;
-public:
-  StringBuffer() {}
-  StringBuffer(const std::string& initTxt) {
-  	_stream << initTxt;
-    assign(_stream.str());
-  }
-  
-  template <typename T>
-  StringBuffer& operator<<(T const& t) {
-    _stream << t;
-    assign(_stream.str());
-    return *this;
-  }
-
-  std::string GetString() const { 
-    return _stream.str(); 
-  }
- 
-};
 
 //extern uint64_t Util::gen_object_id_;
 
@@ -93,13 +72,13 @@ static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, 
 {
 //  std::string base(GetBaseFilePath());
   std::string base(basepath);
-  StringBuffer filename(base);
+  std::ostringstream filename(base);
 //  StringBuffer filename(std::string(base));
 //
-  std::cout << "base file name: "<< filename.GetString() << std::endl << std::endl;
+  std::cout << "base file name: "<< filename.str() << std::endl << std::endl;
   filename << cd_id.level() << '.' << cd_id.rank_in_level() << '.' << cd_id.object_id() << '.' << cd_id.sequential_id() << '.' << cd_id.task_in_color() << '.' << data_name << ".cd";
-  std::cout << "file name for this cd: "<< filename.GetString() << std::endl << std::endl; //getchar(); 
-  return filename.GetString();
+  std::cout << "file name for this cd: "<< filename.str() << std::endl << std::endl; //dbgBreak(); 
+  return filename.str();
 //  return "./";
 }
 

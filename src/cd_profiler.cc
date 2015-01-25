@@ -42,6 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <cstdint>
 using namespace sight;
 using namespace cd;
+using std::endl;
 
 std::list<Viz*> CDProfiler::vizStack_;
 //std::list<module*>     Module::mStack;
@@ -69,19 +70,19 @@ attrIf *Attribute::attrScope;
 void CDProfiler::GetProfile(const char *label)  // it is called in Begin()
 {
   int onOff = 0;
-  cout << "label check "<< label_.first << " " << label << endl; //getchar();
+  dbg << "label check "<< label_.first << " " << label << endl; //dbgBreak();
   if(CDPath::GetCurrentCD()->ptr_cd()->GetCDID().sequential_id_ < 2) onOff = 1;
-    cout<<"GetProfile------   \t"<<label_.first << " - " << label << endl; //getchar();
+    dbg<<"GetProfile------   \t"<<label_.first << " - " << label << endl; //dbgBreak();
 
   if(label_.first != label) { 
     // diff
-    //cout<<"label is diff"<<endl;
-    //getchar();
+    //dbg<<"label is diff"<<endl;
+    //dbgBreak();
     SetCollectProfile(true);
 
     // Dynamic Method Selection
     if(label_.first != "INITIAL_LABEL") {
-      cout << "finish profile"<<endl;
+      dbg << "finish profile"<<endl;
       FinishProfile();
     }
     // Set label. INITIAL_LABEL should be unique for one CD
@@ -93,15 +94,15 @@ void CDProfiler::GetProfile(const char *label)  // it is called in Begin()
     else { // label_.first == "INITIAL_LABEL"
       label_.first = CDPath::GetCurrentCD()->GetName();
     }
-//    cout<<"start profile------"<<endl;
-//    getchar();
+//    dbg<<"start profile------"<<endl;
+//    dbgBreak();
     label_.second = onOff;
     StartProfile();
   }
   else {
     // the same exec
-    //cout<<"label is the same"<<endl;
-    //getchar();
+    //dbg<<"label is the same"<<endl;
+    //dbgBreak();
     if(label_.first == "INITIAL_LABEL") {
       SetCollectProfile(true);
       label_.first = CDPath::GetCurrentCD()->GetName();
@@ -157,8 +158,8 @@ void CDProfiler::InitViz()
   // Only root should call this (inside CD_Init)
   if( CDPath::GetCurrentCD() != CDPath::GetRootCD() ) assert(0);
 
-//  cout<< "\n---------------- Initialize Visualization --------------\n" <<endl;
-  //getchar();
+//  dbg<< "\n---------------- Initialize Visualization --------------\n" <<endl;
+  //dbgBreak();
 
   //SightInit(txt()<<"CDs", txt()<<"dbg_CDs_"<<GetCDID().node_id().color()<<"_"<< GetCDID().node_id().task_in_color() );
   SightInit(txt()<<"CDs", txt()<<"dbg_CDs_"<< CDPath::GetRootCD()->GetTaskID() );
@@ -189,13 +190,13 @@ void CDProfiler::InitViz()
 
 void CDProfiler::FinalizeViz(void)
 {
-  cout<< "\n---------------- Finalize Visualization --------------\n" <<endl;
+  dbg<< "\n---------------- Finalize Visualization --------------\n" <<endl;
 
   // Only root should call this (inside CD_Finalize)
   if( CDPath::GetCurrentCD() != CDPath::GetRootCD() ) assert(0);
 
   // Destroy SightObj
-  cout << "reached here? becore while in FinalizeViz() "<<vizStack_.size() << endl;
+  dbg << "reached here? becore while in FinalizeViz() "<<vizStack_.size() << endl;
 
 #if _ENABLE_SCOPEGRAPH
   assert(scopeGraph);
@@ -221,11 +222,11 @@ void CDProfiler::FinalizeViz(void)
 //    assert(vizStack_.size()>0);
 //    assert(vizStack_.back() != NULL);
 //    vizStack_.back()->Finalize();
-//    cout << "delete viz"<<endl;
-//    cout << "vizStack size: "<<vizStack_.size() << endl;
+//    dbg << "delete viz"<<endl;
+//    dbg << "vizStack size: "<<vizStack_.size() << endl;
 //    delete vizStack_.back();
 //    vizStack_.pop_back();
-//    cout << "vizStack size: "<<vizStack_.size() << endl;
+//    dbg << "vizStack size: "<<vizStack_.size() << endl;
 //    sightObj_count_--;
 //  }
 }
@@ -234,7 +235,7 @@ void CDProfiler::FinalizeViz(void)
 void CDProfiler::StartProfile()
 {
   
-  cout<< "\n\t-------- Start Profile --------\n" <<endl; //getchar();
+  dbg<< "\n\t-------- Start Profile --------\n" <<endl; //dbgBreak();
 
   profile_data_[label_.first] = new uint64_t(MAX_PROFILE_DATA);
 // Profile starts -- ATTR | COMP | MODULE | SCOPE | CDNODE -- 
@@ -253,8 +254,8 @@ void CDProfiler::StartProfile()
 #endif
 
 #if _ENABLE_MODULE
-//  cout << "\ncreate module " <<endl; //getchar();
-//  cout << "vizStack size: "<<vizStack_.size() << endl;
+//  dbg << "\ncreate module " <<endl; //dbgBreak();
+//  dbg << "vizStack size: "<<vizStack_.size() << endl;
 //  Module *m = new Module();
 //  m->Create();
 //  vizStack_.push_back(m);
@@ -279,34 +280,34 @@ void CDProfiler::StartProfile()
 #endif
 
 //  int so_count = getSOStackDepth() - sightObj_count_;
-//  cout << "sight obj count = " << sightObj_count_ << ", so_count : " << so_count << endl; //getchar();
+//  dbg << "sight obj count = " << sightObj_count_ << ", so_count : " << so_count << endl; //dbgBreak();
 }
 
 void CDProfiler::ClearSightObj(void)
 {
 //  while(  sightObj_count_ > 0) {
 
-//    cout << "destroy sightobj" << endl; //getchar();
+//    dbg << "destroy sightobj" << endl; //dbgBreak();
     assert(vizStack_.size()>0);
     assert(vizStack_.back() != NULL);
-//    cout << "delete viz"<<endl;
-//    cout << "vizStack size: "<<vizStack_.size() << endl;
+//    dbg << "delete viz"<<endl;
+//    dbg << "vizStack size: "<<vizStack_.size() << endl;
 //    vizStack_.back()->Destroy();
 //    delete vizStack_.back();
-//    cout << "destroy all" << endl; //getchar();
+//    dbg << "destroy all" << endl; //dbgBreak();
     vizStack_.back()->GetSightObj()->destroyFromA(sightObj_mark_);
 
     for(int i=0; i<getSOStackDepth() - sightObj_count_; i++) vizStack_.pop_back();
 
-//    cout << "vizStack size: "<<vizStack_.size() << endl;
+//    dbg << "vizStack size: "<<vizStack_.size() << endl;
 //  }
 }
 
 void CDProfiler::FinishProfile(void) // it is called in Destroy()
 {
 
-  cout<< "\n\t-------- Finish Profile --------\n" <<endl;
-  //getchar();
+  dbg<< "\n\t-------- Finish Profile --------\n" <<endl;
+  //dbgBreak();
 
 // Profile starts -- COMP | MODULE | SCOPE | CDNODE -- 
 
@@ -323,8 +324,8 @@ void CDProfiler::FinishProfile(void) // it is called in Destroy()
   (profile_data_)[label_.first][EXEC_CYCLE] += (that_point_) - (this_point_);
 
   // Destroy SightObj
-//  cout << "reached here? becore while in FinishProfile() "<<vizStack_.size() << endl;
-//  cout << "++++++++++++++++++++   sightObj_count : " << sightObj_count_ << endl;
+//  dbg << "reached here? becore while in FinishProfile() "<<vizStack_.size() << endl;
+//  dbg << "++++++++++++++++++++   sightObj_count : " << sightObj_count_ << endl;
 
 //  while(  sightObj_count_ > 0) {
 //    ClearSightObj();
@@ -360,7 +361,7 @@ void CDProfiler::GetPrvData(void *data,
       /// Sequential overlapped accumulated data. It will be calculated to OVERLAPPED_DATA/PRV_COPY_DATA
       /// overlapped data: overlapped data that is preserved only via copy method.
 //      profile_data_[label_.first][OVERLAPPED_DATA] += len_in_bytes;
-//      cout<<"something is weird  "<<"level is "<<this->this_cd_->level_ << "length : "<<len_in_bytes<<endl;
+//      dbg<<"something is weird  "<<"level is "<<this->this_cd_->level_ << "length : "<<len_in_bytes<<endl;
 
   } else if(preserve_mask == kRef) {
 
@@ -368,7 +369,7 @@ void CDProfiler::GetPrvData(void *data,
 
   } else {
                                                                                                                                   
-    cout<<"prvTy is not supported currently : "<< preserve_mask<<endl;          
+    dbg<<"prvTy is not supported currently : "<< preserve_mask<<endl;          
 //    exit(-1);
 
   }
@@ -377,7 +378,7 @@ void CDProfiler::GetPrvData(void *data,
 
 void CDProfiler::GetLocalAvg(void)
 {
-  cout<<"Master CD Get Local Avg"<<endl;
+  dbg<<"Master CD Get Local Avg"<<endl;
 //  for(int i=1; i < MAX_PROFILE_DATA-1; ++i) {
 //    profile_data_[label_.first][i] /= profile_data_[label_.first][LOOP_COUNT];
 //  }
@@ -397,7 +398,7 @@ CDNode::CDNode(void)
 CDNode::~CDNode(void)
 {
 //  if(cdStack.back() != NULL){
-//    cout<<"add new info"<<endl;
+//    dbg<<"add new info"<<endl;
 ///*
 //    cdStack.back()->setStageNode( "preserve", "data_copy", profile_data_[label_.first]PRV_COPY_DATA]    );
 //    cdStack.back()->setStageNode( "preserve", "data_overlapped", profile_data_[label_.first][OVERLAPPED_DATA]  );
@@ -438,7 +439,7 @@ Scope::~Scope(void)
 
 ScopeGraph::ScopeGraph(void)
 {
-  std::cout << "destroy scope" << std::endl;
+  dbg << "destroy scope" << endl;
   std::pair<std::string, int> label = CDPath::GetCurrentCD()->profiler_->label();
   /// create a new scope at each Begin() call
   s = new scope(txt()<<label.first<<", cd_id="<<CDPath::GetCurrentCD()->node_id().color());
@@ -449,7 +450,7 @@ ScopeGraph::ScopeGraph(void)
 
 ScopeGraph::~ScopeGraph(void)
 {
-  std::cout << "destroy scopegraph" << std::endl;
+  dbg << "destroy scopegraph" << endl;
 }
 
 
@@ -458,12 +459,12 @@ Module::Module(bool usr_profile_en)
 {
 //  CDHandle *cdh = CDPath::GetCurrentCD();
   std::pair<std::string, int> label = CDPath::GetCurrentCD()->profiler_->label();
-  cout<<"CreateModule call"<<endl;
+  dbg<<"CreateModule call"<<endl;
   NodeID node_id = CDPath::GetCurrentCD()->node_id();
 
   usr_profile_enable = usr_profile_en;
   if(usr_profile_enable==false) {
-    cout<<"\n[[[[Module object created]]]]"<<endl<<endl; //getchar();
+    dbg<<"\n[[[[Module object created]]]]"<<endl<<endl; //dbgBreak();
     m = new module( instance(txt()<<label.first<<"_"<<CDPath::GetCurrentCD()->ptr_cd()->GetCDID().cd_name().GetCDName(), 1, 0), 
                     inputs(port(context("cd_id", CDPath::GetCurrentCD()->ptr_cd()->GetCDID().cd_name().GetCDName(), 
                                         "sequential_id", (int)(CDPath::GetCurrentCD()->ptr_cd()->GetCDID().sequential_id()),
@@ -474,7 +475,7 @@ Module::Module(bool usr_profile_en)
   }
   else {
   
-//    cout<<22222<<endl<<endl; getchar();
+//    dbg<<22222<<endl<<endl; dbgBreak();
     m = new module( instance(txt()<<label.first<<"_"<<CDPath::GetCurrentCD()->ptr_cd()->GetCDID().cd_name().GetCDName(), 2, 2), 
                     inputs(port(context("cd_id", txt()<<node_id.task_in_color(), 
                                         "sequential_id", (int)(CDPath::GetCurrentCD()->ptr_cd()->GetCDID().sequential_id()))),
@@ -489,17 +490,17 @@ Module::Module(bool usr_profile_en)
 
 Module::~Module(void)
 {
-  std::cout << "~Module is called" << std::endl;
+  dbg << "~Module is called" << endl;
   CDProfiler *profiler = (CDProfiler*)(CDPath::GetCurrentCD()->profiler_);
   std::map<std::string, uint64_t*> profile_data = profiler->profile_data_;
   std::pair<std::string, int> label = CDPath::GetCurrentCD()->profiler_->label();
 
-  cout<<"DestroyModule call"<<endl;
+  dbg<<"DestroyModule call"<<endl;
 //  dbg << " ]]] Module Test -- "<<this->this_cd_->cd_id_<<", #mStack="<<mStack.size()<<endl;
 
   assert(m != NULL);
 
-  cout << "reach?" << endl;
+  dbg << "reach?" << endl;
   if(usr_profile_enable == false){
     m->setOutCtxt(0, context("data_copy=", (long)(profile_data[label.first][PRV_COPY_DATA]),
                              "data_overlapped=", (long)(profile_data[label.first][OVERLAPPED_DATA]),
@@ -518,7 +519,7 @@ Module::~Module(void)
 */
 
 
-  cout << "\n [[[[[[[[[[[[ Module is deleted ]]]]]]]]]]]\n"<<endl;
+  dbg << "\n [[[[[[[[[[[[ Module is deleted ]]]]]]]]]]]\n"<<endl;
 }
 
 
@@ -602,7 +603,7 @@ Comparison::~Comparison(void)
 // -------------- HierGraph ---------------------------------------------------------------------------
 HierGraph::HierGraph(void)
 {
-  cout<<"CreateHierGraph call"<<endl;
+  dbg<<"CreateHierGraph call"<<endl;
   NodeID node_id = CDPath::GetCurrentCD()->node_id();
   CDID   cd_id = CDPath::GetCurrentCD()->ptr_cd()->GetCDID();
 

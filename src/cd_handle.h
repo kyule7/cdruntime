@@ -80,7 +80,7 @@ class cd::CDHandle {
 #if _KL
     // This flag is unique for each process. 
     static CDFlagT *pendingFlag_;
-    static CDMailBoxT pendingWindow_;
+    CDMailBoxT pendingWindow_;
 #endif
 #endif
 
@@ -267,6 +267,10 @@ class cd::CDHandle {
 
     // Select Head among task group that are corresponding to one CD.
     void SetHead(NodeID& new_node_id);
+
+    int CheckMailBox(void);
+    int InternalCheckMailBox(void);
+    int SetMailBox(CDEventT event);
 
   public:
     bool IsHead(void) const;

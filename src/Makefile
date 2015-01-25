@@ -1,7 +1,7 @@
 include ../Makefile.extern
 
-DEBUG_VAR = 0
-MPI_VER_VAR = 1
+DEBUG_VAR = 1
+MPI_VER_VAR = 0
 PGAS_VER_VAR = 0
 SINGLE_VER_VAR = 0
 
