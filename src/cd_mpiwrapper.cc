@@ -426,7 +426,7 @@ int MPI_Sendrecv_replace(void *buf,
 // -------------------------------------------------------------------------------------------------------
 
 // non-blocking send
-int MPI_Isend(void *buf, 
+int MPI_Isend(const void *buf, 
               int count, 
               MPI_Datatype datatype, 
               int dest, 

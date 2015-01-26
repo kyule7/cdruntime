@@ -53,7 +53,7 @@ int MPI_Sendrecv_replace(void *buf, int count, MPI_Datatype datatype, int dest, 
                         int source, int recvtag, MPI_Comm comm, MPI_Status *status);
 
 // non-blocking p2p communication
-int MPI_Isend(void *buf, int count, MPI_Datatype datatype, int dest, 
+int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, 
             int tag, MPI_Comm comm, MPI_Request *request);
 int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int src, 
             int tag, MPI_Comm comm, MPI_Request *request);
