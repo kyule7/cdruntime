@@ -285,6 +285,7 @@ update the preserved data.
   
     CDErrT Reexecute(void);
   
+    virtual CDFlagT *event_flag();
     // Utilities -----------------------------------------------------
 
     // GetPlaceToPreserve() decides actual medium to preserve data.
@@ -411,6 +412,7 @@ class cd::HeadCD : public cd::CD {
 
     cd::CDHandle *cd_parent(void);
     void set_cd_parent(cd::CDHandle* cd_parent);
+    virtual CDFlagT *event_flag();
     virtual CDHandle *Create(CDHandle* parent, 
                              const char* name, 
                              const CDID& child_cd_id, 

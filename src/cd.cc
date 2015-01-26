@@ -334,6 +334,71 @@ CD::InternalCreate(CDHandle* parent,
   return CDInternalErrT::kOK;
 }
 
+
+int CD::ReadMailBox(void) 
+{
+  int resolved=0;
+    // Initialize the resolved flag
+    resolved = 0;
+    resolved = HandleEvent(event[i]);
+
+    switch(resolved) {
+      case 0 : 
+        // no event
+        break;
+      case 1 :
+        // There was an event, but resolved
+        break;
+      case 2 :
+        // There was an event, but could not resolved.
+        // Escalation required
+        break;
+      default :
+        break;
+    }
+    dbg << "Task["<< i <<"] (" << ptr_cd()->GetCDName() << " / " << node_id_ 
+        << ") got an error #" << event[i] << ",\nthe result is " << resolved << endl;
+
+  return resolved;
+}
+
+
+int HeadCD::ReadMailBox(void) 
+{
+  int resolved=0;
+  for(int i=0; i<node_id_.size(); i++) {
+    // Initialize the resolved flag
+    resolved = 0;
+    resolved = HandleEvent(event[i]);
+
+    switch(resolved) {
+      case 0 : 
+        // no event
+        break;
+      case 1 :
+        // There was an event, but resolved
+        break;
+      case 2 :
+        // There was an event, but could not resolved.
+        // Escalation required
+        break;
+      default :
+        break;
+    }
+    dbg << "Task["<< i <<"] (" << ptr_cd()->GetCDName() << " / " << node_id_ 
+        << ") got an error #" << event[i] << ",\nthe result is " << resolved << endl;
+  }
+
+  return resolved;
+}
+
+
+
+
+
+
+
+
 // FIXME 11092014
 void AttachChildCD(HeadCD *new_cd)
 {
@@ -1638,6 +1703,17 @@ CDEntry* CD::InternalGetEntry(std::string entry_name)
     return 0;
   }
 }
+
+
+CDFlagT *CD::event_flag(void)
+{
+  return NULL;
+}
+CDFlagT *HeadCD::event_flag(void)
+{
+  return *event_flag_;
+}
+
 
 void CD::DeleteEntryDirectory(void)
 {

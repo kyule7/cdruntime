@@ -834,7 +834,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   dbg << "Detect at Level : " << ptr_cd()->GetCDID().level() << ", my node : " << node_id() << endl; getchar();
   MPI_Win_fence(0, pendingWindow_);
   if(GetTaskID() == 3)
-    SetMailBox(CDEventT::kFailure);
+    SetMailBox(CDEventT::kError);
   MPI_Win_fence(0, pendingWindow_);
   CheckMailBox();
 
@@ -942,25 +942,130 @@ uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_l
 int CDHandle::CheckMailBox(void)
 {
   int ret=0;
-  dbg << "\n\n\n========================================\nI am Head? " << IsHead() << endl;
-  if(IsHead()) {
-    dbg << "I am Head. Task : " << myTaskID << ", Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< ", Node ID: " <<node_id_<<endl;
-    ret = InternalCheckMailBox();
+  int event_count = *pendingFlag_;
+  dbg << "\n\n=================== Check Mail Box Start ==========================\n" << endl;
+  dbg << "\nCheckMailBox " << myTaskID << ", # of events : " << event_count << "Is it Head? "<< IsHead() <<endl;
+  if(event_count > 0) {
+    dbg << "An event is detected" << endl;
+    dbg << "Task : " << myTaskID << ", Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< ", Node ID: " <<node_id_<<endl;
+
+    ret = BringMailBox();
+
+  } 
+  else {
+    dbg << "No event is detected" << endl;
   }
+  dbg << "\n===================================================================\n" << endl;
   return ret;
 }
 
-int CDHandle::InternalCheckMailBox(void)
+int requested_event_count = 0;
+int handled_event_count = 0;
+
+int CDHandle::BringMailBox(CDHandle *current_cdh)
 {
   int ret=0;
-  int event = *pendingFlag_;
-  dbg << "\nCheckMailBox " << myTaskID << ", flag : " << *pendingFlag_ << endl;
+  requested_event_count = *pendingFlag_;
+  handled_event_count = 0;
+
+  CDHandle *curr_cdh = this;
+  CDFlagT *event = current_cdh->ptr_cd()->event_flag();
+
+  if(event == NULL) {
+    // This is not head, so needs to bring its mailbox from head
+    // Check leaf's status first
+    CDFlagT myEvent = 0;
+    MPI_Get();
+    ret = ReadMailBox(myEvent);
+
+  }
+  else {
+    // This task is head
+  }
+
+	while( curr_cdh != NULL ) {
+    // If this task is head at the current CD level, read mailbox
+    if(curr_cdh->IsHead()) {
+      ret = curr_cdh->ReadMailBox();
+    }
+
+    // Termination condition
+    // It finished every requests, and does not need to look at mailbox any more
+    if(requested_event_count == handled_event_count) {
+      dbg<<"I finished handling events!!"<<endl;
+      break;
+    }
+    else {
+      // If current CD is Root CD and GetParentCD is called, it returns NULL
+		  curr_cdh = CDPath::GetParentCD(ptr_cd()->GetCDID().level());
+    }
+
+	} 
+
+  int event_count = *pendingFlag_;  
+  if(requested_event_count != handled_event_count) {
+    // There are some events not handled at this point
+    ret = requested_event_count - handled_event_count;
+    assert(event_count != (requested_event_count-handled_event_count));
+  }
+  else {
+    // All events were handled
+    // If every event was handled, event_count must be 0
+    ret = 0;
+    assert(event_count!=0);
+  }
+
+  return ret;
+}
+
+int CDHandle::ReadMailBox(CDFlagT *event) 
+{
+  CDEventHandleT resolved = CDEventHandleT::kNoEvent;
+  if(event != NULL) {
+    resolved = 0;
+    resolved = HandleEvent(*event);
+  }
+  event = current_cdh->ptr_cd()->event_flag();
+  assert(event);
+
+  for(int i=0; i<node_id_.size(); i++) {
+    // Initialize the resolved flag
+    resolved = 0;
+    resolved = HandleEvent(event[i]);
+
+    switch(resolved) {
+      case CDEventHandleT::kNoEvent : 
+        // no event
+        break;
+      case CDEventHandleT::kEventResolved :
+        // There was an event, but resolved
+
+        (*pendingFlag_)--;
+        handled_event_count--;
+        break;
+      case CDEventHandleT::kEventPending :
+        // There was an event, but could not resolved.
+        // Escalation required
+        break;
+      default :
+        break;
+    }
+    dbg << "Task["<< i <<"] (" << ptr_cd()->GetCDName() << " / " << node_id_ 
+        << ") got an error #" << event[i] << ",\nthe result is " << resolved << endl;
+  }
+
+  return resolved;
+}
+
+int CDHandle::HandleEvent(CDFlagT event)
+{
+  int ret=1;
   switch(event) {
-    case CDEventT::kFine :
+    case CDEventT::kOK :
       dbg << "CD Event kOK" << endl;
       break;
-    case CDEventT::kFailure :
-      dbg << "CD Event kFailure" << endl;
+    case CDEventT::kError :
+      dbg << "CD Event kError" << endl;
       
       break;
     case CDEventT::kAllStop :
@@ -993,23 +1098,26 @@ int CDHandle::InternalCheckMailBox(void)
       break;
   }
   return ret;
-
-
 }
 
 
 int CDHandle::SetMailBox(CDEventT event)
 {
   int ret=0;
-  int val = 4;
+  int val = 1;
   switch(event) {
-    case CDEventT::kFine :
-      dbg << "Set CD Event kFine" << endl;
+    case CDEventT::kOK :
+      dbg << "Set CD Event kOK" << endl;
       break;
-    case CDEventT::kFailure :
-      dbg << "Set CD Event kFailure. Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< endl;
-      MPI_Accumulate(&val, 1, MPI_INT, 0, 0, 1, MPI_INT, MPI_SUM, pendingWindow_);
-      dbg << "Accumulate" << endl; getchar();
+    case CDEventT::kError :
+      dbg << "Set CD Event kError. Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< endl;
+      // Increment pending request count at the target task (requestee)
+      MPI_Accumulate(&val, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, MPI_SUM, pendingWindow_);
+      dbg << "MPI Accumulate done" << endl; getchar();
+
+      // Inform the type of event to be requested
+      MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, ptr_cd()->mailbox_);
+      dbg << "MPI_Put done" << endl; getchar();
       break;
     case CDEventT::kAllStop :
       dbg << "Set CD Event kAllStop" << endl;

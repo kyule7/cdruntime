@@ -173,14 +173,18 @@ static inline void nullFunc(void) {}
                     kSSD,
                     kPFS};
 
-  enum CDEventT { kFine=0,
-                  kFailure=1,
+  enum CDEventT { kOK=0,
+                  kError=1,
                   kAllStop=2,
                   kAllResume=4,
                   kEntryReqeust=8,
                   kEntrySearch=16,
                   kEntrySend=32,
                   kEscalate=64 };
+
+  enum CDEventHandleT { kNoEvent = 0,
+                        kEventResolved,
+                        kEventPending };
 
   class CDNameT;
 
