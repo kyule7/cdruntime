@@ -423,7 +423,7 @@ CDErrT CD::Begin(bool collective, const char* label)
     }
     //GONG: as long as parent CD is in replay(check with ), child CD needs to unpack logs
     if(GetParentHandle()->ptr_cd_->libc_log_ptr_->GetCommLogMode() == kReplayLog){
-      PRINT_DEBUG("unpack logs to children - replay mode\n");
+      PRINT_DEBUG("unpack libc logs to children - replay mode\n");
       //the same issue as above: address space 
       if (IsParentLocal())
       {
@@ -526,24 +526,8 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
                                    incomplete_log_.begin(),
                                    incomplete_log_.end());
 
-      ////delete all invalid incomplete log entries in all ancestors
-      //while (ptmp)
-      //{
-      //  if (ptmp->incomplete_log_.size()!=0){
-      //    for (it=ptmp->incomplete_log_.begin();it!=ptmp->incomplete_log_.end();it++){
-      //      if (it->valid_ == false){
-      //        ptmp->incomplete_log_.erase(it);
-      //      }
-      //    }
-      //  }
-      //  if (ptmp->GetParentHandle()!=NULL){
-      //    ptmp=ptmp->GetParentHandle()->ptr_cd_;
-      //  }
-      //  else{
-      //    ptmp=NULL;
-      //    break;
-      //  }
-      //}
+      // clear incomplete_log_ of current CD 
+      incomplete_log_.clear();
     }
     else if (!IsParentLocal())
     {
@@ -1592,7 +1576,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
     if (it->flag_ == flag) 
     {
       found = 1;
-      PRINT_DEBUG("Found the entry in incomplete_log_\n");
+      PRINT_DEBUG("Found the entry in incomplete_log_ in current CD\n");
       break;
     }
   }
@@ -1609,7 +1593,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
       {
         if (it->flag_ == flag){
           found = 1;
-          PRINT_DEBUG("Found the entry in incomplete_log_\n");
+          PRINT_DEBUG("Found the entry in incomplete_log_ in one parent CD\n");
           break;
         }
       }

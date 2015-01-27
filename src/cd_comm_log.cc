@@ -294,7 +294,7 @@ bool CommLog::ProbeAndLogDataPacked(void * addr,
     {
       if (tmp_table_ptr->flag_ == flag){
         // if found the corresponding log entry
-        assert(tmp_table_ptr->length_ = length);
+        assert(tmp_table_ptr->length_ == length);
         found = true;
         break;
       }
@@ -897,7 +897,8 @@ CommLogErrT CommLog::FindChildLogs(CDID child_cd_id, char** src_ptr)
     #endif
     if (cd_id == child_cd_id) 
     {
-      PRINT_DEBUG("Find the correct children logs\n");
+      PRINT_DEBUG("Find the correct child logs\n");
+      PRINT_DEBUG("tmp_index=%ld, child_log_.cur_pos_=%ld\n", tmp_index, child_log_.cur_pos_);
       break;
     }
     tmp_index += length;
