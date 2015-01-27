@@ -250,7 +250,7 @@ bool CommLog::ProbeAndLogData(void * addr,
       if (length!=0)
       {
         // copy data into the place that reserved..
-        memcpy(log_queue_.base_ptr_+log_queue_.cur_pos_, addr, length);
+        memcpy(log_queue_.base_ptr_+log_table_.base_ptr_[pos].pos_, addr, length);
       }
 
       found = true;
@@ -645,9 +645,12 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
     return kCommLogError;
   }
 
-  memcpy(buffer, 
-      log_queue_.base_ptr_+log_table_.base_ptr_[log_table_reexec_pos_].pos_,
-      log_table_.base_ptr_[log_table_reexec_pos_].length_);
+  if (length != 0)
+  {
+    memcpy(buffer, 
+        log_queue_.base_ptr_+log_table_.base_ptr_[log_table_reexec_pos_].pos_,
+        log_table_.base_ptr_[log_table_reexec_pos_].length_);
+  }
 
   log_table_reexec_pos_++;
 

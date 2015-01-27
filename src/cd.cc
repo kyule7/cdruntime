@@ -1630,6 +1630,10 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
     // ProbeAndLogData:
     // 1) change Isend/Irecv entry to complete state if there is any
     // 2) log data if Irecv
+#if _DEBUG
+    PRINT_DEBUG("Print Incomplete Log before calling comm_log_ptr_->ProbeAndLogData\n");
+    PrintIncompleteLog();
+#endif
     bool found = comm_log_ptr_->ProbeAndLogData((void*)(it->addr_), it->length_, flag, it->isrecv_);
     if (!found)
     {
