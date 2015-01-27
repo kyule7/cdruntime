@@ -13,7 +13,7 @@ int test_nbp2p(int argc, char** argv)
 {
   int partner; 
   double message, message2;
-  MPI_Status sstatus, rstatus;
+  MPI_Status sstatus, rstatus, status;
   MPI_Request srequest, rrequest, request;
   int buf_size;
   int wrong_execution=0;
@@ -66,6 +66,7 @@ int test_nbp2p(int argc, char** argv)
 
   PRINTF("Create child cd of level 1 ...\n");
   CDHandle * child1_0 = root->Create("CD1_0", kRelaxed, 0, 0, NULL);
+  //CDHandle * child1_0 = root->Create("CD1_0", kStrict, 0, 0, NULL);
 
   PRINTF("Begin child cd of level 1 ...\n");
   CD_Begin(child1_0);
@@ -160,21 +161,35 @@ int test_nbp2p(int argc, char** argv)
     // test MPI_Send and MPI_Recv
     partner = nprocs/2 + myrank;
     message = myrank;
+    message2 = myrank;
     PRINTF("message(%p)=%f before MPI_Isend\n", &message, message);
     MPI_Isend(&message, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &request);
     PRINTF("Print level 1 child CD comm_log_ptr info after Isend\n");
     child2_0->ptr_cd()->comm_log_ptr_->Print();
     PRINTF("message(%p)=%f after MPI_Isend\n", &message, message);
+
+    PRINTF("message2(%p)=%f before MPI_Irecv\n", &message2, message2);
+    MPI_Irecv(&message2, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &srequest);
+    PRINTF("Print level 1 child CD comm_log_ptr info after Irecv\n");
+    child2_0->ptr_cd()->comm_log_ptr_->Print();
+    PRINTF("message2(%p)=%f after MPI_Irecv\n", &message2, message2);
   }
   else if (myrank >= nprocs/2)
   {
     partner = myrank - nprocs/2;
     message = myrank;
+    message2 = myrank;
     PRINTF("message(%p)=%f before MPI_Irecv\n", &message, message);
     MPI_Irecv(&message, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &request);
     PRINTF("Print level 1 child CD comm_log_ptr info after Irecv\n");
     child2_0->ptr_cd()->comm_log_ptr_->Print();
     PRINTF("message(%p)=%f after MPI_Irecv\n", &message, message);
+
+    PRINTF("message2(%p)=%f before MPI_Isend\n", &message2, message2);
+    MPI_Isend(&message2, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &srequest);
+    PRINTF("Print level 1 child CD comm_log_ptr info after Isend\n");
+    child2_0->ptr_cd()->comm_log_ptr_->Print();
+    PRINTF("message2(%p)=%f after MPI_Isend\n", &message2, message2);
   }
 
   PRINTF("Complete child CD of level 2 ...\n");
@@ -185,10 +200,16 @@ int test_nbp2p(int argc, char** argv)
   child2_0->ptr_cd()->GetCDID().Print();
 
   PRINTF("message(%p)=%f before MPI_Wait\n", &message, message);
-  MPI_Wait(&request, &sstatus);
+  MPI_Wait(&request, &status);
   PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
   child2_0->ptr_cd()->comm_log_ptr_->Print();
   PRINTF("message(%p)=%f after MPI_Wait\n", &message, message);
+
+  PRINTF("message2(%p)=%f before MPI_Wait\n", &message2, message2);
+  MPI_Wait(&srequest, &sstatus);
+  PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
+  child2_0->ptr_cd()->comm_log_ptr_->Print();
+  PRINTF("message2(%p)=%f after MPI_Wait\n", &message2, message2);
 
   // insert error
   if (num_reexec < 1)
@@ -206,7 +227,16 @@ int test_nbp2p(int argc, char** argv)
   {
     if (message != partner) {
       wrong_execution++;
-      PRINTF("!!! Wrong Execution !!!\n");
+      PRINTF("!!! Wrong Execution for message !!!\n");
+    }
+    else {
+      PRINTF("!!! No Error !!!\n");
+    }
+  }
+  else {
+    if (message2 != partner) {
+      wrong_execution++;
+      PRINTF("!!! Wrong Execution for message2 !!!\n");
     }
     else {
       PRINTF("!!! No Error !!!\n");
