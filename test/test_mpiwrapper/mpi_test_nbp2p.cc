@@ -228,7 +228,7 @@ int test_nbp2p(int argc, char** argv)
     PRINTF("message(%p)=%f after MPI_Wait\n", &message, message);
     PRINTF("message2(%p)=%f after MPI_Wait\n", &message2, message2);
   }
-  else
+  else if (myrank % 4 == 2)
   {
     // Test MPI_Waitany
     int tmp_index=-1;
@@ -239,6 +239,28 @@ int test_nbp2p(int argc, char** argv)
     {
       MPI_Waitany(2, requests, &tmp_index, statuses);
       PRINTF("MPI_Waitany returns with index=%d\n", tmp_index);
+    }
+    PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
+    child2_0->ptr_cd()->comm_log_ptr_->Print();
+    PRINTF("message(%p)=%f after MPI_Wait\n", &message, message);
+    PRINTF("message2(%p)=%f after MPI_Wait\n", &message2, message2);
+  }
+  else
+  {
+    // Test MPI_Waitsome
+    int remaining = 2;
+    int indices[2];
+    int outcount=-1;
+    PRINTF("\nTesting MPI_Waitsome\n");
+    PRINTF("message(%p)=%f before MPI_Wait\n", &message, message);
+    PRINTF("message2(%p)=%f before MPI_Wait\n", &message2, message2);
+    while(remaining > 0)
+    {
+      MPI_Waitsome(2, requests, &outcount, indices, statuses);
+      PRINTF("MPI_Waitsome returns with outcount=%d\n", outcount);
+      for (int ii=0; ii<outcount; ii++)
+        PRINTF("MPI_Waitsome returns with index=%d\n", indices[ii]);
+      remaining = remaining - outcount;
     }
     PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
     child2_0->ptr_cd()->comm_log_ptr_->Print();

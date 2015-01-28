@@ -699,6 +699,75 @@ int MPI_Waitany(int count, MPI_Request *array_of_requests,
   return mpi_ret;
 }
 
+int MPI_Waitsome(int incount,
+                 MPI_Request array_of_requests[],
+                 int *outcount,
+                 int array_of_indices[],
+                 MPI_Status array_of_statuses[])
+{
+  app_side = false;
+  int mpi_ret = 0;
+  int ii=0;
+  PRINT_DEBUG("here inside MPI_Waitsome\n");
+
+  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
+  {
+    if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
+    {
+      mpi_ret = PMPI_Waitsome(incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+
+      PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
+      cur_cd->ptr_cd()->LogData(outcount, sizeof(int));
+      cur_cd->ptr_cd()->LogData(array_of_indices, *outcount*sizeof(int));
+      for (ii=0;ii<*outcount;ii++)
+      {
+        cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[array_of_indices[ii]]);
+      }
+    }
+    else
+    {
+      PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
+      CommLogErrT ret = cur_cd->ptr_cd()->ReadData(outcount, sizeof(int));
+      if (ret == kCommLogOK)
+      {
+        cur_cd->ptr_cd()->ReadData(array_of_indices, *outcount*sizeof(int));
+        for (ii=0;ii<*outcount;ii++)
+        {
+          cur_cd->ptr_cd()->ReadData(&array_of_requests[array_of_indices[ii]], 0);
+        }
+      }
+      else if (ret == kCommLogCommLogModeFlip)
+      {
+        PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
+        PRINT_DEBUG("Should not come here because error happens between Isend/Irecv and WaitXXX...\n");
+        mpi_ret = PMPI_Waitsome(incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+        cur_cd->ptr_cd()->LogData(outcount, sizeof(int));
+        cur_cd->ptr_cd()->LogData(array_of_indices, *outcount*sizeof(int));
+        for (ii=0;ii<*outcount;ii++)
+        {
+          cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[array_of_indices[ii]]);
+        }
+      }
+      else if (ret == kCommLogError)
+      {
+        ERROR_MESSAGE("Needs to escalate, not implemented yet...\n");
+      }
+    }
+  }
+  else
+  {
+    mpi_ret = PMPI_Waitsome(incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+    // delete incomplete entries...
+    for (ii=0;ii<*outcount;ii++)
+    {
+      cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[array_of_indices[ii]]);
+    }
+  }
+
+  app_side = true;
+  return mpi_ret;
+}
 
 // -------------------------------------------------------------------------------------------------------
 // collective communication

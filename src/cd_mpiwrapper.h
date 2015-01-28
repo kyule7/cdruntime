@@ -119,6 +119,11 @@ int MPI_Waitany(int count,
                 MPI_Request array_of_requests[],
                 int *index,
                 MPI_Status *status);
+int MPI_Waitsome(int incount,
+                 MPI_Request array_of_requests[],
+                 int *outcount,
+                 int array_of_indices[],
+                 MPI_Status array_of_statuses[]);
 
 // collective communication
 int MPI_Barrier (MPI_Comm comm);
