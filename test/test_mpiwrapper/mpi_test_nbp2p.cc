@@ -13,8 +13,8 @@ int test_nbp2p(int argc, char** argv)
 {
   int partner; 
   double message, message2;
-  MPI_Status sstatus, rstatus, status;
-  MPI_Request srequest, rrequest, request;
+  MPI_Status sstatus, rstatus, status, statuses[2];
+  MPI_Request srequest, rrequest, request, requests[2];
   int buf_size;
   int wrong_execution=0;
 
@@ -143,6 +143,7 @@ int test_nbp2p(int argc, char** argv)
   //  child1_0->ptr_cd()->comm_log_ptr_->Print();
   //  PRINTF("Sent message=%f\n",message);
   //}
+  //PRINTF("\nFinished Test MPI_Isend/Irecv and MPI_Wait are in the same CD\n\n");
 
   PRINTF("\n--------------------------------------------------------------\n");
 
@@ -163,13 +164,13 @@ int test_nbp2p(int argc, char** argv)
     message = myrank;
     message2 = myrank;
     PRINTF("message(%p)=%f before MPI_Isend\n", &message, message);
-    MPI_Isend(&message, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &request);
+    MPI_Isend(&message, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &requests[0]);
     PRINTF("Print level 1 child CD comm_log_ptr info after Isend\n");
     child2_0->ptr_cd()->comm_log_ptr_->Print();
     PRINTF("message(%p)=%f after MPI_Isend\n", &message, message);
 
     PRINTF("message2(%p)=%f before MPI_Irecv\n", &message2, message2);
-    MPI_Irecv(&message2, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &srequest);
+    MPI_Irecv(&message2, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &requests[1]);
     PRINTF("Print level 1 child CD comm_log_ptr info after Irecv\n");
     child2_0->ptr_cd()->comm_log_ptr_->Print();
     PRINTF("message2(%p)=%f after MPI_Irecv\n", &message2, message2);
@@ -180,18 +181,18 @@ int test_nbp2p(int argc, char** argv)
     message = myrank;
     message2 = myrank;
     PRINTF("message(%p)=%f before MPI_Irecv\n", &message, message);
-    MPI_Irecv(&message, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &request);
+    MPI_Irecv(&message, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &requests[0]);
     PRINTF("Print level 1 child CD comm_log_ptr info after Irecv\n");
     child2_0->ptr_cd()->comm_log_ptr_->Print();
     PRINTF("message(%p)=%f after MPI_Irecv\n", &message, message);
 
     PRINTF("message2(%p)=%f before MPI_Isend\n", &message2, message2);
-    MPI_Isend(&message2, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &srequest);
+    MPI_Isend(&message2, 1, MPI_DOUBLE, partner, 1, MPI_COMM_WORLD, &requests[1]);
     PRINTF("Print level 1 child CD comm_log_ptr info after Isend\n");
     child2_0->ptr_cd()->comm_log_ptr_->Print();
     PRINTF("message2(%p)=%f after MPI_Isend\n", &message2, message2);
   }
-
+  
   PRINTF("Complete child CD of level 2 ...\n");
   CD_Complete(child2_0);
 
@@ -199,25 +200,58 @@ int test_nbp2p(int argc, char** argv)
   CD_Begin(child2_0);
   child2_0->ptr_cd()->GetCDID().Print();
 
-  PRINTF("message(%p)=%f before MPI_Wait\n", &message, message);
-  MPI_Wait(&request, &status);
-  PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
-  child2_0->ptr_cd()->comm_log_ptr_->Print();
-  PRINTF("message(%p)=%f after MPI_Wait\n", &message, message);
+  if (myrank % 4 == 0)
+  {
+    // Test MPI_Wait
+    PRINTF("\nTesting MPI_Wait\n");
+    PRINTF("message(%p)=%f before MPI_Wait\n", &message, message);
+    MPI_Wait(&requests[0], &statuses[0]);
+    PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
+    child2_0->ptr_cd()->comm_log_ptr_->Print();
+    PRINTF("message(%p)=%f after MPI_Wait\n", &message, message);
 
-  PRINTF("message2(%p)=%f before MPI_Wait\n", &message2, message2);
-  MPI_Wait(&srequest, &sstatus);
-  PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
-  child2_0->ptr_cd()->comm_log_ptr_->Print();
-  PRINTF("message2(%p)=%f after MPI_Wait\n", &message2, message2);
+    PRINTF("message2(%p)=%f before MPI_Wait\n", &message2, message2);
+    MPI_Wait(&requests[1], &statuses[1]);
+    PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
+    child2_0->ptr_cd()->comm_log_ptr_->Print();
+    PRINTF("message2(%p)=%f after MPI_Wait\n", &message2, message2);
+  }
+  else if (myrank % 4 == 1)
+  {
+    // Test MPI_Waitall
+    PRINTF("\nTesting MPI_Waitall\n");
+    PRINTF("message(%p)=%f before MPI_Wait\n", &message, message);
+    PRINTF("message2(%p)=%f before MPI_Wait\n", &message2, message2);
+    MPI_Waitall(2, requests, statuses);
+    PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
+    child2_0->ptr_cd()->comm_log_ptr_->Print();
+    PRINTF("message(%p)=%f after MPI_Wait\n", &message, message);
+    PRINTF("message2(%p)=%f after MPI_Wait\n", &message2, message2);
+  }
+  else
+  {
+    // Test MPI_Waitany
+    int tmp_index=-1;
+    PRINTF("\nTesting MPI_Waitany\n");
+    PRINTF("message(%p)=%f before MPI_Wait\n", &message, message);
+    PRINTF("message2(%p)=%f before MPI_Wait\n", &message2, message2);
+    for (int ii=0; ii<2; ii++)
+    {
+      MPI_Waitany(2, requests, &tmp_index, statuses);
+      PRINTF("MPI_Waitany returns with index=%d\n", tmp_index);
+    }
+    PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
+    child2_0->ptr_cd()->comm_log_ptr_->Print();
+    PRINTF("message(%p)=%f after MPI_Wait\n", &message, message);
+    PRINTF("message2(%p)=%f after MPI_Wait\n", &message2, message2);
+  }
 
   // insert error
-  if (num_reexec < 1)
+  if (num_reexec < 3)
   {
     PRINTF("Insert error #%d...\n", num_reexec);
     num_reexec++;
-    // FIXME: this error cannot be recovered...
-    //// reset message for re-execution testing
+    //// FIXME: this error cannot be recovered if message is corrupted...
     //message = myrank;
     child2_0->CDAssert(false);
   }
@@ -243,6 +277,8 @@ int test_nbp2p(int argc, char** argv)
     }
   }
 
+  PRINTF("\nFinished Test MPI_Isend/Irecv and MPI_Wait are in different CDs\n\n");
+
   PRINTF("Complete child CD of level 2 second time...\n");
   CD_Complete(child2_0);
 
@@ -252,7 +288,7 @@ int test_nbp2p(int argc, char** argv)
   PRINTF("\n--------------------------------------------------------------\n");
 
   // insert error
-  if (num_reexec < 2)
+  if (num_reexec < 4)
   {
     PRINTF("Insert error #%d...\n", num_reexec);
     num_reexec++;

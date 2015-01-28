@@ -640,8 +640,7 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
   // if not completed, return kCommLogError, and needs to escalate
   if (log_table_.base_ptr_[log_table_reexec_pos_].completed_==false)
   {
-    PRINT_DEBUG("Not completed non-blocking send function, needs to escalate...\n");
-    ERROR_MESSAGE("Should never be here, because non-blocking send/recv will never call this function...\n");
+    ERROR_MESSAGE("Error happens between isend/irecv and wait, needs to escalate...\n");
     return kCommLogError;
   }
 
