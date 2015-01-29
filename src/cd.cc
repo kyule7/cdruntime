@@ -1658,14 +1658,14 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 
 //SZ
 CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, 
-                      bool completed, unsigned long flag, bool isrecv)
+                      bool completed, unsigned long flag, bool isrecv, bool isrepeated)
 {
   if (comm_log_ptr_ == NULL)
   {
     ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to log data!\n");
     return kCommLogError;
   }
-  return comm_log_ptr_->LogData(data_ptr, length, completed, flag, isrecv);
+  return comm_log_ptr_->LogData(data_ptr, length, completed, flag, isrecv, isrepeated);
 }
 
 //SZ

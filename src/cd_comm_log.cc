@@ -326,9 +326,25 @@ bool CommLog::ProbeAndLogDataPacked(void * addr,
   return found;
 }
 
+bool CommLog::FoundRepeatedEntry(const void * data_ptr, unsigned long data_length, 
+                                 bool completed, unsigned long flag)
+{
+  PRINT_DEBUG("Inside FoundRepeatedEntry:\n");
+  PRINT_DEBUG("isrepeated_=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].isrepeated_);
+  PRINT_DEBUG("length_=%ld vs data_length=%ld\n", log_table_.base_ptr_[log_table_.cur_pos_-1].length_, data_length);
+  PRINT_DEBUG("completed_=%d vs completed=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].completed_, completed);
+  PRINT_DEBUG("flag_=%ld vs flag=%ld\n", log_table_.base_ptr_[log_table_.cur_pos_-1].flag_, flag);
+
+  return log_table_.base_ptr_[log_table_.cur_pos_-1].isrepeated_ &&
+      log_table_.base_ptr_[log_table_.cur_pos_-1].length_ == data_length &&
+      log_table_.base_ptr_[log_table_.cur_pos_-1].completed_ == completed &&
+      log_table_.base_ptr_[log_table_.cur_pos_-1].flag_ == flag;
+
+}
+
 
 CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length, 
-                          bool completed, unsigned long flag, bool isrecv)
+                          bool completed, unsigned long flag, bool isrecv, bool isrepeated)
 {
   bool tmp_app_side = app_side;
   app_side = false;
@@ -336,7 +352,21 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
 
   CommLogErrT ret;
 
-  ret = WriteLogTable(data_ptr, data_length, completed, flag);
+  if (isrepeated)
+  {
+    // check if repeated log entry exists
+    // if exists, just increment the counter_ and return
+    if (FoundRepeatedEntry(data_ptr, data_length, completed, flag))
+    {
+      PRINT_DEBUG("Found current repeating log entry matching!\n");
+      log_table_.base_ptr_[log_table_.cur_pos_-1].counter_++;
+      app_side = tmp_app_side;
+      return kCommLogOK;
+    }
+    PRINT_DEBUG("Current repeating log entry NOT matching!\n");
+  }
+
+  ret = WriteLogTable(data_ptr, data_length, completed, flag, isrepeated);
   if (ret == kCommLogAllocFailed) 
   {
     ERROR_MESSAGE("Log Table Realloc Failed!\n");
@@ -378,7 +408,7 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
 
 
 CommLogErrT CommLog::WriteLogTable (const void * data_ptr, unsigned long data_length, 
-                                  bool completed, unsigned long flag)
+                                  bool completed, unsigned long flag, bool isrepeated)
 {
   CommLogErrT ret;
   if (log_table_.cur_pos_ >= log_table_.table_size_) 
@@ -391,6 +421,9 @@ CommLogErrT CommLog::WriteLogTable (const void * data_ptr, unsigned long data_le
   log_table_.base_ptr_[log_table_.cur_pos_].length_ = data_length;
   log_table_.base_ptr_[log_table_.cur_pos_].completed_ = completed;
   log_table_.base_ptr_[log_table_.cur_pos_].flag_ = flag;
+  log_table_.base_ptr_[log_table_.cur_pos_].counter_ = 1;
+  log_table_.base_ptr_[log_table_.cur_pos_].reexec_counter_ = 0;
+  log_table_.base_ptr_[log_table_.cur_pos_].isrepeated_ = isrepeated;
   log_table_.cur_pos_++;
 
   return kCommLogOK;
@@ -651,13 +684,29 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
         log_table_.base_ptr_[log_table_reexec_pos_].length_);
   }
 
-  log_table_reexec_pos_++;
+  // check if current log entry is a repeated log entry
+  if (log_table_.base_ptr_[log_table_reexec_pos_].isrepeated_)
+  {
+    log_table_.base_ptr_[log_table_reexec_pos_].reexec_counter_++;
+    if (log_table_.base_ptr_[log_table_reexec_pos_].reexec_counter_ 
+        == log_table_.base_ptr_[log_table_reexec_pos_].counter_)
+    {
+      log_table_.base_ptr_[log_table_reexec_pos_].reexec_counter_ = 0;
+      log_table_reexec_pos_++;
+    }
+  }
+  else {
+    log_table_reexec_pos_++;
+  }
 
   return kCommLogOK;
 }
 
 
 // input parameter
+// differences between ProbeData and ReadData is 
+//    1) ProbeData only check log entry, not copy data
+//    2) ProbeData's buffer is const void *, since ProbeData does not need to change contents in buffer 
 CommLogErrT CommLog::ProbeData(const void * buffer, unsigned long length)
 {
   PRINT_DEBUG("Inside ProbeData!\n");
@@ -690,7 +739,20 @@ CommLogErrT CommLog::ProbeData(const void * buffer, unsigned long length)
     return kCommLogError;
   }
 
-  log_table_reexec_pos_++;
+  // check if current log entry is a repeated log entry
+  if (log_table_.base_ptr_[log_table_reexec_pos_].isrepeated_)
+  {
+    log_table_.base_ptr_[log_table_reexec_pos_].reexec_counter_++;
+    if (log_table_.base_ptr_[log_table_reexec_pos_].reexec_counter_ 
+        == log_table_.base_ptr_[log_table_reexec_pos_].counter_)
+    {
+      log_table_.base_ptr_[log_table_reexec_pos_].reexec_counter_ = 0;
+      log_table_reexec_pos_++;
+    }
+  }
+  else {
+    log_table_reexec_pos_++;
+  }
 
   return kCommLogOK;
 }
@@ -716,11 +778,14 @@ void CommLog::Print()
   for (ii=0;ii<log_table_.cur_pos_;ii++)
   {
     PRINT_DEBUG("log_table_.base_ptr_[%ld]:\n", ii);
-    PRINT_DEBUG("pos_=%ld, length_=%ld, completed_=%d, flag_=%lx\n\n"
+    PRINT_DEBUG("pos_=%ld, length_=%ld, completed_=%d, flag_=%lx, counter_=%ld, reexec_counter_=%ld, isrepeated=%d\n\n"
         ,log_table_.base_ptr_[ii].pos_
         ,log_table_.base_ptr_[ii].length_
         ,log_table_.base_ptr_[ii].completed_
-        ,log_table_.base_ptr_[ii].flag_);
+        ,log_table_.base_ptr_[ii].flag_
+        ,log_table_.base_ptr_[ii].counter_
+        ,log_table_.base_ptr_[ii].reexec_counter_
+        ,log_table_.base_ptr_[ii].isrepeated_);
   }
 
   PRINT_DEBUG ("log_table_reexec_pos_ = %ld\n", log_table_reexec_pos_);

@@ -120,7 +120,6 @@ int MPI_Ssend(const void *buf,
     else
     {
       PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
-      //CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(&buf, sizeof(buf));
       CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(buf, 0);
       if (ret == kCommLogCommLogModeFlip)
       {
@@ -169,7 +168,6 @@ int MPI_Rsend(const void *buf,
     else
     {
       PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
-      //CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(&buf, sizeof(buf));
       CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(buf, 0);
       if (ret == kCommLogCommLogModeFlip)
       {
@@ -218,7 +216,6 @@ int MPI_Bsend(const void *buf,
     else
     {
       PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
-      //CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(&buf, sizeof(buf));
       CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(buf, 0);
       if (ret == kCommLogCommLogModeFlip)
       {
@@ -326,7 +323,6 @@ int MPI_Sendrecv(const void *sendbuf,
     else
     {
       PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
-      //CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(&sendbuf, sizeof(sendbuf));
       CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(sendbuf, 0);
       if (ret == kCommLogCommLogModeFlip)
       {
@@ -395,7 +391,6 @@ int MPI_Sendrecv_replace(void *buf,
     else
     {
       PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
-      //CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(&buf, sizeof(buf));
       CommLogErrT ret = cur_cd->ptr_cd()->ProbeData(buf, 0);
       if (ret == kCommLogCommLogModeFlip)
       {
@@ -558,7 +553,7 @@ int MPI_Test(MPI_Request *request,
       else
       {
         PRINT_DEBUG("Operation not complete, log flag...\n");
-        cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+        cur_cd->ptr_cd()->LogData(flag, sizeof(int), true, 0, false, true);
       }
     }
     else
@@ -585,7 +580,7 @@ int MPI_Test(MPI_Request *request,
         else
         {
           PRINT_DEBUG("Operation not complete, log flag...\n");
-          cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+          cur_cd->ptr_cd()->LogData(flag, sizeof(int), true, 0, false, true);
         }
       }
       else if (ret == kCommLogError)
@@ -638,7 +633,7 @@ int MPI_Testall(int count,
       else
       {
         PRINT_DEBUG("Operation not complete, log flag...\n");
-        cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+        cur_cd->ptr_cd()->LogData(flag, sizeof(int), true, 0, false, true);
       }
     }
     else
@@ -671,7 +666,7 @@ int MPI_Testall(int count,
         else
         {
           PRINT_DEBUG("Operation not complete, log flag...\n");
-          cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+          cur_cd->ptr_cd()->LogData(flag, sizeof(int), true, 0, false, true);
         }
       }
       else if (ret == kCommLogError)
@@ -725,7 +720,7 @@ int MPI_Testany(int count,
       else
       {
         PRINT_DEBUG("Operation not complete, log flag...\n");
-        cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+        cur_cd->ptr_cd()->LogData(flag, sizeof(int), true, 0, false, true);
       }
     }
     else
@@ -754,7 +749,7 @@ int MPI_Testany(int count,
         else
         {
           PRINT_DEBUG("Operation not complete, log flag...\n");
-          cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+          cur_cd->ptr_cd()->LogData(flag, sizeof(int), true, 0, false, true);
         }
       }
       else if (ret == kCommLogError)
@@ -807,7 +802,7 @@ int MPI_Testsome(int incount,
       else
       {
         PRINT_DEBUG("Operation not complete, log outcount...\n");
-        cur_cd->ptr_cd()->LogData(outcount, sizeof(int));
+        cur_cd->ptr_cd()->LogData(outcount, sizeof(int), true, 0, false, true);
       }
     }
     else
@@ -840,7 +835,7 @@ int MPI_Testsome(int incount,
         else
         {
           PRINT_DEBUG("Operation not complete, log outcount...\n");
-          cur_cd->ptr_cd()->LogData(outcount, sizeof(int));
+          cur_cd->ptr_cd()->LogData(outcount, sizeof(int), true, 0, false, true);
         }
       }
       else if (ret == kCommLogError)
