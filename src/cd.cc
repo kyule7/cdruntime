@@ -1604,12 +1604,14 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 
     if (!found)
     {
-      ERROR_MESSAGE("Do not find corresponding Isend/Irecv incomplete log!!\n")
+      //ERROR_MESSAGE("Do not find corresponding Isend/Irecv incomplete log!!\n")
+      PRINT_DEBUG("Possible bug: Isend/Irecv incomplete log NOT found (maybe deleted by MPI_Test)!!\n")
     }
   }
   
   // ProbeAndLogData for comm_log_ptr_ if relaxed CD
-  if (comm_log_ptr_ != NULL)
+  // If NOT found, then work has been completed by previous Test Ops
+  if (comm_log_ptr_ != NULL && found)
   {
     // ProbeAndLogData:
     // 1) change Isend/Irecv entry to complete state if there is any
@@ -1640,6 +1642,11 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
         PRINT_DEBUG("Possible bug: not found the incomplete logs...\n");
       }
     }
+    // need to log that wait op completes 
+    comm_log_ptr_->LogData((MPI_Request*)flag, 0);
+  }
+  else if (comm_log_ptr_ != NULL)
+  {
     // need to log that wait op completes 
     comm_log_ptr_->LogData((MPI_Request*)flag, 0);
   }

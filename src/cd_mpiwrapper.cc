@@ -532,6 +532,340 @@ int MPI_Irecv(void *buf,
   return mpi_ret;
 }
 
+// test functions 
+int MPI_Test(MPI_Request *request, 
+             int * flag,
+             MPI_Status *status)
+{
+  app_side = false;
+  int mpi_ret = 0;
+  PRINT_DEBUG("here inside MPI_Test\n");
+
+  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
+  {
+    if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
+    {
+      mpi_ret = PMPI_Test(request, flag, status);
+
+      PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
+      if (*flag == 1)
+      {
+        PRINT_DEBUG("Operation complete, log flag and data...\n");
+        cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+        cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)request);
+      }
+      else
+      {
+        PRINT_DEBUG("Operation not complete, log flag...\n");
+        cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+      }
+    }
+    else
+    {
+      PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
+      CommLogErrT ret = cur_cd->ptr_cd()->ReadData(flag, sizeof(int));
+      if (ret == kCommLogOK)
+      {
+        if (*flag == 1)
+        {
+          cur_cd->ptr_cd()->ProbeData(request, 0);
+        }
+      }
+      else if (ret == kCommLogCommLogModeFlip)
+      {
+        PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
+        mpi_ret = PMPI_Test(request, flag, status);
+        if (*flag == 1)
+        {
+          PRINT_DEBUG("Operation complete, log flag and data...\n");
+          cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+          cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)request);
+        }
+        else
+        {
+          PRINT_DEBUG("Operation not complete, log flag...\n");
+          cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+        }
+      }
+      else if (ret == kCommLogError)
+      {
+        ERROR_MESSAGE("Needs to escalate, not implemented yet...\n");
+      }
+    }
+  }
+  else
+  {
+    mpi_ret = PMPI_Test(request, flag, status);
+    // delete incomplete entries...
+    if (*flag == 1)
+    {
+      cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)request);
+    }
+  }
+
+  app_side = true;
+  return mpi_ret;
+}
+
+
+int MPI_Testall(int count,
+                MPI_Request array_of_requests[],
+                int *flag,
+                MPI_Status array_of_statuses[])
+{
+  app_side = false;
+  int mpi_ret = 0;
+  PRINT_DEBUG("here inside MPI_Testall\n");
+
+  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
+  {
+    if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
+    {
+      mpi_ret = PMPI_Testall(count, array_of_requests, flag, array_of_statuses);
+
+      PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
+      if (*flag == 1)
+      {
+        PRINT_DEBUG("Operation complete, log flag and data...\n");
+        cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+        for (int ii=0;ii<count;ii++)
+        {
+          cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
+        }
+      }
+      else
+      {
+        PRINT_DEBUG("Operation not complete, log flag...\n");
+        cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+      }
+    }
+    else
+    {
+      PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
+      CommLogErrT ret = cur_cd->ptr_cd()->ReadData(flag, sizeof(int));
+      if (ret == kCommLogOK)
+      {
+        if (*flag == 1)
+        {
+          for (int ii=0;ii<count;ii++)
+          {
+            cur_cd->ptr_cd()->ProbeData(&array_of_requests[ii], 0);
+          }
+        }
+      }
+      else if (ret == kCommLogCommLogModeFlip)
+      {
+        PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
+        mpi_ret = PMPI_Testall(count, array_of_requests, flag, array_of_statuses);
+        if (*flag == 1)
+        {
+          PRINT_DEBUG("Operation complete, log flag and data...\n");
+          cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+          for (int ii=0;ii<count;ii++)
+          {
+            cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
+          }
+        }
+        else
+        {
+          PRINT_DEBUG("Operation not complete, log flag...\n");
+          cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+        }
+      }
+      else if (ret == kCommLogError)
+      {
+        ERROR_MESSAGE("Needs to escalate, not implemented yet...\n");
+      }
+    }
+  }
+  else
+  {
+    mpi_ret = PMPI_Testall(count, array_of_requests, flag, array_of_statuses);
+    // delete incomplete entries...
+    if (*flag == 1)
+    {
+      for (int ii=0;ii<count;ii++)
+      {
+        cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
+      }
+    }
+  }
+
+  app_side = true;
+  return mpi_ret;
+}
+
+int MPI_Testany(int count,
+                MPI_Request array_of_requests[],
+                int *index,
+                int *flag,
+                MPI_Status *status)
+{
+  app_side = false;
+  int mpi_ret = 0;
+  PRINT_DEBUG("here inside MPI_Testany\n");
+
+  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
+  {
+    if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
+    {
+      mpi_ret = PMPI_Testany(count, array_of_requests, index, flag, status);
+
+      PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
+      if (*flag == 1)
+      {
+        PRINT_DEBUG("Operation complete, log flag and data...\n");
+        cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+        cur_cd->ptr_cd()->LogData(index, sizeof(int));
+        cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[*index]);
+      }
+      else
+      {
+        PRINT_DEBUG("Operation not complete, log flag...\n");
+        cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+      }
+    }
+    else
+    {
+      PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
+      CommLogErrT ret = cur_cd->ptr_cd()->ReadData(flag, sizeof(int));
+      if (ret == kCommLogOK)
+      {
+        if (*flag == 1)
+        {
+          cur_cd->ptr_cd()->ReadData(index, sizeof(int));
+          cur_cd->ptr_cd()->ProbeData(&array_of_requests[*index], 0);
+        }
+      }
+      else if (ret == kCommLogCommLogModeFlip)
+      {
+        PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
+        mpi_ret = PMPI_Testany(count, array_of_requests, index, flag, status);
+        if (*flag == 1)
+        {
+          PRINT_DEBUG("Operation complete, log flag and data...\n");
+          cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+          cur_cd->ptr_cd()->LogData(index, sizeof(int));
+          cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[*index]);
+        }
+        else
+        {
+          PRINT_DEBUG("Operation not complete, log flag...\n");
+          cur_cd->ptr_cd()->LogData(flag, sizeof(int));
+        }
+      }
+      else if (ret == kCommLogError)
+      {
+        ERROR_MESSAGE("Needs to escalate, not implemented yet...\n");
+      }
+    }
+  }
+  else
+  {
+    mpi_ret = PMPI_Testany(count, array_of_requests, index, flag, status);
+    // delete incomplete entries...
+    if (*flag == 1)
+    {
+      cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[*index]);
+    }
+  }
+
+  app_side = true;
+  return mpi_ret;
+}
+
+int MPI_Testsome(int incount,
+                 MPI_Request array_of_requests[],
+                 int *outcount,
+                 int array_of_indices[],
+                 MPI_Status array_of_statuses[])
+{
+  app_side = false;
+  int mpi_ret = 0;
+  PRINT_DEBUG("here inside MPI_Testsome\n");
+
+  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
+  {
+    if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
+    {
+      mpi_ret = PMPI_Testsome(incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+
+      PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
+      if (*outcount > 0)
+      {
+        PRINT_DEBUG("Operation complete, log outcount and data...\n");
+        cur_cd->ptr_cd()->LogData(outcount, sizeof(int));
+        for (int ii=0;ii<*outcount;ii++)
+        {
+          cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[array_of_indices[ii]]);
+        }
+      }
+      else
+      {
+        PRINT_DEBUG("Operation not complete, log outcount...\n");
+        cur_cd->ptr_cd()->LogData(outcount, sizeof(int));
+      }
+    }
+    else
+    {
+      PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
+      CommLogErrT ret = cur_cd->ptr_cd()->ReadData(outcount, sizeof(int));
+      if (ret == kCommLogOK)
+      {
+        if (*outcount > 0)
+        {
+          for (int ii=0;ii<*outcount;ii++)
+          {
+            cur_cd->ptr_cd()->ProbeData(&array_of_requests[array_of_indices[ii]], 0);
+          }
+        }
+      }
+      else if (ret == kCommLogCommLogModeFlip)
+      {
+        PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
+        mpi_ret = PMPI_Testsome(incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+        if (*outcount > 0)
+        {
+          PRINT_DEBUG("Operation complete, log outcount and data...\n");
+          cur_cd->ptr_cd()->LogData(outcount, sizeof(int));
+          for (int ii=0;ii<*outcount;ii++)
+          {
+            cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[array_of_indices[ii]]);
+          }
+        }
+        else
+        {
+          PRINT_DEBUG("Operation not complete, log outcount...\n");
+          cur_cd->ptr_cd()->LogData(outcount, sizeof(int));
+        }
+      }
+      else if (ret == kCommLogError)
+      {
+        ERROR_MESSAGE("Needs to escalate, not implemented yet...\n");
+      }
+    }
+  }
+  else
+  {
+    mpi_ret = PMPI_Testsome(incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+    // delete incomplete entries...
+    if (*outcount > 0)
+    {
+      for (int ii=0;ii<*outcount;ii++)
+      {
+        cur_cd->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[array_of_indices[ii]]);
+      }
+    }
+  }
+
+  app_side = true;
+  return mpi_ret;
+}
+
 // wait functions 
 int MPI_Wait(MPI_Request *request, 
              MPI_Status *status)

@@ -196,11 +196,91 @@ int test_nbp2p(int argc, char** argv)
   PRINTF("Complete child CD of level 2 ...\n");
   CD_Complete(child2_0);
 
+  PRINTF("\n---------------------------------\n");
+
   PRINTF("Begin child cd of level 2 second time...\n");
   CD_Begin(child2_0);
   child2_0->ptr_cd()->GetCDID().Print();
-
-  if (myrank % 4 == 0)
+  
+  PRINTF("\nTesting MPI_TestXXX\n");
+  int test_flag=0;
+  MPI_Status tstatus;
+  if (myrank % 8 == 0)
+  {
+    PRINTF("\nTesting MPI_Test\n");
+    PRINTF("message(%p)=%f before MPI_Test\n", &message, message);
+    PRINTF("message2(%p)=%f before MPI_Test\n", &message2, message2);
+    while (!test_flag)
+    {
+      MPI_Test(&requests[0], &test_flag, &tstatus);
+    }
+    test_flag = 0;
+    while (!test_flag)
+    {
+      MPI_Test(&requests[1], &test_flag, &tstatus);
+    }
+    PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
+    child2_0->ptr_cd()->comm_log_ptr_->Print();
+    PRINTF("message(%p)=%f after MPI_Test\n", &message, message);
+    PRINTF("message2(%p)=%f after MPI_Test\n", &message2, message2);
+  }
+  else if (myrank % 8 == 1)
+  {
+    PRINTF("\nTesting MPI_Testall\n");
+    PRINTF("message(%p)=%f before MPI_Test\n", &message, message);
+    PRINTF("message2(%p)=%f before MPI_Test\n", &message2, message2);
+    while (!test_flag)
+    {
+      MPI_Testall(2, requests, &test_flag, statuses);
+    }
+    PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
+    child2_0->ptr_cd()->comm_log_ptr_->Print();
+    PRINTF("message(%p)=%f after MPI_Test\n", &message, message);
+    PRINTF("message2(%p)=%f after MPI_Test\n", &message2, message2);
+  }
+  else if (myrank % 8 == 2)
+  {
+    int remaining = 2;
+    int outcount = 0;
+    int indices[2];
+    PRINTF("\nTesting MPI_Testsome\n");
+    PRINTF("message(%p)=%f before MPI_Test\n", &message, message);
+    PRINTF("message2(%p)=%f before MPI_Test\n", &message2, message2);
+    while (remaining)
+    {
+      MPI_Testsome(2, requests, &outcount, indices, statuses);
+      remaining -= outcount;
+      PRINTF("outcount=%d, remaining=%d\n", outcount, remaining);
+    }
+    PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
+    child2_0->ptr_cd()->comm_log_ptr_->Print();
+    PRINTF("message(%p)=%f after MPI_Test\n", &message, message);
+    PRINTF("message2(%p)=%f after MPI_Test\n", &message2, message2);
+  }
+  else if (myrank % 8 == 3)
+  {
+    int remaining = 2;
+    int index = -1;
+    int flag = -1;
+    PRINTF("\nTesting MPI_Testany\n");
+    PRINTF("message(%p)=%f before MPI_Test\n", &message, message);
+    PRINTF("message2(%p)=%f before MPI_Test\n", &message2, message2);
+    while (remaining)
+    {
+      MPI_Testany(2, requests, &index, &flag, &tstatus);
+      if (flag == 1)
+      {
+        PRINTF("output index=%d\n", index);
+        remaining--;
+      }
+    }
+    PRINTF("Print level 2 child CD comm_log_ptr info after Wait\n");
+    child2_0->ptr_cd()->comm_log_ptr_->Print();
+    PRINTF("message(%p)=%f after MPI_Test\n", &message, message);
+    PRINTF("message2(%p)=%f after MPI_Test\n", &message2, message2);
+  }
+  // Test MPI_WaitXXX
+  else if (myrank % 8 == 4)
   {
     // Test MPI_Wait
     PRINTF("\nTesting MPI_Wait\n");
@@ -216,7 +296,7 @@ int test_nbp2p(int argc, char** argv)
     child2_0->ptr_cd()->comm_log_ptr_->Print();
     PRINTF("message2(%p)=%f after MPI_Wait\n", &message2, message2);
   }
-  else if (myrank % 4 == 1)
+  else if (myrank % 8 == 5)
   {
     // Test MPI_Waitall
     PRINTF("\nTesting MPI_Waitall\n");
@@ -228,7 +308,7 @@ int test_nbp2p(int argc, char** argv)
     PRINTF("message(%p)=%f after MPI_Wait\n", &message, message);
     PRINTF("message2(%p)=%f after MPI_Wait\n", &message2, message2);
   }
-  else if (myrank % 4 == 2)
+  else if (myrank % 8 == 6)
   {
     // Test MPI_Waitany
     int tmp_index=-1;
