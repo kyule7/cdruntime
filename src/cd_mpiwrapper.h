@@ -254,5 +254,15 @@ int MPI_Scan(const void *sendbuf,
              MPI_Op op,
              MPI_Comm comm);
 
+// persistent communication
+int MPI_Send_init(const void *buf,
+                  int count,
+                  MPI_Datatype datatype,
+                  int dest,
+                  int tag,
+                  MPI_Comm comm,
+                  MPI_Request *request);
+
+
 #endif
 
