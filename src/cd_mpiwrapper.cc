@@ -1899,20 +1899,56 @@ int MPI_Scan(const void *sendbuf,
 }
 
 
-// -------------------------------------------------------------------------------------------------------
-// persistent communication requests
-// -------------------------------------------------------------------------------------------------------
-
-int MPI_Send_init(const void *buf,
-                  int count,
-                  MPI_Datatype datatype,
-                  int dest,
-                  int tag,
-                  MPI_Comm comm,
-                  MPI_Request *request)
-{
-  return 0;
-}
+//// -------------------------------------------------------------------------------------------------------
+//// persistent communication requests
+//// -------------------------------------------------------------------------------------------------------
+//
+//int MPI_Send_init(const void *buf,
+//                  int count,
+//                  MPI_Datatype datatype,
+//                  int dest,
+//                  int tag,
+//                  MPI_Comm comm,
+//                  MPI_Request *request)
+//{
+//  app_side = false;
+//  int mpi_ret = 0;
+//
+//  PRINT_DEBUG("here inside MPI_Send_init\n");
+//
+//  CDHandle * cur_cd = CDPath::GetCurrentCD();
+//  if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
+//  {
+//
+//    if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
+//    {
+//      mpi_ret = PMPI_Send_init(buf, count, datatype, dest, tag, comm, request);
+//
+//      PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
+//      // TODO: here
+//      cur_cd->ptr_cd()->LogData(recvbuf, count*type_size);
+//    }
+//    else
+//    {
+//      PRINT_DEBUG("In kReplay mode, replaying from logs...\n");
+//      CommLogErrT ret = cur_cd->ptr_cd()->ReadData(recvbuf, count*type_size);
+//
+//      if (ret == kCommLogCommLogModeFlip)
+//      {
+//        PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
+//        mpi_ret = PMPI_Send_init(buf, count, datatype, dest, tag, comm, request);
+//        cur_cd->ptr_cd()->LogData(recvbuf, count*type_size);
+//      }
+//    }
+//  }
+//  else
+//  {
+//    mpi_ret = PMPI_Send_init(buf, count, datatype, dest, tag, comm, request);
+//  }
+//
+//  app_side = true;
+//  return mpi_ret;
+//}
 
 
 #endif
