@@ -270,7 +270,15 @@ class cd::CDHandle {
 
     int CheckMailBox(void);
     int InternalCheckMailBox(void);
-    int SetMailBox(CDEventT event);
+    int SetMailBox(CDEventT &event);
+    CDEventHandleT HandleEvent(CDFlagT *event);
+    int ReadMailBox(void);
+    int ReadMailBoxFromRemote(void);
+
+    // Communication routines in CD runtime
+    //void CollectHeadInfoAndEntry(void); 
+    void CollectHeadInfoAndEntry(const NodeID &new_node_id);
+
 
   public:
     bool IsHead(void) const;

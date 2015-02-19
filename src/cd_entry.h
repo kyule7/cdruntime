@@ -142,34 +142,34 @@ class cd::CDEntry : public cd::Serializable
     void *Serialize(uint32_t &len_in_bytes) 
     {
 
-      std::cout << "\nCD Entry Serialize\n" << std::endl;
+      dbg << "\nCD Entry Serialize\n" << endl;
       Packer entry_packer;
 //      uint32_t ptr_cd_packed_len=0;
 //      void *ptr_cd_packed_p = ptr_cd_->Serialize(ptr_cd_packed_len);
 
       uint32_t src_packed_len=0;
-      std::cout << "\nsrc Serialize\n" << std::endl;
+      dbg << "\nsrc Serialize\n" << endl;
       void *src_packed_p = src_data_.Serialize(src_packed_len);
       uint32_t dst_packed_len=0;
-      std::cout << "\ndst Serialize\n" << std::endl;
+      dbg << "\ndst Serialize\n" << endl;
       void *dst_packed_p = dst_data_.Serialize(dst_packed_len);
 //      assert(ptr_cd_packed_len != 0);
       assert(src_packed_len != 0);
       assert(dst_packed_len != 0);
 
-      std::cout << "\npacked entry_entry_tag_ is :\t " << entry_tag_ <<std::endl<<std::endl;
+      dbg << "\npacked entry_entry_tag_ is :\t " << entry_tag_ <<endl<<endl;
       uint64_t str_key = entry_tag_;
       entry_packer.Add(ENTRY_PACKER_NAME, sizeof(str_key), &str_key); 
 //      entry_packer.Add(ENTRY_PACKER_PTRCD, ptr_cd_packed_len, ptr_cd_packed_p);
       
-      std::cout << "\npacked preserve_type_ is :\t " << preserve_type_ <<std::endl<<std::endl;
+      dbg << "\npacked preserve_type_ is :\t " << preserve_type_ <<endl<<endl;
 
       entry_packer.Add(ENTRY_PACKER_PRESERVETYPE, sizeof(cd::CDPreserveT), &preserve_type_);
 
-      std::cout << "\npacked src_packed_ is :\t " << src_packed_p <<std::endl<<std::endl;
+      dbg << "\npacked src_packed_ is :\t " << src_packed_p <<endl<<endl;
       entry_packer.Add(ENTRY_PACKER_SRC, src_packed_len, src_packed_p);
       entry_packer.Add(ENTRY_PACKER_DST, dst_packed_len, dst_packed_p); 
-      std::cout << "\nCD Entry Serialize Done\n" << std::endl;
+      dbg << "\nCD Entry Serialize Done\n" << endl;
 
       return entry_packer.GetTotalData(len_in_bytes);  
  
@@ -178,7 +178,7 @@ class cd::CDEntry : public cd::Serializable
     void Deserialize(void *object)
     {
       
-      std::cout << "\nCD Entry Deserialize\nobject : " << object <<std::endl;
+      dbg << "\nCD Entry Deserialize\nobject : " << object <<endl;
       Unpacker entry_unpacker;
       uint32_t return_size=0;
       uint32_t dwGetID=0;
@@ -186,24 +186,24 @@ class cd::CDEntry : public cd::Serializable
       void *dst_unpacked=0;
 
       uint64_t entry_tag_ = *(uint64_t *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      std::cout << "unpacked entry_entry_tag_ is :\t " << entry_tag_ <<" <-> " << tag2str[entry_tag_] <<std::endl;
-      std::cout << "1st unpacked thing in data_handle : " << entry_tag_ << ", return size : " << return_size << std::endl<< std::endl;
+      dbg << "unpacked entry_entry_tag_ is :\t " << entry_tag_ <<" <-> " << tag2str[entry_tag_] <<endl;
+      dbg << "1st unpacked thing in data_handle : " << entry_tag_ << ", return size : " << return_size << endl<< endl;
 
       preserve_type_ = *(cd::CDPreserveT *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      std::cout << "unpacked preserve_type_ is :\t " << preserve_type_ <<std::endl;
-      std::cout << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl << std::endl;
+      dbg << "unpacked preserve_type_ is :\t " << preserve_type_ <<endl;
+      dbg << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl << endl;
 
-      std::cout << "\nBefore call GetNext for src data handle\tobject : " << object <<std::endl;
+      dbg << "\nBefore call GetNext for src data handle\tobject : " << object <<endl;
       src_unpacked = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      std::cout << "\nBefore call GetNext for dst data handle\tobject : " << object <<std::endl;
-      std::cout << "src_unpacked is :\t " << src_unpacked <<std::endl;
-      std::cout << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl << std::endl;
+      dbg << "\nBefore call GetNext for dst data handle\tobject : " << object <<endl;
+      dbg << "src_unpacked is :\t " << src_unpacked <<endl;
+      dbg << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl << endl;
 
 
       dst_unpacked = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      std::cout << "\nBefore call src_data.Deserialize\tobject : " << object <<std::endl;
-      std::cout << "dst_unpacked is :\t " << dst_unpacked <<std::endl;
-      std::cout << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
+      dbg << "\nBefore call src_data.Deserialize\tobject : " << object <<endl;
+      dbg << "dst_unpacked is :\t " << dst_unpacked <<endl;
+      dbg << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;    
       src_data_.Deserialize(src_unpacked);
       dst_data_.Deserialize(dst_unpacked);
     }

@@ -144,7 +144,7 @@ static inline void nullFunc(void) {}
   enum CDPreserveT  { kCopy=1, 
 											kRef=2, 
 											kRegen=4,
-                      kShared=8, 
+                      kShared=8 
 										};
 
   enum CDType       { kStrict=0, 
@@ -173,16 +173,16 @@ static inline void nullFunc(void) {}
                     kSSD,
                     kPFS};
 
-  enum CDEventT { kOK=0,
-                  kError=1,
-                  kAllStop=2,
-                  kAllResume=4,
-                  kEntryReqeust=8,
-                  kEntrySearch=16,
-                  kEntrySend=32,
-                  kEscalate=64 };
+  enum CDEventT { kNoEvent=0,
+                  kErrorOccurred=1,
+                  kReserved=2,
+                  kEntrySearch=4,
+                  kEntrySend=8,
+                  kAllPause=16,
+                  kAllResume=32,
+                  kAllReexecute=64 };
 
-  enum CDEventHandleT { kNoEvent = 0,
+  enum CDEventHandleT { kEventNone = 0,
                         kEventResolved,
                         kEventPending };
 
@@ -247,6 +247,17 @@ static inline void nullFunc(void) {}
 #define DATA_FREE free
 #define ERROR_MESSAGE(X) printf(X);
 
+#define CHECK_EVENT_NO_EVENT(X) (X == 0)
+#define CHECK_EVENT_ERROR_OCCURRED(X) (X & kErrorOccurred)
+#define CHECK_EVENT_ENTRY_SEARCH(X) ((X & kEntrySearch) >> 2)
+#define CHECK_EVENT_ENTRY_SEND(X) ((X & kEntrySend) >> 3)
+#define CHECK_EVENT_ALL_PAUSE(X) ((X & kAllPause) >> 4)
+#define CHECK_EVENT_ALL_RESUME(X) ((X & kAllResume) >> 5)
+#define CHECK_EVENT_ALL_REEXECUTE(X) ((X & kAllReexecute) >> 6)
+
+#define CHECK_PRV_TYPE(X,Y) ((X & Y) == Y)
+#define CHECK_EVENT(X,Y) ((X & Y) == Y)
+#define CHECK_NO_EVENT(X) (X == 0)
 #if _DEBUG
 
 #define PRINT_DEBUG(X) printf(X);
@@ -304,8 +315,5 @@ We are increasing the number of reexecution inside Begin(). So, the point of tim
 #define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
 //#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
 #define CD_Complete(X) (X)->Complete()   
-
-
-
 
 #endif

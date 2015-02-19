@@ -245,11 +245,10 @@ update the preserved data.
   
     CDErrT Preserve(void *data,                   // address in the local process 
                     uint64_t len_in_bytes,        // data size to preserve
-                    CDPreserveT preserve_mask=kCopy, // preservation method
+                    uint32_t preserve_mask=kCopy, // preservation method
                     const char *my_name=0,        // data name
                     const char *ref_name=0,       // reference name
                     uint64_t ref_offset=0,        // reference offset
-                    bool ref_remote=false,        // reference offset
                     const RegenObject * regen_object=0, // regen object
                     PreserveUseT data_usage=kUnsure);   // for optimization
   
@@ -260,11 +259,10 @@ update the preserved data.
     CDErrT Preserve(CDEvent &cd_event,            // Event object to synch
                     void *data_ptr, 
                     uint64_t len, 
-                    CDPreserveT preserve_mask=kCopy, 
+                    uint32_t preserve_mask=kCopy, 
                     const char *my_name=0, 
                     const char *ref_name=0, 
                     uint64_t ref_offset=0, 
-                    bool ref_remote=false,        // reference offset
                     const RegenObject *regen_object=0, 
                     PreserveUseT data_usage=kUnsure);
   
@@ -311,11 +309,10 @@ update the preserved data.
     CDInternalErrT InternalDestroy(void);
     CDInternalErrT InternalPreserve(void *data, 
                                     uint64_t len_in_bytes,
-                                    CDPreserveT preserve_mask, 
+                                    uint32_t preserve_mask, 
                                     std::string my_name, 
                                     const char *ref_name, 
                                     uint64_t ref_offset, 
-                                    bool ref_remote,
                                     const RegenObject *regen_object, 
                                     PreserveUseT data_usage);
   
@@ -361,6 +358,8 @@ update the preserved data.
 
 //    virtual void *SerializeEntryDir(uint32_t& entry_count); 
 //    virtual std::vector<CDEntry> DeserializeEntryDir(void *object);
+    void *SerializeRemoteEntryDir(uint32_t& len_in_byte);
+    void DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_dir, void *object);
 
     virtual void *Serialize(uint32_t& len_in_bytes)
     {

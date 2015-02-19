@@ -680,7 +680,7 @@ int test_preservation_via_referenence_partial_update()
   return kError;
 }
 
-
+/*
 // Test basic via reference scheme.
 int test_preservation_via_ref()
 {
@@ -782,7 +782,7 @@ int test_preservation_via_referenence_partial_update()
   return kError;
 }
 
-
+*/
 
 int main(int argc, char* argv[])
 {
@@ -818,3 +818,5 @@ int main(int argc, char* argv[])
 //  performance_test1();
 
   MPI_Finalize(); 
+  return 0;
+}

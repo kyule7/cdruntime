@@ -112,8 +112,9 @@ public:
   int head(void) const { return head_; }
   int size(void) const { return size_; }
   bool IsHead(void) const { 
-    dbg << "head : " << head_ << ", task: " << task_in_color_ << endl; //getchar();
-return head_ == task_in_color_; }
+//    dbg << "head : " << head_ << ", task: " << task_in_color_ << endl; //getchar();
+    return head_ == task_in_color_; 
+  }
 
   void * Serialize(uint32_t& len_in_bytes)
   {

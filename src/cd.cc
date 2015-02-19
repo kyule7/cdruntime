@@ -265,12 +265,6 @@ CDErrT CD::Destroy(void)
   CDErrT err=CDErrT::kOK;
   InternalDestroy();
 
-#if _MPI_VER
-#if _KL
-  dbg << "destroyed cds" << endl;
-//  MPI_Win_free(mailbox_);
-#endif
-#endif
 
   return err;
 }
@@ -293,12 +287,17 @@ CD::InternalCreate(CDHandle* parent,
 #if _MPI_VER
 #if _KL
     int task_count = new_cd_id.task_count();
+
+    if(task_count > 1) {
+
     dbg << "in CD::Create Internal Memory. task count is "<< task_count <<endl;
 //    new_cd->mailbox_ = new CDMailBoxT[task_count];
 //    for(int i=0; i<task_count; ++i) {
       MPI_Win_create(NULL, 0, 1,
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
 //    }
+
+    }
 #endif
 #endif
 
@@ -313,6 +312,7 @@ CD::InternalCreate(CDHandle* parent,
     dbg << "HeadCD create internal memory " << endl;
     int task_count = new_cd_id.task_count();
 
+    if(task_count > 1) {
     MPI_Alloc_mem(task_count*sizeof(CDFlagT), 
                   MPI_INFO_NULL, &(new_cd->event_flag_));
 //    new_cd->mailbox_ = new CDMailBoxT[task_count];
@@ -322,7 +322,7 @@ CD::InternalCreate(CDHandle* parent,
       MPI_Win_create(new_cd->event_flag_, task_count*sizeof(CDFlagT), sizeof(CDFlagT),
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
 //    }
-
+    }
 //    AttachChildCD(new_cd);
 #endif
 #endif
@@ -335,62 +335,6 @@ CD::InternalCreate(CDHandle* parent,
 }
 
 
-int CD::ReadMailBox(void) 
-{
-  int resolved=0;
-    // Initialize the resolved flag
-    resolved = 0;
-    resolved = HandleEvent(event[i]);
-
-    switch(resolved) {
-      case 0 : 
-        // no event
-        break;
-      case 1 :
-        // There was an event, but resolved
-        break;
-      case 2 :
-        // There was an event, but could not resolved.
-        // Escalation required
-        break;
-      default :
-        break;
-    }
-    dbg << "Task["<< i <<"] (" << ptr_cd()->GetCDName() << " / " << node_id_ 
-        << ") got an error #" << event[i] << ",\nthe result is " << resolved << endl;
-
-  return resolved;
-}
-
-
-int HeadCD::ReadMailBox(void) 
-{
-  int resolved=0;
-  for(int i=0; i<node_id_.size(); i++) {
-    // Initialize the resolved flag
-    resolved = 0;
-    resolved = HandleEvent(event[i]);
-
-    switch(resolved) {
-      case 0 : 
-        // no event
-        break;
-      case 1 :
-        // There was an event, but resolved
-        break;
-      case 2 :
-        // There was an event, but could not resolved.
-        // Escalation required
-        break;
-      default :
-        break;
-    }
-    dbg << "Task["<< i <<"] (" << ptr_cd()->GetCDName() << " / " << node_id_ 
-        << ") got an error #" << event[i] << ",\nthe result is " << resolved << endl;
-  }
-
-  return resolved;
-}
 
 
 
@@ -414,11 +358,10 @@ inline CD::CDInternalErrT CD::InternalDestroy(void)
 #if _KL
   int task_count = cd_id_.task_count();
   dbg << "mpi win free for "<< task_count << " mailboxes"<<endl;
-  
-//  for(int i=0; i<task_count; ++i) {
-//    MPI_Win_free(&mailbox_);
-//  }
 
+  if(GetCDID().node_id().size() > 1) {  
+  MPI_Win_free(&mailbox_);
+  }
 
 
 #endif
@@ -510,6 +453,45 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   // FIXME don't we have to wait for others to be completed?  
   cd_exec_mode_ = kSuspension; 
   return CDErrT::kOK;
+}
+
+
+
+
+void *CD::SerializeRemoteEntryDir(uint32_t& len_in_bytes) 
+{
+  Packer entry_dir_packer;
+  uint32_t entry_count = 0;
+
+  for(auto it = remote_entry_directory_map_.begin(); 
+           it!= remote_entry_directory_map_.end(); ++it) {
+    uint32_t entry_len=0;
+    void *packed_entry_p=0;
+    if( !it->second->name().empty() ){ 
+      packed_entry_p = it->second->Serialize(entry_len);
+      entry_dir_packer.Add(entry_count++, entry_len, packed_entry_p);
+    }
+  }
+  
+  return entry_dir_packer.GetTotalData(len_in_bytes);
+}
+
+
+void CD::DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_dir, void *object) 
+{
+  remote_entry_dir.clear();
+  Unpacker entry_dir_unpacker;
+  void *unpacked_entry_p=0;
+  uint32_t dwGetID=0;
+  uint32_t return_size=0;
+  while(1) {
+    unpacked_entry_p = entry_dir_unpacker.GetNext((char *)object, dwGetID, return_size);
+    if(unpacked_entry_p == NULL) break;
+    CDEntry *cd_entry = new CDEntry();
+    cd_entry->Deserialize(unpacked_entry_p);
+    remote_entry_dir[cd_entry->entry_tag_] = cd_entry;
+  }
+  
 }
 /*
 
@@ -825,11 +807,10 @@ PrvMediumT CD::GetPlaceToPreserve()
 
 CDErrT CD::Preserve(void* data, 
                     uint64_t len_in_bytes, 
-                    CDPreserveT preserve_mask, 
+                    uint32_t preserve_mask, 
                     const char* my_name, 
                     const char* ref_name, 
                     uint64_t ref_offset, 
-                    bool ref_remote,
                     const RegenObject* regen_object, 
                     PreserveUseT data_usage)
 {
@@ -840,7 +821,7 @@ CDErrT CD::Preserve(void* data,
 
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
 //    dbg<<"my_name "<< my_name<<endl;
-    switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, ref_remote, regen_object, data_usage) ) {
+    switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : return CDErrT::kOK;
       case CDInternalErrT::kExecModeError : return CDErrT::kError;
       case CDInternalErrT::kEntryError    : return CDErrT::kError;
@@ -890,7 +871,7 @@ CDErrT CD::Preserve(void* data,
       printf("Now reached end of entry directory, now switching to normal execution mode\n");
 
       cd_exec_mode_  = kExecution;    
-      switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, ref_remote, regen_object, data_usage) ) {
+      switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
         case CDInternalErrT::kOK            : return CDErrT::kOK;
         case CDInternalErrT::kExecModeError : return CDErrT::kError;
         case CDInternalErrT::kEntryError    : return CDErrT::kError;
@@ -916,11 +897,10 @@ CDErrT CD::Preserve(void* data,
 CDErrT CD::Preserve(CDEvent &cd_event,     
                     void *data_ptr, 
                     uint64_t len, 
-                    CDPreserveT preserve_mask, 
+                    uint32_t preserve_mask, 
                     const char *my_name, 
                     const char *ref_name, 
                     uint64_t ref_offset, 
-                    bool ref_remote,        
                     const RegenObject *regen_object, 
                     PreserveUseT data_usage)
 {
@@ -931,11 +911,10 @@ CDErrT CD::Preserve(CDEvent &cd_event,
 CD::CDInternalErrT 
 CD::InternalPreserve(void *data, 
                      uint64_t len_in_bytes, 
-                     CDPreserveT preserve_mask, 
+                     uint32_t preserve_mask, 
                      std::string my_name, 
                      const char *ref_name, 
                      uint64_t ref_offset, 
-                     bool ref_remote,
                      const RegenObject* regen_object, 
                      PreserveUseT data_usage)
 {
@@ -950,15 +929,15 @@ CD::InternalPreserve(void *data,
 
     CDEntry* cd_entry = 0;
 //    if(my_name==0) my_name = "INITIAL_ENTRY";
-    dbg << "preserve remote check\npreserve_mask : "<< preserve_mask << " " << ref_remote << endl; //dbgBreak();
+//    dbg << "preserve remote check\npreserve_mask : "<< preserve_mask <<  endl; //dbgBreak();
     // Get cd_entry
-    if( preserve_mask == kCopy ) {                // via-copy, so it saves data right now!
+    if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) {                // via-copy, so it saves data right now!
 
       dbg << "\nPreservation via Copy to %d(memory or file)\n" << GetPlaceToPreserve() << endl;
-
+      dbg << "Prv Mask : " << preserve_mask << ", CHECK PRV TYPE : " << CHECK_PRV_TYPE(preserve_mask, kShared) << endl;
       switch(GetPlaceToPreserve()) {
         case kMemory: {
-//          dbg<<"[kMemory] ------------------------------------------\n" << endl;
+          dbg<<"[kMemory] ------------------------------------------\n" << endl;
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes), 
                                  DataHandle(DataHandle::kMemory, 0, len_in_bytes), 
                                  my_name);
@@ -970,18 +949,22 @@ CD::InternalPreserve(void *data,
           // FIXME 
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
           if( !my_name.empty() ) {
-            entry_directory_map_[str_hash(my_name)] = cd_entry;
-//            dbg <<"register local entry_dir. my_name : "<<my_name
-//                      <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-//                      <<", address: " <<cd_entry->dst_data_.address_data()<< endl;
-            if(ref_remote) {
+
+            if( !CHECK_PRV_TYPE(preserve_mask, kShared) ) {
+              entry_directory_map_[str_hash(my_name)] = cd_entry;
+              dbg <<"register local entry_dir. my_name : "<<my_name
+                  <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
+                  <<", address: " <<cd_entry->dst_data_.address_data()<< endl;
+            } 
+            else{
               remote_entry_directory_map_[str_hash(my_name)] = cd_entry;
-//              dbg <<"register remote entry_dir. my_name : "<<my_name
-//                        <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-//                        <<", address: " <<cd_entry->dst_data_.address_data()<< endl;
+              dbg <<"register remote entry_dir. my_name : "<<my_name
+                  <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
+                  <<", address: " <<cd_entry->dst_data_.address_data()<< endl;
 
 
             }
+
           }
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
@@ -1000,7 +983,7 @@ CD::InternalPreserve(void *data,
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
 
           if( !my_name.empty() ) {
-            if(!ref_remote) {
+            if( !CHECK_PRV_TYPE(preserve_mask, kShared) ) {
               entry_directory_map_[str_hash(my_name)] = cd_entry;
               dbg <<"register local entry_dir. my_name : "<<my_name
                         <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
@@ -1031,7 +1014,7 @@ CD::InternalPreserve(void *data,
 
 //          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
           if( !my_name.empty() ) {
-            if(!ref_remote) {
+            if( !CHECK_PRV_TYPE(preserve_mask, kShared) ) {
               entry_directory_map_[str_hash(my_name)] = cd_entry;
               assert(entry_directory_map_[str_hash(my_name)]);
               assert(entry_directory_map_[str_hash(my_name)]->src_data_.address_data());
@@ -1070,8 +1053,8 @@ CD::InternalPreserve(void *data,
           break;
       }
 
-    }
-    else if( preserve_mask == kRef ) { // via-reference
+    } // end of preserve via copy
+    else if( CHECK_PRV_TYPE(preserve_mask, kRef) ) { // via-reference
 
       dbg << "\nPreservation via %d (reference)\n" << GetPlaceToPreserve() << endl;
 
@@ -1083,11 +1066,17 @@ CD::InternalPreserve(void *data,
       entry_directory_.push_back(*cd_entry);  
 //      entry_directory_map_.emplace(ref_name, *cd_entry);
 //      entry_directory_map_[ref_name] = *cd_entry;
+      if( !my_name.empty() ) {
+        entry_directory_map_[str_hash(my_name)] = cd_entry;
+        if( CHECK_PRV_TYPE(preserve_mask, kShared) ) {
+          cout << "[CD::InternalPreserve. Error : kRef | kShared\nTried to preserve via reference but tried to allow itself as reference to other node. If it allow itself for reference locally, it is fine!" << endl;
+        }
+      }
 
       return CDInternalErrT::kOK;
       
     }
-    else if( preserve_mask == kRegen ) { // via-reference
+    else if( CHECK_PRV_TYPE(preserve_mask, kRegen) ) { // via-reference
 
       //TODO
       assert(0);
@@ -1545,11 +1534,14 @@ CDErrT HeadCD::Destroy(void)
   CDErrT err=CDErrT::kOK;
 
   InternalDestroy();
-
 #if _MPI_VER
 #if _KL
-  dbg << "HeadCD::Destroy"<<endl;
-  MPI_Free_mem(event_flag_);
+  if(GetCDID().node_id().size() > 1) {
+//    dbg << "destroyed cds" << endl;
+//    MPI_Win_free(&mailbox_);
+    dbg << "HeadCD::Destroy"<<endl;
+    MPI_Free_mem(event_flag_);
+  }
 #endif
 #endif
 
@@ -1684,14 +1676,20 @@ CDEntry* CD::InternalGetEntry(std::string entry_name)
       
       dbg<<"[InternalGetEntry] ref_name: " <<entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()
                << ", address: " <<entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()<< endl;
-      return cd_entry;
+      if(cd_entry->isViaReference())
+        return NULL;
+      else
+        return cd_entry;
     }
     else if(jt != remote_entry_directory_map_.end()) {
       CDEntry* cd_entry = remote_entry_directory_map_.find(str_hash(entry_name))->second;
       
       dbg<<"[InternalGetEntry] ref_name: " <<remote_entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()
                << ", address: " <<remote_entry_directory_map_[str_hash(entry_name)]->dst_data_.address_data()<< endl;
-      return cd_entry;
+      if(cd_entry->isViaReference())
+        return NULL;
+      else
+        return cd_entry;
     }
     else {
       dbg << "ERROR: there is the same name of entry in entry_directory_map and remote_entry_directory_map.\n"<< endl;
@@ -1711,7 +1709,7 @@ CDFlagT *CD::event_flag(void)
 }
 CDFlagT *HeadCD::event_flag(void)
 {
-  return *event_flag_;
+  return event_flag_;
 }
 
 
@@ -1739,17 +1737,16 @@ void CD::DeleteEntryDirectory(void)
 */
 
 
-/*
-    uint32_t data_handle_len=0;
+//    uint32_t data_handle_len=0;
+//    dbg << "=========== Check Ser ==============" << endl;
+//    void *ser_data_handle = (it->src_data_).Serialize(data_handle_len);
+//    DataHandle new_data_handle;
+//    new_data_handle.Deserialize(ser_data_handle);
+//
+//    dbg <<"\n\n\noriginal : "<<(it->src_data_).file_name() << endl;
+//    dbg <<"unpacked : "<<new_data_handle.file_name() << endl << endl;
+//    dbgBreak();
 
-    void *ser_data_handle = (it->src_data_).Serialize(data_handle_len);
-    DataHandle new_data_handle;
-    new_data_handle.Deserialize(ser_data_handle);
-
-    dbg <<"\n\n\noriginal : "<<(it->src_data_).file_name() << endl;
-    dbg <<"unpacked : "<<new_data_handle.file_name() << endl << endl;
-    dbgBreak();
-*/
     it->Delete();
     entry_directory_map_.erase(str_hash(it->name()));
     remote_entry_directory_map_.erase(str_hash(it->name()));

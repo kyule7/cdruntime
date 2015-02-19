@@ -108,7 +108,10 @@ public:
   { 
     if(uniquePath_ != NULL ) {
       if( uniquePath_->size() > 1 ) {
-        return uniquePath_->at(current_level-2); 
+//        return uniquePath_->at(current_level-2);
+        if(current_level > 1) 
+          return uniquePath_->at(current_level-1);
+          
       }
     }
     return NULL;

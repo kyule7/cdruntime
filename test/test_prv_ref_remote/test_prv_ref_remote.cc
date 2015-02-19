@@ -65,7 +65,7 @@ static __inline__ long long getCounter(void)
 
 
 // Test basic preservation scheme.
-int test_preemption()
+int test_preservation_via_ref_remote()
 {
 
   int a[4]= {3,0,};
@@ -75,7 +75,7 @@ int test_preemption()
   int test_results[8] = {0,};
   int test_result = 0;
   int num_reexecution = 0;
-  dbg2 << "\n\n--------------------test preemption begins-----------------------\n" << endl;
+  dbg2 << "\n\n--------------------test preservation_via_ref_remote begins-----------------------\n" << endl;
   dbg2 << "CD Create\n" << endl;
 //  CD *root= handle_cd.ptr_cd();// for now let's just get the pointer and use it directly
 
@@ -89,14 +89,28 @@ int test_preemption()
   CDHandle* child_lv1=root->Create(CDPath::GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
   CD_Begin(child_lv1);
   dbg2 << "child level 1-------------------------------------\n" << endl;
+  dbg2 << "Preserve via copy for array a and array b\n" << endl;
+  switch(mr) {
+    case 0 : a[2] = 10;
+    case 1 : a[2] = 11;
+    case 2 : a[2] = 12;
+    case 3 : a[2] = 13;
+    case 4 : a[2] = 14;
+    case 5 : a[2] = 15;
+    case 6 : a[2] = 16;
+    case 7 : a[2] = 17;
+    default : a[2] = 0;
+  }
+  child_lv1->Preserve(a, sizeof(a), kCopy | kShared, "a");
+  child_lv1->Preserve(b, sizeof(b), kCopy | kShared, "b");
 
   CDHandle* child_lv2=child_lv1->Create(CDPath::GetCurrentCD()->GetNodeID(), LV2, "CD2", kStrict, 0, 0, &err);
   CD_Begin(child_lv2);
   dbg2 << "child level 2-------------------------------------\n" << endl;
   dbg << "\n\n\nnode id check : "<< CDPath::GetCurrentCD()->node_id() << "\n\n\n" << endl;
 
-  child_lv2->Preserve(a, sizeof(a), kCopy, "a", "a");
-  child_lv2->Preserve(b, sizeof(b), kCopy, "b", "b");
+  child_lv2->Preserve(a, sizeof(a), kRef, "a", "a");
+  child_lv2->Preserve(b, sizeof(b), kRef, "b", "b");
   //child->Preserve((char *)&b,8* sizeof(int));
   dbg2 << "sizeof a : \t" << sizeof(a) << endl; //getchar();
   dbg2 << "sizeof b : \t" << sizeof(b) << endl; //getchar();
@@ -133,7 +147,7 @@ int test_preemption()
   dbg2 << "\n\n--------------Corruption for c begins ----------------------------\n\n" << endl;
   // this point is to test whether execution mode becomes kExecution from this point, 
   // because before this preservation is called it should be in kReexecution mode
-  child_lv2->Preserve(c, sizeof(c), kCopy, "c", "c");
+  child_lv2->Preserve(c, sizeof(c), kCopy, "c");
   dbg2 << "sizeof c : " << sizeof(c) << endl; //getchar();
 
   if( num_reexecution == 2)  {
@@ -162,7 +176,7 @@ int test_preemption()
   child_lv3->Preserve(a, sizeof(a), kRef, "child_a", "a");
   child_lv3->Preserve(b, sizeof(b), kRef, "child_b", "b");
   child_lv3->Preserve(c, sizeof(b), kRef, "child_c", "c");
-  child_lv3->Preserve(d, sizeof(d), kCopy, "child_d", "d");
+  child_lv3->Preserve(d, sizeof(d), kCopy, "d");
 
   child_lv3->Detect();
 
@@ -205,7 +219,7 @@ int test_preemption()
 
 
 // Test basic via reference scheme.
-int test_preemption_2()
+int test_preservation_via_ref_remote_2()
 {
   int a[4]= {3,0,};
   int b[8]= {1,0,};
@@ -214,7 +228,7 @@ int test_preemption_2()
   int test_result = 0;
   
   //CDHandle no_parent;  // not initialized and this means no parent
-  dbg2 << "\n\n---------------test_preemption 2 begins-----------------------------\n" << endl;
+  dbg2 << "\n\n---------------test_preservation_via_ref_remote 2 begins-----------------------------\n" << endl;
   CDErrT err;
 	CDHandle* root = CD_Init(np, mr);
   CD_Begin(root); 
@@ -266,10 +280,10 @@ int main(int argc, char* argv[])
  
  
  
-  cout << "\ntest_preemption() \n\n" << endl; 
-  ret = test_preemption();
-  if( ret == kError ) cout << "test preemption FAILED\n" << endl;
-  else cout << "test preemption PASSED\n" << endl;
+  cout << "\ntest_preservation_via_ref_remote() \n\n" << endl; 
+  ret = test_preservation_via_ref_remote();
+  if( ret == kError ) cout << "test preservation_via_ref_remote FAILED\n" << endl;
+  else cout << "test preservation_via_ref_remote PASSED\n" << endl;
  
 
   MPI_Finalize();
