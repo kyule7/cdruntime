@@ -481,8 +481,8 @@ CDHandle* CDHandle::Create(const ColorT& color,
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
 //  dbg<<"~~~~~~~~before create cd obj~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<dbg; //dbgBreak();
 
-
-  CollectHeadInfoAndEntry(new_node_id); 
+//  if(node_id_.size() > 1)
+//    CollectHeadInfoAndEntry(new_node_id); 
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
@@ -833,46 +833,53 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 {
   std::vector<SysErrT> ret_prepare;
 
-/*
+
   dbg << "Detect at Level : " << ptr_cd()->GetCDID().level() << ", my node : " << node_id() << endl; getchar();
 
   CDEventT event = CDEventT::kNoEvent;
-  if(ptr_cd()->GetCDID().level() == 0) {
-    if(myTaskID == 3 ) {
-      event = CDEventT::kErrorOccurred;
-    }
-    if(myTaskID == 6 ) {
-      event = CDEventT::kEntrySearch;
-    }
-  }
+//  if(ptr_cd()->GetCDID().level() == 0) {
+//    if(myTaskID == 3 ) {
+//      event = CDEventT::kErrorOccurred;
+//    }
+//    if(myTaskID == 6 ) {
+//      event = CDEventT::kEntrySearch;
+//    }
+//  }
+
   if(ptr_cd()->GetCDID().level() == 1) {
-    if(myTaskID == 7 ) {
-      event = CDEventT::kErrorOccurred;
+    if(myTaskID == 0 ) {
+      event = CDEventT::kAllPause;
     }
-    if(myTaskID == 5 ) {
-      event = CDEventT::kEntrySend;
-    }
+//    if(myTaskID == 7 ) {
+//      event = CDEventT::kErrorOccurred;
+//    }
+//    if(myTaskID == 5 ) {
+//      event = CDEventT::kErrorOccurred;
+//    }
   }
-  if(ptr_cd()->GetCDID().level() == 2) {
-    if(myTaskID == 1 ) {
-      event = CDEventT::kErrorOccurred;
-    }
-    if(myTaskID == 2 ) {
-      event = CDEventT::kEntrySearch;
-    }
-  }
-  if(ptr_cd()->GetCDID().level() == 3) {
-    if(myTaskID == 2 ) {
-      event = CDEventT::kErrorOccurred;
-    }
-    if(myTaskID == 5 ) {
-      event = CDEventT::kEntrySearch;
-    }
-  }
+//  if(ptr_cd()->GetCDID().level() == 2) {
+//    if(myTaskID == 1 ) {
+//      event = CDEventT::kErrorOccurred;
+//    }
+//    if(myTaskID == 2 ) {
+//      event = CDEventT::kEntrySearch;
+//    }
+//  }
+//  if(ptr_cd()->GetCDID().level() == 3) {
+//    if(myTaskID == 2 ) {
+//      event = CDEventT::kErrorOccurred;
+//    }
+//    if(myTaskID == 5 ) {
+//      event = CDEventT::kEntrySearch;
+//    }
+//  }
 
   SetMailBox(event);
   CheckMailBox();
-*/
+  if(IsHead() && ptr_cd()->GetCDID().level() == 1) {
+    ptr_cd_->HandleAllResume(this);
+    cout <<"============ Resumed ================" << endl;
+  }
   return ret_prepare;
 
 }
@@ -1196,7 +1203,8 @@ CDEventHandleT CDHandle::HandleEvent(CDFlagT *p_event)
     int handled_event_count=0;
     if( CHECK_EVENT(event, kErrorOccurred) ) {
 
-      dbg << "CD Event kErrorOccurred";
+      ptr_cd_->HandleErrorOccurred(this);
+
       handled_event_count++;
     }
 
@@ -1222,22 +1230,25 @@ CDEventHandleT CDHandle::HandleEvent(CDFlagT *p_event)
     }
 
     if( CHECK_EVENT(event, kAllPause) ) {
+      cout << "What?? " << node_id_ << endl;
+      ptr_cd_->HandleAllPause(this);
 
-      dbg << "CD Event kAllPause\t\t\t";
       handled_event_count++;
 
     }
 
     if( CHECK_EVENT(event, kAllResume) ) {
 
-      dbg << "CD Event kAllResume\t\t\t";
+      ptr_cd_->HandleAllResume(this);
+
       handled_event_count++;
 
     }
 
     if( CHECK_EVENT(event, kAllReexecute) ) {
 
-      dbg << "CD Event kAllReexecute\t\t";
+      ptr_cd_->HandleAllReexecute(this);
+
       handled_event_count++;
 
     }
@@ -1390,6 +1401,14 @@ int CDHandle::SetMailBox(CDEventT &event)
 }
 
 
+char *CDHandle::GenTag(const char* tag)
+{
+  Tag tag_gen;
+  CDNameT cd_name = ptr_cd()->GetCDName();
+  tag_gen << tag << node_id_.task_in_color_ <<'-'<<cd_name.level()<<'-'<<cd_name.rank_in_level();
+//  cout << const_cast<char*>(tag_gen.str().c_str()) << endl; getchar();
+  return const_cast<char*>(tag_gen.str().c_str());
+}
 /*
 ucontext_t* CDHandle::context()
 {

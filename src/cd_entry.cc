@@ -442,6 +442,15 @@ CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 }
 
 
+std::ostream& cd::operator<<(std::ostream& str, const CDEntry& cd_entry)
+{
+  return str << "\n== CD Entry Information ================"
+             << "\nSource      :\t" << cd_entry.src_data_  
+             << "\nDestination :\t" << cd_entry.dst_data_
+             << "\nEntry Tag   :\t" << cd_entry.entry_tag_
+             << "\nEntry Name  :\t" << tag2str[cd_entry.entry_tag_]
+             << "\n========================================\n";
+}
 
 /*
 void* CDEntry::Serialize(uint32_t* len_in_bytes)

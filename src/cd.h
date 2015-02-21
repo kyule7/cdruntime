@@ -361,6 +361,13 @@ update the preserved data.
     void *SerializeRemoteEntryDir(uint32_t& len_in_byte);
     void DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_dir, void *object);
 
+
+    virtual void HandleErrorOccurred(CDHandle *cdh);
+    virtual void HandleAllPause(CDHandle *cdh);
+    virtual void HandleAllResume(CDHandle *cdh);
+    virtual void HandleAllReexecute(CDHandle *cdh);
+
+
     virtual void *Serialize(uint32_t& len_in_bytes)
     {
       return NULL;  
@@ -428,6 +435,10 @@ class cd::HeadCD : public cd::CD {
 
 //    void *SerializeEntryDir(uint32_t& entry_count); 
 //    std::vector<CDEntry> DeserializeEntryDir(void *object);
+
+    void HandleErrorOccurred(CDHandle *cdh);
+    void HandleAllPause(CDHandle *cdh);
+    void HandleAllResume(CDHandle *cdh);
 
     void *Serialize(uint32_t& len_in_bytes)
     {

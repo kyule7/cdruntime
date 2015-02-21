@@ -50,6 +50,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 class cd::CDEntry : public cd::Serializable
 {
   friend class cd::CD;
+  friend std::ostream& operator<<(std::ostream& str, const CDEntry& cd_entry);
   private:
     enum { 
       ENTRY_PACKER_NAME=0,
@@ -120,6 +121,15 @@ class cd::CDEntry : public cd::Serializable
              && (dst_data_ == that.dst_data_) && (preserve_type_ == that.preserve_type_);
     }
 
+//    std::ostream& operator<<(std::ostream& str, const CDEntry& cd_entry)
+//    {
+//      return str << "== CD Entry Information ================"
+//                 << "\nSource      :\t" << cd_entry.src_data_  
+//                 << "\nDestination :\t" << cd_entry.dst_data_
+//                 << "\nEntry Tag   :\t" << cd_entry.entry_tag_
+//                 << "\nEntry Name  :\t" << tag2str[cd_entry.entry_tag_]
+//                 << "========================================";
+//    }
 
     CDEntryErrT SaveMem(void);
     CDEntryErrT SaveFile(std::string base, 
@@ -185,7 +195,7 @@ class cd::CDEntry : public cd::Serializable
       void *src_unpacked=0;
       void *dst_unpacked=0;
 
-      uint64_t entry_tag_ = *(uint64_t *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+      entry_tag_ = *(uint64_t *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
       dbg << "unpacked entry_entry_tag_ is :\t " << entry_tag_ <<" <-> " << tag2str[entry_tag_] <<endl;
       dbg << "1st unpacked thing in data_handle : " << entry_tag_ << ", return size : " << return_size << endl<< endl;
 

@@ -36,6 +36,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_GLOBAL_H
 #define _CD_GLOBAL_H
 #include <stdint.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <iostream>
 #include <string>
@@ -193,41 +194,44 @@ static inline void nullFunc(void) {}
   extern int myTaskID;
 
   class DebugBuf: public std::streambuf {
-
     std::streambuf *baseBuf_;
-
   public:
-  
     virtual ~DebugBuf() {};
-   
     DebugBuf() {
       init(NULL);
     }
-
     DebugBuf(std::streambuf* baseBuf) {
       init(baseBuf);
     }
-
     void init(std::streambuf* baseBuf) {
       baseBuf = baseBuf;
     }
-  
   private:
-  
     virtual int overflow(int in) {
       return in;
     }
-  
     virtual std::streamsize xsputn(const char *s, std::streamsize in) {
       return in;
     }
-  
-   
     virtual int sync() {
       return 0;
     }
   }; 
-  
+ 
+  class Tag : public std::string {
+    std::ostringstream _oss;
+  public:
+    Tag() {}
+    ~Tag() {}
+    template <typename T>
+    Tag &operator<<(const T &that) {
+      _oss << that;
+      return *this;
+    }
+    std::string str(void) {
+      return _oss.str();
+    }
+  }; 
   
   
 

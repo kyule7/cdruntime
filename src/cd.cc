@@ -489,6 +489,7 @@ void CD::DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_di
     if(unpacked_entry_p == NULL) break;
     CDEntry *cd_entry = new CDEntry();
     cd_entry->Deserialize(unpacked_entry_p);
+    cout << tag2str[cd_entry->entry_tag_] << endl; getchar();
     remote_entry_dir[cd_entry->entry_tag_] = cd_entry;
   }
   
@@ -1739,12 +1740,13 @@ void CD::DeleteEntryDirectory(void)
 
 //    uint32_t data_handle_len=0;
 //    dbg << "=========== Check Ser ==============" << endl;
-//    void *ser_data_handle = (it->src_data_).Serialize(data_handle_len);
+//    dbg <<"[Before packed] :\t"<< it->dst_data_.node_id_ << endl << endl;
+//    void *ser_data_handle = (it->dst_data_).Serialize(data_handle_len);
 //    DataHandle new_data_handle;
 //    new_data_handle.Deserialize(ser_data_handle);
 //
-//    dbg <<"\n\n\noriginal : "<<(it->src_data_).file_name() << endl;
-//    dbg <<"unpacked : "<<new_data_handle.file_name() << endl << endl;
+//    dbg <<"\n\n\noriginal : "<<(it->dst_data_).file_name() << endl;
+//    dbg <<"[After unpacked] :\t"<<new_data_handle.node_id_ << endl << endl;
 //    dbgBreak();
 
     it->Delete();
@@ -1760,6 +1762,73 @@ void CD::DeleteEntryDirectory(void)
 //  dbg<<"Delete Entry Out"<<endl; dbgBreak();
 }
 
+
+void CD::HandleErrorOccurred(CDHandle *cdh)
+{
+
+  dbg << "CD Event kErrorOccurred";
+}
+
+void HeadCD::HandleErrorOccurred(CDHandle *cdh)
+{
+  for(int i=0; i<cdh->node_id().size(); i++)
+    event_flag_[i] |= kErrorOccurred;
+
+  dbg << "CD Event kErrorOccurred";
+
+  for(int i=0; i<cdh->node_id().size(); i++)
+    event_flag_[i] &= ~kErrorOccurred;
+  
+}
+
+void CD::HandleAllPause(CDHandle *cdh)
+{
+
+//  MPI_Barrier(cdh->node_id().color());
+
+  dbg << "CD Event kAllPause\t\t\t";
+
+}
+
+void HeadCD::HandleAllPause(CDHandle *cdh)
+{
+
+  for(int i=0; i<cdh->node_id().size(); i++)
+    event_flag_[i] |= kAllPause;
+
+  dbg << "CD Event kAllPause\t\t\t";
+
+  cout <<"============ Paused  ================" << endl;
+//  HandleAllResume(cdh);
+  cout <<"============ Resumed ================" << endl;
+}
+
+
+void CD::HandleAllResume(CDHandle *cdh)
+{
+
+  dbg << "CD Event kAllResume\t\t\t";
+
+}
+
+void HeadCD::HandleAllResume(CDHandle *cdh)
+{
+
+  if(cdh->IsHead()) {
+//    MPI_Barrier(cdh->node_id().color());
+    for(int i=0; i<cdh->node_id().size(); i++)
+      event_flag_[i] &= ~kAllPause;
+  }
+  dbg << "CD Event kAllResume\t\t\t";
+
+}
+
+void CD::HandleAllReexecute(CDHandle *cdh)
+{
+  this->HandleAllResume(cdh);
+  dbg << "CD Event kAllReexecute\t\t";
+  recoverObj_->Recover(this);
+}
 
 
 /*  CD::setDetectFunc(void *() custom_detect_func)

@@ -56,8 +56,10 @@ namespace cd {
 
 class DataHandle : public Serializable {
   friend class CDEntry;
+  friend std::ostream& operator<<(std::ostream& str, const DataHandle& dh);
   public:
     enum HandleType { kMemory = 0, kOSFile, kReference, kSource };
+		NodeID      node_id_;
   private:
     enum { 
       DATA_PACKER_NODE_ID=0,
@@ -70,7 +72,6 @@ class DataHandle : public Serializable {
     };
 
     HandleType  handle_type_;
-		NodeID      node_id_;
     //DRAM
     void*       address_data_;
     uint64_t    len_;
@@ -139,6 +140,20 @@ class DataHandle : public Serializable {
              && !strcmp(file_name_, that.file_name_) && (ref_name_ == that.ref_name_) 
              && (ref_offset_ == that.ref_offset_);
     }
+
+//    std::ostream& operator<<(std::ostream& str, const DataHandle& dh)
+//    {
+//      return str << "== Data Handle Information ======="
+//                 << "\nhandle T:\t" << dh.handle_type_  
+//                 << "\nNode ID :\t" << dh.node_id_  
+//                 << "\nAddress :\t" << dh.address_data_
+//                 << "\nlength  :\t" << dh.len_
+//                 << "\nfilename:\t" << dh.file_name_
+//                 << "\nref_name:\t" << dh.ref_name_
+//                 << "\nref_offset:\t"<<dh.ref_offset_
+//                 << "==================================";
+//    }
+
   public: 
     //we need serialize deserialize interface here.
     void *Serialize(uint32_t& len_in_bytes)

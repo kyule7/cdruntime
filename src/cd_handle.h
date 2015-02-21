@@ -204,7 +204,8 @@ class cd::CDHandle {
 //                       CDPGASUsageT region_type=kShared);
   
     void CommitPreserveBuff(void);
-
+//    Tag GenTag(const char* tag);
+    char *GenTag(const char* tag);
   private:  // Internal use -------------------------------------------------------------
     // Initialize for CDHandle object.
     void Init(CD* ptr_cd, const NodeID& node_id);

@@ -101,8 +101,8 @@ int test_preservation_via_ref_remote()
     case 7 : a[2] = 17;
     default : a[2] = 0;
   }
-  child_lv1->Preserve(a, sizeof(a), kCopy | kShared, "a");
-  child_lv1->Preserve(b, sizeof(b), kCopy | kShared, "b");
+  child_lv1->Preserve(a, sizeof(a), kCopy | kShared, child_lv1->GenTag("a"));
+  child_lv1->Preserve(b, sizeof(b), kCopy | kShared, child_lv1->GenTag("b"));
 
   CDHandle* child_lv2=child_lv1->Create(CDPath::GetCurrentCD()->GetNodeID(), LV2, "CD2", kStrict, 0, 0, &err);
   CD_Begin(child_lv2);
