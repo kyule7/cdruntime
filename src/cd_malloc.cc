@@ -38,6 +38,18 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 bool app_side;
 
 using namespace cd;
+struct IncompleteLogEntry NewLogEntry(void* p, size_t size)
+{
+      struct IncompleteLogEntry tmp_log_entry;
+      tmp_log_entry.addr_ = (unsigned long) 0;
+      tmp_log_entry.length_ = (unsigned long) size;
+      tmp_log_entry.flag_ = (unsigned long) 0;
+      tmp_log_entry.complete_ = false;
+      tmp_log_entry.isrecv_ = 0;
+      tmp_log_entry.p_ = p;
+      tmp_log_entry.pushed_ = false;
+      return tmp_log_entry;
+}
 
 CD* IsLogable(bool *logable_)
 {
@@ -45,7 +57,7 @@ CD* IsLogable(bool *logable_)
   CDHandle* current = CDPath::GetCurrentCD();
 	CD* c_CD;
 	if(current==NULL){
-		PRINT_LIBC("\tbefore root CD\n");
+//		PRINT_LIBC("\tbefore root CD\n");
 	}
 	else
 	{
@@ -58,7 +70,7 @@ CD* IsLogable(bool *logable_)
 		{
 			if(c_CD->libc_log_ptr_ == NULL)
 			{
-				PRINT_LIBC("\tno libc_log in current CD\n");
+//				PRINT_LIBC("\tno libc_log in current CD\n");
 			}
 			else 
 			{
@@ -73,11 +85,47 @@ CD* IsLogable(bool *logable_)
 //GONG: Is free() required?
 void free(void *p)
 {
+  //set real_free first
   static void(*real_free)(void*);
   if(!real_free)
   {
     real_free = (void(*)(void *)) dlsym(RTLD_NEXT, "free");
   }
+  //check first whether CD-runtime side or application side (logged)
+  if(app_side){
+    app_side = false;      
+	  bool logable  = false;
+    CD* c_CD = IsLogable(&logable);
+	  if(logable){
+//      PRINT_LIBC("FREE invoked %p\n", p);
+      std::vector<struct IncompleteLogEntry>::iterator it;
+      for (it=c_CD->mem_alloc_log_.begin(); it!=c_CD->mem_alloc_log_.end(); it++)
+      {
+        //address matched!
+        if(it->p_ == p) 
+        { 
+//          PRINT_LIBC("FREE- complete? %p\n", p);
+          it->complete_ = true;
+    app_side = true;
+          return;
+        }
+      }
+      //search & parent's log
+      bool found = c_CD->PushedMemLogSearch(p);
+      if(found) 
+      {
+//        PRINT_LIBC("found %p from parent's log will NOT free it \n", p);
+        app_side = true;
+        return;
+      }
+
+    }
+    app_side = true;
+  }
+//  bool tmp = app_side; 
+//  app_side = false;
+//  std::cout<<"REAL free "<<p<<std::endl;
+//  app_side = tmp;
   real_free(p);
 }
 
@@ -95,23 +143,45 @@ void* malloc(size_t size)
 //  PRINT_LIBC("app side?? %d\n", app_side);
 ///GONG: libc logging takes care of only "application-side" malloc, malloc (both explicitly and internally) called in application.
 if(app_side){
+  app_side = false;
 	bool logable  = false;
   CD* c_CD = IsLogable(&logable);
 	if(logable){
 //  CDHandle* current = CDPath::GetCurrentCD();
 //	CD* c_CD = current->ptr_cd();
 	//GONG: Determine whether we call real_malloc w/ logging return value or get return value stored in logs
-    if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
+    if(c_CD->libc_log_ptr_->GetCommLogMode() == 1 ){
       //SZ
-			c_CD->libc_log_ptr_->ReadData(p, size);
+//			c_CD->libc_log_ptr_->ReadData(&p, size);
+      if(c_CD->mem_alloc_log_.size()==0){
+        PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
+        CD* parent_CD = c_CD->GetParentHandle()->ptr_cd();
+        int a = parent_CD->mem_alloc_log_.size();
+        PRINT_LIBC("size: %i current: %i\n", a , parent_CD->cur_pos_mem_alloc_log);
+        p = c_CD->MemAllocSearch();
+      }       
+      else
+      {
+        p = (void*) c_CD->mem_alloc_log_.at(c_CD->cur_pos_mem_alloc_log).p_;
+        if(c_CD->cur_pos_mem_alloc_log == c_CD->mem_alloc_log_.size()){
+          //simply reset
+          c_CD->cur_pos_mem_alloc_log = 0;
+        }
+        else
+        {
+          c_CD->cur_pos_mem_alloc_log++;
+        }
+      }
 			PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE malloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
 		}
 		else
 		{
 			p = real_malloc_(size);
-			PRINT_LIBC("libc_log_ptr_: %p\t - EXECUTE MODE malloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
+			PRINT_LIBC("libc_log_ptr_: %p\t - EXECUTE MODE malloc(%ld) = %p @level %i\n", c_CD->libc_log_ptr_, size, p, c_CD->GetCDID().level());
       //SZ
-		  c_CD->libc_log_ptr_->LogData(p, size);
+//		  c_CD->libc_log_ptr_->LogData(&p, size);
+      struct IncompleteLogEntry log_entry = NewLogEntry(p, size);
+      c_CD->mem_alloc_log_.push_back(log_entry);
 		}
 	}
 	else
@@ -119,9 +189,11 @@ if(app_side){
 		p = real_malloc_(size);
 		PRINT_LIBC("NORMAL malloc(%ld) = %p\n", size, p);	
 	}
+  app_side = true;
 }
-else{
-		p = real_malloc_(size);
+else
+{
+  p = real_malloc_(size);
 //		PRINT_LIBC("CD runtime malloc(%ld) = %p\n", size, p);	
 }	
 	return p;
@@ -147,19 +219,41 @@ extern "C" void *calloc(size_t num, size_t size)
     real_calloc = (void*(*)(size_t, size_t)) dlsym(RTLD_NEXT, "calloc");
   }
   if(app_side){
+  app_side = false;
     bool logable  = false;
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
 	  //GONG: Determine whether we call real_calloc w/ logging return value or get return value stored in logs
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
-			  c_CD->libc_log_ptr_->ReadData(&p, size);
+			//  c_CD->libc_log_ptr_->ReadData(&p, size);
+      if(c_CD->mem_alloc_log_.size()==0){
+        PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
+        CD* parent_CD = c_CD->GetParentHandle()->ptr_cd();
+        int a = parent_CD->mem_alloc_log_.size();
+        PRINT_LIBC("size: %i current: %i\n", a , parent_CD->cur_pos_mem_alloc_log);
+        p = c_CD->MemAllocSearch();
+      }       
+      else
+      {
+        p = (void*) c_CD->mem_alloc_log_.at(c_CD->cur_pos_mem_alloc_log).p_;
+        if(c_CD->cur_pos_mem_alloc_log == c_CD->mem_alloc_log_.size()){
+          //simply reset
+          c_CD->cur_pos_mem_alloc_log = 0;
+        }
+        else
+        {
+          c_CD->cur_pos_mem_alloc_log++;
+        }
+      }
 			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   		}
   		else
   		{
         p = real_calloc(num,size);
-			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
-   	    c_CD->libc_log_ptr_->LogData(&p, size);
+			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE - calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
+   	  //  c_CD->libc_log_ptr_->LogData(&p, size);
+        struct IncompleteLogEntry log_entry = NewLogEntry(p, size);
+        c_CD->mem_alloc_log_.push_back(log_entry);
 	    }
 	  }
 	  else
@@ -167,6 +261,8 @@ extern "C" void *calloc(size_t num, size_t size)
       p = real_calloc(num,size);
 		  PRINT_LIBC("NORMAL calloc(%ld) = %p\n", size, p);	
 	  }
+    
+  app_side = true;
   }
   else{
     //NEVER invoke functions that internally invoke calloc again (e.g., PRINT_LIBC()) in order to aviod infinite calloc loop
@@ -185,19 +281,41 @@ void *valloc(size_t size)
     real_valloc = (void*(*)(size_t)) dlsym(RTLD_NEXT, "valloc");
   }
   if(app_side){
+    app_side = false;
     bool logable  = false;
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
 	  //GONG: Determine whether we call real_valloc w/ logging return value or get return value stored in logs
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
-			  c_CD->libc_log_ptr_->ReadData(&p, size);
+			//  c_CD->libc_log_ptr_->ReadData(&p, size);
+      if(c_CD->mem_alloc_log_.size()==0){
+        PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
+        CD* parent_CD = c_CD->GetParentHandle()->ptr_cd();
+        int a = parent_CD->mem_alloc_log_.size();
+        PRINT_LIBC("size: %i current: %i\n", a , parent_CD->cur_pos_mem_alloc_log);
+        p = c_CD->MemAllocSearch();
+      }       
+      else
+      {
+        p = (void*) c_CD->mem_alloc_log_.at(c_CD->cur_pos_mem_alloc_log).p_;
+        if(c_CD->cur_pos_mem_alloc_log == c_CD->mem_alloc_log_.size()){
+          //simply reset
+          c_CD->cur_pos_mem_alloc_log = 0;
+        }
+        else
+        {
+          c_CD->cur_pos_mem_alloc_log++;
+        }
+      }
 			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE valloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   		}
   		else
   		{
         p = real_valloc(size);
 			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE valloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
-   	    c_CD->libc_log_ptr_->LogData(&p, size);
+  // 	    c_CD->libc_log_ptr_->LogData(&p, size);
+        struct IncompleteLogEntry log_entry = NewLogEntry(p, size);
+        c_CD->mem_alloc_log_.push_back(log_entry);
 	    }
 	  }
 	  else
@@ -205,6 +323,7 @@ void *valloc(size_t size)
       p = real_valloc(size);
 		  PRINT_LIBC("NORMAL valloc(%ld) = %p\n", size, p);	
 	  }
+    app_side = true;
   }
   else{
     p = real_valloc(size);
@@ -213,7 +332,7 @@ void *valloc(size_t size)
   return p;
 }
 
-
+/*
 void *realloc(void* ptr, size_t size)
 {
   void *p;    
@@ -223,21 +342,31 @@ void *realloc(void* ptr, size_t size)
     real_realloc = (void*(*)(void*,size_t)) dlsym(RTLD_NEXT, "realloc");
   }
   if(app_side){
+    app_side = false;
     bool logable  = false;
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
 	  //GONG: Determine whether we call real_realloc w/ logging return value or get return value stored in logs
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
-			  c_CD->libc_log_ptr_->ReadData(&p, size);
-//			  PRINT_LIBC("RE-EXECUTE MODE realloc(%ld) = %p\n", size, p);
+//			  c_CD->libc_log_ptr_->ReadData(&p, size);
+      p = (void*) c_CD->mem_alloc_log_.at(c_CD->cur_pos_mem_alloc_log).p_;
+      if(c_CD->cur_pos_mem_alloc_log == c_CD->mem_alloc_log_.size()){
+        //simply reset
+        c_CD->cur_pos_mem_alloc_log = 0;
+      }
+      else
+      {
+        c_CD->cur_pos_mem_alloc_log++;
+      }
 			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE realloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   		}
   		else
   		{
         p = real_realloc(ptr,size);
-//   		  PRINT_LIBC("EXECUTE MODE realloc(%ld) = %p\n", size, p);
 			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE realloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
-   	    c_CD->libc_log_ptr_->LogData(&p, size);
+   	  //  c_CD->libc_log_ptr_->LogData(&p, size);
+        struct IncompleteLogEntry log_entry = NewLogEntry(p, size);
+        c_CD->mem_alloc_log_.push_back(log_entry);
 	    }
 	  }
 	  else
@@ -245,6 +374,7 @@ void *realloc(void* ptr, size_t size)
       p = real_realloc(ptr,size);
 		  PRINT_LIBC("NORMAL realloc(%ld) = %p\n", size, p);	
 	  }
+    app_side = true;
   }
   else{
     p = real_realloc(ptr,size);
@@ -252,7 +382,7 @@ void *realloc(void* ptr, size_t size)
   }	          
   return p;
 }
-
+*/
 
 
 

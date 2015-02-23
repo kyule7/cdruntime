@@ -364,6 +364,8 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
     tmp_log_entry.flag_ = (unsigned long) flag;
     tmp_log_entry.complete_ = false;
     tmp_log_entry.isrecv_ = isrecv;
+    //GONG
+    tmp_log_entry.p_ = NULL;
     my_cd_->incomplete_log_.push_back(tmp_log_entry);
 #if _DEBUG
     my_cd_->PrintIncompleteLog();
@@ -692,7 +694,6 @@ CommLogErrT CommLog::ProbeData(const void * buffer, unsigned long length)
 
   return kCommLogOK;
 }
-
 
 void CommLog::Print()
 {

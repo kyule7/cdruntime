@@ -575,6 +575,74 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
       PRINT_DEBUG("parent and child are in different memory space - libc\n");
     }
   }
+//    std::cout<<"size: "<<mem_alloc_log_.size()<<std::endl;
+
+    //GONG: DO actual free completed mem_alloc_log_
+    std::vector<struct IncompleteLogEntry>::iterator it;
+    for (it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
+    {
+//      printf("check log %p %i %i\n", it->p_, it->complete_, it->pushed_);
+      if(it->complete_)
+      {       
+        if(it->pushed_)
+        {
+//          printf(" free - completed + pushed - %p\n", it->p_);
+          free(it->p_);      
+          mem_alloc_log_.erase(it);
+          it--;
+        }
+          if(it==mem_alloc_log_.end()){
+            break;
+        }
+      }
+    }
+/*    for (it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
+    {
+        printf(" log - %p\n", it->p_);
+    }
+*/
+//    std::cout<<"size  :"<<mem_alloc_log_.size()<<" app_side: "<<app_side<<std::endl;
+    //GONG: push mem_alloc_log_
+  if(GetParentHandle()!=NULL)
+  {
+    if (IsParentLocal() && mem_alloc_log_.size()!=0)
+    {
+      CD* ptmp = GetParentHandle()->ptr_cd_;
+      // push memory allocation logs to parent
+      std::vector<struct IncompleteLogEntry>::iterator ii;
+      for(it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
+      {
+        bool found = false;      
+        for(ii=ptmp->mem_alloc_log_.begin(); ii!=ptmp->mem_alloc_log_.end(); ii++)
+        {
+          if(ii->p_ == it->p_)
+                  found = true;
+        }
+//        std::cout<<"push check: "<<it->p_<<" found: "<<found<<std::endl;      
+
+        if(!found)
+        {
+          it->pushed_ = true;      
+          ptmp->mem_alloc_log_.insert(ptmp->mem_alloc_log_.end(), *it);
+//          if(it->complete_)
+//            ptmp->mem_alloc_log_.end()->pushed_ = true;
+        }
+      }
+      //remove log after pushing to parent 
+      mem_alloc_log_.clear();
+      //check parent's
+/*      std::cout<<"size(parent) :"<<ptmp->mem_alloc_log_.size()<<" app_side: "<<app_side<<std::endl;
+      for(ii=ptmp->mem_alloc_log_.begin(); ii!=ptmp->mem_alloc_log_.end(); ii++)
+        printf("parent's %p %i %i\n", ii->p_, ii->complete_, ii->pushed_);
+*/        
+    }
+    else if(!IsParentLocal())
+    {
+      PRINT_DEBUG("Should not come to here...\n");
+    }
+  }
+
+
 #endif
 
 //  if( cd_exec_mode_ != kReexecution ) {
@@ -601,6 +669,88 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   app_side = true;
   return CDErrT::kOK;
 }
+
+//GONG
+bool CD::PushedMemLogSearch(void* p)
+{
+  bool ret = false;
+  if(GetCDID().level()!=0)
+  {
+    CD* parent_CD = GetParentHandle()->ptr_cd();
+    if(parent_CD!=NULL)
+    {
+      if(parent_CD->mem_alloc_log_.size()!=0)
+      {
+        std::vector<struct IncompleteLogEntry>::iterator it;  
+        for(it=parent_CD->mem_alloc_log_.begin(); it!=parent_CD->mem_alloc_log_.end();it++)
+        {
+          if(it->p_ == p)
+          {
+            ret = true;
+            //If isnt completed, change it completed.
+            it->complete_ = true;
+            break;
+          }
+        }
+      }
+      else
+      {
+        ret = PushedMemLogSearch(p);
+      }
+    }
+    else
+    {
+      printf("CANNOT find parent CD\n");
+      exit(1);
+    }
+  }
+
+  return ret;
+}
+
+void* CD::MemAllocSearch()
+{
+//  printf("MemAllocSearch\n");
+  void* ret = NULL;
+  if(GetCDID().level()!=0)
+  {
+    CD* parent_CD = GetParentHandle()->ptr_cd();
+    if(parent_CD!=NULL)
+    {
+      //GONG:       
+      if(parent_CD->mem_alloc_log_.size()!=0)
+      {
+        ret = parent_CD->mem_alloc_log_[parent_CD->cur_pos_mem_alloc_log].p_;
+        parent_CD->cur_pos_mem_alloc_log++;
+        //        ret = entry->p_;
+      }
+      else
+      {
+        ret = MemAllocSearch();
+      }
+    }
+    else
+    {
+      printf("CANNOT find parent CD\n");
+      exit(1);
+    }
+  }
+  else
+  {
+    printf("rootCD is trying to search further\n");
+    exit(1);
+  }
+  
+  if(ret == NULL)
+  {
+    printf("somethig wrong!\n");
+    exit(1);
+  
+  }
+
+  return ret;
+}
+
 
 //CD::CDInternalErrT CD::GatherEntryDirMapToHead()
 //{

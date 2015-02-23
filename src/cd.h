@@ -66,6 +66,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //SZ
 #include "cd_comm_log.h"
 #include <vector>
+#include "cd_malloc.h"
 
 // data structure to store incompleted log entries
 struct IncompleteLogEntry{
@@ -75,6 +76,9 @@ struct IncompleteLogEntry{
   unsigned long flag_;
   bool complete_;
   bool isrecv_;
+  //GONG
+  void* p_;
+  bool pushed_;
   //bool valid_;
 };
 #endif
@@ -213,7 +217,11 @@ update the preserved data.
     unsigned long incomplete_log_size_unit_=100;
     unsigned long incomplete_log_size_;
     std::vector<struct IncompleteLogEntry> incomplete_log_;
-    
+    //GONG
+    std::vector<struct IncompleteLogEntry> mem_alloc_log_;
+    unsigned int cur_pos_mem_alloc_log = 0;
+    void* MemAllocSearch(void);
+    bool PushedMemLogSearch(void* p);
     ////SZ: attempted to move from HeadCD class, but we can use CDPath class
     //cd::CDHandle*            cd_parent_;
 #endif
