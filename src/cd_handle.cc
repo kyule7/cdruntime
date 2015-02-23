@@ -50,9 +50,6 @@ uint64_t Util::gen_object_id_=0;
 CDPath* CDPath::uniquePath_;
 //int cd::myTaskID = 0;
 
-//SZ
-bool app_side;
-
 // Global functions -------------------------------------------------------
 /// CD_Init()
 /// Create the data structure that CD object and CDHandle object are going to use.

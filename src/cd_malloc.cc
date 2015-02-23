@@ -155,9 +155,6 @@ if(app_side){
 //			c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
         PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
-        CD* parent_CD = c_CD->GetParentHandle()->ptr_cd();
-        int a = parent_CD->mem_alloc_log_.size();
-        PRINT_LIBC("size: %i current: %i\n", a , parent_CD->cur_pos_mem_alloc_log);
         p = c_CD->MemAllocSearch();
       }       
       else
@@ -228,9 +225,6 @@ extern "C" void *calloc(size_t num, size_t size)
 			//  c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
         PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
-        CD* parent_CD = c_CD->GetParentHandle()->ptr_cd();
-        int a = parent_CD->mem_alloc_log_.size();
-        PRINT_LIBC("size: %i current: %i\n", a , parent_CD->cur_pos_mem_alloc_log);
         p = c_CD->MemAllocSearch();
       }       
       else
@@ -290,9 +284,6 @@ void *valloc(size_t size)
 			//  c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
         PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
-        CD* parent_CD = c_CD->GetParentHandle()->ptr_cd();
-        int a = parent_CD->mem_alloc_log_.size();
-        PRINT_LIBC("size: %i current: %i\n", a , parent_CD->cur_pos_mem_alloc_log);
         p = c_CD->MemAllocSearch();
       }       
       else
