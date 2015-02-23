@@ -212,8 +212,8 @@ extern FILE * fp;
 #if _DEBUG
   //SZ: change to this if want to compile test_comm_log.cc
   #ifdef comm_log
-    //#define PRINT_DEBUG(...) {fprintf(fp,__VA_ARGS__);}
-    #define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
+    #define PRINT_DEBUG(...) {fprintf(fp,__VA_ARGS__);}
+    //#define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
   #else
     #define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
   #endif

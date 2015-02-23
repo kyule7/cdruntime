@@ -423,7 +423,7 @@ CDErrT CD::Begin(bool collective, const char* label)
     }
     //GONG: as long as parent CD is in replay(check with ), child CD needs to unpack logs
     if(GetParentHandle()->ptr_cd_->libc_log_ptr_->GetCommLogMode() == kReplayLog){
-      PRINT_DEBUG("unpack logs to children - replay mode\n");
+      PRINT_DEBUG("unpack libc logs to children - replay mode\n");
       //the same issue as above: address space 
       if (IsParentLocal())
       {
@@ -526,24 +526,8 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
                                    incomplete_log_.begin(),
                                    incomplete_log_.end());
 
-      ////delete all invalid incomplete log entries in all ancestors
-      //while (ptmp)
-      //{
-      //  if (ptmp->incomplete_log_.size()!=0){
-      //    for (it=ptmp->incomplete_log_.begin();it!=ptmp->incomplete_log_.end();it++){
-      //      if (it->valid_ == false){
-      //        ptmp->incomplete_log_.erase(it);
-      //      }
-      //    }
-      //  }
-      //  if (ptmp->GetParentHandle()!=NULL){
-      //    ptmp=ptmp->GetParentHandle()->ptr_cd_;
-      //  }
-      //  else{
-      //    ptmp=NULL;
-      //    break;
-      //  }
-      //}
+      // clear incomplete_log_ of current CD 
+      incomplete_log_.clear();
     }
     else if (!IsParentLocal())
     {
@@ -1742,7 +1726,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
     if (it->flag_ == flag) 
     {
       found = 1;
-      PRINT_DEBUG("Found the entry in incomplete_log_\n");
+      PRINT_DEBUG("Found the entry in incomplete_log_ in current CD\n");
       break;
     }
   }
@@ -1759,7 +1743,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
       {
         if (it->flag_ == flag){
           found = 1;
-          PRINT_DEBUG("Found the entry in incomplete_log_\n");
+          PRINT_DEBUG("Found the entry in incomplete_log_ in one parent CD\n");
           break;
         }
       }
@@ -1770,16 +1754,22 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 
     if (!found)
     {
-      ERROR_MESSAGE("Do not find corresponding Isend/Irecv incomplete log!!\n")
+      //ERROR_MESSAGE("Do not find corresponding Isend/Irecv incomplete log!!\n")
+      PRINT_DEBUG("Possible bug: Isend/Irecv incomplete log NOT found (maybe deleted by MPI_Test)!!\n")
     }
   }
   
   // ProbeAndLogData for comm_log_ptr_ if relaxed CD
-  if (comm_log_ptr_ != NULL)
+  // If NOT found, then work has been completed by previous Test Ops
+  if (comm_log_ptr_ != NULL && found)
   {
     // ProbeAndLogData:
     // 1) change Isend/Irecv entry to complete state if there is any
     // 2) log data if Irecv
+#if _DEBUG
+    PRINT_DEBUG("Print Incomplete Log before calling comm_log_ptr_->ProbeAndLogData\n");
+    PrintIncompleteLog();
+#endif
     bool found = comm_log_ptr_->ProbeAndLogData((void*)(it->addr_), it->length_, flag, it->isrecv_);
     if (!found)
     {
@@ -1805,6 +1795,11 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
     // need to log that wait op completes 
     comm_log_ptr_->LogData((MPI_Request*)flag, 0);
   }
+  else if (comm_log_ptr_ != NULL)
+  {
+    // need to log that wait op completes 
+    comm_log_ptr_->LogData((MPI_Request*)flag, 0);
+  }
 
   // delete the incomplete log entry
   tmp_cd->incomplete_log_.erase(it);
@@ -1813,14 +1808,14 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 
 //SZ
 CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, 
-                      bool completed, unsigned long flag, bool isrecv)
+                      bool completed, unsigned long flag, bool isrecv, bool isrepeated)
 {
   if (comm_log_ptr_ == NULL)
   {
     ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to log data!\n");
     return kCommLogError;
   }
-  return comm_log_ptr_->LogData(data_ptr, length, completed, flag, isrecv);
+  return comm_log_ptr_->LogData(data_ptr, length, completed, flag, isrecv, isrepeated);
 }
 
 //SZ

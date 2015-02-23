@@ -45,6 +45,9 @@ struct LogTableElement {
   unsigned long length_; // length of logged data
   bool completed_;
   unsigned long flag_;
+  unsigned long counter_=0;
+  unsigned long reexec_counter_=0;
+  bool isrepeated_=false;
 };
     
 class cd::CommLog {
@@ -80,7 +83,8 @@ class cd::CommLog {
                         unsigned long data_length, 
                         bool completed=true,
                         unsigned long flag=0,
-                        bool isrecv=0);
+                        bool isrecv=0,
+                        bool isrepeated=0);
 
     CommLogErrT ReadData(void * buffer, unsigned long length);
     CommLogErrT ProbeData(const void * buffer, unsigned long length);
@@ -147,11 +151,16 @@ class cd::CommLog {
 
     CommLogErrT IncreaseLogTableSize();
     CommLogErrT IncreaseLogQueueSize(unsigned long length);
+    bool FoundRepeatedEntry(const void * data_ptr, 
+                            unsigned long data_length, 
+                            bool completed, 
+                            unsigned long flag);
 
     CommLogErrT WriteLogTable (const void * data_ptr, 
                               unsigned long data_length, 
                               bool completed,
-                              unsigned long flag);
+                              unsigned long flag,
+                              bool isrepeated);
     CommLogErrT WriteLogQueue (const void * data_ptr, 
                                unsigned long data_length,
                                bool completed);

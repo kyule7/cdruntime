@@ -41,24 +41,107 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <mpi.h>
 
 // blocking p2p communication
-int MPI_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
-int MPI_Ssend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
-int MPI_Rsend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
-int MPI_Bsend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
-int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int src, int tag, MPI_Comm comm, MPI_Status *status);
-int MPI_Sendrecv(void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, 
-                void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, 
-                MPI_Comm comm, MPI_Status *status);
-int MPI_Sendrecv_replace(void *buf, int count, MPI_Datatype datatype, int dest, int sendtag,
-                        int source, int recvtag, MPI_Comm comm, MPI_Status *status);
+int MPI_Send(const void *buf, 
+             int count, 
+             MPI_Datatype datatype, 
+             int dest, 
+             int tag, 
+             MPI_Comm comm);
+int MPI_Ssend(const void *buf, 
+              int count, 
+              MPI_Datatype datatype, 
+              int dest, 
+              int tag, 
+              MPI_Comm comm);
+int MPI_Rsend(const void *buf, 
+              int count, 
+              MPI_Datatype datatype, 
+              int dest, 
+              int tag, 
+              MPI_Comm comm);
+int MPI_Bsend(const void *buf, 
+              int count, 
+              MPI_Datatype datatype, 
+              int dest, 
+              int tag, 
+              MPI_Comm comm);
+int MPI_Recv(void *buf, 
+             int count, 
+             MPI_Datatype datatype, 
+             int src, 
+             int tag, 
+             MPI_Comm comm, 
+             MPI_Status *status);
+int MPI_Sendrecv(const void *sendbuf, 
+                 int sendcount, 
+                 MPI_Datatype sendtype, 
+                 int dest, 
+                 int sendtag, 
+                 void *recvbuf, 
+                 int recvcount, 
+                 MPI_Datatype recvtype, 
+                 int source, 
+                 int recvtag, 
+                 MPI_Comm comm, 
+                 MPI_Status *status);
+int MPI_Sendrecv_replace(void *buf, 
+                         int count, 
+                         MPI_Datatype datatype, 
+                         int dest, 
+                         int sendtag,
+                         int source, 
+                         int recvtag, 
+                         MPI_Comm comm, 
+                         MPI_Status *status);
 
 // non-blocking p2p communication
-int MPI_Isend(void *buf, int count, MPI_Datatype datatype, int dest, 
-            int tag, MPI_Comm comm, MPI_Request *request);
-int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int src, 
-            int tag, MPI_Comm comm, MPI_Request *request);
+int MPI_Isend(const void *buf, 
+              int count, 
+              MPI_Datatype datatype, 
+              int dest, 
+              int tag, 
+              MPI_Comm comm, 
+              MPI_Request *request);
+int MPI_Irecv(void *buf, 
+              int count, 
+              MPI_Datatype datatype, 
+              int src, 
+              int tag, 
+              MPI_Comm comm, 
+              MPI_Request *request);
 
-int MPI_Wait(MPI_Request *request, MPI_Status *status);
+int MPI_Wait(MPI_Request *request, 
+             MPI_Status *status);
+int MPI_Waitall(int count, 
+                MPI_Request array_of_requests[], 
+                MPI_Status array_of_statuses[]);
+int MPI_Waitany(int count,
+                MPI_Request array_of_requests[],
+                int *index,
+                MPI_Status *status);
+int MPI_Waitsome(int incount,
+                 MPI_Request array_of_requests[],
+                 int *outcount,
+                 int array_of_indices[],
+                 MPI_Status array_of_statuses[]);
+
+int MPI_Test(MPI_Request *request, 
+             int * flag,
+             MPI_Status *status);
+int MPI_Testall(int count,
+                MPI_Request array_of_requests[],
+                int *flag,
+                MPI_Status array_of_statuses[]);
+int MPI_Testany(int count,
+                MPI_Request array_of_requests[],
+                int *index,
+                int *flag,
+                MPI_Status *status);
+int MPI_Testsome(int incount,
+                 MPI_Request array_of_requests[],
+                 int *outcount,
+                 int array_of_indices[],
+                 MPI_Status array_of_statuses[]);
 
 // collective communication
 int MPI_Barrier (MPI_Comm comm);
@@ -78,17 +161,17 @@ int MPI_Gather(void *sendbuf,
                int root, 
                MPI_Comm comm);
 
-int MPI_Gatherv(void *sendbuf,
+int MPI_Gatherv(const void *sendbuf,
                 int sendcnt,
                 MPI_Datatype sendtype,
                 void *recvbuf,
-                int *recvcnts,
-                int *displs,
+                const int *recvcnts,
+                const int *displs,
                 MPI_Datatype recvtype,
                 int root, 
                 MPI_Comm comm);
 
-int MPI_Allgather(void *sendbuf,
+int MPI_Allgather(const void *sendbuf,
                   int sendcnt,
                   MPI_Datatype sendtype,
                   void *recvbuf,
@@ -96,16 +179,16 @@ int MPI_Allgather(void *sendbuf,
                   MPI_Datatype recvtype,
                   MPI_Comm comm);
 
-int MPI_Allgatherv(void *sendbuf,
+int MPI_Allgatherv(const void *sendbuf,
                    int sendcnt,
                    MPI_Datatype sendtype,
                    void *recvbuf,
-                   int *recvcnts,
-                   int *displs,
+                   const int *recvcnts,
+                   const int *displs,
                    MPI_Datatype recvtype,
                    MPI_Comm comm);
 
-int MPI_Reduce(void *sendbuf,
+int MPI_Reduce(const void *sendbuf,
                void *recvbuf, 
                int count,
                MPI_Datatype datatype,
@@ -113,14 +196,14 @@ int MPI_Reduce(void *sendbuf,
                int root,
                MPI_Comm comm);
 
-int MPI_Allreduce(void *sendbuf,
+int MPI_Allreduce(const void *sendbuf,
                   void *recvbuf, 
                   int count,
                   MPI_Datatype datatype,
                   MPI_Op op, 
                   MPI_Comm comm);
 
-int MPI_Alltoall(void *sendbuf,
+int MPI_Alltoall(const void *sendbuf,
                  int sendcnt,
                  MPI_Datatype sendtype,
                  void *recvbuf,
@@ -128,17 +211,17 @@ int MPI_Alltoall(void *sendbuf,
                  MPI_Datatype recvtype,
                  MPI_Comm comm);
 
-int MPI_Alltoallv(void *sendbuf,
-                  int *sendcnts,
-                  int *sdispls,
+int MPI_Alltoallv(const void *sendbuf,
+                  const int *sendcnts,
+                  const int *sdispls,
                   MPI_Datatype sendtype,
                   void *recvbuf,
-                  int *recvcnts,
-                  int *rdispls,
+                  const int *recvcnts,
+                  const int *rdispls,
                   MPI_Datatype recvtype,
                   MPI_Comm comm);
 
-int MPI_Scatter(void *sendbuf,
+int MPI_Scatter(const void *sendbuf,
                 int sendcnt,
                 MPI_Datatype sendtype,
                 void *recvbuf,
@@ -147,9 +230,9 @@ int MPI_Scatter(void *sendbuf,
                 int root, 
                 MPI_Comm comm);
 
-int MPI_Scatterv(void *sendbuf,
-                 int *sendcnts,
-                 int *displs,
+int MPI_Scatterv(const void *sendbuf,
+                 const int *sendcnts,
+                 const int *displs,
                  MPI_Datatype sendtype,
                  void *recvbuf,
                  int recvcnt,
@@ -157,19 +240,29 @@ int MPI_Scatterv(void *sendbuf,
                  int root, 
                  MPI_Comm comm);
 
-int MPI_Reduce_scatter(void *sendbuf,
+int MPI_Reduce_scatter(const void *sendbuf,
                        void *recvbuf,
-                       int *recvcnts,
+                       const int *recvcnts,
                        MPI_Datatype datatype,
                        MPI_Op op,
                        MPI_Comm comm);
 
-int MPI_Scan(void *sendbuf,
+int MPI_Scan(const void *sendbuf,
              void *recvbuf,
              int count,
              MPI_Datatype datatype,
              MPI_Op op,
              MPI_Comm comm);
+
+// persistent communication
+int MPI_Send_init(const void *buf,
+                  int count,
+                  MPI_Datatype datatype,
+                  int dest,
+                  int tag,
+                  MPI_Comm comm,
+                  MPI_Request *request);
+
 
 #endif
 

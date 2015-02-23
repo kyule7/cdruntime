@@ -133,6 +133,7 @@ int test_bp2p(int argc, char** argv)
     {
       PRINTF("Insert error #%d...\n", num_reexec);
       num_reexec++;
+      MPI_Buffer_detach(&tmp_buf, &buf_size);
       child1_0->CDAssert(false);
     }
 

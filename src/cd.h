@@ -387,7 +387,7 @@ update the preserved data.
     //SZ
     CommLogErrT LogData(const void *data_ptr, unsigned long length, 
                       bool completed=true, unsigned long flag=0,
-                      bool isrecv=0);
+                      bool isrecv=0, bool isrepeated=0);
     //SZ
     CommLogErrT ProbeData(const void *data_ptr, unsigned long length);
     //SZ
