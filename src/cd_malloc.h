@@ -42,7 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cds.h" 
 #include "cd_global.h"
 
-extern bool app_side;
+//bool app_side;
 typedef void*(*Malloc)(size_t size);
 
 using namespace cd;

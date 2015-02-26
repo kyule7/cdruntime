@@ -35,7 +35,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_malloc.h"
 
-//bool app_side;
+bool app_side;
 
 using namespace cd;
 struct IncompleteLogEntry NewLogEntry(void* p, size_t size)
