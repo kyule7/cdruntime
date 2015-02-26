@@ -34,6 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_malloc.h"
+#include <stdarg.h>
 
 
 int rand()
@@ -46,36 +47,35 @@ int rand()
     real_rand = (int(*)(void)) dlsym(RTLD_NEXT, "rand");
   
   if(app_side){
+    app_side = false;
     bool logable  = false;
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
 			  c_CD->libc_log_ptr_->ReadData(&i, size);
-			PRINT_DEBUG("libc_log_ptr_: %p\tRE-EXECUTE MODE rand(%i) = %i\n", c_CD->libc_log_ptr_, size, i);
+			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE rand(%i) = %i\n", c_CD->libc_log_ptr_, size, i);
   		}
   		else
   		{
         i = real_rand();
    	    c_CD->libc_log_ptr_->LogData(&i, size);
-			PRINT_DEBUG("libc_log_ptr_: %p\t -EXECUTE MODE rand(%i) = %i\n", c_CD->libc_log_ptr_, size, i);
+        PRINT_LIBC("libc_log_ptr_: %p\t -EXECUTE MODE rand(%i) = %i\n", c_CD->libc_log_ptr_, size, i);
 	    }
 	  }
 	  else
 	  {
       i = real_rand();
 	  }
+    app_side = true;
   }
   else{
     i = real_rand();
-  }
+  }     
 
   return i;
 }
 
-void srand()
-{
 
-}
 
 /*
 long random()
@@ -113,3 +113,81 @@ long random()
   return i;
 }
 */
+/*                        
+int puts(const char *str)
+{
+  int ret;
+  int size = sizeof(int);
+  if(app_side){
+    app_side = false;
+    bool logable  = false;
+    CD* c_CD = IsLogable(&logable);
+	  if(logable){
+      if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
+			  c_CD->libc_log_ptr_->ReadData(&ret, size);
+			  printf("libc_log_ptr_: %p\tRE-EXECUTE MODE printf-puts(%i) = %i\n", c_CD->libc_log_ptr_, size, ret);
+        //
+        printf("%s\n", str);
+        //
+  		}
+  		else
+  		{
+        ret = printf("%s\n", str);
+   	    c_CD->libc_log_ptr_->LogData(&ret, size);
+			  printf("libc_log_ptr_: %p\t -EXECUTE MODE printf-puts(%i) = %i\n", c_CD->libc_log_ptr_, size, ret);
+	    }
+	  }
+	  else
+	  {
+      ret = printf("%s\n", str);
+	  }
+    app_side = true;
+  }
+  else{
+    ret = printf("%s\n", str);
+  }
+  return ret;
+}
+ 
+  
+int printf(const char *format,...)
+{
+  int ret = 0;
+  int size = sizeof(int);
+  va_list args;
+  va_start(args,format);
+
+  if(app_side){
+    app_side = false;
+    bool logable  = false;
+    CD* c_CD = IsLogable(&logable);
+	  if(logable){
+      if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
+			  c_CD->libc_log_ptr_->ReadData(&ret, size);
+			  printf("libc_log_ptr_: %p\tRE-EXECUTE MODE printf(%i) = %i\n", c_CD->libc_log_ptr_, size, ret);
+        //
+        vprintf(format,args);
+        //
+  		}
+  		else
+  		{
+        ret = vprintf(format,args);
+   	    c_CD->libc_log_ptr_->LogData(&ret, size);
+			  printf("libc_log_ptr_: %p\t -EXECUTE MODE printf(%i) = %i\n", c_CD->libc_log_ptr_, size, ret);
+	    }
+	  }
+	  else
+	  {
+      ret = vprintf(format,args);
+	  }
+    app_side = true;
+  }
+  else{
+    ret = vprintf(format,args);
+  }
+
+  va_end(args);
+  return ret;
+} 
+
+    */

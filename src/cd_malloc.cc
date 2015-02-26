@@ -35,7 +35,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_malloc.h"
 
-bool app_side;
+//bool app_side;
 
 using namespace cd;
 struct IncompleteLogEntry NewLogEntry(void* p, size_t size)
@@ -68,7 +68,7 @@ CD* IsLogable(bool *logable_)
 		}
 		else
 		{
-			if(c_CD->libc_log_ptr_ == NULL)
+			if(c_CD->libc_log_ptr_ == NULL && c_CD->GetBegin_())
 			{
 //				PRINT_LIBC("\tno libc_log in current CD\n");
 			}
@@ -155,9 +155,6 @@ if(app_side){
 //			c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
         PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
-        CD* parent_CD = c_CD->GetParentHandle()->ptr_cd();
-        int a = parent_CD->mem_alloc_log_.size();
-        PRINT_LIBC("size: %i current: %i\n", a , parent_CD->cur_pos_mem_alloc_log);
         p = c_CD->MemAllocSearch();
       }       
       else
@@ -228,9 +225,6 @@ extern "C" void *calloc(size_t num, size_t size)
 			//  c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
         PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
-        CD* parent_CD = c_CD->GetParentHandle()->ptr_cd();
-        int a = parent_CD->mem_alloc_log_.size();
-        PRINT_LIBC("size: %i current: %i\n", a , parent_CD->cur_pos_mem_alloc_log);
         p = c_CD->MemAllocSearch();
       }       
       else
@@ -290,9 +284,6 @@ void *valloc(size_t size)
 			//  c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
         PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
-        CD* parent_CD = c_CD->GetParentHandle()->ptr_cd();
-        int a = parent_CD->mem_alloc_log_.size();
-        PRINT_LIBC("size: %i current: %i\n", a , parent_CD->cur_pos_mem_alloc_log);
         p = c_CD->MemAllocSearch();
       }       
       else
@@ -331,6 +322,63 @@ void *valloc(size_t size)
   }	          
   return p;
 }
+
+FILE* fopen(const char *file, const char *mode)
+{
+  FILE* ret;
+  int size = sizeof(FILE*);
+  static FILE* (*real_fopen)(const char*, const char*);
+  if(!real_fopen)
+    real_fopen = (FILE* (*)(const char*, const char*)) dlsym(RTLD_NEXT, "fopen");
+
+  if(app_side){
+    app_side = false;
+    bool logable  = false;
+    CD* c_CD = IsLogable(&logable);
+	  if(logable){
+      if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
+        if(c_CD->mem_alloc_log_.size()==0){
+          PRINT_LIBC("RE-EXECUTION MODE (fopen), but no entries in malloc log! => get log from parent\n");
+          ret = (FILE*) c_CD->MemAllocSearch();
+        }       
+        else
+        {
+          ret = (FILE*) c_CD->mem_alloc_log_.at(c_CD->cur_pos_mem_alloc_log).p_;
+          if(c_CD->cur_pos_mem_alloc_log == c_CD->mem_alloc_log_.size()){
+            c_CD->cur_pos_mem_alloc_log = 0;
+          }
+          else
+          {
+            c_CD->cur_pos_mem_alloc_log++;
+          }
+        }
+			  //c_CD->libc_log_ptr_->ReadData(&ret, size);
+			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE fopen(%i) = %p\n", c_CD->libc_log_ptr_, size, ret);
+  		}
+  		else
+  		{
+        ret = (*real_fopen)(file,mode);
+   	   // c_CD->libc_log_ptr_->LogData(&ret, size);
+			  PRINT_LIBC("libc_log_ptr_: %p\t -EXECUTE MODE fopen(%i) = %p\n", c_CD->libc_log_ptr_, size, ret);
+        struct IncompleteLogEntry log_entry = NewLogEntry(ret, size);
+        c_CD->mem_alloc_log_.push_back(log_entry);
+	    }
+	  }
+	  else
+	  {
+      ret = (*real_fopen)(file,mode);
+      PRINT_LIBC("NORMAL fopen(%i) = %p\n", size, ret);
+	  }
+    app_side = true;
+  }
+  else
+  {
+    ret = (*real_fopen)(file,mode);
+  }     
+
+  return ret;
+}
+
 
 /*
 void *realloc(void* ptr, size_t size)

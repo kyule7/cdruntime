@@ -124,7 +124,10 @@ class cd::CD : public cd::Serializable {
   protected: 
     CDID cd_id_;
     RecoverObject* recoverObj_;
+    //GONG
+    bool begin_;
   public:
+    bool GetBegin_(void){return begin_;}
 
     // Label for Begin/Complete pair. It is mainly for Loop interation.
     // The Begin/Complete pair that has the same computation will have the same label_

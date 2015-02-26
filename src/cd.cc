@@ -118,6 +118,9 @@ CD::CD(CDHandle* cd_parent,
        uint64_t sys_bit_vector)
 //  : cd_type_(cd_type), name_(name), sys_detect_bit_vector_(0), cd_id_(cd_id)
 {
+  //GONG
+  begin_ = false;
+
   cd_type_ = cd_type; 
   name_ = name; 
   sys_detect_bit_vector_ = 0; 
@@ -387,8 +390,8 @@ CDErrT CD::Destroy(void)
 CDErrT CD::Begin(bool collective, const char* label)
 {
   //GONG
-//  printf("app_side = false in CD::Begin\n");
   app_side = false;
+  begin_ = true;
   PRINT_DEBUG("inside CD::Begin\n");
 
 #ifdef comm_log
@@ -467,6 +470,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 {
   //GONG
   app_side = false;
+  begin_ = false;
   //printf("app_side = false in CD::Complete\n");
 #ifdef comm_log
   // SZ: pack logs and push to parent
@@ -570,7 +574,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
       {       
         if(it->pushed_)
         {
-//          printf(" free - completed + pushed - %p\n", it->p_);
+          printf(" free - completed + pushed - %p\n", it->p_);
           free(it->p_);      
           mem_alloc_log_.erase(it);
           it--;
@@ -1289,6 +1293,9 @@ CDErrT CD::Restore()
   // In case we need to find reference name quickly we will maintain seperate structure such as binary search tree and each item will have CDEntry *.
 
   //Ready for long jump? Where should we do that. here ? for now?
+
+  //GONG
+  begin_ = false;
 
   return CDErrT::kOK;
 }

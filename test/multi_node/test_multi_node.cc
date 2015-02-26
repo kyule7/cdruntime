@@ -302,16 +302,22 @@ int test_preservation_via_copy()
 //GONG
 //  printf("CD Preserving..\n");
   
-  int *test_malloc_parent = new int[10];
   
+  printf("test fopen() 1\n");
+  FILE * test_fopen_parent = fopen("test_fopen_parent.txt", "w");
+
   printf("create child CD\n");
   CDHandle* child=root->Create("CD1", kStrict, 0, 0, &err);
-  printf("Child CD Begin\n");
   CD_Begin(child); 
+  printf("Child CD Begin\n");
   printf("child CD Preserving..\n");
   child->Preserve(a, sizeof(a), kCopy, "a", "a");
   child->Preserve(b, sizeof(b), kCopy, "b", "b");
   
+  //test fopen
+  printf("test fopen() 2\n");
+  FILE * test_fopen = fopen("test_fopen.txt", "w");
+
   printf("test_malloc here\n");
   int *test_malloc = new int[10];
   test_malloc[0] = rand();
@@ -321,10 +327,10 @@ int test_preservation_via_copy()
   
   printf("child CD Complete..\n");
   free(test_malloc);
-  printf("complete child 1\n");
+/*  printf("complete child 1\n");
   CD_Complete(child);
   
-  CD_Begin(child);
+  CD_Begin(child);*/
   free(test_calloc);
 
   printf("test_valloc here\n");
@@ -360,11 +366,14 @@ int test_preservation_via_copy()
   printf("After Modify Current value of a[0]=%d\n", a[0]);
 //  printf("After Modify Current value of b[0]=%d==app_side?  %i\n\n", b[0], app_side);
   
+  printf("close test_fopen\n");
+  fclose(test_fopen);
   if( num_reexecution == 0 ){
     printf("\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n");
     num_reexecution = 1;
     child->CDAssert(false);
   }
+
 
   printf("Complete child CD\n");
   child->Complete();
@@ -389,6 +398,8 @@ int test_preservation_via_copy()
   c[0] =77;
   printf("After modifying current value of c[0] %d\n", c[0]);
 
+  printf("close test_fopen_parent\n");
+  fclose(test_fopen_parent);
   if(num_reexecution == 1) {
     printf("\nis now Second error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n");
     num_reexecution = 2;
