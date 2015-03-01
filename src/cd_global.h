@@ -225,8 +225,8 @@ extern FILE * fp;
 #endif
 
 //SZ temp disable libc printf
-//#define PRINT_LIBC(...) {printf(__VA_ARGS__);}
-#define PRINT_LIBC(...) {}
+#define PRINT_LIBC(...) {printf(__VA_ARGS__);}
+//#define PRINT_LIBC(...) {}
 
 #define MAX_FILE_PATH 2048
 

@@ -37,6 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <iostream>
 #include <mpi.h>
 #include "cds.h"
+#include <mcheck.h>
 
 #define SIZE 655360 //10M?
 #define LV1 8 
@@ -305,6 +306,7 @@ int test_preservation_via_copy()
   
   printf("test fopen() 1\n");
   FILE * test_fopen_parent = fopen("test_fopen_parent.txt", "w");
+  FILE * test_fopen_ = fopen("test_fopen_.txt", "w");
 
   printf("create child CD\n");
   CDHandle* child=root->Create("CD1", kStrict, 0, 0, &err);
@@ -317,7 +319,8 @@ int test_preservation_via_copy()
   //test fopen
   printf("test fopen() 2\n");
   FILE * test_fopen = fopen("test_fopen.txt", "w");
-
+  fprintf(test_fopen,"number of re-execution: %i\n", num_reexecution);
+  fprintf(test_fopen_,"number of re-execution: %i\n", num_reexecution);
   printf("test_malloc here\n");
   int *test_malloc = new int[10];
   test_malloc[0] = rand();
@@ -368,6 +371,7 @@ int test_preservation_via_copy()
   
   printf("close test_fopen\n");
   fclose(test_fopen);
+
   if( num_reexecution == 0 ){
     printf("\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n");
     num_reexecution = 1;

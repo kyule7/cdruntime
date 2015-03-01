@@ -33,19 +33,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <stdarg.h>
 #include "cd_malloc.h"
 
 bool app_side;
 
 using namespace cd;
-struct IncompleteLogEntry NewLogEntry(void* p, size_t size)
+struct IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked)
 {
       struct IncompleteLogEntry tmp_log_entry;
       tmp_log_entry.addr_ = (unsigned long) 0;
       tmp_log_entry.length_ = (unsigned long) size;
       tmp_log_entry.flag_ = (unsigned long) 0;
       tmp_log_entry.complete_ = false;
-      tmp_log_entry.isrecv_ = 0;
+      tmp_log_entry.isrecv_ = FreeInvoked;
       tmp_log_entry.p_ = p;
       tmp_log_entry.pushed_ = false;
       return tmp_log_entry;
@@ -93,7 +94,6 @@ void free(void *p)
   }
   //check first whether CD-runtime side or application side (logged)
   if(app_side){
-    app_side = false;      
 	  bool logable  = false;
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
@@ -106,7 +106,6 @@ void free(void *p)
         { 
 //          PRINT_LIBC("FREE- complete? %p\n", p);
           it->complete_ = true;
-    app_side = true;
           return;
         }
       }
@@ -115,17 +114,10 @@ void free(void *p)
       if(found) 
       {
 //        PRINT_LIBC("found %p from parent's log will NOT free it \n", p);
-        app_side = true;
         return;
       }
-
     }
-    app_side = true;
   }
-//  bool tmp = app_side; 
-//  app_side = false;
-//  std::cout<<"REAL free "<<p<<std::endl;
-//  app_side = tmp;
   real_free(p);
 }
 
@@ -177,7 +169,7 @@ if(app_side){
 			PRINT_LIBC("libc_log_ptr_: %p\t - EXECUTE MODE malloc(%ld) = %p @level %i\n", c_CD->libc_log_ptr_, size, p, c_CD->GetCDID().level());
       //SZ
 //		  c_CD->libc_log_ptr_->LogData(&p, size);
-      struct IncompleteLogEntry log_entry = NewLogEntry(p, size);
+      struct IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
       c_CD->mem_alloc_log_.push_back(log_entry);
 		}
 	}
@@ -246,7 +238,7 @@ extern "C" void *calloc(size_t num, size_t size)
         p = real_calloc(num,size);
 			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE - calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
    	  //  c_CD->libc_log_ptr_->LogData(&p, size);
-        struct IncompleteLogEntry log_entry = NewLogEntry(p, size);
+        struct IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
         c_CD->mem_alloc_log_.push_back(log_entry);
 	    }
 	  }
@@ -305,7 +297,7 @@ void *valloc(size_t size)
         p = real_valloc(size);
 			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE valloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   // 	    c_CD->libc_log_ptr_->LogData(&p, size);
-        struct IncompleteLogEntry log_entry = NewLogEntry(p, size);
+        struct IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
         c_CD->mem_alloc_log_.push_back(log_entry);
 	    }
 	  }
@@ -339,7 +331,11 @@ FILE* fopen(const char *file, const char *mode)
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
         if(c_CD->mem_alloc_log_.size()==0){
           PRINT_LIBC("RE-EXECUTION MODE (fopen), but no entries in malloc log! => get log from parent\n");
-          ret = (FILE*) c_CD->MemAllocSearch();
+          //replace (close and re-open) FILE pointer
+          FILE* tmp_ret = (*real_fopen)(file,mode);
+          ret = (FILE*) c_CD->MemAllocSearch(tmp_ret);
+          fclose(ret);
+          ret = tmp_ret;
         }       
         else
         {
@@ -360,7 +356,7 @@ FILE* fopen(const char *file, const char *mode)
         ret = (*real_fopen)(file,mode);
    	   // c_CD->libc_log_ptr_->LogData(&ret, size);
 			  PRINT_LIBC("libc_log_ptr_: %p\t -EXECUTE MODE fopen(%i) = %p\n", c_CD->libc_log_ptr_, size, ret);
-        struct IncompleteLogEntry log_entry = NewLogEntry(ret, size);
+        struct IncompleteLogEntry log_entry = NewLogEntry(ret, size, false);
         c_CD->mem_alloc_log_.push_back(log_entry);
 	    }
 	  }
@@ -375,11 +371,91 @@ FILE* fopen(const char *file, const char *mode)
   {
     ret = (*real_fopen)(file,mode);
   }     
-
   return ret;
 }
 
 
+int fclose(FILE *fp)
+{
+  //set real_free first
+  static int(*real_fclose)(FILE*);
+  if(!real_fclose)
+  {
+    real_fclose = (int(*)(FILE *)) dlsym(RTLD_NEXT, "fclose");
+  }
+  //check first whether CD-runtime side or application side (logged)
+  if(app_side){
+	  bool logable  = false;
+    CD* c_CD = IsLogable(&logable);
+	  if(logable){
+//      PRINT_LIBC("FREE invoked %p\n", p);
+      std::vector<struct IncompleteLogEntry>::iterator it;
+      for (it=c_CD->mem_alloc_log_.begin(); it!=c_CD->mem_alloc_log_.end(); it++)
+      {
+        //address matched!
+        if(it->p_ == fp) 
+        { 
+//          PRINT_LIBC("FREE- complete? %p\n", p);
+          it->complete_ = true;
+          return 0;
+        }
+      }
+      //search & parent's log
+      bool found = c_CD->PushedMemLogSearch(fp);
+      if(found) 
+      {
+//        PRINT_LIBC("found %p from parent's log will NOT free it \n", p);
+        return 0;
+      }
+    }
+  }
+  int ret = real_fclose(fp);
+  return ret;
+}
+
+int fprintf(FILE *str, const char *format,...)
+{
+  int ret = 0;
+  int size = sizeof(int);
+  va_list args;
+  va_start(args,format);
+
+  if(app_side){
+    app_side = false;
+    CD* c_CD = CDPath::GetCurrentCD()->ptr_cd();
+    if(c_CD!=NULL){
+//    bool logable  = false;
+//    CD* c_CD = IsLogable(&logable);
+//	  if(logable){
+      if(c_CD->cd_exec_mode_ != 0){
+//			  c_CD->libc_log_ptr_->ReadData(&ret, size);
+			  printf("libc_log_ptr_: %p\tRE-EXECUTE MODE fprintf(%i) = %i\n", c_CD->libc_log_ptr_, size, ret);
+        //
+//        vprintf(format,args);
+        //
+  		}
+  		else
+  		{
+        ret = vfprintf(str,format,args);
+//   	    c_CD->libc_log_ptr_->LogData(&ret, size);
+			  printf("libc_log_ptr_: %p\t -EXECUTE MODE fprintf(%i) = %i\n", c_CD->libc_log_ptr_, size, ret);
+	    }
+    }
+    else
+    {
+      printf("out of CD runtime side!");
+      exit(1);
+    }
+    app_side = true;
+  }
+  else{
+    printf("out of CD runtime side!");
+    ret = vfprintf(str,format,args);
+  }
+
+  va_end(args);
+  return ret;
+} 
 /*
 void *realloc(void* ptr, size_t size)
 {

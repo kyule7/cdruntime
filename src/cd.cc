@@ -575,7 +575,10 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
         if(it->pushed_)
         {
           printf(" free - completed + pushed - %p\n", it->p_);
-          free(it->p_);      
+          if(it->isrecv_)
+            free(it->p_);
+          else
+            fclose((FILE*)it->p_);
           mem_alloc_log_.erase(it);
           it--;
         }
@@ -696,7 +699,7 @@ bool CD::PushedMemLogSearch(void* p)
   return ret;
 }
 
-void* CD::MemAllocSearch()
+void* CD::MemAllocSearch(void* p_update)
 {
 //  printf("MemAllocSearch\n");
   void* ret = NULL;
@@ -708,13 +711,20 @@ void* CD::MemAllocSearch()
       //GONG:       
       if(parent_CD->mem_alloc_log_.size()!=0)
       {
-        ret = parent_CD->mem_alloc_log_[parent_CD->cur_pos_mem_alloc_log].p_;
+        if(!p_update)
+        {
+          ret = parent_CD->mem_alloc_log_[parent_CD->cur_pos_mem_alloc_log].p_;
+        }
+        else
+        {
+          ret = parent_CD->mem_alloc_log_[parent_CD->cur_pos_mem_alloc_log].p_;
+          parent_CD->mem_alloc_log_[parent_CD->cur_pos_mem_alloc_log].p_ = p_update;
+        }
         parent_CD->cur_pos_mem_alloc_log++;
-        //        ret = entry->p_;
       }
       else
       {
-        ret = MemAllocSearch();
+        ret = MemAllocSearch(p_update);
       }
     }
     else

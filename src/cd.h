@@ -223,7 +223,7 @@ update the preserved data.
     //GONG
     std::vector<struct IncompleteLogEntry> mem_alloc_log_;
     unsigned int cur_pos_mem_alloc_log = 0;
-    void* MemAllocSearch(void);
+    void* MemAllocSearch(void* p_update = NULL);
     bool PushedMemLogSearch(void* p);
     ////SZ: attempted to move from HeadCD class, but we can use CDPath class
     //cd::CDHandle*            cd_parent_;
