@@ -108,6 +108,10 @@ uint32_t Packer::Add(uint32_t id, uint32_t length, void *ptr_data)
 char *Packer::GetTotalData(uint32_t &total_data_size) 
 {
   dbg << "GetTotalData"<<endl;
+
+  // If the target to be packed is actually empty, return NULL
+  if(used_table_size_ + used_data_size_ == 0) return NULL;
+
   char *total_data = new char [used_table_size_ + used_data_size_+ sizeof(uint32_t) ];  // We should not forget the first 4 byte for indicating table size.
 
   uint32_t table_size = (used_table_size_+sizeof(uint32_t));

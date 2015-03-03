@@ -58,8 +58,7 @@ class DataHandle : public Serializable {
   friend class CDEntry;
   friend std::ostream& operator<<(std::ostream& str, const DataHandle& dh);
   public:
-    enum HandleType { kMemory = 0, kOSFile, kReference, kSource };
-		NodeID      node_id_;
+    enum HandleType { kMemory = 0, kOSFile, kReference, kSource, kPFS};
   private:
     enum { 
       DATA_PACKER_NODE_ID=0,
@@ -77,36 +76,56 @@ class DataHandle : public Serializable {
     uint64_t    len_;
     //FILE
     char file_name_[MAX_FILE_PATH];
+
+    //Parallel Filesystem
+    MPI_Offset  parallel_file_offset_;
+
     //Reference
-    uint64_t ref_name_;
+    ENTRY_TAG_T ref_name_;
     uint64_t ref_offset_;
+		NodeID      node_id_;
 
   public: 
     DataHandle() 
       : handle_type_(kMemory), address_data_(0), len_(0), ref_name_(0), ref_offset_(0) 
     { 
-      strcpy(file_name_, INIT_FILE_PATH); 
+      strcpy(file_name_, INIT_FILE_PATH);
+//      node_id_ = CDPath::GetCurrentCD()->node_id(); 
     }
 
-    DataHandle(std::string ref_name, uint64_t ref_offset) 
+    DataHandle(std::string ref_name, uint64_t ref_offset, const NodeID &node_id) 
       : handle_type_(kReference), address_data_(0), len_(0), ref_offset_(ref_offset) 
     { 
       strcpy(file_name_, INIT_FILE_PATH); 
       ref_name_ = str_hash(ref_name); 
       cd::tag2str[ref_name_] = ref_name; 
+      node_id_ = node_id; 
+//      node_id_ = CDPath::GetCurrentCD()->node_id(); 
     }
 
-    DataHandle(const char* file_name)
+    DataHandle(const char* file_name, const NodeID &node_id)
       : handle_type_(kOSFile), address_data_(0), len_(0), ref_name_(0), ref_offset_(0) 
-    { strcpy(file_name_, file_name); }
+    { 
+      strcpy(file_name_, file_name); 
+      node_id_ = node_id; 
+//      node_id_ = CDPath::GetCurrentCD()->node_id(); 
+    }
 
-    DataHandle(void* address_data, const uint64_t& len)
+    DataHandle(void* address_data, const uint64_t& len, const NodeID &node_id)
       : handle_type_(kMemory), address_data_(address_data), len_(len), ref_name_(0), ref_offset_(0) 
-    { strcpy(file_name_, INIT_FILE_PATH); }
+    { 
+      strcpy(file_name_, INIT_FILE_PATH); 
+      node_id_ = node_id; 
+//      node_id_ = CDPath::GetCurrentCD()->node_id(); 
+    }
 
-    DataHandle(HandleType handle_type, void* address_data, const uint64_t& len)
+    DataHandle(HandleType handle_type, void* address_data, const uint64_t& len, const NodeID &node_id)
       : handle_type_(handle_type), address_data_(address_data), len_(len), ref_name_(0), ref_offset_(0)
-    { strcpy(file_name_, INIT_FILE_PATH); }
+    { 
+      strcpy(file_name_, INIT_FILE_PATH); 
+      node_id_ = node_id; 
+//      node_id_ = CDPath::GetCurrentCD()->node_id(); 
+    }
 
     DataHandle(HandleType handle_type, void* address_data, const uint64_t& len, std::string ref_name, uint64_t ref_offset)
       : handle_type_(handle_type), address_data_(address_data), len_(len), ref_offset_(ref_offset) 
@@ -114,20 +133,22 @@ class DataHandle : public Serializable {
       strcpy(file_name_, INIT_FILE_PATH); 
       ref_name_ = str_hash(ref_name); 
       cd::tag2str[ref_name_] = ref_name; 
+//      node_id_ = CDPath::GetCurrentCD()->node_id(); 
     }
 
     ~DataHandle() {}
 
-    std::string file_name()    const { return file_name_; }
-    std::string ref_name()     const { return cd::tag2str[ref_name_]; }
-    uint64_t    ref_offset()   const { return ref_offset_; }
-    void*       address_data() const { return address_data_; }
-    uint64_t    len()          const { return len_; }
-    HandleType  handle_type()  const { return handle_type_; }
-    NodeID      node_id()      const { return node_id_; }
+    std::string file_name(void)    const { return file_name_; }
+    std::string ref_name(void)     const { return cd::tag2str[ref_name_]; }
+    ENTRY_TAG_T ref_name_tag(void) const { return ref_name_; }
+    uint64_t    ref_offset(void)   const { return ref_offset_; }
+    void*       address_data(void) const { return address_data_; }
+    uint64_t    len(void)          const { return len_; }
+    HandleType  handle_type(void)  const { return handle_type_; }
+    NodeID      node_id(void)      const { return node_id_; }
 
     void        set_file_name(const char *file_name)       { strcpy(file_name_, file_name); }
-    void        set_ref_name(std::string ref_name)         { ref_name_     = str_hash(ref_name); }
+    void        set_ref_name(std::string ref_name)         { ref_name_     = str_hash(ref_name); cd::tag2str[ref_name_] = ref_name;}
     void        set_ref_offset(uint64_t ref_offset)        { ref_offset_   = ref_offset; }
     void        set_address_data(const void *address_data) { address_data_ = (void *)address_data; }
     void        set_len(uint64_t len)                      { len_ = len; }

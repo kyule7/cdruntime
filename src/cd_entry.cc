@@ -159,6 +159,23 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen, struct ts
 	
 }
 
+
+
+
+CDEntry::CDEntryErrT CDEntry::SavePFS( struct tsn_log_struct *log )
+{
+	//First we should check for PFS file => I think we have checked it before calling this function (not sure).
+	//MPI_Status preserve_status;//This variable can be used to non-blocking writes to PFS. By checking this variable we can understand whether write has been finished or not.
+  //MPI_File_get_position( ptr_cd_->PFS_d_, &(dst_data_.parallel_file_offset_));
+
+  // Dynamic Chunk Interleave
+  dst_data_.parallel_file_offset_ = ptr_cd_->Par_IO_Man->Write( src_data_.address_data(), src_data_.len() );
+
+	return kOK;
+}
+
+
+
 CDEntry::CDEntryErrT CDEntry::Save(void)
 {
   //Direction is from src_data_ to dst_data_
@@ -232,99 +249,99 @@ void CDEntry::CloseFile(struct tsn_log_struct *log)
 	ret = tsn_log_destroy_file(dst_data_.file_name_);	
 }
 
-DataHandle* CDEntry::GetBuffer() {
-  DataHandle* buffer=0;
-  DataHandle real_dst_data;
 
-//	dbg <<"ref name: "    << dst_data_.ref_name() 
-//            << ", at level: " << ptr_cd()->GetCDID().level()<<endl;
+// -----------------------------------------------------------------------------------------------
 
+void CDEntry::RequestEntrySearch(void)
+{
+  dbg << "\nCDEntry::RequestEntrySearch\n" << endl;
+  assert(0);
+  // SetMailbox
+  CDEventT entry_search = kEntrySearch;
+  ptr_cd()->SetMailBox(entry_search);
 
+//  MPI_Alloc_mem(src_data_.len(), MPI_INFO_NULL, &(dst_data_.address_data_));
+
+  ENTRY_TAG_T entry_tag_to_search = dst_data_.ref_name_tag();
+  ptr_cd()->entry_request_req_[entry_tag_to_search] = CommInfo();
+  // Tag should contain CDID+entry_tag
+  ENTRY_TAG_T sendBuf[2] = {entry_tag_to_search, static_cast<uint64_t>(myTaskID)};
+  MPI_Isend(sendBuf, 
+            2, 
+            MPI_UNSIGNED_LONG_LONG,
+            ptr_cd()->head(), 
+            ptr_cd()->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG),
+            ptr_cd()->color(),
+            &(ptr_cd()->entry_request_req_[entry_tag_to_search].req_));
+
+  // Receive the preserved data to restore the data in application memory
+  MPI_Irecv(src_data_.address_data(), 
+            src_data_.len(), 
+            MPI_BYTE, 
+            MPI_ANY_SOURCE, 
+            ptr_cd()->GetCDID().GenMsgTag(entry_tag_to_search), 
+            MPI_COMM_WORLD, 
+            &(ptr_cd()->entry_recv_req_[entry_tag_to_search].req_));  
+}
+
+// Bring data handle from parents
+CDEntry::CDEntryErrT CDEntry::Restore(void) {
+  dbg<<"CDEntry::Restore(void), ref name: "    << dst_data_.ref_name() << ", at level: " << ptr_cd()->level() <<endl;
+
+  DataHandle *buffer = NULL;
 
 	if( dst_data_.handle_type() == DataHandle::kReference) {  // Restoration from reference
     dbg<< "GetBuffer, reference"<<endl; //dbgBreak();
-    buffer = &real_dst_data;
     
-    // FIXME: for now let's just search immediate parent only.  Let's extend this to more general way.
-//		cd::CDHandle* parent_cd = GetParentCD(ptr_cd_->GetCDID());
+    int found_level = 0;
+	  CDEntry *entry = ptr_cd()->SearchEntry(dst_data_.ref_name_tag(), found_level);
 
-		cd::CDHandle* parent_cd = CDPath::GetParentCD();
-    CDEntry* entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
-
-    dbg<<"parent name: "<<parent_cd->GetName()<<endl;
-    if(entry_tmp != NULL) { 
-      dbg << "parent dst addr : " << entry_tmp->dst_data_.address_data()
-                << ", parent entry name : " << entry_tmp->dst_data_.ref_name()<<endl;
-    } else {
-      dbg<<"there is no reference in parent level"<<endl;
-    }
-//		if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
-
-//		CDEntry* entry = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
-//		dbg <<"ref name: "    << entry->dst_data_.ref_name() 
-//              << ", at level: " << entry->ptr_cd()->GetCDID().level()<<endl;
-//		if( entry != 0 ) {
-
-      //Here, we search Parent's entry and Parent's Parent's entry and so on.
-      //if ref_name does not exit, we believe it's original. 
-      //Otherwise, there is original copy somewhere else, maybe grand parent has it. 
-
-      CDEntry* entry = NULL;
-			while( parent_cd != NULL ) {
-		    entry = parent_cd->ptr_cd()->InternalGetEntry(dst_data_.ref_name());
-				dbg <<"current entry name : "<< entry->name() << " with ref name : "    << entry->dst_data_.ref_name() 
-                  << ", at level: " << entry->ptr_cd()->GetCDID().level()<<endl;
-
-        if(entry != NULL) {
-          dbg<<"I got my reference here!!"<<endl;
-          break;
-        }
-        else {
-				  parent_cd = CDPath::GetParentCD(ptr_cd()->GetCDID().level());
-          dbg<< "Gotta go to upper level! -> " << parent_cd->GetName() << " at level "<< parent_cd->ptr_cd()->GetCDID().level() << endl;
-        }
-			} 
-
-      dbg<<"here?? 2"<<endl;
-       
-			//lsn = entry->lsn;
-			
-      DataHandle& tmp = entry->dst_data_; 
-      buffer = &tmp;
+    // preservation via reference for remote copy.
+    if(entry == NULL) {
+      return InternalRestore(buffer);
+    } 
+    else { // Found entry at local task
+      buffer = &(entry->dst_data_);
+  
+      buffer->set_ref_offset(dst_data_.ref_offset() );   
+  
+      // length could be different in case we want to describe only part of the preserved entry.
+      buffer->set_len(dst_data_.len());     
 
 //      dbg<<"addr "<<entry->dst_data_.address_data()<<endl; 
 //      dbg<<"addr "<<buffer->address_data()<<endl; 
 //			dbg <<"[Buffer] ref name: "    << buffer->ref_name() 
 //                <<", value: "<<*(reinterpret_cast<int*>(buffer->address_data())) << endl;
-      buffer->set_ref_offset(dst_data_.ref_offset() );   
-      // length could be different in case we want to describe only part of the preserved entry.
-      buffer->set_len(dst_data_.len());     
-//		}
-//    else {  // no entry!!
-//      ERROR_MESSAGE("Failed to retrieve a CDEntry");
-//    }
-		//FIXME: Assume the destination (it is a source in restoration context) is local. 
-    // Basically parent's entry's destination is also local. So that we can acheive this by just copying memory or reading file   
 
+    }
 	}
-  else {  // Restoration from memory or file system. Just use the current dst_data_ for it.
+  else {  
+    // Restoration from memory or file system. Just use the current dst_data_ for it.
     dbg<<"GetBuffer :: kCopy "<<endl; //dbgBreak();
     buffer = &dst_data_;
     dst_data_.address_data();
   }
-  return buffer;
+  
+  return InternalRestore(buffer);
 }
 
-CDEntry::CDEntryErrT CDEntry::Restore(void)
+CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer)
 {
-  dbg<<"CDEntry::Restore(void)"<<endl;
-  // Populate buffer
-  DataHandle* buffer = GetBuffer();
-  if(buffer == 0) { ERROR_MESSAGE("GetBuffer failed.\n"); assert(0); }
+  dbg<<"CDEntry::InternalRestore(void)"<<endl;
 
-	//FIXME we need to distinguish whether this request is on Remote or local for both 
-  // when using kOSFile or kMemory and do appropriate operations..
-	if(buffer->handle_type() == DataHandle::kMemory)	{
+  // preservation via reference for remote copy.
+  if(buffer == NULL) {
+#if _FIX
+    // Add this entry for receiving preserved data remotely.
+    ptr_cd()->entry_recv_req_[dst_data_.ref_name_tag()] = CommInfo(src_data_.address_data());
+    RequestEntrySearch();
+#endif
+    return kEntrySearchRemote;
+  }
+	else if(buffer->handle_type() == DataHandle::kMemory)	{
+	  //FIXME we need to distinguish whether this request is on Remote or local for both 
+    // when using kOSFile or kMemory and do appropriate operations..
+
     dbg<<"CDEntry::Restore -> kMemory"<<endl;
 		if(src_data_.address_data() != NULL) {
       dbg << src_data_.len() << " - " << buffer->len() << ", offset : "<<buffer->ref_offset() << endl;
@@ -351,12 +368,14 @@ CDEntry::CDEntryErrT CDEntry::Restore(void)
 		const char* cd_file = buffer->file_name_;
 		fp = fopen(cd_file, "r");
 		if( fp!= NULL )	{
-      if( buffer->ref_offset() != 0 ) fseek(fp, buffer->ref_offset(), SEEK_SET); 
+      if( buffer->ref_offset() != 0 ) 
+        fseek(fp, buffer->ref_offset(), SEEK_SET); 
 			fread(src_data_.address_data(), 1, src_data_.len(), fp);
 			fclose(fp);
 			return CDEntryErrT::kOK;
 		}
-		else return CDEntryErrT::kFileOpenError;
+		else 
+      return CDEntryErrT::kFileOpenError;
 
 	}
 
@@ -377,12 +396,12 @@ CDEntry::CDEntryErrT CDEntry::Restore(void)
 
 
 
-
+/*
 //GONG
 CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 {
   // Populate buffer
-  DataHandle* buffer = GetBuffer();
+  DataHandle* buffer = InternalRestore();
   if(buffer == 0) { ERROR_MESSAGE("GetBuffer failed.\n"); assert(0); }
 	//FIXME we need to distinguish whether this request is on Remote or local for both when using kOSFile or kMemory and do appropriate operations..
 	if(buffer->handle_type() == DataHandle::kMemory) {
@@ -440,7 +459,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(bool open, struct tsn_log_struct *log)
 	//Direction is from dst_data_ to src_data_
 
 }
-
+*/
 
 std::ostream& cd::operator<<(std::ostream& str, const CDEntry& cd_entry)
 {

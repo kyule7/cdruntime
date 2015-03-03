@@ -53,12 +53,14 @@ CDPath* CDPath::uniquePath_;
 std::ostringstream cd::dbg;
 #endif
 
-#if _MPI_VER
-#if _KL
-CDFlagT *CDHandle::pendingFlag_; 
-//CDMailBoxT CDHandle::pendingWindow_;
-#endif
-#endif
+//#if _MPI_VER
+//#if _KL
+//CDFlagT *CD::pendingFlag_; 
+////CDMailBoxT CDHandle::pendingWindow_;
+//#endif
+//#endif
+
+
 int cd::myTaskID = 0;
 
 //StringBuffer &operator<<(StringBuffer &str_buf, const std::ostream &t) {
@@ -77,20 +79,21 @@ int cd::myTaskID = 0;
 CDHandle* cd::CD_Init(int numTask, int myRank)
 {
   myTaskID = myRank;
-//  CDHandle* root_cd = new CDHandle(NULL, "Root", NodeID(ROOT_COLOR, myRank, numTask, 0), kStrict, 0);
+
 #if _MPI_VER
 #if _KL
-  MPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &CDHandle::pendingFlag_);
+  MPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &(CD::pendingFlag_));
+
   // Initialize pending flag
-  *CDHandle::pendingFlag_ = 0;
-//  MPI_Win_create(CDHandle::pendingFlag_, 1, sizeof(CDFlagT), MPI_INFO_NULL, MPI_COMM_WORLD, &CDHandle::pendingWindow_);
+  *CD::pendingFlag_ = 0;
 #endif
 #endif
+
 
   CD::CDInternalErrT internal_err;
   CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myRank, ROOT_HEAD_ID, numTask)), kStrict, 0, &internal_err);
   CDPath::GetCDPath()->push_back(root_cd_handle);
-//  cout << "\n\n========================\n node id check : " << root_cd_handle->node_id() << "===================\n"<<endl; getchar();
+
 #if _PROFILER
   // Profiler-related
   root_cd_handle->profiler_->InitViz();
@@ -132,7 +135,7 @@ void cd::CD_Finalize(std::ostringstream *oss)
 #if _MPI_VER
 #if _KL
 //  MPI_Win_free(&CDHandle::pendingWindow_);
-  MPI_Free_mem(CDHandle::pendingFlag_);
+  MPI_Free_mem(CD::pendingFlag_);
 #endif
 #endif
   
@@ -159,10 +162,11 @@ CDHandle::CDHandle()
   //profiler_ = new NullProfiler();
 #endif
   SplitCD = &SplitCD_3D;
-  if(node_id().size() > 1)
-    MPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), MPI_INFO_NULL, MPI_COMM_WORLD, &pendingWindow_);
-  else
-    dbg << "KL : size is 1" << endl;
+
+//  if(node_id().size() > 1)
+//    MPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), MPI_INFO_NULL, MPI_COMM_WORLD, &pendingWindow_);
+//  else
+//    dbg << "KL : size is 1" << endl;
   
 }
 
@@ -184,10 +188,12 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
 #else
   //profiler_ = new NullProfiler();
 #endif
-  if(node_id_.size() > 1)
-    MPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), MPI_INFO_NULL, MPI_COMM_WORLD, &pendingWindow_);
-  else
-    dbg << "KL : size is 1" << endl;
+
+
+//  if(node_id_.size() > 1)
+//    MPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), MPI_INFO_NULL, MPI_COMM_WORLD, &pendingWindow_);
+//  else
+//    dbg << "KL : size is 1" << endl;
 }
 
 CDHandle::~CDHandle()
@@ -200,10 +206,11 @@ CDHandle::~CDHandle()
   else {  // There is no CD for this CDHandle!!
 
   }
-  if(node_id_.size() > 1)
-    MPI_Win_free(&pendingWindow_);
-  else
-    dbg << "KL : size is 1" << endl;
+
+//  if(node_id_.size() > 1)
+//    MPI_Win_free(&pendingWindow_);
+//  else
+//    dbg << "KL : size is 1" << endl;
 }
 
 void CDHandle::Init(CD* ptr_cd, const NodeID& node_id)
@@ -219,6 +226,8 @@ CDHandle* CDHandle::Create(const char* name,
                            uint32_t error_loc_mask, 
                            CDErrT *error )
 {
+  //CheckMailBox();
+
   // Create CDHandle for a local node
   // Create a new CDHandle and CD object
   // and populate its data structure correctly (CDID, etc...)
@@ -230,8 +239,9 @@ CDHandle* CDHandle::Create(const char* name,
 
 
   // Generate CDID
-  CDNameT new_cd_name(ptr_cd_->GetCDName());
-  new_cd_name.IncLevel();
+  CDNameT new_cd_name(ptr_cd_->GetCDName(), 1, 0);
+//  CDNameT new_cd_name(ptr_cd_->GetCDName());
+//  new_cd_name.IncLevel();
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
   CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec, &internal_err);
@@ -445,11 +455,15 @@ CDHandle* CDHandle::Create(const ColorT& color,
   //  one doesn't really care about the rank-order of the processes in the new communicator.  
 
   // Create CDHandle for multiple tasks (MPI rank or threads)
+  dbg << "check mode : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
+
+  //CheckMailBox();
+
 
 //  Sync();
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
   int new_size = (int)((double)node_id_.size() / num_children);
-  int new_color, new_task = 0;
+  int new_color=0, new_task = 0;
   int err=0;
 
   ColorT new_comm;
@@ -458,10 +472,13 @@ CDHandle* CDHandle::Create(const ColorT& color,
 //  dbg << "[Before] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //dbgBreak();
   if(num_children > 1) {
     dbg<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl; //dbgBreak();
-//    cout << "task id: "<<node_id_.task_in_color() <<", size: " << node_id_.size() <<", num_child: "<<num_children<< endl;
+    cout << "task id: "<<node_id_.task_in_color() <<", size: " << node_id_.size() <<", num_child: "<<num_children<< endl;
     err = SplitCD(node_id_.task_in_color(), node_id_.size(), num_children, new_color, new_task);
     dbg<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl; //dbgBreak();
+    cout << "before new_color : " << new_color << endl;
+
     err = GetNewNodeID(node_id_.color(), new_color, new_task, new_node_id);
+    cout << "new_color : " << new_color << endl;
     assert(new_size == new_node_id.size());
 
   }
@@ -478,11 +495,12 @@ CDHandle* CDHandle::Create(const ColorT& color,
 
   SetHead(new_node_id);
   // Generate CDID
+  cout << "new_color : " << new_color << endl;
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
 //  dbg<<"~~~~~~~~before create cd obj~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<dbg; //dbgBreak();
 
-//  if(node_id_.size() > 1)
-//    CollectHeadInfoAndEntry(new_node_id); 
+//  if(!ptr_cd()->remote_entry_directory_map_.empty())
+    CollectHeadInfoAndEntry(new_node_id); 
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
@@ -562,7 +580,8 @@ CDErrT CDHandle::Destroy(bool collective)
   assert(CDPath::GetCDPath()->size()>0);
   assert(CDPath::GetCDPath()->back() != NULL);
 
-  err = ptr_cd_->Destroy();
+  err = ptr_cd()->Destroy();
+//  delete ptr_cd_;
   delete CDPath::GetCDPath()->back();
   CDPath::GetCDPath()->pop_back();
 
@@ -574,6 +593,16 @@ CDErrT CDHandle::Destroy(bool collective)
 
 CDErrT CDHandle::Begin(bool collective, const char* label)
 {
+  assert(ptr_cd_ != 0);
+  CDErrT err = ptr_cd_->Begin(collective, label);
+
+  dbg << "Do Barrier at CDHandle::Begin at level [" << ptr_cd_->level() << "], is it reexec? " << ptr_cd_->num_reexecution_ << endl;
+  
+  if(node_id_.size() > 1) {
+    MPI_Barrier(node_id_.color());
+    cout << "\n\n[Barrier] CDHandle::Begin - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; getchar();
+  }
+  //CheckMailBox();
 
 //  dbg << jmp_buffer_ << endl; dbgBreak();
   //TODO It is illegal to call a collective Begin() on a CD that was created without a collective Create()??
@@ -591,15 +620,17 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 //  }
 #endif
 
-  assert(ptr_cd_ != 0);
-  CDErrT err = ptr_cd_->Begin(collective, label);
 
   return err;
 }
 
 CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 {
-
+  //CheckMailBox();
+  if(node_id_.size() > 1) {
+    MPI_Barrier(node_id_.color());
+    cout << "\n\n[Barrier] CDHandle::Complete - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; getchar();
+  }
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
 
@@ -641,6 +672,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
                           const RegenObject *regen_object, 
                           PreserveUseT data_usage)
 {
+  //CheckMailBox();
 
 
   /// Preserve meta-data
@@ -674,6 +706,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
                           const RegenObject *regen_object, 
                           PreserveUseT data_usage )
 {
+  //CheckMailBox();
   if( IsHead() ) {
     assert(ptr_cd_ != 0);
     // TODO CDEvent object need to be handled separately, 
@@ -831,55 +864,61 @@ CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 
 std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 {
+  //CheckMailBox();
+  dbg << "DETECT check mode : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
   std::vector<SysErrT> ret_prepare;
-
-
-  dbg << "Detect at Level : " << ptr_cd()->GetCDID().level() << ", my node : " << node_id() << endl; getchar();
-
   CDEventT event = CDEventT::kNoEvent;
-//  if(ptr_cd()->GetCDID().level() == 0) {
-//    if(myTaskID == 3 ) {
-//      event = CDEventT::kErrorOccurred;
-//    }
+
+//if(ptr_cd_->num_reexecution_ == 0) {
+if(false) {
+
+//  dbg << "Detect at Level : " << ptr_cd()->GetCDID().level() << ", my node : " << node_id() << endl; getchar();
+
+  if(ptr_cd()->GetCDID().level() == 0) {
+    if(myTaskID == 3 ) {
+      event = CDEventT::kErrorOccurred;
+    }
 //    if(myTaskID == 6 ) {
 //      event = CDEventT::kEntrySearch;
 //    }
-//  }
+  }
 
   if(ptr_cd()->GetCDID().level() == 1) {
-    if(myTaskID == 0 ) {
-      event = CDEventT::kAllPause;
-    }
 //    if(myTaskID == 7 ) {
 //      event = CDEventT::kErrorOccurred;
 //    }
-//    if(myTaskID == 5 ) {
-//      event = CDEventT::kErrorOccurred;
+    if(myTaskID == 5 ) {
+      event = CDEventT::kErrorOccurred;
+    }
+  }
+  if(ptr_cd()->GetCDID().level() == 1) {
+    if(myTaskID == 1 ) {
+      event = CDEventT::kErrorOccurred;
+    }
+//    if(myTaskID == 2 ) {
+//      event = CDEventT::kEntrySearch;
 //    }
   }
-//  if(ptr_cd()->GetCDID().level() == 2) {
-//    if(myTaskID == 1 ) {
-//      event = CDEventT::kErrorOccurred;
-//    }
-//    if(myTaskID == 2 ) {
-//      event = CDEventT::kEntrySearch;
-//    }
-//  }
-//  if(ptr_cd()->GetCDID().level() == 3) {
-//    if(myTaskID == 2 ) {
-//      event = CDEventT::kErrorOccurred;
-//    }
+  if(ptr_cd()->GetCDID().level() == 1) {
+    if(myTaskID == 2 ) {
+      event = CDEventT::kErrorOccurred;
+    }
 //    if(myTaskID == 5 ) {
 //      event = CDEventT::kEntrySearch;
 //    }
-//  }
+  }
+}
+
 
   SetMailBox(event);
   CheckMailBox();
-  if(IsHead() && ptr_cd()->GetCDID().level() == 1) {
-    ptr_cd_->HandleAllResume(this);
-    cout <<"============ Resumed ================" << endl;
-  }
+//  CheckMailBox();
+//  if(IsHead() && ptr_cd()->GetCDID().level() == 1) {
+//    ptr_cd_->HandleAllResume(this);
+//    cout <<"============ Resumed ================" << endl;
+//  }
+
+
   return ret_prepare;
 
 }
@@ -921,9 +960,11 @@ float CDHandle::RequireErrorProbability (SysErrT error_type, uint32_t error_num,
   return 0;
 }
 
-CDEntry* CDHandle::InternalGetEntry(std::string entry_name)
+CDEntry *CDHandle::InternalGetEntry(std::string entry_name)
 {
-  return ptr_cd_->InternalGetEntry(entry_name);
+  ENTRY_TAG_T entry_tag = str_hash(entry_name);
+  tag2str[entry_tag] = entry_tag;
+  return ptr_cd_->InternalGetEntry(entry_tag);
   //FIXME need some way to ask to accomplish this functionality...  // Remote request
 }
 
@@ -981,434 +1022,489 @@ uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_l
   return sys_bit_vec;
 }
 
-int CDHandle::CheckMailBox(void)
+
+
+
+
+
+
+CDErrT CDHandle::CheckMailBox(void)
 {
-  int ret=0;
-  dbg << "\n\n=================== Check Mail Box Start [Level " << ptr_cd()->GetCDID().level() <<"] ========================" << endl;
+  // FIXME
   if(node_id_.size() > 1) {
-    int event_count = *pendingFlag_;
-    dbg << "\nCheckMailBox " << myTaskID << ", # of events : " << event_count << ", Is it Head? "<< IsHead() <<endl;
-    ReadMailBoxFromRemote();
-    if(event_count > 0) {
-      dbg << "An event is detected" << endl;
-      dbg << "Task : " << myTaskID << ", Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< ", Node ID: " <<node_id_<<endl;
-  
-      ret = InternalCheckMailBox();
-  
-    } 
-    else {
-      dbg << "No event is detected" << endl;
-    }
+    MPI_Barrier(node_id_.color());
+    cout << "\n\n[Barrier] CDHandle::CheckMailBox - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; getchar();
   }
-  else {
-    dbg << "KL : [CheckMailBox] size is " << node_id_.size() << endl;
-    ReadMailBoxFromRemote();
-  }
-  dbg << "\n===================================================================\n" << endl;
+  CDErrT cd_err = ptr_cd()->CheckMailBox();
 
-  return ret;
-}
-
-int requested_event_count = 0;
-int handled_event_count = 0;
-
-int CDHandle::InternalCheckMailBox(void)
-{
-  int ret=0;
-  requested_event_count = *pendingFlag_;
-  handled_event_count = 0;
-
-  CDHandle *curr_cdh = this;
-
-//  ReadMailBoxFromRemote();
-
-	while( curr_cdh != NULL ) {
-    // If this task is head at the current CD level, read mailbox
-    if(curr_cdh->IsHead()) {
-      ret = curr_cdh->ReadMailBox();
-    }
-    dbg << "[Searching for CD Level where current task is head] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
-    // Termination condition
-    // It finished every requests, and does not need to look at mailbox any more
-    if(requested_event_count == handled_event_count) {
-      dbg<<"I finished handling events!!"<<endl;
-      break;
-    }
-    else {
-      // If current CD is Root CD and GetParentCD is called, it returns NULL
-		  curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
-    }
-
-	} 
-
-/*
-  int event_count = *pendingFlag_;  
-  if(requested_event_count != handled_event_count) {
-    // There are some events not handled at this point
-    ret = requested_event_count - handled_event_count;
-    assert(event_count != (requested_event_count-handled_event_count));
-  }
-  else {
-    // All events were handled
-    // If every event was handled, event_count must be 0
-    ret = 0;
-    assert(event_count!=0);
-  }
-*/
-  return ret;
-}
-
-int CDHandle::ReadMailBox(void) 
-{
-  CDEventHandleT resolved = CDEventHandleT::kEventNone;
-  CDFlagT *event = ptr_cd()->event_flag();
-  assert(event);
-
-  for(int i=0; i<node_id_.size(); i++) {
-
-
-    dbg << "Task["<< i <<"] (" << ptr_cd()->GetCDName() << " / " << node_id_ 
-        << "), Error #" << event[i] << "\t";
-
-    // Initialize the resolved flag
-    resolved = kEventNone;
-    resolved = HandleEvent(&(event[i]));
-
-    // Reset the event flag after handling the event
-    switch(resolved) {
-      case CDEventHandleT::kEventNone : 
-        // no event
-        break;
-      case CDEventHandleT::kEventResolved :
-        // There was an event, but resolved
-
-        //(*pendingFlag_)--;
-        handled_event_count--;
-        break;
-      case CDEventHandleT::kEventPending :
-        // There was an event, but could not resolved.
-        // Escalation required
-        break;
-      default :
-        break;
-    }
-    dbg << "\tResolved? : " << resolved << endl;
-  }
-
-  return resolved;
-}
-
-int CDHandle::ReadMailBoxFromRemote(void)
-{
-  int ret = 0;
-  CDHandle *curr_cdh = this;
-	while( curr_cdh->node_id_.size()==1 ) {
-    if(curr_cdh == CDPath::GetRootCD()) {
-      dbg << "[ReadMailBoxFromRemote] there is a single task in the root CD" << endl;
-      assert(0);
-    }
-    dbg << "[ReadMailBoxFromRemote|Searching for CD Level having non-single task] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
-    // If current CD is Root CD and GetParentCD is called, it returns NULL
-		curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
-	} 
-  dbg << "ReadMailBoxFromRemote " << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << " at level : " << curr_cdh->ptr_cd()->GetCDID().level()
-      << "\nOriginal CD " << ptr_cd()->GetCDName() << " / " << node_id_ << " at level : " << ptr_cd()->GetCDID().level() << "\n" << endl;
-  CDMailBoxT &mailbox = curr_cdh->ptr_cd()->mailbox_; 
- 
-  MPI_Group task_group;
-  MPI_Comm_group(curr_cdh->node_id_.color(), &task_group);
-
-  CDFlagT myEvent = 0;
-  if(curr_cdh->IsHead() == false) {
-    // This is not head, so needs to bring its mailbox from head
-    // Check leaf's status first
-//    MPI_Win_start(task_group, 0, mailbox);
-    MPI_Win_fence(0, mailbox);
-    MPI_Get(&myEvent, 1, MPI_INT, curr_cdh->node_id_.head(), curr_cdh->node_id_.task_in_color(), 1, MPI_INT, mailbox);
-    dbg << "Complete event # " << myEvent << endl;
-    MPI_Win_fence(0, mailbox);
-    
-//    MPI_Win_complete(mailbox);
-
-//    dbg << "Task "<< myTaskID <<" (" << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ 
-//        << ") got an error #" << myEvent << " (";
-//    CDEventHandleT ret_handled = HandleEvent(&myEvent);
-//
-//    switch( ret_handled ) {
-//      case CDEventHandleT::kEventNone : 
-//        // no event
-//        break;
-//      case CDEventHandleT::kEventResolved :
-//        // There was an event, but resolved
-//
-//        //(*pendingFlag_)--;
-//        handled_event_count--;
-//        break;
-//      case CDEventHandleT::kEventPending :
-//        // There was an event, but could not resolved.
-//        // Escalation required
-//        break;
-//      default :
-//        break;
-//    }
-//    dbg << "),\t\tResolved? : " << ret_handled << endl;
-
-  }
-  else {
-    // This task is head
-//    MPI_Win_post(task_group, 0, mailbox);
-    MPI_Win_fence(0, mailbox);
-    dbg << "Epoch for getting mailbox for each task " << curr_cdh->IsHead() << ", node id: " << curr_cdh->node_id_ << endl;
-    myEvent = (curr_cdh->ptr_cd()->event_flag())[curr_cdh->node_id_.task_in_color()];
-    MPI_Win_fence(0, mailbox);
-//    MPI_Win_wait(mailbox);
-  }
-
-  dbg << "Task "<< myTaskID <<" (" << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ 
-      << "), Error #" << myEvent << "\t";
-  CDEventHandleT ret_handled = HandleEvent(&myEvent);
-
-  switch( ret_handled ) {
-    case CDEventHandleT::kEventNone : 
-      // no event
-      break;
-    case CDEventHandleT::kEventResolved :
-      // There was an event, but resolved
-
-      //(*pendingFlag_)--;
-      handled_event_count--;
-      break;
-    case CDEventHandleT::kEventPending :
-      // There was an event, but could not resolved.
-      // Escalation required
-      break;
-    default :
-      break;
-  }
-  dbg << "\tResolved? : " << ret_handled << endl;
-
-  return ret;
-}
-
-
-CDEventHandleT CDHandle::HandleEvent(CDFlagT *p_event)
-{
-  CDEventHandleT ret = CDEventHandleT::kEventResolved;
-  int handle_ret = 0;
-  CDFlagT event = *p_event;
-  if( CHECK_NO_EVENT(event) ) {
-    dbg << "CD Event kNoEvent\t\t\t";
-  }
-  else {
-    int handled_event_count=0;
-    if( CHECK_EVENT(event, kErrorOccurred) ) {
-
-      ptr_cd_->HandleErrorOccurred(this);
-
-      handled_event_count++;
-    }
-
-    if( CHECK_EVENT(event, kEntrySearch) ) {
-      if(IsHead()) {
-        cout << "[event: entry search] This is event for head CD.";
-//        assert(0);
-      }
-      dbg << "CD Event kEntrySearch\t";
-      // Search Entry
-      handled_event_count++;
-    }
-
-    if( CHECK_EVENT(event, kEntrySend) ) {
-      if(!IsHead()) {
-        cout << "[event: entry send] This is event for non-head CD.";
-//        assert(0);
-      }
-      
-      dbg << "CD Event kEntrySend\t\t\t";
-      handled_event_count++;
-      
-    }
-
-    if( CHECK_EVENT(event, kAllPause) ) {
-      cout << "What?? " << node_id_ << endl;
-      ptr_cd_->HandleAllPause(this);
-
-      handled_event_count++;
-
-    }
-
-    if( CHECK_EVENT(event, kAllResume) ) {
-
-      ptr_cd_->HandleAllResume(this);
-
-      handled_event_count++;
-
-    }
-
-    if( CHECK_EVENT(event, kAllReexecute) ) {
-
-      ptr_cd_->HandleAllReexecute(this);
-
-      handled_event_count++;
-
-    }
-    
-    (*pendingFlag_) -= handled_event_count;
-  } 
-  return ret;
-}
-
-
-int CDHandle::SetMailBox(CDEventT &event)
-{
-  dbg << "\n\n=================== Set Mail Box Start ==========================\n" << endl;
-  dbg << "\nSetMailBox " << myTaskID << ", event : " << event << ", Is it Head? "<< IsHead() <<endl;
-  int ret=0;
-  int val = 1;
   if(node_id_.size() > 1) {
-    dbg << "KL : [SetMailBox] size is " << node_id_.size() << ". Check mailbox at the upper level." << endl;
-  
-    MPI_Win_fence(0, pendingWindow_);
-    if(event != CDEventT::kNoEvent) {
-//      MPI_Win_fence(0, pendingWindow_);
-      dbg << "Set CD Event kErrorOccurred. Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< endl;
-      // Increment pending request count at the target task (requestee)
-      MPI_Accumulate(&val, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, MPI_SUM, pendingWindow_);
-      dbg << "MPI Accumulate done" << endl; getchar();
-//      MPI_Win_fence(0, pendingWindow_);
-    }
-    MPI_Win_fence(0, pendingWindow_);
-
-    CDMailBoxT &mailbox = ptr_cd()->mailbox_;  
-    MPI_Win_fence(0, mailbox);
-    if(event != CDEventT::kNoEvent) {
-      // Inform the type of event to be requested
-      MPI_Accumulate(&event, 1, MPI_INT, node_id_.head(), node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
-//    MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
-      dbg << "MPI_Put done" << endl; getchar();
-    }
-  
-//    switch(event) {
-//      case CDEventT::kNoEvent :
-//        dbg << "Set CD Event kNoEvent" << endl;
-//        break;
-//      case CDEventT::kErrorOccurred :
-//        // Inform the type of event to be requested
-//        MPI_Accumulate(&event, 1, MPI_INT, node_id_.head(), node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
-////        MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
-//        dbg << "MPI_Put done" << endl; getchar();
-//        break;
-//      case CDEventT::kAllPause :
-//        dbg << "Set CD Event kAllPause" << endl;
-//  
-//        break;
-//      case CDEventT::kAllResume :
-//  
-//        break;
-//      case CDEventT::kEntrySearch :
-//  
-//        break;
-//      case CDEventT::kEntrySend :
-//  
-//        break;
-//      case CDEventT::kAllReexecute :
-//  
-//        break;
-//      default:
-//  
-//        break;
-//    }
-  
-    MPI_Win_fence(0, mailbox);
-  
+    MPI_Barrier(node_id_.color());
+    cout << "\n\n[Barrier] CDHandle::CheckMailBox - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; getchar();
   }
-  else {
-    // This is the leaf that has just single task in a CD
-    dbg << "KL : [SetMailBox Leaf and have 1 task] size is " << node_id_.size() << ". Check mailbox at the upper level." << endl;
-    CDHandle *curr_cdh = this;
+  cout << "==============================================================" << endl;
 
-  	while( curr_cdh->node_id_.size()==1 ) {
-      if(curr_cdh == CDPath::GetRootCD()) {
-        dbg << "[SetMailBox] there is a single task in the root CD" << endl;
-        assert(0);
-      }
-      dbg << "[SetMailBox|Searching for CD Level having non-single task] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
-      // If current CD is Root CD and GetParentCD is called, it returns NULL
-  		curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
-  	} 
-    dbg << "[SetMailBox] " << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << " at level : " << curr_cdh->ptr_cd()->GetCDID().level()
-        << "\nOriginal CD " << ptr_cd()->GetCDName() << " / " << node_id_ << " at level : " << ptr_cd()->GetCDID().level() << "\n" << endl;
-
-
-    int parent_head_id = curr_cdh->node_id().head();
-    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, parent_head_id, 0, curr_cdh->pendingWindow_);
-    if(event != CDEventT::kNoEvent) {
-      dbg << "Set CD Event kErrorOccurred. Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< endl;
-      // Increment pending request count at the target task (requestee)
-      MPI_Accumulate(&val, 1, MPI_INT, parent_head_id, 0, 1, MPI_INT, MPI_SUM, curr_cdh->pendingWindow_);
-      dbg << "MPI Accumulate done" << endl; getchar();
-    }
-    MPI_Win_unlock(parent_head_id, curr_cdh->pendingWindow_);
-
-
-    CDMailBoxT &mailbox = curr_cdh->ptr_cd()->mailbox_;
-
-    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, parent_head_id, 0, mailbox);
-    // Inform the type of event to be requested
-    dbg << "Set event start" << endl; getchar();
-    if(event != CDEventT::kNoEvent) {
-      MPI_Accumulate(&event, 1, MPI_INT, parent_head_id, curr_cdh->node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
-//    MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
-    }
-    dbg << "MPI_Accumulate done" << endl; getchar();
-
-//    switch(event) {
-//      case CDEventT::kNoEvent :
-//        dbg << "Set CD Event kNoEvent" << endl;
-//        break;
-//      case CDEventT::kErrorOccurred :
-//        // Inform the type of event to be requested
-//        dbg << "Set event start" << endl; getchar();
-//        MPI_Accumulate(&event, 1, MPI_INT, parent_head_id, curr_cdh->node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
-////        MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
-//        dbg << "MPI_Accumulate done" << endl; getchar();
-//        break;
-//      case CDEventT::kAllPause :
-//        dbg << "Set CD Event kAllPause" << endl;
-//  
-//        break;
-//      case CDEventT::kAllResume :
-//  
-//        break;
-//      case CDEventT::kEntrySearch :
-//  
-//        break;
-//      case CDEventT::kEntrySend :
-//  
-//        break;
-//      case CDEventT::kAllReexecute :
-//  
-//        break;
-//      default:
-//  
-//        break;
-//    }
-    MPI_Win_unlock(parent_head_id, mailbox);
-  }
-  dbg << "\n================================================================\n" << endl;
-
-  return ret;
+  cd_err = ptr_cd()->CheckMailBox();
+  return cd_err;
 }
 
-
-char *CDHandle::GenTag(const char* tag)
+CDErrT CDHandle::SetMailBox(CDEventT &event)
 {
-  Tag tag_gen;
-  CDNameT cd_name = ptr_cd()->GetCDName();
-  tag_gen << tag << node_id_.task_in_color_ <<'-'<<cd_name.level()<<'-'<<cd_name.rank_in_level();
-//  cout << const_cast<char*>(tag_gen.str().c_str()) << endl; getchar();
-  return const_cast<char*>(tag_gen.str().c_str());
+  return ptr_cd()->SetMailBox(event);
 }
+
+////int CDHandle::CheckMailBox(void)
+////{
+////  int ret=0;
+////  dbg << "\n\n=================== Check Mail Box Start [Level " << ptr_cd()->GetCDID().level() <<"] ========================" << endl;
+////  if(node_id_.size() > 1) {
+////    int event_count = *pendingFlag_;
+////    dbg << "\nCheckMailBox " << myTaskID << ", # of events : " << event_count << ", Is it Head? "<< IsHead() <<endl;
+////    ReadMailBoxFromRemote();
+////    if(event_count > 0) {
+////      dbg << "An event is detected" << endl;
+////      dbg << "Task : " << myTaskID << ", Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< ", Node ID: " <<node_id_<<endl;
+////  
+////      ret = InternalCheckMailBox();
+////  
+////    } 
+////    else {
+////      dbg << "No event is detected" << endl;
+////    }
+////  }
+////  else {
+////    dbg << "KL : [CheckMailBox] size is " << node_id_.size() << endl;
+////    ReadMailBoxFromRemote();
+////  }
+////  dbg << "\n===================================================================\n" << endl;
+////
+////  return ret;
+////}
+////
+////int requested_event_count = 0;
+////int handled_event_count = 0;
+////
+////int CDHandle::InternalCheckMailBox(void)
+////{
+////  int ret=0;
+////  requested_event_count = *pendingFlag_;
+////  handled_event_count = 0;
+////
+////  CDHandle *curr_cdh = this;
+////
+//////  ReadMailBoxFromRemote();
+////
+////	while( curr_cdh != NULL ) {
+////    // If this task is head at the current CD level, read mailbox
+////    if(curr_cdh->IsHead()) {
+////      ret = curr_cdh->ReadMailBox();
+////    }
+////    dbg << "[Searching for CD Level where current task is head] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
+////    // Termination condition
+////    // It finished every requests, and does not need to look at mailbox any more
+////    if(requested_event_count == handled_event_count) {
+////      dbg<<"I finished handling events!!"<<endl;
+////      break;
+////    }
+////    else {
+////      // If current CD is Root CD and GetParentCD is called, it returns NULL
+////		  curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
+////    }
+////
+////	} 
+////
+/////*
+////  int event_count = *pendingFlag_;  
+////  if(requested_event_count != handled_event_count) {
+////    // There are some events not handled at this point
+////    ret = requested_event_count - handled_event_count;
+////    assert(event_count != (requested_event_count-handled_event_count));
+////  }
+////  else {
+////    // All events were handled
+////    // If every event was handled, event_count must be 0
+////    ret = 0;
+////    assert(event_count!=0);
+////  }
+////*/
+////  return ret;
+////}
+////
+////int CDHandle::ReadMailBox(void) 
+////{
+////  CDEventHandleT resolved = CDEventHandleT::kEventNone;
+////  CDFlagT *event = ptr_cd()->event_flag();
+////  assert(event);
+////
+////  for(int i=0; i<node_id_.size(); i++) {
+////
+////
+////    dbg << "Task["<< i <<"] (" << ptr_cd()->GetCDName() << " / " << node_id_ 
+////        << "), Error #" << event[i] << "\t";
+////
+////    // Initialize the resolved flag
+////    resolved = kEventNone;
+////    resolved = HandleEvent(&(event[i]), i);
+////
+////    // Reset the event flag after handling the event
+////    switch(resolved) {
+////      case CDEventHandleT::kEventNone : 
+////        // no event
+////        break;
+////      case CDEventHandleT::kEventResolved :
+////        // There was an event, but resolved
+////
+////        //(*pendingFlag_)--;
+////        handled_event_count--;
+////        break;
+////      case CDEventHandleT::kEventPending :
+////        // There was an event, but could not resolved.
+////        // Escalation required
+////        break;
+////      default :
+////        break;
+////    }
+////    dbg << "\tResolved? : " << resolved << endl;
+////  }
+////
+////  return resolved;
+////}
+////
+////int CDHandle::ReadMailBoxFromRemote(void)
+////{
+////  int ret = 0;
+////  CDHandle *curr_cdh = this;
+////	while( curr_cdh->node_id_.size()==1 ) {
+////    if(curr_cdh == CDPath::GetRootCD()) {
+////      dbg << "[ReadMailBoxFromRemote] there is a single task in the root CD" << endl;
+////      assert(0);
+////    }
+////    dbg << "[ReadMailBoxFromRemote|Searching for CD Level having non-single task] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
+////    // If current CD is Root CD and GetParentCD is called, it returns NULL
+////		curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
+////	} 
+////  dbg << "ReadMailBoxFromRemote " << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << " at level : " << curr_cdh->ptr_cd()->GetCDID().level()
+////      << "\nOriginal CD " << ptr_cd()->GetCDName() << " / " << node_id_ << " at level : " << ptr_cd()->GetCDID().level() << "\n" << endl;
+////  CDMailBoxT &mailbox = curr_cdh->ptr_cd()->mailbox_; 
+//// 
+////  MPI_Group task_group;
+////  MPI_Comm_group(curr_cdh->node_id_.color(), &task_group);
+////
+////  CDFlagT myEvent = 0;
+////  if(curr_cdh->IsHead() == false) {
+////    // This is not head, so needs to bring its mailbox from head
+////    // Check leaf's status first
+//////    MPI_Win_start(task_group, 0, mailbox);
+////    MPI_Win_fence(0, mailbox);
+////    MPI_Get(&myEvent, 1, MPI_INT, curr_cdh->node_id_.head(), curr_cdh->node_id_.task_in_color(), 1, MPI_INT, mailbox);
+////    dbg << "Complete event # " << myEvent << endl;
+////    MPI_Win_fence(0, mailbox);
+////    
+//////    MPI_Win_complete(mailbox);
+////
+//////    dbg << "Task "<< myTaskID <<" (" << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ 
+//////        << ") got an error #" << myEvent << " (";
+//////    CDEventHandleT ret_handled = HandleEvent(&myEvent);
+//////
+//////    switch( ret_handled ) {
+//////      case CDEventHandleT::kEventNone : 
+//////        // no event
+//////        break;
+//////      case CDEventHandleT::kEventResolved :
+//////        // There was an event, but resolved
+//////
+//////        //(*pendingFlag_)--;
+//////        handled_event_count--;
+//////        break;
+//////      case CDEventHandleT::kEventPending :
+//////        // There was an event, but could not resolved.
+//////        // Escalation required
+//////        break;
+//////      default :
+//////        break;
+//////    }
+//////    dbg << "),\t\tResolved? : " << ret_handled << endl;
+////
+////  }
+////  else {
+////    // This task is head
+//////    MPI_Win_post(task_group, 0, mailbox);
+////    MPI_Win_fence(0, mailbox);
+////    dbg << "Epoch for getting mailbox for each task " << curr_cdh->IsHead() << ", node id: " << curr_cdh->node_id_ << endl;
+////    myEvent = (curr_cdh->ptr_cd()->event_flag())[curr_cdh->node_id_.task_in_color()];
+////    MPI_Win_fence(0, mailbox);
+//////    MPI_Win_wait(mailbox);
+////  }
+////
+////  dbg << "Task "<< myTaskID <<" (" << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ 
+////      << "), Error #" << myEvent << "\t";
+////  CDEventHandleT ret_handled = HandleEvent(&myEvent);
+////
+////  switch( ret_handled ) {
+////    case CDEventHandleT::kEventNone : 
+////      // no event
+////      break;
+////    case CDEventHandleT::kEventResolved :
+////      // There was an event, but resolved
+////
+////      //(*pendingFlag_)--;
+////      handled_event_count--;
+////      break;
+////    case CDEventHandleT::kEventPending :
+////      // There was an event, but could not resolved.
+////      // Escalation required
+////      break;
+////    default :
+////      break;
+////  }
+////  dbg << "\tResolved? : " << ret_handled << endl;
+////
+////  return ret;
+////}
+////
+////
+////CDEventHandleT CDHandle::HandleEvent(CDFlagT *p_event, int idx)
+////{
+////  CDEventHandleT ret = CDEventHandleT::kEventResolved;
+////  int handle_ret = 0;
+////  CDFlagT event = *p_event;
+////  if( CHECK_NO_EVENT(event) ) {
+////    dbg << "CD Event kNoEvent\t\t\t";
+////  }
+////  else {
+////    int handled_event_count=0;
+////    if( CHECK_EVENT(event, kErrorOccurred) ) {
+////
+////      ptr_cd_->HandleErrorOccurred(this);
+////
+////      handled_event_count++;
+////    }
+////
+////    if( CHECK_EVENT(event, kEntrySearch) ) {
+////      if(IsHead()) {
+////        cout << "[event: entry search] This is event for head CD.";
+//////        assert(0);
+////      }
+////#if _FIX
+////      ENTRY_TAG_T recvBuf[2] = {0,0};
+////      bool entry_searched = false; 
+////      if( IsHead() ) {
+////        entry_searched = ptr_cd()->HandleEntrySearch(this, idx, recvBuf);
+////      }
+////      else {
+////        
+//////        ptr_head_cd()->HandleEntrySearch(this, idx, recvBuf);
+////      }
+////      if(entry_searched == false) {
+////        CDHandle *parent = CDPath::GetParentCD();
+////        CDEventT entry_search = kEntrySearch;
+////        parent->SetMailBox(entry_search);
+////        MPI_Isend(recvBuf, 
+////                  2, 
+////                  MPI_UNSIGNED_LONG_LONG,
+////                  parent->node_id().head(), 
+////                  parent->ptr_cd()->GetCDID().GenMsgTag(MSG_TAG_ENTRY_TAG), 
+////                  parent->node_id().color(),
+////                  &(parent->ptr_cd()->entry_request_req_[recvBuf[0]].req_));
+////      }
+////#endif
+////      // Search Entry
+////      handled_event_count++;
+////    }
+////
+////    if( CHECK_EVENT(event, kEntrySend) ) {
+////
+////#if _FIX
+////      if(!IsHead()) {
+////        cout << "[event: entry send] This is event for non-head CD.";
+//////        assert(0);
+////      }
+////      ptr_cd_->HandleEntrySend(this);
+////#endif
+////      dbg << "CD Event kEntrySend\t\t\t";
+////      handled_event_count++;
+////      
+////    }
+////
+////    if( CHECK_EVENT(event, kAllPause) ) {
+////      cout << "What?? " << node_id_ << endl;
+////      ptr_cd_->HandleAllPause(this);
+////
+////      handled_event_count++;
+////
+////    }
+////
+////    if( CHECK_EVENT(event, kAllResume) ) {
+////
+////      ptr_cd_->HandleAllResume(this);
+////
+////      handled_event_count++;
+////
+////    }
+////
+////    if( CHECK_EVENT(event, kAllReexecute) ) {
+////
+////      ptr_cd_->HandleAllReexecute(this);
+////
+////      handled_event_count++;
+////
+////    }
+////    
+////    (*pendingFlag_) -= handled_event_count;
+////  } 
+////  return ret;
+////}
+////
+////
+////int CDHandle::SetMailBox(CDEventT &event)
+////{
+////  dbg << "\n\n=================== Set Mail Box Start ==========================\n" << endl;
+////  dbg << "\nSetMailBox " << myTaskID << ", event : " << event << ", Is it Head? "<< IsHead() <<endl;
+////  int ret=0;
+////  int val = 1;
+////  if(node_id_.size() > 1) {
+////    dbg << "KL : [SetMailBox] size is " << node_id_.size() << ". Check mailbox at the upper level." << endl;
+////  
+////    MPI_Win_fence(0, pendingWindow_);
+////    if(event != CDEventT::kNoEvent) {
+//////      MPI_Win_fence(0, pendingWindow_);
+////      dbg << "Set CD Event kErrorOccurred. Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< endl;
+////      // Increment pending request count at the target task (requestee)
+////      MPI_Accumulate(&val, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, MPI_SUM, pendingWindow_);
+////      dbg << "MPI Accumulate done" << endl; getchar();
+//////      MPI_Win_fence(0, pendingWindow_);
+////    }
+////    MPI_Win_fence(0, pendingWindow_);
+////
+////    CDMailBoxT &mailbox = ptr_cd()->mailbox_;  
+////    MPI_Win_fence(0, mailbox);
+////    if(event != CDEventT::kNoEvent) {
+////      // Inform the type of event to be requested
+////      MPI_Accumulate(&event, 1, MPI_INT, node_id_.head(), node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
+//////    MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
+////      dbg << "MPI_Put done" << endl; getchar();
+////    }
+////  
+//////    switch(event) {
+//////      case CDEventT::kNoEvent :
+//////        dbg << "Set CD Event kNoEvent" << endl;
+//////        break;
+//////      case CDEventT::kErrorOccurred :
+//////        // Inform the type of event to be requested
+//////        MPI_Accumulate(&event, 1, MPI_INT, node_id_.head(), node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
+////////        MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
+//////        dbg << "MPI_Put done" << endl; getchar();
+//////        break;
+//////      case CDEventT::kAllPause :
+//////        dbg << "Set CD Event kAllPause" << endl;
+//////  
+//////        break;
+//////      case CDEventT::kAllResume :
+//////  
+//////        break;
+//////      case CDEventT::kEntrySearch :
+//////  
+//////        break;
+//////      case CDEventT::kEntrySend :
+//////  
+//////        break;
+//////      case CDEventT::kAllReexecute :
+//////  
+//////        break;
+//////      default:
+//////  
+//////        break;
+//////    }
+////  
+////    MPI_Win_fence(0, mailbox);
+////  
+////  }
+////  else {
+////    // This is the leaf that has just single task in a CD
+////    dbg << "KL : [SetMailBox Leaf and have 1 task] size is " << node_id_.size() << ". Check mailbox at the upper level." << endl;
+////    CDHandle *curr_cdh = this;
+////
+////  	while( curr_cdh->node_id_.size()==1 ) {
+////      if(curr_cdh == CDPath::GetRootCD()) {
+////        dbg << "[SetMailBox] there is a single task in the root CD" << endl;
+////        assert(0);
+////      }
+////      dbg << "[SetMailBox|Searching for CD Level having non-single task] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
+////      // If current CD is Root CD and GetParentCD is called, it returns NULL
+////  		curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
+////  	} 
+////    dbg << "[SetMailBox] " << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << " at level : " << curr_cdh->ptr_cd()->GetCDID().level()
+////        << "\nOriginal CD " << ptr_cd()->GetCDName() << " / " << node_id_ << " at level : " << ptr_cd()->GetCDID().level() << "\n" << endl;
+////
+////
+////    int parent_head_id = curr_cdh->node_id().head();
+////    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, parent_head_id, 0, curr_cdh->pendingWindow_);
+////    if(event != CDEventT::kNoEvent) {
+////      dbg << "Set CD Event kErrorOccurred. Level : " << ptr_cd()->GetCDID().level() <<" CD Name : " << ptr_cd()->GetCDName()<< endl;
+////      // Increment pending request count at the target task (requestee)
+////      MPI_Accumulate(&val, 1, MPI_INT, parent_head_id, 0, 1, MPI_INT, MPI_SUM, curr_cdh->pendingWindow_);
+////      dbg << "MPI Accumulate done" << endl; getchar();
+////    }
+////    MPI_Win_unlock(parent_head_id, curr_cdh->pendingWindow_);
+////
+////
+////    CDMailBoxT &mailbox = curr_cdh->ptr_cd()->mailbox_;
+////
+////    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, parent_head_id, 0, mailbox);
+////    // Inform the type of event to be requested
+////    dbg << "Set event start" << endl; getchar();
+////    if(event != CDEventT::kNoEvent) {
+////      MPI_Accumulate(&event, 1, MPI_INT, parent_head_id, curr_cdh->node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
+//////    MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
+////    }
+////    dbg << "MPI_Accumulate done" << endl; getchar();
+////
+//////    switch(event) {
+//////      case CDEventT::kNoEvent :
+//////        dbg << "Set CD Event kNoEvent" << endl;
+//////        break;
+//////      case CDEventT::kErrorOccurred :
+//////        // Inform the type of event to be requested
+//////        dbg << "Set event start" << endl; getchar();
+//////        MPI_Accumulate(&event, 1, MPI_INT, parent_head_id, curr_cdh->node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
+////////        MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
+//////        dbg << "MPI_Accumulate done" << endl; getchar();
+//////        break;
+//////      case CDEventT::kAllPause :
+//////        dbg << "Set CD Event kAllPause" << endl;
+//////  
+//////        break;
+//////      case CDEventT::kAllResume :
+//////  
+//////        break;
+//////      case CDEventT::kEntrySearch :
+//////  
+//////        break;
+//////      case CDEventT::kEntrySend :
+//////  
+//////        break;
+//////      case CDEventT::kAllReexecute :
+//////  
+//////        break;
+//////      default:
+//////  
+//////        break;
+//////    }
+////    MPI_Win_unlock(parent_head_id, mailbox);
+////  }
+////  dbg << "\n================================================================\n" << endl;
+////
+////  return ret;
+////}
+////
+////
+////char *CDHandle::GenTag(const char* tag)
+////{
+////  Tag tag_gen;
+////  CDNameT cd_name = ptr_cd()->GetCDName();
+////  tag_gen << tag << node_id_.task_in_color_ <<'-'<<cd_name.level()<<'-'<<cd_name.rank_in_level();
+//////  cout << const_cast<char*>(tag_gen.str().c_str()) << endl; getchar();
+////  return const_cast<char*>(tag_gen.str().c_str());
+////}
 /*
 ucontext_t* CDHandle::context()
 {

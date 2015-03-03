@@ -49,42 +49,62 @@ class Path {
 public:
 	std::string _path_SSD;
 	std::string _path_HDD;
+  std::string _path_PFS;
 public:
 	Path() {
 		_path_SSD = "./SSD/";
 		_path_HDD = "./HDD/";
+    _path_PFS = "./PFS/";
 	}
-	Path(std::string ssd, std::string hdd) {
+	Path(std::string ssd, std::string hdd, std::string pfs) {
 		_path_SSD = ssd;
 		_path_HDD = hdd;
+    _path_PFS = pfs;
 	}
 	void SetSSDPath(std::string path_SSD) { _path_SSD = path_SSD; }
 	void SetHDDPath(std::string path_HDD) { _path_HDD = path_HDD; }
+  void SetPFSPath(std::string path_PFS) { _path_PFS = path_PFS; }
+
 	std::string GetSSDPath(void)          { return _path_SSD;     }
 	std::string GetHDDPath(void)          { return _path_HDD;     }
+  std::string GetPFSPath(void)          { return _path_PFS;     }
 	Path& operator=(const Path& that) {
 		_path_SSD = that._path_SSD;
 		_path_HDD = that._path_HDD;
+    _path_PFS = that._path_PFS;
 		return *this;
 	}
 };
 
-class CDLogHandle {
+
+class CDLogHandle 
+{
 public:
   CDLog HDDlog;
   CDLog SSDlog;
-  bool _OpenHDD, _OpenSSD;
+  CDLog PFSlog;//This is new => I think this might be important too.
+
+  bool _OpenHDD, _OpenSSD, _OpenPFS;//PFS is new
+
   Path path;
+
 public:
-  CDLogHandle() : _OpenHDD(false), _OpenSSD(false), path() {}
+  CDLogHandle() : _OpenHDD(false), _OpenSSD(false), _OpenPFS(false), path() {}
   ~CDLogHandle() {}
+
   void InitOpenHDD() { _OpenHDD = false; }
   void InitOpenSSD() { _OpenSSD = false; }
+  void InitOpenPFS() { _OpenPFS = false; }
+
   bool isOpenHDD()   { return _OpenHDD;  }
   bool isOpenSSD()   { return _OpenSSD;  }
+  bool isOpenPFS()   { return _OpenPFS;  }
+
   void OpenHDD();     
   void OpenSSD();     
+  void OpenPFS();
 };
+
 
 } // namespace cd ends
 #endif

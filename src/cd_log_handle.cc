@@ -65,3 +65,26 @@ void CDLogHandle::OpenSSD(void)
     _OpenSSD = true;  
   }
 }
+
+
+void CDLogHandle::OpenPFS( void )
+{
+  //checking for the head task => only head task should create the directory.
+  //if( IsHead() )
+  //{
+    char cmd[ 30 ];
+    sprintf(cmd, "mkdir -p %s", path.GetPFSPath().c_str());
+
+    int ret = system( cmd );
+
+    if( ret == -1 ) 
+    {
+      ERROR_MESSAGE("Failed to create a directory for preservation data (PFS)");
+      assert(0);
+    }
+    else 
+    {
+      _OpenPFS = true;  
+    }
+//  }
+}

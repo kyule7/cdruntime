@@ -66,7 +66,7 @@ using namespace cd;
 class cd::CDHandle {
   friend class cd::RegenObject;
   friend class cd::CD;
-
+  friend class cd::CDEntry;
   private:
     CD*    ptr_cd_;
     NodeID node_id_;
@@ -76,13 +76,13 @@ class cd::CDHandle {
 
 
   public:
-#if _MPI_VER
-#if _KL
-    // This flag is unique for each process. 
-    static CDFlagT *pendingFlag_;
-    CDMailBoxT pendingWindow_;
-#endif
-#endif
+//#if _MPI_VER
+//#if _KL
+//    // This flag is unique for each process. 
+//    static CDFlagT *pendingFlag_;
+//    CDMailBoxT pendingWindow_;
+//#endif
+//#endif
 
 #if _PROFILER 
     Profiler* profiler_;
@@ -269,12 +269,13 @@ class cd::CDHandle {
     // Select Head among task group that are corresponding to one CD.
     void SetHead(NodeID& new_node_id);
 
-    int CheckMailBox(void);
-    int InternalCheckMailBox(void);
-    int SetMailBox(CDEventT &event);
-    CDEventHandleT HandleEvent(CDFlagT *event);
-    int ReadMailBox(void);
-    int ReadMailBoxFromRemote(void);
+    CDErrT CheckMailBox(void);
+    CDErrT SetMailBox(CDEventT &event);
+//    int InternalCheckMailBox(void);
+//    int SetMailBox(CDEventT &event);
+//    CDEventHandleT HandleEvent(CDFlagT *event, int idx=0);
+//    int ReadMailBox(void);
+//    int ReadMailBoxFromRemote(void);
 
     // Communication routines in CD runtime
     //void CollectHeadInfoAndEntry(void); 

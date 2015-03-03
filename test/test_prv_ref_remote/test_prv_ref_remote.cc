@@ -36,6 +36,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdio.h>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <mpi.h>
 #include "cds.h"
 
@@ -68,8 +69,8 @@ static __inline__ long long getCounter(void)
 int test_preservation_via_ref_remote()
 {
 
-  int a[4]= {3,0,};
-  int b[8]= {1,0,};
+  int a[3]= {3,5,0};
+  int b[8]= {1,2,3,4,5,6,7,8};
   int c[8]= {5,};
   int d[16]= {9,8,7,6,5,4,3,2,1,};
   int test_results[8] = {0,};
@@ -101,16 +102,53 @@ int test_preservation_via_ref_remote()
     case 7 : a[2] = 17;
     default : a[2] = 0;
   }
-  child_lv1->Preserve(a, sizeof(a), kCopy | kShared, child_lv1->GenTag("a"));
-  child_lv1->Preserve(b, sizeof(b), kCopy | kShared, child_lv1->GenTag("b"));
+  child_lv1->Preserve(a, sizeof(a), kCopy | kShared, (string("a-")+to_string(mr)).c_str());
+  child_lv1->Preserve(b, sizeof(b), kCopy | kShared, (string("b-")+to_string(mr)).c_str());
+//  child_lv1->Preserve(a, sizeof(a), kCopy, "a");
+//  child_lv1->Preserve(b, sizeof(b), kCopy, "b");
+
+  // Corrupt array a and b
+  a[0] = 123;
+  a[1] = 456;
+  a[2] = 789;
+  b[0] = 9;
+  b[1] = 8;
+  b[2] = 7;
+  b[3] = 6;
+  b[4] = 5;
+  b[5] = 4;
+  b[6] = 3;
+  b[7] = 2;
+
+  int a_from_2[3] = {3,5,12};
+
+  if(mr == 0) a_from_2[2] = 11;
+  if(mr == 1) a_from_2[2] = 12;
+  if(mr == 2) a_from_2[2] = 13;
+  if(mr == 3) a_from_2[2] = 14;
+  if(mr == 4) a_from_2[2] = 15;
+  if(mr == 5) a_from_2[2] = 16;
+  if(mr == 6) a_from_2[2] = 17;
+  if(mr == 7) a_from_2[2] = 10;
 
   CDHandle* child_lv2=child_lv1->Create(CDPath::GetCurrentCD()->GetNodeID(), LV2, "CD2", kStrict, 0, 0, &err);
+
   CD_Begin(child_lv2);
+
   dbg2 << "child level 2-------------------------------------\n" << endl;
   dbg << "\n\n\nnode id check : "<< CDPath::GetCurrentCD()->node_id() << "\n\n\n" << endl;
 
-  child_lv2->Preserve(a, sizeof(a), kRef, "a", "a");
-  child_lv2->Preserve(b, sizeof(b), kRef, "b", "b");
+  child_lv2->Preserve(a, sizeof(a), kRef, "a_lv2", (string("a")+to_string(mr)).c_str()); // local
+  child_lv2->Preserve(b, sizeof(b), kRef, "b_lv2", (string("b")+to_string(mr)).c_str()); // local
+  if(mr == 0) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-1"); // remote
+  if(mr == 1) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-2"); // remote
+  if(mr == 2) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-3"); // remote
+  if(mr == 3) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-4"); // remote
+  if(mr == 4) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-5"); // remote
+  if(mr == 5) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-6"); // remote
+  if(mr == 6) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-7"); // remote
+  if(mr == 7) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-0"); // remote
+
   //child->Preserve((char *)&b,8* sizeof(int));
   dbg2 << "sizeof a : \t" << sizeof(a) << endl; //getchar();
   dbg2 << "sizeof b : \t" << sizeof(b) << endl; //getchar();
@@ -118,7 +156,18 @@ int test_preservation_via_ref_remote()
   dbg2 << "Before Modify Current value of a[0]="<< a[0] << "a[1]=" << a[1] << endl;
   dbg2 << "Before Modify Current value of b[0]="<< b[0] << "b[1]=" << b[1] << endl;
 
-  if( num_reexecution == 1) {
+
+  a[0] =2;
+  b[0] =5;
+  dbg2 << "After Modify Current value of a[0]=" << a[0] <<endl;
+  dbg2 << "After Modify Current value of b[0]=" << b[0] <<endl;
+
+  if( num_reexecution == 0 ) {
+    cout <<"\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n" << endl;
+    num_reexecution = 1;
+	  child_lv2->CDAssert(false);
+  }
+  else if( num_reexecution == 1) {
     if( a[0] == 3 ) {
       test_results[0] = 1;
     }
@@ -134,27 +183,17 @@ int test_preservation_via_ref_remote()
     }
   }
 
-  a[0] =2;
-  b[0] =5;
-  dbg2 << "After Modify Current value of a[0]=" << a[0] <<endl;
-  dbg2 << "After Modify Current value of b[0]=" << b[0] <<endl;
-
-//  if( num_reexecution == 0) {
-//    dbg2 <<"\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n" << endl;
-//    num_reexecution = 1;
-//    child->CDAssert(false);
-//  }
   dbg2 << "\n\n--------------Corruption for c begins ----------------------------\n\n" << endl;
   // this point is to test whether execution mode becomes kExecution from this point, 
   // because before this preservation is called it should be in kReexecution mode
   child_lv2->Preserve(c, sizeof(c), kCopy, "c");
-  dbg2 << "sizeof c : " << sizeof(c) << endl; //getchar();
+//  dbg2 << "sizeof c : " << sizeof(c) << endl; //getchar();
 
-  if( num_reexecution == 2)  {
-    if( c[0] == 5 ) {
-      test_results[4] = 1;
-    }
-  }
+//  if( num_reexecution == 2)  {
+//    if( c[0] == 5 ) {
+//      test_results[4] = 1;
+//    }
+//  }
 
   // corrupt c[0]
   dbg2 << "Before modifying current value of c[0] : " << c[0] << endl;
@@ -164,7 +203,7 @@ int test_preservation_via_ref_remote()
 //  if(num_reexecution == 1) {
 //    dbg << "\nis now Second error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n" << endl;
 //    num_reexecution = 2;
-//    child->CDAssert(false);
+//    child_lv2->CDAssert(false);
 //  }
 
   dbg2 << "CD Complete\n" << endl;
@@ -173,8 +212,8 @@ int test_preservation_via_ref_remote()
   CDHandle* child_lv3=child_lv2->Create(CDPath::GetCurrentCD()->GetNodeID(), LV3, "CD3", kStrict, 0, 0, &err);
   CD_Begin(child_lv3);
   dbg2 << "child level 3-------------------------------------\n" << endl;
-  child_lv3->Preserve(a, sizeof(a), kRef, "child_a", "a");
-  child_lv3->Preserve(b, sizeof(b), kRef, "child_b", "b");
+  child_lv3->Preserve(a, sizeof(a), kRef, "child_a", (string("a")+to_string(mr)).c_str());
+  child_lv3->Preserve(b, sizeof(b), kRef, "child_b", (string("b")+to_string(mr)).c_str());
   child_lv3->Preserve(c, sizeof(b), kRef, "child_c", "c");
   child_lv3->Preserve(d, sizeof(d), kCopy, "d");
 
@@ -216,7 +255,7 @@ int test_preservation_via_ref_remote()
 }
 
 
-
+/*
 
 // Test basic via reference scheme.
 int test_preservation_via_ref_remote_2()
@@ -264,7 +303,7 @@ int test_preservation_via_ref_remote_2()
   if( test_result == 1 ) return kOK;
   return kError;
 }
-
+*/
 
 
 

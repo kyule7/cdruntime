@@ -46,10 +46,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdlib.h>
 #include <assert.h>
 #include "unixlog.h"
-
+#include "event_handler.h"
 class cd::CDEntry : public cd::Serializable
 {
   friend class cd::CD;
+  friend class cd::HeadCD;
+  friend class cd::HandleEntrySend;
+  friend class cd::HandleEntrySearch;
   friend std::ostream& operator<<(std::ostream& str, const CDEntry& cd_entry);
   private:
     enum { 
@@ -61,7 +64,7 @@ class cd::CDEntry : public cd::Serializable
     };
     // need a unique name to do via reference, 
     // this variable can be empty string when this is not needed
-    uint64_t    entry_tag_;    
+    ENTRY_TAG_T entry_tag_;    
     cd::CD*     ptr_cd_;
     DataHandle  src_data_;
     DataHandle  dst_data_;
@@ -69,12 +72,12 @@ class cd::CDEntry : public cd::Serializable
 //		struct tsn_lsn_struct lsn, durable_lsn;
 
   public:
-    enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError};
+    enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError, kEntrySearchRemote};
     
     CDEntry(){}
-    CDEntry(const DataHandle& src_data, 
-            const DataHandle& dst_data, 
-            const std::string& entry_name) 
+    CDEntry(const DataHandle  &src_data, 
+            const DataHandle  &dst_data, 
+            const std::string &entry_name) 
     {
       src_data_ = src_data;
       dst_data_ = dst_data;
@@ -106,6 +109,7 @@ class cd::CDEntry : public cd::Serializable
 
   public:
 		std::string name() const { return tag2str[entry_tag_]; }
+		ENTRY_TAG_T name_tag() const { return entry_tag_; }
     bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }
 
     CDEntry& operator=(const CDEntry& that) {
@@ -135,6 +139,8 @@ class cd::CDEntry : public cd::Serializable
     CDEntryErrT SaveFile(std::string base, 
                          bool open, 
                          struct tsn_log_struct *log);
+    // PFS
+	  CDEntryErrT SavePFS( struct tsn_log_struct *log );
     CDEntryErrT Save(void);
 
     void CloseFile(struct tsn_log_struct *log);
@@ -148,6 +154,7 @@ class cd::CDEntry : public cd::Serializable
 
     CDEntryErrT Restore(bool open, struct tsn_log_struct *log);
     CDEntryErrT Restore(void);
+    CDEntryErrT InternalRestore(DataHandle *buffer);
 
     void *Serialize(uint32_t &len_in_bytes) 
     {
@@ -222,7 +229,8 @@ class cd::CDEntry : public cd::Serializable
   
 
   private:
-    DataHandle* GetBuffer(void);
+//    DataHandle* GetBuffer(void);
+    void RequestEntrySearch(void);
 };
 
 #endif

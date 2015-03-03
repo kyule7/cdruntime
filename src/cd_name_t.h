@@ -38,6 +38,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define _CD_NAME_T_H
 
 #include <ostream>
+#include "cd_global.h"
 
 using std::endl;
 
@@ -59,10 +60,11 @@ public:
   uint32_t level(void)         const { return level_; }
   uint32_t rank_in_level(void) const { return rank_in_level_; }
   uint32_t size(void)          const { return size_; }
-  CDNameT(const CDNameT& parent_cdname, int num_children, int color)
+  CDNameT(const CDNameT &parent_cdname, int num_children, int color)
   {
     level_         = parent_cdname.level() + 1;
     rank_in_level_ = num_children*(parent_cdname.rank_in_level()) + color;
+    std::cout << "rank_in_level created : " << rank_in_level_ << ", numchild: " << num_children << ", parent rank : " << parent_cdname.rank_in_level() << ", color : "<< color << std::endl;
     size_          = num_children;
   }
   CDNameT(const CDNameT& that)
@@ -97,7 +99,7 @@ public:
     return (level_ == that.level()) && (rank_in_level_ == that.rank_in_level()) && (size_ == that.size());
   }
 
-  int GetCDName(void) const { 
+  int CDTag(void) const { 
     return ((level_ << 16) | rank_in_level_);
   }
 };

@@ -43,6 +43,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_log_handle.h"
 #include "recover_object.h"
 #include "serializable.h"
+#include "event_handler.h"
+#include "cd_pfs.h"
+
 #if _WORK
 #include "transaction.h"
 #endif
@@ -64,12 +67,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 using namespace cd;
 
+
 /// TODO Implement serialize and deserialize of this instance
 class cd::CD : public cd::Serializable {
     /// The friends of CD class
     friend class cd::RegenObject;   
     friend class cd::CDEntry;  
     friend class cd::RecoverObject;
+    friend class cd::HandleAllReexecute;
+    friend class cd::HandleEntrySearch;
+    friend class cd::HandleEntrySend;
+    friend CDEntry *CDHandle::InternalGetEntry(std::string entry_name);
     enum { 
       CD_PACKER_NAME=0,
       CD_PACKER_CDID,
@@ -106,7 +114,12 @@ class cd::CD : public cd::Serializable {
   public:
 #if _MPI_VER
 #if _KL
+    // This flag is unique for each process. 
+    static CDFlagT *pendingFlag_;
+    CDMailBoxT pendingWindow_;
+
     // Every mailbox resides in head 
+    CDFlagT *event_flag_;
     CDMailBoxT mailbox_;
 #endif
 #endif
@@ -132,6 +145,8 @@ class cd::CD : public cd::Serializable {
     CDExecMode      cd_exec_mode_;
     int             num_reexecution_;
 
+    bool need_reexec;
+
     /// Detection-related meta data
     // bit vector that will mask error types that can be handled in this CD
     uint64_t        sys_detect_bit_vector_;
@@ -152,7 +167,11 @@ class cd::CD : public cd::Serializable {
     /// entry_directory_ is a super set of entry_directory_map_
     /// entry_directory_map_ is for preservation via reference
     /// If ref_name is passed by preservation call, it means it allows this entry to be referred to by children CDs.
-    std::list<CDEntry> entry_directory_; 
+    std::list<CDEntry> entry_directory_;
+
+    std::map<ENTRY_TAG_T, CommInfo> entry_request_req_;
+    std::map<ENTRY_TAG_T, CommInfo> entry_send_req_;
+    std::map<ENTRY_TAG_T, CommInfo> entry_recv_req_;
     
     // Only CDEntries that has refname will be pushed into this data structure for later quick search.
     std::map<uint64_t, CDEntry*> entry_directory_map_;   
@@ -160,6 +179,10 @@ class cd::CD : public cd::Serializable {
     // These are entry directory for preservation via reference 
     // in the case that the preserved copy resides in a remote node. 
     std::map<uint64_t, CDEntry*> remote_entry_directory_map_;   
+
+
+    
+    std::vector<CDEventHandler *> cd_event_;
 /*  
 09.23.2014 
 It is not complete yet. I am thinking of some way to implement like cd_advance semantic which should allow
@@ -192,6 +215,8 @@ update the preserved data.
     // handler for log-related things
     CDLogHandle log_handle_;
 
+    // PFS
+    CD_Parallel_IO_Manager *Par_IO_Man;
 
   public:
     CD();
@@ -212,8 +237,6 @@ update the preserved data.
                     CDType cd_type, 
                     uint64_t sys_bit_vector);
     void Init(void);
-  
-    CDID GetCDID(void) { return cd_id_; }
 
     virtual CDHandle* Create(CDHandle* parent, 
                      const char* name, 
@@ -281,24 +304,48 @@ update the preserved data.
   
     CDErrT Assert(bool test);
   
-    CDErrT Reexecute(void);
-  
-    virtual CDFlagT *event_flag();
-    // Utilities -----------------------------------------------------
+    virtual CDErrT Reexecute(void);
+ 
+    CDInternalErrT RegisterDetection(uint32_t system_name_mask, 
+                                     uint32_t system_loc_mask);
 
-    // GetPlaceToPreserve() decides actual medium to preserve data.
-    // TODO Currently, it preserves in memory for everything.
-    // we can change it to preserve file by flag when we compile cd runtime. (with MEMORY=0)
-    // We need some good strategy to decide the most efficient medium of the CD for preservation.
-    PrvMediumT GetPlaceToPreserve(void);
+    CDInternalErrT RegisterRecovery(uint32_t error_name_mask, 
+                                    uint32_t error_loc_mask, 
+                                    RecoverObject *recover_object=0);
+  
+    CDInternalErrT RegisterRecovery(uint32_t error_name_mask, 
+                                    uint32_t error_loc_mask, 
+                                    CDErrT(*recovery_func)(std::vector< SysErrT > errors)=0);
+
+    CDID     &GetCDID(void)       { return cd_id_; }
+    CDNameT  &GetCDName(void)     { return cd_id_.cd_name_; }
+    NodeID   &GetNodeID(void)     { return cd_id_.node_id_; }
+    uint32_t level(void)         const { return cd_id_.cd_name_.level(); }
+    uint32_t rank_in_level(void) const { return cd_id_.cd_name_.rank_in_level(); }
+    uint32_t sibling_num(void)   const { return cd_id_.cd_name_.size(); }
+    ColorT   color(void)         const { return cd_id_.node_id_.color(); }
+    int      task_in_color(void) const { return cd_id_.node_id_.task_in_color(); }
+    int      head(void)          const { return cd_id_.node_id_.head(); }
+    int      task_size(void)     const { return cd_id_.node_id_.size(); }
+    bool     IsHead(void)        const { return cd_id_.IsHead(); }
 
     // These should be virtual because I am going to use polymorphism for those methods.
     virtual CDErrT Stop(cd::CDHandle* cdh=NULL);
     virtual CDErrT Resume(void);
     virtual CDErrT AddChild(cd::CDHandle* cd_child);
     virtual CDErrT RemoveChild(cd::CDHandle* cd_child);
+    virtual CDFlagT *event_flag();
 
-
+  protected:
+ 
+    void Recover(void);
+ 
+    // Utilities -----------------------------------------------------
+    // GetPlaceToPreserve() decides actual medium to preserve data.
+    // TODO Currently, it preserves in memory for everything.
+    // we can change it to preserve file by flag when we compile cd runtime. (with MEMORY=0)
+    // We need some good strategy to decide the most efficient medium of the CD for preservation.
+    PrvMediumT GetPlaceToPreserve(void);
     static CDInternalErrT InternalCreate(CDHandle* parent, 
                      const char* name, 
                      const CDID& child_cd_id, 
@@ -320,8 +367,12 @@ update the preserved data.
     // so serializing entire CDEntry class does not make sense. 
 
     // Search CDEntry with entry_name given. It is needed when its children preserve data via reference and search through its ancestors. If it cannot find in current CD object, it outputs NULL 
-    CDEntry* InternalGetEntry(std::string entry_name); 
-  
+    CDEntry *InternalGetEntry(ENTRY_TAG_T entry_name); 
+ 
+//    CDEntry *SearchEntry(void);
+    CDEntry *SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level);
+    void AddEntryToSend(const ENTRY_TAG_T &entry_tag_to_search);
+ 
     // This comment is previous one, so may be confusing for current design. 
     //
     // When Restore is called, it should be copied the only part ... smartly. 
@@ -338,34 +389,56 @@ update the preserved data.
     // Actual malloced data or created file for the preservation is deleted in this routine. 
     void DeleteEntryDirectory(void);
     
-    CDInternalErrT RegisterDetection(uint32_t system_name_mask, 
-                                     uint32_t system_loc_mask);
+    // Test the completion of internal-CD communications
+    virtual bool TestComm(bool test_untile_done=false);
+//    virtual CDEventHandleT HandleEvent(CDFlagT *p_event, int idx=0);
+    CDEventHandleT HandleEvent(CDFlagT &event);
 
-    CDInternalErrT RegisterRecovery(uint32_t error_name_mask, 
-                                    uint32_t error_loc_mask, 
-                                    RecoverObject *recover_object=0);
-  
-    CDInternalErrT RegisterRecovery(uint32_t error_name_mask, 
-                                    uint32_t error_loc_mask, 
-                                    CDErrT(*recovery_func)(std::vector< SysErrT > errors)=0);
-
-    
-    CDNameT& GetCDName(void)  { return cd_id_.cd_name_; }
-
-    bool IsHead(void) const { 
-      return cd_id_.IsHead();
-    }
+    CDInternalErrT InternalCheckMailBox(void);
+    virtual CDInternalErrT ReadMailBox(void);
+//    CDInternalErrT ReadMailBoxFromRemote(void);
+    virtual CDInternalErrT InvokeErrorHandler(void);
+  public:
+    CDErrT CheckMailBox(void);
+    CDErrT SetMailBox(CDEventT &event);
 
 //    virtual void *SerializeEntryDir(uint32_t& entry_count); 
 //    virtual std::vector<CDEntry> DeserializeEntryDir(void *object);
+//    void DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_dir, void *object);
+
     void *SerializeRemoteEntryDir(uint32_t& len_in_byte);
-    void DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_dir, void *object);
+    void DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
 
-
-    virtual void HandleErrorOccurred(CDHandle *cdh);
-    virtual void HandleAllPause(CDHandle *cdh);
-    virtual void HandleAllResume(CDHandle *cdh);
-    virtual void HandleAllReexecute(CDHandle *cdh);
+//    class EventHandler {
+//    protected:
+//      CDFlagT *event_flag_;
+//    public:
+//      EventHandler(CDFlagT *event_flag) : event_flag_(event_flag) {}
+//      virtual ~EventHandler(void){}
+//      virtual void operator()(void) {}
+//    };
+//    class HandleAllPause : public EventHandler {
+//    public:
+//      HandleAllPause(CDFlagT *event_flag) : EventHandler(event_flag) {}
+//      ~HandleAllPause(){}
+//      virtual void operator()(void);
+//    };
+//    class HandleAllReexecute : public EventHandler {
+//    public:
+//      HandleAllReexecute(CDFlagT *event_flag) : EventHandler(event_flag) {}
+//      ~HandleAllReexecute(){}
+//      virtual void operator()(void);
+//    };
+//    class HandleEntrySend : public EventHandler {
+//    public:
+//      HandleEntrySend(CDFlagT *event_flag) : EventHandler(event_flag) {}
+//      ~HandleEntrySend(){}
+//      virtual void operator()(void);
+//    };
+//    void HandleAllPause(void);
+//    void HandleAllReexecute(void);
+//    void HandleEntrySend(void);
+//    void RequestEntrySearch(void);
 
 
     virtual void *Serialize(uint32_t& len_in_bytes)
@@ -382,6 +455,7 @@ update the preserved data.
 
 
 class cd::HeadCD : public cd::CD {
+  friend class cd::HandleEntrySearch;
   public:
     /// Link information of CD hierarchy   
     /// This is a kind of CD object but represents the corresponding task group of each CD
@@ -397,10 +471,15 @@ class cd::HeadCD : public cd::CD {
     std::list<cd::CDHandle*> cd_children_;
     cd::CDHandle*            cd_parent_;
 
+    std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     // event related
+
+    std::vector<HeadCDEventHandler *> headcd_event_;
+    bool error_occurred;
+//    bool need_reexec;
 #if _MPI_VER
 #if _KL
-    CDFlagT *event_flag_;
+//    CDFlagT *event_flag_;
 
 //    CDFlagT *family_event_flag_;
 //    CDMailBoxT *family_mailbox_;
@@ -426,6 +505,7 @@ class cd::HeadCD : public cd::CD {
                              uint64_t sys_bit_vector, 
                              CDInternalErrT* cd_err=0);
     virtual CDErrT Destroy(void);
+    virtual CDErrT Reexecute(void);
     virtual CDErrT Stop(cd::CDHandle* cdh=NULL);
     virtual CDErrT Resume(void); // Does this make any sense?
     virtual CDErrT AddChild(cd::CDHandle* cd_child); 
@@ -436,9 +516,41 @@ class cd::HeadCD : public cd::CD {
 //    void *SerializeEntryDir(uint32_t& entry_count); 
 //    std::vector<CDEntry> DeserializeEntryDir(void *object);
 
-    void HandleErrorOccurred(CDHandle *cdh);
-    void HandleAllPause(CDHandle *cdh);
-    void HandleAllResume(CDHandle *cdh);
+    CDInternalErrT ReadMailBox(void);
+
+    
+//    class HandleErrorOccurred : public EventHandler {
+//      int task_id_;
+//    public:
+//      HandleErrorOccurred(CDFlagT *event_flag, int task_id) : EventHandler(event_flag), task_id_(task_id) {}
+//      ~HandleErrorOccurred() {}
+//      virtual void operator()(void);
+//    };
+//
+//    class HandleEntrySearch : public EventHandler {
+//      int task_id_;
+//      ENTRY_TAG_T *recvBuf_;
+//    public:
+//      HandleEntrySearch(CDFlagT *event_flag, int task_id, ENTRY_TAG_T *recvBuf) : EventHandler(event_flag) {
+//        task_id_ = task_id;
+//        recvBuf_ = recvBuf;
+//      }
+//      ~HandleEntrySearch() {}
+//      virtual void operator()(void);
+//    };
+//
+//    class HandleAllResume : public EventHandler {
+//    public:
+//      HandleAllResume(CDFlagT *event_flag) : EventHAndler(event_flag) {}
+//      ~HandleAllResume() {}
+//      virtual void operator()(void);
+//    };
+
+//    void HandleErrorOccurred(int task_id);
+//    bool HandleEntrySearch(int entry_requester_id, ENTRY_TAG_T *recvBuf);
+//    void HandleAllResume(void);
+
+    CDErrT SetMailBox(CDEventT &event, int task_id);
 
     void *Serialize(uint32_t& len_in_bytes)
     {
@@ -448,6 +560,12 @@ class cd::HeadCD : public cd::CD {
     void Deserialize(void* object) 
     {
     }
+
+  protected:
+    CDEventHandleT HandleEvent(CDFlagT *p_event, int idx=0);
+    CDInternalErrT InvokeErrorHandler(void);
+    virtual bool TestComm(bool test_untile_done=false);
+    
 };
 
 

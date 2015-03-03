@@ -7,6 +7,12 @@ SINGLE_VER_VAR = 0
 
 PROFILER_ENABLED=0
 
+MEDIUM = -D_MEMORY=0 \
+         -D_PFS=1 \
+         -D_SSD=0 \
+         -D_HDD=0 
+
+
 ifeq ($(PROFILER_ENABLED), 1)
 PROFILER_FLAGS = \
       -D_ENABLE_MODULE=1 \
@@ -50,6 +56,8 @@ ifeq ($(PROFILER_ENABLED), 1)
 
 CDS_FLAGS += -D_PROFILER=$(PROFILER_ENABLED)
 endif
+
+CDS_FLAGS += $(MEDIUM)
 
 CDS_SOURCES=$(wildcard *.cc)
 CDS_OBJECTS=$(CDS_SOURCES:.cc=.o)

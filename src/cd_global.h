@@ -58,6 +58,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define INITIAL_COLOR MPI_COMM_NULL
 typedef MPI_Comm ColorT;
 typedef MPI_Group GroupT;
+typedef MPI_Request ReqestT;
 #else
 
 #define ROOT_COLOR 0 
@@ -65,6 +66,7 @@ typedef MPI_Group GroupT;
 #define INITIAL_COLOR 0
 typedef int ColorT;
 typedef int GroupT;
+typedef int ReqestT;
 
 #endif
 
@@ -75,6 +77,18 @@ typedef MPI_Win CDMailBoxT;
 #endif
 #endif
 
+typedef uint64_t ENTRY_TAG_T;
+
+#define MAX_ENTRY_BUFFER_SIZE 1024
+
+#define MSG_TAG_ENTRY_TAG 1073741824 // 2^30
+#define MSG_TAG_ENTRY     2147483648 // 2^31
+#define MSG_TAG_DATA      3221225472 // 2^31 + 2^30
+#define MSG_MAX_TAG_SIZE  1073741824 // 2^30. TAG is
+//#define GEN_MSG_TAG(X) 
+
+#define INIT_TAG_VALUE   0
+#define INIT_ENTRY_SRC   0
 #define INVALID_TASK_ID -1
 #define INVALID_HEAD_ID -1
 #define NUM_FLAGS 1024
@@ -106,6 +120,7 @@ static inline void nullFunc(void) {}
   class CDEvent;
   class RegenObject;	
   class RecoverObject;
+  class CD_Parallel_IO_Manager;
   class SysErrT;
 
   enum CDErrT       { kOK=0, 
@@ -175,13 +190,15 @@ static inline void nullFunc(void) {}
                     kPFS};
 
   enum CDEventT { kNoEvent=0,
-                  kErrorOccurred=1,
-                  kReserved=2,
-                  kEntrySearch=4,
-                  kEntrySend=8,
-                  kAllPause=16,
-                  kAllResume=32,
-                  kAllReexecute=64 };
+                  // Head -> Non-Head
+                  kAllPause=1,
+                  kAllResume=2,
+                  kAllReexecute=4,
+                  kEntrySend=8, 
+                  // Non-Head -> Head
+                  kEntrySearch=16,
+                  kErrorOccurred=32,
+                  kReserved=64 };
 
   enum CDEventHandleT { kEventNone = 0,
                         kEventResolved,
@@ -192,7 +209,7 @@ static inline void nullFunc(void) {}
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
 
   extern int myTaskID;
-
+  extern int handled_event_count;
   class DebugBuf: public std::streambuf {
     std::streambuf *baseBuf_;
   public:
@@ -233,8 +250,35 @@ static inline void nullFunc(void) {}
     }
   }; 
   
-  
+  class CommInfo { 
+  public:
+    void *addr_;
+    MPI_Request req_;
+    MPI_Status  stat_;
+    int valid_;
+    CommInfo(void *addr = NULL) : addr_(addr) {
+      valid_ = 0;  
+    }
+    ~CommInfo() {}
+    CommInfo &operator=(const CommInfo &that) {
+      addr_  = that.addr_;
+      req_   = that.req_;
+      stat_  = that.stat_;
+      valid_ = that.valid_;
+      return *this;
+    }
+  };
 
+  int GenMsgTag(ENTRY_TAG_T entry_tag, bool any_source=false); 
+
+//uint32_t GenMsgTag(uint64_t tag, uint16_t cd_tag) 
+  extern uint16_t CDTag16(void);
+  extern uint32_t CDTag32(void); 
+  extern uint64_t CDTag64(void);
+  extern void ReadCDTag64(uint64_t cd_tag, uint32_t &level, uint32_t &rank_in_level, uint32_t &task_in_color);
+  extern void ReadCDTag32(uint32_t cd_tag, uint32_t &level, uint32_t &rank_in_level, uint32_t &task_in_color);
+  extern void ReadCDTag16(uint16_t cd_tag, uint32_t &level, uint32_t &rank_in_level, uint32_t &task_in_color);
+  extern void ReadMsgTag(uint32_t msg_tag);
 
   extern std::map<uint64_t, std::string> tag2str;
   extern std::hash<std::string> str_hash;
@@ -245,7 +289,6 @@ static inline void nullFunc(void) {}
 //  extern uint64_t Util::gen_object_id_=0;
 
 }
-
 #define INITIAL_ERR_VAL kOK
 #define DATA_MALLOC malloc
 #define DATA_FREE free
@@ -262,6 +305,7 @@ static inline void nullFunc(void) {}
 #define CHECK_PRV_TYPE(X,Y) ((X & Y) == Y)
 #define CHECK_EVENT(X,Y) ((X & Y) == Y)
 #define CHECK_NO_EVENT(X) (X == 0)
+#define SET_EVENT(X,Y) (X |= Y)
 #if _DEBUG
 
 #define PRINT_DEBUG(X) printf(X);
