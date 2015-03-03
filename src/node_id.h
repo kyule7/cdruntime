@@ -42,10 +42,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <ostream>
 #include <utility>
 
+using std::endl;
 
 namespace cd {
 /*
-NodeID is a class for access to a task in one CD. 
+In MPI context, one process can be represented by a pair of communicator and MPI rank ID. 
+But one process can belong to multiple communicators, so one pair of communicator and MPI rank ID do not uniquely represent a single process.
+
+NodeID is a class for representing a task in one CD. Like MPI, one task can be represented by multiple pairs of color and task ID in the color.  
 Color is a kind of group number or an arbitrary type indicating a group of tasks corresponding to a CD.
 task_in_a_color means an ID to access a task in that color. 
 (ex. rank ID of a communicator in MPI context. Communicator corresponds to color_). 
@@ -64,6 +68,7 @@ friend class CDHandle;
   int task_in_color_;
   int head_;
   int size_;
+  GroupT task_group_;
 public:
   NodeID() 
     : color_(0), task_in_color_(0), head_(0), size_(-1) 
@@ -106,37 +111,40 @@ public:
   int task_in_color(void) const { return task_in_color_; }
   int head(void) const { return head_; }
   int size(void) const { return size_; }
-  bool IsHead(void) const { return head_ == task_in_color_; }
+  bool IsHead(void) const { 
+//    dbg << "head : " << head_ << ", task: " << task_in_color_ << endl; //getchar();
+    return head_ == task_in_color_; 
+  }
 
   void * Serialize(uint32_t& len_in_bytes)
   {
-    //std::cout << "\nNode ID Serialize\n" << std::endl;
+    dbg << "\nNode ID Serialize\n" << endl;
     Packer node_id_packer;
     node_id_packer.Add(NODEID_PACKER_COLOR, sizeof(ColorT), &color_);
     node_id_packer.Add(NODEID_PACKER_TASK_IN_COLOR, sizeof(int), &task_in_color_);
     node_id_packer.Add(NODEID_PACKER_HEAD, sizeof(int), &head_);
     node_id_packer.Add(NODEID_PACKER_SIZE, sizeof(int), &size_);
-    //std::cout << "\nNode ID Serialize Done\n" << std::endl;
+    dbg << "\nNode ID Serialize Done\n" << endl;
     return node_id_packer.GetTotalData(len_in_bytes);  
   }
 
   void Deserialize(void* object) 
   {
-    //std::cout << "\nNode ID Deserialize\n" << std::endl;
+    dbg << "\nNode ID Deserialize\n" << endl;
     Unpacker node_id_unpacker;
     uint32_t return_size;
     uint32_t dwGetID;
     color_ = *(ColorT *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    //std::cout << "first unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    dbg << "first unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
 
     task_in_color_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    //std::cout << "second unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    dbg << "second unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
 
     head_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    //std::cout << "third unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    dbg << "third unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
 
     size_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    //std::cout << "fourth unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << std::endl;
+    dbg << "fourth unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
   }
 
 
@@ -145,4 +153,6 @@ public:
 std::ostream& operator<<(std::ostream& str, const NodeID& node_id);
 
 } // namespace cd ends
+
+
 #endif

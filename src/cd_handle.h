@@ -66,7 +66,7 @@ using namespace cd;
 class cd::CDHandle {
   friend class cd::RegenObject;
   friend class cd::CD;
-
+  friend class cd::CDEntry;
   private:
     CD*    ptr_cd_;
     NodeID node_id_;
@@ -74,16 +74,24 @@ class cd::CDHandle {
     // task ID of head in this CD.
     // If current task is head of current CD, than it is the same as node_id_.task_
 
+
+  public:
+//#if _MPI_VER
+//#if _KL
+//    // This flag is unique for each process. 
+//    static CDFlagT *pendingFlag_;
+//    CDMailBoxT pendingWindow_;
+//#endif
+//#endif
+
 #if _PROFILER 
     Profiler* profiler_;
 #endif
 
-  public:
-
     //TODO copy these to CD async 
     ucontext_t ctxt_;
-    jmp_buf    jump_buffer_;
-
+    jmp_buf    jmp_buffer_;
+    int jmp_val_;
     // Default Constructor
     CDHandle();
 
@@ -135,17 +143,17 @@ class cd::CDHandle {
     // Non-collective
     CDErrT Preserve(void *data_ptr=0, 
                     uint64_t len=0, 
-                    CDPreserveT preserve_mask=kCopy, 
+                    uint32_t preserve_mask=kCopy, 
                     const char *my_name=0, 
                     const char *ref_name=0, 
-                    uint64_t ref_offset=0, 
+                    uint64_t ref_offset=0,
                     const RegenObject *regen_object=0, 
                     PreserveUseT data_usage=kUnsure );
     // Collective (not implemented yet)
     CDErrT Preserve(CDEvent &cd_event, 
                     void *data_ptr=0, 
                     uint64_t len=0, 
-                    CDPreserveT preserve_mask=kCopy, 
+                    uint32_t preserve_mask=kCopy, 
                     const char *my_name=0, 
                     const char *ref_name=0, 
                     uint64_t ref_offset=0, 
@@ -191,12 +199,13 @@ class cd::CDHandle {
                  uint32_t error_loc_mask, 
                  std::vector< SysErrT > errors);
 
-    CDErrT SetPGASType(void *data_ptr, 
-                       uint64_t len, 
-                       CDPGASUsageT region_type=kShared);
+//    CDErrT SetPGASType(void *data_ptr, 
+//                       uint64_t len, 
+//                       CDPGASUsageT region_type=kShared);
   
     void CommitPreserveBuff(void);
-
+//    Tag GenTag(const char* tag);
+    char *GenTag(const char* tag);
   private:  // Internal use -------------------------------------------------------------
     // Initialize for CDHandle object.
     void Init(CD* ptr_cd, const NodeID& node_id);
@@ -259,6 +268,19 @@ class cd::CDHandle {
 
     // Select Head among task group that are corresponding to one CD.
     void SetHead(NodeID& new_node_id);
+
+    CDErrT CheckMailBox(void);
+    CDErrT SetMailBox(CDEventT &event);
+//    int InternalCheckMailBox(void);
+//    int SetMailBox(CDEventT &event);
+//    CDEventHandleT HandleEvent(CDFlagT *event, int idx=0);
+//    int ReadMailBox(void);
+//    int ReadMailBoxFromRemote(void);
+
+    // Communication routines in CD runtime
+    //void CollectHeadInfoAndEntry(void); 
+    void CollectHeadInfoAndEntry(const NodeID &new_node_id);
+
 
   public:
     bool IsHead(void) const;

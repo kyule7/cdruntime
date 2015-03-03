@@ -1,6 +1,7 @@
 #include <cstdio>
-#include <cd.h>
-#include <cd_path.h>
+#include "cd_global.h"
+#include "cd_handle.h"
+#include "cd_path.h"
 #include <iostream>
 using namespace cd;
 
@@ -74,7 +75,7 @@ int main(){
     child1_cd->Destroy();
   }
   CD_Complete( root_cd );
-//  root_cd->Destroy();
+  root_cd->Destroy();
   CD_Finalize();
   delete [] x;
   delete [] y;

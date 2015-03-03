@@ -49,27 +49,6 @@ using namespace cd;
 
 namespace cd {
 
-class StringBuffer : public std::string {
-  std::ostringstream _stream;
-public:
-  StringBuffer() {}
-  StringBuffer(const std::string& initTxt) {
-  	_stream << initTxt;
-    assign(_stream.str());
-  }
-  
-  template <typename T>
-  StringBuffer& operator<<(T const& t) {
-    _stream << t;
-    assign(_stream.str());
-    return *this;
-  }
-
-  std::string GetString() const { 
-    return _stream.str(); 
-  }
- 
-};
 
 //extern uint64_t Util::gen_object_id_;
 
@@ -89,19 +68,39 @@ static const char* GetBaseFilePath()
 // also HEX address of the pointer we are preserving. 
 // -> This might not be a good thing when we recover actually the stack content can be different... 
 // is it? or is it not?  let's assume it does...
-static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, const char* data_name) 
+static std::string GetUniqueCDFileName(const CDID &cd_id, const char *basepath, const char *data_name) 
 {
-//  std::string base(GetBaseFilePath());
   std::string base(basepath);
-  StringBuffer filename(base);
-//  StringBuffer filename(std::string(base));
-//
-//  std::cout << "base file name: "<< filename.GetString() << std::endl << std::endl;
+  std::ostringstream filename(base);
+
+  std::cout << "base file name: "<< filename.str() << std::endl << std::endl;
   filename << cd_id.level() << '.' << cd_id.rank_in_level() << '.' << cd_id.object_id() << '.' << cd_id.sequential_id() << '.' << cd_id.task_in_color() << '.' << data_name << ".cd";
-//  std::cout << "file name for this cd: "<< filename.GetString() << std::endl << std::endl; getchar(); 
-  return filename.GetString();
-//  return "./";
+  std::cout << "file name for this cd: "<< filename.str() << std::endl << std::endl; //dbgBreak(); 
+  return filename.str();
 }
+
+// PFS
+static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, const char* data_name, const PrvMediumT preservationMedium )
+{  
+  std::string base(basepath);
+  std::ostringstream filename(base);
+  
+  if( (preservationMedium == kHDD) || (preservationMedium == kSSD) ) {
+    filename << cd_id.level() << '.' << cd_id.rank_in_level() << '.' << cd_id.object_id() << '.' << cd_id.sequential_id() << '.' << cd_id.task_in_color() << '.' << data_name << ".cd";
+  }
+  else if( preservationMedium == kPFS ) { 
+    filename << cd_id.level() << '.' << cd_id.rank_in_level() << '.' << cd_id.sequential_id();
+  }
+  else {
+    //This case is ERROR.
+    std::cerr<< "We should not get here! there is something wrong." << std::endl;
+    assert(0);
+    return "";
+  }
+  return filename.str();
+}
+
+
 
 static uint64_t GetCurrentTaskID()
 {

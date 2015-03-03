@@ -46,10 +46,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdlib.h>
 #include <assert.h>
 #include "unixlog.h"
-
+#include "event_handler.h"
 class cd::CDEntry : public cd::Serializable
 {
   friend class cd::CD;
+  friend class cd::HeadCD;
+  friend class cd::HandleEntrySend;
+  friend class cd::HandleEntrySearch;
+  friend std::ostream& operator<<(std::ostream& str, const CDEntry& cd_entry);
   private:
     enum { 
       ENTRY_PACKER_NAME=0,
@@ -60,7 +64,7 @@ class cd::CDEntry : public cd::Serializable
     };
     // need a unique name to do via reference, 
     // this variable can be empty string when this is not needed
-    std::string name_;    
+    ENTRY_TAG_T entry_tag_;    
     cd::CD*     ptr_cd_;
     DataHandle  src_data_;
     DataHandle  dst_data_;
@@ -68,17 +72,20 @@ class cd::CDEntry : public cd::Serializable
 //		struct tsn_lsn_struct lsn, durable_lsn;
 
   public:
-    enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError};
+    enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError, kEntrySearchRemote};
     
     CDEntry(){}
-    CDEntry(const DataHandle& src_data, 
-            const DataHandle& dst_data, 
-            const char* entry_name) 
+    CDEntry(const DataHandle  &src_data, 
+            const DataHandle  &dst_data, 
+            const std::string &entry_name) 
     {
       src_data_ = src_data;
       dst_data_ = dst_data;
-      if(entry_name == 0) name_.clear();
-      else name_ = entry_name;
+      if(entry_name.empty()) entry_tag_ = 0;
+      else {
+        entry_tag_ = str_hash(entry_name);
+        tag2str[entry_tag_] = entry_name;
+      }
     }
 
     ~CDEntry()
@@ -88,9 +95,6 @@ class cd::CDEntry : public cd::Serializable
 //        DATA_FREE( dst_data_.address_data() );
       }
  
-      if( !dst_data_.file_name_.empty() )  {
-//        delete dst_data_.file_name(); 
-      }
     }
 
     // FIXME: currently it is assumed that my cd is always in the same memory space.
@@ -104,11 +108,12 @@ class cd::CDEntry : public cd::Serializable
 		CDEntryErrT Delete(void);
 
   public:
-		std::string name() const { return name_; }
+		std::string name() const { return tag2str[entry_tag_]; }
+		ENTRY_TAG_T name_tag() const { return entry_tag_; }
     bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }
 
     CDEntry& operator=(const CDEntry& that) {
-      name_ = that.name_;    
+      entry_tag_ = that.entry_tag_;    
       src_data_ = that.src_data_;
       dst_data_ = that.dst_data_;
       preserve_type_ = that.preserve_type_;
@@ -116,18 +121,16 @@ class cd::CDEntry : public cd::Serializable
     }
 
     bool operator==(const CDEntry& that) const {
-      return (name_ == that.name_) && (src_data_ == that.src_data_) 
+      return (entry_tag_ == that.entry_tag_) && (src_data_ == that.src_data_) 
              && (dst_data_ == that.dst_data_) && (preserve_type_ == that.preserve_type_);
     }
-
-
-
-
 
     CDEntryErrT SaveMem(void);
     CDEntryErrT SaveFile(std::string base, 
                          bool open, 
                          struct tsn_log_struct *log);
+    // PFS
+	  CDEntryErrT SavePFS( struct tsn_log_struct *log );
     CDEntryErrT Save(void);
 
     void CloseFile(struct tsn_log_struct *log);
@@ -141,73 +144,74 @@ class cd::CDEntry : public cd::Serializable
 
     CDEntryErrT Restore(bool open, struct tsn_log_struct *log);
     CDEntryErrT Restore(void);
+    CDEntryErrT InternalRestore(DataHandle *buffer);
 
     void *Serialize(uint32_t &len_in_bytes) 
     {
 
-      //std::cout << "\nCD Entry Serialize\n" << std::endl;
+      dbg << "\nCD Entry Serialize\n" << endl;
       Packer entry_packer;
 //      uint32_t ptr_cd_packed_len=0;
 //      void *ptr_cd_packed_p = ptr_cd_->Serialize(ptr_cd_packed_len);
 
       uint32_t src_packed_len=0;
-      //std::cout << "\nsrc Serialize\n" << std::endl;
+      dbg << "\nsrc Serialize\n" << endl;
       void *src_packed_p = src_data_.Serialize(src_packed_len);
       uint32_t dst_packed_len=0;
-      //std::cout << "\ndst Serialize\n" << std::endl;
+      dbg << "\ndst Serialize\n" << endl;
       void *dst_packed_p = dst_data_.Serialize(dst_packed_len);
 //      assert(ptr_cd_packed_len != 0);
       assert(src_packed_len != 0);
       assert(dst_packed_len != 0);
 
-      //std::cout << "\npacked entry_name_ is :\t " << name_.c_str() <<std::endl<<std::endl;
-      entry_packer.Add(ENTRY_PACKER_NAME, name_.size()+1, const_cast<char*>(name_.c_str())); // string.size() + 1 is for '\0'
+      dbg << "\npacked entry_entry_tag_ is :\t " << entry_tag_ <<endl<<endl;
+      uint64_t str_key = entry_tag_;
+      entry_packer.Add(ENTRY_PACKER_NAME, sizeof(str_key), &str_key); 
 //      entry_packer.Add(ENTRY_PACKER_PTRCD, ptr_cd_packed_len, ptr_cd_packed_p);
       
-      //std::cout << "\npacked preserve_type_ is :\t " << preserve_type_ <<std::endl<<std::endl;
+      dbg << "\npacked preserve_type_ is :\t " << preserve_type_ <<endl<<endl;
 
       entry_packer.Add(ENTRY_PACKER_PRESERVETYPE, sizeof(cd::CDPreserveT), &preserve_type_);
 
-      //std::cout << "\npacked src_packed_ is :\t " << src_packed_p <<std::endl<<std::endl;
+      dbg << "\npacked src_packed_ is :\t " << src_packed_p <<endl<<endl;
       entry_packer.Add(ENTRY_PACKER_SRC, src_packed_len, src_packed_p);
       entry_packer.Add(ENTRY_PACKER_DST, dst_packed_len, dst_packed_p); 
-      //std::cout << "\nCD Entry Serialize Done\n" << std::endl;
+      dbg << "\nCD Entry Serialize Done\n" << endl;
 
       return entry_packer.GetTotalData(len_in_bytes);  
  
     }
 
-    void Deserialize(void * object)
+    void Deserialize(void *object)
     {
       
-      //std::cout << "\nCD Entry Deserialize\nobject : " << object <<std::endl;
+      dbg << "\nCD Entry Deserialize\nobject : " << object <<endl;
       Unpacker entry_unpacker;
       uint32_t return_size=0;
       uint32_t dwGetID=0;
       void *src_unpacked=0;
       void *dst_unpacked=0;
 
-      //char* unpacked_entry_name=0;
-      char *unpacked_entry_name = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      name_ = unpacked_entry_name;
-      //std::cout << "unpacked entry_name_ is :\t " << unpacked_entry_name <<std::endl;
-      //std::cout << "1st unpacked thing in data_handle : " << name_ << ", return size : " << return_size << std::endl<< std::endl;
+      entry_tag_ = *(uint64_t *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+      dbg << "unpacked entry_entry_tag_ is :\t " << entry_tag_ <<" <-> " << tag2str[entry_tag_] <<endl;
+      dbg << "1st unpacked thing in data_handle : " << entry_tag_ << ", return size : " << return_size << endl<< endl;
 
       preserve_type_ = *(cd::CDPreserveT *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      //std::cout << "unpacked preserve_type_ is :\t " << preserve_type_ <<std::endl;
-      //std::cout << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl << std::endl;
+      dbg << "unpacked preserve_type_ is :\t " << preserve_type_ <<endl;
+      dbg << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl << endl;
 
-      //std::cout << "\nBefore call GetNext for src data handle\tobject : " << object <<std::endl;
+      dbg << "\nBefore call GetNext for src data handle\tobject : " << object <<endl;
       src_unpacked = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      //std::cout << "\nBefore call GetNext for dst data handle\tobject : " << object <<std::endl;
-      //std::cout << "src_unpacked is :\t " << src_unpacked <<std::endl;
-      //std::cout << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl << std::endl;
+      dbg << "\nBefore call GetNext for dst data handle\tobject : " << object <<endl;
+      dbg << "src_unpacked is :\t " << src_unpacked <<endl;
+      dbg << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl << endl;
 
 
       dst_unpacked = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      //std::cout << "\nBefore call src_data.Deserialize\tobject : " << object <<std::endl;
-      //std::cout << "dst_unpacked is :\t " << dst_unpacked <<std::endl;
-      //std::cout << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
+      dbg << "\nBefore call src_data.Deserialize\tobject : " << object <<endl;
+      dbg << "dst_unpacked is :\t " << dst_unpacked <<endl;
+      dbg << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;    
+
       src_data_.Deserialize(src_unpacked);
       dst_data_.Deserialize(dst_unpacked);
     }
@@ -216,7 +220,8 @@ class cd::CDEntry : public cd::Serializable
   
 
   private:
-    DataHandle* GetBuffer(void);
+//    DataHandle* GetBuffer(void);
+    void RequestEntrySearch(void);
 };
 
 #endif

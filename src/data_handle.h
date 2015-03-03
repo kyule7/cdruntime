@@ -56,8 +56,9 @@ namespace cd {
 
 class DataHandle : public Serializable {
   friend class CDEntry;
+  friend std::ostream& operator<<(std::ostream& str, const DataHandle& dh);
   public:
-    enum HandleType { kMemory = 0, kOSFile, kReference, kSource };
+    enum HandleType { kMemory = 0, kOSFile, kReference, kSource, kPFS};
   private:
     enum { 
       DATA_PACKER_NODE_ID=0,
@@ -70,64 +71,102 @@ class DataHandle : public Serializable {
     };
 
     HandleType  handle_type_;
-		NodeID      node_id_;
     //DRAM
     void*       address_data_;
     uint64_t    len_;
     //FILE
-    std::string file_name_;
+    char file_name_[MAX_FILE_PATH];
+
+    //Parallel Filesystem
+    MPI_Offset  parallel_file_offset_;
+
     //Reference
-    std::string ref_name_;
-    uint64_t    ref_offset_;
+    ENTRY_TAG_T ref_name_;
+    uint64_t ref_offset_;
+		NodeID      node_id_;
 
   public: 
     DataHandle() 
-      : handle_type_(kMemory), address_data_(0), len_(0), file_name_(), ref_name_(), ref_offset_(0) {} 
+      : handle_type_(kMemory), address_data_(0), len_(0), ref_name_(0), ref_offset_(0) 
+    { 
+      strcpy(file_name_, INIT_FILE_PATH);
+    }
 
-    DataHandle(std::string ref_name, uint64_t ref_offset) 
-      : handle_type_(kReference), address_data_(0), len_(0), file_name_(), ref_name_(ref_name), ref_offset_(ref_offset) {}
+    DataHandle(std::string ref_name, uint64_t ref_offset, const NodeID &node_id) 
+      : handle_type_(kReference), address_data_(0), len_(0), ref_offset_(ref_offset) 
+    { 
+      strcpy(file_name_, INIT_FILE_PATH); 
+      ref_name_ = str_hash(ref_name); 
+      cd::tag2str[ref_name_] = ref_name; 
+      node_id_ = node_id; 
+    }
 
-    DataHandle(const char* file_name)
-      : handle_type_(kOSFile), address_data_(0), len_(0), file_name_(file_name), ref_name_(), ref_offset_(0) {}
+    DataHandle(const char* file_name, const NodeID &node_id)
+      : handle_type_(kOSFile), address_data_(0), len_(0), ref_name_(0), ref_offset_(0) 
+    { 
+      strcpy(file_name_, file_name); 
+      node_id_ = node_id; 
+    }
 
-    DataHandle(void* address_data, const uint64_t& len)
-      : handle_type_(kMemory), address_data_(address_data), len_(len), file_name_(), ref_name_(), ref_offset_(0) {}
+    DataHandle(void* address_data, const uint64_t& len, const NodeID &node_id)
+      : handle_type_(kMemory), address_data_(address_data), len_(len), ref_name_(0), ref_offset_(0) 
+    { 
+      strcpy(file_name_, INIT_FILE_PATH); 
+      node_id_ = node_id; 
+    }
 
-    DataHandle(HandleType handle_type, void* address_data, const uint64_t& len)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), file_name_(), ref_name_(), ref_offset_(0) {}
+    DataHandle(HandleType handle_type, void* address_data, const uint64_t& len, const NodeID &node_id)
+      : handle_type_(handle_type), address_data_(address_data), len_(len), ref_name_(0), ref_offset_(0)
+    { 
+      strcpy(file_name_, INIT_FILE_PATH); 
+      node_id_ = node_id; 
+    }
 
     DataHandle(HandleType handle_type, void* address_data, const uint64_t& len, std::string ref_name, uint64_t ref_offset)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), file_name_(), ref_name_(ref_name), ref_offset_(ref_offset) {}
+      : handle_type_(handle_type), address_data_(address_data), len_(len), ref_offset_(ref_offset) 
+    { 
+      // There is no NodeID passed to newly created DataHandle object.
+      // The reason for this is that we do not track the destinatino information when we preserve,
+      // but we track it in the restoration routine.
+      // Basically, it removes the overhead at failure-free execuation, 
+      // but reqires more overhead in reexecution time which is rare.
+      strcpy(file_name_, INIT_FILE_PATH); 
+      ref_name_ = str_hash(ref_name); 
+      cd::tag2str[ref_name_] = ref_name; 
+    }
 
     ~DataHandle() {}
 
-    std::string file_name()    const { return file_name_; }
-    std::string ref_name()     const { return ref_name_; }
-    uint64_t    ref_offset()   const { return ref_offset_; }
-    void*       address_data() const { return address_data_; }
-    uint64_t    len()          const { return len_; }
-    HandleType  handle_type()  const { return handle_type_; }
-    NodeID      node_id()      const { return node_id_; }
+    std::string file_name(void)    const { return file_name_; }
+    std::string ref_name(void)     const { return cd::tag2str[ref_name_]; }
+    ENTRY_TAG_T ref_name_tag(void) const { return ref_name_; }
+    uint64_t    ref_offset(void)   const { return ref_offset_; }
+    void*       address_data(void) const { return address_data_; }
+    uint64_t    len(void)          const { return len_; }
+    HandleType  handle_type(void)  const { return handle_type_; }
+    NodeID      node_id(void)      const { return node_id_; }
 
-    void        set_file_name(const char* file_name)       { file_name_    = std::string(file_name); }
-    void        set_ref_name(std::string ref_name)         { ref_name_     = ref_name; }
+    void        set_file_name(const char *file_name)       { strcpy(file_name_, file_name); }
+    void        set_ref_name(std::string ref_name)         { ref_name_     = str_hash(ref_name); cd::tag2str[ref_name_] = ref_name;}
     void        set_ref_offset(uint64_t ref_offset)        { ref_offset_   = ref_offset; }
-    void        set_address_data(const void* address_data) { address_data_ = (void*)address_data; }
+    void        set_address_data(const void *address_data) { address_data_ = (void *)address_data; }
     void        set_len(uint64_t len)                      { len_ = len; }
-    void        set_handle_type(const HandleType& handle_type) { handle_type_=handle_type; }
+    void        set_handle_type(const HandleType& handle_type) { handle_type_ = handle_type; }
 
 
     bool operator==(const DataHandle& that) const {
       return (handle_type_ == that.handle_type_) && (node_id_ == that.node_id_) 
              && ( address_data_== that.address_data_) && (len_ == that.len_) 
-             && (file_name_ == that.file_name_) && (ref_name_ == that.ref_name_) 
+             && !strcmp(file_name_, that.file_name_) && (ref_name_ == that.ref_name_) 
              && (ref_offset_ == that.ref_offset_);
     }
+
+
   public: 
     //we need serialize deserialize interface here.
     void *Serialize(uint32_t& len_in_bytes)
     {
-      //std::cout << "\nData Handle Serialize\n" << std::endl;
+      dbg << "\nData Handle Serialize\n" << endl;
       Packer data_packer;
       uint32_t node_id_packed_len=0;
       void *node_id_packed_p = node_id_.Serialize(node_id_packed_len);
@@ -135,61 +174,60 @@ class DataHandle : public Serializable {
       data_packer.Add(DATA_PACKER_NODE_ID, node_id_packed_len, node_id_packed_p);
       data_packer.Add(DATA_PACKER_HANDLE_TYPE, sizeof(HandleType), &handle_type_);
       data_packer.Add(DATA_PACKER_ADDRESS, sizeof(void*), &address_data_);
-      //std::cout << "address data is packed : "<< address_data_ << "\n\n" << std::endl; //getchar();
+      dbg << "address data is packed : "<< address_data_ << "\n\n" << endl; //getchar();
       data_packer.Add(DATA_PACKER_LEN, sizeof(uint64_t), &len_);
-      data_packer.Add(DATA_PACKER_FILENAME, file_name_.size()+1, const_cast<char*>(file_name_.c_str())); // string.size() + 1 is for '\0'
-      data_packer.Add(DATA_PACKER_REFNAME, ref_name_.size()+1, const_cast<char*>(ref_name_.c_str())); // string.size() + 1 is for '\0'
+
+      data_packer.Add(DATA_PACKER_FILENAME, sizeof(file_name_), file_name_);
+ 
+//      uint64_t ref_name_key = str_hash(ref_name);
+      data_packer.Add(DATA_PACKER_REFNAME, sizeof(uint64_t), &ref_name_); // string.size() + 1 is for '\0'
       data_packer.Add(DATA_PACKER_REFOFFSET, sizeof(uint64_t), &ref_offset_); 
-      //std::cout << "\nData Handle Serialize Done\n" << std::endl;
+      dbg << "\nData Handle Serialize Done\n" << endl;
       return data_packer.GetTotalData(len_in_bytes);  
     }
     void Deserialize(void* object) 
     {
-      //std::cout << "\nData Handle Deserialize\n" << object << std::endl;
+      dbg << "\nData Handle Deserialize\n" << object << endl;
       Unpacker data_unpacker;
       uint32_t return_size;
       uint32_t dwGetID;
-      void *node_id_unpacked=0;
 
+      void *node_id_unpacked=0;
       node_id_unpacked = data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      //std::cout << "Before Deserialize node_id"<<std::endl;
+      dbg << "Before Deserialize node_id"<<endl;
       node_id_.Deserialize(node_id_unpacked);
-      //std::cout << "1st unpacked thing in data_handle : " << node_id_ << ", return size : " << return_size << std::endl;
+      dbg << "1st unpacked thing in data_handle : " << node_id_ << ", return size : " << return_size << endl;
 
       handle_type_ = *(HandleType *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      //std::cout << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;
+      dbg << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;
 
       void *tmp_address_data = data_unpacker.GetNext((char *)object, dwGetID, return_size);
       memcpy(&address_data_, tmp_address_data, sizeof(void *));
-      //std::cout << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;
+      dbg << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;
 
       len_ = *(uint64_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      //std::cout << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
+      dbg << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;    
 
 
-      char* unpacked_file_name=0;
-      char* unpacked_ref_name=0;
-      unpacked_file_name = (char *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      //std::cout << "5th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
+      char *file_name_p = (char *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
+      strcpy(file_name_, file_name_p);
+      dbg << "5th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;    
 
-      unpacked_ref_name = (char *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      //std::cout << "6th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
-
-      file_name_ = unpacked_file_name;
-      ref_name_ = unpacked_ref_name;
+      ref_name_ = *(uint64_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
+      dbg << "6th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;    
 
       ref_offset_ = *(uint64_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      //std::cout << "7th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << std::endl;    
+      dbg << "7th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;    
     }
 
     DataHandle& operator=(const DataHandle& that) {
-      handle_type_ = that.handle_type();
-  		node_id_     = that.node_id();
-      address_data_= that.address_data();
+      handle_type_ = that.handle_type_;
+  		node_id_     = that.node_id_;
+      address_data_= that.address_data_;
       len_         = that.len();
-      file_name_   = that.file_name();
-      ref_name_    = that.ref_name();
-      ref_offset_  = that.ref_offset();
+      strcpy(file_name_, that.file_name_);
+      ref_name_    = that.ref_name_;
+      ref_offset_  = that.ref_offset_;
       return *this;
     }
 
@@ -197,6 +235,6 @@ class DataHandle : public Serializable {
 
 std::ostream& operator<<(std::ostream& str, const DataHandle& dh);
 
-}
+} // namespace cd ends
 
 #endif

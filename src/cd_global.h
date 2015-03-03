@@ -36,41 +36,78 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_GLOBAL_H
 #define _CD_GLOBAL_H
 #include <stdint.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <iostream>
+#include <string>
+#include <sstream>
 #include <vector>
 #include <map>
-
-
+#include <functional>
+#include <csetjmp>
 // This could be different from MPI program to PGAS program
 // key is the unique ID from 0 for each CD node.
 // value is the unique ID for mpi communication group or thread group.
 // For MPI, there is a communicator number so it is the group ID,
 // For PGAS, there should be a group ID, or we should generate it. 
+
 #if _MPI_VER 
 #include <mpi.h>
-
 #define ROOT_COLOR MPI_COMM_WORLD
 #define ROOT_HEAD_ID 0
 #define INITIAL_COLOR MPI_COMM_NULL
 typedef MPI_Comm ColorT;
-
+typedef MPI_Group GroupT;
+typedef MPI_Request ReqestT;
 #else
 
 #define ROOT_COLOR 0 
 #define ROOT_HEAD_ID 0
 #define INITIAL_COLOR 0
 typedef int ColorT;
+typedef int GroupT;
+typedef int ReqestT;
 
 #endif
 
+#if _MPI_VER
+#if _KL
+typedef int CDFlagT;
+typedef MPI_Win CDMailBoxT;
+#endif
+#endif
+
+typedef uint64_t ENTRY_TAG_T;
+
+#define MAX_ENTRY_BUFFER_SIZE 1024
+
+#define MSG_TAG_ENTRY_TAG 1073741824 // 2^30
+#define MSG_TAG_ENTRY     2147483648 // 2^31
+#define MSG_TAG_DATA      3221225472 // 2^31 + 2^30
+#define MSG_MAX_TAG_SIZE  1073741824 // 2^30. TAG is
+//#define GEN_MSG_TAG(X) 
+
+#define INIT_TAG_VALUE   0
+#define INIT_ENTRY_SRC   0
 #define INVALID_TASK_ID -1
 #define INVALID_HEAD_ID -1
+#define NUM_FLAGS 1024
+
 
 //GONG: global variable to represent the current context for malloc wrapper
 extern bool app_side;
 
 namespace cd {
+
+static inline void nullFunc(void) {}
+#if _DEBUG
+  extern std::ostringstream dbg;
+#define dbgBreak nullFunc
+#else
+#define dbg std::cout
+#define dbgBreak nullFunc
+#endif
+
   class CD;
   class HeadCD;
   class CDHandle;
@@ -86,6 +123,7 @@ namespace cd {
   class CDEvent;
   class RegenObject;  
   class RecoverObject;
+  class CD_Parallel_IO_Manager;
   class SysErrT;
 #ifdef comm_log
   //SZ
@@ -122,14 +160,15 @@ namespace cd {
                       kFileSys=128 
                     };
 
-  enum CDPGASUsageT { kShared=1, 
-                      KPrivate 
-                    };
+//  enum CDPGASUsageT { kShared=1, 
+//											KPrivate 
+//										};
 
-  enum CDPreserveT  { kCopy=0, 
-                      kRef, 
-                      kRegen 
-                    };
+  enum CDPreserveT  { kCopy=1, 
+											kRef=2, 
+											kRegen=4,
+                      kShared=8 
+										};
 
   enum CDType       { kStrict=0, 
                       kRelaxed };
@@ -174,22 +213,123 @@ namespace cd {
                     };
 #endif
 
+  enum CDEventT { kNoEvent=0,
+                  // Head -> Non-Head
+                  kAllPause=1,
+                  kAllResume=2,
+                  kAllReexecute=4,
+                  kEntrySend=8, 
+                  // Non-Head -> Head
+                  kEntrySearch=16,
+                  kErrorOccurred=32,
+                  kReserved=64 };
+
+  enum CDEventHandleT { kEventNone = 0,
+                        kEventResolved,
+                        kEventPending };
 
   class CDNameT;
 
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
 
-//  extern int myTaskID;
+  extern int myTaskID;
+  extern int handled_event_count;
+  class DebugBuf: public std::streambuf {
+    std::streambuf *baseBuf_;
+  public:
+    virtual ~DebugBuf() {};
+    DebugBuf() {
+      init(NULL);
+    }
+    DebugBuf(std::streambuf* baseBuf) {
+      init(baseBuf);
+    }
+    void init(std::streambuf* baseBuf) {
+      baseBuf = baseBuf;
+    }
+  private:
+    virtual int overflow(int in) {
+      return in;
+    }
+    virtual std::streamsize xsputn(const char *s, std::streamsize in) {
+      return in;
+    }
+    virtual int sync() {
+      return 0;
+    }
+  }; 
+ 
+  class Tag : public std::string {
+    std::ostringstream _oss;
+  public:
+    Tag() {}
+    ~Tag() {}
+    template <typename T>
+    Tag &operator<<(const T &that) {
+      _oss << that;
+      return *this;
+    }
+    std::string str(void) {
+      return _oss.str();
+    }
+  }; 
+  
+  class CommInfo { 
+  public:
+    void *addr_;
+    MPI_Request req_;
+    MPI_Status  stat_;
+    int valid_;
+    CommInfo(void *addr = NULL) : addr_(addr) {
+      valid_ = 0;  
+    }
+    ~CommInfo() {}
+    CommInfo &operator=(const CommInfo &that) {
+      addr_  = that.addr_;
+      req_   = that.req_;
+      stat_  = that.stat_;
+      valid_ = that.valid_;
+      return *this;
+    }
+  };
+
+  int GenMsgTag(ENTRY_TAG_T entry_tag, bool any_source=false); 
+
+//uint32_t GenMsgTag(uint64_t tag, uint16_t cd_tag) 
+  extern uint16_t CDTag16(void);
+  extern uint32_t CDTag32(void); 
+  extern uint64_t CDTag64(void);
+  extern void ReadCDTag64(uint64_t cd_tag, uint32_t &level, uint32_t &rank_in_level, uint32_t &task_in_color);
+  extern void ReadCDTag32(uint32_t cd_tag, uint32_t &level, uint32_t &rank_in_level, uint32_t &task_in_color);
+  extern void ReadCDTag16(uint16_t cd_tag, uint32_t &level, uint32_t &rank_in_level, uint32_t &task_in_color);
+  extern void ReadMsgTag(uint32_t msg_tag);
+
+  extern std::map<uint64_t, std::string> tag2str;
+  extern std::hash<std::string> str_hash;
 
   extern CDHandle* CD_Init(int numproc=1, int myrank=0);
-  extern void CD_Finalize();
+  extern void CD_Finalize(std::ostringstream *oss=NULL);
+  extern void WriteDbgStream(std::ostringstream *oss=NULL);
 //  extern uint64_t Util::gen_object_id_=0;
 
 }
-
 #define INITIAL_ERR_VAL kOK
 #define DATA_MALLOC malloc
 #define DATA_FREE free
+
+#define CHECK_EVENT_NO_EVENT(X) (X == 0)
+#define CHECK_EVENT_ERROR_OCCURRED(X) (X & kErrorOccurred)
+#define CHECK_EVENT_ENTRY_SEARCH(X) ((X & kEntrySearch) >> 2)
+#define CHECK_EVENT_ENTRY_SEND(X) ((X & kEntrySend) >> 3)
+#define CHECK_EVENT_ALL_PAUSE(X) ((X & kAllPause) >> 4)
+#define CHECK_EVENT_ALL_RESUME(X) ((X & kAllResume) >> 5)
+#define CHECK_EVENT_ALL_REEXECUTE(X) ((X & kAllReexecute) >> 6)
+
+#define CHECK_PRV_TYPE(X,Y) ((X & Y) == Y)
+#define CHECK_EVENT(X,Y) ((X & Y) == Y)
+#define CHECK_NO_EVENT(X) (X == 0)
+#define SET_EVENT(X,Y) (X |= Y)
+
 
 //SZ: change the following macro to 1) add "Error: " before all error messages,
 //    2) accept multiple arguments, and 3) assert(0) in ERROR_MESSAGE
@@ -203,11 +343,12 @@ namespace cd {
 
 //SZ: when testing MPI functions, print to files is easier
 #ifdef comm_log 
+
 #if _DEBUG
 extern FILE * fp;
 #endif
-#endif
 
+#endif
 
 #if _DEBUG
   //SZ: change to this if want to compile test_comm_log.cc
@@ -226,9 +367,10 @@ extern FILE * fp;
 
 //SZ temp disable libc printf
 #define PRINT_LIBC(...) {printf(__VA_ARGS__);}
-//#define PRINT_LIBC(...) {}
 
 #define MAX_FILE_PATH 2048
+#define INIT_FILE_PATH "INITIAL_FILE_PATH"
+#define dout clog
 
 /* 
 ISSUE 1 (Kyushick)
@@ -264,14 +406,13 @@ ISSUE 2 (Kyushick)
 We are increasing the number of reexecution inside Begin(). So, the point of time when we mark rollback point is not after Begin() but before Begin()
 */
 
-//#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff()
+//#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff()
 
 // Macros for setjump / getcontext
 // So users should call this in their application, not call cd_handle->Begin().
-#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jump_buffer_);  else getcontext(&(X)->ctxt_); (X)->CommitPreserveBuff(); (X)->Begin();
+
+#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
+//#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
 #define CD_Complete(X) (X)->Complete()   
-
-
-
 
 #endif

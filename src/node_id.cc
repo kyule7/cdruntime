@@ -40,8 +40,8 @@ using namespace cd;
 std::ostream& cd::operator<<(std::ostream& str, const NodeID& node_id)
 {
   return str << '(' 
-             << node_id.color() << ", "
-             << node_id.head() << ", " 
+//             << node_id.color() << ", "
+//             << node_id.head() << ", " 
              << node_id.task_in_color() << "/" << node_id.size() 
              << ')';
 }

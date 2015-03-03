@@ -122,6 +122,108 @@ class CDID {
     CDNameT  cd_name(void)       const { return cd_name_; }
     NodeID   node_id(void)       const { return node_id_; }
     bool     IsHead(void)        const { return node_id_.IsHead(); }
+
+    uint32_t GenMsgTag(uint64_t tag, uint16_t cd_tag) 
+    {
+      uint32_t msg_tag = cd_tag;
+      msg_tag = (1 << 30) | msg_tag; // metadata is 2 bit
+      msg_tag = ((tag & 0x3FFF) << 16) | msg_tag; // tag is 14 bit
+      return msg_tag;
+    }
+    uint32_t GenMsgTag(ENTRY_TAG_T tag)
+    {
+      return ((uint32_t)(tag & 0xFFFFFFFF));
+    }
+
+    uint32_t GenMsgTagForSameCD(int msg_type)
+    {
+      // MAX level : 64 (6 bit)
+      // MAX number of CDs in a level : 4096 (12 bit)
+      // MAX number of tasks in a CD  : 4096 (12 bit)
+      uint32_t level         = cd_name_.level();
+      uint32_t rank_in_level = cd_name_.rank_in_level();
+      uint32_t task_in_color = node_id_.task_in_color();
+      std::cout << "rank in level : "<<rank_in_level << std::endl;
+      if(level > 64) assert(0); 
+      if(rank_in_level > 4096) assert(0); 
+      if(task_in_color > 4096) assert(0); 
+      uint32_t tag = ((level << 24) | (rank_in_level << 12) | (task_in_color));
+      tag &= 0x3FFFFFFF;
+      tag |= msg_type;
+      return tag;
+    }
+
+    uint16_t CDTag16(void)  { 
+      // MAX level : 16 (4 bit)
+      // MAX number of CDs in a level : 64 (6 bit)
+      // MAX number of tasks in a CD  : 64 (6 bit)
+      uint32_t level         = cd_name_.level();
+      uint32_t rank_in_level = cd_name_.rank_in_level();
+      uint32_t task_in_color = node_id_.task_in_color();
+      if(level > 16) assert(0); 
+      if(rank_in_level > 64) assert(0); 
+      if(task_in_color > 64) assert(0); 
+      return ((level << 12) | (rank_in_level << 6) | (task_in_color));
+    }
+
+    uint32_t CDTag32(void)  { 
+      // MAX level : 64 (6 bit)
+      // MAX number of CDs in a level : 4096 (12 bit)
+      // MAX number of tasks in a CD  : 4096 (12 bit)
+      uint32_t level         = cd_name_.level();
+      uint32_t rank_in_level = cd_name_.rank_in_level();
+      uint32_t task_in_color = node_id_.task_in_color();
+      if(level > 64) assert(0); 
+      if(rank_in_level > 4096) assert(0); 
+      if(task_in_color > 4096) assert(0); 
+      return ((level << 24) | (rank_in_level << 12) | (task_in_color));
+    }
+
+    uint64_t CDTag64(void)  { 
+      // MAX level : 256 (8 bit)
+      // MAX number of CDs in a level : 268435456 (28 bit)
+      // MAX number of tasks in a CD  : 268435456 (28 bit)
+      uint64_t level         = cd_name_.level();
+      uint64_t rank_in_level = cd_name_.rank_in_level();
+      uint64_t task_in_color = node_id_.task_in_color();
+      if(level > 256) assert(0); 
+      if(rank_in_level > 268435456) assert(0); 
+      if(task_in_color > 268435456) assert(0); 
+      return ((level << 56) | (rank_in_level << 28) | (task_in_color));
+    }
+
+    void ReadCDTag64(uint64_t cd_tag, uint32_t &level, uint32_t &rank_in_level, uint32_t &task_in_color) {
+      level         = (cd_tag>>56) & 0xFF; // 8bit
+      rank_in_level = (cd_tag>>28) & 0xFFFFFFF; // 28bit
+      task_in_color = cd_tag       & 0xFFFFFFF; // 28bit
+    }
+
+    void ReadCDTag32(uint32_t cd_tag, uint32_t &level, uint32_t &rank_in_level, uint32_t &task_in_color) {
+      level         = (cd_tag>>24) & 0x3F; // 6bit
+      rank_in_level = (cd_tag>>12) & 0xFFF; // 12bit
+      task_in_color = cd_tag       & 0xFFF; // 12bit 
+    }
+
+    void ReadCDTag16(uint16_t cd_tag, uint32_t &level, uint32_t &rank_in_level, uint32_t &task_in_color) {
+      level         = (cd_tag>>12) & 0xF; // 4bit
+      rank_in_level = (cd_tag>>6)  & 0x3F; // 6bit
+      task_in_color = cd_tag       & 0x3F; // 6bit
+    
+    }
+    
+    void ReadMsgTag(uint32_t msg_tag) {
+//      std::cout << "\nReadMsgTag : " << msg_tag << std::endl;
+//      std::cout << ((msg_tag >> 30) & 0x3) << std::endl;
+//      std::cout << ((msg_tag >> 16) & 0x3FFF) << std::endl;
+      uint32_t level16=0;
+      uint32_t rank16=0;
+      uint32_t task16=0;
+      ReadCDTag16(msg_tag & 0xFFFF, level16, rank16, task16);
+//      std::cout << "In msgTag read, \n" << "16bit : "<< level16 << " , " << rank16 << " , " << task16 
+//                                  << std::endl << std::endl;
+    
+    }
+
 };
 
 std::ostream& operator<<(std::ostream& str, const CDID& cd_id);

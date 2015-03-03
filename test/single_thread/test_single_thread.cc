@@ -693,14 +693,14 @@ int main()
   ret = test_preservation_via_copy();
   if( ret == kError ) printf("test via copy FAILED\n");
   else printf("test via copy PASSED\n");
- 
- 
- 
-  printf("\ntest_preservation_via_referenence \n\n"); 
-  ret = test_preservation_via_ref();
-  if( ret == kError ) printf("test_preservation_via_reference FAILED\n");
-  else printf("test_preservation_via_reference PASSED\n");
- 
+
+
+
+printf("\ntest_preservation_via_referenence \n\n"); 
+ret = test_preservation_via_ref();
+if( ret == kError ) printf("test_preservation_via_reference FAILED\n");
+else printf("test_preservation_via_reference PASSED\n");
+
   printf("\ntest_preservation_via_referenence_partial_update() \n\n"); 
   ret = test_preservation_via_referenence_partial_update();
   if( ret == kError ) printf("test_preservation_via_referenence_partial_update FAILED\n");

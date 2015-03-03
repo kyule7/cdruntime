@@ -144,26 +144,27 @@ struct tsn_siteid_struct tsn_get_local_siteid(void)
 static int str_tsn_log_record(char *const s, const size_t n,
                               const struct tsn_log_record_struct *const r)
 {
-    static const char *const tsn_op_names[] = {
-        [tsn_op_invalid] = "tsn_op_invalid",
-        [tsn_op_begin] = "tsn_op_begin",
-        [tsn_op_abort] = "tsn_op_abort",
-        [tsn_op_commit] = "tsn_op_commit",
-        [tsn_op_set_savepoint] = "tsn_op_set_savepoint",
-        [tsn_op_start_rollback] = "tsn_op_start_rollback",
-        [tsn_op_finish_rollback] = "tsn_op_finish_rollback",
-
-    };
+//    static const char *const tsn_op_names[] = {
+//        [tsn_op_invalid] = "tsn_op_invalid",
+//        [tsn_op_begin] = "tsn_op_begin",
+//        [tsn_op_abort] = "tsn_op_abort",
+//        [tsn_op_commit] = "tsn_op_commit",
+//        [tsn_op_set_savepoint] = "tsn_op_set_savepoint",
+//        [tsn_op_start_rollback] = "tsn_op_start_rollback",
+//        [tsn_op_finish_rollback] = "tsn_op_finish_rollback",
+//
+//    };
 
 //    char *kv_format = (char*) "lsn=%lu prev=%lu next_undo=%lu tsnid=%lu tsnid=%s";
-    char *tbl_format = (char*) "%10lu P%10lu N%10lu %10lu %s";
-
-    return snprintf(s, n,
-                    tbl_format,
-                    r->tsn_log_lsn.lsn,
-                    r->tsn_log_prev_lsn.lsn,
-                    r->tsn_log_next_undo_lsn.lsn, r->tsn_log_tsnid.tsn_id, 
-                    tsn_op_names[r->tsn_log_op]);
+//    char *tbl_format = (char*) "%10lu P%10lu N%10lu %10lu %s";
+  return 0;
+//    return snprintf(s, n,
+//                    tbl_format,
+//                    r->tsn_log_lsn.lsn,
+//                    r->tsn_log_prev_lsn.lsn,
+//                    r->tsn_log_next_undo_lsn.lsn, r->tsn_log_tsnid.tsn_id, 
+//                    tsn_op_names[r->tsn_log_op]);
+//                    
 }
 
 void print_log_record(const char *s, 

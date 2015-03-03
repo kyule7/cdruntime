@@ -734,6 +734,110 @@ int test_preservation_via_referenence_partial_update()
   return kError;
 }
 
+/*
+// Test basic via reference scheme.
+int test_preservation_via_ref()
+{
+  int a[4]= {3,0,};
+  int b[8]= {1,0,};
+  int c[8]= {5,};
+  int num_reexecution = 0;
+  int test_result = 0;
+  
+  //CDHandle no_parent;  // not initialized and this means no parent
+  printf("\n\n---------------test_preemption begins-----------------------------\n");
+  CDErrT err;
+	CDHandle* root = CD_Init(np, mr);
+  CD_Begin(root); 
+  root->Preserve(a, sizeof(a), kCopy, "a");
+
+  printf("Before modifying current value of a[0] %d a[1] %d\n", a[0], a[1]);
+  a[0] = 99;  // now when child recovers it should see 3 instead of 99
+  printf("After modifying  current value of a[0] %d a[1] %d\n", a[0], a[1]);
+
+  CDHandle* child=root->Create(CDPath::GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
+  CD_Begin(child); 
+  printf("child cd begin\n"); 
+  child->Preserve(a, sizeof(a), kRef, "nonamejusttest", "a", 0);
+  
+  if( num_reexecution == 0 ) {
+    num_reexecution = 1;
+	  child->CDAssert(false);
+
+  }
+  if( num_reexecution == 1 ) {
+
+    printf("After Reexec :   value of a[0] %d a[1] %d\n", a[0], a[1]);
+    if(a[0] == 3 )
+      test_result=1;
+  }
+  CD_Complete(child);
+  child->Destroy();
+
+ 
+  CD_Complete(root);
+  CD_Finalize();
+
+  if( test_result == 1 ) return kOK;
+  return kError;
+}
+
+// Test basic via reference with partial update scheme.
+int test_preservation_via_referenence_partial_update()
+{
+  int a[4]= {3,7,9,10};
+  int b[8]= {1,0,};
+  int c[8]= {5,};
+  int num_reexecution = 0;
+  int test_result = 1;
+  
+  printf("\n\n---------------test_preservation_via_referenence_partial_update begins-----------------------------\n");
+//  CDHandle no_parent;  // not initialized and this means no parent
+//  CDHandle handle_cd=CD::Create(cd::kStrict, no_parent);
+//  CD *root= handle_cd.ptr_cd();
+	CDHandle* root = CD_Init(np, mr);
+  CD_Begin(root); 
+  root->Preserve(a, sizeof(a), kCopy, "a");
+
+  printf("Before modifying current value of a[0] %d a[1] %d  a[2] %d a[3] %d \n", a[0], a[1], a[2], a[3]);
+  a[0] = 99;  // now when child recovers it should see 99 after recovery of child
+  a[1] = 111;  // now when child recovers it should see 7 instead of 111 
+  a[2] = 112;  
+  a[3] = 113;  
+  CDErrT err;
+  CDHandle* child=root->Create(CDPath::GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
+  CD_Begin(child); 
+  child->Preserve(&(a[1]), 3*sizeof(int), kRef, "a", "a", sizeof(int));
+  printf("Child CD begins a[0] %d a[1] %d a[2] %d a[3] %d  \n", a[0], a[1], a[2], a[3]);
+
+  if( num_reexecution == 0 ) {
+    num_reexecution = 1;
+	  child->CDAssert(false);
+  }
+
+  if( num_reexecution == 1 )
+  {
+    if(a[0] != 99 )
+      test_result=0;
+    if(a[1] != 7 )
+      test_result=0;
+    if(a[2] != 9 )
+      test_result=0;
+    if(a[3] != 10 )
+      test_result=0;
+  }
+  CD_Complete(child);
+  child->Destroy();
+
+ 
+  CD_Complete(root);
+  root->Destroy();
+  if( test_result == 1 ) return kOK;
+  return kError;
+}
+
+*/
+
 int main(int argc, char* argv[])
 {
   int nprocs, myrank;

@@ -46,6 +46,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // In the bigger picture there are [Table] section in the beginning and then [Data] section.  In [Table] section we can see where the data is located.
 
 using namespace cd;
+using std::endl;
+using std::cout;
 Packer::Packer() 
 : table_size_(0), data_size_(0), used_table_size_(0), used_data_size_(0)
 {
@@ -95,7 +97,7 @@ Packer::~Packer()
 uint32_t Packer::Add(uint32_t id, uint32_t length, void *ptr_data)
 {
 
-  //std::cout << "id : " << id << ", length : " << length << ", ptr_data : " << ptr_data << std::endl;
+  dbg << "id : " << id << ", length : " << length << ", ptr_data : " << ptr_data << endl;
 
   // Class user does not need to know the current writing position.	
   return AddData(id , length ,  used_data_size_, (char *)ptr_data); 
@@ -105,13 +107,17 @@ uint32_t Packer::Add(uint32_t id, uint32_t length, void *ptr_data)
 //TODO: We can put checksum, or ECC at the end of this buffer. We can work on this later not now. 
 char *Packer::GetTotalData(uint32_t &total_data_size) 
 {
-//  std::cout << "GetTotalData"<<std::endl;
+  dbg << "GetTotalData"<<endl;
+
+  // If the target to be packed is actually empty, return NULL
+  if(used_table_size_ + used_data_size_ == 0) return NULL;
+
   char *total_data = new char [used_table_size_ + used_data_size_+ sizeof(uint32_t) ];  // We should not forget the first 4 byte for indicating table size.
 
   uint32_t table_size = (used_table_size_+sizeof(uint32_t));
-//  std::cout << "table_size : "<< table_size <<", ptr_table : " << (void *)ptr_table_ << ", used_table_size : " << used_table_size_ << ", used_data_size_ : "<< used_data_size_ <<std::endl;
+  dbg << "table_size : "<< table_size <<", ptr_table : " << (void *)ptr_table_ << ", used_table_size : " << used_table_size_ << ", used_data_size_ : "<< used_data_size_ <<endl;
   
-  //std::cout << "write id : "<< &table_size <<", write size : " << (void *)ptr_table_ << ", write pos : " << (void *)ptr_data_ << std::endl;
+  dbg << "write id : "<< &table_size <<", write size : " << (void *)ptr_table_ << ", write pos : " << (void *)ptr_data_ << endl;
 
   
   memcpy(total_data, &table_size,sizeof(uint32_t) ); 
@@ -119,7 +125,8 @@ char *Packer::GetTotalData(uint32_t &total_data_size)
   memcpy(total_data+used_table_size_+sizeof(uint32_t), ptr_data_, used_data_size_); 
 
   total_data_size = used_table_size_ + used_data_size_+ sizeof(uint32_t);
-// std::cout << "total_data : "<< (void *)total_data << std::endl;
+  dbg << "total_data : "<< (void *)total_data << endl;
+
   return total_data;
 }
 
@@ -158,7 +165,7 @@ void Packer::SetBufferGrow(uint32_t table_grow_unit, uint32_t data_grow_unit)
 void Packer::WriteWord(char *dst_buffer,uint32_t value)
 {
   if(dst_buffer != NULL ){	
-//    //std::cout << "WriteWord\ndst_buffer : "<< (void *)dst_buffer << ", value : "<< value << std::endl;
+//    dbg << "WriteWord\ndst_buffer : "<< (void *)dst_buffer << ", value : "<< value << endl;
     memcpy(dst_buffer,&value,sizeof(uint32_t) );
   }
 }
@@ -248,7 +255,7 @@ void Packer::WriteData(char *ptr_data, uint32_t length, uint32_t position)
 {
   if( ptr_data != NULL ) {	
     memcpy( ptr_data_ + position, ptr_data, length );
-    //std::cout << " Written Data is "<< *(int*)(ptr_data_ + position) << std::endl;
+    dbg << " Written Data is "<< *(int*)(ptr_data_ + position) << endl;
   }
 }
 
@@ -261,26 +268,27 @@ uint32_t Packer::AddData(uint32_t id, uint32_t length, uint32_t position, char *
 {
   uint32_t ret;
 
-    //std::cout << "\n=========================================================="<<std::endl;
-  //std::cout << "Packer::AddData"<<std::endl;  
-  //std::cout << "[before CheckRealloc] ptr_table : "<< (void *)ptr_table_ <<std::endl;  
+  dbg << "\n=========================================================="<<endl;
+  dbg << "Packer::AddData"<<endl;  
+  dbg << "[before CheckRealloc] ptr_table : "<< (void *)ptr_table_ <<endl;  
 
   if ( (ret = CheckRealloc(length)) != kOK ) 
   {
     return ret;  
   }
 
-  //std::cout << "[before write word] ptr_table : "<< (void *)ptr_table_ <<std::endl;  
+  dbg << "[before write word] ptr_table : "<< (void *)ptr_table_ <<endl;  
 
   WriteWord(ptr_table_ + used_table_size_, id); 
   WriteWord(ptr_table_ + used_table_size_ + 4, length); 
   WriteWord(ptr_table_ + used_table_size_ + 8, position); 
 
-  //std::cout << "[Get Info from table] id : " << id << " ("<<  (void*)(ptr_table_ + used_table_size_) << "), length : " << length << " ("<<  (void*)(ptr_table_ + used_table_size_ + 4) << "), position : " << position << " ("<<  (void*)(ptr_table_ + used_table_size_ + 8) << "), ptr_data : " << (void*)ptr_data << std::endl;
+  dbg << "[Get Info from table] id : " << id << " ("<<  (void*)(ptr_table_ + used_table_size_) << "), length : " << length 
+      << " ("<<  (void*)(ptr_table_ + used_table_size_ + 4) << "), position : " << position 
+      << " ("<<  (void*)(ptr_table_ + used_table_size_ + 8) << "), ptr_data : " << (void*)ptr_data << endl;
+  dbg << "Bring data from " << (void *)ptr_data  << " to "<< (void *)(ptr_data_ + position)  << endl;  
+  dbg << "=========================================================="<<endl; //dbgBreak();
 
-  //std::cout << "Bring data from " << (void *)ptr_data  << " to "<< (void *)(ptr_data_ + position)  << std::endl;  
-
-    //std::cout << "=========================================================="<<std::endl; //getchar();
   used_table_size_ += UNITSIZE;    
   WriteData(ptr_data,length,position); 
 
