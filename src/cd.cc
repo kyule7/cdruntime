@@ -40,6 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_entry.h"
 #include "cd_path.h"
 #include "event_handler.h"
+#include <mpi.h>
 #include <stdexcept>
 #include <typeinfo>
 #include <csetjmp>
@@ -252,6 +253,15 @@ void CD::Init()
   ctxt_prv_mode_ = kExcludeStack; 
   cd_exec_mode_  = kSuspension;
   option_save_context_ = 0;
+
+#ifdef comm_log
+  comm_log_ptr_=NULL;
+  //GONG
+  libc_log_ptr_=NULL;
+  incomplete_log_size_unit_=100;
+  //GONG
+  cur_pos_mem_alloc_log = 0;
+#endif
 //#if _WORK 
 //  path = Path("ssd", "hhd");
 //  path.SetSSDPath("./SSDpath/");
@@ -716,7 +726,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    std::cout<<"size: "<<mem_alloc_log_.size()<<std::endl;
 
     //GONG: DO actual free completed mem_alloc_log_
-    std::vector<struct IncompleteLogEntry>::iterator it;
+    std::vector<IncompleteLogEntry>::iterator it;
     for (it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
     {
 //      printf("check log %p %i %i\n", it->p_, it->complete_, it->pushed_);
@@ -750,7 +760,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     {
       CD* ptmp = GetParentHandle()->ptr_cd_;
       // push memory allocation logs to parent
-      std::vector<struct IncompleteLogEntry>::iterator ii;
+      std::vector<IncompleteLogEntry>::iterator ii;
       for(it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
       {
         bool found = false;      
@@ -3516,7 +3526,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 {
   // look for the entry in incomplete_log_
   int found = 0;
-  std::vector<struct IncompleteLogEntry>::iterator it;
+  std::vector<IncompleteLogEntry>::iterator it;
   CD* tmp_cd = this;
   for (it=incomplete_log_.begin(); it!=incomplete_log_.end(); it++)
   {
@@ -3673,7 +3683,7 @@ void CD::PrintIncompleteLog()
 {
   if (incomplete_log_.size()==0) return;
   PRINT_DEBUG("incomplete_log_.size()=%ld\n", incomplete_log_.size());
-  for (std::vector<struct IncompleteLogEntry>::iterator ii=incomplete_log_.begin();
+  for (std::vector<IncompleteLogEntry>::iterator ii=incomplete_log_.begin();
         ii != incomplete_log_.end(); ii++)
   {
     PRINT_DEBUG("\nPrint Incomplete Log information:\n");

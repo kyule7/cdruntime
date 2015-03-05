@@ -125,6 +125,8 @@ CommLog::~CommLog()
 
 void CommLog::InitInternal()
 {
+  new_log_generated_ = false;
+
   log_queue_.queue_size_ = 0;
   log_queue_.cur_pos_ = 0;
   log_queue_.base_ptr_ = NULL;

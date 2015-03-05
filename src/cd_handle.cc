@@ -99,7 +99,7 @@ void cd::WriteDbgStream(std::ostringstream *oss)
 {
 #if _DEBUG
   std::string output_filename("./output/output_");
-  output_filename = output_filename + string(to_string(myTaskID));
+  output_filename = output_filename + string(to_string(static_cast<unsigned long long>(myTaskID)));
   std::ofstream out_file_cd(output_filename.c_str());
 
   out_file_cd << dbg.str() << endl;
@@ -107,7 +107,7 @@ void cd::WriteDbgStream(std::ostringstream *oss)
 
   output_filename.clear();
   output_filename  = "./output/output_app_";
-  output_filename = output_filename + string(to_string(myTaskID));
+  output_filename = output_filename + string(to_string(static_cast<unsigned long long>(myTaskID)));
   std::ofstream out_file_app(output_filename.c_str());
 
   out_file_app << oss->str() << endl;

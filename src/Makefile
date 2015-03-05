@@ -7,7 +7,7 @@ SINGLE_VER_VAR = 0
 
 PROFILER_ENABLED=0
 LOGGING_ENABLED=1
-
+TACC=1
 MEDIUM = -D_MEMORY=1 \
          -D_PFS=0 \
          -D_SSD=0 \
@@ -41,6 +41,11 @@ endif
 ERR_FLAGS=-Wall -fmax-errors=3
 CFLAGS  = -g -fPIC -std=gnu++0x ${ERR_FLAGS} 
 LDFLAGS = #${SIGHT_LINKFLAGS}
+
+ifeq ($(TACC), 1)
+CFLAGS += -xhost -O2 
+endif
+
 CDS_FLAGS=-D_MPI_VER=$(MPI_VER_VAR) -D_PGAS_VER=$(PGAS_VER_VAR) -D_SINGLE_VER=$(SINGLE_VER_VAR) \
         -D_DEBUG=$(DEBUG_VAR) ${PROFILER_FLAGS} \
         -D_KL=1 
