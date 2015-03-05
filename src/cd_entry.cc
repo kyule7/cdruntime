@@ -145,8 +145,8 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen, struct ts
 CDEntry::CDEntryErrT CDEntry::SavePFS( struct tsn_log_struct *log )
 {
 	//First we should check for PFS file => I think we have checked it before calling this function (not sure).
-	//MPI_Status preserve_status;//This variable can be used to non-blocking writes to PFS. By checking this variable we can understand whether write has been finished or not.
-  //MPI_File_get_position( ptr_cd_->PFS_d_, &(dst_data_.parallel_file_offset_));
+	//PMPI_Status preserve_status;//This variable can be used to non-blocking writes to PFS. By checking this variable we can understand whether write has been finished or not.
+  //PMPI_File_get_position( ptr_cd_->PFS_d_, &(dst_data_.parallel_file_offset_));
 
   // Dynamic Chunk Interleave
   dst_data_.parallel_file_offset_ = ptr_cd_->Par_IO_Man->Write( src_data_.address_data(), src_data_.len() );
@@ -165,13 +165,13 @@ void CDEntry::RequestEntrySearch(void)
   CDEventT entry_search = kEntrySearch;
   ptr_cd()->SetMailBox(entry_search);
 
-//  MPI_Alloc_mem(src_data_.len(), MPI_INFO_NULL, &(dst_data_.address_data_));
+//  PMPI_Alloc_mem(src_data_.len(), PMPI_INFO_NULL, &(dst_data_.address_data_));
 
   ENTRY_TAG_T entry_tag_to_search = dst_data_.ref_name_tag();
   ptr_cd()->entry_request_req_[entry_tag_to_search] = CommInfo();
   // Tag should contain CDID+entry_tag
   ENTRY_TAG_T sendBuf[2] = {entry_tag_to_search, static_cast<uint64_t>(myTaskID)};
-  MPI_Isend(sendBuf, 
+  PMPI_Isend(sendBuf, 
             2, 
             MPI_UNSIGNED_LONG_LONG,
             ptr_cd()->head(), 
@@ -180,7 +180,7 @@ void CDEntry::RequestEntrySearch(void)
             &(ptr_cd()->entry_request_req_[entry_tag_to_search].req_));
 
   // Receive the preserved data to restore the data in application memory
-  MPI_Irecv(src_data_.address_data(), 
+  PMPI_Irecv(src_data_.address_data(), 
             src_data_.len(), 
             MPI_BYTE, 
             MPI_ANY_SOURCE, 

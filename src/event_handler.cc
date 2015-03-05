@@ -50,13 +50,13 @@ void HandleEntrySearch::HandleEvent(void)
   dbg << "HeadCD::HandleEntrySearch\t";
 
   MPI_Status status;
-  MPI_Recv(recvBuf, 
-           2, 
-           MPI_UNSIGNED_LONG_LONG, 
-           entry_requester_id, 
-           MSG_TAG_ENTRY_TAG, 
-           ptr_cd_->color(), // Entry requester is in the same CD task group. 
-           &status);
+  PMPI_Recv(recvBuf, 
+            2, 
+            MPI_UNSIGNED_LONG_LONG, 
+            entry_requester_id, 
+            MSG_TAG_ENTRY_TAG, 
+            ptr_cd_->color(), // Entry requester is in the same CD task group. 
+            &status);
 
   ENTRY_TAG_T &tag_to_search  = recvBuf[0];
   ENTRY_TAG_T &source_task_id = recvBuf[1];
@@ -78,7 +78,7 @@ void HandleEntrySearch::HandleEvent(void)
     ptr_cd_->SetMailBox(entry_send, target_task_id);
 
     ENTRY_TAG_T sendBuf[2] = {tag_to_search, source_task_id};
-    MPI_Isend(sendBuf, 
+    PMPI_Isend(sendBuf, 
               2, 
               MPI_UNSIGNED_LONG_LONG, 
               target_task_id, 
@@ -97,7 +97,7 @@ void HandleEntrySearch::HandleEvent(void)
     CDHandle *parent = CDPath::GetParentCD(ptr_cd_->level());
     CDEventT entry_search = kEntrySearch;
     parent->ptr_cd()->SetMailBox(entry_search);
-    MPI_Isend(recvBuf, 
+    PMPI_Isend(recvBuf, 
               2, 
               MPI_UNSIGNED_LONG_LONG,
               parent->node_id().head(), 
@@ -118,7 +118,7 @@ void HandleEntrySend::HandleEvent(void)
 
   MPI_Status status;
   ENTRY_TAG_T recvBuf[2] = {INIT_TAG_VALUE, INIT_ENTRY_SRC};
-  MPI_Recv(recvBuf, 
+  PMPI_Recv(recvBuf, 
            2, 
            MPI_UNSIGNED_LONG_LONG, 
            ptr_cd_->head(), 
@@ -149,7 +149,7 @@ void HandleEntrySend::HandleEvent(void)
 
   ptr_cd_->entry_send_req_[tag_to_search] = CommInfo();
   // Should be non-blocking send to avoid deadlock situation. 
-  MPI_Isend(entry->dst_data_.address_data(), 
+  PMPI_Isend(entry->dst_data_.address_data(), 
             entry->dst_data_.len(), 
             MPI_BYTE, 
             entry_source_task_id, 
@@ -187,7 +187,7 @@ void HandleErrorOccurred::HandleEvent(void)
 
 
     dbg << "Barrier resolved" << endl;
-    MPI_Barrier(ptr_cd_->color());
+    PMPI_Barrier(ptr_cd_->color());
     cout << "\n\n[Barrier] HandleErrorOccurred::HandleEvent, normal "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; //getchar();
     dbg << "Barrier resolved" << endl;
     // reset this flag for the next error
@@ -207,8 +207,8 @@ void HandleErrorOccurred::HandleEvent(void)
     ptr_cd_->event_flag_[task_id] &= ~kErrorOccurred;
 
     dbg << "Barrier resolved" << endl;
-    MPI_Barrier(ptr_cd_->color()); // for succeeding MPI_Barrier after CheckMailBox
-    MPI_Barrier(ptr_cd_->color());
+    PMPI_Barrier(ptr_cd_->color()); // for succeeding PMPI_Barrier after CheckMailBox
+    PMPI_Barrier(ptr_cd_->color());
     cout << "\n\n[Barrier] HandleErrorOccurred::HandleEvent, reexec "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() <<"\n\n" << endl; //getchar();
     dbg << "Barrier resolved" << endl;
     // reset this flag for the next error
@@ -243,7 +243,7 @@ void HandleAllResume::HandleEvent(void)
   ptr_cd_->event_flag_[ptr_cd_->head()] &= ~kAllResume;
   handled_event_count++;
 
-  MPI_Barrier(ptr_cd_->color());
+  PMPI_Barrier(ptr_cd_->color());
   cout << "\n\n[Barrier] HandleAllResume::HandleEvent "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; //getchar();
   dbg << "Barrier resolved" << endl;
 }
@@ -256,7 +256,7 @@ void HandleAllPause::HandleEvent(void)
   *(ptr_cd_->event_flag_) &= ~kAllPause;
   handled_event_count++;
   dbg << "Barrier resolved" << endl;
-  MPI_Barrier(ptr_cd_->color());
+  PMPI_Barrier(ptr_cd_->color());
   cout << "\n\n[Barrier] HandleAllPause::HandleEvent " << ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl;
 
   dbg << "Barrier resolved" << endl;

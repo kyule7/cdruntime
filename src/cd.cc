@@ -370,7 +370,7 @@ CD::InternalCreate(CDHandle* parent,
     if(task_count > 1) {
       cout << "in CD::Create Internal Memory. task count is "<< task_count <<endl;
       app_side = false;
-      MPI_Alloc_mem(sizeof(CDFlagT), 
+      PMPI_Alloc_mem(sizeof(CDFlagT), 
                     MPI_INFO_NULL, &(new_cd->event_flag_));
       
       cout << "in CD::Create Internal Memory. Done"<< task_count <<endl;
@@ -378,16 +378,16 @@ CD::InternalCreate(CDHandle* parent,
       // Initialization of event flags
       *(new_cd->event_flag_) = 0;
 
-//      MPI_Win_create(NULL, 0, 1,
+//      PMPI_Win_create(NULL, 0, 1,
 //                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
       cout << "CD mpi win create for "<< task_count << " window "<<endl;
 
-      MPI_Win_create(new_cd->event_flag_, sizeof(CDFlagT), sizeof(CDFlagT),
+      PMPI_Win_create(new_cd->event_flag_, sizeof(CDFlagT), sizeof(CDFlagT),
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
       cout << "CD mpi win create for "<< task_count << " window done"<<endl;
 
       // FIXME : should it be MPI_COMM_WORLD?
-      MPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
+      PMPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
       cout << "CD mpi win create for "<< task_count << " pending window done"<< ", id :"<<new_cd_id.node_id_<<endl;
     }
@@ -412,7 +412,7 @@ CD::InternalCreate(CDHandle* parent,
     if(task_count > 1) {
       app_side = false;
       cout << "in CD::Create Internal Memory. # tasks : "<< task_count <<endl;
-      MPI_Alloc_mem(task_count*sizeof(CDFlagT), 
+      PMPI_Alloc_mem(task_count*sizeof(CDFlagT), 
                     MPI_INFO_NULL, &(new_cd->event_flag_));
       cout << "in CD::Create Internal Memory. Done. # tasks : "<< task_count  << endl;
 
@@ -426,14 +426,14 @@ CD::InternalCreate(CDHandle* parent,
   
       cout << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
 //    for(int i=0; i<task_count; ++i) {
-      MPI_Win_create(new_cd->event_flag_, task_count*sizeof(CDFlagT), sizeof(CDFlagT),
+      PMPI_Win_create(new_cd->event_flag_, task_count*sizeof(CDFlagT), sizeof(CDFlagT),
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
 //    }
 
       cout << "HeadCD mpi win create for "<< task_count << " mailbox done"<<endl;
 
       // FIXME : should it be MPI_COMM_WORLD?
-      MPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
+      PMPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
 
       cout << "HeadCD mpi win create for "<< task_count << " pending window done"<<" , id: " << new_cd_id.node_id_ << endl;
@@ -479,8 +479,8 @@ inline CD::CDInternalErrT CD::InternalDestroy(void)
   dbg << "mpi win free for "<< task_count << " mailboxes"<<endl;
 
   if(task_size() > 1) {  
-    MPI_Win_free(&pendingWindow_);
-    MPI_Win_free(&mailbox_);
+    PMPI_Win_free(&pendingWindow_);
+    PMPI_Win_free(&mailbox_);
   }
   else
     dbg << "KL : size is 1" << endl;
@@ -961,8 +961,8 @@ CD::CDInternalErrT HeadCD::RequestDataMove(int sender, int receiver, const char 
     char* msg_for_sender1 = found_ref_name;
     int msg_for_receiver = sender;
     
-    MPI_Send(receiver, head, msg_for_receiver); // it will go to receiver
-    MPI_Send(sender, head, msg_for_sender0);    // it will go to sender
+    PMPI_Send(receiver, head, msg_for_receiver); // it will go to receiver
+    PMPI_Send(sender, head, msg_for_sender0);    // it will go to sender
   }
 }
 
@@ -970,12 +970,12 @@ CD::CDInternalErrT HeadCD::RequestDataMove(int sender, int receiver, const char 
 CD::CDInternalErrT CD::RequestDataMove(int sender, int receiver, const char *found_ref_name)
 {
 
-  MPI_Recv(me, head, msg); // this task will know if I am sender or receiver with this msg from head.
+  PMPI_Recv(me, head, msg); // this task will know if I am sender or receiver with this msg from head.
 
   if( am_I_sender() ){
-    MPI_Send(receiver_from_msg, me, msg);
+    PMPI_Send(receiver_from_msg, me, msg);
   } else {
-    MPI_Recv(me, sender_from_msg, msg);
+    PMPI_Recv(me, sender_from_msg, msg);
   }
 
 }
@@ -1005,7 +1005,7 @@ CD::CDInternalErrT CD::GatherEntryDirMapToHead()
   char sendBuf[SEND_BUF_SIZE];
   char recvBuf[num_sibling][SEND_BUF_SIZE];
 
-//  MPI_Allreduce(); // Get the number of entry search requests for HeadCD
+//  PMPI_Allreduce(); // Get the number of entry search requests for HeadCD
 
   if( !IsHead() ) {
 
@@ -1013,12 +1013,12 @@ CD::CDInternalErrT CD::GatherEntryDirMapToHead()
 
     void *packed_entry_dir_p = SerializeEntryDir(entry_count);
     
-    MPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
+    PMPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
 
   } 
   else { // HeadCD
     
-    MPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
+    PMPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
 
     void *entry_object = getEntryObjFromBuf();
 
@@ -1274,7 +1274,7 @@ bool CD::TestComm(bool test_until_done)
   bool is_all_valid = true;
 
   for(auto it=entry_request_req_.begin(); it!=entry_request_req_.end(); ) {
-    MPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
+    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
 
     if(it->second.valid_) {
       entry_request_req_.erase(it++);
@@ -1286,7 +1286,7 @@ bool CD::TestComm(bool test_until_done)
   }
 
   for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ) {
-    MPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
+    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
 
     if(it->second.valid_) {
       entry_recv_req_.erase(it++);
@@ -1298,7 +1298,7 @@ bool CD::TestComm(bool test_until_done)
   }
 
   for(auto it=entry_send_req_.begin(); it!=entry_send_req_.end(); ) {
-    MPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
+    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
 
     if(it->second.valid_) {
       entry_send_req_.erase(it++);
@@ -1316,7 +1316,7 @@ bool HeadCD::TestComm(bool test_until_done)
   bool is_all_valid = true;
 
   for(auto it=entry_request_req_.begin(); it!=entry_request_req_.end(); ) {
-    MPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
+    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
 
     if(it->second.valid_) {
       entry_request_req_.erase(it++);
@@ -1329,7 +1329,7 @@ bool HeadCD::TestComm(bool test_until_done)
 
 
   for(auto it=entry_search_req_.begin(); it!=entry_search_req_.end(); ) {
-    MPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
+    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
 
     if(it->second.valid_) {
       entry_search_req_.erase(it++);
@@ -1343,7 +1343,7 @@ bool HeadCD::TestComm(bool test_until_done)
   // Here is the same as CD::TestComm
 
   for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ) {
-    MPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
+    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
 
     if(it->second.valid_) {
       entry_recv_req_.erase(it++);
@@ -1355,7 +1355,7 @@ bool HeadCD::TestComm(bool test_until_done)
   }
 
   for(auto it=entry_send_req_.begin(); it!=entry_send_req_.end(); ) {
-    MPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
+    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
 
     if(it->second.valid_) {
       entry_send_req_.erase(it++);
@@ -2043,7 +2043,7 @@ CDErrT CD::Stop(CDHandle* cdh)
   //that means we need to stop real cd's thread..
   //otherwise what should we do here? nothing?
 
-  // Maybe blocking Recv here? or MPI_Wait()?
+  // Maybe blocking Recv here? or PMPI_Wait()?
   
   return CDErrT::kOK;
 }
@@ -2077,7 +2077,7 @@ CDErrT CD::RemoveChild(CDHandle* cd_child)
 void RegisterMeToParentHeadCD(int taskID)
 {
   
-//  MPI_Put(&taskID, 1, MPI_INTEGER, cd_id().node_id().head(), target_disp, target_count, MPI_INTEGER, &win);
+//  PMPI_Put(&taskID, 1, PMPI_INTEGER, cd_id().node_id().head(), target_disp, target_count, PMPI_INTEGER, &win);
 
 }
 
@@ -2106,15 +2106,15 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //  if(task_count > 1) {
 //    for(int i=0; i<task_count; ++i) {
 //    
-//      MPI_Win_create(NULL, 0, 1,
-//                     MPI_INFO_NULL, new_cd_id.color(), &((cd_ptr->mailbox_)[i]));
+//      PMPI_Win_create(NULL, 0, 1,
+//                     PMPI_INFO_NULL, new_cd_id.color(), &((cd_ptr->mailbox_)[i]));
 //  
 //    }
 //  }
 //  else {
 //    dbg << "CD::mpi win create for "<< task_count << " mailboxes"<<endl;
-//    MPI_Win_create(NULL, 0, 1,
-//                   MPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
+//    PMPI_Win_create(NULL, 0, 1,
+//                   PMPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
 //    
 //  }
 //
@@ -2131,12 +2131,12 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //    dbg << "mpi win free for "<< task_count << " mailboxes"<<endl;
 //    for(int i=0; i<task_count; ++i) {
 //      dbg << i << endl;
-//      MPI_Win_free(&(cd_ptr->mailbox_[i]));
+//      PMPI_Win_free(&(cd_ptr->mailbox_[i]));
 //    }
 //  }
 //  else {
 //    dbg << "mpi win free for one mailbox"<<endl;
-//    MPI_Win_free(cd_ptr->mailbox_);
+//    PMPI_Win_free(cd_ptr->mailbox_);
 //  }
 //
 //  return CD::CDInternalErrT::kOK;
@@ -2147,14 +2147,14 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //  dbg << "HeadCD create internal memory " << endl;
 //  int task_count = new_cd_id.task_count();
 //#if _MPI_VER
-////  if(new_cd_id.color() == MPI_COMM_WORLD) {
+////  if(new_cd_id.color() == PMPI_COMM_WORLD) {
 ////    dbg << "\n\nthis is root! " << task_count << "\n\n"<<endl;
-////    MPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
-////                  MPI_INFO_NULL, &event_flag_);
+////    PMPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
+////                  PMPI_INFO_NULL, &event_flag_);
 ////    mailbox_ = new CDMailBoxT[task_count];
 ////    for(int i=0; i<task_count; ++i) {
-////      MPI_Win_create(&((event_flag_)[i]), 1, sizeof(CDFlagT),
-////                     MPI_INFO_NULL, MPI_COMM_WORLD, &((mailbox_)[i]));
+////      PMPI_Win_create(&((event_flag_)[i]), 1, sizeof(CDFlagT),
+////                     PMPI_INFO_NULL, PMPI_COMM_WORLD, &((mailbox_)[i]));
 ////    }
 ////
 ////
@@ -2162,30 +2162,30 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 ////    return CD::CDInternalErrT::kOK;
 ////  }
 //
-//  MPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
-//                MPI_INFO_NULL, &(cd_ptr->event_flag_));
+//  PMPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
+//                PMPI_INFO_NULL, &(cd_ptr->event_flag_));
 //
 //  if(task_count > 1) {
 //
 //    dbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
 //    mailbox_ = new CDMailBoxT[task_count];
 //    for(int i=0; i<task_count; ++i) {
-//      MPI_Win_create(&((cd_ptr->event_flag_)[i]), 1, sizeof(CDFlagT),
-//                     MPI_INFO_NULL, new_cd_id.color(), &((cd_ptr->mailbox_)[i]));
+//      PMPI_Win_create(&((cd_ptr->event_flag_)[i]), 1, sizeof(CDFlagT),
+//                     PMPI_INFO_NULL, new_cd_id.color(), &((cd_ptr->mailbox_)[i]));
 //    }
 //
-////      MPI_Win_create(event_flag_, task_count, sizeof(CDFlagT),
-////                     MPI_INFO_NULL, new_cd_id.color(), mailbox_);
+////      PMPI_Win_create(event_flag_, task_count, sizeof(CDFlagT),
+////                     PMPI_INFO_NULL, new_cd_id.color(), mailbox_);
 //
 //  }
 //  else {
 //    dbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
-//    MPI_Win_create(cd_ptr->event_flag_, task_count, sizeof(CDFlagT),
-//                   MPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
+//    PMPI_Win_create(cd_ptr->event_flag_, task_count, sizeof(CDFlagT),
+//                   PMPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
 //    
 //  }
 //
-////  MPI_Win_allocate(task_count*sizeof(CDFlagT), sizeof(CDFlagT), MPI_INFO_NULL, new_cd_id.color(), &event_flag_, &mailbox_);
+////  PMPI_Win_allocate(task_count*sizeof(CDFlagT), sizeof(CDFlagT), PMPI_INFO_NULL, new_cd_id.color(), &event_flag_, &mailbox_);
 //  //dbgBreak();
 //#endif
 //  return CD::CDInternalErrT::kOK;
@@ -2200,18 +2200,18 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //    dbg << "HeadCD mpi win free for "<< task_count << " mailboxes"<<endl;
 //    for(int i=0; i<task_count; ++i) {
 //      dbg << i << endl;
-//      MPI_Win_free(&(cd_ptr->mailbox_[i]));
+//      PMPI_Win_free(&(cd_ptr->mailbox_[i]));
 //    }
 //  }
 //  else {
 //    dbg << "HeadCD mpi win free for one mailbox"<<endl;
-//    MPI_Win_free(cd_ptr->mailbox_);
+//    PMPI_Win_free(cd_ptr->mailbox_);
 //  }
-//  MPI_Free_mem(cd_ptr->event_flag_);
+//  PMPI_Free_mem(cd_ptr->event_flag_);
 //
 //
 //
-////  MPI_Win_free(&mailbox_);
+////  PMPI_Win_free(&mailbox_);
 //#endif
 //  return CD::CDInternalErrT::kOK;
 //}
@@ -2224,7 +2224,7 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 HeadCD::~HeadCD()
 {
 //  DestroyInternalMemory();
-//    MPI_Free_mem(event_flag_);
+//    PMPI_Free_mem(event_flag_);
 }
 
 CDHandle *HeadCD::Create(CDHandle* parent, 
@@ -2244,8 +2244,8 @@ CDHandle *HeadCD::Create(CDHandle* parent,
 
 //  int family_mailbox_count = child_cd_id.sibling_count() + 1;
 //  for(int i=0; i<num_children; ++i) {
-//    MPI_Win_create(&((ptr_headcd->family_event_flag_)[i]), 1, sizeof(CDFlagT),
-//                   MPI_INFO_NULL, new_cd_id.color(), &((ptr_headcd->family_mailbox_)[i]));
+//    PMPI_Win_create(&((ptr_headcd->family_event_flag_)[i]), 1, sizeof(CDFlagT),
+//                   PMPI_INFO_NULL, new_cd_id.color(), &((ptr_headcd->family_mailbox_)[i]));
 //  }
 
 
@@ -2271,7 +2271,7 @@ CDErrT HeadCD::Destroy(void)
 #if _MPI_VER
 #if _KL
   if(GetCDID().node_id().size() > 1) {
-    MPI_Free_mem(event_flag_);
+    PMPI_Free_mem(event_flag_);
   }
 #endif
 #endif
@@ -2349,7 +2349,7 @@ CDErrT HeadCD::AddChild(CDHandle *cd_child)
 //  int recv_buf[cd_id().sibling_count()];
 //  int recv_count;
 //
-//  MPI_Send(, send_count, MPI_INTEGER, recv_buf, recv_count, MPI_INTEGER, cd_id().node_id().head(), cd_id().color());
+//  PMPI_Send(, send_count, PMPI_INTEGER, recv_buf, recv_count, PMPI_INTEGER, cd_id().node_id().head(), cd_id().color());
 //
 //#endif
 //}
@@ -2360,9 +2360,9 @@ CDErrT HeadCD::AddChild(CDHandle *cd_child)
 //
 //  // Gather heads of children CDs
 //  int recv_buf[cd_id().sibling_count()];
-//  MPI_Status status;
+//  PMPI_Status status;
 //  for(int i=1; i<cd_id().sibling_count(); ++i) {
-//    MPI_Recv(&(recv_buf[i]), 1, MPI_INTEGER, MPI_ANY_SOURCE, 0, cd_id().color(), &status);
+//    PMPI_Recv(&(recv_buf[i]), 1, PMPI_INTEGER, PMPI_ANY_SOURCE, 0, cd_id().color(), &status);
 //  }
 //
 //#endif
@@ -2688,7 +2688,7 @@ CD::CDInternalErrT HeadCD::ReadMailBox(void)
     }
 //    dbg << "\tResolved? : " << resolved << endl;
   }
-//  MPI_Win_fence(0, mailbox_);
+//  PMPI_Win_fence(0, mailbox_);
   return ret;
 }
 
@@ -2723,25 +2723,25 @@ CD::CDInternalErrT CD::ReadMailBoxFromRemote(void)
     // This is not head, so needs to bring its mailbox from head
     // Check leaf's status first
 
-//    MPI_Win_start(task_group, 0, mailbox);
+//    PMPI_Win_start(task_group, 0, mailbox);
 
-    MPI_Win_fence(0, mailbox);
-    MPI_Get(&myEvent, 1, MPI_INT, curr_cdh->node_id_.head(), curr_cdh->node_id_.task_in_color(), 1, MPI_INT, mailbox);
+    PMPI_Win_fence(0, mailbox);
+    PMPI_Get(&myEvent, 1, MPI_INT, curr_cdh->node_id_.head(), curr_cdh->node_id_.task_in_color(), 1, MPI_INT, mailbox);
     dbg << "Complete event # " << myEvent << endl;
-    MPI_Win_fence(0, mailbox);
+    PMPI_Win_fence(0, mailbox);
     
-//    MPI_Win_complete(mailbox);
+//    PMPI_Win_complete(mailbox);
 
 
   }
   else {
     // This task is head
-//    MPI_Win_post(task_group, 0, mailbox);
-    MPI_Win_fence(0, mailbox);
+//    PMPI_Win_post(task_group, 0, mailbox);
+    PMPI_Win_fence(0, mailbox);
     dbg << "Epoch for getting mailbox for each task " << curr_cdh->IsHead() << ", node id: " << curr_cdh->node_id_ << endl;
     myEvent = (curr_cdh->ptr_cd()->event_flag())[curr_cdh->node_id_.task_in_color()];
-    MPI_Win_fence(0, mailbox);
-//    MPI_Win_wait(mailbox);
+    PMPI_Win_fence(0, mailbox);
+//    PMPI_Win_wait(mailbox);
   }
 
   dbg << "Task "<< myTaskID <<" (" << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << "), Error #" << myEvent << "\t";
@@ -2777,22 +2777,22 @@ CD::CDInternalErrT CD::ReadMailBoxFromRemote(void)
   CDMailBoxT &mailbox = curr_cdh->ptr_cd()->mailbox_; 
 
 //  FIXME 
-//  MPI_Group task_group;
-//  MPI_Comm_group(curr_cdh->node_id_.color(), &task_group);
+//  PMPI_Group task_group;
+//  PMPI_Comm_group(curr_cdh->node_id_.color(), &task_group);
 
   CDFlagT myEvent = 0;
   if(curr_cdh->IsHead() == false) {
     // This is not head, so needs to bring its mailbox from head
     // Check leaf's status first
 
-//    MPI_Win_start(task_group, 0, mailbox);
+//    PMPI_Win_start(task_group, 0, mailbox);
 
-    MPI_Win_fence(0, mailbox);
-    MPI_Get(&myEvent, 1, MPI_INT, curr_cdh->node_id_.head(), curr_cdh->node_id_.task_in_color(), 1, MPI_INT, mailbox);
+    PMPI_Win_fence(0, mailbox);
+    PMPI_Get(&myEvent, 1, MPI_INT, curr_cdh->node_id_.head(), curr_cdh->node_id_.task_in_color(), 1, MPI_INT, mailbox);
     dbg << "Complete event # " << myEvent << endl;
-    MPI_Win_fence(0, mailbox);
+    PMPI_Win_fence(0, mailbox);
     
-//    MPI_Win_complete(mailbox);
+//    PMPI_Win_complete(mailbox);
 
 //    dbg << "Task "<< myTaskID <<" (" << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ 
 //        << ") got an error #" << myEvent << " (";
@@ -2820,12 +2820,12 @@ CD::CDInternalErrT CD::ReadMailBoxFromRemote(void)
   }
   else {
     // This task is head
-//    MPI_Win_post(task_group, 0, mailbox);
-    MPI_Win_fence(0, mailbox);
+//    PMPI_Win_post(task_group, 0, mailbox);
+    PMPI_Win_fence(0, mailbox);
     dbg << "Epoch for getting mailbox for each task " << curr_cdh->IsHead() << ", node id: " << curr_cdh->node_id_ << endl;
     myEvent = (curr_cdh->ptr_cd()->event_flag())[curr_cdh->node_id_.task_in_color()];
-    MPI_Win_fence(0, mailbox);
-//    MPI_Win_wait(mailbox);
+    PMPI_Win_fence(0, mailbox);
+//    PMPI_Win_wait(mailbox);
   }
 
   dbg << "Task "<< myTaskID <<" (" << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << "), Error #" << myEvent << "\t";
@@ -2893,7 +2893,7 @@ CDEventHandleT CD::HandleEvent(CDFlagT *p_event, int idx)
         CDHandle *parent = CDPath::GetParentCD();
         CDEventT entry_search = kEntrySearch;
         parent->SetMailBox(entry_search);
-        MPI_Isend(recvBuf, 
+        PMPI_Isend(recvBuf, 
                   2, 
                   MPI_UNSIGNED_LONG_LONG,
                   parent->node_id().head(), 
@@ -3048,7 +3048,7 @@ CDEventHandleT HeadCD::HandleEvent(CDFlagT *p_event, int idx)
 //        CDHandle *parent = CDPath::GetParentCD();
 //        CDEventT entry_search = kEntrySearch;
 //        parent->SetMailBox(entry_search);
-//        MPI_Isend(recvBuf, 
+//        PMPI_Isend(recvBuf, 
 //                  2, 
 //                  MPI_UNSIGNED_LONG_LONG,
 //                  parent->node_id().head(), 
@@ -3170,33 +3170,33 @@ CDErrT CD::SetMailBox(CDEventT &event)
 
 
 
-  MPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, curr_cdh->ptr_cd()->pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, curr_cdh->ptr_cd()->pendingWindow_);
   if(event != CDEventT::kNoEvent) {
     dbg << "Set CD Event kErrorOccurred. Level : " << level() <<" CD Name : " << GetCDName()<< endl;
     // Increment pending request count at the target task (requestee)
-    MPI_Accumulate(&val, 1, MPI_INT, 
+    PMPI_Accumulate(&val, 1, MPI_INT, 
                    head_id, 0, 1, MPI_INT, 
                    MPI_SUM, curr_cdh->ptr_cd()->pendingWindow_);
     dbg << "MPI Accumulate done for "<< head_id <<"(head)"<< endl; //getchar();
   }
-  MPI_Win_unlock(head_id, curr_cdh->ptr_cd()->pendingWindow_);
+  PMPI_Win_unlock(head_id, curr_cdh->ptr_cd()->pendingWindow_);
 
   CDMailBoxT &mailbox = curr_cdh->ptr_cd()->mailbox_;
 
 
 
-  MPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, mailbox);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, mailbox);
 
   // Inform the type of event to be requested
   dbg << "Set event start" << endl; //getchar();
   if(event != CDEventT::kNoEvent) {
-    MPI_Accumulate(&event, 1, MPI_INT, 
+    PMPI_Accumulate(&event, 1, MPI_INT, 
                    head_id, curr_cdh->node_id_.task_in_color(), 1, MPI_INT, 
                    MPI_BOR, mailbox);
   }
   dbg << "MPI Accumulate done for "<< head_id <<"(head)"<< endl; //getchar();
 
-  MPI_Win_unlock(head_id, mailbox);
+  PMPI_Win_unlock(head_id, mailbox);
   dbg << "\n=================== Set Mail Box Done ==========================\n" << endl;
 
   return static_cast<CDErrT>(ret);
@@ -3226,34 +3226,34 @@ CDErrT HeadCD::SetMailBox(CDEventT &event, int task_id)
   }
 
 
-  MPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_id, 0, pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_id, 0, pendingWindow_);
   if(event != CDEventT::kNoEvent) {
     dbg << "Set CD Event " << event <<". Level : " << level() <<" CD Name : " << GetCDName()<< endl;
     dbg << "Accumulate event at " << task_id << endl;
     // Increment pending request count at the target task (requestee)
-//    MPI_Put(&val, 1, MPI_INT, 
+//    PMPI_Put(&val, 1, MPI_INT, 
 //                   task_id, 0, 1, MPI_INT, 
 //                   pendingWindow_);
-    MPI_Accumulate(&val, 1, MPI_INT, 
+    PMPI_Accumulate(&val, 1, MPI_INT, 
                    task_id, 0, 1, MPI_INT, 
                    MPI_SUM, pendingWindow_);
   }
-  dbg << "MPI_Accumulate done for " << task_id << endl; //getchar();
-  MPI_Win_unlock(task_id, pendingWindow_);
+  dbg << "PMPI_Accumulate done for " << task_id << endl; //getchar();
+  PMPI_Win_unlock(task_id, pendingWindow_);
 
 
-  MPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_id, 0, mailbox_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_id, 0, mailbox_);
 
   // Inform the type of event to be requested
   dbg << "Set event start" << endl; //getchar();
   if(event != CDEventT::kNoEvent) {
-    MPI_Accumulate(&event, 1, MPI_INT, 
+    PMPI_Accumulate(&event, 1, MPI_INT, 
                    task_id, 0, 1, MPI_INT, 
                    MPI_BOR, mailbox_);
   }
-  dbg << "MPI_Accumulate done for " << task_id << endl; //getchar();
+  dbg << "PMPI_Accumulate done for " << task_id << endl; //getchar();
 
-  MPI_Win_unlock(task_id, mailbox_);
+  PMPI_Win_unlock(task_id, mailbox_);
   dbg << "\n=================== Set Mail Box Done ==========================\n" << endl;
 
   return static_cast<CDErrT>(ret);
@@ -3278,32 +3278,32 @@ CDErrT CD::SetMailBox(CDEventT &event)
   if(task_size() > 1) {
     dbg << "KL : [SetMailBox] size is " << task_size() << ". Check mailbox at the upper level." << endl;
   
-    MPI_Win_fence(0, pendingWindow_);
+    PMPI_Win_fence(0, pendingWindow_);
     if(event != CDEventT::kNoEvent) {
-//      MPI_Win_fence(0, pendingWindow_);
+//      PMPI_Win_fence(0, pendingWindow_);
 
       dbg << "Set CD Event kErrorOccurred. Level : " << level() <<" CD Name : " << GetCDName()<< endl;
       // Increment pending request count at the target task (requestee)
-      MPI_Accumulate(&val, 1, MPI_INT, 
+      PMPI_Accumulate(&val, 1, MPI_INT, 
                      head(), 0, 1, MPI_INT, 
                      MPI_SUM, pendingWindow_);
       dbg << "MPI Accumulate done" << endl; getchar();
 
-//      MPI_Win_fence(0, pendingWindow_);
+//      PMPI_Win_fence(0, pendingWindow_);
     }
-    MPI_Win_fence(0, pendingWindow_);
+    PMPI_Win_fence(0, pendingWindow_);
 
     CDMailBoxT &mailbox = mailbox_;  
 
-    MPI_Win_fence(0, mailbox);
+    PMPI_Win_fence(0, mailbox);
     if(event != CDEventT::kNoEvent) {
       // Inform the type of event to be requested
-      MPI_Accumulate(&event, 1, MPI_INT, 
+      PMPI_Accumulate(&event, 1, MPI_INT, 
                      head(), task_in_color(), 1, MPI_INT, 
                      MPI_BOR, mailbox);
 
-//    MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
-      dbg << "MPI_Put done" << endl; getchar();
+//    PMPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
+      dbg << "PMPI_Put done" << endl; getchar();
     }
   
 //    switch(event) {
@@ -3312,9 +3312,9 @@ CDErrT CD::SetMailBox(CDEventT &event)
 //        break;
 //      case CDEventT::kErrorOccurred :
 //        // Inform the type of event to be requested
-//        MPI_Accumulate(&event, 1, MPI_INT, node_id_.head(), node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
-////        MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
-//        dbg << "MPI_Put done" << endl; getchar();
+//        PMPI_Accumulate(&event, 1, MPI_INT, node_id_.head(), node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
+////        PMPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
+//        dbg << "PMPI_Put done" << endl; getchar();
 //        break;
 //      case CDEventT::kAllPause :
 //        dbg << "Set CD Event kAllPause" << endl;
@@ -3337,7 +3337,7 @@ CDErrT CD::SetMailBox(CDEventT &event)
 //        break;
 //    }
   
-    MPI_Win_fence(0, mailbox);
+    PMPI_Win_fence(0, mailbox);
   
   }
   else {
@@ -3360,29 +3360,29 @@ CDErrT CD::SetMailBox(CDEventT &event)
 
     int parent_head_id = curr_cdh->node_id().head();
 
-    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, parent_head_id, 0, curr_cdh->ptr_cd()->pendingWindow_);
+    PMPI_Win_lock(PMPI_LOCK_EXCLUSIVE, parent_head_id, 0, curr_cdh->ptr_cd()->pendingWindow_);
     if(event != CDEventT::kNoEvent) {
       dbg << "Set CD Event kErrorOccurred. Level : " << level() <<" CD Name : " << GetCDName()<< endl;
       // Increment pending request count at the target task (requestee)
-      MPI_Accumulate(&val, 1, MPI_INT, parent_head_id, 
+      PMPI_Accumulate(&val, 1, MPI_INT, parent_head_id, 
                      0, 1, MPI_INT, 
                      MPI_SUM, curr_cdh->ptr_cd()->pendingWindow_);
       dbg << "MPI Accumulate done" << endl; getchar();
     }
-    MPI_Win_unlock(parent_head_id, curr_cdh->ptr_cd()->pendingWindow_);
+    PMPI_Win_unlock(parent_head_id, curr_cdh->ptr_cd()->pendingWindow_);
 
     CDMailBoxT &mailbox = curr_cdh->ptr_cd()->mailbox_;
 
-    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, parent_head_id, 0, mailbox);
+    PMPI_Win_lock(PMPI_LOCK_EXCLUSIVE, parent_head_id, 0, mailbox);
     // Inform the type of event to be requested
     dbg << "Set event start" << endl; getchar();
     if(event != CDEventT::kNoEvent) {
-      MPI_Accumulate(&event, 1, MPI_INT, parent_head_id, 
+      PMPI_Accumulate(&event, 1, MPI_INT, parent_head_id, 
                      curr_cdh->node_id_.task_in_color(), 1, MPI_INT, 
                      MPI_BOR, mailbox);
-//    MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
+//    PMPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
     }
-    dbg << "MPI_Accumulate done" << endl; getchar();
+    dbg << "PMPI_Accumulate done" << endl; getchar();
 
 //    switch(event) {
 //      case CDEventT::kNoEvent :
@@ -3391,9 +3391,9 @@ CDErrT CD::SetMailBox(CDEventT &event)
 //      case CDEventT::kErrorOccurred :
 //        // Inform the type of event to be requested
 //        dbg << "Set event start" << endl; getchar();
-//        MPI_Accumulate(&event, 1, MPI_INT, parent_head_id, curr_cdh->node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
-////        MPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
-//        dbg << "MPI_Accumulate done" << endl; getchar();
+//        PMPI_Accumulate(&event, 1, MPI_INT, parent_head_id, curr_cdh->node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
+////        PMPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
+//        dbg << "PMPI_Accumulate done" << endl; getchar();
 //        break;
 //      case CDEventT::kAllPause :
 //        dbg << "Set CD Event kAllPause" << endl;
@@ -3415,7 +3415,7 @@ CDErrT CD::SetMailBox(CDEventT &event)
 //  
 //        break;
 //    }
-    MPI_Win_unlock(parent_head_id, mailbox);
+    PMPI_Win_unlock(parent_head_id, mailbox);
   }
   dbg << "\n================================================================\n" << endl;
 
@@ -3487,7 +3487,7 @@ CommLogErrT CD::ProbeAndReadData(unsigned long flag)
            it != tmp_cd->incomplete_log_.end(); 
            it++)
       {
-        //FIXME: potential bug, what if two MPI_Wait within one CD using the same request??
+        //FIXME: potential bug, what if two PMPI_Wait within one CD using the same request??
         //       e.g. begin, irecv, wait, irecv, wait, complete
         if (it->flag_ == flag){
           found = 1;
@@ -3550,7 +3550,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
     if (!found)
     {
       //ERROR_MESSAGE("Do not find corresponding Isend/Irecv incomplete log!!\n")
-      PRINT_DEBUG("Possible bug: Isend/Irecv incomplete log NOT found (maybe deleted by MPI_Test)!!\n")
+      PRINT_DEBUG("Possible bug: Isend/Irecv incomplete log NOT found (maybe deleted by PMPI_Test)!!\n")
     }
   }
   
@@ -3700,8 +3700,8 @@ bool HeadCD::HandleEntrySearch::operator()(void)
 
   dbg << "HeadCD::HandleEntrySearch\t";
 
-  MPI_Status status;
-  MPI_Recv(recvBuf, 
+  PMPI_Status status;
+  PMPI_Recv(recvBuf, 
            2, 
            MPI_UNSIGNED_LONG_LONG, 
            entry_requester_id, 
@@ -3729,7 +3729,7 @@ bool HeadCD::HandleEntrySearch::operator()(void)
     SetMailBox(entry_send, target_task_id);
 
     ENTRY_TAG_T sendBuf[2] = {tag_to_search, source_task_id};
-    MPI_Isend(sendBuf, 
+    PMPI_Isend(sendBuf, 
               2, 
               MPI_UNSIGNED_LONG_LONG, 
               target_task_id, 
@@ -3756,9 +3756,9 @@ void CD::HandleEntrySend::operator()(void)
 {
   dbg << "CD::HandleEntrySend\n" << endl;
 
-  MPI_Status status;
+  PMPI_Status status;
   ENTRY_TAG_T recvBuf[2] = {INIT_TAG_VALUE, INIT_ENTRY_SRC};
-  MPI_Recv(recvBuf, 
+  PMPI_Recv(recvBuf, 
            2, 
            MPI_UNSIGNED_LONG_LONG, 
            head(), 
@@ -3789,12 +3789,12 @@ void CD::HandleEntrySend::operator()(void)
 
   entry_send_req_[tag_to_search] = CommInfo();
   // Should be non-blocking send to avoid deadlock situation. 
-  MPI_Isend(entry->dst_data_.address_data(), 
+  PMPI_Isend(entry->dst_data_.address_data(), 
             entry->dst_data_.len(), 
-            MPI_BYTE, 
+            PMPI_BYTE, 
             entry_source_task_id, 
             cd_id_.GenMsgTag(tag_to_search), 
-            MPI_COMM_WORLD, // could be any task in the whole rank group 
+            PMPI_COMM_WORLD, // could be any task in the whole rank group 
             &(entry_send_req_[tag_to_search].req_));  
 
   dbg << "CD Event kEntrySend\t\t\t";
@@ -3820,7 +3820,7 @@ void HeadCD::HandleErrorOccurred::operator()(void)
 //  bool error_handled = true;
 //  if(error_handled) {
 //    // Resume
-////    MPI_Barrier(color());
+////    PMPI_Barrier(color());
 //  }
 //  else {
 //    for(int i=0; i<task_size(); i++) {
@@ -3829,7 +3829,7 @@ void HeadCD::HandleErrorOccurred::operator()(void)
 //      SetMailBox(all_reexecute, i);
 //    }
 //    // Resume
-//    MPI_Barrier(color());
+//    PMPI_Barrier(color());
 //    HandleAllReexecute();
 //  }
 #endif
@@ -3849,7 +3849,7 @@ void HeadCD::HandleAllResume::operator()(void)
   event_flag_[head()] &= ~kAllResume;
   handled_event_count++;
 
-//  MPI_Barrier(color());
+//  PMPI_Barrier(color());
 
 }
 
@@ -3860,7 +3860,7 @@ void CD::HandleAllPause::operator()(void)
   dbg << "CD Event kAllPause\t\t\t";
   *event_flag_ &= ~kAllResume;
   handled_event_count++;
-//  MPI_Barrier(color());
+//  PMPI_Barrier(color());
 
   if( CHECK_EVENT(*event_flag_, kAllReexecute) ) {
     cout << "\n==================Reexecuted by somebody================\n" << endl;;
@@ -4027,7 +4027,7 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
 //void CD::AddEntryToSend(const ENTRY_TAG_T &entry_tag_to_search) 
 //{
 ////  entry_recv_req_[entry_tag_to_search];
-//  MPI_Alloc_mem(MAX_ENTRY_BUFFER_SIZE, MPI_INFO_NULL, &(entry_recv_req_[entry_tag_to_search]));
+//  PMPI_Alloc_mem(MAX_ENTRY_BUFFER_SIZE, PMPI_INFO_NULL, &(entry_recv_req_[entry_tag_to_search]));
 //}
 //
 //void CD::RequestEntrySearch(void)
@@ -4036,11 +4036,11 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
 //  for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ++it) {
 //    dbg << tag2str[*it] << endl;
 //  }
-////  MPI_Status status;
+////  PMPI_Status status;
 ////  void *entry_list_to_search;
-////  MPI_Probe(source, tag, cdh->node_id().color(), &status)
+////  PMPI_Probe(source, tag, cdh->node_id().color(), &status)
 //
-//  MPI_Irecv(entry_recv_req_[entry_tag_to_search], PACKED_EN, MPI_UNSIGNED_LONG_LONG, src, entry_tag_to_search, node_id().color(), &status);  
+//  PMPI_Irecv(entry_recv_req_[entry_tag_to_search], PACKED_EN, MPI_UNSIGNED_LONG_LONG, src, entry_tag_to_search, node_id().color(), &status);  
 //  
 //}
 //

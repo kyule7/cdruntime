@@ -45,10 +45,10 @@ using namespace std;
 
 //  if(IsHead()) {
 //    // Create window to get head info of children CDs.
-//    MPI_Win_create();
+//    PMPI_Win_create();
 //  }
 //  else {
-//    MPI_Win_create();
+//    PMPI_Win_create();
 //  }
 
 void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id) 
@@ -64,8 +64,8 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
   }
   send_buf[1] = ptr_cd()->remote_entry_directory_map_.size();
 
-  MPI_Allgather(send_buf, 2, MPI_INTEGER, 
-                recv_buf, 2, MPI_INTEGER, 
+  PMPI_Allgather(send_buf, 2, MPI_INT, 
+                recv_buf, 2, MPI_INT, 
                 node_id().color());
 
   dbg << "\n==================Remote entry check ===================\n" << endl;
@@ -112,7 +112,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
   }
 //  dbg << "# of entries to gather : " << entry_count << endl;
 //  CDEntry *entry_to_deserialize = new CDEntry[entry_count*2];
-//  MPI_Gatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
+//  PMPI_Gatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
 //              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
 //              node_id().head(), node_id().color());
 
@@ -122,17 +122,17 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 //  int alloc_err=0;
 //  if(IsHead())  {
 //    alloc_err= 
-  MPI_Alloc_mem(recv_count, MPI_INFO_NULL, &entry_to_deserialize);
+  PMPI_Alloc_mem(recv_count, MPI_INFO_NULL, &entry_to_deserialize);
 //  }
   MPI_Datatype sType;
-  MPI_Type_contiguous(serialized_len_in_bytes, MPI_BYTE, &sType);
-  MPI_Type_commit(&sType);
+  PMPI_Type_contiguous(serialized_len_in_bytes, MPI_BYTE, &sType);
+  PMPI_Type_commit(&sType);
 
-//  MPI_Datatype rType;
-//  MPI_Type_contiguous(recv_count, MPI_BYTE, &rType);
-////  MPI_Type_create_struct(task_count, serialized_len_in_bytes, 0, MPI_BYTE, &rType);
-////  MPI_Type_vector(task_count, serialized_len_in_bytes, serialized_len_in_bytes, MPI_BYTE, &rType);
-//  MPI_Type_commit(&rType);
+//  PMPI_Datatype rType;
+//  PMPI_Type_contiguous(recv_count, MPI_BYTE, &rType);
+////  PMPI_Type_create_struct(task_count, serialized_len_in_bytes, 0, MPI_BYTE, &rType);
+////  PMPI_Type_vector(task_count, serialized_len_in_bytes, serialized_len_in_bytes, MPI_BYTE, &rType);
+//  PMPI_Type_commit(&rType);
 
 
   dbg << "\n\nNote : " << serialized_entry << ", " << serialized_len_in_bytes << ", " << recv_count << ", remote entry dir map size : " << ptr_cd()->remote_entry_directory_map_.size() << "======= "<< endl << endl;
@@ -141,7 +141,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 //  }
 //  char *rbuf = new char[sizeof(int)*task_count*2];
 
-//  MPI_Gather(&node_id_.task_in_color_, 1, MPI_INT,
+//  PMPI_Gather(&node_id_.task_in_color_, 1, MPI_INT,
 //             rbuf, 1, MPI_INT,
 //             node_id().head(), node_id().color());
 //
@@ -159,7 +159,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 
 
 
-//  MPI_Gather(serialized_entry, 1, sType,
+//  PMPI_Gather(serialized_entry, 1, sType,
 //             entry_to_deserialize, 1, sType,
 //             node_id().head(), node_id().color());
   dbg << "Wait!! " << node_id().size() << endl;
@@ -167,7 +167,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
     dbg << "recv_counts["<<i<<"] : " << recv_counts[i] << endl;
     dbg << "displs["<<i<<"] : " << displs[i] << endl;
   }
-//  MPI_Allgatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
+//  PMPI_Allgatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
 //              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
 //              node_id().color());
 
@@ -192,18 +192,18 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
   test_a[2] = test_a[0]+100;
   test_a[3] = test_a[0]+1000;
 
-  MPI_Gatherv(test_a, 4, MPI_INT,
+  PMPI_Gatherv(test_a, 4, MPI_INT,
               test_b, test_counts, test_displs, MPI_INT,
               node_id().head(), node_id().color());
 
-//  MPI_Gatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
+//  PMPI_Gatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
 //              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
 //              node_id().head(), node_id().color());
-//  MPI_Allgatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
+//  PMPI_Allgatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
 //              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
 //              node_id().head(), node_id().color());
 
-  MPI_Gather(serialized_entry, 1, sType,
+  PMPI_Gather(serialized_entry, 1, sType,
              entry_to_deserialize, 1, sType,
              node_id_.head(), node_id_.color());
 
@@ -287,7 +287,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 //
 //    if(new_node_id.IsHead()) {
 //      // Calculate the array of group 
-//      MPI_Group_incl(node_id_.task_group_, head_rank_count, head_rank, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group())); 
+//      PMPI_Group_incl(node_id_.task_group_, head_rank_count, head_rank, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group())); 
 //
 //    }
 //
@@ -310,7 +310,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 //    serialized_entries = ptr_cd_->SerializeEntryDir(uint32_t& entry_count);
 //  }
 //
-//  MPI_Gatherv(serialized_entries, entry_size, MPI_BYTE, 
+//  PMPI_Gatherv(serialized_entries, entry_size, MPI_BYTE, 
 //              entries_to_be_deserialized, entry_count, entry_disp, MPI_BYTE, 
 //              node_id().head(), node_id().color());
 //
@@ -366,11 +366,11 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 //    buffer = entry_dir_packer.GetTotalData(len_in_bytes);
 //
 //
-//    MPI_Gather(send_buf, 1, MPI_BYTE, task_id_buffer, 1, MPI_BYTE, node_id().head(), node_id().color());
+//    PMPI_Gather(send_buf, 1, MPI_BYTE, task_id_buffer, 1, MPI_BYTE, node_id().head(), node_id().color());
 //  }
 //  else {  // Current task is head. It receives children CDs' head info and entry info of every task in the CD.
 //    char *recv_buf;
-//    MPI_Gather(send_buf, 1, MPI_BYTE, recv_buf, 1, MPI_BYTE, node_id().head(), node_id().color());
+//    PMPI_Gather(send_buf, 1, MPI_BYTE, recv_buf, 1, MPI_BYTE, node_id().head(), node_id().color());
 //
 //    // Deserialize the entries received from the other tasks in current CD's task group.
 //    ptr_cd_->DeserializeEntryDir(recv_buf);
@@ -391,7 +391,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 //      entry_dir.push_back(cd_entry);
 //    }
 //
-////    MPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
+////    PMPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
 //
 //  }
 //
@@ -401,10 +401,10 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 //  int task_id = node_id().task_in_color();
 //  int null_id = 0;
 //  if(new_node_id.IsHead()) {
-//    MPI_Gather(&task_id, 1, MPI_INTEGER, task_id_buffer, 1, MPI_INTEGER, node_id().head(), node_id().color());
+//    PMPI_Gather(&task_id, 1, MPI_INT, task_id_buffer, 1, MPI_INT, node_id().head(), node_id().color());
 //  }
 //  else {
-//    MPI_Gather(&null_id, 1, MPI_INTEGER, task_id_buffer, 1, MPI_INTEGER, node_id().head(), node_id().color());
+//    PMPI_Gather(&null_id, 1, MPI_INT, task_id_buffer, 1, MPI_INT, node_id().head(), node_id().color());
 //  }
 //  if(IsHead()) {
 //    for(int i=0; i<node_id().size(); ++i) {
@@ -415,7 +415,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 ////    if(new_node_id.IsHead()) {
 ////      int child_heads[num_children];
 ////      // send child_cd_name.rank_in_level_ of heads of children CDs
-////      MPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
+////      PMPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
 ////    }
 //
 ////  ptr_cd_->family_mailbox_
