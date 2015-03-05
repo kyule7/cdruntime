@@ -3487,7 +3487,7 @@ bool CD::IsParentLocal()
 //SZ
 CDHandle* CD::GetParentHandle()
 {
-  return CDPath::GetParentCD();
+  return CDPath::GetParentCD(level());
 }
 
 #if 0
