@@ -46,22 +46,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 using namespace cd;
 using namespace std;
-uint64_t Util::gen_object_id_=0;
-CDPath* CDPath::uniquePath_;
 
+CDPath* CDPath::uniquePath_;
+bool cd::app_side=true;
 #if _DEBUG
 std::ostringstream cd::dbg;
 #endif
 
 int cd::myTaskID = 0;
 
-static inline void CDPrologue(void) {
-  app_side = false;
-}
-
-static inline void CDEpilogue(void) {
-  app_side = true;
-}
 
 // Global functions -------------------------------------------------------
 /// CD_Init()
@@ -432,6 +425,8 @@ CDHandle* CDHandle::Create(const ColorT& color,
                            uint32_t error_loc_mask, 
                            CDErrT *error )
 {
+  CDPrologue();
+  cout << "CDHandle::Create " << node_id_ << endl;
   // Create a new CDHandle and CD object
   // and populate its data structure correctly (CDID, etc...)
   //  This is an extremely powerful mechanism for dividing a single communicating group of processes into k subgroups, 
@@ -471,7 +466,7 @@ CDHandle* CDHandle::Create(const ColorT& color,
   ColorT new_comm;
   NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, new_size);
 
-//  dbg << "[Before] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //dbgBreak();
+  cout << "[Before] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //dbgBreak();
   if(num_children > 1) {
     dbg<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl; //dbgBreak();
     cout << "task id: "<<node_id_.task_in_color() <<", size: " << node_id_.size() <<", num_child: "<<num_children<< endl;
@@ -497,17 +492,18 @@ CDHandle* CDHandle::Create(const ColorT& color,
 
   SetHead(new_node_id);
   // Generate CDID
-  cout << "new_color : " << new_color << endl;
+  cout << "new_color : " << new_color << " in "<< node_id_ << endl;
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
-//  dbg<<"~~~~~~~~before create cd obj~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<dbg; //dbgBreak();
+  cout<<"~~~~~~~~before create cd obj~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<dbg; //dbgBreak();
 
 //  if(!ptr_cd()->remote_entry_directory_map_.empty())
-    CollectHeadInfoAndEntry(new_node_id); 
-
+//    CollectHeadInfoAndEntry(new_node_id); 
+  cout << "done collect to head" << endl;
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
   CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec, &internal_err);
 
+  cout << "done collect to head" << endl;
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
 
@@ -516,6 +512,8 @@ CDHandle* CDHandle::Create(const ColorT& color,
   if(err<0) {
     ERROR_MESSAGE("CDHandle::Create failed.\n"); assert(0);
   }
+
+  CDEpilogue();
 
   return new_cd_handle;
 }
@@ -541,14 +539,17 @@ CDHandle* CDHandle::CreateAndBegin(const ColorT& color,
                                    uint32_t error_loc_mask, 
                                    CDErrT *error )
 {
+  CDPrologue();
   CDHandle* new_cdh = Create(color, num_children, name, cd_type, error_name_mask, error_loc_mask, error);
   new_cdh->Begin(false, name);
-
+  CDEpilogue();
   return new_cdh;
 }
 
 CDErrT CDHandle::Destroy(bool collective)
 {
+  CDPrologue();
+
   CDErrT err;
  
   if ( collective ) {
@@ -588,13 +589,14 @@ CDErrT CDHandle::Destroy(bool collective)
   CDPath::GetCDPath()->pop_back();
 
    
-
+  CDEpilogue();
   return err;
 }
 
 
 CDErrT CDHandle::Begin(bool collective, const char* label)
 {
+  CDPrologue();
   assert(ptr_cd_ != 0);
   CDErrT err = ptr_cd_->Begin(collective, label);
 
@@ -602,7 +604,7 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
   
   if(node_id_.size() > 1) {
     MPI_Barrier(node_id_.color());
-    cout << "\n\n[Barrier] CDHandle::Begin - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; getchar();
+    cout << "\n\n[Barrier] CDHandle::Begin - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
   }
   //CheckMailBox();
 
@@ -622,16 +624,18 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 //  }
 #endif
 
-
+  CDEpilogue();
   return err;
 }
 
 CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 {
+  CDPrologue();
+
   //CheckMailBox();
   if(node_id_.size() > 1) {
     MPI_Barrier(node_id_.color());
-    cout << "\n\n[Barrier] CDHandle::Complete - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; getchar();
+    cout << "\n\n[Barrier] CDHandle::Complete - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
   }
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
@@ -661,7 +665,8 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 
 
   }
-
+  
+  CDEpilogue();
   return ret;
 }
 
@@ -674,6 +679,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
                           const RegenObject *regen_object, 
                           PreserveUseT data_usage)
 {
+  CDPrologue();
   //CheckMailBox();
 
 
@@ -694,7 +700,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 //    // It is at remote node so do something for that.
 //
 //  }
-
+  CDEpilogue();
   return kError;
 }
 
@@ -708,6 +714,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
                           const RegenObject *regen_object, 
                           PreserveUseT data_usage )
 {
+  CDPrologue();
   //CheckMailBox();
   if( IsHead() ) {
     assert(ptr_cd_ != 0);
@@ -720,7 +727,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   else {
     // It is at remote node so do something for that.
   }
-
+  CDPrologue();
   return kError;
 }
 
@@ -822,6 +829,7 @@ return true;
 
 CDErrT CDHandle::CDAssert (bool test_true, const SysErrT *error_to_report)
 {
+  CDPrologue();
 //  if( IsHead() ) {
     assert(ptr_cd_ != 0);
 #if _PROFILER
@@ -836,7 +844,7 @@ CDErrT CDHandle::CDAssert (bool test_true, const SysErrT *error_to_report)
 //    return ptr_cd_->Assert(test_true); 
 //    // It is at remote node so do something for that.
 //  }
-
+  CDEpilogue();
   return kOK;
 }
 
@@ -866,6 +874,7 @@ CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 
 std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 {
+  CDPrologue();
   //CheckMailBox();
   dbg << "DETECT check mode : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
   std::vector<SysErrT> ret_prepare;
@@ -921,23 +930,28 @@ if(false) {
 //  }
 
 
+
+  CDEpilogue();
   return ret_prepare;
 
 }
 
 CDErrT CDHandle::RegisterRecovery (uint32_t error_name_mask, uint32_t error_loc_mask, RecoverObject *recover_object)
 {
+  CDPrologue();
   if( IsHead() ) {
     // STUB
   }
   else {
     // It is at remote node so do something for that.
   }
+  CDEpilogue();
   return kOK;
 }
 
 CDErrT CDHandle::RegisterDetection (uint32_t system_name_mask, uint32_t system_loc_mask)
 {
+  CDPrologue();
   if( IsHead() ) {
     // STUB
   }
@@ -945,6 +959,7 @@ CDErrT CDHandle::RegisterDetection (uint32_t system_name_mask, uint32_t system_l
     // It is at remote node so do something for that.
 
   }
+  CDEpilogue();
 
   return kOK;
 }
@@ -990,6 +1005,7 @@ int CDHandle::ctxt_prv_mode()
 
 void CDHandle::CommitPreserveBuff()
 {
+  CDPrologue();
 //  if(ptr_cd_->cd_exec_mode_ ==CD::kExecution){
   if( ptr_cd_->ctxt_prv_mode_ == CD::kExcludeStack) {
 //  dbg << "Commit jmp buffer!" << endl; dbgBreak();
@@ -1002,6 +1018,7 @@ void CDHandle::CommitPreserveBuff()
     ptr_cd_->ctxt_ = this->ctxt_;
   }
 //  }
+  CDEpilogue();
 }
 
 
@@ -1035,13 +1052,13 @@ CDErrT CDHandle::CheckMailBox(void)
   // FIXME
   if(node_id_.size() > 1) {
     MPI_Barrier(node_id_.color());
-    cout << "\n\n[Barrier] CDHandle::CheckMailBox - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; getchar();
+    cout << "\n\n[Barrier] CDHandle::CheckMailBox - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
   }
   CDErrT cd_err = ptr_cd()->CheckMailBox();
 
   if(node_id_.size() > 1) {
     MPI_Barrier(node_id_.color());
-    cout << "\n\n[Barrier] CDHandle::CheckMailBox - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; getchar();
+    cout << "\n\n[Barrier] CDHandle::CheckMailBox - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
   }
   cout << "==============================================================" << endl;
 

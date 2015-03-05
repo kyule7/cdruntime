@@ -39,9 +39,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include "node_id.h"
 using namespace cd;
 
-//uint64_t CDID::object_id_ = 0;
-
-
 // TODO Initialize member values to zero or something, 
 //for now I will put just zero but this is less efficient.
 
@@ -56,15 +53,14 @@ CDID::CDID(const CDNameT& cd_name, const NodeID& new_node_id)
   sequential_id_ = 0;
 
 }
-//CDID::CDID(CDNameT&& cd_name, NodeID&& new_node_id)
-//  : cd_name_(std::move(cd_name)), node_id_(std::move(node_id)), domain_id_(0), sequential_id_(0)
-//{}
+
 CDID::CDID(const CDID& that)
   : cd_name_(that.cd_name()), node_id_(that.node_id())
 {
   domain_id_     = that.domain_id();
   sequential_id_ = that.sequential_id();
 }
+
 // should be in CDID.h
 // old_cd_id should be passed by value
 //void CDID::UpdateCDID(const CDNameT& cd_name, const NodeID& node_id)
@@ -100,7 +96,6 @@ bool CDID::operator==(const CDID& that) const
 
 std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
 {
-//  return str<< "Level: "<< cd_id.level_ << ", CDNode" << cd_id.node_id_.color_ << ", Obj# " << cd_id.object_id_ << ", Seq# " << cd_id.sequential_id_;
   return str<< "Level: "<< cd_id.level() << ", CDNode" << cd_id.color() << ", Obj# " << cd_id.object_id() << ", Seq# " << cd_id.sequential_id();
 }
 
@@ -110,34 +105,6 @@ std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
 //}
 
 
-
-//CDID::CDID(CDHandle* parent, const NodeID& new_node_id)
-//{
-//  if(parent != NULL) {
-//    level_         = parent->ptr_cd_->GetCDID().level_ + 1;
-//  }
-//  else { // Root CD
-//    level_         = 0;
-//  }
-//  node_id_ = new_node_id;
-//  domain_id_     = 0; 
-//  rank_in_level_    = 0;
-//  sequential_id_ = 0;
-//}
-//
-//CDID::CDID(CDHandle* parent, NodeID&& new_node_id)
-//{
-//  if(parent != NULL) {
-//    level_         = parent->ptr_cd_->GetCDID().level_ + 1;
-//  }
-//  else { // Root CD
-//    level_         = 0;
-//  }
-//  node_id_ = std::move(new_node_id);
-//  domain_id_     = 0; 
-//  rank_in_level_    = 0;
-//  sequential_id_ = 0;
-//}
 
 //SZ: print function
 void CDID::Print ()

@@ -52,6 +52,7 @@ using namespace std;
 //#endif
 
 int iterator_entry_count=0;
+uint64_t cd::gen_object_id=0;
 std::hash<std::string> cd::str_hash;
 std::map<ENTRY_TAG_T, std::string> cd::tag2str;
 
@@ -100,7 +101,7 @@ CD::CD()
 
   // Kyushick: Object ID should be unique for the copies of the same object?
   // For now, I decided it as an unique one
-  cd_id_.object_id_++;
+  cd_id_.object_id_ = Util::GenCDObjID();
 
   recoverObj_ = new RecoverObject;
   
@@ -309,9 +310,10 @@ CDHandle* CD::Create(CDHandle* parent,
 {
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
-
+  cout << "CD::Create" << endl;
   *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
+  cout << "CD::Create done" << endl;
 
   this->AddChild(new_cd_handle);
 
@@ -355,7 +357,7 @@ CD::InternalCreate(CDHandle* parent,
                    uint64_t sys_bit_vector, 
                    CDHandle** new_cd_handle)
 {
-  dbg << "dbg: Internal Create... Level : " << new_cd_id.level()<< ", node : "<< new_cd_id.node_id() << endl; dbgBreak();
+  cout << "dbg: Internal Create... Level : " << new_cd_id.level()<< ", node : "<< new_cd_id.node_id() << endl; dbgBreak();
 //  dbg << dbg.str() << endl; dbgBreak();
   if( !new_cd_id.IsHead() ) {
     CD *new_cd     = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
@@ -366,22 +368,28 @@ CD::InternalCreate(CDHandle* parent,
     int task_count = new_cd_id.task_count();
 
     if(task_count > 1) {
-      dbg << "in CD::Create Internal Memory. task count is "<< task_count <<endl;
+      cout << "in CD::Create Internal Memory. task count is "<< task_count <<endl;
+      app_side = false;
       MPI_Alloc_mem(sizeof(CDFlagT), 
                     MPI_INFO_NULL, &(new_cd->event_flag_));
+      
+      cout << "in CD::Create Internal Memory. Done"<< task_count <<endl;
 
       // Initialization of event flags
       *(new_cd->event_flag_) = 0;
 
 //      MPI_Win_create(NULL, 0, 1,
 //                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
+      cout << "CD mpi win create for "<< task_count << " window "<<endl;
 
       MPI_Win_create(new_cd->event_flag_, sizeof(CDFlagT), sizeof(CDFlagT),
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
+      cout << "CD mpi win create for "<< task_count << " window done"<<endl;
 
       // FIXME : should it be MPI_COMM_WORLD?
       MPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
+      cout << "CD mpi win create for "<< task_count << " pending window done"<< ", id :"<<new_cd_id.node_id_<<endl;
     }
 #endif
 #endif
@@ -395,38 +403,43 @@ CD::InternalCreate(CDHandle* parent,
     // Create a CD object for head.
     HeadCD *new_cd = new HeadCD(parent, name, new_cd_id, cd_type, sys_bit_vector);
 
-
-
-
 #if _MPI_VER
 #if _KL
     // Create memory region where RDMA is enabled
-    dbg << "HeadCD create internal memory " << endl;
+    cout << "HeadCD create internal memory " << endl;
     int task_count = new_cd_id.task_count();
 
     if(task_count > 1) {
+      app_side = false;
+      cout << "in CD::Create Internal Memory. # tasks : "<< task_count <<endl;
       MPI_Alloc_mem(task_count*sizeof(CDFlagT), 
                     MPI_INFO_NULL, &(new_cd->event_flag_));
+      cout << "in CD::Create Internal Memory. Done. # tasks : "<< task_count  << endl;
+
       // Initialization of event flags
       for(int i=0; i<task_count; i++) {
+        cout << "i "<<i<<endl;
         new_cd->event_flag_[i] = 0;
       }
     
 //    new_cd->mailbox_ = new CDMailBoxT[task_count];
   
-      dbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
+      cout << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
 //    for(int i=0; i<task_count; ++i) {
       MPI_Win_create(new_cd->event_flag_, task_count*sizeof(CDFlagT), sizeof(CDFlagT),
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
 //    }
 
+      cout << "HeadCD mpi win create for "<< task_count << " mailbox done"<<endl;
 
       // FIXME : should it be MPI_COMM_WORLD?
       MPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
 
+      cout << "HeadCD mpi win create for "<< task_count << " pending window done"<<" , id: " << new_cd_id.node_id_ << endl;
 
     }
+    cout << "task_count = 1" << endl;
 //    AttachChildCD(new_cd);
 #endif
 #endif
@@ -598,7 +611,7 @@ CDErrT CD::Begin(bool collective, const char* label)
     cd_exec_mode_ = kExecution;
   }
   else {
-    cout << "Begin again! " << endl; getchar();
+    cout << "Begin again! " << endl; //getchar();
     num_reexecution_++ ;
   }
 
@@ -792,20 +805,25 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 } // CD::Complete ends
 
 
+
+
+
+#ifdef comm_log
 //GONG
-bool CD::PushedMemLogSearch(void* p)
+bool CD::PushedMemLogSearch(void* p, CD *curr_cd)
 {
   bool ret = false;
-  if(GetCDID().level()!=0)
+  CDHandle *cdh_temp = CDPath::GetParentCD(curr_cd->level());
+  if(cdh_temp=NULL)
   {
-    CD* parent_CD = GetParentHandle()->ptr_cd();
+//    cdh_temp = CDPath::GetParentCD(curr_cd->level());
+    CD* parent_CD = cdh_temp->ptr_cd();
     if(parent_CD!=NULL)
     {
       if(parent_CD->mem_alloc_log_.size()!=0)
       {
         std::vector<struct IncompleteLogEntry>::iterator it;  
-        for(it=parent_CD->mem_alloc_log_.begin(); it!=parent_CD->mem_alloc_log_.end();it++)
-        {
+        for(it=parent_CD->mem_alloc_log_.begin(); it!=parent_CD->mem_alloc_log_.end();it++)    {
           if(it->p_ == p)
           {
             ret = true;
@@ -817,7 +835,7 @@ bool CD::PushedMemLogSearch(void* p)
       }
       else
       {
-        ret = PushedMemLogSearch(p);
+        ret = PushedMemLogSearch(p, parent_CD);
       }
     }
     else
@@ -880,7 +898,7 @@ void* CD::MemAllocSearch(void* p_update)
   return ret;
 }
 
-
+#endif
 
 
 
@@ -1418,26 +1436,15 @@ CDErrT CD::Preserve(void *data,
       CDErrT cd_err;
       switch( cd_entry->Restore() ) {
         case CDEntry::CDEntryErrT::kOK : 
-          //GONG
-          app_side = true;
-
           cd_err = CDErrT::kOK; 
           break;
         case CDEntry::CDEntryErrT::kOutOfMemory : 
-          //GONG
-          app_side = true;
-
           cd_err = CDErrT::kError;
           break;
         case CDEntry::CDEntryErrT::kFileOpenError : 
-          //GONG
-          app_side = true;
-
           cd_err = CDErrT::kError;
           break;
         case CDEntry::CDEntryErrT::kEntrySearchRemote : {
-          //GONG
-          app_side = true;
 #if _FIX
           this->TestComm();
 #endif
@@ -1458,6 +1465,8 @@ CDErrT CD::Preserve(void *data,
         // This point means the beginning of body stage. Request EntrySearch at this routine
       }
 
+      // GONG
+      app_side = true;
       return cd_err;
  
     }
@@ -1477,17 +1486,17 @@ CDErrT CD::Preserve(void *data,
         case CDInternalErrT::kOK            : 
           //GONG
           //printf("app_side = true in CD::Preserve - abnormal\n");
-          app_side = false;
+          app_side = true;
           return CDErrT::kOK;
         case CDInternalErrT::kExecModeError : 
           //GONG
           //printf("app_side = true in CD::Preserve - abnormal\n");
-          app_side = false;
+          app_side = true;
           return CDErrT::kError;
         case CDInternalErrT::kEntryError    : 
           //GONG
           //printf("app_side = true in CD::Preserve - abnormal\n");
-          app_side = false;
+          app_side = true;
           return CDErrT::kError;
         default : assert(0);
       }

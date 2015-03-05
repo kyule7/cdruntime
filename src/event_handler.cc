@@ -188,7 +188,7 @@ void HandleErrorOccurred::HandleEvent(void)
 
     dbg << "Barrier resolved" << endl;
     MPI_Barrier(ptr_cd_->color());
-    cout << "\n\n[Barrier] HandleErrorOccurred::HandleEvent, normal "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; getchar();
+    cout << "\n\n[Barrier] HandleErrorOccurred::HandleEvent, normal "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; //getchar();
     dbg << "Barrier resolved" << endl;
     // reset this flag for the next error
     // This will be invoked after CheckMailBox is done, 
@@ -209,7 +209,7 @@ void HandleErrorOccurred::HandleEvent(void)
     dbg << "Barrier resolved" << endl;
     MPI_Barrier(ptr_cd_->color()); // for succeeding MPI_Barrier after CheckMailBox
     MPI_Barrier(ptr_cd_->color());
-    cout << "\n\n[Barrier] HandleErrorOccurred::HandleEvent, reexec "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() <<"\n\n" << endl; getchar();
+    cout << "\n\n[Barrier] HandleErrorOccurred::HandleEvent, reexec "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() <<"\n\n" << endl; //getchar();
     dbg << "Barrier resolved" << endl;
     // reset this flag for the next error
     // This will be invoked after CheckMailBox is done, 
@@ -244,7 +244,7 @@ void HandleAllResume::HandleEvent(void)
   handled_event_count++;
 
   MPI_Barrier(ptr_cd_->color());
-  cout << "\n\n[Barrier] HandleAllResume::HandleEvent "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; getchar();
+  cout << "\n\n[Barrier] HandleAllResume::HandleEvent "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; //getchar();
   dbg << "Barrier resolved" << endl;
 }
 

@@ -32,6 +32,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 */
+
+#ifdef comm_log
+
 #include "cd_malloc.h"
 #include <stdarg.h>
 
@@ -191,3 +194,5 @@ int printf(const char *format,...)
 } 
 
     */
+
+#endif

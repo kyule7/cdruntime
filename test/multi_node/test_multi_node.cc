@@ -38,7 +38,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <mpi.h>
 #include "cds.h"
 #include <mcheck.h>
-
+//#include "cd_global.h"
 #define SIZE 655360 //10M?
 #define LV1 8 
 
@@ -305,8 +305,8 @@ int test_preservation_via_copy()
   
   
   printf("test fopen() 1\n");
-  FILE * test_fopen_parent = fopen("test_fopen_parent.txt", "w");
-  FILE * test_fopen_ = fopen("test_fopen_.txt", "w");
+//  FILE * test_fopen_parent = fopen("test_fopen_parent.txt", "w");
+//  FILE * test_fopen_ = fopen("test_fopen_.txt", "w");
 
   printf("create child CD\n");
   CDHandle* child=root->Create("CD1", kStrict, 0, 0, &err);
@@ -318,9 +318,9 @@ int test_preservation_via_copy()
   
   //test fopen
   printf("test fopen() 2\n");
-  FILE * test_fopen = fopen("test_fopen.txt", "w");
-  fprintf(test_fopen,"number of re-execution: %i\n", num_reexecution);
-  fprintf(test_fopen_,"number of re-execution: %i\n", num_reexecution);
+//  FILE * test_fopen = fopen("test_fopen.txt", "w");
+//  fprintf(test_fopen,"number of re-execution: %i\n", num_reexecution);
+//  fprintf(test_fopen_,"number of re-execution: %i\n", num_reexecution);
   printf("test_malloc here\n");
   int *test_malloc = new int[10];
   test_malloc[0] = rand();
@@ -369,13 +369,13 @@ int test_preservation_via_copy()
   printf("After Modify Current value of a[0]=%d\n", a[0]);
 //  printf("After Modify Current value of b[0]=%d==app_side?  %i\n\n", b[0], app_side);
   
-  printf("close test_fopen\n");
-  fclose(test_fopen);
+//  printf("close test_fopen\n");
+//  fclose(test_fopen);
 
   if( num_reexecution == 0 ){
     printf("\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n");
     num_reexecution = 1;
-    child->CDAssert(false);
+//    child->CDAssert(false);
   }
 
 
@@ -402,8 +402,8 @@ int test_preservation_via_copy()
   c[0] =77;
   printf("After modifying current value of c[0] %d\n", c[0]);
 
-  printf("close test_fopen_parent\n");
-  fclose(test_fopen_parent);
+//  printf("close test_fopen_parent\n");
+//  fclose(test_fopen_parent);
   if(num_reexecution == 1) {
     printf("\nis now Second error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n");
     num_reexecution = 2;
@@ -427,6 +427,9 @@ int test_preservation_via_copy()
       test_result = -1;
     }
   }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  if(mr == 0) getchar();
   if( test_result == -1 ) return kError;
   return kOK; //
 }
@@ -841,9 +844,12 @@ int test_preservation_via_referenence_partial_update()
 int main(int argc, char* argv[])
 {
   int nprocs, myrank;
+
+  app_side=false;
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD,  &nprocs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  app_side=true;
   np = nprocs;
   mr = myrank;
   int ret=0;
@@ -870,7 +876,10 @@ int main(int argc, char* argv[])
 
 //  printf("\n\n------------ performance test 1 ---------------\n\n");  //getchar();
 //  performance_test1();
+//  if(mr==0) getchar();
+  MPI_Barrier(MPI_COMM_WORLD);
 
-  MPI_Finalize(); 
+
+  MPI_Finalize();
   return 0;
 }

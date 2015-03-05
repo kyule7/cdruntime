@@ -71,6 +71,9 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
 
 CDEntry::CDEntryErrT CDEntry::SaveMem(void)
 {
+  bool app_side_temp = app_side;
+  app_side = false;
+
 //  dbg<< "SaveMem(void) this: " << this<<endl;
   if(dst_data_.address_data() == NULL) {
     void *allocated_space = DATA_MALLOC(dst_data_.len() * sizeof(char));
@@ -91,10 +94,12 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
   if(false) { // Is there a way to check if memcpy is done well?
     cerr << "Not enough memory." << endl;
     assert(0);
+    app_side = app_side_temp;
     return kOutOfMemory; 
   }
 
 
+  app_side = app_side_temp;
   return kOK;
 }
 

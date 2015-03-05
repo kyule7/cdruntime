@@ -33,15 +33,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifdef comm_log
 #include <stdarg.h>
 #include "cd_malloc.h"
+#include "cd_global.h"
 
-bool app_side;
+//bool app_side;
 
 using namespace cd;
-struct IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked)
+IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked)
 {
-      struct IncompleteLogEntry tmp_log_entry;
+      IncompleteLogEntry tmp_log_entry;
       tmp_log_entry.addr_ = (unsigned long) 0;
       tmp_log_entry.length_ = (unsigned long) size;
       tmp_log_entry.flag_ = (unsigned long) 0;
@@ -86,19 +88,14 @@ CD* IsLogable(bool *logable_)
 //GONG: Is free() required?
 void free(void *p)
 {
-  //set real_free first
-  static void(*real_free)(void*);
-  if(!real_free)
-  {
-    real_free = (void(*)(void *)) dlsym(RTLD_NEXT, "free");
-  }
+
   //check first whether CD-runtime side or application side (logged)
   if(app_side){
 	  bool logable  = false;
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
 //      PRINT_LIBC("FREE invoked %p\n", p);
-      std::vector<struct IncompleteLogEntry>::iterator it;
+      std::vector<IncompleteLogEntry>::iterator it;
       for (it=c_CD->mem_alloc_log_.begin(); it!=c_CD->mem_alloc_log_.end(); it++)
       {
         //address matched!
@@ -110,7 +107,7 @@ void free(void *p)
         }
       }
       //search & parent's log
-      bool found = c_CD->PushedMemLogSearch(p);
+      bool found = c_CD->PushedMemLogSearch(p, c_CD);
       if(found) 
       {
 //        PRINT_LIBC("found %p from parent's log will NOT free it \n", p);
@@ -118,6 +115,14 @@ void free(void *p)
       }
     }
   }
+
+  //set real_free first
+  static void(*real_free)(void*);
+  if(!real_free)
+  {
+    real_free = (void(*)(void *)) dlsym(RTLD_NEXT, "free");
+  }
+
   real_free(p);
 }
 
@@ -166,10 +171,10 @@ if(app_side){
 		else
 		{
 			p = real_malloc_(size);
-			PRINT_LIBC("libc_log_ptr_: %p\t - EXECUTE MODE malloc(%ld) = %p @level %i\n", c_CD->libc_log_ptr_, size, p, c_CD->GetCDID().level());
+			PRINT_LIBC("libc_log_ptr_: %p\t - EXECUTE MODE malloc(%ld) = %p @level %i\n", c_CD->libc_log_ptr_, size, p, c_CD->level());
       //SZ
 //		  c_CD->libc_log_ptr_->LogData(&p, size);
-      struct IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
+      IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
       c_CD->mem_alloc_log_.push_back(log_entry);
 		}
 	}
@@ -238,7 +243,7 @@ extern "C" void *calloc(size_t num, size_t size)
         p = real_calloc(num,size);
 			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE - calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
    	  //  c_CD->libc_log_ptr_->LogData(&p, size);
-        struct IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
+        IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
         c_CD->mem_alloc_log_.push_back(log_entry);
 	    }
 	  }
@@ -297,7 +302,7 @@ void *valloc(size_t size)
         p = real_valloc(size);
 			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE valloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   // 	    c_CD->libc_log_ptr_->LogData(&p, size);
-        struct IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
+        IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
         c_CD->mem_alloc_log_.push_back(log_entry);
 	    }
 	  }
@@ -356,7 +361,7 @@ FILE* fopen(const char *file, const char *mode)
         ret = (*real_fopen)(file,mode);
    	   // c_CD->libc_log_ptr_->LogData(&ret, size);
 			  PRINT_LIBC("libc_log_ptr_: %p\t -EXECUTE MODE fopen(%i) = %p\n", c_CD->libc_log_ptr_, size, ret);
-        struct IncompleteLogEntry log_entry = NewLogEntry(ret, size, false);
+        IncompleteLogEntry log_entry = NewLogEntry(ret, size, false);
         c_CD->mem_alloc_log_.push_back(log_entry);
 	    }
 	  }
@@ -389,7 +394,7 @@ int fclose(FILE *fp)
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
 //      PRINT_LIBC("FREE invoked %p\n", p);
-      std::vector<struct IncompleteLogEntry>::iterator it;
+      std::vector<IncompleteLogEntry>::iterator it;
       for (it=c_CD->mem_alloc_log_.begin(); it!=c_CD->mem_alloc_log_.end(); it++)
       {
         //address matched!
@@ -401,7 +406,7 @@ int fclose(FILE *fp)
         }
       }
       //search & parent's log
-      bool found = c_CD->PushedMemLogSearch(fp);
+      bool found = c_CD->PushedMemLogSearch(fp, c_CD);
       if(found) 
       {
 //        PRINT_LIBC("found %p from parent's log will NOT free it \n", p);
@@ -517,3 +522,5 @@ void *realloc(void* ptr, size_t size)
 ////  printf("malloc(%ld) = %p\n", size, p);
 //  return p;
 //}
+
+#endif

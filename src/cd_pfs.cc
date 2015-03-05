@@ -184,7 +184,7 @@ MPI_Offset CD_Parallel_IO_Manager::Write( void* buffer, uint64_t buffer_len)
 		{
 			length_to_preserve -= (PFS_current_chunk_end_ - PFS_current_offset_ + 1);
 			MPI_File_write_at( PFS_d_, PFS_current_offset_, (char *)buffer + currently_preserved, 
-			                                  PFS_current_chunk_end_ - PFS_current_offset_ + 1, MPI_BYTE, &write_status );
+			                   PFS_current_chunk_end_ - PFS_current_offset_ + 1, MPI_BYTE, &write_status );
 			currently_preserved += (PFS_current_chunk_end_ - PFS_current_offset_ + 1);
 			PFS_current_chunk_begin_ = PFS_current_chunk_begin_ + (degree_of_sharing_ * PFS_chunk_size_);
 			PFS_current_chunk_end_ = PFS_current_chunk_end_ + (degree_of_sharing_ * PFS_chunk_size_);

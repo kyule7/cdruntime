@@ -95,11 +95,10 @@ typedef uint64_t ENTRY_TAG_T;
 
 
 //GONG: global variable to represent the current context for malloc wrapper
-extern bool app_side;
+//extern bool app_side;
 
 namespace cd {
 
-static inline void nullFunc(void) {}
 #if _DEBUG
   extern std::ostringstream dbg;
 #define dbgBreak nullFunc
@@ -310,8 +309,13 @@ static inline void nullFunc(void) {}
   extern CDHandle* CD_Init(int numproc=1, int myrank=0);
   extern void CD_Finalize(std::ostringstream *oss=NULL);
   extern void WriteDbgStream(std::ostringstream *oss=NULL);
-//  extern uint64_t Util::gen_object_id_=0;
-
+  extern uint64_t gen_object_id;
+  //GONG: global variable to represent the current context for malloc wrapper
+  extern bool app_side;
+  static inline void nullFunc(void) {}
+  static inline void CDPrologue(void) { app_side = false; }
+  static inline void CDEpilogue(void) { app_side = true; }
+  static inline bool CheckAppSide(void) { return app_side; }
 }
 #define INITIAL_ERR_VAL kOK
 #define DATA_MALLOC malloc
@@ -345,7 +349,7 @@ static inline void nullFunc(void) {}
 #ifdef comm_log 
 
 #if _DEBUG
-extern FILE * fp;
+extern FILE * cd_fp;
 #endif
 
 #endif
@@ -353,8 +357,8 @@ extern FILE * fp;
 #if _DEBUG
   //SZ: change to this if want to compile test_comm_log.cc
   #ifdef comm_log
-    #define PRINT_DEBUG(...) {fprintf(fp,__VA_ARGS__);}
-    //#define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
+//    #define PRINT_DEBUG(...) {fprintf(cd_fp,__VA_ARGS__);}
+    #define PRINT_DEBUG(...) {if(cd::app_side){cd::app_side=false;printf(__VA_ARGS__);cd::app_side = true;}else printf(__VA_ARGS__);}
   #else
     #define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
   #endif

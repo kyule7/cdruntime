@@ -35,6 +35,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _CD_MALLOC_H 
 #define _CD_MALLOC_H
+
+#ifdef comm_log
+
 #include <stdint.h>
 #include <stdio.h>
 #include <dlfcn.h>
@@ -50,5 +53,7 @@ using namespace cd;
  
 CD* IsLogable(bool *logable_);
 struct IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked);
+
+#endif
 
 #endif

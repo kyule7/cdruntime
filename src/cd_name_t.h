@@ -64,7 +64,7 @@ public:
   {
     level_         = parent_cdname.level() + 1;
     rank_in_level_ = num_children*(parent_cdname.rank_in_level()) + color;
-    std::cout << "rank_in_level created : " << rank_in_level_ << ", numchild: " << num_children << ", parent rank : " << parent_cdname.rank_in_level() << ", color : "<< color << std::endl;
+    std::cout << "level: " << level_ << ", rank_in_level created : " << rank_in_level_ << ", numchild: " << num_children << ", parent rank : " << parent_cdname.rank_in_level() << ", color : "<< color << std::endl; //getchar();
     size_          = num_children;
   }
   CDNameT(const CDNameT& that)

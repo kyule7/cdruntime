@@ -263,6 +263,7 @@ int MPI_Send_init(const void *buf,
                   MPI_Comm comm,
                   MPI_Request *request);
 
+int MPI_Finalize(void);
 
 #endif
 

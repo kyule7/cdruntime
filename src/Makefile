@@ -8,8 +8,8 @@ SINGLE_VER_VAR = 0
 PROFILER_ENABLED=0
 LOGGING_ENABLED=1
 
-MEDIUM = -D_MEMORY=0 \
-         -D_PFS=1 \
+MEDIUM = -D_MEMORY=1 \
+         -D_PFS=0 \
          -D_SSD=0 \
          -D_HDD=0 
 

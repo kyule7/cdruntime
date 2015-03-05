@@ -35,6 +35,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _UTIL_H 
 #define _UTIL_H
 #include "cd_global.h"
+#include "cd_handle.h"
+#include "cd_id.h"
+
 #include <sys/types.h>
 #include <string>
 #include <unistd.h>
@@ -43,18 +46,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <sstream>
 #include <streambuf>
 #include <string>
-#include "cd_id.h"
+
 // system specific or machine specific utils resides here.
 using namespace cd;
 
 namespace cd {
 
 
-//extern uint64_t Util::gen_object_id_;
 
 class Util {
 public:
-	static uint64_t gen_object_id_;
 
 static const char* GetBaseFilePath()
 {
@@ -129,7 +130,7 @@ static uint64_t GetCurrentNodeID()
 
 }
 
-static uint64_t GenerateCDObjectID() 
+static uint64_t GenCDObjID() 
 {
   // STUB
   // The policy for Generating CDID could be different . 
@@ -138,7 +139,7 @@ static uint64_t GenerateCDObjectID()
   // Assume we call this function one time, so we will have atomically increasing counter and this will be local to a process. 
   // Within a process it will just use one counter. Check whether this is enough or not.
 //  static uint64_t object_id=0;
-  return gen_object_id_++;
+  return gen_object_id++;
 }
 
 };
