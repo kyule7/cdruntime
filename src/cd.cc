@@ -151,7 +151,7 @@ CD::CD(CDHandle* cd_parent,
 
   // Kyushick: Object ID should be unique for the copies of the same object?
   // For now, I decided it as an unique one
-  cd_id_.object_id_++;
+  cd_id_.object_id_ = Util::GenCDObjID();
 
 //  dbg << "cd object is created " << cd_id_.object_id_++ <<endl;
 
@@ -242,7 +242,7 @@ void CD::Initialize(CDHandle* cd_parent,
   cd_type_  = cd_type;
   name_     = name;
   cd_id_    = cd_id;
-  cd_id_.object_id_++;
+  cd_id_.object_id_ = Util::GenCDObjID();
   sys_detect_bit_vector_ = sys_bit_vector;
   Init();  
 }
@@ -822,7 +822,7 @@ bool CD::PushedMemLogSearch(void* p, CD *curr_cd)
     {
       if(parent_CD->mem_alloc_log_.size()!=0)
       {
-        std::vector<struct IncompleteLogEntry>::iterator it;  
+        std::vector<IncompleteLogEntry>::iterator it;  
         for(it=parent_CD->mem_alloc_log_.begin(); it!=parent_CD->mem_alloc_log_.end();it++)    {
           if(it->p_ == p)
           {
@@ -848,13 +848,15 @@ bool CD::PushedMemLogSearch(void* p, CD *curr_cd)
   return ret;
 }
 
-void* CD::MemAllocSearch(void* p_update)
+void* CD::MemAllocSearch(CD *curr_cd, void* p_update)
 {
 //  printf("MemAllocSearch\n");
   void* ret = NULL;
-  if(GetCDID().level()!=0)
+  CDHandle *cdh_temp = CDPath::GetParentCD(curr_cd->level());
+//  if(GetCDID().level()!=0)
+  if(cdh_temp != NULL)
   {
-    CD* parent_CD = GetParentHandle()->ptr_cd();
+    CD* parent_CD = cdh_temp->ptr_cd();
     if(parent_CD!=NULL)
     {
       //GONG:       
@@ -873,7 +875,7 @@ void* CD::MemAllocSearch(void* p_update)
       }
       else
       {
-        ret = MemAllocSearch(p_update);
+        ret = MemAllocSearch(parent_CD, p_update);
       }
     }
     else

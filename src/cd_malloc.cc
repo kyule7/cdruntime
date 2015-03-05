@@ -152,7 +152,7 @@ if(app_side){
 //			c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
         PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
-        p = c_CD->MemAllocSearch();
+        p = c_CD->MemAllocSearch(c_CD);
       }       
       else
       {
@@ -222,7 +222,7 @@ extern "C" void *calloc(size_t num, size_t size)
 			//  c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
         PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
-        p = c_CD->MemAllocSearch();
+        p = c_CD->MemAllocSearch(c_CD);
       }       
       else
       {
@@ -281,7 +281,7 @@ void *valloc(size_t size)
 			//  c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
         PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
-        p = c_CD->MemAllocSearch();
+        p = c_CD->MemAllocSearch(c_CD);
       }       
       else
       {
@@ -338,7 +338,7 @@ FILE* fopen(const char *file, const char *mode)
           PRINT_LIBC("RE-EXECUTION MODE (fopen), but no entries in malloc log! => get log from parent\n");
           //replace (close and re-open) FILE pointer
           FILE* tmp_ret = (*real_fopen)(file,mode);
-          ret = (FILE*) c_CD->MemAllocSearch(tmp_ret);
+          ret = (FILE*) c_CD->MemAllocSearch(c_CD, tmp_ret);
           fclose(ret);
           ret = tmp_ret;
         }       
