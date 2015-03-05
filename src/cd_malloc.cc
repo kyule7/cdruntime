@@ -122,7 +122,7 @@ void free(void *p)
   {
     real_free = (void(*)(void *)) dlsym(RTLD_NEXT, "free");
   }
-
+  printf("==pointer p : %p\n", p);
   real_free(p);
 }
 

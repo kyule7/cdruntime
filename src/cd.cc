@@ -40,7 +40,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_entry.h"
 #include "cd_path.h"
 #include "event_handler.h"
-#include <mpi.h>
 #include <stdexcept>
 #include <typeinfo>
 #include <csetjmp>
@@ -255,13 +254,12 @@ void CD::Init()
   option_save_context_ = 0;
 
 #ifdef comm_log
-  comm_log_ptr_=NULL;
-  //GONG
-  libc_log_ptr_=NULL;
-  incomplete_log_size_unit_=100;
-  //GONG
+  comm_log_ptr_ = NULL;
+  libc_log_ptr_ = NULL;
+  incomplete_log_size_unit_ = 100;
   cur_pos_mem_alloc_log = 0;
 #endif
+
 //#if _WORK 
 //  path = Path("ssd", "hhd");
 //  path.SetSSDPath("./SSDpath/");
@@ -486,7 +484,7 @@ inline CD::CDInternalErrT CD::InternalDestroy(void)
 #if _MPI_VER
 #if _KL
   int task_count = cd_id_.task_count();
-  dbg << "mpi win free for "<< task_count << " mailboxes"<<endl;
+//  dbg << "mpi win free for "<< task_count << " mailboxes"<<endl;
 
   if(task_size() > 1) {  
     PMPI_Win_free(&pendingWindow_);
@@ -726,7 +724,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    std::cout<<"size: "<<mem_alloc_log_.size()<<std::endl;
 
     //GONG: DO actual free completed mem_alloc_log_
-    std::vector<IncompleteLogEntry>::iterator it;
+    std::vector<struct IncompleteLogEntry>::iterator it;
     for (it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
     {
 //      printf("check log %p %i %i\n", it->p_, it->complete_, it->pushed_);
@@ -760,7 +758,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     {
       CD* ptmp = GetParentHandle()->ptr_cd_;
       // push memory allocation logs to parent
-      std::vector<IncompleteLogEntry>::iterator ii;
+      std::vector<struct IncompleteLogEntry>::iterator ii;
       for(it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
       {
         bool found = false;      
@@ -2023,6 +2021,27 @@ CDErrT HeadCD::Reexecute(void)
 
 
   cd_exec_mode_ = kReexecution; 
+
+
+#ifdef comm_log
+  // SZ
+  //// change the comm_log_mode_ into CommLog class
+  //comm_log_mode_ = kReplayLog;  
+  if (cd_type_ == kRelaxed)
+    comm_log_ptr_->ReInit();
+  
+  //SZ: reset to child_seq_id_ = 0 
+  PRINT_DEBUG("Reset child_seq_id_ to 0 at the point of re-execution\n");
+  child_seq_id_ = 0;
+
+  //GONG
+  if(libc_log_ptr_!=NULL){
+    libc_log_ptr_->ReInit();
+    PRINT_DEBUG("reset log_table_reexec_pos_\n");
+    //  libc_log_ptr_->Print();
+  }
+#endif
+
 
   //TODO We need to make sure that all children has stopped before re-executing this CD.
   Stop();
@@ -3526,7 +3545,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 {
   // look for the entry in incomplete_log_
   int found = 0;
-  std::vector<IncompleteLogEntry>::iterator it;
+  std::vector<struct IncompleteLogEntry>::iterator it;
   CD* tmp_cd = this;
   for (it=incomplete_log_.begin(); it!=incomplete_log_.end(); it++)
   {
@@ -3683,7 +3702,7 @@ void CD::PrintIncompleteLog()
 {
   if (incomplete_log_.size()==0) return;
   PRINT_DEBUG("incomplete_log_.size()=%ld\n", incomplete_log_.size());
-  for (std::vector<IncompleteLogEntry>::iterator ii=incomplete_log_.begin();
+  for (std::vector<struct IncompleteLogEntry>::iterator ii=incomplete_log_.begin();
         ii != incomplete_log_.end(); ii++)
   {
     PRINT_DEBUG("\nPrint Incomplete Log information:\n");

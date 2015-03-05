@@ -106,6 +106,7 @@ public:
 
   static CDHandle* GetParentCD(int current_level)
   { 
+    std::cout << current_level << std::endl;
     if(uniquePath_ != NULL ) {
       if( uniquePath_->size() > 1 ) {
 //        return uniquePath_->at(current_level-2);
