@@ -244,18 +244,18 @@ update the preserved data.
 
 #ifdef comm_log
     //SZ
-    cd::CommLog * comm_log_ptr_=NULL;
+    cd::CommLog * comm_log_ptr_;
     //GONG
-    cd::CommLog * libc_log_ptr_=NULL;
+    cd::CommLog * libc_log_ptr_;
 
     uint32_t child_seq_id_;
 
-    unsigned long incomplete_log_size_unit_=100;
+    unsigned long incomplete_log_size_unit_;
     unsigned long incomplete_log_size_;
     std::vector<IncompleteLogEntry> incomplete_log_;
     //GONG
     std::vector<IncompleteLogEntry> mem_alloc_log_;
-    unsigned int cur_pos_mem_alloc_log = 0;
+    unsigned int cur_pos_mem_alloc_log;
     void* MemAllocSearch(void* p_update = NULL);
     bool PushedMemLogSearch(void* p, CD *curr_cd);
     ////SZ: attempted to move from HeadCD class, but we can use CDPath class

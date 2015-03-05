@@ -45,9 +45,15 @@ struct LogTableElement {
   unsigned long length_; // length of logged data
   bool completed_;
   unsigned long flag_;
-  unsigned long counter_=0;
-  unsigned long reexec_counter_=0;
-  bool isrepeated_=false;
+  unsigned long counter_;
+  unsigned long reexec_counter_;
+  bool isrepeated_;
+  LogTableElement(void) {
+    counter_=0;
+    reexec_counter_=0;
+    isrepeated_=false;
+  }
+    
 };
     
 class cd::CommLog {
@@ -180,30 +186,35 @@ class cd::CommLog {
 
     // struct to describe current address and bound address of a log queue
     struct LogQueue {
-      char * base_ptr_ = NULL; 
+      char * base_ptr_; 
       unsigned long cur_pos_;
 
       // queue size by default is queue_size_unit_, and can be increased during runtime
       // but need to be multiples of queue_size_unit_ 
       // TODO: may need to consider the size growth method of C++ vector
       unsigned long queue_size_;
-    } log_queue_;
+      LogQueue(void) : base_ptr_(NULL) {}
+    }; 
+    LogQueue log_queue_;
 
     // this level of indirection is used to cover multiple threads/tasks within one CD
     struct LogTable {
-      struct LogTableElement * base_ptr_ = NULL;
+      LogTableElement * base_ptr_;
 
       unsigned long cur_pos_;
       
       // table size by default is table_size_unit_, and can be increased during runtime
       // but need to be multiples of table_size_unit_ 
       unsigned long table_size_;
-    } log_table_;
+
+      LogTable(void) : base_ptr_(NULL) {}
+    };
+    LogTable log_table_;
 
     unsigned long log_table_reexec_pos_;
 
     // to state if new logs are generated in current CD
-    bool new_log_generated_ = false;
+    bool new_log_generated_;
 
 
   public:
@@ -211,10 +222,12 @@ class cd::CommLog {
     // allocate child_log_ptr_ when pushing data to parents
     // pack all children's log data and then copy into child_log_ptr array
     struct ChildLogQueue{
-      char * base_ptr_ = NULL;
+      char * base_ptr_;
       unsigned long size_;
       unsigned long cur_pos_;
-    } child_log_;
+      ChildLogQueue(void) : base_ptr_(NULL) {}
+    };
+    ChildLogQueue child_log_;
 };
 
 #endif
