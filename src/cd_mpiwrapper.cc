@@ -1903,9 +1903,7 @@ int MPI_Init(int *argc, char ***argv)
   app_side = false;
   int mpi_ret = 0;
 
-  printf("Before Init rank id : %d \n", myTaskID);
   mpi_ret = PMPI_Init(argc, argv);
-  printf("After Init rank id : %d \n", myTaskID);
 
   
   app_side = true;
@@ -1916,9 +1914,7 @@ int MPI_Finalize(void)
   app_side = false;
   int mpi_ret = 0;
 
-  printf("Before Finalize rank id : %d \n", myTaskID);
   mpi_ret = PMPI_Finalize();
-  printf("After Finalize rank id : %d \n", myTaskID);
 
   
   app_side = true;

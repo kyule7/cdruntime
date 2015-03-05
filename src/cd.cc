@@ -814,7 +814,7 @@ bool CD::PushedMemLogSearch(void* p, CD *curr_cd)
 {
   bool ret = false;
   CDHandle *cdh_temp = CDPath::GetParentCD(curr_cd->level());
-  if(cdh_temp=NULL)
+  if(cdh_temp != NULL)
   {
 //    cdh_temp = CDPath::GetParentCD(curr_cd->level());
     CD* parent_CD = cdh_temp->ptr_cd();
