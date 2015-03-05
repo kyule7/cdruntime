@@ -64,7 +64,7 @@ int MPI_Send(const void *buf,
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Send(buf, count, datatype, dest, tag, comm);
+      mpi_ret = PMPI_Send(const_cast<void *>(buf), count, datatype, dest, tag, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       //cur_cd->ptr_cd()->LogData(&buf, sizeof(buf));
@@ -77,7 +77,7 @@ int MPI_Send(const void *buf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Send(buf, count, datatype, dest, tag, comm);
+        mpi_ret = PMPI_Send(const_cast<void *>(buf), count, datatype, dest, tag, comm);
         //cur_cd->ptr_cd()->LogData(&buf, sizeof(buf));
         cur_cd->ptr_cd()->LogData(buf, 0);
       }
@@ -85,7 +85,7 @@ int MPI_Send(const void *buf,
   }
   else
   {
-    mpi_ret = PMPI_Send(buf, count, datatype, dest, tag, comm);
+    mpi_ret = PMPI_Send(const_cast<void *>(buf), count, datatype, dest, tag, comm);
   }
 
   app_side = true;
@@ -111,7 +111,7 @@ int MPI_Ssend(const void *buf,
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Ssend(buf, count, datatype, dest, tag, comm);
+      mpi_ret = PMPI_Ssend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       //cur_cd->ptr_cd()->LogData(&buf, sizeof(buf));
@@ -124,7 +124,7 @@ int MPI_Ssend(const void *buf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Ssend(buf, count, datatype, dest, tag, comm);
+        mpi_ret = PMPI_Ssend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
         //cur_cd->ptr_cd()->LogData(&buf, sizeof(buf));
         cur_cd->ptr_cd()->LogData(buf, 0);
       }
@@ -132,7 +132,7 @@ int MPI_Ssend(const void *buf,
   }
   else
   {
-    mpi_ret = PMPI_Ssend(buf, count, datatype, dest, tag, comm);
+    mpi_ret = PMPI_Ssend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
   }
 
   app_side = true;
@@ -159,7 +159,7 @@ int MPI_Rsend(const void *buf,
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Rsend(buf, count, datatype, dest, tag, comm);
+      mpi_ret = PMPI_Rsend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       //cur_cd->ptr_cd()->LogData(&buf, sizeof(buf));
@@ -172,7 +172,7 @@ int MPI_Rsend(const void *buf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Rsend(buf, count, datatype, dest, tag, comm);
+        mpi_ret = PMPI_Rsend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
         //cur_cd->ptr_cd()->LogData(&buf, sizeof(buf));
         cur_cd->ptr_cd()->LogData(buf, 0);
       }
@@ -180,7 +180,7 @@ int MPI_Rsend(const void *buf,
   }
   else
   {
-    mpi_ret = PMPI_Rsend(buf, count, datatype, dest, tag, comm);
+    mpi_ret = PMPI_Rsend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
   }
 
   app_side = true;
@@ -207,7 +207,7 @@ int MPI_Bsend(const void *buf,
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Bsend(buf, count, datatype, dest, tag, comm);
+      mpi_ret = PMPI_Bsend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       //cur_cd->ptr_cd()->LogData(&buf, sizeof(buf));
@@ -220,7 +220,7 @@ int MPI_Bsend(const void *buf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Bsend(buf, count, datatype, dest, tag, comm);
+        mpi_ret = PMPI_Bsend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
         //cur_cd->ptr_cd()->LogData(&buf, sizeof(buf));
         cur_cd->ptr_cd()->LogData(buf, 0);
       }
@@ -228,7 +228,7 @@ int MPI_Bsend(const void *buf,
   }
   else
   {
-    mpi_ret = PMPI_Bsend(buf, count, datatype, dest, tag, comm);
+    mpi_ret = PMPI_Bsend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
   }
 
   app_side = true;
@@ -258,7 +258,7 @@ int MPI_Recv(void *buf,
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Recv(buf, count, datatype, src, tag, comm, status);
+      mpi_ret = PMPI_Recv(const_cast<void *>(buf), count, datatype, src, tag, comm, status);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       cur_cd->ptr_cd()->LogData(buf, count*type_size);
@@ -270,14 +270,14 @@ int MPI_Recv(void *buf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Recv(buf, count, datatype, src, tag, comm, status);
+        mpi_ret = PMPI_Recv(const_cast<void *>(buf), count, datatype, src, tag, comm, status);
         cur_cd->ptr_cd()->LogData(buf, count*type_size);
       }
     }
   }
   else
   {
-    mpi_ret = PMPI_Recv(buf, count, datatype, src, tag, comm, status);
+    mpi_ret = PMPI_Recv(const_cast<void *>(buf), count, datatype, src, tag, comm, status);
   }
 
   app_side = true;
@@ -312,7 +312,7 @@ int MPI_Sendrecv(const void *sendbuf,
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Sendrecv(sendbuf, sendcount, sendtype, dest, sendtag,
+      mpi_ret = PMPI_Sendrecv(const_cast<void *>(sendbuf), sendcount, sendtype, dest, sendtag,
                             recvbuf, recvcount, recvtype, source, recvtag, comm, status);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
@@ -327,7 +327,7 @@ int MPI_Sendrecv(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Sendrecv(sendbuf, sendcount, sendtype, dest, sendtag,
+        mpi_ret = PMPI_Sendrecv(const_cast<void *>(sendbuf), sendcount, sendtype, dest, sendtag,
                               recvbuf, recvcount, recvtype, source, recvtag, comm, status);
         //cur_cd->ptr_cd()->LogData(&sendbuf, sizeof(sendbuf));
         cur_cd->ptr_cd()->LogData(sendbuf, 0);
@@ -339,7 +339,7 @@ int MPI_Sendrecv(const void *sendbuf,
         if (ret == kCommLogCommLogModeFlip)
         {
           PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-          mpi_ret = PMPI_Sendrecv(sendbuf, sendcount, sendtype, dest, sendtag,
+          mpi_ret = PMPI_Sendrecv(const_cast<void *>(sendbuf), sendcount, sendtype, dest, sendtag,
                                 recvbuf, recvcount, recvtype, source, recvtag, comm, status);
           //FIXME: should we log &sendbuf again in case buf address changes??
           cur_cd->ptr_cd()->LogData(recvbuf, recvcount*type_size);
@@ -349,7 +349,7 @@ int MPI_Sendrecv(const void *sendbuf,
   }
   else
   {
-    mpi_ret = PMPI_Sendrecv(sendbuf, sendcount, sendtype, dest, sendtag,
+    mpi_ret = PMPI_Sendrecv(const_cast<void *>(sendbuf), sendcount, sendtype, dest, sendtag,
                             recvbuf, recvcount, recvtype, source, recvtag, comm, status);
   }
 
@@ -446,7 +446,7 @@ int MPI_Isend(const void *buf,
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
+      mpi_ret = PMPI_Isend(const_cast<void *>(buf), count, datatype, dest, tag, comm, request);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       cur_cd->ptr_cd()->LogData(buf, 0, false, (unsigned long)request, 0);
@@ -458,7 +458,7 @@ int MPI_Isend(const void *buf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
+        mpi_ret = PMPI_Isend(const_cast<void *>(buf), count, datatype, dest, tag, comm, request);
         cur_cd->ptr_cd()->LogData(buf, 0, false, (unsigned long)request, 0);
       }
       else if (ret == kCommLogError)
@@ -469,7 +469,7 @@ int MPI_Isend(const void *buf,
   }
   else
   {
-    mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
+    mpi_ret = PMPI_Isend(const_cast<void *>(buf), count, datatype, dest, tag, comm, request);
   }
 
   app_side = true;
@@ -1210,7 +1210,7 @@ int MPI_Gather(const void *sendbuf,
     PRINT_DEBUG("myrank=%d, size=%d\n", myrank, size);
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Gather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
+      mpi_ret = PMPI_Gather(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       if (myrank == root){
@@ -1234,7 +1234,7 @@ int MPI_Gather(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Gather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
+        mpi_ret = PMPI_Gather(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
         if (myrank == root) {
           cur_cd->ptr_cd()->LogData(recvbuf, size*recvcnt*type_size);
         }
@@ -1246,7 +1246,7 @@ int MPI_Gather(const void *sendbuf,
   }
   else
   {
-    mpi_ret = PMPI_Gather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
+    mpi_ret = PMPI_Gather(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
   }
 
   app_side = true;
@@ -1295,7 +1295,7 @@ int MPI_Gatherv(const void *sendbuf,
 
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Gatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, root, comm);
+      mpi_ret = PMPI_Gatherv(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(displs), recvtype, root, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       if (myrank == root){
@@ -1319,7 +1319,7 @@ int MPI_Gatherv(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Gatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, root, comm);
+        mpi_ret = PMPI_Gatherv(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(displs), recvtype, root, comm);
         if (myrank == root) {
           cur_cd->ptr_cd()->LogData(recvbuf, totalcnts*type_size);
         }
@@ -1331,7 +1331,7 @@ int MPI_Gatherv(const void *sendbuf,
   }
   else
   {
-    mpi_ret = PMPI_Gatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, root, comm);
+    mpi_ret = PMPI_Gatherv(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(displs), recvtype, root, comm);
   }
 
   app_side = true;
@@ -1363,7 +1363,7 @@ int MPI_Allgather(const void *sendbuf,
 
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Allgather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
+      mpi_ret = PMPI_Allgather(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       cur_cd->ptr_cd()->LogData(recvbuf, size*recvcnt*type_size);
@@ -1375,14 +1375,14 @@ int MPI_Allgather(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Allgather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
+        mpi_ret = PMPI_Allgather(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
         cur_cd->ptr_cd()->LogData(recvbuf, size*recvcnt*type_size);
       }
     }
   }
   else
   {
-    mpi_ret = PMPI_Allgather(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
+    mpi_ret = PMPI_Allgather(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
   }
 
   app_side = true;
@@ -1429,7 +1429,7 @@ int MPI_Allgatherv(const void *sendbuf,
 
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Allgatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, comm);
+      mpi_ret = PMPI_Allgatherv(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(displs), recvtype, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       cur_cd->ptr_cd()->LogData(recvbuf, totalcnts*type_size);
@@ -1442,7 +1442,7 @@ int MPI_Allgatherv(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Allgatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, comm);
+        mpi_ret = PMPI_Allgatherv(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(displs), recvtype, comm);
 
         cur_cd->ptr_cd()->LogData(recvbuf, totalcnts*type_size);
       }
@@ -1450,7 +1450,7 @@ int MPI_Allgatherv(const void *sendbuf,
   }
   else
   {
-    mpi_ret = PMPI_Allgatherv(sendbuf, sendcnt, sendtype, recvbuf, recvcnts, displs, recvtype, comm);
+    mpi_ret = PMPI_Allgatherv(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(displs), recvtype, comm);
   }
 
   app_side = true;
@@ -1483,7 +1483,7 @@ int MPI_Reduce(const void *sendbuf,
 
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Reduce(sendbuf, recvbuf, count, datatype, op, root, comm);
+      mpi_ret = PMPI_Reduce(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, root, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       if (myrank == root){
@@ -1507,7 +1507,7 @@ int MPI_Reduce(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Reduce(sendbuf, recvbuf, count, datatype, op, root, comm);
+        mpi_ret = PMPI_Reduce(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, root, comm);
         if (myrank == root) {
           cur_cd->ptr_cd()->LogData(recvbuf, count*type_size);
         }
@@ -1519,7 +1519,7 @@ int MPI_Reduce(const void *sendbuf,
   }
   else
   {
-    mpi_ret = PMPI_Reduce(sendbuf, recvbuf, count, datatype, op, root, comm);
+    mpi_ret = PMPI_Reduce(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, root, comm);
   }
 
   app_side = true;
@@ -1546,7 +1546,7 @@ int MPI_Allreduce(const void *sendbuf,
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Allreduce(sendbuf, recvbuf, count, datatype, op, comm);
+      mpi_ret = PMPI_Allreduce(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       cur_cd->ptr_cd()->LogData(recvbuf, count*type_size);
@@ -1559,14 +1559,14 @@ int MPI_Allreduce(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Allreduce(sendbuf, recvbuf, count, datatype, op, comm);
+        mpi_ret = PMPI_Allreduce(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, comm);
         cur_cd->ptr_cd()->LogData(recvbuf, count*type_size);
       }
     }
   }
   else
   {
-    mpi_ret = PMPI_Allreduce(sendbuf, recvbuf, count, datatype, op, comm);
+    mpi_ret = PMPI_Allreduce(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, comm);
   }
 
   app_side = true;
@@ -1598,7 +1598,7 @@ int MPI_Alltoall(const void *sendbuf,
 
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Alltoall(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
+      mpi_ret = PMPI_Alltoall(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       cur_cd->ptr_cd()->LogData(recvbuf, size*recvcnt*type_size);
@@ -1610,14 +1610,14 @@ int MPI_Alltoall(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Alltoall(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
+        mpi_ret = PMPI_Alltoall(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
         cur_cd->ptr_cd()->LogData(recvbuf, size*recvcnt*type_size);
       }
     }
   }
   else
   {
-    mpi_ret = PMPI_Alltoall(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
+    mpi_ret = PMPI_Alltoall(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
   }
 
   app_side = true;
@@ -1666,8 +1666,8 @@ int MPI_Alltoallv(const void *sendbuf,
 
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Alltoallv(sendbuf, sendcnts, sdispls, sendtype, 
-                               recvbuf, recvcnts, rdispls, recvtype, comm);
+      mpi_ret = PMPI_Alltoallv(const_cast<void *>(sendbuf), const_cast<int *>(sendcnts), const_cast<int *>(sdispls), sendtype, 
+                               recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(rdispls), recvtype, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       cur_cd->ptr_cd()->LogData(recvbuf, totalcnts*type_size);
@@ -1680,8 +1680,8 @@ int MPI_Alltoallv(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Alltoallv(sendbuf, sendcnts, sdispls, sendtype, 
-                                 recvbuf, recvcnts, rdispls, recvtype, comm);
+        mpi_ret = PMPI_Alltoallv(const_cast<void *>(sendbuf), const_cast<int *>(sendcnts), const_cast<int *>(sdispls), sendtype, 
+                                 recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(rdispls), recvtype, comm);
 
         cur_cd->ptr_cd()->LogData(recvbuf, totalcnts*type_size);
       }
@@ -1689,8 +1689,8 @@ int MPI_Alltoallv(const void *sendbuf,
   }
   else
   {
-    mpi_ret = PMPI_Alltoallv(sendbuf, sendcnts, sdispls, sendtype, 
-                             recvbuf, recvcnts, rdispls, recvtype, comm);
+    mpi_ret = PMPI_Alltoallv(const_cast<void *>(sendbuf), const_cast<int *>(sendcnts), const_cast<int *>(sdispls), sendtype, 
+                             recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(rdispls), recvtype, comm);
   }
 
   app_side = true;
@@ -1719,7 +1719,7 @@ int MPI_Scatter(const void *sendbuf,
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Scatter(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
+      mpi_ret = PMPI_Scatter(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       cur_cd->ptr_cd()->LogData(recvbuf, recvcnt*type_size);
@@ -1732,14 +1732,14 @@ int MPI_Scatter(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Scatter(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
+        mpi_ret = PMPI_Scatter(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
         cur_cd->ptr_cd()->LogData(recvbuf, recvcnt*type_size);
       }
     }
   }
   else
   {
-    mpi_ret = PMPI_Scatter(sendbuf, sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
+    mpi_ret = PMPI_Scatter(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
   }
 
   app_side = true;
@@ -1769,7 +1769,7 @@ int MPI_Scatterv(const void *sendbuf,
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Scatterv(sendbuf, sendcnts, displs, sendtype, 
+      mpi_ret = PMPI_Scatterv(const_cast<void *>(sendbuf), const_cast<int *>(sendcnts), const_cast<int *>(displs), sendtype, 
                               recvbuf, recvcnt, recvtype, root, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
@@ -1783,7 +1783,7 @@ int MPI_Scatterv(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Scatterv(sendbuf, sendcnts, displs, sendtype, 
+        mpi_ret = PMPI_Scatterv(const_cast<void *>(sendbuf), const_cast<int *>(sendcnts), const_cast<int *>(displs), sendtype, 
                                 recvbuf, recvcnt, recvtype, root, comm);
         cur_cd->ptr_cd()->LogData(recvbuf, recvcnt*type_size);
       }
@@ -1791,7 +1791,7 @@ int MPI_Scatterv(const void *sendbuf,
   }
   else
   {
-    mpi_ret = PMPI_Scatterv(sendbuf, sendcnts, displs, sendtype, 
+    mpi_ret = PMPI_Scatterv(const_cast<void *>(sendbuf), const_cast<int *>(sendcnts), const_cast<int *>(displs), sendtype, 
                             recvbuf, recvcnt, recvtype, root, comm);
   }
 
@@ -1823,7 +1823,7 @@ int MPI_Reduce_scatter(const void *sendbuf,
 
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Reduce_scatter(sendbuf, recvbuf, recvcnts, datatype, op, comm);
+      mpi_ret = PMPI_Reduce_scatter(const_cast<void *>(sendbuf), recvbuf, const_cast<int *>(recvcnts), datatype, op, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       cur_cd->ptr_cd()->LogData(recvbuf, recvcnts[myrank]*type_size);
@@ -1836,14 +1836,14 @@ int MPI_Reduce_scatter(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Reduce_scatter(sendbuf, recvbuf, recvcnts, datatype, op, comm);
+        mpi_ret = PMPI_Reduce_scatter(const_cast<void *>(sendbuf), recvbuf, const_cast<int *>(recvcnts), datatype, op, comm);
         cur_cd->ptr_cd()->LogData(recvbuf, recvcnts[myrank]*type_size);
       }
     }
   }
   else
   {
-    mpi_ret = PMPI_Reduce_scatter(sendbuf, recvbuf, recvcnts, datatype, op, comm);
+    mpi_ret = PMPI_Reduce_scatter(const_cast<void *>(sendbuf), recvbuf, const_cast<int *>(recvcnts), datatype, op, comm);
   }
 
   app_side = true;
@@ -1871,7 +1871,7 @@ int MPI_Scan(const void *sendbuf,
 
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
     {
-      mpi_ret = PMPI_Scan(sendbuf, recvbuf, count, datatype, op, comm);
+      mpi_ret = PMPI_Scan(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, comm);
 
       PRINT_DEBUG("In kGenerateLog mode, generating new logs...\n");
       cur_cd->ptr_cd()->LogData(recvbuf, count*type_size);
@@ -1884,14 +1884,14 @@ int MPI_Scan(const void *sendbuf,
       if (ret == kCommLogCommLogModeFlip)
       {
         PRINT_DEBUG("Reached end of logs, and begin to generate logs...\n");
-        mpi_ret = PMPI_Scan(sendbuf, recvbuf, count, datatype, op, comm);
+        mpi_ret = PMPI_Scan(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, comm);
         cur_cd->ptr_cd()->LogData(recvbuf, count*type_size);
       }
     }
   }
   else
   {
-    mpi_ret = PMPI_Scan(sendbuf, recvbuf, count, datatype, op, comm);
+    mpi_ret = PMPI_Scan(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, comm);
   }
 
   app_side = true;
