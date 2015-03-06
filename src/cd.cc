@@ -377,7 +377,6 @@ CD::InternalCreate(CDHandle* parent,
 
     if(task_count > 1) {
       cout << "in CD::Create Internal Memory. task count is "<< task_count <<endl;
-      app_side = false;
       PMPI_Alloc_mem(sizeof(CDFlagT), 
                     MPI_INFO_NULL, &(new_cd->event_flag_));
       
@@ -418,7 +417,6 @@ CD::InternalCreate(CDHandle* parent,
     int task_count = new_cd_id.task_count();
 
     if(task_count > 1) {
-      app_side = false;
       cout << "in CD::Create Internal Memory. # tasks : "<< task_count <<endl;
       PMPI_Alloc_mem(task_count*sizeof(CDFlagT), 
                     MPI_INFO_NULL, &(new_cd->event_flag_));
@@ -554,8 +552,6 @@ inline CD::CDInternalErrT CD::InternalDestroy(void)
 // CDHandle will follow the standard interface. 
 CDErrT CD::Begin(bool collective, const char* label)
 {
-  //GONG
-  app_side = false;
   begin_ = true;
   PRINT_DEBUG("inside CD::Begin\n");
 
@@ -623,8 +619,6 @@ CDErrT CD::Begin(bool collective, const char* label)
     num_reexecution_++ ;
   }
 
-  //GONG
-  app_side = true;
 
   return CDErrT::kOK;
 }
@@ -636,10 +630,8 @@ CDErrT CD::Begin(bool collective, const char* label)
  */
 CDErrT CD::Complete(bool collective, bool update_preservations)
 {
-  //GONG
-  app_side = false;
   begin_ = false;
-  //printf("app_side = false in CD::Complete\n");
+
 #ifdef comm_log
   // SZ: pack logs and push to parent
   if (GetParentHandle()!=NULL) {
@@ -750,7 +742,6 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
         printf(" log - %p\n", it->p_);
     }
 */
-//    std::cout<<"size  :"<<mem_alloc_log_.size()<<" app_side: "<<app_side<<std::endl;
     //GONG: push mem_alloc_log_
   if(GetParentHandle()!=NULL)
   {
@@ -806,8 +797,6 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   // FIXME don't we have to wait for others to be completed?  
   cd_exec_mode_ = kSuspension; 
 
-  //GONG
-  app_side = true;
 
   return CDErrT::kOK;
 } // CD::Complete ends
@@ -1390,9 +1379,6 @@ CDErrT CD::Preserve(void *data,
                     const RegenObject *regen_object, 
                     PreserveUseT data_usage)
 {
-  //GONG
-  app_side = false;
-  //printf("app_side = false in CD::Preserve\n");
 
   // FIXME MALLOC should use different ones than the ones for normal malloc
   // For example, it should bypass malloc wrap functions.
@@ -1402,19 +1388,10 @@ CDErrT CD::Preserve(void *data,
 //    dbg<<"my_name "<< my_name<<endl;
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : 
-              //GONG
-              //printf("app_side = true in CD::Preserve\n");
-              app_side = true;
               return CDErrT::kOK;
       case CDInternalErrT::kExecModeError :
-              //GONG
-              //printf("app_side = true in CD::Preserve\n");
-              app_side = true;
               return CDErrT::kError;
       case CDInternalErrT::kEntryError    : 
-              //GONG
-              //printf("app_side = true in CD::Preserve\n");
-              app_side = true;
               return CDErrT::kError;
       default : assert(0);
     }
@@ -1475,8 +1452,6 @@ CDErrT CD::Preserve(void *data,
         // This point means the beginning of body stage. Request EntrySearch at this routine
       }
 
-      // GONG
-      app_side = true;
       return cd_err;
  
     }
@@ -1494,19 +1469,10 @@ CDErrT CD::Preserve(void *data,
       cd_exec_mode_  = kExecution;    
       switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
         case CDInternalErrT::kOK            : 
-          //GONG
-          //printf("app_side = true in CD::Preserve - abnormal\n");
-          app_side = true;
           return CDErrT::kOK;
         case CDInternalErrT::kExecModeError : 
-          //GONG
-          //printf("app_side = true in CD::Preserve - abnormal\n");
-          app_side = true;
           return CDErrT::kError;
         case CDInternalErrT::kEntryError    : 
-          //GONG
-          //printf("app_side = true in CD::Preserve - abnormal\n");
-          app_side = true;
           return CDErrT::kError;
         default : assert(0);
       }
@@ -1521,9 +1487,6 @@ CDErrT CD::Preserve(void *data,
     assert(0);
   }
 
-  //GONG
-  //printf("app_side = true in CD::Preserve - kError\n");
-  app_side = true;
   
   return kError; // we should not encounter this point
 }

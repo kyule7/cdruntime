@@ -94,14 +94,14 @@ void free(void *p)
 	  bool logable  = false;
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
-//      PRINT_LIBC("FREE invoked %p\n", p);
+      PRINT_LIBC("FREE invoked %p\n", p);
       std::vector<IncompleteLogEntry>::iterator it;
       for (it=c_CD->mem_alloc_log_.begin(); it!=c_CD->mem_alloc_log_.end(); it++)
       {
         //address matched!
         if(it->p_ == p) 
         { 
-//          PRINT_LIBC("FREE- complete? %p\n", p);
+          PRINT_LIBC("FREE- complete? %p\n", p);
           it->complete_ = true;
           return;
         }
@@ -110,7 +110,7 @@ void free(void *p)
       bool found = c_CD->PushedMemLogSearch(p, c_CD);
       if(found) 
       {
-//        PRINT_LIBC("found %p from parent's log will NOT free it \n", p);
+        PRINT_LIBC("found %p from parent's log will NOT free it \n", p);
         return;
       }
     }
@@ -122,7 +122,6 @@ void free(void *p)
   {
     real_free = (void(*)(void *)) dlsym(RTLD_NEXT, "free");
   }
-  printf("==pointer p : %p\n", p);
   real_free(p);
 }
 

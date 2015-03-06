@@ -295,6 +295,9 @@ int test_preservation_via_copy()
   printf("\n\n--------------------test1 begins-----------------------\n");
 //  CD *root= handle_cd.ptr_cd();// for now let's just get the pointer and use it directly
   printf("CD Create\n");
+
+
+
 	CDHandle* root = CD_Init(np, mr);
   printf("CD Begin.........lol\n");
   //  root->Begin();  
@@ -309,6 +312,8 @@ int test_preservation_via_copy()
 //  FILE * test_fopen_ = fopen("test_fopen_.txt", "w");
 
   printf("create child CD\n");
+
+
   CDHandle* child=root->Create("CD1", kStrict, 0, 0, &err);
   CD_Begin(child); 
   printf("Child CD Begin\n");
@@ -321,29 +326,31 @@ int test_preservation_via_copy()
 //  FILE * test_fopen = fopen("test_fopen.txt", "w");
 //  fprintf(test_fopen,"number of re-execution: %i\n", num_reexecution);
 //  fprintf(test_fopen_,"number of re-execution: %i\n", num_reexecution);
-  printf("test_malloc here\n");
-  int *test_malloc = new int[10];
-  test_malloc[0] = rand();
-  printf("test_calloc here\n");
-  int *test_calloc = (int*) calloc(10,sizeof(int));
-  test_calloc[0] = rand();
-  
-  printf("child CD Complete..\n");
-  free(test_malloc);
-/*  printf("complete child 1\n");
-  CD_Complete(child);
-  
-  CD_Begin(child);*/
-  free(test_calloc);
-
-  printf("test_valloc here\n");
-  int *test_valloc = (int*) valloc(10*sizeof(int));
-  test_valloc[0] = rand();
-  printf("test_realloc here\n");
-  int *test_realloc = (int*) malloc(10*sizeof(int));//= new int[10];
-  test_realloc = (int*) realloc(test_realloc, 10*sizeof(int));
-  test_realloc[0] = rand();
-  printf("rand value check : %i\t%i\t%i\t%i\t%i\n", test_malloc[0], test_calloc[0], test_valloc[0], test_realloc[0], test_realloc[9]);
+//  printf("test_malloc here\n");
+//  int *test_malloc = new int[10];
+//  test_malloc[0] = rand();
+//  printf("test_calloc here\n");
+//  int *test_calloc = (int*) calloc(10,sizeof(int));
+//  test_calloc[0] = rand();
+//  
+//  printf("child CD Complete..\n");
+//  free(test_malloc);
+///*  printf("complete child 1\n");
+//  CD_Complete(child);
+//  
+//  CD_Begin(child);*/
+//  free(test_calloc);
+//
+//  printf("test_valloc here\n");
+//  int *test_valloc = (int*) valloc(10*sizeof(int));
+//  test_valloc[0] = rand();
+//  printf("test_realloc here\n");
+//  int *test_realloc = (int*) malloc(10*sizeof(int));//= new int[10];
+//  test_realloc = (int*) realloc(test_realloc, 10*sizeof(int));
+//  test_realloc[0] = rand();
+//  printf("rand value check : %i\t%i\t%i\t%i\t%i\n", test_malloc[0], test_calloc[0], test_valloc[0], test_realloc[0], test_realloc[9]);
+//  free(test_valloc);
+//  free(test_realloc);
   
   printf("Before Modify Current value of a[0]=%d a[1]=%d\n", a[0], a[1]);
   printf("Before Modify Current value of b[0]=%d b[1]=%d\n", b[0], b[1]);
@@ -380,7 +387,7 @@ int test_preservation_via_copy()
 
 
   printf("Complete child CD\n");
-  child->Complete();
+  CD_Complete(child);
   printf("Destroy child CD\n");
   child->Destroy();
 
@@ -407,11 +414,11 @@ int test_preservation_via_copy()
   if(num_reexecution == 1) {
     printf("\nis now Second error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n");
     num_reexecution = 2;
-    root->CDAssert(false);
+//    root->CDAssert(false);
   }
 
-  free(test_valloc);
-  free(test_realloc);
+//  free(test_valloc);
+//  free(test_realloc);
   printf("root CD Complete\n");
   //  root->Complete();
   CD_Complete(root);
