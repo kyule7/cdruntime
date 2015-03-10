@@ -106,7 +106,7 @@ public:
 
   static CDHandle* GetParentCD(int current_level)
   { 
-    std::cout << current_level << std::endl;
+    std::cout << "CDPath::GetParentCD current level : "<<current_level << std::endl;
     if(uniquePath_ != NULL ) {
       if( uniquePath_->size() > 1 ) {
 //        return uniquePath_->at(current_level-2);
@@ -116,6 +116,27 @@ public:
       }
     }
     return NULL;
+  }
+
+  static CDHandle* GetCDLevel(int level)
+  { 
+    if(uniquePath_ != NULL) {
+      if( uniquePath_->size() > 1 ) {
+        return uniquePath_->at(level); 
+      }
+    }
+    return NULL;
+  }
+
+  static CDHandle *GetCoarseCD(CDHandle *curr_cdh) {
+    while( curr_cdh->task_size() == 1 ) {
+      if(curr_cdh == GetRootCD()) {
+        dbg << "There is a single task in the root CD" << endl;
+        assert(0);
+      }
+    	curr_cdh = CDPath::GetParentCD(curr_cdh->level());
+    } 
+    return curr_cdh;
   }
 
 };

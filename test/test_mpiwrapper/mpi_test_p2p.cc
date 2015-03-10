@@ -76,10 +76,10 @@ int test_bp2p(int argc, char** argv)
     PRINTF("Received message=%f\n",message);
 
     PRINTF("Print level 1 child CD comm_log_ptr info...\n");
-    if (child1_0->ptr_cd()->cd_type_ == kRelaxed)
-      child1_0->ptr_cd()->comm_log_ptr_->Print();
-    else
-      PRINTF("NULL pointer for strict CD!\n");
+//    if (child1_0->ptr_cd()->cd_type_ == kRelaxed)
+//      child1_0->ptr_cd()->comm_log_ptr_->Print();
+//    else
+//      PRINTF("NULL pointer for strict CD!\n");
 
     // insert error
     if (num_reexec < 1)
@@ -143,11 +143,11 @@ int test_bp2p(int argc, char** argv)
     PRINTF("Barrier2\n");
     MPI_Barrier(MPI_COMM_WORLD);
 
-    PRINTF("Print level 1 child CD comm_log_ptr info...\n");
-    if (child1_0->ptr_cd()->cd_type_ == kRelaxed)
-      child1_0->ptr_cd()->comm_log_ptr_->Print();
-    else
-      PRINTF("NULL pointer for strict CD!\n");
+//    PRINTF("Print level 1 child CD comm_log_ptr info...\n");
+//    if (child1_0->ptr_cd()->cd_type_ == kRelaxed)
+//      child1_0->ptr_cd()->comm_log_ptr_->Print();
+//    else
+//      PRINTF("NULL pointer for strict CD!\n");
 
     PRINTF("Complete child CD of level 1 ...\n");
     CD_Complete(child1_0);
@@ -232,11 +232,11 @@ int test_bp2p(int argc, char** argv)
     PRINTF("Barrier2\n");
     MPI_Barrier(MPI_COMM_WORLD);
 
-    PRINTF("Print level 1 child CD comm_log_ptr info...\n");
-    if (child1_1->ptr_cd()->cd_type_ == kRelaxed)
-      child1_1->ptr_cd()->comm_log_ptr_->Print();
-    else
-      PRINTF("NULL pointer for strict CD!\n");
+//    PRINTF("Print level 1 child CD comm_log_ptr info...\n");
+//    if (child1_1->ptr_cd()->cd_type_ == kRelaxed)
+//      child1_1->ptr_cd()->comm_log_ptr_->Print();
+//    else
+//      PRINTF("NULL pointer for strict CD!\n");
 
     PRINTF("Complete child CD of level 1 ...\n");
     CD_Complete(child1_1);

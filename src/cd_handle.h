@@ -283,21 +283,30 @@ class cd::CDHandle {
 
 
   public:
-    bool IsHead(void) const;
+    bool IsHead(void)            const;
+    char *GetName(void)          const;
     // Accessors
-    CD*       ptr_cd(void) const; 
-    NodeID&   node_id(void) ;  
-    void      SetCD(CD* ptr_cd);
-    char*     GetName(void) const; 
-    int       GetSeqID(void) const;
-    ColorT    GetNodeID(void) const;
-    int       GetTaskID(void) const;
-    int       GetTaskSize(void) const;
-    int       ctxt_prv_mode(void);
-    bool      operator==(const CDHandle &other) const ;
+    CDID     &GetCDID(void);       
+    CDNameT  &GetCDName(void);   
+    ColorT   GetNodeID(void);     
+    NodeID   &node_id(void);       
+    
+    CD       *ptr_cd(void)       const;
+    void     SetCD(CD* ptr_cd);
+    
+    uint32_t level(void)         const;
+    uint32_t rank_in_level(void) const;
+    uint32_t sibling_num(void)   const;
+    
+    ColorT   color(void)         const;
+    int      task_in_color(void) const;
+    int      head(void)          const; 
+    int      task_size(void)     const; 
+    
+    int      GetSeqID()          const;
 
-
-
+    int      ctxt_prv_mode(void);
+    bool     operator==(const CDHandle &other) const ;
 };
 
 

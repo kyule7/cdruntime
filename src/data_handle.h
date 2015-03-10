@@ -96,7 +96,7 @@ class DataHandle : public Serializable {
       : handle_type_(kReference), address_data_(0), len_(0), ref_offset_(ref_offset) 
     { 
       strcpy(file_name_, INIT_FILE_PATH); 
-      ref_name_ = str_hash(ref_name); 
+      ref_name_ = cd_hash(ref_name); 
       cd::tag2str[ref_name_] = ref_name; 
       node_id_ = node_id; 
     }
@@ -131,7 +131,7 @@ class DataHandle : public Serializable {
       // Basically, it removes the overhead at failure-free execuation, 
       // but reqires more overhead in reexecution time which is rare.
       strcpy(file_name_, INIT_FILE_PATH); 
-      ref_name_ = str_hash(ref_name); 
+      ref_name_ = cd_hash(ref_name); 
       cd::tag2str[ref_name_] = ref_name; 
     }
 
@@ -147,7 +147,7 @@ class DataHandle : public Serializable {
     NodeID      node_id(void)      const { return node_id_; }
 
     void        set_file_name(const char *file_name)       { strcpy(file_name_, file_name); }
-    void        set_ref_name(std::string ref_name)         { ref_name_     = str_hash(ref_name); cd::tag2str[ref_name_] = ref_name;}
+    void        set_ref_name(std::string ref_name)         { ref_name_     = cd_hash(ref_name); cd::tag2str[ref_name_] = ref_name;}
     void        set_ref_offset(uint64_t ref_offset)        { ref_offset_   = ref_offset; }
     void        set_address_data(const void *address_data) { address_data_ = (void *)address_data; }
     void        set_len(uint64_t len)                      { len_ = len; }
@@ -179,7 +179,7 @@ class DataHandle : public Serializable {
 
       data_packer.Add(DATA_PACKER_FILENAME, sizeof(file_name_), file_name_);
  
-//      uint64_t ref_name_key = str_hash(ref_name);
+//      uint64_t ref_name_key = cd_hash(ref_name);
       data_packer.Add(DATA_PACKER_REFNAME, sizeof(uint64_t), &ref_name_); // string.size() + 1 is for '\0'
       data_packer.Add(DATA_PACKER_REFOFFSET, sizeof(uint64_t), &ref_offset_); 
       dbg << "\nData Handle Serialize Done\n" << endl;

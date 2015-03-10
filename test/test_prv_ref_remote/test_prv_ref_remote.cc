@@ -42,14 +42,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #define SIZE 655360 //10M?
 #define LV1 1
-#define LV2 8
-#define LV3 1 
+#define LV2 1
+#define LV3 8 
 
 using namespace cd;
 using namespace std;
 using namespace chrono;
 
-ostringstream dbg2;
+ostringstream dbgApp;
 CDErrT err;
 int  np = 0;
 int  mr = 0;
@@ -68,7 +68,6 @@ static __inline__ long long getCounter(void)
 // Test basic preservation scheme.
 int test_preservation_via_ref_remote()
 {
-
   int a[3]= {3,5,0};
   int b[8]= {1,2,3,4,5,6,7,8};
   int c[8]= {5,};
@@ -76,21 +75,19 @@ int test_preservation_via_ref_remote()
   int test_results[8] = {0,};
   int test_result = 0;
   int num_reexecution = 0;
-  dbg2 << "\n\n--------------------test preservation_via_ref_remote begins-----------------------\n" << endl;
-  dbg2 << "CD Create\n" << endl;
-//  CD *root= handle_cd.ptr_cd();// for now let's just get the pointer and use it directly
+  dbgApp << "\nTest Preservation via Reference (remote) -----------------------\n" << endl;
+  dbgApp << "CD Create\n" << endl;
 
 	CDHandle* root = CD_Init(np, mr);
-  dbg2 <<"CD Begin.........lol\n" << endl;
-  //  root->Begin();  
-  //  getcontext(&root->context_);
   CD_Begin(root); 
 
-  dbg2 << "CD Preserving..\n" << endl;
+  dbgApp <<"CD Begin.........lol\n" << endl;
+
+  dbgApp << "CD Preserving..\n" << endl;
   CDHandle* child_lv1=root->Create(CDPath::GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
   CD_Begin(child_lv1);
-  dbg2 << "child level 1-------------------------------------\n" << endl;
-  dbg2 << "Preserve via copy for array a and array b\n" << endl;
+  dbgApp << "child level 1-------------------------------------\n" << endl;
+  dbgApp << "Preserve via copy for array a and array b\n" << endl;
   switch(mr) {
     case 0 : a[2] = 10;
     case 1 : a[2] = 11;
@@ -102,6 +99,7 @@ int test_preservation_via_ref_remote()
     case 7 : a[2] = 17;
     default : a[2] = 0;
   }
+
   child_lv1->Preserve(a, sizeof(a), kCopy | kShared, (string("a-")+to_string(mr)).c_str());
   child_lv1->Preserve(b, sizeof(b), kCopy | kShared, (string("b-")+to_string(mr)).c_str());
 //  child_lv1->Preserve(a, sizeof(a), kCopy, "a");
@@ -135,11 +133,11 @@ int test_preservation_via_ref_remote()
 
   CD_Begin(child_lv2);
 
-  dbg2 << "child level 2-------------------------------------\n" << endl;
+  dbgApp << "child level 2-------------------------------------\n" << endl;
   dbg << "\n\n\nnode id check : "<< CDPath::GetCurrentCD()->node_id() << "\n\n\n" << endl;
 
-  child_lv2->Preserve(a, sizeof(a), kRef, "a_lv2", (string("a")+to_string(mr)).c_str()); // local
-  child_lv2->Preserve(b, sizeof(b), kRef, "b_lv2", (string("b")+to_string(mr)).c_str()); // local
+  child_lv2->Preserve(a, sizeof(a), kRef, "a_lv2", (string("a-")+to_string(mr)).c_str()); // local
+  child_lv2->Preserve(b, sizeof(b), kRef, "b_lv2", (string("b-")+to_string(mr)).c_str()); // local
   if(mr == 0) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-1"); // remote
   if(mr == 1) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-2"); // remote
   if(mr == 2) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-3"); // remote
@@ -149,18 +147,19 @@ int test_preservation_via_ref_remote()
   if(mr == 6) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-7"); // remote
   if(mr == 7) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-0"); // remote
 
+//  getchar();
   //child->Preserve((char *)&b,8* sizeof(int));
-  dbg2 << "sizeof a : \t" << sizeof(a) << endl; //getchar();
-  dbg2 << "sizeof b : \t" << sizeof(b) << endl; //getchar();
+  dbgApp << "sizeof a : \t" << sizeof(a) << endl; //getchar();
+  dbgApp << "sizeof b : \t" << sizeof(b) << endl; //getchar();
 
-  dbg2 << "Before Modify Current value of a[0]="<< a[0] << "a[1]=" << a[1] << endl;
-  dbg2 << "Before Modify Current value of b[0]="<< b[0] << "b[1]=" << b[1] << endl;
+  dbgApp << "Before Modify Current value of a[0]="<< a[0] << "a[1]=" << a[1] << endl;
+  dbgApp << "Before Modify Current value of b[0]="<< b[0] << "b[1]=" << b[1] << endl;
 
 
   a[0] =2;
   b[0] =5;
-  dbg2 << "After Modify Current value of a[0]=" << a[0] <<endl;
-  dbg2 << "After Modify Current value of b[0]=" << b[0] <<endl;
+  dbgApp << "After Modify Current value of a[0]=" << a[0] <<endl;
+  dbgApp << "After Modify Current value of b[0]=" << b[0] <<endl;
 
   if( num_reexecution == 0 ) {
     cout <<"\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n" << endl;
@@ -183,11 +182,11 @@ int test_preservation_via_ref_remote()
     }
   }
 
-  dbg2 << "\n\n--------------Corruption for c begins ----------------------------\n\n" << endl;
+  dbgApp << "\n\n--------------Corruption for c begins ----------------------------\n\n" << endl;
   // this point is to test whether execution mode becomes kExecution from this point, 
   // because before this preservation is called it should be in kReexecution mode
   child_lv2->Preserve(c, sizeof(c), kCopy, "c");
-//  dbg2 << "sizeof c : " << sizeof(c) << endl; //getchar();
+//  dbgApp << "sizeof c : " << sizeof(c) << endl; //getchar();
 
 //  if( num_reexecution == 2)  {
 //    if( c[0] == 5 ) {
@@ -196,9 +195,9 @@ int test_preservation_via_ref_remote()
 //  }
 
   // corrupt c[0]
-  dbg2 << "Before modifying current value of c[0] : " << c[0] << endl;
+  dbgApp << "Before modifying current value of c[0] : " << c[0] << endl;
   c[0] =77;
-  dbg2 << "After modifying current value of c[0] : "<< c[0] << endl;
+  dbgApp << "After modifying current value of c[0] : "<< c[0] << endl;
 
 //  if(num_reexecution == 1) {
 //    dbg << "\nis now Second error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n" << endl;
@@ -206,12 +205,12 @@ int test_preservation_via_ref_remote()
 //    child_lv2->CDAssert(false);
 //  }
 
-  dbg2 << "CD Complete\n" << endl;
+  dbgApp << "CD Complete\n" << endl;
   //  root->Complete();
 
   CDHandle* child_lv3=child_lv2->Create(CDPath::GetCurrentCD()->GetNodeID(), LV3, "CD3", kStrict, 0, 0, &err);
   CD_Begin(child_lv3);
-  dbg2 << "child level 3-------------------------------------\n" << endl;
+  dbgApp << "child level 3-------------------------------------\n" << endl;
   child_lv3->Preserve(a, sizeof(a), kRef, "child_a", (string("a")+to_string(mr)).c_str());
   child_lv3->Preserve(b, sizeof(b), kRef, "child_b", (string("b")+to_string(mr)).c_str());
   child_lv3->Preserve(c, sizeof(b), kRef, "child_c", "c");
@@ -239,13 +238,13 @@ int test_preservation_via_ref_remote()
 
   CD_Complete(root);
 
-  dbg2 <<"CD Destroy\n" << endl;
-  CD_Finalize(&dbg2);
+  dbgApp <<"CD Destroy\n" << endl;
+  CD_Finalize(&dbgApp);
 
 
   // check the test result   
   for( int i = 0; i < 5; i++ ) {
-    dbg2 << "test_result[" << i << "] = " << test_results[i] << endl;
+    dbgApp << "test_result[" << i << "] = " << test_results[i] << endl;
     if( test_results[i] != 1 ) {
       test_result = -1;
     }
@@ -255,55 +254,6 @@ int test_preservation_via_ref_remote()
 }
 
 
-/*
-
-// Test basic via reference scheme.
-int test_preservation_via_ref_remote_2()
-{
-  int a[4]= {3,0,};
-  int b[8]= {1,0,};
-  int c[8]= {5,};
-  int num_reexecution = 0;
-  int test_result = 0;
-  
-  //CDHandle no_parent;  // not initialized and this means no parent
-  dbg2 << "\n\n---------------test_preservation_via_ref_remote 2 begins-----------------------------\n" << endl;
-  CDErrT err;
-	CDHandle* root = CD_Init(np, mr);
-  CD_Begin(root); 
-  root->Preserve(a, sizeof(a), kCopy, "a");
-
-  dbg2 << "Before modifying current value of a[0] " << a[0] <<" a[1] "<< a[1] << endl;
-  a[0] = 99;  // now when child recovers it should see 3 instead of 99
-  dbg2 << "After modifying current value of a[0] " << a[0] <<" a[1] "<< a[1] << endl;
-
-  CDHandle* child=root->Create(CDPath::GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
-  CD_Begin(child); 
-  dbg2 << "child cd begin\n" << endl; 
-  child->Preserve(a, sizeof(a), kRef, "nonamejusttest", "a", 0);
-  
-  if( num_reexecution == 0 ) {
-    num_reexecution = 1;
-	  child->CDAssert(false);
-
-  }
-  if( num_reexecution == 1 ) {
-
-    dbg2 << "After Reexec :   value of a[0] "<< a[0] << " a[1] "<< a[1] << endl;
-    if(a[0] == 3 )
-      test_result=1;
-  }
-  CD_Complete(child);
-  child->Destroy();
-
- 
-  CD_Complete(root);
-  CD_Finalize();
-
-  if( test_result == 1 ) return kOK;
-  return kError;
-}
-*/
 
 
 

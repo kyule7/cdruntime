@@ -46,7 +46,7 @@ ucontext_t context;
 #define SIZE_C 1025
 //#define PRINTF(...) {printf("%d:",myrank);printf(__VA_ARGS__);}
 //#define PRINTF(...) {fprintf(fp, __VA_ARGS__);}
-#define PRINTF(...) {printf(__VA_ARGS__);}
+//#define PRINTF(...) {printf(__VA_ARGS__);}
 
 FILE *fp;
 

@@ -448,7 +448,8 @@ int fprintf(FILE *str, const char *format,...)
     else
     {
       printf("out of CD runtime side!");
-      exit(1);
+      assert(0);
+//      exit(1);
     }
     app_side = true;
   }

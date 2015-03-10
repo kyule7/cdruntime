@@ -132,8 +132,28 @@ class CDID {
     }
     uint32_t GenMsgTag(ENTRY_TAG_T tag)
     {
-      return ((uint32_t)(tag & 0xFFFFFFFF));
+      // MAX tag value is 2^31-1
+      return ((uint32_t)(tag & 0x7FFFFFFF));
     }
+
+    uint32_t GenMsgTagForSameCD(int msg_type, int task_in_color)
+    {
+      // MAX level : 64 (6 bit)
+      // MAX number of CDs in a level : 4096 (12 bit)
+      // MAX number of tasks in a CD  : 4096 (12 bit)
+      uint32_t level         = cd_name_.level();
+      uint32_t rank_in_level = cd_name_.rank_in_level();
+//      std::cout << "rank in level : "<<rank_in_level << std::endl;
+      if(level > 64) assert(0); 
+      if(rank_in_level > 4096) assert(0); 
+      if(task_in_color > 4096) assert(0); 
+      uint32_t tag = ((level << 24) | (rank_in_level << 12) | (task_in_color));
+      tag &= 0x3FFFFFFF;
+      tag |= msg_type;
+      return tag;
+    }
+
+
 
     uint32_t GenMsgTagForSameCD(int msg_type)
     {

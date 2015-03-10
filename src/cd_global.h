@@ -39,8 +39,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdlib.h>
 #include <assert.h>
 #include <iostream>
-#include <string>
+#include <fstream>
 #include <sstream>
+#include <string>
 #include <vector>
 #include <map>
 #include <functional>
@@ -77,7 +78,7 @@ typedef MPI_Win CDMailBoxT;
 #endif
 #endif
 
-typedef uint64_t ENTRY_TAG_T;
+typedef uint32_t ENTRY_TAG_T;
 
 #define MAX_ENTRY_BUFFER_SIZE 1024
 
@@ -94,13 +95,25 @@ typedef uint64_t ENTRY_TAG_T;
 #define NUM_FLAGS 1024
 
 
+#define INITIAL_ERR_VAL kOK
+#define DATA_MALLOC malloc
+#define DATA_FREE free
+
+#define CHECK_EVENT_NO_EVENT(X) (X == 0)
+#define CHECK_PRV_TYPE(X,Y) ((X & Y) == Y)
+#define CHECK_EVENT(X,Y) ((X & Y) == Y)
+#define CHECK_NO_EVENT(X) (X == 0)
+#define SET_EVENT(X,Y) (X |= Y)
+
+
 //GONG: global variable to represent the current context for malloc wrapper
 //extern bool app_side;
 
 namespace cd {
-
+  class DebugBuf;
 #if _DEBUG
-  extern std::ostringstream dbg;
+//  extern std::ostringstream dbg;
+  extern DebugBuf dbg;
 #define dbgBreak nullFunc
 #else
 #define dbg std::cout
@@ -233,31 +246,36 @@ namespace cd {
 
   extern int myTaskID;
   extern int handled_event_count;
-  class DebugBuf: public std::streambuf {
-    std::streambuf *baseBuf_;
+
+  class DebugBuf: public std::ostringstream {
+    std::ofstream ofs_;
   public:
-    virtual ~DebugBuf() {};
-    DebugBuf() {
-      init(NULL);
+    ~DebugBuf() {}
+    DebugBuf(void) {}
+    DebugBuf(const char *filename) 
+      : ofs_(filename) {}
+  
+    void open(const char *filename)
+    {
+      ofs_.open(filename);
     }
-    DebugBuf(std::streambuf* baseBuf) {
-      init(baseBuf);
+    
+    void close(void)
+    {
+      ofs_.close();
     }
-    void init(std::streambuf* baseBuf) {
-      baseBuf = baseBuf;
+    
+    void flush(void) {
+      ofs_ << str();
+      ofs_.flush();
+      str("");
+      clear();
     }
-  private:
-    virtual int overflow(int in) {
-      return in;
-    }
-    virtual std::streamsize xsputn(const char *s, std::streamsize in) {
-      return in;
-    }
-    virtual int sync() {
-      return 0;
-    }
-  }; 
- 
+      
+  };
+
+
+
   class Tag : public std::string {
     std::ostringstream _oss;
   public:
@@ -303,7 +321,7 @@ namespace cd {
   extern void ReadCDTag16(uint16_t cd_tag, uint32_t &level, uint32_t &rank_in_level, uint32_t &task_in_color);
   extern void ReadMsgTag(uint32_t msg_tag);
 
-  extern std::map<uint64_t, std::string> tag2str;
+  extern std::map<ENTRY_TAG_T, std::string> tag2str;
   extern std::hash<std::string> str_hash;
 
   extern CDHandle* CD_Init(int numproc=1, int myrank=0);
@@ -316,23 +334,59 @@ namespace cd {
   static inline void CDPrologue(void) { app_side = false; }
   static inline void CDEpilogue(void) { app_side = true; }
   static inline bool CheckAppSide(void) { return app_side; }
+
+//  static inline ENTRY_TAG_T cd_hash(const std::string &str)
+
+  static inline
+  ENTRY_TAG_T cd_hash(const std::string &str)
+  { return static_cast<ENTRY_TAG_T>(cd::str_hash(str)); }
+
+  extern inline std::string event2str(int event) {
+    switch(event) {
+      case 0:
+        return "kNoEvent";
+      case 1:
+        return "kAllPause";
+      case 2:
+        return "kAllResume";
+      case 4:
+        return "kAllReexecute";
+      case 8:
+        return "kEntrySend";
+      case 16:
+        return "kEntrySearch";
+      case 32:
+        return "kErrorOccurred";
+      case 64:
+        return "kReserved";
+      default:
+        return "UNDEFINED EVENT";
+    }
+
+//    std::string eventStr;
+//    if(CHECK_NO_EVENT(event)) {
+//        eventStr = "kNoEvent";
+//    }
+//    else {
+//      if(CHECK_EVENT(event, kAllPause))
+//        eventStr += "kAllPause ";
+//      if(CHECK_EVENT(event, kAllResume))
+//        eventStr += "kAllResume ";
+//      if(CHECK_EVENT(event, kEntrySend))
+//        eventStr += "kEntrySend ";
+//      if(CHECK_EVENT(event, kEntrySearch))
+//        eventStr += "kEntrySearch ";
+//      if(CHECK_EVENT(event, kErrorOccurred))
+//        eventStr += "kErrorOccurred ";
+//      if(CHECK_EVENT(event, kReserved))
+//        eventStr += "kReserved ";
+//      if(eventStr.empty()) 
+//        eventStr = "UNDEFINED EVENT";
+//    }
+//    return eventStr;
+
+  }
 }
-#define INITIAL_ERR_VAL kOK
-#define DATA_MALLOC malloc
-#define DATA_FREE free
-
-#define CHECK_EVENT_NO_EVENT(X) (X == 0)
-#define CHECK_EVENT_ERROR_OCCURRED(X) (X & kErrorOccurred)
-#define CHECK_EVENT_ENTRY_SEARCH(X) ((X & kEntrySearch) >> 2)
-#define CHECK_EVENT_ENTRY_SEND(X) ((X & kEntrySend) >> 3)
-#define CHECK_EVENT_ALL_PAUSE(X) ((X & kAllPause) >> 4)
-#define CHECK_EVENT_ALL_RESUME(X) ((X & kAllResume) >> 5)
-#define CHECK_EVENT_ALL_REEXECUTE(X) ((X & kAllReexecute) >> 6)
-
-#define CHECK_PRV_TYPE(X,Y) ((X & Y) == Y)
-#define CHECK_EVENT(X,Y) ((X & Y) == Y)
-#define CHECK_NO_EVENT(X) (X == 0)
-#define SET_EVENT(X,Y) (X |= Y)
 
 
 //SZ: change the following macro to 1) add "Error: " before all error messages,

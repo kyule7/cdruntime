@@ -38,7 +38,7 @@ else
 CC=mpic++
 endif
 
-ERR_FLAGS=-Wall -fmax-errors=3
+ERR_FLAGS=-Wall -fmax-errors=1
 CFLAGS  = -g -fPIC -std=gnu++0x ${ERR_FLAGS} 
 LDFLAGS = #${SIGHT_LINKFLAGS}
 
@@ -48,7 +48,7 @@ endif
 
 CDS_FLAGS=-D_MPI_VER=$(MPI_VER_VAR) -D_PGAS_VER=$(PGAS_VER_VAR) -D_SINGLE_VER=$(SINGLE_VER_VAR) \
         -D_DEBUG=$(DEBUG_VAR) ${PROFILER_FLAGS} \
-        -D_KL=1 
+        -D_KL=1 -D_FIX=1 
 
 
 ifeq ($(PROFILER_ENABLED), 1)

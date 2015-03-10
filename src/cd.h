@@ -93,6 +93,7 @@ class cd::CD : public cd::Serializable {
     /// The friends of CD class
     friend class cd::RegenObject;   
     friend class cd::CDEntry;  
+    friend class cd::CDHandle;  
     friend class cd::RecoverObject;
     friend class cd::HandleAllReexecute;
     friend class cd::HandleEntrySearch;
@@ -194,9 +195,11 @@ class cd::CD : public cd::Serializable {
     /// If ref_name is passed by preservation call, it means it allows this entry to be referred to by children CDs.
     std::list<CDEntry> entry_directory_;
 
-    std::map<ENTRY_TAG_T, CommInfo> entry_request_req_;
-    std::map<ENTRY_TAG_T, CommInfo> entry_send_req_;
-    std::map<ENTRY_TAG_T, CommInfo> entry_recv_req_;
+    static std::list<CommInfo> entry_req_;
+    static std::map<ENTRY_TAG_T, CommInfo> entry_request_req_;
+    static std::map<ENTRY_TAG_T, CommInfo> entry_send_req_;
+    static std::map<ENTRY_TAG_T, CommInfo> entry_recv_req_;
+    static std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     
     // Only CDEntries that has refname will be pushed into this data structure for later quick search.
     std::map<uint64_t, CDEntry*> entry_directory_map_;   
@@ -207,7 +210,7 @@ class cd::CD : public cd::Serializable {
 
 
     
-    std::vector<CDEventHandler *> cd_event_;
+    static std::vector<EventHandler *> cd_event_;
 /*  
 09.23.2014 
 It is not complete yet. I am thinking of some way to implement like cd_advance semantic which should allow
@@ -433,16 +436,18 @@ update the preserved data.
     // Actual malloced data or created file for the preservation is deleted in this routine. 
     void DeleteEntryDirectory(void);
     
+    CDEventHandleT ReadMailBox(CDFlagT &event);
+    virtual CDInternalErrT InternalCheckMailBox(void);
+    virtual CDInternalErrT InvokeErrorHandler(void);
+    CDInternalErrT InvokeAllErrorHandler(void);
     // Test the completion of internal-CD communications
     virtual bool TestComm(bool test_untile_done=false);
-    CDEventHandleT HandleEvent(CDFlagT &event);
 
-    CDInternalErrT InternalCheckMailBox(void);
-    virtual CDInternalErrT ReadMailBox(void);
-    virtual CDInternalErrT InvokeErrorHandler(void);
+    void DecPendingCounter(void);
   public:
     CDErrT CheckMailBox(void);
-    CDErrT SetMailBox(CDEventT &event);
+    virtual CDErrT SetMailBox(CDEventT &event);
+    CDInternalErrT RemoteSetMailBox(CD *curr_cd, CDEventT &event);
 
     void *SerializeRemoteEntryDir(uint32_t& len_in_byte);
     void DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
@@ -512,10 +517,9 @@ class cd::HeadCD : public cd::CD {
 
     cd::CDHandle*            cd_parent_;
 
-    std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
+//    std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     // event related
 
-    std::vector<HeadCDEventHandler *> headcd_event_;
     bool error_occurred;
 //    bool need_reexec;
 #if _MPI_VER
@@ -557,41 +561,12 @@ class cd::HeadCD : public cd::CD {
 //    void *SerializeEntryDir(uint32_t& entry_count); 
 //    std::vector<CDEntry> DeserializeEntryDir(void *object);
 
-    CDInternalErrT ReadMailBox(void);
+//    CDInternalErrT ReadMailBox(void);
 
-    
-//    class HandleErrorOccurred : public EventHandler {
-//      int task_id_;
-//    public:
-//      HandleErrorOccurred(CDFlagT *event_flag, int task_id) : EventHandler(event_flag), task_id_(task_id) {}
-//      ~HandleErrorOccurred() {}
-//      virtual void operator()(void);
-//    };
-//
-//    class HandleEntrySearch : public EventHandler {
-//      int task_id_;
-//      ENTRY_TAG_T *recvBuf_;
-//    public:
-//      HandleEntrySearch(CDFlagT *event_flag, int task_id, ENTRY_TAG_T *recvBuf) : EventHandler(event_flag) {
-//        task_id_ = task_id;
-//        recvBuf_ = recvBuf;
-//      }
-//      ~HandleEntrySearch() {}
-//      virtual void operator()(void);
-//    };
-//
-//    class HandleAllResume : public EventHandler {
-//    public:
-//      HandleAllResume(CDFlagT *event_flag) : EventHAndler(event_flag) {}
-//      ~HandleAllResume() {}
-//      virtual void operator()(void);
-//    };
-
-//    void HandleErrorOccurred(int task_id);
-//    bool HandleEntrySearch(int entry_requester_id, ENTRY_TAG_T *recvBuf);
-//    void HandleAllResume(void);
 
     CDErrT SetMailBox(CDEventT &event, int task_id);
+    CDInternalErrT LocalSetMailBox(HeadCD *curr_cd, CDEventT &event);
+    virtual CDErrT SetMailBox(CDEventT &event);
 
     void *Serialize(uint32_t& len_in_bytes)
     {
@@ -603,7 +578,8 @@ class cd::HeadCD : public cd::CD {
     }
 
   protected:
-    CDEventHandleT HandleEvent(CDFlagT *p_event, int idx=0);
+    CDEventHandleT ReadMailBox(CDFlagT *p_event, int idx=0);
+    virtual CDInternalErrT InternalCheckMailBox(void);
     CDInternalErrT InvokeErrorHandler(void);
     virtual bool TestComm(bool test_untile_done=false);
     

@@ -83,7 +83,7 @@ class cd::CDEntry : public cd::Serializable
       dst_data_ = dst_data;
       if(entry_name.empty()) entry_tag_ = 0;
       else {
-        entry_tag_ = str_hash(entry_name);
+        entry_tag_ = cd_hash(entry_name);
         tag2str[entry_tag_] = entry_name;
       }
     }
@@ -144,7 +144,8 @@ class cd::CDEntry : public cd::Serializable
 
     CDEntryErrT Restore(bool open, struct tsn_log_struct *log);
     CDEntryErrT Restore(void);
-    CDEntryErrT InternalRestore(DataHandle *buffer);
+//    CDEntryErrT InternalRestore(DataHandle *buffer);
+    CDEntryErrT InternalRestore(DataHandle *buffer, bool local_found=false);
 
     void *Serialize(uint32_t &len_in_bytes) 
     {
