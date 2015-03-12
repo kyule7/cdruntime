@@ -966,7 +966,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
           case 0:
             break;
           case 1:
-//            event = CDEventT::kErrorOccurred;
+            event = CDEventT::kErrorOccurred;
             break;
           case 2:
             break;
@@ -990,10 +990,10 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
       }
     }
   }
-  while( ptr_cd()->TestComm() ) {
-    // FIXME : Becareful! CheckMailBox() has some collectives.
-    CheckMailBox();
-  }
+//  while( !(ptr_cd()->TestComm()) ) {
+//    // FIXME : Becareful! CheckMailBox() has some collectives.
+//    CheckMailBox();
+//  }
 
   PMPI_Barrier(node_id_.color());
 
@@ -1004,6 +1004,11 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
       cout << "\n\n[Barrier] CDHandle::Detect (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     SetMailBox(event);
+    CheckMailBox();
+    if(node_id_.size() > 1) {
+      PMPI_Barrier(node_id_.color());
+      cout << "\n\n[Barrier] CDHandle::Detect (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+    }
 
   }
   else {
@@ -1013,22 +1018,6 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
       PMPI_Barrier(node_id_.color());
       cout << "\n\n[Barrier] CDHandle::Detect - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
-
-  }
-
-
-
-
-  if(IsHead()) { 
-
-    CheckMailBox();
-    if(node_id_.size() > 1) {
-      PMPI_Barrier(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Detect (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-    }
-  }
-  else {
-
     if(node_id_.size() > 1) {
       PMPI_Barrier(node_id_.color());
       cout << "\n\n[Barrier] CDHandle::Detect - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
@@ -1036,6 +1025,10 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     CheckMailBox();
 
   }
+
+
+
+
 
 
 //  if(IsHead() && ptr_cd()->GetCDID().level() == 1) {

@@ -118,7 +118,7 @@ int test_preservation_via_ref_remote()
   b[6] = 3;
   b[7] = 2;
 
-  int a_from_2[3] = {3,5,12};
+  int a_from_2[8]= {1,2,3,4,5,6,7,8};
 
   if(mr == 0) a_from_2[2] = 11;
   if(mr == 1) a_from_2[2] = 12;
@@ -164,7 +164,7 @@ int test_preservation_via_ref_remote()
   if( num_reexecution == 0 ) {
     cout <<"\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n" << endl;
     num_reexecution = 1;
-	  child_lv2->CDAssert(false);
+//	  child_lv2->CDAssert(false);
   }
   else if( num_reexecution == 1) {
     if( a[0] == 3 ) {

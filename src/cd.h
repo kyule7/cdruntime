@@ -197,9 +197,9 @@ class cd::CD : public cd::Serializable {
 
     static std::list<CommInfo> entry_req_;
     static std::map<ENTRY_TAG_T, CommInfo> entry_request_req_;
-    static std::map<ENTRY_TAG_T, CommInfo> entry_send_req_;
+//    static std::map<ENTRY_TAG_T, CommInfo> entry_send_req_;
     static std::map<ENTRY_TAG_T, CommInfo> entry_recv_req_;
-    static std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
+//    static std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     
     // Only CDEntries that has refname will be pushed into this data structure for later quick search.
     std::map<uint64_t, CDEntry*> entry_directory_map_;   
@@ -438,10 +438,12 @@ update the preserved data.
     
     CDEventHandleT ReadMailBox(CDFlagT &event);
     virtual CDInternalErrT InternalCheckMailBox(void);
-    virtual CDInternalErrT InvokeErrorHandler(void);
+    CDInternalErrT InvokeErrorHandler(void);
     CDInternalErrT InvokeAllErrorHandler(void);
     // Test the completion of internal-CD communications
-    virtual bool TestComm(bool test_untile_done=false);
+    bool TestComm(bool test_untile_done=false);
+    bool TestReqComm(bool is_all_valid=true);
+    bool TestRecvComm(bool is_all_valid=true);
 
     void DecPendingCounter(void);
   public:
@@ -580,8 +582,8 @@ class cd::HeadCD : public cd::CD {
   protected:
     CDEventHandleT ReadMailBox(CDFlagT *p_event, int idx=0);
     virtual CDInternalErrT InternalCheckMailBox(void);
-    CDInternalErrT InvokeErrorHandler(void);
-    virtual bool TestComm(bool test_untile_done=false);
+//    CDInternalErrT InvokeErrorHandler(void);
+//    virtual bool TestComm(bool test_untile_done=false);
     
 };
 

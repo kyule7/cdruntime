@@ -166,7 +166,7 @@ class cd::CDEntry : public cd::Serializable
       assert(dst_packed_len != 0);
 
       dbg << "\npacked entry_entry_tag_ is :\t " << entry_tag_ <<endl<<endl;
-      uint64_t str_key = entry_tag_;
+      ENTRY_TAG_T str_key = entry_tag_;
       entry_packer.Add(ENTRY_PACKER_NAME, sizeof(str_key), &str_key); 
 //      entry_packer.Add(ENTRY_PACKER_PTRCD, ptr_cd_packed_len, ptr_cd_packed_p);
       
@@ -193,7 +193,7 @@ class cd::CDEntry : public cd::Serializable
       void *src_unpacked=0;
       void *dst_unpacked=0;
 
-      entry_tag_ = *(uint64_t *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+      entry_tag_ = *(ENTRY_TAG_T *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
       dbg << "unpacked entry_entry_tag_ is :\t " << entry_tag_ <<" <-> " << tag2str[entry_tag_] <<endl;
       dbg << "1st unpacked thing in data_handle : " << entry_tag_ << ", return size : " << return_size << endl<< endl;
 
@@ -215,6 +215,7 @@ class cd::CDEntry : public cd::Serializable
 
       src_data_.Deserialize(src_unpacked);
       dst_data_.Deserialize(dst_unpacked);
+      ptr_cd_ = NULL;
     }
 
   

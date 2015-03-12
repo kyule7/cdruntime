@@ -171,10 +171,9 @@ void CDEntry::RequestEntrySearch(void)
   dbg.flush();
   curr_cd->SetMailBox(entry_search);
 
-//  PMPI_Alloc_mem(src_data_.len(), PMPI_INFO_NULL, &(dst_data_.address_data_));
+  dbg << "SIZE :" << curr_cdh->task_size() << ", LEVEL : " << curr_cdh->level() << " from " << ptr_cd_->level() << endl;
 
   ENTRY_TAG_T tag_to_search = dst_data_.ref_name_tag();
-  curr_cd->entry_request_req_[tag_to_search] = CommInfo();
   // Tag should contain CDID+entry_tag
   dbg << "[ToHead] CHECK TAG : " << curr_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, curr_cd->task_in_color())
       << " (Entry Tag: " << tag_to_search << ")" << endl;
@@ -183,19 +182,25 @@ void CDEntry::RequestEntrySearch(void)
   dbg << "sendBuf[0] : " << sendBuf[0] << ", sendBuf[1] : " << sendBuf[1] << endl;
   dbg << "CHECK IT OUT : " << curr_cd->task_in_color() << " --> "<< curr_cd->head() << endl;
   dbg.flush();
-  
+  curr_cd->entry_request_req_[tag_to_search] = CommInfo();
+//  curr_cd->entry_req_.push_back(CommInfo()); getchar();
   PMPI_Isend(sendBuf, 
              2, 
              MPI_UNSIGNED_LONG_LONG,
              curr_cd->head(), 
-             curr_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, curr_cd->task_in_color()),
+//             curr_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, curr_cd->task_in_color()),
+             11,
 //             MSG_TAG_ENTRY_TAG,
              curr_cd->color(),
+//             &(curr_cd->entry_req_.back().req_));
              &(curr_cd->entry_request_req_[tag_to_search].req_));
 
   dbg << "[FromAny] CHECK TAG : " <<curr_cd->GetCDID().GenMsgTag(tag_to_search)
       << " (Entry Tag: " << tag_to_search << ")" << endl;
+  dbg << "Size of data to receive : " << src_data_.len() << " (" << tag_to_search << ")" << endl;
   dbg.flush();
+//  curr_cd->entry_req_.push_back(CommInfo()); //getchar();
+    ptr_cd()->entry_recv_req_[tag_to_search] = CommInfo();
   // Receive the preserved data to restore the data in application memory
   PMPI_Irecv(src_data_.address_data(), 
              src_data_.len(), 
@@ -203,6 +208,7 @@ void CDEntry::RequestEntrySearch(void)
              MPI_ANY_SOURCE, 
              curr_cd->cd_id_.GenMsgTag(tag_to_search), 
              MPI_COMM_WORLD, 
+//             &(curr_cd->entry_req_.back().req_));  
              &(curr_cd->entry_recv_req_[tag_to_search].req_));  
 }
 
@@ -250,7 +256,6 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
         dbg.flush();
         HeadCD *found_cd = static_cast<HeadCD *>(CDPath::GetCDLevel(found_level)->ptr_cd());
         // It needs some effort to avoid the naming alias problem of entry tags.
-        found_cd->entry_search_req_[tag_to_search] = CommInfo();
       
         // Found the entry!! 
         // Then, send it to the task that has the entry of actual copy
@@ -268,6 +273,8 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
         dbg << "FOUND " << found_cd->GetCDName() << " " << found_cd->GetNodeID() << ", found level: " << found_level << ", check it out: "<< target_task_id<<endl;
         dbg.flush();
         ENTRY_TAG_T sendBuf[2] = {tag_to_search, static_cast<ENTRY_TAG_T>(myTaskID)};
+//        found_cd->entry_search_req_[tag_to_search] = CommInfo();
+        found_cd->entry_req_.push_back(CommInfo()); //getchar();
         PMPI_Isend(sendBuf, 
                    2, 
                    MPI_UNSIGNED_LONG_LONG, 
@@ -276,7 +283,8 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
     //               found_cd->GetCDID().GenMsgTag(tag_to_search), 
 //                   MSG_TAG_ENTRY_TAG,
                    found_cd->color(), // Entry sender is also in the same CD task group.
-                   &(found_cd->entry_search_req_[tag_to_search]).req_);
+                   &(found_cd->entry_req_.back().req_));
+//                   &(found_cd->entry_search_req_[tag_to_search]).req_);
 
 //        CDHandle *curr_cdh = CDPath::GetCurrentCD();
 //        while( curr_cdh->node_id().size()==1 ) {
@@ -324,7 +332,6 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
     
     // Add this entry for receiving preserved data remotely.
     ENTRY_TAG_T tag_to_search = dst_data_.ref_name_tag();
-    ptr_cd()->entry_recv_req_[tag_to_search] = CommInfo(src_data_.address_data());
 
     if(local_found == false) {
       RequestEntrySearch();
@@ -335,12 +342,15 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
           << ptr_cd()->GetCDID().GenMsgTag(tag_to_search) << ") from remote task in the same CD" << endl;
       dbg << "CHECK TAG : " << tag_to_search << " --> " << ptr_cd()->GetCDID().GenMsgTag(tag_to_search) << endl;
       dbg.flush();
+      ptr_cd()->entry_recv_req_[tag_to_search] = CommInfo();
+//      ptr_cd()->entry_req_.push_back(CommInfo()); //getchar(); //src_data_.address_data());
       PMPI_Irecv(src_data_.address_data(), 
                  src_data_.len(), 
                  MPI_BYTE, 
                  MPI_ANY_SOURCE, 
                  ptr_cd()->GetCDID().GenMsgTag(tag_to_search), 
                  MPI_COMM_WORLD, 
+//                 &(ptr_cd()->entry_req_.back().req_));  
                  &(ptr_cd()->entry_recv_req_[tag_to_search].req_));  
     }
 
