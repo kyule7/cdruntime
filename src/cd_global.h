@@ -35,6 +35,23 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _CD_GLOBAL_H
 #define _CD_GLOBAL_H
+
+/**
+ * @file cd_global.h
+ * @author Kyushick Lee, Song Zhang, Seong-Lyong Gong, Ali Fakhrzadehgan, Jinsuk Chung, Mattan Erez
+ * @date March 2015
+ *
+ * @brief Containment Domains API v0.2 (C++)
+ */
+
+/** 
+ * \brief Declarations/Definitions for global usages in CD runtime.
+ *
+ * All user-visible CD API calls and definitions are under the CD namespace.
+ * Internal CD API implementation components are under a separate CDInternal namespace.
+ *
+ */
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -105,6 +122,8 @@ typedef uint32_t ENTRY_TAG_T;
 #define CHECK_NO_EVENT(X) (X == 0)
 #define SET_EVENT(X,Y) (X |= Y)
 
+#define TAG_MASK(X) ((2<<(X-1)) - 1)
+#define TAG_MASK2(X) ((2<<(X-1)) - 2)
 
 //GONG: global variable to represent the current context for malloc wrapper
 //extern bool app_side;
@@ -142,45 +161,143 @@ namespace cd {
   class CommLog;
 #endif
 
-  enum CDErrT       { kOK=0, 
-                      kAlreadyInit, 
-                      kError,
-                      kExecutionModeError,
-                      kOutOfMemory,
-                      kFileOpenError
+  /** \addtogroup internal_error_types Internal Error Types 
+   * @{
+   *
+   * @brief Type for specifying error return codes from an API call --
+   * signifies some failure of the API call itself, not a system 
+   * failure.
+   *
+   * Unlike SysErrNameT, CDErrT is not for system errors, but
+   * rather errors originating from the CD framework itself.
+   *
+   * For now, only returning OK or error, but will get more elaborate
+   * in future versions of this API.
+   */
+  enum CDErrT { kOK=0,        //!< Call executed without error       
+                kAlreadyInit, //!< Init called more than once
+                kError,       //!< Call did not execute as expected
+                kExecutionModeError,
+                kOutOfMemory,
+                kFileOpenError
+              };
+
+  /** @} */ // end of internal_error_types
+
+
+  /** \addtogroup error_reporting 
+   * @{
+   *
+   * @brief Type for specifying system error/failure names
+   *
+   * This type represents the interface between the user and the
+   * system with respect to errors and failures. The intent is for
+   * these error/failure names to be fairly comprehensive with respect
+   * to system-based issues, while still providing general/abstract
+   * enough names to be useful to the application programmer. The use
+   * categories/names are meant to capture recovery strategies that
+   * might be different based on the error/failure and be comprehensive in that regard. 
+   *
+   * \warning The SysErrNameT and SysErrLocT are extensible by a runtime
+   * call to generate a new constant, but SysErrInfo is a class
+   * hierarchy and extended at compile time by inhereting the
+   * interface -- is this a problem? Should we go the GVR way with all
+   * extensions done at runtime and all accesses with potential
+   * runtime methods and no compile-time typing?
+   *
+   * \todo Is SysErrNameT comprehensive enough for portability?
+   * \todo segv (segmentation violations) can be used as proxy for soft memory errors using the existing kernel infrastructure
+   *
+   * \sa SysErrLocT, DeclareErrName(), UndeclareErrName()
+   */
+  enum SysErrNameT  { kNoHWError=0,   //!< No errors/failures.
+                      kSoftMem=1,     //!< Soft memory error.
+                                      //!< (info includes address range and perhaps syndrome)
+                      kDegradedMem=2, //!< Hard memory error that disabled some memory capacity.
+                                      //!< (info includes address range(s))
+                      kSoftComm=4,    //!< Soft communication error.
+		                                  //!< (info includes message info)
+                      kDegradedComm=8, //!< Some channel loss.
+                      kSoftComp=16,    //!< Soft compute error.
+		                                   //!< (info includes affected PC and perhaps bounds on the error?)
+                      kDegradedResource=32, //!< Resource lost __some__ functionality.
+                      kHardResource=64, //!< Resource entirely lost.
+		                                    //!< (control/reachability failure).
+                      kFileSys=128      //!< Some file system error.
                     };
 
-//  enum SysErrT      { kWhat=1 };
-
-  enum SysErrLoc    { kIntraCore=1, 
-                      kCore=2, 
-                      kProc=4, 
-                      kNode=8, 
-                      kModule=16, 
-                      kCabinet=32, 
-                      kCabinetGroup=64, 
-                      kSystem=128 
+  /** @brief Type for specifying errors and failure location names
+   *
+   * Please see SysErrNameT for discussion of intent and defintions
+   *
+   * This is really not that suitable for all topologies, but the
+   * intent really is to be rather comprehensive to maintain
+   * portability -- how do we resolve this?
+   *
+   * \todo is SysErrLocT comprehensive enough for portability?
+   *
+   *
+   * \sa SysErrNameT, DeclareErrLoc(), UndeclareErrLoc()
+   */
+  enum SysErrLocT   { kNoSysErr=0,      //!< No errors/failures
+                      kIntraCore=1,     //!< Within a part of a core
+                      kCore=2,          //!< A core
+                      kProc=4,          //!< Processor
+                      kNode=8,          //!< Same as processor?
+                      kModule=16,       //!< Module
+                      kCabinet=32,      //!< A cabinet
+                      kCabinetGroup=64, //!< Some grouping of cabinets
+                      kSystem=128       //!< Entire system
                     };
 
-  enum SysErrName   { kSoftMem=1, 
-                      kDegradedMem=2, 
-                      kSoftComm=4, 
-                      kDegradedComm=8, 
-                      kSoftComp=16, 
-                      kDegradedResource=32, 
-                      kHardResource=64, 
-                      kFileSys=128 
-                    };
+  /** \todo Missing error injection API */
+  /** @} */ // end of error_reporting
 
-//  enum CDPGASUsageT { kShared=1, 
-//											KPrivate 
-//										};
 
-  enum CDPreserveT  { kCopy=1, 
-											kRef=2, 
-											kRegen=4,
+
+  /** \addtogroup preservation_funcs Preservation/Restoration Types and Methods
+   *  The \ref preservation_funcs module contains all
+   *  preservation/restoration related types and methods.
+   *
+   * @{
+   */
+
+  /** 
+   * @brief Type for specifying preservation methods
+   *
+   * See <http://lph.ece.utexas.edu/public/CDs> for a detailed description. 
+   *
+   * The intent is for this to be used as a mask for specifying
+   * multiple legal preservation methods so that the autotuner can
+   * choose the appropriate one.
+   *
+   * \sa RegenObject, CDHandle::Preserve()
+   */
+  enum CDPreserveT  { kCopy=1, //!< Prevervation via copy copies
+                               //!< the data to be preserved into
+                               //!< another storage/mem location
+                               //!< Preservation via reference
+											kRef=2, //!< Preservation via reference     
+                              //!< indicates that restoration can
+                              //!< occur by restoring data that is
+                              //!< already preserved in another
+                              //!< CD. __Restriction:__ in the
+                              //!< current version of the API only
+                              //!< the parent can be used as a
+                              //!< reference. 
+											kRegen=4, //!< Preservation via regenaration
+                                //!< is done by calling a
+                                //!< user-provided function to
+                                //!< regenerate the data during
+                                //!< restoration instead of copying
+                                //!< it from preserved storage.
                       kShared=8 
 										};
+  /** @} */ // end of preservation_funcs
+
+
+
+
 
   enum CDType       { kStrict=0, 
                       kRelaxed };
@@ -188,6 +305,10 @@ namespace cd {
   enum PreserveUseT { kUnsure=0, 
                       kReadOnly=1, 
                       kReadWrite=2 };
+
+  enum PGASUsageT { kSharedVar=1, 
+											KPrivate 
+										};
 
   /// Profile-related enumerator
   enum ProfileType      { LOOP_COUNT, 
@@ -246,6 +367,10 @@ namespace cd {
 
   extern int myTaskID;
   extern int handled_event_count;
+  extern int max_tag_bit;
+  extern int max_tag_level_bit;
+  extern int max_tag_rank_bit;
+  extern int max_tag_task_bit;
 
   class DebugBuf: public std::ostringstream {
     std::ofstream ofs_;
@@ -325,21 +450,102 @@ namespace cd {
   extern std::hash<std::string> str_hash;
 
   extern CDHandle* CD_Init(int numproc=1, int myrank=0);
-  extern void CD_Finalize(std::ostringstream *oss=NULL);
-  extern void WriteDbgStream(std::ostringstream *oss=NULL);
+  extern void CD_Finalize(DebugBuf *debugBuf=NULL);
+  extern void WriteDbgStream(DebugBuf *debugBuf=NULL);
   extern uint64_t gen_object_id;
   //GONG: global variable to represent the current context for malloc wrapper
   extern bool app_side;
+
   static inline void nullFunc(void) {}
+
+ /** \addtogroup runtime_logging Runtime logging-related functionality
+  *  The \ref runtime_logging is supported in current CD runtime.
+  * @{
+  *
+  *  @brief Set current context as non-application side. 
+  *  @return true/false
+  */
   static inline void CDPrologue(void) { app_side = false; }
+ /** @brief Set current context as application side. 
+  *  @return true/false
+  */
   static inline void CDEpilogue(void) { app_side = true; }
+ /** @brief Check current context is application side. 
+  *  @return true/false
+  */
   static inline bool CheckAppSide(void) { return app_side; }
+
+  /** @} */ // End runtime_logging group =====================================================
+
+
+  /** \addtogroup cd_accessor_funcs Global CD Accessor Functions
+   *  The \ref cd_accessor_funcs are used to get the current and root
+   *  CD handles if these are not explicitly tracked.
+   *
+   * These methods are globally accessible without a CDHandle object.
+   *
+   * @{
+   *
+   */
+ /**
+  * @brief Accessor function to current active CD.
+  * 
+  *  At any point after the CD runtime is initialized, each task is
+  *  associated with a current CD instance. The current CD is the
+  *  deepest CD in the tree visible from the task that has begun but
+  *  has not yet completed. In other words, whenever a CD begins, it
+  *  becomes the current CD. When a CD completes, its parent becomes
+  *  the current CD.
+  *
+  *  @return returns a pointer to the handle of the current active CD; Returns
+  *  0 if CD runtime is not yet initialized or because of a CD
+  *  implementation bug.
+  */
+  extern inline CDHandle *GetCurrentCD(void);
+
+ /**
+  * @brief Accessor function to root CD of the application.
+  * @return returns a pointer to the handle of the root CD; Returns
+  * 0 if CD runtime is not yet initialized or because of a CD
+  * implementation bug.
+  */
+  extern inline CDHandle *GetRootCD(void);
+
+ /** @brief Accessor function to a CDHandle at a specific level in CDPath 
+  *  @return Pointer to CDHandle at a level
+  */
+  extern inline CDHandle *GetParentCD(void);
+
+ /** @brief Accessor function to a CDHandle at a specific level in CDPath 
+  *  @return Pointer to CDHandle at a level
+  */
+  extern inline CDHandle *GetParentCD(int current_level);
+
+ /** @brief Accessor function to a CDHandle at a specific level in CDPath 
+  *  @return Pointer to CDHandle at a level
+  */
+  extern inline CDHandle *GetCDLevel(int level);
+
+ /** @brief Accessor function to a CDHandle at the lowest level where there are more than one task. 
+  *   This is normally used internally.
+  *  @return Pointer to CDHandle that has multiple tasks in it.
+  */
+  extern inline CDHandle *GetCoarseCD(CDHandle *curr_cdh);
+
+  /** @brief Accessor function to CDPath
+   *  @return returns a pointer to CDPath
+   */
+  extern inline CDPath   *GetCDPath(void);
+
+  /** @} */ // End cd_accessor_funcs group =====================================================
+
+  static inline ENTRY_TAG_T cd_hash(const std::string &str)
+  { return static_cast<ENTRY_TAG_T>(cd::str_hash(str)); }
 
 //  static inline ENTRY_TAG_T cd_hash(const std::string &str)
 
-  static inline
-  ENTRY_TAG_T cd_hash(const std::string &str)
-  { return static_cast<ENTRY_TAG_T>(cd::str_hash(str)); }
+//static inline  ENTRY_TAG_T cd_hash(const std::string &str)
+//{ return static_cast<ENTRY_TAG_T>(cd::str_hash(str)); }
 
   extern inline std::string event2str(int event) {
     switch(event) {
@@ -426,8 +632,16 @@ extern FILE * cd_fp;
 //SZ temp disable libc printf
 #define PRINT_LIBC(...) {printf(__VA_ARGS__);}
 
+
+#define INITIAL_CDOBJ_NAME "INITIAL_NAME"
+
 #define MAX_FILE_PATH 2048
 #define INIT_FILE_PATH "INITIAL_FILE_PATH"
+#define CD_FILEPATH_DEFAULT "./HDD/"
+#define CD_FILEPATH_INVALID "./error_logs/"
+#define CD_FILEPATH_PFS "./PFS/"
+#define CD_FILEPATH_HDD "./HDD/"
+#define CD_FILEPATH_SSD "./SSD/"
 #define dout clog
 
 /* 

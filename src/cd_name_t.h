@@ -36,13 +36,35 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _CD_NAME_T_H
 #define _CD_NAME_T_H
+/**
+ * @file cd_name_t.h
+ * @author Kyushick Lee
+ * @date March 2015
+ *
+ * \brief Containment Domains namespace for global functions, types, and main interface
+ *
+ * All user-visible CD API calls and definitions are under the CD namespace.
+ * Internal CD API implementation components are under a separate cd_internal
+ * namespace; the CDInternal class of namespace cd serves as an interface where necessary.
+ *
+ */
 
-#include <ostream>
 #include "cd_global.h"
 
 using std::endl;
 
 namespace cd {
+/** \addtogroup cd_defs
+ *
+ *
+ *@{
+ *
+ * @brief A type to uniquely name a CD in the tree
+ *
+ * A CD name consists of its level in the CD tree (root=0) and the
+ * its ID, or sequence number, within that level. 
+ *
+ */ 
 
 class CDNameT {
   // Level in the CD hierarhcy. It increases at Create() and destroys at Destroy.
@@ -50,55 +72,27 @@ class CDNameT {
   uint32_t rank_in_level_;
   uint32_t size_;    // The number of sibling CDs
 public:
-  CDNameT()
-    : level_(0), rank_in_level_(0), size_(0) {}
-    
-  CDNameT(uint64_t level, uint64_t rank_in_level=0, uint64_t size=1)
-    : level_(level), rank_in_level_(rank_in_level), size_(size)
-  {}
+  CDNameT(void);
+  CDNameT(uint64_t level, uint64_t rank_in_level=0, uint64_t size=1);
+  CDNameT(const CDNameT &parent_cdname, int num_children, int color);
+  CDNameT(const CDNameT& that);
+  ~CDNameT(void) {}
 
-  uint32_t level(void)         const { return level_; }
-  uint32_t rank_in_level(void) const { return rank_in_level_; }
-  uint32_t size(void)          const { return size_; }
-  CDNameT(const CDNameT &parent_cdname, int num_children, int color)
-  {
-    level_         = parent_cdname.level() + 1;
-    rank_in_level_ = num_children*(parent_cdname.rank_in_level()) + color;
-    std::cout << "level: " << level_ << ", rank_in_level created : " << rank_in_level_ << ", numchild: " << num_children << ", parent rank : " << parent_cdname.rank_in_level() << ", color : "<< color << std::endl; //getchar();
-    size_          = num_children;
-  }
-  CDNameT(const CDNameT& that)
-  {
-    level_         = that.level();
-    rank_in_level_ = that.rank_in_level();
-    size_          = that.size();
-  }
-
-  void IncLevel(void) 
-  {
-    level_++;
-  }
-
-  ~CDNameT()
-  {}
+  uint32_t level(void) const;
+  uint32_t rank_in_level(void) const;
+  uint32_t size(void) const;
+  void IncLevel(void);
  
-  CDNameT& operator=(const CDNameT& that) {
-    level_         = that.level();
-    rank_in_level_ = that.rank_in_level();
-    size_          = that.size();
-    return *this;
-  }
-
-  bool operator==(const CDNameT& that) const {
-    return (level_ == that.level()) && (rank_in_level_ == that.rank_in_level()) && (size_ == that.size());
-  }
-
-  int CDTag(void) const { 
-    return ((level_ << 16) | rank_in_level_);
-  }
+  CDNameT& operator=(const CDNameT& that);
+  bool operator==(const CDNameT& that) const;
+  int CDTag(void) const; 
 };
+
 
 std::ostream& operator<<(std::ostream& str, const CDNameT& cd_name);
 
+/** @} */ // End group cd_defs
+
 } // namespace cd ends
+
 #endif 

@@ -37,9 +37,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_LOG_HANDLE_H
 #define _CD_LOG_HANDLE_H
 
+/**
+ * @file cd_log_handle.h
+ * @author Kyushick Lee, Song Zhang, Seong-Lyong Gong, Ali Fakhrzadehgan, Jinsuk Chung, Mattan Erez
+ * @date March 2015
+ *
+ * @brief Containment Domains API v0.2 (C++)
+ */
+
 #include "cd_global.h"
-#include "transaction.h"
-#define CDLog tsn_log_struct
+//#include "transaction.h"
+//#define CDLog tsn_log_struct
 
 using namespace cd;
 
@@ -47,62 +55,59 @@ namespace cd {
 
 class Path {
 public:
-	std::string _path_SSD;
-	std::string _path_HDD;
-  std::string _path_PFS;
+	std::string filepath_;
 public:
-	Path() {
-		_path_SSD = "./SSD/";
-		_path_HDD = "./HDD/";
-    _path_PFS = "./PFS/";
-	}
-	Path(std::string ssd, std::string hdd, std::string pfs) {
-		_path_SSD = ssd;
-		_path_HDD = hdd;
-    _path_PFS = pfs;
-	}
-	void SetSSDPath(std::string path_SSD) { _path_SSD = path_SSD; }
-	void SetHDDPath(std::string path_HDD) { _path_HDD = path_HDD; }
-  void SetPFSPath(std::string path_PFS) { _path_PFS = path_PFS; }
+	Path() : filepath_(CD_FILEPATH_DEFAULT) {}
+	Path(const std::string &filepath) : filepath_(filepath) {}
+	Path(const char *filepath) : filepath_(filepath) {}
+	void SetFilePath(std::string filepath) { filepath_ = filepath; }
 
-	std::string GetSSDPath(void)          { return _path_SSD;     }
-	std::string GetHDDPath(void)          { return _path_HDD;     }
-  std::string GetPFSPath(void)          { return _path_PFS;     }
-	Path& operator=(const Path& that) {
-		_path_SSD = that._path_SSD;
-		_path_HDD = that._path_HDD;
-    _path_PFS = that._path_PFS;
+	std::string GetFilePath(void) { return filepath_;     }
+	Path &operator=(const Path &that) {
+    filepath_ = that.filepath_;
+		return *this;
+	}
+
+	Path &operator=(const char *filepath) {
+    filepath_ = filepath;
 		return *this;
 	}
 };
 
 
-class CDLogHandle 
-{
+
+class CDLogHandle {
 public:
-  CDLog HDDlog;
-  CDLog SSDlog;
-  CDLog PFSlog;//This is new => I think this might be important too.
-
-  bool _OpenHDD, _OpenSSD, _OpenPFS;//PFS is new
-
-  Path path;
+//  CDLog file_log_;
+  bool opened_;
+  Path path_;
 
 public:
-  CDLogHandle() : _OpenHDD(false), _OpenSSD(false), _OpenPFS(false), path() {}
+  CDLogHandle(void) : opened_(false), path_(CD_FILEPATH_DEFAULT) {}
+  CDLogHandle(const PrvMediumT& prv_medium) : opened_(false)
+  {
+    switch(prv_medium) {
+      case kMemory :
+        path_ = CD_FILEPATH_INVALID;
+        break;
+      case kPFS :
+        path_ = CD_FILEPATH_PFS;
+        break;
+      case kHDD :
+        path_ = CD_FILEPATH_HDD;
+        break;
+      case kSSD :
+        path_ = CD_FILEPATH_SSD;
+        break;
+      default :
+        path_ = CD_FILEPATH_DEFAULT;
+    }   
+  }
   ~CDLogHandle() {}
 
-  void InitOpenHDD() { _OpenHDD = false; }
-  void InitOpenSSD() { _OpenSSD = false; }
-  void InitOpenPFS() { _OpenPFS = false; }
-
-  bool isOpenHDD()   { return _OpenHDD;  }
-  bool isOpenSSD()   { return _OpenSSD;  }
-  bool isOpenPFS()   { return _OpenPFS;  }
-
-  void OpenHDD();     
-  void OpenSSD();     
-  void OpenPFS();
+  void InitOpenFile() { opened_ = false; }
+  bool IsOpen()   { return opened_;  }
+  void OpenFilePath(void);     
 };
 
 

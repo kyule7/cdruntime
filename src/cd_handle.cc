@@ -47,44 +47,57 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 using namespace std;
 
-CDPath* CDPath::uniquePath_;
-bool cd::app_side=true;
+/// KL
+/// dbg is a global variable to be used for debugging purpose.
+/// General usage is that it stores any strings, numbers as a string internally,
+/// and when dbg.flush() is called, it write the internally stored strings to file,
+/// then clean up the internal storage.
 #if _DEBUG
-//std::ostringstream cd::dbg;
 cd::DebugBuf cd::dbg;
 #endif
+
+/// KL
+/// uniquePath is a singleton object per process, which is used for CDPath.
+CDPath *CDPath::uniquePath_;
+
+/// KL
+/// app_side is a global variable to differentiate application side and CD runtime side.
+/// This switch is adopted to turn off runtime logging in CD runtime side,
+/// and turn on only in application side.
+/// Plus, it enables to control on/off of logging for a specific routine.
+bool cd::app_side = true;
+
+/// KL
+/// These global variables are used because MAX_TAG_UB is different from MPI libraries.
+/// For example, MAX_TAG_UB of MPICH is 29 bits and that of OpenMPI is 31 bits.
+/// MPI_TAG is important because it is used to generate an unique message tag in the protocol for preservation-via-reference.
+/// It is not possible to set MPI_TAG_UB to some value by application.
+/// So, I decided to check the MAX_TAG_UB value from MPI runtime at initialization routine
+/// and set the right bit positions in CDID::GenMsgTag(ENTRY_TAG_T tag), CDID::GenMsgTagForSameCD(int msg_type, int task_in_color) functions.
+int  cd::max_tag_bit = 0;
+int  cd::max_tag_level_bit = 0;
+int  cd::max_tag_task_bit  = 0;
+int  cd::max_tag_rank_bit  = 0;
 
 int cd::myTaskID = 0;
 
 
+namespace cd {
 // Global functions -------------------------------------------------------
-/// CD_Init()
-/// Create the data structure that CD object and CDHandle object are going to use.
-/// For example, CDEntry object or CDHandle object or CD object itself.
-/// These objects are very important data for CDs and 
-/// managed separately from the user-level data structure
-/// All the meta data objects and preserved data are managed internally.
-/// Register Root CD
-CDHandle* cd::CD_Init(int numTask, int myRank)
+/// KL
+CDHandle* CD_Init(int numTask, int myRank)
 {
   //GONG
   CDPrologue();
   myTaskID = myRank;
+
 #if _DEBUG
   std::string output_filename("./output/output_");
   output_filename += to_string(static_cast<unsigned long long>(myTaskID));
   dbg.open(output_filename.c_str());
 #endif
 
-#if _MPI_VER
-#if _KL
-  PMPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &(CD::pendingFlag_));
-
-  // Initialize pending flag
-  *CD::pendingFlag_ = 0;
-#endif
-#endif
-
+  Internal::Intialize();
 
   CD::CDInternalErrT internal_err;
   CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myRank, ROOT_HEAD_ID, numTask)), kStrict, 0, &internal_err);
@@ -95,70 +108,153 @@ CDHandle* cd::CD_Init(int numTask, int myRank)
   root_cd_handle->profiler_->InitViz();
 #endif
 
+#if _DEBUG
+  dbg.flush();
+#endif
+
   //GONG
   CDEpilogue();
 
   return root_cd_handle;
 }
 
-void cd::WriteDbgStream(std::ostringstream *oss)
+void WriteDbgStream(DebugBuf *debugBuf)
 {
 #if _DEBUG
-//  std::string output_filename("./output/output_");
-//  output_filename = output_filename + string(to_string(static_cast<unsigned long long>(myTaskID)));
-//  std::ofstream out_file_cd(output_filename.c_str());
-//
-//  out_file_cd << dbg.str() << endl;
   dbg.flush();
   dbg.close();
 
   std::string output_filename("./output/output_app_");
   output_filename += string(to_string(static_cast<unsigned long long>(myTaskID)));
-  std::ofstream out_file_app(output_filename.c_str());
-
-  out_file_app << oss->str() << endl;
-  out_file_app.close();
+  debugBuf->open(output_filename.c_str());
+  debugBuf->flush();
+  debugBuf->close();
 #endif
 }
 
-void cd::CD_Finalize(std::ostringstream *oss)
+void CD_Finalize(DebugBuf *debugBuf)
 {
   //GONG:
   CDPrologue();
 
-  assert(CDPath::GetCDPath()->size()==1); // There should be only on CD which is root CD
-  assert(CDPath::GetCDPath()->back()!=NULL);
 
 #if _PROFILER
   // Profiler-related  
   CDPath::GetRootCD()->profiler_->FinalizeViz();
 #endif
 
-#if _MPI_VER
-#if _KL
-//  PMPI_Win_free(&CDHandle::pendingWindow_);
-  PMPI_Free_mem(CD::pendingFlag_);
-#endif
-#endif
-  
-//  CDPath::GetRootCD()->Destroy();
-  dbg << "============================== Finalize ["  << myTaskID <<"] ================================="<< endl;
+  assert(CDPath::GetCDPath()->size()==1); // There should be only on CD which is root CD
+  assert(CDPath::GetCDPath()->back()!=NULL);
+
+  CDPath::GetRootCD()->Destroy();
+  Internal::Finalize();
+  dbg << "========================= Finalize ["  << myTaskID <<"] ==============================="<< endl;
+
 #if _DEBUG
-  if(oss != NULL) WriteDbgStream(oss);
+  if(debugBuf != NULL) WriteDbgStream(debugBuf);
 #endif
-
-
 
   CDEpilogue();
 }
 
-// CDHandle Member Methods ------------------------------------------------------------
+inline CDPath *GetCDPath(void) 
+{ return CDPath::GetCDPath(); }
 
+inline CDHandle *GetCurrentCD(void) 
+{ return CDPath::GetCurrentCD(); }
+  
+inline CDHandle *GetRootCD(void)    
+{ return CDPath::GetRootCD(); }
+
+inline CDHandle *GetParentCD(void)
+{ return CDPath::GetParentCD(); }
+
+inline CDHandle *GetParentCD(int current_level)
+{ return CDPath::GetParentCD(current_level); }
+
+inline CDHandle *GetCDLevel(int level)
+{ return CDPath::GetCDLevel(level); }
+
+inline CDHandle *GetCoarseCD(CDHandle *curr_cdh) 
+{ return CDPath::GetCoarseCD(curr_cdh); }
+
+
+/// Split the node in three dimension
+/// (x,y,z)
+/// taskID = x + y * nx + z * (nx*ny)
+/// x = taskID % nx
+/// y = ( taskID % ny ) - x 
+/// z = r / (nx*ny)
 int SplitCD_3D(const int& my_task_id, 
                const int& my_size, 
                const int& num_children, 
                int& new_color, 
-               int& new_task);
+               int& new_task)
+{
+  // Get current task group size
+  int new_size = (int)((double)my_size / num_children);
+  int num_x = round(pow(my_size, 1/3.));
+  int num_y = num_x;
+  int num_z = num_x;
+
+  int num_children_x = 0;
+  if(num_children > 1)       num_children_x = round(pow(num_children, 1/3.));
+  else if(num_children == 1) num_children_x = 1;
+  else assert(0);
+
+  int num_children_y = num_children_x;
+  int num_children_z = num_children_x;
+
+  int new_num_x = num_x / num_children_x;
+  int new_num_y = num_y / num_children_y;
+  int new_num_z = num_z / num_children_z;
+
+  assert(num_x*num_y*num_z == my_size);
+  assert(num_children_x * num_children_y * num_children_z == (int)num_children);
+  assert(new_num_x * new_num_y * new_num_z == new_size);
+  assert(num_x != 0);
+  assert(num_y != 0);
+  assert(num_z != 0);
+  assert(new_num_x != 0);
+  assert(new_num_y != 0);
+  assert(new_num_z != 0);
+  assert(num_children_x != 0);
+  assert(num_children_y != 0);
+  assert(num_children_z != 0);
+  
+  int taskID = my_task_id; 
+  int sz = num_x*num_y;
+  int Z = (double)taskID / sz;
+  int tmp = taskID % sz;
+  int Y = (double)tmp / num_x;
+  int X = tmp % num_x;
+
+  new_color = (int)(X / new_num_x + (Y / new_num_y)*num_children_x + (Z / new_num_z)*(num_children_x * num_children_y));
+  new_task  = (int)(X % new_num_x + (Y % new_num_y)*new_num_x      + (Z % new_num_z)*(new_num_x * new_num_y));
+  
+  return 0;
+}
+
+} // namespace cd ends
+
+
+
+
+
+
+
+
+
+
+
+
+// CDHandle Member Methods ------------------------------------------------------------
+
+//int SplitCD_3D(const int& my_task_id, 
+//               const int& my_size, 
+//               const int& num_children, 
+//               int& new_color, 
+//               int& new_task);
 
 CDHandle::CDHandle()
   : ptr_cd_(0), node_id_()
@@ -258,82 +354,82 @@ CDHandle* CDHandle::Create(const char* name,
   return new_cd_handle;
 }
 
-/// Split the node
-/// (x,y,z)
-/// taskID = x + y * nx + z * (nx*ny)
-/// x = taskID % nx
-/// y = ( taskID % ny ) - x 
-/// z = r / (nx*ny)
-int SplitCD_3D(const int& my_task_id, 
-               const int& my_size, 
-               const int& num_children, 
-               int& new_color, 
-               int& new_task)
-{
-  // Get current task group size
-  int new_size = (int)((double)my_size / num_children);
-  int num_x = round(pow(my_size, 1/3.));
-  int num_y = num_x;
-  int num_z = num_x;
-
-  int num_children_x = 0;
-  if(num_children > 1)       num_children_x = round(pow(num_children, 1/3.));
-  else if(num_children == 1) num_children_x = 1;
-  else assert(0);
-
-  int num_children_y = num_children_x;
-  int num_children_z = num_children_x;
-
-  int new_num_x = num_x / num_children_x;
-  int new_num_y = num_y / num_children_y;
-  int new_num_z = num_z / num_children_z;
-
-//  dbg<<"CD : "<< CDPath::GetCurrentCD()->ptr_cd()->name_<<"num_children = "<< num_children 
-//     <<", num_x = "<< num_x 
-//     <<", new_children_x = "<< num_children_x 
-//     <<", new_num_x = "<< new_num_x <<"node size: "<<my_size<<"\n\n"<<endl; //dbgBreak();
-
-  assert(num_x*num_y*num_z == my_size);
-  assert(num_children_x * num_children_y * num_children_z == (int)num_children);
-  assert(new_num_x * new_num_y * new_num_z == new_size);
-  assert(num_x != 0);
-  assert(num_y != 0);
-  assert(num_z != 0);
-  assert(new_num_x != 0);
-  assert(new_num_y != 0);
-  assert(new_num_z != 0);
-  assert(num_children_x != 0);
-  assert(num_children_y != 0);
-  assert(num_children_z != 0);
-  
-  int taskID = my_task_id; // Get current task ID
-  int sz = num_x*num_y;
-  int Z = (double)taskID / sz;
-  int tmp = taskID % sz;
-  int Y = (double)tmp / num_x;
-  int X = tmp % num_x;
-
-//  dbg<<"tmp = "<<tmp <<endl;
-//  dbg<<"taskID = "<<taskID <<endl;
-//  dbg<<"sz = "<<sz<<endl;
-//  dbg<<"X = "<<X<<endl;
-//  dbg<<"Y = "<<Y<<endl;
-//  dbg<<"Z = "<<Z<<endl;
+///// Split the node
+///// (x,y,z)
+///// taskID = x + y * nx + z * (nx*ny)
+///// x = taskID % nx
+///// y = ( taskID % ny ) - x 
+///// z = r / (nx*ny)
+//int SplitCD_3D(const int& my_task_id, 
+//               const int& my_size, 
+//               const int& num_children, 
+//               int& new_color, 
+//               int& new_task)
+//{
+//  // Get current task group size
+//  int new_size = (int)((double)my_size / num_children);
+//  int num_x = round(pow(my_size, 1/3.));
+//  int num_y = num_x;
+//  int num_z = num_x;
 //
-//  dbg<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
-//  dbg<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
-//  dbg << "(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<")"<< endl; 
-
-  new_color = (int)(X / new_num_x + (Y / new_num_y)*num_children_x + (Z / new_num_z)*(num_children_x * num_children_y));
-  new_task  = (int)(X % new_num_x + (Y % new_num_y)*new_num_x      + (Z % new_num_z)*(new_num_x * new_num_y));
-  
-//  dbg << "(color,task,size) = (" << new_color << ","<< new_task << "," << new_size << ") <-- "<<endl;
-//       <<"(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<") -- (color,task,size) = (" << GetCurrentCD()->GetColor() << ","<< my_task_id << "," << my_size <<")"
-//       << "ZZ : " << round((double)Z / new_num_z)
-//       << endl;
-//  dbgBreak();
-  return 0;
-}
+//  int num_children_x = 0;
+//  if(num_children > 1)       num_children_x = round(pow(num_children, 1/3.));
+//  else if(num_children == 1) num_children_x = 1;
+//  else assert(0);
+//
+//  int num_children_y = num_children_x;
+//  int num_children_z = num_children_x;
+//
+//  int new_num_x = num_x / num_children_x;
+//  int new_num_y = num_y / num_children_y;
+//  int new_num_z = num_z / num_children_z;
+//
+////  dbg<<"CD : "<< CDPath::GetCurrentCD()->ptr_cd()->name_<<"num_children = "<< num_children 
+////     <<", num_x = "<< num_x 
+////     <<", new_children_x = "<< num_children_x 
+////     <<", new_num_x = "<< new_num_x <<"node size: "<<my_size<<"\n\n"<<endl; //dbgBreak();
+//
+//  assert(num_x*num_y*num_z == my_size);
+//  assert(num_children_x * num_children_y * num_children_z == (int)num_children);
+//  assert(new_num_x * new_num_y * new_num_z == new_size);
+//  assert(num_x != 0);
+//  assert(num_y != 0);
+//  assert(num_z != 0);
+//  assert(new_num_x != 0);
+//  assert(new_num_y != 0);
+//  assert(new_num_z != 0);
+//  assert(num_children_x != 0);
+//  assert(num_children_y != 0);
+//  assert(num_children_z != 0);
+//  
+//  int taskID = my_task_id; // Get current task ID
+//  int sz = num_x*num_y;
+//  int Z = (double)taskID / sz;
+//  int tmp = taskID % sz;
+//  int Y = (double)tmp / num_x;
+//  int X = tmp % num_x;
+//
+////  dbg<<"tmp = "<<tmp <<endl;
+////  dbg<<"taskID = "<<taskID <<endl;
+////  dbg<<"sz = "<<sz<<endl;
+////  dbg<<"X = "<<X<<endl;
+////  dbg<<"Y = "<<Y<<endl;
+////  dbg<<"Z = "<<Z<<endl;
+////
+////  dbg<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
+////  dbg<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
+////  dbg << "(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<")"<< endl; 
+//
+//  new_color = (int)(X / new_num_x + (Y / new_num_y)*num_children_x + (Z / new_num_z)*(num_children_x * num_children_y));
+//  new_task  = (int)(X % new_num_x + (Y % new_num_y)*new_num_x      + (Z % new_num_z)*(new_num_x * new_num_y));
+//  
+////  dbg << "(color,task,size) = (" << new_color << ","<< new_task << "," << new_size << ") <-- "<<endl;
+////       <<"(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<") -- (color,task,size) = (" << GetCurrentCD()->GetColor() << ","<< my_task_id << "," << my_size <<")"
+////       << "ZZ : " << round((double)Z / new_num_z)
+////       << endl;
+////  dbgBreak();
+//  return 0;
+//}
 
 
 void CDHandle::RegisterSplitMethod(std::function<int(const int& my_task_id,
@@ -813,7 +909,8 @@ bool CDHandle::IsHead(void) const { return node_id_.IsHead(); }
 // head is always task id 0 for now
 void CDHandle::SetHead(NodeID& new_node_id) { new_node_id.set_head(0); }
 
-int CDHandle::GetSeqID() const { return ptr_cd_->GetCDID().sequential_id(); }
+int       CDHandle::GetSeqID(void)     const { return ptr_cd_->GetCDID().sequential_id(); }
+CDHandle *CDHandle::GetParent(void)    const { return CDPath::GetParentCD(ptr_cd_->GetCDName().level()); }
 
 bool CDHandle::operator==(const CDHandle &other) const 
 {
@@ -966,7 +1063,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
           case 0:
             break;
           case 1:
-            event = CDEventT::kErrorOccurred;
+//            event = CDEventT::kErrorOccurred;
             break;
           case 2:
             break;
@@ -1004,11 +1101,6 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
       cout << "\n\n[Barrier] CDHandle::Detect (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     SetMailBox(event);
-    CheckMailBox();
-    if(node_id_.size() > 1) {
-      PMPI_Barrier(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Detect (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-    }
 
   }
   else {
@@ -1018,6 +1110,22 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
       PMPI_Barrier(node_id_.color());
       cout << "\n\n[Barrier] CDHandle::Detect - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
+
+  }
+
+
+
+
+  if(IsHead()) { 
+
+    CheckMailBox();
+    if(node_id_.size() > 1) {
+      PMPI_Barrier(node_id_.color());
+      cout << "\n\n[Barrier] CDHandle::Detect (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+    }
+  }
+  else {
+
     if(node_id_.size() > 1) {
       PMPI_Barrier(node_id_.color());
       cout << "\n\n[Barrier] CDHandle::Detect - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
@@ -1025,10 +1133,6 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     CheckMailBox();
 
   }
-
-
-
-
 
 
 //  if(IsHead() && ptr_cd()->GetCDID().level() == 1) {

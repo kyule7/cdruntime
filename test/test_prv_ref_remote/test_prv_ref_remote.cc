@@ -49,7 +49,7 @@ using namespace cd;
 using namespace std;
 using namespace chrono;
 
-ostringstream dbgApp;
+DebugBuf dbgApp;
 CDErrT err;
 int  np = 0;
 int  mr = 0;
@@ -199,11 +199,11 @@ int test_preservation_via_ref_remote()
   c[0] =77;
   dbgApp << "After modifying current value of c[0] : "<< c[0] << endl;
 
-//  if(num_reexecution == 1) {
-//    dbg << "\nis now Second error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n" << endl;
-//    num_reexecution = 2;
-//    child_lv2->CDAssert(false);
-//  }
+  if(num_reexecution == 1) {
+    dbg << "\nis now Second error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n" << endl;
+    num_reexecution = 2;
+    child_lv2->CDAssert(false);
+  }
 
   dbgApp << "CD Complete\n" << endl;
   //  root->Complete();

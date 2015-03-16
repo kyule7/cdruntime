@@ -34,9 +34,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_id.h"
-#include "cd_handle.h"
-#include "cd.h"
-//#include "node_id.h"
 using namespace cd;
 
 // TODO Initialize member values to zero or something, 
@@ -61,22 +58,25 @@ CDID::CDID(const CDID& that)
   sequential_id_ = that.sequential_id();
 }
 
-// should be in CDID.h
-// old_cd_id should be passed by value
-//void CDID::UpdateCDID(const CDNameT& cd_name, const NodeID& node_id)
-//{
-//  object_id_     = Util::GenObjectID();
-//  sequential_id_ = 0;
-//  cd_name_       = cd_name;
-//  node_id_       = node_id;
-//}
+uint32_t CDID::level(void)         const { return cd_name_.level(); }
+uint32_t CDID::rank_in_level(void) const { return cd_name_.rank_in_level(); }
+uint32_t CDID::sibling_count(void) const { return cd_name_.size(); }
+ColorT   CDID::color(void)         const { return node_id_.color(); }
+int      CDID::task_in_color(void) const { return node_id_.task_in_color(); }
+int      CDID::head(void)          const { return node_id_.head(); }
+int      CDID::task_count(void)    const { return node_id_.size(); }
+uint32_t CDID::object_id(void)     const { return object_id_; }
+uint32_t CDID::sequential_id(void) const { return sequential_id_; }
+uint32_t CDID::domain_id(void)     const { return domain_id_; }
+CDNameT  CDID::cd_name(void)       const { return cd_name_; }
+NodeID   CDID::node_id(void)       const { return node_id_; }
+bool     CDID::IsHead(void)        const { return node_id_.IsHead(); }
 
-void CDID::SetCDID(const NodeID& node_id)
-{
-  node_id_ = node_id;
-}
 
-CDID& CDID::operator=(const CDID& that)
+void CDID::SetCDID(const NodeID& node_id)   { node_id_ = node_id; }
+void CDID::SetSequentialID(uint32_t seq_id) { sequential_id_ = seq_id; }
+
+CDID &CDID::operator=(const CDID& that)
 {
   domain_id_     = that.domain_id();
   sequential_id_ = that.sequential_id();
@@ -90,7 +90,6 @@ CDID& CDID::operator=(const CDID& that)
 bool CDID::operator==(const CDID& that) const
 {
   return (node_id_ == that.node_id()) && (cd_name_ == that.cd_name()) &&  (sequential_id_ == that.sequential_id());
-
 }
 
 
@@ -99,15 +98,31 @@ std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
   return str<< "Level: "<< cd_id.level() << ", CDNode" << cd_id.color() << ", Obj# " << cd_id.object_id() << ", Seq# " << cd_id.sequential_id();
 }
 
-//std::ostream& operator<<(std::ostream& str, const NodeID& node_id)
-//{
-//  return str<< '(' << node_id.color_ << ", " << node_id.task_ << "/" << node_id.size_ << ')';
-//}
 
+
+uint32_t CDID::GenMsgTag(ENTRY_TAG_T tag)
+{
+  // MAX tag value is 2^31-1
+  return ((uint32_t)(tag & TAG_MASK(max_tag_bit)));
+}
+
+uint32_t CDID::GenMsgTagForSameCD(int msg_type, int task_in_color)
+{
+  // MSG TYPE  : 4  (2 bit)
+  // MAX level : 64 (6 bit)
+  // MAX number of CDs in a level : 4096 (12 bit)
+  // MAX number of tasks in a CD  : 4096 (12 bit)
+  uint32_t level         = cd_name_.level();
+  uint32_t rank_in_level = cd_name_.rank_in_level();
+  uint32_t tag = ((level << max_tag_rank_bit) | (rank_in_level << max_tag_task_bit) | (task_in_color));
+  tag &= TAG_MASK(max_tag_bit);
+  tag |= (1<<(max_tag_bit-1));
+  return tag;
+}
 
 
 //SZ: print function
-void CDID::Print ()
+void CDID::Print(void)
 {
   PRINT_DEBUG("CDID information:\n");
   PRINT_DEBUG("    domain_id_: %ld\n"     , (unsigned long)domain_id_);

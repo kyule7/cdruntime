@@ -103,7 +103,7 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
   return kOK;
 }
 
-CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen, struct tsn_log_struct *log)
+CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen)
 {
   // Get file name to write if it is currently NULL
   char* str; 
@@ -142,7 +142,7 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen, struct ts
 
 
 
-CDEntry::CDEntryErrT CDEntry::SavePFS( struct tsn_log_struct *log )
+CDEntry::CDEntryErrT CDEntry::SavePFS(void)
 {
 	//First we should check for PFS file => I think we have checked it before calling this function (not sure).
 	//PMPI_Status preserve_status;//This variable can be used to non-blocking writes to PFS. By checking this variable we can understand whether write has been finished or not.
@@ -188,8 +188,8 @@ void CDEntry::RequestEntrySearch(void)
              2, 
              MPI_UNSIGNED_LONG_LONG,
              curr_cd->head(), 
-//             curr_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, curr_cd->task_in_color()),
-             11,
+             curr_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, curr_cd->task_in_color()),
+//             11,
 //             MSG_TAG_ENTRY_TAG,
              curr_cd->color(),
 //             &(curr_cd->entry_req_.back().req_));
@@ -269,6 +269,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
     
         dbg << "CHECK TAG : " << found_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, found_cd->task_in_color())
             << " (Entry Tag: " << tag_to_search << ")" << endl;
+        dbg << "CHECK IT OUT : " << target_task_id  << " --> " << found_cd->task_in_color() << " at "<< found_cd->GetCDName() << endl;
         
         dbg << "FOUND " << found_cd->GetCDName() << " " << found_cd->GetNodeID() << ", found level: " << found_level << ", check it out: "<< target_task_id<<endl;
         dbg.flush();

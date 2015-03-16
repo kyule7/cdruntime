@@ -37,54 +37,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdlib.h>
 using namespace cd;
 
-void CDLogHandle::OpenHDD(void)     
+void CDLogHandle::OpenFilePath(void)     
 { 
   char cmd[30];
-  sprintf(cmd, "mkdir -p %s", path.GetHDDPath().c_str());
+  sprintf(cmd, "mkdir -p %s", path_.GetFilePath().c_str());
   int ret = system(cmd);
   if( ret == -1 ) {
     ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
     assert(0);
   }
   else {
-    _OpenHDD = true;  
+    opened_ = true;  
   }
   
-}
-
-void CDLogHandle::OpenSSD(void)     
-{ 
-  char cmd[30];
-  sprintf(cmd, "mkdir -p %s", path.GetSSDPath().c_str());
-  int ret = system(cmd);
-  if( ret == -1 ) {
-    ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
-    assert(0);
-  }
-  else {
-    _OpenSSD = true;  
-  }
-}
-
-
-void CDLogHandle::OpenPFS( void )
-{
-  //checking for the head task => only head task should create the directory.
-  //if( IsHead() )
-  //{
-    char cmd[ 30 ];
-    sprintf(cmd, "mkdir -p %s", path.GetPFSPath().c_str());
-
-    int ret = system( cmd );
-
-    if( ret == -1 ) 
-    {
-      ERROR_MESSAGE("Failed to create a directory for preservation data (PFS)");
-      assert(0);
-    }
-    else 
-    {
-      _OpenPFS = true;  
-    }
-//  }
 }

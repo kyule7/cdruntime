@@ -35,28 +35,46 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _NODE_ID_H
 #define _NODE_ID_H
+
+/**
+ * @file node_id.h
+ * @author Kyushick Lee
+ * @date March 2015
+ *
+ * \brief Node ID
+ * Description on node id
+ *
+ * In MPI context, one process can be represented by a pair of communicator and MPI rank ID. 
+ * But one process can belong to multiple communicators, so one pair of communicator and MPI rank ID do not uniquely represent a single process.
+ * 
+ * NodeID is a class for representing a task in one CD. Like MPI, one task can be represented by multiple pairs of color and task ID in the color.  
+ * Color is a kind of group number or an arbitrary type indicating a group of tasks corresponding to a CD.
+ * task_in_a_color means an ID to access a task in that color. 
+ * (ex. rank ID of a communicator in MPI context. Communicator corresponds to color_). 
+ * size means the number of tasks in that color. With these three information, we can access to any tasks.
+ */
+
 #include "cd_global.h"
 #include "serializable.h"
 #include "packer.h"
 #include "unpacker.h"
-#include <ostream>
-#include <utility>
 
 using std::endl;
 
 namespace cd {
-/*
-In MPI context, one process can be represented by a pair of communicator and MPI rank ID. 
-But one process can belong to multiple communicators, so one pair of communicator and MPI rank ID do not uniquely represent a single process.
 
-NodeID is a class for representing a task in one CD. Like MPI, one task can be represented by multiple pairs of color and task ID in the color.  
-Color is a kind of group number or an arbitrary type indicating a group of tasks corresponding to a CD.
-task_in_a_color means an ID to access a task in that color. 
-(ex. rank ID of a communicator in MPI context. Communicator corresponds to color_). 
-size means the number of tasks in that color. With these three information, we can access to any tasks.
-*/
+/** \addtogroup cd_defs 
+ *
+ *@{
+ *
+ * @brief A type to uniquely identify a task in a CD.
+ *
+ */ 
 class NodeID : public Serializable {
 friend class CDHandle;
+  /** @brief Internal enumerators used for serialization.
+   *
+   */
   enum { 
     NODEID_PACKER_COLOR=0,
     NODEID_PACKER_TASK_IN_COLOR,
@@ -69,88 +87,32 @@ friend class CDHandle;
   int head_;
   int size_;
   GroupT task_group_;
+
 public:
-  NodeID() 
-    : color_(0), task_in_color_(0), head_(0), size_(-1) 
-  {}
-  NodeID(const ColorT& color, int task, int head, int size)
-    : color_(color), task_in_color_(task), head_(head), size_(size)
-  {}
-  NodeID(const NodeID& that)
-    : color_(that.color()), task_in_color_(that.task_in_color()), head_(that.head()), size_(that.size())
-  {}
-  ~NodeID(){}
+  NodeID(void); 
+  NodeID(const ColorT &color, int task, int head, int size);
+  NodeID(const NodeID &that);
+  ~NodeID(void){}
 
-  NodeID& operator=(const NodeID& that) {
-    color_         = that.color();
-    task_in_color_ = that.task_in_color();
-    head_          = that.head();
-    size_          = that.size();
-    return *this;
-  }
+  void init_node_id(ColorT color, int task_in_color, int head, int size);
 
-  bool operator==(const NodeID& that) const {
-    return (color_ == that.color()) && (task_in_color_ == that.task_in_color()) && (size_ == that.size());
-  }
+  ColorT color(void)         const;
+  int    task_in_color(void) const;
+  int    head(void)          const;
+  int    size(void)          const;
+  bool   IsHead(void)        const;
+  void   set_head(int head);
 
+  NodeID &operator=(const NodeID &that);
+  bool operator==(const NodeID &that) const;
 
-
-  void init_node_id(ColorT color, int task_in_color, int head, int size)
-  {
-    color_ = color;
-    task_in_color_ = task_in_color;
-    if(head == INVALID_HEAD_ID) {
-      head_ = 0;
-    } else {
-      head_ = head;
-    }
-    size_ = size;
-  } 
-  void set_head(int head) { head_ = head; } 
-  ColorT color(void) const { return color_; }
-  int task_in_color(void) const { return task_in_color_; }
-  int head(void) const { return head_; }
-  int size(void) const { return size_; }
-  bool IsHead(void) const { 
-//    dbg << "head : " << head_ << ", task: " << task_in_color_ << endl; //getchar();
-    return head_ == task_in_color_; 
-  }
-
-  void * Serialize(uint32_t& len_in_bytes)
-  {
-    dbg << "\nNode ID Serialize\n" << endl;
-    Packer node_id_packer;
-    node_id_packer.Add(NODEID_PACKER_COLOR, sizeof(ColorT), &color_);
-    node_id_packer.Add(NODEID_PACKER_TASK_IN_COLOR, sizeof(int), &task_in_color_);
-    node_id_packer.Add(NODEID_PACKER_HEAD, sizeof(int), &head_);
-    node_id_packer.Add(NODEID_PACKER_SIZE, sizeof(int), &size_);
-    dbg << "\nNode ID Serialize Done\n" << endl;
-    return node_id_packer.GetTotalData(len_in_bytes);  
-  }
-
-  void Deserialize(void* object) 
-  {
-    dbg << "\nNode ID Deserialize\n" << endl;
-    Unpacker node_id_unpacker;
-    uint32_t return_size;
-    uint32_t dwGetID;
-    color_ = *(ColorT *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    dbg << "first unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
-
-    task_in_color_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    dbg << "second unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
-
-    head_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    dbg << "third unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
-
-    size_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
-    dbg << "fourth unpacked thing in node_id : " << dwGetID << ", return size : " << return_size << endl;
-  }
-
-
+  void *Serialize(uint32_t &len_in_bytes);
+  void Deserialize(void *object);
 };
 
 std::ostream& operator<<(std::ostream& str, const NodeID& node_id);
+
+/** @} */ // End group cd_defs
 
 } // namespace cd ends
 

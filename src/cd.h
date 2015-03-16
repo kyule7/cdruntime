@@ -35,6 +35,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _CD_H 
 #define _CD_H
+
+/**
+ * @file cd.h
+ * @author Kyushick Lee, Song Zhang, Seong-Lyong Gong, Ali Fakhrzadehgan, Jinsuk Chung, Mattan Erez
+ * @date March 2015
+ *
+ * @brief Containment Domains API v0.2 (C++)
+ */
+
+
 #include "cd_global.h"
 #include "cd_handle.h"
 #include "cd_entry.h"
@@ -46,9 +56,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "event_handler.h"
 #include "cd_pfs.h"
 
-#if _WORK
-#include "transaction.h"
-#endif
+//#if _WORK
+//#include "transaction.h"
+//#endif
 
 #include <cassert>
 #include <list>
@@ -86,6 +96,14 @@ struct IncompleteLogEntry{
 };
 
 using namespace cd;
+
+
+class Internal {
+  friend CDHandle *cd::CD_Init(int numTask, int myRank);
+  friend void cd::CD_Finalize(DebugBuf *debugBuf);
+  static void Intialize(void);
+  static void Finalize(void);
+};
 
 
 /// TODO Implement serialize and deserialize of this instance
@@ -171,7 +189,8 @@ class cd::CD : public cd::Serializable {
     CDExecMode      cd_exec_mode_;
     int             num_reexecution_;
 
-    bool need_reexec;
+    static bool need_reexec;
+    static uint32_t reexec_level;
 
     /// Detection-related meta data
     // bit vector that will mask error types that can be handled in this CD

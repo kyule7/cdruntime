@@ -65,8 +65,8 @@ void HandleEntrySearch::HandleEvent(void)
             MPI_UNSIGNED_LONG_LONG, 
             entry_requester_id, 
 //            MSG_TAG_ENTRY_TAG,
-            11,
-//            ptr_cd_->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, entry_requester_id),
+//            11,
+            ptr_cd_->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, entry_requester_id),
             ptr_cd_->color(), // Entry requester is in the same CD task group. 
             &status);
 
@@ -188,6 +188,8 @@ void HandleEntrySearch::HandleEvent(void)
 //    IncHandledEventCounter();
   }
 
+  ptr_cd_->event_flag_[entry_requester_id] &= ~kEntrySearch;
+  IncHandledEventCounter();
 
 }
 
@@ -274,14 +276,14 @@ void HandleEntrySend::HandleEvent(void)
              &(ptr_cd_->entry_req_.back().req_));  
 //             &(ptr_cd_->entry_send_req_[tag_to_search].req_));  
 
-//  dbg << "CD Event kEntrySend\t\t\t";
-//  if(ptr_cd_->IsHead()) {
-//    ptr_cd_->event_flag_[ptr_cd_->task_in_color()] &= ~kEntrySend;
-//  }
-//  else {
-//    *(ptr_cd_->event_flag_) &= ~kEntrySend;
-//  }
-//  IncHandledEventCounter();
+  dbg << "CD Event kEntrySend\t\t\t";
+  if(ptr_cd_->IsHead()) {
+    ptr_cd_->event_flag_[ptr_cd_->task_in_color()] &= ~kEntrySend;
+  }
+  else {
+    *(ptr_cd_->event_flag_) &= ~kEntrySend;
+  }
+  IncHandledEventCounter();
 }
 
 
@@ -326,12 +328,9 @@ void HandleAllResume::HandleEvent(void)
   if(ptr_cd_->task_size() == 1) return;
 
   dbg << "CD Event kAllResume\t\t\t";
-//  if(ptr_cd_->IsHead()) {
-//    ptr_cd_->event_flag_[task_id_] &= ~kEntrySend;
-//  }
-//  else {
+
     *(ptr_cd_->event_flag_) &= ~kAllResume;
-//  }
+
   IncHandledEventCounter();
 
 //  PMPI_Barrier(ptr_cd_->color());
@@ -374,6 +373,7 @@ void HandleAllReexecute::HandleEvent(void)
   IncHandledEventCounter();
 
   ptr_cd_->need_reexec = true;
+  ptr_cd_->reexec_level = ptr_cd_->level();
 #else
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();

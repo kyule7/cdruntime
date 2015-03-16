@@ -36,6 +36,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _EVENT_HANDLER_H 
 #define _EVENT_HANDLER_H
 
+/**
+ * @file event_handler.h
+ * @author Kyushick Lee, Song Zhang, Seong-Lyong Gong, Ali Fakhrzadehgan, Jinsuk Chung, Mattan Erez
+ * @date March 2015
+ *
+ * @brief Containment Domains API v0.2 (C++)
+ */
+
 #include "cd_global.h"
 #include "cd.h"
 

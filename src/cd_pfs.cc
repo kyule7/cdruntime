@@ -54,14 +54,14 @@ int CD_Parallel_IO_Manager::Open_File( void )
 	//FIXME: Currently no mpi hints are sent to the I/O, this can be tuned in the future.
 	int error_type;
 	error_type = MPI_File_open( PFS_parallel_file_communicator_, const_cast<char*>(PFS_file_path_.c_str()), 
-							MPI_MODE_CREATE|MPI_MODE_RDWR, MPI_INFO_NULL, &(PFS_d_) );
+							MPI_MODE_CREATE|MPI_MODE_RDWR|MPI_MODE_DELETE_ON_CLOSE, MPI_INFO_NULL, &(PFS_d_) );
 	if( error_type != MPI_SUCCESS )
 	{
 		//FIXME: this part should be discussed with Kyushick. What error type can be used here?
 		std::cout << "File could not be opened!" << std::endl;
 		return -1;
 	}
-	return 0;
+	return CDEntry::CDEntryErrT::kOK;
 }
 
 int CD_Parallel_IO_Manager::Close_and_Delete_File( void )
@@ -74,7 +74,7 @@ int CD_Parallel_IO_Manager::Close_and_Delete_File( void )
 		return -1;
 	}
 
-	return 0;
+	return CDEntry::CDEntryErrT::kOK;
 }
 
 void CD_Parallel_IO_Manager::Copy( const CD_Parallel_IO_Manager& that )

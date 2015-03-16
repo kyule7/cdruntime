@@ -63,6 +63,50 @@ std::map<ENTRY_TAG_T, CommInfo> CD::entry_recv_req_;
 //std::map<ENTRY_TAG_T, CommInfo> CD::entry_search_req_;
 std::vector<EventHandler *> CD::cd_event_;
 
+bool CD::need_reexec = false;
+uint32_t CD::reexec_level = 0;
+
+void Internal::Intialize(void)
+{
+#if _MPI_VER
+  PMPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &(CD::pendingFlag_));
+
+  // Initialize pending flag
+  *CD::pendingFlag_ = 0;
+#endif
+
+  // Tag-related
+  void *v;
+  int flag;
+  ENTRY_TAG_T max_tag_size = 2147483647;
+  MPI_Comm_set_attr( MPI_COMM_WORLD, MPI_TAG_UB, &max_tag_size ); // It does not work for MPI_TAG_UB 
+  MPI_Comm_get_attr( MPI_COMM_WORLD, MPI_TAG_UB, &v, &flag ); 
+
+  ENTRY_TAG_T predefined_max_tag_bits = *(int *)v + 1;
+  int cnt = sizeof(ENTRY_TAG_T)*8;
+  while(cnt >= 0) {
+    if((predefined_max_tag_bits >> cnt) & 0x1) {
+      max_tag_bit = cnt;
+      break;
+    }
+    else {
+      cnt--;
+    }
+  }
+  max_tag_level_bit = 6;
+  max_tag_rank_bit = max_tag_bit-max_tag_level_bit-1;
+  max_tag_task_bit = max_tag_rank_bit/2;
+}
+
+void Internal::Finalize(void)
+{
+
+#if _MPI_VER
+  PMPI_Free_mem(CD::pendingFlag_);
+#endif
+
+}
+
 static inline
 void IncHandledEventCounter(void) { handled_event_count++; }
 
@@ -100,11 +144,11 @@ CDFlagT *CD::pendingFlag_;
 /// So I think it would be more desirable to increase level
 /// inside Create() 
 
-CD::CD()
-//  : cd_type_(kStrict), name_("INITIAL_NAME"), sys_detect_bit_vector_(0)
+CD::CD(void)
+  : log_handle_(GetPlaceToPreserve())
 {
   cd_type_ = kStrict; 
-  name_ = "INITIAL_NAME"; 
+  name_ = INITIAL_CDOBJ_NAME; 
   sys_detect_bit_vector_ = 0;
   // Assuming there is only one CD Object across the entire system we initilize cd_id info here.
   cd_id_ = CDID();
@@ -114,11 +158,11 @@ CD::CD()
   cd_id_.object_id_ = Util::GenCDObjID();
 
   recoverObj_ = new RecoverObject;
-  
   need_reexec = false;
+//  reexec_level = 0;
   num_reexecution_ = 0;
   Init();  
-
+  
 #ifdef comm_log
   // SZ
   // create instance for comm_log_ptr_ for relaxed CDs
@@ -142,7 +186,7 @@ CD::CD(CDHandle* cd_parent,
        const CDID& cd_id, 
        CDType cd_type, 
        uint64_t sys_bit_vector)
-//  : cd_type_(cd_type), name_(name), sys_detect_bit_vector_(0), cd_id_(cd_id)
+  : log_handle_(GetPlaceToPreserve())
 {
   //GONG
   begin_ = false;
@@ -179,6 +223,7 @@ CD::CD(CDHandle* cd_parent,
   recoverObj_ = new RecoverObject;
 
   need_reexec = false;
+  reexec_level = cd_id.level();
   num_reexecution_ = 0;
 
   Init();  
@@ -270,13 +315,6 @@ void CD::Init()
   cur_pos_mem_alloc_log = 0;
 #endif
 
-//#if _WORK 
-//  path = Path("ssd", "hhd");
-//  path.SetSSDPath("./SSDpath/");
-//  path.SetHDDPath("./HDDpath/");
-//  InitOpenHDD();
-//  InitOpenSSD();
-//#endif
 
 // Kyushick : I think we already initialize cd_id_ object inside cd object creator (outside of Init method)
 // So we do not have to get it here. 
@@ -412,7 +450,7 @@ CD::InternalCreate(CDHandle* parent,
 #endif
 
     if( new_cd->GetPlaceToPreserve() == kPFS ) {
-      new_cd->Par_IO_Man = new CD_Parallel_IO_Manager( new_cd, "./PFS_Root/" ); 
+      new_cd->Par_IO_Man = new CD_Parallel_IO_Manager( new_cd, new_cd->log_handle_.path_.GetFilePath().c_str() ); 
     }
     *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
   }
@@ -626,10 +664,10 @@ CDErrT CD::Begin(bool collective, const char* label)
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
   }
-  else {
-    cout << "Begin again! " << endl; //getchar();
-    num_reexecution_++ ;
-  }
+//  else {
+//    cout << "Begin again! " << endl; //getchar();
+//    num_reexecution_++ ;
+//  }
 
 
   return CDErrT::kOK;
@@ -643,16 +681,7 @@ CDErrT CD::Begin(bool collective, const char* label)
 CDErrT CD::Complete(bool collective, bool update_preservations)
 {
   cout << "CD::Complete : " << GetCDName() << " " << GetNodeID() << " : Reexec ? : " << need_reexec << endl; //getchar(); 
-  if(need_reexec) { 
-    // Before longjmp, it should decrement the event counts handled so far.
-
-    DecPendingCounter();
-
-    need_reexec = false;
-    this->Recover(); 
-  }
-
-
+  
   begin_ = false;
 
 #ifdef comm_log
@@ -809,12 +838,36 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 #endif
 
 
+
   // Increase sequential ID by one
   cd_id_.sequential_id_++;
   
   /// It deletes entry directory in the CD (for every Complete() call). 
   /// We might modify this in the profiler to support the overlapped data among sequential CDs.
   DeleteEntryDirectory();
+
+  PMPI_Barrier(color());
+  if(need_reexec) { 
+    // Before longjmp, it should decrement the event counts handled so far.
+
+    DecPendingCounter();
+
+    need_reexec = false;
+    //this->Recover(); 
+    dbg << "\n\n\n\n Reexec from level #" << reexec_level<< " from " << level() << "\n\n\n"<< endl;
+    CDHandle *cdh = CDPath::GetCDLevel(reexec_level);
+    CDHandle *curr_cdh = CDPath::GetCurrentCD();
+    while(cdh != curr_cdh) {
+      curr_cdh->ptr_cd()->Complete();
+      curr_cdh->ptr_cd()->Destroy();
+      curr_cdh = CDPath::GetParentCD(curr_cdh->level());
+    }
+    
+    curr_cdh->ptr_cd()->Recover(); 
+  }
+
+
+
 
   // TODO ASSERT( cd_exec_mode_  != kSuspension );
   // FIXME don't we have to wait for others to be completed?  
@@ -1230,15 +1283,15 @@ CDErrT CD::Preserve(void* data,
       if( use_file == true) {
 
 //        if(cd_id_.level()==1) {  // HDD
-//          bool _isOpenHDD = isOpenHDD();
+//          bool _isOpenHDD = IsOpen();
 //          if(!_isOpenHDD)  
-//            OpenHDD(); // set flag 'open_HDD'       
+//            OpenFilePath(); // set flag 'open_HDD'       
 //          return cd_entry.Restore(_isOpenHDD, &HDDlog);
 //        }
 //        else { // SSD
-//          bool _isOpenSSD = isOpenSSD();
+//          bool _isOpenSSD = IsOpen();
 //          if(!_isOpenSSD)
-//            OpenSSD(); // set flag 'open_SSD'       
+//            OpenFilePath(); // set flag 'open_SSD'       
 //          return cd_entry.Restore(_isOpenSSD, &SSDlog);
 //        }
         switch(GetPlaceToPreserve()) {
@@ -1246,16 +1299,16 @@ CDErrT CD::Preserve(void* data,
             assert(0);
             break;
           case kHDD:
-//            bool _isOpenHDD = isOpenHDD();
-            if( !isOpenHDD() )  
-              OpenHDD(); // set flag 'open_HDD'       
-            return cd_entry.Restore(isOpenHDD(), &HDDlog);
+//            bool _isOpenHDD = IsOpen();
+            if( !IsOpen() )  
+              OpenFilePath(); // set flag 'open_HDD'       
+            return cd_entry.Restore(IsOpen(), &HDDlog);
         
           case kSSD:
-//            bool _isOpenSSD = isOpenSSD();
-            if( !isOpenSSD() )
-              OpenSSD(); // set flag 'open_SSD'       
-            return cd_entry.Restore(isOpenSSD(), &SSDlog);
+//            bool _isOpenSSD = IsOpen();
+            if( !IsOpen() )
+              OpenFilePath(); // set flag 'open_SSD'       
+            return cd_entry.Restore(IsOpen(), &SSDlog);
         
           case kPFS:
             assert(0);
@@ -1550,7 +1603,9 @@ CDErrT CD::Preserve(void *data,
           break;
         case CDEntry::CDEntryErrT::kEntrySearchRemote : {
 //#if _FIX
-          while(!TestReqComm());
+          while(!TestReqComm()) {
+            CheckMailBox();
+          }
 //#endif
           cd_err = CDErrT::kError;
           break;
@@ -1563,7 +1618,7 @@ CDErrT CD::Preserve(void *data,
         dbg << "Test Asynch messages until start at " << GetCDName() << " " << GetNodeID() <<endl;
         dbg.flush();
 
-      while( !(TestComm()) ) 
+      while( !(TestComm()) ); 
 
       if(IsHead()) { 
       
@@ -1749,8 +1804,8 @@ CD::InternalPreserve(void *data,
                                  my_name);
           cd_entry->set_my_cd(this); 
 
-          if( !log_handle_.isOpenHDD() ) log_handle_.OpenHDD(); // set flag 'open_HDD'       
-          CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path.GetHDDPath(), log_handle_.isOpenHDD(), &(log_handle_.HDDlog));
+          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_HDD'       
+          CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path_.GetFilePath(), log_handle_.IsOpen());
 
           entry_directory_.push_back(*cd_entry); 
 
@@ -1784,8 +1839,8 @@ CD::InternalPreserve(void *data,
                                  my_name);
           cd_entry->set_my_cd(this); 
 
-          if( !log_handle_.isOpenSSD() ) log_handle_.OpenSSD(); // set flag 'open_SSD'       
-          CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path.GetSSDPath(), log_handle_.isOpenSSD(), &(log_handle_.SSDlog));
+          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
+          CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path_.GetFilePath(), log_handle_.IsOpen());
 
           entry_directory_.push_back(*cd_entry);  
 
@@ -1827,9 +1882,9 @@ CD::InternalPreserve(void *data,
           cd_entry->set_my_cd(this); 
 
 		      //Do we need to check for anything special for accessing to the global filesystem? 
-		      //Potentially=> CDEntry::CDEntryErrT err = cd_entry->SavePFS(log_handle_.path.GetPFSPath(), log_handle_.isPFSAccessible(), &(log_handle_.PFSlog));
-          if( !log_handle_.isOpenPFS() ) log_handle_.OpenPFS(); // set flag 'open_SSD'       
-		      CDEntry::CDEntryErrT err = cd_entry->SavePFS( &(log_handle_.PFSlog) );//I don't know what should I do with the log parameter. I just add it for compatibility.
+		      //Potentially=> CDEntry::CDEntryErrT err = cd_entry->SavePFS(log_handle_.path_.GetFilePath(), log_handle_.isPFSAccessible(), &(log_handle_.PFSlog));
+          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
+		      CDEntry::CDEntryErrT err = cd_entry->SavePFS();//I don't know what should I do with the log parameter. I just add it for compatibility.
           
 
           entry_directory_.push_back(*cd_entry);  
@@ -2111,6 +2166,7 @@ CDErrT CD::Reexecute(void)
   // SZ: FIXME: this is not safe because programmers may have their own RecoverObj
   //            we need to change the cd_exec_mode_ and comm_log_mode_ outside this function
   cd_exec_mode_ = kReexecution; 
+  num_reexecution_++ ;
 
 #ifdef comm_log
   // SZ
@@ -2876,14 +2932,14 @@ CDEventHandleT CD::ReadMailBox(CDFlagT &event)
 //      HandleEntrySend();
       dbg << "ENTRYSEND" << endl;
       cd_event_.push_back(new HandleEntrySend(this));
-  dbg << "CD Event kEntrySend\t\t\t";
-  if(IsHead()) {
-    assert(0);//event_flag_[idx] &= ~kEntrySend;
-  }
-  else {
-    *(event_flag_) &= ~kEntrySend;
-  }
-  IncHandledEventCounter();
+//  dbg << "CD Event kEntrySend\t\t\t";
+//  if(IsHead()) {
+//    assert(0);//event_flag_[idx] &= ~kEntrySend;
+//  }
+//  else {
+//    *(event_flag_) &= ~kEntrySend;
+//  }
+//  IncHandledEventCounter();
 //#endif
       dbg << "CD Event kEntrySend\t\t\t";
     }
@@ -2945,8 +3001,8 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, int idx)
 
 
 
-    event_flag_[idx] &= ~kEntrySearch;
-    IncHandledEventCounter();
+//    event_flag_[idx] &= ~kEntrySearch;
+//    IncHandledEventCounter();
 ////FIXME_KL
 //      if(entry_searched == false) {
 //        CDHandle *parent = CDPath::GetParentCD();

@@ -37,11 +37,79 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "node_id.h"
 using namespace cd;
 
-std::ostream& cd::operator<<(std::ostream& str, const NodeID& node_id)
+
+NodeID::NodeID(void)
+  : color_(0), task_in_color_(0), head_(0), size_(-1) 
+{}
+
+NodeID::NodeID(const ColorT& color, int task, int head, int size)
+  : color_(color), task_in_color_(task), head_(head), size_(size)
+{}
+
+NodeID::NodeID(const NodeID& that)
+  : color_(that.color()), task_in_color_(that.task_in_color()), head_(that.head()), size_(that.size())
+{}
+
+
+NodeID &NodeID::operator=(const NodeID& that) 
+{
+  color_         = that.color();
+  task_in_color_ = that.task_in_color();
+  head_          = that.head();
+  size_          = that.size();
+  return *this;
+}
+
+bool NodeID::operator==(const NodeID& that) const 
+{
+  return (color_ == that.color()) && (task_in_color_ == that.task_in_color()) && (size_ == that.size());
+}
+
+
+
+void NodeID::init_node_id(ColorT color, int task_in_color, int head, int size)
+{
+  color_ = color;
+  task_in_color_ = task_in_color;
+  if(head == INVALID_HEAD_ID) {
+    head_ = 0;
+  } else {
+    head_ = head;
+  }
+  size_ = size;
+} 
+
+ColorT NodeID::color(void)         const { return color_; }
+int    NodeID::task_in_color(void) const { return task_in_color_; }
+int    NodeID::head(void)          const { return head_; }
+int    NodeID::size(void)          const { return size_; }
+bool   NodeID::IsHead(void)        const { return head_ == task_in_color_; }
+void   NodeID::set_head(int head)        { head_ = head; } 
+
+void *NodeID::Serialize(uint32_t& len_in_bytes)
+{
+  Packer node_id_packer;
+  node_id_packer.Add(NODEID_PACKER_COLOR, sizeof(ColorT), &color_);
+  node_id_packer.Add(NODEID_PACKER_TASK_IN_COLOR, sizeof(int), &task_in_color_);
+  node_id_packer.Add(NODEID_PACKER_HEAD, sizeof(int), &head_);
+  node_id_packer.Add(NODEID_PACKER_SIZE, sizeof(int), &size_);
+  return node_id_packer.GetTotalData(len_in_bytes);  
+}
+
+void NodeID::Deserialize(void* object) 
+{
+  Unpacker node_id_unpacker;
+  uint32_t return_size;
+  uint32_t dwGetID;
+  color_         = *(ColorT *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
+  task_in_color_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
+  head_          = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
+  size_          = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
+}
+
+std::ostream &cd::operator<<(std::ostream &str, const NodeID &node_id)
 {
   return str << '(' 
-//             << node_id.color() << ", "
-//             << node_id.head() << ", " 
              << node_id.task_in_color() << "/" << node_id.size() 
              << ')';
 }

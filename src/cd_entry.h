@@ -126,14 +126,12 @@ class cd::CDEntry : public cd::Serializable
     }
 
     CDEntryErrT SaveMem(void);
-    CDEntryErrT SaveFile(std::string base, 
-                         bool open, 
-                         struct tsn_log_struct *log);
+    CDEntryErrT SaveFile(std::string base, bool open);
     // PFS
-	  CDEntryErrT SavePFS( struct tsn_log_struct *log );
+	  CDEntryErrT SavePFS(void);
     CDEntryErrT Save(void);
 
-    void CloseFile(struct tsn_log_struct *log);
+    void CloseFile(void) {}
 
 
     //FIXME We need another Restore function that would accept offset and length, 

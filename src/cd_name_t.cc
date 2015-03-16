@@ -33,14 +33,57 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 #include "cd_name_t.h"
-
 using namespace cd;
+
+CDNameT::CDNameT(void)
+  : level_(0), rank_in_level_(0), size_(0) 
+{}
+  
+CDNameT::CDNameT(uint64_t level, uint64_t rank_in_level, uint64_t size)
+  : level_(level), rank_in_level_(rank_in_level), size_(size)
+{}
+
+uint32_t CDNameT::level(void)         const { return level_; }
+uint32_t CDNameT::rank_in_level(void) const { return rank_in_level_; }
+uint32_t CDNameT::size(void)          const { return size_; }
+void     CDNameT::IncLevel(void)            { level_++; }
+
+CDNameT::CDNameT(const CDNameT &parent_cdname, int num_children, int color)
+{
+  level_         = parent_cdname.level() + 1;
+  rank_in_level_ = num_children*(parent_cdname.rank_in_level()) + color;
+  size_          = num_children;
+/*  std::cout << "level: " << level_ 
+            << ", rank_in_level created : " << rank_in_level_ 
+            << ", numchild: " << num_children << ", parent rank : " 
+            << parent_cdname.rank_in_level() 
+            << ", color : "<< color << std::endl;*/ 
+}
+
+CDNameT::CDNameT(const CDNameT& that)
+{
+  level_         = that.level();
+  rank_in_level_ = that.rank_in_level();
+  size_          = that.size();
+}
+
+CDNameT &CDNameT::operator=(const CDNameT& that) 
+{
+  level_         = that.level();
+  rank_in_level_ = that.rank_in_level();
+  size_          = that.size();
+  return *this;
+}
+
+bool CDNameT::operator==(const CDNameT& that) const 
+{
+  return (level_ == that.level()) && (rank_in_level_ == that.rank_in_level()) && (size_ == that.size());
+}
+
+int CDNameT::CDTag(void) const { return ((level_ << 16) | rank_in_level_); }
 
 std::ostream& cd::operator<<(std::ostream& str, const CDNameT& cd_name)
 {
   return str << "CD"<< cd_name.level() << "_"  << cd_name.rank_in_level();
 }
-
-

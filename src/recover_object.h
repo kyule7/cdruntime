@@ -36,19 +36,62 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _RECOVER_OBJECT_H
 #define _RECOVER_OBJECT_H
 
+/**
+ * @file recover_object.h
+ * @author Kyushick Lee, Mattan Erez
+ * @date March 2015
+ */
 #include "cd_global.h"
 #include "cd.h"
  
 namespace cd {
 
+/** @brief Recovery method that can be inherited and specialized by user
+ *
+ * \addtogroup detection_recovery Detection and Recovery Methods
+ *
+ * @{
+ *
+ * The purpose of RecoverObject is to provide an interface to enable a
+ * programer to create custom Recover routines. The idea is that for
+ * each CD, each error type+location may be bound to a specialized
+ * recovery routine, which is expressed through a Recover object. The
+ * Recover object inherits the default RecoverObject and extends or
+ * replaces the default restore+reexecute recovery method.
+ *
+ * \todo Write some example for custom recovery (see GVR
+ * interpolation example, although they do it between versions).
+ *
+ *
+ * \sa CDHandle::RegisterRecovery()
+ */
 
 class RecoverObject {
 public:
-  virtual void Recover(CD* cd, uint64_t error_name_mask, uint64_t error_location_mask, std::vector<SysErrT> errors); 
-  virtual void Recover(CD* cd, uint64_t error_name_mask=0, uint64_t error_location_mask=0); 
+
+  /** @brief Recover method to be specialized by inheriting and overloading
+   *
+   * Recover uses methods that are internal to the CD itself and should
+   * only be called by customized recovery routines that inherit from
+   * RecoverObject and modify the Recover() method.
+   *
+   */
+  virtual void Recover(CD* cd, //!< A pointer to the actual CD instance
+                               //!< so that the internal methods can be called.
+                       uint64_t error_name_mask,     //!< [in] Mask of all error/fail types that require recovery
+                       uint64_t error_location_mask, //!< [in] Mask of all error/fail locations that require recovery
+                       std::vector<SysErrT> errors   //!< [in] Errors/failures to recover from (typically just one).
+                      ); 
+  virtual void Recover(CD* cd, //!< A pointer to the actual CD instance
+                               //!< so that the internal methods can be called.
+                       uint64_t error_name_mask=0,    //!< [in] Mask of all error/fail types that require recovery
+                       uint64_t error_location_mask=0 //!< [in] Mask of all error/fail locations that require recovery
+                      ); 
 };
 
-}
+/** @} */ // End detection_recovery group, but more methods later in CDHandle::CDAssert, etc..
+
+} // namespace cd ends
 
 
 #endif

@@ -36,55 +36,153 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _SYS_ERR_T_H 
 #define _SYS_ERR_T_H
 
-#include <iostream>
+
+/**
+ * @file sys_err_t.h
+ * @author Kyushick Lee, Mattan Erez
+ * @date March 2015
+ *
+ *
+ * \addtogroup error_reporting Error Reporting 
+ *  The \ref error_reporting module includes the definition of types
+ *  and methods used for system and CD runtime error/failure reporting.
+ *
+ * @{
+ *
+ * \brief Type for specifying system errors and failure names
+ *
+ * This type represents the interface between the user and the
+ * system with respect to errors and failures. The intent is for
+ * these error/failure names to be fairly comprehensive with respect
+ * to system-based issues, while still providing general/abstract
+ * enough names to be useful to the application programmer. The use
+ * categories/names are meant to capture recovery strategies that
+ * might be different based on the error/failure and be
+ * comprehensive in that regard. The
+ * DeclareErrName() method may be used to create a
+ * programmer-defined error that may be associated with a
+ * programmer-provided detection method.
+ *
+ * We considered doing
+ * an extensible class hierarchy like GVR, but ended up with a
+ * hybrid type system. There are predefined bit vector constants
+ * for error/failure names and machine location names. These may be
+ * extended by application programmers for specialized
+ * detectors. These types are meant to capture abstract general
+ * classes of errors that may be treated differently by recovery
+ * functions and therefore benefit from easy-to-access and
+ * well-defined names. Additional error/failure-specific
+ * information will be represented by the SysErrInfo interface class
+ * hierarchy, which may be extended by the programmer at compiler
+ * time. Thus, each error/failure is a combination of 
+ * SysErrNameT, SysErrLocT, and SysErrInfo.
+ *
+ *
+ * __This needs more thought__
+ *
+ *
+ */
+#include "cd_global.h"
+
 
 namespace cd {
-
+/** @brief Interface to error/failure-specific information 
+ *
+ * An abstract interface to specific error/failure information, such
+ * as address range, core number, degradation, specific lost
+ * functionality, ...
+ *
+ * This is an empty interface because the information is very much
+ * error dependent. Also defining a few specific initial examples
+ * below. This follows the GVR ideas pretty closely.
+ *
+ * \sa SoftMemErrInfo, DegradedMemErrInfo
+ */
 class SysErrInfo {
 protected:
   uint64_t info_;
 public:
-  SysErrInfo() {}
-  virtual ~SysErrInfo() {}
+  SysErrInfo(void) {}
+  virtual ~SysErrInfo(void) {}
 };
 
+/** @brief Interface to memory-type error information
+ *
+ * This is meant to potentially be extended.
+ *
+ */
 class MemErrInfo : public SysErrInfo {
-protected:
-  uint64_t pa_start_;
-  uint64_t va_start_;
-  uint64_t length_;
 public:
-  MemErrInfo() {}
-  virtual ~MemErrInfo() {}
-  virtual void get_pa_start();
-  virtual void get_va_start();
-  virtual void get_length();
+  MemErrInfo(void) {}
+  virtual ~MemErrInfo(void) {}
+  virtual uint64_t get_pa_start(void)=0; //!< Starting physical address 
+  virtual uint64_t get_va_start(void)=0; //!< Starting virtual address
+  virtual uint64_t get_length(void)=0;   //!< Length of affected access
+  virtual char    *get_data(void)=0;     //!< Data value read (erroneous)
 };
 
+
+
+
+/** @brief Interface to soft memory error information
+ *
+ * This is meant to potentially be extended.
+ *
+ */
 class SoftMemErrInfo : public MemErrInfo {
 protected:
-  char* data_;
-  uint64_t syndrome_len_;
-  char* syndrome_;
+  uint64_t pa_start_;     //!< Starting physical address
+  uint64_t va_start_;     //!< Starting virtual address
+  uint64_t length_;       //!< Length of affected access
+  char    *data_;         //!< Data value read (erroneous)
+  uint64_t syndrome_len_; //!< Length of syndrome
+  char    *syndrome_;     //!< Value of syndrome
 public:
-  SoftMemErrInfo() {}
-  ~SoftMemErrInfo() {}
-  void get_data();
-  void get_syndrome_len();
-  void get_syndrome();
+  SoftMemErrInfo(void) {}
+  ~SoftMemErrInfo(void) {}
+  uint64_t get_pa_start(void);  //!< Starting physical address
+  uint64_t get_va_start(void);  //!< Starting virtual address
+  uint64_t get_length(void);    //!< Length of affected access
+  char    *get_data(void);      //!< Data value read (erroneous)
+  uint64_t get_syndrome_len(void); //!< Length of syndrome
+  char    *get_syndrome(void);     //!< Value of syndrome
 };
 
+/** @brief Interface to degraded memory error information
+ *
+ * This is meant to potentially be extended.
+ *
+ */
 class DegradedMemErrInfo : public MemErrInfo {
+protected:
+  std::vector<uint64_t> pa_starts_;     //!< Starting physical addresses
+  std::vector<uint64_t> va_starts_;     //!< Starting virtual addresses
+  std::vector<uint64_t> lengths_;       //!< Lengths of affected regions
 public:
-  DegradedMemErrInfo() {}
-  ~DegradedMemErrInfo() {}
+  DegradedMemErrInfo(void) {}
+  ~DegradedMemErrInfo(void) {}
+  std::vector<uint64_t> get_pa_starts(void);//!< Starting physical addresses
+  std::vector<uint64_t> get_va_starts(void);//!< Starting virtual addresses
+  std::vector<uint64_t> get_lengths(void);  //!< Lengths of affected regions
 };
 
 
-
-// data structure for specifying errors and failure 
-// should come up with a reasonable way to allow some extensible class hierarchy for various error types.
-// currently, it is more like a bit vector
+/** @brief Data structure for specifying errors and failure
+ *
+ * should come up with a reasonable way to allow some extensible class hierarchy for various error types.
+ * currently, it is more like a bit vector
+ * This type represents the interface between the user and the
+ * system with respect to errors and failures. We considered doing
+ * an extensible class hierarchy like GVR, but ended up with
+ * predefined bitvector constants because of the pain involved in
+ * setting up and using deep class hierarchies. However, the bitmask
+ * way is dangerously narrow and may lead to less portable (and less
+ * future-proof code). Basically we chose C over C++ style here :-(
+ *
+ * __This needs more thought__
+ *
+ * 
+ */
 class SysErrT {
 public:
 /*
@@ -107,14 +205,59 @@ Additional error/failure-specific information will be represented by the SysErrI
 which may be extended by the programmer at compiler time. 
 Thus, each error/failure is a combination of SysErrNameT, SysErrLocT, and SysErrInfo.
 */
-//  SysErrNameT  sys_err_name_;
-//  SysErrLocT   sys_err_loc_;
+  SysErrNameT  sys_err_name_;
+  SysErrLocT   sys_err_loc_;
   SysErrInfo*  error_info_;
 
-  SysErrT() {}
-  ~SysErrT() {}
-  char* printSysErrInfo() { return NULL; }
+  SysErrT(void) {}
+  ~SysErrT(void) {}
+  char* printSysErrInfo(void) { return NULL; }
 };
+
+
+
+
+/** @brief Create a new error/failure type name
+ *
+ * \return Returns a "constant" corresponding to a free bit location in the SysErrNameT bitvector.
+ * \sa SysErrNameT, SysErrLocT, UndeclareErrName()
+ */
+uint32_t DeclareErrName(const char* name_string //!< user-specified name for a new error/failure type
+            	          );
+
+
+/** @brief Free a name that was created with DeclareErrorName()
+ *
+ * \return Returns kOK on success.
+ *
+ * \sa SysErrNameT, SysErrLocT, DeclareErrName()
+ */
+CDErrT UndeclareErrName(uint error_name_id //!< ID to free
+		                    );
+
+
+
+/** @brief Create a new error/failure type name
+ *
+ * \return Returns a "constant" corresponding to a free bit location in the SysErrNameT bitvector.
+ *
+ * \sa SysErrNameT, SysErrLocT, UndeclareErrLoc()
+ */
+uint32_t DeclareErrLoc(const char* name_string //!< user-specified name for a new error/failure location
+	                     );
+
+
+/** @brief Free a name that was created with DeclareErrLoc()
+ *
+ * \return Returns kOK on success.
+ *
+ * \sa SysErrNameT, SysErrLocT, DeclareErrLoc()
+ */
+CDErrT UndeclareErrLoc(uint error_name_id //!< ID to free
+                       );
+
+
+
 
 //std::ostream& operator<<(const std::ostream& str, const SysErrT& sys_err)
 //{
@@ -122,34 +265,7 @@ Thus, each error/failure is a combination of SysErrNameT, SysErrLocT, and SysErr
 //}
 
 
-
-// Create a new error/failure type name
-
-//uint64_t DeclareErrLoc(const char* name_string)
-//{
-//  // STUB
-//  return 0;
-//}
-//
-//uint64_t DeclareErrName(const char* name_string)
-//{
-//  // STUB
-//  return 0;
-//}
-//
-//CDErrT UndeclareErrLoc(uint64_t error_name_id)
-//{
-//  // STUB
-//  return kOK;
-//}
-//
-//
-//CDErrT UndeclareErrName(uint64_t error_name_id)
-//{
-//  // STUB
-//  return kOK;
-//}
-
+/** @} */ // End error_reporting group
 
 
 } // namespace cd ends

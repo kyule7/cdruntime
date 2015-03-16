@@ -33,46 +33,43 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _REGEN_OBJECT_H
-#define _REGEN_OBJECT_H
-/**
- * @file regen_object.h
- * @author Kyushick Lee, Mattan Erez
- * @date March 2015
- */
+#include "sys_err_t.h"
+using namespace cd;
 
-#include "cd_global.h"
-namespace cd {
+uint64_t SoftMemErrInfo::get_pa_start(void)     { return pa_start_; }
+uint64_t SoftMemErrInfo::get_va_start(void)     { return va_start_; }
+uint64_t SoftMemErrInfo::get_length(void)       { return length_; }
+char    *SoftMemErrInfo::get_data(void)         { return data_; }
+uint64_t SoftMemErrInfo::get_syndrome_len(void) { return syndrome_len_; }
+char    *SoftMemErrInfo::get_syndrome(void)     { return syndrome_; }
 
-/** \addtogroup preservation_funcs 
- *  The \ref preservation_funcs module contains all
- *  preservation/restoration related types and methods.
- *
- * @{
- *
- * @brief Interface for specifying regeneration functions for preserve/restore
- *
- * An interface for a data regeneration function that can be used to
- * restore "preserved" data instead of making a copy of the data to
- * be preserved.
- *
- * \sa PreserveMethodT, CDHandle::Preserve()
- */
-class RegenObject {
 
-  protected:
-    /** @brief Pure virtual interface function for regenerating data as restoration type
-     *
-     * Must be implemented by programmer.
-     *
-     * \return Should return a CD error value if regeneration is not successful. 
-     */
-    virtual void Regenerate(CDHandle &handle); //!< Not supported yet.
-    //TODO Is this needs to be a CDHandle or CD? If our policy is not to expose CD object directly then CDHandle is the one?
-};
+std::vector<uint64_t> DegradedMemErrInfo::get_pa_starts(void) { return pa_starts_; }
+std::vector<uint64_t> DegradedMemErrInfo::get_va_starts(void) { return va_starts_; }
+std::vector<uint64_t> DegradedMemErrInfo::get_lengths(void)   { return lengths_; }
 
-/** @} */ // End preservation_funcs group, but more methods later in CDHandle
 
-} // namespace cd ends
 
-#endif
+uint32_t DeclareErrName(const char* name_string)
+{
+  // STUB
+  return kOK;
+}
+
+CDErrT UndeclareErrName(uint32_t error_name_id)
+{
+  // STUB
+  return kOK;
+}
+
+uint32_t DeclareErrLoc(const char *name_string)
+{
+  // STUB
+  return kOK;
+}
+
+CDErrT UndeclareErrLoc(uint32_t error_name_id)
+{
+  // STUB
+  return kOK;
+}
