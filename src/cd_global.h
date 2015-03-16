@@ -298,19 +298,87 @@ namespace cd {
 
 
 
+  /** \addtogroup cd_defs 
+   *@{
+   *
+   * @brief Type for specifying whether a CD is strict or relaxed
+   *
+   * This type is used to specify whether a CD is strict or
+   * relaxed. The full definition of the semantics of strict and
+   * relaxed CDs can be found in the semantics document under
+   * <http://lph.ece.utexas.edu/public/CDs>. In brief, concurrent
+   * tasks (threads, MPI ranks, ...) in two different strict CDs
+   * cannot communicate with one another and must first complete inner
+   * CDs so that communicating tasks are at the same CD context. Tasks
+   * in two different relaxed CDs may communicate (verified data
+   * only). Relaxed CDs typically incur additional runtime overhead
+   * compared to strict CDs.
+   */
+    enum CDType  { kStrict=0, ///< A strict CD
+              		 kRelaxed   ///< A relaxed CD
+                 };
 
-  enum CDType       { kStrict=0, 
-                      kRelaxed };
+  /** @brief Type to indicate whether preserved data is from read-only
+   * or potentially read/write application data
+   *
+   * \sa CDHandle::Preserve(), CDHandle::Complete()
+   */
+    enum PreserveUseT { kUnsure =0, //!< Not sure whether data being preserved will be written 
+                                    //!< by the CD (treated as Read/Write for now, but may be optimized later)
+                        kReadOnly = 1, //!< Data to be preserved is read-only within this CD
+                        kReadWrite = 2 //!< Data to be preserved will be modified by this CD
+    };
+  
+  /** @brief Type to indicate where to preserve data
+   *
+   * \sa CD::GetPlaceToPreserve()
+   */
+    enum PrvMediumT { kMemory=0,
+                      kHDD,
+                      kSSD,
+                      kPFS};
 
-  enum PreserveUseT { kUnsure=0, 
-                      kReadOnly=1, 
-                      kReadWrite=2 };
+  /** @} */ // End group cd_defs ===========================================
 
-  enum PGASUsageT { kSharedVar=1, 
-											KPrivate 
-										};
+  /** \addtogroup PGAS_funcs PGAS-Specific Methods and Types
+   *
+   * @{
+   */
 
-  /// Profile-related enumerator
+  /** @brief Different types of PGAS memory behavior for relaxed CDs.
+   *
+   * Please see the CD semantics document at
+   * <http://lph.ece.utexas.edu/public/CDs> for a full description of
+   * PGAS semantics. In brief, because of the logging/tracking
+   * requirements of relaxed CDs, it is important to identify which
+   * memory accesses may be for communication between relaxed CDs
+   * vs. memory accesses that are private (or temporarily privatized)
+   * within this CD. 
+   *
+   */
+  enum PGASUsageT {
+    kSharedVar = 0,      //!< Definitely shared for actual communication
+    kPotentiallyShared, //!< Perhaps used for communication by this
+			//!< CD, essentially equivalent to kShared for CDs.
+    kPrivatized,     //!< Shared in general, but not used for any
+		      //!< communication during this CD.
+    kPrivate          //!< Entirely private to this CD.
+  };
+
+  /** @} */ // end PGAS_funcs ===========================================
+
+
+
+
+
+  /** \addtogroup profiler-related Profiler-related Methods and Types
+   *
+   * @{
+   */
+
+  /** @brief Profile-related enumerator
+   *
+   */
   enum ProfileType      { LOOP_COUNT, 
                           EXEC_CYCLE, 
                           PRV_COPY_DATA, 
@@ -319,15 +387,16 @@ namespace cd {
                           SYSTEM_BIT_VECTOR, 
                           MAX_PROFILE_DATA };
 
+  /** @brief Profile format
+   *
+   */
   enum ProfileFormat    { PRV, 
                           REC, 
                           BODY, 
                           MAX_FORMAT };
 
-  enum PrvMediumT { kMemory=0,
-                    kHDD,
-                    kSSD,
-                    kPFS};
+  /** @} */ // end profiler-related group ===========================================
+
 
 #ifdef comm_log
   //SZ
