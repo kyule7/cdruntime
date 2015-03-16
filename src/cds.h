@@ -55,7 +55,8 @@
  * - \ref cd_event_funcs
  * - \ref cd_defs
  *
- * - \ref sec_examples
+ * - \ref sec_example_spmv
+ * - \ref sec_example_lulesh
  *
  * \note  This research was, in part, funded by the U.S. Government
  *  with partial support from the Department of Energy under Awards
@@ -65,15 +66,24 @@
  *  expressed or implied, of the U.S. Government. 
  *
  * \example spmv.cc
+ * \example lulesh.cc
  */
 
-/** \page examples_page Examples
+/** \page examples_page_spmv CD Example Page 1 (SpMV)
  *
- * \section sec_examples Examples
- * \subsection example_spmv SpMV Example
+ * \section sec_example_spmv CD Example 1 - SpMV
+ * \subsection example_spmv Sparse Matrix Vector Multiplication
  *
- * \include examples/spmv.cc
+ * \include examples_for_doc/spmv.cc
  *
  */
 
+/** \page examples_page_lulesh CD Example Page 2 (LULESH)
+ *
+ * \section sec_example_lulesh CD Example 2 - LULESH
+ * \subsection example_lulesh Livermore Unstructured Lagrangian Explicit Shock Hydrodynamics
+ *
+ * \include examples_for_doc/lulesh.cc
+ *
+ */
 

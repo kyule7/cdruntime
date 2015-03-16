@@ -179,8 +179,9 @@ class cd::CDHandle {
 
    ~CDHandle(); 
 
-  /** \addtogroup cd_hierarchy 
+  /** \addtogroup cd_hierarchy How to create CD hierarchy
    *
+   *  This Module is about functions and types to create CD hierarchy in the application.
    * @{
    */
 
@@ -215,6 +216,41 @@ class cd::CDHandle {
                                      //!< (kOK on success and kError on failure) 
                                      //!< no error value returned if error=0.
                      );
+
+   /**
+    * @brief Collective Create
+    * 
+    * Creates a new CD as a child of the current CD. The new CD does
+    * not begin until CDHandle::Begin() is called explicitly.
+    * 
+    * This version of Create() is intended to be called by all
+    * tasks that will be contained in the new child CD. It functions as
+    * a collective operation in a way that is analogous to
+    * MPI_comm_split, but only those tasks that are contained in the
+    * new child synchronize with one another.
+    *
+    * @return Returns a pointer to the handle of the newly created
+    * child CD; returns 0 on an error.
+    *
+    */
+    CDHandle* Create(uint32_t  numchildren, //!< [in] The total number of tasks that are collectively creating
+                                     	      //!< the child numbered "color"; the collective waits for this number
+		                                        //!< of tasks to arrive before creating the child
+                     const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
+                                		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
+                     CDType cd_type=kStrict, //!< [in] Strict or relaxed
+                     uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
+                                          		   //!< should be able to recover from that error type.
+                     uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
+                                                //!< should be able to recover from that error type.
+
+                     CDErrT *error=0 //!< [in,out] Pointer for error return value 
+                                     //!< (kOK on success and kError on failure) 
+                                     //!< no error value returned if error=0.
+                     );
+
+
+
   
    /**
     * @brief Collective Create
@@ -248,37 +284,7 @@ class cd::CDHandle {
                                      //!< (kOK on success and kError on failure) 
                                      //!< no error value returned if error=0.
                      );
-   /**
-    * @brief Collective Create
-    * 
-    * Creates a new CD as a child of the current CD. The new CD does
-    * not begin until CDHandle::Begin() is called explicitly.
-    * 
-    * This version of Create() is intended to be called by all
-    * tasks that will be contained in the new child CD. It functions as
-    * a collective operation in a way that is analogous to
-    * MPI_comm_split, but only those tasks that are contained in the
-    * new child synchronize with one another.
-    *
-    * @return Returns a pointer to the handle of the newly created
-    * child CD; returns 0 on an error.
-    *
-    */
-    CDHandle* Create(uint32_t  numchildren, //!< [in] The total number of tasks that are collectively creating
-                                     	      //!< the child numbered "color"; the collective waits for this number
-		                                        //!< of tasks to arrive before creating the child
-                     const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
-                                		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
-                     CDType cd_type=kStrict, //!< [in] Strict or relaxed
-                     uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
-                                          		   //!< should be able to recover from that error type.
-                     uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
-                                                //!< should be able to recover from that error type.
 
-                     CDErrT *error=0 //!< [in,out] Pointer for error return value 
-                                     //!< (kOK on success and kError on failure) 
-                                     //!< no error value returned if error=0.
-                     );
  
    /**
     * @brief Collective Create and Begin
