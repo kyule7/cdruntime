@@ -34,6 +34,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 #ifndef _UTIL_H 
 #define _UTIL_H
+
+/**
+ * @file util.h
+ * @author Jinsuk Chung, Kyushick Lee
+ * @date March 2015
+ *
+ * \brief Utilities for CD runtime
+ *
+ */
 #include "cd_global.h"
 #include "cd_handle.h"
 #include "cd_id.h"
@@ -51,24 +60,44 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 
 namespace cd {
-
-
+/** \addtogroup utilities Utilities for CD runtime
+ *
+ *@{
+ *
+ * @brief Read time at a point of time
+ *
+ */ 
+static __inline__ 
+uint64_t rdtsc(void)
+{
+  unsigned high, low;
+  __asm__ __volatile__ ("rdtsc" : "=a"(low), "=d"(high));
+  return ((uint64_t)low) | (((uint64_t)high) << 32);
+}
 
 class Util {
 public:
 
-static const char* GetBaseFilePath()
+/** 
+ * @brief Generate unique name to write to filesystem.
+ *
+ * FIXME This should return appropriate path depending on configuration 
+ * and perhaps each node may have different path to store CD related files
+ */
+static const char* GetBaseFilePath(void)
 {
-  //FIXME This should return appropriate path depending on configuration 
-  // and perhaps each node may have different path to store CD related files
   return "./"; 
 }
 
-// This generates a unique file name that will be used for preservation. 
-// Per CD must be different, so we can refer to CDID and 
-// also HEX address of the pointer we are preserving. 
-// -> This might not be a good thing when we recover actually the stack content can be different... 
-// is it? or is it not?  let's assume it does...
+/** 
+ * @brief Generate unique name to write to filesystem.
+ *
+ * This generates a unique file name that will be used for preservation. 
+ * Per CD must be different, so we can refer to CDID and 
+ * also HEX address of the pointer we are preserving. 
+ * -> This might not be a good thing when we recover actually the stack content can be different... 
+ * is it? or is it not?  let's assume it does...
+ */ 
 static std::string GetUniqueCDFileName(const CDID &cd_id, const char *basepath, const char *data_name) 
 {
   std::string base(basepath);
@@ -80,7 +109,10 @@ static std::string GetUniqueCDFileName(const CDID &cd_id, const char *basepath, 
   return filename.str();
 }
 
-// PFS
+/** 
+ * @brief PFS-related
+ *
+ */ 
 static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, const char* data_name, const PrvMediumT preservationMedium )
 {  
   std::string base(basepath);
@@ -101,50 +133,47 @@ static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, 
   return filename.str();
 }
 
-
-
-static uint64_t GetCurrentTaskID()
-{
-  // STUB
-
-  return 0;
-}
-
+/** 
+ * @brief Get process ID of current task.
+ *
+ */
 static pid_t GetCurrentProcessID()
 {
   //FIXME maybe it is the same task id 
   return getpid();	
 }
 
+/** 
+ * @brief Get Domain ID of current task in the CD.
+ *
+ */
 static uint64_t GetCurrentDomainID()
 {
   //STUB
   return 0;
 }
 
-static uint64_t GetCurrentNodeID()
-{
 
-  //STUB 
-  return 0;
-
-}
-
+/** 
+ * @brief Generate object ID for CD object
+ *
+ *
+ * The policy for Generating CDID could be different . 
+ * But this should be unique
+ * FIXME for multithreaded version this is not safe 
+ * Assume we call this function one time, so we will have atomically increasing counter and this will be local to a process. 
+ * Within a process it will just use one counter. Check whether this is enough or not.
+ * static uint64_t object_id=0;
+ *
+ */ 
 static uint64_t GenCDObjID() 
 {
-  // STUB
-  // The policy for Generating CDID could be different . 
-  // But this should be unique
-  //FIXME for multithreaded version this is not safe 
-  // Assume we call this function one time, so we will have atomically increasing counter and this will be local to a process. 
-  // Within a process it will just use one counter. Check whether this is enough or not.
-//  static uint64_t object_id=0;
   return gen_object_id++;
 }
 
 };
 
-//uint64_t Util::gen_object_id_=0;
+/** @} */ // End group utilities
 
 } // namespace cd ends
 

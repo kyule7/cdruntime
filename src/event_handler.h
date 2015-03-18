@@ -38,7 +38,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 /**
  * @file event_handler.h
- * @author Kyushick Lee, Song Zhang, Seong-Lyong Gong, Ali Fakhrzadehgan, Jinsuk Chung, Mattan Erez
+ * @author Kyushick Lee
  * @date March 2015
  *
  * @brief Containment Domains API v0.2 (C++)

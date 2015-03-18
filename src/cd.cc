@@ -34,22 +34,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd.h"
-#include "cd_handle.h"
-#include "cd_id.h"
-//#include "data_handle.h"
-#include "cd_entry.h"
 #include "cd_path.h"
-#include "event_handler.h"
-#include <stdexcept>
-#include <typeinfo>
-#include <csetjmp>
 
 using namespace cd;
 using namespace std;
 
-//#ifdef comm_log
-//#include "cd_path.h"
-//#endif
 
 int iterator_entry_count=0;
 uint64_t cd::gen_object_id=0;
@@ -61,7 +50,7 @@ std::map<ENTRY_TAG_T, CommInfo> CD::entry_request_req_;
 //std::map<ENTRY_TAG_T, CommInfo> CD::entry_send_req_;
 std::map<ENTRY_TAG_T, CommInfo> CD::entry_recv_req_;
 //std::map<ENTRY_TAG_T, CommInfo> CD::entry_search_req_;
-std::vector<EventHandler *> CD::cd_event_;
+std::list<EventHandler *> CD::cd_event_;
 
 bool CD::need_reexec = false;
 uint32_t CD::reexec_level = 0;
@@ -2125,14 +2114,32 @@ CDErrT CD::Assert(bool test)
 {
 
   if(test == false) {
+    SetMailBox(kErrorOccurred);
+
+  }
+  PMPI_Barrier(color());
+  if(IsHead()) {
+    CheckMailBox();
+
+    if(task_size() > 1) {
+      PMPI_Barrier(color());
+    }
+  }
+  else{
+    if(task_size() > 1) {
+      PMPI_Barrier(color());
+    }
+    CheckMailBox();
+  }
+
     // SZ
     // FIXME: need to create a function to change:
     //        cd_exec_mode_ and stop all children 
     //        also change CommLog::comm_log_mode_
 
     //Restore the data  (for now just do only this no other options for recovery)
-    recoverObj_->Recover(this); 
-  }
+//    recoverObj_->Recover(this); 
+  
 
   return CDErrT::kOK;
 }
@@ -3087,7 +3094,7 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, int idx)
 
 
 #if 1
-CDErrT CD::SetMailBox(CDEventT &event)
+CDErrT CD::SetMailBox(const CDEventT &event)
 {
   dbg << "\n\n=================== Set Mail Box Start ==========================\n" << endl;
   dbg << "\nSetMailBox " << myTaskID << ", event : " << event2str(event) << ", Is it Head? "<< IsHead() <<endl;
@@ -3165,7 +3172,7 @@ CDErrT CD::SetMailBox(CDEventT &event)
   return static_cast<CDErrT>(ret);
 }
 
-CD::CDInternalErrT CD::RemoteSetMailBox(CD *curr_cd, CDEventT &event)
+CD::CDInternalErrT CD::RemoteSetMailBox(CD *curr_cd, const CDEventT &event)
 {
   dbg <<"\nCD::RemoteSetMailBox, event" << event2str(event) << " at " << curr_cd->GetCDName() << " " << curr_cd->GetNodeID() << endl;
   dbg.flush();
@@ -3203,7 +3210,7 @@ CD::CDInternalErrT CD::RemoteSetMailBox(CD *curr_cd, CDEventT &event)
 }
 
 
-CDErrT HeadCD::SetMailBox(CDEventT &event, int task_id)
+CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
 {
   dbg << "\n\n=================== Set Mail Box ("<<event2str(event)<<", "<<task_id<<") Start! myTaskID #"<< myTaskID << "==========================\n" << endl;
   dbg.flush();
@@ -3276,7 +3283,7 @@ CDErrT HeadCD::SetMailBox(CDEventT &event, int task_id)
       // head CD does not check mail box to invoke kAllRexecute for itself. 
       // Therefore, it locally register the event handler right away, 
       // and all the tasks including head task can reexecute after the CheckMailBox.
-      dbg << "\nEven though it calls SetMailBox("<<event2str(event)<<", "<<task_id<<"=="<<task_in_color()<<"), locally set/handle events\n"<<endl;
+      dbg << "\nEven though it calls SetMailBox( "<<event2str(event)<<", "<<task_id<<"=="<<task_in_color()<<" ), locally set/handle events\n"<<endl;
       CDInternalErrT cd_ret = LocalSetMailBox(this, event);
       ret = static_cast<CDErrT>(cd_ret);
     }
@@ -3288,7 +3295,7 @@ CDErrT HeadCD::SetMailBox(CDEventT &event, int task_id)
 }
 
 
-CDErrT HeadCD::SetMailBox(CDEventT &event)
+CDErrT HeadCD::SetMailBox(const CDEventT &event)
 {
   // If the task to set event is the head itself,
   // it does not increase pending counter and set event flag through RDMA,
@@ -3299,7 +3306,7 @@ CDErrT HeadCD::SetMailBox(CDEventT &event)
   // head CD does not check mail box to invoke kAllRexecute for itself. 
   // Therefore, it locally register the event handler right away, 
   // and all the tasks including head task can reexecute after the CheckMailBox.
-  dbg << "\n---------- HeadCD::SetMailBox(event), Event: "<< event2str(event) <<" at level #"<<level()<<"-------------\n" << endl;
+  dbg << "\n---------- HeadCD::SetMailBox( "<< event2str(event) <<" ) at level #"<<level()<<"-------------\n" << endl;
   dbg.flush();
   CDInternalErrT ret = kOK;
   CDHandle *curr_cdh = CDPath::GetCurrentCD();
@@ -3352,7 +3359,7 @@ CDErrT HeadCD::SetMailBox(CDEventT &event)
   return static_cast<CDErrT>(ret);
 }
 
-CD::CDInternalErrT HeadCD::LocalSetMailBox(HeadCD *curr_cd, CDEventT &event)
+CD::CDInternalErrT HeadCD::LocalSetMailBox(HeadCD *curr_cd, const CDEventT &event)
 {
   dbg << "HeadCD::LocalSetMailBox Event : " << event2str(event) << endl;
   dbg.flush();
@@ -3828,11 +3835,11 @@ CD::CDInternalErrT CD::InvokeErrorHandler(void)
 
   while(!cd_event_.empty()) {
     dbg << "\n\n==============================\ncd event size " << cd_event_.size() << endl;
-    EventHandler *cd_event_handler = cd_event_.back();
+    EventHandler *cd_event_handler = cd_event_.front();
     cd_event_handler->HandleEvent();
 //    delete cd_event_handler;
     dbg << "before pop #" << cd_event_.size() << endl;
-    cd_event_.pop_back();
+    cd_event_.pop_front();
     dbg << "after pop #" << cd_event_.size() << endl << endl;
     if(cd_event_.empty()) break;
   }

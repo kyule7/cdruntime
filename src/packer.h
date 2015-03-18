@@ -36,17 +36,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _PACKER_H
 #define _PACKER_H
 
+/**
+ * @file packer.h
+ * @author Jinsuk Chung, Kyushick Lee
+ * @date March 2015
+ *
+ * \brief Packing object for serialization
+ *
+ */
 #include "cd_global.h"
 #include "cstdint"
-/*
-
-   We have two main section. One section is Table section, it is kind of header where it locates where the data is, and shows the length of data element.
-
-   [ENTIRE_SIZE][TABLE][DATA]
-   [ID][POS][LEN]
-   And the table look like the following.
-
- */
 
 // Packer packer;
 // packer.Add(ID_NAME, 100, name_ptr);
@@ -55,6 +54,26 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // char *serialized_data = packer.GetTotalData( total_data_size);
 // packer.Add(ID_SOMETHING, 10, something_ptr);
 // char *serialized_data = packer.GetTotalData( total_data_size);
+
+
+/** \addtogroup utilities Utilities for CD runtime
+ *
+ *@{
+ *
+ * @brief Packing object for serialization 
+ *
+ *
+ * Data layout
+ * [TableLength][ID][Length][Position][ID][Length][Position][ID][Length][Position]...[DATAChunk]
+ * 
+ * First 4 byte is the size of the chunk
+ * Next following is the ones that describes all data's positions.   
+ * ID is identifier
+ * Length is the length of the data in bytes, 
+ * and Position is the relative position starting from where consqutive data is located
+ *
+ */ 
+
 class cd::Packer  
 {
   public:
@@ -99,4 +118,7 @@ class cd::Packer
     char *ptr_table_;
     char *ptr_data_;
 };
+
+
+/** @} */ // End group utilities
 #endif

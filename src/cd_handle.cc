@@ -34,15 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_handle.h"
-#include "cd.h"
-#include "cd_entry.h"
-#include "cd_id.h"
-#include "util.h"
 #include "cd_path.h"
-#include <assert.h>
-#include <utility>
-#include <math.h>
-#include <fstream>
 
 using namespace cd;
 using namespace std;
@@ -745,7 +737,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   if(IsHead()) {
     if(node_id_.size() > 1) {
       PMPI_Barrier(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Complete (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      cout << "\n\n[Barrier] CDHandle::Complete 1 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     CheckMailBox();
 
@@ -754,7 +746,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
     CheckMailBox();
     if(node_id_.size() > 1) {
       PMPI_Barrier(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Complete - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      cout << "\n\n[Barrier] CDHandle::Complete 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
   }
 
@@ -764,7 +756,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   if(IsHead()) {
     if(node_id_.size() > 1) {
       PMPI_Barrier(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Complete (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      cout << "\n\n[Barrier] CDHandle::Complete 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     CheckMailBox();
 
@@ -773,12 +765,12 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
     CheckMailBox();
     if(node_id_.size() > 1) {
       PMPI_Barrier(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Complete - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      cout << "\n\n[Barrier] CDHandle::Complete 2 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
   }
   if(node_id_.size() > 1) {
     PMPI_Barrier(node_id_.color());
-    cout << "\n\n[Barrier] CDHandle::Complete --- "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; 
+    cout << "\n\n[Barrier] CDHandle::Complete 3 --- "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; 
   }
 
   // Call internal Complete routine
@@ -1052,6 +1044,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
           case 5:
             break;
           case 6:
+//            event = CDEventT::kErrorOccurred;
             break;
           case 7:
             break;
@@ -1098,7 +1091,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
     if(node_id_.size() > 1) {
       PMPI_Barrier(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Detect (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      dbg << "\n\n[Barrier] CDHandle::Detect 1 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     SetMailBox(event);
 
@@ -1108,7 +1101,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     SetMailBox(event);
     if(node_id_.size() > 1) {
       PMPI_Barrier(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Detect - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
 
   }
@@ -1121,14 +1114,14 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     CheckMailBox();
     if(node_id_.size() > 1) {
       PMPI_Barrier(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Detect (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      cout << "\n\n[Barrier] CDHandle::Detect 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
   }
   else {
 
     if(node_id_.size() > 1) {
       PMPI_Barrier(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Detect - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      cout << "\n\n[Barrier] CDHandle::Detect 2 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     CheckMailBox();
 

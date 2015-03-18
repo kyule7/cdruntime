@@ -35,6 +35,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _DATA_HANDLE_H 
 #define _DATA_HANDLE_H
+
+/**
+ * @file data_handle.h
+ * @author Kyushick Lee
+ * @date March 2015
+ *
+ * \brief Data handle
+ *
+ * Description on data handle
+ */
+
 #include "cd_global.h"
 #include "node_id.h"
 #include "serializable.h"
@@ -53,7 +64,22 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 // FIXME neet to inherit serializable object and that will handle serilization complication.
 namespace cd {
-
+  /** \addtogroup cd_defs 
+   *
+   *
+   *@{
+   *
+   * @brief Information of data regarding preservation
+   *
+   * DataHandle can be copied by using = operator by default. Making of a copy of a handle is thus very easy. 
+   * This object needs to support serialization and deserialization 
+   * because runtime often times need to send this DataHandle object to remote node. 
+   * Before the DataHandle is sent over network, first it needs to be serializaed and then sent. 
+   * On the remote node, it needs to first figure out the object type, 
+   * and depending on the object type, it will create the object accordingly, and then deserialize. 
+   * 
+   * 
+   */ 
 class DataHandle : public Serializable {
   friend class CDEntry;
   friend std::ostream& operator<<(std::ostream& str, const DataHandle& dh);

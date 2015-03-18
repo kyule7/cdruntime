@@ -36,7 +36,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _CD_EVENT_H
 #define _CD_EVENT_H
-
+/**
+ * @file cd_event.h
+ * @author Jinsuk Chung, Kyushick Lee
+ * @date March 2015
+ *
+ */
 #define SIZE_EVENT_ARRAY 64  // allocate 32bit * 64 memory. If we need more we allocate additional 32bit * 64 
 // TODO This part should be carefully designed for better efficiency
 #include "cd_global.h"

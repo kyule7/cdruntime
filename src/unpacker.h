@@ -35,24 +35,32 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _UNPACKER_H
 #define _UNPACKER_H
-
+/**
+ * @file unpacker.h
+ * @author Jinsuk Chung, Kyushick Lee
+ * @date March 2015
+ *
+ * \brief Packing object for serialization
+ *
+ */
 #include "cd_global.h"
 
-/* 
 
-Jinsuk:
-Data layout
-[TableLength][ID][Length][Position][ID][Length][Position][ID][Length][Position]...[DATAChunk]
-
-First 4 byte is the size of the chunk
-Next following is the ones that describes all data's positions.   
-ID is identifier
-Length is the length of the data in bytes, 
-and Position is the relative position starting from where consqutive data is located
-
- */
-
-
+/** \addtogroup utilities Utilities for CD runtime
+ *
+ *@{
+ *
+ * @brief Unpacking data to reconstruct object 
+ * Data layout
+ * [TableLength][ID][Length][Position][ID][Length][Position][ID][Length][Position]...[DATAChunk]
+ * 
+ * First 4 byte is the size of the chunk
+ * Next following is the ones that describes all data's positions.   
+ * ID is identifier
+ * Length is the length of the data in bytes, 
+ * and Position is the relative position starting from where consqutive data is located
+ *
+ */ 
 class cd::Unpacker    
 {
   public:
@@ -90,7 +98,8 @@ class cd::Unpacker
 
 };
 
-
+/** @} */ // End group utilities
+ 
 
 
 #endif 

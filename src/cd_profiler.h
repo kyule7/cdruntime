@@ -35,6 +35,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _CD_PROFILER_H 
 #define _CD_PROFILER_H
+/**
+ * @file cd_profiler.h
+ * @author Kyushick Lee
+ * @date March 2015
+ *
+ * \brief Interface classes for profiling
+ *
+ * \TODO More descriptiong needed.
+ *
+ */
+
 #if _PROFILER
 
 #include "cd.h"

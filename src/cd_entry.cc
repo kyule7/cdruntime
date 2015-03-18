@@ -36,7 +36,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_entry.h"
 #include "cd_path.h"
 
-#include <cassert>
 using namespace cd;
 using namespace std;
 

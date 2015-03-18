@@ -35,18 +35,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _CD_ENTRY_H 
 #define _CD_ENTRY_H
+/**
+ * @file cd_entry.h
+ * @author Kyushick Lee, Song Zhang, Seong-Lyong Gong, Ali Fakhrzadehgan, Jinsuk Chung, Mattan Erez
+ * @date March 2015
+ *
+ * @brief Containment Domains API v0.2 (C++)
+ */
 #include "cd_global.h"
 #include "cd.h"
 #include "serializable.h"
 #include "data_handle.h"
 #include "util.h"
-#include <stdint.h>
-#include <string>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
-#include "unixlog.h"
 #include "event_handler.h"
+
 class cd::CDEntry : public cd::Serializable
 {
   friend class cd::CD;

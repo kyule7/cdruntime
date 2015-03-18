@@ -49,18 +49,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  */
 
-#include <stdint.h>
-#include <vector>
-#include <string>
-#include <array>
-#include <setjmp.h>
 #include <ucontext.h>
-#include <functional>
-
 #include "cd_global.h"
 #include "node_id.h"
 #include "sys_err_t.h"
-#include "cd_name_t.h"
 
 #if _PROFILER
 #include "cd_profiler.h"

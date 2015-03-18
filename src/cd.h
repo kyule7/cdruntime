@@ -247,7 +247,7 @@ class cd::CD : public cd::Serializable {
 
 
     
-    static std::vector<EventHandler *> cd_event_;
+    static std::list<EventHandler *> cd_event_;
 /*  
 09.23.2014 
 It is not complete yet. I am thinking of some way to implement like cd_advance semantic which should allow
@@ -485,8 +485,8 @@ update the preserved data.
     void DecPendingCounter(void);
   public:
     CDErrT CheckMailBox(void);
-    virtual CDErrT SetMailBox(CDEventT &event);
-    CDInternalErrT RemoteSetMailBox(CD *curr_cd, CDEventT &event);
+    virtual CDErrT SetMailBox(const CDEventT &event);
+    CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);
 
     void *SerializeRemoteEntryDir(uint32_t& len_in_byte);
     void DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
@@ -603,9 +603,9 @@ class cd::HeadCD : public cd::CD {
 //    CDInternalErrT ReadMailBox(void);
 
 
-    CDErrT SetMailBox(CDEventT &event, int task_id);
-    CDInternalErrT LocalSetMailBox(HeadCD *curr_cd, CDEventT &event);
-    virtual CDErrT SetMailBox(CDEventT &event);
+    CDErrT SetMailBox(const CDEventT &event, int task_id);
+    CDInternalErrT LocalSetMailBox(HeadCD *curr_cd, const CDEventT &event);
+    virtual CDErrT SetMailBox(const CDEventT &event);
 
     void *Serialize(uint32_t& len_in_bytes)
     {

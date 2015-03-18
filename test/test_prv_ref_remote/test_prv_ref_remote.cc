@@ -51,205 +51,232 @@ using namespace chrono;
 
 DebugBuf dbgApp;
 CDErrT err;
-int  np = 0;
-int  mr = 0;
-
+int  numProcs = 0;
+int  myRank = 0;
+std::map<int*, string> arrayName;
 #define NUM_TEST_BLOCKS 10
 #define SIZE_BLOCK (25*1024)  //100,000kByte
-
+#define ARRAY_A_SIZE 32
+#define ARRAY_B_SIZE 8
+#define ARRAY_C_SIZE 8
+#define ARRAY_D_SIZE 16
+#define ARRAY_E_SIZE 16
+#define ARRAY_F_SIZE 32
+#define ARRAY_G_SIZE 16
 static __inline__ long long getCounter(void)
 {
-  unsigned a, d; 
-  asm volatile("rdtsc" : "=a" (a), "=d" (d)); 
-  return ((long long)a) | (((long long)d) << 32); 
+  unsigned arrayA, arrayD; 
+  asm volatile("rdtsc" : "=arrayA" (arrayA), "=arrayD" (arrayD)); 
+  return ((long long)arrayA) | (((long long)arrayD) << 32); 
 }
 
+void DecomposeData(int *array, int length, int rank)
+{
+  for(int i=0; i<length; i++) {
+    array[i] = (i + rank) % length;
+  }
+}
+
+void PrintData(int *array, int length)
+{
+  if(arrayName.find(array) != arrayName.end())
+    dbgApp <<"Print Data "<< arrayName[array] << ", Size: " << length << endl;
+
+  for(int i=0; i<length; i++) {
+    dbgApp << array[i] << " ";
+  }
+  dbgApp <<"\n=========================="<<endl;
+}
+
+void CorruptData(int *array, int length)
+{
+  for(int i=0; i<length; i++) {
+    array[i] = (-20 + i);
+  }
+}
+
+bool CheckArray(int *array, int length)
+{
+  for(int i=0; i<length; i++) {
+    if(array[i] < 0) {
+      return false;
+    }
+  }
+  return true;
+}
 
 // Test basic preservation scheme.
-int test_preservation_via_ref_remote()
+int TestPreservationViaRefRemote(void)
 {
-  int a[3]= {3,5,0};
-  int b[8]= {1,2,3,4,5,6,7,8};
-  int c[8]= {5,};
-  int d[16]= {9,8,7,6,5,4,3,2,1,};
+  int arrayA[ARRAY_A_SIZE] = {3,5,0,6};
+  int arrayB[ARRAY_B_SIZE] = {1,2,3,4,5,6,7,8};
+  int arrayC[ARRAY_C_SIZE] = {5,};
+  int arrayD[ARRAY_D_SIZE] = {9,8,7,6,5,4,3,2,1,};
+  arrayName[arrayA] = "arrayA";
+  arrayName[arrayB] = "arrayB";
+  arrayName[arrayC] = "arrayC";
+  arrayName[arrayD] = "arrayD";
   int test_results[8] = {0,};
   int test_result = 0;
   int num_reexecution = 0;
-  dbgApp << "\nTest Preservation via Reference (remote) -----------------------\n" << endl;
-  dbgApp << "CD Create\n" << endl;
 
-	CDHandle* root = CD_Init(np, mr);
+	CDHandle *root = CD_Init(numProcs, myRank);
   CD_Begin(root); 
 
-  dbgApp <<"CD Begin.........lol\n" << endl;
+  dbgApp << "Root CD Begin...\n" << endl;
+  root->Preserve(arrayA, sizeof(arrayA), kCopy, "a_root");
+  root->Preserve(arrayB, sizeof(arrayB), kCopy, "b_root");
 
   dbgApp << "CD Preserving..\n" << endl;
   CDHandle* child_lv1=root->Create(CDPath::GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
+  dbgApp << "Root Creates Level 1 CD. # of children CDs = " << LV1 << "\n" << endl;
+
   CD_Begin(child_lv1);
-  dbgApp << "child level 1-------------------------------------\n" << endl;
-  dbgApp << "Preserve via copy for array a and array b\n" << endl;
-  switch(mr) {
-    case 0 : a[2] = 10;
-    case 1 : a[2] = 11;
-    case 2 : a[2] = 12;
-    case 3 : a[2] = 13;
-    case 4 : a[2] = 14;
-    case 5 : a[2] = 15;
-    case 6 : a[2] = 16;
-    case 7 : a[2] = 17;
-    default : a[2] = 0;
+  dbgApp << "\t\tLevel 1 CD Begin...\n" << endl;
+
+  DecomposeData(arrayA, sizeof(arrayA), myRank);
+
+  int arrayE[ARRAY_E_SIZE] = {1,2,3,4,5,6,7,8};
+  DecomposeData(arrayE, sizeof(arrayE), myRank);
+  arrayName[arrayE] = "arrayE";
+
+  child_lv1->Preserve(arrayA, sizeof(arrayA), kCopy | kShared, 
+                      (string("arrayA-")+to_string(myRank)).c_str()); // arrayA-rankID
+  child_lv1->Preserve(arrayB, sizeof(arrayB), kCopy | kShared, 
+                      (string("arrayB-")+to_string(myRank)).c_str()); // arrayB-rankID
+  child_lv1->Preserve(arrayE, sizeof(arrayE), kCopy | kShared, 
+                      (string("arrayE-")+to_string(myRank)).c_str()); // arrayE-rankID
+
+  dbgApp << "\t\tPreserve via copy: arrayA (Share), arrayB (Share), arrayE (Share)\n" << endl;
+
+
+  // Level 1 Body
+
+  // Corrupt array arrayA and arrayB
+//  if(num_reexecution = 0) {
+//    CorruptData(arrayA, ARRAY_A_SIZE);
+//    num_reexecution++;
+//  }
+//
+//  child_lv1->CDAssert(CheckArray(arrayA, sizeof(arrayA)));
+
+  int arrayF[ARRAY_F_SIZE] = {0,};
+  int arrayG[ARRAY_G_SIZE] = {0,};
+  arrayName[arrayF] = "arrayF";
+  arrayName[arrayG] = "arrayG";
+
+  dbgApp << "\nCheck Array Before Communication =============" << endl;
+  PrintData(arrayA, ARRAY_A_SIZE);
+  PrintData(arrayE, ARRAY_E_SIZE);
+  PrintData(arrayF, ARRAY_F_SIZE);
+  PrintData(arrayG, ARRAY_G_SIZE);
+  dbgApp << "=============================================" << endl;
+  dbgApp.flush();
+  MPI_Request arrayF_req;
+  MPI_Request arrayG_req;
+  if(myRank % 2 == 1) {
+    MPI_Send(arrayA, sizeof(arrayA), MPI_BYTE, (myRank+numProcs-1)%numProcs, 1, MPI_COMM_WORLD); // A3->F2
+    MPI_Send(arrayE, sizeof(arrayE), MPI_BYTE, (myRank+numProcs-2)%numProcs, 0, MPI_COMM_WORLD); // E3->G1
+    MPI_Irecv(arrayF, sizeof(arrayF), MPI_BYTE, (myRank+1)%numProcs, 1, MPI_COMM_WORLD, &arrayF_req); //F3<-A4
+    MPI_Irecv(arrayG, sizeof(arrayG), MPI_BYTE, (myRank+2)%numProcs, 0, MPI_COMM_WORLD, &arrayG_req); //G3<-E5
   }
+  else {
+    MPI_Irecv(arrayF, sizeof(arrayF), MPI_BYTE, (myRank+1)%numProcs, 1, MPI_COMM_WORLD, &arrayF_req);
+    MPI_Irecv(arrayG, sizeof(arrayG), MPI_BYTE, (myRank+2)%numProcs, 0, MPI_COMM_WORLD, &arrayG_req);
+    MPI_Send(arrayA, sizeof(arrayA), MPI_BYTE, (myRank+numProcs-1)%numProcs, 1, MPI_COMM_WORLD);
+    MPI_Send(arrayE, sizeof(arrayE), MPI_BYTE, (myRank+numProcs-2)%numProcs, 0, MPI_COMM_WORLD);
+  }
+  MPI_Wait(&arrayF_req, MPI_STATUS_IGNORE);
+  MPI_Wait(&arrayG_req, MPI_STATUS_IGNORE);
 
-  child_lv1->Preserve(a, sizeof(a), kCopy | kShared, (string("a-")+to_string(mr)).c_str());
-  child_lv1->Preserve(b, sizeof(b), kCopy | kShared, (string("b-")+to_string(mr)).c_str());
-//  child_lv1->Preserve(a, sizeof(a), kCopy, "a");
-//  child_lv1->Preserve(b, sizeof(b), kCopy, "b");
-
-  // Corrupt array a and b
-  a[0] = 123;
-  a[1] = 456;
-  a[2] = 789;
-  b[0] = 9;
-  b[1] = 8;
-  b[2] = 7;
-  b[3] = 6;
-  b[4] = 5;
-  b[5] = 4;
-  b[6] = 3;
-  b[7] = 2;
-
-  int a_from_2[8]= {1,2,3,4,5,6,7,8};
-
-  if(mr == 0) a_from_2[2] = 11;
-  if(mr == 1) a_from_2[2] = 12;
-  if(mr == 2) a_from_2[2] = 13;
-  if(mr == 3) a_from_2[2] = 14;
-  if(mr == 4) a_from_2[2] = 15;
-  if(mr == 5) a_from_2[2] = 16;
-  if(mr == 6) a_from_2[2] = 17;
-  if(mr == 7) a_from_2[2] = 10;
+  dbgApp << "\nCheck Array After Communication =============" << endl; dbgApp.flush();
+  PrintData(arrayA, ARRAY_A_SIZE);
+  PrintData(arrayE, ARRAY_E_SIZE);
+  PrintData(arrayF, ARRAY_F_SIZE);
+  PrintData(arrayG, ARRAY_G_SIZE);
+  dbgApp << "=============================================" << endl;
+  dbgApp.flush();
 
   CDHandle* child_lv2=child_lv1->Create(CDPath::GetCurrentCD()->GetNodeID(), LV2, "CD2", kStrict, 0, 0, &err);
+  dbgApp << "\t\tCD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
 
   CD_Begin(child_lv2);
+  dbgApp << "\t\t\t\tLevel 2 CD Begin...\n" << endl;
+  dbgApp.flush();
 
-  dbgApp << "child level 2-------------------------------------\n" << endl;
-  dbg << "\n\n\nnode id check : "<< CDPath::GetCurrentCD()->node_id() << "\n\n\n" << endl;
-
-  child_lv2->Preserve(a, sizeof(a), kRef, "a_lv2", (string("a-")+to_string(mr)).c_str()); // local
-  child_lv2->Preserve(b, sizeof(b), kRef, "b_lv2", (string("b-")+to_string(mr)).c_str()); // local
-  if(mr == 0) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-1"); // remote
-  if(mr == 1) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-2"); // remote
-  if(mr == 2) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-3"); // remote
-  if(mr == 3) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-4"); // remote
-  if(mr == 4) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-5"); // remote
-  if(mr == 5) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-6"); // remote
-  if(mr == 6) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-7"); // remote
-  if(mr == 7) child_lv2->Preserve(a_from_2, sizeof(a_from_2), kRef, "b_remote_lv2", "b-0"); // remote
-
-//  getchar();
-  //child->Preserve((char *)&b,8* sizeof(int));
-  dbgApp << "sizeof a : \t" << sizeof(a) << endl; //getchar();
-  dbgApp << "sizeof b : \t" << sizeof(b) << endl; //getchar();
-
-  dbgApp << "Before Modify Current value of a[0]="<< a[0] << "a[1]=" << a[1] << endl;
-  dbgApp << "Before Modify Current value of b[0]="<< b[0] << "b[1]=" << b[1] << endl;
+//  child_lv2->Preserve(arrayA, sizeof(arrayA), kRef, 
+//                      "a_lv2", (string("arrayA-")+to_string(myRank)).c_str()); // local
+  child_lv2->Preserve(arrayB, sizeof(arrayB), kRef, 
+                      "b_lv2", (string("arrayB-")+to_string(myRank)).c_str()); // local
+  child_lv2->Preserve(arrayF, sizeof(arrayF), kRef, 
+                      "b_remote_lv2", 
+                      (string("arrayA-")+to_string((myRank+1) % numProcs)).c_str()); // remote
+  child_lv2->Preserve(arrayG, sizeof(arrayG), kRef, 
+                      "b_remote_lv2", 
+                      (string("arrayE-")+to_string((myRank+1) % numProcs)).c_str()); // remote
+  child_lv2->Preserve(arrayC, sizeof(arrayC), kCopy, "arrayC");
+  dbgApp << "\t\t\t\tPreserve via ref : arrayA (local), arrayB (local), arrayF (remote), arrayG (remote)" << endl;
+  dbgApp << "\t\t\t\tPreserve via copy: arrayC" << endl;
+  dbgApp.flush();
 
 
-  a[0] =2;
-  b[0] =5;
-  dbgApp << "After Modify Current value of a[0]=" << a[0] <<endl;
-  dbgApp << "After Modify Current value of b[0]=" << b[0] <<endl;
-
-  if( num_reexecution == 0 ) {
-    cout <<"\nis now First error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n" << endl;
-    num_reexecution = 1;
-//	  child_lv2->CDAssert(false);
+  if(num_reexecution = 1) {
+    CorruptData(arrayE, ARRAY_E_SIZE);
+    num_reexecution++;
   }
-  else if( num_reexecution == 1) {
-    if( a[0] == 3 ) {
-      test_results[0] = 1;
-    }
-    if( a[1] == 0 ) {
-      test_results[1] = 1;
-    }
+  // Level 2 Body
 
-    if( b[0] == 1 ) {
-      test_results[2] = 1;
-    }
-    if( b[1] == 0 ) {
-      test_results[3] = 1;
-    }
-  }
-
-  dbgApp << "\n\n--------------Corruption for c begins ----------------------------\n\n" << endl;
-  // this point is to test whether execution mode becomes kExecution from this point, 
-  // because before this preservation is called it should be in kReexecution mode
-  child_lv2->Preserve(c, sizeof(c), kCopy, "c");
-//  dbgApp << "sizeof c : " << sizeof(c) << endl; //getchar();
-
-//  if( num_reexecution == 2)  {
-//    if( c[0] == 5 ) {
-//      test_results[4] = 1;
-//    }
-//  }
-
-  // corrupt c[0]
-  dbgApp << "Before modifying current value of c[0] : " << c[0] << endl;
-  c[0] =77;
-  dbgApp << "After modifying current value of c[0] : "<< c[0] << endl;
-
-  if(num_reexecution == 1) {
-    dbg << "\nis now Second error..\n <<<<<<<<<<< Error is detected >>>>>>>>>>>>>\n\n" << endl;
-    num_reexecution = 2;
-    child_lv2->CDAssert(false);
-  }
-
-  dbgApp << "CD Complete\n" << endl;
-  //  root->Complete();
+  child_lv2->CDAssert(CheckArray(arrayE, sizeof(arrayE)));
 
   CDHandle* child_lv3=child_lv2->Create(CDPath::GetCurrentCD()->GetNodeID(), LV3, "CD3", kStrict, 0, 0, &err);
+  dbgApp << "\t\t\t\tCD2 Creates Level 3 CD. # of children CDs = " << LV3 << "\n" << endl;
+
   CD_Begin(child_lv3);
-  dbgApp << "child level 3-------------------------------------\n" << endl;
-  child_lv3->Preserve(a, sizeof(a), kRef, "child_a", (string("a")+to_string(mr)).c_str());
-  child_lv3->Preserve(b, sizeof(b), kRef, "child_b", (string("b")+to_string(mr)).c_str());
-  child_lv3->Preserve(c, sizeof(b), kRef, "child_c", "c");
-  child_lv3->Preserve(d, sizeof(d), kCopy, "d");
+  dbgApp << "\t\t\t\t\t\tLevel 3 CD Begin...\n" << endl;
+  dbgApp.flush();
+
+  child_lv3->Preserve(arrayA, sizeof(arrayA), kRef, "child_a", (string("arrayA")+to_string(myRank)).c_str()); // local
+  child_lv3->Preserve(arrayB, sizeof(arrayB), kRef, "child_b", (string("arrayB")+to_string(myRank)).c_str()); // local
+  child_lv3->Preserve(arrayC, sizeof(arrayC), kRef, "child_c", "arrayC");
+  child_lv3->Preserve(arrayD, sizeof(arrayD), kCopy, "arrayD");
+
+
+  // Level 3 Body
+
 
   child_lv3->Detect();
 
   CD_Complete(child_lv3);
+  dbgApp << "\t\t\t\t\t\tLevel 3 CD Complete...\n" << endl;
   child_lv3->Destroy();
+  dbgApp << "\t\t\t\t\t\tLevel 3 CD Destroyed...\n" << endl;
 
   // Detect Error here
   child_lv2->Detect();
 
   CD_Complete(child_lv2);
+  dbgApp << "\t\t\t\tLevel 2 CD Complete...\n" << endl;
   child_lv2->Destroy();
+  dbgApp << "\t\t\t\tLevel 2 CD Destroyed...\n" << endl;
 
   // Detect Error here
   child_lv1->Detect();
 
   CD_Complete(child_lv1);
+  dbgApp << "\t\tLevel 1 CD Complete...\n" << endl;
   child_lv1->Destroy();
+  dbgApp << "\t\tLevel 1 CD Destroyed...\n" << endl;
 
   // Detect Error here
   root->Detect();
 
   CD_Complete(root);
-
-  dbgApp <<"CD Destroy\n" << endl;
+  dbgApp << "Root CD Complete...\n" << endl;
   CD_Finalize(&dbgApp);
-
-
+  dbgApp << "\t\tRoot CD Destroyed (Finalized) ...\n" << endl;
+  dbgApp << "\n==== TestPreservationViaRefRemote Done ====\n" << endl; 
+  
   // check the test result   
-  for( int i = 0; i < 5; i++ ) {
-    dbgApp << "test_result[" << i << "] = " << test_results[i] << endl;
-    if( test_results[i] != 1 ) {
-      test_result = -1;
-    }
-  }
-  if( test_result == -1 ) return kError;
   return kOK; //
 }
 
@@ -259,21 +286,20 @@ int test_preservation_via_ref_remote()
 
 int main(int argc, char* argv[])
 {
-  int nprocs, myrank;
   MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD,  &nprocs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-  np = nprocs;
-  mr = myrank;
+  MPI_Comm_size(MPI_COMM_WORLD,  &numProcs);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   int ret=0;
- 
- 
- 
-  cout << "\ntest_preservation_via_ref_remote() \n\n" << endl; 
-  ret = test_preservation_via_ref_remote();
-  if( ret == kError ) cout << "test preservation_via_ref_remote FAILED\n" << endl;
-  else cout << "test preservation_via_ref_remote PASSED\n" << endl;
- 
+  
+  dbgApp.open((string("./output/output_app_")+to_string(myRank)).c_str());
+  dbgApp << "\n==== TestPreservationViaRefRemote ====\n" << endl; 
+  ret = TestPreservationViaRefRemote();
+  if( ret == kError ) 
+    dbgApp << "Test Preservation via Reference (remote) FAILED\n" << endl;
+  else 
+    dbgApp << "Test Preservation via Reference (remote) PASSED\n" << endl;
+  dbgApp.flush();
+  dbgApp.close(); 
 
   MPI_Finalize();
   return 0;

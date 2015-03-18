@@ -86,4 +86,8 @@
  * \include examples_for_doc/lulesh.cc
  *
  */
-
+ 
+/** @file cds.h
+ *
+ *  \brief Top-level header file that will be included by users.
+ */

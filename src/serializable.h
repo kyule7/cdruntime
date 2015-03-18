@@ -35,6 +35,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #ifndef _SERIALIZABLE_H
 #define _SERIALIZABLE_H
+/**
+ * @file serializable.h
+ * @author Jinsuk Chung, Kyushick Lee
+ * @date March 2015
+ *
+ * \brief Abstract base class for serialization.
+ * Other classes which need serialization will inherits this class.
+ *
+ */
+
 #include "cd_global.h"
 
 class cd::Serializable
