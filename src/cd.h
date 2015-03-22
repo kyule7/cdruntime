@@ -303,7 +303,7 @@ update the preserved data.
 #endif
 
     // PFS
-    CD_Parallel_IO_Manager *Par_IO_Man;
+    PFSHandle *pfs_handler_;
 
   public:
     CD();

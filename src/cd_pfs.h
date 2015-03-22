@@ -10,7 +10,7 @@
 #include "cd.h"
 
 namespace cd {
-class CD_Parallel_IO_Manager {
+class PFSHandle {
 	friend class cd::CD;
 private:
 	CD *ptr_cd_;
@@ -31,11 +31,11 @@ private:
 	int sharing_group_id_;
 
 public:
-	CD_Parallel_IO_Manager( CD* my_cd );
-	CD_Parallel_IO_Manager( CD* my_cd, const char* file_path );
-	CD_Parallel_IO_Manager( CD* my_cd, const char* file_path , uint64_t chunk_size );
-	CD_Parallel_IO_Manager( const CD_Parallel_IO_Manager& that ) ;
-	~CD_Parallel_IO_Manager( void ) 
+	PFSHandle( CD* my_cd );
+	PFSHandle( CD* my_cd, const char* file_path );
+	PFSHandle( CD* my_cd, const char* file_path , uint64_t chunk_size );
+	PFSHandle( const PFSHandle& that ) ;
+	~PFSHandle( void ) 
   { 
   	Close_and_Delete_File(); 
   	MPI_Group_free( &PFS_parallel_file_group_ );
@@ -48,7 +48,7 @@ public:
 private:
 	int Open_File( void );
 	int Close_and_Delete_File( void );
-	void Copy( const CD_Parallel_IO_Manager& that );
+	void Copy( const PFSHandle& that );
 	int Splitter( void );
 	void Init( const char* file_path );
 };
