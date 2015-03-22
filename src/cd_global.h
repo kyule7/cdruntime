@@ -570,7 +570,7 @@ namespace cd {
   *  0 if CD runtime is not yet initialized or because of a CD
   *  implementation bug.
   */
-  extern inline CDHandle *GetCurrentCD(void);
+  CDHandle *GetCurrentCD(void);
 
  /**
   * @brief Accessor function to root CD of the application.
@@ -578,33 +578,17 @@ namespace cd {
   * 0 if CD runtime is not yet initialized or because of a CD
   * implementation bug.
   */
-  extern inline CDHandle *GetRootCD(void);
+  CDHandle *GetRootCD(void);
 
  /** @brief Accessor function to a CDHandle at a specific level in CDPath 
   *  @return Pointer to CDHandle at a level
   */
-  extern inline CDHandle *GetParentCD(void);
+  CDHandle *GetParentCD(void);
 
  /** @brief Accessor function to a CDHandle at a specific level in CDPath 
   *  @return Pointer to CDHandle at a level
   */
-  extern inline CDHandle *GetParentCD(int current_level);
-
- /** @brief Accessor function to a CDHandle at a specific level in CDPath 
-  *  @return Pointer to CDHandle at a level
-  */
-  extern inline CDHandle *GetCDLevel(int level);
-
- /** @brief Accessor function to a CDHandle at the lowest level where there are more than one task. 
-  *   This is normally used internally.
-  *  @return Pointer to CDHandle that has multiple tasks in it.
-  */
-  extern inline CDHandle *GetCoarseCD(CDHandle *curr_cdh);
-
-  /** @brief Accessor function to CDPath
-   *  @return returns a pointer to CDPath
-   */
-  extern inline CDPath   *GetCDPath(void);
+  CDHandle *GetParentCD(int current_level);
 
   /** @} */ // End cd_accessor_funcs group =====================================================
 

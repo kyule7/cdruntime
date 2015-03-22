@@ -115,10 +115,10 @@ class MemErrInfo : public SysErrInfo {
 public:
   MemErrInfo(void) {}
   virtual ~MemErrInfo(void) {}
-  virtual uint64_t get_pa_start(void)=0; //!< Starting physical address 
-  virtual uint64_t get_va_start(void)=0; //!< Starting virtual address
-  virtual uint64_t get_length(void)=0;   //!< Length of affected access
-  virtual char    *get_data(void)=0;     //!< Data value read (erroneous)
+  virtual uint64_t get_pa_start(void){ return 0; } //!< Starting physical address 
+  virtual uint64_t get_va_start(void){ return 0; } //!< Starting virtual address
+  virtual uint64_t get_length(void){ return 0; }  //!< Length of affected access
+  virtual char    *get_data(void){ return 0; }    //!< Data value read (erroneous)
 };
 
 

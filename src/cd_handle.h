@@ -105,7 +105,7 @@ namespace cd {
  * accessible variable so that it can be accessed by
  * cd::GetCurrentCD() and cd::GetRootCD().
  */
-  CDHandle* CD_Init(int numTask, int myRank);
+  CDHandle* CD_Init(int numTask, int myTask);
   
 /** 
  * @brief Finalize the CD runtime.
@@ -619,10 +619,10 @@ class cd::CDHandle {
   /** @brief Register that this CD can recover from certain errors/failures
    *
    * This method serves two purposes:
-   * # It extends the specification of intent to recover provided in
-   *   Create(). 
-   * # It enables registering a customized recovery routine by
-   *   inheriting from the RecoverObject class.
+   *  It extends the specification of intent to recover provided in
+   *  Create(). 
+   *  It enables registering a customized recovery routine by
+   *  inheriting from the RecoverObject class.
    *
    * @return kOK on success.
    *

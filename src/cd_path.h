@@ -73,12 +73,26 @@ namespace cd {
  * It will be more convenient to use it with "using namespace cd::CDPath", and the usage for those methods will be the same as before.
  */
 class CDPath : public std::vector<CDHandle*> {
+  friend class cd::CD;
+  friend class cd::HeadCD;
+  friend class cd::CDHandle;
+  friend class cd::CDEntry;
+  friend class cd::HandleAllReexecute;
+  friend class cd::HandleEntrySearch;
+  friend class cd::HandleEntrySend;
+  friend CDHandle *cd::GetCurrentCD(void);
+  friend CDHandle *cd::GetRootCD(void);
+  friend CDHandle *cd::GetParentCD(void);
+  friend CDHandle *cd::GetParentCD(int current_level);
+  friend CDHandle *cd::CD_Init(int numTask, int myTask);
+  friend void      cd::CD_Finalize(DebugBuf *debugBuf);
+
 private:
   static CDPath *uniquePath_;
 private:
   CDPath(void) {}
 
-public:
+//public:
  /** @brief Get CDHandle of Root CD 
   *
   * \return Pointer to CDHandle of root

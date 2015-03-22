@@ -77,11 +77,11 @@ int cd::myTaskID = 0;
 namespace cd {
 // Global functions -------------------------------------------------------
 /// KL
-CDHandle* CD_Init(int numTask, int myRank)
+CDHandle* CD_Init(int numTask, int myTask)
 {
   //GONG
   CDPrologue();
-  myTaskID = myRank;
+  myTaskID = myTask;
 
 #if _DEBUG
   std::string output_filename("./output/output_");
@@ -92,7 +92,7 @@ CDHandle* CD_Init(int numTask, int myRank)
   Internal::Intialize();
 
   CD::CDInternalErrT internal_err;
-  CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myRank, ROOT_HEAD_ID, numTask)), kStrict, 0, &internal_err);
+  CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask)), kStrict, 0, &internal_err);
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
 #if _PROFILER
@@ -149,27 +149,18 @@ void CD_Finalize(DebugBuf *debugBuf)
   CDEpilogue();
 }
 
-inline CDPath *GetCDPath(void) 
-{ return CDPath::GetCDPath(); }
 
-inline CDHandle *GetCurrentCD(void) 
+CDHandle *GetCurrentCD(void) 
 { return CDPath::GetCurrentCD(); }
   
-inline CDHandle *GetRootCD(void)    
+CDHandle *GetRootCD(void)    
 { return CDPath::GetRootCD(); }
 
-inline CDHandle *GetParentCD(void)
+CDHandle *GetParentCD(void)
 { return CDPath::GetParentCD(); }
 
-inline CDHandle *GetParentCD(int current_level)
+CDHandle *GetParentCD(int current_level)
 { return CDPath::GetParentCD(current_level); }
-
-inline CDHandle *GetCDLevel(int level)
-{ return CDPath::GetCDLevel(level); }
-
-inline CDHandle *GetCoarseCD(CDHandle *curr_cdh) 
-{ return CDPath::GetCoarseCD(curr_cdh); }
-
 
 /// Split the node in three dimension
 /// (x,y,z)

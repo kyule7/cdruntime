@@ -57,7 +57,7 @@ IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked)
 CD* IsLogable(bool *logable_)
 {
 //  PRINT_LIBC("logable_execmode\n");      
-  CDHandle* current = CDPath::GetCurrentCD();
+  CDHandle* current = GetCurrentCD();
 	CD* c_CD;
 	if(current==NULL){
 //		PRINT_LIBC("\tbefore root CD\n");
@@ -143,7 +143,7 @@ if(app_side){
 	bool logable  = false;
   CD* c_CD = IsLogable(&logable);
 	if(logable){
-//  CDHandle* current = CDPath::GetCurrentCD();
+//  CDHandle* current = GetCurrentCD();
 //	CD* c_CD = current->ptr_cd();
 	//GONG: Determine whether we call real_malloc w/ logging return value or get return value stored in logs
     if(c_CD->libc_log_ptr_->GetCommLogMode() == 1 ){
@@ -426,7 +426,7 @@ int fprintf(FILE *str, const char *format,...)
 
   if(app_side){
     app_side = false;
-    CD* c_CD = CDPath::GetCurrentCD()->ptr_cd();
+    CD* c_CD = GetCurrentCD()->ptr_cd();
     if(c_CD!=NULL){
 //    bool logable  = false;
 //    CD* c_CD = IsLogable(&logable);

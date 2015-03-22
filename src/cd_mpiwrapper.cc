@@ -59,7 +59,7 @@ int MPI_Send(const void *buf,
   PRINT_DEBUG("here inside MPI_Send\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -106,7 +106,7 @@ int MPI_Ssend(const void *buf,
   PRINT_DEBUG("here inside MPI_Ssend\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -154,7 +154,7 @@ int MPI_Rsend(const void *buf,
   PRINT_DEBUG("here inside MPI_Rsend\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -202,7 +202,7 @@ int MPI_Bsend(const void *buf,
   PRINT_DEBUG("here inside MPI_Bsend\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -253,7 +253,7 @@ int MPI_Recv(void *buf,
   PRINT_DEBUG("here inside MPI_Recv\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -307,7 +307,7 @@ int MPI_Sendrecv(const void *sendbuf,
   PRINT_DEBUG("sendbuf=%p, &sendbuf=%p\n", sendbuf, &sendbuf);
   PRINT_DEBUG("recvbuf=%p, &recvbuf=%p\n", recvbuf, &recvbuf);
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -376,7 +376,7 @@ int MPI_Sendrecv_replace(void *buf,
   PRINT_DEBUG("here inside MPI_Recv\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -441,7 +441,7 @@ int MPI_Isend(const void *buf,
   PRINT_DEBUG("here inside MPI_Isend\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -492,7 +492,7 @@ int MPI_Irecv(void *buf,
   PRINT_DEBUG("here inside MPI_Irecv\n");
   PRINT_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -536,7 +536,7 @@ int MPI_Test(MPI_Request *request,
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Test\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -613,7 +613,7 @@ int MPI_Testall(int count,
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Testall\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -702,7 +702,7 @@ int MPI_Testany(int count,
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Testany\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -782,7 +782,7 @@ int MPI_Testsome(int incount,
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Testsome\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -869,7 +869,7 @@ int MPI_Wait(MPI_Request *request,
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Wait\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -916,7 +916,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
   int ii=0;
   PRINT_DEBUG("here inside MPI_Waitall\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -984,7 +984,7 @@ int MPI_Waitany(int count, MPI_Request *array_of_requests,
   int mpi_ret = 0;
   PRINT_DEBUG("here inside MPI_Waitany\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1039,7 +1039,7 @@ int MPI_Waitsome(int incount,
   int ii=0;
   PRINT_DEBUG("here inside MPI_Waitsome\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1110,7 +1110,7 @@ int MPI_Barrier (MPI_Comm comm)
   PRINT_DEBUG("here inside MPI_Barrier\n");
   PRINT_DEBUG("comm=%x, &comm=%p\n", comm, &comm);
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1154,7 +1154,7 @@ int MPI_Bcast (void *buffer,
   MPI_Type_size(datatype, &type_size);
   PRINT_DEBUG("here inside MPI_Bcast\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1201,7 +1201,7 @@ int MPI_Gather(const void *sendbuf,
   MPI_Type_size(recvtype, &type_size);
   PRINT_DEBUG("here inside MPI_Gather\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     int myrank, size;
@@ -1271,7 +1271,7 @@ int MPI_Gatherv(const void *sendbuf,
   MPI_Type_size(recvtype, &type_size);
   PRINT_DEBUG("here inside MPI_Gatherv\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     int myrank, size;
@@ -1354,7 +1354,7 @@ int MPI_Allgather(const void *sendbuf,
   MPI_Type_size(recvtype, &type_size);
   PRINT_DEBUG("here inside MPI_Allgather\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     int size;
@@ -1406,7 +1406,7 @@ int MPI_Allgatherv(const void *sendbuf,
   MPI_Type_size(recvtype, &type_size);
   PRINT_DEBUG("here inside MPI_Allgatherv\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     int size;
@@ -1473,7 +1473,7 @@ int MPI_Reduce(const void *sendbuf,
   MPI_Type_size(datatype, &type_size);
   PRINT_DEBUG("here inside MPI_Reduce\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     int myrank, size;
@@ -1541,7 +1541,7 @@ int MPI_Allreduce(const void *sendbuf,
   MPI_Type_size(datatype, &type_size);
   PRINT_DEBUG("here inside MPI_Allreduce\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1589,7 +1589,7 @@ int MPI_Alltoall(const void *sendbuf,
   MPI_Type_size(recvtype, &type_size);
   PRINT_DEBUG("here inside MPI_Alltoall\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     int size;
@@ -1642,7 +1642,7 @@ int MPI_Alltoallv(const void *sendbuf,
   MPI_Type_size(recvtype, &type_size);
   PRINT_DEBUG("here inside MPI_Alltoallv\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     int size;
@@ -1714,7 +1714,7 @@ int MPI_Scatter(const void *sendbuf,
   MPI_Type_size(recvtype, &type_size);
   PRINT_DEBUG("here inside MPI_Scatter\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1764,7 +1764,7 @@ int MPI_Scatterv(const void *sendbuf,
   MPI_Type_size(recvtype, &type_size);
   PRINT_DEBUG("here inside MPI_Scatterv\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1814,7 +1814,7 @@ int MPI_Reduce_scatter(const void *sendbuf,
   MPI_Type_size(datatype, &type_size);
   PRINT_DEBUG("here inside MPI_Reduce_scatter\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
     int myrank;
@@ -1865,7 +1865,7 @@ int MPI_Scan(const void *sendbuf,
   MPI_Type_size(datatype, &type_size);
   PRINT_DEBUG("here inside MPI_Scan\n");
 
-  CDHandle * cur_cd = CDPath::GetCurrentCD();
+  CDHandle * cur_cd = GetCurrentCD();
   if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
   {
 
@@ -1937,7 +1937,7 @@ int MPI_Finalize(void)
 //
 //  PRINT_DEBUG("here inside MPI_Send_init\n");
 //
-//  CDHandle * cur_cd = CDPath::GetCurrentCD();
+//  CDHandle * cur_cd = GetCurrentCD();
 //  if (cur_cd->ptr_cd()->GetCDType()==kRelaxed)
 //  {
 //
