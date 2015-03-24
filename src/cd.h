@@ -98,6 +98,11 @@ struct IncompleteLogEntry{
 using namespace cd;
 
 
+/**@class cd::Internal 
+ * @brief This class contains static internal routines 
+ *        regarding initialization and finalization of CD runtime.
+ *
+ */ 
 class Internal {
   friend CDHandle *cd::CD_Init(int numTask, int myRank);
   friend void cd::CD_Finalize(DebugBuf *debugBuf);
@@ -106,7 +111,12 @@ class Internal {
 };
 
 
-/// TODO Implement serialize and deserialize of this instance
+/**@class cd::CD 
+ * @brief Core data structure of CD runtime. It has all the information and controls of a specific level of CDs.
+ * This object will not be exposed to users and be managed internally by CD runtime.
+ *
+ * \todo Implement serialize and deserialize of CD object.
+ */ 
 class cd::CD : public cd::Serializable {
     /// The friends of CD class
     friend class cd::RegenObject;   
@@ -303,7 +313,7 @@ update the preserved data.
 #endif
 
     // PFS
-    CD_Parallel_IO_Manager *Par_IO_Man;
+    PFSHandle *pfs_handler_;
 
   public:
     CD();
@@ -389,7 +399,6 @@ update the preserved data.
   
     CDErrT Assert(bool test);
   
-    virtual CDErrT Reexecute(void);
  
     CDInternalErrT RegisterDetection(uint32_t system_name_mask, 
                                      uint32_t system_loc_mask);
@@ -423,8 +432,56 @@ update the preserved data.
 
   protected:
  
+  /** \addtogroup internal_recovery Internal Functions for Customizable Recovery
+   *
+   * @{ 
+   */
+
+
+/**
+ * @brief Reexecute CD from the beginning. 
+ * 
+ * It set the CD execution mode as kReexecute, 
+ * and increment reexecution counter by one.
+ * Then it long jump to the point of setjump marked by CD_Begin.
+ * The logging framework for communication message and libc will be replayed in the reexecution mode.
+ *
+ * @return Returns error code.
+ */
+    virtual CDErrT Reexecute(void);
+
+/** @brief Escalate error/failure to parent
+ *
+ * Internal method used by Recover() to escalate
+ * errors/failures that cannot be handled.
+ * 
+ */
+    virtual void Escalate(
+        uint64_t error_name_mask,     //!< [in] Mask of all error/fail types that require recovery
+    		uint64_t error_location_mask, //!< [in] Mask of all error/fail locations that require recovery
+    		std::vector<SysErrT> errors   //!< [in] Errors/failures to recover from (typically just one).
+    		);
+
+/** @brief Invoke a registered recovery handler. 
+ *  If user does not register it, CD::Reexecute() is called by default. 
+ *
+ */
     void Recover(void);
- 
+
+/** @brief Method to test if this CD can recover from an error/location mask
+ *
+ * \return Returns `true` is can recover and `false` otherwise.
+ *
+ * \sa Create(), SysErrNameT, SysErrLocT
+ */
+    virtual bool InternalCanRecover(
+          uint64_t error_name_mask,  //!< [in] Mask of all error/fail types that require recovery
+  			  uint64_t error_location_mask //!< [in] Mask of all error/fail locations that require recovery
+  			  );
+
+  /** @} */ // End internal_recovery group ===========================================================================
+
+
     // Utilities -----------------------------------------------------
     // GetPlaceToPreserve() decides actual medium to preserve data.
     // TODO Currently, it preserves in memory for everything.
@@ -538,6 +595,12 @@ update the preserved data.
  }; // class CD ends
 
 
+/**@class cd::HeadCD 
+ * @brief A representer of CD objects among the task group corresponding to the current CD.
+ *        Head task which has HeadCD object has actual control over the non-head tasks which has CD object.
+ *
+ * \todo Implement serialize and deserialize of HeadCD object.
+ */ 
 class cd::HeadCD : public cd::CD {
   friend class cd::HandleEntrySearch;
   public:

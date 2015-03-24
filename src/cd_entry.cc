@@ -148,7 +148,7 @@ CDEntry::CDEntryErrT CDEntry::SavePFS(void)
   //PMPI_File_get_position( ptr_cd_->PFS_d_, &(dst_data_.parallel_file_offset_));
 
   // Dynamic Chunk Interleave
-  dst_data_.parallel_file_offset_ = ptr_cd_->Par_IO_Man->Write( src_data_.address_data(), src_data_.len() );
+  dst_data_.parallel_file_offset_ = ptr_cd_->pfs_handler_->Write( src_data_.address_data(), src_data_.len() );
 
 	return kOK;
 }

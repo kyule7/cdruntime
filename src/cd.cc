@@ -439,7 +439,7 @@ CD::InternalCreate(CDHandle* parent,
 #endif
 
     if( new_cd->GetPlaceToPreserve() == kPFS ) {
-      new_cd->Par_IO_Man = new CD_Parallel_IO_Manager( new_cd, new_cd->log_handle_.path_.GetFilePath().c_str() ); 
+      new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->log_handle_.path_.GetFilePath().c_str() ); 
     }
     *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
   }
@@ -487,7 +487,7 @@ CD::InternalCreate(CDHandle* parent,
 #endif
 #endif
     if( new_cd->GetPlaceToPreserve() == kPFS ) {
-      new_cd->Par_IO_Man = new CD_Parallel_IO_Manager( new_cd, "./PFS_Root/" ); 
+      new_cd->pfs_handler_ = new PFSHandle( new_cd, "./PFS_Root/" ); 
     }
     *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
   }
@@ -568,7 +568,7 @@ inline CD::CDInternalErrT CD::InternalDestroy(void)
 
   }
   if( GetPlaceToPreserve() == kPFS ) {
-    delete Par_IO_Man;
+    delete pfs_handler_;
   }
 
   delete this;
@@ -4042,29 +4042,21 @@ void CD::DecPendingCounter(void)
 //}
 //
 
-
-
-
-
-
-
-
-
-
-
-
-/*  CD::setDetectFunc(void *() custom_detect_func)
- *  (1) 
- *      
- *  (2) 
- *
- *  (3)
- *
- */
-
 //int CD::AddDetectFunc(void *() custom_detect_func)
 //{
 //
 //  return CDErrT::kOK;
 //}
 
+void CD::Escalate(uint64_t error_name_mask, 
+                  unit64_t error_location_mask,
+                  std::vector<SysErrT> errors)
+{
+  // STUB
+}
+
+bool CD::CanRecover(uint64_t error_name_mask, uint64_t error_location_mask)
+{
+  // STUB
+  return true;
+}

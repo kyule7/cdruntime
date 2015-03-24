@@ -49,6 +49,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "util.h"
 #include "event_handler.h"
 
+/**@class cd::CDEntry
+ * @brief Data structure that contains preservation-related information.
+ *  This class represent all the required information in the preservation action
+ *  such as source/destination information, preservation type, etc.
+ *  It is internally managed by CD object.
+ */ 
 class cd::CDEntry : public cd::Serializable
 {
   friend class cd::CD;

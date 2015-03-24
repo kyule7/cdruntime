@@ -5,7 +5,7 @@ using namespace cd;
 using namespace std;
 
 
-CD_Parallel_IO_Manager::CD_Parallel_IO_Manager( cd::CD* my_cd )
+PFSHandle::PFSHandle( cd::CD* my_cd )
 {
 	ptr_cd_ = my_cd;
 	PFS_file_path_ = "./";
@@ -17,7 +17,7 @@ CD_Parallel_IO_Manager::CD_Parallel_IO_Manager( cd::CD* my_cd )
 	Open_File();
 }
 
-CD_Parallel_IO_Manager::CD_Parallel_IO_Manager( cd::CD* my_cd, const char* file_path )
+PFSHandle::PFSHandle( cd::CD* my_cd, const char* file_path )
 {
 	ptr_cd_ = my_cd;
 	PFS_chunk_size_ = 1048576;//default chunk is considered to be 1MB.
@@ -28,7 +28,7 @@ CD_Parallel_IO_Manager::CD_Parallel_IO_Manager( cd::CD* my_cd, const char* file_
 	Open_File();
 }
 
-CD_Parallel_IO_Manager::CD_Parallel_IO_Manager( cd::CD* my_cd, const char* file_path , uint64_t chunk_size )
+PFSHandle::PFSHandle( cd::CD* my_cd, const char* file_path , uint64_t chunk_size )
 {
 	ptr_cd_ = my_cd;
 	PFS_chunk_size_ = chunk_size;
@@ -39,17 +39,17 @@ CD_Parallel_IO_Manager::CD_Parallel_IO_Manager( cd::CD* my_cd, const char* file_
 	Open_File();
 }	
 
-CD_Parallel_IO_Manager::CD_Parallel_IO_Manager( const CD_Parallel_IO_Manager& that ) 
+PFSHandle::PFSHandle( const PFSHandle& that ) 
 { Copy( that ); }
 
-//~CD_Parallel_IO_Manager::CD_Parallel_IO_Manager( void ) 
+//~PFSHandle::PFSHandle( void ) 
 //{ 
 //	Close_and_Delete_File(); 
 //	MPI_Group_free( &PFS_parallel_file_group_ );
 //	MPI_Comm_free( &PFS_parallel_file_communicator_ );
 //}
 
-int CD_Parallel_IO_Manager::Open_File( void )
+int PFSHandle::Open_File( void )
 {
 	//FIXME: Currently no mpi hints are sent to the I/O, this can be tuned in the future.
 	int error_type;
@@ -64,7 +64,7 @@ int CD_Parallel_IO_Manager::Open_File( void )
 	return CDEntry::CDEntryErrT::kOK;
 }
 
-int CD_Parallel_IO_Manager::Close_and_Delete_File( void )
+int PFSHandle::Close_and_Delete_File( void )
 {
 	int error_type;
 	error_type = MPI_File_close( &PFS_d_ );
@@ -77,7 +77,7 @@ int CD_Parallel_IO_Manager::Close_and_Delete_File( void )
 	return CDEntry::CDEntryErrT::kOK;
 }
 
-void CD_Parallel_IO_Manager::Copy( const CD_Parallel_IO_Manager& that )
+void PFSHandle::Copy( const PFSHandle& that )
 {
 	ptr_cd_ = that.ptr_cd_;
 	PFS_file_path_ = that.PFS_file_path_;
@@ -92,7 +92,7 @@ void CD_Parallel_IO_Manager::Copy( const CD_Parallel_IO_Manager& that )
 	degree_of_sharing_ = that.degree_of_sharing_;
 }
 
-int CD_Parallel_IO_Manager::Splitter( void )
+int PFSHandle::Splitter( void )
 {
 	MPI_Group original_group;
 	MPI_Comm_group( ptr_cd_->color(), &original_group );
@@ -144,7 +144,7 @@ int CD_Parallel_IO_Manager::Splitter( void )
 	return 0;
 }
 
-void CD_Parallel_IO_Manager::Init( const char* file_path )
+void PFSHandle::Init( const char* file_path )
 {
 	std::stringstream temp_file_name;
 	temp_file_name << Util::GetUniqueCDFileName( ptr_cd_->GetCDID(), file_path, NULL, kPFS ) << '.' << sharing_group_id_ << ".cd";
@@ -164,14 +164,14 @@ void CD_Parallel_IO_Manager::Init( const char* file_path )
 
 
 
-void CD_Parallel_IO_Manager::Reset_File_Pointer( void )
+void PFSHandle::Reset_File_Pointer( void )
 {
 	PFS_current_offset_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
 	PFS_current_chunk_begin_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
 	PFS_current_chunk_end_ = (PFS_rank_in_file_communicator_ + 1) * PFS_chunk_size_ - 1;
 }
 
-MPI_Offset CD_Parallel_IO_Manager::Write( void* buffer, uint64_t buffer_len)
+MPI_Offset PFSHandle::Write( void* buffer, uint64_t buffer_len)
 {
 	MPI_Status write_status;
 	MPI_Offset start_location_in_file = PFS_current_offset_;
@@ -202,7 +202,7 @@ MPI_Offset CD_Parallel_IO_Manager::Write( void* buffer, uint64_t buffer_len)
 	return start_location_in_file;
 }
 
-uint64_t CD_Parallel_IO_Manager::Read_at( void* buffer, uint64_t buffer_len, MPI_Offset read_from )
+uint64_t PFSHandle::Read_at( void* buffer, uint64_t buffer_len, MPI_Offset read_from )
 {
 	MPI_Status read_status;
     MPI_Offset chunk_begin = (read_from / PFS_chunk_size_) * PFS_chunk_size_;

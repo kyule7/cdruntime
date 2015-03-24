@@ -47,6 +47,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_global.h"
 #include <stdint.h>
 
+/**@class cd::CDEvent 
+ * @brief An object that provides an event identifier to a non-blocking CD runtime call
+ *
+ * This is basically just an internal event handle that the user can wait on
+ * when trying to make a non-blocking call.
+ *
+ * Events are automatically chained (see CDHandle::Preserve()),
+ *
+ * \note We do not rely on C++11 async/futures here because the API is
+ * meant to be somewhat portable to other languages.
+ */ 
 class cd::CDEvent
 {
   protected:
@@ -57,9 +68,9 @@ class cd::CDEvent
   public:
     CDEvent();
     ~CDEvent();
-    // Using bitset perhaps if we would like to use this to represent the case where multiple async function needs to be completed before we do something? Or is this something that we do not want anyways? Assuming we use this, would it cause too much contention? Perhaps, no?
+    // Using bitset perhaps if we would like to use this to represent the case where multiple async function needs to be completed before we do something? 
+    // Or is this something that we do not want anyways? Assuming we use this, would it cause too much contention? Perhaps, no?
 
-    //	uint32_t event_;
     void InitEvent();
     uint32_t AddEvent();
     void ResetEvent(uint32_t pos);
@@ -67,9 +78,28 @@ class cd::CDEvent
     void DestroyEvent();
 
 public:
-    bool Test();
+/** \addtogroup cd_event_funcs CD Event Functions for Non-Blocking Calls
+ * @{
+ */
+
+/**@brief Blocking call waiting on the event to complete
+ *
+ * Once CDEvent::Wait() returns, the event is empty (uninitialized), as if it
+ * has been explicitly CDEvent::Reset().
+ *
+ * @return kOK on success and kError if the event timed out
+ *
+ */
     CDErrT Wait();
 
+/**@brief Non-blocking call to test whether the event completed
+ *
+ * @return `true` if complete and `false` is any chained events not
+ * yet done.
+ *
+ */
+    bool Test();
+/** @} */ // End cd_event_funcs group ===========================================================================
 };
 
 #endif 

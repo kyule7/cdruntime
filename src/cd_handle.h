@@ -58,36 +58,25 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_profiler.h"
 #endif
 
-
 using namespace cd;
 
 
-
-
-
-
-
-
 namespace cd {
-  /** \addtogroup cd_init_funcs CD Init Functions
-   *  The \ref cd_init_funcs are used for initialization.
-   * @{
-   */
+/** \addtogroup cd_init_funcs CD Init Functions
+ *  The \ref cd_init_funcs are used for initialization.
+ * @{
+ */
 
 /** 
  * @brief Initialize the CD runtime.
  * 
- * CD_Init()
- * Create the data structure that CD object and CDHandle object are going to use.
- * For example, CDEntry object or CDHandle object or CD object itself.
- * These objects are very important data for CDs and 
- * managed separately from the user-level data structure
- * All the meta data objects and preserved data are managed internally.
- * Register Root CD.
  * Creates all necessary CD runtime components and data structures,
- * initializes the CD runtime, and creates and begins the root
- * CD. At this point, the current CD is the root. `cd::Init()`
- * __should only be called once per application.__
+ * initializes the CD runtime, and creates the root CD. 
+ * These internal metadata are very important for CDs and 
+ * managed separately from the user-level data structure.
+ * At this point, the current CD is the root. 
+ *
+ * `CD_Init()`__should only be called once per application.__
  *
  * There are two variants of this function. The first is a
  * collective operation across all SPMD tasks currently in the
@@ -97,30 +86,36 @@ namespace cd {
  * broadcasting the handle are up to the programmer. Use of this second
  * variant is discouraged.
  *
- * @return Returns a handle to the root CD; Returns `kOK` if successful, `AlreadyInit` if called more
- * than once, and `kError` if initialization is unsuccessful for
- * some reason.
- *
+ * @return Returns a handle to the root CD. 
+ * Returns `kOK` if successful, 
+ * `AlreadyInit` if called more than once, 
+ * and `kError` if initialization is unsuccessful for some reason.
  * The handle to the root is also registered in some globally
  * accessible variable so that it can be accessed by
  * cd::GetCurrentCD() and cd::GetRootCD().
+ * 
+ * @sa Internal::Initialize()
  */
-  CDHandle* CD_Init(int numTask, int myTask);
+CDHandle* CD_Init(int numTask, int myTask);
   
 /** 
  * @brief Finalize the CD runtime.
- * 
+ *  
+ * Destroy CD-related global data structures and root CD object.
+ * If DebugBuf object's pointer is passed to `CD_Finalize()`, 
+ * string streams will be written to file. (it is for debugging purpose)
  *
- * @return Returns void
+ * @return Returns nothing.
  *
+ * @sa Internal::Finalize()
  */
-  void CD_Finalize(DebugBuf *debugBuf);
-
+void CD_Finalize(DebugBuf *debugBuf);
+  
   /** @} */ // End cd_init_funcs group ===========================================================================
 } // namespace cd ends
 
 
-/** 
+/**@class cd::CDHandle 
  * @brief An object that provides a handle to a specific CD instance.
  *
  * CDHandle is a global accessor to the CD object. 
