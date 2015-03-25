@@ -60,6 +60,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  *@{
  *
+ */
+
+/**@class cd::Packer
  * @brief Packing object for serialization 
  *
  *
@@ -78,17 +81,23 @@ class cd::Packer
 {
   public:
 
-    enum PackerErrT {kOK =0, kMallocFailed, kReallocFailed};
-
+///@brief Enumerator internally used in Packer.
+    enum PackerErrT { kOK =0,         //!< No errors. 
+                      kMallocFailed,  //!< Malloc failed.
+                      kReallocFailed, //!< Realloc failed.
+                      };
     Packer();
     Packer(uint32_t table_grow_unit, uint32_t data_grow_unit);
     virtual ~Packer();
 
+
+///@brief Add data to pack in packer data structure.
     virtual uint32_t Add(uint32_t id, uint32_t length, void *position);
+
+///@brief Get total size required for table (metadata) and data.
     virtual char *GetTotalData(uint32_t &total_data_size);
 
-
-
+///@brief Grow buffer size internally used in packer.
     virtual void SetBufferGrow( uint32_t table_grow_unit, uint32_t data_grow_unit);
 
 

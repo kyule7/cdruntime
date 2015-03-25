@@ -76,7 +76,7 @@ namespace cd {
  * managed separately from the user-level data structure.
  * At this point, the current CD is the root. 
  *
- * `CD_Init()`__should only be called once per application.__
+ * `CD_Init()` __should only be called once per application.__
  *
  * There are two variants of this function. The first is a
  * collective operation across all SPMD tasks currently in the
@@ -118,77 +118,72 @@ void CD_Finalize(DebugBuf *debugBuf);
 /**@class cd::CDHandle 
  * @brief An object that provides a handle to a specific CD instance.
  *
- * CDHandle is a global accessor to the CD object. 
- * CDHandle must be valid regardless of MPI rank or threads
- * That means that once I know CDHandle object, 
- * I can access to the ptr_cd_ anyhow.
- * Sometimes, CDHandle::node_id_.second and CDID::node_id_.second can be different. 
- * (If node_id_.first is different, that means there is something wrong!)
- * That means that CD object was newly given from somewhere,
- * and in that case, we should be careful of synchorizing the CD object to CDHandle
- * 09.22.2014 Kyushick: The above comment is written long time ago, so may be confusing to understand the current design.
- * All usage of CDs (other than @ref cd_init_funcs and cd_accessor_funcs) is done by
- * utilizing a handle to a particular CD instance within the CD
- * tree. The CDHandle provides an implementation- and
+ * All usage of CDs (other than \ref cd_init_funcs and \ref cd_accessor_funcs) is done by
+ * utilizing a handle to a particular CD instance within the CD tree. 
+ * The CDHandle provides an implementation- and
  * location-independent accessor for CD operation.
  *
- * __Most calls currently only have blocking versions.__ Which should
- * also be non-blocking other than Preserve?
+ * __Most calls currently only have blocking versions.__ 
  */ 
 
 class cd::CDHandle {
   friend class cd::RegenObject;
   friend class cd::CD;
   friend class cd::CDEntry;
+  public:
+
+    typedef std::function<int(const int& my_task_id,   //<! [in] Current task ID.
+                          const int& my_size,      //<! [in] The number of task of the current CD. (original task group)
+                          const int& num_children, //<! [in] The number of childrens. (new task groups)
+                          int& new_color,  //!< [out] New color (task group ID) generated from split method.
+                          int& new_task    //<! [out] New task ID generated from split method.
+                        )> SplitFuncT; /**\typedef function pointer/object type for splitting CDs. */
   private:
-    CD*    ptr_cd_;
-    NodeID node_id_;
+    CD*    ptr_cd_;   //!< Pointer to CD object which will not exposed to users.
+    NodeID node_id_;  //!< NodeID contains the information to access to the task.
 
-    // task ID of head in this CD.
-    // If current task is head of current CD, than it is the same as node_id_.task_
-
+#if _PROFILER 
+    Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
+                          //!< It will be valid when `_PROFILER` compile-time flag is on.
+#endif
+    SplitFuncT SplitCD; //!<function object that will be set to some appropriate split strategy.
 
   public:
 
-#if _PROFILER 
-    Profiler* profiler_;
-#endif
+    int     jmp_val_;     //!< Temporary flag related to longjmp/setjmp
+    jmp_buf jmp_buffer_;  //!< Temporary buffer related to longjmp/setjmp
+    ucontext_t ctxt_;     //!< Temporary buffer related to setcontext/getcontext
 
-    //TODO copy these to CD async 
-    ucontext_t ctxt_;
-    jmp_buf    jmp_buffer_;
-    int jmp_val_;
-    // Default Constructor
-    CDHandle();
+  private:
+    CDHandle(); //!< Default constructor of CDHandle. 
 
-    // Constructor
-    CDHandle(CD* ptr_cd, const NodeID& node_id);
+    CDHandle(CD* ptr_cd, const NodeID& node_id); //!< Normally this constructor will be called when CD is created. 
+                                                 //!<CDHandle pointer is returned when `CDHandle::Create()` is called.
 
    ~CDHandle(); 
 
-  /** \addtogroup cd_hierarchy How to create CD hierarchy
-   *
-   *  This Module is about functions and types to create CD hierarchy in the application.
-   * @{
-   */
-
-  /**
-   * @brief Non-collective Create (Single task)
-   * 
-   * Creates a new CD as a child of this CD. The new CD does
-   * not begin until Begin() is called explicitly.
-   * 
-   * This version of Create() is intended to be called by only a
-   * single task and the value of the returned handle explicitly
-   * communicated between all tasks contained within the new child. An
-   * alternate collective version is also provided. It is expected
-   * that this non-collective version will be mostly used within a
-   * single task or, at least, within a single process address space.
-   *
-   * @return Returns a pointer to the handle of the newly created
-   * child CD; returns 0 on an error (error code returned in a parameter).
-   *
-   */
+  public:
+/**\addtogroup cd_hierarchy How to create CD hierarchy
+ *
+ *  This Module is about functions and types to create CD hierarchy in the application.
+ * @{
+ *
+ * @brief Non-collective Create (Single task)
+ * 
+ * Creates a new CD as a child of this CD. The new CD does
+ * not begin until Begin() is called explicitly.
+ * 
+ * This version of Create() is intended to be called by only a
+ * single task and the value of the returned handle explicitly
+ * communicated between all tasks contained within the new child. An
+ * alternate collective version is also provided. It is expected
+ * that this non-collective version will be mostly used within a
+ * single task or, at least, within a single process address space.
+ *
+ * @return Returns a pointer to the handle of the newly created
+ * child CD; returns 0 on an error (error code returned in a parameter).
+ *
+ */
     CDHandle* Create(const char* name=0, //!< [in] Optional user-specified
                                   		   //!< name that can be used to "re-create" the same CD object
                                   		   //!< if it was not destroyed yet; useful for resuing preserved
@@ -388,37 +383,52 @@ class cd::CDHandle {
                                                 //!< object (this enables the Cray CD
                                                 //!< AdvancePointInTime functionality).
   		               );
-  
-   /** @} */ // End cd_hierarchy ==================================================================================
 
-  /** \addtogroup preservation_funcs
-   *
-   * @{
-   */
+/**@brief Register a method to split CDs to create chidlren CDs. 
+ * 
+ * __SPMD programming model specific__
+ * When CD runtime create children CDs, it is necessary to split the task group of the current CD,
+ * then re-index each task in new task groups for children CDs. 
+ * By default, it splits the task group of the current CD in three dimension.
+ * In general, how many children group to split, how may tasks there are in current task group, current task ID are required.
+ * With these three information, split method populates new color (task group ID), new task ID appropriately.
+ *
+ * @return Returns CD-related error code.
 
-  /** @brief (Non-collective) Preserve data to be restored when recovering (typically reexecuting the CD from right after its Begin() call.
-   * 
-   * Preserves application data so that it can be restored for correct
-   * CD recovery (typically reexecution).
-   *
-   * Preserve() preserves data on the first execution of the CD
-   * (`kExec`) but acts to restore data when a CD is reexecuted
-   * (`kReexec`). Success is defined as successfully preserving or
-   * restoring `len` bytes of contiguous data starting at address
-   * `data_ptr`.
-   *
-   * In many cases there is more than one way to preserve data and the
-   * best way to do depends on machine-specific characteristics. It is
-   * therefore possible to call Preserve() with a set of possible
-   * correct and legal preservation methods and have an autotuner
-   * select the best one. This is done by setting the appropriate bits
-   * in the `preserve_mask` parameter based on the constants defined
-   * by PreserveMethodT.
-   *
-   * @return kOK on success and kError otherwise.
-   *
-   * \sa Complete()
-   */
+ */
+    CDErrT RegisterSplitMethod(SplitFuncT split_func); //<! [in] function pointer or object to split CD.
+
+/** @} */ // End cd_hierarchy ==================================================================================
+
+/** \addtogroup preservation_funcs
+ *
+ * @brief These modules are regarding how to preserve data in CDs.
+ * @{
+ */
+/**@brief (Non-collective) Preserve data to be restored when recovering. 
+ *        (typically reexecuting the CD from right after its Begin() call.)
+ * 
+ * Preserves application data so that it can be restored for correct
+ * CD recovery (typically reexecution).
+ *
+ * Preserve() preserves data on the first execution of the CD
+ * (`kExec`) but acts to restore data when a CD is reexecuted
+ * (`kReexec`). Success is defined as successfully preserving or
+ * restoring `len` bytes of contiguous data starting at address
+ * `data_ptr`.
+ *
+ * In many cases there is more than one way to preserve data and the
+ * best way to do depends on machine-specific characteristics. It is
+ * therefore possible to call Preserve() with a set of possible
+ * correct and legal preservation methods and have an autotuner
+ * select the best one. This is done by setting the appropriate bits
+ * in the `preserve_mask` parameter based on the constants defined
+ * by PreserveMethodT.
+ *
+ * @return kOK on success and kError otherwise.
+ *
+ * \sa Complete()
+ */
     CDErrT Preserve(void *data_ptr=0, //!< [in] pointer to data to be preserved;
                              		      //!< __currently must be in same address space
                              		      //!< as calling task, but will extend to PGAS fat pointers later 
@@ -442,36 +452,36 @@ class cd::CDHandle {
                                             		    //!< preserved state that is unmodified (see Complete()).
                     );
 
-  /** @brief (Not supported yet) Non-blocking preserve data to be restored when recovering (typically reexecuting the CD from right after its Begin() call.
-   * 
-   * 
-   * Preserves application data so that it can be restored for correct
-   * CD recovery (typically reexecution).
-   *
-   * Preserve() preserves data on the first execution of the CD
-   * (`kExec`) but acts to restore data when a CD is reexecuted
-   * (`kReexec`). Success is defined as successfully preserving or
-   * restoring `len` bytes of contiguous data starting at address
-   * `data_ptr`.
-   *
-   * In many cases there is more than one way to preserve data and the
-   * best way to do depends on machine-specific characteristics. It is
-   * therefore possible to call Preserve() with a set of possible
-   * correct and legal preservation methods and have an autotuner
-   * select the best one. This is done by setting the appropriate bits
-   * in the `preserve_mask` parameter based on the constants defined
-   * by PreserveMethodT.
-   *
-   * __The CDEvent object__ will be initialized to wait on this
-   * particular call if it is empty. If the CDEvent already contains
-   * an event, then this new event is chained to it -- in this way,
-   * the user can use a single CDEvent::Wait() call to wait on a
-   * sequence of non-blocking calls.
-   *
-   * @return kOK on success and kError otherwise.
-   *
-   * \sa Complete()
-   */
+/** @brief (Not supported yet) Non-blocking preserve data to be restored when recovering (typically reexecuting the CD from right after its Begin() call.
+ * 
+ * 
+ * Preserves application data so that it can be restored for correct
+ * CD recovery (typically reexecution).
+ *
+ * Preserve() preserves data on the first execution of the CD
+ * (`kExec`) but acts to restore data when a CD is reexecuted
+ * (`kReexec`). Success is defined as successfully preserving or
+ * restoring `len` bytes of contiguous data starting at address
+ * `data_ptr`.
+ *
+ * In many cases there is more than one way to preserve data and the
+ * best way to do depends on machine-specific characteristics. It is
+ * therefore possible to call Preserve() with a set of possible
+ * correct and legal preservation methods and have an autotuner
+ * select the best one. This is done by setting the appropriate bits
+ * in the `preserve_mask` parameter based on the constants defined
+ * by PreserveMethodT.
+ *
+ * __The CDEvent object__ will be initialized to wait on this
+ * particular call if it is empty. If the CDEvent already contains
+ * an event, then this new event is chained to it -- in this way,
+ * the user can use a single CDEvent::Wait() call to wait on a
+ * sequence of non-blocking calls.
+ *
+ * @return kOK on success and kError otherwise.
+ *
+ * \sa Complete()
+ */
     CDErrT Preserve(CDEvent &cd_event, //!< [in,out] enqueue this call onto the cd_event
                     void *data_ptr=0, //!< [in] pointer to data to be preserved;
                             		      //!< __currently must be in same address space as calling task, but will extend to PGAS fat pointers later
@@ -830,122 +840,129 @@ class cd::CDHandle {
 
 
 
+/** \brief Commits setjmp buffer or context buffer to CD object.
+ *
+ */
   
     void CommitPreserveBuff(void);
-//    char *GenTag(const char* tag);
   private:  // Internal use -------------------------------------------------------------
-    // Initialize for CDHandle object.
+
+/// \brief Initialize for CDHandle object.
     void Init(CD* ptr_cd, const NodeID& node_id);
 
-    // Search CDEntry with entry_name given. It is needed when its children preserve data via reference and search through its ancestors. If it cannot find in current CD object, it outputs NULL 
+/// \brief Search CDEntry with entry_name given. 
+/// It is needed when its children preserve data via reference and search through its ancestors. 
+/// If it cannot find in current CD object, it outputs NULL 
     cd::CDEntry* InternalGetEntry(std::string entry_name);
 
-    
-//    void InternalReexecute (void);
-//    void InternalEscalate ( uint32_t error_name_mask, 
-//                            uint32_t error_loc_mask, 
-//                            std::vector< SysErrT > errors);
 
-    // Add children CD to my CD
+/// Add children CD to my CD.
     CDErrT AddChild(CDHandle* cd_child);
 
-    // Delete a child CD in my children CD list
+/// Delete a child CD in my children CD list
     CDErrT RemoveChild(CDHandle* cd_child);  
     
-    // Stop every task in this CD
+/// Stop every task in this CD
     CDErrT Stop(void);
   
-    /// Synchronize every task of this CD.
+/// Synchronize every task of this CD.
     CDErrT Sync(void);
 
-    // Set bit vector for error types to handle in this CD.
+/// Set bit vector for error types to handle in this CD.
     uint64_t SetSystemBitVector(uint64_t error_name_mask, 
                                 uint64_t error_loc_mask);
 
-    // Split CD to create children CD. So, it is basically re-indexing for task group for children CDs. By default it splits the task group of this CD in three dimension.
-    // # of children to split
-    // Current task ID (NodeID::task_in_level_)
-    // Current size of task group (NodeID::size_) 
-    // are required to split.
-    // It populates new_color, new_task appropriately.
-    // By default it splits the task group of this CD in three dimension.
-    // This default split function is defined in cd_handle.cc (SplitCD_3D())
-    void RegisterSplitMethod(std::function<int(const int& my_task_id,
-                                               const int& my_size,
-                                               const int& num_children,
-                                               int& new_color, 
-                                               int& new_task)> split_func);
 
-    // function object that will be set to some appropriate split strategy
-    std::function<int(const int& my_task_id, 
-                      const int& my_size, 
-                      const int& num_children, 
-                      int& new_color, 
-                      int& new_task)> SplitCD;
 
-    // Get NodeID with given new_color and new_task
+/// Get NodeID with given new_color and new_task
     CDErrT GetNewNodeID(NodeID& new_node);
+/// Get NodeID with given new_color and new_task
     CDErrT GetNewNodeID(const ColorT& my_color, 
                         const int& new_color, 
                         const int& new_task, 
                         NodeID& new_node);
 
-    /// Do we need this?
-    bool IsLocalObject(void);
-
-    // Select Head among task group that are corresponding to one CD.
+/// Select Head among task group that are corresponding to one CD.
     void SetHead(NodeID& new_node_id);
 
+/// Check mail box.
     CDErrT CheckMailBox(void);
+
+/// Set mail box.
     CDErrT SetMailBox(CDEventT &event);
-//    int InternalCheckMailBox(void);
-//    int SetMailBox(CDEventT &event);
-//    CDEventHandleT HandleEvent(CDFlagT *event, int idx=0);
-//    int ReadMailBox(void);
-//    int ReadMailBoxFromRemote(void);
 
-    // Communication routines in CD runtime
-    //void CollectHeadInfoAndEntry(void); 
+/// Collect child CDs' head information.
     void CollectHeadInfoAndEntry(const NodeID &new_node_id);
-
 
   public:
     // Accessors
 
-  /** @brief Get the name/location of this CD
-   *
-   * The CDName is a (level, number_within_level) tuple.
-   *
-   * @return the name/location of the CD
-   */
+/**@brief Get the string name defined by user.
+ *         __It is different from `CDHandle::GetCDName()`.__
+ * @return string name for a CD 
+ */
     char    *GetName(void)       const;
 
+///@brief Get CDID of the current CD.
     CDID    &GetCDID(void);       
+
+/**@brief Get the name/location of this CD.
+ * The CDName is a (level, rank_in_level) tuple.
+ *
+ * @return the name/location of the CD
+ */
     CDNameT &GetCDName(void);   
-    ColorT  GetNodeID(void);     
+
+
+///@brief Get NodeID of the current CD.
     NodeID  &node_id(void);       
     
+///@brief Get CD object pointer that this CDHandle corresponds to.
+///@return CD object's pointer.
     CD      *ptr_cd(void)        const;
+
+///@brief Set CD for this CDHandle. 
     void     SetCD(CD* ptr_cd);
+
+///@brief Check if the current task int this CD is head task.
+///@return true if it is head, otherwise false.
     bool     IsHead(void)        const;
     
+///@brief Get current CDHandle's level.
     uint32_t level(void)         const;
+
+///@brief Get the rank ID of this CD in current CD level.
     uint32_t rank_in_level(void) const;
+
+///@brief Get the number of sibling CDs in current CD level.
     uint32_t sibling_num(void)   const;
     
+///@brief Get color of the current CD.
+///       In MPI version, color means a communicator.
     ColorT   color(void)         const;
+
+///@brief Get task ID in the task group of this CD.
     int      task_in_color(void) const;
+
+///@brief Get head task's task ID in this CD.
     int      head(void)          const; 
+
+///@brief Get the number of tasks in this CD.
     int      task_size(void)     const; 
     
+///@brief Get the ID of sequential CD.
+///       It is incremented by one per begin/complete pair.
     int      GetSeqID(void)      const;
 
-  /** @brief Get CDHandle to this CD's parent
-   *
-   * \return Pointer to CDHandle of parent
-   */
+///@brief Get CDHandle to this CD's parent
+///@return Pointer to CDHandle of parent
     CDHandle *GetParent(void)    const;
+
+///@brief Check the current CD's context preservation mode.
+///       There are two flavors: Include stack and Exclude stack.
     int      ctxt_prv_mode(void);
+
+///@brief Operator to check equality between CDHandles.
     bool     operator==(const CDHandle &other) const ;
 };
 

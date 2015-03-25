@@ -81,6 +81,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_malloc.h"
 #endif
 
+
+namespace cd {
+
+
 // data structure to store incompleted log entries
 struct IncompleteLogEntry{
   //void * addr_;
@@ -95,37 +99,37 @@ struct IncompleteLogEntry{
   //bool valid_;
 };
 
-using namespace cd;
+//using namespace cd;
 
 
-/**@class cd::Internal 
+/**@class Internal 
  * @brief This class contains static internal routines 
  *        regarding initialization and finalization of CD runtime.
  *
  */ 
 class Internal {
-  friend CDHandle *cd::CD_Init(int numTask, int myRank);
-  friend void cd::CD_Finalize(DebugBuf *debugBuf);
+  friend CDHandle *CD_Init(int numTask, int myRank);
+  friend void CD_Finalize(DebugBuf *debugBuf);
   static void Intialize(void);
   static void Finalize(void);
 };
 
 
-/**@class cd::CD 
+/**@class CD 
  * @brief Core data structure of CD runtime. It has all the information and controls of a specific level of CDs.
  * This object will not be exposed to users and be managed internally by CD runtime.
  *
  * \todo Implement serialize and deserialize of CD object.
  */ 
-class cd::CD : public cd::Serializable {
+class CD : public Serializable {
     /// The friends of CD class
-    friend class cd::RegenObject;   
-    friend class cd::CDEntry;  
-    friend class cd::CDHandle;  
-    friend class cd::RecoverObject;
-    friend class cd::HandleAllReexecute;
-    friend class cd::HandleEntrySearch;
-    friend class cd::HandleEntrySend;
+    friend class RegenObject;   
+    friend class CDEntry;  
+    friend class CDHandle;  
+    friend class RecoverObject;
+    friend class HandleAllReexecute;
+    friend class HandleEntrySearch;
+    friend class HandleEntrySend;
     friend CDEntry *CDHandle::InternalGetEntry(std::string entry_name);
     enum { 
       CD_PACKER_NAME=0,
@@ -294,9 +298,9 @@ update the preserved data.
 
 #ifdef comm_log
     //SZ
-    cd::CommLog * comm_log_ptr_;
+    CommLog * comm_log_ptr_;
     //GONG
-    cd::CommLog * libc_log_ptr_;
+    CommLog * libc_log_ptr_;
 
     uint32_t child_seq_id_;
 
@@ -309,7 +313,7 @@ update the preserved data.
     void* MemAllocSearch(CD *curr_cd, void* p_update = NULL);
     bool PushedMemLogSearch(void* p, CD *curr_cd);
     ////SZ: attempted to move from HeadCD class, but we can use CDPath class
-    //cd::CDHandle*            cd_parent_;
+    //CDHandle*            cd_parent_;
 #endif
 
     // PFS
@@ -318,7 +322,7 @@ update the preserved data.
   public:
     CD();
 
-    CD(cd::CDHandle* cd_parent, 
+    CD(CDHandle* cd_parent, 
        const char* name, 
        const CDID& cd_id, 
        CDType cd_type, 
@@ -326,7 +330,7 @@ update the preserved data.
 
     virtual ~CD();
 
-    void Initialize(cd::CDHandle* cd_parent, 
+    void Initialize(CDHandle* cd_parent, 
                     const char* name, 
                     CDID cd_id, 
                     CDType cd_type, 
@@ -424,10 +428,10 @@ update the preserved data.
     bool     IsHead(void)        const { return cd_id_.IsHead(); }
 
     // These should be virtual because I am going to use polymorphism for those methods.
-    virtual CDErrT Stop(cd::CDHandle* cdh=NULL);
+    virtual CDErrT Stop(CDHandle* cdh=NULL);
     virtual CDErrT Resume(void);
-    virtual CDErrT AddChild(cd::CDHandle* cd_child);
-    virtual CDErrT RemoveChild(cd::CDHandle* cd_child);
+    virtual CDErrT AddChild(CDHandle* cd_child);
+    virtual CDErrT RemoveChild(CDHandle* cd_child);
     virtual CDFlagT *event_flag();
 
   protected:
@@ -474,7 +478,7 @@ update the preserved data.
  *
  * \sa Create(), SysErrNameT, SysErrLocT
  */
-    virtual bool InternalCanRecover(
+    virtual bool CanRecover(
           uint64_t error_name_mask,  //!< [in] Mask of all error/fail types that require recovery
   			  uint64_t error_location_mask //!< [in] Mask of all error/fail locations that require recovery
   			  );
@@ -595,14 +599,14 @@ update the preserved data.
  }; // class CD ends
 
 
-/**@class cd::HeadCD 
+/**@class HeadCD 
  * @brief A representer of CD objects among the task group corresponding to the current CD.
  *        Head task which has HeadCD object has actual control over the non-head tasks which has CD object.
  *
  * \todo Implement serialize and deserialize of HeadCD object.
  */ 
-class cd::HeadCD : public cd::CD {
-  friend class cd::HandleEntrySearch;
+class HeadCD : public CD {
+  friend class HandleEntrySearch;
   public:
     /// Link information of CD hierarchy   
     /// This is a kind of CD object but represents the corresponding task group of each CD
@@ -615,9 +619,9 @@ class cd::HeadCD : public cd::CD {
     /// If children CD is gone, this Head CD sends children CD.
     /// So, when we create CDs, 
     /// we should send Head CDHandle and its CD to its parent CD
-    std::list<cd::CDHandle*> cd_children_;
+    std::list<CDHandle*> cd_children_;
 
-    cd::CDHandle*            cd_parent_;
+    CDHandle*            cd_parent_;
 
 //    std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     // event related
@@ -635,15 +639,15 @@ class cd::HeadCD : public cd::CD {
 
 
     HeadCD();
-    HeadCD(cd::CDHandle* cd_parent, 
+    HeadCD(CDHandle* cd_parent, 
              const char* name, 
              const CDID& cd_id, 
              CDType cd_type, 
              uint64_t sys_bit_vector);
     virtual ~HeadCD();
 
-    cd::CDHandle *cd_parent(void);
-    void set_cd_parent(cd::CDHandle* cd_parent);
+    CDHandle *cd_parent(void);
+    void set_cd_parent(CDHandle* cd_parent);
     virtual CDFlagT *event_flag();
     virtual CDHandle *Create(CDHandle* parent, 
                              const char* name, 
@@ -653,10 +657,10 @@ class cd::HeadCD : public cd::CD {
                              CDInternalErrT* cd_err=0);
     virtual CDErrT Destroy(void);
     virtual CDErrT Reexecute(void);
-    virtual CDErrT Stop(cd::CDHandle* cdh=NULL);
+    virtual CDErrT Stop(CDHandle* cdh=NULL);
     virtual CDErrT Resume(void); // Does this make any sense?
-    virtual CDErrT AddChild(cd::CDHandle* cd_child); 
-    virtual CDErrT RemoveChild(cd::CDHandle* cd_child); 
+    virtual CDErrT AddChild(CDHandle* cd_child); 
+    virtual CDErrT RemoveChild(CDHandle* cd_child); 
 //    CDInternalErrT CreateInternalMemory(HeadCD *cd_ptr, const CDID& new_cd_id);
 //    CDInternalErrT DestroyInternalMemory(HeadCD *cd_ptr);
 
@@ -687,5 +691,5 @@ class cd::HeadCD : public cd::CD {
     
 };
 
-
+}
 #endif

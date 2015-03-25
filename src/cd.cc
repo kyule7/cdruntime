@@ -4049,13 +4049,14 @@ void CD::DecPendingCounter(void)
 //}
 
 void CD::Escalate(uint64_t error_name_mask, 
-                  unit64_t error_location_mask,
+                  uint64_t error_location_mask,
                   std::vector<SysErrT> errors)
 {
   // STUB
 }
 
-bool CD::CanRecover(uint64_t error_name_mask, uint64_t error_location_mask)
+bool CD::CanRecover(uint64_t error_name_mask, 
+                    uint64_t error_location_mask)
 {
   // STUB
   return true;

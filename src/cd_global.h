@@ -129,6 +129,7 @@ typedef uint32_t ENTRY_TAG_T;
 //extern bool app_side;
 
 namespace cd {
+
   class DebugBuf;
 #if _DEBUG
 //  extern std::ostringstream dbg;
@@ -154,7 +155,7 @@ namespace cd {
   class CDEvent;
   class RegenObject;  
   class RecoverObject;
-  class CD_Parallel_IO_Manager;
+  class PFSHandle;
   class SysErrT;
 #ifdef comm_log
   //SZ
@@ -441,6 +442,24 @@ namespace cd {
   extern int max_tag_rank_bit;
   extern int max_tag_task_bit;
 
+
+
+/**@class cd::DebugBuf
+ * @brief Utility class for debugging.
+ *
+ *  Like other parallel programming models, it is hard to debug CD runtime. 
+ *  So, debugging information are printed out to file using this class.
+ *  The global object of this class, dbg, is defined.
+ * 
+ *  The usage of this class is like below.
+ *  \n
+ *  \n
+ *  DebugBuf dbgApp;
+ *  dbgApp.open("./file_path_to_write"); 
+ *  dbgApp << "Debug Information" << endl;
+ *  dbg.flush(); 
+ *  dbg.close();
+ */ 
   class DebugBuf: public std::ostringstream {
     std::ofstream ofs_;
   public:
@@ -448,17 +467,30 @@ namespace cd {
     DebugBuf(void) {}
     DebugBuf(const char *filename) 
       : ofs_(filename) {}
-  
+/**
+ * @brief Open a file to write debug information.
+ *
+ */
     void open(const char *filename)
     {
       ofs_.open(filename);
     }
-    
+
+/**
+ * @brief Close the file where debug information is written.
+ *
+ */    
     void close(void)
     {
       ofs_.close();
     }
-    
+
+ 
+/**
+ * @brief Flush the buffer that contains debugging information to the file.
+ *        After flushing it, it clears the buffer for the next use.
+ *
+ */
     void flush(void) {
       ofs_ << str();
       ofs_.flush();
@@ -469,7 +501,10 @@ namespace cd {
   };
 
 
-
+/**@class cd::Tag
+ * @brief Utility class to generate tag.
+ *
+ */ 
   class Tag : public std::string {
     std::ostringstream _oss;
   public:
@@ -484,17 +519,26 @@ namespace cd {
       return _oss.str();
     }
   }; 
-  
+
+/**@class cd::CommInfo
+ * @brief Data structure that contains the communication message information generated in CD runtime.
+ *
+ *  There are some communications among task group in a CD, and some of them are non-blocking calls.
+ *  So, this class is used to contain and track the completion of the messages.
+ */ 
   class CommInfo { 
   public:
     void *addr_;
-    MPI_Request req_;
-    MPI_Status  stat_;
-    int valid_;
+    MPI_Request req_;   //<! MPI_Request
+    MPI_Status  stat_;  //<! MPI_Status
+    int valid_;         //<! Valid bit for the message completion.
     CommInfo(void *addr = NULL) : addr_(addr) {
       valid_ = 0;  
     }
     ~CommInfo() {}
+
+/**@brief Copy operator for class CommInfo.
+ */
     CommInfo &operator=(const CommInfo &that) {
       addr_  = that.addr_;
       req_   = that.req_;
@@ -527,49 +571,52 @@ namespace cd {
 
   static inline void nullFunc(void) {}
 
- /** \addtogroup runtime_logging Runtime logging-related functionality
-  *  The \ref runtime_logging is supported in current CD runtime.
-  * @{
-  *
-  *  @brief Set current context as non-application side. 
-  *  @return true/false
-  */
+/** \addtogroup runtime_logging Runtime logging-related functionality
+ *  The \ref runtime_logging is supported in current CD runtime.
+ * @{
+ */
+
+/**@brief Set current context as non-application side. 
+ * @return true/false
+ */
   static inline void CDPrologue(void) { app_side = false; }
- /** @brief Set current context as application side. 
-  *  @return true/false
-  */
+
+/**@brief Set current context as application side. 
+ * @return true/false
+ */
   static inline void CDEpilogue(void) { app_side = true; }
- /** @brief Check current context is application side. 
-  *  @return true/false
-  */
+
+/**@brief Check current context is application side. 
+ * @return true/false
+ */
   static inline bool CheckAppSide(void) { return app_side; }
 
-  /** @} */ // End runtime_logging group =====================================================
+ /** @} */ // End runtime_logging group =====================================================
 
 
-  /** \addtogroup cd_accessor_funcs Global CD Accessor Functions
-   *  The \ref cd_accessor_funcs are used to get the current and root
-   *  CD handles if these are not explicitly tracked.
-   *
-   * These methods are globally accessible without a CDHandle object.
-   *
-   * @{
-   *
-   */
- /**
-  * @brief Accessor function to current active CD.
-  * 
-  *  At any point after the CD runtime is initialized, each task is
-  *  associated with a current CD instance. The current CD is the
-  *  deepest CD in the tree visible from the task that has begun but
-  *  has not yet completed. In other words, whenever a CD begins, it
-  *  becomes the current CD. When a CD completes, its parent becomes
-  *  the current CD.
+ /** \addtogroup cd_accessor_funcs Global CD Accessor Functions
+  *  The \ref cd_accessor_funcs are used to get the current and root
+  *  CD handles if these are not explicitly tracked.
   *
-  *  @return returns a pointer to the handle of the current active CD; Returns
-  *  0 if CD runtime is not yet initialized or because of a CD
-  *  implementation bug.
+  * These methods are globally accessible without a CDHandle object.
+  *
+  * @{
+  *
   */
+
+/**@brief Accessor function to current active CD.
+ * 
+ *  At any point after the CD runtime is initialized, each task is
+ *  associated with a current CD instance. The current CD is the
+ *  deepest CD in the tree visible from the task that has begun but
+ *  has not yet completed. In other words, whenever a CD begins, it
+ *  becomes the current CD. When a CD completes, its parent becomes
+ *  the current CD.
+ *
+ *  @return returns a pointer to the handle of the current active CD; Returns
+ *  0 if CD runtime is not yet initialized or because of a CD
+ *  implementation bug.
+ */
   CDHandle *GetCurrentCD(void);
 
  /**

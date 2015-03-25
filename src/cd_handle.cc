@@ -126,7 +126,7 @@ void WriteDbgStream(DebugBuf *debugBuf)
 
 void CD_Finalize(DebugBuf *debugBuf)
 {
-  //GONG:
+  //GONG
   CDPrologue();
 
 
@@ -337,103 +337,15 @@ CDHandle* CDHandle::Create(const char* name,
   return new_cd_handle;
 }
 
-///// Split the node
-///// (x,y,z)
-///// taskID = x + y * nx + z * (nx*ny)
-///// x = taskID % nx
-///// y = ( taskID % ny ) - x 
-///// z = r / (nx*ny)
-//int SplitCD_3D(const int& my_task_id, 
-//               const int& my_size, 
-//               const int& num_children, 
-//               int& new_color, 
-//               int& new_task)
-//{
-//  // Get current task group size
-//  int new_size = (int)((double)my_size / num_children);
-//  int num_x = round(pow(my_size, 1/3.));
-//  int num_y = num_x;
-//  int num_z = num_x;
-//
-//  int num_children_x = 0;
-//  if(num_children > 1)       num_children_x = round(pow(num_children, 1/3.));
-//  else if(num_children == 1) num_children_x = 1;
-//  else assert(0);
-//
-//  int num_children_y = num_children_x;
-//  int num_children_z = num_children_x;
-//
-//  int new_num_x = num_x / num_children_x;
-//  int new_num_y = num_y / num_children_y;
-//  int new_num_z = num_z / num_children_z;
-//
-////  dbg<<"CD : "<< CDPath::GetCurrentCD()->ptr_cd()->name_<<"num_children = "<< num_children 
-////     <<", num_x = "<< num_x 
-////     <<", new_children_x = "<< num_children_x 
-////     <<", new_num_x = "<< new_num_x <<"node size: "<<my_size<<"\n\n"<<endl; //dbgBreak();
-//
-//  assert(num_x*num_y*num_z == my_size);
-//  assert(num_children_x * num_children_y * num_children_z == (int)num_children);
-//  assert(new_num_x * new_num_y * new_num_z == new_size);
-//  assert(num_x != 0);
-//  assert(num_y != 0);
-//  assert(num_z != 0);
-//  assert(new_num_x != 0);
-//  assert(new_num_y != 0);
-//  assert(new_num_z != 0);
-//  assert(num_children_x != 0);
-//  assert(num_children_y != 0);
-//  assert(num_children_z != 0);
-//  
-//  int taskID = my_task_id; // Get current task ID
-//  int sz = num_x*num_y;
-//  int Z = (double)taskID / sz;
-//  int tmp = taskID % sz;
-//  int Y = (double)tmp / num_x;
-//  int X = tmp % num_x;
-//
-////  dbg<<"tmp = "<<tmp <<endl;
-////  dbg<<"taskID = "<<taskID <<endl;
-////  dbg<<"sz = "<<sz<<endl;
-////  dbg<<"X = "<<X<<endl;
-////  dbg<<"Y = "<<Y<<endl;
-////  dbg<<"Z = "<<Z<<endl;
-////
-////  dbg<<"num_children_x*num_children_y = "<<num_children_x * num_children_y <<endl;
-////  dbg<<"new_num_x*new_num_y = "<<new_num_x * new_num_y <<endl;
-////  dbg << "(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<")"<< endl; 
-//
-//  new_color = (int)(X / new_num_x + (Y / new_num_y)*num_children_x + (Z / new_num_z)*(num_children_x * num_children_y));
-//  new_task  = (int)(X % new_num_x + (Y % new_num_y)*new_num_x      + (Z % new_num_z)*(new_num_x * new_num_y));
-//  
-////  dbg << "(color,task,size) = (" << new_color << ","<< new_task << "," << new_size << ") <-- "<<endl;
-////       <<"(X,Y,Z) = (" << X << ","<<Y << "," <<Z <<") -- (color,task,size) = (" << GetCurrentCD()->GetColor() << ","<< my_task_id << "," << my_size <<")"
-////       << "ZZ : " << round((double)Z / new_num_z)
-////       << endl;
-////  dbgBreak();
-//  return 0;
-//}
 
 
-void CDHandle::RegisterSplitMethod(std::function<int(const int& my_task_id,
-                                                     const int& my_size,
-                                                     const int& num_children,
-                                                     int& new_color, 
-                                                     int& new_task)> split_func)
-{ SplitCD = split_func; }
+CDErrT CDHandle::RegisterSplitMethod(SplitFuncT split_func)
+{ 
+  SplitCD = split_func; 
+  return kOK;
+}
 
 
-//CDErrT CDHandle::CD_Comm_Split(int group_id, int color, int key, int* new_group_id)
-//{
-////1) Get color and task from API
-////2) Using PMPI_Allreduce(), get table for every color and task
-////3) Two contexts are allocated for all the comms to be created.  
-////   These same two contexts can be used for all created communicators 
-////   since the communicators will not overlap.
-////4) If the local process has a color of PMPI_UNDEFINED, it can return a NULL comm.
-////5) The table entries that match the local process color are sorted by key/rank.
-////6) A group is created from the sorted list and a communicator is created with this group and the previously allocated contexts.
-//}
 
 
 CDErrT CDHandle::GetNewNodeID(NodeID& new_node)
@@ -620,7 +532,7 @@ CDHandle* CDHandle::Create(uint32_t num_children,
                            uint32_t error_loc_mask, 
                            CDErrT *error )
 {
-  return Create(GetNodeID(), num_children, name, cd_type, error_name_mask, error_loc_mask, error);
+  return Create(color(), num_children, name, cd_type, error_name_mask, error_loc_mask, error);
 }
 
 
@@ -869,7 +781,6 @@ char *CDHandle::GetName(void) const
 
 CDID     &CDHandle::GetCDID(void)       { return ptr_cd_->GetCDID(); }
 CDNameT  &CDHandle::GetCDName(void)     { return ptr_cd_->GetCDName(); }
-ColorT   CDHandle::GetNodeID(void)     { return node_id_.color(); }
 NodeID   &CDHandle::node_id(void)       { return node_id_; }
 
 CD       *CDHandle::ptr_cd(void)       const { return ptr_cd_; }
@@ -937,23 +848,6 @@ CDErrT CDHandle::RemoveChild(CDHandle* cd_child)
   CDErrT err=INITIAL_ERR_VAL;
   ptr_cd_->RemoveChild(cd_child);
   return err;
-}
-
-bool CDHandle::IsLocalObject()
-{
-/* RELEASE
-  // Check whether we already have this current node info, if not then get one.
-  if( current_task_id_ == -1 || current_process_id_ == -1 ) {
-    current_task_id_    = cd::Util::GetCurrentTaskID(); 
-    current_process_id_ = cd::Util::GetCurrentProcessID();
-  }
-
-  if( current_task_id_ == task_id_ && current_process_id_ == process_id_ )
-    return true;
-  else 
-    return false;
-*/
-return true;
 }
 
 

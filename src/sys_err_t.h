@@ -86,7 +86,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 
 namespace cd {
-/** @brief Interface to error/failure-specific information 
+/**@class cd::SysErrInfo 
+ * @brief Interface to error/failure-specific information 
  *
  * An abstract interface to specific error/failure information, such
  * as address range, core number, degradation, specific lost
@@ -100,13 +101,14 @@ namespace cd {
  */
 class SysErrInfo {
 protected:
-  uint64_t info_;
+  uint64_t info_; //!< Information about system error component.
 public:
   SysErrInfo(void) {}
   virtual ~SysErrInfo(void) {}
 };
 
-/** @brief Interface to memory-type error information
+/**@class cd::MemErrInfo
+ * @brief Interface to memory-type error information
  *
  * This is meant to potentially be extended.
  *
@@ -115,16 +117,15 @@ class MemErrInfo : public SysErrInfo {
 public:
   MemErrInfo(void) {}
   virtual ~MemErrInfo(void) {}
-  virtual uint64_t get_pa_start(void){ return 0; } //!< Starting physical address 
+
+  virtual uint64_t get_pa_start(void){ return 0; } //!< Starting physical address
   virtual uint64_t get_va_start(void){ return 0; } //!< Starting virtual address
   virtual uint64_t get_length(void){ return 0; }  //!< Length of affected access
   virtual char    *get_data(void){ return 0; }    //!< Data value read (erroneous)
 };
 
-
-
-
-/** @brief Interface to soft memory error information
+/**@class SoftMemErrInfo
+ * @brief Interface to soft memory error information
  *
  * This is meant to potentially be extended.
  *
@@ -148,7 +149,8 @@ public:
   char    *get_syndrome(void);     //!< Value of syndrome
 };
 
-/** @brief Interface to degraded memory error information
+/**@class DegradedMemErrInfo 
+ * @brief Interface to degraded memory error information
  *
  * This is meant to potentially be extended.
  *
@@ -167,7 +169,8 @@ public:
 };
 
 
-/** @brief Data structure for specifying errors and failure
+/**@class SysErrT 
+ * @brief Data structure for specifying errors and failure
  *
  * should come up with a reasonable way to allow some extensible class hierarchy for various error types.
  * currently, it is more like a bit vector
@@ -178,40 +181,46 @@ public:
  * setting up and using deep class hierarchies. However, the bitmask
  * way is dangerously narrow and may lead to less portable (and less
  * future-proof code). Basically we chose C over C++ style here :-(
- *
+ * \n
+ * \n
  * __This needs more thought__
- *
+ * \n
+ * Type for specifying system errors and failure names.
+ * 
+ * This type represents the interface between the user and the system with respect to errors and failures. 
+ * The intent is for these error/failure names to be fairly comprehensive with respect to system-based issues, 
+ * while still providing general/abstract enough names to be useful to the application programmer. 
+ * The use categories/names are meant to capture recovery strategies 
+ * that might be different based on the error/failure and be comprehensive in that regard. 
+ * The DeclareErrName() method may be used to create a programmer-defined error 
+ * that may be associated with a programmer-provided detection method.
+ * 
+ * We considered doing an extensible class hierarchy like GVR, but ended up with a hybrid type system. 
+ * There are predefined bit vector constants for error/failure names and machine location names. 
+ * These may be extended by application programmers for specialized detectors. 
+ * These types are meant to capture abstract general classes of errors that may be treated differently by recovery functions 
+ * and therefore benefit from easy-to-access and well-defined names. 
+ * Additional error/failure-specific information will be represented by the SysErrInfo interface class hierarchy, 
+ * which may be extended by the programmer at compiler time. 
+ * Thus, each error/failure is a combination of SysErrNameT, SysErrLocT, and SysErrInfo.
  * 
  */
 class SysErrT {
 public:
-/*
-Type for specifying system errors and failure names.
+  /// Name of a system error.
+  SysErrNameT  sys_err_name_; 
 
-This type represents the interface between the user and the system with respect to errors and failures. 
-The intent is for these error/failure names to be fairly comprehensive with respect to system-based issues, 
-while still providing general/abstract enough names to be useful to the application programmer. 
-The use categories/names are meant to capture recovery strategies 
-that might be different based on the error/failure and be comprehensive in that regard. 
-The DeclareErrName() method may be used to create a programmer-defined error 
-that may be associated with a programmer-provided detection method.
-
-We considered doing an extensible class hierarchy like GVR, but ended up with a hybrid type system. 
-There are predefined bit vector constants for error/failure names and machine location names. 
-These may be extended by application programmers for specialized detectors. 
-These types are meant to capture abstract general classes of errors that may be treated differently by recovery functions 
-and therefore benefit from easy-to-access and well-defined names. 
-Additional error/failure-specific information will be represented by the SysErrInfo interface class hierarchy, 
-which may be extended by the programmer at compiler time. 
-Thus, each error/failure is a combination of SysErrNameT, SysErrLocT, and SysErrInfo.
-*/
-  SysErrNameT  sys_err_name_;
-  SysErrLocT   sys_err_loc_;
-  SysErrInfo*  error_info_;
+  /// Location of a system error.
+  SysErrLocT   sys_err_loc_; 
+ 
+  /// Detail information of system error.
+  SysErrInfo*  error_info_;   
 
   SysErrT(void) {}
   ~SysErrT(void) {}
-  char* printSysErrInfo(void) { return NULL; }
+  
+///@brief Print system error information.
+  char* printSysErrInfo(void) { return NULL; } 
 };
 
 

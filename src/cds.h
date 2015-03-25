@@ -42,17 +42,18 @@
  * the HTML docs.
  *
  * - \ref cd_init_funcs
+ * - \ref cd_defs
  * - \ref cd_accessor_funcs
  * - \ref cd_hierarchy
  * - \ref preservation_funcs
  * - \ref detection_recovery
  *   - \ref error_reporting
  *   - \ref internal_recovery 
- *   
+ *
+ * - \ref runtime_logging
+ * - \ref cd_event_funcs
  * - \ref cd_error_probability
  * - \ref PGAS_funcs
- * - \ref cd_event_funcs
- * - \ref cd_defs
  *
  * - \ref sec_example_spmv
  * - \ref sec_example_lulesh
@@ -86,7 +87,3 @@
  *
  */
  
-/** @file cds.h
- *
- *  \brief Top-level header file that will be included by users.
- */

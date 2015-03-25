@@ -10,6 +10,7 @@
 #include "cd.h"
 
 namespace cd {
+
 class PFSHandle {
 	friend class cd::CD;
 private:

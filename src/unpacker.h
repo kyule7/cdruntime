@@ -50,6 +50,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  *@{
  *
+ */
+
+/* @class cd::Unpacker
  * @brief Unpacking data to reconstruct object 
  * Data layout
  * [TableLength][ID][Length][Position][ID][Length][Position][ID][Length][Position]...[DATAChunk]
@@ -64,23 +67,34 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 class cd::Unpacker    
 {
   public:
-
-    enum UnpackerErrT {kOK =0, kMallocFailed, kReallocFailed, kNotFound};
+    
+///@brief Enumerator internally used in Unpacker.
+    enum UnpackerErrT { kOK =0,         //!< No errors. 
+                        kMallocFailed,  //!< Malloc failed.
+                        kReallocFailed, //!< Realloc failed.
+                        kNotFound       //!< Could not find the data to unpack.
+                        };
     Unpacker();
     virtual ~Unpacker();
 
-
+///@brief Get actual data in packer data structured from data table.
     char *GetAt(const char *src_data, uint32_t find_id, uint32_t &return_size, uint32_t &dwGetID); 
+
+///@brief Get actual data in packer data structured from data table.
     char *GetAt(const char *src_data, uint32_t find_id, uint32_t &return_size);
 
 
-
+///@brief Get actual data in packer data structured from data table.
     uint32_t GetAt(const char *src_data, uint32_t find_id, void *return_data);
 
 
+///@brief Get next data from data table.
     char *GetNext(char *src_data,  uint32_t &dwGetID, uint32_t &return_size);  
 
+///@brief Get next data from data table.
     void *GetNext(void *str_return_data, void *src_data,  uint32_t &return_id, uint32_t &return_size);
+
+///@brief Initialize seek.
     void SeekInit();
 
 
