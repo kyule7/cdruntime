@@ -55,6 +55,7 @@ int PFSHandle::Open_File( void )
 	int error_type;
 	error_type = MPI_File_open( PFS_parallel_file_communicator_, const_cast<char*>(PFS_file_path_.c_str()), 
 							MPI_MODE_CREATE|MPI_MODE_RDWR|MPI_MODE_DELETE_ON_CLOSE, MPI_INFO_NULL, &(PFS_d_) );
+  std::cout <<"\n\n=====\n\n"<< PFS_file_path_ << "==============\n\n"<<endl;
 	if( error_type != MPI_SUCCESS )
 	{
 		//FIXME: this part should be discussed with Kyushick. What error type can be used here?
@@ -147,7 +148,8 @@ int PFSHandle::Splitter( void )
 void PFSHandle::Init( const char* file_path )
 {
 	std::stringstream temp_file_name;
-	temp_file_name << Util::GetUniqueCDFileName( ptr_cd_->GetCDID(), file_path, NULL, kPFS ) << '.' << sharing_group_id_ << ".cd";
+	temp_file_name << Util::GetUniqueCDFileName( ptr_cd_->GetCDID(), file_path, NULL, kPFS ) + std::string(".") + std::to_string(sharing_group_id_) + std::string(".cd");
+  std::cout << "Init : " << temp_file_name.str() << std::endl;
 	PFS_file_path_ = temp_file_name.str();
 	PFS_current_offset_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
 	PFS_current_chunk_begin_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;

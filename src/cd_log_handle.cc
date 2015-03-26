@@ -51,3 +51,14 @@ void CDLogHandle::OpenFilePath(void)
   }
   
 }
+
+
+std::string CDLogHandle::GetFilePath(void)
+{ 
+  if(!opened_) {
+    OpenFilePath();
+  }
+  return path_.GetFilePath();
+
+
+}

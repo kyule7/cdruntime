@@ -791,6 +791,7 @@ uint32_t CDHandle::rank_in_level(void) const { return ptr_cd_->GetCDName().rank_
 uint32_t CDHandle::sibling_num(void)   const { return ptr_cd_->GetCDName().size(); }
 
 ColorT  CDHandle::color(void)          const { return node_id_.color(); }
+ColorT  CDHandle::GetNodeID(void)          const { return node_id_.color(); }
 int     CDHandle::task_in_color(void)  const { return node_id_.task_in_color(); }
 int     CDHandle::head(void)           const { return node_id_.head(); }
 int     CDHandle::task_size(void)      const { return node_id_.size(); }
@@ -1096,7 +1097,7 @@ void CDHandle::CommitPreserveBuff()
 {
   CDPrologue();
 //  if(ptr_cd_->cd_exec_mode_ ==CD::kExecution){
-  if( ptr_cd_->ctxt_prv_mode_ == CD::kExcludeStack) {
+  if( ptr_cd_->ctxt_prv_mode_ == kExcludeStack) {
 //  dbg << "Commit jmp buffer!" << endl; dbgBreak();
 //  dbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << ", size: "<< sizeof(jmp_buf) << endl; dbgBreak();
     memcpy(ptr_cd_->jmp_buffer_, jmp_buffer_, sizeof(jmp_buf));

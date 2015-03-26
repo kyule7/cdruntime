@@ -48,7 +48,7 @@ using namespace cd;
 using namespace std;
 using namespace chrono;
 
-ostringstream dbg2;
+DebugBuf dbg2;
 CDErrT err;
 int  np = 0;
 int  mr = 0;
@@ -86,14 +86,14 @@ int test_preemption()
   CD_Begin(root); 
 
   dbg2 << "CD Preserving..\n" << endl;
-  CDHandle* child_lv1=root->Create(CDPath::GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
+  CDHandle* child_lv1=root->Create(GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
   CD_Begin(child_lv1);
   dbg2 << "child level 1-------------------------------------\n" << endl;
 
-  CDHandle* child_lv2=child_lv1->Create(CDPath::GetCurrentCD()->GetNodeID(), LV2, "CD2", kStrict, 0, 0, &err);
+  CDHandle* child_lv2=child_lv1->Create(GetCurrentCD()->GetNodeID(), LV2, "CD2", kStrict, 0, 0, &err);
   CD_Begin(child_lv2);
   dbg2 << "child level 2-------------------------------------\n" << endl;
-  dbg << "\n\n\nnode id check : "<< CDPath::GetCurrentCD()->node_id() << "\n\n\n" << endl;
+  dbg << "\n\n\nnode id check : "<< GetCurrentCD()->node_id() << "\n\n\n" << endl;
 
   child_lv2->Preserve(a, sizeof(a), kCopy, "a", "a");
   child_lv2->Preserve(b, sizeof(b), kCopy, "b", "b");
@@ -156,7 +156,7 @@ int test_preemption()
   dbg2 << "CD Complete\n" << endl;
   //  root->Complete();
 
-  CDHandle* child_lv3=child_lv2->Create(CDPath::GetCurrentCD()->GetNodeID(), LV3, "CD3", kStrict, 0, 0, &err);
+  CDHandle* child_lv3=child_lv2->Create(GetCurrentCD()->GetNodeID(), LV3, "CD3", kStrict, 0, 0, &err);
   CD_Begin(child_lv3);
   dbg2 << "child level 3-------------------------------------\n" << endl;
   child_lv3->Preserve(a, sizeof(a), kRef, "child_a", "a");
@@ -224,7 +224,7 @@ int test_preemption_2()
   a[0] = 99;  // now when child recovers it should see 3 instead of 99
   dbg2 << "After modifying current value of a[0] " << a[0] <<" a[1] "<< a[1] << endl;
 
-  CDHandle* child=root->Create(CDPath::GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
+  CDHandle* child=root->Create(GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
   CD_Begin(child); 
   dbg2 << "child cd begin\n" << endl; 
   child->Preserve(a, sizeof(a), kRef, "nonamejusttest", "a", 0);

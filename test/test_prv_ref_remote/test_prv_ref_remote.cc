@@ -143,11 +143,11 @@ int TestPreservationViaRefRemote(void)
   DecomposeData(arrayE, sizeof(arrayE), myRank);
   arrayName[arrayE] = "arrayE";
 
-  child_lv1->Preserve(arrayA, sizeof(arrayA), kCopy | kShared, 
+  child_lv1->Preserve(arrayA, sizeof(arrayA), kCopy | kCoop, 
                       (string("arrayA-")+to_string(myRank)).c_str()); // arrayA-rankID
-  child_lv1->Preserve(arrayB, sizeof(arrayB), kCopy | kShared, 
+  child_lv1->Preserve(arrayB, sizeof(arrayB), kCopy | kCoop, 
                       (string("arrayB-")+to_string(myRank)).c_str()); // arrayB-rankID
-  child_lv1->Preserve(arrayE, sizeof(arrayE), kCopy | kShared, 
+  child_lv1->Preserve(arrayE, sizeof(arrayE), kCopy | kCoop, 
                       (string("arrayE-")+to_string(myRank)).c_str()); // arrayE-rankID
 
   dbgApp << "\t\tPreserve via copy: arrayA (Share), arrayB (Share), arrayE (Share)\n" << endl;

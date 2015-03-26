@@ -127,7 +127,6 @@ typedef uint32_t ENTRY_TAG_T;
 
 //GONG: global variable to represent the current context for malloc wrapper
 //extern bool app_side;
-
 namespace cd {
 
   class DebugBuf;
@@ -292,7 +291,7 @@ namespace cd {
                                 //!< regenerate the data during
                                 //!< restoration instead of copying
                                 //!< it from preserved storage.
-                      kShared=8 
+                      kCoop=8 
 										};
   /** @} */ // end of preservation_funcs
 
@@ -358,9 +357,9 @@ namespace cd {
    *
    */
   enum PGASUsageT {
-    kSharedVar = 0,      //!< Definitely shared for actual communication
+    kShared = 0,      //!< Definitely shared for actual communication
     kPotentiallyShared, //!< Perhaps used for communication by this
-			//!< CD, essentially equivalent to kShared for CDs.
+			//!< CD, essentially equivalent to kCoop for CDs.
     kPrivatized,     //!< Shared in general, but not used for any
 		      //!< communication during this CD.
     kPrivate          //!< Entirely private to this CD.
@@ -692,6 +691,9 @@ namespace cd {
 //    return eventStr;
 
   }
+    enum CtxtPrvMode { kExcludeStack=0, 
+                       kIncludeStack
+                     };
 }
 
 
@@ -783,7 +785,7 @@ We are increasing the number of reexecution inside Begin(). So, the point of tim
 // Macros for setjump / getcontext
 // So users should call this in their application, not call cd_handle->Begin().
 
-#define CD_Begin(X) if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
+#define CD_Begin(X) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
 //#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
 #define CD_Complete(X) (X)->Complete()   
 

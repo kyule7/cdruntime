@@ -487,7 +487,8 @@ CD::InternalCreate(CDHandle* parent,
 #endif
 #endif
     if( new_cd->GetPlaceToPreserve() == kPFS ) {
-      new_cd->pfs_handler_ = new PFSHandle( new_cd, "./PFS_Root/" ); 
+//          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
+      new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->log_handle_.path_.GetFilePath().c_str() ); 
     }
     *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
   }
@@ -1747,7 +1748,7 @@ CD::InternalPreserve(void *data,
     if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) {                // via-copy, so it saves data right now!
 
       dbg << "\nPreservation via Copy to %d(memory or file)\n" << GetPlaceToPreserve() << endl;
-      dbg << "Prv Mask : " << preserve_mask << ", CHECK PRV TYPE : " << CHECK_PRV_TYPE(preserve_mask, kShared) << endl;
+      dbg << "Prv Mask : " << preserve_mask << ", CHECK PRV TYPE : " << CHECK_PRV_TYPE(preserve_mask, kCoop) << endl;
       switch(GetPlaceToPreserve()) {
         case kMemory: {
           dbg<<"[kMemory] ------------------------------------------\n" << endl;
@@ -1762,7 +1763,7 @@ CD::InternalPreserve(void *data,
 
           if( !my_name.empty() ) {
 
-            if( !CHECK_PRV_TYPE(preserve_mask, kShared) ) {
+            if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
               entry_directory_map_[cd_hash(my_name)] = cd_entry;
 
               dbg <<"register local entry_dir. my_name : "<<my_name << " - " << cd_hash(my_name) 
@@ -1793,18 +1794,18 @@ CD::InternalPreserve(void *data,
                                  my_name);
           cd_entry->set_my_cd(this); 
 
-          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_HDD'       
+//          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_HDD'       
           CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path_.GetFilePath(), log_handle_.IsOpen());
 
           entry_directory_.push_back(*cd_entry); 
 
           if( !my_name.empty() ) {
-            if( !CHECK_PRV_TYPE(preserve_mask, kShared) ) {
+            if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
               entry_directory_map_[cd_hash(my_name)] = cd_entry;
 
-              dbg <<"register local entry_dir. my_name : "<<my_name
-                        <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
-                        <<", address: " <<cd_entry->dst_data_.address_data()<< endl;
+//              dbg <<"register local entry_dir. my_name : "<<my_name
+//                        <<", value : "<<*(reinterpret_cast<int*>(cd_entry->dst_data_.address_data())) 
+//                        <<", address: " <<cd_entry->dst_data_.address_data()<< endl;
             }
             else {
               remote_entry_directory_map_[cd_hash(my_name)] = cd_entry;
@@ -1828,13 +1829,13 @@ CD::InternalPreserve(void *data,
                                  my_name);
           cd_entry->set_my_cd(this); 
 
-          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
+//          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
           CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path_.GetFilePath(), log_handle_.IsOpen());
 
           entry_directory_.push_back(*cd_entry);  
 
           if( !my_name.empty() ) {
-            if( !CHECK_PRV_TYPE(preserve_mask, kShared) ) {
+            if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
               entry_directory_map_[cd_hash(my_name)] = cd_entry;
 
               assert(entry_directory_map_[cd_hash(my_name)]);
@@ -1872,13 +1873,13 @@ CD::InternalPreserve(void *data,
 
 		      //Do we need to check for anything special for accessing to the global filesystem? 
 		      //Potentially=> CDEntry::CDEntryErrT err = cd_entry->SavePFS(log_handle_.path_.GetFilePath(), log_handle_.isPFSAccessible(), &(log_handle_.PFSlog));
-          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
+//          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
 		      CDEntry::CDEntryErrT err = cd_entry->SavePFS();//I don't know what should I do with the log parameter. I just add it for compatibility.
           
 
           entry_directory_.push_back(*cd_entry);  
           if( !my_name.empty() ) {
-            if( !CHECK_PRV_TYPE(preserve_mask, kShared) ) {
+            if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
               entry_directory_map_[ cd_hash(my_name) ] = cd_entry;
               assert( entry_directory_map_[ cd_hash( my_name ) ] );
               assert( entry_directory_map_[ cd_hash( my_name ) ]->src_data_.address_data() );
@@ -1926,8 +1927,8 @@ CD::InternalPreserve(void *data,
 //      entry_directory_map_[ref_name] = *cd_entry;
       if( !my_name.empty() ) {
         entry_directory_map_[cd_hash(my_name)] = cd_entry;
-        if( CHECK_PRV_TYPE(preserve_mask, kShared) ) {
-          cout << "[CD::InternalPreserve. Error : kRef | kShared\n"
+        if( CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
+          cout << "[CD::InternalPreserve. Error : kRef | kCoop\n"
                << "Tried to preserve via reference but tried to allow itself as reference to other node. "
                << "If it allow itself for reference locally, it is fine!" << endl;
         }

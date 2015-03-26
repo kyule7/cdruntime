@@ -65,10 +65,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // FIXME neet to inherit serializable object and that will handle serilization complication.
 namespace cd {
   /** \addtogroup cd_defs 
-   *
-   *
    *@{
-   *
+   */
+ /**
    * @brief Information of data regarding preservation
    *
    * DataHandle can be copied by using = operator by default. Making of a copy of a handle is thus very easy. 
@@ -84,7 +83,7 @@ class DataHandle : public Serializable {
   friend class CDEntry;
   friend std::ostream& operator<<(std::ostream& str, const DataHandle& dh);
   public:
-    enum HandleType { kMemory = 0, kOSFile, kReference, kSource, kPFS};
+    enum HandleType { kMemory = 0, kOSFile, kReference, kSource, kPFS };
   private:
     enum { 
       DATA_PACKER_NODE_ID=0,

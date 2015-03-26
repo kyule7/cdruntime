@@ -129,6 +129,7 @@ void CD_Finalize(DebugBuf *debugBuf);
 class cd::CDHandle {
   friend class cd::RegenObject;
   friend class cd::CD;
+  friend class cd::HeadCD;
   friend class cd::CDEntry;
   public:
 
@@ -751,79 +752,74 @@ class cd::CDHandle {
 
 
 
-  /** \addtogroup PGAS_funcs
-   *
-   * @{
-   */
+/** \addtogroup PGAS_funcs
+ *
+ * @{
+ */
 
-  /** @brief Declare how a region of memory behaves within this CD (for Relaxed CDs) 
-   *
-   * Declare the behavior of a region of PGAS/GAS memory within this
-   *  CD to minimize logging/tracking overhead. Ideally, only those
-   *  memory accesses that really are used to communicate between this
-   *  relaxed CD and another relaxed CD are logged/tracked.
-   *
-   * \warning For now, we are using an address to mark the type, but it is
-   * quite possible that using actual types and casting is
-   * better. Unfortunately types cannot be done through an API
-   * interface and require a change to the language. It is not clear
-   * how much overhead will be saved through just this API technique
-   * and we will explore language changes (see discussion below).
-   *
-   * In the UPC++ implementation, this API call should not be used, and a cast from 
-   * `shared_array` to `privatized_array` (or `shared_var` to `privatized_var`) is
-   * preferred. UPC++ implementation should be quite straight-forward
-   *
-   * \todo Do we want to expose explicit logging functions?
-   *
-   * Discussion on 3/11/2014:
-   *
-   * Just in UPC runtime, perhaps cram a field that says log
-   * vs. unlogged into the pointer representation (steal one
-   * bit). That we can perhaps do just in the runtime. A problem is
-   * that all pointer operations (e.g., comparisons) need to know
-   * about this bit.
-   * 
-   * If adding to the compiler, then should be done at same point as
-   * strict and relaxed are done.
-   *
-   * There is also a pragma that can be used for changing the default
-   * behavior from shared to privatized (assuming that all or at least
-   * vast majority of accesses) within a code block are such. This
-   * might be easier than casting.
-   */
-  CDErrT SetPGASType(void* data_ptr,   //!< [in] pointer to data to be "Typed";
-		      //!< __currently must be in same address space
-		      //!< as calling task, but will extend to
-		      //!< PGAS fat pointers later  
+/** @brief Declare how a region of memory behaves within this CD (for Relaxed CDs) 
+ *
+ * Declare the behavior of a region of PGAS/GAS memory within this
+ *  CD to minimize logging/tracking overhead. Ideally, only those
+ *  memory accesses that really are used to communicate between this
+ *  relaxed CD and another relaxed CD are logged/tracked.
+ *
+ * \warning For now, we are using an address to mark the type, but it is
+ * quite possible that using actual types and casting is
+ * better. Unfortunately types cannot be done through an API
+ * interface and require a change to the language. It is not clear
+ * how much overhead will be saved through just this API technique
+ * and we will explore language changes (see discussion below).
+ *
+ * In the UPC++ implementation, this API call should not be used, and a cast from 
+ * `shared_array` to `privatized_array` (or `shared_var` to `privatized_var`) is
+ * preferred. UPC++ implementation should be quite straight-forward
+ *
+ * \todo Do we want to expose explicit logging functions?
+ *
+ * Just in UPC runtime, perhaps cram a field that says log
+ * vs. unlogged into the pointer representation (steal one
+ * bit). That we can perhaps do just in the runtime. A problem is
+ * that all pointer operations (e.g., comparisons) need to know
+ * about this bit.
+ * 
+ * If adding to the compiler, then should be done at same point as
+ * strict and relaxed are done.
+ *
+ * There is also a pragma that can be used for changing the default
+ * behavior from shared to privatized (assuming that all or at least
+ * vast majority of accesses) within a code block are such. This
+ * might be easier than casting.
+ */
+  CDErrT SetPGASType(void* data_ptr, //!< [in] pointer to data to be "Typed";
+                        		      //!< __currently must be in same address space
+                        		      //!< as calling task, but will extend to
+                        		      //!< PGAS fat pointers later  
 		      uint64_t len, //!< [in] Length of preserved data (Bytes)
-		      PGASUsageT region_type=kSharedVar //!< [in] How
-		      //!< is this
-		      //!< memory range
-		      //!< used (shared
-		      //!< for comm or not?)
+		      PGASUsageT region_type=kShared //!< [in] How is this memory range used.
+                                         //!< (shared for comm or not?)
 		      ) { return kOK; }
   
-  /** \brief Simplify optimization of discarding relaxed CD log entries
-   *
-   * When using relaxed CDs, the CD runtime may log all communication
-   * with tasks that are in a different CD context. While privatizing
-   * some accesses reduces logging volume, all logged entries must
-   * still be propagated and preserved up the CD tree for distributed
-   * recovery. Log entries may be discarded when both the task that
-   * produced the data and the task that logged it are in the same CD
-   * (after descendant CDs complete and "merge"). This can always be
-   * guaranteed when the least-common strict ancestor is reached, but
-   * may happen sooner. In order to identify the earliest opportunity
-   * to discard a log entry, the CD runtime must track producers,
-   * which is impractical in general. In the specific and common
-   * scenario of "owner computes", however, it is possible to track
-   * the producer with low overhead. The SetPGASOwnerWrites() method i
-   * used to indicate this behavior.
-   *
-   * \return kOK on success.
-   *
-   */
+/** \brief Simplify optimization of discarding relaxed CD log entries
+ *
+ * When using relaxed CDs, the CD runtime may log all communication
+ * with tasks that are in a different CD context. While privatizing
+ * some accesses reduces logging volume, all logged entries must
+ * still be propagated and preserved up the CD tree for distributed
+ * recovery. Log entries may be discarded when both the task that
+ * produced the data and the task that logged it are in the same CD
+ * (after descendant CDs complete and "merge"). This can always be
+ * guaranteed when the least-common strict ancestor is reached, but
+ * may happen sooner. In order to identify the earliest opportunity
+ * to discard a log entry, the CD runtime must track producers,
+ * which is impractical in general. In the specific and common
+ * scenario of "owner computes", however, it is possible to track
+ * the producer with low overhead. The SetPGASOwnerWrites() method i
+ * used to indicate this behavior.
+ *
+ * \return kOK on success.
+ *
+ */
   CDErrT SetPGASOwnerWrites(void* data_ptr,
 			    //!< [in] pointer to data to be "Typed";
 			    //!< __currently must be in same address space
@@ -836,14 +832,11 @@ class cd::CDHandle {
 			    //!< ancestor is reached)?
 			    ) { return kOK; }
 
-  /** @} */ // End PGAS_funcs =========================================================== 
+/** @} */ // End PGAS_funcs =========================================================== 
 
 
 
-/** \brief Commits setjmp buffer or context buffer to CD object.
- *
- */
-  
+///@brief Commits setjmp buffer or context buffer to CD object.
     void CommitPreserveBuff(void);
   private:  // Internal use -------------------------------------------------------------
 
@@ -940,6 +933,7 @@ class cd::CDHandle {
 ///@brief Get color of the current CD.
 ///       In MPI version, color means a communicator.
     ColorT   color(void)         const;
+    ColorT   GetNodeID(void)         const;
 
 ///@brief Get task ID in the task group of this CD.
     int      task_in_color(void) const;

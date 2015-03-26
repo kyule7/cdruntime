@@ -49,13 +49,19 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
   }
 
   if( dst_data_.handle_type() == DataHandle::kOSFile )  {
-    dbg << "erase file start!\n" << endl; //dbgBreak();
-    dbg << "erase the file of preserved data\n" << endl; 
-//    delete dst_data_.file_name(); 
 
+#if _DEBUG_FILE_OUT
+    char cmd[30];
+    char backup_dir[30];
+    sprintf(backup_dir, "mkdir backup_results");
+    int ret = system(backup_dir);
+    sprintf(cmd, "mv %s ./backup_results/", dst_data_.file_name_);
+    ret = system(cmd);
+#else
     char cmd[30];
     sprintf(cmd, "rm %s", dst_data_.file_name_);
     int ret = system(cmd);
+#endif
 
     if( ret == -1 ) {
       cerr << "Failed to create a directory for preservation data (SSD)" << endl;
@@ -102,7 +108,7 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
   return kOK;
 }
 
-CDEntry::CDEntryErrT CDEntry::SaveFile(std::string base_, bool isOpen)
+CDEntry::CDEntryErrT CDEntry::SaveFile(string base_, bool isOpen)
 {
   // Get file name to write if it is currently NULL
   char* str; 
@@ -410,7 +416,7 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
 
 
 
-std::ostream& cd::operator<<(std::ostream& str, const CDEntry& cd_entry)
+ostream& cd::operator<<(ostream& str, const CDEntry& cd_entry)
 {
   return str << "\n== CD Entry Information ================"
              << "\nSource      :\t" << cd_entry.src_data_  

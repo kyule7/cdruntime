@@ -62,7 +62,8 @@ public:
 	Path(const char *filepath) : filepath_(filepath) {}
 	void SetFilePath(std::string filepath) { filepath_ = filepath; }
 
-	std::string GetFilePath(void) { return filepath_;     }
+	std::string GetFilePath(void) { return filepath_; }
+
 	Path &operator=(const Path &that) {
     filepath_ = that.filepath_;
 		return *this;
@@ -105,6 +106,7 @@ public:
   }
   ~CDLogHandle() {}
 
+	std::string GetFilePath(void);
   void InitOpenFile() { opened_ = false; }
   bool IsOpen()   { return opened_;  }
   void OpenFilePath(void);     

@@ -170,9 +170,9 @@ class CD : public Serializable {
 
   /** @} */ // End group cd_defs
 
-    enum CtxtPrvMode { kExcludeStack=0, 
-                       kIncludeStack
-                     };
+//    enum CtxtPrvMode { kExcludeStack=0, 
+//                       kIncludeStack
+//                     };
 
     enum CDInternalErrT { kOK=0, 
                           kExecModeError, 
