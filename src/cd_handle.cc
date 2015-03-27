@@ -903,6 +903,10 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   //CheckMailBox();
   dbg << "DETECT check mode : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
   std::vector<SysErrT> ret_prepare;
+
+  *err_ret_val = ptr_cd_->Detect();
+
+
   CDEventT event = CDEventT::kNoEvent;
 
   if(ptr_cd_->num_reexecution_ == 0) {

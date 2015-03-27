@@ -594,13 +594,9 @@ class cd::CDHandle {
    *
    * @return any errors or failures detected during this CDs execution.
    */
-    std::vector<SysErrT> Detect(CDErrT* err_ret_val=0 //!< [in,out] Pointer to
-  				 //!< a variable for
-  				 //!< optionally returning a
-  				 //!< CD runtime error code
-  				 //!< indicating some bug
-  				 //!< with Detect().
-  				 );
+    std::vector<SysErrT> Detect(CDErrT* err_ret_val=0 //!< [in,out] Pointer to a variable 
+            //!<for optionally returning a CD runtime error code indicating some bug with Detect().
+  				                     );
 
   /** @brief Declare that this CD can detect certain errors/failures by user-defined detectors.
    *
@@ -681,7 +677,7 @@ class cd::CDHandle {
 
  
 
-  /** \addtogroup cd_error_probability Methods for Interacting with the CD Framework and Tuner
+ /** \addtogroup cd_error_probability Methods for Interacting with the CD Framework and Tuner
   *
   * @{
   */

@@ -179,7 +179,8 @@ namespace cd {
                 kError,       //!< Call did not execute as expected
                 kExecutionModeError,
                 kOutOfMemory,
-                kFileOpenError
+                kFileOpenError,
+                kAppError
               };
 
   /** @} */ // end of internal_error_types

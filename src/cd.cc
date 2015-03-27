@@ -2101,8 +2101,13 @@ CDErrT CD::Restore()
  */
 CDErrT CD::Detect()
 {
+  CDErrT err = kOK;
+  if(error_injector_->InjectError()) {
+    SetMailBox(kErrorOccurred);
+    err = kAppError;
+  }
 
-  return CDErrT::kOK;
+  return err;
 }
 
 void CD::Recover(void)
@@ -2114,14 +2119,13 @@ void CD::Recover(void)
 CDErrT CD::Assert(bool test)
 {
 
-  if(test == false) {
+  if(test == false || error_injector_->InjectError()) {
     SetMailBox(kErrorOccurred);
-
   }
   PMPI_Barrier(color());
+
   if(IsHead()) {
     CheckMailBox();
-
     if(task_size() > 1) {
       PMPI_Barrier(color());
     }
@@ -2133,14 +2137,11 @@ CDErrT CD::Assert(bool test)
     CheckMailBox();
   }
 
-    // SZ
-    // FIXME: need to create a function to change:
-    //        cd_exec_mode_ and stop all children 
-    //        also change CommLog::comm_log_mode_
+// SZ
+// FIXME: need to create a function to change:
+//        cd_exec_mode_ and stop all children 
+//        also change CommLog::comm_log_mode_
 
-    //Restore the data  (for now just do only this no other options for recovery)
-//    recoverObj_->Recover(this); 
-  
 
   return CDErrT::kOK;
 }
