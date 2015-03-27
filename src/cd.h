@@ -56,7 +56,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "event_handler.h"
 #include "cd_pfs.h"
 
-#include "error_injector.h"
 
 //#if _WORK
 //#include "transaction.h"
@@ -178,12 +177,12 @@ class CD : public Serializable {
 
     enum CDInternalErrT { kOK=0, 
                           kExecModeError, 
-                          kEntryError 
+                          kEntryError,
+                          kErrorReported 
                         };  
 
   protected: 
     CDID cd_id_;
-    ErrorInjector *error_injector_;
     RecoverObject *recoverObj_;
     //GONG
     bool begin_;
@@ -391,7 +390,7 @@ update the preserved data.
                     const RegenObject *regen_object=0, 
                     PreserveUseT data_usage=kUnsure);
   
-    CDErrT Detect(); 
+    CDInternalErrT Detect(); 
     CDErrT Restore();
   
 //  DISCUSS: Jinsuk: About longjmp setjmp: By running some experiement, 
@@ -404,7 +403,7 @@ update the preserved data.
 //  so that we can jump back to the existing stack pointer. 
 //  I think that Just always pairing them in the same function is much cleaner. 
   
-    CDErrT Assert(bool test);
+    CDInternalErrT Assert(bool test);
   
  
     CDInternalErrT RegisterDetection(uint32_t system_name_mask, 

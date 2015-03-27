@@ -58,6 +58,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_profiler.h"
 #endif
 
+#include "error_injector.h"
+
 using namespace cd;
 
 
@@ -140,8 +142,10 @@ class cd::CDHandle {
                           int& new_task    //<! [out] New task ID generated from split method.
                         )> SplitFuncT; /**\typedef function pointer/object type for splitting CDs. */
   private:
-    CD*    ptr_cd_;   //!< Pointer to CD object which will not exposed to users.
+    CD    *ptr_cd_;   //!< Pointer to CD object which will not exposed to users.
     NodeID node_id_;  //!< NodeID contains the information to access to the task.
+
+    ErrorInjector *error_injector_; //!< Error injector interface.
 
 #if _PROFILER 
     Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
@@ -878,7 +882,7 @@ class cd::CDHandle {
     CDErrT CheckMailBox(void);
 
 /// Set mail box.
-    CDErrT SetMailBox(CDEventT &event);
+    CDErrT SetMailBox(CDEventT event);
 
 /// Collect child CDs' head information.
     void CollectHeadInfoAndEntry(const NodeID &new_node_id);

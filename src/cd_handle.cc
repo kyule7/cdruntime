@@ -852,25 +852,30 @@ CDErrT CDHandle::RemoveChild(CDHandle* cd_child)
 }
 
 
-CDErrT CDHandle::CDAssert (bool test_true, const SysErrT *error_to_report)
+CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 {
   CDPrologue();
-//  if( IsHead() ) {
-    assert(ptr_cd_ != 0);
+  assert(ptr_cd_ != 0);
+  CDErrT err = kOK;
 #if _PROFILER
 //    if(!test_true) {
 //      profiler_->ClearSightObj();
 //    }
 #endif
-    return ptr_cd_->Assert(test_true);
-//  }
-//  else {
-//    assert(ptr_cd_ != 0);
-//    return ptr_cd_->Assert(test_true); 
-//    // It is at remote node so do something for that.
-//  }
+
+  if(error_injector_ != NULL) {
+    if(error_injector_->InjectAndTest()) {
+      test = false;
+      err = kAppError;
+    }
+  }
+
+  CD::CDInternalErrT internal_err = ptr_cd_->Assert(test);
+  if(internal_err == CD::CDInternalErrT::kErrorReported)
+    err = kAppError;
+
   CDEpilogue();
-  return kOK;
+  return err;
 }
 
 CDErrT CDHandle::CDAssertFail (bool test_true, const SysErrT *error_to_report)
@@ -903,80 +908,92 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   //CheckMailBox();
   dbg << "DETECT check mode : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
   std::vector<SysErrT> ret_prepare;
-
-  *err_ret_val = ptr_cd_->Detect();
-
-
-  CDEventT event = CDEventT::kNoEvent;
-
-  if(ptr_cd_->num_reexecution_ == 0) {
-    if(true) {
-    
-    //  dbg << "Detect at Level : " << ptr_cd()->GetCDID().level() << ", my node : " << node_id() << endl; getchar();
-    
-      if(ptr_cd()->GetCDID().level() == 2) {
-//        if(myTaskID == 3 ) {
-//          event = CDEventT::kErrorOccurred;
-//        }
-      }
-      else if(ptr_cd()->GetCDID().level() == 1) {
-        switch(myTaskID) {
-          case 0:
-            break;
-          case 1:
-            break;
-          case 2:
-            break;
-          case 3:
-            break;
-          case 4:
-            break;
-          case 5:
-            break;
-          case 6:
-//            event = CDEventT::kErrorOccurred;
-            break;
-          case 7:
-            break;
-          default : break; 
-        }
-      }
-      else if(ptr_cd()->GetCDID().level() == 2) {
-        switch(myTaskID) {
-          case 0:
-            break;
-          case 1:
-//            event = CDEventT::kErrorOccurred;
-            break;
-          case 2:
-            break;
-          case 3:
-//            event = CDEventT::kErrorOccurred;
-            break;
-          case 4:
-            break;
-          case 5:
-            break;
-          case 6:
-            break;
-          case 7:
-//            event = CDEventT::kErrorOccurred;
-            break;
-          default : break;
-        }
-      }
-      else {
-
-      }
+  CDErrT err = kOK;
+  CD::CDInternalErrT internal_err = ptr_cd_->Detect();
+  if(internal_err == CD::CDInternalErrT::kErrorReported) {
+    SetMailBox(kErrorOccurred);
+    err = kAppError;
+  }
+  else if(error_injector_ != NULL) {
+    if(error_injector_->InjectAndTest()) {
+      SetMailBox(kErrorOccurred);
+      err = kAppError;
     }
   }
-//  while( !(ptr_cd()->TestComm()) ) {
-//    // FIXME : Becareful! CheckMailBox() has some collectives.
-//    CheckMailBox();
+
+
+
+//  CDEventT event = CDEventT::kNoEvent;
+//
+//  if(ptr_cd_->num_reexecution_ == 0) {
+//    if(true) {
+//    
+//    //  dbg << "Detect at Level : " << ptr_cd()->GetCDID().level() << ", my node : " << node_id() << endl; getchar();
+//    
+//      if(ptr_cd()->GetCDID().level() == 2) {
+////        if(myTaskID == 3 ) {
+////          event = CDEventT::kErrorOccurred;
+////        }
+//      }
+//      else if(ptr_cd()->GetCDID().level() == 1) {
+//        switch(myTaskID) {
+//          case 0:
+//            break;
+//          case 1:
+//            break;
+//          case 2:
+//            break;
+//          case 3:
+//            break;
+//          case 4:
+//            break;
+//          case 5:
+//            break;
+//          case 6:
+////            event = CDEventT::kErrorOccurred;
+//            break;
+//          case 7:
+//            break;
+//          default : break; 
+//        }
+//      }
+//      else if(ptr_cd()->GetCDID().level() == 2) {
+//        switch(myTaskID) {
+//          case 0:
+//            break;
+//          case 1:
+////            event = CDEventT::kErrorOccurred;
+//            break;
+//          case 2:
+//            break;
+//          case 3:
+////            event = CDEventT::kErrorOccurred;
+//            break;
+//          case 4:
+//            break;
+//          case 5:
+//            break;
+//          case 6:
+//            break;
+//          case 7:
+////            event = CDEventT::kErrorOccurred;
+//            break;
+//          default : break;
+//        }
+//      }
+//      else {
+//
+//      }
+//    }
 //  }
+////  while( !(ptr_cd()->TestComm()) ) {
+////    // FIXME : Becareful! CheckMailBox() has some collectives.
+////    CheckMailBox();
+////  }
 
   PMPI_Barrier(node_id_.color());
 
+  CDEventT event = kErrorOccurred;
   if(IsHead()) { 
 
     if(node_id_.size() > 1) {
@@ -995,9 +1012,6 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     }
 
   }
-
-
-
 
   if(IsHead()) { 
 
@@ -1023,7 +1037,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 //    cout <<"============ Resumed ================" << endl;
 //  }
 
-
+  *err_ret_val = err;
 
   CDEpilogue();
   return ret_prepare;
@@ -1160,7 +1174,7 @@ CDErrT CDHandle::CheckMailBox(void)
   return cd_err;
 }
 
-CDErrT CDHandle::SetMailBox(CDEventT &event)
+CDErrT CDHandle::SetMailBox(CDEventT event)
 {
   return ptr_cd()->SetMailBox(event);
 }

@@ -2099,15 +2099,13 @@ CDErrT CD::Restore()
  *  (3)
  *
  */
-CDErrT CD::Detect()
+CD::CDInternalErrT CD::Detect()
 {
-  CDErrT err = CDErrT::kOK;
-  if(error_injector_->InjectAndTest()) {
-    SetMailBox(kErrorOccurred);
-    err = kAppError;
-  }
+  CD::CDInternalErrT internal_err = kOK;
 
-  return err;
+  // STUB
+
+  return internal_err;
 }
 
 void CD::Recover(void)
@@ -2116,34 +2114,33 @@ void CD::Recover(void)
 } 
 
 
-CDErrT CD::Assert(bool test)
+CD::CDInternalErrT CD::Assert(bool test)
 {
 
-  if(test == false || error_injector_->InjectAndTest()) {
-    SetMailBox(kErrorOccurred);
-  }
-  PMPI_Barrier(color());
+  CDInternalErrT internal_err = kOK;
 
+  if(test == false) {
+    SetMailBox(kErrorOccurred);
+    internal_err = kErrorReported;
+  }
+
+  PMPI_Barrier(color());
+  
   if(IsHead()) {
     CheckMailBox();
     if(task_size() > 1) {
       PMPI_Barrier(color());
     }
   }
-  else{
+  else {
     if(task_size() > 1) {
       PMPI_Barrier(color());
     }
     CheckMailBox();
   }
 
-// SZ
-// FIXME: need to create a function to change:
-//        cd_exec_mode_ and stop all children 
-//        also change CommLog::comm_log_mode_
 
-
-  return CDErrT::kOK;
+  return internal_err;
 }
 
 CD::CDInternalErrT CD::RegisterDetection(uint32_t system_name_mask, 
