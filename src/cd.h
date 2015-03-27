@@ -56,6 +56,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "event_handler.h"
 #include "cd_pfs.h"
 
+#include "error_injector.h"
+
 //#if _WORK
 //#include "transaction.h"
 //#endif
@@ -181,7 +183,8 @@ class CD : public Serializable {
 
   protected: 
     CDID cd_id_;
-    RecoverObject* recoverObj_;
+    ErrorInjector *error_injector_;
+    RecoverObject *recoverObj_;
     //GONG
     bool begin_;
   public:

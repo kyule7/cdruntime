@@ -235,6 +235,12 @@ public:
 };
 
 
+enum RandType { kUniform = 0,
+                kExponential,
+                kLogNormal,
+                kNormal,
+                kPoisson
+              };
 static inline ErrorProb *
 CreateErrorProb(RandType random_type)
 {
@@ -247,7 +253,7 @@ CreateErrorProb(RandType random_type)
         random_number = new Exponential();
         break; 
       case kLogNormal :
-        random_number = new LogNorm();
+        random_number = new LogNormal();
         break; 
       case kNormal :
         random_number = new Normal();
@@ -263,12 +269,12 @@ CreateErrorProb(RandType random_type)
 
 class ErrorInjector {
 public:
-  enum RandType { kUniform = 0,
-                  kExponential,
-                  kLogNormal,
-                  kNormal,
-                  kPoisson
-                };
+//  enum RandType { kUniform = 0,
+//                  kExponential,
+//                  kLogNormal,
+//                  kNormal,
+//                  kPoisson
+//                };
 
 protected:
   ErrorProb *rand_generator_;
@@ -283,7 +289,7 @@ public:
     logfile_    = stdout;
   }
 
-  ErrorInjector(RandType random_type, FILE *logfile=stdout) {
+  ErrorInjector(RandType random_type=kUniform, FILE *logfile=stdout) {
     rand_generator_ = CreateErrorProb(random_type);
     enabled_    = false;
     logfile_    = stdout;
@@ -302,6 +308,7 @@ public:
   void Disable(void) { enabled_=false; }
   void SetLogfile(FILE *logfile) { logfile_ = logfile; }
   virtual void Inject(void)=0;
+  virtual bool InjectAndTest(void)=0;
       
 };
 
@@ -312,16 +319,37 @@ class MemoryErrorInjector : public ErrorInjector {
 
 public:
   MemoryErrorInjector(void *data, uint64_t size)
-    : data_(data), size_(size), ErrorInjector(stdout) {}
+    : ErrorInjector(kUniform, stdout), data_(data), size_(size) {}
 
-  MemoryErrorInjector(void *data, uint64_t size, FILE *logfile)
-    : data_(data), size_(size), ErrorInjector(logfile) {}
+  MemoryErrorInjector(void *data, uint64_t size, RandType random_type, FILE *logfile)
+    : ErrorInjector(random_type, logfile), data_(data), size_(size) {}
   virtual ~MemoryErrorInjector() {}
 
-  int64_t SetRange(uint64_t range)=0;
-  void PushRange(void *data, uint64_t ndata, uint64_t sdata, char *desc)=0;
+  virtual int64_t SetRange(uint64_t range)=0;
+  virtual void PushRange(void *data, uint64_t ndata, uint64_t sdata, char *desc)=0;
 
 };
+
+class CDErrorInjector : public ErrorInjector {
+
+  double error_rate_;
+
+public:
+  CDErrorInjector(void) 
+    : ErrorInjector(kUniform, stdout), error_rate_(0.0) {}
+
+  CDErrorInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
+    : ErrorInjector(rand_type, logfile), error_rate_(error_rate) {}
+
+  virtual bool InjectAndTest(void)
+  {
+    // STUB
+    return true;
+  }
+
+  virtual ~CDErrorInjector(void) {}
+};
+
 
 class NodeFailureInjector : public ErrorInjector {
 
@@ -329,11 +357,12 @@ class NodeFailureInjector : public ErrorInjector {
 
 public:
   NodeFailureInjector(void) 
-    : error_rate_(0.0), ErrorInjector(stdout) {}
+    : ErrorInjector(kUniform, stdout), error_rate_(0.0) {}
 
-  NodeFailureInjector(double error_rate, FILE *logfile=stdout) 
-    : error_rate_(error_rate), ErrorInjector(logfile) {}
+  NodeFailureInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
+    : ErrorInjector(rand_type, logfile), error_rate_(error_rate) {}
 
+  virtual bool InjectAndTest(void)=0;
   virtual ~NodeFailureInjector(void) {}
 };
 

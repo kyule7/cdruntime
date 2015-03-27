@@ -2101,8 +2101,8 @@ CDErrT CD::Restore()
  */
 CDErrT CD::Detect()
 {
-  CDErrT err = kOK;
-  if(error_injector_->InjectError()) {
+  CDErrT err = CDErrT::kOK;
+  if(error_injector_->InjectAndTest()) {
     SetMailBox(kErrorOccurred);
     err = kAppError;
   }
@@ -2119,7 +2119,7 @@ void CD::Recover(void)
 CDErrT CD::Assert(bool test)
 {
 
-  if(test == false || error_injector_->InjectError()) {
+  if(test == false || error_injector_->InjectAndTest()) {
     SetMailBox(kErrorOccurred);
   }
   PMPI_Barrier(color());
