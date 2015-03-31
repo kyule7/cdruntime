@@ -1,4 +1,5 @@
 include ../Makefile.extern
+#include ../error_injection.conf
 
 DEBUG_VAR = 1
 MPI_VER_VAR = 1
@@ -8,10 +9,10 @@ SINGLE_VER_VAR = 0
 PROFILER_ENABLED=0
 LOGGING_ENABLED=1
 TACC=0
-MEDIUM = -D_MEMORY=0 \
+MEDIUM = -D_MEMORY=1 \
          -D_PFS=0 \
          -D_SSD=0 \
-         -D_HDD=1 
+         -D_HDD=0 
 
 DEBUG_FLAGS = -D_DEBUG=$(DEBUG_VAR) -D_DEBUG_FILE_OUT=0
 
@@ -88,7 +89,7 @@ $(CDS_OUTPUT): $(CDS_OBJECTS)
 	${CC} -shared -Wl,-soname,libcds.so -o ${CDS_OUTPUT} ${CDS_OBJECTS} ${LDFLAGS}
 
 clean:
-	rm $(CDS_OUTPUT) $(CDS_OBJECTS)
+	rm -rf $(CDS_OUTPUT) $(CDS_OBJECTS)
 #	cd profiler; make clean
 
 

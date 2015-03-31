@@ -211,7 +211,7 @@ class CD : public Serializable {
 
     // Flag for Strict or Relexed CD
     CDType          cd_type_;
-
+    PrvMediumT      prv_medium_;
     /// Set rollback point and options
     CtxtPrvMode     ctxt_prv_mode_;
     ucontext_t      ctxt_;
@@ -343,6 +343,7 @@ update the preserved data.
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
+                     PrvMediumT prv_medium,
                      uint64_t sys_bit_vector, 
                      CDInternalErrT* cd_err=0);
 
@@ -350,6 +351,7 @@ update the preserved data.
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
+                     PrvMediumT prv_medium,
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err);
 
@@ -494,10 +496,12 @@ update the preserved data.
     // we can change it to preserve file by flag when we compile cd runtime. (with MEMORY=0)
     // We need some good strategy to decide the most efficient medium of the CD for preservation.
     PrvMediumT GetPlaceToPreserve(void);
+    void SetPlaceToPreserve(PrvMediumT prv_medium);
     static CDInternalErrT InternalCreate(CDHandle* parent, 
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
+                     PrvMediumT prv_medium,
                      uint64_t sys_bit_vector, 
                      CDHandle** new_cd_handle);
 
@@ -655,6 +659,7 @@ class HeadCD : public CD {
                              const char* name, 
                              const CDID& child_cd_id, 
                              CDType cd_type, 
+                             PrvMediumT prv_medium,
                              uint64_t sys_bit_vector, 
                              CDInternalErrT* cd_err=0);
     virtual CDErrT Destroy(void);

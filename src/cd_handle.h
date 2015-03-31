@@ -194,6 +194,7 @@ class cd::CDHandle {
                                   		   //!< if it was not destroyed yet; useful for resuing preserved
                                   		   //!< state in CD trees that are not loop based.
                      CDType cd_type=kStrict, //!< [in] Strict or relaxed
+                     PrvMediumT prv_medium=kMemory, //!< [in] Medium to preserve for a CD.
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                           		   //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
@@ -226,6 +227,7 @@ class cd::CDHandle {
                      const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                 		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
                      CDType cd_type=kStrict, //!< [in] Strict or relaxed
+                     PrvMediumT prv_medium=kMemory, //!< [in] Medium to preserve for a CD.
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                           		   //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
@@ -262,6 +264,7 @@ class cd::CDHandle {
                      const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                 		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
                      CDType cd_type=kStrict, //!< [in] Strict or relaxed
+                     PrvMediumT prv_medium=kMemory, //!< [in] Medium to preserve for a CD.
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                           		   //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
@@ -297,6 +300,7 @@ class cd::CDHandle {
                              const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                         		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
                              CDType cd_type=kStrict, //!< [in] Strict or relaxed
+                             PrvMediumT prv_medium=kMemory, //!< [in] Medium to preserve for a CD.
                              uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                                   		   //!< should be able to recover from that error type.
                              uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD

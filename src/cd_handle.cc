@@ -92,7 +92,7 @@ CDHandle* CD_Init(int numTask, int myTask)
   Internal::Intialize();
 
   CD::CDInternalErrT internal_err;
-  CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask)), kStrict, 0, &internal_err);
+  CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask)), kStrict, DEFAULT_MEDIUM, 0, &internal_err);
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
 #if _PROFILER
@@ -247,6 +247,8 @@ CDHandle::CDHandle()
 #else
   //profiler_ = new NullProfiler();
 #endif
+  error_injector_ = NULL;
+
   SplitCD = &SplitCD_3D;
 
 //  if(node_id().size() > 1)
@@ -275,6 +277,7 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
   //profiler_ = new NullProfiler();
 #endif
 
+  error_injector_ = NULL;
 
 //  if(node_id_.size() > 1)
 //    PMPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), PMPI_INFO_NULL, PMPI_COMM_WORLD, &pendingWindow_);
@@ -304,6 +307,7 @@ void CDHandle::Init(CD* ptr_cd, const NodeID& node_id)
 // Non-collective
 CDHandle* CDHandle::Create(const char* name, 
                            CDType cd_type, 
+                           PrvMediumT prv_medium,
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
                            CDErrT *error )
@@ -327,7 +331,7 @@ CDHandle* CDHandle::Create(const char* name,
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
-  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec, &internal_err);
+  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, prv_medium, sys_bit_vec, &internal_err);
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
   
@@ -421,6 +425,7 @@ CDHandle* CDHandle::Create(const ColorT& color,
                            uint32_t  num_children,
                            const char* name, 
                            CDType cd_type, 
+                           PrvMediumT prv_medium,
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
                            CDErrT *error )
@@ -506,7 +511,7 @@ CDHandle* CDHandle::Create(const ColorT& color,
   cout << "done collect to head" << endl;
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
-  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, sys_bit_vec, &internal_err);
+  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, prv_medium, sys_bit_vec, &internal_err);
 
   cout << "done collect to head" << endl;
 
@@ -528,11 +533,12 @@ CDHandle* CDHandle::Create(const ColorT& color,
 CDHandle* CDHandle::Create(uint32_t num_children, 
                            const char* name, 
                            CDType cd_type, 
+                           PrvMediumT prv_medium,
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
                            CDErrT *error )
 {
-  return Create(color(), num_children, name, cd_type, error_name_mask, error_loc_mask, error);
+  return Create(color(), num_children, name, cd_type, prv_medium, error_name_mask, error_loc_mask, error);
 }
 
 
@@ -540,12 +546,13 @@ CDHandle* CDHandle::CreateAndBegin(const ColorT& color,
                                    uint32_t num_children, 
                                    const char* name, 
                                    CDType cd_type, 
+                                   PrvMediumT prv_medium,
                                    uint32_t error_name_mask, 
                                    uint32_t error_loc_mask, 
                                    CDErrT *error )
 {
   CDPrologue();
-  CDHandle* new_cdh = Create(color, num_children, name, cd_type, error_name_mask, error_loc_mask, error);
+  CDHandle* new_cdh = Create(color, num_children, name, cd_type, prv_medium, error_name_mask, error_loc_mask, error);
   new_cdh->Begin(false, name);
   CDEpilogue();
   return new_cdh;
@@ -855,6 +862,7 @@ CDErrT CDHandle::RemoveChild(CDHandle* cd_child)
 CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 {
   CDPrologue();
+  dbg << "Assert : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
   assert(ptr_cd_ != 0);
   CDErrT err = kOK;
 #if _PROFILER
@@ -909,13 +917,18 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   dbg << "DETECT check mode : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
   std::vector<SysErrT> ret_prepare;
   CDErrT err = kOK;
+  CDEventT event = kNoEvent;
   CD::CDInternalErrT internal_err = ptr_cd_->Detect();
   if(internal_err == CD::CDInternalErrT::kErrorReported) {
+    dbg << "HERE?" << endl;
+    event = kErrorOccurred;
     SetMailBox(kErrorOccurred);
     err = kAppError;
   }
   else if(error_injector_ != NULL) {
     if(error_injector_->InjectAndTest()) {
+      dbg << "or HERE?" << endl;
+      event = kErrorOccurred;
       SetMailBox(kErrorOccurred);
       err = kAppError;
     }
@@ -993,7 +1006,6 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
   PMPI_Barrier(node_id_.color());
 
-  CDEventT event = kErrorOccurred;
   if(IsHead()) { 
 
     if(node_id_.size() > 1) {
@@ -1036,8 +1048,8 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 //    ptr_cd_->HandleAllResume(this);
 //    cout <<"============ Resumed ================" << endl;
 //  }
-
-  *err_ret_val = err;
+  if(err_ret_val != NULL)
+    *err_ret_val = err;
 
   CDEpilogue();
   return ret_prepare;

@@ -350,13 +350,14 @@ CDHandle* CD::Create(CDHandle* parent,
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
+                     PrvMediumT prv_medium,
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err)
 {
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
   cout << "CD::Create" << endl;
-  *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
+  *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, prv_medium, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
   cout << "CD::Create done" << endl;
 
@@ -370,13 +371,14 @@ CDHandle* CD::CreateRootCD(CDHandle* parent,
                            const char* name, 
                            const CDID& root_cd_id, 
                            CDType cd_type, 
+                           PrvMediumT prv_medium,
                            uint64_t sys_bit_vector, 
                            CD::CDInternalErrT *cd_internal_err)
 {
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
 
-  *cd_internal_err = InternalCreate(parent, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
+  *cd_internal_err = InternalCreate(parent, name, root_cd_id, cd_type, prv_medium, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
 
   return new_cd_handle;
@@ -399,11 +401,14 @@ CD::InternalCreate(CDHandle* parent,
                    const char* name, 
                    const CDID& new_cd_id, 
                    CDType cd_type, 
+                   PrvMediumT prv_medium,
                    uint64_t sys_bit_vector, 
                    CDHandle** new_cd_handle)
 {
   cout << "dbg: Internal Create... Level : " << new_cd_id.level()<< ", node : "<< new_cd_id.node_id() << endl; dbgBreak();
 //  dbg << dbg.str() << endl; dbgBreak();
+
+
   if( !new_cd_id.IsHead() ) {
     CD *new_cd     = new CD(parent, name, new_cd_id, cd_type, sys_bit_vector);
 
@@ -437,6 +442,8 @@ CD::InternalCreate(CDHandle* parent,
     }
 #endif
 #endif
+
+    new_cd->SetPlaceToPreserve(prv_medium);
 
     if( new_cd->GetPlaceToPreserve() == kPFS ) {
       new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->log_handle_.path_.GetFilePath().c_str() ); 
@@ -486,6 +493,9 @@ CD::InternalCreate(CDHandle* parent,
 //    AttachChildCD(new_cd);
 #endif
 #endif
+
+    new_cd->SetPlaceToPreserve(prv_medium);
+
     if( new_cd->GetPlaceToPreserve() == kPFS ) {
 //          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
       new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->log_handle_.path_.GetFilePath().c_str() ); 
@@ -1325,6 +1335,9 @@ CDErrT CD::Preserve(void* data,
 // FIXME
 PrvMediumT CD::GetPlaceToPreserve()
 {
+
+  return prv_medium_;
+/*
 #if _MEMORY
   return kMemory;
 #elif _PFS
@@ -1336,6 +1349,12 @@ PrvMediumT CD::GetPlaceToPreserve()
 #else
   return kMemory;
 #endif
+*/
+}
+
+void CD::SetPlaceToPreserve(PrvMediumT prv_medium)
+{
+  prv_medium_ = prv_medium;
 }
 
 bool CD::TestReqComm(bool is_all_valid)
@@ -2458,6 +2477,7 @@ CDHandle *HeadCD::Create(CDHandle* parent,
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
+                     PrvMediumT prv_medium,
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err)
 {
@@ -2478,7 +2498,7 @@ CDHandle *HeadCD::Create(CDHandle* parent,
 
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
-  *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
+  *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, prv_medium, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
 
 

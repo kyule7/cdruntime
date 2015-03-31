@@ -747,6 +747,7 @@ extern FILE * cd_fp;
 #define CD_FILEPATH_SSD "./SSD/"
 #define dout clog
 
+#define DEFAULT_MEDIUM kMemory
 /* 
 ISSUE 1 (Kyushick)
 If we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?
