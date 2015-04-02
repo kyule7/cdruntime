@@ -3964,3 +3964,37 @@ bool CD::CanRecover(uint64_t error_name_mask,
   // STUB
   return true;
 }
+
+
+#ifdef comm_log
+CD *CD::IsLogable(bool *logable_)
+{
+//  PRINT_LIBC("logable_execmode\n");      
+//  CDHandle* current = GetCurrentCD();
+//	CD* c_CD;
+//	if(current==NULL){
+////		PRINT_LIBC("\tbefore root CD\n");
+//	}
+//	else
+//	{
+		CD *c_CD = GetCurrentCD()->ptr_cd();
+		if(c_CD == NULL)
+		{
+//			PRINT_LIBC("\tCD object associated with CD handle\n");
+		}
+		else
+		{
+			if(c_CD->libc_log_ptr() == NULL && c_CD->GetBegin_())
+			{
+//				PRINT_LIBC("\tno libc_log in current CD\n");
+			}
+			else 
+			{
+//				PRINT_LIBC("\tnow we have libc_log object\n");
+				*logable_ = true;
+			}
+		}
+//	}
+  return c_CD;
+}
+#endif

@@ -131,11 +131,15 @@ class CD : public Serializable {
     friend class CDEntry;  
     friend class RecoverObject;
     friend class HandleAllReexecute;
+    friend class HandleAllResume;
+    friend class HandleAllPause;
     friend class HandleEntrySearch;
     friend class HandleEntrySend;
     friend class HeadCD;
     friend class CommLog;
     friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+
+//    friend CD* cd::IsLogable(bool *logable_);
 //    friend CDEntry *CDHandle::InternalGetEntry(std::string entry_name);
     enum { 
       CD_PACKER_NAME=0,
@@ -305,10 +309,11 @@ update the preserved data.
     CDLogHandle log_handle_;
 
 #ifdef comm_log
+  public:
     //SZ
-    CommLog * comm_log_ptr_;
+    CommLog *comm_log_ptr_;
     //GONG
-    CommLog * libc_log_ptr_;
+    CommLog *libc_log_ptr_;
 
     uint32_t child_seq_id_;
 
@@ -423,7 +428,7 @@ update the preserved data.
     CDInternalErrT RegisterRecovery(uint32_t error_name_mask, 
                                     uint32_t error_loc_mask, 
                                     CDErrT(*recovery_func)(std::vector< SysErrT > errors)=0);
-
+public:
     CDID     &GetCDID(void)       { return cd_id_; }
     CDNameT  &GetCDName(void)     { return cd_id_.cd_name_; }
     NodeID   &GetNodeID(void)     { return cd_id_.node_id_; }
@@ -435,7 +440,10 @@ update the preserved data.
     int      head(void)          const { return cd_id_.node_id_.head(); }
     int      task_size(void)     const { return cd_id_.node_id_.size(); }
     bool     IsHead(void)        const { return cd_id_.IsHead(); }
-
+    CDType GetCDType();
+#ifdef comm_log
+    CommLog *libc_log_ptr()      const { return libc_log_ptr_; }
+#endif
     // These should be virtual because I am going to use polymorphism for those methods.
     virtual CDErrT Stop(CDHandle* cdh=NULL);
     virtual CDErrT Resume(void);
@@ -570,6 +578,7 @@ update the preserved data.
 
 
 #ifdef comm_log
+public:
     //SZ
     //FIXME: no function should return CommLogErrT, change to CD error types...
     CommLogErrT CommLogCheckAlloc(unsigned long length);
@@ -600,11 +609,21 @@ update the preserved data.
     //GONG: duplicated for libc
     bool IsNewLogGenerated_libc();
     //SZ
-    CDType GetCDType();
+public:
+//    CDType GetCDType();
     //SZ
     void PrintIncompleteLog();
-#endif
 
+public:
+    static CD   *IsLogable(bool *logable_);
+    static int   fprintf(FILE *str, const char *format, va_list &args);
+    static int   fclose(FILE *fp);
+    static FILE *fopen(const char *file, const char *mode);
+    static void *valloc(size_t size);
+    static void *calloc(size_t num, size_t size);
+    static void *malloc(size_t size);
+    static void  free(void *p);
+#endif
  }; // class CD ends
 
 
@@ -618,13 +637,14 @@ class HeadCD : public CD {
   friend class Internal;
   friend class CDHandle;
   friend class HandleEntrySearch;
+  friend class HandleErrorOccurred;
   friend class RegenObject;   
   friend class CDEntry;  
   friend class RecoverObject;
 //    friend class HandleAllReexecute;
 //    friend class HandleEntrySearch;
 //    friend class HandleEntrySend;
-//    friend class CommLog;
+    friend class CommLog;
 
   friend CDInternalErrT CD::InternalCreate(CDHandle* parent, 
                      const char* name, 
@@ -708,7 +728,6 @@ class HeadCD : public CD {
     void Deserialize(void* object) 
     {
     }
-
   protected:
     CDEventHandleT ReadMailBox(CDFlagT *p_event, int idx=0);
     virtual CDInternalErrT InternalCheckMailBox(void);

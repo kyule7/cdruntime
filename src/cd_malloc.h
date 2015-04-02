@@ -48,11 +48,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //bool app_side;
 typedef void*(*Malloc)(size_t size);
 
-using namespace cd;
+namespace cd {
 
- 
-CD* IsLogable(bool *logable_);
+
+//CD *IsLogable(bool *logable_);
 struct IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked);
+
+
+}
 
 #endif
 

@@ -51,7 +51,7 @@ int rand()
   if(app_side){
     app_side = false;
     bool logable  = false;
-    CD* c_CD = IsLogable(&logable);
+    CD* c_CD = CD::IsLogable(&logable);
 	  if(logable){
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
 			  c_CD->libc_log_ptr_->ReadData(&i, size);

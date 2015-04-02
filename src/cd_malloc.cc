@@ -41,7 +41,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //bool app_side;
 
 using namespace cd;
-IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked)
+
+IncompleteLogEntry cd::NewLogEntry(void* p, size_t size, bool FreeInvoked)
 {
       IncompleteLogEntry tmp_log_entry;
       tmp_log_entry.addr_ = (unsigned long) 0;
@@ -54,39 +55,44 @@ IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked)
       return tmp_log_entry;
 }
 
-CD* IsLogable(bool *logable_)
-{
-//  PRINT_LIBC("logable_execmode\n");      
-  CDHandle* current = GetCurrentCD();
-	CD* c_CD;
-	if(current==NULL){
-//		PRINT_LIBC("\tbefore root CD\n");
-	}
-	else
-	{
-		c_CD = current->ptr_cd();
-		if(c_CD == NULL)
-		{
-//			PRINT_LIBC("\tCD object associated with CD handle\n");
-		}
-		else
-		{
-			if(c_CD->libc_log_ptr_ == NULL && c_CD->GetBegin_())
-			{
-//				PRINT_LIBC("\tno libc_log in current CD\n");
-			}
-			else 
-			{
-//				PRINT_LIBC("\tnow we have libc_log object\n");
-				*logable_ = true;
-			}
-		}
-	}
-  return c_CD;
-}
+//CD* CD::IsLogable(bool *logable_)
+//{
+////  PRINT_LIBC("logable_execmode\n");      
+//  CDHandle* current = GetCurrentCD();
+//	CD* c_CD;
+//	if(current==NULL){
+////		PRINT_LIBC("\tbefore root CD\n");
+//	}
+//	else
+//	{
+//		c_CD = current->ptr_cd();
+//		if(c_CD == NULL)
+//		{
+////			PRINT_LIBC("\tCD object associated with CD handle\n");
+//		}
+//		else
+//		{
+//			if(c_CD->libc_log_ptr_ == NULL && c_CD->GetBegin_())
+//			{
+////				PRINT_LIBC("\tno libc_log in current CD\n");
+//			}
+//			else 
+//			{
+////				PRINT_LIBC("\tnow we have libc_log object\n");
+//				*logable_ = true;
+//			}
+//		}
+//	}
+//  return c_CD;
+//}
 
 //GONG: Is free() required?
 void free(void *p)
+{
+  CD::free(p);
+}
+
+void CD::free(void *p)
 {
 
   //check first whether CD-runtime side or application side (logged)
@@ -134,6 +140,11 @@ void* real_malloc_(size_t size)
 
 
 void* malloc(size_t size)
+{
+  return CD::malloc(size);
+}
+
+void* CD::malloc(size_t size)
 {
 	void* p;
 //  PRINT_LIBC("app side?? %d\n", app_side);
@@ -204,6 +215,11 @@ static void* temp_calloc(size_t num, size_t size)
 
 extern "C" void *calloc(size_t num, size_t size)
 {
+  return CD::calloc(num, size);
+}
+
+void *CD::calloc(size_t num, size_t size)
+{
   static void * (*real_calloc)(size_t,size_t) = 0;
   void *p;    
   if(!real_calloc)
@@ -264,6 +280,10 @@ extern "C" void *calloc(size_t num, size_t size)
                   
 void *valloc(size_t size)
 {
+  return CD::valloc(size);
+}
+void *CD::valloc(size_t size)
+{
   void *p;    
   static void * (*real_valloc)(size_t);
   if(!real_valloc)
@@ -320,6 +340,10 @@ void *valloc(size_t size)
 }
 
 FILE* fopen(const char *file, const char *mode)
+{
+  return CD::fopen(file, mode);
+}
+FILE* CD::fopen(const char *file, const char *mode)
 {
   FILE* ret;
   int size = sizeof(FILE*);
@@ -381,6 +405,10 @@ FILE* fopen(const char *file, const char *mode)
 
 int fclose(FILE *fp)
 {
+  return CD::fclose(fp);
+}
+int CD::fclose(FILE *fp)
+{
   //set real_free first
   static int(*real_fclose)(FILE*);
   if(!real_fclose)
@@ -419,10 +447,16 @@ int fclose(FILE *fp)
 
 int fprintf(FILE *str, const char *format,...)
 {
-  int ret = 0;
-  int size = sizeof(int);
   va_list args;
   va_start(args,format);
+  return CD::fprintf(str, format, args);
+}
+int CD::fprintf(FILE *str, const char *format, va_list &args)
+{
+  int ret = 0;
+  int size = sizeof(int);
+//  va_list args;
+//  va_start(args,format);
 
   if(app_side){
     app_side = false;

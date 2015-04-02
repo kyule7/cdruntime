@@ -14,7 +14,7 @@ MEDIUM = -D_MEMORY=1 \
          -D_SSD=0 \
          -D_HDD=0 
 
-DEBUG_FLAGS = -D_DEBUG=$(DEBUG_VAR) -D_DEBUG_FILE_OUT=0
+DEBUG_FLAGS = -D_DEBUG=$(DEBUG_VAR) -D_PRV_FILE_NOT_ERASED=0
 
 ifeq ($(PROFILER_ENABLED), 1)
 PROFILER_FLAGS = \
@@ -40,7 +40,7 @@ else
 CC=mpic++
 endif
 
-ERR_FLAGS=-Wall -fmax-errors=1
+ERR_FLAGS=-Wall -fmax-errors=5
 CFLAGS  = -g -fPIC -std=gnu++0x ${ERR_FLAGS} 
 LDFLAGS = #${SIGHT_LINKFLAGS}
 
