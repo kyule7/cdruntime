@@ -50,6 +50,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  */
 
 #include <ucontext.h>
+#include <functional>
 #include "cd_global.h"
 #include "node_id.h"
 #include "sys_err_t.h"
@@ -63,9 +64,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 
 
+
+
+
 namespace cd {
-/** \addtogroup cd_init_funcs CD Init Functions
- *  The \ref cd_init_funcs are used for initialization.
+/**@ingroup cd_init_funcs
  * @{
  */
 
@@ -83,7 +86,8 @@ namespace cd {
  * There are two variants of this function. The first is a
  * collective operation across all SPMD tasks currently in the
  * application. All tasks get a handle to the single root and begin
- * the CD in a synchronized manner. The second variant is called
+ * the CD in a synchronized manner. 
+ * The second variant is called
  * locally by a single task and synchronization, as well as
  * broadcasting the handle are up to the programmer. Use of this second
  * variant is discouraged.
@@ -96,16 +100,17 @@ namespace cd {
  * accessible variable so that it can be accessed by
  * cd::GetCurrentCD() and cd::GetRootCD().
  * 
- * @sa Internal::Initialize()
+ * @sa GetCurrentCD(), GetRootCD(), Internal::Initialize()
  */
-CDHandle* CD_Init(int numTask, int myTask);
+CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   
 /** 
  * @brief Finalize the CD runtime.
  *  
- * Destroy CD-related global data structures and root CD object.
- * If DebugBuf object's pointer is passed to `CD_Finalize()`, 
- * string streams will be written to file. (it is for debugging purpose)
+ * It should be called once in a program with the pair of `CD_Init()`.
+ * This call destroys CD-related global data structures and root CD object.
+ * If DebugBuf object's pointer can passed to `CD_Finalize()`, 
+ * string streams will be written to file. (it is for debugging purpose.)
  *
  * @return Returns nothing.
  *
@@ -113,13 +118,20 @@ CDHandle* CD_Init(int numTask, int myTask);
  */
 void CD_Finalize(DebugBuf *debugBuf);
   
-  /** @} */ // End cd_init_funcs group ===========================================================================
+/** @} */ // End cd_init_funcs group ===========================================================================
 } // namespace cd ends
 
 
+
+
+/**@addtogroup cd_handle
+ * @brief Interfaces that user need to know.
+ * @{
+ */
 /**@class cd::CDHandle 
- * @brief An object that provides a handle to a specific CD instance.
+ * @brief The accessor class that provides a handle to a specific CD instance.
  *
+ * This class is the interface that users will actuall use to express resiliency-related information.
  * All usage of CDs (other than \ref cd_init_funcs and \ref cd_accessor_funcs) is done by
  * utilizing a handle to a particular CD instance within the CD tree. 
  * The CDHandle provides an implementation- and
@@ -127,20 +139,38 @@ void CD_Finalize(DebugBuf *debugBuf);
  *
  * __Most calls currently only have blocking versions.__ 
  */ 
-
 class cd::CDHandle {
+/**@} */ // End cd_handle
   friend class cd::RegenObject;
   friend class cd::CD;
   friend class cd::HeadCD;
   friend class cd::CDEntry;
   public:
 
-    typedef std::function<int(const int& my_task_id,   //<! [in] Current task ID.
-                          const int& my_size,      //<! [in] The number of task of the current CD. (original task group)
-                          const int& num_children, //<! [in] The number of childrens. (new task groups)
-                          int& new_color,  //!< [out] New color (task group ID) generated from split method.
-                          int& new_task    //<! [out] New task ID generated from split method.
-                        )> SplitFuncT; /**\typedef function pointer/object type for splitting CDs. */
+/**@defgroup cd_split CD split interface
+ * @brief Method to split CDs to children CDs.
+ * @ingroup user_interfaces
+ * @addtogroup cd_split
+ * @{
+ *
+ * @var typedef SplitFuncT
+ * @brief A function object type for splitting method to create children CDs.
+ * @param[in] my_task_id   Current task ID.
+ * @param[in] my_size      The number of task of the current CD. (original task group)
+ * @param[in] num_children The number of childrens. (new task groups)
+ * @param[out] new_color   New color (task group ID) generated from split method.
+ * @param[out] new_task    New task ID generated from split method.                   
+ * @\typedef function pointer/object type for splitting CDs.
+ */ 
+     typedef std::function<int(const int& my_task_id,
+                           const int& my_size,       
+                           const int& num_children,  
+                           int& new_color,           
+                           int& new_task             
+                         )> SplitFuncT; 
+ 
+/** @} */ // End cd_split and user_interfaces
+
   private:
     CD    *ptr_cd_;   //!< Pointer to CD object which will not exposed to users.
     NodeID node_id_;  //!< NodeID contains the information to access to the task.
@@ -168,12 +198,14 @@ class cd::CDHandle {
    ~CDHandle(); 
 
   public:
-/**\addtogroup cd_hierarchy How to create CD hierarchy
- *
- *  This Module is about functions and types to create CD hierarchy in the application.
+
+
+/**@addtogroup cd_hierarchy 
+ * @sa cd_split 
  * @{
- *
- * @brief Non-collective Create (Single task)
+ */
+
+/**@brief Non-collective Create (Single task)
  * 
  * Creates a new CD as a child of this CD. The new CD does
  * not begin until Begin() is called explicitly.
@@ -193,8 +225,7 @@ class cd::CDHandle {
                                   		   //!< name that can be used to "re-create" the same CD object
                                   		   //!< if it was not destroyed yet; useful for resuing preserved
                                   		   //!< state in CD trees that are not loop based.
-                     CDType cd_type=kStrict, //!< [in] Strict or relaxed
-                     PrvMediumT prv_medium=kMemory, //!< [in] Medium to preserve for a CD.
+                     int cd_type=kDefaultCD, //!< [in] Strict or relaxed
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                           		   //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
@@ -226,8 +257,7 @@ class cd::CDHandle {
 		                                        //!< of tasks to arrive before creating the child
                      const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                 		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
-                     CDType cd_type=kStrict, //!< [in] Strict or relaxed
-                     PrvMediumT prv_medium=kMemory, //!< [in] Medium to preserve for a CD.
+                     int cd_type=kDefaultCD, //!< [in] Strict or relaxed
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                           		   //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
@@ -263,8 +293,7 @@ class cd::CDHandle {
                                             		  //!< of tasks to arrive before creating the child
                      const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                 		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
-                     CDType cd_type=kStrict, //!< [in] Strict or relaxed
-                     PrvMediumT prv_medium=kMemory, //!< [in] Medium to preserve for a CD.
+                     int cd_type=kDefaultCD, //!< [in] Strict or relaxed
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                           		   //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
@@ -299,8 +328,7 @@ class cd::CDHandle {
                                                     		  //!< of tasks to arrive before creating the child
                              const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                         		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
-                             CDType cd_type=kStrict, //!< [in] Strict or relaxed
-                             PrvMediumT prv_medium=kMemory, //!< [in] Medium to preserve for a CD.
+                             int cd_type=kDefaultCD, //!< [in] Strict or relaxed
                              uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                                   		   //!< should be able to recover from that error type.
                              uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
@@ -393,7 +421,11 @@ class cd::CDHandle {
                                                 //!< AdvancePointInTime functionality).
   		               );
 
-/**@brief Register a method to split CDs to create chidlren CDs. 
+/** @} */ // End cd_hierarchy ==================================================================================
+
+/**@addtogroup cd_split
+ * @{
+ * @brief Register a method to split CDs to create chidlren CDs. 
  * 
  * __SPMD programming model specific__
  * When CD runtime create children CDs, it is necessary to split the task group of the current CD,
@@ -406,12 +438,9 @@ class cd::CDHandle {
 
  */
     CDErrT RegisterSplitMethod(SplitFuncT split_func); //<! [in] function pointer or object to split CD.
+ /** @} */ // Ends cd_split
 
-/** @} */ // End cd_hierarchy ==================================================================================
-
-/** \addtogroup preservation_funcs
- *
- * @brief These modules are regarding how to preserve data in CDs.
+/**@addtogroup preservation_funcs
  * @{
  */
 /**@brief (Non-collective) Preserve data to be restored when recovering. 
@@ -519,8 +548,7 @@ class cd::CDHandle {
 // so we have to always assume this preservation happens local...  
 // Basically preserve function will get called from local..
  
-  /** \addtogroup detection_recovery Detection and Recovery Methods
-   *
+  /** \addtogroup cd_detection 
    * @{
    */
 
@@ -606,6 +634,15 @@ class cd::CDHandle {
             //!<for optionally returning a CD runtime error code indicating some bug with Detect().
   				                     );
 
+  /** @} */ // End cd_detection group =========================================
+
+
+/**@ingroup cd_detection */
+/**@ingroup register_detection_recovery */
+/**
+ * @{
+ */
+
   /** @brief Declare that this CD can detect certain errors/failures by user-defined detectors.
    *
    * The intent of this method is to specify to the autotuner that
@@ -641,6 +678,7 @@ class cd::CDHandle {
    *\todo Does registering recovery also imply turning on detection?
    *Or is that done purely through RequireErrorProbability()? 
    */
+
     CDErrT RegisterRecovery(uint error_name_mask, //!< [in] each `1` in
   			     //!< the mask indicates that this CD
   			     //!< should be able to recover from that
@@ -670,6 +708,11 @@ class cd::CDHandle {
    *  for relaxed-CDs context?
    */
 
+/** @} */ // Ends register_detection_recovery group
+
+
+/**@addtogroup cd_detection */
+
   /** @brief Recover method to be specialized by inheriting and overloading
    *
    * Recover uses methods that are internal to the CD itself and should
@@ -681,32 +724,32 @@ class cd::CDHandle {
                  uint32_t error_loc_mask, 
                  std::vector< SysErrT > errors);
 
-  /** @} */ // End detection_recovery group =========================================
+  /** @} */ // End cd_detection group =========================================
 
  
 
- /** \addtogroup cd_error_probability Methods for Interacting with the CD Framework and Tuner
-  *
-  * @{
-  */
+/** \addtogroup cd_error_probability Methods for Interacting with the CD Framework and Tuner
+ *
+ * @{
+ */
 
-  /** @brief Ask the CD framework to estimate error/fault rate.
-   *
-   * Each CD will experience a certain rate of failure/error for
-   * different failure/error mechanisms. These rates depend on the
-   * system, the duration of the CD, its memory footprint, etc. The CD
-   * framework can estimate the expected rate of each fault mechanism
-   * given its knowledge of the CD and system properties.
-   *
-   * @return probability that the queried number of error/failure of the type
-   * queried will occur during the execution of this CD.
-   *
-   * \note Should this be some rate instead? Seems like it would be
-   * easier for the programmer to deal with number and probability,
-   * but is it?
-   *
-   * \todo Decide on rate vs. number+probability
-   */
+/** @brief Ask the CD framework to estimate error/fault rate.
+ *
+ * Each CD will experience a certain rate of failure/error for
+ * different failure/error mechanisms. These rates depend on the
+ * system, the duration of the CD, its memory footprint, etc. The CD
+ * framework can estimate the expected rate of each fault mechanism
+ * given its knowledge of the CD and system properties.
+ *
+ * @return probability that the queried number of error/failure of the type
+ * queried will occur during the execution of this CD.
+ *
+ * \note Should this be some rate instead? Seems like it would be
+ * easier for the programmer to deal with number and probability,
+ * but is it?
+ *
+ * \todo Decide on rate vs. number+probability
+ */
     float GetErrorProbability(SysErrT error_type, //!< [in] Type of
   						  //!error/failure
   						  //!queried
@@ -714,27 +757,27 @@ class cd::CDHandle {
   					    //!< errors/failures queried.
   			    );
 
-  /** @brief Request the CD framework to reach a certain error/failure probability.
-   *
-   * Each CD will experience a certain rate of failure/error for
-   * different failure/error mechanisms. These rates depend on the
-   * system, the duration of the CD, its memory footprint, etc. The CD
-   * framework may be able to apply automatic resilience techniques,
-   * such as replication, to ensure certain errors/failures will be
-   * tolerated (or simply) detected.
-   *
-   * @return probability that at least `error_num` errors/failurse of the type
-   * queried will occur during the execution of this CD, _after_ the 
-   * automatic techniques are applied. Should be less than or equal to
-   * requested `probability` if successful.
-   *
-   * \note Should this be some rate instead? Seems like it would be
-   * easier for the programmer to deal with number and probability,
-   * but is it?
-   *
-   * \todo Decide on rate vs. number+probability
-   *
-   */
+/** @brief Request the CD framework to reach a certain error/failure probability.
+ *
+ * Each CD will experience a certain rate of failure/error for
+ * different failure/error mechanisms. These rates depend on the
+ * system, the duration of the CD, its memory footprint, etc. The CD
+ * framework may be able to apply automatic resilience techniques,
+ * such as replication, to ensure certain errors/failures will be
+ * tolerated (or simply) detected.
+ *
+ * @return probability that at least `error_num` errors/failurse of the type
+ * queried will occur during the execution of this CD, _after_ the 
+ * automatic techniques are applied. Should be less than or equal to
+ * requested `probability` if successful.
+ *
+ * \note Should this be some rate instead? Seems like it would be
+ * easier for the programmer to deal with number and probability,
+ * but is it?
+ *
+ * \todo Decide on rate vs. number+probability
+ *
+ */
     float RequireErrorProbability(SysErrT error_type, //!< [in] Type of
   				//!< error/failure
   				//!< queried.
@@ -839,7 +882,6 @@ class cd::CDHandle {
 /** @} */ // End PGAS_funcs =========================================================== 
 
 
-
 ///@brief Commits setjmp buffer or context buffer to CD object.
     void CommitPreserveBuff(void);
   private:  // Internal use -------------------------------------------------------------
@@ -850,7 +892,7 @@ class cd::CDHandle {
 /// \brief Search CDEntry with entry_name given. 
 /// It is needed when its children preserve data via reference and search through its ancestors. 
 /// If it cannot find in current CD object, it outputs NULL 
-    cd::CDEntry* InternalGetEntry(std::string entry_name);
+//    cd::CDEntry* InternalGetEntry(std::string entry_name);
 
 
 /// Add children CD to my CD.
@@ -873,7 +915,8 @@ class cd::CDHandle {
 
 /// Get NodeID with given new_color and new_task
     CDErrT GetNewNodeID(NodeID& new_node);
-/// Get NodeID with given new_color and new_task
+
+/// Get NodeID with given new_color and new_task.
     CDErrT GetNewNodeID(const ColorT& my_color, 
                         const int& new_color, 
                         const int& new_task, 
@@ -892,7 +935,13 @@ class cd::CDHandle {
     void CollectHeadInfoAndEntry(const NodeID &new_node_id);
 
   public:
-    // Accessors
+
+/**@defgroup cd_accessor CD accessors
+ * @brief The accessors of CDHandle which might be useful.
+ * @ingroup user_interfaces
+ * @addtogroup cd_accessor
+ * @{
+ */
 
 /**@brief Get the string name defined by user.
  *         __It is different from `CDHandle::GetCDName()`.__
@@ -937,6 +986,10 @@ class cd::CDHandle {
 ///@brief Get color of the current CD.
 ///       In MPI version, color means a communicator.
     ColorT   color(void)         const;
+
+
+///@brief Get color of the current CD.
+///       In MPI version, color means a communicator.
     ColorT   GetNodeID(void)         const;
 
 ///@brief Get task ID in the task group of this CD.
@@ -956,13 +1009,16 @@ class cd::CDHandle {
 ///@return Pointer to CDHandle of parent
     CDHandle *GetParent(void)    const;
 
+///@brief Operator to check equality between CDHandles.
+    bool     operator==(const CDHandle &other) const ;
+
+/** @} */ // End cd_accessor and user_interfaces
+
 ///@brief Check the current CD's context preservation mode.
 ///       There are two flavors: Include stack and Exclude stack.
     int      ctxt_prv_mode(void);
 
-///@brief Operator to check equality between CDHandles.
-    bool     operator==(const CDHandle &other) const ;
-};
 
+};
 
 #endif

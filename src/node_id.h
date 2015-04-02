@@ -55,6 +55,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  */
 
 #include "cd_global.h"
+#include "cd_def_internal.h" 
 #include "serializable.h"
 #include "packer.h"
 #include "unpacker.h"
@@ -72,6 +73,7 @@ namespace cd {
  */ 
 class NodeID : public Serializable {
 friend class CDHandle;
+friend class DataHandle;
   /** @brief Internal enumerators used for serialization.
    *
    */

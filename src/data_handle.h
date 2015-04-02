@@ -54,35 +54,30 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <string>
 #include <cstring>
 
-// DataHandle can be copied by using = operator by default. Making of a copy of a handle is thus very easy. 
-// This object needs to support serialization and deserialization 
-// because runtime often times need to send this DataHandle object to remote node. 
-// Before the DataHandle is sent over network, first it needs to be serializaed and then sent. 
-// On the remote node, it needs to first figure out the object type, 
-// and depending on the object type, it will create the object accordingly, and then deserialize. 
-// Then entire serealization and deserialization will be implemented after Mar 1st. 
 
-// FIXME neet to inherit serializable object and that will handle serilization complication.
 namespace cd {
-  /** \addtogroup cd_defs 
-   *@{
-   */
- /**
-   * @brief Information of data regarding preservation
-   *
-   * DataHandle can be copied by using = operator by default. Making of a copy of a handle is thus very easy. 
-   * This object needs to support serialization and deserialization 
-   * because runtime often times need to send this DataHandle object to remote node. 
-   * Before the DataHandle is sent over network, first it needs to be serializaed and then sent. 
-   * On the remote node, it needs to first figure out the object type, 
-   * and depending on the object type, it will create the object accordingly, and then deserialize. 
-   * 
-   * 
-   */ 
+/** \addtogroup cd_defs 
+ *@{
+ */
+
+/**
+  * @brief Information of data regarding preservation
+  *
+  * DataHandle can be copied by using = operator by default. Making of a copy of a handle is thus very easy. 
+  * This object needs to support serialization and deserialization 
+  * because runtime often times need to send this DataHandle object to remote node. 
+  * Before the DataHandle is sent over network, first it needs to be serializaed and then sent. 
+  * On the remote node, it needs to first figure out the object type, 
+  * and depending on the object type, it will create the object accordingly, and then deserialize. 
+  * 
+  * 
+  */ 
 class DataHandle : public Serializable {
   friend class CDEntry;
+  friend class CD;
+  friend class HeadCD;
   friend std::ostream& operator<<(std::ostream& str, const DataHandle& dh);
-  public:
+//  public:
     enum HandleType { kMemory = 0, kOSFile, kReference, kSource, kPFS };
   private:
     enum { 
@@ -110,7 +105,7 @@ class DataHandle : public Serializable {
     uint64_t ref_offset_;
 		NodeID      node_id_;
 
-  public: 
+//  public: 
     DataHandle() 
       : handle_type_(kMemory), address_data_(0), len_(0), ref_name_(0), ref_offset_(0) 
     { 
@@ -162,6 +157,13 @@ class DataHandle : public Serializable {
 
     ~DataHandle() {}
 
+    void        set_file_name(const char *file_name)       { strcpy(file_name_, file_name); }
+    void        set_ref_name(std::string ref_name)         { ref_name_     = cd_hash(ref_name); cd::tag2str[ref_name_] = ref_name;}
+    void        set_ref_offset(uint64_t ref_offset)        { ref_offset_   = ref_offset; }
+    void        set_address_data(const void *address_data) { address_data_ = (void *)address_data; }
+    void        set_len(uint64_t len)                      { len_ = len; }
+    void        set_handle_type(const HandleType& handle_type) { handle_type_ = handle_type; }
+public:
     std::string file_name(void)    const { return file_name_; }
     std::string ref_name(void)     const { return cd::tag2str[ref_name_]; }
     ENTRY_TAG_T ref_name_tag(void) const { return ref_name_; }
@@ -171,13 +173,6 @@ class DataHandle : public Serializable {
     HandleType  handle_type(void)  const { return handle_type_; }
     NodeID      node_id(void)      const { return node_id_; }
 
-    void        set_file_name(const char *file_name)       { strcpy(file_name_, file_name); }
-    void        set_ref_name(std::string ref_name)         { ref_name_     = cd_hash(ref_name); cd::tag2str[ref_name_] = ref_name;}
-    void        set_ref_offset(uint64_t ref_offset)        { ref_offset_   = ref_offset; }
-    void        set_address_data(const void *address_data) { address_data_ = (void *)address_data; }
-    void        set_len(uint64_t len)                      { len_ = len; }
-    void        set_handle_type(const HandleType& handle_type) { handle_type_ = handle_type; }
-
 
     bool operator==(const DataHandle& that) const {
       return (handle_type_ == that.handle_type_) && (node_id_ == that.node_id_) 
@@ -186,8 +181,8 @@ class DataHandle : public Serializable {
              && (ref_offset_ == that.ref_offset_);
     }
 
-
-  public: 
+private:
+//  public: 
     //we need serialize deserialize interface here.
     void *Serialize(uint32_t& len_in_bytes)
     {

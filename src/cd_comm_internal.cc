@@ -43,13 +43,72 @@ using namespace cd;
 using namespace std;
 
 
-//  if(IsHead()) {
-//    // Create window to get head info of children CDs.
-//    PMPI_Win_create();
-//  }
-//  else {
-//    PMPI_Win_create();
-//  }
+void TestMPIFunc(const ColorT& new_color, const int& color_for_split)
+{
+/*
+  int sendBuf[3] = {1, 2, 3};
+  int recvBuf[3] = {0, 0, 0};
+//  for(int i=0; i<3; ++i) 
+//    sendBuf[i] += color_for_split-1;
+
+  for(int i=0; i<color_for_split*100000; i++) { int a = 5 * 5; } 
+  dbg<<"\n-------------------------------------------------------------------\n"<<endl;
+  dbg<<new_color<<"[Before Allreduce-----]\nsendBuf : {"<<sendBuf[0]<<", "<<sendBuf[1]<<", "<<sendBuf[2]<<"}"<<endl;
+  dbg<<"recvBuf : {"<<recvBuf[0]<<", "<<recvBuf[1]<<", "<<recvBuf[2]<<"}"<<endl;
+
+  PMPI_Allreduce(sendBuf, recvBuf, 3, MPI_INT, PMPI_SUM, new_color);
+//  PMPI_Barrier(PMPI_COMM_WORLD); 
+  for(int i=0; i<color_for_split*100000; i++) { int a = 5 * 5; } 
+  dbg<< new_color<<"[After Allreduce-----]\nsendBuf : {"<<sendBuf[0]<<", "<<sendBuf[1]<<", "<<sendBuf[2]<<"}"<<endl;
+  dbg<<"recvBuf : {"<<recvBuf[0]<<", "<<recvBuf[1]<<", "<<recvBuf[2]<<"}"<<endl;
+  dbg<<"\n-------------------------------------------------------------------\n"<<endl;
+  //dbgBreak();
+*/
+}
+
+CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, const int& new_task, NodeID& new_node)
+{
+#if _MPI_VER
+    CDErrT err = kOK;
+//    dbg<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
+    PMPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
+    PMPI_Comm_size(new_node.color(), &(new_node.size_));
+    PMPI_Comm_rank(new_node.color(), &(new_node.task_in_color_));
+    PMPI_Comm_group(new_node.color(), &(new_node.task_group_));
+//    Sync();
+//    TestMPIFunc(node_id_.color(), node_id_.task_in_color());
+//    Sync();
+//    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
+//    if(new_color == 0) 
+//      dbg<<"\n--------PRE DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
+//
+//    TestMPIFunc(new_node.color(), new_color);
+//
+//    Sync();
+//    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
+//    if(new_color == 0) 
+//      dbg<<"\n--------DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
+    return err;
+
+#elif _PGAS_VER
+    CDErrT err = kOK;
+    int size = new_node.size();
+//    assert(size == new_node.size());
+    return err;
+#else
+    return kOK;
+#endif
+}
+
+/// Synchronize the CD object in every task of that CD.
+CDErrT CDHandle::Sync(void) 
+{
+#if _MPI_VER
+  PMPI_Barrier(node_id_.color());
+#endif
+
+  return kOK;
+}
 
 void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id) 
 {

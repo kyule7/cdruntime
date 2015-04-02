@@ -37,6 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define _CD_COMM_LOG_H
 
 #include "cd_global.h"
+#include "cd_def_internal.h"
 #include "cd_id.h"
 
     

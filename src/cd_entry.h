@@ -43,6 +43,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * @brief Containment Domains API v0.2 (C++)
  */
 #include "cd_global.h"
+#include "cd_def_internal.h"
 #include "cd.h"
 #include "serializable.h"
 #include "data_handle.h"
@@ -59,6 +60,7 @@ class cd::CDEntry : public cd::Serializable
 {
   friend class cd::CD;
   friend class cd::HeadCD;
+  friend class cd::PFSHandle;
   friend class cd::HandleEntrySend;
   friend class cd::HandleEntrySearch;
   friend std::ostream& operator<<(std::ostream& str, const CDEntry& cd_entry);
@@ -79,7 +81,6 @@ class cd::CDEntry : public cd::Serializable
     cd::CDPreserveT preserve_type_; // already determined according to class 
 //		struct tsn_lsn_struct lsn, durable_lsn;
 
-  public:
     enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError, kEntrySearchRemote};
     
     CDEntry(){}
@@ -95,16 +96,17 @@ class cd::CDEntry : public cd::Serializable
         tag2str[entry_tag_] = entry_name;
       }
     }
+  public:
 
     ~CDEntry()
     {
       //FIXME we need to delete allocated (preserved) space at some point, should we do it when entry is destroyed?  when is appropriate for now let's do it now.
-      if( dst_data_.address_data() != NULL ) {
-//        DATA_FREE( dst_data_.address_data() );
-      }
+//      if( dst_data_.address_data() != NULL ) {
+////        DATA_FREE( dst_data_.address_data() );
+//      }
  
     }
-
+  private:
     // FIXME: currently it is assumed that my cd is always in the same memory space.
     // In the future we might need a distributed CD structure. 
     // For example right now we have one list who handles all the CDEntries for that CD. 
@@ -115,7 +117,7 @@ class cd::CDEntry : public cd::Serializable
 
 		CDEntryErrT Delete(void);
 
-  public:
+//  public:
 		std::string name() const { return tag2str[entry_tag_]; }
 		ENTRY_TAG_T name_tag() const { return entry_tag_; }
     bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }

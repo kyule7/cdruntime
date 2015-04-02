@@ -34,6 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_handle.h"
+#include "cd_def_internal.h"
 #include "cd_path.h"
 
 using namespace cd;
@@ -77,7 +78,7 @@ int cd::myTaskID = 0;
 namespace cd {
 // Global functions -------------------------------------------------------
 /// KL
-CDHandle* CD_Init(int numTask, int myTask)
+CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   //GONG
   CDPrologue();
@@ -92,7 +93,7 @@ CDHandle* CD_Init(int numTask, int myTask)
   Internal::Intialize();
 
   CD::CDInternalErrT internal_err;
-  CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask)), kStrict, DEFAULT_MEDIUM, 0, &internal_err);
+  CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask)), static_cast<CDType>(kStrict | prv_medium), 0, &internal_err);
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
 #if _PROFILER
@@ -306,8 +307,7 @@ void CDHandle::Init(CD* ptr_cd, const NodeID& node_id)
 
 // Non-collective
 CDHandle* CDHandle::Create(const char* name, 
-                           CDType cd_type, 
-                           PrvMediumT prv_medium,
+                           int cd_type, 
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
                            CDErrT *error )
@@ -331,7 +331,7 @@ CDHandle* CDHandle::Create(const char* name,
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
-  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, prv_medium, sys_bit_vec, &internal_err);
+  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
   
@@ -350,8 +350,6 @@ CDErrT CDHandle::RegisterSplitMethod(SplitFuncT split_func)
 }
 
 
-
-
 CDErrT CDHandle::GetNewNodeID(NodeID& new_node)
 {
   CDErrT err = kOK;
@@ -362,70 +360,14 @@ CDErrT CDHandle::GetNewNodeID(NodeID& new_node)
   return err;
 }
 
-void TestMPIFunc(const ColorT& new_color, const int& color_for_split)
-{
-/*
-  int sendBuf[3] = {1, 2, 3};
-  int recvBuf[3] = {0, 0, 0};
-//  for(int i=0; i<3; ++i) 
-//    sendBuf[i] += color_for_split-1;
 
-  for(int i=0; i<color_for_split*100000; i++) { int a = 5 * 5; } 
-  dbg<<"\n-------------------------------------------------------------------\n"<<endl;
-  dbg<<new_color<<"[Before Allreduce-----]\nsendBuf : {"<<sendBuf[0]<<", "<<sendBuf[1]<<", "<<sendBuf[2]<<"}"<<endl;
-  dbg<<"recvBuf : {"<<recvBuf[0]<<", "<<recvBuf[1]<<", "<<recvBuf[2]<<"}"<<endl;
-
-  PMPI_Allreduce(sendBuf, recvBuf, 3, MPI_INT, PMPI_SUM, new_color);
-//  PMPI_Barrier(PMPI_COMM_WORLD); 
-  for(int i=0; i<color_for_split*100000; i++) { int a = 5 * 5; } 
-  dbg<< new_color<<"[After Allreduce-----]\nsendBuf : {"<<sendBuf[0]<<", "<<sendBuf[1]<<", "<<sendBuf[2]<<"}"<<endl;
-  dbg<<"recvBuf : {"<<recvBuf[0]<<", "<<recvBuf[1]<<", "<<recvBuf[2]<<"}"<<endl;
-  dbg<<"\n-------------------------------------------------------------------\n"<<endl;
-  //dbgBreak();
-*/
-}
-
-CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, const int& new_task, NodeID& new_node)
-{
-#if _MPI_VER
-    CDErrT err = kOK;
-//    dbg<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
-    PMPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
-    PMPI_Comm_size(new_node.color(), &(new_node.size_));
-    PMPI_Comm_rank(new_node.color(), &(new_node.task_in_color_));
-    PMPI_Comm_group(new_node.color(), &(new_node.task_group_));
-//    Sync();
-//    TestMPIFunc(node_id_.color(), node_id_.task_in_color());
-//    Sync();
-//    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
-//    if(new_color == 0) 
-//      dbg<<"\n--------PRE DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
-//
-//    TestMPIFunc(new_node.color(), new_color);
-//
-//    Sync();
-//    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
-//    if(new_color == 0) 
-//      dbg<<"\n--------DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
-    return err;
-
-#elif _PGAS_VER
-    CDErrT err = kOK;
-    int size = new_node.size();
-//    assert(size == new_node.size());
-    return err;
-#else
-    return kOK;
-#endif
-}
 
 
 // Collective
 CDHandle* CDHandle::Create(const ColorT& color,
                            uint32_t  num_children,
                            const char* name, 
-                           CDType cd_type, 
-                           PrvMediumT prv_medium,
+                           int cd_type, 
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
                            CDErrT *error )
@@ -511,7 +453,7 @@ CDHandle* CDHandle::Create(const ColorT& color,
   cout << "done collect to head" << endl;
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
-  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), cd_type, prv_medium, sys_bit_vec, &internal_err);
+  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
   cout << "done collect to head" << endl;
 
@@ -532,27 +474,25 @@ CDHandle* CDHandle::Create(const ColorT& color,
 // Collective
 CDHandle* CDHandle::Create(uint32_t num_children, 
                            const char* name, 
-                           CDType cd_type, 
-                           PrvMediumT prv_medium,
+                           int cd_type, 
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
                            CDErrT *error )
 {
-  return Create(color(), num_children, name, cd_type, prv_medium, error_name_mask, error_loc_mask, error);
+  return Create(color(), num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
 }
 
 
 CDHandle* CDHandle::CreateAndBegin(const ColorT& color, 
                                    uint32_t num_children, 
                                    const char* name, 
-                                   CDType cd_type, 
-                                   PrvMediumT prv_medium,
+                                   int cd_type, 
                                    uint32_t error_name_mask, 
                                    uint32_t error_loc_mask, 
                                    CDErrT *error )
 {
   CDPrologue();
-  CDHandle* new_cdh = Create(color, num_children, name, cd_type, prv_medium, error_name_mask, error_loc_mask, error);
+  CDHandle* new_cdh = Create(color, num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
   new_cdh->Begin(false, name);
   CDEpilogue();
   return new_cdh;
@@ -726,28 +666,24 @@ CDErrT CDHandle::Preserve(void *data_ptr,
                           PreserveUseT data_usage)
 {
   CDPrologue();
-  //CheckMailBox();
 
-
-  /// Preserve meta-data
-  /// Accumulated volume of data to be preserved for Sequential CDs. 
-  /// It will be averaged out with the number of seq. CDs.
 #if _PROFILER
   if(ptr_cd()->cd_exec_mode_ == 0) { 
 //    profiler_->GetPrvData(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
   }
 #endif
 
-//  if( IsHead() ) {
-    assert(ptr_cd_ != 0);
-    return ptr_cd()->Preserve(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
-//  }
-//  else {
-//    // It is at remote node so do something for that.
-//
-//  }
+  
+  /// Preserve meta-data
+  /// Accumulated volume of data to be preserved for Sequential CDs. 
+  /// It will be averaged out with the number of seq. CDs.
+  assert(ptr_cd_ != 0);
+  CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+                                 my_name, ref_name, ref_offset, 
+                                 regen_object, data_usage);
+
   CDEpilogue();
-  return kError;
+  return err;
 }
 
 CDErrT CDHandle::Preserve(CDEvent &cd_event, 
@@ -761,29 +697,27 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
                           PreserveUseT data_usage )
 {
   CDPrologue();
-  //CheckMailBox();
-  if( IsHead() ) {
-    assert(ptr_cd_ != 0);
-    // TODO CDEvent object need to be handled separately, 
-    // this is essentially shared object among multiple nodes.
-    return ptr_cd()->Preserve(data_ptr, len, preserve_mask, 
-                             my_name, ref_name, ref_offset,  
-                             regen_object, data_usage );
-  }
-  else {
-    // It is at remote node so do something for that.
-  }
+
+  assert(ptr_cd_ != 0);
+
+  // TODO CDEvent object need to be handled separately, 
+  // this is essentially shared object among multiple nodes.
+  CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+                              my_name, ref_name, ref_offset,  
+                              regen_object, data_usage);
   CDPrologue();
-  return kError;
+  return err;
 }
 
 
 char *CDHandle::GetName(void) const
 {
-  if(ptr_cd_ != NULL)
+  if(ptr_cd_ != NULL) {
     return const_cast<char*>(ptr_cd_->name_.c_str());  
-  else
-    assert(0);
+  }
+  else {
+    return NULL;
+  }
 }
 
 CDID     &CDHandle::GetCDID(void)       { return ptr_cd_->GetCDID(); }
@@ -824,22 +758,6 @@ bool CDHandle::operator==(const CDHandle &other) const
 }
 
 
-/// Synchronize the CD object in every task of that CD.
-CDErrT CDHandle::Sync() 
-{
-  CDErrT err = INITIAL_ERR_VAL;
-
-#if _MPI_VER
-  int mpi_err = PMPI_Barrier(node_id_.color());
-#else
-  int mpi_err = 1;
-#endif
-
-  if(mpi_err != 0) { 
-    err = kOK; 
-  }
-  return err;
-}
 
 CDErrT CDHandle::Stop()
 { return ptr_cd_->Stop(); }
@@ -1097,13 +1015,13 @@ float CDHandle::RequireErrorProbability (SysErrT error_type, uint32_t error_num,
   return 0;
 }
 
-CDEntry *CDHandle::InternalGetEntry(std::string entry_name)
-{
-  ENTRY_TAG_T entry_tag = cd_hash(entry_name);
-  tag2str[entry_tag] = entry_tag;
-  return ptr_cd_->InternalGetEntry(entry_tag);
-  //FIXME need some way to ask to accomplish this functionality...  // Remote request
-}
+//CDEntry *CDHandle::InternalGetEntry(std::string entry_name)
+//{
+//  ENTRY_TAG_T entry_tag = cd_hash(entry_name);
+//  tag2str[entry_tag] = entry_tag;
+//  return ptr_cd_->InternalGetEntry(entry_tag);
+//  //FIXME need some way to ask to accomplish this functionality...  // Remote request
+//}
 
 void CDHandle::Recover (uint32_t error_name_mask, 
                         uint32_t error_loc_mask, 

@@ -7,12 +7,15 @@
 #include <math.h>
 #include <sstream>
 #include "cd_global.h"
+#include "cd_def_internal.h" 
 #include "cd.h"
 
 namespace cd {
 
 class PFSHandle {
 	friend class cd::CD;
+	friend class cd::HeadCD;
+	friend class cd::CDEntry;
 private:
 	CD *ptr_cd_;
 
@@ -31,7 +34,6 @@ private:
 	int degree_of_sharing_;
 	int sharing_group_id_;
 
-public:
 	PFSHandle( CD* my_cd );
 	PFSHandle( CD* my_cd, const char* file_path );
 	PFSHandle( CD* my_cd, const char* file_path , uint64_t chunk_size );
@@ -46,6 +48,7 @@ public:
 	void Reset_File_Pointer( void );
 	MPI_Offset Write( void*, uint64_t );
 	uint64_t Read_at( void*, uint64_t, MPI_Offset );
+
 private:
 	int Open_File( void );
 	int Close_and_Delete_File( void );

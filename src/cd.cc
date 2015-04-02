@@ -136,7 +136,7 @@ CDFlagT *CD::pendingFlag_;
 CD::CD(void)
   : log_handle_(GetPlaceToPreserve())
 {
-  cd_type_ = kStrict; 
+  cd_type_ = kDefaultCD;
   name_ = INITIAL_CDOBJ_NAME; 
   sys_detect_bit_vector_ = 0;
   // Assuming there is only one CD Object across the entire system we initilize cd_id info here.
@@ -227,10 +227,10 @@ CD::CD(CDHandle* cd_parent,
   {
     // Only create CommLog object for relaxed CDs
     assert(comm_log_ptr_ == NULL);
-    if (cd_type_ == kRelaxed)
+    if (MASK_CDTYPE(cd_type_) == kRelaxed)
     {
       //SZ: if parent is a relaxed CD, then copy comm_log_mode from parent
-      if (cd_parent->ptr_cd()->cd_type_ == kRelaxed)
+      if (MASK_CDTYPE(cd_parent->ptr_cd()->cd_type_) == kRelaxed)
       {
         CommLogMode parent_log_mode = cd_parent->ptr_cd()->comm_log_ptr_->GetCommLogMode();
         PRINT_DEBUG("With cd_parent (%p) relaxed CD, creating CommLog with parent's mode %d\n", cd_parent, parent_log_mode);
@@ -258,7 +258,7 @@ CD::CD(CDHandle* cd_parent,
   {
     // Only create CommLog object for relaxed CDs
     assert(comm_log_ptr_ == NULL);
-    if (cd_type_ == kRelaxed)
+    if (MASK_CDTYPE(cd_type_) == kRelaxed)
     {
       PRINT_DEBUG("With cd_parent = NULL, creating CommLog with mode kGenerateLog\n");
       comm_log_ptr_ = new CommLog(this, kGenerateLog);
@@ -350,14 +350,13 @@ CDHandle* CD::Create(CDHandle* parent,
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
-                     PrvMediumT prv_medium,
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err)
 {
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
   cout << "CD::Create" << endl;
-  *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, prv_medium, sys_bit_vector, &new_cd_handle);
+  *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
   cout << "CD::Create done" << endl;
 
@@ -371,14 +370,13 @@ CDHandle* CD::CreateRootCD(CDHandle* parent,
                            const char* name, 
                            const CDID& root_cd_id, 
                            CDType cd_type, 
-                           PrvMediumT prv_medium,
                            uint64_t sys_bit_vector, 
                            CD::CDInternalErrT *cd_internal_err)
 {
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
 
-  *cd_internal_err = InternalCreate(parent, name, root_cd_id, cd_type, prv_medium, sys_bit_vector, &new_cd_handle);
+  *cd_internal_err = InternalCreate(parent, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
 
   return new_cd_handle;
@@ -401,7 +399,6 @@ CD::InternalCreate(CDHandle* parent,
                    const char* name, 
                    const CDID& new_cd_id, 
                    CDType cd_type, 
-                   PrvMediumT prv_medium,
                    uint64_t sys_bit_vector, 
                    CDHandle** new_cd_handle)
 {
@@ -443,7 +440,6 @@ CD::InternalCreate(CDHandle* parent,
 #endif
 #endif
 
-    new_cd->SetPlaceToPreserve(prv_medium);
 
     if( new_cd->GetPlaceToPreserve() == kPFS ) {
       new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->log_handle_.path_.GetFilePath().c_str() ); 
@@ -494,7 +490,6 @@ CD::InternalCreate(CDHandle* parent,
 #endif
 #endif
 
-    new_cd->SetPlaceToPreserve(prv_medium);
 
     if( new_cd->GetPlaceToPreserve() == kPFS ) {
 //          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
@@ -612,7 +607,7 @@ CDErrT CD::Begin(bool collective, const char* label)
     // Only need to if for both parent and child are relaxed CDs, 
     // if child is relaxed but parent is strict, then create the CommLog object with kGenerateLog mode
     // if child is strict, then do not need to do anything for comm_log_ptr_...
-    if(GetParentHandle()->ptr_cd_->cd_type_ == kRelaxed && cd_type_ == kRelaxed)
+    if(MASK_CDTYPE(GetParentHandle()->ptr_cd_->cd_type_) == kRelaxed && MASK_CDTYPE(cd_type_) == kRelaxed)
     {
       if (GetParentHandle()->ptr_cd_->comm_log_ptr_->GetCommLogMode() == kReplayLog)
       {
@@ -687,9 +682,9 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 #ifdef comm_log
   // SZ: pack logs and push to parent
   if (GetParentHandle()!=NULL) {
-    if (cd_type_ == kRelaxed) {
+    if (MASK_CDTYPE(cd_type_) == kRelaxed) {
       if (IsParentLocal()) {
-        if (IsNewLogGenerated() && GetParentHandle()->ptr_cd_->cd_type_ == kRelaxed) {
+        if (IsNewLogGenerated() && MASK_CDTYPE(GetParentHandle()->ptr_cd_->cd_type_) == kRelaxed) {
           PRINT_DEBUG("Pushing logs to parent...\n");
           comm_log_ptr_->PackAndPushLogs(GetParentHandle()->ptr_cd_);
 
@@ -1295,7 +1290,7 @@ CDErrT CD::Preserve(void* data,
 //          return cd_entry.Restore(_isOpenSSD, &SSDlog);
 //        }
         switch(GetPlaceToPreserve()) {
-          case kMemory:
+          case kDRAM:
             assert(0);
             break;
           case kHDD:
@@ -1336,10 +1331,10 @@ CDErrT CD::Preserve(void* data,
 PrvMediumT CD::GetPlaceToPreserve()
 {
 
-  return prv_medium_;
+  return static_cast<PrvMediumT>(MASK_MEDIUM(cd_type_));
 /*
 #if _MEMORY
-  return kMemory;
+  return kDRAM;
 #elif _PFS
   return kPFS;
 #elif _HDD
@@ -1347,15 +1342,11 @@ PrvMediumT CD::GetPlaceToPreserve()
 #elif _SSD
   return kSSD;
 #else
-  return kMemory;
+  return kDRAM;
 #endif
 */
 }
 
-void CD::SetPlaceToPreserve(PrvMediumT prv_medium)
-{
-  prv_medium_ = prv_medium;
-}
 
 bool CD::TestReqComm(bool is_all_valid)
 {
@@ -1769,8 +1760,8 @@ CD::InternalPreserve(void *data,
       dbg << "\nPreservation via Copy to %d(memory or file)\n" << GetPlaceToPreserve() << endl;
       dbg << "Prv Mask : " << preserve_mask << ", CHECK PRV TYPE : " << CHECK_PRV_TYPE(preserve_mask, kCoop) << endl;
       switch(GetPlaceToPreserve()) {
-        case kMemory: {
-          dbg<<"[kMemory] ------------------------------------------\n" << endl;
+        case kDRAM: {
+          dbg<<"[kDRAM] ------------------------------------------\n" << endl;
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
                                  DataHandle(DataHandle::kMemory, 0, len_in_bytes, cd_id_.node_id_), 
                                  my_name);
@@ -1892,11 +1883,11 @@ CD::InternalPreserve(void *data,
 
 		      //Do we need to check for anything special for accessing to the global filesystem? 
 		      //Potentially=> CDEntry::CDEntryErrT err = cd_entry->SavePFS(log_handle_.path_.GetFilePath(), log_handle_.isPFSAccessible(), &(log_handle_.PFSlog));
-//          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
-		      CDEntry::CDEntryErrT err = cd_entry->SavePFS();//I don't know what should I do with the log parameter. I just add it for compatibility.
-          
+		      //I don't know what should I do with the log parameter. I just add it for compatibility.
+		      CDEntry::CDEntryErrT err = cd_entry->SavePFS(); 
 
-          entry_directory_.push_back(*cd_entry);  
+          entry_directory_.push_back(*cd_entry); 
+ 
           if( !my_name.empty() ) {
             if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
               entry_directory_map_[ cd_hash(my_name) ] = cd_entry;
@@ -1912,21 +1903,7 @@ CD::InternalPreserve(void *data,
           dbg << "-------------------------------------------------------------\n" << endl;
           return (err == CDEntry::CDEntryErrT::kOK) ? CDInternalErrT::kOK : CDInternalErrT::kEntryError; 
         }
-/*
-        case kPFS: {
-          dbg << "kPFS ----------------------------------\n"<< endl;
-          cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                                 DataHandle(DataHandle::kOSFile, 0, len_in_bytes, cd_id_.node_id_), 
-                                 my_name);
-          cd_entry->set_my_cd(this); 
-          entry_directory_.push_back(*cd_entry);  
-//          if( ref_name != 0 ) entry_directory_map_.emplace(ref_name, *cd_entry);
-          if( !my_name.empty() ) entry_directory_map_[cd_hash(my_name)] = cd_entry;
-          dbg << "\nPreservation to PFS which is not supported yet. ERROR\n" << endl;
-          assert(0);
-          break;
-        }
-*/
+
         default:
           break;
       }
@@ -1981,83 +1958,6 @@ CD::InternalPreserve(void *data,
   return kExecModeError; 
 }
 
-/* RELEASE
-#ifdef IMPL
-
-// Only for reference, this section is not activated
-int CD::Preserve(char* data_p, int data_l, enum preserveType prvTy, enum mediumLevel medLvl)
-{
-
-  abstraction_trans_func(); // FIXME
-
-  AS* src_data = new AS(cd_self->rankID, SOURCE, data_p, data_l); //It is better to define AS src/dst_data here because we can know rankID.
-  switch(prvTy){
-    case COPY:
-      // AS *DATA_dest = (AS *) manGetNewAllocation(DATA, mediumType);  
-      // DATA is passed to figure out the length we need
-      if(medLvl==DRAM) {
-        char* DATA = DATA_MALLOC(data_l);
-        AS* dst_data = new AS(cd_self->rankID, DESTINATION, DATA, data_l);
-        if(!DATA){  // FIXME 
-          fprintf(stderr, "ERROR DATA_MALLOC FAILED due to insufficient memory");
-          return FAILURE;
-        }
-      } else {
-        char* fp = GenerateNewFile(WorkingDir);
-        AS* dst_data = new AS(cd_self->rankID, DESTINATION, medLvl, fp);
-      }
-      cd_entry *entry  = new cd_entry(RankIDfromRuntime, src_data, dst_data, enum preserveType prvTy, enum mediumLevel medLvl, NULL);
-      entry->preserveEntry(); // we need to add entry to some sort of list. 
-      break;
-
-      ///////////////////////////////////////////////////////////////////////////////////////////
-      //song
-    case REFER:
-      //find parent's (grandparent's or even earlier ancestor's) preserved entry
-      //need some name matching
-      //TODO: if parent also uses preserve via refer, is the entry in this child cd pointing to its parent's entry, or grandparent's entry??
-      //Seonglyong: I think if parent's preserved entry is "via REFER", to let the corresponding entry point (refer to) the original entry 
-      //whether it is grandparent's or parent of grandparent's entry will be reasonable by copying the parent's entry. More efficient than searching through a few hops.
-      //TODO: need to determine to when to find the entry? in preservation or restoration?
-      //    1) in preservation, find the refer entry in parent (or earlier ancestors), set the entry of this cd to be a pointer to that ancestor 
-      //    (or copy all the entry information to this entry --> this is messier, and should not be called preserve via refer...)
-      //    2) or we could do all those stuff in the restoration, when preserve, we only mark this entry to be preserve via reference, 
-      //    and when some errors happen, we could follow the pointer to parents to find the data needed. 
-      //Seonglyong: "In restoration" would be right. In terms of efficiency, we need to search the "preserved" entry via the tag in the restoration. 
-      cd_handle* temp_parent = cd_parent;
-      std::list<cd_entry*>::iterator it_entry = (temp_parent->cdInstance)->entryDirectory.begin();
-      for (;it_entry!=(temp_parent->cdInstance)->entryDirectory.end();it_entry++){
-        if (it_entry->entryNameMatching(EntryName)) { //TODO: need a parameter of EntryName
-          //    not name, but tags...
-          //
-        }       
-      }
-
-      //TODO: should the entry of this cd be just a pointer to parent? 
-      //or it will copy all the entry information from parent?
-      //SL: Pointer to parent or one of ancestors. What is the entry information? maybe not the preserved data (which is not REFER type anymore) 
-      //Whenever more than one hop is expected, we need to copy the REFER entry (which is kind of pointer to ancestor's entry or application data) 
-      cd_entry *entry  = new cd_entry(RankIDfromRuntime, src_data, dst_data, prvTy, medLvl, NULL);
-      entry->preserveEntry();
-      break;
-      ///////////////////////////////////////////////////////////////////////////////////////////
-
-    case REGEN:
-      customRegenFunc = getRegenFunc(); //Send request to Run-time to get an appropriate regenFunc
-      cd_entry *entry  = new cd_entry(RankIDfromRuntime, src_data, dst_data, prvTy, medLvl, customRegenFunc);
-      entry->preserveEntry();
-      break;
-    default:
-      fprintf(stderr, "ERROR CD::Preserve: Unknown restoration type: %d\n", prvTy);
-      return FAILURE;
-  }
-
-  return CDErrT::kOK;
-
-}
-
-#endif
-*/
 
 
 
@@ -2069,38 +1969,23 @@ int CD::Preserve(char* data_p, int data_l, enum preserveType prvTy, enum mediumL
  *
  *  (3) Logged data for recovery would be just replayed when reexecuted. We need to do something for this.
  */
-
-//Jinsuk: Side question: how do we know if the recovery was successful or not? 
-//It seems like this is very important topic, we could think the recovery was successful, 
-//but we still can miss, or restore with wrong data and the re-execute, 
-//for such cases, do we have a good detection mechanisms?
-// Jinsuk: 02092014 are we going to leave this function? 
-//It seems like this may not be required. Or for optimization, we can do this. 
-//Bulk restoration might be more efficient than fine grained restoration for each block.
 CDErrT CD::Restore()
 {
-
-
+  //Jinsuk: Side question: how do we know if the recovery was successful or not? 
+  //It seems like this is very important topic, we could think the recovery was successful, 
+  //but we still can miss, or restore with wrong data and the re-execute, 
+  //for such cases, do we have a good detection mechanisms?
+  // Jinsuk: 02092014 are we going to leave this function? 
+  //It seems like this may not be required. Or for optimization, we can do this. 
+  //Bulk restoration might be more efficient than fine grained restoration for each block.
   // this code section is for restoring all the cd entries at once. 
   // Now this is defunct. 
 
-  /*  for( std::list<CDEntry*>::iterator it = entry_directory_.begin(), it_end = entry_directory_.end(); it != it_end ; ++it)
-      {
-      (*it)->Restore();
-      } */
-
-  // what we need to do here is just reset the iterator to the beginning of the list.
-//  dbg<<"CD::Restore()"<<endl;
   iterator_entry_ = entry_directory_.begin();
-//  dbg<<"entry dir size : "<<entry_directory_.size()<<", entry dir map size : "<<entry_directory_map_.size()<<endl;
-//  dbg<<"dst addr : "<<iterator_entry_->dst_data_.address_data()<<", size: "<<iterator_entry_->dst_data_.len()<< endl<<endl;
-
-//  assert(iterator_entry_->dst_data_.address_data() != 0);
 
   //TODO currently we only have one iterator. This should be maintined to figure out the order. 
   // In case we need to find reference name quickly we will maintain seperate structure such as binary search tree and each item will have CDEntry *.
 
-  //Ready for long jump? Where should we do that. here ? for now?
 
   //GONG
   begin_ = false;
@@ -2114,8 +1999,6 @@ CDErrT CD::Restore()
  *  (1) Call all the user-defined error checking functions.
  *    Each error checking function should call its error handling function.(mostly restore() and reexec())  
  *  (2) 
- *
- *  (3)
  *
  */
 CD::CDInternalErrT CD::Detect()
@@ -2197,7 +2080,7 @@ CDErrT CD::Reexecute(void)
   // SZ
   //// change the comm_log_mode_ into CommLog class
   //comm_log_mode_ = kReplayLog;  
-  if (cd_type_ == kRelaxed)
+  if (MASK_CDTYPE(cd_type_) == kRelaxed)
     comm_log_ptr_->ReInit();
   
   //SZ: reset to child_seq_id_ = 0 
@@ -2242,7 +2125,7 @@ CDErrT HeadCD::Reexecute(void)
   // SZ
   //// change the comm_log_mode_ into CommLog class
   //comm_log_mode_ = kReplayLog;  
-  if (cd_type_ == kRelaxed)
+  if (MASK_CDTYPE(cd_type_) == kRelaxed)
     comm_log_ptr_->ReInit();
   
   //SZ: reset to child_seq_id_ = 0 
@@ -2477,7 +2360,6 @@ CDHandle *HeadCD::Create(CDHandle* parent,
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
-                     PrvMediumT prv_medium,
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err)
 {
@@ -2498,7 +2380,7 @@ CDHandle *HeadCD::Create(CDHandle* parent,
 
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
-  *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, prv_medium, sys_bit_vector, &new_cd_handle);
+  *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
 
 
@@ -3721,7 +3603,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
       CD* tmp_cd = this;
       while (tmp_cd->GetParentHandle() != NULL)
       {
-        if (tmp_cd->GetParentHandle()->ptr_cd()->cd_type_==kRelaxed)
+        if (MASK_CDTYPE(tmp_cd->GetParentHandle()->ptr_cd()->cd_type_)==kRelaxed)
         {
           found = GetParentHandle()->ptr_cd()->comm_log_ptr_
             ->ProbeAndLogDataPacked((void*)(it->addr_), it->length_, flag, it->isrecv_);
@@ -3808,6 +3690,8 @@ bool CD::IsNewLogGenerated_libc()
   return libc_log_ptr_->IsNewLogGenerated_();
 }
 
+CDType CD::GetCDType()
+{ return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
 
 //SZ
 //  struct IncompleteLogEntry{

@@ -42,25 +42,30 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * @date March 2015
  */
 #include "cd_global.h"
+#include "cd_def_internal.h"
+
 #include "cd.h"
  
 namespace cd {
 
-/** @brief Recovery method that can be inherited and specialized by user
+/**@brief Recovery method that can be inherited and specialized by user
  *
- * \addtogroup detection_recovery Detection and Recovery Methods
- *
+ * @addtogroup register_detection_recovery  
  * @{
  *
- * The purpose of RecoverObject is to provide an interface to enable a
+ */
+
+
+/**@class RecoverObject
+ * @brief The purpose of RecoverObject is to provide an interface to enable a
  * programer to create custom Recover routines. The idea is that for
  * each CD, each error type+location may be bound to a specialized
  * recovery routine, which is expressed through a Recover object. The
  * Recover object inherits the default RecoverObject and extends or
  * replaces the default restore+reexecute recovery method.
  *
- * \todo Write some example for custom recovery (see GVR
- * interpolation example, although they do it between versions).
+ * @todo Write some example for custom recovery 
+ * (see GVR interpolation example, although they do it between versions).
  *
  *
  * \sa CDHandle::RegisterRecovery()
@@ -69,7 +74,7 @@ namespace cd {
 class RecoverObject {
 public:
 
-  /** @brief Recover method to be specialized by inheriting and overloading
+  /**@brief Recover method to be specialized by inheriting and overloading
    *
    * Recover uses methods that are internal to the CD itself and should
    * only be called by customized recovery routines that inherit from

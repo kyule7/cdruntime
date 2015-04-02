@@ -1,0 +1,12 @@
+.TextWrapLeft {
+  float:left;
+  margin:10px;
+}
+
+div.image img[src="cd_runtime.png"]{
+  width:768px;
+  float:right;
+  margin:15px;
+  top:0;
+  text-align:right;
+}

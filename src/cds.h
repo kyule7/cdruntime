@@ -10,19 +10,22 @@
  * \note Print version available at <http://lph.ece.utexas.edu/public/CDs>
  *
  * 
- * \brief Containment Domains API v0.2 (C++)
- * The purpose of this document is to describe a CD API for
- * programming CD-enabled applications. A complete discussion of the
- * semantics of containment domains is out of scope of this document; the
- * latest version of the semantics is available at
+ * \brief Containment Domains (CD) API v0.2 (C++) is a programming construct 
+ * that allows users to express resilience needs in their program.
+ * The purpose of this document is to describe a CD API to program CD-enabled applications.
+ * Current CD runtime is designed for MPI programs, which also works well with signle node, single thread programs.
+ *
+ * A complete discussion of the semantics of containment domains is out of scope of this document.
+ * The latest version of the semantics is available at
  * <http://lph.ece.utexas.edu/public/CDs>.
  *
  * @section sect_intro Containment Domains Overview
  * 
- * Containment domains (CDs) are a new approach that achieves
- * low-overhead resilient and scalable
- * execution (see http://lph.ece.utexas.edu/public/CDs). CDs abandon the prevailing
- * one-size-fits-all approach to resilience and instead embrace the
+ * \image html cd_runtime.png "" width=10px
+ *
+ * Containment domains (CDs) are a library-level approach that achieves
+ * low-overhead resilient and scalable execution (see http://lph.ece.utexas.edu/public/CDs). 
+ * CDs abandon the prevailing one-size-fits-all approach to resilience and instead embrace the
  * diversity of application needs, resilience mechanisms, and the deep
  * hierarchies expected in exascale hardware and software. CDs give
  * software a means to express resilience concerns intuitively and
@@ -32,8 +35,10 @@
  * tailor error detection, elision (ignoring some errors), and
  * recovery mechanisms to algorithmic and system needs.
  *
+ *
  * \tableofcontents
  *
+ * \n\n\n\n\n\n\n\n\n\n
  * \todo Write a more significant introduction and put sections for
  * what are currently modules
  *
@@ -46,13 +51,14 @@
  * - \ref cd_accessor_funcs
  * - \ref cd_hierarchy
  * - \ref preservation_funcs
- * - \ref detection_recovery
+ * - \ref cd_detection
  *   - \ref error_reporting
  *   - \ref internal_recovery 
  *
  * - \ref runtime_logging
  * - \ref cd_event_funcs
  * - \ref cd_error_probability
+ * - \ref error_injector
  * - \ref PGAS_funcs
  *
  * - \ref sec_example_spmv
@@ -87,3 +93,89 @@
  *
  */
  
+/**
+ * @defgroup cd_handle CD handle
+ * @ingroup user_interfaces
+ * @brief Interface object which users will interact with CD runtime.
+ *
+ *   Following lists are the modules in CD handle class.
+ *   - @ref cd_hierarchy \n
+ *   - @ref preservation_funcs \n
+ *   - @ref cd_detection \n
+ *   - @ref cd_accessor \n
+ *
+ * @defgroup cd_hierarchy CD hierarchy
+ * @brief Methods regarding how to create CD hierarchy in application.
+ *
+ *        This Module is about functions and types to create CD hierarchy in the application.
+ * 
+ * @defgroup preservation_funcs Preservation/Restoration
+ * @brief These modules are regarding how to preserve and restore data in CDs.
+ *
+ *        The \ref preservation_funcs module contains all preservation/restoration related types and methods.
+ * 
+ * @defgroup cd_detection Error detection
+ * @brief Error detection mechanism supported by CD runtime.
+ *
+ * @defgroup cd_accessor CD accessors
+ * @brief The accessors of CDHandle which might be useful.
+ * 
+ * @defgroup cd_init_funcs CD Init Functions
+ * @brief Initialization and finalization for CD runtime.
+ * 
+ * @defgroup cd_accessor_funcs Global CD accessor
+ * @brief The \ref cd_accessor_funcs are used to get the current and root.
+ *
+ *        CD handles if these are not explicitly tracked. These methods are globally accessible without a CDHandle object.
+ * 
+ * 
+ * @defgroup cd_defs CD types
+ * @brief CD-related type definitions. 
+ * 
+ * @defgroup user_interfaces CD-user interfaces
+ * @brief Interfaces that user need to know.
+ * 
+ * 
+ *   @defgroup register_detection_recovery Register error detection/recovery
+ *   @brief Methods to register error detecting/recovry handler.
+ *   @ingroup user_interfaces
+ *   
+ *   @defgroup cd_split CD split interface
+ *   @brief Method to split CDs to children CDs.
+ *   @ingroup user_interfaces
+ * 
+ * 
+ *   @defgroup cd_error_probability Tunning resiliency
+ *   @brief Methods for Interacting with the CD Framework and Tuner
+ *   @ingroup user_interfaces
+ * 
+ * 
+ * @defgroup profiler-related Profiler-related
+ * @brief Methods and types regarding CD profiler.
+ * 
+ * 
+ * @defgroup internal_error_types Internal Error Types 
+ * @brief Error types used internally in CD runtime.
+ * 
+ * @defgroup error_reporting Error reporting
+ * @brief Error report part in CD runtime.
+ *
+ * @defgroup error_injector Error injection interface
+ * @brief Interface for error injection through CD runtime.
+ * 
+ * @defgroup runtime_logging Runtime Logging
+ * @brief Runtime logging-related functionality.
+ *
+ *        The \ref runtime_logging is supported in current CD runtime.
+ * 
+ * 
+ * @defgroup PGAS_funcs PGAS-specific
+ * @brief PGAS-related methods and types.
+ *
+ *
+ * @defgroup cd_event_funcs CD event
+ * @brief CD Event Functions for Non-Blocking Calls
+ *
+ * @defgroup internal_recovery Internal routines for recovery
+ * @brief Internal Functions for Customizable Recovery
+ */

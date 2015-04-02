@@ -83,6 +83,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  */
 #include "cd_global.h"
+#include "cd_def_internal.h" 
 
 
 namespace cd {

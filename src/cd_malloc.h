@@ -42,8 +42,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdio.h>
 #include <dlfcn.h>
 #include "cd.h"
-#include "cds.h" 
 #include "cd_global.h"
+#include "cd_def_internal.h"
 
 //bool app_side;
 typedef void*(*Malloc)(size_t size);

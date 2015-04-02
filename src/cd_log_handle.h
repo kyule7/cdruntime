@@ -46,6 +46,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  */
 
 #include "cd_global.h"
+#include "cd_def_internal.h"
 //#include "transaction.h"
 //#define CDLog tsn_log_struct
 
@@ -53,10 +54,13 @@ using namespace cd;
 
 namespace cd {
 
+class CDLogHandle;
+
 class Path {
-public:
+  friend class cd::CD;
+  friend class cd::CDLogHandle;
+private:
 	std::string filepath_;
-public:
 	Path() : filepath_(CD_FILEPATH_DEFAULT) {}
 	Path(const std::string &filepath) : filepath_(filepath) {}
 	Path(const char *filepath) : filepath_(filepath) {}
@@ -78,7 +82,9 @@ public:
 
 
 class CDLogHandle {
-public:
+  friend class cd::CD;
+  friend class cd::HeadCD;
+
 //  CDLog file_log_;
   bool opened_;
   Path path_;
@@ -88,7 +94,7 @@ public:
   CDLogHandle(const PrvMediumT& prv_medium) : opened_(false)
   {
     switch(prv_medium) {
-      case kMemory :
+      case kDRAM :
         path_ = CD_FILEPATH_INVALID;
         break;
       case kPFS :
@@ -111,6 +117,7 @@ public:
   bool IsOpen()   { return opened_;  }
   void OpenFilePath(void);     
 };
+
 
 
 } // namespace cd ends

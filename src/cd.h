@@ -46,6 +46,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 
 #include "cd_global.h"
+#include "cd_def_internal.h"
 #include "cd_handle.h"
 #include "cd_entry.h"
 #include "util.h"
@@ -109,7 +110,7 @@ struct IncompleteLogEntry{
  *
  */ 
 class Internal {
-  friend CDHandle *CD_Init(int numTask, int myRank);
+  friend CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   friend void CD_Finalize(DebugBuf *debugBuf);
   static void Intialize(void);
   static void Finalize(void);
@@ -124,14 +125,18 @@ class Internal {
  */ 
 class CD : public Serializable {
     /// The friends of CD class
+    friend class CDHandle;  
+    friend class Internal;
     friend class RegenObject;   
     friend class CDEntry;  
-    friend class CDHandle;  
     friend class RecoverObject;
     friend class HandleAllReexecute;
     friend class HandleEntrySearch;
     friend class HandleEntrySend;
-    friend CDEntry *CDHandle::InternalGetEntry(std::string entry_name);
+    friend class HeadCD;
+    friend class CommLog;
+    friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+//    friend CDEntry *CDHandle::InternalGetEntry(std::string entry_name);
     enum { 
       CD_PACKER_NAME=0,
       CD_PACKER_CDID,
@@ -146,7 +151,8 @@ class CD : public Serializable {
       CD_PACKER_DETECTFUNC,
       CD_PACKER_RECOVERFUNC
     };
-  public:
+  protected:
+//  public:
     /// CD class internal enumerators 
   /** \addtogroup cd_defs CD-Related Definitions
    *@{
@@ -186,7 +192,7 @@ class CD : public Serializable {
     RecoverObject *recoverObj_;
     //GONG
     bool begin_;
-  public:
+//  public:
     bool GetBegin_(void){return begin_;}
 
 #if _MPI_VER
@@ -211,7 +217,7 @@ class CD : public Serializable {
 
     // Flag for Strict or Relexed CD
     CDType          cd_type_;
-    PrvMediumT      prv_medium_;
+
     /// Set rollback point and options
     CtxtPrvMode     ctxt_prv_mode_;
     ucontext_t      ctxt_;
@@ -321,7 +327,8 @@ update the preserved data.
     // PFS
     PFSHandle *pfs_handler_;
 
-  public:
+  protected:
+//  public:
     CD();
 
     CD(CDHandle* cd_parent, 
@@ -343,7 +350,6 @@ update the preserved data.
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
-                     PrvMediumT prv_medium,
                      uint64_t sys_bit_vector, 
                      CDInternalErrT* cd_err=0);
 
@@ -351,7 +357,6 @@ update the preserved data.
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
-                     PrvMediumT prv_medium,
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err);
 
@@ -440,10 +445,9 @@ update the preserved data.
 
   protected:
  
-  /** \addtogroup internal_recovery Internal Functions for Customizable Recovery
-   *
-   * @{ 
-   */
+/**@addtogroup internal_recovery 
+ * @{ 
+ */
 
 
 /**
@@ -496,12 +500,10 @@ update the preserved data.
     // we can change it to preserve file by flag when we compile cd runtime. (with MEMORY=0)
     // We need some good strategy to decide the most efficient medium of the CD for preservation.
     PrvMediumT GetPlaceToPreserve(void);
-    void SetPlaceToPreserve(PrvMediumT prv_medium);
     static CDInternalErrT InternalCreate(CDHandle* parent, 
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
-                     PrvMediumT prv_medium,
                      uint64_t sys_bit_vector, 
                      CDHandle** new_cd_handle);
 
@@ -550,7 +552,8 @@ update the preserved data.
     bool TestRecvComm(bool is_all_valid=true);
 
     void DecPendingCounter(void);
-  public:
+  protected:
+//  public:
     CDErrT CheckMailBox(void);
     virtual CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);
@@ -597,7 +600,7 @@ update the preserved data.
     //GONG: duplicated for libc
     bool IsNewLogGenerated_libc();
     //SZ
-    CDType GetCDType() {return cd_type_;}
+    CDType GetCDType();
     //SZ
     void PrintIncompleteLog();
 #endif
@@ -612,8 +615,25 @@ update the preserved data.
  * \todo Implement serialize and deserialize of HeadCD object.
  */ 
 class HeadCD : public CD {
+  friend class Internal;
+  friend class CDHandle;
   friend class HandleEntrySearch;
-  public:
+  friend class RegenObject;   
+  friend class CDEntry;  
+  friend class RecoverObject;
+//    friend class HandleAllReexecute;
+//    friend class HandleEntrySearch;
+//    friend class HandleEntrySend;
+//    friend class CommLog;
+
+  friend CDInternalErrT CD::InternalCreate(CDHandle* parent, 
+                     const char* name, 
+                     const CDID& child_cd_id, 
+                     CDType cd_type, 
+                     uint64_t sys_bit_vector, 
+                     CDHandle** new_cd_handle);
+  protected:
+//  public:
     /// Link information of CD hierarchy   
     /// This is a kind of CD object but represents the corresponding task group of each CD
     /// Therefore, CDTree is generated with CD object. 
@@ -659,7 +679,6 @@ class HeadCD : public CD {
                              const char* name, 
                              const CDID& child_cd_id, 
                              CDType cd_type, 
-                             PrvMediumT prv_medium,
                              uint64_t sys_bit_vector, 
                              CDInternalErrT* cd_err=0);
     virtual CDErrT Destroy(void);

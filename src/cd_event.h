@@ -45,6 +45,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define SIZE_EVENT_ARRAY 64  // allocate 32bit * 64 memory. If we need more we allocate additional 32bit * 64 
 // TODO This part should be carefully designed for better efficiency
 #include "cd_global.h"
+#include "cd_def_internal.h"
 #include <stdint.h>
 
 /**@class cd::CDEvent 
@@ -78,7 +79,7 @@ class cd::CDEvent
     void DestroyEvent();
 
 public:
-/** \addtogroup cd_event_funcs CD Event Functions for Non-Blocking Calls
+/** \addtogroup cd_event_funcs
  * @{
  */
 
