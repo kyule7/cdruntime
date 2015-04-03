@@ -600,7 +600,7 @@ int test_preservation_via_ref()
   a[0] = 99;  // now when child recovers it should see 3 instead of 99
   printf("After modifying  current value of a[0] %d a[1] %d\n", a[0], a[1]);
 
-  CDHandle* child=root->Create(CDPath::GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
+  CDHandle* child=root->Create(GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
   CD_Begin(child); 
   printf("child cd begin\n"); 
   child->Preserve(a, sizeof(a), kRef, "nonamejusttest", "a", 0);
@@ -650,7 +650,7 @@ int test_preservation_via_referenence_partial_update()
   a[2] = 112;  
   a[3] = 113;  
   CDErrT err;
-  CDHandle* child=root->Create(CDPath::GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
+  CDHandle* child=root->Create(GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
   CD_Begin(child); 
   child->Preserve(&(a[1]), 3*sizeof(int), kRef, "a", "a", sizeof(int));
   printf("Child CD begins a[0] %d a[1] %d a[2] %d a[3] %d  \n", a[0], a[1], a[2], a[3]);

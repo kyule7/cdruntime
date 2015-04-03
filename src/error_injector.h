@@ -43,10 +43,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * \brief Error injection interface. 
  *
  *  User can inject errors using this error injector interface. 
- *  This functionality can be turned on/off by setting compile flag, "ENABLE_ERROR_INJECTOR", as 1.
- *  
+ * `ErrorInjector` class is the base class that users will inherit if they want to plug in their own error injector.
+ *  This functionality can be turned on/off by setting compile flag, `ENABLE_ERROR_INJECTOR`, as 1.
+ *  It will be helpful to take a look at how to interact with CDs to inject errors through CD runtime.
+ * - \ref sec_example_error_injection
  */
 #include <cstdio>
+#include <iostream>
 #include <random>
 
 
@@ -321,6 +324,10 @@ CreateErrorProb(RandType random_type)
 
 /**@class ErrorInjector
  * @brief Base class to provide interface to inject error.
+ * 
+ * User will inherit this base class for every error injector 
+ * whose error injection will be invoked internally in CD runtime.
+ * - \ref sec_example_error_injection
  * @{
  */
 class ErrorInjector {
@@ -376,7 +383,7 @@ class MemoryErrorInjector : public ErrorInjector {
   uint64_t size_;
 
 public:
-  MemoryErrorInjector(void *data, uint64_t size)
+  MemoryErrorInjector(void *data=NULL, uint64_t size=0)
     : ErrorInjector(kUniform, stdout), data_(data), size_(size) {}
 
   MemoryErrorInjector(void *data, uint64_t size, RandType random_type, FILE *logfile)

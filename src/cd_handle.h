@@ -102,7 +102,14 @@ namespace cd {
  * 
  * @sa GetCurrentCD(), GetRootCD(), Internal::Initialize()
  */
-CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+CDHandle *CD_Init(int numTask=1, //!< [in] number of task. For single task version, 
+                                 //!< this should be 1. Default is 1.
+                  int myTask=0,  //!< [in] Task ID which is global for all tasks.
+                                 //!< Default is 0.
+                  PrvMediumT prv_medium=kDRAM //!< Preservation medium for root CD.
+                                              //!< User can set the medium for root through CD_Init's argument.
+                                              //!< Default is kDRAM.
+                 );
   
 /** 
  * @brief Finalize the CD runtime.
@@ -110,13 +117,14 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
  * It should be called once in a program with the pair of `CD_Init()`.
  * This call destroys CD-related global data structures and root CD object.
  * If DebugBuf object's pointer can passed to `CD_Finalize()`, 
- * string streams will be written to file. (it is for debugging purpose.)
+ * string streams will be written to file or printed out to stdout. (it is for debugging purpose.)
  *
  * @return Returns nothing.
  *
- * @sa Internal::Finalize()
+ * @sa Internal::Finalize(), sec_example_test_hierarchy
  */
-void CD_Finalize(DebugBuf *debugBuf);
+void CD_Finalize(DebugBuf *debugBuf //!< [in] debug buffer to print out or write to file.
+                );
   
 /** @} */ // End cd_init_funcs group ===========================================================================
 } // namespace cd ends
@@ -160,7 +168,7 @@ class cd::CDHandle {
  * @param[in] num_children The number of childrens. (new task groups)
  * @param[out] new_color   New color (task group ID) generated from split method.
  * @param[out] new_task    New task ID generated from split method.                   
- * @\typedef function pointer/object type for splitting CDs.
+ * @typedef function pointer/object type for splitting CDs.
  */ 
      typedef std::function<int(const int& my_task_id,
                            const int& my_size,       
@@ -209,7 +217,6 @@ class cd::CDHandle {
  * 
  * Creates a new CD as a child of this CD. The new CD does
  * not begin until Begin() is called explicitly.
- * 
  * This version of Create() is intended to be called by only a
  * single task and the value of the returned handle explicitly
  * communicated between all tasks contained within the new child. An
@@ -218,14 +225,16 @@ class cd::CDHandle {
  * single task or, at least, within a single process address space.
  *
  * @return Returns a pointer to the handle of the newly created
- * child CD; returns 0 on an error (error code returned in a parameter).
+ * child CD.\n Returns 0 on an error (error code returned in a parameter).
  *
  */
     CDHandle* Create(const char* name=0, //!< [in] Optional user-specified
                                   		   //!< name that can be used to "re-create" the same CD object
                                   		   //!< if it was not destroyed yet; useful for resuing preserved
                                   		   //!< state in CD trees that are not loop based.
-                     int cd_type=kDefaultCD, //!< [in] Strict or relaxed
+                     int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
+                                             //!< User can also set preservation medium for children CDs 
+                                             //!< when creating them. (ex. kStrict | kDRAM)
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                           		   //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
@@ -236,28 +245,28 @@ class cd::CDHandle {
                                      //!< no error value returned if error=0.
                      );
 
-   /**
-    * @brief Collective Create
-    * 
-    * Creates a new CD as a child of the current CD. The new CD does
-    * not begin until CDHandle::Begin() is called explicitly.
-    * 
-    * This version of Create() is intended to be called by all
-    * tasks that will be contained in the new child CD. It functions as
-    * a collective operation in a way that is analogous to
-    * MPI_comm_split, but only those tasks that are contained in the
-    * new child synchronize with one another.
-    *
-    * @return Returns a pointer to the handle of the newly created
-    * child CD; returns 0 on an error.
-    *
-    */
-    CDHandle* Create(uint32_t  numchildren, //!< [in] The total number of tasks that are collectively creating
-                                     	      //!< the child numbered "color"; the collective waits for this number
-		                                        //!< of tasks to arrive before creating the child
+/**
+ * @brief Collective Create
+ * 
+ * Creates a new CD as a child of the current CD. 
+ * The new CD does not begin until `CDHandle::Begin()` is called explicitly.
+ * This version of Create() is intended to be called by all
+ * tasks that will be contained in the new child CD. It functions as
+ * a collective operation in a way that is analogous to
+ * MPI_comm_split, but only those tasks that are contained in the
+ * new child synchronize with one another.
+ *
+ * @return Returns a pointer to the handle of the newly created child CD.\n
+ *         Returns 0 on an error.
+ *
+ */
+    CDHandle* Create(uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
+                                     	      //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
                      const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                 		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
-                     int cd_type=kDefaultCD, //!< [in] Strict or relaxed
+                     int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
+                                             //!< User can also set preservation medium for children CDs 
+                                             //!< when creating them. (ex. kStrict | kDRAM)
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                           		   //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
@@ -271,29 +280,32 @@ class cd::CDHandle {
 
 
   
-   /**
-    * @brief Collective Create
-    * 
-    * Creates a new CD as a child of the current CD. The new CD does
-    * not begin until CDHandle::Begin() is called explicitly.
-    * 
-    * This version of Create() is intended to be called by all
-    * tasks that will be contained in the new child CD. It functions as
-    * a collective operation in a way that is analogous to
-    * MPI_comm_split, but only those tasks that are contained in the
-    * new child synchronize with one another.
-    *
-    * @return Returns a pointer to the handle of the newly created
-    * child CD; returns 0 on an error.
-    *
-    */
-    CDHandle* Create(const ColorT& color, //!< [in] The "color" of the new child to which this task will belong
-                     uint32_t num_tasks_in_color, //!< [in] The total number of tasks that are collectively creating
+/**
+ * @brief Collective Create
+ * 
+ * Creates a new CD as a child of the current CD. The new CD does
+ * not begin until CDHandle::Begin() is called explicitly.
+ * This version of Create() is intended to be called by all
+ * tasks that will be contained in the new child CD. It functions as
+ * a collective operation in a way that is analogous to
+ * MPI_comm_split, but only those tasks that are contained in the
+ * new child synchronize with one another.
+ *
+ * @return Returns a pointer to the handle of the newly created
+ * child CD; returns 0 on an error.
+ *
+ */
+    CDHandle* Create(uint32_t color,              //!< [in] The "color" of the new child to which this task will belong to.
+                     uint32_t task_in_color, //!< [in] The total number of tasks that are collectively creating
                                             		  //!< the child numbered "color"; the collective waits for this number
-                                            		  //!< of tasks to arrive before creating the child
+                                            		  //!< of tasks to arrive before creating the child.
+                     uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
+                                     	      //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
                      const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                 		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
-                     int cd_type=kDefaultCD, //!< [in] Strict or relaxed
+                     int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
+                                             //!< User can also set preservation medium for children CDs 
+                                             //!< when creating them. (ex. kStrict | kDRAM)
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                           		   //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
@@ -305,30 +317,29 @@ class cd::CDHandle {
                      );
 
  
-   /**
-    * @brief Collective Create and Begin
-    *
-    * Creates a new CD as a child of the current CD. The new CD then
-    * immediately begins with a single collective call.
-    * 
-    * This version of is intended to be called by all
-    * tasks that will be contained in the new child CD. It functions as
-    * a collective operation in a way that is analogous to
-    * MPI_comm_split, but only those tasks that are contained in the
-    * new child synchronize with one another. To avoid unnecessary
-    * collectives, CreateAndBegin() then immediately begins the new CD.
-    *
-    * @return Returns a pointer to the handle of the newly created
-    * child CD; returns 0 on an error.
-    *
-    */
-    CDHandle* CreateAndBegin(const ColorT& color, //!< [in] The "color" of the new child to which this task will belong
-                             uint32_t num_tasks_in_color, //!< [in] The total number of tasks that are collectively creating
-                                                    		  //!< the child numbered "color"; the collective waits for this number
-                                                    		  //!< of tasks to arrive before creating the child
+/**
+ * @brief Collective Create and Begin
+ *
+ * Creates a new CD as a child of the current CD. The new CD then
+ * immediately begins with a single collective call.
+ * This version of is intended to be called by all
+ * tasks that will be contained in the new child CD. It functions as
+ * a collective operation in a way that is analogous to
+ * MPI_comm_split, but only those tasks that are contained in the
+ * new child synchronize with one another. To avoid unnecessary
+ * collectives, CreateAndBegin() then immediately begins the new CD.
+ *
+ * @return Returns a pointer to the handle of the newly created
+ * child CD; returns 0 on an error.
+ *
+ */
+    CDHandle* CreateAndBegin(uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
+                                     	      //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
                              const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                         		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
-                             int cd_type=kDefaultCD, //!< [in] Strict or relaxed
+                             int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
+                                                     //!< User can also set preservation medium for children CDs 
+                                                     //!< when creating them. (ex. kStrict | kDRAM)
                              uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                                   		   //!< should be able to recover from that error type.
                              uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
@@ -425,7 +436,8 @@ class cd::CDHandle {
 
 /**@addtogroup cd_split
  * @{
- * @brief Register a method to split CDs to create chidlren CDs. 
+ */
+/**@brief Register a method to split CDs to create chidlren CDs. 
  * 
  * __SPMD programming model specific__
  * When CD runtime create children CDs, it is necessary to split the task group of the current CD,
@@ -435,9 +447,9 @@ class cd::CDHandle {
  * With these three information, split method populates new color (task group ID), new task ID appropriately.
  *
  * @return Returns CD-related error code.
-
+ * @param [in] function pointer or object to split CD.
  */
-    CDErrT RegisterSplitMethod(SplitFuncT split_func); //<! [in] function pointer or object to split CD.
+    CDErrT RegisterSplitMethod(SplitFuncT split_func);
  /** @} */ // Ends cd_split
 
 /**@addtogroup preservation_funcs
@@ -904,8 +916,6 @@ class cd::CDHandle {
 /// Stop every task in this CD
     CDErrT Stop(void);
   
-/// Synchronize every task of this CD.
-    CDErrT Sync(void);
 
 /// Set bit vector for error types to handle in this CD.
     uint64_t SetSystemBitVector(uint64_t error_name_mask, 
@@ -916,11 +926,6 @@ class cd::CDHandle {
 /// Get NodeID with given new_color and new_task
     CDErrT GetNewNodeID(NodeID& new_node);
 
-/// Get NodeID with given new_color and new_task.
-    CDErrT GetNewNodeID(const ColorT& my_color, 
-                        const int& new_color, 
-                        const int& new_task, 
-                        NodeID& new_node);
 
 /// Select Head among task group that are corresponding to one CD.
     void SetHead(NodeID& new_node_id);
@@ -931,8 +936,20 @@ class cd::CDHandle {
 /// Set mail box.
     CDErrT SetMailBox(CDEventT event);
 
+#if _MPI_VER
+
+/// Get NodeID with given new_color and new_task.
+    CDErrT GetNewNodeID(const ColorT& my_color, 
+                        const int& new_color, 
+                        const int& new_task, 
+                        NodeID& new_node);
+
 /// Collect child CDs' head information.
     void CollectHeadInfoAndEntry(const NodeID &new_node_id);
+
+/// Synchronize every task of this CD.
+    CDErrT Sync(ColorT color);
+#endif
 
   public:
 

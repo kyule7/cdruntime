@@ -49,6 +49,43 @@ PFSHandle::PFSHandle( const PFSHandle& that )
 //	MPI_Comm_free( &PFS_parallel_file_communicator_ );
 //}
 
+void PFSHandle::Init( const char* file_path )
+{
+	std::stringstream temp_file_name;
+	temp_file_name << Util::GetUniqueCDFileName( ptr_cd_->GetCDID(), file_path, NULL, kPFS ) + std::string(".") + std::to_string(sharing_group_id_) + std::string(".cd");
+  std::cout << "Init : " << temp_file_name.str() << std::endl;
+	PFS_file_path_ = temp_file_name.str();
+	PFS_current_offset_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
+	PFS_current_chunk_begin_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
+	PFS_current_chunk_end_ = (PFS_rank_in_file_communicator_ + 1) * PFS_chunk_size_ - 1;
+}
+
+
+
+void PFSHandle::Reset_File_Pointer( void )
+{
+	PFS_current_offset_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
+	PFS_current_chunk_begin_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
+	PFS_current_chunk_end_ = (PFS_rank_in_file_communicator_ + 1) * PFS_chunk_size_ - 1;
+}
+
+
+void PFSHandle::Copy( const PFSHandle& that )
+{
+	ptr_cd_ = that.ptr_cd_;
+	PFS_file_path_ = that.PFS_file_path_;
+	PFS_d_ = that.PFS_d_;
+	PFS_current_offset_ = that.PFS_current_offset_;
+	PFS_current_chunk_begin_ = that.PFS_current_chunk_begin_;
+	PFS_current_chunk_end_ = that.PFS_current_chunk_end_;
+	PFS_chunk_size_ = that.PFS_chunk_size_;
+	PFS_parallel_file_group_ = that.PFS_parallel_file_group_;
+	PFS_parallel_file_communicator_ = that.PFS_parallel_file_communicator_;
+	PFS_rank_in_file_communicator_ = that.PFS_rank_in_file_communicator_;
+	degree_of_sharing_ = that.degree_of_sharing_;
+}
+#if _MPI_VER
+
 int PFSHandle::Open_File( void )
 {
 	//FIXME: Currently no mpi hints are sent to the I/O, this can be tuned in the future.
@@ -78,20 +115,7 @@ int PFSHandle::Close_and_Delete_File( void )
 	return CDEntry::CDEntryErrT::kOK;
 }
 
-void PFSHandle::Copy( const PFSHandle& that )
-{
-	ptr_cd_ = that.ptr_cd_;
-	PFS_file_path_ = that.PFS_file_path_;
-	PFS_d_ = that.PFS_d_;
-	PFS_current_offset_ = that.PFS_current_offset_;
-	PFS_current_chunk_begin_ = that.PFS_current_chunk_begin_;
-	PFS_current_chunk_end_ = that.PFS_current_chunk_end_;
-	PFS_chunk_size_ = that.PFS_chunk_size_;
-	PFS_parallel_file_group_ = that.PFS_parallel_file_group_;
-	PFS_parallel_file_communicator_ = that.PFS_parallel_file_communicator_;
-	PFS_rank_in_file_communicator_ = that.PFS_rank_in_file_communicator_;
-	degree_of_sharing_ = that.degree_of_sharing_;
-}
+
 
 int PFSHandle::Splitter( void )
 {
@@ -145,38 +169,14 @@ int PFSHandle::Splitter( void )
 	return 0;
 }
 
-void PFSHandle::Init( const char* file_path )
-{
-	std::stringstream temp_file_name;
-	temp_file_name << Util::GetUniqueCDFileName( ptr_cd_->GetCDID(), file_path, NULL, kPFS ) + std::string(".") + std::to_string(sharing_group_id_) + std::string(".cd");
-  std::cout << "Init : " << temp_file_name.str() << std::endl;
-	PFS_file_path_ = temp_file_name.str();
-	PFS_current_offset_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
-	PFS_current_chunk_begin_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
-	PFS_current_chunk_end_ = (PFS_rank_in_file_communicator_ + 1) * PFS_chunk_size_ - 1;
-}
 
 
 
 
-
-
-
-
-
-
-
-void PFSHandle::Reset_File_Pointer( void )
-{
-	PFS_current_offset_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
-	PFS_current_chunk_begin_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
-	PFS_current_chunk_end_ = (PFS_rank_in_file_communicator_ + 1) * PFS_chunk_size_ - 1;
-}
-
-MPI_Offset PFSHandle::Write( void* buffer, uint64_t buffer_len)
+COMMLIB_Offset PFSHandle::Write( void* buffer, uint64_t buffer_len)
 {
 	MPI_Status write_status;
-	MPI_Offset start_location_in_file = PFS_current_offset_;
+	COMMLIB_Offset start_location_in_file = PFS_current_offset_;
 	uint64_t length_to_preserve = buffer_len;
 	uint64_t currently_preserved = 0;
 
@@ -204,16 +204,16 @@ MPI_Offset PFSHandle::Write( void* buffer, uint64_t buffer_len)
 	return start_location_in_file;
 }
 
-uint64_t PFSHandle::Read_at( void* buffer, uint64_t buffer_len, MPI_Offset read_from )
+uint64_t PFSHandle::Read_at( void* buffer, uint64_t buffer_len, COMMLIB_Offset read_from )
 {
 	MPI_Status read_status;
-    MPI_Offset chunk_begin = (read_from / PFS_chunk_size_) * PFS_chunk_size_;
-    MPI_Offset chunk_end = chunk_begin + PFS_chunk_size_ - 1;
+    COMMLIB_Offset chunk_begin = (read_from / PFS_chunk_size_) * PFS_chunk_size_;
+    COMMLIB_Offset chunk_end = chunk_begin + PFS_chunk_size_ - 1;
 
     uint64_t length_to_restore = buffer_len;
     uint64_t currently_restored = 0;
 
-    MPI_Offset file_pointer = read_from;
+    COMMLIB_Offset file_pointer = read_from;
   
     while( length_to_restore > 0 )
     {
@@ -239,3 +239,44 @@ uint64_t PFSHandle::Read_at( void* buffer, uint64_t buffer_len, MPI_Offset read_
 
     return currently_restored;
 }
+
+
+#else
+
+int PFSHandle::Open_File( void )
+{
+  assert(0);
+	return CDEntry::CDEntryErrT::kOK;
+}
+
+int PFSHandle::Close_and_Delete_File( void )
+{
+  assert(0);
+	return CDEntry::CDEntryErrT::kOK;
+}
+
+
+
+int PFSHandle::Splitter( void )
+{
+	assert(0);
+	return 0;
+}
+
+
+
+
+COMMLIB_Offset PFSHandle::Write( void* buffer, uint64_t buffer_len)
+{
+  assert(0);
+	return 0;
+}
+
+uint64_t PFSHandle::Read_at( void* buffer, uint64_t buffer_len, COMMLIB_Offset read_from )
+{
+    assert(0);
+    return 0;
+}
+
+
+#endif

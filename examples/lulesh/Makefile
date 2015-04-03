@@ -13,7 +13,7 @@ CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=1
 SERCXX   = g++ -DUSE_MPI=0 
 MPICXX   = mpic++ -DUSE_MPI=1 -D_CD=1 -D_DEBUG=1 
 CXX      = $(MPICXX) 
-CXXFLAGS = -g -std=gnu++0x -openmp -I${SILO_INCDIR} -Wall -Wno-pragmas ${CD_SRC_CFLAGS} ${CD_FLAGS} 
+CXXFLAGS = -g -std=gnu++0x -openmp -I${SILO_INCDIR} -Wall -Wno-pragmas ${CD_CFLAGS} ${CD_FLAGS} 
 LDFLAGS  = ${CD_LINKFLAGS} ${SIGHT_LINKFLAGS} 
 
 SOURCE_LULESH = \

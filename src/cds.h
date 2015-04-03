@@ -23,24 +23,21 @@
  * 
  * \image html cd_runtime.png "" width=10px
  *
- * Containment domains (CDs) are a library-level approach that achieves
+ * Containment Domains (CDs) is a library-level approach dealing with
  * low-overhead resilient and scalable execution (see http://lph.ece.utexas.edu/public/CDs). 
  * CDs abandon the prevailing one-size-fits-all approach to resilience and instead embrace the
  * diversity of application needs, resilience mechanisms, and the deep
- * hierarchies expected in exascale hardware and software. CDs give
- * software a means to express resilience concerns intuitively and
- * concisely. With CDs, software can preserve and restore state in an
- * optimal way within the storage hierarchy and can efficiently
- * support uncoordinated recovery. In addition, CDs allow software to
- * tailor error detection, elision (ignoring some errors), and
+ * hierarchies expected in exascale hardware and software. 
+ * CDs give software a means to express resilience concerns intuitively and concisely. 
+ * With CDs, software can preserve and restore state in an optimal way within the storage hierarchy 
+ * and can efficiently support uncoordinated recovery. 
+ * In addition, CDs allow software to tailor error detection, elision (ignoring some errors), and
  * recovery mechanisms to algorithmic and system needs.
  *
  *
  * \tableofcontents
  *
  * \n\n\n\n\n\n\n\n\n\n
- * \todo Write a more significant introduction and put sections for
- * what are currently modules
  *
  * For now, the documentation is organized around the following
  * "modules", which can also be accessed through the "Modules" tab on
@@ -59,6 +56,7 @@
  * - \ref cd_event_funcs
  * - \ref cd_error_probability
  * - \ref error_injector
+ *   - \ref sec_example_error_injection
  * - \ref PGAS_funcs
  *
  * - \ref sec_example_spmv
@@ -73,6 +71,7 @@
  *
  * \example spmv.cc
  * \example lulesh.cc
+ * \example test_cd_hierarchy.cc
  */
 
 /** \page examples_page_spmv CD Example Page 1 (SpMV)
@@ -93,6 +92,27 @@
  *
  */
  
+/** \page examples_page_test_hierarchy CD Example Page 3 (Test CD Hierarchy)
+ *
+ * \section sec_example_test_hierarchy CD Example 3 - CD Test Program : CD Hierarchy
+ * \subsection example_test_hierarchy Test CD Hierarchy
+ *
+ * \include examples_for_doc/test_cd_hierarchy.cc
+ *
+ */
+
+/** \page examples_page_error_injection Error Injection
+ *
+ * \section sec_example_error_injection Error Injection Interface
+ *
+ * \subsection example_error_injection User-defined Error Injector Example
+ * \include examples_for_doc/example_error_injector.h 
+ *
+ * \subsection example_error_injection Description File for Error Injection
+ * \include examples_for_doc/error_injection_description.h
+ */
+
+
 /**
  * @defgroup cd_handle CD handle
  * @ingroup user_interfaces
@@ -131,10 +151,24 @@
  * 
  * @defgroup cd_defs CD types
  * @brief CD-related type definitions. 
+ *
+ * The \ref cd_defs module includes general CD-related type
+ * definitions that don't fall into other type definitions (\ref
+ * error_reporting and \ref preservation_funcs).
+ *
  * 
  * @defgroup user_interfaces CD-user interfaces
  * @brief Interfaces that user need to know.
  * 
+ *   @defgroup error_injector Error injection interface
+ *   @brief Interface for error injection through CD runtime.
+ *
+ *    User can inject errors using this error injector interface. 
+ *   `ErrorInjector` class is the base class that users will inherit if they want to plug in their own error injector.
+ *    This functionality can be turned on/off by setting compile flag, "ENABLE_ERROR_INJECTOR", as 1.
+ *    It will be helpful to take a look at how to interact with CDs to inject errors through CD runtime.
+ *    - \ref sec_example_error_injection
+ *   @ingroup user_interfaces
  * 
  *   @defgroup register_detection_recovery Register error detection/recovery
  *   @brief Methods to register error detecting/recovry handler.
@@ -160,8 +194,6 @@
  * @defgroup error_reporting Error reporting
  * @brief Error report part in CD runtime.
  *
- * @defgroup error_injector Error injection interface
- * @brief Interface for error injection through CD runtime.
  * 
  * @defgroup runtime_logging Runtime Logging
  * @brief Runtime logging-related functionality.

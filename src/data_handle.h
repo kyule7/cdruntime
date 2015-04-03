@@ -56,10 +56,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 
 namespace cd {
-/** \addtogroup cd_defs 
- *@{
- */
-
 /**
   * @brief Information of data regarding preservation
   *
@@ -98,7 +94,7 @@ class DataHandle : public Serializable {
     char file_name_[MAX_FILE_PATH];
 
     //Parallel Filesystem
-    MPI_Offset  parallel_file_offset_;
+    COMMLIB_Offset  parallel_file_offset_;
 
     //Reference
     ENTRY_TAG_T ref_name_;

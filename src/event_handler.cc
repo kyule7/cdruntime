@@ -43,11 +43,11 @@ using namespace cd;
 using namespace std;
 
 
-static inline
-void IncHandledEventCounter(void) { handled_event_count++; }
 
 void HandleEntrySearch::HandleEvent(void)
 {
+#if _MPI_VER
+
   int entry_requester_id = task_id_;
   ENTRY_TAG_T recvBuf[2] = {0,0};
 
@@ -191,10 +191,13 @@ void HandleEntrySearch::HandleEvent(void)
   ptr_cd_->event_flag_[entry_requester_id] &= ~kEntrySearch;
   IncHandledEventCounter();
 
+#endif
 }
 
 void HandleEntrySend::HandleEvent(void)
 {
+#if _MPI_VER
+
   dbg << "CD::HandleEntrySend\n" << endl;
   dbg << "CHECK TAG : " << ptr_cd_->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, ptr_cd_->head()) << endl;
   dbg.flush();
@@ -284,12 +287,17 @@ void HandleEntrySend::HandleEvent(void)
     *(ptr_cd_->event_flag_) &= ~kEntrySend;
   }
   IncHandledEventCounter();
+
+#endif
 }
 
 
 
 void HandleErrorOccurred::HandleEvent(void)
 {
+#if _MPI_VER
+
+
   if(ptr_cd_->task_size() == 1) return;
   int task_id = task_id_;
   dbg << "\n== HandleErrorOccurred::HandleEvent\n"<<endl;;
@@ -310,6 +318,7 @@ void HandleErrorOccurred::HandleEvent(void)
   // so it is safe to reset here.
   ptr_cd_->error_occurred = false;
 
+#endif
 }
 
 //void AllPause::HandleEvent(void)
@@ -325,6 +334,9 @@ void HandleErrorOccurred::HandleEvent(void)
 
 void HandleAllResume::HandleEvent(void)
 {
+#if _MPI_VER
+
+
   if(ptr_cd_->task_size() == 1) return;
 
   dbg << "CD Event kAllResume\t\t\t";
@@ -336,10 +348,13 @@ void HandleAllResume::HandleEvent(void)
 //  PMPI_Barrier(ptr_cd_->color());
   cout << "\n\n[Barrier] HandleAllResume::HandleEvent "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; //getchar();
   dbg << "Barrier resolved" << endl;
+
+#endif
 }
 
 void HandleAllPause::HandleEvent(void)
 {
+#if _MPI_VER
 
 #if 0
   if(ptr_cd_->task_size() == 1) return;
@@ -361,10 +376,13 @@ void HandleAllPause::HandleEvent(void)
   IncHandledEventCounter();
 #endif
 
+#endif
 }
 
 void HandleAllReexecute::HandleEvent(void)
 {
+#if _MPI_VER
+
 #if 1
   if(ptr_cd_->task_size() == 1) assert(0);
 
@@ -377,6 +395,8 @@ void HandleAllReexecute::HandleEvent(void)
 #else
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();
+
+#endif
 
 #endif
 }

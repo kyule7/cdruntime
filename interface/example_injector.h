@@ -1,8 +1,27 @@
+// This example is based on the error injector written by Brian Austin (LLBL)
 
+/**addtogroup example_error_injection Error Injection Example
+ * @{
+ */
+#include <sys/time.h>
+#include <unistd.h>
+#include <cstdio>
+#include <cassert>
+#include <cstring>
 #include "error_injector.h"
 
+#define ERROR_INJECTOR_DESC_SIZE 256
+#define ERROR_INJECTOR_LIST_SIZE 256
+#define ERROR_INJECTOR_MAX_SDATA 1024
+#define ERROR_INJECTOR_DEFAULT_CRANGE 256
+
 //gtod: converts gettimeofday to double
-double gtod();
+double gtod()
+{
+  struct timeval mytime;
+  gettimeofday(&mytime, NULL);
+  return static_cast<double>(mytime.tv_usec);
+}
 
 typedef struct ErrorRange{
   void    *data; //pointer to some data block
@@ -133,7 +152,8 @@ private:
 
 public:
 
-  ExampleInjector(){
+  ExampleInjector()
+    : MemoryErrorInjector(){
 
     ARange  = 0;
     CRange  = ERROR_INJECTOR_DEFAULT_CRANGE;
@@ -237,3 +257,7 @@ public:
   }
       
 };
+
+
+/** @} */
+

@@ -53,6 +53,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  */
 
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cassert>
 #include <iostream>
@@ -66,22 +67,34 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // For PGAS, there should be a group ID, or we should generate it. 
 
 #if _MPI_VER 
-
 #include <mpi.h>
-typedef MPI_Group     GroupT;
-typedef MPI_Request   ReqestT;
+#define ROOT_COLOR    MPI_COMM_WORLD
+#define INITIAL_COLOR MPI_COMM_NULL
+#define ROOT_HEAD_ID  0
 #else
-
-typedef int           GroupT;
-typedef int           ReqestT;
-
+#define ROOT_COLOR    0 
+#define INITIAL_COLOR 0
+#define ROOT_HEAD_ID  0
 #endif
 
-#if _MPI_VER
-#if _KL
-typedef int           CDFlagT;
-typedef MPI_Win       CDMailBoxT;
+#if _SINGLE_VER
+#define DEFINE_COLOR 0
+#else
+#define DEFINE_COLOR 1
 #endif
+
+
+#if DEFINE_COLOR
+///@addtogroup cd_defs 
+///@{
+///@var typedef ColorT
+///@brief ColorT is a type that signifies a task group entity. 
+///       For MPI version, it corresponds to MPI_Comm.
+///@typedef ColorT is used for non-single task program.OR
+typedef MPI_Comm      ColorT;
+///@}
+#else
+typedef int           ColorT;
 #endif
 
 
@@ -114,10 +127,10 @@ namespace cd {
   enum CDErrT { kOK=0,        //!< Call executed without error       
                 kAlreadyInit, //!< Init called more than once
                 kError,       //!< Call did not execute as expected
-                kExecutionModeError,
-                kOutOfMemory,
-                kFileOpenError,
-                kAppError
+                kExecutionModeError, //!< Errors during execution
+                kOutOfMemory, //!< Error due to not enough memory
+                kFileOpenError, //!< error during opening file
+                kAppError 
               };
 
 /** @} */ // end of internal_error_types
@@ -240,7 +253,8 @@ namespace cd {
 /** \addtogroup cd_defs 
  *@{
  *
- * @brief Type for specifying whether a CD is strict or relaxed
+ */
+/**@brief Type for specifying whether a CD is strict or relaxed
  *
  * This type is used to specify whether a CD is strict or
  * relaxed. The full definition of the semantics of strict and
@@ -425,7 +439,7 @@ namespace cd {
   }; 
 
 
-  extern CDHandle *CD_Init(int numTask=1, int myTask=0, PrvMediumT prv_medium=kDRAM);
+  extern CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   extern void CD_Finalize(DebugBuf *debugBuf=NULL);
 
 

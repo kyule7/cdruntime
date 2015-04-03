@@ -69,39 +69,42 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_global.h"
 #include "node_id.h"
 #include "cd_name_t.h"
-
+#include "cd_def_internal.h"
 using namespace cd;
 
 namespace cd{
 
-  /** \addtogroup cd_defs CD-Related Definitions
-   *
-   * The \ref cd_defs module includes general CD-related type
-   * definitions that don't fall into other type definitions (\ref
-   * error_reporting and \ref preservation_funcs).
-   *
-   *@{
-   *
-   * @brief A type to uniquely identify a task in CD hierarchy.
-   *
-   * A CD name consists of its level in the CD tree (root=0)and the
-   * its ID, or sequence number, within that level. 
-   * 
-   * \note Alternatives:
-   * - The alternative of simply a unique name misses the idea of
-   * levels in the tree; the idea of hierarchy is central to CDs so
-   * this is a bad alternative.
-   * - The alternative of naming a CD by its entire "branch" leads
-   * to requiring the name to be parsed to identify the level; the
-   * level is typically the most crucial information so this seems
-   * unduly complex. 
-   * - A third alternative is to store the branch information as a
-   * std::vector, so the vector's length is the level. However, this
-   * means the name is rather long.
-   * 
-   */ 
+/**@addtogroup cd_defs
+ * @{
+ */
+/**@class CDID
+ * @brief A type to uniquely identify a task in CD hierarchy.
+ *
+ * A CD name consists of its level in the CD tree (root=0), and the
+ * its ID, or sequence number, within that level. 
+ * 
+ * \note Alternatives:
+ * - The alternative of simply a unique name misses the idea of
+ * levels in the tree; the idea of hierarchy is central to CDs so
+ * this is a bad alternative.
+ * - The alternative of naming a CD by its entire "branch" leads
+ * to requiring the name to be parsed to identify the level; the
+ * level is typically the most crucial information so this seems
+ * unduly complex. 
+ * - A third alternative is to store the branch information as a
+ * std::vector, so the vector's length is the level. However, this
+ * means the name is rather long.
+ * 
+ */ 
 class CDID {
-  public:
+  friend class CDHandle;
+  friend class CD;
+  friend class HeadCD;
+  friend class CDEntry;
+  friend class HandleEntrySearch;
+  friend class HandleEntrySend;
+
+private:
     uint32_t domain_id_; //!< Some physical information is desired in CDID to maximize locality when needed.
 
     CDNameT  cd_name_; //!< CD name
@@ -115,7 +118,8 @@ class CDID {
     uint32_t object_id_; //!< This will be local and unique within a process. It increases at creator or Create().
 
     uint32_t sequential_id_; //!< Number of Begin/Complete pairs of each CD object. It increases at Begin() 
-  public:
+
+public:
     // TODO Initialize member values to zero or something, for now I will put just zero but this is less efficient.
     CDID(void);
     CDID(const CDNameT& cd_name, const NodeID& new_node_id);
@@ -125,7 +129,6 @@ class CDID {
     CDID &operator=(const CDID& that);
     bool operator==(const CDID& that) const;
    
-
     uint32_t level(void)         const;
     uint32_t rank_in_level(void) const;
     uint32_t sibling_count(void) const;
@@ -139,6 +142,10 @@ class CDID {
     CDNameT  cd_name(void)       const;
     NodeID   node_id(void)       const;
     bool     IsHead(void)        const;
+   //SZ: print function
+    void Print(void);
+
+private:
 
     void SetCDID(const NodeID& new_node_id);
     void SetSequentialID(uint32_t seq_id);
@@ -146,8 +153,6 @@ class CDID {
     uint32_t GenMsgTag(ENTRY_TAG_T tag);
     uint32_t GenMsgTagForSameCD(int msg_type, int task_in_color);
  
-   //SZ: print function
-    void Print(void);
 };
 
 std::ostream& operator<<(std::ostream& str, const CDID& cd_id);

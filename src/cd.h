@@ -57,25 +57,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "event_handler.h"
 #include "cd_pfs.h"
 
-
-//#if _WORK
-//#include "transaction.h"
-//#endif
-
-#include <cassert>
 #include <list>
-#include <vector>
-#include <stdint.h>
-#include <cstdlib>
-#include <cstdio>
-#include <cstring>
-#include <string>
-#include <setjmp.h>
-#include <ucontext.h>
 #include <map>
 //#include <unordered_map>
+
+#include <cstring>
+#include <ucontext.h>
 #include <functional>
-//#include <array>
 
 #ifdef comm_log
 //SZ
@@ -157,7 +145,6 @@ class CD : public Serializable {
     };
   protected:
 //  public:
-    /// CD class internal enumerators 
   /** \addtogroup cd_defs CD-Related Definitions
    *@{
    */
@@ -174,9 +161,9 @@ class CD : public Serializable {
    * namespace because the application programmer may want to manipulate
    * this when specifying specialized recovery routines.
    */
-    enum CDExecMode  {kExecution=0, 
-                      kReexecution, 
-                      kSuspension
+    enum CDExecMode  {kExecution=0, //!< Execution mode 
+                      kReexecution, //!< Reexecution mode
+                      kSuspension   //!< Suspension mode (not active)
                      };
 
   /** @} */ // End group cd_defs
@@ -185,10 +172,10 @@ class CD : public Serializable {
 //                       kIncludeStack
 //                     };
 
-    enum CDInternalErrT { kOK=0, 
-                          kExecModeError, 
-                          kEntryError,
-                          kErrorReported 
+    enum CDInternalErrT { kOK=0, //!< No error 
+                          kExecModeError,  //!< Internal error during execution
+                          kEntryError,     //!< Internal error in CD entries
+                          kErrorReported   //!< Error reported from hardware or application.
                         };  
 
   protected: 
@@ -200,7 +187,6 @@ class CD : public Serializable {
     bool GetBegin_(void){return begin_;}
 
 #if _MPI_VER
-#if _KL
     // This flag is unique for each process. 
     static CDFlagT *pendingFlag_;
     CDMailBoxT pendingWindow_;
@@ -208,7 +194,6 @@ class CD : public Serializable {
     // Every mailbox resides in head 
     CDFlagT *event_flag_;
     CDMailBoxT mailbox_;
-#endif
 #endif
 
     // Label for Begin/Complete pair. It is mainly for Loop interation.
@@ -221,6 +206,9 @@ class CD : public Serializable {
 
     // Flag for Strict or Relexed CD
     CDType          cd_type_;
+
+    // Flag to imform the medium type for preservation
+    PrvMediumT      prv_medium_;
 
     /// Set rollback point and options
     CtxtPrvMode     ctxt_prv_mode_;
@@ -340,6 +328,7 @@ update the preserved data.
        const char* name, 
        const CDID& cd_id, 
        CDType cd_type, 
+       PrvMediumT prv_medium, 
        uint64_t sys_bit_vector);
 
     virtual ~CD();
@@ -449,7 +438,6 @@ public:
     virtual CDErrT Resume(void);
     virtual CDErrT AddChild(CDHandle* cd_child);
     virtual CDErrT RemoveChild(CDHandle* cd_child);
-    virtual CDFlagT *event_flag();
 
   protected:
  
@@ -550,22 +538,21 @@ public:
     // Actual malloced data or created file for the preservation is deleted in this routine. 
     void DeleteEntryDirectory(void);
     
-    CDEventHandleT ReadMailBox(CDFlagT &event);
-    virtual CDInternalErrT InternalCheckMailBox(void);
+
     CDInternalErrT InvokeErrorHandler(void);
     CDInternalErrT InvokeAllErrorHandler(void);
     // Test the completion of internal-CD communications
+#if _MPI_VER
     bool TestComm(bool test_untile_done=false);
     bool TestReqComm(bool is_all_valid=true);
     bool TestRecvComm(bool is_all_valid=true);
+    virtual CDFlagT *event_flag();
+#endif
 
-    void DecPendingCounter(void);
   protected:
-//  public:
-    CDErrT CheckMailBox(void);
-    virtual CDErrT SetMailBox(const CDEventT &event);
-    CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);
 
+
+    CDInternalErrT Sync(ColorT color); 
     void *SerializeRemoteEntryDir(uint32_t& len_in_byte);
     void DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
 
@@ -624,6 +611,16 @@ public:
     static void *malloc(size_t size);
     static void  free(void *p);
 #endif
+
+#if _MPI_VER
+    CDEventHandleT ReadMailBox(CDFlagT &event);
+    virtual CDInternalErrT InternalCheckMailBox(void);
+    void DecPendingCounter(void);
+    CDErrT CheckMailBox(void);
+    virtual CDErrT SetMailBox(const CDEventT &event);
+    CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);
+#endif
+
  }; // class CD ends
 
 
@@ -644,7 +641,7 @@ class HeadCD : public CD {
 //    friend class HandleAllReexecute;
 //    friend class HandleEntrySearch;
 //    friend class HandleEntrySend;
-    friend class CommLog;
+  friend class CommLog;
 
   friend CDInternalErrT CD::InternalCreate(CDHandle* parent, 
                      const char* name, 
@@ -652,8 +649,7 @@ class HeadCD : public CD {
                      CDType cd_type, 
                      uint64_t sys_bit_vector, 
                      CDHandle** new_cd_handle);
-  protected:
-//  public:
+  private:
     /// Link information of CD hierarchy   
     /// This is a kind of CD object but represents the corresponding task group of each CD
     /// Therefore, CDTree is generated with CD object. 
@@ -674,14 +670,6 @@ class HeadCD : public CD {
 
     bool error_occurred;
 //    bool need_reexec;
-#if _MPI_VER
-#if _KL
-//    CDFlagT *event_flag_;
-
-//    CDFlagT *family_event_flag_;
-//    CDMailBoxT *family_mailbox_;
-#endif
-#endif
 
 
     HeadCD();
@@ -689,12 +677,12 @@ class HeadCD : public CD {
              const char* name, 
              const CDID& cd_id, 
              CDType cd_type, 
+             PrvMediumT prv_medium, 
              uint64_t sys_bit_vector);
     virtual ~HeadCD();
 
     CDHandle *cd_parent(void);
     void set_cd_parent(CDHandle* cd_parent);
-    virtual CDFlagT *event_flag();
     virtual CDHandle *Create(CDHandle* parent, 
                              const char* name, 
                              const CDID& child_cd_id, 
@@ -707,18 +695,7 @@ class HeadCD : public CD {
     virtual CDErrT Resume(void); // Does this make any sense?
     virtual CDErrT AddChild(CDHandle* cd_child); 
     virtual CDErrT RemoveChild(CDHandle* cd_child); 
-//    CDInternalErrT CreateInternalMemory(HeadCD *cd_ptr, const CDID& new_cd_id);
-//    CDInternalErrT DestroyInternalMemory(HeadCD *cd_ptr);
 
-//    void *SerializeEntryDir(uint32_t& entry_count); 
-//    std::vector<CDEntry> DeserializeEntryDir(void *object);
-
-//    CDInternalErrT ReadMailBox(void);
-
-
-    CDErrT SetMailBox(const CDEventT &event, int task_id);
-    CDInternalErrT LocalSetMailBox(HeadCD *curr_cd, const CDEventT &event);
-    virtual CDErrT SetMailBox(const CDEventT &event);
 
     void *Serialize(uint32_t& len_in_bytes)
     {
@@ -726,14 +703,19 @@ class HeadCD : public CD {
     }
   
     void Deserialize(void* object) 
-    {
-    }
-  protected:
+    {    }
+
+#if _MPI_VER
+    virtual CDFlagT *event_flag();
+
+    CDErrT SetMailBox(const CDEventT &event, int task_id);
+    CDInternalErrT LocalSetMailBox(HeadCD *curr_cd, const CDEventT &event);
+    virtual CDErrT SetMailBox(const CDEventT &event);
     CDEventHandleT ReadMailBox(CDFlagT *p_event, int idx=0);
     virtual CDInternalErrT InternalCheckMailBox(void);
 //    CDInternalErrT InvokeErrorHandler(void);
 //    virtual bool TestComm(bool test_untile_done=false);
-    
+#endif    
 };
 
 }

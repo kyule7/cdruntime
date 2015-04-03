@@ -55,11 +55,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using std::endl;
 
 namespace cd {
-/** \addtogroup cd_defs
- *
- *
- *@{
- *
+/**@addtogroup cd_defs
+ * @{
+ */
+/**@class CDNameT
  * @brief A type to uniquely name a CD in the tree
  *
  * A CD name consists of its level in the CD tree (root=0) and the
@@ -68,6 +67,9 @@ namespace cd {
  */ 
 
 class CDNameT {
+  friend class CD;
+  friend class HeadCD;
+private:
   // Level in the CD hierarhcy. It increases at Create() and destroys at Destroy.
 	uint32_t level_;  
   uint32_t rank_in_level_;
@@ -79,13 +81,15 @@ public:
   CDNameT(const CDNameT& that);
   ~CDNameT(void) {}
 
+  CDNameT& operator=(const CDNameT& that);
+  bool operator==(const CDNameT& that) const;
+
   uint32_t level(void) const;
   uint32_t rank_in_level(void) const;
   uint32_t size(void) const;
+
+private: 
   void IncLevel(void);
- 
-  CDNameT& operator=(const CDNameT& that);
-  bool operator==(const CDNameT& that) const;
   int CDTag(void) const; 
 };
 

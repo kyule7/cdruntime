@@ -48,16 +48,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  
 namespace cd {
 
-/**@brief Recovery method that can be inherited and specialized by user
- *
- * @addtogroup register_detection_recovery  
+/**@addtogroup register_detection_recovery  
  * @{
  *
  */
 
 
 /**@class RecoverObject
- * @brief The purpose of RecoverObject is to provide an interface to enable a
+ * @brief Recovery method that can be inherited and specialized by user
+ *
+ * The purpose of RecoverObject is to provide an interface to enable a
  * programer to create custom Recover routines. The idea is that for
  * each CD, each error type+location may be bound to a specialized
  * recovery routine, which is expressed through a Recover object. The

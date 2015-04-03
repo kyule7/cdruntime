@@ -64,16 +64,21 @@ using std::endl;
 
 namespace cd {
 
-/** \addtogroup cd_defs 
- *
- *@{
- *
+/**@addtogroup cd_defs 
+ * @{
+ */
+/**@class NodeID
  * @brief A type to uniquely identify a task in a CD.
  *
  */ 
 class NodeID : public Serializable {
-friend class CDHandle;
-friend class DataHandle;
+  friend class CDHandle;
+  friend class DataHandle;
+//  friend class CD;
+//  friend class HeadCD;
+
+private:
+
   /** @brief Internal enumerators used for serialization.
    *
    */
@@ -88,7 +93,7 @@ friend class DataHandle;
   int task_in_color_;
   int head_;
   int size_;
-  GroupT task_group_;
+  CommGroupT task_group_;
 
 public:
   NodeID(void); 
@@ -96,18 +101,17 @@ public:
   NodeID(const NodeID &that);
   ~NodeID(void){}
 
-  void init_node_id(ColorT color, int task_in_color, int head, int size);
+  NodeID &operator=(const NodeID &that);
+  bool operator==(const NodeID &that) const;
 
   ColorT color(void)         const;
   int    task_in_color(void) const;
   int    head(void)          const;
   int    size(void)          const;
   bool   IsHead(void)        const;
+private:
   void   set_head(int head);
-
-  NodeID &operator=(const NodeID &that);
-  bool operator==(const NodeID &that) const;
-
+  void init_node_id(ColorT color, int task_in_color, int head, int size);
   void *Serialize(uint32_t &len_in_bytes);
   void Deserialize(void *object);
 };

@@ -67,13 +67,13 @@ bool cd::app_side = true;
 /// It is not possible to set MPI_TAG_UB to some value by application.
 /// So, I decided to check the MAX_TAG_UB value from MPI runtime at initialization routine
 /// and set the right bit positions in CDID::GenMsgTag(ENTRY_TAG_T tag), CDID::GenMsgTagForSameCD(int msg_type, int task_in_color) functions.
+#if _MPI_VER
 int  cd::max_tag_bit = 0;
 int  cd::max_tag_level_bit = 0;
 int  cd::max_tag_task_bit  = 0;
 int  cd::max_tag_rank_bit  = 0;
-
+#endif
 int cd::myTaskID = 0;
-
 
 namespace cd {
 // Global functions -------------------------------------------------------
@@ -146,7 +146,6 @@ void CD_Finalize(DebugBuf *debugBuf)
 #if _DEBUG
   if(debugBuf != NULL) WriteDbgStream(debugBuf);
 #endif
-
   CDEpilogue();
 }
 
@@ -364,15 +363,16 @@ CDErrT CDHandle::GetNewNodeID(NodeID& new_node)
 
 
 // Collective
-CDHandle* CDHandle::Create(const ColorT& color,
-                           uint32_t  num_children,
+CDHandle* CDHandle::Create(uint32_t  num_children,
                            const char* name, 
                            int cd_type, 
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
-                           CDErrT *error )
+                           CDErrT *error)
 {
   CDPrologue();
+#if _MPI_VER
+
   cout << "CDHandle::Create " << node_id_ << endl;
   // Create a new CDHandle and CD object
   // and populate its data structure correctly (CDID, etc...)
@@ -449,7 +449,6 @@ CDHandle* CDHandle::Create(const ColorT& color,
 
   CollectHeadInfoAndEntry(new_node_id); 
 
-
   cout << "done collect to head" << endl;
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
@@ -465,6 +464,13 @@ CDHandle* CDHandle::Create(const ColorT& color,
     ERROR_MESSAGE("CDHandle::Create failed.\n"); assert(0);
   }
 
+
+#else
+
+  CDHandle *new_cd_handle = Create(name, cd_type, error_name_mask, error_loc_mask, error );
+
+#endif
+
   CDEpilogue();
 
   return new_cd_handle;
@@ -472,19 +478,54 @@ CDHandle* CDHandle::Create(const ColorT& color,
 
 
 // Collective
-CDHandle* CDHandle::Create(uint32_t num_children, 
+CDHandle* CDHandle::Create(uint32_t color, 
+                           uint32_t task_in_color, 
+                           uint32_t num_children, 
                            const char* name, 
                            int cd_type, 
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
                            CDErrT *error )
 {
-  return Create(color(), num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
+  CDPrologue();
+#if _MPI_VER
+
+  uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
+  int err=0;
+
+  ColorT new_comm;
+  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, num_children);
+
+  err = GetNewNodeID(node_id_.color(), color, task_in_color, new_node_id);
+
+  SetHead(new_node_id);
+
+  // Generate CDID
+  CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, color);
+
+  CollectHeadInfoAndEntry(new_node_id); 
+
+  // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
+  CD::CDInternalErrT internal_err;
+  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
+
+  CDPath::GetCDPath()->push_back(new_cd_handle);
+
+  if(err<0) {
+    ERROR_MESSAGE("CDHandle::Create failed.\n"); assert(0);
+  }
+
+
+#else
+  CDHandle *new_cd_handle = Create(name, cd_type, error_name_mask, error_loc_mask, error );
+#endif
+
+  CDEpilogue();
+  return new_cd_handle;
 }
 
 
-CDHandle* CDHandle::CreateAndBegin(const ColorT& color, 
-                                   uint32_t num_children, 
+CDHandle* CDHandle::CreateAndBegin(uint32_t num_children, 
                                    const char* name, 
                                    int cd_type, 
                                    uint32_t error_name_mask, 
@@ -492,7 +533,7 @@ CDHandle* CDHandle::CreateAndBegin(const ColorT& color,
                                    CDErrT *error )
 {
   CDPrologue();
-  CDHandle* new_cdh = Create(color, num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
+  CDHandle* new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
   new_cdh->Begin(false, name);
   CDEpilogue();
   return new_cdh;
@@ -552,10 +593,12 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
   assert(ptr_cd_ != 0);
   CDErrT err = ptr_cd_->Begin(collective, label);
 
+
+#if _MPI_VER
   dbg << "Do Barrier at CDHandle::Begin at level [" << ptr_cd_->level() << "], is it reexec? " << ptr_cd_->num_reexecution_ << endl;
   
   if(node_id_.size() > 1) {
-    PMPI_Barrier(node_id_.color());
+    Sync(node_id_.color());
     cout << "\n\n[Barrier] CDHandle::Begin - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
   }
   //CheckMailBox();
@@ -565,6 +608,8 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
   if ( collective ) {
     // Sync();
   }
+
+#endif
 
 #if _PROFILER
   // Profile-related
@@ -584,9 +629,12 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 {
   CDPrologue();
 
+
+#if _MPI_VER
+
   if(IsHead()) {
     if(node_id_.size() > 1) {
-      PMPI_Barrier(node_id_.color());
+      Sync(node_id_.color());
       cout << "\n\n[Barrier] CDHandle::Complete 1 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     CheckMailBox();
@@ -595,7 +643,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   else {
     CheckMailBox();
     if(node_id_.size() > 1) {
-      PMPI_Barrier(node_id_.color());
+      Sync(node_id_.color());
       cout << "\n\n[Barrier] CDHandle::Complete 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
   }
@@ -605,7 +653,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 //  CheckMailBox();
   if(IsHead()) {
     if(node_id_.size() > 1) {
-      PMPI_Barrier(node_id_.color());
+      Sync(node_id_.color());
       cout << "\n\n[Barrier] CDHandle::Complete 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     CheckMailBox();
@@ -614,14 +662,16 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   else {
     CheckMailBox();
     if(node_id_.size() > 1) {
-      PMPI_Barrier(node_id_.color());
+      Sync(node_id_.color());
       cout << "\n\n[Barrier] CDHandle::Complete 2 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
   }
   if(node_id_.size() > 1) {
-    PMPI_Barrier(node_id_.color());
+    Sync(node_id_.color());
     cout << "\n\n[Barrier] CDHandle::Complete 3 --- "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; 
   }
+
+#endif
 
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
@@ -835,8 +885,15 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   dbg << "DETECT check mode : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
   std::vector<SysErrT> ret_prepare;
   CDErrT err = kOK;
-  CDEventT event = kNoEvent;
   CD::CDInternalErrT internal_err = ptr_cd_->Detect();
+
+  if(internal_err == CD::CDInternalErrT::kErrorReported) {
+    err = kError;
+  }
+
+#if _MPI_VER
+  CDEventT event = kNoEvent;
+
   if(internal_err == CD::CDInternalErrT::kErrorReported) {
     dbg << "HERE?" << endl;
     event = kErrorOccurred;
@@ -922,12 +979,13 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 ////    CheckMailBox();
 ////  }
 
-  PMPI_Barrier(node_id_.color());
+
+  Sync(node_id_.color());
 
   if(IsHead()) { 
 
     if(node_id_.size() > 1) {
-      PMPI_Barrier(node_id_.color());
+      Sync(node_id_.color());
       dbg << "\n\n[Barrier] CDHandle::Detect 1 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     SetMailBox(event);
@@ -937,7 +995,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
     SetMailBox(event);
     if(node_id_.size() > 1) {
-      PMPI_Barrier(node_id_.color());
+      Sync(node_id_.color());
       dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
 
@@ -947,20 +1005,21 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
     CheckMailBox();
     if(node_id_.size() > 1) {
-      PMPI_Barrier(node_id_.color());
+      Sync(node_id_.color());
       cout << "\n\n[Barrier] CDHandle::Detect 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
   }
   else {
 
     if(node_id_.size() > 1) {
-      PMPI_Barrier(node_id_.color());
+      Sync(node_id_.color());
       cout << "\n\n[Barrier] CDHandle::Detect 2 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     CheckMailBox();
 
   }
 
+#endif
 
 //  if(IsHead() && ptr_cd()->GetCDID().level() == 1) {
 //    ptr_cd_->HandleAllResume(this);
@@ -1087,26 +1146,21 @@ uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_l
 
 CDErrT CDHandle::CheckMailBox(void)
 {
-  // FIXME
-//  if(node_id_.size() > 1) {
-//    PMPI_Barrier(node_id_.color());
-//    cout << "\n\n[Barrier] CDHandle::CheckMailBox - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-//  }
+#if _MPI_VER
   CDErrT cd_err = ptr_cd()->CheckMailBox();
-
-//  if(node_id_.size() > 1) {
-//    PMPI_Barrier(node_id_.color());
-//    cout << "\n\n[Barrier] CDHandle::CheckMailBox - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-//  }
-//  cout << "==============================================================" << endl;
-//
-//  cd_err = ptr_cd()->CheckMailBox();
   return cd_err;
+#else
+  return kOK;
+#endif
 }
 
 CDErrT CDHandle::SetMailBox(CDEventT event)
 {
+#if _MPI_VER
   return ptr_cd()->SetMailBox(event);
+#else
+  return kOK;
+#endif
 }
 
 /*

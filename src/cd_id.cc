@@ -99,6 +99,7 @@ std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
 }
 
 
+#if _MPI_VER
 
 uint32_t CDID::GenMsgTag(ENTRY_TAG_T tag)
 {
@@ -119,7 +120,7 @@ uint32_t CDID::GenMsgTagForSameCD(int msg_type, int task_in_color)
   tag |= (1<<(max_tag_bit-1));
   return tag;
 }
-
+#endif
 
 //SZ: print function
 void CDID::Print(void)

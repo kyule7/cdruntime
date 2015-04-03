@@ -5,16 +5,17 @@ SIGHT_ROOT  = ${CD_ROOT}/tools/sight
 
 CD_TEST     = ${CD_ROOT}/test
 CD_SRC      = ${CD_ROOT}/src
+CD_INTERFACE= ${CD_ROOT}/interface
 CD_TOOLS    = ${CD_ROOT}/tools
 CD_LIB      = ${CD_ROOT}/lib
 CD_AUTOTUNER= ${CD_ROOT}/autotuner
 
 
-CD_SRC_CFLAGS = -I${CD_SRC} #-I${SIGHT_ROOT}/widgets 
+CD_CFLAGS =-I${CD_SRC} -I${CD_INTERFACE}
 
-CD_LINKFLAGS = -Wl,-rpath ${CD_LIB} \
-               ${CD_LIB}/libcds.so \
-               -L${CD_LIB} -lcds 
+CD_LINKFLAGS =-Wl,-rpath ${CD_LIB} \
+              ${CD_LIB}/libcds.so \
+              -L${CD_LIB} -lcds 
 
 
 

@@ -3,13 +3,20 @@
 
 #include <iostream>
 #include <string>
-#include <mpi.h>
 #include <math.h>
 #include <sstream>
 #include "cd_global.h"
 #include "cd_def_internal.h" 
 #include "cd.h"
 
+#if _MPI_VER
+#include <mpi.h>
+#define CommFree MPI_Comm_free
+#define CommGroupFree MPI_Group_free
+#else
+#define CommFree free
+#define CommGroupFree free
+#endif
 namespace cd {
 
 class PFSHandle {
@@ -20,15 +27,15 @@ private:
 	CD *ptr_cd_;
 
 	std::string PFS_file_path_;
-	MPI_File PFS_d_;
+	COMMLIB_File PFS_d_;
 
-	MPI_Offset PFS_current_offset_;
-	MPI_Offset PFS_current_chunk_begin_;
-	MPI_Offset PFS_current_chunk_end_;
+	COMMLIB_Offset PFS_current_offset_;
+	COMMLIB_Offset PFS_current_chunk_begin_;
+	COMMLIB_Offset PFS_current_chunk_end_;
 	uint64_t PFS_chunk_size_;
 
-	MPI_Group PFS_parallel_file_group_;
-	MPI_Comm PFS_parallel_file_communicator_;
+	CommGroupT PFS_parallel_file_group_;
+	ColorT PFS_parallel_file_communicator_;
 	int PFS_rank_in_file_communicator_;
 
 	int degree_of_sharing_;
@@ -41,13 +48,13 @@ private:
 	~PFSHandle( void ) 
   { 
   	Close_and_Delete_File(); 
-  	MPI_Group_free( &PFS_parallel_file_group_ );
-  	MPI_Comm_free( &PFS_parallel_file_communicator_ );
+  	CommGroupFree( &PFS_parallel_file_group_ );
+  	CommFree( &PFS_parallel_file_communicator_ );
   }
 
 	void Reset_File_Pointer( void );
-	MPI_Offset Write( void*, uint64_t );
-	uint64_t Read_at( void*, uint64_t, MPI_Offset );
+	COMMLIB_Offset Write( void*, uint64_t );
+	uint64_t Read_at( void*, uint64_t, COMMLIB_Offset );
 
 private:
 	int Open_File( void );

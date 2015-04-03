@@ -161,9 +161,9 @@ CDEntry::CDEntryErrT CDEntry::SavePFS(void)
 
 
 // -----------------------------------------------------------------------------------------------
-
 void CDEntry::RequestEntrySearch(void)
 {
+#if _MPI_VER
   dbg << "\nCDEntry::RequestEntrySearch\n" << endl;
   dbg.flush();
   
@@ -215,9 +215,8 @@ void CDEntry::RequestEntrySearch(void)
              MPI_COMM_WORLD, 
 //             &(curr_cd->entry_req_.back().req_));  
              &(curr_cd->entry_recv_req_[tag_to_search].req_));  
+#endif
 }
-
-
 
 
 
@@ -255,6 +254,8 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
 //                <<", value: "<<*(reinterpret_cast<int*>(buffer->address_data())) << endl;
       }
       else {
+
+#if _MPI_VER
         // Entry was found at this task because the current task is head.
         // So, it should request EntrySend to the task that holds the actual data copy for preservation.
         dbg << "\nIt succeed in finding the entry at this level #"<< found_level <<" of head task!" << endl;
@@ -308,6 +309,9 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
 //        headcd->SetMailBox(entry_send, entry->dst_data_.node_id().task_in_color());
 //        dbg << "[CDEntry::Restore] Can't find the entry local. Remote Case!!" << endl;
         cout << "[CDEntry::Restore] Can't find the entry local. Remote Case!! --" << endl;
+
+
+#endif
       }
     }
     else { // Remote case
@@ -333,7 +337,9 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
 
   // Handles preservation via reference for remote copy.
   if(buffer == NULL) {
-//#if _FIX
+
+#if _MPI_VER
+
     dbg<<"Request head to bring the entry" << endl;
     
     // Add this entry for receiving preserved data remotely.
@@ -364,7 +370,8 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
 
     dbg<<"RequestEntrhSearch Done\n" << endl;
     dbg.flush();
-//#endif
+
+#endif
     return kEntrySearchRemote;
   }
 	else if(buffer->handle_type() == DataHandle::kMemory)	{

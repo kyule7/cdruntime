@@ -9,7 +9,7 @@ SINGLE_VER_VAR = 0
 PROFILER_ENABLED=0
 LOGGING_ENABLED=1
 TACC=0
-MEDIUM = -D_MEMORY=1 \
+MEDIUM = -D_MEMORY=1 #\
          -D_PFS=0 \
          -D_SSD=0 \
          -D_HDD=0 
@@ -17,7 +17,7 @@ MEDIUM = -D_MEMORY=1 \
 DEBUG_FLAGS = -D_DEBUG=$(DEBUG_VAR) -D_PRV_FILE_NOT_ERASED=0
 
 ifeq ($(PROFILER_ENABLED), 1)
-PROFILER_FLAGS = \
+PROFILER_FLAGS =\
       -D_ENABLE_MODULE=1 \
       -D_ENABLE_HIERGRAPH=0 \
       -D_ENABLE_SCOPE=0 \
@@ -41,16 +41,16 @@ CC=mpic++
 endif
 
 ERR_FLAGS=-Wall -fmax-errors=5
-CFLAGS  = -g -fPIC -std=gnu++0x ${ERR_FLAGS} 
+CFLAGS  = -g -fPIC -std=gnu++0x ${ERR_FLAGS}
 LDFLAGS = #${SIGHT_LINKFLAGS}
 
 ifeq ($(TACC), 1)
-CFLAGS += -xhost -O2 
+CFLAGS += -xhost -O2
 endif
 
 CDS_FLAGS=-D_MPI_VER=$(MPI_VER_VAR) -D_PGAS_VER=$(PGAS_VER_VAR) -D_SINGLE_VER=$(SINGLE_VER_VAR) \
-        ${DEBUG_FLAGS} ${PROFILER_FLAGS} \
-        -D_KL=1 -D_FIX=1 
+        ${DEBUG_FLAGS}\
+        ${PROFILER_FLAGS}
 
 
 ifeq ($(PROFILER_ENABLED), 1)

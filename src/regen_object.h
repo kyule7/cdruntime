@@ -45,13 +45,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_internal.h" 
 namespace cd {
 
-/** \addtogroup preservation_funcs 
- *  The \ref preservation_funcs module contains all
- *  preservation/restoration related types and methods.
- *
+/**@addtogroup preservation_funcs 
  * @{
- *
- * @brief Interface for specifying regeneration functions for preserve/restore
+ */
+/**@brief Interface for specifying regeneration functions for preserve/restore
  *
  * An interface for a data regeneration function that can be used to
  * restore "preserved" data instead of making a copy of the data to

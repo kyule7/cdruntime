@@ -33,6 +33,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#if _MPI_VER
+
 #ifdef comm_log
 
 #include "cd_mpiwrapper.h"
@@ -1971,5 +1973,7 @@ int MPI_Finalize(void)
 //  return mpi_ret;
 //}
 
+
+#endif
 
 #endif

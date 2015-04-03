@@ -44,22 +44,32 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #if _MPI_VER 
 
 #include <mpi.h>
-#define ROOT_COLOR    MPI_COMM_WORLD
-#define INITIAL_COLOR MPI_COMM_NULL
-#define ROOT_HEAD_ID  0
-typedef MPI_Comm      ColorT;
+//#define ROOT_COLOR    MPI_COMM_WORLD
+//#define INITIAL_COLOR MPI_COMM_NULL
+//#define ROOT_HEAD_ID  0
+//typedef MPI_Comm      ColorT;
+typedef MPI_Group     CommGroupT;
+typedef MPI_Request   CommRequestT;
+typedef MPI_Status    CommStatusT;
 typedef int           CDFlagT;
 typedef MPI_Win       CDMailBoxT;
+typedef MPI_Offset    COMMLIB_Offset;
+typedef MPI_File      COMMLIB_File;
 
 #else
 
-#define ROOT_COLOR    0 
-#define INITIAL_COLOR 0
-#define ROOT_HEAD_ID  0
-typedef int           ColorT;
+//#define ROOT_COLOR    0 
+//#define INITIAL_COLOR 0
+//#define ROOT_HEAD_ID  0
+//typedef int           ColorT;
+typedef int           CommGroupT;
+typedef int           CommRequestT;
+typedef int           CommStatusT;
 // FIXME
 typedef int           CDFlagT;
 typedef int           CDMailBoxT;
+typedef int           COMMLIB_Offset;
+typedef int           COMMLIB_File;
 
 #endif
 
@@ -185,12 +195,13 @@ namespace cd {
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
 
   extern int myTaskID;
+#if _MPI_VER
   extern int handled_event_count;
   extern int max_tag_bit;
   extern int max_tag_level_bit;
   extern int max_tag_rank_bit;
   extern int max_tag_task_bit;
-
+#endif
 
 
 
@@ -203,8 +214,9 @@ namespace cd {
   class CommInfo { 
   public:
     void *addr_;
-    MPI_Request req_;   //<! MPI_Request
-    MPI_Status  stat_;  //<! MPI_Status
+    CommRequestT req_;   //<! MPI_Request
+    CommStatusT  stat_;  //<! MPI_Status
+
     int valid_;         //<! Valid bit for the message completion.
     CommInfo(void *addr = NULL) : addr_(addr) {
       valid_ = 0;  
@@ -325,6 +337,10 @@ namespace cd {
 
  /** @} */ // End runtime_logging group =====================================================
 
+#if _MPI_VER
+  extern inline void IncHandledEventCounter(void)
+  { handled_event_count++; }
+#endif
 }
 
 
@@ -340,11 +356,9 @@ namespace cd {
 
 //SZ: when testing MPI functions, print to files is easier
 #ifdef comm_log 
-
 #if _DEBUG
 extern FILE * cd_fp;
 #endif
-
 #endif
 
 #if _DEBUG
@@ -377,7 +391,7 @@ extern FILE * cd_fp;
 #define CD_FILEPATH_SSD "./SSD/"
 #define dout clog
 
-#define DEFAULT_MEDIUM kMemory
+#define DEFAULT_MEDIUM kDRAM
 /* 
 ISSUE 1 (Kyushick)
 If we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?

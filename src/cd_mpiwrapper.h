@@ -37,6 +37,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_MPIWRAPPER_H
 #define _CD_MPIWRAPPER_H
 
+#if _MPI_VER
+
 #include <stdio.h>
 #include <mpi.h>
 
@@ -267,3 +269,4 @@ int MPI_Finalize(void);
 
 #endif
 
+#endif
