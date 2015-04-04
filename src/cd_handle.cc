@@ -314,8 +314,10 @@ CDHandle::~CDHandle()
   if(error_injector_ != NULL);
     delete error_injector_;
 
+#if _PROFILER
   if(profiler_ != NULL);
     delete profiler_;
+#endif
 
 }
 

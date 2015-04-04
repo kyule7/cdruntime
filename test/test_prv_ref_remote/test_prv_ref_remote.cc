@@ -75,9 +75,9 @@ static __inline__ long long getCounter(void)
 
 void DecomposeData(int *array, int length, int rank)
 {
-  for(int i=0; i<length; i++) {
-    array[i] = (i + rank) % length;
-  }
+//  for(int i=0; i<length; i++) {
+//    array[i] = (i + rank) % length;
+//  }
 }
 
 void PrintData(int *array, int length)
@@ -131,7 +131,7 @@ int TestPreservationViaRefRemote(void)
   root->Preserve(arrayB, sizeof(arrayB), kCopy, "b_root");
 
   dbgApp << "CD Preserving..\n" << endl;
-  CDHandle* child_lv1=root->Create(GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict, 0, 0, &err);
+  CDHandle* child_lv1=root->Create(LV1, "CD1", kStrict, 0, 0, &err);
   dbgApp << "Root Creates Level 1 CD. # of children CDs = " << LV1 << "\n" << endl;
 
   CD_Begin(child_lv1);
@@ -200,7 +200,7 @@ int TestPreservationViaRefRemote(void)
   dbgApp << "=============================================" << endl;
   dbgApp.flush();
 
-  CDHandle* child_lv2=child_lv1->Create(GetCurrentCD()->GetNodeID(), LV2, "CD2", kStrict, 0, 0, &err);
+  CDHandle* child_lv2=child_lv1->Create(LV2, "CD2", kStrict, 0, 0, &err);
   dbgApp << "\t\tCD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
 
   CD_Begin(child_lv2);
@@ -231,7 +231,7 @@ int TestPreservationViaRefRemote(void)
 
   child_lv2->CDAssert(CheckArray(arrayE, sizeof(arrayE)));
 
-  CDHandle* child_lv3=child_lv2->Create(GetCurrentCD()->GetNodeID(), LV3, "CD3", kStrict, 0, 0, &err);
+  CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kStrict, 0, 0, &err);
   dbgApp << "\t\t\t\tCD2 Creates Level 3 CD. # of children CDs = " << LV3 << "\n" << endl;
 
   CD_Begin(child_lv3);

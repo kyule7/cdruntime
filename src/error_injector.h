@@ -109,8 +109,8 @@ public:
 
   UniformRandom(void) 
     : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(0.0, 1.0), low_(0.0), high_(1.0) {}
-  UniformRandom(double threshold, double low, double high) 
-    : ErrorProb(threshold), distribution_(low, high), low_(low), high_(high) {}
+  UniformRandom(double low, double high) 
+    : distribution_(low, high), low_(low), high_(high) {}
   virtual ~UniformRandom() {}
 };
 
@@ -151,7 +151,7 @@ public:
   LogNormal(void) 
     : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
   LogNormal(double mean, double std) 
-    : ErrorProb(threshold), distribution_(mean, std), mean_(mean), std_(std) {}
+    : distribution_(mean, std), mean_(mean), std_(std) {}
   virtual ~LogNormal() {}
 };
 
@@ -192,7 +192,7 @@ public:
     : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(1.0), lamda_(1.0) {}
 
   Exponential(double lamda) 
-    : ErrorProb(threshold), distribution_(lamda), lamda_(lamda) {}
+    : distribution_(lamda), lamda_(lamda) {}
 
   virtual ~Exponential() {}
 };
@@ -237,7 +237,7 @@ public:
   Normal(void) 
     : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
   Normal(double mean, double std) 
-    : ErrorProb(threshold), distribution_(mean, std), mean_(mean), std_(std) {}
+    : distribution_(mean, std), mean_(mean), std_(std) {}
   virtual ~Normal() {}
 };
 
@@ -277,7 +277,7 @@ public:
   Poisson(void) 
     : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(1.0), mean_(1.0) {}
   Poisson(double mean) 
-    : ErrorProb(threshold), distribution_(mean), mean_(mean) {}
+    : distribution_(mean), mean_(mean) {}
   virtual ~Poisson() {}
 };
 
@@ -427,33 +427,18 @@ public:
 
   virtual bool InjectAndTest(void)
   {
-    // Generate random value
-    // Compare with threashold
-    // Depending on compile-time flag indicating statically forcing a task failed,
-    // Check compile-time flag, and if it is set, set the threshold to 1.
-    // Every random variable will be less that 1, so it will be always failed.
-    double random_num = GenRandomNumber();
-    switch(level_) {
-      case INJECTION_ID_0
-      case INJECTION_ID_1
-      case INJECTION_ID_2
-      case INJECTION_ID_3
-      case INJECTION_ID_4
-      case INJECTION_ID_5
-      case INJECTION_ID_6
-      case INJECTION_ID_7
-      case INJECTION_ID_8
-      case INJECTION_ID_9
-      case INJECTION_ID_10
-      case INJECTION_ID_11
-
-    
-    INJECTED_LEVEL == level_
-    switch(level_) {
-      case 0 :
-      case 1 :
-        
-    rand_generator_->GenErrorVal()
+//    // Generate random value
+//    // Compare with threashold
+//    // Depending on compile-time flag indicating statically forcing a task failed,
+//    // Check compile-time flag, and if it is set, set the threshold to 1.
+//    // Every random variable will be less that 1, so it will be always failed.
+//    double random_num = GenRandomNumber();
+//    if(INJECTED_LEVEL_0 == 
+//    switch(level_) {
+//      case 0 :
+//      case 1 :
+//        
+//    rand_generator_->GenErrorVal()
     return true;
   }
 

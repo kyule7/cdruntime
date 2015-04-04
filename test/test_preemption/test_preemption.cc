@@ -86,11 +86,11 @@ int test_preemption()
   CD_Begin(root); 
 
   dbg2 << "CD Preserving..\n" << endl;
-  CDHandle* child_lv1=root->Create(GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict | kDRAM, 0, 0, &err);
+  CDHandle* child_lv1=root->Create(LV1, "CD1", kStrict | kDRAM, 0, 0, &err);
   CD_Begin(child_lv1);
   dbg2 << "child level 1-------------------------------------\n" << endl;
 
-  CDHandle* child_lv2=child_lv1->Create(GetCurrentCD()->GetNodeID(), LV2, "CD2", kStrict | kDRAM, 0, 0, &err);
+  CDHandle* child_lv2=child_lv1->Create(LV2, "CD2", kStrict | kDRAM, 0, 0, &err);
   CD_Begin(child_lv2);
   dbg2 << "child level 2-------------------------------------\n" << endl;
   dbg << "\n\n\nnode id check : "<< GetCurrentCD()->node_id() << "\n\n\n" << endl;
@@ -156,7 +156,7 @@ int test_preemption()
   dbg2 << "CD Complete\n" << endl;
   //  root->Complete();
 
-  CDHandle* child_lv3=child_lv2->Create(GetCurrentCD()->GetNodeID(), LV3, "CD3", kStrict | kDRAM, 0, 0, &err);
+  CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kStrict | kDRAM, 0, 0, &err);
   CD_Begin(child_lv3);
   dbg2 << "child level 3-------------------------------------\n" << endl;
   child_lv3->Preserve(a, sizeof(a), kRef, "child_a", "a");
@@ -224,7 +224,7 @@ int test_preemption_2()
   a[0] = 99;  // now when child recovers it should see 3 instead of 99
   dbg2 << "After modifying current value of a[0] " << a[0] <<" a[1] "<< a[1] << endl;
 
-  CDHandle* child=root->Create(GetCurrentCD()->GetNodeID(), LV1, "CD1", kStrict | kDRAM, 0, 0, &err);
+  CDHandle* child=root->Create(LV1, "CD1", kStrict | kDRAM, 0, 0, &err);
   CD_Begin(child); 
   dbg2 << "child cd begin\n" << endl; 
   child->Preserve(a, sizeof(a), kRef, "nonamejusttest", "a", 0);
