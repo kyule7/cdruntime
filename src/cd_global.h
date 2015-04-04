@@ -322,6 +322,7 @@ namespace cd {
 /** @} */ // end PGAS_funcs ===========================================
 
   extern int myTaskID;
+  extern int totalTaskSize;
 
  /** \addtogroup cd_accessor_funcs 
   * @{

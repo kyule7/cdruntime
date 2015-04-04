@@ -51,7 +51,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <cstdio>
 #include <iostream>
 #include <random>
-
+#define DEFAULT_ERROR_THRESHOLD 0.0
 
 class ErrorProb {
 protected:
@@ -108,9 +108,9 @@ public:
   }
 
   UniformRandom(void) 
-    : distribution_(0.0, 1.0), low_(0.0), high_(1.0) {}
-  UniformRandom(double low, double high) 
-    : distribution_(low, high), low_(low), high_(high) {}
+    : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(0.0, 1.0), low_(0.0), high_(1.0) {}
+  UniformRandom(double threshold, double low, double high) 
+    : ErrorProb(threshold), distribution_(low, high), low_(low), high_(high) {}
   virtual ~UniformRandom() {}
 };
 
@@ -149,9 +149,9 @@ public:
 
   }
   LogNormal(void) 
-    : distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
+    : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
   LogNormal(double mean, double std) 
-    : distribution_(mean, std), mean_(mean), std_(std) {}
+    : ErrorProb(threshold), distribution_(mean, std), mean_(mean), std_(std) {}
   virtual ~LogNormal() {}
 };
 
@@ -189,10 +189,10 @@ public:
 
   }
   Exponential(void) 
-    : distribution_(1.0), lamda_(1.0) {}
+    : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(1.0), lamda_(1.0) {}
 
   Exponential(double lamda) 
-    : distribution_(lamda), lamda_(lamda) {}
+    : ErrorProb(threshold), distribution_(lamda), lamda_(lamda) {}
 
   virtual ~Exponential() {}
 };
@@ -235,9 +235,9 @@ public:
 
   }
   Normal(void) 
-    : distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
+    : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
   Normal(double mean, double std) 
-    : distribution_(mean, std), mean_(mean), std_(std) {}
+    : ErrorProb(threshold), distribution_(mean, std), mean_(mean), std_(std) {}
   virtual ~Normal() {}
 };
 
@@ -275,9 +275,9 @@ public:
   }
 
   Poisson(void) 
-    : distribution_(1.0), mean_(1.0) {}
+    : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(1.0), mean_(1.0) {}
   Poisson(double mean) 
-    : distribution_(mean), mean_(mean) {}
+    : ErrorProb(threshold), distribution_(mean), mean_(mean) {}
   virtual ~Poisson() {}
 };
 
@@ -396,8 +396,14 @@ public:
 };
 
 class CDErrorInjector : public ErrorInjector {
-
   double error_rate_;
+
+  uint32_t level_;          
+  uint32_t rank_in_level_;
+  uint32_t num_cds_in_level_;
+  uint32_t task_in_color_;
+  uint32_t task_size_;
+  uint32_t total_task_size_;
 
 public:
   CDErrorInjector(void) 
@@ -406,9 +412,48 @@ public:
   CDErrorInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
     : ErrorInjector(rand_type, logfile), error_rate_(error_rate) {}
 
+  CDErrorInjector(uint32_t level, uint32_t rank_in_level, uint32_t num_cds_in_level,
+                  uint32_t task_in_color, uint32_t task_size, uint32_t total_task_size,
+                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
+    : ErrorInjector(rand_type, logfile), error_rate_(error_rate) {
+    level_ = level;
+    rank_in_level_ = rank_in_level_;
+    num_cds_in_level_ = num_cds_in_level;
+    task_in_color_ = task_in_color;
+    task_size_ = task_in_color;
+    total_task_size_ = total_task_size;  
+  
+  }
+
   virtual bool InjectAndTest(void)
   {
-    // STUB
+    // Generate random value
+    // Compare with threashold
+    // Depending on compile-time flag indicating statically forcing a task failed,
+    // Check compile-time flag, and if it is set, set the threshold to 1.
+    // Every random variable will be less that 1, so it will be always failed.
+    double random_num = GenRandomNumber();
+    switch(level_) {
+      case INJECTION_ID_0
+      case INJECTION_ID_1
+      case INJECTION_ID_2
+      case INJECTION_ID_3
+      case INJECTION_ID_4
+      case INJECTION_ID_5
+      case INJECTION_ID_6
+      case INJECTION_ID_7
+      case INJECTION_ID_8
+      case INJECTION_ID_9
+      case INJECTION_ID_10
+      case INJECTION_ID_11
+
+    
+    INJECTED_LEVEL == level_
+    switch(level_) {
+      case 0 :
+      case 1 :
+        
+    rand_generator_->GenErrorVal()
     return true;
   }
 

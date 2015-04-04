@@ -343,33 +343,50 @@ namespace cd {
 #endif
 }
 
+#if _CD_DEBUG == 0  // No printouts
 
-//SZ: change the following macro to 1) add "Error: " before all error messages,
-//    2) accept multiple arguments, and 3) assert(0) in ERROR_MESSAGE
-//#define ERROR_MESSAGE(X) printf(X);
+#define DEBUG(FP, ...) 
+
+#elif _CD_DEBUG == 1  // Print to fileout
+
+#define DEBUG(FP, ...) \
+  fprintf(FP, __VA_ARGS__)
+
+#define DEBUG(...) \
+  fprintf(DEFAULT_FP, __VA_ARGS__)
+
+#elif _CD_DEBUG == 2  // print to stdout
+
+#define DEBUG(...) \
+  fprintf(stdout, __VA_ARGS__)
+
+#else
+
+#define DEBUG(...) \
+  fprintf(stderr, __VA_ARGS__)
+
+#endif
+
+
+//SZ: change the following macro to 
+// 1) add "Error: " before all error messages,
+// 2) accept multiple arguments, and 3) assert(0) in ERROR_MESSAGE
 #define ERROR_MESSAGE(...) {printf("\nError: ");printf(__VA_ARGS__);assert(0);}
-//#ifdef DEBUG
-//#define DEBUG_PRINT(...) {printf(__VA_ARGS__);}
-//#else
-//#define DEBUG_PRINT(...) {}
-//#endif
-
-//SZ: when testing MPI functions, print to files is easier
-#ifdef comm_log 
-#if _DEBUG
-extern FILE * cd_fp;
-#endif
-#endif
 
 #if _DEBUG
   //SZ: change to this if want to compile test_comm_log.cc
   #ifdef comm_log
-//    #define PRINT_DEBUG(...) {fprintf(cd_fp,__VA_ARGS__);}
-    #define PRINT_DEBUG(...) {if(cd::app_side){cd::app_side=false;printf(__VA_ARGS__);cd::app_side = true;}else printf(__VA_ARGS__);}
+    extern FILE * cd_fp;
+    #define PRINT_DEBUG(...) \
+      { if(cd::app_side) {\
+          cd::app_side=false;\
+          printf(__VA_ARGS__);\
+          cd::app_side = true;}\
+        else printf(__VA_ARGS__);\
+      }
   #else
     #define PRINT_DEBUG(...) {printf(__VA_ARGS__);}
   #endif
-
   #define PRINT_DEBUG2(X,Y) printf(X,Y);
 #else
   #define PRINT_DEBUG(...) {}
@@ -389,9 +406,13 @@ extern FILE * cd_fp;
 #define CD_FILEPATH_PFS "./PFS/"
 #define CD_FILEPATH_HDD "./HDD/"
 #define CD_FILEPATH_SSD "./SSD/"
+
 #define dout clog
 
 #define DEFAULT_MEDIUM kDRAM
+
+
+
 /* 
 ISSUE 1 (Kyushick)
 If we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?
@@ -431,8 +452,8 @@ We are increasing the number of reexecution inside Begin(). So, the point of tim
 // Macros for setjump / getcontext
 // So users should call this in their application, not call cd_handle->Begin().
 
-#define CD_Begin(X) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
-//#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
-#define CD_Complete(X) (X)->Complete()   
+//#define CD_Begin(X) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
+////#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
+//#define CD_Complete(X) (X)->Complete()   
 
 #endif

@@ -74,6 +74,7 @@ int  cd::max_tag_task_bit  = 0;
 int  cd::max_tag_rank_bit  = 0;
 #endif
 int cd::myTaskID = 0;
+int cd::totalTaskSize = 1;
 
 namespace cd {
 // Global functions -------------------------------------------------------
@@ -82,7 +83,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   //GONG
   CDPrologue();
-  myTaskID = myTask;
+  myTaskID      = myTask;
+  totalTaskSize = numTask;
 
 #if _DEBUG
   std::string output_filename("./output/output_");
@@ -247,7 +249,12 @@ CDHandle::CDHandle()
 #else
   //profiler_ = new NullProfiler();
 #endif
+
+#if _ERROR_INJECTION_ENABLED
+  error_injector_ = new CDErrorInjector();
+#else
   error_injector_ = NULL;
+#endif
 
   SplitCD = &SplitCD_3D;
 
@@ -277,7 +284,14 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
   //profiler_ = new NullProfiler();
 #endif
 
+#if _ERROR_INJECTION_ENABLED
+  CDNameT cd_name = ptr_cd_->GetCDName();
+  error_injector_ = new CDErrorInjector(cd_name.level(), cd_name.rank_in_level(), 
+                                        cd_name.size(), node_id.task_in_color(), node_id.size(), 
+                                        totalTaskSize);
+#else
   error_injector_ = NULL;
+#endif
 
 //  if(node_id_.size() > 1)
 //    PMPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), PMPI_INFO_NULL, PMPI_COMM_WORLD, &pendingWindow_);
@@ -291,10 +305,17 @@ CDHandle::~CDHandle()
   if(ptr_cd_ != NULL) {
     // We should do this at Destroy(), not creator?
 //    RemoveChild(this);
+    
   } 
   else {  // There is no CD for this CDHandle!!
 
   }
+
+  if(error_injector_ != NULL);
+    delete error_injector_;
+
+  if(profiler_ != NULL);
+    delete profiler_;
 
 }
 
