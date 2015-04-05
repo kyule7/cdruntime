@@ -32,14 +32,16 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-### ***CD runtime system framework*** ###		                                         							**Modified date: 09.26.2014**
+### **CD runtime system framework** ### 		                                         							**Modified date: 09.26.2014**
 
 
-## **[Introduction]** ##
+## ** * Introduction** ##
 
-Containment Domains (CDs) is a library-level approach dealing with low-overhead resilient and scalable execution (see http://lph.ece.utexas.edu/public/CDs). CDs abandon the prevailing one-size-fits-all approach to resilience and instead embrace the diversity of application needs, resilience mechanisms, and the deep hierarchies expected in exascale hardware and software.  CDs give software a means to express resilience concerns intuitively and concisely.  With CDs, software can preserve and restore state in an optimal way within the storage hierarchy  and can efficiently support uncoordinated recovery.  In addition, CDs allow software to tailor error detection, elision (ignoring some errors), and recovery mechanisms to algorithmic and system needs.
+Containment Domains (CDs) is a library-level approach dealing with low-overhead resilient and scalable execution (see [http://lph.ece.utexas.edu/public/CDs](http://lph.ece.utexas.edu/public/CDs)). CDs abandon the prevailing one-size-fits-all approach to resilience and instead embrace the diversity of application needs, resilience mechanisms, and the deep hierarchies expected in exascale hardware and software.  CDs give software a means to express resilience concerns intuitively and concisely.  With CDs, software can preserve and restore state in an optimal way within the storage hierarchy  and can efficiently support uncoordinated recovery.  In addition, CDs allow software to tailor error detection, elision (ignoring some errors), and recovery mechanisms to algorithmic and system needs.
 
-## **[Organization]** ##
+![cd_runtime.png](https://bitbucket.org/repo/nR7Rza/images/652255769-cd_runtime.png)
+
+## ** * Organization** ##
 
 This repository is Containment Domain (CD) runtime system libraries. This consists of four subdirectories.
 
