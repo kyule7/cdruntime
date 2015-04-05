@@ -32,7 +32,8 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-### CD runtime system framework ### 		                                         							**Modified date: 09.26.2014**
+### **CD runtime system framework** ### 		                                         							
+                                                                                                                                                            **Modified date: 09.26.2014**
 
 
 ## **Introduction** ##
