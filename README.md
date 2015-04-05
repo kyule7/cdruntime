@@ -1,3 +1,7 @@
+# **Containment Domains Runtime System** #
+**Modified date: 04.05.2015**
+
+## **Copyright** ##
 Copyright 2014, The University of Texas at Austin 
 All rights reserved.
 
@@ -7,16 +11,20 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met: 
 
+
 1. Redistributions of source code must retain the above copyright
 notice, this list of conditions and the following disclaimer. 
+
 
 2. Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution. 
 
+
 3. Neither the name of the copyright holder nor the names of its
 contributors may be used to endorse or promote products derived from
 this software without specific prior written permission. 
+
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -32,10 +40,15 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-CD runtime system framework										Modified date: 09.26.2014
+
+## **Introduction** ##
+
+Containment Domains (CDs) is a library-level approach dealing with low-overhead resilient and scalable execution (see [http://lph.ece.utexas.edu/public/CDs](http://lph.ece.utexas.edu/public/CDs)). CDs abandon the prevailing one-size-fits-all approach to resilience and instead embrace the diversity of application needs, resilience mechanisms, and the deep hierarchies expected in exascale hardware and software.  CDs give software a means to express resilience concerns intuitively and concisely.  With CDs, software can preserve and restore state in an optimal way within the storage hierarchy  and can efficiently support uncoordinated recovery.  In addition, CDs allow software to tailor error detection, elision (ignoring some errors), and recovery mechanisms to algorithmic and system needs.
+
+[The documentation about CD API](http://lph.ece.utexas.edu/users/CDAPI/) is available online. 
 
 
-[Introduction]
+## **Organization** ##
 
 This repository is Containment Domain (CD) runtime system libraries. This consists of four subdirectories.
 
@@ -48,42 +61,3 @@ This repository is Containment Domain (CD) runtime system libraries. This consis
 4. tools : it contains the tools running with CD runtime system.
 
 5. test : it contains the example codes that is annotated with CD libraris.
-
-
-[Job allocation of runtime system development]
-
-1. Song - Communication logging
-
-2. Kyushick - Overall runtime system operations
-
-3. Jinsuk - Overall runtime system operations
-
-4. Seong-lyong - Libc logging 
-
-
-[TODO]
-
-1. (Kyushick) Reporting CDEntry of local space to the centralized data structure of CDEntry (HeadCD)
-
-2. (Seong-lyong) Runtime logging: Isn’t runtime logging (what Rahul started) kind of critical for recovery, even on a single node?
-
-3. (Song) Communication logging 
-
-4. Some decision framework to map CD to storage for preservation. 
-This is kind of important to be figured out soon, and currently it is selected by changing Macro (MEMORY=0) to preserving to file. 
-This would be involved with error detection mechanism to be applied to current CD or decided statically by auto-tuner before run.
-
-5. BLCR intergration and test for it. We also need some decision framework for the survivality from node failure of a specific CD. 
-By the way, do we also sometimes allow in-memory checkpoint in buddy too?
-
-6. Need to come up with error injection framework.
-Generate OS Error Signals from separate process? 
-(Kyushick: I think what normally people do is just using kill command)
-
-7. (Kyushick) Detaching profiler class to work with runtime.
-
-8. (Kyushick) More interactive visualization of CD runtime system with sight. 
-Need to work on the front-end part of Sight to generate viz-related log file that is appropriate to layout engine which is being developed by Hoa in Utah university.
-
-
-
