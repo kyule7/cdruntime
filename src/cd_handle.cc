@@ -49,6 +49,10 @@ using namespace std;
 cd::DebugBuf cd::dbg;
 #endif
 
+#if _ERROR_INJECTION_ENABLED
+MemoryErrorInjector *CDHandle::memory_error_injector_ = NULL;
+#endif
+
 /// KL
 /// uniquePath is a singleton object per process, which is used for CDPath.
 CDPath *CDPath::uniquePath_;
@@ -1119,18 +1123,16 @@ float CDHandle::RequireErrorProbability (SysErrT error_type, uint32_t error_num,
 
 
 
-#if _ERROR_INJECTION_ENABLED
-void CDHandle::RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
-{ CDHandle::memory_error_injector_ = memory_error_injector; }
-
-
-void CDHandle::RegisterErrorInjector(CDErrorInjector *cd_error_injector)
-{
-  cd_error_injector_ = cd_error_injector;
-  cd_error_injector_->task_in_color_ = task_in_color();
-  cd_error_injector_->rank_in_level_ = rank_in_level();
-}
-#endif
+//void CDHandle::RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
+//{ CDHandle::memory_error_injector_ = memory_error_injector; }
+//
+//
+//inline void CDHandle::RegisterErrorInjector(CDErrorInjector *cd_error_injector)
+//{
+//  cd_error_injector_ = cd_error_injector;
+//  cd_error_injector_->task_in_color_ = task_in_color();
+//  cd_error_injector_->rank_in_level_ = rank_in_level();
+//}
 
 //CDEntry *CDHandle::InternalGetEntry(std::string entry_name)
 //{

@@ -834,7 +834,10 @@ class cd::CDHandle {
  */
 
 #if _ERROR_INJECTION_ENABLED
-    void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector);
+    inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
+    { memory_error_injector_ = memory_error_injector; }
+//#else
+//    inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector) {}
 #endif
 
 /**@brief Register error injection method into CD runtime system.
@@ -852,7 +855,14 @@ class cd::CDHandle {
  * @param [in] newly created error injector object.
  */
 #if _ERROR_INJECTION_ENABLED
-    void RegisterErrorInjector(CDErrorInjector *cd_error_injector);
+    inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector)
+    {
+      cd_error_injector_ = cd_error_injector;
+      cd_error_injector_->task_in_color_ = task_in_color();
+      cd_error_injector_->rank_in_level_ = rank_in_level();
+    }
+//#else
+//    inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector) {}
 #endif
 
  /** @} */ // Ends cd_split

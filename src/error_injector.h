@@ -52,8 +52,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <iostream>
 #include <random>
 #include <cstdio>
+#include "cd_def_internal.h"
+#include "cd_global.h"
 
+using namespace cd;
 #define DEFAULT_ERROR_THRESHOLD 0.0
+
 class ErrorProb {
 protected:
   std::random_device generator_;
@@ -318,6 +322,13 @@ public:
     threshold_  = threshold;
   }
 
+  ErrorInjector(bool enabled, double threshold, RandType random_type=kUniform, FILE *logfile=stdout) {
+    rand_generator_ = CreateErrorProb(random_type);
+    enabled_    = false;
+    logfile_    = stdout;
+    threshold_  = threshold;
+  }
+
   virtual ~ErrorInjector(void) {}
 
   void Init(RandType random_type, FILE *logfile=stdout) {
@@ -379,6 +390,7 @@ public:
 
 };
 
+
 class CDErrorInjector : public ErrorInjector {
   friend class cd::CDHandle;
 
@@ -394,13 +406,13 @@ public:
   }
 
   CDErrorInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
-    : ErrorInjector(error_rate, rand_type, logfile) {
+    : ErrorInjector(true, error_rate, rand_type, logfile) {
     force_to_fail_ = false;
   }
 
   CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail, 
-                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
-    : ErrorInjector(error_rate, rand_type, logfile) {
+                  double error_rate) 
+    : ErrorInjector(true, error_rate, kUniform, stdout) {
     for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
       cd_to_fail_.push_back(*it);
     }
@@ -410,9 +422,20 @@ public:
     force_to_fail_ = true;
   }
 
+  CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail, 
+                  double error_rate, RandType rand_type, FILE *logfile) 
+    : ErrorInjector(true, error_rate, rand_type, logfile) {
+    for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
+      cd_to_fail_.push_back(*it);
+    }
+    for(auto it=task_list_to_fail.begin(); it!=task_list_to_fail.end(); ++it) {
+      task_to_fail_.push_back(*it);
+    }
+    force_to_fail_ = true;
+  }
   CDErrorInjector(uint32_t cd_to_fail, uint32_t task_to_fail, 
                   double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
-    : ErrorInjector(error_rate, rand_type, logfile) {
+    : ErrorInjector(true, error_rate, rand_type, logfile) {
     cd_to_fail_.push_back(cd_to_fail);
     task_to_fail_.push_back(task_to_fail); 
     force_to_fail_ = true;
@@ -452,27 +475,30 @@ public:
 
   virtual bool InjectAndTest()
   {
+    if(enabled_ == false) return false;
+
     if( force_to_fail_ ) {
-      std::cout << "force_to_fail is turned on. ";
+      dbg << "force_to_fail is turned on. ";
       for(auto it=cd_to_fail_.begin(); it!=cd_to_fail_.end(); ++it) {
         if(*it == rank_in_level_) {
-          std::cout << "cd failed rank_in_level #" << *it << std::endl;
+          dbg << "cd failed rank_in_level #" << *it << std::endl;
           return true;
         }
       }
 
       for(auto it=task_to_fail_.begin(); it!=task_to_fail_.end(); ++it) {
         if(*it == task_in_color_) {
-          std::cout << "task failed task_in_color #" << *it << std::endl;
+          dbg << "task failed task_in_color #" << *it << std::endl;
           return true;
         }
       }
 
-      std::cout  << std::endl;
+      dbg  << std::endl;
     }
     double rand_var = rand_generator_->GenErrorVal();
     bool error = threshold_ < rand_var;
-    printf("task #%d failed : %f(threshold) < %f(random var)\n", task_in_color_, threshold_, rand_var);
+    CD_DEBUG("task #%d failed : %f(threshold) < %f(random var)\n", task_in_color_, threshold_, rand_var);
+    enabled_ = false;
     return error;
   }
 

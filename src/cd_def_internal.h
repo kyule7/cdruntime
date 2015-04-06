@@ -345,24 +345,24 @@ namespace cd {
 
 #if _CD_DEBUG == 0  // No printouts
 
-#define DEBUG(FP, ...) 
+#define CD_DEBUG(FP, ...) 
 
 #elif _CD_DEBUG == 1  // Print to fileout
 
-#define DEBUG(FP, ...) \
+#define CD_DEBUG(FP, ...) \
   fprintf(FP, __VA_ARGS__)
 
-#define DEBUG(...) \
+#define CD_DEBUG(...) \
   fprintf(DEFAULT_FP, __VA_ARGS__)
 
 #elif _CD_DEBUG == 2  // print to stdout
 
-#define DEBUG(...) \
+#define CD_DEBUG(...) \
   fprintf(stdout, __VA_ARGS__)
 
 #else
 
-#define DEBUG(...) \
+#define CD_DEBUG(...) \
   fprintf(stderr, __VA_ARGS__)
 
 #endif
