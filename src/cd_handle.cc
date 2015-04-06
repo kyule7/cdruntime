@@ -103,6 +103,10 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   root_cd_handle->profiler_->InitViz();
 #endif
 
+#if _ERROR_INJECTION_ENABLED
+  CDHandle::memory_error_injector_ = NULL;
+#endif
+
 #if _DEBUG
   dbg.flush();
 #endif
@@ -148,6 +152,12 @@ void CD_Finalize(DebugBuf *debugBuf)
 #if _DEBUG
   if(debugBuf != NULL) WriteDbgStream(debugBuf);
 #endif
+
+#if _ERROR_INJECTION_ENABLED
+  if(CDHandle::memory_error_injector_ != NULL);
+    delete CDHandle::memory_error_injector_;
+#endif
+
   CDEpilogue();
 }
 
@@ -251,9 +261,7 @@ CDHandle::CDHandle()
 #endif
 
 #if _ERROR_INJECTION_ENABLED
-  error_injector_ = new CDErrorInjector();
-#else
-  error_injector_ = NULL;
+  cd_error_injector_ = NULL;
 #endif
 
   SplitCD = &SplitCD_3D;
@@ -285,12 +293,7 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
 #endif
 
 #if _ERROR_INJECTION_ENABLED
-  CDNameT cd_name = ptr_cd_->GetCDName();
-  error_injector_ = new CDErrorInjector(cd_name.level(), cd_name.rank_in_level(), 
-                                        cd_name.size(), node_id.task_in_color(), node_id.size(), 
-                                        totalTaskSize);
-#else
-  error_injector_ = NULL;
+  cd_error_injector_ = NULL;
 #endif
 
 //  if(node_id_.size() > 1)
@@ -311,8 +314,10 @@ CDHandle::~CDHandle()
 
   }
 
-  if(error_injector_ != NULL);
-    delete error_injector_;
+#if _ERROR_INJECTION_ENABLED
+  if(cd_error_injector_ != NULL);
+    delete cd_error_injector_;
+#endif
 
 #if _PROFILER
   if(profiler_ != NULL);
@@ -746,6 +751,12 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   }
 #endif
 
+
+#if _ERROR_INJECTION_ENABLED
+  if(memory_error_injector_ != NULL) {
+    memory_error_injector_->Inject();
+  }
+#endif
   
   /// Preserve meta-data
   /// Accumulated volume of data to be preserved for Sequential CDs. 
@@ -862,12 +873,15 @@ CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 //    }
 #endif
 
-  if(error_injector_ != NULL) {
-    if(error_injector_->InjectAndTest()) {
+
+#if _ERROR_INJECTION_ENABLED
+  if(cd_error_injector_ != NULL) {
+    if(cd_error_injector_->InjectAndTest()) {
       test = false;
       err = kAppError;
     }
   }
+#endif
 
   CD::CDInternalErrT internal_err = ptr_cd_->Assert(test);
   if(internal_err == CD::CDInternalErrT::kErrorReported)
@@ -923,15 +937,20 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     SetMailBox(kErrorOccurred);
     err = kAppError;
   }
-  else if(error_injector_ != NULL) {
-    if(error_injector_->InjectAndTest()) {
-      dbg << "or HERE?" << endl;
-      event = kErrorOccurred;
-      SetMailBox(kErrorOccurred);
-      err = kAppError;
-    }
-  }
+  else {
 
+#if _ERROR_INJECTION_ENABLED
+    if(cd_error_injector_ != NULL) {
+      if(cd_error_injector_->InjectAndTest()) {
+        dbg << "or HERE?" << endl;
+        event = kErrorOccurred;
+        SetMailBox(kErrorOccurred);
+        err = kAppError;
+      }
+    }
+#endif
+
+  }
 
 
 //  CDEventT event = CDEventT::kNoEvent;
@@ -1096,6 +1115,22 @@ float CDHandle::RequireErrorProbability (SysErrT error_type, uint32_t error_num,
 
   return 0;
 }
+
+
+
+
+#if _ERROR_INJECTION_ENABLED
+void CDHandle::RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
+{ CDHandle::memory_error_injector_ = memory_error_injector; }
+
+
+void CDHandle::RegisterErrorInjector(CDErrorInjector *cd_error_injector)
+{
+  cd_error_injector_ = cd_error_injector;
+  cd_error_injector_->task_in_color_ = task_in_color();
+  cd_error_injector_->rank_in_level_ = rank_in_level();
+}
+#endif
 
 //CDEntry *CDHandle::InternalGetEntry(std::string entry_name)
 //{

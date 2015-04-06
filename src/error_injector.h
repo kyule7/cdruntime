@@ -51,23 +51,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <cstdio>
 #include <iostream>
 #include <random>
-#define DEFAULT_ERROR_THRESHOLD 0.0
+#include <cstdio>
 
+#define DEFAULT_ERROR_THRESHOLD 0.0
 class ErrorProb {
 protected:
-  double threshold_;
-#ifndef GEN_TRUE_RANDOM
-  std::default_random_engine generator_;
-#else
   std::random_device generator_;
-#endif
 public:
-  virtual bool GenErrorVal(void)=0;
+  virtual double GenErrorVal(void)=0;
 
-  ErrorProb(void) 
-    : threshold_(0.0) {}
-  ErrorProb(double threshold) 
-    : threshold_(threshold) {}
+  ErrorProb(void) {}
   virtual ~ErrorProb(void) {}
 };
 
@@ -77,10 +70,11 @@ protected:
   double low_;
   double high_;
 public:
-  bool GenErrorVal(void) {
+  double GenErrorVal(void) {
     distribution_.reset();
-    double error = distribution_(generator_);
-    return error >= threshold_;
+    double rand_var = distribution_(generator_);
+    std::cout << "rand var: " <<rand_var << std::endl;
+    return rand_var;
   }
 
   void TestErrorProb(int num_bucket=10) {
@@ -108,7 +102,7 @@ public:
   }
 
   UniformRandom(void) 
-    : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(0.0, 1.0), low_(0.0), high_(1.0) {}
+    : distribution_(0.0, 1.0), low_(0.0), high_(1.0) {}
   UniformRandom(double low, double high) 
     : distribution_(low, high), low_(low), high_(high) {}
   virtual ~UniformRandom() {}
@@ -120,10 +114,9 @@ protected:
   double mean_;
   double std_;
 public:
-  bool GenErrorVal(void) {
+  double GenErrorVal(void) {
     distribution_.reset();
-    double error = distribution_(generator_);
-    return error >= threshold_;
+    return distribution_(generator_);
   }
 
   void TestErrorProb(int num_bucket=10) {
@@ -149,7 +142,7 @@ public:
 
   }
   LogNormal(void) 
-    : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
+    : distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
   LogNormal(double mean, double std) 
     : distribution_(mean, std), mean_(mean), std_(std) {}
   virtual ~LogNormal() {}
@@ -160,10 +153,9 @@ protected:
   std::exponential_distribution<double> distribution_;
   double lamda_;
 public:
-  bool GenErrorVal(void) {
+  double GenErrorVal(void) {
     distribution_.reset();
-    double error = distribution_(generator_);
-    return error >= threshold_;
+    return distribution_(generator_);
   }
 
   void TestErrorProb(int num_bucket=10) {
@@ -189,7 +181,7 @@ public:
 
   }
   Exponential(void) 
-    : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(1.0), lamda_(1.0) {}
+    : distribution_(1.0), lamda_(1.0) {}
 
   Exponential(double lamda) 
     : distribution_(lamda), lamda_(lamda) {}
@@ -203,11 +195,9 @@ protected:
   double mean_;
   double std_;
 public:
-  bool GenErrorVal(void) {
+  double GenErrorVal(void) {
     distribution_.reset();
-    double error = distribution_(generator_);
-    if(error < 0) error *= -1;
-    return error >= threshold_;
+    return distribution_(generator_);
   }
 
   void TestErrorProb(int num_bucket=10) {
@@ -235,7 +225,7 @@ public:
 
   }
   Normal(void) 
-    : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
+    : distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
   Normal(double mean, double std) 
     : distribution_(mean, std), mean_(mean), std_(std) {}
   virtual ~Normal() {}
@@ -246,9 +236,8 @@ protected:
   std::poisson_distribution<int> distribution_;
   double mean_;
 public:
-  bool GenErrorVal(void) {
-    int error = distribution_(generator_);
-    return static_cast<double>(error) >= threshold_;
+  double GenErrorVal(void) {
+    return static_cast<double>(distribution_(generator_));
   }
   
   void TestErrorProb(int num_bucket=10) {
@@ -275,21 +264,75 @@ public:
   }
 
   Poisson(void) 
-    : ErrorProb(DEFAULT_ERROR_THRESHOLD), distribution_(1.0), mean_(1.0) {}
+    : distribution_(1.0), mean_(1.0) {}
   Poisson(double mean) 
     : distribution_(mean), mean_(mean) {}
   virtual ~Poisson() {}
 };
 
 
-enum RandType { kUniform = 0,
-                kExponential,
-                kLogNormal,
-                kNormal,
-                kPoisson
-              };
-static inline ErrorProb *
-CreateErrorProb(RandType random_type)
+  enum RandType { kUniform = 0,
+                  kExponential,
+                  kLogNormal,
+                  kNormal,
+                  kPoisson
+                };
+
+
+/**@addtogroup error_injector
+ * @{
+ */
+
+
+/**@class ErrorInjector
+ * @brief Base class to provide interface to inject error.
+ * 
+ * User will inherit this base class for every error injector 
+ * whose error injection will be invoked internally in CD runtime.
+ * - \ref sec_example_error_injection
+ * @{
+ */
+class ErrorInjector {
+public:
+
+
+protected:
+  ErrorProb *rand_generator_;
+  bool enabled_;
+  FILE *logfile_;
+  double threshold_;
+
+public:
+
+  ErrorInjector(void) {
+    rand_generator_ = new UniformRandom();
+    enabled_    = false;
+    logfile_    = stdout;
+    threshold_  = DEFAULT_ERROR_THRESHOLD;
+  }
+
+  ErrorInjector(double threshold, RandType random_type=kUniform, FILE *logfile=stdout) {
+    rand_generator_ = CreateErrorProb(random_type);
+    enabled_    = false;
+    logfile_    = stdout;
+    threshold_  = threshold;
+  }
+
+  virtual ~ErrorInjector(void) {}
+
+  void Init(RandType random_type, FILE *logfile=stdout) {
+    if(rand_generator_ == NULL)
+      rand_generator_ = CreateErrorProb(random_type);
+    enabled_    = false;
+    logfile_    = stdout;
+  }
+  
+  void Enable(void)  { enabled_=true; }
+  void Disable(void) { enabled_=false; }
+  void SetLogfile(FILE *logfile) { logfile_ = logfile; }
+  virtual bool InjectAndTest(void)=0;
+protected:
+  inline ErrorProb *CreateErrorProb(RandType random_type)
 {
   ErrorProb *random_number = NULL;
     switch(random_type) {
@@ -312,67 +355,7 @@ CreateErrorProb(RandType random_type)
         random_number = new Exponential();
     }
   return random_number;
-}
-
-
-
-
-/**@addtogroup error_injector
- * @{
- */
-
-
-/**@class ErrorInjector
- * @brief Base class to provide interface to inject error.
- * 
- * User will inherit this base class for every error injector 
- * whose error injection will be invoked internally in CD runtime.
- * - \ref sec_example_error_injection
- * @{
- */
-class ErrorInjector {
-public:
-//  enum RandType { kUniform = 0,
-//                  kExponential,
-//                  kLogNormal,
-//                  kNormal,
-//                  kPoisson
-//                };
-
-protected:
-  ErrorProb *rand_generator_;
-  bool enabled_;
-  FILE *logfile_;
-
-public:
-
-  ErrorInjector(void) {
-    rand_generator_ = new UniformRandom();
-    enabled_    = false;
-    logfile_    = stdout;
-  }
-
-  ErrorInjector(RandType random_type=kUniform, FILE *logfile=stdout) {
-    rand_generator_ = CreateErrorProb(random_type);
-    enabled_    = false;
-    logfile_    = stdout;
-  }
-
-  virtual ~ErrorInjector(void) {}
-
-  void Init(RandType random_type, FILE *logfile=stdout) {
-    if(rand_generator_ == NULL)
-      rand_generator_ = CreateErrorProb(random_type);
-    enabled_    = false;
-    logfile_    = stdout;
-  }
-  
-  void Enable(void)  { enabled_=true; }
-  void Disable(void) { enabled_=false; }
-  void SetLogfile(FILE *logfile) { logfile_ = logfile; }
-  virtual void Inject(void)=0;
-  virtual bool InjectAndTest(void)=0;
-      
+}     
 };
 
 /** @} */ // Ends error_injector
@@ -384,62 +367,113 @@ class MemoryErrorInjector : public ErrorInjector {
 
 public:
   MemoryErrorInjector(void *data=NULL, uint64_t size=0)
-    : ErrorInjector(kUniform, stdout), data_(data), size_(size) {}
+    : ErrorInjector(0.0, kUniform, stdout), data_(data), size_(size) {}
 
-  MemoryErrorInjector(void *data, uint64_t size, RandType random_type, FILE *logfile)
-    : ErrorInjector(random_type, logfile), data_(data), size_(size) {}
+  MemoryErrorInjector(void *data, uint64_t size, double error_rate, RandType random_type=kUniform, FILE *logfile=stdout)
+    : ErrorInjector(error_rate, random_type, logfile), data_(data), size_(size) {}
   virtual ~MemoryErrorInjector() {}
 
+  virtual void Inject(void) {}
   virtual int64_t SetRange(uint64_t range)=0;
   virtual void PushRange(void *data, uint64_t ndata, uint64_t sdata, char *desc)=0;
 
 };
 
 class CDErrorInjector : public ErrorInjector {
-  double error_rate_;
+  friend class cd::CDHandle;
 
-  uint32_t level_;          
+  std::vector<uint32_t> cd_to_fail_;
+  std::vector<uint32_t> task_to_fail_;
   uint32_t rank_in_level_;
-  uint32_t num_cds_in_level_;
   uint32_t task_in_color_;
-  uint32_t task_size_;
-  uint32_t total_task_size_;
-
+  bool force_to_fail_;
 public:
   CDErrorInjector(void) 
-    : ErrorInjector(kUniform, stdout), error_rate_(0.0) {}
-
-  CDErrorInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
-    : ErrorInjector(rand_type, logfile), error_rate_(error_rate) {}
-
-  CDErrorInjector(uint32_t level, uint32_t rank_in_level, uint32_t num_cds_in_level,
-                  uint32_t task_in_color, uint32_t task_size, uint32_t total_task_size,
-                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
-    : ErrorInjector(rand_type, logfile), error_rate_(error_rate) {
-    level_ = level;
-    rank_in_level_ = rank_in_level_;
-    num_cds_in_level_ = num_cds_in_level;
-    task_in_color_ = task_in_color;
-    task_size_ = task_in_color;
-    total_task_size_ = total_task_size;  
-  
+    : ErrorInjector(0.0, kUniform, stdout) {
+    force_to_fail_ = false;
   }
 
-  virtual bool InjectAndTest(void)
+  CDErrorInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
+    : ErrorInjector(error_rate, rand_type, logfile) {
+    force_to_fail_ = false;
+  }
+
+  CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail, 
+                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
+    : ErrorInjector(error_rate, rand_type, logfile) {
+    for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
+      cd_to_fail_.push_back(*it);
+    }
+    for(auto it=task_list_to_fail.begin(); it!=task_list_to_fail.end(); ++it) {
+      task_to_fail_.push_back(*it);
+    }
+    force_to_fail_ = true;
+  }
+
+  CDErrorInjector(uint32_t cd_to_fail, uint32_t task_to_fail, 
+                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
+    : ErrorInjector(error_rate, rand_type, logfile) {
+    cd_to_fail_.push_back(cd_to_fail);
+    task_to_fail_.push_back(task_to_fail); 
+    force_to_fail_ = true;
+  }
+
+
+  CDErrorInjector(uint32_t cd_to_fail, uint32_t task_to_fail, uint32_t rank_in_level, uint32_t task_in_color,
+                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
+    : ErrorInjector(error_rate, rand_type, logfile) {
+    cd_to_fail_.push_back(cd_to_fail);
+    task_to_fail_.push_back(task_to_fail); 
+    rank_in_level_ = rank_in_level;
+    task_in_color_ = task_in_color;
+    force_to_fail_ = true;
+  }
+
+  CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail,
+                  uint32_t rank_in_level, uint32_t task_in_color,
+                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
+    : ErrorInjector(error_rate, rand_type, logfile) {
+    for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
+      cd_to_fail_.push_back(*it);
+    }
+    for(auto it=task_list_to_fail.begin(); it!=task_list_to_fail.end(); ++it) {
+      task_to_fail_.push_back(*it);
+    }
+ 
+    rank_in_level_ = rank_in_level;
+    task_in_color_ = task_in_color;
+    force_to_fail_ = true;
+  }
+  void RegisterTarget(uint32_t rank_in_level, uint32_t task_in_color)
   {
-//    // Generate random value
-//    // Compare with threashold
-//    // Depending on compile-time flag indicating statically forcing a task failed,
-//    // Check compile-time flag, and if it is set, set the threshold to 1.
-//    // Every random variable will be less that 1, so it will be always failed.
-//    double random_num = GenRandomNumber();
-//    if(INJECTED_LEVEL_0 == 
-//    switch(level_) {
-//      case 0 :
-//      case 1 :
-//        
-//    rand_generator_->GenErrorVal()
-    return true;
+    rank_in_level_ = rank_in_level;
+    task_in_color_ = task_in_color;
+  }
+
+  virtual bool InjectAndTest()
+  {
+    if( force_to_fail_ ) {
+      std::cout << "force_to_fail is turned on. ";
+      for(auto it=cd_to_fail_.begin(); it!=cd_to_fail_.end(); ++it) {
+        if(*it == rank_in_level_) {
+          std::cout << "cd failed rank_in_level #" << *it << std::endl;
+          return true;
+        }
+      }
+
+      for(auto it=task_to_fail_.begin(); it!=task_to_fail_.end(); ++it) {
+        if(*it == task_in_color_) {
+          std::cout << "task failed task_in_color #" << *it << std::endl;
+          return true;
+        }
+      }
+
+      std::cout  << std::endl;
+    }
+    double rand_var = rand_generator_->GenErrorVal();
+    bool error = threshold_ < rand_var;
+    printf("task #%d failed : %f(threshold) < %f(random var)\n", task_in_color_, threshold_, rand_var);
+    return error;
   }
 
   virtual ~CDErrorInjector(void) {}
@@ -449,17 +483,14 @@ public:
 
 
 class NodeFailureInjector : public ErrorInjector {
-
-  double error_rate_;
-
 public:
   NodeFailureInjector(void) 
-    : ErrorInjector(kUniform, stdout), error_rate_(0.0) {}
+    : ErrorInjector(0.0, kUniform, stdout) {}
 
   NodeFailureInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
-    : ErrorInjector(rand_type, logfile), error_rate_(error_rate) {}
+    : ErrorInjector(error_rate, rand_type, logfile) {}
 
-  virtual bool InjectAndTest(void)=0;
+  virtual bool InjectAndTest(void) { return false; }
   virtual ~NodeFailureInjector(void) {}
 };
 

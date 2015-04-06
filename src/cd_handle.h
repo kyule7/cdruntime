@@ -153,6 +153,9 @@ class cd::CDHandle {
   friend class cd::CD;
   friend class cd::HeadCD;
   friend class cd::CDEntry;
+  friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+  friend void CD_Finalize(DebugBuf *debugBuf);
+
   public:
 
 /**@defgroup cd_split CD split interface
@@ -183,7 +186,10 @@ class cd::CDHandle {
     CD    *ptr_cd_;   //!< Pointer to CD object which will not exposed to users.
     NodeID node_id_;  //!< NodeID contains the information to access to the task.
 
-    ErrorInjector *error_injector_; //!< Error injector interface.
+#if _ERROR_INJECTION_ENABLED
+    CDErrorInjector *cd_error_injector_; //!< Error injector interface.
+    static MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.
+#endif
 
 #if _PROFILER 
     Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
@@ -809,6 +815,47 @@ class cd::CDHandle {
    /** @} */ // End cd_error_probability group  ==================================================
 
 
+/**@addtogroup error_injector
+ * @{
+ */
+/**@brief Register memory error injection method into CD runtime system.
+ *
+ * This is registered once in a program generally, and will be invoked at Preserve().
+ * Then, some location in the application data can be corrupted (manipulated) by CD runtime,
+ * and application will perform its computation with this corrupted value.
+ * The wrong results from wrong inputs will be supposed to be detected at the end of CD.
+ * This error injection is used for development phase, not in production run.
+ * 
+ * So, ERROR_INJECTION_ENABLED=0 to turn off this error injection functinality.
+ * Even though there is some code lines regarding error injection, 
+ * it will not affect any errors with this compile-time flag off.
+ * -\ref sec_example_error_injection
+ * @param [in] newly created memory error injector object.
+ */
+
+#if _ERROR_INJECTION_ENABLED
+    void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector);
+#endif
+
+/**@brief Register error injection method into CD runtime system.
+ * 
+ * This is registered per CDHandle::Create(),
+ * otherwise error injection information will be passed from parent. 
+ * (Just task list to fail, not CD list to fail. It is because CD hierarchy could be changed by CDHandle::Create(), 
+ * but task ID (mpi rank in MPI version) will be invariant.)
+ * 
+ * This error injection is used for development phase, not in production run.
+ * So, ERROR_INJECTION_ENABLED=0 to turn off this error injection functinality.
+ * Even though there is some code lines regarding error injection, 
+ * it will not affect any errors with this compile-time flag off.
+ * -\ref sec_example_error_injection
+ * @param [in] newly created error injector object.
+ */
+#if _ERROR_INJECTION_ENABLED
+    void RegisterErrorInjector(CDErrorInjector *cd_error_injector);
+#endif
+
+ /** @} */ // Ends cd_split
 
 
 /** \addtogroup PGAS_funcs
