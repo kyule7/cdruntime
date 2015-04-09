@@ -324,7 +324,7 @@ public:
 
   ErrorInjector(bool enabled, double threshold, RandType random_type=kUniform, FILE *logfile=stdout) {
     rand_generator_ = CreateErrorProb(random_type);
-    enabled_    = false;
+    enabled_    = enabled;
     logfile_    = stdout;
     threshold_  = threshold;
   }
@@ -420,6 +420,7 @@ public:
       task_to_fail_.push_back(*it);
     }
     force_to_fail_ = true;
+    dbg << "WOW CDErrorInjector created!" << endl;
   }
 
   CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail, 
@@ -494,10 +495,14 @@ public:
       }
 
       dbg  << std::endl;
+//      enabled_ = false; // Turn off error injection in the reexecution.
+      return false; // if it reach this point. No tasks/CDs are registered to be failed.
+                    // So, return false.
     }
     double rand_var = rand_generator_->GenErrorVal();
     bool error = threshold_ < rand_var;
     CD_DEBUG("task #%d failed : %f(threshold) < %f(random var)\n", task_in_color_, threshold_, rand_var);
+    dbg << "WOW" << endl;
     enabled_ = false;
     return error;
   }

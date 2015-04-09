@@ -857,15 +857,16 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     need_reexec = false;
     //this->Recover(); 
     dbg << "\n\n\n\n Reexec from level #" << reexec_level<< " from " << level() << "\n\n\n"<< endl;
-    CDHandle *cdh = CDPath::GetCDLevel(reexec_level);
-    CDHandle *curr_cdh = CDPath::GetCurrentCD();
-//    while(cdh != curr_cdh) {
-//      curr_cdh->ptr_cd()->Complete();
-//      curr_cdh->ptr_cd()->Destroy();
-//      curr_cdh = CDPath::GetParentCD(curr_cdh->level());
-//    }
-    
-    curr_cdh->ptr_cd()->Recover(); 
+//    CDHandle *curr_cdh = CDPath::GetCurrentCD();
+////    CDHandle *cdh = CDPath::GetCDLevel(reexec_level);
+////    while(cdh != curr_cdh) {
+////      curr_cdh->ptr_cd()->Complete();
+////      curr_cdh->ptr_cd()->Destroy();
+////      curr_cdh = CDPath::GetParentCD(curr_cdh->level());
+////    }
+//    
+//    curr_cdh->ptr_cd()->Recover(); 
+    Recover();
   }
 
 

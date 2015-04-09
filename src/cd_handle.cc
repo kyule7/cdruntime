@@ -151,7 +151,7 @@ void CD_Finalize(DebugBuf *debugBuf)
 
   CDPath::GetRootCD()->Destroy();
   Internal::Finalize();
-  dbg << "========================= Finalize ["  << myTaskID <<"] ==============================="<< endl;
+  CD_DEBUG("========================= Finalize [%d] ===============================\n", myTaskID);
 
 #if _DEBUG
   if(debugBuf != NULL) WriteDbgStream(debugBuf);
@@ -431,7 +431,7 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
   //  one doesn't really care about the rank-order of the processes in the new communicator.  
 
   // Create CDHandle for multiple tasks (MPI rank or threads)
-  dbg << "check mode : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
+  CD_DEBUG("check mode : %d at level %d\n", ptr_cd()->cd_exec_mode_,  ptr_cd()->level());
 
   //CheckMailBox();
 
@@ -445,18 +445,12 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
   ColorT new_comm;
   NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, new_size);
 
-  cout << "[Before] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //dbgBreak();
+  CD_DEBUG("[Before] old: %d, new: %d\n", node_id_, new_node_id);
+ 
   if(num_children > 1) {
-    dbg<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl; //dbgBreak();
-    cout << "task id: "<<node_id_.task_in_color() <<", size: " << node_id_.size() <<", num_child: "<<num_children<< endl;
     err = SplitCD(node_id_.task_in_color(), node_id_.size(), num_children, new_color, new_task);
-    dbg<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl; //dbgBreak();
-    cout << "before new_color : " << new_color << endl;
-
     err = GetNewNodeID(node_id_.color(), new_color, new_task, new_node_id);
-    cout << "new_color : " << new_color << endl;
     assert(new_size == new_node_id.size());
-
   }
   else if(num_children == 1) {
     err = GetNewNodeID(new_node_id);
@@ -465,32 +459,23 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
     ERROR_MESSAGE("Number of children to create is wrong.\n");
   }
 
-//  Sync();
-//  for(int i=0; i<node_id_.task_in_color()*100000; i++) { int a = 5 * 5; } 
-//  dbg << "[After] old: " << node_id_ <<", new: " << new_node_id << endl << endl; //dbgBreak();
-
   SetHead(new_node_id);
+
   // Generate CDID
-  cout << "new_color : " << new_color << " in "<< node_id_ << endl;
+  CD_DEBUG("new_color : %d in %d\n", new_color, node_id_);
+
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
-  cout<<"~~~~~~~~before create cd obj~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<dbg; //dbgBreak();
 
-//  if(!ptr_cd()->remote_entry_directory_map_.empty())
-
-  dbg << "Remote Entry Dir size:  "<< ptr_cd_->remote_entry_directory_map_.size() << endl;
+  CD_DEBUG("Remote Entry Dir size: %d", ptr_cd_->remote_entry_directory_map_.size());
 
   CollectHeadInfoAndEntry(new_node_id); 
 
-  cout << "done collect to head" << endl;
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
   CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
-  cout << "done collect to head" << endl;
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
-
-//  dbg<<"push back cd"<<ptr_cd()->GetCDID().level_<<endl;
 
   if(err<0) {
     ERROR_MESSAGE("CDHandle::Create failed.\n"); assert(0);
@@ -599,7 +584,8 @@ CDErrT CDHandle::Destroy(bool collective)
   }
 
 #if _PROFILER
-  dbg << "calling finish profiler" <<endl;
+  CD_DEBUG("Calling finish profiler\n");
+
   //if(ptr_cd()->cd_exec_mode_ == 0) { 
     profiler_->FinishProfile();
   //}
@@ -609,6 +595,7 @@ CDErrT CDHandle::Destroy(bool collective)
   assert(CDPath::GetCDPath()->back() != NULL);
 
   err = ptr_cd()->Destroy();
+
 //  delete ptr_cd_;
   delete CDPath::GetCDPath()->back();
   CDPath::GetCDPath()->pop_back();
@@ -825,6 +812,7 @@ int     CDHandle::task_in_color(void)  const { return node_id_.task_in_color(); 
 int     CDHandle::head(void)           const { return node_id_.head(); }
 int     CDHandle::task_size(void)      const { return node_id_.size(); }
 
+CDExecMode CDHandle::GetExecMode(void) const { return ptr_cd_->cd_exec_mode_; }
 // FIXME
 bool CDHandle::IsHead(void) const { return node_id_.IsHead(); }
 
@@ -944,8 +932,11 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   else {
 
 #if _ERROR_INJECTION_ENABLED
+
+    dbg << "WOW it is before" << endl;
     if(cd_error_injector_ != NULL) {
-      if(cd_error_injector_->InjectAndTest()) {
+      dbg << "WOW it is after : # reexec: "<< ptr_cd_->num_reexecution_ <<", exec mode : " << kExecution << " level : " << level() << endl;
+      if(cd_error_injector_->InjectAndTest() && GetExecMode() != kReexecution) {
         dbg << "or HERE?" << endl;
         event = kErrorOccurred;
         SetMailBox(kErrorOccurred);
@@ -1248,6 +1239,4 @@ jmp_buf* CDHandle::jump_buffer()
   }
 } 
 */
-
-
 

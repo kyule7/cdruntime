@@ -93,11 +93,11 @@ int test_preemption()
   CD_Begin(child_lv1);
   dbg2 << "child level 1-------------------------------------\n" << endl;
 
-  child_lv1->RegisterErrorInjector(new CDErrorInjector({},{3},0.0));
+  child_lv1->RegisterErrorInjector(new CDErrorInjector({},{},0.0));
 
   CDHandle* child_lv2=child_lv1->Create(LV2, "CD2", kStrict | kDRAM, 0, 0, &err);
   
-  child_lv2->RegisterErrorInjector(new CDErrorInjector({2,6},{},0.0));
+  child_lv2->RegisterErrorInjector(new CDErrorInjector({1},{},0.0));
 
   CD_Begin(child_lv2);
   dbg2 << "child level 2-------------------------------------\n" << endl;
@@ -237,11 +237,11 @@ int test_preemption_2()
   dbg2 << "child cd begin\n" << endl; 
   child->Preserve(a, sizeof(a), kRef, "nonamejusttest", "a", 0);
   
-  if( num_reexecution == 0 ) {
-    num_reexecution = 1;
-	  child->CDAssert(false);
-
-  }
+//  if( num_reexecution == 0 ) {
+//    num_reexecution = 1;
+//	  child->CDAssert(false);
+//
+//  }
   if( num_reexecution == 1 ) {
 
     dbg2 << "After Reexec :   value of a[0] "<< a[0] << " a[1] "<< a[1] << endl;

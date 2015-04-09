@@ -836,8 +836,8 @@ class cd::CDHandle {
 #if _ERROR_INJECTION_ENABLED
     inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
     { memory_error_injector_ = memory_error_injector; }
-//#else
-//    inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector) {}
+#else
+    inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector) {}
 #endif
 
 /**@brief Register error injection method into CD runtime system.
@@ -857,12 +857,19 @@ class cd::CDHandle {
 #if _ERROR_INJECTION_ENABLED
     inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector)
     {
-      cd_error_injector_ = cd_error_injector;
-      cd_error_injector_->task_in_color_ = task_in_color();
-      cd_error_injector_->rank_in_level_ = rank_in_level();
+      dbg << "RegisterErrorInjector: "<< GetExecMode() << ", at level " << level() << endl;
+      if(cd_error_injector_ == NULL && GetExecMode() != kReexecution) {
+        dbg << "Reach?" << endl;
+        cd_error_injector_ = cd_error_injector;
+        cd_error_injector_->task_in_color_ = task_in_color();
+        cd_error_injector_->rank_in_level_ = rank_in_level();
+      }
+      else {
+        delete cd_error_injector;
+      }
     }
-//#else
-//    inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector) {}
+#else
+    inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector) {}
 #endif
 
  /** @} */ // Ends cd_split
@@ -1007,6 +1014,9 @@ class cd::CDHandle {
 /// Synchronize every task of this CD.
     CDErrT Sync(ColorT color);
 #endif
+
+/// Check the mode of current CD.
+    CDExecMode GetExecMode(void) const;
 
   public:
 

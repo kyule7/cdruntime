@@ -133,6 +133,31 @@ namespace cd {
 #endif
 
 
+/** \addtogroup cd_defs 
+ *@{
+ */
+/** 
+ * @brief Type for specifying whether the current CD is executing
+ * for the first time or is currently reexecuting as part of recovery.
+ *
+ * During reexecution, data is restored instead of being
+ * preserved. Additionally, for relaxed CDs, some communication and
+ * synchronization may not repeated and instead preserved (logged)
+ * values are used. 
+ * See <http://lph.ece.utexas.edu/public/CDs> for a detailed
+ * description. Note that this is not part of the cd_internal
+ * namespace because the application programmer may want to manipulate
+ * this when specifying specialized recovery routines.
+ */
+    enum CDExecMode  {kExecution=0, //!< Execution mode 
+                      kReexecution, //!< Reexecution mode
+                      kSuspension   //!< Suspension mode (not active)
+                     };
+
+/** @} */ // End group cd_defs
+
+
+
 /** @brief Profile-related enumerator
  *
  */

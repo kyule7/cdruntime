@@ -184,7 +184,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *        CD handles if these are not explicitly tracked. These methods are globally accessible without a CDHandle object.
  * 
  * 
- * @defgroup cd_defs CD types
+ * @defgroup cd_defs CD types/definitions.
  * @brief CD-related type definitions. 
  *
  * The \ref cd_defs module includes general CD-related type
