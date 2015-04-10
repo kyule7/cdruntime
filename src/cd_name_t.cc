@@ -87,3 +87,8 @@ std::ostream& cd::operator<<(std::ostream& str, const CDNameT& cd_name)
 {
   return str << "CD"<< cd_name.level() << "_"  << cd_name.rank_in_level();
 }
+
+std::string CDNameT::GetString(void) const {
+  return ( std::string("CD") + std::to_string(level_) + std::string("_") + std::to_string(rank_in_level_) );
+}
+

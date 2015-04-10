@@ -151,7 +151,7 @@ private:
   */
   static CDHandle* GetParentCD(int current_level)
   { 
-    std::cout << "CDPath::GetParentCD current level : "<<current_level << std::endl;
+    dbg << "CDPath::GetParentCD current level : "<<current_level << std::endl;
     if(uniquePath_ != NULL ) {
       if( uniquePath_->size() > 1 ) {
         if(current_level >= 1) { 

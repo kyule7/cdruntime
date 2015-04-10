@@ -54,6 +54,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_global.h"
 #include "node_id.h"
 #include "sys_err_t.h"
+#include "cd.h"
 
 #if _PROFILER
 #include "cd_profiler.h"
@@ -62,7 +63,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "error_injector.h"
 
 using namespace cd;
-
 
 
 
@@ -858,7 +858,7 @@ class cd::CDHandle {
     inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector)
     {
       dbg << "RegisterErrorInjector: "<< GetExecMode() << ", at level " << level() << endl;
-      if(cd_error_injector_ == NULL && GetExecMode() != kReexecution) {
+      if(cd_error_injector_ == NULL && recreated() == false && reexecuted() == false) {
         dbg << "Reach?" << endl;
         cd_error_injector_ = cd_error_injector;
         cd_error_injector_->task_in_color_ = task_in_color();
@@ -1018,6 +1018,8 @@ class cd::CDHandle {
 /// Check the mode of current CD.
     CDExecMode GetExecMode(void) const;
 
+    bool     recreated(void)     const;
+    bool     reexecuted(void)     const;
   public:
 
 /**@defgroup cd_accessor CD accessors

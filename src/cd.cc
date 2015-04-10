@@ -42,13 +42,17 @@ using namespace std;
 
 int iterator_entry_count=0;
 uint64_t cd::gen_object_id=0;
-std::hash<std::string> cd::str_hash;
- 
-std::map<ENTRY_TAG_T, std::string> cd::tag2str;
-std::list<CommInfo> CD::entry_req_;
-std::map<ENTRY_TAG_T, CommInfo> CD::entry_request_req_;
-std::map<ENTRY_TAG_T, CommInfo> CD::entry_recv_req_;
-std::list<EventHandler *> CD::cd_event_;
+
+hash<string> cd::str_hash;
+map<ENTRY_TAG_T, string> cd::tag2str;
+list<CommInfo> CD::entry_req_;
+map<ENTRY_TAG_T, CommInfo> CD::entry_request_req_;
+map<ENTRY_TAG_T, CommInfo> CD::entry_recv_req_;
+list<EventHandler *> CD::cd_event_;
+
+map<uint32_t, uint32_t> Util::object_id;
+
+map<string, uint32_t> CD::exec_count_;
 
 bool CD::need_reexec = false;
 uint32_t CD::reexec_level = 0;
@@ -140,6 +144,8 @@ CDFlagT *CD::pendingFlag_;
 CD::CD(void)
   : log_handle_(GetPlaceToPreserve())
 {
+	reexecuted_ = false;
+	recreated_ = false;
   cd_type_ = kStrict;
   prv_medium_ = kDRAM;
   name_ = INITIAL_CDOBJ_NAME; 
@@ -186,10 +192,25 @@ CD::CD(CDHandle* cd_parent,
   //GONG
   begin_ = false;
 
+	reexecuted_ = false;
+	if(cd_parent != NULL) {
+		if(cd_parent->ptr_cd_->reexecuted_ == true) {
+			recreated_ = true;
+		}
+		else {
+			recreated_ = false;
+		}
+	}
+	else {
+		recreated_ = false;
+	}
+
   cd_type_ = cd_type; 
   prv_medium_ = prv_medium; 
+
   if(name != NULL)
     name_ = name; 
+
   sys_detect_bit_vector_ = 0; 
   cd_id_ = cd_id;
   // FIXME 
@@ -201,7 +222,13 @@ CD::CD(CDHandle* cd_parent,
 
   // Kyushick: Object ID should be unique for the copies of the same object?
   // For now, I decided it as an unique one
-  cd_id_.object_id_ = Util::GenCDObjID();
+	dbg << "exec_count[" << cd_id_.GetPhaseID() << "] = " << exec_count_[cd_id_.GetPhaseID()] << endl;
+	if(exec_count_[cd_id_.GetPhaseID()] == 0) {
+	  cd_id_.object_id_ = Util::GenCDObjID(cd_id_.level());
+	}
+	exec_count_[cd_id_.GetPhaseID()]++;
+
+	dbg << "exec_count[" << cd_id_.GetPhaseID() << "] = " << exec_count_[cd_id_.GetPhaseID()] << endl;
 
 //  dbg << "cd object is created " << cd_id_.object_id_++ <<endl;
 
@@ -290,10 +317,29 @@ void CD::Initialize(CDHandle* cd_parent,
                     CDType cd_type, 
                     uint64_t sys_bit_vector)
 {
+
+	reexecuted_ = false;
+	if(cd_parent != NULL) {
+		if(cd_parent->ptr_cd_->reexecuted_ == true) {
+			recreated_ = true;
+		}
+		else {
+			recreated_ = false;
+		}
+	}
+	else {
+		recreated_ = false;
+	}
+
+
   cd_type_  = cd_type;
   name_     = name;
   cd_id_    = cd_id;
-  cd_id_.object_id_ = Util::GenCDObjID();
+	if(exec_count_[cd_id_.GetPhaseID()] == 0) {
+  	cd_id_.object_id_ = Util::GenCDObjID(cd_id.level());
+		exec_count_[cd_id.GetPhaseID()]++;
+	}
+	dbg << "exec_count[" << cd_id.GetPhaseID() << "] = " << exec_count_[cd_id.GetPhaseID()] << endl;
   sys_detect_bit_vector_ = sys_bit_vector;
   Init();  
 }
@@ -409,13 +455,13 @@ CD::InternalCreate(CDHandle* parent,
                    uint64_t sys_bit_vector, 
                    CDHandle** new_cd_handle)
 {
-  cout << "dbg: Internal Create... Level : " << new_cd_id.level()<< ", node : "<< new_cd_id.node_id() << endl; dbgBreak();
-//  dbg << dbg.str() << endl; dbgBreak();
-
+  CD_DEBUG("Internal Create... level #%u, Node ID : %s\n", new_cd_id.level(), new_cd_id.node_id().GetString().c_str());
 
   if( !new_cd_id.IsHead() ) {
-    cout << "mask medium : "<<MASK_MEDIUM(cd_type) << endl;
-    PrvMediumT new_prv_medium = (MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : DEFAULT_MEDIUM;
+
+    CD_DEBUG("Mask medium : %d\n", MASK_MEDIUM(cd_type));
+
+    PrvMediumT new_prv_medium = static_cast<PrvMediumT>((MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : MASK_MEDIUM(cd_type));
 
     CD *new_cd     = new CD(parent, name, new_cd_id, static_cast<CDType>(MASK_CDTYPE(cd_type)), new_prv_medium, sys_bit_vector);
 
@@ -424,27 +470,31 @@ CD::InternalCreate(CDHandle* parent,
     int task_count = new_cd_id.task_count();
 
     if(task_count > 1) {
-      cout << "in CD::Create Internal Memory. task count is "<< task_count <<endl;
+
+      CD_DEBUG("In CD::Create Internal Memory. Alloc Start. # tasks : %u\n", task_count);
+
       PMPI_Alloc_mem(sizeof(CDFlagT), 
                     MPI_INFO_NULL, &(new_cd->event_flag_));
       
-      cout << "in CD::Create Internal Memory. Done"<< task_count <<endl;
+      CD_DEBUG("In CD::Create Internal Memory. Alloc Done. # tasks : %u\n", task_count);
 
       // Initialization of event flags
       *(new_cd->event_flag_) = 0;
 
 //      PMPI_Win_create(NULL, 0, 1,
 //                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
-      cout << "CD mpi win create for "<< task_count << " window "<<endl;
+      CD_DEBUG("CD MPI Win create for %u windows start.\n", task_count);
 
       PMPI_Win_create(new_cd->event_flag_, sizeof(CDFlagT), sizeof(CDFlagT),
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
-      cout << "CD mpi win create for "<< task_count << " window done"<<endl;
+
+      CD_DEBUG("CD MPI Win create for %u windows done.\n", task_count);
 
       // FIXME : should it be MPI_COMM_WORLD?
       PMPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
-      cout << "CD mpi win create for "<< task_count << " pending window done"<< ", id :"<<new_cd_id.node_id_<<endl;
+
+      CD_DEBUG("HeadCD mpi win create for %u pending window done, new Node ID : %s\n", task_count, new_cd_id.node_id_.GetString().c_str());
     }
 #endif
 
@@ -456,45 +506,45 @@ CD::InternalCreate(CDHandle* parent,
   }
   else {
     // Create a CD object for head.
-    cout << "mask medium : "<<MASK_MEDIUM(cd_type) << endl;
-    PrvMediumT new_prv_medium = (MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : DEFAULT_MEDIUM;
+    CD_DEBUG("Mask medium : %d\n", MASK_MEDIUM(cd_type));
+
+    PrvMediumT new_prv_medium = static_cast<PrvMediumT>((MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : MASK_MEDIUM(cd_type));
+
     HeadCD *new_cd = new HeadCD(parent, name, new_cd_id, static_cast<CDType>(MASK_CDTYPE(cd_type)), new_prv_medium, sys_bit_vector);
 
 #if _MPI_VER
     // Create memory region where RDMA is enabled
-    cout << "HeadCD create internal memory " << endl;
-    int task_count = new_cd_id.task_count();
+    CD_DEBUG("HeadCD create internal memory.\n");
+
+    uint32_t task_count = new_cd_id.task_count();
 
     if(task_count > 1) {
-      cout << "in CD::Create Internal Memory. # tasks : "<< task_count <<endl;
+
+      CD_DEBUG("In CD::Create Internal Memory. Alloc Start. # tasks : %u\n", task_count);
+
       PMPI_Alloc_mem(task_count*sizeof(CDFlagT), 
                     MPI_INFO_NULL, &(new_cd->event_flag_));
-      cout << "in CD::Create Internal Memory. Done. # tasks : "<< task_count  << endl;
+
+      CD_DEBUG("In CD::Create Internal Memory. Alloc Done. # tasks : %u\n", task_count);
 
       // Initialization of event flags
-      for(int i=0; i<task_count; i++) {
-        cout << "i "<<i<<endl;
+      for(uint32_t i=0; i<task_count; i++) {
         new_cd->event_flag_[i] = 0;
       }
     
-//    new_cd->mailbox_ = new CDMailBoxT[task_count];
-  
-      cout << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
-//    for(int i=0; i<task_count; ++i) {
       PMPI_Win_create(new_cd->event_flag_, task_count*sizeof(CDFlagT), sizeof(CDFlagT),
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
-//    }
 
-      cout << "HeadCD mpi win create for "<< task_count << " mailbox done"<<endl;
+      CD_DEBUG("HeadCD mpi win create for %u mailbox done\n", task_count);
 
       // FIXME : should it be MPI_COMM_WORLD?
       PMPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
 
-      cout << "HeadCD mpi win create for "<< task_count << " pending window done"<<" , id: " << new_cd_id.node_id_ << endl;
+      CD_DEBUG("HeadCD mpi win create for %u pending window done, new Node ID : %s\n", task_count, new_cd_id.node_id_.GetString().c_str());
 
     }
-    cout << "task_count = 1" << endl;
+
 //    AttachChildCD(new_cd);
 #endif
 
@@ -528,7 +578,7 @@ void AttachChildCD(HeadCD *new_cd)
 inline CD::CDInternalErrT CD::InternalDestroy(void)
 {
 
-  cout << "in CD::Destroy Internal Memory"<<endl;
+  CD_DEBUG("in CD::Destroy Internal Memory\n");
 
 #if _MPI_VER
   int task_count = cd_id_.task_count();
@@ -680,7 +730,7 @@ CDErrT CD::Begin(bool collective, const char* label)
  */
 CDErrT CD::Complete(bool collective, bool update_preservations)
 {
-  cout << "CD::Complete : " << GetCDName() << " " << GetNodeID() << " : Reexec ? : " << need_reexec << endl; //getchar(); 
+  CD_DEBUG("\nCD::Complete : %s %s \t Reexec: %d\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec);
   
   begin_ = false;
 
@@ -1697,13 +1747,13 @@ CDErrT CD::Preserve(void *data,
     else {  // abnormal case
       //return CDErrT::kOK;
 
-      dbg<< "The end of reexec!!!"<<endl<<endl;  
+      CD_DEBUG("The end of reexec!!!\n");
       // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
       // we reached the last preserve function call. 
       // Since we have reached the last point already now convert current execution mode into kExecution
       
 //      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
-      printf("Now reached end of entry directory, now switching to normal execution mode\n");
+      CD_DEBUG("Now reached end of entry directory, now switching to normal execution mode\n");
 
       cd_exec_mode_  = kExecution;    
       switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
@@ -1718,7 +1768,7 @@ CDErrT CD::Preserve(void *data,
 
     }
 
-    PRINT_DEBUG("Reexecution mode finished...\n");
+    CD_DEBUG("Reexecution mode finished...\n");
   }   // Re-execution mode ends
   else {  // Suspension mode
     // Is it okay ?
@@ -2095,8 +2145,9 @@ CDErrT CD::Reexecute(void)
   // SZ: FIXME: this is not safe because programmers may have their own RecoverObj
   //            we need to change the cd_exec_mode_ and comm_log_mode_ outside this function
   cd_exec_mode_ = kReexecution; 
+  reexecuted_ = true; 
   num_reexecution_++ ;
-
+	dbg << "REEXEC !! "<< reexecuted_ << " " << num_reexecution_ << endl;
 #ifdef comm_log
   // SZ
   //// change the comm_log_mode_ into CommLog class
@@ -2141,6 +2192,9 @@ CDErrT HeadCD::Reexecute(void)
 
   cd_exec_mode_ = kReexecution; 
 
+  reexecuted_ = true; 
+  num_reexecution_++ ;
+	dbg << "REEXEC !! reexecuted : " <<reexecuted_ << ", # of reexecution : " << num_reexecution_ << endl;
 
 #ifdef comm_log
   // SZ
@@ -2418,7 +2472,7 @@ CDErrT HeadCD::Destroy(void)
 {
   CDErrT err=CDErrT::kOK;
 
-  cout << "HeadCD::Destroy\n" << endl;
+  CD_DEBUG("\nHeadCD::Destroy\n");
 
   InternalDestroy();
 
@@ -3808,18 +3862,20 @@ CD::CDInternalErrT CD::InvokeErrorHandler(void)
 
 CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, int &found_level)
 {
-    dbg << "Search Entry : " << tag_to_search << " (" << tag2str[tag_to_search] <<") at level #"<< level() << endl;
+    CD_DEBUG("Search Entry : %u (%s) at level #%u \n", tag_to_search, tag2str[tag_to_search].c_str(), level());
 
 		CDHandle *parent_cd = CDPath::GetParentCD();
     CDEntry *entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
 
-    dbg<<"parent name: "<<parent_cd->GetName()<<endl;
+    CD_DEBUG("Parent name : %s\n", parent_cd->GetName());
+
     if(entry_tmp != NULL) { 
-      dbg << "parent dst addr : " << entry_tmp->dst_data_.address_data()
-                << ", parent entry name : " << entry_tmp->dst_data_.ref_name()<<endl;
+      CD_DEBUG("Parent dst addr : %p \tParent entry name : %s\n", 
+								entry_tmp->dst_data_.address_data(), entry_tmp->dst_data_.ref_name().c_str());
     } else {
-      dbg<<"there is no reference in parent level"<<endl;
+      CD_DEBUG("There is no reference in parent level\n");
     }
+
 //		if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
 
 //		CDEntry* entry = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
@@ -3833,14 +3889,17 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, int &found_level)
 
       CDEntry* entry = NULL;
 			while( parent_cd != NULL ) {
-				dbg << "InternalGetEntry at Level: " << parent_cd->ptr_cd()->GetCDID().level()<<endl;
+				CD_DEBUG("InternalGetEntry at level #%u\n", parent_cd->ptr_cd()->GetCDID().level());
+
 		    entry = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
 
         if(entry != NULL) {
           found_level = parent_cd->ptr_cd()->level();
-          cout<<"\n\nI got my reference here!! found level: " << found_level << " " << GetNodeID() <<endl;
-				  cout <<"Current entry name : "<< entry->name() << " with ref name : "  << entry->dst_data_.ref_name() 
-                  << ", at level: " << found_level<<endl;
+
+          CD_DEBUG("\n\nI got my reference here!! found level : %d, Node ID : %s\n", 
+									 found_level, GetNodeID().GetString().c_str());
+					CD_DEBUG("Current entry name (%s) with ref name (%s) at level #%d\n", 
+									 entry->name().c_str(), entry->dst_data_.ref_name().c_str(), found_level);
           break;
         }
         else {

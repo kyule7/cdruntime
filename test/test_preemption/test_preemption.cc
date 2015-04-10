@@ -93,7 +93,7 @@ int test_preemption()
   CD_Begin(child_lv1);
   dbg2 << "child level 1-------------------------------------\n" << endl;
 
-  child_lv1->RegisterErrorInjector(new CDErrorInjector({},{},0.0));
+  child_lv1->RegisterErrorInjector(new CDErrorInjector({},{2,3},0.0));
 
   CDHandle* child_lv2=child_lv1->Create(LV2, "CD2", kStrict | kDRAM, 0, 0, &err);
   
@@ -163,7 +163,7 @@ int test_preemption()
 
   dbg2 << "CD Complete\n" << endl;
   //  root->Complete();
-
+	dbg2 << "My rank_in_level : " << child_lv2->rank_in_level() << endl;
   CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kStrict | kDRAM, 0, 0, &err);
   CD_Begin(child_lv3);
   dbg2 << "child level 3-------------------------------------\n" << endl;

@@ -122,6 +122,8 @@ class cd::CDEntry : public cd::Serializable
 		ENTRY_TAG_T name_tag() const { return entry_tag_; }
     bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }
 
+		std::string GetString(void) const;
+
     CDEntry& operator=(const CDEntry& that) {
       entry_tag_ = that.entry_tag_;    
       src_data_ = that.src_data_;

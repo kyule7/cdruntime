@@ -53,7 +53,7 @@ int test_bp2p(int argc, char** argv)
   CD_Begin(root);
 
   PRINTF("root CD information...\n");
-  root->ptr_cd()->GetCDID().Print();
+  root->GetCDID().Print();
 
   int num_reexec=0;
   if (myrank < nprocs/2)
@@ -65,7 +65,7 @@ int test_bp2p(int argc, char** argv)
 
     PRINTF("Begin child cd of level 1 ...\n");
     CD_Begin(child1_0);
-    child1_0->ptr_cd()->GetCDID().Print();
+    child1_0->GetCDID().Print();
 
     // test MPI_Send and MPI_Recv
     partner = nprocs/2 + myrank;
@@ -166,7 +166,7 @@ int test_bp2p(int argc, char** argv)
 
     PRINTF("Begin child cd of level 1 ...\n");
     CD_Begin(child1_1);
-    child1_1->ptr_cd()->GetCDID().Print();
+    child1_1->GetCDID().Print();
 
     // real communication...
     partner = myrank - nprocs/2;

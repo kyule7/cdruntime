@@ -129,48 +129,31 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
                 recv_buf, 2, MPI_INT, 
                 node_id().color());
 
-  dbg << "\n==================Remote entry check ===================\n" << endl;
-  for(int k=0; k<task_count; ++k ) {
-    dbg <<recv_buf[k][0] << " " << recv_buf[k][1] << endl;
-  }
-  dbg << "\n" << endl; dbgBreak();
+  CD_DEBUG("\n================== Remote entry check ===================\n");
+  CD_DEBUG("[Before] Check entries in remote entry directory\n");
 
-//  uint32_t node_id_len=0;
-//  dbg << "=========== Check Ser ==============" << endl;
-//  dbg <<"[Before packed] :\t"<< node_id_ << endl << endl;
-//  void *ser_node_id = node_id_.Serialize(node_id_len);
-//  NodeID unpacked_node_id;
-//  unpacked_node_id.Deserialize(ser_node_id);
-//  dbg <<"[After unpacked] :\t"<< unpacked_node_id << ", len : "<< node_id_len<< endl << endl;
-
-//  for(std::list<CDEntry*>::iterator it = entry_directory_.begin();
-//  
-//  for(int i=0; i<send_buf[1]; i++) {
-//    void *serialized_entry = Serialize(entry_len);
-//  }
-
-  dbg << "[Before] Check entries in remote entry directory" << endl;
   for(auto it = ptr_cd()->remote_entry_directory_map_.begin();
            it!= ptr_cd()->remote_entry_directory_map_.end(); ++it) {
     dbg << *(it->second) << endl;
 
   }
   uint32_t serialized_len_in_bytes=0;
-//  std::map<uint64_t, CDEntry*> remote_entry_dir;
 
   void *serialized_entry = ptr_cd()->SerializeRemoteEntryDir(serialized_len_in_bytes); 
+
   // if there is no entries to send to head, just return
   if(serialized_entry == NULL) return;
   
-//  int entry_count=0;
-  int recv_counts[task_count];
-  int displs[task_count];
-//  int stride = 1196;
-  for(int k=0; k<task_count; k++ ) {
-//    displs[k] = k*stride;
-    displs[k] = k*serialized_len_in_bytes;
-    recv_counts[k] = serialized_len_in_bytes;
-  }
+////  int entry_count=0;
+//  int recv_counts[task_count];
+//  int displs[task_count];
+////  int stride = 1196;
+//  for(int k=0; k<task_count; k++ ) {
+////    displs[k] = k*stride;
+//    displs[k] = k*serialized_len_in_bytes;
+//    recv_counts[k] = serialized_len_in_bytes;
+//  }
+
 //  dbg << "# of entries to gather : " << entry_count << endl;
 //  CDEntry *entry_to_deserialize = new CDEntry[entry_count*2];
 //  PMPI_Gatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
@@ -180,11 +163,8 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
   int recv_count = task_count*serialized_len_in_bytes;
 //  int recv_count = task_count*stride;
   void *entry_to_deserialize = NULL;
-//  int alloc_err=0;
-//  if(IsHead())  {
-//    alloc_err= 
+
   PMPI_Alloc_mem(recv_count, MPI_INFO_NULL, &entry_to_deserialize);
-//  }
   MPI_Datatype sType;
   PMPI_Type_contiguous(serialized_len_in_bytes, MPI_BYTE, &sType);
   PMPI_Type_commit(&sType);
@@ -196,7 +176,10 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 //  PMPI_Type_commit(&rType);
 
 
-  dbg << "\n\nNote : " << serialized_entry << ", " << serialized_len_in_bytes << ", " << recv_count << ", remote entry dir map size : " << ptr_cd()->remote_entry_directory_map_.size() << "======= "<< endl << endl;
+  CD_DEBUG("\n\nNote : %p, %u, %d, remote entry dir map size : %lu\n\n", 
+					 serialized_entry, serialized_len_in_bytes, recv_count, 
+					 ptr_cd()->remote_entry_directory_map_.size());
+
 //  for(auto it = ptr_cd()->remote_entry_directory_map_.begin(); it!=ptr_cd()->remote_entry_directory_map_.end(); ++it) {
 //    dbg << *(it->second) << endl;
 //  }
@@ -223,39 +206,46 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 //  PMPI_Gather(serialized_entry, 1, sType,
 //             entry_to_deserialize, 1, sType,
 //             node_id().head(), node_id().color());
-  dbg << "Wait!! " << node_id().size() << endl;
-  for(int i=0; i<task_count; i++) {
-    dbg << "recv_counts["<<i<<"] : " << recv_counts[i] << endl;
-    dbg << "displs["<<i<<"] : " << displs[i] << endl;
-  }
+//  dbg << "Wait!! " << node_id().size() << endl;
+//  for(int i=0; i<task_count; i++) {
+//    dbg << "recv_counts["<<i<<"] : " << recv_counts[i] << endl;
+//    dbg << "displs["<<i<<"] : " << displs[i] << endl;
+//  }
 //  PMPI_Allgatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
 //              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
 //              node_id().color());
 
-  int test_counts[task_count];
-  int test_displs[task_count];
-  for(int k=0; k<task_count; k++ ) {
-    test_displs[k] = k*4;
-    test_counts[k] = 4;
-  }
-  dbg << "Wait!! " << node_id().size() << endl;
-  for(int i=0; i<task_count; i++) {
-    dbg << "test_counts["<<i<<"] : " << test_counts[i] << endl;
-  }
-  for(int i=0; i<task_count; i++) {
-    dbg << "test_displs["<<i<<"] : " << test_displs[i] << endl;
-  }
-  int test_a[4];
-  int test_b[task_count*4];
-//  int test_b[task_count][4];
-  test_a[0] = node_id().task_in_color();
-  test_a[1] = test_a[0]+10;
-  test_a[2] = test_a[0]+100;
-  test_a[3] = test_a[0]+1000;
 
-  PMPI_Gatherv(test_a, 4, MPI_INT,
-              test_b, test_counts, test_displs, MPI_INT,
-              node_id().head(), node_id().color());
+
+
+//  int test_counts[task_count];
+//  int test_displs[task_count];
+//  for(int k=0; k<task_count; k++ ) {
+//    test_displs[k] = k*4;
+//    test_counts[k] = 4;
+//  }
+//  dbg << "Wait!! " << node_id().size() << endl;
+//  for(int i=0; i<task_count; i++) {
+//    dbg << "test_counts["<<i<<"] : " << test_counts[i] << endl;
+//  }
+//  for(int i=0; i<task_count; i++) {
+//    dbg << "test_displs["<<i<<"] : " << test_displs[i] << endl;
+//  }
+//  int test_a[4];
+//  int test_b[task_count*4];
+////  int test_b[task_count][4];
+//  test_a[0] = node_id().task_in_color();
+//  test_a[1] = test_a[0]+10;
+//  test_a[2] = test_a[0]+100;
+//  test_a[3] = test_a[0]+1000;
+//
+//  PMPI_Gatherv(test_a, 4, MPI_INT,
+//              test_b, test_counts, test_displs, MPI_INT,
+//              node_id().head(), node_id().color());
+
+
+
+
 
 //  PMPI_Gatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
 //              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
@@ -270,74 +260,58 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 
   if(IsHead()) {
     
-    for(int i=0; i<task_count; i++) {
-      dbg<<endl;
-      for(int j=0; j<4; j++) {
-        dbg << "test_b["<<4*i+j << "] : " << *(test_b+4*i+j) << endl;
-//        dbg << "test_b["<<i<<"]["<<j << "] : " << test_b[i][j] << endl;
-      }
-    }
+//    int * test_des = (int *)entry_to_deserialize;
+//    char * test_des_char = (char *)entry_to_deserialize;
+//    int test_count = serialized_len_in_bytes/4;
+//    int tk=0;
+//    int tj=0;
+//    for(int j=0; j<task_count; j++){
+////      dbg << test_des+tk << "-- " << (void *)(test_des_char + tj)<< ", j: "<< j<< endl;
+////      for(int i=0; i<test_count;i++) {
+////        dbg << *(test_des+i+j*test_count) << " ";
+////        tk = i + j*test_count;
+////        tj = 4*i + j*serialized_len_in_bytes;
+////      }
+//        tk = j*test_count;
+//        tj = j*serialized_len_in_bytes;
+//        dbg << *(test_des+tk) << endl;
+//        dbg << *(test_des_char+tj) << endl;
+//        cout << test_des+tk << "-- " << (void *)(test_des_char + tj)<< ", j: "<< j<< endl;
+//      dbg << endl;
+//    }
+//    dbg << endl;
+////    cout << "1" << endl;
+////    for(int i=0; i<task_count; i++) cout << " --- " << ((int *)rbuf)[i];
+////    cout << endl;
+////    getchar();
+////    ptr_cd()->DeserializeRemoteEntryDir(remote_entry_dir, serialized_entry);
+//
+//    dbg << "===" << serialized_len_in_bytes << endl;
 
-    int * test_des = (int *)entry_to_deserialize;
-    char * test_des_char = (char *)entry_to_deserialize;
-    int test_count = serialized_len_in_bytes/4;
-//    int abc = serialized_len_in_bytes;
-    int aaa=1;
-    dbg << "Check it out----------------------------------"<< test_des << " " << test_des+aaa << "--" << (void *)test_des_char << " " <<(void *)(test_des_char+aaa) << endl;
-    int tk=0;
-    int tj=0;
-    for(int j=0; j<task_count; j++){
-//      dbg << test_des+tk << "-- " << (void *)(test_des_char + tj)<< ", j: "<< j<< endl;
-//      for(int i=0; i<test_count;i++) {
-//        dbg << *(test_des+i+j*test_count) << " ";
-//        tk = i + j*test_count;
-//        tj = 4*i + j*serialized_len_in_bytes;
-//      }
-        tk = j*test_count;
-        tj = j*serialized_len_in_bytes;
-        dbg << *(test_des+tk) << endl;
-        dbg << *(test_des_char+tj) << endl;
-        cout << test_des+tk << "-- " << (void *)(test_des_char + tj)<< ", j: "<< j<< endl;
-      dbg << endl;
-    }
-    dbg << endl;
-//    cout << "1" << endl;
-//    for(int i=0; i<task_count; i++) cout << " --- " << ((int *)rbuf)[i];
-//    cout << endl;
-//    getchar();
-//    ptr_cd()->DeserializeRemoteEntryDir(remote_entry_dir, serialized_entry);
 
-    dbg << "===" << serialized_len_in_bytes << endl; 
-    void * temp_ptr = (void *)((char *)entry_to_deserialize+serialized_len_in_bytes-8);
-    dbg << "Check it out: "<< entry_to_deserialize << " -- " << temp_ptr << ", diff : " << (void *)((char *)temp_ptr - (char *)entry_to_deserialize) << endl;
  
+    void * temp_ptr = (void *)((char *)entry_to_deserialize+serialized_len_in_bytes-8);
+
+		CD_DEBUG("Check it out : %p -- %p, diff : %p\n", 
+						 entry_to_deserialize, temp_ptr, (void *)((char *)temp_ptr - (char *)entry_to_deserialize));
+
     ptr_cd()->DeserializeRemoteEntryDir(ptr_cd()->remote_entry_directory_map_, entry_to_deserialize, task_count, serialized_len_in_bytes); 
 //    ptr_cd()->DeserializeRemoteEntryDir(remote_entry_dir, (void *)((char *)entry_to_deserialize + 1196), task_count, serialized_len_in_bytes); 
-    dbg << "\n\n[After] Check entries after deserialization " << ", size : "<< ptr_cd()->remote_entry_directory_map_.size() << ", # of tasks : " << node_id_.size() << ", level: "<< ptr_cd()->GetCDID().level() << endl<<endl;
+
+    CD_DEBUG("\n\n[After] Check entries after deserialization, size : %lu, # of tasks : %u, level : %u\n", 
+						 ptr_cd()->remote_entry_directory_map_.size(), node_id_.size(), ptr_cd()->GetCDID().level());
+
 //    for(auto it = remote_entry_dir.begin(); it!=remote_entry_dir.end(); ++it) {
 //      dbg << *(it->second) << endl;
 //    }
-    dbg << "\n\nEnd of deserialization =========================================\n" << endl;
+
+    CD_DEBUG("\n\n============================ End of deserialization ===========================\n\n");
   }
   for(auto it=ptr_cd()->remote_entry_directory_map_.begin(); it!=ptr_cd()->remote_entry_directory_map_.end(); ++it) {
     dbg << (*it->second) << endl;
   }  
 
 }  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

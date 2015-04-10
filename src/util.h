@@ -190,6 +190,13 @@ static uint64_t GenCDObjID()
   return gen_object_id++;
 }
 
+static std::map<uint32_t, uint32_t> object_id;
+
+static uint64_t GenCDObjID(uint32_t level) 
+{
+  return object_id[level]++;
+}
+
 };
 
 /** @} */ // End group utilities

@@ -20,21 +20,23 @@ contributors may be used to endorse or promote products derived from
 this software without specific prior written permission. 
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCuDING, BUT NOT
   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
   COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCuDING,
   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+  LIABILITY, OR TORT (INCuDING NEGLIGENCE OR OTHERWISE) ARISING IN
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "cd_entry.h"
 #include "cd_path.h"
+#include "cd_def_internal.h"
+//#define u u
 
 using namespace cd;
 using namespace std;
@@ -45,7 +47,7 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
 
   if( dst_data_.address_data() != NULL ) {
     DATA_FREE( dst_data_.address_data() );
-    dbg << "free preserved data\n" << endl; 
+    CD_DEBUG("free preserved data\n"); 
   }
 
   if( dst_data_.handle_type() == DataHandle::kOSFile )  {
@@ -58,14 +60,14 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
     sprintf(cmd, "mv %s ./backup_results/", dst_data_.file_name_);
     ret = system(cmd);
 #else
-    char cmd[30];
-    sprintf(cmd, "rm %s", dst_data_.file_name_);
-    int ret = system(cmd);
+//    char cmd[30];
+//    sprintf(cmd, "rm %s", dst_data_.file_name_);
+//    int ret = system(cmd);
+			int ret=0;
 #endif
 
     if( ret == -1 ) {
-      cerr << "Failed to create a directory for preservation data (SSD)" << endl;
-      assert(0);
+      ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
     }
   }
 
@@ -79,26 +81,22 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
   bool app_side_temp = app_side;
   app_side = false;
 
-//  dbg<< "SaveMem(void) this: " << this<<endl;
   if(dst_data_.address_data() == NULL) {
     void *allocated_space = DATA_MALLOC(dst_data_.len() * sizeof(char));
+
     // FIXME: Jinsuk we might want our own memory manager 
     // since we don't want to call malloc everytime we want small amount of additional memory. 
     dst_data_.set_address_data(allocated_space);
-//    dbg <<"..." << dst_data_.len()*sizeof(char) << endl;;
-//    dbg << "allocated memory: " << allocated_space << endl;
-//    dbg << "dst_data_: " << dst_data_.address_data() << endl;
-//    dbgBreak();
   }
   memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len());
 
-  dbg << "\tSaved Data "<<tag2str[entry_tag_]<<" : " << *(reinterpret_cast<int*>(dst_data_.address_data())) 
-      << " at " << dst_data_.address_data() <<" (Memory)" << endl; 
-//  dbg<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<endl<<endl;
+  CD_DEBUG("Saved Data %s : %d at %p (Memory)", 
+					tag2str[entry_tag_].c_str(), 
+					*(reinterpret_cast<int*>(dst_data_.address_data())), 
+					dst_data_.address_data()); 
 
   if(false) { // Is there a way to check if memcpy is done well?
-    cerr << "Not enough memory." << endl;
-    assert(0);
+    ERROR_MESSAGE("Not enough memory.");
     app_side = app_side_temp;
     return kOutOfMemory; 
   }
@@ -115,8 +113,6 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(string base_, bool isOpen)
   if( !strcmp(dst_data_.file_name_, INIT_FILE_PATH) ) {
     // assume cd_id_ is unique (sequential cds will have different cd_id) 
     // and address data is also unique by natural
-//      char *cd_file = new char[MAX_FILE_PATH];
-//      cd::Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file, base_); 
     const char* data_name;
     str = new char[30];
     if(entry_tag_ == 0) {
@@ -136,7 +132,7 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(string base_, bool isOpen)
     fwrite(src_data_.address_data(), sizeof(char), src_data_.len(), fp);
     fclose(fp);
 
-    dbg << "we write a file \n" << endl;
+    CD_DEBUG("Write to a file. \n");
 
     return kOK;
   }
@@ -164,48 +160,50 @@ CDEntry::CDEntryErrT CDEntry::SavePFS(void)
 void CDEntry::RequestEntrySearch(void)
 {
 #if _MPI_VER
-  dbg << "\nCDEntry::RequestEntrySearch\n" << endl;
-  dbg.flush();
+  CD_DEBUG("\nCDEntry::RequestEntrySearch\n");
   
   CDHandle *curr_cdh = CDPath::GetCDLevel(ptr_cd_->level());
   curr_cdh = CDPath::GetCoarseCD(curr_cdh);
-  dbg << "SIZE :" << curr_cdh->task_size() << ", LEVEL : " << curr_cdh->level() << " from " << ptr_cd_->level() << endl;
+
+  CD_DEBUG("task size: %u, finding entry at level #%u from level #%u", 
+						curr_cdh->task_size(), curr_cdh->level(), ptr_cd_->level());
+
   CD *curr_cd = curr_cdh->ptr_cd();
+
   // SetMailbox
   CDEventT entry_search = kEntrySearch;
-  dbg.flush();
+
   curr_cd->SetMailBox(entry_search);
 
-  dbg << "SIZE :" << curr_cdh->task_size() << ", LEVEL : " << curr_cdh->level() << " from " << ptr_cd_->level() << endl;
-
   ENTRY_TAG_T tag_to_search = dst_data_.ref_name_tag();
+
   // Tag should contain CDID+entry_tag
-  dbg << "[ToHead] CHECK TAG : " << curr_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, curr_cd->task_in_color())
-      << " (Entry Tag: " << tag_to_search << ")" << endl;
+  CD_DEBUG("[ToHead] CHECK TAG : %u (Entry Tag: %u)\n", 
+					curr_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, curr_cd->task_in_color()), tag_to_search);
 
   ENTRY_TAG_T sendBuf[2] = {tag_to_search, static_cast<ENTRY_TAG_T>(myTaskID)};
-  dbg << "sendBuf[0] : " << sendBuf[0] << ", sendBuf[1] : " << sendBuf[1] << endl;
-  dbg << "CHECK IT OUT : " << curr_cd->task_in_color() << " --> "<< curr_cd->head() << endl;
-  dbg.flush();
+
+  CD_DEBUG("sendBuf[0] : %u, sendBuf[1] : %u \nCHECK IT OUT : %u --> %u", 
+					 sendBuf[0], sendBuf[1], curr_cd->task_in_color(), curr_cd->head());
+
   curr_cd->entry_request_req_[tag_to_search] = CommInfo();
 //  curr_cd->entry_req_.push_back(CommInfo()); getchar();
+
   PMPI_Isend(sendBuf, 
              2, 
              MPI_UNSIGNED_LONG_LONG,
              curr_cd->head(), 
              curr_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, curr_cd->task_in_color()),
-//             11,
-//             MSG_TAG_ENTRY_TAG,
              curr_cd->color(),
-//             &(curr_cd->entry_req_.back().req_));
              &(curr_cd->entry_request_req_[tag_to_search].req_));
+//             &(curr_cd->entry_req_.back().req_));
 
-  dbg << "[FromAny] CHECK TAG : " <<curr_cd->GetCDID().GenMsgTag(tag_to_search)
-      << " (Entry Tag: " << tag_to_search << ")" << endl;
-  dbg << "Size of data to receive : " << src_data_.len() << " (" << tag_to_search << ")" << endl;
-  dbg.flush();
-//  curr_cd->entry_req_.push_back(CommInfo()); //getchar();
+  CD_DEBUG("[FromAny] CHECK TAG : %u (Entry Tag: %u)\n", curr_cd->GetCDID().GenMsgTag(tag_to_search), tag_to_search);
+  CD_DEBUG("Size of data to receive : %lu (%u)\n", src_data_.len(), tag_to_search);
+
     ptr_cd()->entry_recv_req_[tag_to_search] = CommInfo();
+//  curr_cd->entry_req_.push_back(CommInfo()); //getchar();
+
   // Receive the preserved data to restore the data in application memory
   PMPI_Irecv(src_data_.address_data(), 
              src_data_.len(), 
@@ -213,22 +211,27 @@ void CDEntry::RequestEntrySearch(void)
              MPI_ANY_SOURCE, 
              curr_cd->cd_id_.GenMsgTag(tag_to_search), 
              MPI_COMM_WORLD, 
-//             &(curr_cd->entry_req_.back().req_));  
              &(curr_cd->entry_recv_req_[tag_to_search].req_));  
+//             &(curr_cd->entry_req_.back().req_));  
+
 #endif
+
 }
 
 
 
 // Bring data handle from parents
 CDEntry::CDEntryErrT CDEntry::Restore(void) {
-  dbg<<"CDEntry::Restore at level: " << ptr_cd_->level() <<" [";
+  
+	CD_DEBUG("CDEntry::Restore at level: %u\n", ptr_cd_->level());
+
   bool local_found = false;
   DataHandle *buffer = NULL;
   CDEntry *entry = NULL;
+
 	if( dst_data_.handle_type() == DataHandle::kReference ) {  
     // Restoration from reference
-    dbg<< "kReference] Ref name: " << dst_data_.ref_name() << endl; 
+    CD_DEBUG("[kReference] Ref name: %s\n", dst_data_.ref_name().c_str());
     
     int found_level = 0;
     ENTRY_TAG_T tag_to_search = dst_data_.ref_name_tag();
@@ -239,8 +242,8 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
       local_found = true;
       // FIXME MPI_Group
       if(entry->dst_data_.node_id() == CDPath::GetCDLevel(found_level)->node_id()) {
-        dbg << "\n[CDEntry::Restore] Succeed in finding the entry locally!!" << endl;
-        dbg.flush();
+
+        CD_DEBUG("\n[CDEntry::Restore] Succeed in finding the entry locally!!\n");
         buffer = &(entry->dst_data_);
     
         buffer->set_ref_offset(dst_data_.ref_offset() );   
@@ -248,47 +251,48 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
         // length could be different in case we want to describe only part of the preserved entry.
         buffer->set_len(dst_data_.len());     
   
-//        dbg<<"addr "<<entry->dst_data_.address_data()<<endl; 
-//        dbg<<"addr "<<buffer->address_data()<<endl; 
-//  			dbg <<"[Buffer] ref name: "    << buffer->ref_name() 
-//                <<", value: "<<*(reinterpret_cast<int*>(buffer->address_data())) << endl;
+        CD_DEBUG("addr %p (dst), addr %p (buffer)\n[Buffer] ref name : %s, value: %d\n", 
+								 entry->dst_data_.address_data(), buffer->address_data(), 
+								 buffer->ref_name().c_str(), *(reinterpret_cast<int*>(buffer->address_data())));
       }
       else {
 
 #if _MPI_VER
         // Entry was found at this task because the current task is head.
         // So, it should request EntrySend to the task that holds the actual data copy for preservation.
-        dbg << "\nIt succeed in finding the entry at this level #"<< found_level <<" of head task!" << endl;
-        dbg.flush();
+        CD_DEBUG("\nIt succeed in finding the entry at this level #%u of head task!\n", found_level);
         HeadCD *found_cd = static_cast<HeadCD *>(CDPath::GetCDLevel(found_level)->ptr_cd());
         // It needs some effort to avoid the naming alias problem of entry tags.
       
         // Found the entry!! 
         // Then, send it to the task that has the entry of actual copy
-        int target_task_id = entry->dst_data_.node_id().task_in_color();
+        uint32_t target_task_id = entry->dst_data_.node_id().task_in_color();
         
-        dbg << "Before SetMailBox(kEntrySend)" << endl;
-        dbg.flush(); 
+        CD_DEBUG("Before SetMailBox(kEntrySend)\n");
+
         // SetMailBox for entry send to target
         CDEventT entry_send = kEntrySend;
         found_cd->SetMailBox(entry_send, target_task_id);
     
-        dbg << "CHECK TAG : " << found_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, found_cd->task_in_color())
-            << " (Entry Tag: " << tag_to_search << ")" << endl;
-        dbg << "CHECK IT OUT : " << target_task_id  << " --> " << found_cd->task_in_color() << " at "<< found_cd->GetCDName() << endl;
+        CD_DEBUG("CHECK TAG : %u (Entry Tag : %u)\nCHECK IT OUT : %u --> %u at %s\n", 
+								 found_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, found_cd->task_in_color()), tag_to_search, 
+								 target_task_id, found_cd->task_in_color(), found_cd->GetCDName().GetString().c_str());
         
-        dbg << "FOUND " << found_cd->GetCDName() << " " << found_cd->GetNodeID() << ", found level: " << found_level << ", check it out: "<< target_task_id<<endl;
-        dbg.flush();
+        CD_DEBUG("FOUND %s, %s at %u, target task ID : %u\n", 
+							 	 found_cd->GetCDName().GetString().c_str(), 
+								 found_cd->GetNodeID().GetString().c_str(), 
+								 found_level, target_task_id);
+
         ENTRY_TAG_T sendBuf[2] = {tag_to_search, static_cast<ENTRY_TAG_T>(myTaskID)};
-//        found_cd->entry_search_req_[tag_to_search] = CommInfo();
+
         found_cd->entry_req_.push_back(CommInfo()); //getchar();
+//        found_cd->entry_search_req_[tag_to_search] = CommInfo();
+
         PMPI_Isend(sendBuf, 
                    2, 
                    MPI_UNSIGNED_LONG_LONG, 
                    target_task_id, 
                    found_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, found_cd->task_in_color()),
-    //               found_cd->GetCDID().GenMsgTag(tag_to_search), 
-//                   MSG_TAG_ENTRY_TAG,
                    found_cd->color(), // Entry sender is also in the same CD task group.
                    &(found_cd->entry_req_.back().req_));
 //                   &(found_cd->entry_search_req_[tag_to_search]).req_);
@@ -308,7 +312,9 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
 //        CDEventT entry_send = kEntrySend;
 //        headcd->SetMailBox(entry_send, entry->dst_data_.node_id().task_in_color());
 //        dbg << "[CDEntry::Restore] Can't find the entry local. Remote Case!!" << endl;
-        cout << "[CDEntry::Restore] Can't find the entry local. Remote Case!! --" << endl;
+
+
+        CD_DEBUG("[CDEntry::Restore] Can't find the entry local. Remote Case!!\n");
 
 
 #endif
@@ -316,31 +322,32 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
     }
     else { // Remote case
       entry = NULL;
-      cout << "[CDEntry::Restore] Can't find the entry local. Remote Case!! ==--" << endl;
-      dbg << "[CDEntry::Restore] Can't find the entry local. Remote Case!!" << endl;
+      CD_DEBUG("[CDEntry::Restore] Can't find the entry local. Remote Case!!\n");
     } 
 	}
   else {  
     // Restoration from memory or file system. Just use the current dst_data_ for it.
-    dbg<< "kCopy]" << endl; 
+    CD_DEBUG("[kCopy] buffer addr : %p\n", buffer);
+ 
     buffer = &dst_data_;
     dst_data_.address_data();
   }
-  cout << "Entry ? " << entry << endl;
-  dbg.flush(); 
+
+  CD_DEBUG("[Restore] Done. Entry : %p\n", entry);
+
   return InternalRestore(buffer, local_found);
 }
 
 CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_found)
 {
-  dbg<<"CDEntry::InternalRestore ";
+  CD_DEBUG("[CDEntry::InternalRestore] ");
 
   // Handles preservation via reference for remote copy.
   if(buffer == NULL) {
 
 #if _MPI_VER
 
-    dbg<<"Request head to bring the entry" << endl;
+    CD_DEBUG("Request head to bring the entry");
     
     // Add this entry for receiving preserved data remotely.
     ENTRY_TAG_T tag_to_search = dst_data_.ref_name_tag();
@@ -350,52 +357,53 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
     } 
     else {
       // Receive the preserved data to restore the data in application memory
-      dbg << "Found entry locally, but need to bring the entry (" << tag_to_search << ", "
-          << ptr_cd()->GetCDID().GenMsgTag(tag_to_search) << ") from remote task in the same CD" << endl;
-      dbg << "CHECK TAG : " << tag_to_search << " --> " << ptr_cd()->GetCDID().GenMsgTag(tag_to_search) << endl;
-      dbg.flush();
+      CD_DEBUG("Found entry locally, but need to bring the entry (Entry Tag: %u, Msg Tag: %u) from remote task in the same CD\n", 
+							 tag_to_search, ptr_cd()->GetCDID().GenMsgTag(tag_to_search));
+      CD_DEBUG("CHECK TAG : %u --> %u\n", tag_to_search, ptr_cd()->GetCDID().GenMsgTag(tag_to_search));
+
       ptr_cd()->entry_recv_req_[tag_to_search] = CommInfo();
 //      ptr_cd()->entry_req_.push_back(CommInfo()); //getchar(); //src_data_.address_data());
+
       PMPI_Irecv(src_data_.address_data(), 
                  src_data_.len(), 
                  MPI_BYTE, 
                  MPI_ANY_SOURCE, 
                  ptr_cd()->GetCDID().GenMsgTag(tag_to_search), 
                  MPI_COMM_WORLD, 
-//                 &(ptr_cd()->entry_req_.back().req_));  
                  &(ptr_cd()->entry_recv_req_[tag_to_search].req_));  
+//                 &(ptr_cd()->entry_req_.back().req_));  
     }
 
 
 
-    dbg<<"RequestEntrhSearch Done\n" << endl;
-    dbg.flush();
+    CD_DEBUG("[RequestEntrhSearch] Done\n");
 
 #endif
     return kEntrySearchRemote;
   }
 	else if(buffer->handle_type() == DataHandle::kMemory)	{
+
 	  //FIXME we need to distinguish whether this request is on Remote or local for both 
     // when using kOSFile or kMemory and do appropriate operations..
 
-    dbg<<"Local Case -> kMemory"<<endl;
-		if(src_data_.address_data() != NULL) {
-      dbg << src_data_.len() << " - " << buffer->len() << ", offset : "<<buffer->ref_offset() << endl;
-      dbg << src_data_.address_data() << " - " << buffer->address_data() << endl;
-      assert( src_data_.len() == buffer->len() );
-//      dbg << "sizeof src "<< sizeof(src_data_.address_data()) << ", sizeof dst " <<sizeof(buffer->address_data())<<endl;
-			memcpy(src_data_.address_data(), (char *)buffer->address_data()+(buffer->ref_offset()), buffer->len()); 
-      dbg<<"memcpy succeeds"<<endl; //dbgBreak();
+    CD_DEBUG("Local Case -> kMemory\n");
 
-      dbg<<"memcpy "<< dst_data_.len() <<" size data from "<< dst_data_.address_data() << " to "<< src_data_.address_data() <<endl<<endl;
+		if(src_data_.address_data() != NULL) {
+      CD_DEBUG("%lu (src) - %lu (buffer), offset : %lu\n", src_data_.len(), buffer->len(), buffer->ref_offset());
+      CD_DEBUG("%p - %p\n", src_data_.address_data(), buffer->address_data());
+      assert( src_data_.len() == buffer->len() );
+
+			memcpy(src_data_.address_data(), (char *)buffer->address_data()+(buffer->ref_offset()), buffer->len()); 
+
+      CD_DEBUG("Succeeds in memcpy %lu size data. %p --> %p\n", dst_data_.len(), dst_data_.address_data(), src_data_.address_data());
 		}
 		else {
-			cerr << "Not enough memory." << endl;
+			ERROR_MESSAGE("Not enough memory.\n");
 		}
 
 	}
 	else if( buffer->handle_type() == DataHandle::kOSFile)	{
-    dbg<<"CDEntry::Restore -> kOSFile"<<endl;
+    CD_DEBUG("CDEntry::Restore -> kOSFile\n");
 		//FIXME we need to collect file writes and write as a chunk. We don't want to have too many files per one CD.   
 
 		FILE *fp;
@@ -433,6 +441,15 @@ ostream& cd::operator<<(ostream& str, const CDEntry& cd_entry)
              << "\n========================================\n";
 }
 
+string CDEntry::GetString(void) const 
+{
+  return ( string("\n== CD Entry Information ================")
+         + string("\nSource      :\t") + src_data_.GetString() 
+         + string("\nDestination :\t") + dst_data_.GetString()
+         + string("\nEntry Tag   :\t") + to_string(entry_tag_)
+         + string("\nEntry Name  :\t") + tag2str[entry_tag_]
+         + string("\n========================================\n") );
+}
 
 CDEntry::CDEntryErrT CDEntry::Save(void)
 {
@@ -457,11 +474,11 @@ CDEntry::CDEntryErrT CDEntry::Save(void)
 
     if(dst_data_.address_data() != NULL) {
       memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len()); 
-      dbg<<"memcpy "<< src_data_.len() <<" size data from "<< src_data_.address_data() << " to "<< dst_data_.address_data() <<endl<<endl;
+      CD_DEBUG("Succeeds in memcpy %lu size data. %p --> %p\n", dst_data_.len(), dst_data_.address_data(), src_data_.address_data());
     }
     else {
+      ERROR_MESSAGE("Not enough memory.");
       return kOutOfMemory;
-      //  ERROR_MESSAGE("Not enough memory.");
     }
 
   }

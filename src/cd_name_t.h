@@ -69,6 +69,7 @@ namespace cd {
 class CDNameT {
   friend class CD;
   friend class HeadCD;
+	friend class CDID;
 private:
   // Level in the CD hierarhcy. It increases at Create() and destroys at Destroy.
 	uint32_t level_;  
@@ -87,7 +88,7 @@ public:
   uint32_t level(void) const;
   uint32_t rank_in_level(void) const;
   uint32_t size(void) const;
-
+	std::string GetString(void) const;
 private: 
   void IncLevel(void);
   int CDTag(void) const; 

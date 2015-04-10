@@ -159,6 +159,9 @@ class CD : public Serializable {
   protected: 
     CDID cd_id_;
     RecoverObject *recoverObj_;
+
+		bool recreated_;
+		bool reexecuted_;
     //GONG
     bool begin_;
 //  public:
@@ -229,7 +232,7 @@ class CD : public Serializable {
 //    static std::map<ENTRY_TAG_T, CommInfo> entry_send_req_;
     static std::map<ENTRY_TAG_T, CommInfo> entry_recv_req_;
 //    static std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
-    
+		static std::map<std::string, uint32_t> exec_count_;
     // Only CDEntries that has refname will be pushed into this data structure for later quick search.
     std::map<uint64_t, CDEntry*> entry_directory_map_;   
    
@@ -407,6 +410,8 @@ public:
     int      head(void)          const { return cd_id_.node_id_.head(); }
     int      task_size(void)     const { return cd_id_.node_id_.size(); }
     bool     IsHead(void)        const { return cd_id_.IsHead(); }
+    bool     recreated(void)     const { return recreated_; }
+    bool     reexecuted(void)    const { return reexecuted_; }
     CDType GetCDType();
 #ifdef comm_log
     CommLog *libc_log_ptr()      const { return libc_log_ptr_; }

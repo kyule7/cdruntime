@@ -177,12 +177,14 @@ public:
              && (ref_offset_ == that.ref_offset_);
     }
 
+	std::string GetString(void) const;
 private:
 //  public: 
     //we need serialize deserialize interface here.
     void *Serialize(uint32_t& len_in_bytes)
     {
-      dbg << "\nData Handle Serialize\n" << endl;
+      CD_DEBUG("\nData Handle Serialize\n");
+
       Packer data_packer;
       uint32_t node_id_packed_len=0;
       void *node_id_packed_p = node_id_.Serialize(node_id_packed_len);
@@ -190,50 +192,62 @@ private:
       data_packer.Add(DATA_PACKER_NODE_ID, node_id_packed_len, node_id_packed_p);
       data_packer.Add(DATA_PACKER_HANDLE_TYPE, sizeof(HandleType), &handle_type_);
       data_packer.Add(DATA_PACKER_ADDRESS, sizeof(void*), &address_data_);
-      dbg << "address data is packed : "<< address_data_ << "\n\n" << endl; //getchar();
-      data_packer.Add(DATA_PACKER_LEN, sizeof(uint64_t), &len_);
 
+      CD_DEBUG("address data is packed : %p\n\n", address_data_);
+
+      data_packer.Add(DATA_PACKER_LEN, sizeof(uint64_t), &len_);
       data_packer.Add(DATA_PACKER_FILENAME, sizeof(file_name_), file_name_);
  
 //      uint64_t ref_name_key = cd_hash(ref_name);
       data_packer.Add(DATA_PACKER_REFNAME, sizeof(uint64_t), &ref_name_); // string.size() + 1 is for '\0'
       data_packer.Add(DATA_PACKER_REFOFFSET, sizeof(uint64_t), &ref_offset_); 
-      dbg << "\nData Handle Serialize Done\n" << endl;
+
+      CD_DEBUG("\nData Handle Serialize Done\n");
+
       return data_packer.GetTotalData(len_in_bytes);  
     }
     void Deserialize(void* object) 
     {
-      dbg << "\nData Handle Deserialize\n" << object << endl;
+      CD_DEBUG("\nData Handle Deserialize %p\n", object);
+
       Unpacker data_unpacker;
       uint32_t return_size;
       uint32_t dwGetID;
 
       void *node_id_unpacked=0;
       node_id_unpacked = data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      dbg << "Before Deserialize node_id"<<endl;
+
+      CD_DEBUG("Before Deserialize node_id\n");
+
       node_id_.Deserialize(node_id_unpacked);
-      dbg << "1st unpacked thing in data_handle : " << node_id_ << ", return size : " << return_size << endl;
+      
+			CD_DEBUG("1st unpacked thing in data_handle : %s, return size : %u\n", node_id_.GetString().c_str(), return_size);
 
       handle_type_ = *(HandleType *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      dbg << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;
+
+      CD_DEBUG("2nd unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
 
       void *tmp_address_data = data_unpacker.GetNext((char *)object, dwGetID, return_size);
       memcpy(&address_data_, tmp_address_data, sizeof(void *));
-      dbg << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;
+
+      CD_DEBUG("3rd unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
 
       len_ = *(uint64_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      dbg << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;    
 
+      CD_DEBUG("4th unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
 
       char *file_name_p = (char *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
       strcpy(file_name_, file_name_p);
-      dbg << "5th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;    
+
+      CD_DEBUG("5th unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
 
       ref_name_ = *(uint64_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      dbg << "6th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;    
+
+      CD_DEBUG("6th unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
 
       ref_offset_ = *(uint64_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      dbg << "7th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;    
+
+      CD_DEBUG("7th unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
     }
 
     DataHandle& operator=(const DataHandle& that) {

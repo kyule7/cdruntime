@@ -34,6 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_id.h"
+#include "util.h"
 using namespace cd;
 
 // TODO Initialize member values to zero or something, 
@@ -41,13 +42,23 @@ using namespace cd;
 
 CDID::CDID() 
   : domain_id_(0), sequential_id_(0)
-{}
+{
+	object_id_ = 0;
+}
 
 CDID::CDID(const CDNameT& cd_name, const NodeID& new_node_id)
   : cd_name_(cd_name), node_id_(new_node_id)
 {
   domain_id_ = 0;
   sequential_id_ = 0;
+//	if(Util::object_id.find(cd_name.level_) != Util::object_id.end()) {
+//		object_id_ = Util::object_id[cd_name.level_];
+//	}
+//	else {
+//		Util::object_id[cd_name.level_] = 0;
+//		object_id_ = 0;
+//	}
+	object_id_ = 0;
 
 }
 
@@ -56,6 +67,15 @@ CDID::CDID(const CDID& that)
 {
   domain_id_     = that.domain_id();
   sequential_id_ = that.sequential_id();
+//	uint32_t level = that.cd_name_.level_;
+//	if(Util::object_id.find(level) != Util::object_id.end()) {
+//		object_id_ = Util::object_id[level];
+//	}
+//	else {
+//		Util::object_id[level] = 0;
+//		object_id_ = 0;
+//	}
+	object_id_ = 0;
 }
 
 uint32_t CDID::level(void)         const { return cd_name_.level(); }
@@ -72,7 +92,7 @@ CDNameT  CDID::cd_name(void)       const { return cd_name_; }
 NodeID   CDID::node_id(void)       const { return node_id_; }
 bool     CDID::IsHead(void)        const { return node_id_.IsHead(); }
 
-
+std::string CDID::GetPhaseID(void) const { return std::to_string(cd_name_.level_) + std::string("_") + std::to_string(object_id_); }
 void CDID::SetCDID(const NodeID& node_id)   { node_id_ = node_id; }
 void CDID::SetSequentialID(uint32_t seq_id) { sequential_id_ = seq_id; }
 
@@ -82,7 +102,7 @@ CDID &CDID::operator=(const CDID& that)
   sequential_id_ = that.sequential_id();
   cd_name_       = that.cd_name();
   node_id_       = that.node_id();
-//  object_id_     = that.object_id();
+  object_id_     = that.object_id();
   return *this;
 }
 
@@ -140,3 +160,10 @@ void CDID::Print(void)
   PRINT_DEBUG("    IsHead: %d\n"          , IsHead());
 }
 
+std::string CDID::GetString(void) const 
+{
+  return ( std::string("CDName : ") + cd_name_.GetString() 
+				 + std::string(", Node ID : ") + node_id_.GetString() 
+				 + std::string(", Obj#") + std::to_string(object_id_) 
+				 + std::string(", Seq#") + std::to_string(sequential_id_) );
+}

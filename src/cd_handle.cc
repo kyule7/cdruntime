@@ -49,9 +49,15 @@ using namespace std;
 cd::DebugBuf cd::dbg;
 #endif
 
+#if _CD_DEBUG == 1  // Print to fileout -----
+FILE *cdout=NULL;
+FILE *cdoutApp=NULL;
+#endif
+
 #if _ERROR_INJECTION_ENABLED
 MemoryErrorInjector *CDHandle::memory_error_injector_ = NULL;
 #endif
+
 
 /// KL
 /// uniquePath is a singleton object per process, which is used for CDPath.
@@ -90,10 +96,16 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   myTaskID      = myTask;
   totalTaskSize = numTask;
 
-#if _DEBUG
+#if _CD_DEBUG
   std::string output_filename("./output/output_");
   output_filename += to_string(static_cast<unsigned long long>(myTaskID));
-  dbg.open(output_filename.c_str());
+	
+	cdout = fopen(output_filename.c_str(), "w");
+
+
+  std::string output_filename2("./output/dbg_output_");
+  output_filename2 += to_string(static_cast<unsigned long long>(myTaskID));
+  dbg.open(output_filename2.c_str());
 #endif
 
   Internal::Intialize();
@@ -126,9 +138,12 @@ void WriteDbgStream(DebugBuf *debugBuf)
 #if _DEBUG
   dbg.flush();
   dbg.close();
+	fclose(cdout);
+
 
   std::string output_filename("./output/output_app_");
   output_filename += string(to_string(static_cast<unsigned long long>(myTaskID)));
+	
   debugBuf->open(output_filename.c_str());
   debugBuf->flush();
   debugBuf->close();
@@ -445,7 +460,7 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
   ColorT new_comm;
   NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, new_size);
 
-  CD_DEBUG("[Before] old: %d, new: %d\n", node_id_, new_node_id);
+  CD_DEBUG("[Before] old: %s, new: %s\n", node_id_.GetString().c_str(), new_node_id.GetString().c_str());
  
   if(num_children > 1) {
     err = SplitCD(node_id_.task_in_color(), node_id_.size(), num_children, new_color, new_task);
@@ -462,11 +477,11 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
   SetHead(new_node_id);
 
   // Generate CDID
-  CD_DEBUG("new_color : %d in %d\n", new_color, node_id_);
+  CD_DEBUG("new_color : %d in %s\n", new_color, node_id_.GetString().c_str());
 
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
 
-  CD_DEBUG("Remote Entry Dir size: %d", ptr_cd_->remote_entry_directory_map_.size());
+  CD_DEBUG("Remote Entry Dir size: %lu", ptr_cd_->remote_entry_directory_map_.size());
 
   CollectHeadInfoAndEntry(new_node_id); 
 
@@ -654,7 +669,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   if(IsHead()) {
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Complete 1 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      dbg << "\n\n[Barrier] CDHandle::Complete 1 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     CheckMailBox();
 
@@ -663,7 +678,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
     CheckMailBox();
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Complete 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      dbg << "\n\n[Barrier] CDHandle::Complete 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
   }
 
@@ -673,7 +688,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   if(IsHead()) {
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Complete 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      dbg << "\n\n[Barrier] CDHandle::Complete 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     CheckMailBox();
 
@@ -682,12 +697,12 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
     CheckMailBox();
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Complete 2 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+      dbg << "\n\n[Barrier] CDHandle::Complete 2 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
   }
   if(node_id_.size() > 1) {
     Sync(node_id_.color());
-    cout << "\n\n[Barrier] CDHandle::Complete 3 --- "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; 
+    dbg << "\n\n[Barrier] CDHandle::Complete 3 --- "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; 
   }
 
 #endif
@@ -910,8 +925,7 @@ CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 {
   CDPrologue();
-  //CheckMailBox();
-  dbg << "DETECT check mode : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
+  dbg << "\nDETECT check mode : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
   std::vector<SysErrT> ret_prepare;
   CDErrT err = kOK;
   CD::CDInternalErrT internal_err = ptr_cd_->Detect();
@@ -921,28 +935,58 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   }
 
 #if _MPI_VER
-  CDEventT event = kNoEvent;
 
   if(internal_err == CD::CDInternalErrT::kErrorReported) {
     dbg << "HERE?" << endl;
-    event = kErrorOccurred;
     SetMailBox(kErrorOccurred);
     err = kAppError;
+
+
+    //if(node_id_.size() > 1) 
+		{
+      Sync(CDPath::GetCoarseCD(this)->color());
+      dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+    }
+
   }
   else {
 
 #if _ERROR_INJECTION_ENABLED
 
     dbg << "WOW it is before" << endl;
+    dbg << "is it NULL? " << cd_error_injector_ <<" recreated? "<< ptr_cd_->recreated()<< " reexecuted? "<< ptr_cd_->reexecuted()<< endl;
     if(cd_error_injector_ != NULL) {
       dbg << "WOW it is after : # reexec: "<< ptr_cd_->num_reexecution_ <<", exec mode : " << kExecution << " level : " << level() << endl;
-      if(cd_error_injector_->InjectAndTest() && GetExecMode() != kReexecution) {
-        dbg << "or HERE?" << endl;
-        event = kErrorOccurred;
+        dbg << " recreated? "<< ptr_cd_->recreated()<< " reexecuted? "<< ptr_cd_->reexecuted()<< endl;
+      if(cd_error_injector_->InjectAndTest() && ptr_cd_->recreated() == false && ptr_cd_->reexecuted() == false) {
+        dbg << "or HERE? recreated? "<< ptr_cd_->recreated()<< " reexecuted? "<< ptr_cd_->reexecuted()<< endl;
         SetMailBox(kErrorOccurred);
         err = kAppError;
+
+//		    if(node_id_.size() > 1) 
+				{
+		      Sync(CDPath::GetCoarseCD(this)->color());
+		      dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+		    }
+
       }
+			else {
+//		    if(node_id_.size() > 1) 
+				{
+		      Sync(CDPath::GetCoarseCD(this)->color());
+		      dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+		    }
+
+			}
     }
+		else {
+//		  if(node_id_.size() > 1) 
+			{
+		    Sync(CDPath::GetCoarseCD(this)->color());
+		    dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+		  }
+		}
+
 #endif
 
   }
@@ -1017,40 +1061,54 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 ////  }
 
 
-  Sync(node_id_.color());
+//  Sync(node_id_.color());
+
+//  if(IsHead()) { 
+//
+//    if(node_id_.size() > 1) {
+//      Sync(node_id_.color());
+//      dbg << "\n\n[Barrier] CDHandle::Detect 1 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+//    }
+//    SetMailBox(event);
+//
+//  }
+//  else {
+//
+//    SetMailBox(event);
+//    if(node_id_.size() > 1) {
+//      Sync(node_id_.color());
+//      dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+//    }
+//
+//  }
 
   if(IsHead()) { 
 
-    if(node_id_.size() > 1) {
-      Sync(node_id_.color());
-      dbg << "\n\n[Barrier] CDHandle::Detect 1 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+//    if(node_id_.size() > 1) 
+		{
+      Sync(CDPath::GetCoarseCD(this)->color());
+      dbg << "\n\n[Barrier] CDHandle::Detect 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
-    SetMailBox(event);
-
-  }
-  else {
-
-    SetMailBox(event);
-    if(node_id_.size() > 1) {
-      Sync(node_id_.color());
-      dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-    }
-
-  }
-
-  if(IsHead()) { 
 
     CheckMailBox();
-    if(node_id_.size() > 1) {
-      Sync(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Detect 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+		
+//    if(node_id_.size() > 1) 
+		{
+      Sync(CDPath::GetCoarseCD(this)->color());
+      dbg << "\n\n[Barrier] CDHandle::Detect 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
   }
   else {
 
-    if(node_id_.size() > 1) {
-      Sync(node_id_.color());
-      cout << "\n\n[Barrier] CDHandle::Detect 2 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+//    if(node_id_.size() > 1) 
+		{
+      Sync(CDPath::GetCoarseCD(this)->color());
+      dbg << "\n\n[Barrier] CDHandle::Detect 2 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+    }
+//    if(node_id_.size() > 1) 
+		{
+      Sync(CDPath::GetCoarseCD(this)->color());
+      dbg << "\n\n[Barrier] CDHandle::Detect 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
     }
     CheckMailBox();
 
@@ -1240,3 +1298,5 @@ jmp_buf* CDHandle::jump_buffer()
 } 
 */
 
+bool     CDHandle::recreated(void)     const { return ptr_cd_->recreated_; }
+bool     CDHandle::reexecuted(void)    const { return ptr_cd_->reexecuted_; }

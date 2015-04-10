@@ -414,9 +414,11 @@ public:
                   double error_rate) 
     : ErrorInjector(true, error_rate, kUniform, stdout) {
     for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
+			dbg<<"push back cd " << *it << endl;
       cd_to_fail_.push_back(*it);
     }
     for(auto it=task_list_to_fail.begin(); it!=task_list_to_fail.end(); ++it) {
+			dbg<<"push back task " << *it << endl;
       task_to_fail_.push_back(*it);
     }
     force_to_fail_ = true;
@@ -479,8 +481,9 @@ public:
     if(enabled_ == false) return false;
 
     if( force_to_fail_ ) {
-      dbg << "force_to_fail is turned on. ";
+      dbg << "force_to_fail is turned on. " << cd_to_fail_.size() << " " << task_to_fail_.size() << endl;
       for(auto it=cd_to_fail_.begin(); it!=cd_to_fail_.end(); ++it) {
+				dbg << "cd_to_fail : " << *it << " = " << rank_in_level_ << endl;
         if(*it == rank_in_level_) {
           dbg << "cd failed rank_in_level #" << *it << std::endl;
           return true;
@@ -488,6 +491,7 @@ public:
       }
 
       for(auto it=task_to_fail_.begin(); it!=task_to_fail_.end(); ++it) {
+				dbg << "task_to_fail : " << *it << " = " << task_in_color_ << endl;
         if(*it == task_in_color_) {
           dbg << "task failed task_in_color #" << *it << std::endl;
           return true;

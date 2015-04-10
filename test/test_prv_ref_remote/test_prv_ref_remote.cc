@@ -134,7 +134,11 @@ int TestPreservationViaRefRemote(void)
   CDHandle* child_lv1=root->Create(LV1, "CD1", kStrict, 0, 0, &err);
   dbgApp << "Root Creates Level 1 CD. # of children CDs = " << LV1 << "\n" << endl;
 
+
   CD_Begin(child_lv1);
+
+	child_lv1->RegisterErrorInjector(new CDErrorInjector({}, {3,4}, 0.0));
+
   dbgApp << "\t\tLevel 1 CD Begin...\n" << endl;
 
   DecomposeData(arrayA, sizeof(arrayA), myRank);
@@ -204,6 +208,7 @@ int TestPreservationViaRefRemote(void)
   dbgApp << "\t\tCD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
 
   CD_Begin(child_lv2);
+	child_lv2->RegisterErrorInjector(new CDErrorInjector({}, {6}, 0.0));
   dbgApp << "\t\t\t\tLevel 2 CD Begin...\n" << endl;
   dbgApp.flush();
 
@@ -229,7 +234,7 @@ int TestPreservationViaRefRemote(void)
   }
   // Level 2 Body
 
-  child_lv2->CDAssert(CheckArray(arrayE, sizeof(arrayE)));
+//  child_lv2->CDAssert(CheckArray(arrayE, sizeof(arrayE)));
 
   CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kStrict, 0, 0, &err);
   dbgApp << "\t\t\t\tCD2 Creates Level 3 CD. # of children CDs = " << LV3 << "\n" << endl;
@@ -246,9 +251,11 @@ int TestPreservationViaRefRemote(void)
 
   // Level 3 Body
 
+  dbgApp << "\t\t\t\t\t\tLevel 3 CD Body...\n" << endl;
 
   child_lv3->Detect();
 
+  dbgApp << "\t\t\t\t\t\tLevel 3 After Detect...\n" << endl;
   CD_Complete(child_lv3);
   dbgApp << "\t\t\t\t\t\tLevel 3 CD Complete...\n" << endl;
   child_lv3->Destroy();
@@ -262,6 +269,7 @@ int TestPreservationViaRefRemote(void)
   child_lv2->Destroy();
   dbgApp << "\t\t\t\tLevel 2 CD Destroyed...\n" << endl;
 
+  dbgApp.flush(); 
   // Detect Error here
   child_lv1->Detect();
 
@@ -275,10 +283,10 @@ int TestPreservationViaRefRemote(void)
 
   CD_Complete(root);
   dbgApp << "Root CD Complete...\n" << endl;
-  CD_Finalize(&dbgApp);
   dbgApp << "\t\tRoot CD Destroyed (Finalized) ...\n" << endl;
   dbgApp << "\n==== TestPreservationViaRefRemote Done ====\n" << endl; 
   dbgApp.flush(); 
+  CD_Finalize(&dbgApp);
   // check the test result   
   return kOK; //
 }

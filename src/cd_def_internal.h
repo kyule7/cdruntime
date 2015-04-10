@@ -40,6 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <vector>
 #include <map>
 #include <csetjmp>
+#include <cstdio>
 
 #if _MPI_VER 
 
@@ -368,24 +369,24 @@ namespace cd {
 #endif
 }
 
-#if _CD_DEBUG == 0  // No printouts
+#if _CD_DEBUG == 0  // No printouts -----------
 
-#define CD_DEBUG(FP, ...) 
+#define CD_DEBUG(...) 
 
-#elif _CD_DEBUG == 1  // Print to fileout
+#elif _CD_DEBUG == 1  // Print to fileout -----
 
-#define CD_DEBUG(FP, ...) \
-  fprintf(FP, __VA_ARGS__)
+extern FILE *cdout;
+extern FILE *cdoutApp;
 
 #define CD_DEBUG(...) \
-  fprintf(DEFAULT_FP, __VA_ARGS__)
+  fprintf(cdout, __VA_ARGS__)
 
-#elif _CD_DEBUG == 2  // print to stdout
+#elif _CD_DEBUG == 2  // print to stdout ------
 
 #define CD_DEBUG(...) \
   fprintf(stdout, __VA_ARGS__)
 
-#else
+#else  // -------------------------------------
 
 #define CD_DEBUG(...) \
   fprintf(stderr, __VA_ARGS__)
@@ -396,8 +397,9 @@ namespace cd {
 //SZ: change the following macro to 
 // 1) add "Error: " before all error messages,
 // 2) accept multiple arguments, and 3) assert(0) in ERROR_MESSAGE
-#define ERROR_MESSAGE(...) {printf("\nError: ");printf(__VA_ARGS__);assert(0);}
-
+#define ERROR_MESSAGE(...) /*\
+	{ fprintf(stderr, "\nERROR: %s", __VA_ARGS__); assert(0); }
+*/
 #if _DEBUG
   //SZ: change to this if want to compile test_comm_log.cc
   #ifdef comm_log

@@ -113,3 +113,8 @@ std::ostream &cd::operator<<(std::ostream &str, const NodeID &node_id)
              << node_id.task_in_color() << "/" << node_id.size() 
              << ')';
 }
+
+std::string NodeID::GetString(void) const 
+{
+  return ( std::string("(") + std::to_string(task_in_color_) + std::string("/") + std::to_string(size_) + std::string(")") );
+}

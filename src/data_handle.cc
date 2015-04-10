@@ -36,9 +36,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "data_handle.h"
 #include <iostream>
 using namespace cd;
+using namespace std;
 
 
-std::ostream& cd::operator<<(std::ostream& str, const DataHandle& dh)
+ostream& cd::operator<<(ostream& str, const DataHandle& dh)
 {
   return str << "\n== Data Handle Information ======="
              << "\nhandle T:\t" << dh.handle_type_  
@@ -49,4 +50,17 @@ std::ostream& cd::operator<<(std::ostream& str, const DataHandle& dh)
              << "\nref_name:\t" << dh.ref_name_
              << "\nref_offset:\t"<<dh.ref_offset_
              << "\n==================================\n";
+}
+
+string DataHandle::GetString(void) const 
+{
+  return ( string("\n== Data Handle Information =======")
+         + string("\nhandle T:\t") + to_string(handle_type_)
+         + string("\nNode ID :\t") + node_id_.GetString()
+//         + string("\nAddress :\t") + to_string(static_cast<char *>(address_data_))
+         + string("\nlength  :\t") + to_string(len_)
+         + string("\nfilename:\t") + string(file_name_)
+         + string("\nref_name:\t") + to_string(ref_name_)
+         + string("\nref_offset:\t") + to_string(ref_offset_)
+         + string("\n==================================\n") );
 }
