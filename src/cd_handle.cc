@@ -420,7 +420,7 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
   CDPrologue();
 #if _MPI_VER
 
-  cout << "CDHandle::Create " << node_id_ << endl;
+  CD_DEBUG("CDHandle::Create Node ID : %s\n", node_id_.GetString().c_str());
   // Create a new CDHandle and CD object
   // and populate its data structure correctly (CDID, etc...)
   //  This is an extremely powerful mechanism for dividing a single communicating group of processes into k subgroups, 
@@ -633,7 +633,7 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
   
   if(node_id_.size() > 1) {
     Sync(node_id_.color());
-    cout << "\n\n[Barrier] CDHandle::Begin - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+    CD_DEBUG("\n\n[Barrier] CDHandle::Begin - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
   }
   //CheckMailBox();
 

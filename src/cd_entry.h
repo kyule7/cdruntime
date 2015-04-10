@@ -106,6 +106,7 @@ class cd::CDEntry : public cd::Serializable
 //      }
  
     }
+		std::string GetString(void) const;
   private:
     // FIXME: currently it is assumed that my cd is always in the same memory space.
     // In the future we might need a distributed CD structure. 
@@ -122,7 +123,6 @@ class cd::CDEntry : public cd::Serializable
 		ENTRY_TAG_T name_tag() const { return entry_tag_; }
     bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }
 
-		std::string GetString(void) const;
 
     CDEntry& operator=(const CDEntry& that) {
       entry_tag_ = that.entry_tag_;    

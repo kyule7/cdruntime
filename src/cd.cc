@@ -408,10 +408,13 @@ CDHandle* CD::Create(CDHandle* parent,
 {
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
-  cout << "CD::Create" << endl;
+
+  CD_DEBUG("CD::Create\n");
+
   *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
-  cout << "CD::Create done" << endl;
+
+  CD_DEBUG("CD::Create done\n");
 
   this->AddChild(new_cd_handle);
 
@@ -653,7 +656,8 @@ inline CD::CDInternalErrT CD::InternalDestroy(void)
 CDErrT CD::Begin(bool collective, const char* label)
 {
   begin_ = true;
-  PRINT_DEBUG("inside CD::Begin\n");
+
+  CD_DEBUG("Inside CD::Begin\n");
 
 #ifdef comm_log
   //SZ: if in reexecution, need to unpack logs to childs
@@ -709,7 +713,7 @@ CDErrT CD::Begin(bool collective, const char* label)
   }
 #endif
 
-  dbg<<"inside CD::Begin"<<endl;
+  CD_DEBUG("Inside CD::Begin\n");
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
@@ -2174,8 +2178,9 @@ CDErrT CD::Reexecute(void)
   //TODO We need to consider collective re-start. 
   if(ctxt_prv_mode_ == kExcludeStack) {
     printf("longjmp\n");
-    
-    dbg << "\n\nlongjmp \t" << jmp_buffer_ << " at level " << level()<< endl; //dbgBreak();
+   
+//    CD_DEBUG("\n\nlongjmp \t %d at level #%u\n", (tmp<<jmp_buffer_).rdbuf(), level());
+
     longjmp(jmp_buffer_, jmp_val_);
   }
   else if (ctxt_prv_mode_ == kIncludeStack) {
@@ -2224,7 +2229,7 @@ CDErrT HeadCD::Reexecute(void)
   if(ctxt_prv_mode_ == kExcludeStack) {
     printf("longjmp\n");
     
-    dbg << "\n\nlongjmp \t" << jmp_buffer_ << " at level " << level()<< endl; //dbgBreak();
+//    dbg << "\n\nlongjmp \t" << jmp_buffer_ << " at level " << level()<< endl; //dbgBreak();
     longjmp(jmp_buffer_, jmp_val_);
   }
   else if (ctxt_prv_mode_ == kIncludeStack) {
@@ -2259,8 +2264,6 @@ CDErrT CD::Resume(void)
 
 CDErrT CD::AddChild(CDHandle* cd_child) 
 { 
-//  dbg<<"sth wrong"<<endl; 
-//  dbgBreak(); 
   // Do nothing?
   if(cd_child->IsHead()) {
     //Send it to Head
@@ -2271,8 +2274,6 @@ CDErrT CD::AddChild(CDHandle* cd_child)
 
 CDErrT CD::RemoveChild(CDHandle* cd_child) 
 {
-//  dbg<<"sth wrong"<<endl; 
-//  dbgBreak(); 
   // Do nothing?
   return CDErrT::kOK;
 }
@@ -2526,7 +2527,7 @@ CDErrT HeadCD::Resume(void)
 CDErrT HeadCD::AddChild(CDHandle *cd_child) 
 {
   if(cd_child->IsHead()) {
-    dbg << "It is not desirable to let the same task be head twice!" << endl;
+    CD_DEBUG("It is not desirable to let the same task be head twice!\n");
 //    cd_children_.push_back(cd_child->ptr_cd()->cd_id().task());
 
 //    GatherChildHead();
@@ -2593,22 +2594,21 @@ void HeadCD::set_cd_parent(CDHandle* cd_parent)
 CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name) 
 {
   try {
-    dbg << "\nCD::InternalGetEntry : " << entry_name << " - " << tag2str[entry_name] << endl;
+    CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
     
     auto it = entry_directory_map_.find(entry_name);
     auto jt = remote_entry_directory_map_.find(entry_name);
     if(it == entry_directory_map_.end() && jt == remote_entry_directory_map_.end()) {
-      dbg<<"[InternalGetEntry Failed] There is no entry for reference of "<< tag2str[entry_name]
-               <<" at CD level " << GetCDID().level() << endl;
-      //dbgBreak();
+      CD_DEBUG("[InternalGetEntry Failed] There is no entry for reference of %s at level #%u\n", tag2str[entry_name].c_str(), level());
       return NULL;
     }
     else if(it != entry_directory_map_.end()) {
       // Found entry at local directory
       CDEntry* cd_entry = entry_directory_map_.find(entry_name)->second;
       
-      dbg<<"[InternalGetEntry Local] ref_name: " <<entry_directory_map_[entry_name]->dst_data_.address_data()
-               << ", address: " <<entry_directory_map_[entry_name]->dst_data_.address_data()<< endl;
+      CD_DEBUG("[InternalGetEntry Local] ref_name: %s, address: %p\n", 
+								entry_directory_map_[entry_name]->dst_data_.ref_name().c_str(), 
+								entry_directory_map_[entry_name]->dst_data_.address_data());
 
 //      if(cd_entry->isViaReference())
 //        return NULL;
@@ -2618,9 +2618,11 @@ CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name)
     else if(jt != remote_entry_directory_map_.end()) {
       // Found entry at local directory, but it is a buffer to send remotely.
       CDEntry* cd_entry = remote_entry_directory_map_.find(entry_name)->second;
+
+      CD_DEBUG("[InternalGetEntry Remote] ref_name: %s, address: %p\n", 
+								remote_entry_directory_map_[entry_name]->dst_data_.ref_name().c_str(), 
+								remote_entry_directory_map_[entry_name]->dst_data_.address_data());
       
-      dbg<<"[InternalGetEntry Remote] ref_name: " <<remote_entry_directory_map_[entry_name]->dst_data_.address_data()
-               << ", address: " <<remote_entry_directory_map_[entry_name]->dst_data_.address_data()<< endl;
 //      if(cd_entry->isViaReference())
 //        return NULL;
 //      else
