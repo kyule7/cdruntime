@@ -64,7 +64,10 @@ This repository is Containment Domain (CD) runtime system libraries. This consis
 
 
 ## **How to build** ##
-In your source, you should include "cds.h" library in your source code.
-Then, you need to add ${CD_CFLAGS} and ${CD_LINKFLAGS} when you compile your source code to generate executable.
-${CD_LINKFLAGS} will include .so files to enable CD runtime system in your program.
-See also {CD_ROOT}/test/test_simple_hierarchy/Makefile to get an example for build.
+1. Include "cds.h" library in your source code.
+
+
+2. Add ${CD_CFLAGS} and ${CD_LINKFLAGS} when you compile your source code to generate executable. ${CD_LINKFLAGS} will include .so files to enable CD runtime system in your program.
+
+
+3. See also {CD_ROOT}/test/test_simple_hierarchy/Makefile to get an example for build.
