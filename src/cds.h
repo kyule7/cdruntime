@@ -74,6 +74,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  * \n\n\n\n\n\n\n\n\n\n
  *
+ * The supported features are descripted as below. Please take a look at it before using CD runtime system for your application.
+ * - \ref sec_plans
+ *
+ * \n\n\n
+ *
  * For now, the documentation is organized around the following
  * "modules", which can also be accessed through the "Modules" tab on
  * the HTML docs.
@@ -109,6 +114,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * \example test_cd_hierarchy.cc
  */
 
+/** \page plans Road Map of CD Runtime
+ *
+ * \section sec_plans Supported features in CD runtime
+ * \subsection supported Supported features
+ *
+ * \include plans.txt
+ *
+ */
+
 /** \page examples_page_spmv CD Example Page 1 (SpMV)
  *
  * \section sec_example_spmv CD Example 1 - SpMV
@@ -134,6 +148,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  * \include examples_for_doc/test_cd_hierarchy.cc
  *
+ * \subsection example_user_defined_hierarchy User-defined CD Hierarchy Example
+ *
+ * \include examples_for_doc/test_user_defined_hierarchy.cc
  */
 
 /** \page examples_page_error_injection Error Injection

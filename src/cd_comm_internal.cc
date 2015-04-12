@@ -134,7 +134,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 
   for(auto it = ptr_cd()->remote_entry_directory_map_.begin();
            it!= ptr_cd()->remote_entry_directory_map_.end(); ++it) {
-    dbg << *(it->second) << endl;
+    CD_DEBUG("%s\n", it->second->GetString().c_str());
 
   }
   uint32_t serialized_len_in_bytes=0;
@@ -562,7 +562,7 @@ bool CD::TestComm(bool test_until_done)
     }
   }
 
-  CD_DEBUG("\nIs all valid : %d\n", is_all_valid);
+  CD_DEBUG("\nIs all valid : %d\n==============================\n", is_all_valid);
 
   return is_all_valid;
 }

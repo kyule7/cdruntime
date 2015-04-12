@@ -90,7 +90,7 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
   }
   memcpy(dst_data_.address_data(), src_data_.address_data(), src_data_.len());
 
-  CD_DEBUG("Saved Data %s : %d at %p (Memory)", 
+  CD_DEBUG("Saved Data %s : %d at %p (Memory)\n", 
 					tag2str[entry_tag_].c_str(), 
 					*(reinterpret_cast<int*>(dst_data_.address_data())), 
 					dst_data_.address_data()); 
@@ -171,9 +171,7 @@ void CDEntry::RequestEntrySearch(void)
   CD *curr_cd = curr_cdh->ptr_cd();
 
   // SetMailbox
-  CDEventT entry_search = kEntrySearch;
-
-  curr_cd->SetMailBox(entry_search);
+  curr_cd->SetMailBox(kEntrySearch);
 
   ENTRY_TAG_T tag_to_search = dst_data_.ref_name_tag();
 
@@ -233,7 +231,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
     // Restoration from reference
     CD_DEBUG("[kReference] Ref name: %s\n", dst_data_.ref_name().c_str());
     
-    int found_level = 0;
+    uint32_t found_level = 0;
     ENTRY_TAG_T tag_to_search = dst_data_.ref_name_tag();
 	  entry = ptr_cd()->SearchEntry(tag_to_search, found_level);
 
@@ -330,7 +328,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
     CD_DEBUG("[kCopy] buffer addr : %p\n", buffer);
  
     buffer = &dst_data_;
-    dst_data_.address_data();
+//    dst_data_.address_data();
   }
 
   CD_DEBUG("[Restore] Done. Entry : %p\n", entry);
@@ -347,12 +345,13 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
 
 #if _MPI_VER
 
-    CD_DEBUG("Request head to bring the entry");
+    CD_DEBUG("Preservation via reference for remote copy.\n");
     
     // Add this entry for receiving preserved data remotely.
     ENTRY_TAG_T tag_to_search = dst_data_.ref_name_tag();
 
     if(local_found == false) {
+    	CD_DEBUG("Failed to find the entry locally. Request head to bring the entry.\n");
       RequestEntrySearch();
     } 
     else {
@@ -381,48 +380,54 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
 #endif
     return kEntrySearchRemote;
   }
-	else if(buffer->handle_type() == DataHandle::kMemory)	{
-
-	  //FIXME we need to distinguish whether this request is on Remote or local for both 
-    // when using kOSFile or kMemory and do appropriate operations..
-
-    CD_DEBUG("Local Case -> kMemory\n");
-
-		if(src_data_.address_data() != NULL) {
-      CD_DEBUG("%lu (src) - %lu (buffer), offset : %lu\n", src_data_.len(), buffer->len(), buffer->ref_offset());
-      CD_DEBUG("%p - %p\n", src_data_.address_data(), buffer->address_data());
-      assert( src_data_.len() == buffer->len() );
-
-			memcpy(src_data_.address_data(), (char *)buffer->address_data()+(buffer->ref_offset()), buffer->len()); 
-
-      CD_DEBUG("Succeeds in memcpy %lu size data. %p --> %p\n", dst_data_.len(), dst_data_.address_data(), src_data_.address_data());
+	else {
+		if(buffer->handle_type() == DataHandle::kMemory)	{
+	    CD_DEBUG("Local Case -> kMemory\n");
+	
+		  //FIXME we need to distinguish whether this request is on Remote or local for both 
+	    // when using kOSFile or kMemory and do appropriate operations..
+	
+			if(src_data_.address_data() != NULL) {
+	      CD_DEBUG("%lu (src) - %lu (buffer), offset : %lu\n", src_data_.len(), buffer->len(), buffer->ref_offset());
+	      CD_DEBUG("%p - %p\n", src_data_.address_data(), buffer->address_data());
+	      assert( src_data_.len() == buffer->len() );
+	
+				memcpy(src_data_.address_data(), (char *)buffer->address_data()+(buffer->ref_offset()), buffer->len()); 
+	
+	      CD_DEBUG("Succeeds in memcpy %lu size data. %p --> %p\n", dst_data_.len(), dst_data_.address_data(), src_data_.address_data());
+			}
+			else {
+				ERROR_MESSAGE("Not enough memory.\n");
+			}
+	
 		}
+		else if( buffer->handle_type() == DataHandle::kOSFile)	{
+	    CD_DEBUG("Local Case -> kOSFile\n");
+
+			//FIXME we need to collect file writes and write as a chunk. We don't want to have too many files per one CD.   
+	
+			FILE *fp = fopen(buffer->file_name_, "r");
+			if( fp!= NULL )	{
+	      if( buffer->ref_offset() != 0 ) { 
+	        fseek(fp, buffer->ref_offset(), SEEK_SET); 
+				}
+
+				fread(src_data_.address_data(), 1, src_data_.len(), fp);
+
+				CD_DEBUG("Read data from OS file system\n");
+
+				fclose(fp);
+				return CDEntryErrT::kOK;
+			}
+			else {
+				CD_DEBUG("Error in fopen\n");
+	      return CDEntryErrT::kFileOpenError;
+		  }
+		} 
 		else {
-			ERROR_MESSAGE("Not enough memory.\n");
+			ERROR_MESSAGE("Unsupported data handle type. Handle Type : %d\n", buffer->handle_type());
 		}
-
 	}
-	else if( buffer->handle_type() == DataHandle::kOSFile)	{
-    CD_DEBUG("CDEntry::Restore -> kOSFile\n");
-		//FIXME we need to collect file writes and write as a chunk. We don't want to have too many files per one CD.   
-
-		FILE *fp;
-		//  Util::GetUniqueCDFileName(cd_id_, src_data_.address_data(), cd_file); 
-    // assume cd_id_ is unique (sequential cds will have different cd_id) and address data is also unique by natural
-		const char* cd_file = buffer->file_name_;
-		fp = fopen(cd_file, "r");
-		if( fp!= NULL )	{
-      if( buffer->ref_offset() != 0 ) 
-        fseek(fp, buffer->ref_offset(), SEEK_SET); 
-			fread(src_data_.address_data(), 1, src_data_.len(), fp);
-			fclose(fp);
-			return CDEntryErrT::kOK;
-		}
-		else 
-      return CDEntryErrT::kFileOpenError;
-
-	}
-
 
 	return kOK;
 	//Direction is from dst_data_ to src_data_

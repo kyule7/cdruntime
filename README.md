@@ -1,5 +1,5 @@
 # **Containment Domains Runtime System** #
-**Modified date: 04.05.2015**
+**Modified date: 04.11.2015**
 
 ## **Copyright** ##
 Copyright 2014, The University of Texas at Austin 
@@ -60,4 +60,14 @@ This repository is Containment Domain (CD) runtime system libraries. This consis
 
 4. tools : it contains the tools running with CD runtime system.
 
-5. test : it contains the example codes that is annotated with CD libraris.
+5. test : it contains the example codes that is annotated with CD libraries.
+
+
+## **How to build** ##
+1. Include "cds.h" library in your source code.
+
+
+2. Add ${CD_CFLAGS} and ${CD_LINKFLAGS} when you compile your source code to generate executable. ${CD_LINKFLAGS} will include .so files to enable CD runtime system in your program.
+
+
+3. See also {CD_ROOT}/test/test_simple_hierarchy/Makefile to get an example for build.

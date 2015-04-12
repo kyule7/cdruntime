@@ -414,15 +414,15 @@ public:
                   double error_rate) 
     : ErrorInjector(true, error_rate, kUniform, stdout) {
     for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
-			dbg<<"push back cd " << *it << endl;
+			CD_DEBUG("push back cd %u\n", *it);
       cd_to_fail_.push_back(*it);
     }
     for(auto it=task_list_to_fail.begin(); it!=task_list_to_fail.end(); ++it) {
-			dbg<<"push back task " << *it << endl;
+			CD_DEBUG("push back task %u\n", *it);
       task_to_fail_.push_back(*it);
     }
     force_to_fail_ = true;
-    dbg << "WOW CDErrorInjector created!" << endl;
+    CD_DEBUG("EIE CDErrorInjector created!\n");
   }
 
   CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail, 
@@ -481,24 +481,25 @@ public:
     if(enabled_ == false) return false;
 
     if( force_to_fail_ ) {
-      dbg << "force_to_fail is turned on. " << cd_to_fail_.size() << " " << task_to_fail_.size() << endl;
+      CD_DEBUG("force_to_fail is turned on. cd fail list size : %zu, task fail list size : %zu\n", cd_to_fail_.size(), task_to_fail_.size());
+
       for(auto it=cd_to_fail_.begin(); it!=cd_to_fail_.end(); ++it) {
-				dbg << "cd_to_fail : " << *it << " = " << rank_in_level_ << endl;
+				CD_DEBUG("cd_to_fail : %u = %u\n", *it, rank_in_level_);
         if(*it == rank_in_level_) {
-          dbg << "cd failed rank_in_level #" << *it << std::endl;
+          CD_DEBUG("cd failed rank_in_level #%u\n", *it);
           return true;
         }
       }
 
       for(auto it=task_to_fail_.begin(); it!=task_to_fail_.end(); ++it) {
-				dbg << "task_to_fail : " << *it << " = " << task_in_color_ << endl;
+				CD_DEBUG("task_to_fail : %u = %u\n", *it, task_in_color_);
         if(*it == task_in_color_) {
-          dbg << "task failed task_in_color #" << *it << std::endl;
+          CD_DEBUG("task failed task_in_color #%u\n", *it);
           return true;
         }
       }
 
-      dbg  << std::endl;
+      CD_DEBUG("\n");
 //      enabled_ = false; // Turn off error injection in the reexecution.
       return false; // if it reach this point. No tasks/CDs are registered to be failed.
                     // So, return false.
@@ -506,7 +507,8 @@ public:
     double rand_var = rand_generator_->GenErrorVal();
     bool error = threshold_ < rand_var;
     CD_DEBUG("task #%d failed : %f(threshold) < %f(random var)\n", task_in_color_, threshold_, rand_var);
-    dbg << "WOW" << endl;
+    CD_DEBUG("EIE\n");
+
     enabled_ = false;
     return error;
   }

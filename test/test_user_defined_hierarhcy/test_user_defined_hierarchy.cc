@@ -44,9 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define MEGA 1048576
 #define GIGA 1073741824
 
-#define LV1 1
 #define LV2 1
-#define LV3 8 
 
 using namespace cd;
 using namespace std;
@@ -66,6 +64,7 @@ std::map<int*, string> arrayName;
 #define ARRAY_E_SIZE 16
 #define ARRAY_F_SIZE 32
 #define ARRAY_G_SIZE 16
+
 static __inline__ long long getCounter(void)
 {
   unsigned arrayA, arrayD; 
@@ -73,12 +72,7 @@ static __inline__ long long getCounter(void)
   return ((long long)arrayA) | (((long long)arrayD) << 32); 
 }
 
-void DecomposeData(int *array, int length, int rank)
-{
-//  for(int i=0; i<length; i++) {
-//    array[i] = (i + rank) % length;
-//  }
-}
+
 
 void PrintData(int *array, int length)
 {
@@ -109,7 +103,7 @@ bool CheckArray(int *array, int length)
 }
 
 // Test basic preservation scheme.
-int TestPreservationViaRefRemote(void)
+int TestCDHierarchy(void)
 {
   int arrayA[ARRAY_A_SIZE] = {3,5,0,6};
   int arrayB[ARRAY_B_SIZE] = {1,2,3,4,5,6,7,8};
@@ -123,6 +117,7 @@ int TestPreservationViaRefRemote(void)
   int test_result = 0;
   int num_reexecution = 0;
 
+  dbgApp << "\n==== TestCDHierarchy Start ====\n" << endl; 
 	CDHandle *root = CD_Init(numProcs, myRank);
   CD_Begin(root); 
 
@@ -131,166 +126,150 @@ int TestPreservationViaRefRemote(void)
   root->Preserve(arrayB, sizeof(arrayB), kCopy, "b_root");
 
   dbgApp << "CD Preserving..\n" << endl;
-  CDHandle* child_lv1=root->Create(LV1, "CD1", kStrict, 0, 0, &err);
-  dbgApp << "Root Creates Level 1 CD. # of children CDs = " << LV1 << "\n" << endl;
-
+  CDHandle* child_lv1=root->Create("CD1", kStrict | kDRAM, 0, 0, &err);
+  dbgApp << "Root Creates Level 1 CD. # of children CDs = " << 1 << "\n" << endl;
 
   CD_Begin(child_lv1);
-
-	child_lv1->RegisterErrorInjector(new CDErrorInjector({}, {3,4}, 0.0));
-
   dbgApp << "\t\tLevel 1 CD Begin...\n" << endl;
 
-  DecomposeData(arrayA, sizeof(arrayA), myRank);
-
   int arrayE[ARRAY_E_SIZE] = {1,2,3,4,5,6,7,8};
-  DecomposeData(arrayE, sizeof(arrayE), myRank);
   arrayName[arrayE] = "arrayE";
 
-  child_lv1->Preserve(arrayA, sizeof(arrayA), kCopy | kCoop, 
+  child_lv1->Preserve(arrayA, sizeof(arrayA), kCopy, 
                       (string("arrayA-")+to_string(myRank)).c_str()); // arrayA-rankID
-  child_lv1->Preserve(arrayB, sizeof(arrayB), kCopy | kCoop, 
+  child_lv1->Preserve(arrayB, sizeof(arrayB), kCopy, 
                       (string("arrayB-")+to_string(myRank)).c_str()); // arrayB-rankID
-  child_lv1->Preserve(arrayE, sizeof(arrayE), kCopy | kCoop, 
+  child_lv1->Preserve(arrayE, sizeof(arrayE), kCopy, 
                       (string("arrayE-")+to_string(myRank)).c_str()); // arrayE-rankID
 
-  dbgApp << "\t\tPreserve via copy: arrayA (Share), arrayB (Share), arrayE (Share)\n" << endl;
+  dbgApp << "\t\tPreserve via copy: arrayA, arrayB, arrayE\n\n" << endl;
 
 
   // Level 1 Body
+  dbgApp << string(1<<1, '\t') << "Here is computation body of CD level 1...\n" << endl;
 
-  // Corrupt array arrayA and arrayB
-//  if(num_reexecution = 0) {
-//    CorruptData(arrayA, ARRAY_A_SIZE);
-//    num_reexecution++;
-//  }
-//
-//  child_lv1->CDAssert(CheckArray(arrayA, sizeof(arrayA)));
 
   int arrayF[ARRAY_F_SIZE] = {0,};
   int arrayG[ARRAY_G_SIZE] = {0,};
   arrayName[arrayF] = "arrayF";
   arrayName[arrayG] = "arrayG";
 
-  dbgApp << "\nCheck Array Before Communication =============" << endl;
-  PrintData(arrayA, ARRAY_A_SIZE);
-  PrintData(arrayE, ARRAY_E_SIZE);
-  PrintData(arrayF, ARRAY_F_SIZE);
-  PrintData(arrayG, ARRAY_G_SIZE);
-  dbgApp << "=============================================" << endl;
-  dbgApp.flush();
-  MPI_Request arrayF_req;
-  MPI_Request arrayG_req;
-  if(myRank % 2 == 1) {
-    MPI_Send(arrayA, sizeof(arrayA), MPI_BYTE, (myRank+numProcs-1)%numProcs, 1, MPI_COMM_WORLD); // A3->F2
-    MPI_Send(arrayE, sizeof(arrayE), MPI_BYTE, (myRank+numProcs-2)%numProcs, 0, MPI_COMM_WORLD); // E3->G1
-    MPI_Irecv(arrayF, sizeof(arrayF), MPI_BYTE, (myRank+1)%numProcs, 1, MPI_COMM_WORLD, &arrayF_req); //F3<-A4
-    MPI_Irecv(arrayG, sizeof(arrayG), MPI_BYTE, (myRank+2)%numProcs, 0, MPI_COMM_WORLD, &arrayG_req); //G3<-E5
-  }
-  else {
-    MPI_Irecv(arrayF, sizeof(arrayF), MPI_BYTE, (myRank+1)%numProcs, 1, MPI_COMM_WORLD, &arrayF_req);
-    MPI_Irecv(arrayG, sizeof(arrayG), MPI_BYTE, (myRank+2)%numProcs, 0, MPI_COMM_WORLD, &arrayG_req);
-    MPI_Send(arrayA, sizeof(arrayA), MPI_BYTE, (myRank+numProcs-1)%numProcs, 1, MPI_COMM_WORLD);
-    MPI_Send(arrayE, sizeof(arrayE), MPI_BYTE, (myRank+numProcs-2)%numProcs, 0, MPI_COMM_WORLD);
-  }
-  MPI_Wait(&arrayF_req, MPI_STATUS_IGNORE);
-  MPI_Wait(&arrayG_req, MPI_STATUS_IGNORE);
 
-  dbgApp << "\nCheck Array After Communication =============" << endl; dbgApp.flush();
-  PrintData(arrayA, ARRAY_A_SIZE);
-  PrintData(arrayE, ARRAY_E_SIZE);
-  PrintData(arrayF, ARRAY_F_SIZE);
-  PrintData(arrayG, ARRAY_G_SIZE);
-  dbgApp << "=============================================" << endl;
-  dbgApp.flush();
-
-  CDHandle* child_lv2=child_lv1->Create(LV2, "CD2", kStrict, 0, 0, &err);
-  dbgApp << "\t\tCD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
+  // User-defined Create() example.
+  int color = 0;
+  int task_in_color = 0;
+  int color_num = 8;
+  switch(myRank) {
+    case 0:
+      color = 0;
+      task_in_color = 0;
+      break;
+    case 1:
+      color = 0;
+      task_in_color = 1;
+      break;
+    case 2:
+      color = 0;
+      task_in_color = 2;
+      break;
+    case 3:
+      color = 0;
+      task_in_color = 3;
+      break;
+    case 4:
+      color = 1;
+      task_in_color = 0;
+      break;
+    case 5:
+      color = 1;
+      task_in_color = 1;
+      break;
+    case 6:
+      color = 1;
+      task_in_color = 2;
+      break;
+    case 7:
+      color = 1;
+      task_in_color = 3;
+      break;
+    default:
+      cerr << "Assumed the # of ranks are 8 in this example code." << endl;
+      assert(0);
+  }
+  CDHandle* child_lv2=child_lv1->Create(color, task_in_color, color_num, "CD2", kStrict, 0, 0, &err);
+  dbgApp << string(1<<1, '\t') << "CD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
 
   CD_Begin(child_lv2);
-	child_lv2->RegisterErrorInjector(new CDErrorInjector({}, {6}, 0.0));
-  dbgApp << "\t\t\t\tLevel 2 CD Begin...\n" << endl;
-  dbgApp.flush();
+  dbgApp << string(2<<1, '\t') <<"Level 2 CD Begin...\n" << endl;
 
   child_lv2->Preserve(arrayA, sizeof(arrayA), kRef, 
                       "a_lv2", (string("arrayA-")+to_string(myRank)).c_str()); // local
-  child_lv2->Preserve(arrayF, sizeof(arrayF), kRef, 
-                      "b_remote_lv2", 
-                      (string("arrayA-")+to_string((myRank+1) % numProcs)).c_str()); // remote
   child_lv2->Preserve(arrayB, sizeof(arrayB), kRef, 
-                      "b_lv2", (string("arrayB-")+to_string(myRank)).c_str()); // local
-  child_lv2->Preserve(arrayG, sizeof(arrayG), kRef, 
-                      "b_remote_lv2", 
-                      (string("arrayE-")+to_string((myRank+1) % numProcs)).c_str()); // remote
+                      "b_lv2", (string("arrayB-")+to_string(myRank)).c_str());
+  child_lv2->Preserve(arrayE, sizeof(arrayE), kRef, 
+                      "e_lv2", (string("arrayE-")+to_string(myRank)).c_str());
   child_lv2->Preserve(arrayC, sizeof(arrayC), kCopy, "arrayC");
-  dbgApp << "\t\t\t\tPreserve via ref : arrayA (local), arrayB (local), arrayF (remote), arrayG (remote)" << endl;
-  dbgApp << "\t\t\t\tPreserve via copy: arrayC" << endl;
-  dbgApp.flush();
+  dbgApp << string(2<<1, '\t')<<"Preserve via ref : arrayA (local), arrayB (local), arrayE (local)" << endl;
+  dbgApp << string(2<<1, '\t')<<"Preserve via copy: arrayC\n" << endl;
 
-
-  if(num_reexecution = 1) {
-    CorruptData(arrayE, ARRAY_E_SIZE);
-    num_reexecution++;
-  }
   // Level 2 Body
+  dbgApp << string(2<<1, '\t') << "Here is computation body of CD level 2...\n" << endl;
 
-//  child_lv2->CDAssert(CheckArray(arrayE, sizeof(arrayE)));
+  child_lv2->CDAssert(CheckArray(arrayE, sizeof(arrayE)));
 
-  CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kStrict, 0, 0, &err);
-  dbgApp << "\t\t\t\tCD2 Creates Level 3 CD. # of children CDs = " << LV3 << "\n" << endl;
+  CDHandle* child_lv3=child_lv2->Create("CD3", kStrict, 0, 0, &err);
+  dbgApp << string(2<<1, '\t') << "CD2 Creates Level 3 CD. # of children CDs = " << 1 << "\n" << endl;
 
   CD_Begin(child_lv3);
-  dbgApp << "\t\t\t\t\t\tLevel 3 CD Begin...\n" << endl;
-  dbgApp.flush();
+  dbgApp << string(3<<1, '\t') << "Level 3 CD Begin...\n" << endl;
 
   child_lv3->Preserve(arrayA, sizeof(arrayA), kRef, "child_a", (string("arrayA")+to_string(myRank)).c_str()); // local
   child_lv3->Preserve(arrayB, sizeof(arrayB), kRef, "child_b", (string("arrayB")+to_string(myRank)).c_str()); // local
   child_lv3->Preserve(arrayC, sizeof(arrayC), kRef, "child_c", "arrayC");
   child_lv3->Preserve(arrayD, sizeof(arrayD), kCopy, "arrayD");
-
+  dbgApp << string(3<<1, '\t') << "Preserve via ref : arrayA (local), arrayB (local), arrayC (local)" << endl;
+  dbgApp << string(3<<1, '\t') << "Preserve via copy: arrayD\n" << endl;
 
   // Level 3 Body
+  dbgApp << string(3<<1, '\t') << "Here is computation body of CD level 3...\n" << endl;
 
-  dbgApp << "\t\t\t\t\t\tLevel 3 CD Body...\n" << endl;
 
   child_lv3->Detect();
 
-  dbgApp << "\t\t\t\t\t\tLevel 3 After Detect...\n" << endl;
   CD_Complete(child_lv3);
-  dbgApp << "\t\t\t\t\t\tLevel 3 CD Complete...\n" << endl;
+  dbgApp << string(3<<1, '\t') << "Level 3 CD Complete...\n" << endl;
   child_lv3->Destroy();
-  dbgApp << "\t\t\t\t\t\tLevel 3 CD Destroyed...\n" << endl;
+  dbgApp << string(3<<1, '\t') << "Level 3 CD Destroyed...\n" << endl;
 
   // Detect Error here
   child_lv2->Detect();
 
   CD_Complete(child_lv2);
-  dbgApp << "\t\t\t\tLevel 2 CD Complete...\n" << endl;
+  dbgApp << string(2<<1, '\t') << "Level 2 CD Complete...\n" << endl;
   child_lv2->Destroy();
-  dbgApp << "\t\t\t\tLevel 2 CD Destroyed...\n" << endl;
+  dbgApp << string(2<<1, '\t') << "Level 2 CD Destroyed...\n" << endl;
 
-  dbgApp.flush(); 
   // Detect Error here
   child_lv1->Detect();
 
   CD_Complete(child_lv1);
-  dbgApp << "\t\tLevel 1 CD Complete...\n" << endl;
+  dbgApp << string(1<<1, '\t') << "Level 1 CD Complete...\n" << endl;
   child_lv1->Destroy();
-  dbgApp << "\t\tLevel 1 CD Destroyed...\n" << endl;
+  dbgApp << string(1<<1, '\t') << "Level 1 CD Destroyed...\n" << endl;
 
   // Detect Error here
   root->Detect();
 
   CD_Complete(root);
   dbgApp << "Root CD Complete...\n" << endl;
-  dbgApp << "\t\tRoot CD Destroyed (Finalized) ...\n" << endl;
-  dbgApp << "\n==== TestPreservationViaRefRemote Done ====\n" << endl; 
-  dbgApp.flush(); 
-  CD_Finalize(&dbgApp);
-  // check the test result   
-  return kOK; //
-}
+  dbgApp << "Root CD Destroyed (Finalized) ...\n" << endl;
+  dbgApp << "\n==== TestCDHierarchy Done ====\n" << endl; 
 
+  CD_Finalize(&dbgApp);
+
+
+  return kOK; 
+}
 
 
 
@@ -300,21 +279,17 @@ int main(int argc, char* argv[])
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD,  &numProcs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-//  int ret=0;
+  int ret=0;
+
+  ret = TestCDHierarchy();
   
-  dbgApp.open((string("./output/output_app_")+to_string(myRank)).c_str());
-  dbgApp << "\n==== TestPreservationViaRefRemote ====\n" << endl; 
-//  ret = 
-  TestPreservationViaRefRemote();
-//    cout << "end???\n" << endl;
-//  if( ret == kError ) 
-//    cout << "Test Preservation via Reference (remote) FAILED\n" << endl;
-//  else 
-//    cout << "Test Preservation via Reference (remote) PASSED\n" << endl;
-//  dbgApp.flush();
-//  dbgApp.close(); 
-//
-//    cout << "end?\n" << endl;
+  if( ret == kError ) 
+    cout << "Test CD Hierarchy FAILED\n" << endl;
+  else 
+    cout << "Test CD Hierarchy PASSED\n" << endl;
+
   MPI_Finalize();
+
+
   return 0;
 } 
