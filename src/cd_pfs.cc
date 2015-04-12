@@ -87,7 +87,6 @@ void PFSHandle::Init( const char* file_path )
 {
 	std::stringstream temp_file_name;
 	temp_file_name << Util::GetUniqueCDFileName( ptr_cd_->GetCDID(), file_path, NULL, kPFS ) + std::string(".") + std::to_string(sharing_group_id_) + std::string(".cd");
-  std::cout << "Init : " << temp_file_name.str() << std::endl;
 	PFS_file_path_ = temp_file_name.str();
 	PFS_current_offset_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
 	PFS_current_chunk_begin_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
@@ -126,7 +125,6 @@ int PFSHandle::Open_File( void )
 	int error_type;
 	error_type = MPI_File_open( PFS_parallel_file_communicator_, const_cast<char*>(PFS_file_path_.c_str()), 
 							MPI_MODE_CREATE|MPI_MODE_RDWR|MPI_MODE_DELETE_ON_CLOSE, MPI_INFO_NULL, &(PFS_d_) );
-  std::cout <<"\n\n=====\n\n"<< PFS_file_path_ << "==============\n\n"<<endl;
 	if( error_type != MPI_SUCCESS )
 	{
 		//FIXME: this part should be discussed with Kyushick. What error type can be used here?
@@ -158,7 +156,12 @@ int PFSHandle::Splitter( void )
 		
 	int original_comm_size = ptr_cd_->GetCDID().task_count();
 	
-	degree_of_sharing_ = pow( 2, ( int ) log2( original_comm_size ) - 2 );
+	int cd_sharing_degree = log2( CD_SHARING_DEGREE ) - 1;
+	if( secure_getenv("CD_PFS_PRSV_SHARE_DGR") )
+	{
+		cd_sharing_degree = log2( atoi( secure_getenv("CD_PFS_PRSV_SHARE_DGR") ) ) - 1;
+	}
+	degree_of_sharing_ = pow( 2, ( int ) log2( original_comm_size ) - cd_sharing_degree );
 	degree_of_sharing_ = degree_of_sharing_ <= 0 ? 1 : degree_of_sharing_;
 
 	int base_rank = (int)( ptr_cd_->GetCDID().task_in_color() / degree_of_sharing_ );		

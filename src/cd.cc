@@ -187,7 +187,7 @@ CD::CD(CDHandle* cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
-  : log_handle_(prv_medium)
+  : log_handle_( prv_medium, (cd_parent ? cd_parent->ptr_cd_->log_handle_.uniqueName_ : "") )
 {
   //GONG
   begin_ = false;
@@ -433,6 +433,14 @@ CDHandle* CD::CreateRootCD(CDHandle* parent,
   CDHandle* new_cd_handle = NULL;
 
   *cd_internal_err = InternalCreate(parent, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
+
+  char preservation_unique_name [ L_tmpnam ];
+  if( tmpnam( preservation_unique_name ) )
+  {
+    MPI_Bcast( preservation_unique_name, L_tmpnam, MPI_BYTE, root_cd_id.head(), MPI_COMM_WORLD );
+    new_cd_handle->ptr_cd_->log_handle_.uniqueName_.assign( preservation_unique_name );
+  }
+
   assert(new_cd_handle != NULL);
 
   return new_cd_handle;

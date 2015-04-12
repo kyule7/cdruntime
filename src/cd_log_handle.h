@@ -88,11 +88,13 @@ class CDLogHandle {
 //  CDLog file_log_;
   bool opened_;
   Path path_;
+  std::string uniqueName_;
 
 public:
   CDLogHandle(void) : opened_(false), path_(CD_FILEPATH_DEFAULT) {}
-  CDLogHandle(const PrvMediumT& prv_medium) : opened_(false)
+  CDLogHandle(const PrvMediumT& prv_medium, const std::string& parentUniqueName = "") : opened_(false)
   {
+    uniqueName_ = parentUniqueName;
     switch(prv_medium) 
     {
       case kDRAM :
@@ -104,8 +106,8 @@ public:
       {
       	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
       	{
-        	std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
-        	path_base += "/PFS/";
+          std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
+          path_base = path_base + "/PFS/" + uniqueName_ + "/";
           path_.filepath_.clear();
           path_.filepath_ = path_base;
         }
@@ -122,8 +124,8 @@ public:
       {
       	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
         {
-	        std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
-        	path_base += "/HDD/";
+	  std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
+          path_base = path_base + "/HDD/" + uniqueName_ + "/";
           path_.filepath_.clear();
           path_.filepath_ = path_base;
       	}
@@ -140,8 +142,8 @@ public:
       {
       	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
       	{
-        	std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
-        	path_base += "/SSD/";
+          std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
+          path_base = path_base + "/SSD/" + uniqueName_ + "/";
           path_.filepath_.clear();
           path_.filepath_ = path_base;
         }
@@ -173,6 +175,7 @@ public:
   void InitOpenFile() { opened_ = false; }
   bool IsOpen()   { return opened_;  }
   void OpenFilePath(void);     
+  void CloseAndDeletePath( void );
 };
 
 

@@ -53,8 +53,8 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
   if( dst_data_.handle_type() == DataHandle::kOSFile )  {
 
 #if _PRV_FILE_NOT_ERASED
-    char cmd[30];
-    char backup_dir[30];
+    char cmd[1024];
+    char backup_dir[1024];
     sprintf(backup_dir, "mkdir backup_results");
     int ret = system(backup_dir);
     sprintf(cmd, "mv %s ./backup_results/", dst_data_.file_name_);

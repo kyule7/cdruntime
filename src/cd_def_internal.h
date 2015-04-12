@@ -446,6 +446,7 @@ extern FILE *cdoutApp;
 #define CD_FILEPATH_DEFAULT "./HDD/"
 #define CD_FILEPATH_INVALID "./error_logs/"
 #define CD_FILEPATH_PFS "./PFS/"
+#define CD_SHARING_DEGREE 64
 #define CD_FILEPATH_HDD "./HDD/"
 #define CD_FILEPATH_SSD "./SSD/"
 

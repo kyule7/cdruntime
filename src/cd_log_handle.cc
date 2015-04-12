@@ -43,7 +43,7 @@ void CDLogHandle::OpenFilePath(void)
   sprintf(cmd, "mkdir -p %s", path_.GetFilePath().c_str());
   int ret = system(cmd);
   if( ret == -1 ) {
-    ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
+    ERROR_MESSAGE("Failed to create a directory for preservation data.");
     assert(0);
   }
   else {
@@ -52,6 +52,21 @@ void CDLogHandle::OpenFilePath(void)
   
 }
 
+void CDLogHandle::CloseAndDeletePath( void )
+{
+  char cmd[ 1024 ];
+  sprintf(cmd, "rm -r -f %s", path_.GetFilePath().c_str());
+  int ret = system(cmd);
+  if( ret == -1 ) 
+  {
+    ERROR_MESSAGE("Failed to remove a directory for preservation data.");
+    assert(0);
+  }
+  else 
+  {
+    opened_ = false;  
+  }
+}
 
 std::string CDLogHandle::GetFilePath(void)
 { 
