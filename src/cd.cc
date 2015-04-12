@@ -142,7 +142,7 @@ CDFlagT *CD::pendingFlag_;
 /// inside Create() 
 
 CD::CD(void)
-  : log_handle_(GetPlaceToPreserve())
+  : log_handle_(kDRAM)
 {
 	reexecuted_ = false;
 	recreated_ = false;
@@ -187,7 +187,7 @@ CD::CD(CDHandle* cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
-  : log_handle_(GetPlaceToPreserve())
+  : log_handle_(prv_medium)
 {
   //GONG
   begin_ = false;
@@ -1871,7 +1871,7 @@ CD::InternalPreserve(void *data,
                                  my_name);
           cd_entry->set_my_cd(this); 
 
-//          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_HDD'       
+          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_HDD'       
           CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path_.GetFilePath(), log_handle_.IsOpen());
 
           entry_directory_.push_back(*cd_entry); 
@@ -1906,7 +1906,7 @@ CD::InternalPreserve(void *data,
                                  my_name);
           cd_entry->set_my_cd(this); 
 
-//          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
+          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
           CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path_.GetFilePath(), log_handle_.IsOpen());
 
           entry_directory_.push_back(*cd_entry);  
@@ -1951,7 +1951,7 @@ CD::InternalPreserve(void *data,
 		      //Do we need to check for anything special for accessing to the global filesystem? 
 		      //Potentially=> CDEntry::CDEntryErrT err = cd_entry->SavePFS(log_handle_.path_.GetFilePath(), log_handle_.isPFSAccessible(), &(log_handle_.PFSlog));
 		      //I don't know what should I do with the log parameter. I just add it for compatibility.
-		      CDEntry::CDEntryErrT err = cd_entry->SavePFS(); 
+	  CDEntry::CDEntryErrT err = cd_entry->SavePFS(); 
 
           entry_directory_.push_back(*cd_entry); 
  

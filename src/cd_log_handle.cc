@@ -39,7 +39,7 @@ using namespace cd;
 
 void CDLogHandle::OpenFilePath(void)     
 { 
-  char cmd[30];
+  char cmd[ 1024 ];
   sprintf(cmd, "mkdir -p %s", path_.GetFilePath().c_str());
   int ret = system(cmd);
   if( ret == -1 ) {
