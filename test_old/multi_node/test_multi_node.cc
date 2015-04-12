@@ -315,7 +315,7 @@ int test_preservation_via_copy()
 
   root->Preserve(a, sizeof(a), kCopy, "a", "a");
 
-  CDHandle* child=root->Create("CD1", kStrict, 0, 0, &err);
+  CDHandle* child=root->Create("CD1", kStrict | kHDD, 0, 0, &err);
   CD_Begin(child); 
   printf("Child CD Begin\n");
   printf("child CD Preserving..\n");

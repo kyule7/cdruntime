@@ -102,7 +102,7 @@ public:
       }
       case kPFS :
       {
-      	if ( getenv( "CD_PRESERVATION_BASE_PATH" ) )
+      	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
       	{
         	std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
         	path_base += "/PFS/";
@@ -120,7 +120,7 @@ public:
       }
       case kHDD :
       {
-      	if ( getenv( "CD_PRESERVATION_BASE_PATH" ) )
+      	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
         {
 	        std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
         	path_base += "/HDD/";
@@ -138,7 +138,7 @@ public:
       }
       case kSSD :
       {
-      	if ( getenv( "CD_PRESERVATION_BASE_PATH" ) )
+      	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
       	{
         	std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
         	path_base += "/SSD/";
