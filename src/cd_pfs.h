@@ -55,47 +55,88 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #endif
 namespace cd {
 
+/** 
+ * @brief This class is designed for Parallel File System (PFS) operations using MPI-I/O.
+ * In CDs, one of the preservation mediums is considered to be the PFS so in this case, 
+ * CDs use this class for preservation to PFS. 
+ */
+   
+/**
+ * @brief In order to decrease pressure on each file and the meta-data server for 
+ * parallel files, this class creates some internal communicators from the tasks
+ * inside the CD and each file is shared among the ranks inside that local communicator.
+ * Number of new local communicators depends on the total number of tasks in CD.
+ * Basically, number of files grows logarithmically while number of ranks in CD 
+ * increases, and consequently, number of ranks which operator on the same shared-file
+ * would be less while total number of files is also manageable.
+ */
+
 class PFSHandle {
 	friend class cd::CD;
 	friend class cd::HeadCD;
 	friend class cd::CDEntry;
 private:
-	CD *ptr_cd_;
+	CD *ptr_cd_; //pointer to owner CD
 
-	std::string PFS_file_path_;
-	COMMLIB_File PFS_d_;
+	std::string PFS_file_path_;  //string pointing to the target path.
+	COMMLIB_File PFS_d_; //parallel file desctiptor.
 
-	COMMLIB_Offset PFS_current_offset_;
-	COMMLIB_Offset PFS_current_chunk_begin_;
+	COMMLIB_Offset PFS_current_offset_; //this offset points to the location which the next data would be written to.
+	COMMLIB_Offset PFS_current_chunk_begin_; //in a shared file, each rank operates on specific chunks. This variable and the next
+						 //one define boundaries of the operating chunk.
 	COMMLIB_Offset PFS_current_chunk_end_;
-	uint64_t PFS_chunk_size_;
+	uint64_t PFS_chunk_size_; //This value can be tunned. This represents the chunk dedicated to each task in the 
+				  //shared mode. When there is only one file operating on the file, this variable does not have impac
 
-	CommGroupT PFS_parallel_file_group_;
-	ColorT PFS_parallel_file_communicator_;
-	int PFS_rank_in_file_communicator_;
+	CommGroupT PFS_parallel_file_group_; //local group of ranks operating on the file (sharing the file).
+	ColorT PFS_parallel_file_communicator_; //local communicator associated with the local group.
+	int PFS_rank_in_file_communicator_; //local PFS rank used for calculating next possible chunk for each rank.
 
-	int degree_of_sharing_;
-	int sharing_group_id_;
+	int degree_of_sharing_; //Depending on number of ranks in the CD, this value represents number of ranks which share a single file.
+	int sharing_group_id_; //each local group has a local id starting from 0. This is used for naming the shared parallel file.
 
 	PFSHandle( CD* my_cd );
 	PFSHandle( CD* my_cd, const char* file_path );
 	PFSHandle( CD* my_cd, const char* file_path , uint64_t chunk_size );
 	PFSHandle( const PFSHandle& that ) ;
 	~PFSHandle( void ) 
-  { 
-  	Close_and_Delete_File(); 
-  	CommGroupFree( &PFS_parallel_file_group_ );
-  	CommFree( &PFS_parallel_file_communicator_ );
-  }
-
+ 	{ 
+  		Close_and_Delete_File(); 
+  		CommGroupFree( &PFS_parallel_file_group_ );
+  		CommFree( &PFS_parallel_file_communicator_ );
+  	}
+       /**
+  	* @brief This function is used for "CD_Complete". Whenever CD completes its operation, 
+  	* by calling this function, file pointer is returned to its appropriate location so that the same file
+  	* can be used again. 
+  	*/
 	void Reset_File_Pointer( void );
-	COMMLIB_Offset Write( void*, uint64_t );
+	COMMLIB_Offset Write( void*, uint64_t ); //This is a basic function, It writes the input data.
+
+       /**
+  	* @brief For getting back the data, i.e. reading it from the file, it is important to have the 
+  	* starting point of data in the file. The third argument is the start point of data whenever it
+  	* was saved to the file. This element is saved in CD_Entry.
+  	*/
 	uint64_t Read_at( void*, uint64_t, COMMLIB_Offset );
 
 private:
+       /**
+  	* @brief Open file is called whenever this object is created.
+  	* Opening the file uses the MPI_MODE_DELETE_ON_CLOSE, so whenever the next function
+  	* is called for closing the file, it automatically deletes the file. This happens 
+  	* at the point which CD is destroyed (CD_Destroy).
+  	*/
 	int Open_File( void );
+
 	int Close_and_Delete_File( void );
 	void Copy( const PFSHandle& that );
+
+       /**
+  	* @brief This function is used for creating the local communicators. Basically, it gets the 
+  	* number of tasks in a CD and based on that it increases number of operating tasks/file in a 
+  	* exponential manner.
+  	*/
 	int Splitter( void );
 	void Init( const char* file_path );
 };
