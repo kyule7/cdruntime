@@ -60,4 +60,37 @@ This repository is Containment Domain (CD) runtime system libraries. This consis
 
 4. tools : it contains the tools running with CD runtime system.
 
-5. test : it contains the example codes that is annotated with CD libraris.
+5. test : it contains the example codes that is annotated with CD libraries.
+
+## **Supported features of CD Runtime** ##
+                                                                                Updated at 04. 11. 2015
++---------------------------+-------------------------+-------------+-----+------------+------+------------+
+|                           | Functionality           | Single Task | MPI | MPI+OpenMP | PGAS | Task-based |
++---------------------------+-------------------------+-------------+-----+------------+------+------------+
+|           |               | via Copy                |      O      |  O  |    N/S     | N/S  |    N/S     |
+|           | Preservation  | via Reference           |      O      |  O  |    N/S     | N/S  |    N/S     |
+|           |               | via Reference (Remote)  |     N/A     |  O  |    N/S     | N/S  |    N/S     |
+|           |               | via Regeneration        |     N/S     | N/S |    N/S     | N/S  |    N/S     |
+|           |---------------+-------------------------+-------------+-----+------------+------+------------+
+|           | Detection     | CDAssert                |      O      |  O  |    N/S     | N/S  |    N/S     |
+|           |               | Hardware-assited        |     N/S     | N/S |    N/S     | N/S  |    N/S     |
+|           |               | Comm-related            |     N/A     | N/S |    N/S     | N/S  |    N/S     |
+| Strict CD |---------------+-------------------------+-------------+-----+------------+------+------------+
+|           | Recovery      | Reexecution             |      O      |  O  |    N/S     | N/S  |    N/S     |
+|           |               | Restart from Checkpoint |     N/S     | N/S |    N/S     | N/S  |    N/S     |
+|           |---------------+-------------------------+-------------+-----+------------+------+------------+
+|           | IO            | Local File System       |      O      |  O  |    N/S     | N/S  |    N/S     |
+|           |               | Parallel File System    |     N/A     |  O  |    N/S     | N/S  |    N/S     |
+|           |---------------+-------------------------+-------------+-----+------------+------+------------+
+|           |               | Runtime Logging         |      O      |  O  |    N/S     | N/S  |    N/S     |
++-----------+               +-------------------------+-------------+-----+------------+------+------------+
+|           | Logging       |                         |             |     |            |      |            |
+| Relaxed CD|               | Communication Logging   |     N/A     |  O  |    N/S     | N/S  |    N/S     |
+|           |               |                         |             |     |            |      |            |
++-----------+---------------+-------------------------+-------------+-----+------------+------+------------+
+| Error Injection Interface                           |      O      |  O  |    N/S     | N/S  |    N/S     |
++-----------------------------------------------------+-------------+-----+------------+------+------------+
+| Auto Tuner for CD runtime system                    |     N/S     | N/S |    N/S     | N/S  |    N/S     |
++-----------------------------------------------------+-------------+-----+------------+------+------------+
+                                                                               N/A : Not Available
+                                                                               N/S : Not Supported as of now
