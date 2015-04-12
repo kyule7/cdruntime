@@ -289,13 +289,14 @@ class cd::CDHandle {
 /**
  * @brief Collective Create
  * 
- * Creates a new CD as a child of the current CD. The new CD does
- * not begin until CDHandle::Begin() is called explicitly.
- * This version of Create() is intended to be called by all
- * tasks that will be contained in the new child CD. It functions as
- * a collective operation in a way that is analogous to
- * MPI_comm_split, but only those tasks that are contained in the
- * new child synchronize with one another.
+ * Creates a new CD as a child of the current CD. 
+ * This version of Create() intended to allow users to explicitly provide 
+ * supgroup ID (color), task ID in a supgroup (task_in_color), and number of subgroup.
+ * (See also \ref example_user_defined_hierarchy)
+ *
+ * The new CD does not begin until CDHandle::Begin() is called explicitly.
+ * This API as a collective operation is analogous to MPI_comm_split, 
+ * but only those tasks that are contained in the new child synchronize with one another.
  *
  * @return Returns a pointer to the handle of the newly created
  * child CD; returns 0 on an error.

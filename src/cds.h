@@ -148,6 +148,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  * \include examples_for_doc/test_cd_hierarchy.cc
  *
+ * \subsection example_user_defined_hierarchy User-defined CD Hierarchy Example
+ *
+ * \include examples_for_doc/test_user_defined_hierarchy.cc
  */
 
 /** \page examples_page_error_injection Error Injection

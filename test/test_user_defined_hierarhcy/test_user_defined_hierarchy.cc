@@ -148,19 +148,14 @@ int TestCDHierarchy(void)
   // Level 1 Body
   dbgApp << string(1<<1, '\t') << "Here is computation body of CD level 1...\n" << endl;
 
-  // Corrupt array arrayA and arrayB
-//  if(num_reexecution = 0) {
-//    CorruptData(arrayA, ARRAY_A_SIZE);
-//    num_reexecution++;
-//  }
-//
-//  child_lv1->CDAssert(CheckArray(arrayA, sizeof(arrayA)));
 
   int arrayF[ARRAY_F_SIZE] = {0,};
   int arrayG[ARRAY_G_SIZE] = {0,};
   arrayName[arrayF] = "arrayF";
   arrayName[arrayG] = "arrayG";
 
+
+  // User-defined Create() example.
   int color = 0;
   int task_in_color = 0;
   int color_num = 8;
@@ -216,12 +211,6 @@ int TestCDHierarchy(void)
   child_lv2->Preserve(arrayC, sizeof(arrayC), kCopy, "arrayC");
   dbgApp << string(2<<1, '\t')<<"Preserve via ref : arrayA (local), arrayB (local), arrayE (local)" << endl;
   dbgApp << string(2<<1, '\t')<<"Preserve via copy: arrayC\n" << endl;
-
-
-//  if(num_reexecution = 1) {
-//    CorruptData(arrayE, ARRAY_E_SIZE);
-//    num_reexecution++;
-//  }
 
   // Level 2 Body
   dbgApp << string(2<<1, '\t') << "Here is computation body of CD level 2...\n" << endl;
