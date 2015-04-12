@@ -857,14 +857,15 @@ class cd::CDHandle {
 #if _ERROR_INJECTION_ENABLED
     inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector)
     {
-      dbg << "RegisterErrorInjector: "<< GetExecMode() << ", at level " << level() << endl;
+      CD_DEBUG("RegisterErrorInjector: %d at level #%u\n", GetExecMode(), level());
       if(cd_error_injector_ == NULL && recreated() == false && reexecuted() == false) {
-        dbg << "Reach?" << endl;
+        CD_DEBUG("Registered!!\n");
         cd_error_injector_ = cd_error_injector;
         cd_error_injector_->task_in_color_ = task_in_color();
         cd_error_injector_->rank_in_level_ = rank_in_level();
       }
       else {
+        CD_DEBUG("Failed to be Registered!!\n");
         delete cd_error_injector;
       }
     }

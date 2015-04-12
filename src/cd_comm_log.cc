@@ -101,25 +101,25 @@ CommLog::~CommLog()
   //log_table_
   if (log_table_.base_ptr_ != NULL) 
   {
-    PRINT_DEBUG("delete log_table_.base_ptr_ (%p)\n", log_table_.base_ptr_);
+    LOG_DEBUG("delete log_table_.base_ptr_ (%p)\n", log_table_.base_ptr_);
     delete log_table_.base_ptr_;
   }
 
   //log_queue_
   if (log_queue_.base_ptr_ != NULL)
   {
-    PRINT_DEBUG("delete log_queue_.base_ptr_ (%p)\n", log_queue_.base_ptr_);
+    LOG_DEBUG("delete log_queue_.base_ptr_ (%p)\n", log_queue_.base_ptr_);
     delete log_queue_.base_ptr_;
   }
 
   //child_log_
   if (child_log_.base_ptr_ != NULL)
   {
-    PRINT_DEBUG("delete child_log_.base_ptr_ (%p)\n", child_log_.base_ptr_);
+    LOG_DEBUG("delete child_log_.base_ptr_ (%p)\n", child_log_.base_ptr_);
     delete child_log_.base_ptr_;
   }
   
-  PRINT_DEBUG("Reach the end of CommLog destructor...\n");
+  LOG_DEBUG("Reach the end of CommLog destructor...\n");
 }
 
 
@@ -331,11 +331,11 @@ bool CommLog::ProbeAndLogDataPacked(void * addr,
 bool CommLog::FoundRepeatedEntry(const void * data_ptr, unsigned long data_length, 
                                  bool completed, unsigned long flag)
 {
-  PRINT_DEBUG("Inside FoundRepeatedEntry:\n");
-  PRINT_DEBUG("isrepeated_=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].isrepeated_);
-  PRINT_DEBUG("length_=%ld vs data_length=%ld\n", log_table_.base_ptr_[log_table_.cur_pos_-1].length_, data_length);
-  PRINT_DEBUG("completed_=%d vs completed=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].completed_, completed);
-  PRINT_DEBUG("flag_=%ld vs flag=%ld\n", log_table_.base_ptr_[log_table_.cur_pos_-1].flag_, flag);
+  LOG_DEBUG("Inside FoundRepeatedEntry:\n");
+  LOG_DEBUG("isrepeated_=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].isrepeated_);
+  LOG_DEBUG("length_=%ld vs data_length=%ld\n", log_table_.base_ptr_[log_table_.cur_pos_-1].length_, data_length);
+  LOG_DEBUG("completed_=%d vs completed=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].completed_, completed);
+  LOG_DEBUG("flag_=%ld vs flag=%ld\n", log_table_.base_ptr_[log_table_.cur_pos_-1].flag_, flag);
 
   return log_table_.base_ptr_[log_table_.cur_pos_-1].isrepeated_ &&
       log_table_.base_ptr_[log_table_.cur_pos_-1].length_ == data_length &&
@@ -350,7 +350,7 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
 {
   bool tmp_app_side = app_side;
   app_side = false;
-  PRINT_DEBUG("LogData of address (%p) and length(%ld)\n", data_ptr, data_length);
+  LOG_DEBUG("LogData of address (%p) and length(%ld)\n", data_ptr, data_length);
 
   CommLogErrT ret;
 
@@ -360,12 +360,12 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
     // if exists, just increment the counter_ and return
     if (FoundRepeatedEntry(data_ptr, data_length, completed, flag))
     {
-      PRINT_DEBUG("Found current repeating log entry matching!\n");
+      LOG_DEBUG("Found current repeating log entry matching!\n");
       log_table_.base_ptr_[log_table_.cur_pos_-1].counter_++;
       app_side = tmp_app_side;
       return kCommLogOK;
     }
-    PRINT_DEBUG("Current repeating log entry NOT matching!\n");
+    LOG_DEBUG("Current repeating log entry NOT matching!\n");
   }
 
   ret = WriteLogTable(data_ptr, data_length, completed, flag, isrepeated);
@@ -579,10 +579,10 @@ CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
 {
   if (dst_cl_ptr == NULL) return kCommLogError;
 
-  PRINT_DEBUG("dst_cl_ptr=%p\n", dst_cl_ptr);
-  PRINT_DEBUG("dst_cl_ptr->child_log_.base_ptr_=%p\n", dst_cl_ptr->child_log_.base_ptr_);
-  PRINT_DEBUG("before: child_log_.size_= %ld\n", dst_cl_ptr->child_log_.size_);
-  PRINT_DEBUG("before: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+  LOG_DEBUG("dst_cl_ptr=%p\n", dst_cl_ptr);
+  LOG_DEBUG("dst_cl_ptr->child_log_.base_ptr_=%p\n", dst_cl_ptr->child_log_.base_ptr_);
+  LOG_DEBUG("before: child_log_.size_= %ld\n", dst_cl_ptr->child_log_.size_);
+  LOG_DEBUG("before: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
 
   unsigned long size;
   //[SIZE]
@@ -590,7 +590,7 @@ CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
   memcpy (&(dst_cl_ptr->child_log_.base_ptr_[dst_cl_ptr->child_log_.cur_pos_]), 
       &length, size);
   dst_cl_ptr->child_log_.cur_pos_ += size;
-  PRINT_DEBUG("After size: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+  LOG_DEBUG("After size: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
 
   //[CDID]
   size = sizeof(CDID);
@@ -598,51 +598,51 @@ CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
   memcpy (&(dst_cl_ptr->child_log_.base_ptr_[dst_cl_ptr->child_log_.cur_pos_]), 
       &(tmp_cd_id), size);
   dst_cl_ptr->child_log_.cur_pos_ += size;
-  PRINT_DEBUG("After CDID: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+  LOG_DEBUG("After CDID: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
 
   //[Table] meta data
   size = sizeof(struct LogTable);
   memcpy (&(dst_cl_ptr->child_log_.base_ptr_[dst_cl_ptr->child_log_.cur_pos_]), 
       &log_table_, size);
   dst_cl_ptr->child_log_.cur_pos_ += size;
-  PRINT_DEBUG("After table meta data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+  LOG_DEBUG("After table meta data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
 
   //[Table] data
   size = sizeof(struct LogTableElement)*log_table_.cur_pos_;
   memcpy (&(dst_cl_ptr->child_log_.base_ptr_[dst_cl_ptr->child_log_.cur_pos_]), 
       log_table_.base_ptr_, size);
   dst_cl_ptr->child_log_.cur_pos_ += size;
-  PRINT_DEBUG("After table data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+  LOG_DEBUG("After table data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
 
   //[Queue] meta data
   size = sizeof(struct LogQueue);
   memcpy (&(dst_cl_ptr->child_log_.base_ptr_[dst_cl_ptr->child_log_.cur_pos_]), 
       &log_queue_, size);
   dst_cl_ptr->child_log_.cur_pos_ += size;
-  PRINT_DEBUG("After queue meta data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+  LOG_DEBUG("After queue meta data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
 
   //[Queue] data
   size = sizeof(char)*log_queue_.cur_pos_;
   memcpy (&(dst_cl_ptr->child_log_.base_ptr_[dst_cl_ptr->child_log_.cur_pos_]), 
       log_queue_.base_ptr_, size);
   dst_cl_ptr->child_log_.cur_pos_ += size;
-  PRINT_DEBUG("After queue data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+  LOG_DEBUG("After queue data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
 
   //[Queue] meta data
   size = sizeof(struct ChildLogQueue);
   memcpy (&(dst_cl_ptr->child_log_.base_ptr_[dst_cl_ptr->child_log_.cur_pos_]), 
       &child_log_, size);
   dst_cl_ptr->child_log_.cur_pos_ += size;
-  PRINT_DEBUG("After child queue meta data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+  LOG_DEBUG("After child queue meta data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
 
   //[ChildLogQueue] data
   size = sizeof(char)*child_log_.cur_pos_;
   memcpy (&(dst_cl_ptr->child_log_.base_ptr_[dst_cl_ptr->child_log_.cur_pos_]), 
       child_log_.base_ptr_, size);
   dst_cl_ptr->child_log_.cur_pos_ += size;
-  PRINT_DEBUG("After child queue data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
+  LOG_DEBUG("After child queue data: child_log_.cur_pos_ = %ld\n", dst_cl_ptr->child_log_.cur_pos_);
 
-  PRINT_DEBUG("After: child_log_.size_= %ld\n", dst_cl_ptr->child_log_.size_);
+  LOG_DEBUG("After: child_log_.size_= %ld\n", dst_cl_ptr->child_log_.size_);
 
   return kCommLogOK;
 }
@@ -651,14 +651,14 @@ CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
 // input parameter
 CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
 {
-  PRINT_DEBUG("ReadData to address (%p) and length(%ld)\n", buffer, length);
-  PRINT_DEBUG("reexec_pos_: %li\t cur_pos_: %li\n",log_table_reexec_pos_,log_table_.cur_pos_ );
+  LOG_DEBUG("ReadData to address (%p) and length(%ld)\n", buffer, length);
+  LOG_DEBUG("reexec_pos_: %li\t cur_pos_: %li\n",log_table_reexec_pos_,log_table_.cur_pos_ );
   // reached end of logs, and need to return back and log data again...
   if (log_table_reexec_pos_ == log_table_.cur_pos_)
   {
     comm_log_mode_ = kGenerateLog;
 
-    PRINT_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
+    LOG_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
     return kCommLogCommLogModeFlip;
   }
   
@@ -713,14 +713,14 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
 //    2) ProbeData's buffer is const void *, since ProbeData does not need to change contents in buffer 
 CommLogErrT CommLog::ProbeData(const void * buffer, unsigned long length)
 {
-  PRINT_DEBUG("Inside ProbeData!\n");
-  PRINT_DEBUG("reexec_pos_: %li\t cur_pos_: %li\n",log_table_reexec_pos_,log_table_.cur_pos_ );
+  LOG_DEBUG("Inside ProbeData!\n");
+  LOG_DEBUG("reexec_pos_: %li\t cur_pos_: %li\n",log_table_reexec_pos_,log_table_.cur_pos_ );
   // reached end of logs, and need to return back and log data again...
   if (log_table_reexec_pos_ == log_table_.cur_pos_)
   {
     comm_log_mode_ = kGenerateLog;
 
-    PRINT_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
+    LOG_DEBUG("Reach end of log_table_ and comm_log_mode_ flip to %d\n", comm_log_mode_);
     return kCommLogCommLogModeFlip;
   }
   
@@ -739,7 +739,7 @@ CommLogErrT CommLog::ProbeData(const void * buffer, unsigned long length)
   // if not completed, return kCommLogError, and needs to escalate
   if (log_table_.base_ptr_[log_table_reexec_pos_].completed_==false)
   {
-    PRINT_DEBUG("Not completed non-blocking send function, needs to escalate...\n");
+    LOG_DEBUG("Not completed non-blocking send function, needs to escalate...\n");
     return kCommLogError;
   }
 
@@ -765,23 +765,23 @@ void CommLog::Print()
 {
   my_cd_->GetCDID().Print();
 
-  PRINT_DEBUG("\ncomm_log_mode_=%d\n", comm_log_mode_);
+  LOG_DEBUG("\ncomm_log_mode_=%d\n", comm_log_mode_);
 
-  PRINT_DEBUG("\nUnits:\n");
-  PRINT_DEBUG("queue_size_unit_ = %ld\n", queue_size_unit_);
-  PRINT_DEBUG("table_size_unit_ = %ld\n", table_size_unit_);
-  PRINT_DEBUG("child_log_size_unit_ = %ld\n", child_log_size_unit_);
+  LOG_DEBUG("\nUnits:\n");
+  LOG_DEBUG("queue_size_unit_ = %ld\n", queue_size_unit_);
+  LOG_DEBUG("table_size_unit_ = %ld\n", table_size_unit_);
+  LOG_DEBUG("child_log_size_unit_ = %ld\n", child_log_size_unit_);
 
-  PRINT_DEBUG("\nlog_table_:\n");
-  PRINT_DEBUG("base_ptr_ = %p\n", log_table_.base_ptr_);
-  PRINT_DEBUG("cur_pos_ = %ld\n", log_table_.cur_pos_);
-  PRINT_DEBUG("table_size_ = %ld\n", log_table_.table_size_);
+  LOG_DEBUG("\nlog_table_:\n");
+  LOG_DEBUG("base_ptr_ = %p\n", log_table_.base_ptr_);
+  LOG_DEBUG("cur_pos_ = %ld\n", log_table_.cur_pos_);
+  LOG_DEBUG("table_size_ = %ld\n", log_table_.table_size_);
   
   unsigned long ii;
   for (ii=0;ii<log_table_.cur_pos_;ii++)
   {
-    PRINT_DEBUG("log_table_.base_ptr_[%ld]:\n", ii);
-    PRINT_DEBUG("pos_=%ld, length_=%ld, completed_=%d, flag_=%lx, counter_=%ld, reexec_counter_=%ld, isrepeated=%d\n\n"
+    LOG_DEBUG("log_table_.base_ptr_[%ld]:\n", ii);
+    LOG_DEBUG("pos_=%ld, length_=%ld, completed_=%d, flag_=%lx, counter_=%ld, reexec_counter_=%ld, isrepeated=%d\n\n"
         ,log_table_.base_ptr_[ii].pos_
         ,log_table_.base_ptr_[ii].length_
         ,log_table_.base_ptr_[ii].completed_
@@ -791,19 +791,19 @@ void CommLog::Print()
         ,log_table_.base_ptr_[ii].isrepeated_);
   }
 
-  PRINT_DEBUG ("log_table_reexec_pos_ = %ld\n", log_table_reexec_pos_);
+  LOG_DEBUG ("log_table_reexec_pos_ = %ld\n", log_table_reexec_pos_);
 
-  PRINT_DEBUG("\nlog_queue_:\n");
-  PRINT_DEBUG("base_ptr_ = %p\n", log_queue_.base_ptr_);
-  PRINT_DEBUG("cur_pos_ = %ld\n", log_queue_.cur_pos_);
-  PRINT_DEBUG("queue_size_ = %ld\n", log_queue_.queue_size_);
+  LOG_DEBUG("\nlog_queue_:\n");
+  LOG_DEBUG("base_ptr_ = %p\n", log_queue_.base_ptr_);
+  LOG_DEBUG("cur_pos_ = %ld\n", log_queue_.cur_pos_);
+  LOG_DEBUG("queue_size_ = %ld\n", log_queue_.queue_size_);
 
-  PRINT_DEBUG("\nchild_log_:\n");
-  PRINT_DEBUG("base_ptr_ = %p\n", child_log_.base_ptr_);
-  PRINT_DEBUG("cur_pos_ = %ld\n", child_log_.cur_pos_);
-  PRINT_DEBUG("size_ = %ld\n", child_log_.size_);
+  LOG_DEBUG("\nchild_log_:\n");
+  LOG_DEBUG("base_ptr_ = %p\n", child_log_.base_ptr_);
+  LOG_DEBUG("cur_pos_ = %ld\n", child_log_.cur_pos_);
+  LOG_DEBUG("size_ = %ld\n", child_log_.size_);
 
-  PRINT_DEBUG("\nnew_log_generated_ = %d\n\n", new_log_generated_);
+  LOG_DEBUG("\nnew_log_generated_ = %d\n\n", new_log_generated_);
 }
 
 
@@ -949,7 +949,7 @@ CommLogErrT CommLog::FindChildLogs(CDID child_cd_id, char** src_ptr)
   unsigned long length;
   CDID cd_id;
   #if _DEBUG
-  PRINT_DEBUG("Inside FindChildLogs to print CDID wanted:\n");
+  LOG_DEBUG("Inside FindChildLogs to print CDID wanted:\n");
   child_cd_id.Print();
   #endif
 
@@ -959,13 +959,13 @@ CommLogErrT CommLog::FindChildLogs(CDID child_cd_id, char** src_ptr)
     memcpy(&cd_id, child_log_.base_ptr_+tmp_index+sizeof(unsigned long), sizeof(CDID));
 
     #if _DEBUG
-    PRINT_DEBUG("Temp CDID got:\n");
+    LOG_DEBUG("Temp CDID got:\n");
     cd_id.Print();
     #endif
     if (cd_id == child_cd_id) 
     {
-      PRINT_DEBUG("Find the correct child logs\n");
-      PRINT_DEBUG("tmp_index=%ld, child_log_.cur_pos_=%ld\n", tmp_index, child_log_.cur_pos_);
+      LOG_DEBUG("Find the correct child logs\n");
+      LOG_DEBUG("tmp_index=%ld, child_log_.cur_pos_=%ld\n", tmp_index, child_log_.cur_pos_);
       break;
     }
     tmp_index += length;
@@ -973,7 +973,7 @@ CommLogErrT CommLog::FindChildLogs(CDID child_cd_id, char** src_ptr)
 
   if (tmp_index >= child_log_.cur_pos_)
   {
-    PRINT_DEBUG("Warning: Could not find correspondent child logs, child may not push any logs yet...\n");
+    LOG_DEBUG("Warning: Could not find correspondent child logs, child may not push any logs yet...\n");
     return kCommLogChildLogNotFound;
   }
 

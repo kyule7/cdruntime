@@ -96,13 +96,15 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   myTaskID      = myTask;
   totalTaskSize = numTask;
 
-#if _CD_DEBUG
+#if _CD_DEBUG == 1
   std::string output_filename("./output/output_");
   output_filename += to_string(static_cast<unsigned long long>(myTaskID));
 	
 	cdout = fopen(output_filename.c_str(), "w");
 
+#endif
 
+#if _DEBUG
   std::string output_filename2("./output/dbg_output_");
   output_filename2 += to_string(static_cast<unsigned long long>(myTaskID));
   dbg.open(output_filename2.c_str());
@@ -135,11 +137,13 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 
 void WriteDbgStream(DebugBuf *debugBuf)
 {
+#if _CD_DEBUG == 1
+	fclose(cdout);
+#endif
+
 #if _DEBUG
   dbg.flush();
   dbg.close();
-	fclose(cdout);
-
 
   std::string output_filename("./output/output_app_");
   output_filename += string(to_string(static_cast<unsigned long long>(myTaskID)));
@@ -273,6 +277,8 @@ int SplitCD_3D(const int& my_task_id,
 CDHandle::CDHandle()
   : ptr_cd_(0), node_id_()
 {
+  SplitCD = &SplitCD_3D;
+
 #if _PROFILER
   profiler_ = new CDProfiler();
 #else
@@ -283,7 +289,6 @@ CDHandle::CDHandle()
   cd_error_injector_ = NULL;
 #endif
 
-  SplitCD = &SplitCD_3D;
 
 //  if(node_id().size() > 1)
 //    PMPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), PMPI_INFO_NULL, PMPI_COMM_WORLD, &pendingWindow_);
@@ -305,6 +310,8 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
   : ptr_cd_(ptr_cd), node_id_(node_id)
 {
   SplitCD = &SplitCD_3D;
+
+
 #if _PROFILER
   profiler_ = new CDProfiler();
 #else
@@ -629,7 +636,7 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 
 
 #if _MPI_VER
-  dbg << "Do Barrier at CDHandle::Begin at level [" << ptr_cd_->level() << "], is it reexec? " << ptr_cd_->num_reexecution_ << endl;
+  CD_DEBUG("[CDHandle::Begin] Do Barrier at level#%u, reexec: %d\n", ptr_cd_->level(), ptr_cd_->num_reexecution_);
   
   if(node_id_.size() > 1) {
     Sync(node_id_.color());
@@ -669,7 +676,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   if(IsHead()) {
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-      dbg << "\n\n[Barrier] CDHandle::Complete 1 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+    	CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     }
     CheckMailBox();
 
@@ -678,7 +685,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
     CheckMailBox();
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-      dbg << "\n\n[Barrier] CDHandle::Complete 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+    	CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     }
   }
 
@@ -688,7 +695,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   if(IsHead()) {
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-      dbg << "\n\n[Barrier] CDHandle::Complete 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+    	CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     }
     CheckMailBox();
 
@@ -697,12 +704,12 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
     CheckMailBox();
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-      dbg << "\n\n[Barrier] CDHandle::Complete 2 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
+    	CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     }
   }
   if(node_id_.size() > 1) {
     Sync(node_id_.color());
-    dbg << "\n\n[Barrier] CDHandle::Complete 3 --- "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; 
+    CD_DEBUG("\n\n[Barrier] CDHandle::Complete 3 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
   }
 
 #endif
@@ -925,7 +932,8 @@ CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 {
   CDPrologue();
-  dbg << "\nDETECT check mode : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
+  CD_DEBUG("\nDETECT check mode : %d at level #%u\n", ptr_cd()->cd_exec_mode_, ptr_cd()->level());
+
   std::vector<SysErrT> ret_prepare;
   CDErrT err = kOK;
   CD::CDInternalErrT internal_err = ptr_cd_->Detect();
@@ -940,51 +948,45 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     dbg << "HERE?" << endl;
     SetMailBox(kErrorOccurred);
     err = kAppError;
-
-
-    //if(node_id_.size() > 1) 
-		{
-      Sync(CDPath::GetCoarseCD(this)->color());
-      dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-    }
+		
+    Sync(CDPath::GetCoarseCD(this)->color());
+    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 
   }
   else {
 
 #if _ERROR_INJECTION_ENABLED
 
-    dbg << "WOW it is before" << endl;
-    dbg << "is it NULL? " << cd_error_injector_ <<" recreated? "<< ptr_cd_->recreated()<< " reexecuted? "<< ptr_cd_->reexecuted()<< endl;
+    CD_DEBUG("EIE Before\n");
+    CD_DEBUG("Is it NULL? %p, recreated? %d, reexecuted? %d\n", cd_error_injector_, ptr_cd_->recreated(), ptr_cd_->reexecuted());
     if(cd_error_injector_ != NULL) {
-      dbg << "WOW it is after : # reexec: "<< ptr_cd_->num_reexecution_ <<", exec mode : " << kExecution << " level : " << level() << endl;
-        dbg << " recreated? "<< ptr_cd_->recreated()<< " reexecuted? "<< ptr_cd_->reexecuted()<< endl;
+      CD_DEBUG("EIE It is after : reexec # : %d, exec mode : %d at level #%u\n", ptr_cd_->num_reexecution_, GetExecMode(), level());
+      CD_DEBUG("recreated? %d, recreated? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
+
       if(cd_error_injector_->InjectAndTest() && ptr_cd_->recreated() == false && ptr_cd_->reexecuted() == false) {
-        dbg << "or HERE? recreated? "<< ptr_cd_->recreated()<< " reexecuted? "<< ptr_cd_->reexecuted()<< endl;
+        CD_DEBUG("EIE Reached SetMailBox. recreated? %d, reexecuted? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
         SetMailBox(kErrorOccurred);
         err = kAppError;
 
-//		    if(node_id_.size() > 1) 
-				{
-		      Sync(CDPath::GetCoarseCD(this)->color());
-		      dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-		    }
+				
+		    Sync(CDPath::GetCoarseCD(this)->color());
+      	CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 
       }
 			else {
-//		    if(node_id_.size() > 1) 
-				{
-		      Sync(CDPath::GetCoarseCD(this)->color());
-		      dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-		    }
+				
+		    Sync(CDPath::GetCoarseCD(this)->color());
+      	CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+    		CheckMailBox();
 
 			}
     }
 		else {
-//		  if(node_id_.size() > 1) 
-			{
-		    Sync(CDPath::GetCoarseCD(this)->color());
-		    dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-		  }
+			
+		  Sync(CDPath::GetCoarseCD(this)->color());
+      CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+    	CheckMailBox();
+		  
 		}
 
 #endif
@@ -992,124 +994,26 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   }
 
 
-//  CDEventT event = CDEventT::kNoEvent;
-//
-//  if(ptr_cd_->num_reexecution_ == 0) {
-//    if(true) {
-//    
-//    //  dbg << "Detect at Level : " << ptr_cd()->GetCDID().level() << ", my node : " << node_id() << endl; getchar();
-//    
-//      if(ptr_cd()->GetCDID().level() == 2) {
-////        if(myTaskID == 3 ) {
-////          event = CDEventT::kErrorOccurred;
-////        }
-//      }
-//      else if(ptr_cd()->GetCDID().level() == 1) {
-//        switch(myTaskID) {
-//          case 0:
-//            break;
-//          case 1:
-//            break;
-//          case 2:
-//            break;
-//          case 3:
-//            break;
-//          case 4:
-//            break;
-//          case 5:
-//            break;
-//          case 6:
-////            event = CDEventT::kErrorOccurred;
-//            break;
-//          case 7:
-//            break;
-//          default : break; 
-//        }
-//      }
-//      else if(ptr_cd()->GetCDID().level() == 2) {
-//        switch(myTaskID) {
-//          case 0:
-//            break;
-//          case 1:
-////            event = CDEventT::kErrorOccurred;
-//            break;
-//          case 2:
-//            break;
-//          case 3:
-////            event = CDEventT::kErrorOccurred;
-//            break;
-//          case 4:
-//            break;
-//          case 5:
-//            break;
-//          case 6:
-//            break;
-//          case 7:
-////            event = CDEventT::kErrorOccurred;
-//            break;
-//          default : break;
-//        }
-//      }
-//      else {
-//
-//      }
-//    }
-//  }
-////  while( !(ptr_cd()->TestComm()) ) {
-////    // FIXME : Becareful! CheckMailBox() has some collectives.
-////    CheckMailBox();
-////  }
-
-
-//  Sync(node_id_.color());
-
-//  if(IsHead()) { 
-//
-//    if(node_id_.size() > 1) {
-//      Sync(node_id_.color());
-//      dbg << "\n\n[Barrier] CDHandle::Detect 1 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-//    }
-//    SetMailBox(event);
-//
-//  }
-//  else {
-//
-//    SetMailBox(event);
-//    if(node_id_.size() > 1) {
-//      Sync(node_id_.color());
-//      dbg << "\n\n[Barrier] CDHandle::Detect 1 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-//    }
-//
-//  }
-
   if(IsHead()) { 
 
-//    if(node_id_.size() > 1) 
-		{
-      Sync(CDPath::GetCoarseCD(this)->color());
-      dbg << "\n\n[Barrier] CDHandle::Detect 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-    }
+    Sync(CDPath::GetCoarseCD(this)->color());
+    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 
     CheckMailBox();
 		
-//    if(node_id_.size() > 1) 
-		{
-      Sync(CDPath::GetCoarseCD(this)->color());
-      dbg << "\n\n[Barrier] CDHandle::Detect 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-    }
+    Sync(CDPath::GetCoarseCD(this)->color());
+    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+    
   }
   else {
-
-//    if(node_id_.size() > 1) 
-		{
-      Sync(CDPath::GetCoarseCD(this)->color());
-      dbg << "\n\n[Barrier] CDHandle::Detect 2 - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-    }
-//    if(node_id_.size() > 1) 
-		{
-      Sync(CDPath::GetCoarseCD(this)->color());
-      dbg << "\n\n[Barrier] CDHandle::Detect 2 (Head) - "<< ptr_cd_->GetCDName() << " / " << node_id_ << "\n\n" << endl; //getchar();
-    }
+		
+    Sync(CDPath::GetCoarseCD(this)->color());
+    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+    
+		
+    Sync(CDPath::GetCoarseCD(this)->color());
+    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+    
     CheckMailBox();
 
   }

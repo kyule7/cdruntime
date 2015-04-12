@@ -55,30 +55,62 @@ IncompleteLogEntry cd::NewLogEntry(void* p, size_t size, bool FreeInvoked)
       return tmp_log_entry;
 }
 
-//CD* CD::IsLogable(bool *logable_)
+CD *RuntimeLogger::IsLogable(bool *logable_)
+{
+//  LIBC_DEBUG("logable_execmode\n");      
+  CDHandle* current = GetCurrentCD();
+	CD* c_CD;
+	if(current==NULL){
+//		LIBC_DEBUG("\tbefore root CD\n");
+	}
+	else
+	{
+		c_CD = current->ptr_cd();
+		if(c_CD == NULL)
+		{
+//			LIBC_DEBUG("\tCD object associated with CD handle\n");
+		}
+		else
+		{
+			if(c_CD->libc_log_ptr() == NULL && c_CD->GetBegin_())
+			{
+//				LIBC_DEBUG("\tno libc_log in current CD\n");
+			}
+			else 
+			{
+//				LIBC_DEBUG("\tnow we have libc_log object\n");
+				*logable_ = true;
+			}
+		}
+	}
+  return c_CD;
+}
+
+
+//CD* RuntimeLogger::IsLogable(bool *logable_)
 //{
-////  PRINT_LIBC("logable_execmode\n");      
+////  LIBC_DEBUG("logable_execmode\n");      
 //  CDHandle* current = GetCurrentCD();
 //	CD* c_CD;
 //	if(current==NULL){
-////		PRINT_LIBC("\tbefore root CD\n");
+////		LIBC_DEBUG("\tbefore root CD\n");
 //	}
 //	else
 //	{
 //		c_CD = current->ptr_cd();
 //		if(c_CD == NULL)
 //		{
-////			PRINT_LIBC("\tCD object associated with CD handle\n");
+////			LIBC_DEBUG("\tCD object associated with CD handle\n");
 //		}
 //		else
 //		{
 //			if(c_CD->libc_log_ptr_ == NULL && c_CD->GetBegin_())
 //			{
-////				PRINT_LIBC("\tno libc_log in current CD\n");
+////				LIBC_DEBUG("\tno libc_log in current CD\n");
 //			}
 //			else 
 //			{
-////				PRINT_LIBC("\tnow we have libc_log object\n");
+////				LIBC_DEBUG("\tnow we have libc_log object\n");
 //				*logable_ = true;
 //			}
 //		}
@@ -89,10 +121,10 @@ IncompleteLogEntry cd::NewLogEntry(void* p, size_t size, bool FreeInvoked)
 //GONG: Is free() required?
 void free(void *p)
 {
-  CD::free(p);
+  RuntimeLogger::free(p);
 }
 
-void CD::free(void *p)
+void RuntimeLogger::free(void *p)
 {
 
   //check first whether CD-runtime side or application side (logged)
@@ -100,14 +132,14 @@ void CD::free(void *p)
 	  bool logable  = false;
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
-      PRINT_LIBC("FREE invoked %p\n", p);
+      LIBC_DEBUG("FREE invoked %p\n", p);
       std::vector<IncompleteLogEntry>::iterator it;
       for (it=c_CD->mem_alloc_log_.begin(); it!=c_CD->mem_alloc_log_.end(); it++)
       {
         //address matched!
         if(it->p_ == p) 
         { 
-          PRINT_LIBC("FREE- complete? %p\n", p);
+          LIBC_DEBUG("FREE- complete? %p\n", p);
           it->complete_ = true;
           return;
         }
@@ -116,7 +148,7 @@ void CD::free(void *p)
       bool found = c_CD->PushedMemLogSearch(p, c_CD);
       if(found) 
       {
-        PRINT_LIBC("found %p from parent's log will NOT free it \n", p);
+        LIBC_DEBUG("found %p from parent's log will NOT free it \n", p);
         return;
       }
     }
@@ -133,7 +165,7 @@ void CD::free(void *p)
 
 void* real_malloc_(size_t size)
 {
-//	PRINT_LIBC("inside of real_malloc_()\n");
+//	LIBC_DEBUG("inside of real_malloc_()\n");
 	Malloc real_malloc = (Malloc)dlsym(RTLD_NEXT, "malloc");
 	return real_malloc(size);
 }
@@ -141,13 +173,13 @@ void* real_malloc_(size_t size)
 
 void* malloc(size_t size)
 {
-  return CD::malloc(size);
+  return RuntimeLogger::malloc(size);
 }
 
-void* CD::malloc(size_t size)
+void* RuntimeLogger::malloc(size_t size)
 {
 	void* p;
-//  PRINT_LIBC("app side?? %d\n", app_side);
+//  LIBC_DEBUG("app side?? %d\n", app_side);
 ///GONG: libc logging takes care of only "application-side" malloc, malloc (both explicitly and internally) called in application.
 if(app_side){
   app_side = false;
@@ -161,7 +193,7 @@ if(app_side){
       //SZ
 //			c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
-        PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
+        LIBC_DEBUG("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
         p = c_CD->MemAllocSearch(c_CD);
       }       
       else
@@ -176,12 +208,12 @@ if(app_side){
           c_CD->cur_pos_mem_alloc_log++;
         }
       }
-			PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE malloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
+			LIBC_DEBUG("libc_log_ptr_: %p\tRE-EXECUTE MODE malloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
 		}
 		else
 		{
 			p = real_malloc_(size);
-			PRINT_LIBC("libc_log_ptr_: %p\t - EXECUTE MODE malloc(%ld) = %p @level %i\n", c_CD->libc_log_ptr_, size, p, c_CD->level());
+			LIBC_DEBUG("libc_log_ptr_: %p\t - EXECUTE MODE malloc(%ld) = %p @level %i\n", c_CD->libc_log_ptr_, size, p, c_CD->level());
       //SZ
 //		  c_CD->libc_log_ptr_->LogData(&p, size);
       IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
@@ -191,14 +223,14 @@ if(app_side){
 	else
 	{
 		p = real_malloc_(size);
-		PRINT_LIBC("NORMAL malloc(%ld) = %p\n", size, p);	
+		LIBC_DEBUG("NORMAL malloc(%ld) = %p\n", size, p);	
 	}
   app_side = true;
 }
 else
 {
   p = real_malloc_(size);
-//		PRINT_LIBC("CD runtime malloc(%ld) = %p\n", size, p);	
+//		LIBC_DEBUG("CD runtime malloc(%ld) = %p\n", size, p);	
 }	
 	return p;
 } 
@@ -209,16 +241,16 @@ else
 
 static void* temp_calloc(size_t num, size_t size)
 {
-  PRINT_LIBC("empty calloc is called\n");
+  LIBC_DEBUG("empty calloc is called\n");
   return NULL;
 }
 
 extern "C" void *calloc(size_t num, size_t size)
 {
-  return CD::calloc(num, size);
+  return RuntimeLogger::calloc(num, size);
 }
 
-void *CD::calloc(size_t num, size_t size)
+void *RuntimeLogger::calloc(size_t num, size_t size)
 {
   static void * (*real_calloc)(size_t,size_t) = 0;
   void *p;    
@@ -236,7 +268,7 @@ void *CD::calloc(size_t num, size_t size)
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
 			//  c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
-        PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
+        LIBC_DEBUG("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
         p = c_CD->MemAllocSearch(c_CD);
       }       
       else
@@ -251,12 +283,12 @@ void *CD::calloc(size_t num, size_t size)
           c_CD->cur_pos_mem_alloc_log++;
         }
       }
-			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
+			  LIBC_DEBUG("libc_log_ptr_: %p\tRE-EXECUTE MODE calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   		}
   		else
   		{
         p = real_calloc(num,size);
-			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE - calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
+			  LIBC_DEBUG("libc_log_ptr_: %p\tEXECUTE MODE - calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
    	  //  c_CD->libc_log_ptr_->LogData(&p, size);
         IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
         c_CD->mem_alloc_log_.push_back(log_entry);
@@ -265,13 +297,13 @@ void *CD::calloc(size_t num, size_t size)
 	  else
 	  {
       p = real_calloc(num,size);
-		  PRINT_LIBC("NORMAL calloc(%ld) = %p\n", size, p);	
+		  LIBC_DEBUG("NORMAL calloc(%ld) = %p\n", size, p);	
 	  }
     
   app_side = true;
   }
   else{
-    //NEVER invoke functions that internally invoke calloc again (e.g., PRINT_LIBC()) in order to aviod infinite calloc loop
+    //NEVER invoke functions that internally invoke calloc again (e.g., LIBC_DEBUG()) in order to aviod infinite calloc loop
     p = real_calloc(num,size);
   }	        
   return p;
@@ -280,9 +312,9 @@ void *CD::calloc(size_t num, size_t size)
                   
 void *valloc(size_t size)
 {
-  return CD::valloc(size);
+  return RuntimeLogger::valloc(size);
 }
-void *CD::valloc(size_t size)
+void *RuntimeLogger::valloc(size_t size)
 {
   void *p;    
   static void * (*real_valloc)(size_t);
@@ -299,7 +331,7 @@ void *CD::valloc(size_t size)
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
 			//  c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
-        PRINT_LIBC("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
+        LIBC_DEBUG("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
         p = c_CD->MemAllocSearch(c_CD);
       }       
       else
@@ -314,12 +346,12 @@ void *CD::valloc(size_t size)
           c_CD->cur_pos_mem_alloc_log++;
         }
       }
-			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE valloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
+			  LIBC_DEBUG("libc_log_ptr_: %p\tRE-EXECUTE MODE valloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   		}
   		else
   		{
         p = real_valloc(size);
-			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE valloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
+			  LIBC_DEBUG("libc_log_ptr_: %p\tEXECUTE MODE valloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   // 	    c_CD->libc_log_ptr_->LogData(&p, size);
         IncompleteLogEntry log_entry = NewLogEntry(p, size, true);
         c_CD->mem_alloc_log_.push_back(log_entry);
@@ -328,22 +360,22 @@ void *CD::valloc(size_t size)
 	  else
 	  {
       p = real_valloc(size);
-		  PRINT_LIBC("NORMAL valloc(%ld) = %p\n", size, p);	
+		  LIBC_DEBUG("NORMAL valloc(%ld) = %p\n", size, p);	
 	  }
     app_side = true;
   }
   else{
     p = real_valloc(size);
-//		PRINT_LIBC("CD runtime side valloc(%ld) = %p\n", size, p);	
+//		LIBC_DEBUG("CD runtime side valloc(%ld) = %p\n", size, p);	
   }	          
   return p;
 }
 
 FILE* fopen(const char *file, const char *mode)
 {
-  return CD::fopen(file, mode);
+  return RuntimeLogger::fopen(file, mode);
 }
-FILE* CD::fopen(const char *file, const char *mode)
+FILE* RuntimeLogger::fopen(const char *file, const char *mode)
 {
   FILE* ret;
   int size = sizeof(FILE*);
@@ -358,7 +390,7 @@ FILE* CD::fopen(const char *file, const char *mode)
 	  if(logable){
       if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
         if(c_CD->mem_alloc_log_.size()==0){
-          PRINT_LIBC("RE-EXECUTION MODE (fopen), but no entries in malloc log! => get log from parent\n");
+          LIBC_DEBUG("RE-EXECUTION MODE (fopen), but no entries in malloc log! => get log from parent\n");
           //replace (close and re-open) FILE pointer
           FILE* tmp_ret = (*real_fopen)(file,mode);
           ret = (FILE*) c_CD->MemAllocSearch(c_CD, tmp_ret);
@@ -377,13 +409,13 @@ FILE* CD::fopen(const char *file, const char *mode)
           }
         }
 			  //c_CD->libc_log_ptr_->ReadData(&ret, size);
-			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE fopen(%i) = %p\n", c_CD->libc_log_ptr_, size, ret);
+			  LIBC_DEBUG("libc_log_ptr_: %p\tRE-EXECUTE MODE fopen(%i) = %p\n", c_CD->libc_log_ptr_, size, ret);
   		}
   		else
   		{
         ret = (*real_fopen)(file,mode);
    	   // c_CD->libc_log_ptr_->LogData(&ret, size);
-			  PRINT_LIBC("libc_log_ptr_: %p\t -EXECUTE MODE fopen(%i) = %p\n", c_CD->libc_log_ptr_, size, ret);
+			  LIBC_DEBUG("libc_log_ptr_: %p\t -EXECUTE MODE fopen(%i) = %p\n", c_CD->libc_log_ptr_, size, ret);
         IncompleteLogEntry log_entry = NewLogEntry(ret, size, false);
         c_CD->mem_alloc_log_.push_back(log_entry);
 	    }
@@ -391,7 +423,7 @@ FILE* CD::fopen(const char *file, const char *mode)
 	  else
 	  {
       ret = (*real_fopen)(file,mode);
-      PRINT_LIBC("NORMAL fopen(%i) = %p\n", size, ret);
+      LIBC_DEBUG("NORMAL fopen(%i) = %p\n", size, ret);
 	  }
     app_side = true;
   }
@@ -405,9 +437,9 @@ FILE* CD::fopen(const char *file, const char *mode)
 
 int fclose(FILE *fp)
 {
-  return CD::fclose(fp);
+  return RuntimeLogger::fclose(fp);
 }
-int CD::fclose(FILE *fp)
+int RuntimeLogger::fclose(FILE *fp)
 {
   //set real_free first
   static int(*real_fclose)(FILE*);
@@ -420,14 +452,14 @@ int CD::fclose(FILE *fp)
 	  bool logable  = false;
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
-//      PRINT_LIBC("FREE invoked %p\n", p);
+//      LIBC_DEBUG("FREE invoked %p\n", p);
       std::vector<IncompleteLogEntry>::iterator it;
       for (it=c_CD->mem_alloc_log_.begin(); it!=c_CD->mem_alloc_log_.end(); it++)
       {
         //address matched!
         if(it->p_ == fp) 
         { 
-//          PRINT_LIBC("FREE- complete? %p\n", p);
+//          LIBC_DEBUG("FREE- complete? %p\n", p);
           it->complete_ = true;
           return 0;
         }
@@ -436,7 +468,7 @@ int CD::fclose(FILE *fp)
       bool found = c_CD->PushedMemLogSearch(fp, c_CD);
       if(found) 
       {
-//        PRINT_LIBC("found %p from parent's log will NOT free it \n", p);
+//        LIBC_DEBUG("found %p from parent's log will NOT free it \n", p);
         return 0;
       }
     }
@@ -449,9 +481,9 @@ int fprintf(FILE *str, const char *format,...)
 {
   va_list args;
   va_start(args,format);
-  return CD::fprintf(str, format, args);
+  return RuntimeLogger::cd_fprintf(str, format, args);
 }
-int CD::fprintf(FILE *str, const char *format, va_list &args)
+int RuntimeLogger::cd_fprintf(FILE *str, const char *format, va_list &args)
 {
   int ret = 0;
   int size = sizeof(int);
@@ -521,12 +553,12 @@ void *realloc(void* ptr, size_t size)
       {
         c_CD->cur_pos_mem_alloc_log++;
       }
-			  PRINT_LIBC("libc_log_ptr_: %p\tRE-EXECUTE MODE realloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
+			  LIBC_DEBUG("libc_log_ptr_: %p\tRE-EXECUTE MODE realloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
   		}
   		else
   		{
         p = real_realloc(ptr,size);
-			  PRINT_LIBC("libc_log_ptr_: %p\tEXECUTE MODE realloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
+			  LIBC_DEBUG("libc_log_ptr_: %p\tEXECUTE MODE realloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
    	  //  c_CD->libc_log_ptr_->LogData(&p, size);
         struct IncompleteLogEntry log_entry = NewLogEntry(p, size);
         c_CD->mem_alloc_log_.push_back(log_entry);
@@ -535,13 +567,13 @@ void *realloc(void* ptr, size_t size)
 	  else
 	  {
       p = real_realloc(ptr,size);
-		  PRINT_LIBC("NORMAL realloc(%ld) = %p\n", size, p);	
+		  LIBC_DEBUG("NORMAL realloc(%ld) = %p\n", size, p);	
 	  }
     app_side = true;
   }
   else{
     p = real_realloc(ptr,size);
-//		PRINT_LIBC("CD runtime side realloc(%ld) = %p\n", size, p);	
+//		LIBC_DEBUG("CD runtime side realloc(%ld) = %p\n", size, p);	
   }	          
   return p;
 }

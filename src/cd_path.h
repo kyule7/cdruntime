@@ -69,22 +69,22 @@ namespace cd {
  * but in our case, we restore program state inside our runtime system which is implicit to user (user does not know about when error happens)
  * I put this CDPath as a Class rather than just static global variable, so it can be more object-oriented
  * because related methods such as GetCurrentCD, GetRootCD, etc, is encapsulated in this CDPath class.
- * It will be more convenient to use it with "using namespace cd::CDPath", and the usage for those methods will be the same as before.
+ * It will be more convenient to use it with "using namespace   CDPath", and the usage for those methods will be the same as before.
  */
 class CDPath : public std::vector<CDHandle*> {
-  friend class cd::CD;
-  friend class cd::HeadCD;
-  friend class cd::CDHandle;
-  friend class cd::CDEntry;
-  friend class cd::HandleAllReexecute;
-  friend class cd::HandleEntrySearch;
-  friend class cd::HandleEntrySend;
-  friend CDHandle *cd::GetCurrentCD(void);
-  friend CDHandle *cd::GetRootCD(void);
-  friend CDHandle *cd::GetParentCD(void);
-  friend CDHandle *cd::GetParentCD(int current_level);
-  friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
-  friend void      cd::CD_Finalize(DebugBuf *debugBuf);
+  friend class CD;
+  friend class HeadCD;
+  friend class CDHandle;
+  friend class CDEntry;
+  friend class HandleAllReexecute;
+  friend class HandleEntrySearch;
+  friend class HandleEntrySend;
+  friend CDHandle *GetCurrentCD(void);
+  friend CDHandle *GetRootCD(void);
+  friend CDHandle *GetParentCD(void);
+  friend CDHandle *GetParentCD(int current_level);
+  friend CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+  friend void      CD_Finalize(DebugBuf *debugBuf);
 
 private:
   static CDPath *uniquePath_;
@@ -151,7 +151,7 @@ private:
   */
   static CDHandle* GetParentCD(int current_level)
   { 
-    dbg << "CDPath::GetParentCD current level : "<<current_level << std::endl;
+    CD_DEBUG("CDPath::GetParentCD current level : %d\n", current_level);
     if(uniquePath_ != NULL ) {
       if( uniquePath_->size() > 1 ) {
         if(current_level >= 1) { 
@@ -185,7 +185,7 @@ private:
   static CDHandle *GetCoarseCD(CDHandle *curr_cdh) {
     while( curr_cdh->task_size() == 1 ) {
       if(curr_cdh == GetRootCD()) {
-        dbg << "There is a single task in the root CD" << endl;
+        CD_DEBUG("There is a single task in the root CD\n");
         assert(0);
       }
     	curr_cdh = CDPath::GetParentCD(curr_cdh->level());

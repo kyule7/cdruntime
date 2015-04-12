@@ -125,6 +125,7 @@ class CD : public Serializable {
     friend class HandleEntrySend;
     friend class HeadCD;
     friend class CommLog;
+		friend class RuntimeLogger;
     friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
 
 //    friend CD* cd::IsLogable(bool *logable_);
@@ -496,13 +497,15 @@ public:
                                     const RegenObject *regen_object, 
                                     PreserveUseT data_usage);
   
+		CDErrT InternalReexecute(void);
+
     // copy should happen for the part that is needed.. 
     // so serializing entire CDEntry class does not make sense. 
 
     // Search CDEntry with entry_name given. It is needed when its children preserve data via reference and search through its ancestors. If it cannot find in current CD object, it outputs NULL 
     CDEntry *InternalGetEntry(ENTRY_TAG_T entry_name); 
  
-    CDEntry *SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level);
+    CDEntry *SearchEntry(ENTRY_TAG_T entry_tag_to_search, uint32_t &found_level);
     void AddEntryToSend(const ENTRY_TAG_T &entry_tag_to_search);
  
     // This comment is previous one, so may be confusing for current design. 
@@ -585,14 +588,14 @@ public:
     void PrintIncompleteLog();
 
 public:
-    static CD   *IsLogable(bool *logable_);
-    static int   fprintf(FILE *str, const char *format, va_list &args);
-    static int   fclose(FILE *fp);
-    static FILE *fopen(const char *file, const char *mode);
-    static void *valloc(size_t size);
-    static void *calloc(size_t num, size_t size);
-    static void *malloc(size_t size);
-    static void  free(void *p);
+//    static CD   *IsLogable(bool *logable_);
+//    static int   cd_fprintf(FILE *str, const char *format, va_list &args);
+//    static int   fclose(FILE *fp);
+//    static FILE *fopen(const char *file, const char *mode);
+//    static void *valloc(size_t size);
+//    static void *calloc(size_t num, size_t size);
+//    static void *malloc(size_t size);
+//    static void  free(void *p);
 #endif
 
 #if _MPI_VER

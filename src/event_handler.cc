@@ -51,12 +51,11 @@ void HandleEntrySearch::HandleEvent(void)
   int entry_requester_id = task_id_;
   ENTRY_TAG_T recvBuf[2] = {0,0};
 
-  dbg << "SIZE :" << ptr_cd_->task_size() << ", LEVEL : " << ptr_cd_->level() << endl;
-  dbg << "[HeadCD::HandleEntrySearch\t" << task_id_ << endl;
-  dbg << "[FromRequester] CHECK TAG : " << ptr_cd_->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, entry_requester_id)
-      << " (Entry Tag: " << "NOT_YET_READY" << ")" << endl;
-  dbg << "CHECK IT OUT : " << entry_requester_id << " --> " << ptr_cd_->task_in_color() << endl;
-  dbg.flush(); 
+  CD_DEBUG("SIZE : %u at level #%u\n", ptr_cd_->task_size(), ptr_cd_->level());
+  CD_DEBUG("[HeadCD::HandleEntrySearch]\ttask_id : %u\n", task_id_);
+  CD_DEBUG("[FromRequester] CHECK TAG : %u (Entry Tag: NOT_YET_READY)\n", ptr_cd_->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, entry_requester_id));
+  CD_DEBUG("CHECK IT OUT : %d --> %u\n", entry_requester_id, ptr_cd_->task_in_color());
+
 //  ptr_cd_->entry_req_.push_back(CommInfo());
   MPI_Status status;
 
@@ -84,32 +83,38 @@ void HandleEntrySearch::HandleEvent(void)
 
   ENTRY_TAG_T &tag_to_search  = recvBuf[0];
   ENTRY_TAG_T &source_task_id = recvBuf[1];
-  int found_level = 0;
+  uint32_t found_level = 0;
   
   CDEntry *target_entry = ptr_cd_->InternalGetEntry(tag_to_search);
   if(target_entry != NULL) { 
-    dbg << "FOUND it at this level! " << ptr_cd_->level() << endl;
+    CD_DEBUG("FOUND it at this level #%u\n", ptr_cd_->level());
     found_level = ptr_cd_->level();
   } 
   else {
-    dbg << "NOT FOUND it at this level! " << ptr_cd_->level() << endl;
+    CD_DEBUG("NOT FOUND it at this level #%u\n", ptr_cd_->level());
     target_entry = ptr_cd_->SearchEntry(tag_to_search, found_level);
   }
 
 
   if(target_entry != NULL) {
-    dbg << "It succeed in finding the entry at this level #"<<found_level<<" of head task!" << endl;
+    CD_DEBUG("It succeed in finding the entry at this level #%u if head task!\n", found_level);
+
     // It needs some effort to avoid the naming alias problem of entry tags.
 //    ptr_cd_->entry_search_req_[tag_to_search] = CommInfo();
 
     HeadCD *found_cd = static_cast<HeadCD *>(CDPath::GetCDLevel(found_level)->ptr_cd());
+
     // It needs some effort to avoid the naming alias problem of entry tags.
   
     // Found the entry!! 
     // Then, send it to the task that has the entry of actual copy
     ENTRY_TAG_T tag_to_search = target_entry->name_tag();
     int target_task_id = target_entry->dst_data_.node_id().task_in_color();
-    dbg << "FOUND " << found_cd->GetCDName() << " " << found_cd->GetNodeID() << ", found level: " << found_level << ", check it out: "<< target_task_id<<endl;
+
+    CD_DEBUG("FOUND %s / %s at level #%u, target task id : %u\n", 
+						 found_cd->GetCDName().GetString().c_str(), 
+						 found_cd->GetNodeID().GetString().c_str(), 
+						 found_level, target_task_id);
 
     // SetMailBox for entry send to target
     CDEventT entry_send = kEntrySend;
@@ -118,12 +123,15 @@ void HandleEntrySearch::HandleEvent(void)
       found_cd->SetMailBox(entry_send, target_task_id);
     
 
-    dbg << "[ToSender] CHECK TAG : " << found_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, found_cd->task_in_color())
-        << " (Entry Tag: " << tag_to_search << ")" << endl;
-    dbg.flush();
+    CD_DEBUG("[ToSender] CHECK TAG : %u (Entry Tag: %u)\n",
+						 found_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, found_cd->task_in_color()),
+						 tag_to_search);
+
     ENTRY_TAG_T sendBuf[2] = {tag_to_search, source_task_id};
+
 //    found_cd->entry_search_req_[tag_to_search] = CommInfo();
-    found_cd->entry_req_.push_back(CommInfo()); //getchar();
+    found_cd->entry_req_.push_back(CommInfo());
+
     PMPI_Isend(sendBuf, 
                2, 
                MPI_UNSIGNED_LONG_LONG, 
@@ -136,11 +144,12 @@ void HandleEntrySearch::HandleEvent(void)
   
     }
     else {
-      dbg << "HandleEntrySearch --> EntrySend (Head): entry was found at " << found_level << endl;
-      dbg << "Size of data to send : " << target_entry->dst_data_.len() << " (" << tag_to_search << ")" << endl;
-      dbg.flush();
+      CD_DEBUG("HandleEntrySearch --> EntrySend (Head): entry was found at %u\n", found_level);
+      CD_DEBUG("Size of data to send : %lu (%u)\n", target_entry->dst_data_.len(), tag_to_search);
+
     //  ptr_cd_->entry_send_req_[tag_to_search] = CommInfo();
       ptr_cd_->entry_req_.push_back(CommInfo()); //getchar();
+
       // Should be non-blocking send to avoid deadlock situation. 
       PMPI_Isend(target_entry->dst_data_.address_data(), 
                  target_entry->dst_data_.len(), 
@@ -163,16 +172,19 @@ void HandleEntrySearch::HandleEvent(void)
 //    cerr<<"Failed to search the entry at current CD level. Request to upper-level ptr_cd_->head to search the entry. Not implemented yet\n"<<endl;
 //    assert(0);
 
-    dbg << "It failed to find the entry at this level #"<<ptr_cd_->level()<< " of head task. Request to parent level!" << endl;
+    CD_DEBUG("It failed to find the entry at this level #%u of head task. Request to parent level!\n", ptr_cd_->level());
 
     CDHandle *parent = CDPath::GetParentCD(ptr_cd_->level());
     CDEventT entry_search = kEntrySearch;
     parent->ptr_cd()->SetMailBox(entry_search);
-    dbg << "CHECK TAG : " << parent->ptr_cd()->GetCDID().GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, parent->task_in_color()) 
-        <<" (Entry Tag: "<< tag_to_search<< ")"<< endl;
-    dbg.flush();
+
+    CD_DEBUG("CHECK TAG : %u (Entry Tag: %u)\n", 
+					   parent->ptr_cd()->GetCDID().GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, parent->task_in_color()), 
+					   tag_to_search);
+
     parent->ptr_cd()->entry_request_req_[tag_to_search] = CommInfo();
 //    parent->ptr_cd()->entry_req_.push_back(CommInfo()); getchar();
+
     PMPI_Isend(recvBuf, 
                2, 
                MPI_UNSIGNED_LONG_LONG,
@@ -186,32 +198,35 @@ void HandleEntrySearch::HandleEvent(void)
 
 //    ptr_cd_->event_flag_[entry_requester_id] &= ~kEntrySearch;
 //    IncHandledEventCounter();
+
   }
 
   ptr_cd_->event_flag_[entry_requester_id] &= ~kEntrySearch;
   IncHandledEventCounter();
 
 #endif
+
 }
 
 void HandleEntrySend::HandleEvent(void)
 {
 #if _MPI_VER
 
-  dbg << "CD::HandleEntrySend\n" << endl;
-  dbg << "CHECK TAG : " << ptr_cd_->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, ptr_cd_->head()) << endl;
-  dbg.flush();
+  CD_DEBUG("CD::HandleEntrySend\n");
+  CD_DEBUG("CHECK TAG : %u\n", ptr_cd_->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, ptr_cd_->head()));
+
   ENTRY_TAG_T recvBuf[2] = {INIT_TAG_VALUE, INIT_ENTRY_SRC};
 //  ptr_cd_->entry_req_.push_back(CommInfo());
+
   MPI_Status status;
 
   PMPI_Recv(recvBuf, 
-             2, 
-             MPI_UNSIGNED_LONG_LONG, 
-             ptr_cd_->head(), 
-             ptr_cd_->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, ptr_cd_->head()),
-             ptr_cd_->color(), // Entry searcher is in the same CD task gruop (ptr_cd_->head) 
-             &status);
+            2, 
+            MPI_UNSIGNED_LONG_LONG, 
+            ptr_cd_->head(), 
+            ptr_cd_->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, ptr_cd_->head()),
+            ptr_cd_->color(), // Entry searcher is in the same CD task gruop (ptr_cd_->head) 
+            &status);
 /*
   PMPI_Irecv(recvBuf, 
              2, 
@@ -221,29 +236,30 @@ void HandleEntrySend::HandleEvent(void)
              ptr_cd_->color(), // Entry searcher is in the same CD task gruop (ptr_cd_->head) 
              &(ptr_cd_->entry_req_.back().req_));
 */
-  ENTRY_TAG_T &tag_to_search = recvBuf[0];
-  int entry_source_task_id  = static_cast<int>(recvBuf[1]);
-//  dbg << "Received Entry Tag : " << tag_to_search << " = " << tag2str[tag_to_search] << endl; 
 
-  dbg.flush();
+  ENTRY_TAG_T &tag_to_search = recvBuf[0];
+
+  int entry_source_task_id  = static_cast<int>(recvBuf[1]);
+  CD_DEBUG("Received Entry Tag : %u == %s\n", tag_to_search, tag2str[tag_to_search].c_str());
 
   // Find entry
   if(tag_to_search == INIT_TAG_VALUE) {
-    cerr << "Entry sender failed to receive the entry tag to search for the right entry with. CD Level " << ptr_cd_->level() << endl;
-    assert(0);
+    ERROR_MESSAGE("Entry sender failed to receive the entry tag to search for the right entry with. CD Level #%u\n", ptr_cd_->level());
   }
 
 //  CDEntry *entry = InternalGetEntry(tag_to_search);
-  int found_level=ptr_cd_->level();
+  uint32_t found_level=ptr_cd_->level();
 
 
   CDEntry *entry = ptr_cd_->InternalGetEntry(tag_to_search);
   if(entry != NULL) { 
-    dbg << "FOUND it at this level! " << ptr_cd_->level() << endl;
+    CD_DEBUG("FOUND it at this level #%u!\n", ptr_cd_->level());
+
     found_level = ptr_cd_->level();
   } 
   else {
-    dbg << "NOT FOUND it at this level! " << ptr_cd_->level() << endl;
+    CD_DEBUG("NOT FOUND it at this level #%u!\n", ptr_cd_->level());
+
     entry = ptr_cd_->SearchEntry(tag_to_search, found_level);
   }
 
@@ -255,20 +271,20 @@ void HandleEntrySend::HandleEvent(void)
   CDHandle *cdh = CDPath::GetCDLevel(ptr_cd_->level());
   
   for(auto it=cdh->ptr_cd()->remote_entry_directory_map_.begin(); it!=cdh->ptr_cd()->remote_entry_directory_map_.end(); ++it) {
-    dbg << it->first << " (" << tag2str[it->first] << ") - " << *(it->second) << endl;
-    dbg << "--------------------- level : "<<cdh->level()<< " --------------------------------" << endl;
+    CD_DEBUG("%lu (%s) - %s\n)\n", it->first, tag2str[it->first].c_str(), it->second->GetString().c_str());
+    CD_DEBUG("--------------------- level : %u --------------------------------", cdh->level());
   }
 
   if(entry == NULL) {
-    dbg << "The received tag ["<< tag_to_search << "] does not work in "<< ptr_cd_->GetNodeID() <<". CD Level " << ptr_cd_->level() << endl; dbg.flush();
-    cerr << "The received tag ["<< tag_to_search << "] does not work in "<< ptr_cd_->GetNodeID() <<". CD Level " << ptr_cd_->level() << endl;
-    assert(0);
+    ERROR_MESSAGE("The received tag [%u] does not work in %s. CD Level %u.\n",
+ 								  tag_to_search, ptr_cd_->GetNodeID().GetString().c_str(), ptr_cd_->level());
   }
   else
-    dbg << "HandleEntrySend: entry was found at " << found_level << endl;
-  dbg.flush();
+    CD_DEBUG("HandleEntrySend: entry was found at level #%u.\n", found_level);
+
 //  ptr_cd_->entry_send_req_[tag_to_search] = CommInfo();
   ptr_cd_->entry_req_.push_back(CommInfo()); //getchar();
+
   // Should be non-blocking send to avoid deadlock situation. 
   PMPI_Isend(entry->dst_data_.address_data(), 
              entry->dst_data_.len(), 
@@ -279,7 +295,8 @@ void HandleEntrySend::HandleEvent(void)
              &(ptr_cd_->entry_req_.back().req_));  
 //             &(ptr_cd_->entry_send_req_[tag_to_search].req_));  
 
-  dbg << "CD Event kEntrySend\t\t\t";
+  CD_DEBUG("CD Event kEntrySend\t\t\t");
+
   if(ptr_cd_->IsHead()) {
     ptr_cd_->event_flag_[ptr_cd_->task_in_color()] &= ~kEntrySend;
   }
@@ -297,19 +314,19 @@ void HandleErrorOccurred::HandleEvent(void)
 {
 #if _MPI_VER
 
-
   if(ptr_cd_->task_size() == 1) return;
+
   int task_id = task_id_;
-  dbg << "\n== HandleErrorOccurred::HandleEvent\n"<<endl;;
+  CD_DEBUG("\n[HandleErrorOccurred::HandleEvent]\n");
 
   CDEventT all_reexecute = kAllReexecute;
   for(int i=0; i<ptr_cd_->task_size(); i++) {
-    dbg << "\nSetMailBox(kAllRexecute) for error occurred of task #" << i <<endl;;
+    CD_DEBUG("SetMailBox(kAllRexecute) for error occurred of task #%d\n", i);
     ptr_cd_->SetMailBox(all_reexecute, i);
   }
 
   // Resume
-  dbg << "\n== HandleErrorOccurred::HandleEvent HeadCD Event kErrorOccurred is handled!!\n"<<endl;;
+  CD_DEBUG("\n== HandleErrorOccurred::HandleEvent HeadCD Event kErrorOccurred is handled!!\n");
   ptr_cd_->event_flag_[task_id] &= ~kErrorOccurred;
   IncHandledEventCounter();
 
@@ -339,15 +356,16 @@ void HandleAllResume::HandleEvent(void)
 
   if(ptr_cd_->task_size() == 1) return;
 
-  dbg << "CD Event kAllResume\t\t\t";
+  CD_DEBUG("CD Event kAllResume\t\t\t");
 
     *(ptr_cd_->event_flag_) &= ~kAllResume;
 
   IncHandledEventCounter();
 
 //  PMPI_Barrier(ptr_cd_->color());
-  cout << "\n\n[Barrier] HandleAllResume::HandleEvent "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; //getchar();
-  dbg << "Barrier resolved" << endl;
+//  cout << "\n\n[Barrier] HandleAllResume::HandleEvent "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; //getchar();
+
+  CD_DEBUG("Barrier resolved\n");
 
 #endif
 }
@@ -386,7 +404,7 @@ void HandleAllReexecute::HandleEvent(void)
 #if 1
   if(ptr_cd_->task_size() == 1) assert(0);
 
-  dbg << "CD Event kAllReexecute\t\t";
+  CD_DEBUG("CD Event kAllReexecute\t\t");
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();
 

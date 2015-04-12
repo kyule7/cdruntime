@@ -50,19 +50,21 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "util.h"
 #include "event_handler.h"
 
-/**@class cd::CDEntry
+namespace cd {
+
+/**@class CDEntry
  * @brief Data structure that contains preservation-related information.
  *  This class represent all the required information in the preservation action
  *  such as source/destination information, preservation type, etc.
  *  It is internally managed by CD object.
  */ 
-class cd::CDEntry : public cd::Serializable
+class CDEntry : public Serializable
 {
-  friend class cd::CD;
-  friend class cd::HeadCD;
-  friend class cd::PFSHandle;
-  friend class cd::HandleEntrySend;
-  friend class cd::HandleEntrySearch;
+  friend class CD;
+  friend class HeadCD;
+  friend class PFSHandle;
+  friend class HandleEntrySend;
+  friend class HandleEntrySearch;
   friend std::ostream& operator<<(std::ostream& str, const CDEntry& cd_entry);
   private:
     enum { 
@@ -75,10 +77,10 @@ class cd::CDEntry : public cd::Serializable
     // need a unique name to do via reference, 
     // this variable can be empty string when this is not needed
     ENTRY_TAG_T entry_tag_;    
-    cd::CD*     ptr_cd_;
+    CD*     ptr_cd_;
     DataHandle  src_data_;
     DataHandle  dst_data_;
-    cd::CDPreserveT preserve_type_; // already determined according to class 
+    CDPreserveT preserve_type_; // already determined according to class 
 //		struct tsn_lsn_struct lsn, durable_lsn;
 
     enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError, kEntrySearchRemote};
@@ -90,6 +92,20 @@ class cd::CDEntry : public cd::Serializable
     {
       src_data_ = src_data;
       dst_data_ = dst_data;
+      if(entry_name.empty()) entry_tag_ = 0;
+      else {
+        entry_tag_ = cd_hash(entry_name);
+        tag2str[entry_tag_] = entry_name;
+      }
+    }
+    CDEntry(const DataHandle  &src_data, 
+            const DataHandle  &dst_data, 
+            const std::string &entry_name,
+						const CD *ptr_cd) 
+    {
+      src_data_ = src_data;
+      dst_data_ = dst_data;
+			ptr_cd_ = const_cast<CD *>(ptr_cd);
       if(entry_name.empty()) entry_tag_ = 0;
       else {
         entry_tag_ = cd_hash(entry_name);
@@ -113,8 +129,8 @@ class cd::CDEntry : public cd::Serializable
     // For example right now we have one list who handles all the CDEntries for that CD. 
     // But this list might need to be distributed if that CD spans among multiple threads. 
     // If we have that data structure the issue here will be solved anyways. 
-    void set_my_cd(cd::CD* ptr_cd) { ptr_cd_ = ptr_cd; }
-    cd::CD* ptr_cd() const { return ptr_cd_; }
+    void set_my_cd(CD* ptr_cd) { ptr_cd_ = ptr_cd; }
+    CD* ptr_cd() const { return ptr_cd_; }
 
 		CDEntryErrT Delete(void);
 
@@ -160,34 +176,37 @@ class cd::CDEntry : public cd::Serializable
     void *Serialize(uint32_t &len_in_bytes) 
     {
 
-      dbg << "\nCD Entry Serialize\n" << endl;
+      CD_DEBUG("\nCD Entry Serialize\n");
       Packer entry_packer;
 //      uint32_t ptr_cd_packed_len=0;
 //      void *ptr_cd_packed_p = ptr_cd_->Serialize(ptr_cd_packed_len);
 
       uint32_t src_packed_len=0;
-      dbg << "\nsrc Serialize\n" << endl;
+      CD_DEBUG("\nsrc Serialize\n");
       void *src_packed_p = src_data_.Serialize(src_packed_len);
       uint32_t dst_packed_len=0;
-      dbg << "\ndst Serialize\n" << endl;
+      CD_DEBUG("\ndst Serialize\n");
       void *dst_packed_p = dst_data_.Serialize(dst_packed_len);
 //      assert(ptr_cd_packed_len != 0);
       assert(src_packed_len != 0);
       assert(dst_packed_len != 0);
 
-      dbg << "\npacked entry_entry_tag_ is :\t " << entry_tag_ <<endl<<endl;
+      CD_DEBUG("packed entry_entry_tag_ is : %u \n", entry_tag_);
+
       ENTRY_TAG_T str_key = entry_tag_;
       entry_packer.Add(ENTRY_PACKER_NAME, sizeof(str_key), &str_key); 
 //      entry_packer.Add(ENTRY_PACKER_PTRCD, ptr_cd_packed_len, ptr_cd_packed_p);
       
-      dbg << "\npacked preserve_type_ is :\t " << preserve_type_ <<endl<<endl;
+      CD_DEBUG("packed preserve_type_ is : %d \n", preserve_type_);
 
-      entry_packer.Add(ENTRY_PACKER_PRESERVETYPE, sizeof(cd::CDPreserveT), &preserve_type_);
+      entry_packer.Add(ENTRY_PACKER_PRESERVETYPE, sizeof(CDPreserveT), &preserve_type_);
 
-      dbg << "\npacked src_packed_ is :\t " << src_packed_p <<endl<<endl;
+      CD_DEBUG("packed src_packed_ is : %p\n", src_packed_p);
+
       entry_packer.Add(ENTRY_PACKER_SRC, src_packed_len, src_packed_p);
       entry_packer.Add(ENTRY_PACKER_DST, dst_packed_len, dst_packed_p); 
-      dbg << "\nCD Entry Serialize Done\n" << endl;
+
+      CD_DEBUG("\nCD Entry Serialize Done\n");
 
       return entry_packer.GetTotalData(len_in_bytes);  
  
@@ -196,7 +215,8 @@ class cd::CDEntry : public cd::Serializable
     void Deserialize(void *object)
     {
       
-      dbg << "\nCD Entry Deserialize\nobject : " << object <<endl;
+      CD_DEBUG("\nCD Entry Deserialize\nobject : %p\n", object);
+
       Unpacker entry_unpacker;
       uint32_t return_size=0;
       uint32_t dwGetID=0;
@@ -204,24 +224,27 @@ class cd::CDEntry : public cd::Serializable
       void *dst_unpacked=0;
 
       entry_tag_ = *(ENTRY_TAG_T *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      dbg << "unpacked entry_entry_tag_ is :\t " << entry_tag_ <<" <-> " << tag2str[entry_tag_] <<endl;
-      dbg << "1st unpacked thing in data_handle : " << entry_tag_ << ", return size : " << return_size << endl<< endl;
 
-      preserve_type_ = *(cd::CDPreserveT *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      dbg << "unpacked preserve_type_ is :\t " << preserve_type_ <<endl;
-      dbg << "2nd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl << endl;
+      CD_DEBUG("unpacked entry_entry_tag_ is : %u <-> %s\n", entry_tag_, tag2str[entry_tag_].c_str());
+      CD_DEBUG("1st unpacked thing in data_handle : %u, return size : %u\n", entry_tag_, return_size);
 
-      dbg << "\nBefore call GetNext for src data handle\tobject : " << object <<endl;
+      preserve_type_ = *(CDPreserveT *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+
+      CD_DEBUG("unpacked preserve_type_ is : %d\n", preserve_type_);
+      CD_DEBUG("2nd unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
+
+      CD_DEBUG("Before call GetNext for src data handle object : %p\n", object);
       src_unpacked = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      dbg << "\nBefore call GetNext for dst data handle\tobject : " << object <<endl;
-      dbg << "src_unpacked is :\t " << src_unpacked <<endl;
-      dbg << "3rd unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl << endl;
+      CD_DEBUG("After call GetNext for dst data handle object : %p\n", object);
+
+      CD_DEBUG("src_unpacked is : %p\n", src_unpacked);
+      CD_DEBUG("3rd unpacked thing in data_handle : %u, return size: %u\n", dwGetID, return_size);
 
 
       dst_unpacked = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
-      dbg << "\nBefore call src_data.Deserialize\tobject : " << object <<endl;
-      dbg << "dst_unpacked is :\t " << dst_unpacked <<endl;
-      dbg << "4th unpacked thing in data_handle : " << dwGetID << ", return size : " << return_size << endl;    
+      CD_DEBUG("Before call src_data.Deserialize object : %p\n", object);
+      CD_DEBUG("dst_unpacked is : %p\n", dst_unpacked);
+      CD_DEBUG("4th unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
 
       src_data_.Deserialize(src_unpacked);
       dst_data_.Deserialize(dst_unpacked);
@@ -236,5 +259,8 @@ class cd::CDEntry : public cd::Serializable
     void RequestEntrySearch(void);
 };
 
+
+
+} // namespace cd ends
 #endif
 

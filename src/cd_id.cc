@@ -145,19 +145,19 @@ uint32_t CDID::GenMsgTagForSameCD(int msg_type, int task_in_color)
 //SZ: print function
 void CDID::Print(void)
 {
-  PRINT_DEBUG("CDID information:\n");
-  PRINT_DEBUG("    domain_id_: %ld\n"     , (unsigned long)domain_id_);
-  PRINT_DEBUG("    object_id_: %ld\n"     , (unsigned long)object_id_);
-  PRINT_DEBUG("    sequential_id_: %ld\n" , (unsigned long)sequential_id_);
+  CD_DEBUG("CDID information:\n");
+  CD_DEBUG("    domain_id_: %ld\n"     , (unsigned long)domain_id_);
+  CD_DEBUG("    object_id_: %ld\n"     , (unsigned long)object_id_);
+  CD_DEBUG("    sequential_id_: %ld\n" , (unsigned long)sequential_id_);
 
-  PRINT_DEBUG("    level: %ld\n"          , (unsigned long)level());
-  PRINT_DEBUG("    rank_in_level: %ld\n"  , (unsigned long)rank_in_level());
-  PRINT_DEBUG("    sibling_count: %ld\n"  , (unsigned long)sibling_count());
+  CD_DEBUG("    level: %ld\n"          , (unsigned long)level());
+  CD_DEBUG("    rank_in_level: %ld\n"  , (unsigned long)rank_in_level());
+  CD_DEBUG("    sibling_count: %ld\n"  , (unsigned long)sibling_count());
 
-  PRINT_DEBUG("    task_count: %d\n"      , task_count());
-  PRINT_DEBUG("    task_in_color: %d\n"   , task_in_color());
-  PRINT_DEBUG("    head: %d\n"            , head());
-  PRINT_DEBUG("    IsHead: %d\n"          , IsHead());
+  CD_DEBUG("    task_count: %d\n"      , task_count());
+  CD_DEBUG("    task_in_color: %d\n"   , task_in_color());
+  CD_DEBUG("    head: %d\n"            , head());
+  CD_DEBUG("    IsHead: %d\n"          , IsHead());
 }
 
 std::string CDID::GetString(void) const 

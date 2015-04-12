@@ -50,6 +50,20 @@ typedef void*(*Malloc)(size_t size);
 
 namespace cd {
 
+class RuntimeLogger {
+	friend class CD;
+	friend class HeadCD;
+	public:
+    static CD   *IsLogable(bool *logable_);
+    static int   cd_fprintf(FILE *str, const char *format, va_list &args);
+    static int   fclose(FILE *fp);
+    static FILE *fopen(const char *file, const char *mode);
+    static void *valloc(size_t size);
+    static void *calloc(size_t num, size_t size);
+    static void *malloc(size_t size);
+    static void  free(void *p);
+};
+
 
 //CD *IsLogable(bool *logable_);
 struct IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked);
