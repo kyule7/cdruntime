@@ -145,12 +145,25 @@ void WriteDbgStream(DebugBuf *debugBuf)
   dbg.flush();
   dbg.close();
 
-  std::string output_filename("./output/output_app_");
-  output_filename += string(to_string(static_cast<unsigned long long>(myTaskID)));
+  if( secure_getenv( "CD_DEBUG_OUTPUT" ) )
+  {
+    std::string path( secure_getenv( "CD_DEBUG_OUTPUT" ) );
+    std::string output_filename = path + "/output/output_app_";
+    output_filename += string(to_string(static_cast<unsigned long long>(myTaskID)));
 	
-  debugBuf->open(output_filename.c_str());
-  debugBuf->flush();
-  debugBuf->close();
+    debugBuf->open(output_filename.c_str());
+    debugBuf->flush();
+    debugBuf->close();
+  }
+  else
+  {
+    std::string output_filename = "./output/output_app_";
+    output_filename += string(to_string(static_cast<unsigned long long>(myTaskID)));
+	
+    debugBuf->open(output_filename.c_str());
+    debugBuf->flush();
+    debugBuf->close();
+  }
 #endif
 }
 
