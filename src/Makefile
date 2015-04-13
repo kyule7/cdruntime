@@ -1,4 +1,4 @@
-include ../interface/preservation_filepath.conf ../Makefile.extern
+include ../Makefile.extern
 
 DEBUG_VAR = 1
 MPI_VER_VAR = 1

@@ -452,7 +452,7 @@ extern FILE *cdoutApp;
 
 #define dout clog
 
-#define DEFAULT_MEDIUM kDRAM
+#define DEFAULT_MEDIUM kHDD
 
 
 

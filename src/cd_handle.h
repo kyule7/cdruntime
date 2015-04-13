@@ -80,17 +80,13 @@ namespace cd {
  * These internal metadata are very important for CDs and 
  * managed separately from the user-level data structure.
  * At this point, the current CD is the root. 
+ * The storage medium for preservation through CD runtime 
+ * can be explicitly controlled by users.
+ * This medium can be set per CD level, 
+ * so users can set a specific medium at CD_Init() or CDHandle::Create().
  *
  * `CD_Init()` __should only be called once per application.__
  *
- * There are two variants of this function. The first is a
- * collective operation across all SPMD tasks currently in the
- * application. All tasks get a handle to the single root and begin
- * the CD in a synchronized manner. 
- * The second variant is called
- * locally by a single task and synchronization, as well as
- * broadcasting the handle are up to the programmer. Use of this second
- * variant is discouraged.
  *
  * @return Returns a handle to the root CD. 
  * Returns `kOK` if successful, 
@@ -106,7 +102,7 @@ CDHandle *CD_Init(int numTask=1, //!< [in] number of task. For single task versi
                                  //!< this should be 1. Default is 1.
                   int myTask=0,  //!< [in] Task ID which is global for all tasks.
                                  //!< Default is 0.
-                  PrvMediumT prv_medium=kDRAM //!< Preservation medium for root CD.
+                  PrvMediumT prv_medium=DEFAULT_MEDIUM //!< Preservation medium for root CD.
                                               //!< User can set the medium for root through CD_Init's argument.
                                               //!< Default is kDRAM.
                  );
