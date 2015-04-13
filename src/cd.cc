@@ -434,12 +434,14 @@ CDHandle* CD::CreateRootCD(CDHandle* parent,
 
   *cd_internal_err = InternalCreate(parent, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
 
-  char preservation_unique_name [ L_tmpnam ];
-  if( tmpnam( preservation_unique_name ) )
-  {
-    MPI_Bcast( preservation_unique_name, L_tmpnam, MPI_BYTE, root_cd_id.head(), MPI_COMM_WORLD );
-    new_cd_handle->ptr_cd_->log_handle_.uniqueName_.assign( preservation_unique_name );
-  }
+  char preservation_unique_name[ 32 ];
+  strncpy(preservation_unique_name, "/CD/cd_XXXXXX", 13 );
+  if( new_cd_handle->IsHead() )
+   if( mkdtemp( preservation_unique_name ) )
+     new_cd_handle->ptr_cd_->log_handle_.uniqueName_.assign( preservation_unique_name );
+
+  MPI_Bcast( preservation_unique_name, 32, MPI_BYTE, root_cd_id.head(), MPI_COMM_WORLD );
+  new_cd_handle->ptr_cd_->log_handle_.uniqueName_.assign( preservation_unique_name );
 
   assert(new_cd_handle != NULL);
 
