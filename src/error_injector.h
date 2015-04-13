@@ -377,7 +377,10 @@ class MemoryErrorInjector : public ErrorInjector {
   uint64_t size_;
 
 public:
-  MemoryErrorInjector(void *data=NULL, uint64_t size=0)
+  MemoryErrorInjector(void)
+    : ErrorInjector(0.0, kUniform, stdout), data_(NULL), size_(0) {}
+
+  MemoryErrorInjector(void *data, uint64_t size)
     : ErrorInjector(0.0, kUniform, stdout), data_(data), size_(size) {}
 
   MemoryErrorInjector(void *data, uint64_t size, double error_rate, RandType random_type=kUniform, FILE *logfile=stdout)
@@ -385,8 +388,10 @@ public:
   virtual ~MemoryErrorInjector() {}
 
   virtual void Inject(void) {}
-  virtual int64_t SetRange(uint64_t range)=0;
-  virtual void PushRange(void *data, uint64_t ndata, uint64_t sdata, char *desc)=0;
+	virtual bool InjectAndTest(void) { return false; }
+  virtual int64_t SetRange(uint64_t range) {return 0;}
+  virtual void PushRange(void *data, uint64_t ndata, uint64_t sdata, const char *desc){}
+  virtual void Init(double soft_error_rate=0.0, double hard_error_rate=0.0){}
 
 };
 

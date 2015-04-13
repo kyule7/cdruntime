@@ -176,8 +176,8 @@ public:
     return CRange;
   }
 
-  void PushRange( void *_data, uint64_t _ndata, uint64_t _sdata, char *_desc ){
-
+  void PushRange( void *_data, uint64_t _ndata, uint64_t _sdata, const char *_desc ){
+    printf("data : %p, # of element : %lu, size of element : %lu, desc : %s\n", _data, _ndata, _sdata, _desc);
     assert(_sdata <= ERROR_INJECTOR_MAX_SDATA);
 
     if( NRange == ARange ) 

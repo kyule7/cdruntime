@@ -434,15 +434,6 @@ CDHandle* CD::CreateRootCD(CDHandle* parent,
 
   *cd_internal_err = InternalCreate(parent, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
 
-  char preservation_unique_name[ 32 ];
-  strncpy(preservation_unique_name, "/CD/cd_XXXXXX", 13 );
-  if( new_cd_handle->IsHead() )
-   if( mkdtemp( preservation_unique_name ) )
-     new_cd_handle->ptr_cd_->log_handle_.uniqueName_.assign( preservation_unique_name );
-
-  MPI_Bcast( preservation_unique_name, 32, MPI_BYTE, root_cd_id.head(), MPI_COMM_WORLD );
-  new_cd_handle->ptr_cd_->log_handle_.uniqueName_.assign( preservation_unique_name );
-
   assert(new_cd_handle != NULL);
 
   return new_cd_handle;
@@ -470,11 +461,11 @@ CD::InternalCreate(CDHandle* parent,
 {
   CD_DEBUG("Internal Create... level #%u, Node ID : %s\n", new_cd_id.level(), new_cd_id.node_id().GetString().c_str());
 
+  PrvMediumT new_prv_medium = static_cast<PrvMediumT>((MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : MASK_MEDIUM(cd_type));
+
   if( !new_cd_id.IsHead() ) {
 
     CD_DEBUG("Mask medium : %d\n", MASK_MEDIUM(cd_type));
-
-    PrvMediumT new_prv_medium = static_cast<PrvMediumT>((MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : MASK_MEDIUM(cd_type));
 
     CD *new_cd     = new CD(parent, name, new_cd_id, static_cast<CDType>(MASK_CDTYPE(cd_type)), new_prv_medium, sys_bit_vector);
 
@@ -512,16 +503,14 @@ CD::InternalCreate(CDHandle* parent,
 #endif
 
 
-    if( new_cd->GetPlaceToPreserve() == kPFS ) {
+    if( new_cd->GetPlaceToPreserve() == kPFS ) 
       new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->log_handle_.path_.GetFilePath().c_str() ); 
-    }
+
     *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
   }
   else {
     // Create a CD object for head.
     CD_DEBUG("Mask medium : %d\n", MASK_MEDIUM(cd_type));
-
-    PrvMediumT new_prv_medium = static_cast<PrvMediumT>((MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : MASK_MEDIUM(cd_type));
 
     HeadCD *new_cd = new HeadCD(parent, name, new_cd_id, static_cast<CDType>(MASK_CDTYPE(cd_type)), new_prv_medium, sys_bit_vector);
 
@@ -562,16 +551,41 @@ CD::InternalCreate(CDHandle* parent,
 #endif
 
 
-    if( new_cd->GetPlaceToPreserve() == kPFS ) {
-//          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
+    if( new_cd->GetPlaceToPreserve() == kPFS ) 
       new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->log_handle_.path_.GetFilePath().c_str() ); 
-    }
+
     *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
   }
   
   CD_DEBUG("[CD::InternalCreate] Done. New Node ID: %s -- %s\n", 
            new_cd_id.node_id().GetString().c_str(), 
            (*new_cd_handle)->node_id().GetString().c_str());
+
+  if( parent == NULL )
+  {
+    char preservation_unique_name[ L_tmpnam ];
+    char processor_name[ MPI_MAX_PROCESSOR_NAME ];
+    if( new_cd_id.IsHead() )
+    {
+     if( tmpnam_r( preservation_unique_name ) )
+     {
+       CD_DEBUG("[CD::InternalCreate] this is the temporary path created for run: %s\n");
+     }
+     else
+       ERROR_MESSAGE("Failed to generate an unique filepath.\n");
+
+     int len;
+     MPI_Get_processor_name( processor_name, &len );
+    }
+    
+  #if _MPI_VER
+    MPI_Bcast( preservation_unique_name, L_tmpnam, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
+    MPI_Bcast( processor_name, MPI_MAX_PROCESSOR_NAME, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
+  #endif
+
+    (*new_cd_handle)->ptr_cd_->log_handle_.SetFilePath( new_prv_medium, std::string (preservation_unique_name) + std::string(processor_name) );
+  }
+
   return CD::CDInternalErrT::kOK;
 }
 

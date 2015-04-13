@@ -1,4 +1,4 @@
-include ../interface/preservation_filepath.conf ../Makefile.extern
+include ../Makefile.extern
 
 DEBUG_VAR = 1
 MPI_VER_VAR = 1
@@ -13,7 +13,8 @@ TACC=0
 MEDIUM = -D_MEMORY=1 #\
          -D_PFS=0 \
          -D_SSD=0 \
-         -D_HDD=0 
+         -D_HDD=0
+          
 
 DEBUG_FLAGS = -D_DEBUG=$(DEBUG_VAR) -D_CD_DEBUG=$(DEBUG_VAR) -D_PRV_FILE_NOT_ERASED=1
 

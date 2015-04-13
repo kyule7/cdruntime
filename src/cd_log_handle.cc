@@ -74,6 +74,63 @@ std::string CDLogHandle::GetFilePath(void)
     OpenFilePath();
   }
   return path_.GetFilePath();
-
-
 }
+
+void CDLogHandle::SetFilePath(const PrvMediumT& prv_medium, const std::string& parentUniqueName = "")
+  {
+    uniqueName_ = parentUniqueName;
+    switch(prv_medium) 
+    {
+      case kDRAM :
+      {
+      	path_ = CD_FILEPATH_INVALID;
+      	break;
+      }
+      case kPFS :
+      {
+      	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
+      	{
+          std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
+          path_base = path_base + "/PFS/" + uniqueName_ + "/";
+          path_.filepath_.clear();
+          path_.filepath_ = path_base;
+        }
+      	else
+          path_ = CD_FILEPATH_PFS;
+
+        break;	
+      }
+      case kHDD :
+      {
+      	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
+        {
+	  std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
+          path_base = path_base + "/HDD/" + uniqueName_ + "/";
+          path_.filepath_.clear();
+          path_.filepath_ = path_base;
+      	}
+        else
+	  path_ = CD_FILEPATH_HDD;
+
+        break;
+      }
+      case kSSD :
+      {
+      	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
+      	{
+          std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
+          path_base = path_base + "/SSD/" + uniqueName_ + "/";
+          path_.filepath_.clear();
+          path_.filepath_ = path_base;
+        }
+      	else
+	  path_ = CD_FILEPATH_SSD;
+
+        break;
+      }
+      default :
+      {
+        path_ = CD_FILEPATH_DEFAULT;
+      }
+    }   
+  }

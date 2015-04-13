@@ -125,7 +125,8 @@ class CD : public Serializable {
     friend class HandleEntrySend;
     friend class HeadCD;
     friend class CommLog;
-		friend class RuntimeLogger;
+    friend class PFSHandle;
+    friend class RuntimeLogger;
     friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
 
 //    friend CD* cd::IsLogable(bool *logable_);

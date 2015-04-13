@@ -122,6 +122,8 @@ void PFSHandle::Copy( const PFSHandle& that )
 int PFSHandle::Open_File( void )
 {
 	//FIXME: Currently no mpi hints are sent to the I/O, this can be tuned in the future.
+        if( !(ptr_cd_->log_handle_.IsOpen()) ) ptr_cd_->log_handle_.OpenFilePath();       
+
 	int error_type;
 	error_type = MPI_File_open( PFS_parallel_file_communicator_, const_cast<char*>(PFS_file_path_.c_str()), 
 							MPI_MODE_CREATE|MPI_MODE_RDWR|MPI_MODE_DELETE_ON_CLOSE, MPI_INFO_NULL, &(PFS_d_) );

@@ -5,7 +5,7 @@ SIGHT_ROOT  = ${CD_ROOT}/tools/sight
 
 CD_TEST     = ${CD_ROOT}/test
 CD_SRC      = ${CD_ROOT}/src
-CD_INTERFACE= ${CD_ROOT}/interface
+CD_INTERFACE= ${CD_ROOT}/interface/include
 CD_TOOLS    = ${CD_ROOT}/tools
 CD_LIB      = ${CD_ROOT}/lib
 CD_AUTOTUNER= ${CD_ROOT}/autotuner

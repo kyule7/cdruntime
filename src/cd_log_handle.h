@@ -112,12 +112,8 @@ public:
           path_.filepath_ = path_base;
         }
       	else
-        	path_ = CD_FILEPATH_PFS;
+          path_ = CD_FILEPATH_PFS;
 
-        if( !opened_ ) 
-        {
-          OpenFilePath();
-        }
         break;	
       }
       case kHDD :
@@ -130,12 +126,8 @@ public:
           path_.filepath_ = path_base;
       	}
         else
-	        path_ = CD_FILEPATH_HDD;
+	  path_ = CD_FILEPATH_HDD;
 
-        if( !opened_ ) 
-        {
-          OpenFilePath();
-        }
         break;
       }
       case kSSD :
@@ -148,34 +140,24 @@ public:
           path_.filepath_ = path_base;
         }
       	else
-      		path_ = CD_FILEPATH_SSD;
+	  path_ = CD_FILEPATH_SSD;
 
-        if( !opened_ ) 
-        {
-          OpenFilePath();
-        }
         break;
       }
       default :
       {
         path_ = CD_FILEPATH_DEFAULT;
-        if( prv_medium != kDRAM )
-        {
-          if( !opened_ ) 
-          {
-            OpenFilePath();
-          }
-        }
       }
     }   
   }
   ~CDLogHandle() {}
 
-	std::string GetFilePath(void);
+  std::string GetFilePath(void);
   void InitOpenFile() { opened_ = false; }
   bool IsOpen()   { return opened_;  }
   void OpenFilePath(void);     
   void CloseAndDeletePath( void );
+  void SetFilePath(const PrvMediumT&, const std::string&);
 };
 
 

@@ -780,6 +780,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 
 #if _ERROR_INJECTION_ENABLED
   if(memory_error_injector_ != NULL) {
+    memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
     memory_error_injector_->Inject();
   }
 #endif
@@ -809,6 +810,18 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   CDPrologue();
 
   assert(ptr_cd_ != 0);
+
+#if _PROFILER
+  if(ptr_cd()->cd_exec_mode_ == 0) { 
+//    profiler_->GetPrvData(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
+  }
+#endif
+
+#if _ERROR_INJECTION_ENABLED
+  if(memory_error_injector_ != NULL) {
+    memory_error_injector_->Inject();
+  }
+#endif
 
   // TODO CDEvent object need to be handled separately, 
   // this is essentially shared object among multiple nodes.
