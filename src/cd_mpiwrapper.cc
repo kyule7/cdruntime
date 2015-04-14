@@ -1110,7 +1110,7 @@ int MPI_Barrier (MPI_Comm comm)
   app_side = false;
   int mpi_ret=0;
   LOG_DEBUG("here inside MPI_Barrier\n");
-  LOG_DEBUG("comm=%x, &comm=%p\n", comm, &comm);
+//  LOG_DEBUG("comm=%x, &comm=%p\n", comm, &comm);
 
   CDHandle * cur_cd = GetCurrentCD();
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)

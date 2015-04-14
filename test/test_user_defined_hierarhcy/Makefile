@@ -7,7 +7,7 @@ all:
 	mpic++  -std=gnu++0x -o test_user_defined_hierarchy ${CD_CFLAGS} ${CD_APP_FLAGS} ./test_user_defined_hierarchy.cc ${CD_LINKFLAGS}
 
 clean:
-	rm -rf  test_user_defined_hierarchy 
+	rm -rf  test_user_defined_hierarchy; rm -rf ./HDD 
 
 clean_cdruntime:
 	cd ../../src; make clean;
