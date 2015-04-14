@@ -99,7 +99,7 @@ class DataHandle : public Serializable {
     //Reference
     ENTRY_TAG_T ref_name_;
     uint64_t ref_offset_;
-		NodeID      node_id_;
+    NodeID      node_id_;
 
 //  public: 
     DataHandle() 
@@ -177,7 +177,7 @@ public:
              && (ref_offset_ == that.ref_offset_);
     }
 
-	std::string GetString(void) const;
+  std::string GetString(void) const;
 private:
 //  public: 
     //we need serialize deserialize interface here.
@@ -221,7 +221,7 @@ private:
 
       node_id_.Deserialize(node_id_unpacked);
       
-			CD_DEBUG("1st unpacked thing in data_handle : %s, return size : %u\n", node_id_.GetString().c_str(), return_size);
+      CD_DEBUG("1st unpacked thing in data_handle : %s, return size : %u\n", node_id_.GetString().c_str(), return_size);
 
       handle_type_ = *(HandleType *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
 
@@ -252,7 +252,7 @@ private:
 
     DataHandle& operator=(const DataHandle& that) {
       handle_type_ = that.handle_type_;
-  		node_id_     = that.node_id_;
+      node_id_     = that.node_id_;
       address_data_= that.address_data_;
       len_         = that.len();
       strcpy(file_name_, that.file_name_);

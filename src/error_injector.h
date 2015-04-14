@@ -388,7 +388,7 @@ public:
   virtual ~MemoryErrorInjector() {}
 
   virtual void Inject(void) {}
-	virtual bool InjectAndTest(void) { return false; }
+  virtual bool InjectAndTest(void) { return false; }
   virtual int64_t SetRange(uint64_t range) {return 0;}
   virtual void PushRange(void *data, uint64_t ndata, uint64_t sdata, const char *desc){}
   virtual void Init(double soft_error_rate=0.0, double hard_error_rate=0.0){}
@@ -419,11 +419,11 @@ public:
                   double error_rate) 
     : ErrorInjector(true, error_rate, kUniform, stdout) {
     for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
-			CD_DEBUG("push back cd %u\n", *it);
+      CD_DEBUG("push back cd %u\n", *it);
       cd_to_fail_.push_back(*it);
     }
     for(auto it=task_list_to_fail.begin(); it!=task_list_to_fail.end(); ++it) {
-			CD_DEBUG("push back task %u\n", *it);
+      CD_DEBUG("push back task %u\n", *it);
       task_to_fail_.push_back(*it);
     }
     force_to_fail_ = true;
@@ -489,7 +489,7 @@ public:
       CD_DEBUG("force_to_fail is turned on. cd fail list size : %zu, task fail list size : %zu\n", cd_to_fail_.size(), task_to_fail_.size());
 
       for(auto it=cd_to_fail_.begin(); it!=cd_to_fail_.end(); ++it) {
-				CD_DEBUG("cd_to_fail : %u = %u\n", *it, rank_in_level_);
+        CD_DEBUG("cd_to_fail : %u = %u\n", *it, rank_in_level_);
         if(*it == rank_in_level_) {
           CD_DEBUG("cd failed rank_in_level #%u\n", *it);
           return true;
@@ -497,7 +497,7 @@ public:
       }
 
       for(auto it=task_to_fail_.begin(); it!=task_to_fail_.end(); ++it) {
-				CD_DEBUG("task_to_fail : %u = %u\n", *it, task_in_color_);
+        CD_DEBUG("task_to_fail : %u = %u\n", *it, task_in_color_);
         if(*it == task_in_color_) {
           CD_DEBUG("task failed task_in_color #%u\n", *it);
           return true;

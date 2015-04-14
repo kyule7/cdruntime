@@ -60,23 +60,23 @@ class Path {
   friend class cd::CD;
   friend class cd::CDLogHandle;
 private:
-	std::string filepath_;
-	Path() : filepath_(CD_FILEPATH_DEFAULT) {}
-	Path(const std::string &filepath) : filepath_(filepath) {}
-	Path(const char *filepath) : filepath_(filepath) {}
-	void SetFilePath(std::string filepath) { filepath_ = filepath; }
+  std::string filepath_;
+  Path() : filepath_(CD_FILEPATH_DEFAULT) {}
+  Path(const std::string &filepath) : filepath_(filepath) {}
+  Path(const char *filepath) : filepath_(filepath) {}
+  void SetFilePath(std::string filepath) { filepath_ = filepath; }
 
-	std::string GetFilePath(void) { return filepath_; }
+  std::string GetFilePath(void) { return filepath_; }
 
-	Path &operator=(const Path &that) {
+  Path &operator=(const Path &that) {
     filepath_ = that.filepath_;
-		return *this;
-	}
+    return *this;
+  }
 
-	Path &operator=(const char *filepath) {
+  Path &operator=(const char *filepath) {
     filepath_ = filepath;
-		return *this;
-	}
+    return *this;
+  }
 };
 
 
@@ -99,48 +99,48 @@ public:
     {
       case kDRAM :
       {
-      	path_ = CD_FILEPATH_INVALID;
-      	break;
+        path_ = CD_FILEPATH_INVALID;
+        break;
       }
       case kPFS :
       {
-      	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
-      	{
+        if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
+        {
           std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
           path_base = path_base + "/PFS/" + uniqueName_ + "/";
           path_.filepath_.clear();
           path_.filepath_ = path_base;
         }
-      	else
+        else
           path_ = CD_FILEPATH_PFS;
 
-        break;	
+        break;  
       }
       case kHDD :
       {
-      	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
+        if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
         {
-	  std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
+    std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
           path_base = path_base + "/HDD/" + uniqueName_ + "/";
           path_.filepath_.clear();
           path_.filepath_ = path_base;
-      	}
+        }
         else
-	  path_ = CD_FILEPATH_HDD;
+    path_ = CD_FILEPATH_HDD;
 
         break;
       }
       case kSSD :
       {
-      	if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
-      	{
+        if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
+        {
           std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
           path_base = path_base + "/SSD/" + uniqueName_ + "/";
           path_.filepath_.clear();
           path_.filepath_ = path_base;
         }
-      	else
-	  path_ = CD_FILEPATH_SSD;
+        else
+    path_ = CD_FILEPATH_SSD;
 
         break;
       }

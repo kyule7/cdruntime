@@ -370,7 +370,7 @@ namespace cd {
 }
 
 #define ERROR_MESSAGE(...) \
-	{ fprintf(stderr, __VA_ARGS__); assert(0); }
+  { fprintf(stderr, __VA_ARGS__); assert(0); }
 
 
 #if _CD_DEBUG == 0  // No printouts -----------

@@ -142,10 +142,10 @@ public:
     CDNameT  cd_name(void)       const;
     NodeID   node_id(void)       const;
     bool     IsHead(void)        const;
-		std::string GetPhaseID(void) const;
+    std::string GetPhaseID(void) const;
    //SZ: print function
     void Print(void);
-		std::string GetString(void) const;
+    std::string GetString(void) const;
 private:
 
     void SetCDID(const NodeID& new_node_id);

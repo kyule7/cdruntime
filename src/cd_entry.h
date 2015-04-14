@@ -81,7 +81,7 @@ class CDEntry : public Serializable
     DataHandle  src_data_;
     DataHandle  dst_data_;
     CDPreserveT preserve_type_; // already determined according to class 
-//		struct tsn_lsn_struct lsn, durable_lsn;
+//    struct tsn_lsn_struct lsn, durable_lsn;
 
     enum CDEntryErrT {kOK=0, kOutOfMemory, kFileOpenError, kEntrySearchRemote};
     
@@ -101,11 +101,11 @@ class CDEntry : public Serializable
     CDEntry(const DataHandle  &src_data, 
             const DataHandle  &dst_data, 
             const std::string &entry_name,
-						const CD *ptr_cd) 
+            const CD *ptr_cd) 
     {
       src_data_ = src_data;
       dst_data_ = dst_data;
-			ptr_cd_ = const_cast<CD *>(ptr_cd);
+      ptr_cd_ = const_cast<CD *>(ptr_cd);
       if(entry_name.empty()) entry_tag_ = 0;
       else {
         entry_tag_ = cd_hash(entry_name);
@@ -122,7 +122,7 @@ class CDEntry : public Serializable
 //      }
  
     }
-		std::string GetString(void) const;
+    std::string GetString(void) const;
   private:
     // FIXME: currently it is assumed that my cd is always in the same memory space.
     // In the future we might need a distributed CD structure. 
@@ -132,11 +132,11 @@ class CDEntry : public Serializable
     void set_my_cd(CD* ptr_cd) { ptr_cd_ = ptr_cd; }
     CD* ptr_cd() const { return ptr_cd_; }
 
-		CDEntryErrT Delete(void);
+    CDEntryErrT Delete(void);
 
 //  public:
-		std::string name() const { return tag2str[entry_tag_]; }
-		ENTRY_TAG_T name_tag() const { return entry_tag_; }
+    std::string name() const { return tag2str[entry_tag_]; }
+    ENTRY_TAG_T name_tag() const { return entry_tag_; }
     bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }
 
 
@@ -156,7 +156,7 @@ class CDEntry : public Serializable
     CDEntryErrT SaveMem(void);
     CDEntryErrT SaveFile(std::string base, bool open);
     // PFS
-	  CDEntryErrT SavePFS(void);
+    CDEntryErrT SavePFS(void);
     CDEntryErrT Save(void);
 
     void CloseFile(void) {}

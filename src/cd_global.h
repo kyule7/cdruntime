@@ -168,13 +168,13 @@ namespace cd {
                       kDegradedMem=2, //!< Hard memory error that disabled some memory capacity.
                                       //!< (info includes address range(s))
                       kSoftComm=4,    //!< Soft communication error.
-		                                  //!< (info includes message info)
+                                      //!< (info includes message info)
                       kDegradedComm=8, //!< Some channel loss.
                       kSoftComp=16,    //!< Soft compute error.
-		                                   //!< (info includes affected PC and perhaps bounds on the error?)
+                                       //!< (info includes affected PC and perhaps bounds on the error?)
                       kDegradedResource=32, //!< Resource lost __some__ functionality.
                       kHardResource=64, //!< Resource entirely lost.
-		                                    //!< (control/reachability failure).
+                                        //!< (control/reachability failure).
                       kFileSys=128      //!< Some file system error.
                     };
 
@@ -225,7 +225,7 @@ namespace cd {
                                //!< the data to be preserved into
                                //!< another storage/mem location
                                //!< Preservation via reference
-											kRef=2, //!< Preservation via reference     
+                      kRef=2, //!< Preservation via reference     
                               //!< indicates that restoration can
                               //!< occur by restoring data that is
                               //!< already preserved in another
@@ -233,7 +233,7 @@ namespace cd {
                               //!< current version of the API only
                               //!< the parent can be used as a
                               //!< reference. 
-											kRegen=4, //!< Preservation via regenaration
+                      kRegen=4, //!< Preservation via regenaration
                                 //!< is done by calling a
                                 //!< user-provided function to
                                 //!< regenerate the data during
@@ -245,7 +245,7 @@ namespace cd {
                                 //!< such as kCopy | kCoop.
                                 //!< Then, this entry can be referred by lower level.
                                 
-										};
+                    };
 /** @} */ // end of preservation_funcs
 
 
@@ -269,7 +269,7 @@ namespace cd {
  * compared to strict CDs.
  */
     enum CDType  { kStrict=1,   ///< A strict CD
-              		 kRelaxed=2,   ///< A relaxed CD
+                   kRelaxed=2,   ///< A relaxed CD
                    kDefaultCD=5   ///< Default is strict CD
                  };
 
@@ -314,9 +314,9 @@ namespace cd {
   enum PGASUsageT {
     kShared = 0,        //!< Definitely shared for actual communication
     kPotentiallyShared, //!< Perhaps used for communication by this
-	                  		//!< CD, essentially equivalent to kShared for CDs.
+                        //!< CD, essentially equivalent to kShared for CDs.
     kPrivatized,        //!< Shared in general, but not used for any
-		                    //!< communication during this CD.
+                        //!< communication during this CD.
     kPrivate            //!< Entirely private to this CD.
   };
 

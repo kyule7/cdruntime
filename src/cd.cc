@@ -569,7 +569,7 @@ CD::InternalCreate(CDHandle* parent,
     {
      if( tmpnam_r( preservation_unique_name ) )
      {
-       CD_DEBUG("[CD::InternalCreate] this is the temporary path created for run: %s\n");
+       CD_DEBUG("[CD::InternalCreate] this is the temporary path created for run: %s\n", preservation_unique_name);
      }
      else
        ERROR_MESSAGE("Failed to generate an unique filepath.\n");
@@ -1646,14 +1646,14 @@ CDErrT CD::Preserve(void *data,
 {
 
   CD_DEBUG("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
-					 data, len_in_bytes, my_name, ref_name, cd_exec_mode_); 
+           data, len_in_bytes, my_name, ref_name, cd_exec_mode_); 
 
-	CD_DEBUG("prv mask (%d) : %d(kCopy) %d(kRef) %d(kRegen) , kCoop : %d]\n\n",
-					 preserve_mask,
-					 CHECK_PRV_TYPE(preserve_mask, kCopy),
-					 CHECK_PRV_TYPE(preserve_mask, kRef),
-					 CHECK_PRV_TYPE(preserve_mask, kRegen),
-				 	 CHECK_PRV_TYPE(preserve_mask, kCoop));
+  CD_DEBUG("prv mask (%d) : %d(kCopy) %d(kRef) %d(kRegen) , kCoop : %d]\n\n",
+           preserve_mask,
+           CHECK_PRV_TYPE(preserve_mask, kCopy),
+           CHECK_PRV_TYPE(preserve_mask, kRef),
+           CHECK_PRV_TYPE(preserve_mask, kRegen),
+            CHECK_PRV_TYPE(preserve_mask, kCoop));
 
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
 //    dbg<<"my_name "<< my_name<<endl;
@@ -1709,9 +1709,9 @@ CDErrT CD::Preserve(void *data,
 //          while(!TestReqComm()) {
 //            CheckMailBox();
 //          }
-//      		while( !(TestComm()) ) {
+//          while( !(TestComm()) ) {
 //
-//					}
+//          }
 //#endif
           cd_err = CDErrT::kError;
           break;
@@ -1721,110 +1721,110 @@ CDErrT CD::Preserve(void *data,
 
       if(iterator_entry_ != entry_directory_.end()) {
 
-	      if(IsHead()) { 
-	      
-	        TestComm();
-	        CheckMailBox();
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
+        if(IsHead()) { 
+        
+          TestComm();
+          CheckMailBox();
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
           TestReqComm();
-	        TestComm();
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
-	        TestComm();
+          TestComm();
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
+          TestComm();
           TestReqComm();
-	        CheckMailBox();
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
-	        TestComm();
+          CheckMailBox();
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
+          TestComm();
           TestRecvComm();
-	      }
-	      else {
-	    
-	        TestComm();
+        }
+        else {
+      
+          TestComm();
           TestReqComm();
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
-	        TestComm();
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
+          TestComm();
           TestReqComm();
-	        CheckMailBox();
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
+          CheckMailBox();
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
           TestReqComm();
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
-	        TestComm();
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
+          TestComm();
           TestRecvComm();
-	        CheckMailBox();
-	        
-	      
-	      }
+          CheckMailBox();
+          
+        
+        }
 
-			}
-			else { // The end of entry directory
+      }
+      else { // The end of entry directory
 
 #if _MPI_VER
-	      CD_DEBUG("Test Asynch messages until start at %s / %s\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	
-	      while( !(TestComm()) ); 
-	
-	      if(IsHead()) { 
-	      
-	        TestComm();
-	        CheckMailBox();
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
-	        TestComm();
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
-	        TestComm();
-	        CheckMailBox();
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
-	        TestComm();
-	      }
-	      else {
-	    
-	        TestComm();
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
-	        TestComm();
-	        CheckMailBox();
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
-	        if(task_size() > 1) {
-	          CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-	          Sync(color());
-	        }
-	        TestComm();
-	        CheckMailBox();
-	      }
-	
-	      while(!TestRecvComm());
-	
-	      CD_DEBUG("Test Asynch messages until done \n");
+        CD_DEBUG("Test Asynch messages until start at %s / %s\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+  
+        while( !(TestComm()) ); 
+  
+        if(IsHead()) { 
+        
+          TestComm();
+          CheckMailBox();
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
+          TestComm();
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
+          TestComm();
+          CheckMailBox();
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
+          TestComm();
+        }
+        else {
+      
+          TestComm();
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
+          TestComm();
+          CheckMailBox();
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
+          if(task_size() > 1) {
+            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+            Sync(color());
+          }
+          TestComm();
+          CheckMailBox();
+        }
+  
+        while(!TestRecvComm());
+  
+        CD_DEBUG("Test Asynch messages until done \n");
 
 #endif
 
@@ -1927,7 +1927,7 @@ CD::InternalPreserve(void *data,
 
           entry_directory_.push_back(*cd_entry);
 
-			    CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
+          CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
 
           if( !my_name.empty() ) {
 
@@ -1971,7 +1971,7 @@ CD::InternalPreserve(void *data,
           CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path_.GetFilePath(), log_handle_.IsOpen());
 
           entry_directory_.push_back(*cd_entry); 
-			    CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
+          CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
 
           if( !my_name.empty() ) {
             if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
@@ -2014,7 +2014,7 @@ CD::InternalPreserve(void *data,
           CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path_.GetFilePath(), log_handle_.IsOpen());
 
           entry_directory_.push_back(*cd_entry);  
-			    CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
+          CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
 
           if( !my_name.empty() ) {
             if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
@@ -2066,7 +2066,7 @@ CD::InternalPreserve(void *data,
           CDEntry::CDEntryErrT err = cd_entry->SavePFS(); 
 
           entry_directory_.push_back(*cd_entry); 
-			    CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
+          CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
  
           if( !my_name.empty() ) {
             if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
@@ -2793,7 +2793,7 @@ void CD::DeleteEntryDirectory(void)
     entry_directory_.erase(it++);
   }
 
-	CD_DEBUG("Delete entry directory!\n");
+  CD_DEBUG("Delete entry directory!\n");
 
 //  for(std::map<std::string, CDEntry*>::iterator it = entry_directory_map_.begin();
 //      it != entry_directory_map_.end(); ++it) {

@@ -99,8 +99,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #if _CD_DEBUG == 1
   std::string output_filename("./output/output_");
   output_filename += to_string(static_cast<unsigned long long>(myTaskID));
-	
-	cdout = fopen(output_filename.c_str(), "w");
+  
+  cdout = fopen(output_filename.c_str(), "w");
 
 #endif
 
@@ -138,7 +138,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 void WriteDbgStream(DebugBuf *debugBuf)
 {
 #if _CD_DEBUG == 1
-	fclose(cdout);
+  fclose(cdout);
 #endif
 
 #if _DEBUG
@@ -150,7 +150,7 @@ void WriteDbgStream(DebugBuf *debugBuf)
     std::string path( secure_getenv( "CD_DEBUG_OUTPUT" ) );
     std::string output_filename = path + "/output/output_app_";
     output_filename += string(to_string(static_cast<unsigned long long>(myTaskID)));
-	
+  
     debugBuf->open(output_filename.c_str());
     debugBuf->flush();
     debugBuf->close();
@@ -159,7 +159,7 @@ void WriteDbgStream(DebugBuf *debugBuf)
   {
     std::string output_filename = "./output/output_app_";
     output_filename += string(to_string(static_cast<unsigned long long>(myTaskID)));
-	
+  
     debugBuf->open(output_filename.c_str());
     debugBuf->flush();
     debugBuf->close();
@@ -689,7 +689,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   if(IsHead()) {
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-    	CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     }
     CheckMailBox();
 
@@ -698,7 +698,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
     CheckMailBox();
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-    	CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     }
   }
 
@@ -708,7 +708,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   if(IsHead()) {
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-    	CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     }
     CheckMailBox();
 
@@ -717,7 +717,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
     CheckMailBox();
     if(node_id_.size() > 1) {
       Sync(node_id_.color());
-    	CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     }
   }
   if(node_id_.size() > 1) {
@@ -974,7 +974,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     dbg << "HERE?" << endl;
     SetMailBox(kErrorOccurred);
     err = kAppError;
-		
+    
     Sync(CDPath::GetCoarseCD(this)->color());
     CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 
@@ -994,26 +994,26 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
         SetMailBox(kErrorOccurred);
         err = kAppError;
 
-				
-		    Sync(CDPath::GetCoarseCD(this)->color());
-      	CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+        
+        Sync(CDPath::GetCoarseCD(this)->color());
+        CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 
       }
-			else {
-				
-		    Sync(CDPath::GetCoarseCD(this)->color());
-      	CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-    		CheckMailBox();
+      else {
+        
+        Sync(CDPath::GetCoarseCD(this)->color());
+        CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+        CheckMailBox();
 
-			}
+      }
     }
-		else {
-			
-		  Sync(CDPath::GetCoarseCD(this)->color());
+    else {
+      
+      Sync(CDPath::GetCoarseCD(this)->color());
       CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-    	CheckMailBox();
-		  
-		}
+      CheckMailBox();
+      
+    }
 
 #endif
 
@@ -1026,17 +1026,17 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 
     CheckMailBox();
-		
+    
     Sync(CDPath::GetCoarseCD(this)->color());
     CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     
   }
   else {
-		
+    
     Sync(CDPath::GetCoarseCD(this)->color());
     CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     
-		
+    
     Sync(CDPath::GetCoarseCD(this)->color());
     CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     

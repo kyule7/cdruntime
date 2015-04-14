@@ -112,9 +112,9 @@ void HandleEntrySearch::HandleEvent(void)
     int target_task_id = target_entry->dst_data_.node_id().task_in_color();
 
     CD_DEBUG("FOUND %s / %s at level #%u, target task id : %u\n", 
-						 found_cd->GetCDName().GetString().c_str(), 
-						 found_cd->GetNodeID().GetString().c_str(), 
-						 found_level, target_task_id);
+             found_cd->GetCDName().GetString().c_str(), 
+             found_cd->GetNodeID().GetString().c_str(), 
+             found_level, target_task_id);
 
     // SetMailBox for entry send to target
     CDEventT entry_send = kEntrySend;
@@ -124,8 +124,8 @@ void HandleEntrySearch::HandleEvent(void)
     
 
     CD_DEBUG("[ToSender] CHECK TAG : %u (Entry Tag: %u)\n",
-						 found_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, found_cd->task_in_color()),
-						 tag_to_search);
+             found_cd->cd_id_.GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, found_cd->task_in_color()),
+             tag_to_search);
 
     ENTRY_TAG_T sendBuf[2] = {tag_to_search, source_task_id};
 
@@ -179,8 +179,8 @@ void HandleEntrySearch::HandleEvent(void)
     parent->ptr_cd()->SetMailBox(entry_search);
 
     CD_DEBUG("CHECK TAG : %u (Entry Tag: %u)\n", 
-					   parent->ptr_cd()->GetCDID().GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, parent->task_in_color()), 
-					   tag_to_search);
+             parent->ptr_cd()->GetCDID().GenMsgTagForSameCD(MSG_TAG_ENTRY_TAG, parent->task_in_color()), 
+             tag_to_search);
 
     parent->ptr_cd()->entry_request_req_[tag_to_search] = CommInfo();
 //    parent->ptr_cd()->entry_req_.push_back(CommInfo()); getchar();
@@ -277,7 +277,7 @@ void HandleEntrySend::HandleEvent(void)
 
   if(entry == NULL) {
     ERROR_MESSAGE("The received tag [%u] does not work in %s. CD Level %u.\n",
- 								  tag_to_search, ptr_cd_->GetNodeID().GetString().c_str(), ptr_cd_->level());
+                   tag_to_search, ptr_cd_->GetNodeID().GetString().c_str(), ptr_cd_->level());
   }
   else
     CD_DEBUG("HandleEntrySend: entry was found at level #%u.\n", found_level);

@@ -177,8 +177,8 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 
 
   CD_DEBUG("\n\nNote : %p, %u, %d, remote entry dir map size : %lu\n\n", 
-					 serialized_entry, serialized_len_in_bytes, recv_count, 
-					 ptr_cd()->remote_entry_directory_map_.size());
+           serialized_entry, serialized_len_in_bytes, recv_count, 
+           ptr_cd()->remote_entry_directory_map_.size());
 
 //  for(auto it = ptr_cd()->remote_entry_directory_map_.begin(); it!=ptr_cd()->remote_entry_directory_map_.end(); ++it) {
 //    dbg << *(it->second) << endl;
@@ -292,14 +292,14 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
  
     void * temp_ptr = (void *)((char *)entry_to_deserialize+serialized_len_in_bytes-8);
 
-		CD_DEBUG("Check it out : %p -- %p, diff : %p\n", 
-						 entry_to_deserialize, temp_ptr, (void *)((char *)temp_ptr - (char *)entry_to_deserialize));
+    CD_DEBUG("Check it out : %p -- %p, diff : %p\n", 
+             entry_to_deserialize, temp_ptr, (void *)((char *)temp_ptr - (char *)entry_to_deserialize));
 
     ptr_cd()->DeserializeRemoteEntryDir(ptr_cd()->remote_entry_directory_map_, entry_to_deserialize, task_count, serialized_len_in_bytes); 
 //    ptr_cd()->DeserializeRemoteEntryDir(remote_entry_dir, (void *)((char *)entry_to_deserialize + 1196), task_count, serialized_len_in_bytes); 
 
     CD_DEBUG("\n\n[After] Check entries after deserialization, size : %lu, # of tasks : %u, level : %u\n", 
-						 ptr_cd()->remote_entry_directory_map_.size(), node_id_.size(), ptr_cd()->GetCDID().level());
+             ptr_cd()->remote_entry_directory_map_.size(), node_id_.size(), ptr_cd()->GetCDID().level());
 
 //    for(auto it = remote_entry_dir.begin(); it!=remote_entry_dir.end(); ++it) {
 //      dbg << *(it->second) << endl;
@@ -462,9 +462,9 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 bool CD::TestReqComm(bool is_all_valid)
 {
   CD_DEBUG("\nCD::TestReqComm at %s / %s \nentry request req Q size : %lu\n", 
-					 GetCDName().GetString().c_str(), 
-					 GetNodeID().GetString().c_str(), 
-					 entry_request_req_.size());
+           GetCDName().GetString().c_str(), 
+           GetNodeID().GetString().c_str(), 
+           entry_request_req_.size());
 
   is_all_valid = true;
   for(auto it=entry_request_req_.begin(); it!=entry_request_req_.end(); ) {
@@ -486,9 +486,9 @@ bool CD::TestReqComm(bool is_all_valid)
 bool CD::TestRecvComm(bool is_all_valid)
 {
   CD_DEBUG("\nCD::TestRecvComm at %s / %s \nentry recv req Q size : %zu\n", 
-					 GetCDName().GetString().c_str(), 
-					 GetNodeID().GetString().c_str(), 
-					 entry_recv_req_.size());
+           GetCDName().GetString().c_str(), 
+           GetNodeID().GetString().c_str(), 
+           entry_recv_req_.size());
   is_all_valid = true;
   for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ) {
     PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
@@ -510,11 +510,11 @@ bool CD::TestRecvComm(bool is_all_valid)
 bool CD::TestComm(bool test_until_done)
 {
   CD_DEBUG("\nCD::TestComm at %s / %s \nentry req Q size : %lu\nentry request req Q size : %zu\nentry recv req Q size : %zu\n", 
-					 GetCDName().GetString().c_str(), 
-					 GetNodeID().GetString().c_str(), 
-					 entry_req_.size(),
-					 entry_recv_req_.size(),
-					 entry_request_req_.size());
+           GetCDName().GetString().c_str(), 
+           GetNodeID().GetString().c_str(), 
+           entry_req_.size(),
+           entry_recv_req_.size(),
+           entry_request_req_.size());
   bool is_all_valid = true;
   is_all_valid = TestReqComm(is_all_valid);
   CD_DEBUG("============================");
@@ -589,7 +589,7 @@ CDErrT CD::CheckMailBox(void)
     int temp = handled_event_count;
     InvokeErrorHandler();
     CD_DEBUG("\nCheck MailBox is done. handled_event_count : %d --> %d, pending events : %d ", 
-						 temp, handled_event_count, *pendingFlag_);
+             temp, handled_event_count, *pendingFlag_);
   
     DecPendingCounter();
   
@@ -611,16 +611,16 @@ CDErrT CD::CheckMailBox(void)
 
       // If current CD is Root CD and GetParentCD is called, it returns NULL
       CD_DEBUG("ReadMailBox %s / %s at level #%u\n", 
-							 curr_cdh->ptr_cd()->GetCDName().GetString().c_str(), 
-							 curr_cdh->node_id_.GetString().c_str(), 
-							 curr_cdh->ptr_cd()->GetCDID().level());
+               curr_cdh->ptr_cd()->GetCDName().GetString().c_str(), 
+               curr_cdh->node_id_.GetString().c_str(), 
+               curr_cdh->ptr_cd()->GetCDID().level());
 
       CD_DEBUG("Original current CD %s / %s at level #%u\n", 
-							 GetCDName().GetString().c_str(), 
-							 GetNodeID().GetString().c_str(), 
-							 level());
+               GetCDName().GetString().c_str(), 
+               GetNodeID().GetString().c_str(), 
+               level());
 
-    	curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
+      curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
     } 
 
     CD_DEBUG("\n-------------------------------------------------------------------");
@@ -629,7 +629,7 @@ CDErrT CD::CheckMailBox(void)
     InvokeErrorHandler();
 
     CD_DEBUG("\nCheck MailBox is done. handled_event_count : %d --> %d, pending events : %d", 
-						 temp, handled_event_count, *pendingFlag_);
+             temp, handled_event_count, *pendingFlag_);
   
     DecPendingCounter();
   
@@ -680,9 +680,9 @@ CD::CDInternalErrT CD::InternalCheckMailBox(void)
   CD_DEBUG("\nInternalCheckMailBox\n");
   CD_DEBUG("pending counter : %d\n", *pendingFlag_);
   CD_DEBUG("\nTask : %s / %s, Error #%d\n", 
-					 GetCDName().GetString().c_str(), 
-					 GetNodeID().GetString().c_str(), 
-					 *event_flag_);
+           GetCDName().GetString().c_str(), 
+           GetNodeID().GetString().c_str(), 
+           *event_flag_);
 
   // Initialize the resolved flag
   CDFlagT event = *event_flag_;
@@ -710,7 +710,7 @@ CD::CDInternalErrT CD::InternalCheckMailBox(void)
 
   CD_DEBUG("\tResolved? : %d\n", resolved);
   CD_DEBUG("cd event queue size : %lu, handled event count : %d\n", 
-					 cd_event_.size(), handled_event_count);
+           cd_event_.size(), handled_event_count);
 
   return ret;
 }
@@ -727,7 +727,7 @@ CD::CDInternalErrT HeadCD::InternalCheckMailBox(void)
 
   for(int i=0; i<task_size(); i++) {
     CD_DEBUG("\nTask[%d] (%s / %s), Error #%d\n", 
-						 i, GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), event[i]);
+             i, GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), event[i]);
 
     // Initialize the resolved flag
     resolved = kEventNone;
@@ -752,7 +752,7 @@ CD::CDInternalErrT HeadCD::InternalCheckMailBox(void)
   }
   CD_DEBUG("\tResolved? : %d\n", resolved);
   CD_DEBUG("cd event queue size : %lu, handled event count : %d\n", 
-					 cd_event_.size(), handled_event_count);
+           cd_event_.size(), handled_event_count);
 
   return ret;
 }
@@ -819,7 +819,7 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, int idx)
 //  int handle_ret = 0;
   if(idx == head()) {
     if(head() != task_in_color()) 
-			assert(0);
+      assert(0);
     CD_DEBUG("event in head : %d\n", *p_event);
   }
 
@@ -833,7 +833,7 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, int idx)
 
       if(error_occurred == true) {
         if(task_size() == 1) 
-					assert(0);
+          assert(0);
 
         CD_DEBUG("Event kErrorOccurred %d", idx);
         event_flag_[idx] &= ~kErrorOccurred;
@@ -841,7 +841,7 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, int idx)
       }
       else {
         if(task_size() == 1) 
-					assert(0);
+          assert(0);
 
         CD_DEBUG("Event kErrorOccurred %d (Initiator)", idx);
         cd_event_.push_back(new HandleErrorOccurred(this, idx));
@@ -962,30 +962,30 @@ CDErrT CD::SetMailBox(const CDEventT &event)
     // This is the leaf that has just single task in a CD
     CD_DEBUG("[SetMailBox Leaf and have 1 task] size is %u. Check mailbox at the upper level.\n", task_size());
 
-  	while( curr_cdh->node_id_.size()==1 ) {
+    while( curr_cdh->node_id_.size()==1 ) {
       if(curr_cdh == GetRootCD()) {
         ERROR_MESSAGE("[SetMailBox] there is a single task in the root CD\n");
       }
       CD_DEBUG("[SetMailBox|Searching for CD Level having non-single task] Current Level : %u\n", curr_cdh->ptr_cd()->GetCDID().level());
 
       // If current CD is Root CD and GetParentCD is called, it returns NULL
-  		curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
-  	}
+      curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
+    }
  
     CD_DEBUG("[SetMailBox] %s / %s at level #%u\n", 
-						 curr_cdh->ptr_cd()->GetCDName().GetString().c_str(), 
-						 curr_cdh->node_id_.GetString().c_str(), 
-						 curr_cdh->ptr_cd()->GetCDID().level());
-		CD_DEBUG("Original current CD %s / %s at level #%u\n", 
-						 GetCDName().GetString().c_str(), 
-						 GetNodeID().GetString().c_str(), 
-						 level());
+             curr_cdh->ptr_cd()->GetCDName().GetString().c_str(), 
+             curr_cdh->node_id_.GetString().c_str(), 
+             curr_cdh->ptr_cd()->GetCDID().level());
+    CD_DEBUG("Original current CD %s / %s at level #%u\n", 
+             GetCDName().GetString().c_str(), 
+             GetNodeID().GetString().c_str(), 
+             level());
 
 //    head_id = curr_cdh->node_id().head();
 //  }
 
   if(curr_cdh->IsHead()) 
-		assert(0);
+    assert(0);
 
   CD_DEBUG("Before RemoteSetMailBox\n");
 
@@ -1029,9 +1029,9 @@ CDErrT CD::SetMailBox(const CDEventT &event)
 CD::CDInternalErrT CD::RemoteSetMailBox(CD *curr_cd, const CDEventT &event)
 {
   CD_DEBUG("[CD::RemoteSetMailBox] event : %s at %s / %s\n", 
-					 event2str(event).c_str(), 
-					 curr_cd->GetCDName().GetString().c_str(), 
-					 curr_cd->GetNodeID().GetString().c_str());
+           event2str(event).c_str(), 
+           curr_cd->GetCDName().GetString().c_str(), 
+           curr_cd->GetNodeID().GetString().c_str());
 
   CDInternalErrT ret=kOK;
 
@@ -1140,7 +1140,7 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
       // Therefore, it locally register the event handler right away, 
       // and all the tasks including head task can reexecute after the CheckMailBox.
       CD_DEBUG("\nEven though it calls SetMailBox(%s, %d == %u), locally set/handle events\n", 
-							 event2str(event).c_str(), task_id, task_in_color());
+               event2str(event).c_str(), task_id, task_in_color());
 
       CDInternalErrT cd_ret = LocalSetMailBox(this, event);
       ret = static_cast<CDErrT>(cd_ret);
@@ -1174,7 +1174,7 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event)
       ERROR_MESSAGE("[SetMailBox] there is a single task in the root CD\n");
     }
     // If current CD is Root CD and GetParentCD is called, it returns NULL
-  	curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
+    curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
   } 
 //  if(curr_cdh->IsHead()) assert(0);
 
@@ -1334,15 +1334,15 @@ CDErrT CD::SetMailBox(CDEventT &event)
     dbg << "KL : [SetMailBox Leaf and have 1 task] size is " << task_size() << ". Check mailbox at the upper level." << endl;
     CDHandle *curr_cdh = GetCurrentCD();
 
-  	while( curr_cdh->node_id_.size()==1 ) {
+    while( curr_cdh->node_id_.size()==1 ) {
       if(curr_cdh == GetRootCD()) {
         dbg << "[SetMailBox] there is a single task in the root CD" << endl;
         assert(0);
       }
       dbg << "[SetMailBox|Searching for CD Level having non-single task] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
       // If current CD is Root CD and GetParentCD is called, it returns NULL
-  		curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
-  	} 
+      curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
+    } 
     dbg << "[SetMailBox] " << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << " at level : " << curr_cdh->ptr_cd()->GetCDID().level()
         << "\nOriginal current CD " << GetCDName() << " / " << GetNodeID() << " at level : " << level() << "\n" << endl;
 

@@ -162,8 +162,8 @@ class CD : public Serializable {
     CDID cd_id_;
     RecoverObject *recoverObj_;
 
-		bool recreated_;
-		bool reexecuted_;
+    bool recreated_;
+    bool reexecuted_;
     //GONG
     bool begin_;
 //  public:
@@ -234,7 +234,7 @@ class CD : public Serializable {
 //    static std::map<ENTRY_TAG_T, CommInfo> entry_send_req_;
     static std::map<ENTRY_TAG_T, CommInfo> entry_recv_req_;
 //    static std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
-		static std::map<std::string, uint32_t> exec_count_;
+    static std::map<std::string, uint32_t> exec_count_;
     // Only CDEntries that has refname will be pushed into this data structure for later quick search.
     std::map<uint64_t, CDEntry*> entry_directory_map_;   
    
@@ -451,9 +451,9 @@ public:
  */
     virtual void Escalate(
         uint64_t error_name_mask,     //!< [in] Mask of all error/fail types that require recovery
-    		uint64_t error_location_mask, //!< [in] Mask of all error/fail locations that require recovery
-    		std::vector<SysErrT> errors   //!< [in] Errors/failures to recover from (typically just one).
-    		);
+        uint64_t error_location_mask, //!< [in] Mask of all error/fail locations that require recovery
+        std::vector<SysErrT> errors   //!< [in] Errors/failures to recover from (typically just one).
+        );
 
 /** @brief Invoke a registered recovery handler. 
  *  If user does not register it, CD::Reexecute() is called by default. 
@@ -469,8 +469,8 @@ public:
  */
     virtual bool CanRecover(
           uint64_t error_name_mask,  //!< [in] Mask of all error/fail types that require recovery
-  			  uint64_t error_location_mask //!< [in] Mask of all error/fail locations that require recovery
-  			  );
+          uint64_t error_location_mask //!< [in] Mask of all error/fail locations that require recovery
+          );
 
   /** @} */ // End internal_recovery group ===========================================================================
 
@@ -498,7 +498,7 @@ public:
                                     const RegenObject *regen_object, 
                                     PreserveUseT data_usage);
   
-		CDErrT InternalReexecute(void);
+    CDErrT InternalReexecute(void);
 
     // copy should happen for the part that is needed.. 
     // so serializing entire CDEntry class does not make sense. 

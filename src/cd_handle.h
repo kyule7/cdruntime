@@ -231,14 +231,14 @@ class cd::CDHandle {
  *
  */
     CDHandle* Create(const char* name=0, //!< [in] Optional user-specified
-                                  		   //!< name that can be used to "re-create" the same CD object
-                                  		   //!< if it was not destroyed yet; useful for resuing preserved
-                                  		   //!< state in CD trees that are not loop based.
+                                         //!< name that can be used to "re-create" the same CD object
+                                         //!< if it was not destroyed yet; useful for resuing preserved
+                                         //!< state in CD trees that are not loop based.
                      int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
                                              //!< User can also set preservation medium for children CDs 
                                              //!< when creating them. (ex. kStrict | kDRAM)
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
-                                          		   //!< should be able to recover from that error type.
+                                                 //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                                 //!< should be able to recover from that error type.
 
@@ -263,14 +263,14 @@ class cd::CDHandle {
  *
  */
     CDHandle* Create(uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
-                                     	      //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
+                                             //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
                      const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
-                                		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
+                                       //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
                      int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
                                              //!< User can also set preservation medium for children CDs 
                                              //!< when creating them. (ex. kStrict | kDRAM)
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
-                                          		   //!< should be able to recover from that error type.
+                                                 //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                                 //!< should be able to recover from that error type.
 
@@ -300,17 +300,17 @@ class cd::CDHandle {
  */
     CDHandle* Create(uint32_t color,              //!< [in] The "color" of the new child to which this task will belong to.
                      uint32_t task_in_color, //!< [in] The total number of tasks that are collectively creating
-                                            		  //!< the child numbered "color"; the collective waits for this number
-                                            		  //!< of tasks to arrive before creating the child.
+                                                  //!< the child numbered "color"; the collective waits for this number
+                                                  //!< of tasks to arrive before creating the child.
                      uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
-                                     	      //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
+                                             //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
                      const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
-                                		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
+                                       //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
                      int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
                                              //!< User can also set preservation medium for children CDs 
                                              //!< when creating them. (ex. kStrict | kDRAM)
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
-                                          		   //!< should be able to recover from that error type.
+                                                 //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                                 //!< should be able to recover from that error type.
 
@@ -337,14 +337,14 @@ class cd::CDHandle {
  *
  */
     CDHandle* CreateAndBegin(uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
-                                     	      //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
+                                             //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
                              const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
-                                        		   //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
+                                               //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
                              int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
                                                      //!< User can also set preservation medium for children CDs 
                                                      //!< when creating them. (ex. kStrict | kDRAM)
                              uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
-                                                  		   //!< should be able to recover from that error type.
+                                                         //!< should be able to recover from that error type.
                              uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                                         //!< should be able to recover from that error type.
         
@@ -368,9 +368,9 @@ class cd::CDHandle {
    *
    */
     CDErrT Destroy(bool collective=false //!< [in] if `true`, destroy is done as a collective across all tasks that
-                              				   //!< created the CD; otherwise the behavior is that only one task destroys 
+                                         //!< created the CD; otherwise the behavior is that only one task destroys 
                                          //!< the actual object while the rest just delete the local CDHandle.
-  	        	    );
+                  );
 
   /** @brief Begins a CD 
    *
@@ -417,14 +417,14 @@ class cd::CDHandle {
    * @sa Begin()
    */
     CDErrT Complete(bool collective=true, //!< [in] Specifies whether
-                                		     //!< this call is a collective
-                                		     //!< across all tasks contained
-                                		     //!< by this CD or whether its to
-                                		     //!< be run by a single task only
-                                		     //!< with the programmer
-                                		     //!< responsible for
-                                		     //!< synchronization
-  		              bool update_preservations=false //!< [in] Flag that
+                                         //!< this call is a collective
+                                         //!< across all tasks contained
+                                         //!< by this CD or whether its to
+                                         //!< be run by a single task only
+                                         //!< with the programmer
+                                         //!< responsible for
+                                         //!< synchronization
+                    bool update_preservations=false //!< [in] Flag that
                                                 //!< indicates whether preservation should be
                                                 //!< updated on Complete rather than discarding all 
                                                 //!< preserved state. If `true` then Complete
@@ -433,7 +433,7 @@ class cd::CDHandle {
                                                 //!< between these two consecutive uses of the CD
                                                 //!< object (this enables the Cray CD
                                                 //!< AdvancePointInTime functionality).
-  		               );
+                     );
 
 /** @} */ // End cd_hierarchy ==================================================================================
 
@@ -483,26 +483,26 @@ class cd::CDHandle {
  * \sa Complete()
  */
     CDErrT Preserve(void *data_ptr=0, //!< [in] pointer to data to be preserved;
-                             		      //!< __currently must be in same address space
-                             		      //!< as calling task, but will extend to PGAS fat pointers later 
+                                       //!< __currently must be in same address space
+                                       //!< as calling task, but will extend to PGAS fat pointers later 
                     uint64_t len=0,   //!< [in] Length of preserved data (Bytes)
                     uint32_t preserve_mask=kCopy, //!< [in] Allowed types of preservation 
                                                   //!< (e.g., kCopy|kRef|kRegen), default only via copy
                     const char *my_name=0,  //!< [in] Optional C-string representing the name of this
-                                  		      //!< preserved data for later preserve-via-reference
+                                            //!< preserved data for later preserve-via-reference
 
                     const char *ref_name=0, //!< [in] Optional C-string representing
-                                    	      //!< a user-specified name that was set by a previous preserve call at the parent.; 
+                                            //!< a user-specified name that was set by a previous preserve call at the parent.; 
                                             //!< __Do we also need an offset into parent preservation?__
 
                     uint64_t ref_offset=0,  //!< [in] explicit offset within the named region at the other CD (for restoration via reference)
                     const RegenObject *regen_object=0, //!< [in] optional user-specified function for
-                                              		     //!< regenerating values instead of restoring by copying
+                                                       //!< regenerating values instead of restoring by copying
 
                     PreserveUseT data_usage=kUnsure //!< [in] This flag is used
-                                            		    //!< to optimize consecutive Complete/Begin calls
-                                            		    //!< where there is significant overlap in
-                                            		    //!< preserved state that is unmodified (see Complete()).
+                                                    //!< to optimize consecutive Complete/Begin calls
+                                                    //!< where there is significant overlap in
+                                                    //!< preserved state that is unmodified (see Complete()).
                     );
 
 /** @brief (Not supported yet) Non-blocking preserve data to be restored when recovering (typically reexecuting the CD from right after its Begin() call.
@@ -537,20 +537,20 @@ class cd::CDHandle {
  */
     CDErrT Preserve(CDEvent &cd_event, //!< [in,out] enqueue this call onto the cd_event
                     void *data_ptr=0, //!< [in] pointer to data to be preserved;
-                            		      //!< __currently must be in same address space as calling task, but will extend to PGAS fat pointers later
+                                      //!< __currently must be in same address space as calling task, but will extend to PGAS fat pointers later
                     uint64_t len=0,   //!< [in] Length of preserved data (Bytes)
                     uint32_t preserve_mask=kCopy, //!< [in] Allowed types of preservation 
                                                   //!< (e.g.,kCopy|kRef|kRegen), default only via copy
                     const char *my_name=0, //!< [in] Optional C-string representing the name of this
-                                  		     //!< preserved data for later preserve-via-reference
+                                           //!< preserved data for later preserve-via-reference
                     const char *ref_name=0, //!< [in] Optional C-string representing a user-specified name 
                                             //!< that was set by a previous preserve call at the parent.; 
                                             //!< __Do we also need an offset into parent preservation?__
                     uint64_t ref_offset=0, //!< [in] explicit offset within the named region at the other CD
                     const RegenObject *regen_object=0, //!< [in] optional user-specified function for
-                                              		     //!< regenerating values instead of restoring by copying
+                                                       //!< regenerating values instead of restoring by copying
                     PreserveUseT data_usage=kUnsure //!< [in] This flag is used to optimize consecutive Complete/Begin calls
-                                           		     //!< where there is significant overlap in preserved state that is unmodified (see Complete()).
+                                                    //!< where there is significant overlap in preserved state that is unmodified (see Complete()).
                     );
 
 
@@ -584,9 +584,9 @@ class cd::CDHandle {
    *
    */
     CDErrT CDAssert(bool test_true, //!< [in] Boolean to be asserted as true.
-  		     const SysErrT* error_to_report=0 //!< [in,out] An optional error report that will be
-  		                                      //!< used during recovery and for system diagnostics. 
-  		              );
+           const SysErrT* error_to_report=0 //!< [in,out] An optional error report that will be
+                                            //!< used during recovery and for system diagnostics. 
+                    );
 
   /** @brief User-provided detection function for failing a CD
    * 
@@ -604,12 +604,12 @@ class cd::CDHandle {
    * \warning May not be implemented yet.
    */
     CDErrT CDAssertFail(bool test_true, //!< [in] Boolean to be asserted
-  		     //!< as true.
-  		     const SysErrT* error_to_report=0
-  		     //!< [in,out] An optional error report that will be
-  		     //!< used during recovery and for system
-  		     //!< diagnostics. 
-  		     );
+           //!< as true.
+           const SysErrT* error_to_report=0
+           //!< [in,out] An optional error report that will be
+           //!< used during recovery and for system
+           //!< diagnostics. 
+           );
 
   /** @brief User-provided detection function for failing a CD
    * 
@@ -627,12 +627,12 @@ class cd::CDHandle {
    *
    */
     CDErrT CDAssertNotify(bool test_true, //!< [in] Boolean to be asserted
-  			   //!< as true.
-  			   const SysErrT* error_to_report=0
-  		     //!< [in,out] An optional error report that will be
-  		     //!< used during recovery and for system
-  		     //!< diagnostics. 
-  		     );
+           //!< as true.
+           const SysErrT* error_to_report=0
+           //!< [in,out] An optional error report that will be
+           //!< used during recovery and for system
+           //!< diagnostics. 
+           );
 
   
   /** @brief Check whether any errors occurred while CD the executed
@@ -647,7 +647,7 @@ class cd::CDHandle {
    */
     std::vector<SysErrT> Detect(CDErrT* err_ret_val=0 //!< [in,out] Pointer to a variable 
             //!<for optionally returning a CD runtime error code indicating some bug with Detect().
-  				                     );
+                               );
 
   /** @} */ // End cd_detection group =========================================
 
@@ -667,16 +667,16 @@ class cd::CDHandle {
    * @return kOK on success.
    */
     CDErrT RegisterDetection(uint system_name_mask, //!< [in] each `1` in
-  			     //!< the mask indicates that this CD
-  			     //!< should be able to detect any errors
-  			     //!< that are meaningful to the application
-  			     //!< (in the error type mask).
-  			      uint system_loc_mask //!< [in] each `1` in
-  			     //!< the mask indicates that this CD
-  			     //!< should be able to detect any errors
-  			     //!< that are meaningful to the application
-  			     //!< (in the error type mask).
-  			      );
+             //!< the mask indicates that this CD
+             //!< should be able to detect any errors
+             //!< that are meaningful to the application
+             //!< (in the error type mask).
+              uint system_loc_mask //!< [in] each `1` in
+             //!< the mask indicates that this CD
+             //!< should be able to detect any errors
+             //!< that are meaningful to the application
+             //!< (in the error type mask).
+              );
 
   /** @brief Register that this CD can recover from certain errors/failures
    *
@@ -695,30 +695,30 @@ class cd::CDHandle {
    */
 
     CDErrT RegisterRecovery(uint error_name_mask, //!< [in] each `1` in
-  			     //!< the mask indicates that this CD
-  			     //!< should be able to recover from that
-  			     //!< error type.
-  			     uint error_loc_mask, //!< [in] each `1` in
-  			     //!< the mask indicates that this CD
-  			     //!< should be able to recover from that
-  			     //!< error type.
-  			     RecoverObject* recover_object=0 //!< [in] pointer
-  			     //!< to an object that contains the customized
-  			     //!< recovery routine; if unspecified,
-  			     //!< default recovery is used.
-  			     );
+             //!< the mask indicates that this CD
+             //!< should be able to recover from that
+             //!< error type.
+             uint error_loc_mask, //!< [in] each `1` in
+             //!< the mask indicates that this CD
+             //!< should be able to recover from that
+             //!< error type.
+             RecoverObject* recover_object=0 //!< [in] pointer
+             //!< to an object that contains the customized
+             //!< recovery routine; if unspecified,
+             //!< default recovery is used.
+             );
   
     CDErrT RegisterRecovery(uint error_name_mask, //!< [in] each `1` in
-  			     //!< the mask indicates that this CD
-  			     //!< should be able to recover from that
-  			     //!< error type.
-  			     uint error_loc_mask, //!< [in] each `1` in
-  			     //!< the mask indicates that this CD
-  			     //!< should be able to recover from that
-  			     //!< error type.
+             //!< the mask indicates that this CD
+             //!< should be able to recover from that
+             //!< error type.
+             uint error_loc_mask, //!< [in] each `1` in
+             //!< the mask indicates that this CD
+             //!< should be able to recover from that
+             //!< error type.
              CDErrT(*recovery_func)(std::vector< SysErrT > errors)=0 //!< [in] function pointer for customized
-  			                                       //!< recovery routine; if unspecified, default recovery is used.
-  			     );
+                                               //!< recovery routine; if unspecified, default recovery is used.
+             );
   /** \todo What about specifying leniant communication-related errors
    *  for relaxed-CDs context?
    */
@@ -766,11 +766,11 @@ class cd::CDHandle {
  * \todo Decide on rate vs. number+probability
  */
     float GetErrorProbability(SysErrT error_type, //!< [in] Type of
-  						  //!error/failure
-  						  //!queried
-  			    uint32_t error_num //!< [in] Number of
-  					    //!< errors/failures queried.
-  			    );
+                //!error/failure
+                //!queried
+            uint32_t error_num //!< [in] Number of
+                //!< errors/failures queried.
+            );
 
 /** @brief Request the CD framework to reach a certain error/failure probability.
  *
@@ -794,20 +794,20 @@ class cd::CDHandle {
  *
  */
     float RequireErrorProbability(SysErrT error_type, //!< [in] Type of
-  				//!< error/failure
-  				//!< queried.
-  				uint32_t error_num, //!< [in] Number of
-  				//!< errors/failures queried.
-  				float probability, //!< [in] Requested
-  				//!< maximum probability of `num_errors` errors/failures
-  				//!< not being detected or even occurring during
-  				//!< CD execution.
-  				bool fail_over=true //!< [in] Should
-  				//!< redundancy be added just to detect the
-  				//!< specified  error type (`false`) or should
-  				//!< enough redundancy be added to tolerate the
-  				//!< error (fail-over/forward-error-correction/...)
-  				);
+          //!< error/failure
+          //!< queried.
+          uint32_t error_num, //!< [in] Number of
+          //!< errors/failures queried.
+          float probability, //!< [in] Requested
+          //!< maximum probability of `num_errors` errors/failures
+          //!< not being detected or even occurring during
+          //!< CD execution.
+          bool fail_over=true //!< [in] Should
+          //!< redundancy be added just to detect the
+          //!< specified  error type (`false`) or should
+          //!< enough redundancy be added to tolerate the
+          //!< error (fail-over/forward-error-correction/...)
+          );
 
    /** @} */ // End cd_error_probability group  ==================================================
 
@@ -913,13 +913,13 @@ class cd::CDHandle {
  * might be easier than casting.
  */
   CDErrT SetPGASType(void* data_ptr, //!< [in] pointer to data to be "Typed";
-                        		      //!< __currently must be in same address space
-                        		      //!< as calling task, but will extend to
-                        		      //!< PGAS fat pointers later  
-		      uint64_t len, //!< [in] Length of preserved data (Bytes)
-		      PGASUsageT region_type=kShared //!< [in] How is this memory range used.
+                                  //!< __currently must be in same address space
+                                  //!< as calling task, but will extend to
+                                  //!< PGAS fat pointers later  
+          uint64_t len, //!< [in] Length of preserved data (Bytes)
+          PGASUsageT region_type=kShared //!< [in] How is this memory range used.
                                          //!< (shared for comm or not?)
-		      ) { return kOK; }
+          ) { return kOK; }
   
 /** \brief Simplify optimization of discarding relaxed CD log entries
  *
@@ -942,16 +942,16 @@ class cd::CDHandle {
  *
  */
   CDErrT SetPGASOwnerWrites(void* data_ptr,
-			    //!< [in] pointer to data to be "Typed";
-			    //!< __currently must be in same address space
-			    //!< as calling task, but will extend to
-			    //!< PGAS fat pointers later  
-			    uint64_t len=0, //!< [in] Length of preserved data (Bytes)
-			    bool owner_writes=true //!< [in] Is the current
-			    //!< CD the only CD in which this address
-			    //!< range is written (until strict
-			    //!< ancestor is reached)?
-			    ) { return kOK; }
+          //!< [in] pointer to data to be "Typed";
+          //!< __currently must be in same address space
+          //!< as calling task, but will extend to
+          //!< PGAS fat pointers later  
+          uint64_t len=0, //!< [in] Length of preserved data (Bytes)
+          bool owner_writes=true //!< [in] Is the current
+          //!< CD the only CD in which this address
+          //!< range is written (until strict
+          //!< ancestor is reached)?
+          ) { return kOK; }
 
 /** @} */ // End PGAS_funcs =========================================================== 
 

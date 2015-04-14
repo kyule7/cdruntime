@@ -188,7 +188,7 @@ private:
         CD_DEBUG("There is a single task in the root CD\n");
         assert(0);
       }
-    	curr_cdh = CDPath::GetParentCD(curr_cdh->level());
+      curr_cdh = CDPath::GetParentCD(curr_cdh->level());
     } 
     return curr_cdh;
   }

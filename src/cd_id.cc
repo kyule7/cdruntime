@@ -43,7 +43,7 @@ using namespace cd;
 CDID::CDID() 
   : domain_id_(0), sequential_id_(0)
 {
-	object_id_ = 0;
+  object_id_ = 0;
 }
 
 CDID::CDID(const CDNameT& cd_name, const NodeID& new_node_id)
@@ -51,14 +51,14 @@ CDID::CDID(const CDNameT& cd_name, const NodeID& new_node_id)
 {
   domain_id_ = 0;
   sequential_id_ = 0;
-//	if(Util::object_id.find(cd_name.level_) != Util::object_id.end()) {
-//		object_id_ = Util::object_id[cd_name.level_];
-//	}
-//	else {
-//		Util::object_id[cd_name.level_] = 0;
-//		object_id_ = 0;
-//	}
-	object_id_ = 0;
+//  if(Util::object_id.find(cd_name.level_) != Util::object_id.end()) {
+//    object_id_ = Util::object_id[cd_name.level_];
+//  }
+//  else {
+//    Util::object_id[cd_name.level_] = 0;
+//    object_id_ = 0;
+//  }
+  object_id_ = 0;
 
 }
 
@@ -67,15 +67,15 @@ CDID::CDID(const CDID& that)
 {
   domain_id_     = that.domain_id();
   sequential_id_ = that.sequential_id();
-//	uint32_t level = that.cd_name_.level_;
-//	if(Util::object_id.find(level) != Util::object_id.end()) {
-//		object_id_ = Util::object_id[level];
-//	}
-//	else {
-//		Util::object_id[level] = 0;
-//		object_id_ = 0;
-//	}
-	object_id_ = 0;
+//  uint32_t level = that.cd_name_.level_;
+//  if(Util::object_id.find(level) != Util::object_id.end()) {
+//    object_id_ = Util::object_id[level];
+//  }
+//  else {
+//    Util::object_id[level] = 0;
+//    object_id_ = 0;
+//  }
+  object_id_ = 0;
 }
 
 uint32_t CDID::level(void)         const { return cd_name_.level(); }
@@ -163,7 +163,7 @@ void CDID::Print(void)
 std::string CDID::GetString(void) const 
 {
   return ( std::string("CDName : ") + cd_name_.GetString() 
-				 + std::string(", Node ID : ") + node_id_.GetString() 
-				 + std::string(", Obj#") + std::to_string(object_id_) 
-				 + std::string(", Seq#") + std::to_string(sequential_id_) );
+         + std::string(", Node ID : ") + node_id_.GetString() 
+         + std::string(", Obj#") + std::to_string(object_id_) 
+         + std::string(", Seq#") + std::to_string(sequential_id_) );
 }
