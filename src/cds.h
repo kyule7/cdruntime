@@ -76,8 +76,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  * The supported features are descripted as below. Please take a look at it before using CD runtime system for your application.
  * - \ref sec_plans
+ * \n\n
  *
- * \n\n\n
+ * This version of CD runtime system works with MPIPCH. There are some issues with OpenMPI regarding runtime logging, which we do not resolve, yet.
+ * So, to use current version of CD runtime system, please use MPICH.
+ *
+ * \n\n
  *
  * For now, the documentation is organized around the following
  * "modules", which can also be accessed through the "Modules" tab on
