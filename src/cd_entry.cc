@@ -248,9 +248,9 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
         // length could be different in case we want to describe only part of the preserved entry.
         buffer->set_len(dst_data_.len());     
   
-        CD_DEBUG("addr %p (dst), addr %p (buffer)\n[Buffer] ref name : %s, value: %d\n", 
-                 entry->dst_data_.address_data(), buffer->address_data(), 
-                 buffer->ref_name().c_str(), *(reinterpret_cast<int*>(buffer->address_data())));
+//        CD_DEBUG("addr %p (dst), addr %p (buffer)\n[Buffer] ref name : %s, value: %d\n", 
+//                 entry->dst_data_.address_data(), buffer->address_data(), 
+//                 buffer->ref_name().c_str(), *(reinterpret_cast<int*>(buffer->address_data())));
       }
       else {
 

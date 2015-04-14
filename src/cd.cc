@@ -90,7 +90,7 @@ void Internal::Intialize(void)
     }
   }
 //  max_tag_bit = 30;
-//  cout << "max bits : " << max_tag_bit << endl;
+  cout << "max bits : " << max_tag_bit << endl;
   max_tag_level_bit = 6;
   max_tag_rank_bit = max_tag_bit-max_tag_level_bit-1;
   max_tag_task_bit = max_tag_rank_bit/2;
@@ -579,8 +579,8 @@ CD::InternalCreate(CDHandle* parent,
     }
     
   #if _MPI_VER
-    MPI_Bcast( preservation_unique_name, L_tmpnam, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
-    MPI_Bcast( processor_name, MPI_MAX_PROCESSOR_NAME, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
+    PMPI_Bcast( preservation_unique_name, L_tmpnam, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
+    PMPI_Bcast( processor_name, MPI_MAX_PROCESSOR_NAME, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
   #endif
 
     (*new_cd_handle)->ptr_cd_->log_handle_.SetFilePath( new_prv_medium, std::string (preservation_unique_name) + std::string(processor_name) );
@@ -1424,19 +1424,6 @@ PrvMediumT CD::GetPlaceToPreserve()
 {
 
   return prv_medium_;
-/*
-#if _MEMORY
-  return kDRAM;
-#elif _PFS
-  return kPFS;
-#elif _HDD
-  return kHDD;
-#elif _SSD
-  return kSSD;
-#else
-  return kDRAM;
-#endif
-*/
 }
 
 #if 0

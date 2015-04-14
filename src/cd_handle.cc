@@ -172,6 +172,7 @@ void CD_Finalize(DebugBuf *debugBuf)
   //GONG
   CDPrologue();
 
+  CD_DEBUG("========================= Finalize [%d] ===============================\n", myTaskID);
 
 #if _PROFILER
   // Profiler-related  
@@ -183,7 +184,6 @@ void CD_Finalize(DebugBuf *debugBuf)
 
   CDPath::GetRootCD()->Destroy();
   Internal::Finalize();
-  CD_DEBUG("========================= Finalize [%d] ===============================\n", myTaskID);
 
 #if _DEBUG
   if(debugBuf != NULL) WriteDbgStream(debugBuf);

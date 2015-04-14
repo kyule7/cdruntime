@@ -1,35 +1,33 @@
-                                                               Updated at 04. 11. 2015
+                                                              Updated at 04. 11. 2015
 +---------------------------+-----------------------------------+-------------+-----+
 |                           | Functionality                     | Single Task | MPI |
 +---------------------------+-----------------------------------+-------------+-----+
 |           |               | via Copy                          |      O      |  O  |
 |           | Preservation  | via Reference                     |      O      |  O  |
-|           |               | via Reference (Remote)            |     N/A     |  O  |
-|           |               | via Regeneration                  |     N/S     | N/S |
+|           |               | via Reference (Remote)            |      -      |  O  |
+|           |               | via Regeneration                  |     N/A     | N/A |
 |           |---------------+-----------------------------------+-------------+-----+
 |           |               | CDAssert                          |      O      |  O  |
-|           | Detection     | Hardware-assited                  |     N/S     | N/S |
-|           |               | Comm-related                      |     N/A     | N/S |
+|           | Detection     | Hardware-assited                  |     N/A     | N/A |
+|           |               | Comm-related                      |      -      | N/A |
 | Strict CD |---------------+-----------------------------------+-------------+-----+
 |           | Recovery      | Reexecution                       |      O      |  O  |
-|           |               | Restart from Checkpoint           |     N/S     | N/S |
+|           |               | Restart from Checkpoint           |     N/A     | N/A |
 |           |---------------+---------------------+-------------+-------------+-----+
 |           |               | Local File System   | Blocking    |      O      |  O  |
-|           | I/O           |                     | Non-blocking|     N/S     | N/S |
+|           | I/O           |                     | Non-blocking|     N/A     | N/A |
 |           |               +---------------------+-------------+-------------+-----+
-|           |               | Parallel File System              |     N/A     |  O  |
+|           |               | Parallel File System              |      -      |  O  |
 |           |---------------+-----------------------------------+-------------+-----+
 |           |               | Runtime Logging                   |      O      |  O  |
 +-----------+               +-----------------------------------+-------------+-----+
 |           | Logging       |                                   |             |     |
-| Relaxed CD|               | Communication Logging             |     N/A     |  O  |
+| Relaxed CD|               | Communication Logging             |      -      |  O  |
 |           |               |                                   |             |     |
 +-----------+---------------+-----------------------------------+-------------+-----+
-| Ability to survive from node failure                          |     N/S     | N/S |
+| Ability to survive from node failure                          |     N/A     | N/A |
 +---------------------------------------------------------------+-------------+-----+
 | Error Injection Interface                                     |      O      |  O  |
 +---------------------------------------------------------------+-------------+-----+
-| Auto Tuner for CD runtime system                              |     N/S     | N/S |
+| Auto Tuner for CD runtime system                              |     N/A     | N/A |
 +---------------------------------------------------------------+-------------+-----+
-                                                         N/A : Not Available
-                                                         N/S : Not Supported as of now

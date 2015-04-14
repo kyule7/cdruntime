@@ -13,7 +13,7 @@ clean_cdruntime:
 	cd ../../src; make clean;
 
 refresh:
-	cd ../../src; make clean; make DEBUG_VAR=1 MPI_VER_VAR=1 SINGLE_VER_VAR=0 LOGGING_ENABLED=0; ERROR_INJECTION_ENABLED=1
+	cd ../../src; make clean; make DEBUG_VAR=1 MPI_VER_VAR=1 SINGLE_VER_VAR=0 LOGGING_ENABLED=1; ERROR_INJECTION_ENABLED=1
 
 
 
