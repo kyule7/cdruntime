@@ -1,0 +1,9 @@
+Here is the commands to set up for public repo in your machine. If you want to set up in your existing local repo, skip step 1 and 2.
+
+step 1) git clone git clone https://{your_id}@bitbucket.org/lphgroup/cdresilience.git cdruntime-dev
+step 2) cd cdruntime-dev
+step 3) git remote add -f cds-release https://bitbucket.org/cdresilience/cdruntime.git
+step 4) git branch --track release cds-release/master
+step 5) git branch -vv
+* master  XXXXXXX [origin/master] # the branch of our original repo
+  release XXXXXXX [cds-release/master] # new branch for release repo
