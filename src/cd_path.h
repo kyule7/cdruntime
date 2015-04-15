@@ -152,6 +152,12 @@ private:
   static CDHandle* GetParentCD(int current_level)
   { 
     CD_DEBUG("CDPath::GetParentCD current level : %d\n", current_level);
+//    printf("CDPath::GetParentCD current level : %d at %d\n", current_level, myTaskID);
+    if(current_level > 100) {
+      std::cout << GetCurrentCD()->GetCDName() << " / " << GetCurrentCD()->node_id() << std::endl;
+
+    }
+
     if(uniquePath_ != NULL ) {
       if( uniquePath_->size() > 1 ) {
         if(current_level >= 1) { 

@@ -828,7 +828,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
                               my_name, ref_name, ref_offset,  
                               regen_object, data_usage);
-  CDPrologue();
+  CDEpilogue();
   return err;
 }
 
@@ -989,7 +989,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
     CD_DEBUG("EIE Before\n");
     CD_DEBUG("Is it NULL? %p, recreated? %d, reexecuted? %d\n", cd_error_injector_, ptr_cd_->recreated(), ptr_cd_->reexecuted());
-    if(cd_error_injector_ != NULL) {
+    if(cd_error_injector_ != NULL && ptr_cd_ != NULL) {
       CD_DEBUG("EIE It is after : reexec # : %d, exec mode : %d at level #%u\n", ptr_cd_->num_reexecution_, GetExecMode(), level());
       CD_DEBUG("recreated? %d, recreated? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
 
@@ -1093,12 +1093,16 @@ CDErrT CDHandle::RegisterDetection (uint32_t system_name_mask, uint32_t system_l
 float CDHandle::GetErrorProbability (SysErrT error_type, uint32_t error_num)
 {
 
+  CDPrologue();
+  CDEpilogue();
   return 0;
 }
 
 float CDHandle::RequireErrorProbability (SysErrT error_type, uint32_t error_num, float probability, bool fail_over)
 {
 
+  CDPrologue();
+  CDEpilogue();
 
   return 0;
 }
@@ -1164,6 +1168,7 @@ void CDHandle::CommitPreserveBuff()
 
 uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_loc_mask)
 {
+  CDPrologue();
   uint64_t sys_bit_vec = 0;
   if(error_name_mask == 0) {
 
@@ -1178,6 +1183,7 @@ uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_l
   else {
 
   }
+  CDEpilogue();
   return sys_bit_vec;
 }
 

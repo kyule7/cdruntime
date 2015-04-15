@@ -348,8 +348,9 @@ bool CommLog::FoundRepeatedEntry(const void * data_ptr, unsigned long data_lengt
 CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length, 
                           bool completed, unsigned long flag, bool isrecv, bool isrepeated)
 {
-  bool tmp_app_side = app_side;
-  app_side = false;
+// FIXME
+//  bool tmp_app_side = app_side;
+//  app_side = false;
   LOG_DEBUG("LogData of address (%p) and length(%ld)\n", data_ptr, data_length);
 
   CommLogErrT ret;
@@ -362,7 +363,7 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
     {
       LOG_DEBUG("Found current repeating log entry matching!\n");
       log_table_.base_ptr_[log_table_.cur_pos_-1].counter_++;
-      app_side = tmp_app_side;
+//      app_side = tmp_app_side;
       return kCommLogOK;
     }
     LOG_DEBUG("Current repeating log entry NOT matching!\n");
@@ -406,7 +407,7 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
 
   new_log_generated_ = true;
 
-  app_side = tmp_app_side;
+//  app_side = tmp_app_side;
   return kCommLogOK;
 }
 

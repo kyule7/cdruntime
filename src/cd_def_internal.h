@@ -108,7 +108,6 @@ typedef uint32_t ENTRY_TAG_T;
 #define TAG_MASK2(X) ((2<<(X-1)) - 2)
 
 //GONG: global variable to represent the current context for malloc wrapper
-//extern bool app_side;
 namespace cd {
 
   class CD;
@@ -388,38 +387,45 @@ extern FILE *cdoutApp;
   fprintf(cdout, __VA_ARGS__)
 
 
-#define LOG_DEBUG(...) \
+#define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
       cd::app_side=false;\
       fprintf(stdout, __VA_ARGS__);\
       cd::app_side = true;}\
     else fprintf(stdout, __VA_ARGS__);\
-  }
+  }*/
 
-#define LIBC_DEBUG(...) \
+#define LIBC_DEBUG(...) /*\
     { if(cd::app_side) {\
         cd::app_side=false;\
-        fprintf(cdout, __VA_ARGS__);\
+        fprintf(stdout, __VA_ARGS__);\
         cd::app_side = true;}\
-      else fprintf(cdout, __VA_ARGS__);\
-    }
+      else fprintf(stdout, __VA_ARGS__);\
+    }*/
 
 
 
 #elif _CD_DEBUG == 2  // print to stdout ------
 
 #define CD_DEBUG(...) \
+  fprintf(stdout, __VA_ARGS__)
 
 
-#define LOG_DEBUG(...) \
+#define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
       cd::app_side=false;\
       fprintf(stdout, __VA_ARGS__);\
       cd::app_side = true;}\
     else fprintf(stdout, __VA_ARGS__);\
-  }
+  }*/
 
-#define LIBC_DEBUG(...) \
+#define LIBC_DEBUG(...)/* \
+    { if(cd::app_side) {\
+        cd::app_side=false;\
+        fprintf(stdout, __VA_ARGS__);\
+        cd::app_side = true;}\
+      else fprintf(stdout, __VA_ARGS__);\
+    }*/
 
 
 #else  // -------------------------------------
