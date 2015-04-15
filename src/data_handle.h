@@ -73,7 +73,7 @@ class DataHandle : public Serializable {
   friend class CD;
   friend class HeadCD;
   friend std::ostream& operator<<(std::ostream& str, const DataHandle& dh);
-//  public:
+  public:
     enum HandleType { kMemory = 0, kOSFile, kReference, kSource, kPFS };
   private:
     enum { 

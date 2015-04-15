@@ -104,7 +104,7 @@ static std::string GetUniqueCDFileName(const CDID &cd_id, const char *basepath, 
   
   std::ostringstream filename(base);
 
-  std::cout << "base file name: "<< base << std::endl; //filename.str() << std::endl << std::endl;
+//  std::cout << "base file name: "<< base << std::endl; //filename.str() << std::endl << std::endl;
 //  filename << cd_id.level() << '.' << cd_id.rank_in_level() << '.' << cd_id.object_id() << '.' << cd_id.sequential_id() << '.' << cd_id.task_in_color() << '.' << data_name << ".cd";
   base += std::to_string(cd_id.level())         + std::string(".") 
         + std::to_string(cd_id.rank_in_level()) + std::string(".") 
@@ -112,7 +112,7 @@ static std::string GetUniqueCDFileName(const CDID &cd_id, const char *basepath, 
         + std::to_string(cd_id.sequential_id()) + std::string(".") 
         + std::to_string(cd_id.task_in_color()) + std::string(".") 
         + std::string(data_name)                + std::string(".cd");
-  std::cout << "file name for this cd: "<< base << std::endl; // filename.str() << std::endl << std::endl; //dbgBreak(); 
+//  std::cout << "file name for this cd: "<< base << std::endl; // filename.str() << std::endl << std::endl; //dbgBreak(); 
 //  return filename.str();
   return base;
 }
@@ -143,9 +143,7 @@ static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, 
   }
   else {
     //This case is ERROR.
-    std::cerr<< "We should not get here! there is something wrong." << std::endl;
-    assert(0);
-    return "";
+    ERROR_MESSAGE("We should not get here! there is something wrong.\n");
   }
   std::cout << "GenPath : " << filename.str() << ", base : " << base << endl;
   //return filename.str();

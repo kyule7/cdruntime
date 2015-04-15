@@ -90,7 +90,7 @@ void Internal::Intialize(void)
     }
   }
 //  max_tag_bit = 30;
-  cout << "max bits : " << max_tag_bit << endl;
+//  cout << "max bits : " << max_tag_bit << endl;
   max_tag_level_bit = 6;
   max_tag_rank_bit = max_tag_bit-max_tag_level_bit-1;
   max_tag_task_bit = max_tag_rank_bit/2;
@@ -575,7 +575,7 @@ CD::InternalCreate(CDHandle* parent,
        ERROR_MESSAGE("Failed to generate an unique filepath.\n");
 
      int len;
-     MPI_Get_processor_name( processor_name, &len );
+     PMPI_Get_processor_name( processor_name, &len );
     }
     
   #if _MPI_VER

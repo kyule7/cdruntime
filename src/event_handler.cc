@@ -147,12 +147,43 @@ void HandleEntrySearch::HandleEvent(void)
       CD_DEBUG("HandleEntrySearch --> EntrySend (Head): entry was found at %u\n", found_level);
       CD_DEBUG("Size of data to send : %lu (%u)\n", target_entry->dst_data_.len(), tag_to_search);
 
+
+      char *data_to_send = NULL;
+      DataHandle &target = target_entry->dst_data_;
+    
+      if(target.handle_type() == DataHandle::kMemory) {
+        data_to_send = static_cast<char *>(target.address_data());
+      }
+      else if(target.handle_type() == DataHandle::kOSFile || target.handle_type() == DataHandle::kPFS) {
+        data_to_send = new char[target_entry->dst_data_.len()];
+        FILE *temp_fp = fopen(target.file_name().c_str(), "r");
+        if( temp_fp!= NULL )  {
+          if( target.ref_offset() != 0 ) { 
+            fseek(temp_fp, target.ref_offset(), SEEK_SET); 
+          }
+      
+          fread(data_to_send, 1, target.len(), temp_fp);
+      
+          CD_DEBUG("Read data from OS file system\n");
+      
+          fclose(temp_fp);
+        }
+        else {
+          ERROR_MESSAGE("Error in fopen in HandleEntrySend\n");
+        }
+      }
+      else {
+        ERROR_MESSAGE("Unsupported handle type : %d\n", target.handle_type());
+      }
+
+
+
     //  ptr_cd_->entry_send_req_[tag_to_search] = CommInfo();
       ptr_cd_->entry_req_.push_back(CommInfo()); //getchar();
 
       // Should be non-blocking send to avoid deadlock situation. 
-      PMPI_Isend(target_entry->dst_data_.address_data(), 
-                 target_entry->dst_data_.len(), 
+      PMPI_Isend(data_to_send, 
+                 target.len(), 
                  MPI_BYTE, 
                  source_task_id, 
                  ptr_cd_->cd_id_.GenMsgTag(tag_to_search), 
@@ -160,9 +191,12 @@ void HandleEntrySearch::HandleEvent(void)
                  &(ptr_cd_->entry_req_.back().req_));  
     //             &(ptr_cd_->entry_send_req_[tag_to_search].req_));  
 
+
+    if(target.handle_type() == DataHandle::kOSFile || target.handle_type() == DataHandle::kPFS) {
+      delete data_to_send;
     }
 
-
+    }
 
 //    ptr_cd_->event_flag_[entry_requester_id] &= ~kEntrySearch;
 //    IncHandledEventCounter();
@@ -279,32 +313,63 @@ void HandleEntrySend::HandleEvent(void)
     ERROR_MESSAGE("The received tag [%u] does not work in %s. CD Level %u.\n",
                    tag_to_search, ptr_cd_->GetNodeID().GetString().c_str(), ptr_cd_->level());
   }
-  else
+  else {
     CD_DEBUG("HandleEntrySend: entry was found at level #%u.\n", found_level);
 
-//  ptr_cd_->entry_send_req_[tag_to_search] = CommInfo();
-  ptr_cd_->entry_req_.push_back(CommInfo()); //getchar();
+    char *data_to_send = NULL;
+    DataHandle &target = entry->dst_data_;
 
-  // Should be non-blocking send to avoid deadlock situation. 
-  PMPI_Isend(entry->dst_data_.address_data(), 
-             entry->dst_data_.len(), 
-             MPI_BYTE, 
-             entry_source_task_id, 
-             ptr_cd_->GetCDID().GenMsgTag(tag_to_search), 
-             MPI_COMM_WORLD, // could be any task in the whole rank group 
-             &(ptr_cd_->entry_req_.back().req_));  
-//             &(ptr_cd_->entry_send_req_[tag_to_search].req_));  
-
-  CD_DEBUG("CD Event kEntrySend\t\t\t");
-
-  if(ptr_cd_->IsHead()) {
-    ptr_cd_->event_flag_[ptr_cd_->task_in_color()] &= ~kEntrySend;
+    if(target.handle_type() == DataHandle::kMemory) {
+      data_to_send = static_cast<char *>(target.address_data());
+    }
+    else if(target.handle_type() == DataHandle::kOSFile || target.handle_type() == DataHandle::kPFS) {
+      data_to_send = new char[entry->dst_data_.len()];
+      FILE *temp_fp = fopen(target.file_name().c_str(), "r");
+      if( temp_fp!= NULL )  {
+        if( target.ref_offset() != 0 ) { 
+          fseek(temp_fp, target.ref_offset(), SEEK_SET); 
+        }
+  
+        fread(data_to_send, 1, target.len(), temp_fp);
+  
+        CD_DEBUG("Read data from OS file system\n");
+  
+        fclose(temp_fp);
+      }
+      else {
+        ERROR_MESSAGE("Error in fopen in HandleEntrySend\n");
+      }
+    }
+    else {
+      ERROR_MESSAGE("Unsupported handle type : %d\n", target.handle_type());
+    }
+    
+//    ptr_cd_->entry_send_req_[tag_to_search] = CommInfo();
+    ptr_cd_->entry_req_.push_back(CommInfo()); //getchar();
+      
+    // Should be non-blocking send to avoid deadlock situation. 
+    PMPI_Isend(data_to_send, 
+               target.len(), 
+               MPI_BYTE, 
+               entry_source_task_id, 
+               ptr_cd_->GetCDID().GenMsgTag(tag_to_search), 
+               MPI_COMM_WORLD, // could be any task in the whole rank group 
+               &(ptr_cd_->entry_req_.back().req_));  
+//               &(ptr_cd_->entry_send_req_[tag_to_search].req_));  
+  
+    if(target.handle_type() == DataHandle::kOSFile || target.handle_type() == DataHandle::kPFS) {
+      delete data_to_send;
+    }
+    CD_DEBUG("CD Event kEntrySend\t\t\t");
+  
+    if(ptr_cd_->IsHead()) {
+      ptr_cd_->event_flag_[ptr_cd_->task_in_color()] &= ~kEntrySend;
+    }
+    else {
+      *(ptr_cd_->event_flag_) &= ~kEntrySend;
+    }
+    IncHandledEventCounter();
   }
-  else {
-    *(ptr_cd_->event_flag_) &= ~kEntrySend;
-  }
-  IncHandledEventCounter();
-
 #endif
 }
 

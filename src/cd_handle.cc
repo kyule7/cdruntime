@@ -855,7 +855,7 @@ uint32_t CDHandle::rank_in_level(void) const { return ptr_cd_->GetCDName().rank_
 uint32_t CDHandle::sibling_num(void)   const { return ptr_cd_->GetCDName().size(); }
 
 ColorT  CDHandle::color(void)          const { return node_id_.color(); }
-ColorT  CDHandle::GetNodeID(void)          const { return node_id_.color(); }
+ColorT  CDHandle::GetNodeID(void)      const { return node_id_.color(); }
 int     CDHandle::task_in_color(void)  const { return node_id_.task_in_color(); }
 int     CDHandle::head(void)           const { return node_id_.head(); }
 int     CDHandle::task_size(void)      const { return node_id_.size(); }
@@ -933,6 +933,7 @@ CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 
 CDErrT CDHandle::CDAssertFail (bool test_true, const SysErrT *error_to_report)
 {
+  CDPrologue();
   if( IsHead() ) {
 
   }
@@ -940,11 +941,13 @@ CDErrT CDHandle::CDAssertFail (bool test_true, const SysErrT *error_to_report)
     // It is at remote node so do something for that.
   }
 
+  CDEpilogue();
   return kOK;
 }
 
 CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 {
+  CDPrologue();
   if( IsHead() ) {
     // STUB
   }
@@ -952,6 +955,7 @@ CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
     // It is at remote node so do something for that.
   }
 
+  CDEpilogue();
   return kOK;
 }
 

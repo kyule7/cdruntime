@@ -44,7 +44,6 @@ void CDLogHandle::OpenFilePath(void)
   int ret = system(cmd);
   if( ret == -1 ) {
     ERROR_MESSAGE("Failed to create a directory for preservation data.");
-    assert(0);
   }
   else {
     opened_ = true;  
@@ -60,7 +59,6 @@ void CDLogHandle::CloseAndDeletePath( void )
   if( ret == -1 ) 
   {
     ERROR_MESSAGE("Failed to remove a directory for preservation data.");
-    assert(0);
   }
   else 
   {
@@ -104,13 +102,13 @@ void CDLogHandle::SetFilePath(const PrvMediumT& prv_medium, const std::string& p
       {
         if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
         {
-    std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
+          std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
           path_base = path_base + "/HDD/" + uniqueName_ + "/";
           path_.filepath_.clear();
           path_.filepath_ = path_base;
         }
         else
-    path_ = CD_FILEPATH_HDD;
+          path_ = CD_FILEPATH_HDD;
 
         break;
       }
@@ -124,7 +122,7 @@ void CDLogHandle::SetFilePath(const PrvMediumT& prv_medium, const std::string& p
           path_.filepath_ = path_base;
         }
         else
-    path_ = CD_FILEPATH_SSD;
+          path_ = CD_FILEPATH_SSD;
 
         break;
       }
