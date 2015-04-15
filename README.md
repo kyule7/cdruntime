@@ -71,3 +71,20 @@ This repository is Containment Domain (CD) runtime system libraries. This consis
 
 
 3. See also {CD_ROOT}/test/test_simple_hierarchy/Makefile to get an example for build.
+
+
+
+## **Environment variable setting regarding CD runtime** ##
+1. You can set a filepath where your application's data will be preserved if they are preserved to file system. Default is current filepath where you are running the program.
+
+export CD_PRESERVATION_BASE_PATH={your_filepath_for_preservation}
+
+
+2. It is possible to generate debug information printouts to file system. Default is current filepath where you are running the program.
+
+export CD_DEBUG_OUTPUT={your_filepath_for_debug_print}
+
+
+3. If you want to use Parallel File System for preservation medium, you can also configure how many tasks will share a file to write data for each preservation. Default is 64.
+
+export CD_PFS_PRSV_SHARE={integer number for # of tasks to share a file}
