@@ -495,6 +495,9 @@ int MPI_Irecv(void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cd = GetCurrentCD();
+
+  printf( "\n\n cd mode : %d\n\n\n", cur_cd->ptr_cd()->GetCDType());
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)

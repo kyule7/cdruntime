@@ -1672,6 +1672,64 @@ CDErrT CD::Preserve(void *data,
     // Everytime restore is called one entry is restored.
     CD_DEBUG("\n\nReexecution!!! entry directory size : %zu\n\n", entry_directory_.size());
 
+
+
+#if 0
+    if( iterator_entry_ != entry_directory_.end() ) { // normal case
+
+//      printf("Reexecution mode start...\n");
+      CD_DEBUG("\n\nNow reexec!!! %d\n\n", iterator_entry_count++);
+
+      CDEntry *cd_entry = &*iterator_entry_;
+      ++iterator_entry_;
+
+      CDErrT cd_err;
+      switch( cd_entry->Restore() ) {
+        case CDEntry::CDEntryErrT::kOK : 
+          cd_err = CDErrT::kOK; 
+          break;
+        case CDEntry::CDEntryErrT::kOutOfMemory : 
+          cd_err = CDErrT::kError;
+          break;
+        case CDEntry::CDEntryErrT::kFileOpenError : 
+          cd_err = CDErrT::kError;
+          break;
+        case CDEntry::CDEntryErrT::kEntrySearchRemote : {
+
+          cd_err = CDErrT::kError;
+          break;
+        }
+        default : assert(0);
+      }
+
+      if(iterator_entry_ != entry_directory_.end()) {
+        PMPI_Win_fence();
+
+        CheckMailBox();
+
+
+      }
+      else { // The end of entry directory
+
+        CD_DEBUG("Test Asynch messages until start at %s / %s\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+  
+        while( !TestComm() ); 
+  
+        while(!TestRecvComm());
+  
+        CD_DEBUG("Test Asynch messages until done \n");
+
+        cd_exec_mode_ = kExecution;
+        // This point means the beginning of body stage. Request EntrySearch at this routine
+      }
+
+      return cd_err;
+ 
+    }
+
+#else
+
+
     if( iterator_entry_ != entry_directory_.end() ) { // normal case
 
 //      printf("Reexecution mode start...\n");
@@ -1822,6 +1880,7 @@ CDErrT CD::Preserve(void *data,
       return cd_err;
  
     }
+#endif
     else {  // abnormal case
       //return CDErrT::kOK;
 

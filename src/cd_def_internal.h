@@ -399,9 +399,9 @@ extern FILE *cdoutApp;
 #define LIBC_DEBUG(...) \
     { if(cd::app_side) {\
         cd::app_side=false;\
-        fprintf(stdout, __VA_ARGS__);\
+        fprintf(cdout, __VA_ARGS__);\
         cd::app_side = true;}\
-      else fprintf(stdout, __VA_ARGS__);\
+      else fprintf(cdout, __VA_ARGS__);\
     }
 
 
@@ -409,7 +409,6 @@ extern FILE *cdoutApp;
 #elif _CD_DEBUG == 2  // print to stdout ------
 
 #define CD_DEBUG(...) \
-  fprintf(stdout, __VA_ARGS__)
 
 
 #define LOG_DEBUG(...) \
@@ -421,12 +420,6 @@ extern FILE *cdoutApp;
   }
 
 #define LIBC_DEBUG(...) \
-    { if(cd::app_side) {\
-        cd::app_side=false;\
-        fprintf(stdout, __VA_ARGS__);\
-        cd::app_side = true;}\
-      else fprintf(stdout, __VA_ARGS__);\
-    }
 
 
 #else  // -------------------------------------
