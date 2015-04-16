@@ -77,7 +77,7 @@ This repository is Containment Domain (CD) runtime system libraries. This consis
 ## **Environment variable setting regarding CD runtime** ##
 1. You can set a filepath where your application's data will be preserved if they are preserved to file system. Default is current filepath where you are running the program.
 
-    export CD_PRESERVATION_BASE_PATH={your_filepath_for_preservation}
+    export CD_PRV_BASEPATH={your_filepath_for_preservation}
 
 
 2. It is possible to generate debug information printouts to file system. Default is current filepath where you are running the program.
