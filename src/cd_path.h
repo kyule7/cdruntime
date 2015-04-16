@@ -192,7 +192,8 @@ private:
     while( curr_cdh->task_size() == 1 ) {
       if(curr_cdh == GetRootCD()) {
         CD_DEBUG("There is a single task in the root CD\n");
-        assert(0);
+//        assert(0);
+        return curr_cdh;
       }
       curr_cdh = CDPath::GetParentCD(curr_cdh->level());
     } 

@@ -68,6 +68,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifdef comm_log
 //SZ
 #include "cd_comm_log.h"
+#endif
+
+#ifdef libc_log
 #include "cd_malloc.h"
 #endif
 
@@ -283,23 +286,24 @@ update the preserved data.
   public:
     //SZ
     CommLog *comm_log_ptr_;
-    //GONG
-    CommLog *libc_log_ptr_;
 
     uint32_t child_seq_id_;
 
     unsigned long incomplete_log_size_unit_;
     unsigned long incomplete_log_size_;
     std::vector<IncompleteLogEntry> incomplete_log_;
-    //GONG
-    std::vector<IncompleteLogEntry> mem_alloc_log_;
-    unsigned int cur_pos_mem_alloc_log;
-    void* MemAllocSearch(CD *curr_cd, void* p_update = NULL);
-    bool PushedMemLogSearch(void* p, CD *curr_cd);
     ////SZ: attempted to move from HeadCD class, but we can use CDPath class
     //CDHandle*            cd_parent_;
 #endif
 
+#ifdef libc_log
+    //GONG
+    CommLog *libc_log_ptr_;
+    //GONG
+    std::vector<IncompleteLogEntry> mem_alloc_log_;
+    unsigned int cur_pos_mem_alloc_log;
+
+#endif
     // PFS
     PFSHandle *pfs_handler_;
 
@@ -330,10 +334,10 @@ update the preserved data.
                      uint64_t sys_bit_vector, 
                      CDInternalErrT* cd_err=0);
 
-    static CDHandle* CreateRootCD(CDHandle* parent, 
-                     const char* name, 
+    static CDHandle* CreateRootCD(const char* name, 
                      const CDID& child_cd_id, 
-                     CDType cd_type, 
+                     CDType cd_type,
+                     const std::string &basepath, 
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err);
 
@@ -415,7 +419,7 @@ public:
     bool     recreated(void)     const { return recreated_; }
     bool     reexecuted(void)    const { return reexecuted_; }
     CDType GetCDType();
-#ifdef comm_log
+#ifdef libc_log
     CommLog *libc_log_ptr()      const { return libc_log_ptr_; }
 #endif
     // These should be virtual because I am going to use polymorphism for those methods.
@@ -550,14 +554,19 @@ public:
     virtual void Deserialize(void* object) {
     }
 
+#ifdef libc_log
+public:
+    //GONG: duplicated for libc logging
+    CommLogErrT CommLogCheckAlloc_libc(unsigned long length);
+    void* MemAllocSearch(CD *curr_cd, void* p_update = NULL);
+    bool PushedMemLogSearch(void* p, CD *curr_cd);
+#endif
 
 #ifdef comm_log
 public:
     //SZ
     //FIXME: no function should return CommLogErrT, change to CD error types...
     CommLogErrT CommLogCheckAlloc(unsigned long length);
-    //GONG: duplicated for libc logging
-    CommLogErrT CommLogCheckAlloc_libc(unsigned long length);
     //SZ 
     bool IsParentLocal();
     //SZ

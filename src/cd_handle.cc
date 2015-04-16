@@ -97,10 +97,20 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   totalTaskSize = numTask;
 
 #if _CD_DEBUG == 1
-  std::string output_filename("./output/output_");
-  output_filename += to_string(static_cast<unsigned long long>(myTaskID));
+  char *filepath = getenv( "CD_DEBUG_OUT" );
+  string basepath;
+  string filename("/output_");
+
+  if(filepath != NULL) {
+    basepath = filepath;
+  }
+  else {
+    basepath = CD_DEFAULT_DEBUG_OUT;
+  }
+
+  basepath = basepath + filename + to_string(static_cast<unsigned long long>(myTaskID));
   
-  cdout = fopen(output_filename.c_str(), "w");
+  cdout = fopen(basepath.c_str(), "w");
 
 #endif
 
@@ -113,7 +123,30 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   Internal::Intialize();
 
   CD::CDInternalErrT internal_err;
-  CDHandle* root_cd_handle = CD::CreateRootCD(NULL, "Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask)), static_cast<CDType>(kStrict | prv_medium), 0, &internal_err);
+  NodeID new_node_id(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
+  char preservation_unique_name[ L_tmpnam ];
+  char processor_name[ MPI_MAX_PROCESSOR_NAME ];
+  if( new_node_id.IsHead() )
+  {
+     if( tmpnam_r( preservation_unique_name ) )
+     {
+       CD_DEBUG("[CD_Init] this is the temporary path created for run: %s\n", preservation_unique_name);
+     }
+     else
+       ERROR_MESSAGE("Failed to generate an unique filepath.\n");
+
+     int len;
+     PMPI_Get_processor_name( processor_name, &len );
+  }
+
+#if _MPI_VER
+  PMPI_Bcast( preservation_unique_name, L_tmpnam, MPI_BYTE, new_node_id.head(), MPI_COMM_WORLD );
+  PMPI_Bcast( processor_name, MPI_MAX_PROCESSOR_NAME, MPI_BYTE, new_node_id.head(), MPI_COMM_WORLD );
+#endif
+  string base_filepath = string(preservation_unique_name) + string(processor_name);
+
+  CDHandle* root_cd_handle = CD::CreateRootCD("Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask)), static_cast<CDType>(kStrict | prv_medium), base_filepath, 0, &internal_err);
+
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
 #if _PROFILER
@@ -144,26 +177,8 @@ void WriteDbgStream(DebugBuf *debugBuf)
 #if _DEBUG
   dbg.flush();
   dbg.close();
-
-  if( secure_getenv( "CD_DEBUG_OUTPUT" ) )
-  {
-    std::string path( secure_getenv( "CD_DEBUG_OUTPUT" ) );
-    std::string output_filename = path + "/output/output_app_";
-    output_filename += string(to_string(static_cast<unsigned long long>(myTaskID)));
-  
-    debugBuf->open(output_filename.c_str());
-    debugBuf->flush();
-    debugBuf->close();
-  }
-  else
-  {
-    std::string output_filename = "./output/output_app_";
-    output_filename += string(to_string(static_cast<unsigned long long>(myTaskID)));
-  
-    debugBuf->open(output_filename.c_str());
-    debugBuf->flush();
-    debugBuf->close();
-  }
+  debugBuf->flush();
+  debugBuf->close();
 #endif
 }
 

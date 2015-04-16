@@ -397,8 +397,12 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
     tmp_log_entry.flag_ = (unsigned long) flag;
     tmp_log_entry.complete_ = false;
     tmp_log_entry.isrecv_ = isrecv;
+
+#ifdef libc_log
     //GONG
     tmp_log_entry.p_ = NULL;
+#endif
+
     my_cd_->incomplete_log_.push_back(tmp_log_entry);
 #if _DEBUG
     my_cd_->PrintIncompleteLog();
@@ -555,6 +559,8 @@ CommLogErrT CommLog::PackAndPushLogs(CD* parent_cd)
 
   return kCommLogOK;
 }
+
+#ifdef libc_log
 //GONG
 CommLogErrT CommLog::PackAndPushLogs_libc(CD* parent_cd)
 {
@@ -575,6 +581,7 @@ CommLogErrT CommLog::PackAndPushLogs_libc(CD* parent_cd)
 
   return kCommLogOK;
 }
+#endif
 
 CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
 {
@@ -822,6 +829,7 @@ CommLogErrT CommLog::UnpackLogsToChildCD(CD* child_cd)
   return kCommLogOK;
 }
 
+#ifdef libc_log
 //GONG
 CommLogErrT CommLog::UnpackLogsToChildCD_libc(CD* child_cd)
 {
@@ -838,6 +846,7 @@ CommLogErrT CommLog::UnpackLogsToChildCD_libc(CD* child_cd)
   child_cd->libc_log_ptr_->Print();
   return kCommLogOK;
 }
+#endif
 
 CommLogErrT CommLog::UnpackLogs(char * src_ptr)
 {

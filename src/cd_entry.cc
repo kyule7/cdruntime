@@ -45,23 +45,22 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
 {
   // Do something
 
-  if( dst_data_.address_data() != NULL ) {
+  if( dst_data_.handle_type() == DataHandle::kMemory ) {
     DATA_FREE( dst_data_.address_data() );
     CD_DEBUG("free preserved data\n"); 
   }
-
-  if( dst_data_.handle_type() == DataHandle::kOSFile )  {
+  else if( dst_data_.handle_type() == DataHandle::kOSFile )  {
 
 #if _PRV_FILE_NOT_ERASED
-    char cmd[1024];
-    char backup_dir[1024];
+    char cmd[256];
+    char backup_dir[256];
     sprintf(backup_dir, "mkdir backup_results");
     int ret = system(backup_dir);
     sprintf(cmd, "mv %s ./backup_results/", dst_data_.file_name_);
     ret = system(cmd);
 #else
-    char cmd[30];
-    sprintf(cmd, "rm %s", dst_data_.file_name_);
+    char cmd[256];
+    sprintf(cmd, "rm -f %s", dst_data_.file_name_);
     int ret = system(cmd);
 #endif
 

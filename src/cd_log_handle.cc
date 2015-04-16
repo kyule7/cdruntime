@@ -37,9 +37,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdlib.h>
 using namespace cd;
 
+
+
 void CDLogHandle::OpenFilePath(void)     
 { 
-  char cmd[ 1024 ];
+  char cmd[ 256 ];
   sprintf(cmd, "mkdir -p %s", path_.GetFilePath().c_str());
   int ret = system(cmd);
   if( ret == -1 ) {
@@ -53,7 +55,7 @@ void CDLogHandle::OpenFilePath(void)
 
 void CDLogHandle::CloseAndDeletePath( void )
 {
-  char cmd[ 1024 ];
+  char cmd[ 256 ];
   sprintf(cmd, "rm -r -f %s", path_.GetFilePath().c_str());
   int ret = system(cmd);
   if( ret == -1 ) 
@@ -74,61 +76,92 @@ std::string CDLogHandle::GetFilePath(void)
   return path_.GetFilePath();
 }
 
-void CDLogHandle::SetFilePath(const PrvMediumT& prv_medium, const std::string& parentUniqueName = "")
-  {
-    uniqueName_ = parentUniqueName;
-    switch(prv_medium) 
-    {
-      case kDRAM :
-      {
-        path_ = CD_FILEPATH_INVALID;
-        break;
-      }
-      case kPFS :
-      {
-        if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
-        {
-          std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
-          path_base = path_base + "/PFS/" + uniqueName_ + "/";
-          path_.filepath_.clear();
-          path_.filepath_ = path_base;
-        }
-        else
-          path_ = CD_FILEPATH_PFS;
+void CDLogHandle::SetFilePath(const PrvMediumT& prv_medium, const std::string& unique_filepath = "")
+{
+  unique_basepath_ = unique_filepath;
+#if 1
+  if(prv_medium != kDRAM) {
+    char *filepath_env = getenv("CD_PRV_BASEPATH");
+    std::string basepath;
+    if(filepath_env != NULL) {
+      basepath = filepath_env;
+    }
+    else {
+      basepath = CD_DEFAULT_PRV_FILEPATH;
+    }
 
-        break;  
-      }
-      case kHDD :
-      {
-        if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
-        {
-          std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
-          path_base = path_base + "/HDD/" + uniqueName_ + "/";
-          path_.filepath_.clear();
-          path_.filepath_ = path_base;
-        }
-        else
-          path_ = CD_FILEPATH_HDD;
-
-        break;
-      }
-      case kSSD :
-      {
-        if ( secure_getenv( "CD_PRESERVATION_BASE_PATH" ) )
-        {
-          std::string path_base( getenv( "CD_PRESERVATION_BASE_PATH" ) );
-          path_base = path_base + "/SSD/" + uniqueName_ + "/";
-          path_.filepath_.clear();
-          path_.filepath_ = path_base;
-        }
-        else
-          path_ = CD_FILEPATH_SSD;
-
-        break;
-      }
-      default :
-      {
-        path_ = CD_FILEPATH_DEFAULT;
-      }
-    }   
+    if(prv_medium == kHDD) { 
+      path_ = basepath + "/HDD/" + unique_basepath_ + "/";
+    }
+    else if(prv_medium == kSSD) {
+      path_ = basepath + "/SSD/" + unique_basepath_ + "/";
+    }
+    else if(prv_medium == kPFS) { 
+      path_ = basepath + "/PFS/" + unique_basepath_ + "/";
+    }
+    else {
+      ERROR_MESSAGE("Unsupported medium : %d\n", prv_medium);
+    }
   }
+  else {
+    ERROR_MESSAGE("DRAM does not need to set filepath : %d\n", prv_medium);
+  }
+#else
+  switch(prv_medium) 
+  {
+    case kDRAM :
+    {
+      path_ = CD_FILEPATH_INVALID;
+      break;
+    }
+    case kPFS :
+    {
+      if ( secure_getenv( "CD_PRV_BASEPATH" ) )
+      {
+        std::string path_base( getenv( "CD_PRV_BASEPATH" ) );
+        path_base = path_base + "/PFS/" + unique_basepath_ + "/";
+        path_.filepath_.clear();
+        path_.filepath_ = path_base;
+      }
+      else
+        path_ = CD_FILEPATH_PFS;
+
+      break;  
+    }
+    case kHDD :
+    {
+      if ( secure_getenv( "CD_PRV_BASEPATH" ) )
+      {
+        std::string path_base( getenv( "CD_PRV_BASEPATH" ) );
+        path_base = path_base + "/HDD/" + unique_basepath_ + "/";
+        path_.filepath_.clear();
+        path_.filepath_ = path_base;
+      }
+      else
+        path_ = CD_FILEPATH_HDD;
+
+      break;
+    }
+    case kSSD :
+    {
+      if ( secure_getenv( "CD_PRV_BASEPATH" ) )
+      {
+        std::string path_base( getenv( "CD_PRV_BASEPATH" ) );
+        path_base = path_base + "/SSD/" + unique_basepath_ + "/";
+        path_.filepath_.clear();
+        path_.filepath_ = path_base;
+      }
+      else
+        path_ = CD_FILEPATH_SSD;
+
+      break;
+    }
+    default :
+    {
+      path_ = CD_FILEPATH_DEFAULT;
+    }
+  }  
+  std::cout << "ALI : " << path_.filepath_ << std::endl;
+#endif
+ 
+}

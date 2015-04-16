@@ -33,7 +33,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifdef comm_log
+#ifdef libc_log
 #include <stdarg.h>
 #include "cd_malloc.h"
 #include "cd_global.h"
@@ -59,6 +59,11 @@ CD *RuntimeLogger::IsLogable(bool *logable_)
 {
 //  LIBC_DEBUG("logable_execmode\n");      
   CDHandle* current = GetCurrentCD();
+//  if(current != NULL) {
+//  std::cout << current->node_id() << " / " << current->GetCDName() <<  std::endl;
+//  } else {
+//    std::cout << "CD is null" << std::endl;
+//  }
 //  printf("current cd : %s / %s\n", current->ptr_cd_);
 
 	CD* c_CD;
@@ -119,6 +124,10 @@ CD *RuntimeLogger::IsLogable(bool *logable_)
 //	}
 //  return c_CD;
 //}
+
+
+
+
 
 //GONG: Is free() required?
 void free(void *p)
@@ -523,9 +532,7 @@ int RuntimeLogger::cd_fprintf(FILE *str, const char *format, va_list &args)
     }
     else
     {
-      LIBC_DEBUG("out of CD runtime side!");
-      assert(0);
-//      exit(1);
+      ERROR_MESSAGE("out of CD runtime side!");
     }
     app_side = true;
   }
