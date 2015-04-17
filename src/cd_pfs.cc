@@ -159,9 +159,9 @@ int PFSHandle::Splitter( void )
 	int original_comm_size = ptr_cd_->GetCDID().task_count();
 	
 	int cd_sharing_degree = log2( CD_SHARING_DEGREE ) - 1;
-	if( secure_getenv("CD_PFS_PRSV_SHARE_DGR") )
+	if( getenv("CD_PFS_PRSV_SHARE_DGR") )
 	{
-		cd_sharing_degree = log2( atoi( secure_getenv("CD_PFS_PRSV_SHARE_DGR") ) ) - 1;
+		cd_sharing_degree = log2( atoi( getenv("CD_PFS_PRSV_SHARE_DGR") ) ) - 1;
 	}
 	degree_of_sharing_ = pow( 2, ( int ) log2( original_comm_size ) - cd_sharing_degree );
 	degree_of_sharing_ = degree_of_sharing_ <= 0 ? 1 : degree_of_sharing_;

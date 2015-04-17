@@ -177,8 +177,8 @@ void WriteDbgStream(DebugBuf *debugBuf)
 #if _DEBUG
   dbg.flush();
   dbg.close();
-  debugBuf->flush();
-  debugBuf->close();
+//  debugBuf->flush();
+//  debugBuf->close();
 #endif
 }
 
@@ -197,7 +197,7 @@ void CD_Finalize(DebugBuf *debugBuf)
   assert(CDPath::GetCDPath()->size()==1); // There should be only on CD which is root CD
   assert(CDPath::GetCDPath()->back()!=NULL);
 
-  CDPath::GetRootCD()->Destroy();
+  CDPath::GetRootCD()->InternalDestroy(false);
   Internal::Finalize();
 
 #if _DEBUG
@@ -606,10 +606,15 @@ CDHandle* CDHandle::CreateAndBegin(uint32_t num_children,
   return new_cdh;
 }
 
-CDErrT CDHandle::Destroy(bool collective)
-{
+CDErrT CDHandle::Destroy(bool collective) {
   CDPrologue();
+  CDErrT err = InternalDestroy(collective);
+  CDEpilogue();
+  return err;
+}
 
+CDErrT CDHandle::InternalDestroy(bool collective)
+{
   CDErrT err;
  
   if ( collective ) {
@@ -651,7 +656,6 @@ CDErrT CDHandle::Destroy(bool collective)
   CDPath::GetCDPath()->pop_back();
 
    
-  CDEpilogue();
   return err;
 }
 
@@ -919,7 +923,9 @@ CDErrT CDHandle::RemoveChild(CDHandle* cd_child)
 CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 {
   CDPrologue();
-  dbg << "Assert : " << ptr_cd()->cd_exec_mode_ << " at level " << ptr_cd()->level() << endl;
+  CD_DEBUG("Assert : %d at level %u\n", ptr_cd()->cd_exec_mode_, ptr_cd()->level());
+  printf("Assert : %d at level %u\n", ptr_cd()->cd_exec_mode_, ptr_cd()->level());
+
   assert(ptr_cd_ != 0);
   CDErrT err = kOK;
 #if _PROFILER
@@ -994,12 +1000,12 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     SetMailBox(kErrorOccurred);
     err = kAppError;
     
-    Sync(CDPath::GetCoarseCD(this)->color());
-    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+//    Sync(CDPath::GetCoarseCD(this)->color());
+//    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 
   }
   else {
-
 #if _ERROR_INJECTION_ENABLED
 
     CD_DEBUG("EIE Before\n");
@@ -1007,20 +1013,21 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     if(cd_error_injector_ != NULL && ptr_cd_ != NULL) {
       CD_DEBUG("EIE It is after : reexec # : %d, exec mode : %d at level #%u\n", ptr_cd_->num_reexecution_, GetExecMode(), level());
       CD_DEBUG("recreated? %d, recreated? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
-
+      cout << cd_error_injector_ << " " << ptr_cd_<< endl;
+      cout << cd_error_injector_->InjectAndTest() << " " << ptr_cd_->recreated() << " " << ptr_cd_->reexecuted() << endl;
       if(cd_error_injector_->InjectAndTest() && ptr_cd_->recreated() == false && ptr_cd_->reexecuted() == false) {
         CD_DEBUG("EIE Reached SetMailBox. recreated? %d, reexecuted? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
         SetMailBox(kErrorOccurred);
         err = kAppError;
 
         
-        Sync(CDPath::GetCoarseCD(this)->color());
+        PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
         CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 
       }
       else {
         
-        Sync(CDPath::GetCoarseCD(this)->color());
+        PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
         CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
         CheckMailBox();
 
@@ -1028,37 +1035,46 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     }
     else {
       
-      Sync(CDPath::GetCoarseCD(this)->color());
-      CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-      CheckMailBox();
+//      PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+//      CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+//      CheckMailBox();
       
     }
 
 #endif
 
+    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
   }
+
+  CheckMailBox();
 
 
   if(IsHead()) { 
 
-    Sync(CDPath::GetCoarseCD(this)->color());
-    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-
-    CheckMailBox();
-    
-    Sync(CDPath::GetCoarseCD(this)->color());
-    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+//    Sync(CDPath::GetCoarseCD(this)->color());
+//    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+//
+//    CheckMailBox();
+//    
+//    Sync(CDPath::GetCoarseCD(this)->color());
+//    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+//    CheckMailBox();
+//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
     
   }
   else {
     
-    Sync(CDPath::GetCoarseCD(this)->color());
-    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+//    Sync(CDPath::GetCoarseCD(this)->color());
+//    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+//    
+//    
+//    Sync(CDPath::GetCoarseCD(this)->color());
+//    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     
-    
-    Sync(CDPath::GetCoarseCD(this)->color());
-    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-    
+//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
     CheckMailBox();
 
   }
@@ -1183,7 +1199,6 @@ void CDHandle::CommitPreserveBuff()
 
 uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_loc_mask)
 {
-  CDPrologue();
   uint64_t sys_bit_vec = 0;
   if(error_name_mask == 0) {
 
@@ -1198,7 +1213,6 @@ uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_l
   else {
 
   }
-  CDEpilogue();
   return sys_bit_vec;
 }
 

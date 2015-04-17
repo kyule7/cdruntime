@@ -970,6 +970,7 @@ class cd::CDHandle {
 /// If it cannot find in current CD object, it outputs NULL 
 //    cd::CDEntry* InternalGetEntry(std::string entry_name);
 
+    CDErrT InternalDestroy(bool collective);
 
 /// Add children CD to my CD.
     CDErrT AddChild(CDHandle* cd_child);

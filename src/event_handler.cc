@@ -46,6 +46,7 @@ using namespace std;
 
 void HandleEntrySearch::HandleEvent(void)
 {
+  CheckHere();
 #if _MPI_VER
 
   int entry_requester_id = task_id_;
@@ -244,6 +245,7 @@ void HandleEntrySearch::HandleEvent(void)
 
 void HandleEntrySend::HandleEvent(void)
 {
+  CheckHere();
 #if _MPI_VER
 
   CD_DEBUG("CD::HandleEntrySend\n");

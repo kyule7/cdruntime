@@ -1670,7 +1670,6 @@ CDErrT CD::Preserve(void *data,
 
 
 
-
     if( iterator_entry_ != entry_directory_.end() ) { // normal case
 
 //      printf("Reexecution mode start...\n");
@@ -1707,55 +1706,72 @@ CDErrT CD::Preserve(void *data,
 
       if(iterator_entry_ != entry_directory_.end()) {
 
+//        if(task_size() > 1) {
+//        PMPI_Win_fence(0, mailbox_);
+//        }
+        CheckMailBox();
         if(IsHead()) { 
         
+//          TestComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestReqComm();
+//          TestComm();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          TestReqComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
           TestComm();
-          CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
           TestReqComm();
-          TestComm();
+
           if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
-          TestReqComm();
+          PMPI_Win_fence(0, mailbox_);
           CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
           }
-          TestComm();
           TestRecvComm();
+
         }
         else {
-      
           TestComm();
           TestReqComm();
           if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
+          PMPI_Win_fence(0, mailbox_);
+          CheckMailBox(); 
           }
-          TestComm();
-          TestReqComm();
-          CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestReqComm();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
           TestRecvComm();
-          CheckMailBox();
-          
-        
+//          TestComm();
+//          TestReqComm();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          TestReqComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestReqComm();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          TestRecvComm();
+//          CheckMailBox();
+//          
+//        
         }
 
       }
@@ -1765,48 +1781,63 @@ CDErrT CD::Preserve(void *data,
         CD_DEBUG("Test Asynch messages until start at %s / %s\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
   
         while( !(TestComm()) ); 
-  
-        if(IsHead()) { 
-        
-          TestComm();
-          CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
-          CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
+ 
+      if(IsHead()) { 
+        CheckMailBox();
+        if(task_size() > 1) {
+          PMPI_Win_fence(0, mailbox_);
         }
-        else {
-      
-          TestComm();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
-          CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
-          CheckMailBox();
+      }
+      else {
+
+        if(task_size() > 1) {
+          PMPI_Win_fence(0, mailbox_);
         }
+        CheckMailBox();
+
+      }
+
+//        if(IsHead()) { 
+//        
+//          TestComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//        }
+//        else {
+//      
+//          TestComm();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          CheckMailBox();
+//        }
   
         while(!TestRecvComm());
   

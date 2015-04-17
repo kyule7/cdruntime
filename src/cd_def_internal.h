@@ -455,7 +455,8 @@ extern FILE *cdoutApp;
 
 #define DEFAULT_MEDIUM kHDD
 
-
+#define CheckHere() \
+  if(cd::app_side) assert(0);
 
 /* 
 ISSUE 1 (Kyushick)
