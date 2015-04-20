@@ -152,6 +152,12 @@ private:
   static CDHandle* GetParentCD(int current_level)
   { 
     CD_DEBUG("CDPath::GetParentCD current level : %d\n", current_level);
+//    printf("CDPath::GetParentCD current level : %d at %d\n", current_level, myTaskID);
+    if(current_level > 100) {
+      std::cout << GetCurrentCD()->GetCDName() << " / " << GetCurrentCD()->node_id() << std::endl;
+
+    }
+
     if(uniquePath_ != NULL ) {
       if( uniquePath_->size() > 1 ) {
         if(current_level >= 1) { 
@@ -186,7 +192,8 @@ private:
     while( curr_cdh->task_size() == 1 ) {
       if(curr_cdh == GetRootCD()) {
         CD_DEBUG("There is a single task in the root CD\n");
-        assert(0);
+//        assert(0);
+        return curr_cdh;
       }
       curr_cdh = CDPath::GetParentCD(curr_cdh->level());
     } 

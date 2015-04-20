@@ -105,8 +105,6 @@ class CDID {
   friend class HandleEntrySend;
 
 private:
-    uint32_t domain_id_; //!< Some physical information is desired in CDID to maximize locality when needed.
-
     CDNameT  cd_name_; //!< CD name
 
     NodeID   node_id_; //!< Unique ID for each CD. It can be a communicator number. It increases at Create().
@@ -114,6 +112,8 @@ private:
                        //!< node_id_.task_in_color_ means task ID in that CD task group (color)
                        //!< For now, node_id_.color_==0 is always Head.
                        //!< But it can be more nicely managed distribuing Head for one process.
+
+    uint32_t domain_id_; //!< Some physical information is desired in CDID to maximize locality when needed.
 
     uint32_t object_id_; //!< This will be local and unique within a process. It increases at creator or Create().
 

@@ -854,6 +854,7 @@ class cd::CDHandle {
 #if _ERROR_INJECTION_ENABLED
     inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector)
     {
+      app_side = false;
       CD_DEBUG("RegisterErrorInjector: %d at level #%u\n", GetExecMode(), level());
       if(cd_error_injector_ == NULL && recreated() == false && reexecuted() == false) {
         CD_DEBUG("Registered!!\n");
@@ -865,6 +866,7 @@ class cd::CDHandle {
         CD_DEBUG("Failed to be Registered!!\n");
         delete cd_error_injector;
       }
+      app_side = true;
     }
 #else
     inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector) {}
@@ -968,6 +970,7 @@ class cd::CDHandle {
 /// If it cannot find in current CD object, it outputs NULL 
 //    cd::CDEntry* InternalGetEntry(std::string entry_name);
 
+    CDErrT InternalDestroy(bool collective);
 
 /// Add children CD to my CD.
     CDErrT AddChild(CDHandle* cd_child);

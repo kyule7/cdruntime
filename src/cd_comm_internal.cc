@@ -1236,6 +1236,7 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(HeadCD *curr_cd, const CDEventT &even
         CD_DEBUG("kErrorOccurred in HeadCD::SetMailBox\n");
 
         curr_cd->cd_event_.push_back(new HandleErrorOccurred(curr_cd));
+        error_occurred = true;
         // it is not needed to register here. I will be registered by HandleErrorOccurred functor.
     }
     if( CHECK_EVENT(event, kAllReexecute) ) {

@@ -348,8 +348,9 @@ bool CommLog::FoundRepeatedEntry(const void * data_ptr, unsigned long data_lengt
 CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length, 
                           bool completed, unsigned long flag, bool isrecv, bool isrepeated)
 {
-  bool tmp_app_side = app_side;
-  app_side = false;
+// FIXME
+//  bool tmp_app_side = app_side;
+//  app_side = false;
   LOG_DEBUG("LogData of address (%p) and length(%ld)\n", data_ptr, data_length);
 
   CommLogErrT ret;
@@ -362,7 +363,7 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
     {
       LOG_DEBUG("Found current repeating log entry matching!\n");
       log_table_.base_ptr_[log_table_.cur_pos_-1].counter_++;
-      app_side = tmp_app_side;
+//      app_side = tmp_app_side;
       return kCommLogOK;
     }
     LOG_DEBUG("Current repeating log entry NOT matching!\n");
@@ -396,8 +397,12 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
     tmp_log_entry.flag_ = (unsigned long) flag;
     tmp_log_entry.complete_ = false;
     tmp_log_entry.isrecv_ = isrecv;
+
+#ifdef libc_log
     //GONG
     tmp_log_entry.p_ = NULL;
+#endif
+
     my_cd_->incomplete_log_.push_back(tmp_log_entry);
 #if _DEBUG
     my_cd_->PrintIncompleteLog();
@@ -406,7 +411,7 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
 
   new_log_generated_ = true;
 
-  app_side = tmp_app_side;
+//  app_side = tmp_app_side;
   return kCommLogOK;
 }
 
@@ -554,6 +559,8 @@ CommLogErrT CommLog::PackAndPushLogs(CD* parent_cd)
 
   return kCommLogOK;
 }
+
+#ifdef libc_log
 //GONG
 CommLogErrT CommLog::PackAndPushLogs_libc(CD* parent_cd)
 {
@@ -574,6 +581,7 @@ CommLogErrT CommLog::PackAndPushLogs_libc(CD* parent_cd)
 
   return kCommLogOK;
 }
+#endif
 
 CommLogErrT CommLog::PackLogs(CommLog * dst_cl_ptr, unsigned long length)
 {
@@ -821,6 +829,7 @@ CommLogErrT CommLog::UnpackLogsToChildCD(CD* child_cd)
   return kCommLogOK;
 }
 
+#ifdef libc_log
 //GONG
 CommLogErrT CommLog::UnpackLogsToChildCD_libc(CD* child_cd)
 {
@@ -837,6 +846,7 @@ CommLogErrT CommLog::UnpackLogsToChildCD_libc(CD* child_cd)
   child_cd->libc_log_ptr_->Print();
   return kCommLogOK;
 }
+#endif
 
 CommLogErrT CommLog::UnpackLogs(char * src_ptr)
 {

@@ -33,7 +33,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifdef comm_log
+#ifdef libc_log
 
 #include "cd_malloc.h"
 #include <stdarg.h>

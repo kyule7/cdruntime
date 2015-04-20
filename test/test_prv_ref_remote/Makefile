@@ -6,7 +6,7 @@ all:
 	mpic++  -std=gnu++0x -o test_prv_ref_remote ${CD_CFLAGS} ${CD_APP_FLAGS} ./test_prv_ref_remote.cc ${CD_LINKFLAGS}
 
 clean:
-	rm -rf  test_prv_ref_remote; rm -rf HDD 
+	rm -rf  test_prv_ref_remote; rm -rf HDD; rm -rf output/output_*
 
 clean_cdruntime:
 	cd ../../src; make clean;

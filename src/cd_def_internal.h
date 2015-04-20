@@ -108,7 +108,6 @@ typedef uint32_t ENTRY_TAG_T;
 #define TAG_MASK2(X) ((2<<(X-1)) - 2)
 
 //GONG: global variable to represent the current context for malloc wrapper
-//extern bool app_side;
 namespace cd {
 
   class CD;
@@ -388,38 +387,45 @@ extern FILE *cdoutApp;
   fprintf(cdout, __VA_ARGS__)
 
 
-#define LOG_DEBUG(...) \
+#define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
       cd::app_side=false;\
       fprintf(stdout, __VA_ARGS__);\
       cd::app_side = true;}\
     else fprintf(stdout, __VA_ARGS__);\
-  }
+  }*/
 
-#define LIBC_DEBUG(...) \
+#define LIBC_DEBUG(...) /*\
     { if(cd::app_side) {\
         cd::app_side=false;\
-        fprintf(cdout, __VA_ARGS__);\
+        fprintf(stdout, __VA_ARGS__);\
         cd::app_side = true;}\
-      else fprintf(cdout, __VA_ARGS__);\
-    }
+      else fprintf(stdout, __VA_ARGS__);\
+    }*/
 
 
 
 #elif _CD_DEBUG == 2  // print to stdout ------
 
 #define CD_DEBUG(...) \
+  fprintf(stdout, __VA_ARGS__)
 
 
-#define LOG_DEBUG(...) \
+#define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
       cd::app_side=false;\
       fprintf(stdout, __VA_ARGS__);\
       cd::app_side = true;}\
     else fprintf(stdout, __VA_ARGS__);\
-  }
+  }*/
 
-#define LIBC_DEBUG(...) \
+#define LIBC_DEBUG(...)/* \
+    { if(cd::app_side) {\
+        cd::app_side=false;\
+        fprintf(stdout, __VA_ARGS__);\
+        cd::app_side = true;}\
+      else fprintf(stdout, __VA_ARGS__);\
+    }*/
 
 
 #else  // -------------------------------------
@@ -435,19 +441,22 @@ extern FILE *cdoutApp;
 #define INITIAL_CDOBJ_NAME "INITIAL_NAME"
 
 #define MAX_FILE_PATH 2048
+#define CD_FILEPATH_INVALID "./error_logs/"
 #define INIT_FILE_PATH "INITIAL_FILE_PATH"
 #define CD_FILEPATH_DEFAULT "./HDD/"
-#define CD_FILEPATH_INVALID "./error_logs/"
 #define CD_FILEPATH_PFS "./PFS/"
-#define CD_SHARING_DEGREE 64
 #define CD_FILEPATH_HDD "./HDD/"
 #define CD_FILEPATH_SSD "./SSD/"
+#define CD_DEFAULT_PRV_FILEPATH "./"
+#define CD_DEFAULT_DEBUG_OUT "./output/"
 
+#define CD_SHARING_DEGREE 64
 #define dout clog
 
 #define DEFAULT_MEDIUM kHDD
 
-
+#define CheckHere() \
+  if(cd::app_side) assert(0);
 
 /* 
 ISSUE 1 (Kyushick)

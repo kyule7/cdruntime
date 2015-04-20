@@ -61,9 +61,16 @@ class Path {
   friend class cd::CDLogHandle;
 private:
   std::string filepath_;
-  Path() : filepath_(CD_FILEPATH_DEFAULT) {}
-  Path(const std::string &filepath) : filepath_(filepath) {}
-  Path(const char *filepath) : filepath_(filepath) {}
+  Path() 
+    : filepath_(CD_FILEPATH_DEFAULT) {
+  }
+  Path(const std::string &filepath) 
+    : filepath_(filepath) {
+  }
+  Path(const char *filepath) 
+    : filepath_(filepath) {
+  }
+
   void SetFilePath(std::string filepath) { filepath_ = filepath; }
 
   std::string GetFilePath(void) { return filepath_; }
@@ -88,7 +95,7 @@ class CDLogHandle {
 //  CDLog file_log_;
   bool opened_;
   Path path_;
-  std::string uniqueName_;
+  std::string unique_basepath_;
 
 public:
   CDLogHandle(void) : opened_(false), path_(CD_FILEPATH_DEFAULT) {}
@@ -104,7 +111,7 @@ public:
   bool IsOpen()   { return opened_;  }
   void OpenFilePath(void);     
   void CloseAndDeletePath( void );
-  void SetFilePath(const PrvMediumT&, const std::string&);
+  void SetFilePath(const PrvMediumT& prv_medium, const std::string& filepath);
 };
 
 

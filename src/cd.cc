@@ -72,8 +72,8 @@ void Internal::Intialize(void)
   int flag;
 //  ENTRY_TAG_T max_tag_size = 2147483647;
 
-//  MPI_Comm_set_attr( MPI_COMM_WORLD, MPI_TAG_UB, &max_tag_size ); // It does not work for MPI_TAG_UB 
-  MPI_Comm_get_attr( MPI_COMM_WORLD, MPI_TAG_UB, &v, &flag ); 
+//  PMPI_Comm_set_attr( MPI_COMM_WORLD, MPI_TAG_UB, &max_tag_size ); // It does not work for MPI_TAG_UB 
+  PMPI_Comm_get_attr( MPI_COMM_WORLD, MPI_TAG_UB, &v, &flag ); 
 
   ENTRY_TAG_T predefined_max_tag_bits = *(int *)v + 1;
 
@@ -187,7 +187,7 @@ CD::CD(CDHandle* cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
-  : log_handle_( prv_medium, (cd_parent ? cd_parent->ptr_cd_->log_handle_.uniqueName_ : "") )
+  : log_handle_( prv_medium, (cd_parent ? cd_parent->ptr_cd_->log_handle_.unique_basepath_ : "") )
 {
   //GONG
   begin_ = false;
@@ -285,8 +285,12 @@ CD::CD(CDHandle* cd_parent,
     uint32_t tmp_seq_id = cd_parent->ptr_cd()->child_seq_id_;
     LOG_DEBUG("With cd_parent = %p, set child's seq_id_ to parent's child_seq_id_(%d)\n", cd_parent, tmp_seq_id);
     cd_id_.SetSequentialID(tmp_seq_id);
+
+#ifdef libc_log
     //GONG
     libc_log_ptr_ = new CommLog(this, kGenerateLog);
+#endif
+
   }
   else 
   {
@@ -297,8 +301,11 @@ CD::CD(CDHandle* cd_parent,
       LOG_DEBUG("With cd_parent = NULL, creating CommLog with mode kGenerateLog\n");
       comm_log_ptr_ = new CommLog(this, kGenerateLog);
     }
+
+#ifdef libc_log
     //GONG:
     libc_log_ptr_ = new CommLog(this, kGenerateLog);
+#endif
 
     LOG_DEBUG("Set child's child_seq_id_ to 0\n");
     child_seq_id_ = 0;
@@ -352,12 +359,12 @@ void CD::Init()
 
 #ifdef comm_log
   comm_log_ptr_ = NULL;
-  libc_log_ptr_ = NULL;
   incomplete_log_size_unit_ = 100;
+#endif
+#ifdef libc_log
+  libc_log_ptr_ = NULL;
   cur_pos_mem_alloc_log = 0;
 #endif
-
-
 // Kyushick : I think we already initialize cd_id_ object inside cd object creator (outside of Init method)
 // So we do not have to get it here. 
 // I think this should be inside CDID object creator because there is no information to pass from CD object to CDID object
@@ -422,18 +429,19 @@ CDHandle* CD::Create(CDHandle* parent,
 
 }
 
-CDHandle* CD::CreateRootCD(CDHandle* parent, 
-                           const char* name, 
+CDHandle* CD::CreateRootCD(const char* name, 
                            const CDID& root_cd_id, 
                            CDType cd_type, 
+                           const string &basepath,
                            uint64_t sys_bit_vector, 
                            CD::CDInternalErrT *cd_internal_err)
 {
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
+  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
 
-  *cd_internal_err = InternalCreate(parent, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
-
+  *cd_internal_err = InternalCreate(NULL, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
+  new_cd_handle->ptr_cd_->log_handle_.SetFilePath(new_prv_medium, basepath);
   assert(new_cd_handle != NULL);
 
   return new_cd_handle;
@@ -561,30 +569,30 @@ CD::InternalCreate(CDHandle* parent,
            new_cd_id.node_id().GetString().c_str(), 
            (*new_cd_handle)->node_id().GetString().c_str());
 
-  if( parent == NULL )
-  {
-    char preservation_unique_name[ L_tmpnam ];
-    char processor_name[ MPI_MAX_PROCESSOR_NAME ];
-    if( new_cd_id.IsHead() )
-    {
-     if( tmpnam_r( preservation_unique_name ) )
-     {
-       CD_DEBUG("[CD::InternalCreate] this is the temporary path created for run: %s\n", preservation_unique_name);
-     }
-     else
-       ERROR_MESSAGE("Failed to generate an unique filepath.\n");
-
-     int len;
-     PMPI_Get_processor_name( processor_name, &len );
-    }
-    
-  #if _MPI_VER
-    PMPI_Bcast( preservation_unique_name, L_tmpnam, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
-    PMPI_Bcast( processor_name, MPI_MAX_PROCESSOR_NAME, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
-  #endif
-
-    (*new_cd_handle)->ptr_cd_->log_handle_.SetFilePath( new_prv_medium, std::string (preservation_unique_name) + std::string(processor_name) );
-  }
+//  char preservation_unique_name[ L_tmpnam ];
+//  char processor_name[ MPI_MAX_PROCESSOR_NAME ];
+//  if( parent == NULL && new_cd_id.IsHead())
+//  {
+//    if( new_cd_id.IsHead() )
+//    {
+//     if( tmpnam_r( preservation_unique_name ) )
+//     {
+//       CD_DEBUG("[CD::InternalCreate] this is the temporary path created for run: %s\n", preservation_unique_name);
+//       printf("[CD::InternalCreate] this is the temporary path created for run: %s\n", preservation_unique_name);
+//     }
+//     else
+//       ERROR_MESSAGE("Failed to generate an unique filepath.\n");
+//
+//     int len;
+//     PMPI_Get_processor_name( processor_name, &len );
+//    }
+//  }
+//  #if _MPI_VER
+//    PMPI_Bcast( preservation_unique_name, L_tmpnam, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
+//    PMPI_Bcast( processor_name, MPI_MAX_PROCESSOR_NAME, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
+//  #endif
+//    cout << preservation_unique_name << " " << processor_name << " / " << new_cd_id.node_id() << endl;
+//    (*new_cd_handle)->ptr_cd_->log_handle_.SetFilePath( new_prv_medium, string(preservation_unique_name) + string(processor_name) );
 
   return CD::CDInternalErrT::kOK;
 }
@@ -625,25 +633,6 @@ inline CD::CDInternalErrT CD::InternalDestroy(void)
 
 #endif
 
-//GONG
-//#if _WORK
-//  //When we destroy a CD, we need to delete its log (preservation file)
-//  for(std::list<CDEntry>::iterator it = entry_directory_.begin(); 
-//      it != entry_directory_.end() ; ++it) {
-//
-//    bool use_file = false;
-//    if(cd_id_.level()<=1)  use_file = true;
-//    if( use_file == true)  {
-////      if(cd_id_.level()==1) { // HDD
-////        it->CloseFile(&HDDlog);  
-////      }
-////      else { // SSD
-////        it->CloseFile(&SSDlog);  
-////      }
-//    }
-//
-//  }  // for loop ends
-//#endif
 
 #ifdef comm_log
   if (GetParentHandle()!=NULL)
@@ -716,6 +705,8 @@ CDErrT CD::Begin(bool collective, const char* label)
         }
       }
     }
+
+#ifdef libc_log
     //GONG: as long as parent CD is in replay(check with ), child CD needs to unpack logs
     if(GetParentHandle()->ptr_cd_->libc_log_ptr_->GetCommLogMode() == kReplayLog){
       LOG_DEBUG("unpack libc logs to children - replay mode\n");
@@ -737,9 +728,10 @@ CDErrT CD::Begin(bool collective, const char* label)
         }
     }
 
-  }
 #endif
+  }
 
+#endif
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
@@ -825,6 +817,9 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
       LOG_DEBUG("Should not come to here...\n");
     }
   }
+#endif
+
+#ifdef libc_log
   //GONG
   if(GetParentHandle()!=NULL) {
     if(IsParentLocal()) {
@@ -856,7 +851,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
       {       
         if(it->pushed_)
         {
-          printf(" free - completed + pushed - %p\n", it->p_);
+//          printf(" free - completed + pushed - %p\n", it->p_);
           if(it->isrecv_)
             free(it->p_);
           else
@@ -963,7 +958,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 
 
 
-#ifdef comm_log
+#ifdef libc_log
 //GONG
 bool CD::PushedMemLogSearch(void* p, CD *curr_cd)
 {
@@ -1674,61 +1669,6 @@ CDErrT CD::Preserve(void *data,
 
 
 
-#if 0
-    if( iterator_entry_ != entry_directory_.end() ) { // normal case
-
-//      printf("Reexecution mode start...\n");
-      CD_DEBUG("\n\nNow reexec!!! %d\n\n", iterator_entry_count++);
-
-      CDEntry *cd_entry = &*iterator_entry_;
-      ++iterator_entry_;
-
-      CDErrT cd_err;
-      switch( cd_entry->Restore() ) {
-        case CDEntry::CDEntryErrT::kOK : 
-          cd_err = CDErrT::kOK; 
-          break;
-        case CDEntry::CDEntryErrT::kOutOfMemory : 
-          cd_err = CDErrT::kError;
-          break;
-        case CDEntry::CDEntryErrT::kFileOpenError : 
-          cd_err = CDErrT::kError;
-          break;
-        case CDEntry::CDEntryErrT::kEntrySearchRemote : {
-
-          cd_err = CDErrT::kError;
-          break;
-        }
-        default : assert(0);
-      }
-
-      if(iterator_entry_ != entry_directory_.end()) {
-        PMPI_Win_fence();
-
-        CheckMailBox();
-
-
-      }
-      else { // The end of entry directory
-
-        CD_DEBUG("Test Asynch messages until start at %s / %s\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-  
-        while( !TestComm() ); 
-  
-        while(!TestRecvComm());
-  
-        CD_DEBUG("Test Asynch messages until done \n");
-
-        cd_exec_mode_ = kExecution;
-        // This point means the beginning of body stage. Request EntrySearch at this routine
-      }
-
-      return cd_err;
- 
-    }
-
-#else
-
 
     if( iterator_entry_ != entry_directory_.end() ) { // normal case
 
@@ -1766,55 +1706,72 @@ CDErrT CD::Preserve(void *data,
 
       if(iterator_entry_ != entry_directory_.end()) {
 
+//        if(task_size() > 1) {
+//        PMPI_Win_fence(0, mailbox_);
+//        }
+        CheckMailBox();
         if(IsHead()) { 
         
+//          TestComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestReqComm();
+//          TestComm();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          TestReqComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
           TestComm();
-          CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
           TestReqComm();
-          TestComm();
+
           if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
-          TestReqComm();
+          PMPI_Win_fence(0, mailbox_);
           CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
           }
-          TestComm();
           TestRecvComm();
+
         }
         else {
-      
           TestComm();
           TestReqComm();
           if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
+          PMPI_Win_fence(0, mailbox_);
+          CheckMailBox(); 
           }
-          TestComm();
-          TestReqComm();
-          CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestReqComm();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
           TestRecvComm();
-          CheckMailBox();
-          
-        
+//          TestComm();
+//          TestReqComm();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          TestReqComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestReqComm();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          TestRecvComm();
+//          CheckMailBox();
+//          
+//        
         }
 
       }
@@ -1824,48 +1781,63 @@ CDErrT CD::Preserve(void *data,
         CD_DEBUG("Test Asynch messages until start at %s / %s\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
   
         while( !(TestComm()) ); 
-  
-        if(IsHead()) { 
-        
-          TestComm();
-          CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
-          CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
+ 
+      if(IsHead()) { 
+        CheckMailBox();
+        if(task_size() > 1) {
+          PMPI_Win_fence(0, mailbox_);
         }
-        else {
-      
-          TestComm();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
-          CheckMailBox();
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          if(task_size() > 1) {
-            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-            Sync(color());
-          }
-          TestComm();
-          CheckMailBox();
+      }
+      else {
+
+        if(task_size() > 1) {
+          PMPI_Win_fence(0, mailbox_);
         }
+        CheckMailBox();
+
+      }
+
+//        if(IsHead()) { 
+//        
+//          TestComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//        }
+//        else {
+//      
+//          TestComm();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          CheckMailBox();
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          if(task_size() > 1) {
+//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//            Sync(color());
+//          }
+//          TestComm();
+//          CheckMailBox();
+//        }
   
         while(!TestRecvComm());
   
@@ -1880,7 +1852,6 @@ CDErrT CD::Preserve(void *data,
       return cd_err;
  
     }
-#endif
     else {  // abnormal case
       //return CDErrT::kOK;
 
@@ -2352,7 +2323,9 @@ CDErrT CD::InternalReexecute(void)
   //SZ: reset to child_seq_id_ = 0 
   LOG_DEBUG("Reset child_seq_id_ to 0 at the point of re-execution\n");
   child_seq_id_ = 0;
+#endif
 
+#ifdef libc_log
   //GONG
   if(libc_log_ptr_!=NULL){
     libc_log_ptr_->ReInit();
@@ -3686,17 +3659,39 @@ void CD::DeleteEntryDirectory(void)
 //}
 
 
+
+
+#ifdef libc_log
+//GONG
+CommLogErrT CD::CommLogCheckAlloc_libc(unsigned long length)
+{
+  return libc_log_ptr_->CheckChildLogAlloc(length);
+}
+
+//GONG
+CommLogMode CD::GetCommLogMode_libc()
+{
+  return libc_log_ptr_->GetCommLogMode();
+}
+
+//GONG
+bool CD::IsNewLogGenerated_libc()
+{
+  return libc_log_ptr_->IsNewLogGenerated_();
+}
+
+#endif
+
+
+
+
 #ifdef comm_log
 //SZ
 CommLogErrT CD::CommLogCheckAlloc(unsigned long length)
 {
   return comm_log_ptr_->CheckChildLogAlloc(length);
 }
-//GONG
-CommLogErrT CD::CommLogCheckAlloc_libc(unsigned long length)
-{
-  return libc_log_ptr_->CheckChildLogAlloc(length);
-}
+
 
 //SZ 
 bool CD::IsParentLocal()
@@ -3850,7 +3845,8 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
   }
 
   // delete the incomplete log entry
-  tmp_cd->incomplete_log_.erase(it);
+  if(found)
+    tmp_cd->incomplete_log_.erase(it);
   return kCommLogOK;
 }
 
@@ -3893,11 +3889,6 @@ CommLogMode CD::GetCommLogMode()
 {
   return comm_log_ptr_->GetCommLogMode();
 }
-//GONG
-CommLogMode CD::GetCommLogMode_libc()
-{
-  return libc_log_ptr_->GetCommLogMode();
-}
 
 //SZ
 bool CD::IsNewLogGenerated()
@@ -3905,11 +3896,6 @@ bool CD::IsNewLogGenerated()
   return comm_log_ptr_->IsNewLogGenerated_();
 }
 
-//GONG
-bool CD::IsNewLogGenerated_libc()
-{
-  return libc_log_ptr_->IsNewLogGenerated_();
-}
 
 CDType CD::GetCDType()
 { return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
