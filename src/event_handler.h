@@ -51,6 +51,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 
 namespace cd {
+  namespace internal {
 
 class EventHandler {
 public:
@@ -134,6 +135,6 @@ public:
 };
 
 
-
-}
+  } // namespace internal ends
+} // namespace cd ends
 #endif

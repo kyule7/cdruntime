@@ -63,6 +63,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using std::endl;
 
 namespace cd {
+  namespace internal {
 
 /**@addtogroup cd_defs 
  * @{
@@ -72,7 +73,7 @@ namespace cd {
  *
  */ 
 class NodeID : public Serializable {
-  friend class CDHandle;
+  friend class cd::CDHandle;
   friend class DataHandle;
 //  friend class CD;
 //  friend class HeadCD;
@@ -121,6 +122,7 @@ std::ostream& operator<<(std::ostream& str, const NodeID& node_id);
 
 /** @} */ // End group cd_defs
 
+  } // namespace internal ends
 } // namespace cd ends
 
 

@@ -55,8 +55,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_internal.h"
 #include "cd_global.h"
 
-using namespace cd;
 #define DEFAULT_ERROR_THRESHOLD 0.0
+
+namespace cd {
+  namespace interface {
+
+
 
 class ErrorProb {
 protected:
@@ -537,6 +541,7 @@ public:
 };
 
 
-
+  } // namespace interface ends
+} // namespace cd ends
 #endif
 

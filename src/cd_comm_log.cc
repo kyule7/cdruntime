@@ -40,6 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <string.h>
 
 using namespace cd;
+using namespace cd::logging;
 
 //CommLog::CommLog()
 //  :queue_size_unit_(1024), table_size_unit_(100), child_log_size_unit_(1024)

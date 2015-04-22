@@ -36,10 +36,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "data_handle.h"
 #include <iostream>
 using namespace cd;
+using namespace cd::internal;
 using namespace std;
 
 
-ostream& cd::operator<<(ostream& str, const DataHandle& dh)
+ostream& cd::internal::operator<<(ostream& str, const DataHandle& dh)
 {
   return str << "\n== Data Handle Information ======="
              << "\nhandle T:\t" << dh.handle_type_  

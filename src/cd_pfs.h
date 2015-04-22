@@ -54,6 +54,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define CommGroupFree free
 #endif
 namespace cd {
+  namespace internal {
 
 /** 
  * @brief This class is designed for Parallel File System (PFS) operations using MPI-I/O.
@@ -72,9 +73,9 @@ namespace cd {
  */
 
 class PFSHandle {
-	friend class cd::CD;
-	friend class cd::HeadCD;
-	friend class cd::CDEntry;
+	friend class CD;
+	friend class HeadCD;
+	friend class CDEntry;
 private:
 	CD *ptr_cd_; //pointer to owner CD
 
@@ -142,5 +143,6 @@ private:
 };
 
 
-} // namespace ends
+  } // namespace internal ends
+} // namespace cd ends
 #endif

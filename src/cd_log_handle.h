@@ -50,15 +50,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include "transaction.h"
 //#define CDLog tsn_log_struct
 
-using namespace cd;
 
 namespace cd {
+  namespace internal {
 
 class CDLogHandle;
 
 class Path {
-  friend class cd::CD;
-  friend class cd::CDLogHandle;
+  friend class CD;
+  friend class CDLogHandle;
 private:
   std::string filepath_;
   Path() 
@@ -89,8 +89,8 @@ private:
 
 
 class CDLogHandle {
-  friend class cd::CD;
-  friend class cd::HeadCD;
+  friend class CD;
+  friend class HeadCD;
 
 //  CDLog file_log_;
   bool opened_;
@@ -116,5 +116,6 @@ public:
 
 
 
+  } // namespace internal ends
 } // namespace cd ends
 #endif

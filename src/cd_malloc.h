@@ -49,6 +49,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 typedef void*(*Malloc)(size_t size);
 
 namespace cd {
+  namespace logging {
 
 class RuntimeLogger {
 	friend class CD;
@@ -66,9 +67,9 @@ class RuntimeLogger {
 
 
 //CD *IsLogable(bool *logable_);
-struct IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked);
+struct IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked, unsigned int level, unsigned long index);
 
-
+  }
 }
 
 #endif

@@ -107,7 +107,7 @@ void NodeID::Deserialize(void* object)
   size_          = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
 }
 
-std::ostream &cd::operator<<(std::ostream &str, const NodeID &node_id)
+std::ostream &cd::internal::operator<<(std::ostream &str, const NodeID &node_id)
 {
   return str << '(' 
              << node_id.task_in_color() << "/" << node_id.size() 

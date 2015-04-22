@@ -112,6 +112,9 @@ namespace cd {
 #endif
 
 
+  //GONG: global variable to represent the current context for malloc wrapper
+  extern bool app_side;
+
 /**@addtogroup internal_error_types  
  * @{
  *
@@ -393,7 +396,10 @@ namespace cd {
  */
     void open(const char *filename)
     {
+      bool temp = app_side;
+      app_side = false;
       ofs_.open(filename);
+      app_side = temp;
     }
 
 /**
@@ -402,7 +408,10 @@ namespace cd {
  */    
     void close(void)
     {
+      bool temp = app_side;
+      app_side = false;
       ofs_.close();
+      app_side = temp;
     }
 
  
@@ -411,13 +420,28 @@ namespace cd {
  *        After flushing it, it clears the buffer for the next use.
  *
  */
-    void flush(void) {
+    void flush(void) 
+    {
+      bool temp = app_side;
+      app_side = false;
       ofs_ << str();
       ofs_.flush();
       str("");
       clear();
+      app_side = temp;
     }
-      
+     
+
+    template <typename T>
+    std::ostream &operator<<(T val) 
+    {
+      bool temp = app_side;
+      app_side = false;
+      std::ostream &os = std::ostringstream::operator<<(val);
+      app_side = temp;
+      return os;
+    }
+ 
   };
 
 

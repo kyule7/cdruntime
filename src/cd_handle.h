@@ -61,9 +61,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #endif
 
 #include "error_injector.h"
-
 using namespace cd;
-
+using namespace cd::interface;
+using namespace cd::internal;
 
 
 
@@ -123,7 +123,6 @@ void CD_Finalize(DebugBuf *debugBuf //!< [in] debug buffer to print out or write
                 );
   
 /** @} */ // End cd_init_funcs group ===========================================================================
-} // namespace cd ends
 
 
 
@@ -132,7 +131,7 @@ void CD_Finalize(DebugBuf *debugBuf //!< [in] debug buffer to print out or write
  * @brief Interfaces that user need to know.
  * @{
  */
-/**@class cd::CDHandle 
+/**@class CDHandle 
  * @brief The accessor class that provides a handle to a specific CD instance.
  *
  * This class is the interface that users will actuall use to express resiliency-related information.
@@ -143,13 +142,13 @@ void CD_Finalize(DebugBuf *debugBuf //!< [in] debug buffer to print out or write
  *
  * __Most calls currently only have blocking versions.__ 
  */ 
-class cd::CDHandle {
+class CDHandle {
 /**@} */ // End cd_handle
-  friend class cd::RegenObject;
-  friend class cd::CD;
-  friend class cd::HeadCD;
-  friend class cd::CDEntry;
-  friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+  friend class internal::CD;
+  friend class internal::HeadCD;
+  friend class internal::CDEntry;
+  friend class RegenObject;
+  friend CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   friend void CD_Finalize(DebugBuf *debugBuf);
 
   public:
@@ -1108,4 +1107,5 @@ class cd::CDHandle {
 
 };
 
+} // namespace cd ends
 #endif

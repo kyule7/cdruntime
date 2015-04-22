@@ -83,7 +83,7 @@ bool CDNameT::operator==(const CDNameT& that) const
 
 int CDNameT::CDTag(void) const { return ((level_ << 16) | rank_in_level_); }
 
-std::ostream& cd::operator<<(std::ostream& str, const CDNameT& cd_name)
+std::ostream& cd::internal::operator<<(std::ostream& str, const CDNameT& cd_name)
 {
   return str << "CD"<< cd_name.level() << "_"  << cd_name.rank_in_level();
 }

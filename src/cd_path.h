@@ -49,7 +49,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_handle.h"
 #include "cd_entry.h"
 namespace cd {
-
+  namespace internal {
 
 // TODO
 // Using DCL(Double-Checking Locking), try to reduce some synch overhead for GetCDPath for multiple threads.
@@ -72,19 +72,19 @@ namespace cd {
  * It will be more convenient to use it with "using namespace   CDPath", and the usage for those methods will be the same as before.
  */
 class CDPath : public std::vector<CDHandle*> {
+  friend class cd::CDHandle;
   friend class CD;
   friend class HeadCD;
-  friend class CDHandle;
   friend class CDEntry;
   friend class HandleAllReexecute;
   friend class HandleEntrySearch;
   friend class HandleEntrySend;
-  friend CDHandle *GetCurrentCD(void);
-  friend CDHandle *GetRootCD(void);
-  friend CDHandle *GetParentCD(void);
-  friend CDHandle *GetParentCD(int current_level);
-  friend CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
-  friend void      CD_Finalize(DebugBuf *debugBuf);
+  friend CDHandle *cd::GetCurrentCD(void);
+  friend CDHandle *cd::GetRootCD(void);
+  friend CDHandle *cd::GetParentCD(void);
+  friend CDHandle *cd::GetParentCD(int current_level);
+  friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+  friend void      cd::CD_Finalize(DebugBuf *debugBuf);
 
 private:
   static CDPath *uniquePath_;
@@ -153,10 +153,10 @@ private:
   { 
     CD_DEBUG("CDPath::GetParentCD current level : %d\n", current_level);
 //    printf("CDPath::GetParentCD current level : %d at %d\n", current_level, myTaskID);
-    if(current_level > 100) {
-      std::cout << GetCurrentCD()->GetCDName() << " / " << GetCurrentCD()->node_id() << std::endl;
-
-    }
+//    if(current_level > 100) {
+//      std::cout << GetCurrentCD()->GetCDName() << " / " << GetCurrentCD()->node_id() << std::endl;
+//
+//    }
 
     if(uniquePath_ != NULL ) {
       if( uniquePath_->size() > 1 ) {
@@ -230,6 +230,7 @@ public:
 };
 */
 
+  } // namespace internal ends
 } // namespace cd ends
 
 #endif

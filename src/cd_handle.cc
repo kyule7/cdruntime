@@ -38,6 +38,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_path.h"
 
 using namespace cd;
+using namespace cd::interface;
+using namespace cd::internal;
 using namespace std;
 
 /// KL
@@ -120,7 +122,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   dbg.open(output_filename2.c_str());
 #endif
 
-  Internal::Intialize();
+  cd::internal::Initialize();
 
   CD::CDInternalErrT internal_err;
   NodeID new_node_id(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
@@ -198,7 +200,7 @@ void CD_Finalize(DebugBuf *debugBuf)
   assert(CDPath::GetCDPath()->back()!=NULL);
 
   CDPath::GetRootCD()->InternalDestroy(false);
-  Internal::Finalize();
+  cd::internal::Finalize();
 
 #if _DEBUG
   if(debugBuf != NULL) WriteDbgStream(debugBuf);
