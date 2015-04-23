@@ -36,7 +36,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_MALLOC_H 
 #define _CD_MALLOC_H
 
-#ifdef libc_log
 
 #include <stdint.h>
 #include <stdio.h>
@@ -70,4 +69,3 @@ struct RuntimeLogger {
 
 #endif
 
-#endif

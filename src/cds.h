@@ -34,7 +34,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_handle.h"
-
+using namespace cd;
+using namespace cd::logging;
 
 /**
  * @mainpage Containment Domains 

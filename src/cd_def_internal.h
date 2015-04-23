@@ -51,15 +51,8 @@ namespace cd {
     class PFSHandle;
   }
   namespace logging {
-
-#ifdef comm_log
-  //SZ
-  class CommLog;
-#endif
-#ifdef libc_log
-  //SZ
-  class RuntimeLogger;
-#endif
+    class CommLog;
+    class RuntimeLogger;
   }
   namespace interface {
 
