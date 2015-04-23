@@ -77,24 +77,24 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd::logging;
 
 namespace cd {
+
+
+//// data structure to store incompleted log entries
+//struct IncompleteLogEntry{
+//  //void * addr_;
+//  unsigned long addr_;
+//  unsigned long length_;
+//  unsigned long flag_;
+//  bool complete_;
+//  bool isrecv_;
+//  //GONG
+//  void* p_;
+//  bool pushed_;
+//  unsigned int level_;
+//  //bool valid_;
+//};
+
   namespace internal {
-
-
-// data structure to store incompleted log entries
-struct IncompleteLogEntry{
-  //void * addr_;
-  unsigned long addr_;
-  unsigned long length_;
-  unsigned long flag_;
-  bool complete_;
-  bool isrecv_;
-  //GONG
-  void* p_;
-  bool pushed_;
-  unsigned int level_;
-  //bool valid_;
-};
-
 //using namespace cd;
 
 
@@ -125,8 +125,8 @@ class CD : public Serializable {
     friend class HandleEntrySearch;
     friend class HandleEntrySend;
     friend class HeadCD;
-    friend class CommLog;
-    friend class RuntimeLogger;
+    friend class cd::logging::CommLog;
+    friend class cd::logging::RuntimeLogger;
     friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
     friend void Initialize(void);
     friend void Finalize(void);

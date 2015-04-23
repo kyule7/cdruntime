@@ -42,19 +42,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 using namespace cd;
 using namespace cd::logging;
+using namespace cd::internal;
 
-IncompleteLogEntry cd::NewLogEntry(void* p, size_t size, bool FreeInvoked, unsigned int level, unsigned long index)
+IncompleteLogEntry RuntimeLogger::NewLogEntry(void* p, size_t size, bool FreeInvoked, unsigned int level, unsigned long index)
 {
-      IncompleteLogEntry tmp_log_entry;
-      tmp_log_entry.addr_ = (unsigned long) 0;
-      tmp_log_entry.length_ = (unsigned long) size;
-      tmp_log_entry.flag_ = (unsigned long) index;
-      tmp_log_entry.complete_ = false;
-      tmp_log_entry.isrecv_ = FreeInvoked;
-      tmp_log_entry.p_ = p;
-      tmp_log_entry.pushed_ = false;
-      tmp_log_entry.level_ = level;
-      return tmp_log_entry;
+  IncompleteLogEntry tmp_log_entry;
+  tmp_log_entry.addr_ = (unsigned long) 0;
+  tmp_log_entry.length_ = (unsigned long) size;
+  tmp_log_entry.flag_ = (unsigned long) index;
+  tmp_log_entry.complete_ = false;
+  tmp_log_entry.isrecv_ = FreeInvoked;
+  tmp_log_entry.p_ = p;
+  tmp_log_entry.pushed_ = false;
+  tmp_log_entry.level_ = level;
+  return tmp_log_entry;
 }
 
 CD *RuntimeLogger::IsLogable(bool *logable_)

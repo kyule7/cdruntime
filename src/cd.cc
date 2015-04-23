@@ -877,7 +877,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    std::cout<<"size: "<<mem_alloc_log_.size()<<std::endl;
 
     //GONG: DO actual free completed mem_alloc_log_
-    std::vector<struct IncompleteLogEntry>::iterator it;
+    std::vector<IncompleteLogEntry>::iterator it;
     for (it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
     {
 //      printf("check log %p %i %i\n", it->p_, it->complete_, it->pushed_);
@@ -910,7 +910,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     {
       CD* ptmp = GetParentHandle()->ptr_cd_;
       // push memory allocation logs to parent
-      std::vector<struct IncompleteLogEntry>::iterator ii;
+      std::vector<IncompleteLogEntry>::iterator ii;
       for(it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
       {
         bool found = false;      
@@ -1066,7 +1066,7 @@ void* CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, v
         if(!p_update)
         {
           CD_DEBUG("parent_CD->cur_pos_mem_alloc_log: %lu\n", parent_CD->cur_pos_mem_alloc_log);      
-          std::vector<struct IncompleteLogEntry>::iterator it;
+          std::vector<IncompleteLogEntry>::iterator it;
           for (it=parent_CD->mem_alloc_log_.begin(); it!=parent_CD->mem_alloc_log_.end(); it++){
             //should be unique!
             if(it->level_ == level && it->flag_ == index){
@@ -3823,7 +3823,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 {
   // look for the entry in incomplete_log_
   int found = 0;
-  std::vector<struct IncompleteLogEntry>::iterator it;
+  std::vector<IncompleteLogEntry>::iterator it;
   CD* tmp_cd = this;
   for (it=incomplete_log_.begin(); it!=incomplete_log_.end(); it++)
   {
@@ -3973,7 +3973,7 @@ void CD::PrintIncompleteLog()
 {
   if (incomplete_log_.size()==0) return;
   LOG_DEBUG("incomplete_log_.size()=%ld\n", incomplete_log_.size());
-  for (std::vector<struct IncompleteLogEntry>::iterator ii=incomplete_log_.begin();
+  for (std::vector<IncompleteLogEntry>::iterator ii=incomplete_log_.begin();
         ii != incomplete_log_.end(); ii++)
   {
     LOG_DEBUG("\nPrint Incomplete Log information:\n");

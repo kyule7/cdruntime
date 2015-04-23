@@ -41,6 +41,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 using namespace cd;
 using namespace cd::logging;
+using namespace cd::internal;
 
 //CommLog::CommLog()
 //  :queue_size_unit_(1024), table_size_unit_(100), child_log_size_unit_(1024)
@@ -392,7 +393,7 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
   if (!completed)
   {
     // append one entry at the end of my_cd_->incomplete_log_
-    struct IncompleteLogEntry tmp_log_entry;
+    IncompleteLogEntry tmp_log_entry;
     tmp_log_entry.addr_ = (unsigned long) data_ptr;
     tmp_log_entry.length_ = (unsigned long) data_length;
     tmp_log_entry.flag_ = (unsigned long) flag;

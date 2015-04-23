@@ -40,6 +40,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_internal.h"
 #include "cd_id.h"
 
+using namespace cd::internal;
+
 namespace cd {
   namespace logging {
     
@@ -60,8 +62,8 @@ struct LogTableElement {
 };
     
 class CommLog {
-    friend class CD;
-    friend class HeadCD;
+    friend class cd::internal::CD;
+    friend class cd::internal::HeadCD;
 //    friend CD* IsLogable(bool *logable_);
   public:
     //CommLog();

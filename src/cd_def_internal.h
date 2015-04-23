@@ -56,6 +56,10 @@ namespace cd {
   //SZ
   class CommLog;
 #endif
+#ifdef libc_log
+  //SZ
+  class RuntimeLogger;
+#endif
   }
   namespace interface {
 
@@ -176,10 +180,10 @@ namespace cd {
 
 
 
-/** @brief Profile-related enumerator
- *
- */
 
+/** \addtogroup profiler-related
+ *@{
+ */
 /** @brief Profile-related enumerator
  *
  */
@@ -383,7 +387,29 @@ namespace cd {
   extern inline void IncHandledEventCounter(void)
   { handled_event_count++; }
 #endif
-}
+
+
+
+  namespace logging {
+
+    // data structure to store incompleted log entries
+    struct IncompleteLogEntry{
+      //void * addr_;
+      unsigned long addr_;
+      unsigned long length_;
+      unsigned long flag_;
+      bool complete_;
+      bool isrecv_;
+      //GONG
+      void* p_;
+      bool pushed_;
+      unsigned int level_;
+      //bool valid_;
+    };
+
+  }
+
+} // namespace cd ends
 
 #define ERROR_MESSAGE(...) \
   { fprintf(stderr, __VA_ARGS__); assert(0); }
