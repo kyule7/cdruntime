@@ -46,13 +46,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd.h"
  
-namespace cd {
 
 /**@addtogroup register_detection_recovery  
  * @{
  *
  */
 
+namespace cd {
 
 /**@class RecoverObject
  * @brief Recovery method that can be inherited and specialized by user

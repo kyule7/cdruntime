@@ -287,7 +287,6 @@ namespace cd {
   extern std::map<ENTRY_TAG_T, std::string> tag2str;
   extern std::hash<std::string> str_hash;
 
-  extern void WriteDbgStream(DebugBuf *debugBuf=NULL);
   extern uint64_t gen_object_id;
 
   //GONG: global variable to represent the current context for malloc wrapper

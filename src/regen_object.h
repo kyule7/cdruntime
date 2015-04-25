@@ -43,11 +43,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_global.h"
 #include "cd_def_internal.h" 
-namespace cd {
 
 /**@addtogroup preservation_funcs 
  * @{
  */
+
+namespace cd {
 /**@brief Interface for specifying regeneration functions for preserve/restore
  *
  * An interface for a data regeneration function that can be used to

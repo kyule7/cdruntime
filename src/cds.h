@@ -41,7 +41,7 @@ using namespace cd::logging;
  * @mainpage Containment Domains 
  *
  * \author Kyushick Lee, Song Zhang, Seong-Lyong Gong, Ali Fakhrzadehgan, Jinsuk Chung, Mattan Erez
- * \date March 2015
+ * \date April 2015
  *
  * \note Print version available at <http://lph.ece.utexas.edu/public/CDs>
  *
@@ -51,7 +51,7 @@ using namespace cd::logging;
  * The purpose of this document is to describe a CD API to program CD-enabled applications.
  * Current CD runtime is designed for MPI programs, which also works well with signle node, single thread programs.
  *
- * A complete discussion of the semantics of containment domains is out of scope of this document.
+ * A complete discussion of the semantics of Containment Domains is out of scope of this document.
  * The latest version of the semantics is available at
  * <http://lph.ece.utexas.edu/public/CDs>.
  *
@@ -59,14 +59,13 @@ using namespace cd::logging;
  * 
  * \image html cd_runtime.png "" width=10px
  *
- * Containment Domains (CDs) is a library-level approach dealing with
- * low-overhead resilient and scalable execution (see http://lph.ece.utexas.edu/public/CDs). 
- * CDs abandon the prevailing one-size-fits-all approach to resilience and instead embrace the
- * diversity of application needs, resilience mechanisms, and the deep
- * hierarchies expected in exascale hardware and software. 
+ * Containment Domains (CDs) is a library-level approach dealing with low-overhead resilient and scalable execution. 
+ * CDs abandon the prevailing one-size-fits-all approach to resilience and 
+ * instead embrace the diversity of application needs, resilience mechanisms, and 
+ * the deep hierarchies expected in exascale hardware and software. 
  * CDs give software a means to express resilience concerns intuitively and concisely. 
  * With CDs, software can preserve and restore state in an optimal way within the storage hierarchy 
- * and can efficiently support uncoordinated recovery. 
+ * and can efficiently support not globally-coordinated recovery. 
  * In addition, CDs allow software to tailor error detection, elision (ignoring some errors), and
  * recovery mechanisms to algorithmic and system needs.
  *
@@ -77,16 +76,13 @@ using namespace cd::logging;
  *
  * The supported features are descripted as below. Please take a look at it before using CD runtime system for your application.
  * - \ref sec_plans
- * \n\n
+ *
+ * \n
  *
  * This version of CD runtime system works with MPICH. There are some issues with OpenMPI regarding runtime logging, which we do not resolve, yet.
- * So, to use current version of CD runtime system, please use MPICH.
- *
- * \n\n
- *
- * For now, the documentation is organized around the following
- * "modules", which can also be accessed through the "Modules" tab on
- * the HTML docs.
+ * So, please use MPICH to use current version of CD runtime system.
+ * For now, the documentation is organized around the following "modules", 
+ * which can also be accessed through the "Modules" tab on the HTML docs.
  *
  * - \ref cd_init_funcs
  * - \ref cd_defs
@@ -165,10 +161,10 @@ using namespace cd::logging;
  * \subsection example_error_injection User-defined Error Injector Example
  * \include examples_for_doc/example_error_injector.h 
  *
- * \subsection example_error_injection Description File for Error Injection
- * \include examples_for_doc/error_injection_description.h
  */
 
+// \subsection example_error_injection Description File for Error Injection
+// \include examples_for_doc/error_injection_description.h
 
 /**
  * @defgroup cd_handle CD handle
@@ -184,12 +180,10 @@ using namespace cd::logging;
  * @defgroup cd_hierarchy CD hierarchy
  * @brief Methods regarding how to create CD hierarchy in application.
  *
- *        This Module is about functions and types to create CD hierarchy in the application.
  * 
  * @defgroup preservation_funcs Preservation/Restoration
  * @brief These modules are regarding how to preserve and restore data in CDs.
  *
- *        The \ref preservation_funcs module contains all preservation/restoration related types and methods.
  * 
  * @defgroup cd_detection Error detection
  * @brief Error detection mechanism supported by CD runtime.
@@ -201,9 +195,8 @@ using namespace cd::logging;
  * @brief Initialization and finalization for CD runtime.
  * 
  * @defgroup cd_accessor_funcs Global CD accessor
- * @brief The \ref cd_accessor_funcs are used to get the current and root.
+ * @brief The \ref cd_accessor_funcs are used to get the handle for current CD or root CD.
  *
- *        CD handles if these are not explicitly tracked. These methods are globally accessible without a CDHandle object.
  * 
  * 
  * @defgroup cd_defs CD types/definitions.

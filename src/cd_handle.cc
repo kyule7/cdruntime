@@ -170,7 +170,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   return root_cd_handle;
 }
 
-void WriteDbgStream(DebugBuf *debugBuf)
+inline void WriteDbgStream(void)
 {
 #if _CD_DEBUG == 1
   fclose(cdout);
@@ -179,12 +179,10 @@ void WriteDbgStream(DebugBuf *debugBuf)
 #if _DEBUG
   dbg.flush();
   dbg.close();
-//  debugBuf->flush();
-//  debugBuf->close();
 #endif
 }
 
-void CD_Finalize(DebugBuf *debugBuf)
+void CD_Finalize(void)
 {
   //GONG
   CDPrologue();
@@ -203,7 +201,7 @@ void CD_Finalize(DebugBuf *debugBuf)
   cd::internal::Finalize();
 
 #if _DEBUG
-  if(debugBuf != NULL) WriteDbgStream(debugBuf);
+  WriteDbgStream();
 #endif
 
 #if _ERROR_INJECTION_ENABLED

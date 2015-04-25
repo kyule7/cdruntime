@@ -48,6 +48,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <vector>
 #include "cd_handle.h"
 #include "cd_entry.h"
+/** \addtogroup cd_hierarchy  
+ *
+ * @{
+ */
 namespace cd {
   namespace internal {
 
@@ -56,8 +60,7 @@ namespace cd {
 // DCL will check if uniquePath_ is created or not, it performs synch only when it is not created before.
 // Using volatile keyword, we can let uniquePath_ be initialized correctly for multi-threading.
 
-/** \addtogroup cd_hierarchy  *
- * @{
+/** 
  * Kyushick : CDPath object should be unique for one process, so I adopted Singleton pattern for it.
  * But the difference is that I modified it for something like Memento pattern for it also, 
  * because it also performs like CareTaker object in that pattern.
@@ -84,7 +87,7 @@ class CDPath : public std::vector<CDHandle*> {
   friend CDHandle *cd::GetParentCD(void);
   friend CDHandle *cd::GetParentCD(int current_level);
   friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
-  friend void      cd::CD_Finalize(DebugBuf *debugBuf);
+  friend void      cd::CD_Finalize(void);
 
 private:
   static CDPath *uniquePath_;

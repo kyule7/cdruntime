@@ -38,6 +38,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 using namespace cd;
 using namespace cd::internal;
+using namespace cd::interface;
 using namespace cd::logging;
 using namespace std;
 
