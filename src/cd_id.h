@@ -72,7 +72,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_internal.h"
 using namespace cd;
 
-namespace cd{
+namespace cd {
+  namespace internal {
 
 /**@addtogroup cd_defs
  * @{
@@ -97,7 +98,7 @@ namespace cd{
  * 
  */ 
 class CDID {
-  friend class CDHandle;
+  friend class cd::CDHandle;
   friend class CD;
   friend class HeadCD;
   friend class CDEntry;
@@ -160,6 +161,7 @@ std::ostream& operator<<(std::ostream& str, const CDID& cd_id);
 
 /** @} */ // End group cd_defs
 
+  } // namespace internal ends
 } // namespace cd ends
 
 #endif 

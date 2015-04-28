@@ -36,7 +36,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_MALLOC_H 
 #define _CD_MALLOC_H
 
-#ifdef libc_log
 
 #include <stdint.h>
 #include <stdio.h>
@@ -49,11 +48,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 typedef void*(*Malloc)(size_t size);
 
 namespace cd {
+  namespace logging {
 
-class RuntimeLogger {
-	friend class CD;
-	friend class HeadCD;
-	public:
+struct RuntimeLogger {
+	friend class cd::internal::CD;
+	friend class cd::internal::HeadCD;
     static CD   *IsLogable(bool *logable_);
     static int   cd_fprintf(FILE *str, const char *format, va_list &args);
     static int   fclose(FILE *fp);
@@ -62,15 +61,11 @@ class RuntimeLogger {
     static void *calloc(size_t num, size_t size);
     static void *malloc(size_t size);
     static void  free(void *p);
+    static IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked, unsigned int level, unsigned long index);
 };
 
-
-//CD *IsLogable(bool *logable_);
-struct IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked);
-
-
+  }
 }
 
 #endif
 
-#endif

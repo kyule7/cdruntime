@@ -37,6 +37,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_path.h"
 
 using namespace cd;
+using namespace cd::internal;
+using namespace cd::interface;
+using namespace cd::logging;
 using namespace std;
 
 
@@ -57,7 +60,7 @@ map<string, uint32_t> CD::exec_count_;
 bool CD::need_reexec = false;
 uint32_t CD::reexec_level = 0;
 
-void Internal::Intialize(void)
+void cd::internal::Initialize(void)
 {
 #if _MPI_VER
   PMPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &(CD::pendingFlag_));
@@ -98,7 +101,7 @@ void Internal::Intialize(void)
 #endif
 }
 
-void Internal::Finalize(void)
+void cd::internal::Finalize(void)
 {
 
 #if _MPI_VER
@@ -158,7 +161,7 @@ CD::CD(void)
   cd_id_.object_id_ = Util::GenCDObjID();
 
   recoverObj_ = new RecoverObject;
-  need_reexec = false;
+//  need_reexec = false;
 //  reexec_level = 0;
   num_reexecution_ = 0;
   Init();  
@@ -194,7 +197,7 @@ CD::CD(CDHandle* cd_parent,
 
   reexecuted_ = false;
   if(cd_parent != NULL) {
-    if(cd_parent->ptr_cd_->reexecuted_ == true) {
+    if(cd_parent->ptr_cd_->reexecuted_ == true || cd_parent->ptr_cd_->recreated_ == true) {
       recreated_ = true;
     }
     else {
@@ -245,7 +248,7 @@ CD::CD(CDHandle* cd_parent,
 
   recoverObj_ = new RecoverObject;
 
-  need_reexec = false;
+//  need_reexec = false;
   reexec_level = cd_id.level();
   num_reexecution_ = 0;
 
@@ -327,7 +330,7 @@ void CD::Initialize(CDHandle* cd_parent,
 
   reexecuted_ = false;
   if(cd_parent != NULL) {
-    if(cd_parent->ptr_cd_->reexecuted_ == true) {
+    if(cd_parent->ptr_cd_->reexecuted_ == true || cd_parent->ptr_cd_->recreated_ == true) {
       recreated_ = true;
     }
     else {
@@ -364,6 +367,7 @@ void CD::Init()
 #ifdef libc_log
   libc_log_ptr_ = NULL;
   cur_pos_mem_alloc_log = 0;
+  replay_pos_mem_alloc_log = 0;
 #endif
 // Kyushick : I think we already initialize cd_id_ object inside cd object creator (outside of Init method)
 // So we do not have to get it here. 
@@ -450,7 +454,7 @@ CDHandle* CD::CreateRootCD(const char* name,
 
 CDErrT CD::Destroy(void)
 {
-  dbg << "~~~~~~~~~~~~~~~~~~~~~"<<endl;
+  CD_DEBUG("CD::Destroy\n");
   CDErrT err=CDErrT::kOK;
   InternalDestroy();
 
@@ -721,11 +725,13 @@ CDErrT CD::Begin(bool collective, const char* label)
             // need to reallocate table and data array...
             libc_log_ptr_->Realloc();
           }
-        }
-        else
-        {
-          LOG_DEBUG("Should not be here to unpack logs!! - libc\n");
-        }
+      }
+      else
+      {
+        LOG_DEBUG("Should not be here to unpack logs!! - libc\n");
+      }
+      cur_pos_mem_alloc_log = PullMemLogs();
+      replay_pos_mem_alloc_log = 0;
     }
 
 #endif
@@ -735,6 +741,9 @@ CDErrT CD::Begin(bool collective, const char* label)
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
+  }
+  else {
+    need_reexec = false;
   }
 //  else {
 //    cout << "Begin again! " << endl; //getchar();
@@ -755,6 +764,32 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   CD_DEBUG("\nCD::Complete : %s %s \t Reexec: %d\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec);
   
   begin_ = false;
+
+
+  Sync(color());
+
+  if(need_reexec) { 
+    // Before longjmp, it should decrement the event counts handled so far.
+
+#if _MPI_VER
+    DecPendingCounter();
+#endif
+
+    need_reexec = false;
+    //this->Recover(); 
+    CD_DEBUG("\n\n\n\n Reexec from level #%u from level #%u\n\n\n\n", reexec_level, level());
+//    CDHandle *curr_cdh = CDPath::GetCurrentCD();
+////    CDHandle *cdh = CDPath::GetCDLevel(reexec_level);
+////    while(cdh != curr_cdh) {
+////      curr_cdh->ptr_cd()->Complete();
+////      curr_cdh->ptr_cd()->Destroy();
+////      curr_cdh = CDPath::GetParentCD(curr_cdh->level());
+////    }
+//    
+//    curr_cdh->ptr_cd()->Recover(); 
+    Recover();
+  }
+
 
 #ifdef comm_log
   // SZ: pack logs and push to parent
@@ -843,7 +878,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    std::cout<<"size: "<<mem_alloc_log_.size()<<std::endl;
 
     //GONG: DO actual free completed mem_alloc_log_
-    std::vector<struct IncompleteLogEntry>::iterator it;
+    std::vector<IncompleteLogEntry>::iterator it;
     for (it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
     {
 //      printf("check log %p %i %i\n", it->p_, it->complete_, it->pushed_);
@@ -876,7 +911,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     {
       CD* ptmp = GetParentHandle()->ptr_cd_;
       // push memory allocation logs to parent
-      std::vector<struct IncompleteLogEntry>::iterator ii;
+      std::vector<IncompleteLogEntry>::iterator ii;
       for(it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
       {
         bool found = false;      
@@ -911,31 +946,6 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 
 
 #endif
-
-
-  Sync(color());
-
-  if(need_reexec) { 
-    // Before longjmp, it should decrement the event counts handled so far.
-
-#if _MPI_VER
-    DecPendingCounter();
-#endif
-
-    need_reexec = false;
-    //this->Recover(); 
-    CD_DEBUG("\n\n\n\n Reexec from level #%u from level #%u\n\n\n\n", reexec_level, level());
-//    CDHandle *curr_cdh = CDPath::GetCurrentCD();
-////    CDHandle *cdh = CDPath::GetCDLevel(reexec_level);
-////    while(cdh != curr_cdh) {
-////      curr_cdh->ptr_cd()->Complete();
-////      curr_cdh->ptr_cd()->Destroy();
-////      curr_cdh = CDPath::GetParentCD(curr_cdh->level());
-////    }
-//    
-//    curr_cdh->ptr_cd()->Recover(); 
-    Recover();
-  }
 
 
   // Increase sequential ID by one
@@ -978,7 +988,7 @@ bool CD::PushedMemLogSearch(void* p, CD *curr_cd)
           {
             ret = true;
             //If isnt completed, change it completed.
-            it->complete_ = true;
+//            it->complete_ = true;
             break;
           }
         }
@@ -999,7 +1009,48 @@ bool CD::PushedMemLogSearch(void* p, CD *curr_cd)
   return ret;
 }
 
-void* CD::MemAllocSearch(CD *curr_cd, void* p_update)
+
+
+unsigned int CD::PullMemLogs()
+{
+  unsigned int num_logs = 0;
+  CDHandle *cdh_temp = CDPath::GetParentCD(level());
+  std::vector<IncompleteLogEntry>::iterator it;  
+  if(cdh_temp != NULL)
+  {
+    CD* parent_CD = cdh_temp->ptr_cd();
+    if(parent_CD!=NULL)
+    {
+      for(it=parent_CD->mem_alloc_log_.begin(); it!=parent_CD->mem_alloc_log_.end();it++)
+      { 
+        //bring all logs lower than or equal to current CD
+        CD_DEBUG("try to pull logs %p %lu %u %u\n", it->p_, it->flag_, it->level_, level());
+        if(it->level_ >= level())
+        {
+          mem_alloc_log_.insert(mem_alloc_log_.end(), *it);      
+          num_logs++;
+        }
+      }
+    }
+    else
+    {
+      printf("CANNOT find parent CD\n");
+      assert(0);
+    }
+  }
+  for(it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
+    CD_DEBUG("pulled logs %p %i %i %lu\n", it->p_, it->complete_, it->pushed_, it->flag_);
+    CD_DEBUG("cur_pos_mem_alloc_log: %u\n", num_logs);
+
+  return num_logs;
+
+}
+
+
+
+
+
+void* CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, void* p_update)
 {
 //  printf("MemAllocSearch\n");
   void* ret = NULL;
@@ -1015,18 +1066,30 @@ void* CD::MemAllocSearch(CD *curr_cd, void* p_update)
       {
         if(!p_update)
         {
-          ret = parent_CD->mem_alloc_log_[parent_CD->cur_pos_mem_alloc_log].p_;
-        }
-        else
-        {
-          ret = parent_CD->mem_alloc_log_[parent_CD->cur_pos_mem_alloc_log].p_;
-          parent_CD->mem_alloc_log_[parent_CD->cur_pos_mem_alloc_log].p_ = p_update;
-        }
-        parent_CD->cur_pos_mem_alloc_log++;
-      }
-      else
-      {
-        ret = MemAllocSearch(parent_CD, p_update);
+          CD_DEBUG("parent_CD->cur_pos_mem_alloc_log: %lu\n", parent_CD->cur_pos_mem_alloc_log);      
+          std::vector<IncompleteLogEntry>::iterator it;
+          for (it=parent_CD->mem_alloc_log_.begin(); it!=parent_CD->mem_alloc_log_.end(); it++){
+            //should be unique!
+            if(it->level_ == level && it->flag_ == index){
+              CD_DEBUG("level: %u, index: %lu\n", level, index);   
+              ret = it->p_;
+//              break;
+            }
+          }
+          //ret = parent_CD->mem_alloc_log_[parent_CD->cur_pos_mem_alloc_log].p_;
+
+         }
+         else
+         {
+           ret = parent_CD->mem_alloc_log_[parent_CD->cur_pos_mem_alloc_log].p_;
+           parent_CD->mem_alloc_log_[parent_CD->cur_pos_mem_alloc_log].p_ = p_update;
+         }
+//       parent_CD->cur_pos_mem_alloc_log++;
+       }
+       else
+       {
+         CD_DEBUG("mem_alloc_log_.size()==0, search parent's log\n");      
+         ret = MemAllocSearch(parent_CD, level, index, p_update);
       }
     }
     else
@@ -2589,9 +2652,8 @@ CDHandle *HeadCD::Create(CDHandle* parent,
 
 CDErrT HeadCD::Destroy(void)
 {
+  CD_DEBUG("HeadCD::Destroy\n");
   CDErrT err=CDErrT::kOK;
-
-  CD_DEBUG("\nHeadCD::Destroy\n");
 
   InternalDestroy();
 
@@ -3762,7 +3824,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 {
   // look for the entry in incomplete_log_
   int found = 0;
-  std::vector<struct IncompleteLogEntry>::iterator it;
+  std::vector<IncompleteLogEntry>::iterator it;
   CD* tmp_cd = this;
   for (it=incomplete_log_.begin(); it!=incomplete_log_.end(); it++)
   {
@@ -3912,7 +3974,7 @@ void CD::PrintIncompleteLog()
 {
   if (incomplete_log_.size()==0) return;
   LOG_DEBUG("incomplete_log_.size()=%ld\n", incomplete_log_.size());
-  for (std::vector<struct IncompleteLogEntry>::iterator ii=incomplete_log_.begin();
+  for (std::vector<IncompleteLogEntry>::iterator ii=incomplete_log_.begin();
         ii != incomplete_log_.end(); ii++)
   {
     LOG_DEBUG("\nPrint Incomplete Log information:\n");

@@ -40,6 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "event_handler.h"
 
 using namespace cd;
+using namespace cd::internal;
 using namespace std;
 
 

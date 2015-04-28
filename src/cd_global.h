@@ -112,6 +112,9 @@ namespace cd {
 #endif
 
 
+  //GONG: global variable to represent the current context for malloc wrapper
+  extern bool app_side;
+
 /**@addtogroup internal_error_types  
  * @{
  *
@@ -325,9 +328,15 @@ namespace cd {
   extern int myTaskID;
   extern int totalTaskSize;
 
- /** \addtogroup cd_accessor_funcs 
-  * @{
-  */
+/** \addtogroup cd_accessor_funcs 
+ * These methods are globally accessible without a CDHandle object.
+ * So, user can get a handle of CD at any point of program with these methods.
+ * This can be used at convenience to map a CD for a function.
+ * In this case, users do not need to pass CDHandle as a function argument,
+ * but instead, they can get the leaf CD handle by calling GetCurrentCD().
+ *
+ * @{
+ */
 
 /**@brief Accessor function to current active CD.
  * 
@@ -344,20 +353,19 @@ namespace cd {
  */
   CDHandle *GetCurrentCD(void);
 
- /**
-  * @brief Accessor function to root CD of the application.
+ /**@brief Accessor function to a CDHandle at a root level in CD hierachy.
   * @return returns a pointer to the handle of the root CD; Returns
   * 0 if CD runtime is not yet initialized or because of a CD
   * implementation bug.
   */
   CDHandle *GetRootCD(void);
 
- /** @brief Accessor function to a CDHandle at a specific level in CDPath 
+ /** @brief Accessor function to a CDHandle at parent level of the leaf CD. 
   *  @return Pointer to CDHandle at a level
   */
   CDHandle *GetParentCD(void);
 
- /** @brief Accessor function to a CDHandle at a specific level in CDPath 
+ /** @brief Accessor function to a CDHandle at parent level of a specific CD hierarchy level. 
   *  @return Pointer to CDHandle at a level
   */
   CDHandle *GetParentCD(int current_level);
@@ -393,7 +401,10 @@ namespace cd {
  */
     void open(const char *filename)
     {
+      bool temp = app_side;
+      app_side = false;
       ofs_.open(filename);
+      app_side = temp;
     }
 
 /**
@@ -402,7 +413,10 @@ namespace cd {
  */    
     void close(void)
     {
+      bool temp = app_side;
+      app_side = false;
       ofs_.close();
+      app_side = temp;
     }
 
  
@@ -411,13 +425,28 @@ namespace cd {
  *        After flushing it, it clears the buffer for the next use.
  *
  */
-    void flush(void) {
+    void flush(void) 
+    {
+      bool temp = app_side;
+      app_side = false;
       ofs_ << str();
       ofs_.flush();
       str("");
       clear();
+      app_side = temp;
     }
-      
+     
+
+    template <typename T>
+    std::ostream &operator<<(T val) 
+    {
+      bool temp = app_side;
+      app_side = false;
+      std::ostream &os = std::ostringstream::operator<<(val);
+      app_side = temp;
+      return os;
+    }
+ 
   };
 
 
@@ -442,7 +471,7 @@ namespace cd {
 
 
   extern CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
-  extern void CD_Finalize(DebugBuf *debugBuf=NULL);
+  extern void CD_Finalize(void);
 
 
 

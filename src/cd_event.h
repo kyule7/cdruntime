@@ -48,7 +48,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_internal.h"
 #include <stdint.h>
 
-/**@class cd::CDEvent 
+
+
+namespace cd {
+  namespace internal {
+
+/**@class CDEvent 
  * @brief An object that provides an event identifier to a non-blocking CD runtime call
  *
  * This is basically just an internal event handle that the user can wait on
@@ -59,7 +64,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * \note We do not rely on C++11 async/futures here because the API is
  * meant to be somewhat portable to other languages.
  */ 
-class cd::CDEvent
+class CDEvent
 {
   protected:
     uint32_t *event_;
@@ -103,4 +108,7 @@ public:
 /** @} */ // End cd_event_funcs group ===========================================================================
 };
 
+
+  } // namespace internal ends
+} // namespace cd ends
 #endif 

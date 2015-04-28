@@ -237,8 +237,9 @@ int TestCDHierarchy(void)
   dbgApp << "Root CD Complete...\n" << endl;
   dbgApp << "Root CD Destroyed (Finalized) ...\n" << endl;
   dbgApp << "\n==== TestCDHierarchy Done ====\n" << endl; 
+  dbgApp.flush();
 
-  CD_Finalize(&dbgApp);
+  CD_Finalize();
 
 
   return kOK; 
@@ -254,12 +255,17 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   int ret=0;
 
+  dbgApp.open((string("./output/output_app_")+to_string(myRank)).c_str());
+  dbgApp << "\n==== TestSimpleHierarchy ====\n" << endl;
+
   ret = TestCDHierarchy();
   
   if( ret == kError ) 
     cout << "Test CD Hierarchy FAILED\n" << endl;
   else 
     cout << "Test CD Hierarchy PASSED\n" << endl;
+
+  dbgApp.close();
 
   MPI_Finalize();
 

@@ -44,7 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  *  User can inject errors using this error injector interface. 
  * `ErrorInjector` class is the base class that users will inherit if they want to plug in their own error injector.
- *  This functionality can be turned on/off by setting compile flag, `ENABLE_ERROR_INJECTOR`, as 1.
+ *  This functionality can be turned on/off by setting `ENABLE_ERROR_INJECTOR` as 1 in Makefile.
  *  It will be helpful to take a look at how to interact with CDs to inject errors through CD runtime.
  * - \ref sec_example_error_injection
  */
@@ -55,8 +55,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_internal.h"
 #include "cd_global.h"
 
-using namespace cd;
 #define DEFAULT_ERROR_THRESHOLD 0.0
+
+namespace cd {
+
+
 
 class ErrorProb {
 protected:
@@ -521,7 +524,6 @@ public:
   virtual ~CDErrorInjector(void) {}
 };
 
-/** @} */ // Ends error_injector
 
 
 class NodeFailureInjector : public ErrorInjector {
@@ -538,5 +540,9 @@ public:
 
 
 
+/** @} */ // Ends error_injector
+
+
+} // namespace cd ends
 #endif
 

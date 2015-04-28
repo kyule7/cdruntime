@@ -55,6 +55,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using std::endl;
 
 namespace cd {
+  namespace internal {
 /**@addtogroup cd_defs
  * @{
  */
@@ -99,6 +100,7 @@ std::ostream& operator<<(std::ostream& str, const CDNameT& cd_name);
 
 /** @} */ // End group cd_defs
 
+  } // namespace internal ends
 } // namespace cd ends
 
 #endif 

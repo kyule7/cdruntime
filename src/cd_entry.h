@@ -51,6 +51,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "event_handler.h"
 
 namespace cd {
+  namespace internal {
 
 /**@class CDEntry
  * @brief Data structure that contains preservation-related information.
@@ -260,7 +261,7 @@ class CDEntry : public Serializable
 };
 
 
-
+  } // namespace internal ends
 } // namespace cd ends
 #endif
 

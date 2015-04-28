@@ -39,6 +39,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#define u u
 
 using namespace cd;
+using namespace cd::internal;
 using namespace std;
 
 CDEntry::CDEntryErrT CDEntry::Delete(void)
@@ -430,7 +431,7 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
 
 
 
-ostream& cd::operator<<(ostream& str, const CDEntry& cd_entry)
+ostream& cd::internal::operator<<(ostream& str, const CDEntry& cd_entry)
 {
   return str << "\n== CD Entry Information ================"
              << "\nSource      :\t" << cd_entry.src_data_  

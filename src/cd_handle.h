@@ -61,19 +61,28 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #endif
 
 #include "error_injector.h"
-
 using namespace cd;
+using namespace cd::interface;
+using namespace cd::internal;
 
-
-
-
-namespace cd {
-/**@ingroup cd_init_funcs
+/**@addtogroup cd_init_funcs
+ * User must exeplicitly initialize and finalize CD runtime 
+ * by calling CD_Init() and CD_Finalize().
+ * For MPI-version of CD runtime, 
+ * CD_Init() should be called after MPI_Init(), and
+ * CD_Finalize() should be called before MPI_Finalize().
+ * In current version of CD runtime, user can explicitly control 
+ * the medium of preservation by CD_Init() for root CD,
+ * and CDHandle::Create() for non-root CDs.
  * @{
  */
 
-/** 
- * @brief Initialize the CD runtime.
+namespace cd {
+/**@}
+ * @addtogroup cd_init_funcs
+ * @{
+ */
+/**@brief Initialize the CD runtime.
  * 
  * Creates all necessary CD runtime components and data structures,
  * initializes the CD runtime, and creates the root CD. 
@@ -84,6 +93,13 @@ namespace cd {
  * can be explicitly controlled by users.
  * This medium can be set per CD level, 
  * so users can set a specific medium at CD_Init() or CDHandle::Create().
+ * If users want to set a specific filepath for preservations,
+ * they can set it by defining environmetal variable (CD_PRV_FILEPATH)
+ * before building CD-enabled executable. 
+ * If it is not defined, the default filepath is 
+ * {current location running the executable}/{medium_name_such_as_HDD}.
+ * In initialization phase, it creates a directory for preservation files, and
+ * this filepath is broadcasted to every process in SPMD program.
  *
  * `CD_Init()` __should only be called once per application.__
  *
@@ -107,24 +123,24 @@ CDHandle *CD_Init(int numTask=1, //!< [in] number of task. For single task versi
                                               //!< Default is kDRAM.
                  );
   
-/** 
- * @brief Finalize the CD runtime.
+/**@brief Finalize the CD runtime.
  *  
- * It should be called once in a program with the pair of `CD_Init()`.
- * This call destroys CD-related global data structures and root CD object.
- * If DebugBuf object's pointer can passed to `CD_Finalize()`, 
- * string streams will be written to file or printed out to stdout. (it is for debugging purpose.)
+ * This call destroys root CD object, which indicates the termination of CD-enabled program.
+ * In this finalization routine, CD-related global data structures are all destroyed. 
+ * This call is recommended to be called before MPI_Finalize() in MPI-version of CD runtime.
+ * 
+ *
+ * `CD_Finalize()` __should only be called once per application.__
  *
  * @return Returns nothing.
  *
  * @sa Internal::Finalize(), sec_example_test_hierarchy
  */
-void CD_Finalize(DebugBuf *debugBuf //!< [in] debug buffer to print out or write to file.
-                );
+void CD_Finalize(void);
   
+
 /** @} */ // End cd_init_funcs group ===========================================================================
 } // namespace cd ends
-
 
 
 
@@ -132,7 +148,9 @@ void CD_Finalize(DebugBuf *debugBuf //!< [in] debug buffer to print out or write
  * @brief Interfaces that user need to know.
  * @{
  */
-/**@class cd::CDHandle 
+namespace cd {
+
+/**@class CDHandle 
  * @brief The accessor class that provides a handle to a specific CD instance.
  *
  * This class is the interface that users will actuall use to express resiliency-related information.
@@ -143,14 +161,14 @@ void CD_Finalize(DebugBuf *debugBuf //!< [in] debug buffer to print out or write
  *
  * __Most calls currently only have blocking versions.__ 
  */ 
-class cd::CDHandle {
+class CDHandle {
 /**@} */ // End cd_handle
-  friend class cd::RegenObject;
-  friend class cd::CD;
-  friend class cd::HeadCD;
-  friend class cd::CDEntry;
-  friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
-  friend void CD_Finalize(DebugBuf *debugBuf);
+  friend class internal::CD;
+  friend class internal::HeadCD;
+  friend class internal::CDEntry;
+  friend class RegenObject;
+  friend CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+  friend void CD_Finalize(void);
 
   public:
 
@@ -211,6 +229,17 @@ class cd::CDHandle {
 
 
 /**@addtogroup cd_hierarchy 
+ * This Module is about functions and types to create CD hierarchy in the application.
+ * There are three kinds of Create() method for CD hierarchy. 
+ * One is non-collective manner, and the other two are collective calls.
+ * Users can map each task to belong to a specific task group corresponding to a CD,
+ * and also they can register a split method to easily map parent-level tasks to children-level tasks.
+ * By default, 3 dimensionally splitting method is provided, so the number of tasks provided should be
+ * n^3 (for example, 8, 27, 64, ...). In future, there will be more default split functions provided. 
+ * And users can also define this split function and register it.
+ * Another important point in this module is CD_Begin() and CD_Complete() pair.
+ * Explanation about these are following.
+ * 
  * @sa cd_split 
  * @{
  */
@@ -456,8 +485,19 @@ class cd::CDHandle {
  /** @} */ // Ends cd_split
 
 /**@addtogroup preservation_funcs
+ * The \ref preservation_funcs module contains all preservation/restoration related types and methods.
+ * With CDs, a variety of preservation methods are supported, and they are configured in CDHandle::Preserve().
+ * Users can preserve via reference, but it is the responsibility of users to make sure if the tag of preserving data 
+ * is matched to the target preservation entry that is referred to.
+ * If the tag is not matched, CD runtime will not be able to search for 
+ * the right entry preserved via copy at the parent CD level. (Currently, this case cause calling internal assert call.)
+ * 
+ * __Users must make sure that all the data which are touched in a CD computation body are preserved.
+ * The data are modified by computation, but not preserved for the original states, it will cause a critical problem.__
+ * 
  * @{
  */
+
 /**@brief (Non-collective) Preserve data to be restored when recovering. 
  *        (typically reexecuting the CD from right after its Begin() call.)
  * 
@@ -826,8 +866,10 @@ class cd::CDHandle {
  * So, ERROR_INJECTION_ENABLED=0 to turn off this error injection functinality.
  * Even though there is some code lines regarding error injection, 
  * it will not affect any errors with this compile-time flag off.
- * -\ref sec_example_error_injection
- * @param [in] newly created memory error injector object.
+ *
+ * (See \ref sec_example_error_injection)
+ *
+ * @param [in] created memory error injector object.
  */
 
 #if _ERROR_INJECTION_ENABLED
@@ -1108,4 +1150,5 @@ class cd::CDHandle {
 
 };
 
+} // namespace cd ends
 #endif

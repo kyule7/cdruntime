@@ -40,7 +40,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_internal.h"
 #include "cd_id.h"
 
+using namespace cd::internal;
+
 namespace cd {
+  namespace logging {
     
 struct LogTableElement {
   unsigned long pos_; // starting position of logged data in log_queue_
@@ -59,9 +62,9 @@ struct LogTableElement {
 };
     
 class CommLog {
-    friend class cd::CD;
-    friend class cd::HeadCD;
-//    friend CD* cd::IsLogable(bool *logable_);
+    friend class cd::internal::CD;
+    friend class cd::internal::HeadCD;
+//    friend CD* IsLogable(bool *logable_);
   public:
     //CommLog();
 
@@ -235,5 +238,6 @@ class CommLog {
     ChildLogQueue child_log_;
 };
 
+  } // namespace logging ends
 } // namespace cd ends
 #endif

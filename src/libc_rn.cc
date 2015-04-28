@@ -37,7 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_malloc.h"
 #include <stdarg.h>
-
+using namespace cd::logging;
 
 int rand()
 {

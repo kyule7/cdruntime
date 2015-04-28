@@ -74,38 +74,36 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_malloc.h"
 #endif
 
+using namespace cd::logging;
 
 namespace cd {
 
 
-// data structure to store incompleted log entries
-struct IncompleteLogEntry{
-  //void * addr_;
-  unsigned long addr_;
-  unsigned long length_;
-  unsigned long flag_;
-  bool complete_;
-  bool isrecv_;
-  //GONG
-  void* p_;
-  bool pushed_;
-  //bool valid_;
-};
+//// data structure to store incompleted log entries
+//struct IncompleteLogEntry{
+//  //void * addr_;
+//  unsigned long addr_;
+//  unsigned long length_;
+//  unsigned long flag_;
+//  bool complete_;
+//  bool isrecv_;
+//  //GONG
+//  void* p_;
+//  bool pushed_;
+//  unsigned int level_;
+//  //bool valid_;
+//};
 
+  namespace internal {
 //using namespace cd;
 
 
-/**@class Internal 
- * @brief This class contains static internal routines 
- *        regarding initialization and finalization of CD runtime.
- *
- */ 
-class Internal {
-  friend CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
-  friend void CD_Finalize(DebugBuf *debugBuf);
-  static void Intialize(void);
-  static void Finalize(void);
-};
+//class Internal 
+//brief This class contains static internal routines 
+//      regarding initialization and finalization of CD runtime.
+void Initialize(void);
+
+void Finalize(void);
 
 
 /**@class CD 
@@ -116,23 +114,24 @@ class Internal {
  */ 
 class CD : public Serializable {
     /// The friends of CD class
-    friend class CDHandle;  
-    friend class Internal;
-    friend class RegenObject;   
+    friend class cd::CDHandle;  
+    friend class cd::RegenObject;   
+    friend class cd::RecoverObject;
     friend class CDEntry;  
-    friend class RecoverObject;
+    friend class PFSHandle;
     friend class HandleAllReexecute;
     friend class HandleAllResume;
     friend class HandleAllPause;
     friend class HandleEntrySearch;
     friend class HandleEntrySend;
     friend class HeadCD;
-    friend class CommLog;
-    friend class PFSHandle;
-    friend class RuntimeLogger;
+    friend class cd::logging::CommLog;
+    friend class cd::logging::RuntimeLogger;
     friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+    friend void Initialize(void);
+    friend void Finalize(void);
 
-//    friend CD* cd::IsLogable(bool *logable_);
+//    friend CD* IsLogable(bool *logable_);
 //    friend CDEntry *CDHandle::InternalGetEntry(std::string entry_name);
     enum { 
       CD_PACKER_NAME=0,
@@ -301,8 +300,8 @@ update the preserved data.
     CommLog *libc_log_ptr_;
     //GONG
     std::vector<IncompleteLogEntry> mem_alloc_log_;
-    unsigned int cur_pos_mem_alloc_log;
-
+    unsigned long cur_pos_mem_alloc_log;
+    unsigned long replay_pos_mem_alloc_log;
 #endif
     // PFS
     PFSHandle *pfs_handler_;
@@ -558,8 +557,9 @@ public:
 public:
     //GONG: duplicated for libc logging
     CommLogErrT CommLogCheckAlloc_libc(unsigned long length);
-    void* MemAllocSearch(CD *curr_cd, void* p_update = NULL);
+    void* MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, void* p_update = NULL);
     bool PushedMemLogSearch(void* p, CD *curr_cd);
+    unsigned int PullMemLogs(void);
 #endif
 
 #ifdef comm_log
@@ -714,5 +714,7 @@ class HeadCD : public CD {
 #endif    
 };
 
-}
+
+  } // namespace internal ends
+} // namespace cd ends
 #endif

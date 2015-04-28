@@ -42,13 +42,18 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * @author Kyushick Lee, Mattan Erez
  * @date March 2015
  *
- *
- * \addtogroup error_reporting Error Reporting 
- *  The \ref error_reporting module includes the definition of types
- *  and methods used for system and CD runtime error/failure reporting.
- *
+ */
+/**\addtogroup error_reporting Error Reporting 
+ * The \ref error_reporting module includes the definition of types
+ * and methods used for system and CD runtime error/failure reporting.
  * @{
- *
+ */
+
+#include "cd_global.h"
+#include "cd_def_internal.h" 
+
+namespace cd {
+/**
  * \brief Type for specifying system errors and failure names
  *
  * This type represents the interface between the user and the
@@ -82,12 +87,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  *
  */
-#include "cd_global.h"
-#include "cd_def_internal.h" 
 
-
-namespace cd {
-/**@class cd::SysErrInfo 
+/**@class SysErrInfo 
  * @brief Interface to error/failure-specific information 
  *
  * An abstract interface to specific error/failure information, such
@@ -108,7 +109,7 @@ public:
   virtual ~SysErrInfo(void) {}
 };
 
-/**@class cd::MemErrInfo
+/**@class MemErrInfo
  * @brief Interface to memory-type error information
  *
  * This is meant to potentially be extended.
@@ -265,9 +266,6 @@ uint32_t DeclareErrLoc(const char* name_string //!< user-specified name for a ne
  */
 CDErrT UndeclareErrLoc(uint error_name_id //!< ID to free
                        );
-
-
-
 
 //std::ostream& operator<<(const std::ostream& str, const SysErrT& sys_err)
 //{

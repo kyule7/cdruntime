@@ -36,10 +36,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 
 using namespace cd;
+using namespace cd::internal;
 using namespace std;
 
 
-PFSHandle::PFSHandle( cd::CD* my_cd )
+PFSHandle::PFSHandle( CD* my_cd )
 {
 	ptr_cd_ = my_cd;
 	PFS_file_path_ = "./";
@@ -51,7 +52,7 @@ PFSHandle::PFSHandle( cd::CD* my_cd )
 	Open_File();
 }
 
-PFSHandle::PFSHandle( cd::CD* my_cd, const char* file_path )
+PFSHandle::PFSHandle( CD* my_cd, const char* file_path )
 {
 	ptr_cd_ = my_cd;
 	PFS_chunk_size_ = 1048576;//default chunk is considered to be 1MB.
@@ -62,7 +63,7 @@ PFSHandle::PFSHandle( cd::CD* my_cd, const char* file_path )
 	Open_File();
 }
 
-PFSHandle::PFSHandle( cd::CD* my_cd, const char* file_path , uint64_t chunk_size )
+PFSHandle::PFSHandle( CD* my_cd, const char* file_path , uint64_t chunk_size )
 {
 	ptr_cd_ = my_cd;
 	PFS_chunk_size_ = chunk_size;

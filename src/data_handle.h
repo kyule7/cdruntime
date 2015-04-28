@@ -56,6 +56,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 
 namespace cd {
+  namespace internal {
+
 /**
   * @brief Information of data regarding preservation
   *
@@ -113,7 +115,7 @@ class DataHandle : public Serializable {
     { 
       strcpy(file_name_, INIT_FILE_PATH); 
       ref_name_ = cd_hash(ref_name); 
-      cd::tag2str[ref_name_] = ref_name; 
+      tag2str[ref_name_] = ref_name; 
       node_id_ = node_id; 
     }
 
@@ -148,20 +150,20 @@ class DataHandle : public Serializable {
       // but reqires more overhead in reexecution time which is rare.
       strcpy(file_name_, INIT_FILE_PATH); 
       ref_name_ = cd_hash(ref_name); 
-      cd::tag2str[ref_name_] = ref_name; 
+      tag2str[ref_name_] = ref_name; 
     }
 
     ~DataHandle() {}
 
     void        set_file_name(const char *file_name)       { strcpy(file_name_, file_name); }
-    void        set_ref_name(std::string ref_name)         { ref_name_     = cd_hash(ref_name); cd::tag2str[ref_name_] = ref_name;}
+    void        set_ref_name(std::string ref_name)         { ref_name_     = cd_hash(ref_name); tag2str[ref_name_] = ref_name;}
     void        set_ref_offset(uint64_t ref_offset)        { ref_offset_   = ref_offset; }
     void        set_address_data(const void *address_data) { address_data_ = (void *)address_data; }
     void        set_len(uint64_t len)                      { len_ = len; }
     void        set_handle_type(const HandleType& handle_type) { handle_type_ = handle_type; }
 public:
     std::string file_name(void)    const { return file_name_; }
-    std::string ref_name(void)     const { return cd::tag2str[ref_name_]; }
+    std::string ref_name(void)     const { return tag2str[ref_name_]; }
     ENTRY_TAG_T ref_name_tag(void) const { return ref_name_; }
     uint64_t    ref_offset(void)   const { return ref_offset_; }
     void*       address_data(void) const { return address_data_; }
@@ -265,6 +267,7 @@ private:
 
 std::ostream& operator<<(std::ostream& str, const DataHandle& dh);
 
+  } // namespace internal ends
 } // namespace cd ends
 
 #endif

@@ -36,6 +36,33 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_DEF_INTERNAL_H
 #define _CD_DEF_INTERNAL_H
 
+namespace cd {
+  namespace internal {
+
+    class CD;
+    class HeadCD;
+    class CDPath;
+    class CDEntry;
+    class DataHandle;
+    class NodeID;
+    class CDNameT;
+    class CDID;
+    class CDEvent;
+    class PFSHandle;
+  }
+  namespace logging {
+    class CommLog;
+    class RuntimeLogger;
+  }
+  namespace interface {
+
+  }
+}
+
+using namespace cd;
+using namespace cd::internal;
+using namespace cd::interface;
+using namespace cd::logging;
 #include <string>
 #include <vector>
 #include <map>
@@ -110,27 +137,15 @@ typedef uint32_t ENTRY_TAG_T;
 //GONG: global variable to represent the current context for malloc wrapper
 namespace cd {
 
-  class CD;
-  class HeadCD;
   class CDHandle;
-  class CDPath;
-  class CDEntry;
-  class DataHandle;
   class Serializable;
-  class NodeID;
-  class CDID;
   class Packer; 
   class Unpacker; 
 //  class Util;
-  class CDEvent;
   class RegenObject;  
   class RecoverObject;
-  class PFSHandle;
   class SysErrT;
-#ifdef comm_log
-  //SZ
-  class CommLog;
-#endif
+
 
 
 /** \addtogroup cd_defs 
@@ -158,10 +173,10 @@ namespace cd {
 
 
 
-/** @brief Profile-related enumerator
- *
- */
 
+/** \addtogroup profiler-related
+ *@{
+ */
 /** @brief Profile-related enumerator
  *
  */
@@ -215,7 +230,6 @@ namespace cd {
                         kEventResolved,
                         kEventPending };
 
-  class CDNameT;
 
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
 
@@ -273,11 +287,10 @@ namespace cd {
   extern std::map<ENTRY_TAG_T, std::string> tag2str;
   extern std::hash<std::string> str_hash;
 
-  extern void WriteDbgStream(DebugBuf *debugBuf=NULL);
   extern uint64_t gen_object_id;
 
   //GONG: global variable to represent the current context for malloc wrapper
-  extern bool app_side;
+//  extern bool app_side;
 
   static inline void nullFunc(void) {}
 
@@ -366,7 +379,29 @@ namespace cd {
   extern inline void IncHandledEventCounter(void)
   { handled_event_count++; }
 #endif
-}
+
+
+
+  namespace logging {
+
+    // data structure to store incompleted log entries
+    struct IncompleteLogEntry{
+      //void * addr_;
+      unsigned long addr_;
+      unsigned long length_;
+      unsigned long flag_;
+      bool complete_;
+      bool isrecv_;
+      //GONG
+      void* p_;
+      bool pushed_;
+      unsigned int level_;
+      //bool valid_;
+    };
+
+  }
+
+} // namespace cd ends
 
 #define ERROR_MESSAGE(...) \
   { fprintf(stderr, __VA_ARGS__); assert(0); }
