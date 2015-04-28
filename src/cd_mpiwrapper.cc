@@ -62,6 +62,14 @@ int MPI_Send(const void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Send out of CD context...\n");
+    mpi_ret = PMPI_Send(const_cast<void *>(buf), count, datatype, dest, tag, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -109,6 +117,14 @@ int MPI_Ssend(const void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Ssend out of CD context...\n");
+    mpi_ret = PMPI_Ssend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -157,6 +173,14 @@ int MPI_Rsend(const void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Rsend out of CD context...\n");
+    mpi_ret = PMPI_Rsend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -205,6 +229,14 @@ int MPI_Bsend(const void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Bsend out of CD context...\n");
+    mpi_ret = PMPI_Bsend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -256,6 +288,14 @@ int MPI_Recv(void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Recv out of CD context...\n");
+    mpi_ret = PMPI_Recv(const_cast<void *>(buf), count, datatype, src, tag, comm, status);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -310,6 +350,15 @@ int MPI_Sendrecv(const void *sendbuf,
   LOG_DEBUG("recvbuf=%p, &recvbuf=%p\n", recvbuf, &recvbuf);
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Sendrecv out of CD context...\n");
+    mpi_ret = PMPI_Sendrecv(const_cast<void *>(sendbuf), sendcount, sendtype, dest, sendtag,
+                          recvbuf, recvcount, recvtype, source, recvtag, comm, status);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -379,6 +428,14 @@ int MPI_Sendrecv_replace(void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Sendrecv_replace out of CD context...\n");
+    mpi_ret = PMPI_Sendrecv_replace(buf, count, datatype, dest, sendtag, source, recvtag, comm, status);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -444,6 +501,14 @@ int MPI_Isend(const void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Isend out of CD context...\n");
+    mpi_ret = PMPI_Isend(const_cast<void *>(buf), count, datatype, dest, tag, comm, request);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -495,6 +560,14 @@ int MPI_Irecv(void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Irecv out of CD context...\n");
+    mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -539,6 +612,14 @@ int MPI_Test(MPI_Request *request,
   LOG_DEBUG("here inside MPI_Test\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    //LOG_DEBUG("Warning: MPI_Test out of CD context...\n");
+    mpi_ret = PMPI_Test(request, flag, status);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -616,6 +697,14 @@ int MPI_Testall(int count,
   LOG_DEBUG("here inside MPI_Testall\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    //LOG_DEBUG("Warning: MPI_Testall out of CD context...\n");
+    mpi_ret = PMPI_Testall(count, array_of_requests, flag, array_of_statuses);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -705,6 +794,14 @@ int MPI_Testany(int count,
   LOG_DEBUG("here inside MPI_Testany\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    //LOG_DEBUG("Warning: MPI_Testany out of CD context...\n");
+    mpi_ret = PMPI_Testany(count, array_of_requests, index, flag, status);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -785,6 +882,14 @@ int MPI_Testsome(int incount,
   LOG_DEBUG("here inside MPI_Testsome\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    //LOG_DEBUG("Warning: MPI_Testsome out of CD context...\n");
+    mpi_ret = PMPI_Testsome(incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -872,6 +977,14 @@ int MPI_Wait(MPI_Request *request,
   LOG_DEBUG("here inside MPI_Wait\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Wait out of CD context...\n");
+    mpi_ret = PMPI_Wait(request, status);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -919,6 +1032,14 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
   LOG_DEBUG("here inside MPI_Waitall\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Waitall out of CD context...\n");
+    mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -987,6 +1108,14 @@ int MPI_Waitany(int count, MPI_Request *array_of_requests,
   LOG_DEBUG("here inside MPI_Waitany\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Waitany out of CD context...\n");
+    mpi_ret = PMPI_Waitany(count, array_of_requests, index, status);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1042,6 +1171,14 @@ int MPI_Waitsome(int incount,
   LOG_DEBUG("here inside MPI_Waitsome\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Waitsome out of CD context...\n");
+    mpi_ret = PMPI_Waitsome(incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1113,6 +1250,14 @@ int MPI_Barrier (MPI_Comm comm)
 //  LOG_DEBUG("comm=%x, &comm=%p\n", comm, &comm);
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Barrier out of CD context...\n");
+    mpi_ret = PMPI_Barrier(comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1157,6 +1302,14 @@ int MPI_Bcast (void *buffer,
   LOG_DEBUG("here inside MPI_Bcast\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Bcast out of CD context...\n");
+    mpi_ret = PMPI_Bcast(buffer, count, datatype, root, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1204,6 +1357,14 @@ int MPI_Gather(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Gather\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Gather out of CD context...\n");
+    mpi_ret = PMPI_Gather(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     int myrank, size;
@@ -1274,6 +1435,14 @@ int MPI_Gatherv(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Gatherv\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Gatherv out of CD context...\n");
+    mpi_ret = PMPI_Gatherv(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(displs), recvtype, root, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     int myrank, size;
@@ -1357,6 +1526,14 @@ int MPI_Allgather(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Allgather\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Allgather out of CD context...\n");
+    mpi_ret = PMPI_Allgather(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     int size;
@@ -1409,6 +1586,14 @@ int MPI_Allgatherv(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Allgatherv\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Allgatherv out of CD context...\n");
+    mpi_ret = PMPI_Allgatherv(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(displs), recvtype, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     int size;
@@ -1476,6 +1661,14 @@ int MPI_Reduce(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Reduce\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Reduce out of CD context...\n");
+    mpi_ret = PMPI_Reduce(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, root, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     int myrank, size;
@@ -1544,6 +1737,14 @@ int MPI_Allreduce(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Allreduce\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Allreduce out of CD context...\n");
+    mpi_ret = PMPI_Allreduce(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1592,6 +1793,14 @@ int MPI_Alltoall(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Alltoall\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Alltoall out of CD context...\n");
+    mpi_ret = PMPI_Alltoall(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     int size;
@@ -1645,6 +1854,15 @@ int MPI_Alltoallv(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Alltoallv\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Alltoallv out of CD context...\n");
+    mpi_ret = PMPI_Alltoallv(const_cast<void *>(sendbuf), const_cast<int *>(sendcnts), const_cast<int *>(sdispls), sendtype, 
+                             recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(rdispls), recvtype, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     int size;
@@ -1717,6 +1935,14 @@ int MPI_Scatter(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Scatter\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Scatter out of CD context...\n");
+    mpi_ret = PMPI_Scatter(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1767,6 +1993,15 @@ int MPI_Scatterv(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Scatterv\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Scatterv out of CD context...\n");
+    mpi_ret = PMPI_Scatterv(const_cast<void *>(sendbuf), const_cast<int *>(sendcnts), const_cast<int *>(displs), sendtype, 
+                            recvbuf, recvcnt, recvtype, root, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     if (cur_cd->ptr_cd()->GetCommLogMode()==kGenerateLog)
@@ -1817,6 +2052,14 @@ int MPI_Reduce_scatter(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Reduce_scatter\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Reduce_scatter out of CD context...\n");
+    mpi_ret = PMPI_Reduce_scatter(const_cast<void *>(sendbuf), recvbuf, const_cast<int *>(recvcnts), datatype, op, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
     int myrank;
@@ -1868,6 +2111,14 @@ int MPI_Scan(const void *sendbuf,
   LOG_DEBUG("here inside MPI_Scan\n");
 
   CDHandle * cur_cd = GetCurrentCD();
+  if (cur_cd == NULL)
+  {
+    LOG_DEBUG("Warning: MPI_Scan out of CD context...\n");
+    mpi_ret = PMPI_Scan(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, comm);
+    app_side = true;
+    return mpi_ret;
+  }
+
   if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
   {
 
@@ -1940,6 +2191,14 @@ int MPI_Finalize(void)
 //  LOG_DEBUG("here inside MPI_Send_init\n");
 //
 //  CDHandle * cur_cd = GetCurrentCD();
+//  if (cur_cd == NULL)
+//  {
+//    LOG_DEBUG("Warning: MPI_Send_init out of CD context...\n");
+//    mpi_ret = PMPI_Send_init(buf, count, datatype, dest, tag, comm, request);
+//    app_side = true;
+//    return mpi_ret;
+//  }
+//
 //  if (MASK_CDTYPE(cur_cd->ptr_cd()->GetCDType())==kRelaxed)
 //  {
 //
