@@ -445,7 +445,10 @@ CDHandle* CD::CreateRootCD(const char* name,
   PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
 
   *cd_internal_err = InternalCreate(NULL, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
-  new_cd_handle->ptr_cd_->log_handle_.SetFilePath(new_prv_medium, basepath);
+
+  if(new_prv_medium != kDRAM)
+    new_cd_handle->ptr_cd_->log_handle_.SetFilePath(new_prv_medium, basepath);
+
   assert(new_cd_handle != NULL);
 
   return new_cd_handle;

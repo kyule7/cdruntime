@@ -146,7 +146,7 @@ int TestCDHierarchy(void)
 
 
   // Level 1 Body
-  dbgApp << string(1<<1, '\t') << "Here is computation body of CD level 1...\n" << endl;
+  dbgApp << string(1<<1, '\t').c_str() << "Here is computation body of CD level 1...\n" << endl;
 
 
   int arrayF[ARRAY_F_SIZE] = {0,};
@@ -197,10 +197,10 @@ int TestCDHierarchy(void)
       assert(0);
   }
   CDHandle* child_lv2=child_lv1->Create(color, task_in_color, color_num, "CD2", kStrict, 0, 0, &err);
-  dbgApp << string(1<<1, '\t') << "CD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
+  dbgApp << string(1<<1, '\t').c_str() << "CD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
 
   CD_Begin(child_lv2);
-  dbgApp << string(2<<1, '\t') <<"Level 2 CD Begin...\n" << endl;
+  dbgApp << string(2<<1, '\t').c_str() <<"Level 2 CD Begin...\n" << endl;
 
   child_lv2->Preserve(arrayA, sizeof(arrayA), kRef, 
                       "a_lv2", (string("arrayA-")+to_string(myRank)).c_str()); // local
@@ -209,53 +209,53 @@ int TestCDHierarchy(void)
   child_lv2->Preserve(arrayE, sizeof(arrayE), kRef, 
                       "e_lv2", (string("arrayE-")+to_string(myRank)).c_str());
   child_lv2->Preserve(arrayC, sizeof(arrayC), kCopy, "arrayC");
-  dbgApp << string(2<<1, '\t')<<"Preserve via ref : arrayA (local), arrayB (local), arrayE (local)" << endl;
-  dbgApp << string(2<<1, '\t')<<"Preserve via copy: arrayC\n" << endl;
+  dbgApp << string(2<<1, '\t').c_str() <<"Preserve via ref : arrayA (local), arrayB (local), arrayE (local)" << endl;
+  dbgApp << string(2<<1, '\t').c_str() <<"Preserve via copy: arrayC\n" << endl;
 
   // Level 2 Body
-  dbgApp << string(2<<1, '\t') << "Here is computation body of CD level 2...\n" << endl;
+  dbgApp << string(2<<1, '\t').c_str()  << "Here is computation body of CD level 2...\n" << endl;
 
   child_lv2->CDAssert(CheckArray(arrayE, sizeof(arrayE)));
 
   CDHandle* child_lv3=child_lv2->Create("CD3", kStrict, 0, 0, &err);
-  dbgApp << string(2<<1, '\t') << "CD2 Creates Level 3 CD. # of children CDs = " << 1 << "\n" << endl;
+  dbgApp << string(2<<1, '\t').c_str() << "CD2 Creates Level 3 CD. # of children CDs = " << 1 << "\n" << endl;
 
   CD_Begin(child_lv3);
-  dbgApp << string(3<<1, '\t') << "Level 3 CD Begin...\n" << endl;
+  dbgApp << string(3<<1, '\t').c_str() << "Level 3 CD Begin...\n" << endl;
 
   child_lv3->Preserve(arrayA, sizeof(arrayA), kRef, "child_a", (string("arrayA")+to_string(myRank)).c_str()); // local
   child_lv3->Preserve(arrayB, sizeof(arrayB), kRef, "child_b", (string("arrayB")+to_string(myRank)).c_str()); // local
   child_lv3->Preserve(arrayC, sizeof(arrayC), kRef, "child_c", "arrayC");
   child_lv3->Preserve(arrayD, sizeof(arrayD), kCopy, "arrayD");
-  dbgApp << string(3<<1, '\t') << "Preserve via ref : arrayA (local), arrayB (local), arrayC (local)" << endl;
-  dbgApp << string(3<<1, '\t') << "Preserve via copy: arrayD\n" << endl;
+  dbgApp << string(3<<1, '\t').c_str() << "Preserve via ref : arrayA (local), arrayB (local), arrayC (local)" << endl;
+  dbgApp << string(3<<1, '\t').c_str() << "Preserve via copy: arrayD\n" << endl;
 
   // Level 3 Body
-  dbgApp << string(3<<1, '\t') << "Here is computation body of CD level 3...\n" << endl;
+  dbgApp << string(3<<1, '\t').c_str() << "Here is computation body of CD level 3...\n" << endl;
 
 
   child_lv3->Detect();
 
   CD_Complete(child_lv3);
-  dbgApp << string(3<<1, '\t') << "Level 3 CD Complete...\n" << endl;
+  dbgApp << string(3<<1, '\t').c_str() << "Level 3 CD Complete...\n" << endl;
   child_lv3->Destroy();
-  dbgApp << string(3<<1, '\t') << "Level 3 CD Destroyed...\n" << endl;
+  dbgApp << string(3<<1, '\t').c_str() << "Level 3 CD Destroyed...\n" << endl;
 
   // Detect Error here
   child_lv2->Detect();
 
   CD_Complete(child_lv2);
-  dbgApp << string(2<<1, '\t') << "Level 2 CD Complete...\n" << endl;
+  dbgApp << string(2<<1, '\t').c_str() << "Level 2 CD Complete...\n" << endl;
   child_lv2->Destroy();
-  dbgApp << string(2<<1, '\t') << "Level 2 CD Destroyed...\n" << endl;
+  dbgApp << string(2<<1, '\t').c_str() << "Level 2 CD Destroyed...\n" << endl;
 
   // Detect Error here
   child_lv1->Detect();
 
   CD_Complete(child_lv1);
-  dbgApp << string(1<<1, '\t') << "Level 1 CD Complete...\n" << endl;
+  dbgApp << string(1<<1, '\t').c_str() << "Level 1 CD Complete...\n" << endl;
   child_lv1->Destroy();
-  dbgApp << string(1<<1, '\t') << "Level 1 CD Destroyed...\n" << endl;
+  dbgApp << string(1<<1, '\t').c_str() << "Level 1 CD Destroyed...\n" << endl;
 
   // Detect Error here
   root->Detect();
@@ -281,7 +281,7 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   int ret=0;
 
-  dbgApp.open((string("./output/output_app_")+to_string(myRank)).c_str());
+  dbgApp.open((string("./dbg_logs/output_app_")+to_string(myRank)).c_str());
   dbgApp << "\n==== TestUserDefinedHierarchy ====\n" << endl;
  
   ret = TestCDHierarchy();

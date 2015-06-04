@@ -286,7 +286,7 @@ int TestPreservationViaRefRemote(void)
   dbgApp << "\t\tRoot CD Destroyed (Finalized) ...\n" << endl;
   dbgApp << "\n==== TestPreservationViaRefRemote Done ====\n" << endl; 
   dbgApp.flush(); 
-  CD_Finalize(&dbgApp);
+  CD_Finalize();
   // check the test result   
   return kOK; //
 }
@@ -300,21 +300,15 @@ int main(int argc, char* argv[])
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD,  &numProcs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-//  int ret=0;
   
-  dbgApp.open((string("./output/output_app_")+to_string(myRank)).c_str());
+  dbgApp.open((string("./dbg_logs/output_app_")+to_string(myRank)).c_str());
   dbgApp << "\n==== TestPreservationViaRefRemote ====\n" << endl; 
-//  ret = 
-  TestPreservationViaRefRemote();
-//    cout << "end???\n" << endl;
-//  if( ret == kError ) 
-//    cout << "Test Preservation via Reference (remote) FAILED\n" << endl;
-//  else 
-//    cout << "Test Preservation via Reference (remote) PASSED\n" << endl;
-//  dbgApp.flush();
-//  dbgApp.close(); 
-//
-//    cout << "end?\n" << endl;
+  int ret = TestPreservationViaRefRemote();
+  if( ret == kError ) 
+    cout << "Test Preservation via Reference (remote) FAILED\n" << endl;
+  else 
+    cout << "Test Preservation via Reference (remote) PASSED\n" << endl;
+  dbgApp.close(); 
   MPI_Finalize();
   return 0;
 } 

@@ -483,7 +483,7 @@ extern FILE *cdoutApp;
 #define CD_FILEPATH_HDD "./HDD/"
 #define CD_FILEPATH_SSD "./SSD/"
 #define CD_DEFAULT_PRV_FILEPATH "./"
-#define CD_DEFAULT_DEBUG_OUT "./output/"
+#define CD_DEFAULT_DEBUG_OUT "./debug_logs/"
 
 #define CD_SHARING_DEGREE 64
 #define dout clog

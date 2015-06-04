@@ -33,9 +33,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <sys/stat.h>
 #include "cd_handle.h"
 #include "cd_def_internal.h"
 #include "cd_path.h"
+
 
 using namespace cd;
 using namespace cd::interface;
@@ -101,12 +103,30 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #if _CD_DEBUG == 1
   char *filepath = getenv( "CD_DEBUG_OUT" );
   string basepath;
-  string filename("/output_");
+  string filename("/dbg_log_rank_");
 
   if(filepath != NULL) {
     basepath = filepath;
   }
   else {
+
+    if(myTaskID == 0) {
+      struct stat sb;
+      if (stat("./debug_logs", &sb) == 0 && S_ISDIR(sb.st_mode)) {
+//        CD_DEBUG("Path exists!\n");
+      }
+      else {
+//        CD_DEBUG("Path does not exist!\n");
+        char debug_dir[32];
+        sprintf(debug_dir, "mkdir ./debug_logs");
+        
+        int ret = system(debug_dir);
+  
+        if(ret == -1)
+          ERROR_MESSAGE("ERROR: Failed to create directory for debug info. %s\n", debug_dir);
+      }
+    }
+
     basepath = CD_DEFAULT_DEBUG_OUT;
   }
 
@@ -924,7 +944,6 @@ CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 {
   CDPrologue();
   CD_DEBUG("Assert : %d at level %u\n", ptr_cd()->cd_exec_mode_, ptr_cd()->level());
-  printf("Assert : %d at level %u\n", ptr_cd()->cd_exec_mode_, ptr_cd()->level());
 
   assert(ptr_cd_ != 0);
   CDErrT err = kOK;

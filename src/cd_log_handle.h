@@ -101,7 +101,7 @@ public:
   CDLogHandle(void) : opened_(false), path_(CD_FILEPATH_DEFAULT) {}
   CDLogHandle(const PrvMediumT& prv_medium, const std::string& parentUniqueName = "") : opened_(false)
   {
-    if(parentUniqueName != "")
+    if(parentUniqueName != "" && prv_medium != kDRAM)
       SetFilePath(prv_medium, parentUniqueName);
   }
   ~CDLogHandle() {}
