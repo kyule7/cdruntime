@@ -113,14 +113,14 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
     if(myTaskID == 0) {
       struct stat sb;
       if (stat("./debug_logs", &sb) == 0 && S_ISDIR(sb.st_mode)) {
-//        CD_DEBUG("Path exists!\n");
+//        printf("Path exists!\n");
       }
       else {
-//        CD_DEBUG("Path does not exist!\n");
         char debug_dir[32];
         sprintf(debug_dir, "mkdir ./debug_logs");
         
         int ret = system(debug_dir);
+
   
         if(ret == -1)
           ERROR_MESSAGE("ERROR: Failed to create directory for debug info. %s\n", debug_dir);
@@ -132,8 +132,11 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 
   basepath = basepath + filename + to_string(static_cast<unsigned long long>(myTaskID));
   
-  cdout = fopen(basepath.c_str(), "w");
+  // Synchronization is needed. Otherwise, some task may execute CD_DEBUG before head creates directory 
+  PMPI_Barrier(MPI_COMM_WORLD);
 
+  cdout = fopen(basepath.c_str(), "w");
+ 
 #endif
 
 #if _DEBUG
