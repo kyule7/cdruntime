@@ -35,6 +35,7 @@ MAKE_ARGS = CD_ROOT=${CD_ROOT} SIGHT_ROOT=${SIGHT_ROOT} \
 
 ifeq ($(MPI_VER_VAR), 0)
 CC=g++
+LOGGING_ENABLED=0
 else
 CC=mpic++
 endif

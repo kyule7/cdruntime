@@ -131,9 +131,11 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   }
 
   basepath = basepath + filename + to_string(static_cast<unsigned long long>(myTaskID));
-  
+
+#if _MPI_VER  
   // Synchronization is needed. Otherwise, some task may execute CD_DEBUG before head creates directory 
   PMPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   cdout = fopen(basepath.c_str(), "w");
  
@@ -148,9 +150,11 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   cd::internal::Initialize();
 
   CD::CDInternalErrT internal_err;
-  NodeID new_node_id(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
+
   char preservation_unique_name[ L_tmpnam ];
+#if _MPI_VER
   char processor_name[ MPI_MAX_PROCESSOR_NAME ];
+  NodeID new_node_id(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
   if( new_node_id.IsHead() )
   {
      if( tmpnam_r( preservation_unique_name ) )
@@ -164,11 +168,19 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
      PMPI_Get_processor_name( processor_name, &len );
   }
 
-#if _MPI_VER
   PMPI_Bcast( preservation_unique_name, L_tmpnam, MPI_BYTE, new_node_id.head(), MPI_COMM_WORLD );
   PMPI_Bcast( processor_name, MPI_MAX_PROCESSOR_NAME, MPI_BYTE, new_node_id.head(), MPI_COMM_WORLD );
-#endif
   string base_filepath = string(preservation_unique_name) + string(processor_name);
+#else
+
+  if( tmpnam_r( preservation_unique_name ) ) {
+    CD_DEBUG("[CD_Init] this is the temporary path created for run: %s\n", preservation_unique_name);
+  }
+  else
+    ERROR_MESSAGE("Failed to generate an unique filepath.\n");
+
+  string base_filepath = string(preservation_unique_name);
+#endif
 
   CDHandle* root_cd_handle = CD::CreateRootCD("Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask)), static_cast<CDType>(kStrict | prv_medium), base_filepath, 0, &internal_err);
 

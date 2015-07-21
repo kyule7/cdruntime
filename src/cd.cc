@@ -1775,6 +1775,8 @@ CDErrT CD::Preserve(void *data,
 //        if(task_size() > 1) {
 //        PMPI_Win_fence(0, mailbox_);
 //        }
+
+#if _MPI_VER
         CheckMailBox();
         if(IsHead()) { 
         
@@ -1839,6 +1841,7 @@ CDErrT CD::Preserve(void *data,
 //          
 //        
         }
+#endif
 
       }
       else { // The end of entry directory
@@ -2303,8 +2306,14 @@ CD::CDInternalErrT CD::Assert(bool test)
 
 #if _MPI_VER
   if(test == false) {
-    SetMailBox(kErrorOccurred);
-    internal_err = kErrorReported;
+    if(totalTaskSize != 1) {
+      SetMailBox(kErrorOccurred);
+      internal_err = kErrorReported;
+    }
+    else { // This is just for the case that it is compiled with MPI_VER but rank size is 1.
+      Recover();  // It will go back to the begin point eventually by longjmp
+      return internal_err;  // Actually this will not be reached. 
+    }
   }
 
   Sync(color());
