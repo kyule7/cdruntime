@@ -70,7 +70,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "node_id.h"
 #include "cd_name_t.h"
 #include "cd_def_internal.h"
-using namespace cd;
 
 namespace cd {
   namespace internal {

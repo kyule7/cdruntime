@@ -58,10 +58,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <cstdint>
 #include "sight.h"
 
-using namespace cd;
+//using namespace cd;
 using namespace sight;
 using namespace sight::structure;
 #define LabelT std::pair<std::string, int>
+
+namespace cd {
 
 class Viz;
 
@@ -259,5 +261,7 @@ public:
   ~ScopeGraph(void);
 };
 
+
+} // namespace cd ends
 #endif
 #endif

@@ -61,7 +61,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #endif
 
 #include "error_injector.h"
-using namespace cd;
+//using namespace cd;
 using namespace cd::interface;
 using namespace cd::internal;
 
