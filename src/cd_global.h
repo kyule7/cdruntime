@@ -79,14 +79,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define ROOT_HEAD_ID  0
 #endif
 
-#if _SINGLE_VER
-#define DEFINE_COLOR 0
-#else
-#define DEFINE_COLOR 1
-#endif
 
 
-#if DEFINE_COLOR
+#if _MPI_VER
 ///@addtogroup cd_defs 
 ///@{
 ///@var typedef ColorT

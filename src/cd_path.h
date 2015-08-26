@@ -111,10 +111,18 @@ private:
   * \return Pointer to the CDHandle at the leaf CD level.
   */
   static CDHandle* GetCurrentCD(void) 
-  { 
+  {
+    printf("GetCurrentCD is called\n");
     if(uniquePath_ != NULL ) {
       if( !uniquePath_->empty() ) {
-        return uniquePath_->back(); 
+        if( uniquePath_->back()->GetExecMode() == kExecution ) {
+          
+          printf("Active CD is %d\n", uniquePath_->back()->level() );
+          return uniquePath_->back();
+        }
+        else {
+          return GetParentCD(uniquePath_->back()->level());
+        }
       }
     }
     return NULL;

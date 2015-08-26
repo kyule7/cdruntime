@@ -1058,12 +1058,12 @@ class CDHandle {
     CDErrT Sync(ColorT color);
 #endif
 
-/// Check the mode of current CD.
-    CDExecMode GetExecMode(void) const;
-
     bool     recreated(void)     const;
     bool     reexecuted(void)     const;
   public:
+
+/// Check the mode of current CD.
+    CDExecMode GetExecMode(void) const;
 
 /**@defgroup cd_accessor CD accessors
  * @brief The accessors of CDHandle which might be useful.

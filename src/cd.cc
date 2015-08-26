@@ -3971,9 +3971,6 @@ bool CD::IsNewLogGenerated()
 }
 
 
-CDType CD::GetCDType()
-{ return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
-
 //SZ
 //  struct IncompleteLogEntry{
 //    unsigned long addr_;
@@ -3998,8 +3995,10 @@ void CD::PrintIncompleteLog()
   }
 }
 #endif
+//commLog ends 
 
-
+CDType CD::GetCDType()
+{ return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
 
 CD::CDInternalErrT CD::InvokeAllErrorHandler(void) {
   CDInternalErrT err = kOK;
