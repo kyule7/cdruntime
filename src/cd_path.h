@@ -112,12 +112,12 @@ private:
   */
   static CDHandle* GetCurrentCD(void) 
   {
-    printf("GetCurrentCD is called\n");
+    //printf("GetCurrentCD is called\n");
     if(uniquePath_ != NULL ) {
       if( !uniquePath_->empty() ) {
         if( uniquePath_->back()->GetExecMode() == kExecution ) {
           
-          printf("Active CD is %d\n", uniquePath_->back()->level() );
+//          printf("Active CD is %d\n", uniquePath_->back()->level() );
           return uniquePath_->back();
         }
         else {

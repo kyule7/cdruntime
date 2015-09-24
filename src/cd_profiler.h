@@ -61,19 +61,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //using namespace cd;
 using namespace sight;
 using namespace sight::structure;
-#define LabelT std::pair<std::string, int>
+#define LabelT std::string
 
 namespace cd {
 
 class Viz;
 
 class Profiler {
+  friend class CDHandle;
 public:
   Profiler() {}
   ~Profiler() {}
-  virtual void GetProfile(const char *label)=0;
+//  virtual void GetProfile(const char *label)=0;
   virtual void CollectProfile(void)=0;
-  virtual void GetPrvData(void *data, 
+  virtual void GetPreserveInfo(void *data, 
                           uint64_t len_in_bytes,
                           uint32_t preserve_mask, 
                           const char *my_name, 
@@ -81,7 +82,7 @@ public:
                           uint64_t ref_offset, 
                           const RegenObject * regen_object, 
                           PreserveUseT data_usage){}
-  virtual void StartProfile()=0;
+  virtual void StartProfile(const char *label)=0;
   virtual void FinishProfile(void)=0;
   virtual void InitViz(void)=0;
   virtual void FinalizeViz(void)=0;
@@ -93,9 +94,9 @@ class NullProfiler : public Profiler {
 public:
   NullProfiler() {}
   ~NullProfiler() {}
-  void GetProfile(const char *label) {}
+//  void GetProfile(const char *label) {}
   void CollectProfile(void) {}
-  void GetPrvData(void *data, 
+  void GetPreserveInfo(void *data, 
                   uint64_t len_in_bytes,
                   uint32_t preserve_mask, 
                   const char *my_name, 
@@ -103,7 +104,7 @@ public:
                   uint64_t ref_offset, 
                   const RegenObject * regen_object, 
                   PreserveUseT data_usage) {}
-  void StartProfile() {}
+  void StartProfile(const char *label) {}
   void FinishProfile(void) {}
   void InitViz(void) {}
   void FinalizeViz(void) {}
@@ -113,7 +114,7 @@ public:
 class CDProfiler : public Profiler {
   /// sight-related member data
   static std::list<Viz*> vizStack_;
-  LabelT label_;
+  LabelT current_label_;
   uint64_t  sibling_id_;
   uint64_t  level_;
 
@@ -125,6 +126,7 @@ class CDProfiler : public Profiler {
 //  std::vector<std::pair<std::string, long>>  usr_profile;
   int sightObj_count_;
   std::map<sight::structure::dbgStream*, int> sightObj_mark_;
+
   /// Timer-related meta data
   uint64_t this_point_;
   uint64_t that_point_;
@@ -141,14 +143,14 @@ public:
     is_child_destroyed = false;
     //profile_data_(MAX_PROFILE_DATA)
     
-    label_.first = "INITIAL_LABEL";
+    current_label_ = "INITIAL_LABEL";
     profile_data_.clear();
   }
   ~CDProfiler() {}
   void InitProfile(std::string label="INITIAL_LABEL");
-  void GetProfile(const char *label);
+//  void GetProfile(const char *label);
   void CollectProfile(void);
-  void GetPrvData(void *data, 
+  void GetPreserveInfo(void *data, 
                   uint64_t len_in_bytes,
                   CDPreserveT preserve_mask, 
                   const char *my_name, 
@@ -156,11 +158,11 @@ public:
                   uint64_t ref_offset, 
                   const RegenObject * regen_object, 
                   PreserveUseT data_usage);
-  void StartProfile();
+  void StartProfile(const char *label);
   void FinishProfile(void);
   void InitViz(void);
   void FinalizeViz(void);
-  LabelT label() { return label_; }
+  LabelT label() { return current_label_; }
   void ClearSightObj(void);
 
 private:

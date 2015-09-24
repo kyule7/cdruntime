@@ -184,7 +184,8 @@ class CD : public Serializable {
     // Label for Begin/Complete pair. It is mainly for Loop interation.
     // The Begin/Complete pair that has the same computation will have the same label_
     // and we can optimize CD with this label_ later.
-    std::vector<std::string> label_;
+    //std::map<std::string, uint64_t> label_;
+    std::string label_;
     
     // Name of this CD
     std::string     name_;

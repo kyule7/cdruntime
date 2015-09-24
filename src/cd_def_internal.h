@@ -185,7 +185,8 @@ namespace cd {
                           PRV_COPY_DATA, 
                           PRV_REF_DATA, 
                           OVERLAPPED_DATA, 
-                          SYSTEM_BIT_VECTOR, 
+                          SYSTEM_BIT_VECTOR,
+                          CD_OVERHEAD, 
                           MAX_PROFILE_DATA };
 /** @brief Profile format
  *
@@ -474,6 +475,7 @@ extern FILE *cdoutApp;
 
 
 #define INITIAL_CDOBJ_NAME "INITIAL_NAME"
+#define INITIAL_CDOBJ_LABEL "INITIAL_LABEL"
 
 #define MAX_FILE_PATH 2048
 #define CD_FILEPATH_INVALID "./error_logs/"

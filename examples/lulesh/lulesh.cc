@@ -164,8 +164,8 @@ Additional BSD Notice
 //#include "cds.h"
 #include "cds.h"
 using namespace cd;
-#define NUM_CDS_IN_LEVEL_1   8
-#define NUM_CDS_IN_LEVEL_2   1
+#define NUM_CDS_IN_LEVEL_1   1
+#define NUM_CDS_IN_LEVEL_2   8
 #define NUM_CDS_IN_LEVEL_3_0 1
 #define NUM_CDS_IN_LEVEL_3_1 1
 #define NUM_CDS_IN_LEVEL_3_2 1
@@ -207,13 +207,13 @@ void Release(T **ptr)
 }
 
 #if _CD
-inline void DumpPreserve(void)
-{
-//   int tmp[(int)(1000/(GetCurrentCD()->ptr_cd()->GetCDID().level_ + 1))] = {0};
-   int* tmp = new int(1000/(GetCurrentCD()->level()+1));
-   GetCurrentCD()->Preserve(tmp, sizeof(tmp), kCopy, "tmp", 0, 0, 0, kUnsure);
-   delete tmp;
-}
+//inline void //DumpPreserve(void)
+//{
+////   int tmp[(int)(1000/(GetCurrentCD()->ptr_cd()->GetCDID().level_ + 1))] = {0};
+//   int* tmp = new int(1000/(GetCurrentCD()->level()+1));
+//   GetCurrentCD()->Preserve(tmp, sizeof(tmp), kCopy, "tmp", 0, 0, 0, kUnsure);
+//   delete tmp;
+//}
 #endif
 
 /******************************************/
@@ -227,10 +227,9 @@ void TimeIncrement(Domain& domain)
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "TimeIncrement");
+   CD_Begin(cdh, false, "TimeIncrement");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 
@@ -306,13 +305,12 @@ void CollectDomainNodesToElemNodes(Domain &domain,
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CollectDomainNodesToElemNodes");
+   CD_Begin(cdh, false, "CollectDomainNodesToElemNodes");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    GetCurrentCD()->Preserve(elemX, sizeof(elemX), kCopy, "elemX", 0, 0, 0, kUnsure);
    GetCurrentCD()->Preserve(elemY, sizeof(elemY), kCopy, "elemY", 0, 0, 0, kUnsure);
    GetCurrentCD()->Preserve(elemZ, sizeof(elemZ), kCopy, "elemZ", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
    Index_t nd0i = elemToNode[0] ;
@@ -371,10 +369,9 @@ void InitStressTermsForElems(Domain &domain,
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "InitStressTermsForElems");
+   CD_Begin(cdh, false, "InitStressTermsForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #pragma omp parallel for firstprivate(numElem)
@@ -402,10 +399,9 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcElemShapeFunctionDerivatives");
+   CD_Begin(cdh, false, "CalcElemShapeFunctionDerivatives");
    GetCurrentCD()->Preserve(b, sizeof(b), kCopy, "b", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
   const Real_t x0 = x[0] ;   const Real_t x1 = x[1] ;
@@ -548,13 +544,12 @@ void CalcElemNodeNormals(Real_t pfx[8],
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcElemNodeNormals");
+   CD_Begin(cdh, false, "CalcElemNodeNormals");
    GetCurrentCD()->Preserve(pfx, sizeof(pfx), kCopy, "pfx", 0, 0, 0, kUnsure);
    GetCurrentCD()->Preserve(pfy, sizeof(pfy), kCopy, "pfy", 0, 0, 0, kUnsure);
    GetCurrentCD()->Preserve(pfz, sizeof(pfz), kCopy, "pfz", 0, 0, 0, kUnsure);
 
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
    for (Index_t i = 0 ; i < 8 ; ++i) {
@@ -640,10 +635,9 @@ void IntegrateStressForElems( Domain &domain,
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "IntegrateStressForElems");
+   CD_Begin(cdh, false, "IntegrateStressForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #if _OPENMP
@@ -696,10 +690,9 @@ void IntegrateStressForElems( Domain &domain,
 
 #if _CD
     CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "SumElemStressesToNodeForces");
+   CD_Begin(cdh, false, "SumElemStressesToNodeForces");
     GetCurrentCD()->Preserve(B, sizeof(B), kCopy, "B", 0, 0, 0, kUnsure);
-    DumpPreserve();
+    //DumpPreserve();
 #endif
 
     if (numthreads > 1) {
@@ -737,10 +730,9 @@ void IntegrateStressForElems( Domain &domain,
    GetCurrentCD()->Detect();
    CD_Complete(cdh);
 
-   CD_Begin(cdh);
-///true, "Write data in IntegrateStressForElems");
+   CD_Begin(cdh, false, "Write data in IntegrateStressForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
   if (numthreads > 1) {
@@ -822,12 +814,11 @@ void CalcElemVolumeDerivative(Real_t dvdx[8],
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcElemVolumeDerivative");
+   CD_Begin(cdh, false, "CalcElemVolumeDerivative");
    GetCurrentCD()->Preserve(dvdx, sizeof(dvdx), kCopy, "dvdx", 0, 0, 0, kUnsure);
    GetCurrentCD()->Preserve(dvdy, sizeof(dvdy), kCopy, "dvdy", 0, 0, 0, kUnsure);
    GetCurrentCD()->Preserve(dvdz, sizeof(dvdz), kCopy, "dvdz", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
    VoluDer(x[1], x[2], x[3], x[4], x[5], x[7],
@@ -880,10 +871,9 @@ void CalcElemFBHourglassForce(Real_t *xd, Real_t *yd, Real_t *zd,  Real_t hourga
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcElemFBHourglassForce");
+   CD_Begin(cdh, false, "CalcElemFBHourglassForce");
    GetCurrentCD()->Preserve(&coefficient, sizeof(coefficient), kCopy, "coefficient", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
    Real_t hxx[4];
@@ -943,10 +933,9 @@ void CalcFBHourglassForceForElems( Domain &domain,
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcFBHourglassForceForElems");
+   CD_Begin(cdh, false, "CalcFBHourglassForceForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 
@@ -1035,10 +1024,9 @@ void CalcFBHourglassForceForElems( Domain &domain,
       Real_t ss1, mass1, volume13 ;
 
 #if _CD
-      CD_Begin(cd);
-///true, "Loop in CalcFBHourglassForceForElems");
+      CD_Begin(cd, false, "Loop in CalcFBHourglassForceForElems");
       cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-      DumpPreserve();
+      //DumpPreserve();
 #endif
 
       for(Index_t i1=0;i1<4;++i1){
@@ -1151,10 +1139,9 @@ void CalcFBHourglassForceForElems( Domain &domain,
                       coefficient, hgfx, hgfy, hgfz);
 
 #if _CD
-      CD_Begin(cd);
-///true, "Write elems in CalcFBHourglassForceForElems");
+      CD_Begin(cd, false, "Write elems in CalcFBHourglassForceForElems");
       cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-      DumpPreserve();
+      //DumpPreserve();
 #endif
 
       // With the threaded version, we write into local arrays per elem
@@ -1236,10 +1223,9 @@ void CalcFBHourglassForceForElems( Domain &domain,
    
    GetCurrentCD()->Detect();
    CD_Complete(cdh);
-   CD_Begin(cdh);
-///true, "Collect elems in CalcFBHourglassForceForElems");
+   CD_Begin(cdh, false, "Collect elems in CalcFBHourglassForceForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
    if (numthreads > 1) {
@@ -1287,10 +1273,9 @@ void CalcHourglassControlForElems(Domain& domain,
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcHourglassControlForElem");
+   CD_Begin(cdh, false, "CalcHourglassControlForElem");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 
 //   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_6_1, "CD6_1", kStrict, 0, 0, &err);
    CDHandle* cd = GetCurrentCD()->Create("CalcHourglassControlForElems", kStrict, 0, 0, &err); //CD6_1
@@ -1319,10 +1304,9 @@ void CalcHourglassControlForElems(Domain& domain,
 
 #if _CD
       CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "Negative check in CalcHourglassControlForelem");
+   CD_Begin(cdh, false, "Negative check in CalcHourglassControlForelem");
       GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-      DumpPreserve(); 
+      //DumpPreserve(); 
 #endif
 
       /* load into temporary storage for FB Hour Glass control */
@@ -1388,10 +1372,9 @@ void CalcVolumeForceForElems(Domain& domain)
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcVolumeForceForElems");
+   CD_Begin(cdh, false, "CalcVolumeForceForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 //   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_5_0, "CD5_0", kStrict, 0, 0, &err);
    CDHandle* cd = GetCurrentCD()->Create("CalcVolumeForceForElems", kStrict, 0, 0, &err); // CD5_0
 #endif
@@ -1416,10 +1399,9 @@ void CalcVolumeForceForElems(Domain& domain)
 
 // Belong to CD 5 ///////////////////////////////////////////////////////////
 #if _CD
-   CD_Begin(cd);
-///true, "Negative check in CalcVolumeForceForElems");
+   CD_Begin(cd, false, "Negative check in CalcVolumeForceForElems");
    cd->Preserve(determ, sizeof(*determ), kCopy, "determ", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
       // check for negative element volume
@@ -1472,19 +1454,17 @@ static inline void CalcForceForNodes(Domain& domain)
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-/////true, "CalcForceForNodes");
-   DumpPreserve();
+   CD_Begin(cdh, false, "CalcForceForNodes");
+   //DumpPreserve();
 
 //   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    // Seems possible to start fine-grain CDs from here
    // Spawn multiple children
    CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_4_0, "CalcForceForNodes", kStrict, 0, 0, &err); // CD4_0
 
-   CD_Begin(cd);
-/////true, "loop in CalcForceForNodes");
+   CD_Begin(cd, false, "loop in CalcForceForNodes");
    cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 
@@ -1541,10 +1521,9 @@ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
    
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-/////true, "CalcAccelerationForNodes");
+   CD_Begin(cdh, false, "CalcAccelerationForNodes");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #pragma omp parallel for firstprivate(numNode)
@@ -1570,10 +1549,9 @@ void ApplyAccelerationBoundaryConditionsForNodes(Domain& domain)
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "ApplyAccelerationBoundaryConditionsForNodes");
+   CD_Begin(cdh, false, "ApplyAccelerationBoundaryConditionsForNodes");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
    Index_t size = domain.sizeX();
@@ -1616,10 +1594,9 @@ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
 {
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcVelocityForNodes");
+   CD_Begin(cdh, false, "CalcVelocityForNodes");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #pragma omp parallel for firstprivate(numNode)
@@ -1654,10 +1631,9 @@ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
 {
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcPositionForNodes");
+   CD_Begin(cdh, false, "CalcPositionForNodes");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #pragma omp parallel for firstprivate(numNode)
@@ -1683,10 +1659,9 @@ void LagrangeNodal(Domain& domain)
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "LagrangeNodal");
+   CD_Begin(cdh, false, "LagrangeNodal");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #ifdef SEDOV_SYNC_POS_VEL_EARLY
@@ -1780,8 +1755,7 @@ Real_t CalcElemVolume( const Real_t x0, const Real_t x1,
 
 #if _CD
 //   CDHandle* cdh = GetCurrentCD();
-//   CD_Begin(cdh);
-///true, "CalcElemVolume");
+//   CD_Begin(cdh, false, "CalcElemVolume");
 //   GetCurrentCD()->Preserve(&x0, sizeof(x0), kCopy, "x0", 0, 0, 0, kUnsure);
 #endif
 
@@ -1907,10 +1881,9 @@ Real_t CalcElemCharacteristicLength( const Real_t x[8],
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcElemCharacteristicLength");
+   CD_Begin(cdh, false, "CalcElemCharacteristicLength");
 //   GetCurrentCD()->Preserve(&volume, sizeof(volume), kCopy, "volume", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
    Real_t a, charLength = Real_t(0.0);
@@ -1969,10 +1942,9 @@ void CalcElemVelocityGradient( const Real_t* const xvel,
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcElemVelocityGradient");
+   CD_Begin(cdh, false, "CalcElemVelocityGradient");
 //   GetCurrentCD()->Preserve(&detJ, sizeof(detJ), kCopy, "detJ", 0, 0, 0, kUnsure);
-DumpPreserve();
+//DumpPreserve();
 #endif
 
   const Real_t inv_detJ = Real_t(1.0) / detJ ;
@@ -2045,10 +2017,9 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcKinematicsForElems");
+   CD_Begin(cdh, false, "CalcKinematicsForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 
 //   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_4_1, "CD4_1", kStrict, 0, 0, &err);
    CDHandle* cd = GetCurrentCD()->Create("CalcKinematicsForElems", kStrict, 0, 0, &err); //CD4_1
@@ -2088,10 +2059,9 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
 
  #if _CD
     CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "Get Nodal Velocity in CalcKinematicsForElems");
+   CD_Begin(cdh, false, "Get Nodal Velocity in CalcKinematicsForElems");
     GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-    DumpPreserve();
+    //DumpPreserve();
 #endif
    
     // get nodal velocities from global array and copy into local arrays.
@@ -2146,10 +2116,9 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
 {
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcLagrangeElements");
+   CD_Begin(cdh, false, "CalcLagrangeElements");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
    // Fine-grain CD
    CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_3_2, "CalcLagrangeElements", kStrict, 0, 0, &err); // CD3_2
 #endif
@@ -2164,10 +2133,9 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
 
 #if _CD
       CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "Epilog in CalcLagrangeElements");
+   CD_Begin(cdh, false, "Epilog in CalcLagrangeElements");
       GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-      DumpPreserve();
+      //DumpPreserve();
 #endif
 
       // element loop to do some stuff not included in the elemlib function.
@@ -2228,10 +2196,9 @@ void CalcMonotonicQGradientsForElems(Domain& domain, Real_t vnew[])
 
 #if _CD
       CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcMonotonicQGradientsForElems");
+   CD_Begin(cdh, false, "CalcMonotonicQGradientsForElems");
       GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-      DumpPreserve();
+      //DumpPreserve();
 #endif
 
 
@@ -2397,7 +2364,7 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
 
 #if _CD
 //   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_4_2, "CD4_2", kStrict, 0, 0, &err);
-   CDHandle* cd = GetCurrentCD()->Create("CalcMonotonicQRegionForElems", kStrict, 0, 0, &err); //CD4_2
+//   CDHandle* cd = GetCurrentCD()->Create("CalcMonotonicQRegionForElems", kStrict, 0, 0, &err); //CD4_2
 #endif
 
 #pragma omp parallel for firstprivate(qlc_monoq, qqc_monoq, monoq_limiter_mult, monoq_max_slope, ptiny)
@@ -2409,11 +2376,10 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
       Real_t delvm, delvp ;
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcMonotonicQRegionForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+//   CDHandle* cdh = GetCurrentCD();
+//   CD_Begin(cdh, false, "CalcMonotonicQRegionForElems");
+//   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   //DumpPreserve();
 #endif
 
       /*  phixi     */
@@ -2542,15 +2508,14 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
       domain.ql(i) = qlin  ;
 
 #if _CD
-      GetCurrentCD()->Detect();
-   CD_Complete(cdh);
-;
+//      GetCurrentCD()->Detect();
+//   CD_Complete(cdh);
 #endif
 
    }  // loop ends
 
 #if _CD
-   cd->Destroy(); // CD4_2 is destroyed
+//   cd->Destroy(); // CD4_2 is destroyed
 #endif
 
 
@@ -2575,10 +2540,9 @@ void CalcMonotonicQForElems(Domain& domain, Real_t vnew[])
 
 #if _CD
       CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcMonotonicQForElems");
+   CD_Begin(cdh, false, "CalcMonotonicQForElems");
       GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-      DumpPreserve();
+      //DumpPreserve();
 #endif
 
       if (domain.regElemSize(r) > 0) {
@@ -2607,10 +2571,9 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
    //
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcQForElems");
+   CD_Begin(cdh, false, "CalcQForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 
@@ -2672,11 +2635,10 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
 #if _CD
       // It is still fine-grain CDs
       CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "Epilog in CalcQForElems");
+   CD_Begin(cdh, false, "Epilog in CalcQForElems");
       GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
       GetCurrentCD()->Preserve(vnew, sizeof(vnew), kCopy, "vnew", 0, 0, 0, kUnsure);
-      DumpPreserve();
+      //DumpPreserve();
 #endif
 
 
@@ -2729,10 +2691,9 @@ void CalcPressureForElems(Real_t* p_new, Real_t* bvc,
 {
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcPressureForElems");
+   CD_Begin(cdh, false, "CalcPressureForElems");
    GetCurrentCD()->Preserve(p_new, sizeof(*p_new), kCopy, "p_new", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #pragma omp parallel for firstprivate(length)
@@ -2781,10 +2742,9 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
 {
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcEnergyForElems 0");
+   CD_Begin(cdh, false, "CalcEnergyForElems 0");
    GetCurrentCD()->Preserve(compression, sizeof(*compression), kCopy, "compression", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 
@@ -2812,10 +2772,9 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
 
 #if _CD
    cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcEnergyForElems 1");
+   CD_Begin(cdh, false, "CalcEnergyForElems 1");
    GetCurrentCD()->Preserve(&eosvmax, sizeof(eosvmax), kCopy, "eosvmax", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #pragma omp parallel for firstprivate(length, rho0)
@@ -2865,10 +2824,9 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
 
 #if _CD
    cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcEnergyForElems 2");
+   CD_Begin(cdh, false, "CalcEnergyForElems 2");
    GetCurrentCD()->Preserve(p_new, sizeof(*p_new), kCopy, "p_new", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 
 #endif
 
@@ -2917,10 +2875,9 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
 
 #if _CD
    cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcEnergyForElems 3");
+   CD_Begin(cdh, false, "CalcEnergyForElems 3");
    GetCurrentCD()->Preserve(p_new, sizeof(*p_new), kCopy, "p_new", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #pragma omp parallel for firstprivate(length, rho0, q_cut)
@@ -2965,10 +2922,9 @@ void CalcSoundSpeedForElems(Domain &domain,
 {
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcSoundSpeedForElems");
+   CD_Begin(cdh, false, "CalcSoundSpeedForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #pragma omp parallel for firstprivate(rho0, ss4o3)
@@ -3000,10 +2956,9 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
 {
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "EvalEOSForElems");
+   CD_Begin(cdh, false, "EvalEOSForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
    Real_t  e_cut = domain.e_cut() ;
@@ -3049,10 +3004,9 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
 
 #if _CD
          CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "loop 0 in EvalEOSForElems");
+   CD_Begin(cdh, false, "loop 0 in EvalEOSForElems");
          GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-         DumpPreserve();
+         //DumpPreserve();
 #endif
 
 
@@ -3129,10 +3083,9 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
    cd->Destroy();    // CD5_1 is destroyed
    GetCurrentCD()->Detect();
    CD_Complete(cdh);
-   CD_Begin(cdh);
-///true, "loop 1 in EvalEOSForElems");
+   CD_Begin(cdh, false, "loop 1 in EvalEOSForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #pragma omp parallel for firstprivate(numElemReg)
@@ -3154,10 +3107,9 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
                           numElemReg, regElemList) ;
 #if _CD
    cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "Epilog in EvalEOSForElems");
+   CD_Begin(cdh, false, "Epilog in EvalEOSForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
    Release(&pbvc) ;
@@ -3190,10 +3142,9 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 {
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "ApplyMaterialPropertiesForElems");
+   CD_Begin(cdh, false, "ApplyMaterialPropertiesForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
    Index_t numElem = domain.numElem() ;
@@ -3214,10 +3165,9 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 
 #if _CD
     CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "loop 0 in ApplyMaterialPropertiesForElems");
+   CD_Begin(cdh, false, "loop 0 in ApplyMaterialPropertiesForElems");
     GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-    DumpPreserve();
+    //DumpPreserve();
 #endif
 
        // Bound the updated relative volumes with eosvmin/max
@@ -3251,10 +3201,9 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 
 #if _CD
           CDHandle* cdh = GetCurrentCD();
-          CD_Begin(cdh);
-///true, "loop 1 in ApplyMaterialPropertiesForElems");
+          CD_Begin(cdh, false, "loop 1 in ApplyMaterialPropertiesForElems");
           GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-          DumpPreserve();
+          //DumpPreserve();
 #endif
 
           Real_t vc = domain.v(i) ;
@@ -3289,10 +3238,9 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 
 #if _CD
        CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "loop 2 in ApplyMaterialPropertiesForElems");
+   CD_Begin(cdh, false, "loop 2 in ApplyMaterialPropertiesForElems");
        GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-       DumpPreserve();
+       //DumpPreserve();
 #endif
 
        Index_t numElemReg = domain.regElemSize(r);
@@ -3348,10 +3296,9 @@ void UpdateVolumesForElems(Domain &domain, Real_t *vnew,
 {
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "UpdateVolumesForElems");
+   CD_Begin(cdh, false, "UpdateVolumesForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 
@@ -3409,10 +3356,9 @@ void CalcCourantConstraintForElems(Domain &domain, Index_t length,
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcCourantConstraintForElems");
+   CD_Begin(cdh, false, "CalcCourantConstraintForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #if _OPENMP   
@@ -3501,10 +3447,9 @@ void CalcHydroConstraintForElems(Domain &domain, Index_t length,
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcHydroConstraintForElems");
+   CD_Begin(cdh, false, "CalcHydroConstraintForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #if _OPENMP   
@@ -3584,10 +3529,9 @@ void CalcTimeConstraintsForElems(Domain& domain) {
 #if _CD
    // CD2
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "CalcTimeConstraintsForElems");
+   CD_Begin(cdh, false, "CalcTimeConstraintsForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
    // Fine-grain CDs start
    CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_3_6, "CalcTimeConstraintsForElems", kStrict, 0, 0, &err); // CD3_6
 #endif
@@ -3628,12 +3572,11 @@ void LagrangeLeapFrog(Domain& domain)
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh);
-///true, "LagrangeLeapFrog");
+   CD_Begin(cdh, false, "LagrangeLeapFrog");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   DumpPreserve();
-//   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_2, "LagrangeLeapFrog", kStrict, 0, 0, &err);
-   CDHandle* cd = GetCurrentCD()->Create("LagrangeLeapFrog", kStrict, 0, 0, &err);  // CD2
+   //DumpPreserve();
+   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_2, "LagrangeLeapFrog", kStrict, 0, 0, &err);
+//   CDHandle* cd = GetCurrentCD()->Create("LagrangeLeapFrog", kStrict, 0, 0, &err);  // CD2
 #endif
 
    /* calculate nodal forces, accelerations, velocities, positions, with
@@ -3756,12 +3699,11 @@ int main(int argc, char *argv[])
 //   else
 //    printf("??\n");
 
-   CD_Begin(root_cd);
-///true, "Root Begin");
+   CD_Begin(root_cd, false, "Root Begin");
 
    printf("--root--\n");
    root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
 #if USE_MPI   
@@ -3799,10 +3741,9 @@ int main(int argc, char *argv[])
    root_cd->Detect();
    root_cd->Complete();
 
-   CD_Begin(root_cd);
-///true, "Root Before Main Loop");
+   CD_Begin(root_cd, false, "Root Before Main Loop");
    root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 
    CDHandle* cd1 = root_cd->Create(NUM_CDS_IN_LEVEL_1, "Main Loop", kStrict, 0, 0, &err);
 #endif
@@ -3834,10 +3775,9 @@ int main(int argc, char *argv[])
    root_cd->Detect();
    root_cd->Complete();
 
-   CD_Begin(root_cd);
-///true, "Root After Main Loop");
+   CD_Begin(root_cd, false, "Root After Main Loop");
    root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom", 0, 0, 0, kUnsure);
-   DumpPreserve();
+   //DumpPreserve();
 #endif
 
    // Use reduced max elapsed time

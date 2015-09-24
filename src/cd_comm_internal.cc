@@ -581,7 +581,8 @@ CDErrT CD::CheckMailBox(void)
   CDHandle *curr_cdh = GetCurrentCD();
 
   CD_DEBUG("\n\n=================== Check Mail Box Start [Level #%u], # of pending events : %d ========================\n", level(), event_count);
-
+  
+  CD_DEBUG("Label Check : %s\n", label_.c_str());
   if(event_count == 0) {
     CD_DEBUG("No event is detected\n");
 

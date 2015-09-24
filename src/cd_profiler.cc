@@ -66,78 +66,77 @@ attrIf *Attribute::attrScope;
 //std::list<comparison*> Conparison::compStack;
 
 
-
-void CDProfiler::GetProfile(const char *label)  // it is called in Begin()
+// The Begin/Complete pairs that have the same label are assumed that
+// they are identical sequential CDs.
+// If the label is different from the new CDs, 
+// it means it is newly created CD or the beginning of a new phase of sequential CD.
+// Now, a new phase CDs is differentiated with the label for the CDs provided by user.
+// After acquiring the profile data, 
+// aggregate the data to master task
+// Only master task will call sight APIs.
+// Aggregated data from every task belonging to one CD node
+// will be averaged out, and avg value with std will be shown.
+//    
+// <PROFILE_NAME>   | <SEND?>
+// LOOP_COUNT       |   X
+// EXEC_CYCLE       |   O
+// PRV_COPY_DATA    |   O
+// PRV_REF_DATA     |   O
+// OVERLAPPED_DATA  |   O
+// SYSTEM_BIT_VECTOR|   X
+void CDProfiler::StartProfile(const char *label)
 {
-  int onOff = 0;
-  dbg << "label check "<< label_.first << " " << label << endl; //dbgBreak();
-  if(GetCurrentCD()->ptr_cd()->GetCDID().sequential_id_ < 2) onOff = 1;
-    dbg<<"GetProfile------   \t"<<label_.first << " - " << label << endl; //dbgBreak();
+  dbg<< "\n\t-------- Start Profile --------\n" <<endl; //dbgBreak();
+  cout << "current_label_ : " << current_label_ << ", label : " << label << endl;
 
-  if(label_.first != label) { 
-    // diff
-    //dbg<<"label is diff"<<endl;
-    //dbgBreak();
-    SetCollectProfile(true);
+  if(current_label_ != label) {
+    cout << "diff" << endl;
+    current_label_ = label;
 
-    // Dynamic Method Selection
-    if(label_.first != "INITIAL_LABEL") {
-      dbg << "finish profile"<<endl;
-      FinishProfile();
-    }
-    // Set label. INITIAL_LABEL should be unique for one CD
-    // CD name cannot be "INITIAL_LABEL"
-    if(label_.first != "INITIAL_LABEL") {
-      label_.first = label;
-      
-    }
-    else { // label_.first == "INITIAL_LABEL"
-      label_.first = GetCurrentCD()->GetName();
-    }
-//    dbg<<"start profile------"<<endl;
-//    dbgBreak();
-    label_.second = onOff;
-    StartProfile();
+    // Profile starts -- ATTR | COMP | MODULE | SCOPE | CDNODE -- 
+    profile_data_[current_label_] = new uint64_t(MAX_PROFILE_DATA);
   }
-  else {
-    // the same exec
-    //dbg<<"label is the same"<<endl;
-    //dbgBreak();
-    if(label_.first == "INITIAL_LABEL") {
-      SetCollectProfile(true);
-      label_.first = GetCurrentCD()->GetName();
-      label_.second = onOff;
-      StartProfile();
-    }
-    else { 
-      SetCollectProfile(false);
-    }
-  }
+  
+//  profile_data_[current_label_][LOOP_COUNT]++;
+  
+
+  /// Timer on
+  this_point_ = rdtsc();
+
+  // Initialize sightObj_count
+//  sightObj_count_ = getSOStackDepth();
+//  sightObj_mark_ = markSOStack();
+
+#if _ENABLE_ATTR
+  vizStack_.push_back(new Attribute());
+#endif
+
+#if _ENABLE_COMP
+  vizStack_.push_back(new Comparison());
+#endif
+
+#if _ENABLE_MODULE
+  vizStack_.push_back(new Module());
+#endif
+
+#if _ENABLE_HIERGRAPH
+  vizStack_.push_back(new HierGraph());
+#endif
+
+#if _ENABLE_SCOPE
+  vizStack_.push_back(new Scope());
+#endif
+
+#if _ENABLE_SCOPEGRAPH
+  vizStack_.push_back(new ScopeGraph());
+#endif
+
+#if _ENABLE_CDNODE
+  vizStack_.push_back(new CDNode());
+#endif
+
 }
 
-
-void CDProfiler::CollectProfile(void) // it is called in Complete()
-{
-  if( CheckCollectProfile() ) {
-    // After acquiring the profile data, 
-    // aggregate the data to master task
-    // Only master task will call sight APIs.
-    // Aggregated data from every task belonging to one CD node
-    // will be averaged out, and avg value with std will be shown.
-    //    
-    // <PROFILE_NAME>   | <SEND?>
-    // LOOP_COUNT       |   X
-    // EXEC_CYCLE       |   O
-    // PRV_COPY_DATA    |   O
-    // PRV_REF_DATA     |   O
-    // OVERLAPPED_DATA  |   O
-    // SYSTEM_BIT_VECTOR|   X
-
-    //Dynamic Method Selection
-    
-    SetCollectProfile(false); // initialize this flag for the next Begin
-  }
-}
 
  
 
@@ -145,7 +144,7 @@ void CDProfiler::InitProfile(std::string label)
 {
   sibling_id_ = 0;
   level_      = 0;
-  label_.first = label;
+  current_label_ = label;
   this_point_ = 0;
   that_point_ = 0;
   collect_profile_   = false;
@@ -218,98 +217,21 @@ void CDProfiler::FinalizeViz(void)
   vizStack_.pop_back();
 #endif
 
-//  while( sightObj_count_ > 0) {
-//    assert(vizStack_.size()>0);
-//    assert(vizStack_.back() != NULL);
-//    vizStack_.back()->Finalize();
-//    dbg << "delete viz"<<endl;
-//    dbg << "vizStack size: "<<vizStack_.size() << endl;
-//    delete vizStack_.back();
-//    vizStack_.pop_back();
-//    dbg << "vizStack size: "<<vizStack_.size() << endl;
-//    sightObj_count_--;
-//  }
 }
 
 
-void CDProfiler::StartProfile()
-{
-  
-  dbg<< "\n\t-------- Start Profile --------\n" <<endl; //dbgBreak();
-
-  profile_data_[label_.first] = new uint64_t(MAX_PROFILE_DATA);
-// Profile starts -- ATTR | COMP | MODULE | SCOPE | CDNODE -- 
-  /// Timer on
-  this->this_point_ = rdtsc();
-
-  // Initialize sightObj_count
-  sightObj_count_ = getSOStackDepth();
-  sightObj_mark_ = markSOStack();
-#if _ENABLE_ATTR
-  vizStack_.push_back(new Attribute());
-#endif
-
-#if _ENABLE_COMP
-  vizStack_.push_back(new Comparison());
-#endif
-
-#if _ENABLE_MODULE
-//  dbg << "\ncreate module " <<endl; //dbgBreak();
-//  dbg << "vizStack size: "<<vizStack_.size() << endl;
-//  Module *m = new Module();
-//  m->Create();
-//  vizStack_.push_back(m);
-//  vizStack_.back()->Create();
-  vizStack_.push_back(new Module());
-#endif
-
-#if _ENABLE_HIERGRAPH
-  vizStack_.push_back(new HierGraph());
-#endif
-
-#if _ENABLE_SCOPE
-  vizStack_.push_back(new Scope());
-#endif
-
-#if _ENABLE_SCOPEGRAPH
-  vizStack_.push_back(new ScopeGraph());
-#endif
-
-#if _ENABLE_CDNODE
-  vizStack_.push_back(new CDNode());
-#endif
-
-//  int so_count = getSOStackDepth() - sightObj_count_;
-//  dbg << "sight obj count = " << sightObj_count_ << ", so_count : " << so_count << endl; //dbgBreak();
-}
 
 void CDProfiler::ClearSightObj(void)
 {
-//  while(  sightObj_count_ > 0) {
-
-//    dbg << "destroy sightobj" << endl; //dbgBreak();
-    assert(vizStack_.size()>0);
-    assert(vizStack_.back() != NULL);
-//    dbg << "delete viz"<<endl;
-//    dbg << "vizStack size: "<<vizStack_.size() << endl;
-//    vizStack_.back()->Destroy();
-//    delete vizStack_.back();
-//    dbg << "destroy all" << endl; //dbgBreak();
-    vizStack_.back()->GetSightObj()->destroyFromA(sightObj_mark_);
-
-    for(int i=0; i<getSOStackDepth() - sightObj_count_; i++) vizStack_.pop_back();
-
-//    dbg << "vizStack size: "<<vizStack_.size() << endl;
-//  }
+  for(auto it=vizStack_.begin(); it!=vizStack_.end(); ++it) {
+    delete vizStack_.back();
+    vizStack_.pop_back();
+  }
 }
 
 void CDProfiler::FinishProfile(void) // it is called in Destroy()
 {
-
   dbg<< "\n\t-------- Finish Profile --------\n" <<endl;
-  //dbgBreak();
-
-// Profile starts -- COMP | MODULE | SCOPE | CDNODE -- 
 
   // outputs the preservation / detection info
   /// Timer off
@@ -317,19 +239,14 @@ void CDProfiler::FinishProfile(void) // it is called in Destroy()
   that_point_ = tmp_point;
 
   /// Loop Count (# of seq. CDs) + 1
-//  (this->profile_data_)[label_.first][LOOP_COUNT] += 1;
-  (profile_data_)[label_.first][LOOP_COUNT] = GetCurrentCD()->ptr_cd()->GetCDID().sequential_id_;
+//  (this->profile_data_)[current_label_][LOOP_COUNT] += 1;
+//  (profile_data_)[current_label_][LOOP_COUNT] = GetCurrentCD()->ptr_cd()->GetCDID().sequential_id_;
+  profile_data_[current_label_][LOOP_COUNT]++;
 
   /// Calcualate the execution time
-  (profile_data_)[label_.first][EXEC_CYCLE] += (that_point_) - (this_point_);
+  (profile_data_)[current_label_][EXEC_CYCLE] += (that_point_) - (this_point_);
 
-  // Destroy SightObj
-//  dbg << "reached here? becore while in FinishProfile() "<<vizStack_.size() << endl;
-//  dbg << "++++++++++++++++++++   sightObj_count : " << sightObj_count_ << endl;
-
-//  while(  sightObj_count_ > 0) {
-//    ClearSightObj();
-//  }
+  ClearSightObj();
 }
 
 
@@ -345,7 +262,7 @@ void CDProfiler::SetCollectProfile(bool flag)
 
 
 
-void CDProfiler::GetPrvData(void *data, 
+void CDProfiler::GetPreserveInfo(void *data, 
                             uint64_t len_in_bytes,
                             CDPreserveT preserve_mask, 
                             const char *my_name, 
@@ -356,16 +273,16 @@ void CDProfiler::GetPrvData(void *data,
 {
   if(preserve_mask == kCopy){
 
-    profile_data_[label_.first][PRV_COPY_DATA] += len_in_bytes;
+    profile_data_[current_label_][PRV_COPY_DATA] += len_in_bytes;
 //    if( (this->parent_ != NULL) && check_overlap(this->parent_, ref_name) ){
       /// Sequential overlapped accumulated data. It will be calculated to OVERLAPPED_DATA/PRV_COPY_DATA
       /// overlapped data: overlapped data that is preserved only via copy method.
-//      profile_data_[label_.first][OVERLAPPED_DATA] += len_in_bytes;
+//      profile_data_[current_label_][OVERLAPPED_DATA] += len_in_bytes;
 //      dbg<<"something is weird  "<<"level is "<<this->this_cd_->level_ << "length : "<<len_in_bytes<<endl;
 
   } else if(preserve_mask == kRef) {
 
-    profile_data_[label_.first][PRV_REF_DATA] += len_in_bytes;
+    profile_data_[current_label_][PRV_REF_DATA] += len_in_bytes;
 
   } else {
                                                                                                                                   
@@ -380,7 +297,7 @@ void CDProfiler::GetLocalAvg(void)
 {
   dbg<<"Master CD Get Local Avg"<<endl;
 //  for(int i=1; i < MAX_PROFILE_DATA-1; ++i) {
-//    profile_data_[label_.first][i] /= profile_data_[label_.first][LOOP_COUNT];
+//    profile_data_[current_label_][i] /= profile_data_[current_label_][LOOP_COUNT];
 //  }
 }
 
@@ -390,7 +307,7 @@ void CDProfiler::GetLocalAvg(void)
 
 CDNode::CDNode(void)
 {
-//  CDNode* cdn = new CDNode(txt()<<label_.first, txt()<<GetCDID()); 
+//  CDNode* cdn = new CDNode(txt()<<current_label_, txt()<<GetCDID()); 
 //  this->cdStack.push_back(cdn);
 //  dbg << "{{{ CDNode Test -- "<<this->this_cd_->cd_id_<<", #cdStack="<<cdStack.size()<<endl;
 }
@@ -400,16 +317,16 @@ CDNode::~CDNode(void)
 //  if(cdStack.back() != NULL){
 //    dbg<<"add new info"<<endl;
 ///*
-//    cdStack.back()->setStageNode( "preserve", "data_copy", profile_data_[label_.first]PRV_COPY_DATA]    );
-//    cdStack.back()->setStageNode( "preserve", "data_overlapped", profile_data_[label_.first][OVERLAPPED_DATA]  );
-//    cdStack.back()->setStageNode( "preserve", "data_ref", profile_data_[label_.first][PRV_REF_DATA]     );
+//    cdStack.back()->setStageNode( "preserve", "data_copy", profile_data_[current_label_]PRV_COPY_DATA]    );
+//    cdStack.back()->setStageNode( "preserve", "data_overlapped", profile_data_[current_label_][OVERLAPPED_DATA]  );
+//    cdStack.back()->setStageNode( "preserve", "data_ref", profile_data_[current_label_][PRV_REF_DATA]     );
 //*/
 //    
 //    //scope s("Preserved Stats");
 //    PreserveStageNode psn(txt()<<"Preserve Stage");
-//    dbg << "data_copy="<<profile_data_[label_.first][PRV_COPY_DATA]<<endl;
-//    dbg << "data_overlapped="<<profile_data_[label_.first][OVERLAPPED_DATA]<<endl;
-//    dbg << "data_ref="<<profile_data_[label_.first][PRV_REF_DATA]<<endl;
+//    dbg << "data_copy="<<profile_data_[current_label_][PRV_COPY_DATA]<<endl;
+//    dbg << "data_overlapped="<<profile_data_[current_label_][OVERLAPPED_DATA]<<endl;
+//    dbg << "data_ref="<<profile_data_[current_label_][PRV_REF_DATA]<<endl;
 //
 //  }
 
@@ -513,9 +430,9 @@ Module::~Module(void)
   delete m;
 
 /*
-  mStack.back()->setOutCtxt(1, context("sequential id =" , (long)profile_data_[label_.first][PRV_REF_DATA],
-                                       "execution cycle=", (long)profile_data_[label_.first][PRV_COPY_DATA],
-                                       "estimated error rate=", (long)profile_data_[label_.first][OVERLAPPED_DATA]));
+  mStack.back()->setOutCtxt(1, context("sequential id =" , (long)profile_data_[current_label_][PRV_REF_DATA],
+                                       "execution cycle=", (long)profile_data_[current_label_][PRV_COPY_DATA],
+                                       "estimated error rate=", (long)profile_data_[current_label_][OVERLAPPED_DATA]));
 */
 
 

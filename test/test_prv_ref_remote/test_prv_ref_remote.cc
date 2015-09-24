@@ -45,8 +45,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define GIGA 1073741824
 
 #define LV1 1
-#define LV2 1
-#define LV3 8 
+#define LV2 8
+#define LV3 1 
 
 using namespace cd;
 using namespace std;

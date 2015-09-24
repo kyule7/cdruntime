@@ -1,9 +1,9 @@
 include ../Makefile.extern
 
-DEBUG_VAR = 1
-MPI_VER_VAR = 0
+DEBUG_VAR = 2
+MPI_VER_VAR = 1
 PGAS_VER_VAR = 0
-SINGLE_VER_VAR = 1
+SINGLE_VER_VAR = 0
 
 PROFILER_ENABLED=0
 LOGGING_ENABLED=1
@@ -46,7 +46,7 @@ LOGGING_ENABLED=0
 endif
 
 ERR_FLAGS=-Wall -fmax-errors=5
-CFLAGS  = -g -fPIC -std=gnu++0x ${ERR_FLAGS}
+CFLAGS  = -g -fPIC -std=gnu++11 ${ERR_FLAGS}
 LDFLAGS = #${SIGHT_LINKFLAGS}
 
 ifeq ($(TACC), 1)

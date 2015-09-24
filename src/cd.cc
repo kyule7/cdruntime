@@ -152,6 +152,7 @@ CD::CD(void)
   cd_type_ = kStrict;
   prv_medium_ = kDRAM;
   name_ = INITIAL_CDOBJ_NAME; 
+  label_ = string(INITIAL_CDOBJ_LABEL); 
   sys_detect_bit_vector_ = 0;
   // Assuming there is only one CD Object across the entire system we initilize cd_id info here.
   cd_id_ = CDID();
@@ -213,6 +214,8 @@ CD::CD(CDHandle* cd_parent,
 
   if(name != NULL)
     name_ = name; 
+    //label_ = INITIAL_CDOBJ_LABEL; 
+    label_ = string(INITIAL_CDOBJ_LABEL); 
 
   sys_detect_bit_vector_ = 0; 
   cd_id_ = cd_id;
@@ -344,6 +347,8 @@ void CD::Initialize(CDHandle* cd_parent,
 
   cd_type_  = cd_type;
   name_     = name;
+  //label_ = INITIAL_CDOBJ_LABEL; 
+  label_ = string(INITIAL_CDOBJ_LABEL); 
   cd_id_    = cd_id;
   if(exec_count_[cd_id_.GetPhaseID()] == 0) {
     cd_id_.object_id_ = Util::GenCDObjID(cd_id.level());
@@ -420,7 +425,7 @@ CDHandle* CD::Create(CDHandle* parent,
   /// Create CD object with new CDID
   CDHandle* new_cd_handle = NULL;
 
-  CD_DEBUG("CD::Create\n");
+  CD_DEBUG("CD::Create %s\n", name);
 
   *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
@@ -682,6 +687,10 @@ CDErrT CD::Begin(bool collective, const char* label)
 
   CD_DEBUG("Inside CD::Begin\n");
 
+//  label_[string(label)] = 0;
+  if(label != NULL)
+    label_ = string(label);
+
 #ifdef comm_log
   //SZ: if in reexecution, need to unpack logs to childs
   if (GetParentHandle()!=NULL)
@@ -769,7 +778,11 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   begin_ = false;
 
 
-  Sync(color());
+//  Sync(color());
+
+  if(task_size() > 1) {
+    PMPI_Win_fence(0, mailbox_);
+  }
 
   if(need_reexec) { 
     // Before longjmp, it should decrement the event counts handled so far.
@@ -1803,8 +1816,8 @@ CDErrT CD::Preserve(void *data,
           TestReqComm();
 
           if(task_size() > 1) {
-          PMPI_Win_fence(0, mailbox_);
-          CheckMailBox();
+            PMPI_Win_fence(0, mailbox_);
+            CheckMailBox();
           }
           TestRecvComm();
 
@@ -1813,8 +1826,8 @@ CDErrT CD::Preserve(void *data,
           TestComm();
           TestReqComm();
           if(task_size() > 1) {
-          PMPI_Win_fence(0, mailbox_);
-          CheckMailBox(); 
+            PMPI_Win_fence(0, mailbox_);
+            CheckMailBox(); 
           }
           TestRecvComm();
 //          TestComm();
@@ -2311,28 +2324,31 @@ CD::CDInternalErrT CD::Assert(bool test)
       internal_err = kErrorReported;
     }
     else { // This is just for the case that it is compiled with MPI_VER but rank size is 1.
-      Recover();  // It will go back to the begin point eventually by longjmp
+      //Recover();  // It will go back to the begin point eventually by longjmp
+      need_reexec = true;
       return internal_err;  // Actually this will not be reached. 
     }
   }
 
-  Sync(color());
-  
-  if(IsHead()) {
-    CheckMailBox();
-    if(task_size() > 1) {
-      Sync(color());
-    }
-  }
-  else {
-    if(task_size() > 1) {
-      Sync(color());
-    }
-    CheckMailBox();
-  }
+//  Sync(color());
+//  
+//  if(IsHead()) {
+//    CheckMailBox();
+//    if(task_size() > 1) {
+//      Sync(color());
+//    }
+//  }
+//  else {
+//    if(task_size() > 1) {
+//      Sync(color());
+//    }
+//    CheckMailBox();
+//  }
+  CheckMailBox();
 #else
   if(test == false) {
-    Recover();    
+    need_reexec = true;
+//    Recover();    
   }
 
 #endif

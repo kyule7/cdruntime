@@ -224,16 +224,15 @@ void CD_Finalize(void)
 
   CD_DEBUG("========================= Finalize [%d] ===============================\n", myTaskID);
 
-#if _PROFILER
-  // Profiler-related  
-  CDPath::GetRootCD()->profiler_->FinalizeViz();
-#endif
-
   assert(CDPath::GetCDPath()->size()==1); // There should be only on CD which is root CD
   assert(CDPath::GetCDPath()->back()!=NULL);
 
   CDPath::GetRootCD()->InternalDestroy(false);
-  cd::internal::Finalize();
+
+#if _PROFILER
+  // Profiler-related  
+  CDPath::GetRootCD()->profiler_->FinalizeViz();
+#endif
 
 #if _DEBUG
   WriteDbgStream();
@@ -243,6 +242,8 @@ void CD_Finalize(void)
   if(CDHandle::memory_error_injector_ != NULL);
     delete CDHandle::memory_error_injector_;
 #endif
+
+  cd::internal::Finalize();
 
   CDEpilogue();
 }
@@ -722,11 +723,9 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 #if _PROFILER
   // Profile-related
   dbg << "calling get profile" <<endl; //dbgBreak();
-//  if(ptr_cd()->cd_exec_mode_ == 0) { 
-    if(label == NULL) label = "INITIAL_LABEL";
-    dbg << "label "<< label <<endl; //dbgBreak();
-    profiler_->GetProfile(label);
-//  }
+  if(label == NULL) label = "INITIAL_LABEL";
+  dbg << "label "<< label <<endl; //dbgBreak();
+  profiler_->StartProfile(label);
 #endif
 
   CDEpilogue();
@@ -827,7 +826,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 
 #if _PROFILER
   if(ptr_cd()->cd_exec_mode_ == 0) { 
-//    profiler_->GetPrvData(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
+//    profiler_->GetPreserveInfo(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
   }
 #endif
 
@@ -867,7 +866,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
 
 #if _PROFILER
   if(ptr_cd()->cd_exec_mode_ == 0) { 
-//    profiler_->GetPrvData(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
+//    profiler_->GetPreserveInfo(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
   }
 #endif
 
@@ -1034,7 +1033,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     SetMailBox(kErrorOccurred);
     err = kAppError;
     
-    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
 //    Sync(CDPath::GetCoarseCD(this)->color());
 //    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 
@@ -1077,7 +1076,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
 #endif
 
-    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
     CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
   }
 
@@ -1093,7 +1092,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 //    
 //    Sync(CDPath::GetCoarseCD(this)->color());
 //    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
 //    CheckMailBox();
 //    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
     
@@ -1108,7 +1107,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 //    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
     
 //    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
-    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
     CheckMailBox();
 
   }

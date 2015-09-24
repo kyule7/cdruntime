@@ -45,8 +45,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define GIGA 1073741824
 
 #define LV1 1
-#define LV2 1
-#define LV3 8 
+#define LV2 8
+#define LV3 1 
 
 using namespace cd;
 using namespace std;
@@ -132,6 +132,7 @@ int TestCDHierarchy(void)
   dbgApp << "Root Creates Level 1 CD. # of children CDs = " << LV1 << "\n" << endl;
 
   CD_Begin(child_lv1);
+	child_lv1->RegisterErrorInjector(new CDErrorInjector({}, {3,4}, 0.0));
   dbgApp << "\t\tLevel 1 CD Begin...\n" << endl;
 
   int arrayE[ARRAY_E_SIZE] = {1,2,3,4,5,6,7,8};
@@ -167,6 +168,7 @@ int TestCDHierarchy(void)
   dbgApp << string(1<<1, '\t').c_str() << "CD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
 
   CD_Begin(child_lv2);
+	child_lv2->RegisterErrorInjector(new CDErrorInjector({}, {6}, 0.0));
   dbgApp << string(2<<1, '\t').c_str() <<"Level 2 CD Begin...\n" << endl;
 
   child_lv2->Preserve(arrayA, sizeof(arrayA), kRef, 
