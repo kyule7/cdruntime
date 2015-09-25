@@ -205,13 +205,13 @@ class CDHandle {
     static MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.
 #endif
 
+    SplitFuncT SplitCD; //!<function object that will be set to some appropriate split strategy.
+
+  public:
 #if _PROFILER 
     Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
                           //!< It will be valid when `_PROFILER` compile-time flag is on.
 #endif
-    SplitFuncT SplitCD; //!<function object that will be set to some appropriate split strategy.
-
-  public:
 
     int     jmp_val_;     //!< Temporary flag related to longjmp/setjmp
     jmp_buf jmp_buffer_;  //!< Temporary buffer related to longjmp/setjmp
@@ -876,7 +876,7 @@ class CDHandle {
     inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
     { memory_error_injector_ = memory_error_injector; }
 #else
-    inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector) {}
+//    inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector) {}
 #endif
 
 /**@brief Register error injection method into CD runtime system.
@@ -911,7 +911,7 @@ class CDHandle {
       app_side = true;
     }
 #else
-    inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector) {}
+//    inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector) {}
 #endif
 
  /** @} */ // Ends cd_split
@@ -1077,6 +1077,14 @@ class CDHandle {
  * @return string name for a CD 
  */
     char    *GetName(void)       const;
+
+/**@brief Get the string label defined by user.
+ *        Label can be defined at Begin() time.
+ *        It is intended to differentiate different phase
+ *        of the same CD (object)
+ * @return string name for a CD 
+ */
+    char    *GetLabel(void)      const;
 
 ///@brief Get CDID of the current CD.
     CDID    &GetCDID(void);       

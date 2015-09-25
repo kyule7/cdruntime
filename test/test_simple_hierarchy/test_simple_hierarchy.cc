@@ -132,7 +132,7 @@ int TestCDHierarchy(void)
   dbgApp << "Root Creates Level 1 CD. # of children CDs = " << LV1 << "\n" << endl;
 
   CD_Begin(child_lv1);
-	child_lv1->RegisterErrorInjector(new CDErrorInjector({}, {3,4}, 0.0));
+//	child_lv1->RegisterErrorInjector(new CDErrorInjector({}, {3,4}, 0.0));
   dbgApp << "\t\tLevel 1 CD Begin...\n" << endl;
 
   int arrayE[ARRAY_E_SIZE] = {1,2,3,4,5,6,7,8};
@@ -168,7 +168,7 @@ int TestCDHierarchy(void)
   dbgApp << string(1<<1, '\t').c_str() << "CD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
 
   CD_Begin(child_lv2);
-	child_lv2->RegisterErrorInjector(new CDErrorInjector({}, {6}, 0.0));
+//	child_lv2->RegisterErrorInjector(new CDErrorInjector({}, {6}, 0.0));
   dbgApp << string(2<<1, '\t').c_str() <<"Level 2 CD Begin...\n" << endl;
 
   child_lv2->Preserve(arrayA, sizeof(arrayA), kRef, 
@@ -190,7 +190,7 @@ int TestCDHierarchy(void)
   // Level 2 Body
   dbgApp << string(2<<1, '\t').c_str() << "Here is computation body of CD level 2...\n" << endl;
 
-  child_lv2->CDAssert(CheckArray(arrayE, sizeof(arrayE)));
+//  child_lv2->CDAssert(CheckArray(arrayE, sizeof(arrayE)));
 
   CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kStrict, 0, 0, &err);
   dbgApp << string(2<<1, '\t').c_str() << "CD2 Creates Level 3 CD. # of children CDs = " << LV3 << "\n" << endl;
@@ -198,8 +198,8 @@ int TestCDHierarchy(void)
   CD_Begin(child_lv3);
   dbgApp << string(3<<1, '\t').c_str() << "Level 3 CD Begin...\n" << endl;
 
-  child_lv3->Preserve(arrayA, sizeof(arrayA), kRef, "child_a", (string("arrayA")+to_string(myRank)).c_str()); // local
-  child_lv3->Preserve(arrayB, sizeof(arrayB), kRef, "child_b", (string("arrayB")+to_string(myRank)).c_str()); // local
+  child_lv3->Preserve(arrayA, sizeof(arrayA), kRef, "child_a", (string("arrayA-")+to_string(myRank)).c_str()); // local
+  child_lv3->Preserve(arrayB, sizeof(arrayB), kRef, "child_b", (string("arrayB-")+to_string(myRank)).c_str()); // local
   child_lv3->Preserve(arrayC, sizeof(arrayC), kRef, "child_c", "arrayC");
   child_lv3->Preserve(arrayD, sizeof(arrayD), kCopy, "arrayD");
   dbgApp << string(3<<1, '\t').c_str() << "Preserve via ref : arrayA (local), arrayB (local), arrayC (local)" << endl;

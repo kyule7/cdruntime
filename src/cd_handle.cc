@@ -45,12 +45,12 @@ using namespace cd::internal;
 using namespace std;
 
 /// KL
-/// dbg is a global variable to be used for debugging purpose.
+/// cddbg is a global variable to be used for debugging purpose.
 /// General usage is that it stores any strings, numbers as a string internally,
-/// and when dbg.flush() is called, it write the internally stored strings to file,
+/// and when cddbg.flush() is called, it write the internally stored strings to file,
 /// then clean up the internal storage.
 #if _DEBUG
-cd::DebugBuf cd::dbg;
+cd::DebugBuf cd::cddbg;
 #endif
 
 #if _CD_DEBUG == 1  // Print to fileout -----
@@ -103,7 +103,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #if _CD_DEBUG == 1
   char *filepath = getenv( "CD_DEBUG_OUT" );
   string basepath;
-  string filename("/dbg_log_rank_");
+  string filename("/cddbg_log_rank_");
 
   if(filepath != NULL) {
     basepath = filepath;
@@ -142,9 +142,9 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #endif
 
 #if _DEBUG
-  std::string output_filename2("./output/dbg_output_");
+  std::string output_filename2("./output/cddbg_output_");
   output_filename2 += to_string(static_cast<unsigned long long>(myTaskID));
-  dbg.open(output_filename2.c_str());
+  cddbg.open(output_filename2.c_str());
 #endif
 
   cd::internal::Initialize();
@@ -196,7 +196,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #endif
 
 #if _DEBUG
-  dbg.flush();
+  cddbg.flush();
 #endif
 
   //GONG
@@ -212,8 +212,8 @@ inline void WriteDbgStream(void)
 #endif
 
 #if _DEBUG
-  dbg.flush();
-  dbg.close();
+  cddbg.flush();
+  cddbg.close();
 #endif
 }
 
@@ -227,12 +227,13 @@ void CD_Finalize(void)
   assert(CDPath::GetCDPath()->size()==1); // There should be only on CD which is root CD
   assert(CDPath::GetCDPath()->back()!=NULL);
 
-  CDPath::GetRootCD()->InternalDestroy(false);
 
 #if _PROFILER
   // Profiler-related  
+  cout << CDPath::GetRootCD() << " " << CDPath::GetRootCD()->profiler_ << endl << endl;
   CDPath::GetRootCD()->profiler_->FinalizeViz();
 #endif
+  CDPath::GetRootCD()->InternalDestroy(false);
 
 #if _DEBUG
   WriteDbgStream();
@@ -357,7 +358,7 @@ CDHandle::CDHandle()
 //  if(node_id().size() > 1)
 //    PMPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), PMPI_INFO_NULL, PMPI_COMM_WORLD, &pendingWindow_);
 //  else
-//    dbg << "KL : size is 1" << endl;
+//    cddbg << "KL : size is 1" << endl;
   
 }
 
@@ -389,7 +390,7 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
 //  if(node_id_.size() > 1)
 //    PMPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), PMPI_INFO_NULL, PMPI_COMM_WORLD, &pendingWindow_);
 //  else
-//    dbg << "KL : size is 1" << endl;
+//    cddbg << "KL : size is 1" << endl;
 }
 
 CDHandle::~CDHandle()
@@ -678,7 +679,7 @@ CDErrT CDHandle::InternalDestroy(bool collective)
   CD_DEBUG("Calling finish profiler\n");
 
   //if(ptr_cd()->cd_exec_mode_ == 0) { 
-    profiler_->FinishProfile();
+//    profiler_->FinishProfile();
   //}
 #endif
 
@@ -707,12 +708,12 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
   CD_DEBUG("[CDHandle::Begin] Do Barrier at level#%u, reexec: %d\n", ptr_cd_->level(), ptr_cd_->num_reexecution_);
   
   if(node_id_.size() > 1) {
-    Sync(node_id_.color());
+//    Sync(node_id_.color());
     CD_DEBUG("\n\n[Barrier] CDHandle::Begin - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
   }
   //CheckMailBox();
 
-//  dbg << jmp_buffer_ << endl; dbgBreak();
+//  cddbg << jmp_buffer_ << endl; cddbgBreak();
   //TODO It is illegal to call a collective Begin() on a CD that was created without a collective Create()??
   if ( collective ) {
     // Sync();
@@ -722,9 +723,9 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 
 #if _PROFILER
   // Profile-related
-  dbg << "calling get profile" <<endl; //dbgBreak();
+  cddbg << "calling get profile" <<endl; //cddbgBreak();
   if(label == NULL) label = "INITIAL_LABEL";
-  dbg << "label "<< label <<endl; //dbgBreak();
+  cddbg << "label "<< label <<endl; //cddbgBreak();
   profiler_->StartProfile(label);
 #endif
 
@@ -739,55 +740,55 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 
 #if _MPI_VER
 
-  if(IsHead()) {
-    if(node_id_.size() > 1) {
-      Sync(node_id_.color());
-      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-    }
-    CheckMailBox();
-
-  }
-  else {
-    CheckMailBox();
-    if(node_id_.size() > 1) {
-      Sync(node_id_.color());
-      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-    }
-  }
-
-
-
-//  CheckMailBox();
-  if(IsHead()) {
-    if(node_id_.size() > 1) {
-      Sync(node_id_.color());
-      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-    }
-    CheckMailBox();
-
-  }
-  else {
-    CheckMailBox();
-    if(node_id_.size() > 1) {
-      Sync(node_id_.color());
-      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-    }
-  }
-  if(node_id_.size() > 1) {
-    Sync(node_id_.color());
-    CD_DEBUG("\n\n[Barrier] CDHandle::Complete 3 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-  }
-
+//  if(IsHead()) {
+//    if(node_id_.size() > 1) {
+//      Sync(node_id_.color());
+//      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+//    }
+//    CheckMailBox();
+//
+//  }
+//  else {
+//    CheckMailBox();
+//    if(node_id_.size() > 1) {
+//      Sync(node_id_.color());
+//      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+//    }
+//  }
+//
+//
+//
+////  CheckMailBox();
+//  if(IsHead()) {
+//    if(node_id_.size() > 1) {
+//      Sync(node_id_.color());
+//      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+//    }
+//    CheckMailBox();
+//
+//  }
+//  else {
+//    CheckMailBox();
+//    if(node_id_.size() > 1) {
+//      Sync(node_id_.color());
+//      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+//    }
+//  }
+//  if(node_id_.size() > 1) {
+//    Sync(node_id_.color());
+//    CD_DEBUG("\n\n[Barrier] CDHandle::Complete 3 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+//  }
+//
 #endif
 
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
 
 #if _PROFILER
-  dbg << "calling collect profile" <<endl; //dbgBreak();
+  cddbg << "calling collect profile" <<endl; //cddbgBreak();
   // Profile-related
 //  if(ptr_cd()->cd_exec_mode_ == 0) { 
-    profiler_->CollectProfile();
+    profiler_->FinishProfile();
 //  }
 #endif
 
@@ -825,8 +826,13 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   CDPrologue();
 
 #if _PROFILER
-  if(ptr_cd()->cd_exec_mode_ == 0) { 
-//    profiler_->GetPreserveInfo(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
+  if(ptr_cd()->cd_exec_mode_ == 0) {
+    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
+      profiler_->RecordProfile(PRV_COPY_DATA, len);
+    }
+    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
+      profiler_->RecordProfile(PRV_REF_DATA, len);
+    }
   }
 #endif
 
@@ -865,8 +871,13 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   assert(ptr_cd_ != 0);
 
 #if _PROFILER
-  if(ptr_cd()->cd_exec_mode_ == 0) { 
-//    profiler_->GetPreserveInfo(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
+  if(ptr_cd()->cd_exec_mode_ == 0) {
+    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
+      profiler_->RecordProfile(PRV_COPY_DATA, len);
+    }
+    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
+      profiler_->RecordProfile(PRV_REF_DATA, len);
+    }
   }
 #endif
 
@@ -890,6 +901,16 @@ char *CDHandle::GetName(void) const
 {
   if(ptr_cd_ != NULL) {
     return const_cast<char*>(ptr_cd_->name_.c_str());  
+  }
+  else {
+    return NULL;
+  }
+}
+
+char *CDHandle::GetLabel(void) const
+{
+  if(ptr_cd_ != NULL) {
+    return const_cast<char*>(ptr_cd_->label_.c_str());  
   }
   else {
     return NULL;
@@ -1029,7 +1050,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 #if _MPI_VER
 
   if(internal_err == CD::CDInternalErrT::kErrorReported) {
-    dbg << "HERE?" << endl;
+    cddbg << "HERE?" << endl;
     SetMailBox(kErrorOccurred);
     err = kAppError;
     
@@ -1216,11 +1237,11 @@ void CDHandle::CommitPreserveBuff()
   CDPrologue();
 //  if(ptr_cd_->cd_exec_mode_ ==CD::kExecution){
   if( ptr_cd_->ctxt_prv_mode_ == kExcludeStack) {
-//  dbg << "Commit jmp buffer!" << endl; dbgBreak();
-//  dbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << ", size: "<< sizeof(jmp_buf) << endl; dbgBreak();
+//  cddbg << "Commit jmp buffer!" << endl; cddbgBreak();
+//  cddbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << ", size: "<< sizeof(jmp_buf) << endl; cddbgBreak();
     memcpy(ptr_cd_->jmp_buffer_, jmp_buffer_, sizeof(jmp_buf));
     ptr_cd_->jmp_val_ = jmp_val_;
-//  dbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << endl; dbgBreak();
+//  cddbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << endl; cddbgBreak();
   }
   else {
     ptr_cd_->ctxt_ = this->ctxt_;

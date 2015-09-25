@@ -38,33 +38,40 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_path.h"
 #include "cd_global.h"
 #include "cd_profiler.h"
-#include "rdtsc.h"
+#include "util.h"
 #include <cstdint>
 using namespace sight;
 using namespace cd;
 using std::endl;
 
+
+std::map<std::string, bool> CDProfiler::onOff_;
+
 std::list<Viz*> CDProfiler::vizStack_;
-//std::list<module*>     Module::mStack;
+
+#if _ENABLE_MODULE
 //modularApp*            Module::ma;
+#endif
 
-
-//std::list<flowgraph*>  HierGraph::hgStack;
+#if _ENABLE_HIERGRAPH
 flowgraph *HierGraph::fg;
+#endif
 
-//std::list<scope*>      Scope::sStack;
+#if _ENABLE_SCOPE
 graph *ScopeGraph::scopeGraph;
+#endif
 
+#if _ENABLE_ATTR
 attrIf *Attribute::attrScope;
 //std::list<attrAnd*>    Attribute::attrStack;
 //std::list<attr*>       Attribute::attrValStack;
+#endif
 
-//std::list<CDNode*>     CDNode::cdStack;
-
+#if _ENABLE_COMP
 //std::vector<comparison*> Comparison::compTagStack;
 //std::vector<int> Comparison::compKeyStack;
 //std::list<comparison*> Conparison::compStack;
-
+#endif
 
 // The Begin/Complete pairs that have the same label are assumed that
 // they are identical sequential CDs.
@@ -86,15 +93,14 @@ attrIf *Attribute::attrScope;
 // SYSTEM_BIT_VECTOR|   X
 void CDProfiler::StartProfile(const char *label)
 {
-  dbg<< "\n\t-------- Start Profile --------\n" <<endl; //dbgBreak();
-  cout << "current_label_ : " << current_label_ << ", label : " << label << endl;
+//  cout << "current_label_ : " << current_label_ << ", label : " << label << endl;
 
   if(current_label_ != label) {
-    cout << "diff" << endl;
+//    cout << "diff" << endl;
     current_label_ = label;
 
     // Profile starts -- ATTR | COMP | MODULE | SCOPE | CDNODE -- 
-    profile_data_[current_label_] = new uint64_t(MAX_PROFILE_DATA);
+    profile_data_[current_label_];// = new uint64_t[MAX_PROFILE_DATA];
   }
   
 //  profile_data_[current_label_][LOOP_COUNT]++;
@@ -116,7 +122,7 @@ void CDProfiler::StartProfile(const char *label)
 #endif
 
 #if _ENABLE_MODULE
-  vizStack_.push_back(new Module());
+  vizStack_.push_back(new Module(this));
 #endif
 
 #if _ENABLE_HIERGRAPH
@@ -155,13 +161,16 @@ void CDProfiler::InitProfile(std::string label)
 void CDProfiler::InitViz()
 {
   // Only root should call this (inside CD_Init)
-  if( GetCurrentCD() != GetRootCD() ) assert(0);
+//  if( GetCurrentCD() != GetRootCD() ) {
+//    cout << GetCurrentCD() << " " << GetRootCD() << endl;
+//    assert(0);
+//  }
 
-//  dbg<< "\n---------------- Initialize Visualization --------------\n" <<endl;
-  //dbgBreak();
+//  cddbg<< "\n---------------- Initialize Visualization --------------\n" <<endl;
+  //cddbgBreak();
 
-  //SightInit(txt()<<"CDs", txt()<<"dbg_CDs_"<<GetCDID().node_id().color()<<"_"<< GetCDID().node_id().task_in_color() );
-  SightInit(txt()<<"CDs", txt()<<"dbg_CDs_"<< GetRootCD()->GetTaskID() );
+  //SightInit(txt()<<"CDs", txt()<<"cddbg_CDs_"<<GetCDID().node_id().color()<<"_"<< GetCDID().node_id().task_in_color() );
+  SightInit(txt()<<"CDs", txt()<<"cddbg_CDs_"<< GetRootCD()->task_in_color() );
 
   /// Title
   dbg << "<h1>Containment Domains Profiling and Visualization</h1>" << endl;
@@ -174,6 +183,10 @@ void CDProfiler::InitViz()
   attr *attrVal = new attr("INIT", 1);
   vizStack_.push_back(attrVal);
   attrScope = new attrIf(new attrEQ("INIT", 1));
+#endif
+
+#if _ENABLE_MODULE
+  modularApp::setNamedMeasures(namedMeasures("time", new timeMeasure())); 
 #endif
 
 #if _ENABLE_HIERGRAPH
@@ -189,13 +202,13 @@ void CDProfiler::InitViz()
 
 void CDProfiler::FinalizeViz(void)
 {
-  dbg<< "\n---------------- Finalize Visualization --------------\n" <<endl;
+  cddbg<< "\n---------------- Finalize Visualization --------------\n" <<endl;
 
   // Only root should call this (inside CD_Finalize)
-  if( GetCurrentCD() != GetRootCD() ) assert(0);
+//  if( GetCurrentCD() != GetRootCD() ) assert(0);
 
   // Destroy SightObj
-  dbg << "reached here? becore while in FinalizeViz() "<<vizStack_.size() << endl;
+  cddbg << "reached here? becore while in FinalizeViz() "<<vizStack_.size() << endl;
 
 #if _ENABLE_SCOPEGRAPH
   assert(scopeGraph);
@@ -223,7 +236,7 @@ void CDProfiler::FinalizeViz(void)
 
 void CDProfiler::ClearSightObj(void)
 {
-  for(auto it=vizStack_.begin(); it!=vizStack_.end(); ++it) {
+  for(auto it=vizStack_.rbegin(); it!=vizStack_.rend(); ++it) {
     delete vizStack_.back();
     vizStack_.pop_back();
   }
@@ -231,7 +244,7 @@ void CDProfiler::ClearSightObj(void)
 
 void CDProfiler::FinishProfile(void) // it is called in Destroy()
 {
-  dbg<< "\n\t-------- Finish Profile --------\n" <<endl;
+  cddbg<< "\n\t-------- Finish Profile --------\n" <<endl;
 
   // outputs the preservation / detection info
   /// Timer off
@@ -241,7 +254,7 @@ void CDProfiler::FinishProfile(void) // it is called in Destroy()
   /// Loop Count (# of seq. CDs) + 1
 //  (this->profile_data_)[current_label_][LOOP_COUNT] += 1;
 //  (profile_data_)[current_label_][LOOP_COUNT] = GetCurrentCD()->ptr_cd()->GetCDID().sequential_id_;
-  profile_data_[current_label_][LOOP_COUNT]++;
+  (profile_data_)[current_label_][LOOP_COUNT]++;
 
   /// Calcualate the execution time
   (profile_data_)[current_label_][EXEC_CYCLE] += (that_point_) - (this_point_);
@@ -262,40 +275,32 @@ void CDProfiler::SetCollectProfile(bool flag)
 
 
 
-void CDProfiler::GetPreserveInfo(void *data, 
-                            uint64_t len_in_bytes,
-                            CDPreserveT preserve_mask, 
-                            const char *my_name, 
-                            const char *ref_name, 
-                            uint64_t ref_offset, 
-                            const RegenObject * regen_object, 
-                            PreserveUseT data_usage)
+void CDProfiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
 {
-  if(preserve_mask == kCopy){
 
-    profile_data_[current_label_][PRV_COPY_DATA] += len_in_bytes;
-//    if( (this->parent_ != NULL) && check_overlap(this->parent_, ref_name) ){
-      /// Sequential overlapped accumulated data. It will be calculated to OVERLAPPED_DATA/PRV_COPY_DATA
-      /// overlapped data: overlapped data that is preserved only via copy method.
-//      profile_data_[current_label_][OVERLAPPED_DATA] += len_in_bytes;
-//      dbg<<"something is weird  "<<"level is "<<this->this_cd_->level_ << "length : "<<len_in_bytes<<endl;
+  /// Sequential overlapped accumulated data. It will be calculated to OVERLAPPED_DATA/PRV_COPY_DATA
+  /// overlapped data: overlapped data that is preserved only via copy method.
+  profile_data_[current_label_][profile_type] += profile_data;
+//  if( (this->parent_ != NULL) && check_overlap(this->parent_, ref_name) ){
 
-  } else if(preserve_mask == kRef) {
-
-    profile_data_[current_label_][PRV_REF_DATA] += len_in_bytes;
-
-  } else {
-                                                                                                                                  
-    dbg<<"prvTy is not supported currently : "<< preserve_mask<<endl;          
-//    exit(-1);
-
-  }
 }
 
+void CDProfiler::RecordClockBegin()
+{
+  this_time_ = clock();
+
+}
+
+void CDProfiler::RecordClockEnd()
+{
+  that_time_ = clock();
+  profile_data_[current_label_][CD_OVERHEAD] += that_time_ - this_time_;
+  
+}
 
 void CDProfiler::GetLocalAvg(void)
 {
-  dbg<<"Master CD Get Local Avg"<<endl;
+  cddbg<<"Master CD Get Local Avg"<<endl;
 //  for(int i=1; i < MAX_PROFILE_DATA-1; ++i) {
 //    profile_data_[current_label_][i] /= profile_data_[current_label_][LOOP_COUNT];
 //  }
@@ -305,17 +310,18 @@ void CDProfiler::GetLocalAvg(void)
 
 // -------------- CD Node -----------------------------------------------------------------------------
 
+#if _ENABLE_CDNODE
 CDNode::CDNode(void)
 {
 //  CDNode* cdn = new CDNode(txt()<<current_label_, txt()<<GetCDID()); 
 //  this->cdStack.push_back(cdn);
-//  dbg << "{{{ CDNode Test -- "<<this->this_cd_->cd_id_<<", #cdStack="<<cdStack.size()<<endl;
+//  cddbg << "{{{ CDNode Test -- "<<this->this_cd_->cd_id_<<", #cdStack="<<cdStack.size()<<endl;
 }
 
 CDNode::~CDNode(void)
 {
 //  if(cdStack.back() != NULL){
-//    dbg<<"add new info"<<endl;
+//    cddbg<<"add new info"<<endl;
 ///*
 //    cdStack.back()->setStageNode( "preserve", "data_copy", profile_data_[current_label_]PRV_COPY_DATA]    );
 //    cdStack.back()->setStageNode( "preserve", "data_overlapped", profile_data_[current_label_][OVERLAPPED_DATA]  );
@@ -324,42 +330,45 @@ CDNode::~CDNode(void)
 //    
 //    //scope s("Preserved Stats");
 //    PreserveStageNode psn(txt()<<"Preserve Stage");
-//    dbg << "data_copy="<<profile_data_[current_label_][PRV_COPY_DATA]<<endl;
-//    dbg << "data_overlapped="<<profile_data_[current_label_][OVERLAPPED_DATA]<<endl;
-//    dbg << "data_ref="<<profile_data_[current_label_][PRV_REF_DATA]<<endl;
+//    cddbg << "data_copy="<<profile_data_[current_label_][PRV_COPY_DATA]<<endl;
+//    cddbg << "data_overlapped="<<profile_data_[current_label_][OVERLAPPED_DATA]<<endl;
+//    cddbg << "data_ref="<<profile_data_[current_label_][PRV_REF_DATA]<<endl;
 //
 //  }
 
-//  dbg << " }}} CDNode Test -- "<<this->this_cd_->cd_id_<<", #cdStack="<<cdStack.size()<<endl;
+//  cddbg << " }}} CDNode Test -- "<<this->this_cd_->cd_id_<<", #cdStack="<<cdStack.size()<<endl;
 //  assert(cdStack.size()>0);
 //  assert(cdStack.back() != NULL);
 //  delete cdStack.back();
 //  cdStack.pop_back();
 }
 
+#endif
+
 // -------------- Scope -------------------------------------------------------------------------------
+#if _ENABLE_SCOPE
 
 Scope::Scope(void)
 {
-  std::pair<std::string, int> label = GetCurrentCD()->profiler_->label();
+  string label = GetCurrentCD()->profiler_->label();
 
   /// create a new scope at each Begin() call
-  s = new scope(txt()<<label.first<<", cd_id="<<GetCurrentCD()->node_id().color());
+  s = new scope(txt()<<label<<", cd_id="<<GetCurrentCD()->node_id().color());
 }
 
 Scope::~Scope(void)
 {
-//  dbg << " >>> Scope  Test -- "<<this->this_cd_->cd_id_<<", #sStack="<<sStack.size()<<endl;
+//  cddbg << " >>> Scope  Test -- "<<this->this_cd_->cd_id_<<", #sStack="<<sStack.size()<<endl;
   assert(s != NULL);
   delete s;
 }
 
 ScopeGraph::ScopeGraph(void)
 {
-  dbg << "destroy scope" << endl;
-  std::pair<std::string, int> label = GetCurrentCD()->profiler_->label();
+  cddbg << "destroy scope" << endl;
+  string label = GetCurrentCD()->profiler_->label();
   /// create a new scope at each Begin() call
-  s = new scope(txt()<<label.first<<", cd_id="<<GetCurrentCD()->node_id().color());
+  s = new scope(txt()<<label<<", cd_id="<<GetCurrentCD()->node_id().color());
   /// Connect edge between previous node to newly created node
   if(prv_s != NULL)
     scopeGraph->addDirEdge(prv_s->getAnchor(), s->getAnchor());
@@ -367,61 +376,75 @@ ScopeGraph::ScopeGraph(void)
 
 ScopeGraph::~ScopeGraph(void)
 {
-  dbg << "destroy scopegraph" << endl;
+  cddbg << "destroy scopegraph" << endl;
 }
+#endif
 
 
 // -------------- Module ------------------------------------------------------------------------------
-Module::Module(bool usr_profile_en)
+#if _ENABLE_MODULE
+Module::Module(CDProfiler *profiler_p, bool usr_profile_en)
 {
+  profiler = profiler_p;
+  std::map<std::string, array<uint64_t,MAX_PROFILE_DATA>> &profile_data_ = profiler->profile_data_;
+  LabelT &current_label_ = profiler->current_label_;
 //  CDHandle *cdh = GetCurrentCD();
-  std::pair<std::string, int> label = GetCurrentCD()->profiler_->label();
-  dbg<<"CreateModule call"<<endl;
+  string label = GetCurrentCD()->profiler_->label();
+//  cddbg<<"CreateModule call"<<endl;
   NodeID node_id = GetCurrentCD()->node_id();
-
+  bool isReference = node_id.task_in_color() == 0;
   usr_profile_enable = usr_profile_en;
+// LOOP_COUNT, 
+// EXEC_CYCLE, 
+// PRV_COPY_DATA, 
+// PRV_REF_DATA, 
+// OVERLAPPED_DATA, 
+// SYSTEM_BIT_VECTOR,
+// CD_OVERHEAD, 
+// LOGGING_OVERHEAD, 
   if(usr_profile_enable==false) {
-    dbg<<"\n[[[[Module object created]]]]"<<endl<<endl; //dbgBreak();
-    m = new module( instance(txt()<<label.first<<"_"<<GetCurrentCD()->ptr_cd()->GetCDID().cd_name().GetCDName(), 1, 0), 
-                    inputs(port(context("cd_id", GetCurrentCD()->ptr_cd()->GetCDID().cd_name().GetCDName(), 
-                                        "sequential_id", (int)(GetCurrentCD()->ptr_cd()->GetCDID().sequential_id()),
-                                        "label", label.first,
-                                        "processID", (int)node_id.task_in_color()))),
-                    namedMeasures("time", new timeMeasure()) );
-//    mStack.push_back(m);
+//    cddbg<<"\n[[[[Module object created]]]]"<<endl<<endl; //cddbgBreak();
+    m = new compModule( instance(txt()<<label<<"_"<<GetCurrentCD()->ptr_cd()->GetCDName(), 1, 0), 
+                    inputs(port(context("Sequential CDs #",(long)profile_data_[current_label_][LOOP_COUNT],
+                                        "Exec cycle", (long)profile_data_[current_label_][EXEC_CYCLE],
+                                        "Preservation volume", (long)profile_data_[current_label_][PRV_COPY_DATA],
+                                         "CD_OVERHEAD", (long)profile_data_[current_label_][CD_OVERHEAD],
+                                        "Logging Overhead", (long)profile_data_[current_label_][LOGGING_OVERHEAD]
+//                                       // "label", label,
+//                                        "processID", (int)node_id.task_in_color()
+                                       ))),
+                    externalOutputs,
+                    isReference,
+                    compNamedMeasures("time", new timeMeasure(), noComp()) );
   }
   else {
   
-//    dbg<<22222<<endl<<endl; dbgBreak();
-    m = new module( instance(txt()<<label.first<<"_"<<GetCurrentCD()->ptr_cd()->GetCDID().cd_name().GetCDName(), 2, 2), 
-                    inputs(port(context("cd_id", txt()<<node_id.task_in_color(), 
-                                        "sequential_id", (int)(GetCurrentCD()->ptr_cd()->GetCDID().sequential_id()))),
-                           port(usr_profile_input)),
-                    namedMeasures("time", new timeMeasure()) );
+//    cddbg<<22222<<endl<<endl; cddbgBreak();
+//    m = new module( instance(txt()<<label<<"_"<<GetCurrentCD()->ptr_cd()->GetCDName(), 2, 2), 
+//                    inputs(port(context("cd_id", txt()<<node_id.task_in_color(), 
+//                                        "sequential_id", (int)(GetCurrentCD()->ptr_cd()->GetCDID().sequential_id()))),
+//                           port(usr_profile_input)),
+//                    namedMeasures("time", new timeMeasure()) );
     //this->mStack.push_back(m);
   }
 
-//  dbg << "[[[ Module Test -- "<<this->this_cd_->cd_id_<<", #mStack="<<mStack.size()<<endl;
+//  cddbg << "[[[ Module Test -- "<<this->this_cd_->cd_id_<<", #mStack="<<mStack.size()<<endl;
 }
 
 
 Module::~Module(void)
 {
-  dbg << "~Module is called" << endl;
   CDProfiler *profiler = (CDProfiler*)(GetCurrentCD()->profiler_);
-  std::map<std::string, uint64_t*> profile_data = profiler->profile_data_;
-  std::pair<std::string, int> label = GetCurrentCD()->profiler_->label();
+  std::map<std::string, array<uint64_t, MAX_PROFILE_DATA>> profile_data = profiler->profile_data_;
+  string label = GetCurrentCD()->profiler_->label();
 
-  dbg<<"DestroyModule call"<<endl;
-//  dbg << " ]]] Module Test -- "<<this->this_cd_->cd_id_<<", #mStack="<<mStack.size()<<endl;
 
   assert(m != NULL);
 
-  dbg << "reach?" << endl;
   if(usr_profile_enable == false){
-    m->setOutCtxt(0, context("data_copy=", (long)(profile_data[label.first][PRV_COPY_DATA]),
-                             "data_overlapped=", (long)(profile_data[label.first][OVERLAPPED_DATA]),
-                             "data_ref=" , (long)(profile_data[label.first][PRV_REF_DATA])));
+//    m->setOutCtxt(0, context("data_copy=", (long)(profile_data[label][PRV_COPY_DATA]),
+//                             "data_overlapped=", (long)(profile_data[label][OVERLAPPED_DATA]),
+//                             "data_ref=" , (long)(profile_data[label][PRV_REF_DATA])));
   }
   else {
     m->setOutCtxt(1, usr_profile_output);
@@ -436,7 +459,6 @@ Module::~Module(void)
 */
 
 
-  dbg << "\n [[[[[[[[[[[[ Module is deleted ]]]]]]]]]]]\n"<<endl;
 }
 
 
@@ -477,16 +499,17 @@ void Module::AddUsrProfile(std::string key, long val, int mode)
   }
   usr_profile_enable = true;
 }
-
+#endif
 
 
 
 
 // -------------- Comparison --------------------------------------------------------------------------
+#if _ENABLE_COMP
 Comparison::Comparison(void)
 {
 
-  compTag = new comparison(txt() << GetCurrentCD()->node_id().color());
+  compTag = new comparison(txt() << cd::myTaskID);
 //  comparison* comp = new comparison(node_id().color());
 //  compStack.push_back(comp);
 
@@ -514,17 +537,18 @@ Comparison::~Comparison(void)
 
 }
 
-
+#endif
 
 
 // -------------- HierGraph ---------------------------------------------------------------------------
+#if _ENABLE_HIERGRAPH
 HierGraph::HierGraph(void)
 {
-  dbg<<"CreateHierGraph call"<<endl;
+  cddbg<<"CreateHierGraph call"<<endl;
   NodeID node_id = GetCurrentCD()->node_id();
   CDID   cd_id = GetCurrentCD()->ptr_cd()->GetCDID();
 
-  fg->graphNodeStart(GetCurrentCD()->GetName(), cd_id.sequential_id(), cd_id.cd_name().GetCDName());
+  fg->graphNodeStart(GetCurrentCD()->GetName(), GetCurrentCD()->GetLabel(), cd_id.sequential_id(), cd_id.task_in_color());
 }
 
 
@@ -532,13 +556,16 @@ HierGraph::~HierGraph(void)
 {
   fg->graphNodeEnd(GetCurrentCD()->GetName());
 }
+#endif
 
+
+#if _ENABLE_ATTR
 Attribute::Attribute(void)
 {
-  std::pair<std::string, int> label = GetCurrentCD()->profiler_->label();
+  string label = GetCurrentCD()->profiler_->label();
 
-  attrVal = new attr(label.first, label.second);
-  attrKey = new attrAnd(new attrEQ(label.first, 1));
+  attrVal = new attr(label, CDProfiler::onOff_[label]);
+  attrKey = new attrAnd(new attrEQ(label, 1));
 }
 
 Attribute::~Attribute(void)
@@ -548,5 +575,7 @@ Attribute::~Attribute(void)
   assert(attrVal);
   delete attrVal;
 }
+#endif
+
 
 #endif

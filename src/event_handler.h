@@ -56,7 +56,7 @@ class EventHandler {
 public:
   EventHandler() {}
   virtual ~EventHandler(void) {}
-  virtual void HandleEvent(void) {dbg << "EventHandler::HandleEvent is called" << endl;}
+  virtual void HandleEvent(void) {cddbg << "EventHandler::HandleEvent is called" << endl;}
 };
 
 class CDEventHandler : public EventHandler {
@@ -65,8 +65,8 @@ protected:
 public:
   CDEventHandler(CD *ptr_cd) 
     : ptr_cd_(ptr_cd) {}
-  virtual ~CDEventHandler(void){ dbg << "CDEventHandler is destroyed" << endl; }
-  virtual void HandleEvent(void) {dbg << "CDEventHandler::HandleEvent is called" << endl;}
+  virtual ~CDEventHandler(void){ cddbg << "CDEventHandler is destroyed" << endl; }
+  virtual void HandleEvent(void) {cddbg << "CDEventHandler::HandleEvent is called" << endl;}
 };
 
 class HeadCDEventHandler : public EventHandler {
@@ -75,8 +75,8 @@ protected:
 public:
   HeadCDEventHandler(HeadCD *ptr_cd) 
     : ptr_cd_(ptr_cd) {}
-  virtual ~HeadCDEventHandler(void){ dbg << "HeadCDEventHandler is destroyed" << endl; }
-  virtual void HandleEvent(void) {dbg << "HeadCDEventHandler::HandleEvent is destroyed" << endl;}
+  virtual ~HeadCDEventHandler(void){ cddbg << "HeadCDEventHandler is destroyed" << endl; }
+  virtual void HandleEvent(void) {cddbg << "HeadCDEventHandler::HandleEvent is destroyed" << endl;}
 };
 
 // ------------------------------------------------------------------------
@@ -110,7 +110,7 @@ class HandleErrorOccurred : public HeadCDEventHandler {
 public:
   HandleErrorOccurred(HeadCD *ptr_cd, int task_id=0) 
     : HeadCDEventHandler(ptr_cd), task_id_(task_id) {}
-  ~HandleErrorOccurred() { dbg << "HandleErrorOccurred is destroyed" << endl; }
+  ~HandleErrorOccurred() { cddbg << "HandleErrorOccurred is destroyed" << endl; }
   virtual void HandleEvent(void);
 };
 

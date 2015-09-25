@@ -34,6 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "data_handle.h"
+#include "util.h"
 #include <iostream>
 using namespace cd;
 using namespace cd::internal;

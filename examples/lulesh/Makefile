@@ -9,12 +9,15 @@ CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=1 -D_DEBUG=1
 #CD_CFLAGS = -I../../src 
 #CD_LINKFLAGS = -L../../lib -Wl,-rpath ../../lib -lcds
 
+CD_CFLAGS += ${SIGHT_CFLAGS} 
+CD_LINKFLAGS += ${VIZ_LINKFLAGS} -lgomp
 
 SERCXX   = g++ -DUSE_MPI=0 
 MPICXX   = mpic++ -DUSE_MPI=1 -D_CD=1 -D_DEBUG=1 
 CXX      = $(MPICXX) 
-CXXFLAGS = -g -std=gnu++0x -openmp -I${SILO_INCDIR} -Wall -Wno-pragmas ${CD_CFLAGS} ${CD_FLAGS} 
+CXXFLAGS = -g -std=gnu++0x  -I${SILO_INCDIR} -Wall -Wno-pragmas ${CD_CFLAGS} ${CD_FLAGS} 
 LDFLAGS  = ${CD_LINKFLAGS} #${SIGHT_LINKFLAGS} 
+
 
 SOURCE_LULESH = \
 	./lulesh.cc \

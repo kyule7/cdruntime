@@ -94,16 +94,19 @@ typedef MPI_Comm      ColorT;
 typedef int           ColorT;
 #endif
 
+#define THREE_ARGS_MACRO(_IN0,_IN1,_IN2,FUNC,...) FUNC
+#define TWO_ARGS_MACRO(_IN0,_IN1,FUNC,...) FUNC
+
 
 namespace cd {
   class CDHandle;
   class DebugBuf;
 #if _DEBUG
 //  extern std::ostringstream dbg;
-  extern DebugBuf dbg;
+  extern DebugBuf cddbg;
 #define dbgBreak nullFunc
 #else
-#define dbg std::cout
+#define cddbg std::cout
 #define dbgBreak nullFunc
 #endif
 
@@ -473,9 +476,47 @@ namespace cd {
 
 }
 
-#define CD_Begin(X) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
-#define CD_Begin(X,Y) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y);
-#define CD_Begin(X,Y,Z) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y,Z);
+/* 
+ISSUE 1 (Kyushick)
+If we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?
+
+void Foo(void)
+{
+  double X, Y, Z;
+  ...
+  if (IsTrue == true) { 
+    int A, B, C, D;
+    ...
+    ...
+    A = B + C; B = D * A;
+    ...
+  } 
+  else {
+    int E, F;
+    ...
+    E = F * E;
+    ...
+  }
+  ...
+}
+
+there will be Foo's local scope in the stack and what about A, B, C, D, E, F ??
+A, B, C, D, E, F's life cycle will be up to the end of if-then statement. 
+So, I guess the stack will grow/shrink a bit due to this if-then statement.
+So, if we setjmp or get context within this if-then statement's scope,
+I think there will be some problem...
+
+ISSUE 2 (Kyushick)
+We are increasing the number of reexecution inside Begin(). So, the point of time when we mark rollback point is not after Begin() but before Begin()
+*/
+#define THREE_ARGS_MACRO(_IN0,_IN1,_IN2,FUNC,...) FUNC
+#define CD_Begin(...) THREE_ARGS_MACRO(__VA_ARGS__, CD_BEGIN3, CD_BEGIN2, CD_BEGIN1)(__VA_ARGS__)
+
+// Macros for setjump / getcontext
+// So users should call this in their application, not call cd_handle->Begin().
+#define CD_BEGIN1(X) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
+#define CD_BEGIN2(X,Y) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y);
+#define CD_BEGIN3(X,Y,Z) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y,Z);
 //#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
 #define CD_Complete(X) (X)->Complete()   
 

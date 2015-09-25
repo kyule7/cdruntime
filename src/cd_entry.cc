@@ -346,7 +346,8 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
     ENTRY_TAG_T tag_to_search = dst_data_.ref_name_tag();
 
     if(local_found == false) {
-      CD_DEBUG("Failed to find the entry locally. Request head to bring the entry.\n");
+      CD_DEBUG("Failed to find the entry locally. Request head to bring the entry.\n"); 
+//      printf("Failed to find the entry locally. Request head to bring the entry. %s\n",ptr_cd()->GetCDName().GetString().c_str()); 
       RequestEntrySearch();
     } 
     else {

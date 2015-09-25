@@ -63,11 +63,14 @@ using namespace cd;
 using namespace cd::internal;
 using namespace cd::interface;
 using namespace cd::logging;
+
+#include <cstdio>
+#include <csetjmp>
 #include <string>
 #include <vector>
 #include <map>
-#include <csetjmp>
-#include <cstdio>
+#include <unordered_map>
+#define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
 
 #if _MPI_VER 
 
@@ -187,6 +190,7 @@ namespace cd {
                           OVERLAPPED_DATA, 
                           SYSTEM_BIT_VECTOR,
                           CD_OVERHEAD, 
+                          LOGGING_OVERHEAD, 
                           MAX_PROFILE_DATA };
 /** @brief Profile format
  *
@@ -286,7 +290,10 @@ namespace cd {
   extern void ReadMsgTag(uint32_t msg_tag);
 
   extern std::map<ENTRY_TAG_T, std::string> tag2str;
-  extern std::hash<std::string> str_hash;
+//  extern std::hash<std::string> str_hash;
+//  extern EntryDirType::hasher str_hash;
+  extern std::unordered_map<std::string,CDEntry*>::hasher str_hash;
+  extern std::unordered_map<std::string,CDEntry*> str_hash_map;
 
   extern uint64_t gen_object_id;
 
@@ -296,13 +303,11 @@ namespace cd {
   static inline void nullFunc(void) {}
 
 
-  static inline ENTRY_TAG_T cd_hash(const std::string &str)
+  extern inline ENTRY_TAG_T cd_hash(const std::string &str)
   { return static_cast<ENTRY_TAG_T>(cd::str_hash(str)); }
 
 //  static inline ENTRY_TAG_T cd_hash(const std::string &str)
 
-//static inline  ENTRY_TAG_T cd_hash(const std::string &str)
-//{ return static_cast<ENTRY_TAG_T>(cd::str_hash(str)); }
 
   extern inline std::string event2str(int event) {
     switch(event) {
@@ -362,12 +367,51 @@ namespace cd {
 /**@brief Set current context as non-application side. 
  * @return true/false
  */
-  static inline void CDPrologue(void) { app_side = false; }
+#if _PROFILER
+
+#define CDPrologue() \
+  app_side = false;\
+
+#else
+
+#define CDPrologue() \
+  app_side = false;\
+  profiler_->RecordClockBegin();
+
+#endif
+//  static inline void CDPrologue(void) 
+//  { 
+//    app_side = false; 
+//#if _PROFILER
+//    profiler_->RecordClockBegin();
+//#endif
+//  }
+
+
 
 /**@brief Set current context as application side. 
  * @return true/false
  */
-  static inline void CDEpilogue(void) { app_side = true; }
+#if _PROFILER
+
+#define CDEpilogue() \
+  app_side = true;\
+
+#else
+
+#define CDEpilogue() \
+  app_side = true;\
+  profiler_->RecordClockEnd();
+
+#endif
+//  static inline void CDEpilogue(void) 
+//  { 
+//    app_side = true; 
+//#if _PROFILER
+//    profiler_->RecordClockEnd();
+//#endif
+//    
+//  }
 
 /**@brief Check current context is application side. 
  * @return true/false
@@ -490,52 +534,10 @@ extern FILE *cdoutApp;
 #define CD_SHARING_DEGREE 64
 #define dout clog
 
-#define DEFAULT_MEDIUM kHDD
+#define DEFAULT_MEDIUM kDRAM
 
 #define CheckHere() \
   if(cd::app_side) assert(0);
 
-/* 
-ISSUE 1 (Kyushick)
-If we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?
-
-void Foo(void)
-{
-  double X, Y, Z;
-  ...
-  if (IsTrue == true) { 
-    int A, B, C, D;
-    ...
-    ...
-    A = B + C; B = D * A;
-    ...
-  } 
-  else {
-    int E, F;
-    ...
-    E = F * E;
-    ...
-  }
-  ...
-}
-
-there will be Foo's local scope in the stack and what about A, B, C, D, E, F ??
-A, B, C, D, E, F's life cycle will be up to the end of if-then statement. 
-So, I guess the stack will grow/shrink a bit due to this if-then statement.
-So, if we setjmp or get context within this if-then statement's scope,
-I think there will be some problem...
-
-ISSUE 2 (Kyushick)
-We are increasing the number of reexecution inside Begin(). So, the point of time when we mark rollback point is not after Begin() but before Begin()
-*/
-
-//#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff()
-
-// Macros for setjump / getcontext
-// So users should call this in their application, not call cd_handle->Begin().
-
-//#define CD_Begin(X) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
-////#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
-//#define CD_Complete(X) (X)->Complete()   
 
 #endif

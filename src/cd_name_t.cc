@@ -34,6 +34,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_name_t.h"
+#include "util.h"
+
 using namespace cd;
 
 CDNameT::CDNameT(void)
@@ -54,11 +56,11 @@ CDNameT::CDNameT(const CDNameT &parent_cdname, int num_children, int color)
   level_         = parent_cdname.level() + 1;
   rank_in_level_ = num_children*(parent_cdname.rank_in_level()) + color;
   size_          = num_children;
-/*  std::cout << "level: " << level_ 
+/*  cout << "level: " << level_ 
             << ", rank_in_level created : " << rank_in_level_ 
             << ", numchild: " << num_children << ", parent rank : " 
             << parent_cdname.rank_in_level() 
-            << ", color : "<< color << std::endl;*/ 
+            << ", color : "<< color << endl;*/ 
 }
 
 CDNameT::CDNameT(const CDNameT& that)
@@ -83,12 +85,12 @@ bool CDNameT::operator==(const CDNameT& that) const
 
 int CDNameT::CDTag(void) const { return ((level_ << 16) | rank_in_level_); }
 
-std::ostream& cd::internal::operator<<(std::ostream& str, const CDNameT& cd_name)
+ostream& cd::internal::operator<<(ostream& str, const CDNameT& cd_name)
 {
   return str << "CD"<< cd_name.level() << "_"  << cd_name.rank_in_level();
 }
 
-std::string CDNameT::GetString(void) const {
-  return ( std::string("CD") + std::to_string(level_) + std::string("_") + std::to_string(rank_in_level_) );
+string CDNameT::GetString(void) const {
+  return ( string("CD") + to_string(level_) + string("_") + to_string(rank_in_level_) );
 }
 

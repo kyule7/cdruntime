@@ -58,12 +58,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_pfs.h"
 
 #include <list>
-#include <map>
-//#include <unordered_map>
 
 #include <cstring>
 #include <ucontext.h>
 #include <functional>
+
 
 #ifdef comm_log
 //SZ
@@ -239,11 +238,11 @@ class CD : public Serializable {
 //    static std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     static std::map<std::string, uint32_t> exec_count_;
     // Only CDEntries that has refname will be pushed into this data structure for later quick search.
-    std::map<uint64_t, CDEntry*> entry_directory_map_;   
+    EntryDirType entry_directory_map_;   
    
     // These are entry directory for preservation via reference 
     // in the case that the preserved copy resides in a remote node. 
-    std::map<uint64_t, CDEntry*> remote_entry_directory_map_;   
+    EntryDirType remote_entry_directory_map_;   
 
 
     
@@ -545,7 +544,7 @@ public:
 
     CDInternalErrT Sync(ColorT color); 
     void *SerializeRemoteEntryDir(uint32_t& len_in_byte);
-    void DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
+    void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
 
     virtual void *Serialize(uint32_t& len_in_bytes) {
       return NULL;  

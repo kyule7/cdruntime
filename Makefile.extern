@@ -17,27 +17,108 @@ CD_LINKFLAGS =-Wl,-rpath ${CD_LIB} \
               ${CD_LIB}/libcds.so \
               -L${CD_LIB} -lcds 
 
+VIZ_LINKFLAGS =-Wl,-rpath ${SIGHT_ROOT} \
+              ${SIGHT_ROOT}/libsight_structure.so \
+              -L${SIGHT_ROOT} -lsight_structure \
+              -Wl,-rpath ${SIGHT_ROOT}/widgets/papi/lib \
+              ${SIGHT_ROOT}/widgets/papi/lib/libpapi.so \
+              ${SIGHT_ROOT}/widgets/papi/lib/libpfm.so \
+              -L${SIGHT_ROOT}/widgets/papi/lib -lpapi -lpfm
 
 
+#SIGHT_CFLAGS = -I${SIGHT_ROOT} -I${SIGHT_ROOT}/widgets -I${SIGHT_ROOT}/widgets/parallel \
+#               -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
+#               -I${SIGHT_ROOT}/widgets/papi/include\
+#               -I${SIGHT_ROOT}/tools/boost_1_55_0 \
+#               -I${SIGHT_ROOT}/widgets/libmsr/include
+##SIGHT_LINKFLAGS_NORPATH = -L${SIGHT_ROOT} -lsight_structure \
+##                  -L${SIGHT_ROOT}/tools/adept-utils/lib -ladept_cutils -ladept_timing -ladept_utils \
+##                  -L${SIGHT_ROOT}/tools/callpath/src/src -lcallpath \
+##                  -L${SIGHT_ROOT}/widgets/papi/lib -lpapi \
+##                  -L${SIGHT_ROOT}/widgets/gsl/lib -lgsl -lgslcblas \
+##                  -lpthread
+#
+#SIGHT_LINKFLAGS = \
+#                  -Wl,-rpath ${SIGHT_ROOT} \
+#                  -L${SIGHT_ROOT} -lsight_structure \
+#                  -L${SIGHT_ROOT}/tools/adept-utils/lib -ladept_cutils -ladept_timing -ladept_utils \
+#                  -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
+#                  -L${SIGHT_ROOT}/tools/callpath/src/src -lcallpath \
+#                  -Wl,-rpath ${SIGHT_ROOT}/tools/callpath/src/src \
+#                  -L${SIGHT_ROOT}/widgets/papi/lib -lpapi \
+#                  -Wl,-rpath ${SIGHT_ROOT}/widgets/papi/lib \
+#                  ${SIGHT_ROOT}/widgets/gsl/lib/libgsl.so \
+#                  ${SIGHT_ROOT}/widgets/gsl/lib/libgslcblas.so \
+#                  -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib \
+#                  -lpthread
+#
+#
 
-SIGHT_CFLAGS = -I${SIGHT_ROOT} \
-               -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
-               -I${SIGHT_ROOT}/widgets \
-               -I${SIGHT_ROOT}/widgets/papi/include\
-               -I${SIGHT_ROOT}/tools/boost_1_55_0
+SIGHT_CFLAGS = \
+              -I${SIGHT_ROOT} -I${SIGHT_ROOT}/widgets -I${SIGHT_ROOT}/attributes \
+              -I${SIGHT_ROOT}/widgets/parallel \
+              -I${SIGHT_ROOT}/tools/callpath/src \
+              -I${SIGHT_ROOT}/tools/adept-utils/include \
+              -I${SIGHT_ROOT}/tools/boost_1_55_0 \
+              -I${SIGHT_ROOT}/widgets/papi/include \
+              -fopenmp -g -fPIC 
+
 SIGHT_LINKFLAGS = \
                   -Wl,-rpath ${SIGHT_ROOT} \
-                  -L${SIGHT_ROOT} -lsight_structure \
-                  -L${SIGHT_ROOT}/tools/adept-utils/lib -ladept_cutils -ladept_timing -ladept_utils \
+                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_cutils.so \
+                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_timing.so \
+                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_utils.so \
                   -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
-                  -L${SIGHT_ROOT}/tools/callpath/src/src -lcallpath \
+                  ${SIGHT_ROOT}/tools/callpath/src/src/libcallpath.so \
                   -Wl,-rpath ${SIGHT_ROOT}/tools/callpath/src/src \
-                  -L${SIGHT_ROOT}/widgets/papi/lib -lpapi \
-                  -Wl,-rpath ${SIGHT_ROOT}/widgets/papi/lib \
+                  ${SIGHT_ROOT}/widgets/papi/lib/libpapi.a \
                   ${SIGHT_ROOT}/widgets/gsl/lib/libgsl.so \
                   ${SIGHT_ROOT}/widgets/gsl/lib/libgslcblas.so \
                   -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib \
-                  -lpthread
+	                -lpthread
+
+
+ 
+## Flags to use when linking a version of slayout that include object files
+## for additional widgets and capabilities
+#
+## Dynamic linking
+#SIGHT_LAYOUT_DYNAMIC_LINKFLAGS = \
+#                  -Wl,-rpath ${SIGHT_ROOT} \
+#                  ${SIGHT_ROOT}/libsight_layout.so \
+#                  -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib -L${SIGHT_ROOT}/widgets/gsl/lib -lgsl -lgslcblas \
+#                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_cutils.so \
+#                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_timing.so \
+#                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_utils.so \
+#                  -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
+#                  ${SIGHT_ROOT}/tools/callpath/src/src/libcallpath.so \
+#                  -Wl,-rpath ${SIGHT_ROOT}/tools/callpath/src/src \
+#                  ${SIGHT_ROOT}/widgets/papi/lib/libpapi.a \
+#                 -lpthread
+#CC = gcc
+#CCC = g++
+#MPICC = mpicc
+##MPICCC = mpic++
+
+
+#SIGHT_CFLAGS = -I${SIGHT_ROOT} \
+#               -I${SIGHT_ROOT}/tools/callpath/src -I${SIGHT_ROOT}/tools/adept-utils/include \
+#               -I${SIGHT_ROOT}/widgets \
+#               -I${SIGHT_ROOT}/widgets/papi/include\
+#               -I${SIGHT_ROOT}/tools/boost_1_55_0
+#SIGHT_LINKFLAGS = \
+#                  -Wl,-rpath ${SIGHT_ROOT} \
+#                  -L${SIGHT_ROOT} -lsight_structure \
+#                  -L${SIGHT_ROOT}/tools/adept-utils/lib -ladept_cutils -ladept_timing -ladept_utils \
+#                  -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
+#                  -L${SIGHT_ROOT}/tools/callpath/src/src -lcallpath \
+#                  -Wl,-rpath ${SIGHT_ROOT}/tools/callpath/src/src \
+#                  -L${SIGHT_ROOT}/widgets/papi/lib -lpapi \
+#                  -Wl,-rpath ${SIGHT_ROOT}/widgets/papi/lib \
+#                  ${SIGHT_ROOT}/widgets/gsl/lib/libgsl.so \
+#                  ${SIGHT_ROOT}/widgets/gsl/lib/libgslcblas.so \
+#                  -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib \
+#                  -lpthread
 
 
 
@@ -114,26 +195,26 @@ SIGHT_LINKFLAGS = \
 ##                  -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib \
 ##	          -lpthread
 ##                  #-L ${PNMPI_PATH}lib -lpnmpi -Wl,-rpath,${PNMPI_PATH}
-
-RAPL_ENABLED = 0
-ifeq (${RAPL_ENABLED}, 1)
-SIGHT_CFLAGS += -I${SIGHT_ROOT}/widgets/libmsr/include
-SIGHT_LINKFLAGS += ${SIGHT_ROOT}/widgets/libmsr/lib/libmsr.so \
-                    -Wl,-rpath ${SIGHT_ROOT}/widgets/libmsr/lib
-endif
-# Flags to use when linking a version of slayout that include object files
-# for additional widgets and capabilities
-
-# Dynamic linking
-SIGHT_LAYOUT_DYNAMIC_LINKFLAGS = \
-                  -Wl,-rpath ${SIGHT_ROOT} \
-                  ${SIGHT_ROOT}/libsight_layout.so \
-                  -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib -L${SIGHT_ROOT}/widgets/gsl/lib -lgsl -lgslcblas \
-                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_cutils.so \
-                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_timing.so \
-                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_utils.so \
-                  -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
-                  ${SIGHT_ROOT}/tools/callpath/src/src/libcallpath.so \
-                  -Wl,-rpath ${SIGHT_ROOT}/tools/callpath/src/src \
-                  ${SIGHT_ROOT}/widgets/papi/lib/libpapi.a \
-                 -lpthread
+#
+#RAPL_ENABLED = 0
+#ifeq (${RAPL_ENABLED}, 1)
+#SIGHT_CFLAGS += -I${SIGHT_ROOT}/widgets/libmsr/include
+#SIGHT_LINKFLAGS += ${SIGHT_ROOT}/widgets/libmsr/lib/libmsr.so \
+#                    -Wl,-rpath ${SIGHT_ROOT}/widgets/libmsr/lib
+#endif
+## Flags to use when linking a version of slayout that include object files
+## for additional widgets and capabilities
+#
+## Dynamic linking
+#SIGHT_LAYOUT_DYNAMIC_LINKFLAGS = \
+#                  -Wl,-rpath ${SIGHT_ROOT} \
+#                  ${SIGHT_ROOT}/libsight_layout.so \
+#                  -Wl,-rpath ${SIGHT_ROOT}/widgets/gsl/lib -L${SIGHT_ROOT}/widgets/gsl/lib -lgsl -lgslcblas \
+#                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_cutils.so \
+#                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_timing.so \
+#                  ${SIGHT_ROOT}/tools/adept-utils/lib/libadept_utils.so \
+#                  -Wl,-rpath ${SIGHT_ROOT}/tools/adept-utils/lib \
+#                  ${SIGHT_ROOT}/tools/callpath/src/src/libcallpath.so \
+#                  -Wl,-rpath ${SIGHT_ROOT}/tools/callpath/src/src \
+#                  ${SIGHT_ROOT}/widgets/papi/lib/libpapi.a \
+#                 -lpthread

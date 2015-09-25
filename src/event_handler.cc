@@ -308,7 +308,7 @@ void HandleEntrySend::HandleEvent(void)
   CDHandle *cdh = CDPath::GetCDLevel(ptr_cd_->level());
   
   for(auto it=cdh->ptr_cd()->remote_entry_directory_map_.begin(); it!=cdh->ptr_cd()->remote_entry_directory_map_.end(); ++it) {
-    CD_DEBUG("%lu (%s) - %s\n)\n", it->first, tag2str[it->first].c_str(), it->second->GetString().c_str());
+    CD_DEBUG("%u (%s) - %s\n)\n", it->first, tag2str[it->first].c_str(), it->second->GetString().c_str());
     CD_DEBUG("--------------------- level : %u --------------------------------", cdh->level());
   }
 
@@ -445,14 +445,14 @@ void HandleAllPause::HandleEvent(void)
 #if 0
   if(ptr_cd_->task_size() == 1) return;
   
-  dbg << "CD Event kAllPause\t\t\t";
+  cddbg << "CD Event kAllPause\t\t\t";
   *(ptr_cd_->event_flag_) &= ~kAllPause;
   IncHandledEventCounter();
-  dbg << "Barrier resolved" << endl;
+  cddbg << "Barrier resolved" << endl;
   PMPI_Barrier(ptr_cd_->color());
   cout << "\n\n[Barrier] HandleAllPause::HandleEvent " << ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl;
 
-  dbg << "Barrier resolved" << endl;
+  cddbg << "Barrier resolved" << endl;
 
   if( CHECK_EVENT(*(ptr_cd_->event_flag_), kAllReexecute) ) {
     ptr_cd_->need_reexec = true;
@@ -521,14 +521,14 @@ void HandleErrorOccurred::HandleEvent(void)
   if(error_handled) {
     // Resume
 
-    dbg << "HeadCD Event kErrorOccurred";
+    cddbg << "HeadCD Event kErrorOccurred";
     ptr_cd_->event_flag_[task_id] &= ~kErrorOccurred;
 
 
-//    dbg << "Barrier resolved" << endl;
+//    cddbg << "Barrier resolved" << endl;
 //    PMPI_Barrier(ptr_cd_->color());
 //    cout << "\n\n[Barrier] HandleErrorOccurred::HandleEvent, normal "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; //getchar();
-//    dbg << "Barrier resolved" << endl;
+//    cddbg << "Barrier resolved" << endl;
 
     // reset this flag for the next error
     // This will be invoked after CheckMailBox is done, 
@@ -544,7 +544,7 @@ void HandleErrorOccurred::HandleEvent(void)
     }
 
     // Resume
-    dbg << "HeadCD Event kErrorOccurred";
+    cddbg << "HeadCD Event kErrorOccurred";
     ptr_cd_->event_flag_[task_id] &= ~kErrorOccurred;
     IncHandledEventCounter();
 

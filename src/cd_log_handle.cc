@@ -116,7 +116,7 @@ void CDLogHandle::SetFilePath(const PrvMediumT& prv_medium, const std::string& u
     }
     case kPFS :
     {
-      if ( secure_getenv( "CD_PRV_BASEPATH" ) )
+      if ( getenv( "CD_PRV_BASEPATH" ) )
       {
         std::string path_base( getenv( "CD_PRV_BASEPATH" ) );
         path_base = path_base + "/PFS/" + unique_basepath_ + "/";
@@ -130,7 +130,7 @@ void CDLogHandle::SetFilePath(const PrvMediumT& prv_medium, const std::string& u
     }
     case kHDD :
     {
-      if ( secure_getenv( "CD_PRV_BASEPATH" ) )
+      if ( getenv( "CD_PRV_BASEPATH" ) )
       {
         std::string path_base( getenv( "CD_PRV_BASEPATH" ) );
         path_base = path_base + "/HDD/" + unique_basepath_ + "/";
@@ -144,7 +144,7 @@ void CDLogHandle::SetFilePath(const PrvMediumT& prv_medium, const std::string& u
     }
     case kSSD :
     {
-      if ( secure_getenv( "CD_PRV_BASEPATH" ) )
+      if ( getenv( "CD_PRV_BASEPATH" ) )
       {
         std::string path_base( getenv( "CD_PRV_BASEPATH" ) );
         path_base = path_base + "/SSD/" + unique_basepath_ + "/";

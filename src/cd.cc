@@ -46,7 +46,9 @@ using namespace std;
 int iterator_entry_count=0;
 uint64_t cd::gen_object_id=0;
 
-hash<string> cd::str_hash;
+//EntryDirType::hasher cd::str_hash;
+std::unordered_map<string,CDEntry*> cd::str_hash_map;
+std::unordered_map<string,CDEntry*>::hasher cd::str_hash;
 map<ENTRY_TAG_T, string> cd::tag2str;
 list<CommInfo> CD::entry_req_;
 map<ENTRY_TAG_T, CommInfo> CD::entry_request_req_;
@@ -236,7 +238,7 @@ CD::CD(CDHandle* cd_parent,
   CD_DEBUG("exec_count[%s] = %u\n", cd_id_.GetPhaseID().c_str(), exec_count_[cd_id_.GetPhaseID()]);
 
 
-//  dbg << "cd object is created " << cd_id_.object_id_++ <<endl;
+//  cddbg << "cd object is created " << cd_id_.object_id_++ <<endl;
 
   // FIXME maybe call self generating function here?           
   // cd_self_  = self;  //FIXME maybe call self generating function here?           
@@ -450,6 +452,9 @@ CDHandle* CD::CreateRootCD(const char* name,
   PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
 
   *cd_internal_err = InternalCreate(NULL, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
+
+  // Only root define hash function.
+  str_hash = str_hash_map.hash_function();
 
   if(new_prv_medium != kDRAM)
     new_cd_handle->ptr_cd_->log_handle_.SetFilePath(new_prv_medium, basepath);
@@ -774,7 +779,7 @@ CDErrT CD::Begin(bool collective, const char* label)
 CDErrT CD::Complete(bool collective, bool update_preservations)
 {
   CD_DEBUG("\nCD::Complete : %s %s \t Reexec: %d\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec);
-  
+
   begin_ = false;
 
 
@@ -1156,7 +1161,7 @@ void *CD::SerializeRemoteEntryDir(uint32_t& len_in_bytes)
 }
 
 
-void CD::DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size) 
+void CD::DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size) 
 {
   void *unpacked_entry_p=0;
   uint32_t dwGetID=0;
@@ -1171,8 +1176,8 @@ void CD::DeserializeRemoteEntryDir(std::map<uint64_t, CDEntry*> &remote_entry_di
       unpacked_entry_p = entry_dir_unpacker.GetNext(begin + i * unit_size, dwGetID, return_size);
       if(unpacked_entry_p == NULL) {
 
-//      dbg<<"DESER new ["<< cnt++ << "] i: "<< i <<"\ndwGetID : "<< dwGetID << endl;
-//      dbg<<"return size : "<< return_size << endl;
+//      cddbg<<"DESER new ["<< cnt++ << "] i: "<< i <<"\ndwGetID : "<< dwGetID << endl;
+//      cddbg<<"return size : "<< return_size << endl;
   
         break;
       }
@@ -1503,63 +1508,63 @@ PrvMediumT CD::GetPlaceToPreserve()
 #if 0
 bool CD::TestReqComm(bool is_all_valid)
 {
-  dbg << "\nCD::TestReqComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl
-      << "entry request req Q size : " << entry_request_req_.size() <<endl; dbg.flush();
+  cddbg << "\nCD::TestReqComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl
+      << "entry request req Q size : " << entry_request_req_.size() <<endl; cddbg.flush();
   is_all_valid = true;
   for(auto it=entry_request_req_.begin(); it!=entry_request_req_.end(); ) {
     PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
 
     if(it->second.valid_) {
-      dbg << it->second.valid_ << " ";
+      cddbg << it->second.valid_ << " ";
       entry_request_req_.erase(it++);
     }
     else {
-      dbg << it->second.valid_ << " ";
+      cddbg << it->second.valid_ << " ";
       is_all_valid &= it->second.valid_;
       ++it;
     }
   }
-  dbg << endl;
-  dbg << "TestReqComm end"<<endl; dbg.flush();
+  cddbg << endl;
+  cddbg << "TestReqComm end"<<endl; cddbg.flush();
   return is_all_valid;
 }
 
 bool CD::TestRecvComm(bool is_all_valid)
 {
-  dbg << "\nCD::TestReqComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl
-      << "entry request req Q size : " << entry_recv_req_.size() <<endl; dbg.flush();
+  cddbg << "\nCD::TestReqComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl
+      << "entry request req Q size : " << entry_recv_req_.size() <<endl; cddbg.flush();
   is_all_valid = true;
   for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ) {
     PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
 
     if(it->second.valid_) {
-      dbg << it->second.valid_ << " ";
+      cddbg << it->second.valid_ << " ";
       entry_recv_req_.erase(it++);
     }
     else {
-      dbg << it->second.valid_ << " ";
+      cddbg << it->second.valid_ << " ";
       is_all_valid &= it->second.valid_;
       ++it;
     }
   }
-  dbg << endl; 
-  dbg << "TestRecvComm end"<<endl; dbg.flush();
+  cddbg << endl; 
+  cddbg << "TestRecvComm end"<<endl; cddbg.flush();
   return is_all_valid;
 }
 
 
 bool CD::TestComm(bool test_until_done)
 {
-  dbg << "\nCD::TestComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl;
-  dbg << "entry req Q size : " << entry_req_.size() << endl 
+  cddbg << "\nCD::TestComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl;
+  cddbg << "entry req Q size : " << entry_req_.size() << endl 
        << "\nentry recv Q size : " << entry_recv_req_.size() << endl
-      << "entry request req Q size : " << entry_request_req_.size() <<endl; dbg.flush();
+      << "entry request req Q size : " << entry_request_req_.size() <<endl; cddbg.flush();
 //       << "\nentry search Q size : " << entry_search_req_.size()
 //       << "\nentry recv Q size : " << entry_recv_req_.size()
 //       << "\nentry send Q size : " << entry_send_req_.size() << endl;
   bool is_all_valid = true;
   is_all_valid = TestReqComm(is_all_valid);
-  dbg << "==================" << endl; dbg.flush(); 
+  cddbg << "==================" << endl; cddbg.flush(); 
 
 //
 //  for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ) {
@@ -1590,23 +1595,23 @@ bool CD::TestComm(bool test_until_done)
 
 
   for(auto it=entry_req_.begin(); it!=entry_req_.end(); ) {
-  dbg << "+++" << endl; dbg.flush(); 
+  cddbg << "+++" << endl; cddbg.flush(); 
     PMPI_Test(&(it->req_), &(it->valid_), &(it->stat_));
 
     if(it->valid_) {
-      dbg << it->valid_ << " ";
+      cddbg << it->valid_ << " ";
       is_all_valid &= it->valid_;
       entry_req_.erase(it++);
     }
     else {
-      dbg << it->valid_ << " ";
+      cddbg << it->valid_ << " ";
       is_all_valid &= it->valid_;
       ++it;
     }
   }
-  dbg << endl;
-  dbg << "Is all valid : " << is_all_valid << endl;
-  dbg.flush();
+  cddbg << endl;
+  cddbg << "Is all valid : " << is_all_valid << endl;
+  cddbg.flush();
   return is_all_valid;
 }
 
@@ -1615,7 +1620,7 @@ bool CD::TestComm(bool test_until_done)
 
 //bool HeadCD::TestComm(bool test_until_done)
 //{
-//  dbg << "\nHeadCD::TestComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl;
+//  cddbg << "\nHeadCD::TestComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl;
 //  cout << "\nHeadCD::TestComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl;
 //  cout << "entry request Q size : " << entry_request_req_.size()
 //       << "\nentry search Q size : " << entry_search_req_.size()
@@ -1717,7 +1722,7 @@ CDErrT CD::Preserve(void *data,
             CHECK_PRV_TYPE(preserve_mask, kCoop));
 
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
-//    dbg<<"my_name "<< my_name<<endl;
+//    cddbg<<"my_name "<< my_name<<endl;
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : 
               return CDErrT::kOK;
@@ -2517,7 +2522,7 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //CD::CDInternalErrT CD::CreateInternalMemory(CD *cd_ptr, const CDID& new_cd_id)
 //{
 //  int task_count = new_cd_id.task_count();
-//  dbg << "in CD::Create Internal Memory"<<endl;
+//  cddbg << "in CD::Create Internal Memory"<<endl;
 //  if(task_count > 1) {
 //    for(int i=0; i<task_count; ++i) {
 //    
@@ -2527,7 +2532,7 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //    }
 //  }
 //  else {
-//    dbg << "CD::mpi win create for "<< task_count << " mailboxes"<<endl;
+//    cddbg << "CD::mpi win create for "<< task_count << " mailboxes"<<endl;
 //    PMPI_Win_create(NULL, 0, 1,
 //                   PMPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
 //    
@@ -2540,17 +2545,17 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //CD::CDInternalErrT CD::DestroyInternalMemory(CD *cd_ptr)
 //{
 //
-//  dbg << "in CD::Destroy Internal Memory"<<endl;
+//  cddbg << "in CD::Destroy Internal Memory"<<endl;
 //  int task_count = cd_id_.task_count();
 //  if(task_count > 1) {
-//    dbg << "mpi win free for "<< task_count << " mailboxes"<<endl;
+//    cddbg << "mpi win free for "<< task_count << " mailboxes"<<endl;
 //    for(int i=0; i<task_count; ++i) {
-//      dbg << i << endl;
+//      cddbg << i << endl;
 //      PMPI_Win_free(&(cd_ptr->mailbox_[i]));
 //    }
 //  }
 //  else {
-//    dbg << "mpi win free for one mailbox"<<endl;
+//    cddbg << "mpi win free for one mailbox"<<endl;
 //    PMPI_Win_free(cd_ptr->mailbox_);
 //  }
 //
@@ -2559,11 +2564,11 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 
 //CD::CDInternalErrT HeadCD::CreateInternalMemory(HeadCD *cd_ptr, const CDID& new_cd_id)
 //{
-//  dbg << "HeadCD create internal memory " << endl;
+//  cddbg << "HeadCD create internal memory " << endl;
 //  int task_count = new_cd_id.task_count();
 //#if _MPI_VER
 ////  if(new_cd_id.color() == PMPI_COMM_WORLD) {
-////    dbg << "\n\nthis is root! " << task_count << "\n\n"<<endl;
+////    cddbg << "\n\nthis is root! " << task_count << "\n\n"<<endl;
 ////    PMPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
 ////                  PMPI_INFO_NULL, &event_flag_);
 ////    mailbox_ = new CDMailBoxT[task_count];
@@ -2582,7 +2587,7 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //
 //  if(task_count > 1) {
 //
-//    dbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
+//    cddbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
 //    mailbox_ = new CDMailBoxT[task_count];
 //    for(int i=0; i<task_count; ++i) {
 //      PMPI_Win_create(&((cd_ptr->event_flag_)[i]), 1, sizeof(CDFlagT),
@@ -2594,14 +2599,14 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //
 //  }
 //  else {
-//    dbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
+//    cddbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
 //    PMPI_Win_create(cd_ptr->event_flag_, task_count, sizeof(CDFlagT),
 //                   PMPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
 //    
 //  }
 //
 ////  PMPI_Win_allocate(task_count*sizeof(CDFlagT), sizeof(CDFlagT), PMPI_INFO_NULL, new_cd_id.color(), &event_flag_, &mailbox_);
-//  //dbgBreak();
+//  //cddbgBreak();
 //#endif
 //  return CD::CDInternalErrT::kOK;
 //}
@@ -2609,17 +2614,17 @@ HeadCD::HeadCD( CDHandle* cd_parent,
 //CD::CDInternalErrT HeadCD::DestroyInternalMemory(HeadCD *cd_ptr)
 //{
 //#if _MPI_VER
-//  dbg << "in HeadCD::Destroy"<<endl;
+//  cddbg << "in HeadCD::Destroy"<<endl;
 //  int task_count = cd_id_.task_count();
 //  if(task_count > 1) {
-//    dbg << "HeadCD mpi win free for "<< task_count << " mailboxes"<<endl;
+//    cddbg << "HeadCD mpi win free for "<< task_count << " mailboxes"<<endl;
 //    for(int i=0; i<task_count; ++i) {
-//      dbg << i << endl;
+//      cddbg << i << endl;
 //      PMPI_Win_free(&(cd_ptr->mailbox_[i]));
 //    }
 //  }
 //  else {
-//    dbg << "HeadCD mpi win free for one mailbox"<<endl;
+//    cddbg << "HeadCD mpi win free for one mailbox"<<endl;
 //    PMPI_Win_free(cd_ptr->mailbox_);
 //  }
 //  PMPI_Free_mem(cd_ptr->event_flag_);
@@ -2801,50 +2806,52 @@ void HeadCD::set_cd_parent(CDHandle* cd_parent)
 
 CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name) 
 {
-  try {
-    CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
+//  try 
+//  {
+  CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
+  
+  auto it = entry_directory_map_.find(entry_name);
+  auto jt = remote_entry_directory_map_.find(entry_name);
+  if(it == entry_directory_map_.end() && jt == remote_entry_directory_map_.end()) {
+    CD_DEBUG("[InternalGetEntry Failed] There is no entry for reference of %s at level #%u\n", tag2str[entry_name].c_str(), level());
+    return NULL;
+  }
+  else if(it != entry_directory_map_.end()) {
+    // Found entry at local directory
+    CDEntry* cd_entry = entry_directory_map_.find(entry_name)->second;
     
-    auto it = entry_directory_map_.find(entry_name);
-    auto jt = remote_entry_directory_map_.find(entry_name);
-    if(it == entry_directory_map_.end() && jt == remote_entry_directory_map_.end()) {
-      CD_DEBUG("[InternalGetEntry Failed] There is no entry for reference of %s at level #%u\n", tag2str[entry_name].c_str(), level());
-      return NULL;
-    }
-    else if(it != entry_directory_map_.end()) {
-      // Found entry at local directory
-      CDEntry* cd_entry = entry_directory_map_.find(entry_name)->second;
-      
-      CD_DEBUG("[InternalGetEntry Local] ref_name: %s, address: %p\n", 
-                entry_directory_map_[entry_name]->dst_data_.ref_name().c_str(), 
-                entry_directory_map_[entry_name]->dst_data_.address_data());
+    CD_DEBUG("[InternalGetEntry Local] ref_name: %s, address: %p\n", 
+              entry_directory_map_[entry_name]->dst_data_.ref_name().c_str(), 
+              entry_directory_map_[entry_name]->dst_data_.address_data());
 
 //      if(cd_entry->isViaReference())
 //        return NULL;
 //      else
-        return cd_entry;
-    }
-    else if(jt != remote_entry_directory_map_.end()) {
-      // Found entry at local directory, but it is a buffer to send remotely.
-      CDEntry* cd_entry = remote_entry_directory_map_.find(entry_name)->second;
+      return cd_entry;
+  }
+  else if(jt != remote_entry_directory_map_.end()) {
+    // Found entry at local directory, but it is a buffer to send remotely.
+    CDEntry* cd_entry = remote_entry_directory_map_.find(entry_name)->second;
 
-      CD_DEBUG("[InternalGetEntry Remote] ref_name: %s, address: %p\n", 
-                remote_entry_directory_map_[entry_name]->dst_data_.ref_name().c_str(), 
-                remote_entry_directory_map_[entry_name]->dst_data_.address_data());
-      
+    CD_DEBUG("[InternalGetEntry Remote] ref_name: %s, address: %p\n", 
+              remote_entry_directory_map_[entry_name]->dst_data_.ref_name().c_str(), 
+              remote_entry_directory_map_[entry_name]->dst_data_.address_data());
+    
 //      if(cd_entry->isViaReference())
 //        return NULL;
 //      else
-        return cd_entry;
-    }
-    else {
-      dbg << "ERROR: there is the same name of entry in entry_directory_map and remote_entry_directory_map.\n"<< endl;
-      assert(0);
-    }
+      return cd_entry;
   }
-  catch (const std::out_of_range &oor) {
-    std::cerr << "Out of Range error: " << oor.what() << '\n';
-    return 0;
+  else {
+    cddbg << "ERROR: there is the same name of entry in entry_directory_map and remote_entry_directory_map.\n"<< endl;
+    assert(0);
   }
+//  }
+//  catch (const std::out_of_range &oor) 
+//  {
+//    std::cerr << "Out of Range error: " << oor.what() << '\n';
+//    return 0;
+//  }
 }
 
 
@@ -2863,7 +2870,7 @@ CDFlagT *HeadCD::event_flag(void)
 
 void CD::DeleteEntryDirectory(void)
 {
-//  dbg<<"Delete Entry In"<<endl; dbgBreak();
+//  cddbg<<"Delete Entry In"<<endl; cddbgBreak();
   for(std::list<CDEntry>::iterator it = entry_directory_.begin();
       it != entry_directory_.end(); ) {
 
@@ -2872,29 +2879,29 @@ void CD::DeleteEntryDirectory(void)
     uint32_t entry_len=0;
     void *ser_entry = it->Serialize(entry_len);
 
-    dbg << "ser entry : "<< ser_entry << endl;
+    cddbg << "ser entry : "<< ser_entry << endl;
     CDEntry new_entry;
-    dbg << "\n\n--------------------------------\n"<<endl;
+    cddbg << "\n\n--------------------------------\n"<<endl;
     new_entry.Deserialize(ser_entry);
-    dbg << "before!!!! " << (it->src_data_).address_data()<<endl<<endl;
-    dbg << "\n\n\nafter!!!! " << new_entry.src_data_.address_data()<<endl;
+    cddbg << "before!!!! " << (it->src_data_).address_data()<<endl<<endl;
+    cddbg << "\n\n\nafter!!!! " << new_entry.src_data_.address_data()<<endl;
 
-    dbg << "before!!!! " << it->name() <<endl<<endl;
-    dbg << "\n\n\nafter!!!! " << new_entry.name()<<endl;
-    dbg << (*it == new_entry) << endl;
+    cddbg << "before!!!! " << it->name() <<endl<<endl;
+    cddbg << "\n\n\nafter!!!! " << new_entry.name()<<endl;
+    cddbg << (*it == new_entry) << endl;
 */
 
 
 //    uint32_t data_handle_len=0;
-//    dbg << "=========== Check Ser ==============" << endl;
-//    dbg <<"[Before packed] :\t"<< it->dst_data_.node_id_ << endl << endl;
+//    cddbg << "=========== Check Ser ==============" << endl;
+//    cddbg <<"[Before packed] :\t"<< it->dst_data_.node_id_ << endl << endl;
 //    void *ser_data_handle = (it->dst_data_).Serialize(data_handle_len);
 //    DataHandle new_data_handle;
 //    new_data_handle.Deserialize(ser_data_handle);
 //
-//    dbg <<"\n\n\noriginal : "<<(it->dst_data_).file_name() << endl;
-//    dbg <<"[After unpacked] :\t"<<new_data_handle.node_id_ << endl << endl;
-//    dbgBreak();
+//    cddbg <<"\n\n\noriginal : "<<(it->dst_data_).file_name() << endl;
+//    cddbg <<"[After unpacked] :\t"<<new_data_handle.node_id_ << endl << endl;
+//    cddbgBreak();
 
     it->Delete();
     entry_directory_map_.erase(it->name_tag());
@@ -2908,7 +2915,7 @@ void CD::DeleteEntryDirectory(void)
 //      it != entry_directory_map_.end(); ++it) {
 //    //entry_directory_map_.erase(it);
 //  }
-//  dbg<<"Delete Entry Out"<<endl; dbgBreak();
+//  cddbg<<"Delete Entry Out"<<endl; cddbgBreak();
 }
 
 
@@ -2931,63 +2938,63 @@ void CD::DeleteEntryDirectory(void)
 //  // Reset handled event counter
 //  handled_event_count = 0;
 //  CDHandle *curr_cdh = CDPath::GetCurrentCD();
-//  dbg.flush();
-//  dbg << "\n\n=================== Check Mail Box Start [Level " << level() <<"] , # of pending events : " << event_count << " ========================" << endl;
+//  cddbg.flush();
+//  cddbg << "\n\n=================== Check Mail Box Start [Level " << level() <<"] , # of pending events : " << event_count << " ========================" << endl;
 //
 //  if(event_count == 0) {
-//    dbg << "No event is detected" << endl;
+//    cddbg << "No event is detected" << endl;
 //
 //    //FIXME
-//    dbg << "\n-----------------KYU--------------------------------------------------" << endl;
+//    cddbg << "\n-----------------KYU--------------------------------------------------" << endl;
 //    int temp = handled_event_count;
 //    InvokeErrorHandler();
-//    dbg << "\nCheck MailBox is done. handled_event_count : " << temp << " -> " << handled_event_count << ", pending events : " << *pendingFlag_;
+//    cddbg << "\nCheck MailBox is done. handled_event_count : " << temp << " -> " << handled_event_count << ", pending events : " << *pendingFlag_;
 //  
 //    DecPendingCounter();
 //  
-//    dbg << " -> " << *pendingFlag_ << endl;
-//    dbg << "-------------------------------------------------------------------\n" << endl;
+//    cddbg << " -> " << *pendingFlag_ << endl;
+//    cddbg << "-------------------------------------------------------------------\n" << endl;
 //
 //
 //  }
 //  else if(event_count > 0) {
 //    while( curr_cdh != NULL ) { // Terminate when it reaches upto root
-//      dbg << "\n---- Internal Check Mail [Level " << curr_cdh->ptr_cd_->level() <<"] , # of pending events : " << event_count << " ----" << endl;
+//      cddbg << "\n---- Internal Check Mail [Level " << curr_cdh->ptr_cd_->level() <<"] , # of pending events : " << event_count << " ----" << endl;
 //
 //      if( curr_cdh->node_id_.size() > 1) {
 //        ret = curr_cdh->ptr_cd_->InternalCheckMailBox();
 //      }
 //      else {
-//        dbg << "[ReadMailBox|Searching for CD Level having non-single task] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
+//        cddbg << "[ReadMailBox|Searching for CD Level having non-single task] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
 //      }
-//      dbg << "\n--------------------------------------------------------\n" << endl;
+//      cddbg << "\n--------------------------------------------------------\n" << endl;
 //      // If current CD is Root CD and GetParentCD is called, it returns NULL
-//      dbg << "ReadMailBox " << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << " at level : " << curr_cdh->ptr_cd()->GetCDID().level()
+//      cddbg << "ReadMailBox " << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << " at level : " << curr_cdh->ptr_cd()->GetCDID().level()
 //          << "\nOriginal current CD " << GetCDName() << " / " << GetNodeID() << " at level : " << level() << "\n" << endl;
-////      dbg << "\nCheckMailBox " << myTaskID << ", # of events : " << event_count << ", Is it Head? "<< IsHead() <<endl;
-////      dbg << "An event is detected" << endl;
-////      dbg << "Task : " << myTaskID << ", Level : " << level() <<" CD Name : " << GetCDName() << ", Node ID: " << GetNodeID() <<endl;
+////      cddbg << "\nCheckMailBox " << myTaskID << ", # of events : " << event_count << ", Is it Head? "<< IsHead() <<endl;
+////      cddbg << "An event is detected" << endl;
+////      cddbg << "Task : " << myTaskID << ", Level : " << level() <<" CD Name : " << GetCDName() << ", Node ID: " << GetNodeID() <<endl;
 //      curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
-//      dbg.flush();
+//      cddbg.flush();
 //    } 
 //
-//    dbg << "\n-------------------------------------------------------------------" << endl;
+//    cddbg << "\n-------------------------------------------------------------------" << endl;
 //    int temp = handled_event_count;
 //    InvokeErrorHandler();
-//    dbg << "\nCheck MailBox is done. handled_event_count : " << temp << " -> " << handled_event_count << ", pending events : " << *pendingFlag_;
+//    cddbg << "\nCheck MailBox is done. handled_event_count : " << temp << " -> " << handled_event_count << ", pending events : " << *pendingFlag_;
 //  
 //    DecPendingCounter();
 //  
-//    dbg << " -> " << *pendingFlag_ << endl;
-//    dbg << "-------------------------------------------------------------------\n" << endl;
+//    cddbg << " -> " << *pendingFlag_ << endl;
+//    cddbg << "-------------------------------------------------------------------\n" << endl;
 //  }
 //  else {
 //    cerr << "Pending event counter is less than zero. Something wrong!" << endl;
 ////    assert(0);
 //  }
 //  
-//  dbg << "=================== Check Mail Box Done  [Level " << level() <<"] =====================================================\n\n" << endl;
-//  dbg.flush();
+//  cddbg << "=================== Check Mail Box Done  [Level " << level() <<"] =====================================================\n\n" << endl;
+//  cddbg.flush();
 //
 //  return static_cast<CDErrT>(ret);
 //}
@@ -3028,8 +3035,8 @@ void CD::DeleteEntryDirectory(void)
 //  CDInternalErrT ret = kOK;
 //  assert(event_flag_);
 //  cout << "\nInternalCheckMailBox\n" << endl; 
-//  dbg << "pending counter : "<< *pendingFlag_ << endl;
-//  dbg << "\nTask : " << GetCDName() << " / " << GetNodeID() << "), Error #" << *event_flag_ << "\t";
+//  cddbg << "pending counter : "<< *pendingFlag_ << endl;
+//  cddbg << "\nTask : " << GetCDName() << " / " << GetNodeID() << "), Error #" << *event_flag_ << "\t";
 //
 //  // Initialize the resolved flag
 //  CDFlagT event = *event_flag_;
@@ -3054,8 +3061,8 @@ void CD::DeleteEntryDirectory(void)
 //    default :
 //      break;
 //  }
-//  dbg << "\tResolved? : " << resolved << endl; //getchar();
-//  dbg << "cd event queue size : " << cd_event_.size() <<", handled event count : " << handled_event_count << endl;
+//  cddbg << "\tResolved? : " << resolved << endl; //getchar();
+//  cddbg << "cd event queue size : " << cd_event_.size() <<", handled event count : " << handled_event_count << endl;
 //  return ret;
 //}
 //
@@ -3067,10 +3074,10 @@ void CD::DeleteEntryDirectory(void)
 //  assert(event_flag_);
 //
 //  cout << "\n\n\n\nInternalCheckMailBox CHECK IT OUT HEAD\n" << endl; //getchar();
-//  dbg << "pending counter : "<< *pendingFlag_ << endl;
+//  cddbg << "pending counter : "<< *pendingFlag_ << endl;
 //
 //  for(int i=0; i<task_size(); i++) {
-//    dbg << "\nTask["<< i <<"] (" << GetCDName() << " / " << GetNodeID() << "), Error #" << event[i] << endl;;
+//    cddbg << "\nTask["<< i <<"] (" << GetCDName() << " / " << GetNodeID() << "), Error #" << event[i] << endl;;
 //
 //    // Initialize the resolved flag
 //    resolved = kEventNone;
@@ -3093,18 +3100,18 @@ void CD::DeleteEntryDirectory(void)
 //        break;
 //    }
 //  }
-//  dbg << "\tResolved? : " << resolved << endl; //getchar();
-//  dbg << "cd event queue size : " << cd_event_.size() << ", headcd event queue size : " << cd_event_.size() <<", handled event count : " << handled_event_count << endl;
+//  cddbg << "\tResolved? : " << resolved << endl; //getchar();
+//  cddbg << "cd event queue size : " << cd_event_.size() << ", headcd event queue size : " << cd_event_.size() <<", handled event count : " << handled_event_count << endl;
 //  return ret;
 //}
 //
 //CDEventHandleT CD::ReadMailBox(CDFlagT &event)
 //{
-//  dbg << "\nCD::ReadMailBox("<< event2str(event) << ")\n"<< endl; dbg.flush();
+//  cddbg << "\nCD::ReadMailBox("<< event2str(event) << ")\n"<< endl; cddbg.flush();
 //  CDEventHandleT ret = CDEventHandleT::kEventResolved;
 ////  int handle_ret = 0;
 //  if( CHECK_NO_EVENT(event) ) {
-//    dbg << "CD Event kNoEvent\t\t\t";
+//    cddbg << "CD Event kNoEvent\t\t\t";
 //  }
 //  else {
 //// Events requested from head to non-head.
@@ -3122,9 +3129,9 @@ void CD::DeleteEntryDirectory(void)
 //
 ////#if _FIX
 ////      HandleEntrySend();
-//      dbg << "ENTRYSEND" << endl;
+//      cddbg << "ENTRYSEND" << endl;
 //      cd_event_.push_back(new HandleEntrySend(this));
-////  dbg << "CD Event kEntrySend\t\t\t";
+////  cddbg << "CD Event kEntrySend\t\t\t";
 ////  if(IsHead()) {
 ////    assert(0);//event_flag_[idx] &= ~kEntrySend;
 ////  }
@@ -3133,17 +3140,17 @@ void CD::DeleteEntryDirectory(void)
 ////  }
 ////  IncHandledEventCounter();
 ////#endif
-//      dbg << "CD Event kEntrySend\t\t\t";
+//      cddbg << "CD Event kEntrySend\t\t\t";
 //    }
 //
 //    if( CHECK_EVENT(event, kAllPause) ) {
-//      dbg << "What?? kAllPause" << GetNodeID() << endl;
+//      cddbg << "What?? kAllPause" << GetNodeID() << endl;
 //      cd_event_.push_back(new HandleAllPause(this));
 //    }
 //
 //
 //    if( CHECK_EVENT(event, kAllReexecute) ) {
-//      dbg << "ReadMailBox. push back HandleAllReexecute" << endl;
+//      cddbg << "ReadMailBox. push back HandleAllReexecute" << endl;
 //      cd_event_.push_back(new HandleAllReexecute(this));
 //    }
 //
@@ -3154,7 +3161,7 @@ void CD::DeleteEntryDirectory(void)
 //
 //CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, int idx)
 //{
-//  dbg << "CDEventHandleT HeadCD::HandleEvent(" << event2str(*p_event) << ", " << idx <<")" << endl; dbg.flush();
+//  cddbg << "CDEventHandleT HeadCD::HandleEvent(" << event2str(*p_event) << ", " << idx <<")" << endl; cddbg.flush();
 //  CDEventHandleT ret = CDEventHandleT::kEventResolved;
 ////  int handle_ret = 0;
 //  if(idx == head()) {
@@ -3164,20 +3171,20 @@ void CD::DeleteEntryDirectory(void)
 //
 //  CDFlagT event = *p_event;
 //  if( CHECK_NO_EVENT(event) ) {
-//    dbg << "CD Event kNoEvent\t\t\t";
+//    cddbg << "CD Event kNoEvent\t\t\t";
 //  }
 //  else {
 //    if( CHECK_EVENT(event, kErrorOccurred) ) {
-//      dbg << "Error Occurred at task ID : " << idx << " level " << level() << endl;
+//      cddbg << "Error Occurred at task ID : " << idx << " level " << level() << endl;
 //      if(error_occurred == true) {
 //        if(task_size() == 1) assert(0);
-//        dbg << "Event kErrorOccurred " << idx;
+//        cddbg << "Event kErrorOccurred " << idx;
 //        event_flag_[idx] &= ~kErrorOccurred;
 //        IncHandledEventCounter();
 //      }
 //      else {
 //        if(task_size() == 1) assert(0);
-//        dbg << "!!!!Event kErrorOccurred " << idx;
+//        cddbg << "!!!!Event kErrorOccurred " << idx;
 //        cd_event_.push_back(new HandleErrorOccurred(this, idx));
 //        error_occurred = true;
 //      }
@@ -3186,7 +3193,7 @@ void CD::DeleteEntryDirectory(void)
 //    if( CHECK_EVENT(event, kEntrySearch) ) {
 //
 ////#if _FIX
-//      dbg << "ENTRYSEARCH" << endl;
+//      cddbg << "ENTRYSEARCH" << endl;
 ////      ENTRY_TAG_T recvBuf[2] = {0,0};
 ////      bool entry_searched = HandleEntrySearch(idx, recvBuf);
 //      cd_event_.push_back(new HandleEntrySearch(this, idx));
@@ -3216,13 +3223,13 @@ void CD::DeleteEntryDirectory(void)
 //    }
 //
 //    if( CHECK_EVENT(event, kAllResume) ) {
-//      dbg << "Head ReadMailBox. kAllResume" << endl;
+//      cddbg << "Head ReadMailBox. kAllResume" << endl;
 //      cd_event_.push_back(new HandleAllResume(this));
 //
 //
 //    }
 //    if( CHECK_EVENT(event, kAllReexecute) ) {
-//      dbg << "Handle All Reexecute at " << GetCDName() << " | " << GetNodeID() << endl;
+//      cddbg << "Handle All Reexecute at " << GetCDName() << " | " << GetNodeID() << endl;
 //      cd_event_.push_back(new HandleAllReexecute(this));
 //
 //    }
@@ -3247,7 +3254,7 @@ void CD::DeleteEntryDirectory(void)
 ////      HandleEntrySend();
 //      cd_event_.push_back(new HandleEntrySend(this));
 //#endif
-//      dbg << "CD Event kEntrySend\t\t\t";
+//      cddbg << "CD Event kEntrySend\t\t\t";
 //      
 //    }
 //
@@ -3281,10 +3288,10 @@ void CD::DeleteEntryDirectory(void)
 //#if 1
 //CDErrT CD::SetMailBox(const CDEventT &event)
 //{
-//  dbg << "\n\n=================== Set Mail Box Start ==========================\n" << endl;
-//  dbg << "\nSetMailBox " << myTaskID << ", event : " << event2str(event) << ", Is it Head? "<< IsHead() <<endl;
+//  cddbg << "\n\n=================== Set Mail Box Start ==========================\n" << endl;
+//  cddbg << "\nSetMailBox " << myTaskID << ", event : " << event2str(event) << ", Is it Head? "<< IsHead() <<endl;
 //
-//  dbg.flush();
+//  cddbg.flush();
 //  CD::CDInternalErrT ret=kOK;
 ////  int val = 1;
 //
@@ -3292,44 +3299,44 @@ void CD::DeleteEntryDirectory(void)
 ////  int head_id = head();
 //  if(event == CDEventT::kNoEvent) {
 //
-//    dbg << "\n=================== Set Mail Box Done ==========================\n" << endl;
+//    cddbg << "\n=================== Set Mail Box Done ==========================\n" << endl;
 //
 //    return static_cast<CDErrT>(ret);  
 //  }
 ////  if(task_size() == 1) {
 //    // This is the leaf that has just single task in a CD
-//    dbg << "KL : [SetMailBox Leaf and have 1 task] size is " << task_size() << ". Check mailbox at the upper level." << endl;
+//    cddbg << "KL : [SetMailBox Leaf and have 1 task] size is " << task_size() << ". Check mailbox at the upper level." << endl;
 //
 //    while( curr_cdh->node_id_.size()==1 ) {
 //      if(curr_cdh == CDPath::GetRootCD()) {
-//        dbg << "[SetMailBox] there is a single task in the root CD" << endl;
+//        cddbg << "[SetMailBox] there is a single task in the root CD" << endl;
 //        assert(0);
 //      }
-//      dbg << "[SetMailBox|Searching for CD Level having non-single task] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
+//      cddbg << "[SetMailBox|Searching for CD Level having non-single task] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
 //      // If current CD is Root CD and GetParentCD is called, it returns NULL
 //      curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
 //    } 
-//    dbg << "[SetMailBox] " << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << " at level : " << curr_cdh->ptr_cd()->GetCDID().level()
+//    cddbg << "[SetMailBox] " << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << " at level : " << curr_cdh->ptr_cd()->GetCDID().level()
 //        << "\nOriginal current CD " << GetCDName() << " / " << GetNodeID() << " at level : " << level() << "\n" << endl;
 //
 ////    head_id = curr_cdh->node_id().head();
 ////  }
 //
-//  dbg.flush();
+//  cddbg.flush();
 //  if(curr_cdh->IsHead()) assert(0);
-//  dbg << "Before RemoteSetMailBox" << endl; dbg.flush();
+//  cddbg << "Before RemoteSetMailBox" << endl; cddbg.flush();
 ////  curr_cdh->ptr_cd()
 //  ret = RemoteSetMailBox(curr_cdh->ptr_cd(), event);
 //  
 ///*
 //  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, curr_cdh->ptr_cd()->pendingWindow_);
 //  if(event != CDEventT::kNoEvent) {
-//    dbg << "Set CD Event kErrorOccurred. Level : " << level() <<" CD Name : " << GetCDName()<< endl;
+//    cddbg << "Set CD Event kErrorOccurred. Level : " << level() <<" CD Name : " << GetCDName()<< endl;
 //    // Increment pending request count at the target task (requestee)
 //    PMPI_Accumulate(&val, 1, MPI_INT, 
 //                    head_id, 0, 1, MPI_INT, 
 //                    MPI_SUM, curr_cdh->ptr_cd()->pendingWindow_);
-//    dbg << "MPI Accumulate done for tast #"<< head_id <<" (head)"<< endl; //getchar();
+//    cddbg << "MPI Accumulate done for tast #"<< head_id <<" (head)"<< endl; //getchar();
 //  }
 //  PMPI_Win_unlock(head_id, curr_cdh->ptr_cd()->pendingWindow_);
 //
@@ -3340,40 +3347,40 @@ void CD::DeleteEntryDirectory(void)
 //  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, mailbox);
 //
 //  // Inform the type of event to be requested
-//  dbg << "Set event start" << endl; //getchar();
+//  cddbg << "Set event start" << endl; //getchar();
 //  if(event != CDEventT::kNoEvent) {
 //    PMPI_Accumulate(&event, 1, MPI_INT, 
 //                    head_id, curr_cdh->node_id_.task_in_color(), 1, MPI_INT, 
 //                    MPI_BOR, mailbox);
 //  }
-//  dbg << "MPI Accumulate done for task #"<< head_id <<"(head)"<< endl; //getchar();
+//  cddbg << "MPI Accumulate done for task #"<< head_id <<"(head)"<< endl; //getchar();
 //
 //  PMPI_Win_unlock(head_id, mailbox);
 //*/
 //
-//  dbg << "\n=================== Set Mail Box Done ==========================\n" << endl;
+//  cddbg << "\n=================== Set Mail Box Done ==========================\n" << endl;
 //
-//  dbg.flush();
+//  cddbg.flush();
 //  return static_cast<CDErrT>(ret);
 //}
 //
 //CD::CDInternalErrT CD::RemoteSetMailBox(CD *curr_cd, const CDEventT &event)
 //{
-//  dbg <<"\nCD::RemoteSetMailBox, event" << event2str(event) << " at " << curr_cd->GetCDName() << " " << curr_cd->GetNodeID() << endl;
-//  dbg.flush();
+//  cddbg <<"\nCD::RemoteSetMailBox, event" << event2str(event) << " at " << curr_cd->GetCDName() << " " << curr_cd->GetNodeID() << endl;
+//  cddbg.flush();
 //  CDInternalErrT ret=kOK;
 //  int head_id = curr_cd->head();
 //  int val = 1;
 //  if(event != CDEventT::kNoEvent) {
 //    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, curr_cd->pendingWindow_);
-//    dbg << "Set CD Event "<< event2str(event) <<". Level : " << curr_cd->level() <<" CD Name : " << curr_cd->GetCDName()<< endl;
+//    cddbg << "Set CD Event "<< event2str(event) <<". Level : " << curr_cd->level() <<" CD Name : " << curr_cd->GetCDName()<< endl;
 //    // Increment pending request count at the target task (requestee)
 //    PMPI_Accumulate(&val, 1, MPI_INT, 
 //                    head_id, 0, 1, MPI_INT, 
 //                    MPI_SUM, curr_cd->pendingWindow_);
-//    dbg << "MPI Accumulate done for task #"<< head_id <<" (head)"<< endl; //getchar();
+//    cddbg << "MPI Accumulate done for task #"<< head_id <<" (head)"<< endl; //getchar();
 //  
-//    dbg.flush();
+//    cddbg.flush();
 //    PMPI_Win_unlock(head_id, curr_cd->pendingWindow_);
 //  
 //    CDMailBoxT &mailbox = curr_cd->mailbox_;
@@ -3381,24 +3388,24 @@ void CD::DeleteEntryDirectory(void)
 //    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, mailbox);
 //  
 //    // Inform the type of event to be requested
-//    dbg << "Set event start" << endl; //getchar();
+//    cddbg << "Set event start" << endl; //getchar();
 //    PMPI_Accumulate(&event, 1, MPI_INT, 
 //                    head_id, curr_cd->task_in_color(), 1, MPI_INT, 
 //                    MPI_BOR, mailbox);
 //    PMPI_Win_unlock(head_id, mailbox);
 //  }
-//  dbg << "MPI Accumulate done for task #"<< head_id <<"(head)"<< endl; //getchar();
-//  dbg.flush();
-//  dbg << "CD::RemoteSetMailBox Done." << endl;
-//  dbg.flush();
+//  cddbg << "MPI Accumulate done for task #"<< head_id <<"(head)"<< endl; //getchar();
+//  cddbg.flush();
+//  cddbg << "CD::RemoteSetMailBox Done." << endl;
+//  cddbg.flush();
 //  return ret;
 //}
 //
 //
 //CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
 //{
-//  dbg << "\n\n=================== Set Mail Box ("<<event2str(event)<<", "<<task_id<<") Start! myTaskID #"<< myTaskID << "==========================\n" << endl;
-//  dbg.flush();
+//  cddbg << "\n\n=================== Set Mail Box ("<<event2str(event)<<", "<<task_id<<") Start! myTaskID #"<< myTaskID << "==========================\n" << endl;
+//  cddbg.flush();
 // 
 //  if(event == CDEventT::kErrorOccurred || event == CDEventT::kEntrySearch) {
 //    cerr << "[HeadCD::SetMailBox(event, task_id)] Error, the event argument is something wrong. event: " << event << endl;
@@ -3413,7 +3420,7 @@ void CD::DeleteEntryDirectory(void)
 //  int val = 1;
 //  if(event == CDEventT::kNoEvent) {
 //    // There is no vent to set.
-//    dbg << "No event to set" << endl;
+//    cddbg << "No event to set" << endl;
 //  }
 //  else {
 //    if(task_id != task_in_color()) {
@@ -3423,37 +3430,37 @@ void CD::DeleteEntryDirectory(void)
 //      // Increment pending request count at the target task (requestee)
 //      if(event != CDEventT::kNoEvent) {
 //        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_id, 0, pendingWindow_);
-//        dbg << "Set CD Event " << event2str(event) <<". Level : " << level() <<" CD Name : " << GetCDName()<< endl;
-//        dbg << "Accumulate event at " << task_id << endl;
+//        cddbg << "Set CD Event " << event2str(event) <<". Level : " << level() <<" CD Name : " << GetCDName()<< endl;
+//        cddbg << "Accumulate event at " << task_id << endl;
 //  
 //        PMPI_Accumulate(&val, 1, MPI_INT, 
 //                       task_id, 0, 1, MPI_INT, 
 //                       MPI_SUM, pendingWindow_);
-//        dbg << "PMPI_Accumulate done for task #" << task_id << endl; //getchar();
-//        dbg.flush();
+//        cddbg << "PMPI_Accumulate done for task #" << task_id << endl; //getchar();
+//        cddbg.flush();
 //        PMPI_Win_unlock(task_id, pendingWindow_);
 //    
 //    
-//        dbg << "Finished to increment the pending counter at task #" << task_id << endl;
-//        dbg.flush();
+//        cddbg << "Finished to increment the pending counter at task #" << task_id << endl;
+//        cddbg.flush();
 //    
 //        if(task_id == task_in_color()) { 
-//          dbg << "after accumulate --> pending counter : " << *pendingFlag_ << endl;
+//          cddbg << "after accumulate --> pending counter : " << *pendingFlag_ << endl;
 //        }
 //        
 //        // Inform the type of event to be requested
 //        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_id, 0, mailbox_);
-//        dbg << "Set event start" << endl; //getchar();
+//        cddbg << "Set event start" << endl; //getchar();
 //        PMPI_Accumulate(&event, 1, MPI_INT, 
 //                       task_id, 0, 1, MPI_INT, 
 //                       MPI_BOR, mailbox_);
 //        PMPI_Win_unlock(task_id, mailbox_);
 //      }
-//      dbg << "PMPI_Accumulate done for task #" << task_id << endl; //getchar();
-//      dbg.flush();
+//      cddbg << "PMPI_Accumulate done for task #" << task_id << endl; //getchar();
+//      cddbg.flush();
 //  
 //      if(task_id == task_in_color()) { 
-//        dbg << "after accumulate --> event : " << event2str(event_flag_[task_id]) << endl;
+//        cddbg << "after accumulate --> event : " << event2str(event_flag_[task_id]) << endl;
 //      }
 //    
 //    
@@ -3468,14 +3475,14 @@ void CD::DeleteEntryDirectory(void)
 //      // head CD does not check mail box to invoke kAllRexecute for itself. 
 //      // Therefore, it locally register the event handler right away, 
 //      // and all the tasks including head task can reexecute after the CheckMailBox.
-//      dbg << "\nEven though it calls SetMailBox( "<<event2str(event)<<", "<<task_id<<"=="<<task_in_color()<<" ), locally set/handle events\n"<<endl;
+//      cddbg << "\nEven though it calls SetMailBox( "<<event2str(event)<<", "<<task_id<<"=="<<task_in_color()<<" ), locally set/handle events\n"<<endl;
 //      CDInternalErrT cd_ret = LocalSetMailBox(this, event);
 //      ret = static_cast<CDErrT>(cd_ret);
 //    }
 //  }
-//  dbg << "\n=================== Set Mail Box Done ==========================\n" << endl;
+//  cddbg << "\n=================== Set Mail Box Done ==========================\n" << endl;
 //
-//  dbg.flush();
+//  cddbg.flush();
 //  return ret;
 //}
 //
@@ -3491,19 +3498,19 @@ void CD::DeleteEntryDirectory(void)
 //  // head CD does not check mail box to invoke kAllRexecute for itself. 
 //  // Therefore, it locally register the event handler right away, 
 //  // and all the tasks including head task can reexecute after the CheckMailBox.
-//  dbg << "\n---------- HeadCD::SetMailBox( "<< event2str(event) <<" ) at level #"<<level()<<"-------------\n" << endl;
-//  dbg.flush();
+//  cddbg << "\n---------- HeadCD::SetMailBox( "<< event2str(event) <<" ) at level #"<<level()<<"-------------\n" << endl;
+//  cddbg.flush();
 //  CDInternalErrT ret = kOK;
 //  CDHandle *curr_cdh = CDPath::GetCurrentCD();
 //  while( curr_cdh->task_size() == 1 ) {
 //    if(curr_cdh == CDPath::GetRootCD()) {
-//      dbg << "[SetMailBox] there is a single task in the root CD" << endl;
+//      cddbg << "[SetMailBox] there is a single task in the root CD" << endl;
 //      assert(0);
 //    }
 //    // If current CD is Root CD and GetParentCD is called, it returns NULL
 //    curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
 //  } 
-//  dbg.flush();
+//  cddbg.flush();
 ////  if(curr_cdh->IsHead()) assert(0);
 //
 //
@@ -3514,7 +3521,7 @@ void CD::DeleteEntryDirectory(void)
 //    ret = RemoteSetMailBox(curr_cdh->ptr_cd(), event);
 //  }
 //
-//  dbg.flush();
+//  cddbg.flush();
 ///*
 //  CDErrT ret=CDErrT::kOK;
 //  if(event != kNoEvent) {
@@ -3527,33 +3534,33 @@ void CD::DeleteEntryDirectory(void)
 //    (*pendingFlag_)++;
 ////  PMPI_Win_unlock(task_in_color(), pendingWindow_);
 //    if( CHECK_EVENT(event, kErrorOccurred) ) {
-//        dbg << "kErrorOccurred in HeadCD::SetMailBox" << endl; //getchar();
+//        cddbg << "kErrorOccurred in HeadCD::SetMailBox" << endl; //getchar();
 //        curr_cdh->ptr_cd()->cd_event_.push_back(new HandleErrorOccurred(static_cast<HeadCD *>(curr_cdh->ptr_cd())));
 ////        curr_cdh->ptr_cd()->cd_event_.push_back(new HandleAllReexecute(this));
 //        // it is not needed to register here. I will be registered by HandleErrorOccurred functor.
 //    }
 //    if( CHECK_EVENT(event, kAllReexecute) ) {
-//        dbg << "kAllRexecute in HeadCD::SetMailBox" << endl; //getchar();
+//        cddbg << "kAllRexecute in HeadCD::SetMailBox" << endl; //getchar();
 //        assert(curr_cdh->ptr_cd() == this);
 //        curr_cdh->ptr_cd()->cd_event_.push_back(new HandleAllReexecute(curr_cdh->ptr_cd()));
 //    }
 //  
 //  }
 //*/
-//  dbg << "\n------------------------------------------------------------\n" << endl;
+//  cddbg << "\n------------------------------------------------------------\n" << endl;
 //  return static_cast<CDErrT>(ret);
 //}
 //
 //CD::CDInternalErrT HeadCD::LocalSetMailBox(HeadCD *curr_cd, const CDEventT &event)
 //{
-//  dbg << "HeadCD::LocalSetMailBox Event : " << event2str(event) << endl;
-//  dbg.flush();
+//  cddbg << "HeadCD::LocalSetMailBox Event : " << event2str(event) << endl;
+//  cddbg.flush();
 //  CDInternalErrT ret=kOK;
 //  if(event != kNoEvent) {
 //    if(curr_cd->task_in_color() != head()) assert(0);
 //  
 //    if(event == kAllResume || event == kAllPause  || event == kEntrySearch ) {//|| event == kEntrySend) {
-//      dbg << "HeadCD::LocalSetMailBox -> Event: " << event2str(event) << endl; dbg.flush();
+//      cddbg << "HeadCD::LocalSetMailBox -> Event: " << event2str(event) << endl; cddbg.flush();
 //      cerr << "HeadCD::LocalSetMailBox -> Event: " << event2str(event) << endl; 
 //      assert(0);
 //    }
@@ -3561,18 +3568,18 @@ void CD::DeleteEntryDirectory(void)
 //    (*pendingFlag_)++;
 ////  PMPI_Win_unlock(task_in_color(), pendingWindow_);
 //    if( CHECK_EVENT(event, kErrorOccurred) ) {
-//        dbg << "kErrorOccurred in HeadCD::SetMailBox" << endl; //getchar();
+//        cddbg << "kErrorOccurred in HeadCD::SetMailBox" << endl; //getchar();
 //        curr_cd->cd_event_.push_back(new HandleErrorOccurred(curr_cd));
 //        // it is not needed to register here. I will be registered by HandleErrorOccurred functor.
 //    }
 //    if( CHECK_EVENT(event, kAllReexecute) ) {
-//        dbg << "kAllRexecute in HeadCD::SetMailBox" << endl; //getchar();
+//        cddbg << "kAllRexecute in HeadCD::SetMailBox" << endl; //getchar();
 //        assert(curr_cd == this);
 //        curr_cd->cd_event_.push_back(new HandleAllReexecute(curr_cd));
 //    }
 //    if( CHECK_EVENT(event, kEntrySend) ) {
 //        assert(0);
-//        dbg << "kEntrySend in HeadCD::SetMailBox" << endl; //getchar();
+//        cddbg << "kEntrySend in HeadCD::SetMailBox" << endl; //getchar();
 //        assert(curr_cd == this);
 //        curr_cd->cd_event_.push_back(new HandleEntrySend(curr_cd));
 //    }
@@ -3585,24 +3592,24 @@ void CD::DeleteEntryDirectory(void)
 ///*
 //CDErrT CD::SetMailBox(CDEventT &event)
 //{
-//  dbg << "\n\n=================== Set Mail Box Start ==========================\n" << endl;
-//  dbg << "\nSetMailBox " << myTaskID << ", event : " << event << ", Is it Head? "<< IsHead() <<endl;
+//  cddbg << "\n\n=================== Set Mail Box Start ==========================\n" << endl;
+//  cddbg << "\nSetMailBox " << myTaskID << ", event : " << event << ", Is it Head? "<< IsHead() <<endl;
 //  CD::CDInternalErrT ret=kOK;
 //  int val = 1;
 //
 //  if(task_size() > 1) {
-//    dbg << "KL : [SetMailBox] size is " << task_size() << ". Check mailbox at the upper level." << endl;
+//    cddbg << "KL : [SetMailBox] size is " << task_size() << ". Check mailbox at the upper level." << endl;
 //  
 //    PMPI_Win_fence(0, pendingWindow_);
 //    if(event != CDEventT::kNoEvent) {
 ////      PMPI_Win_fence(0, pendingWindow_);
 //
-//      dbg << "Set CD Event kErrorOccurred. Level : " << level() <<" CD Name : " << GetCDName()<< endl;
+//      cddbg << "Set CD Event kErrorOccurred. Level : " << level() <<" CD Name : " << GetCDName()<< endl;
 //      // Increment pending request count at the target task (requestee)
 //      PMPI_Accumulate(&val, 1, MPI_INT, 
 //                     head(), 0, 1, MPI_INT, 
 //                     MPI_SUM, pendingWindow_);
-//      dbg << "MPI Accumulate done" << endl; //getchar();
+//      cddbg << "MPI Accumulate done" << endl; //getchar();
 //
 ////      PMPI_Win_fence(0, pendingWindow_);
 //    }
@@ -3618,21 +3625,21 @@ void CD::DeleteEntryDirectory(void)
 //                     MPI_BOR, mailbox);
 //
 ////    PMPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
-//      dbg << "PMPI_Accumulate done" << endl; //getchar();
+//      cddbg << "PMPI_Accumulate done" << endl; //getchar();
 //    }
 //  
 ////    switch(event) {
 ////      case CDEventT::kNoEvent :
-////        dbg << "Set CD Event kNoEvent" << endl;
+////        cddbg << "Set CD Event kNoEvent" << endl;
 ////        break;
 ////      case CDEventT::kErrorOccurred :
 ////        // Inform the type of event to be requested
 ////        PMPI_Accumulate(&event, 1, MPI_INT, node_id_.head(), node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
 //////        PMPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
-////        dbg << "PMPI_Put done" << endl; getchar();
+////        cddbg << "PMPI_Put done" << endl; getchar();
 ////        break;
 ////      case CDEventT::kAllPause :
-////        dbg << "Set CD Event kAllPause" << endl;
+////        cddbg << "Set CD Event kAllPause" << endl;
 ////  
 ////        break;
 ////      case CDEventT::kAllResume :
@@ -3657,19 +3664,19 @@ void CD::DeleteEntryDirectory(void)
 //  }
 //  else {
 //    // This is the leaf that has just single task in a CD
-//    dbg << "KL : [SetMailBox Leaf and have 1 task] size is " << task_size() << ". Check mailbox at the upper level." << endl;
+//    cddbg << "KL : [SetMailBox Leaf and have 1 task] size is " << task_size() << ". Check mailbox at the upper level." << endl;
 //    CDHandle *curr_cdh = CDPath::GetCurrentCD();
 //
 //    while( curr_cdh->node_id_.size()==1 ) {
 //      if(curr_cdh == CDPath::GetRootCD()) {
-//        dbg << "[SetMailBox] there is a single task in the root CD" << endl;
+//        cddbg << "[SetMailBox] there is a single task in the root CD" << endl;
 //        assert(0);
 //      }
-//      dbg << "[SetMailBox|Searching for CD Level having non-single task] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
+//      cddbg << "[SetMailBox|Searching for CD Level having non-single task] Current Level : " << curr_cdh->ptr_cd()->GetCDID().level() << endl;
 //      // If current CD is Root CD and GetParentCD is called, it returns NULL
 //      curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
 //    } 
-//    dbg << "[SetMailBox] " << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << " at level : " << curr_cdh->ptr_cd()->GetCDID().level()
+//    cddbg << "[SetMailBox] " << curr_cdh->ptr_cd()->GetCDName() << " / " << curr_cdh->node_id_ << " at level : " << curr_cdh->ptr_cd()->GetCDID().level()
 //        << "\nOriginal current CD " << GetCDName() << " / " << GetNodeID() << " at level : " << level() << "\n" << endl;
 //
 //
@@ -3677,12 +3684,12 @@ void CD::DeleteEntryDirectory(void)
 //
 //    PMPI_Win_lock(PMPI_LOCK_EXCLUSIVE, parent_head_id, 0, curr_cdh->ptr_cd()->pendingWindow_);
 //    if(event != CDEventT::kNoEvent) {
-//      dbg << "Set CD Event kErrorOccurred. Level : " << level() <<" CD Name : " << GetCDName()<< endl;
+//      cddbg << "Set CD Event kErrorOccurred. Level : " << level() <<" CD Name : " << GetCDName()<< endl;
 //      // Increment pending request count at the target task (requestee)
 //      PMPI_Accumulate(&val, 1, MPI_INT, parent_head_id, 
 //                     0, 1, MPI_INT, 
 //                     MPI_SUM, curr_cdh->ptr_cd()->pendingWindow_);
-//      dbg << "MPI Accumulate done" << endl; //getchar();
+//      cddbg << "MPI Accumulate done" << endl; //getchar();
 //    }
 //    PMPI_Win_unlock(parent_head_id, curr_cdh->ptr_cd()->pendingWindow_);
 //
@@ -3690,28 +3697,28 @@ void CD::DeleteEntryDirectory(void)
 //
 //    PMPI_Win_lock(PMPI_LOCK_EXCLUSIVE, parent_head_id, 0, mailbox);
 //    // Inform the type of event to be requested
-//    dbg << "Set event start" << endl; //getchar();
+//    cddbg << "Set event start" << endl; //getchar();
 //    if(event != CDEventT::kNoEvent) {
 //      PMPI_Accumulate(&event, 1, MPI_INT, parent_head_id, 
 //                     curr_cdh->node_id_.task_in_color(), 1, MPI_INT, 
 //                     MPI_BOR, mailbox);
 ////    PMPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
 //    }
-//    dbg << "PMPI_Accumulate done" << endl; //getchar();
+//    cddbg << "PMPI_Accumulate done" << endl; //getchar();
 //
 ////    switch(event) {
 ////      case CDEventT::kNoEvent :
-////        dbg << "Set CD Event kNoEvent" << endl;
+////        cddbg << "Set CD Event kNoEvent" << endl;
 ////        break;
 ////      case CDEventT::kErrorOccurred :
 ////        // Inform the type of event to be requested
-////        dbg << "Set event start" << endl; getchar();
+////        cddbg << "Set event start" << endl; getchar();
 ////        PMPI_Accumulate(&event, 1, MPI_INT, parent_head_id, curr_cdh->node_id_.task_in_color(), 1, MPI_INT, MPI_BOR, mailbox);
 //////        PMPI_Put(&event, 1, MPI_INT, node_id_.head(), 0, 1, MPI_INT, mailbox);
-////        dbg << "PMPI_Accumulate done" << endl; getchar();
+////        cddbg << "PMPI_Accumulate done" << endl; getchar();
 ////        break;
 ////      case CDEventT::kAllPause :
-////        dbg << "Set CD Event kAllPause" << endl;
+////        cddbg << "Set CD Event kAllPause" << endl;
 ////  
 ////        break;
 ////      case CDEventT::kAllResume :
@@ -3732,7 +3739,7 @@ void CD::DeleteEntryDirectory(void)
 ////    }
 //    PMPI_Win_unlock(parent_head_id, mailbox);
 //  }
-//  dbg << "\n================================================================\n" << endl;
+//  cddbg << "\n================================================================\n" << endl;
 //
 //  return static_cast<CDErrT>(ret);
 //}
@@ -4054,7 +4061,7 @@ CD::CDInternalErrT CD::InvokeErrorHandler(void)
 
 //CD::CDInternalErrT HeadCD::InvokeErrorHandler(void)
 //{
-//  dbg << "HeadCD::CDInternalErrT CD::InvokeErrorHandler(void), event queue size : " << cd_event_.size() << ", (head) event queue size : " << cd_event_.size()<< endl;
+//  cddbg << "HeadCD::CDInternalErrT CD::InvokeErrorHandler(void), event queue size : " << cd_event_.size() << ", (head) event queue size : " << cd_event_.size()<< endl;
 //  CDInternalErrT cd_err = kOK;
 //
 //  while(!cd_event_.empty()) {
@@ -4071,8 +4078,8 @@ CD::CDInternalErrT CD::InvokeErrorHandler(void)
 //  }
 //
 //
-//  dbg << "Handled event count : " << handled_event_count << endl;
-//  dbg << "currnt pending count : " << *pendingFlag_ << endl;
+//  cddbg << "Handled event count : " << handled_event_count << endl;
+//  cddbg << "currnt pending count : " << *pendingFlag_ << endl;
 //
 //
 //
@@ -4103,7 +4110,7 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
 //    if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
 
 //    CDEntry* entry = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
-//    dbg <<"ref name: "    << entry->dst_data_.ref_name() 
+//    cddbg <<"ref name: "    << entry->dst_data_.ref_name() 
 //              << ", at level: " << entry->ptr_cd()->GetCDID().level()<<endl;
 //    if( entry != 0 ) {
 
@@ -4156,21 +4163,21 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
 
 CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
 {
-    dbg << "Search Entry : " << entry_tag_to_search << "(" << tag2str[entry_tag_to_search] <<")"<< endl;
+    cddbg << "Search Entry : " << entry_tag_to_search << "(" << tag2str[entry_tag_to_search] <<")"<< endl;
     CDHandle *parent_cd = CDPath::GetParentCD();
     CDEntry *entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(entry_tag_to_search);
 
-    dbg<<"parent name: "<<parent_cd->GetName()<<endl;
+    cddbg<<"parent name: "<<parent_cd->GetName()<<endl;
     if(entry_tmp != NULL) { 
-      dbg << "parent dst addr : " << entry_tmp->dst_data_.address_data()
+      cddbg << "parent dst addr : " << entry_tmp->dst_data_.address_data()
                 << ", parent entry name : " << entry_tmp->dst_data_.ref_name()<<endl;
     } else {
-      dbg<<"there is no reference in parent level"<<endl;
+      cddbg<<"there is no reference in parent level"<<endl;
     }
 //    if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
 
 //    CDEntry* entry = parent_cd->ptr_cd()->InternalGetEntry(entry_tag_to_search);
-//    dbg <<"ref name: "    << entry->dst_data_.ref_name() 
+//    cddbg <<"ref name: "    << entry->dst_data_.ref_name() 
 //              << ", at level: " << entry->ptr_cd()->GetCDID().level()<<endl;
 //    if( entry != 0 ) {
 
@@ -4180,7 +4187,7 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
 
       CDEntry* entry = NULL;
       while( parent_cd != NULL ) {
-        dbg << "InternalGetEntry at Level: " << parent_cd->ptr_cd()->GetCDID().level()<<endl;
+        cddbg << "InternalGetEntry at Level: " << parent_cd->ptr_cd()->GetCDID().level()<<endl;
         entry = parent_cd->ptr_cd()->InternalGetEntry(entry_tag_to_search);
 
         if(entry != NULL) {
@@ -4192,13 +4199,13 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
         }
         else {
           parent_cd = CDPath::GetParentCD(parent_cd->ptr_cd()->level());
-          if(parent_cd != NULL) dbg<< "Gotta go to upper level! -> " << parent_cd->GetName() << " at level "<< parent_cd->ptr_cd()->GetCDID().level() << endl;
+          if(parent_cd != NULL) cddbg<< "Gotta go to upper level! -> " << parent_cd->GetName() << " at level "<< parent_cd->ptr_cd()->GetCDID().level() << endl;
         }
-        dbg.flush();
+        cddbg.flush();
       } 
       if(parent_cd == NULL) entry = NULL;
-      dbg<<"--------- CD::SearchEntry Done. Check entry " << entry <<", at " << GetNodeID() << " -----------" << endl; //(int)(entry ===NULL)<endl;
-      dbg.flush();
+      cddbg<<"--------- CD::SearchEntry Done. Check entry " << entry <<", at " << GetNodeID() << " -----------" << endl; //(int)(entry ===NULL)<endl;
+      cddbg.flush();
 //       
 //
 //      // preservation via reference for remote copy.
@@ -4235,9 +4242,9 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
 //
 //void CD::RequestEntrySearch(void)
 //{
-//  dbg << "REQ" << endl;
+//  cddbg << "REQ" << endl;
 //  for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ++it) {
-//    dbg << tag2str[*it] << endl;
+//    cddbg << tag2str[*it] << endl;
 //  }
 ////  PMPI_Status status;
 ////  void *entry_list_to_search;

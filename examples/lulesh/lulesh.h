@@ -14,6 +14,11 @@
 #include <math.h>
 #include <vector>
 
+#if _CD
+#include "packer.h"
+#include "unpacker.h"
+#include "cds.h"
+#endif
 //**************************************************
 // Allow flexibility for arithmetic representations 
 //**************************************************
@@ -332,6 +337,150 @@ class Domain {
 
    Index_t *nodeElemCornerList(Index_t idx)
    { return &m_nodeElemCornerList[m_nodeElemStart[idx]] ; }
+
+   enum DOMAIN_DATA_ID {
+    M_X ,  /* COORDINATES */
+    M_Y ,
+    M_Z ,
+
+    M_XD , /* VELOCITIES */
+    M_YD ,
+    M_ZD ,
+
+    M_XDD , /* ACCELERATIONS */
+    M_YDD ,
+    M_ZDD ,
+
+    M_FX ,  /* FORCES */
+    M_FY ,
+    M_FZ ,
+
+    M_NODALMASS ,  /* MASS */
+
+    M_SYMMX ,  /* SYMMETRY PLANE NODESETS */
+    M_SYMMY ,
+    M_SYMMZ ,
+
+
+    M_MATELEMLIST ,  /* MATERIAL INDEXSET */
+    M_NODELIST ,     /* ELEMTONODE CONNECTIVITY */
+
+    M_LXIM ,  /* ELEMENT CONNECTIVITY ACROSS EACH FACE */
+    M_LXIP ,
+    M_LETAM ,
+    M_LETAP ,
+    M_LZETAM ,
+    M_LZETAP ,
+
+    M_ELEMBC ,  /* SYMMETRY/FREE-SURFACE FLAGS FOR EACH ELEM FACE */
+
+    M_DXX ,  /* PRINCIPAL STRAINS -- TEMPORARY */
+    M_DYY ,
+    M_DZZ ,
+
+    M_DELV_XI ,    /* VELOCITY GRADIENT -- TEMPORARY */
+    M_DELV_ETA ,
+    M_DELV_ZETA ,
+
+    M_DELX_XI ,    /* COORDINATE GRADIENT -- TEMPORARY */
+    M_DELX_ETA ,
+    M_DELX_ZETA ,
+   
+    M_E_ ,   /* ENERGY */
+
+    M_P ,   /* PRESSURE */
+    M_Q ,   /* Q */
+    M_QL ,  /* LINEAR TERM FOR Q */
+    M_QQ ,  /* QUADRATIC TERM FOR Q */
+
+    M_V ,     /* RELATIVE VOLUME */
+    M_VOLO ,  /* REFERENCE VOLUME */
+    M_VNEW ,  /* NEW RELATIVE VOLUME -- TEMPORARY */
+    M_DELV ,  /* M_VNEW - M_V */
+    M_VDOV ,  /* VOLUME DERIVATIVE OVER VOLUME */
+
+    M_AREALG ,  /* CHARACTERISTIC LENGTH OF AN ELEMENT */
+   
+    M_SS ,      /* "SOUND SPEED" */
+
+    M_ELEMMASS ,  /* MASS */
+
+    TOTAL_ELEMENT_COUNT
+
+   };
+
+
+   void *Serialize(uint32_t &len_in_bytes) {
+      Packer packer;
+      packer.Add(M_X, sizeof(Real_t) * m_x.size(), m_x.data());
+      packer.Add(M_Y, sizeof(Real_t) * m_y.size(), m_y.data());
+      packer.Add(M_Z, sizeof(Real_t) * m_z.size(), m_z.data());
+
+      packer.Add(M_XD, sizeof(Real_t) * m_xd.size(), m_xd.data());
+      packer.Add(M_YD, sizeof(Real_t) * m_yd.size(), m_yd.data());
+      packer.Add(M_ZD, sizeof(Real_t) * m_zd.size(), m_zd.data());
+
+      packer.Add(M_XDD, sizeof(Real_t) * m_xdd.size(), m_xdd.data());
+      packer.Add(M_YDD, sizeof(Real_t) * m_ydd.size(), m_ydd.data());
+      packer.Add(M_ZDD, sizeof(Real_t) * m_zdd.size(), m_zdd.data());
+
+      packer.Add(M_FX, sizeof(Real_t) * m_fx.size(), m_x.data());
+      packer.Add(M_FY, sizeof(Real_t) * m_fy.size(), m_y.data());
+      packer.Add(M_FZ, sizeof(Real_t) * m_fz.size(), m_z.data());
+
+      packer.Add(M_NODALMASS, sizeof(Real_t) * m_nodalMass.size(), m_nodalMass.data());
+
+      packer.Add(M_SYMMX, sizeof(Index_t) * m_symmX.size(), m_symmX.data());
+      packer.Add(M_SYMMY, sizeof(Index_t) * m_symmY.size(), m_symmY.data());
+      packer.Add(M_SYMMZ, sizeof(Index_t) * m_symmZ.size(), m_symmZ.data());
+
+      packer.Add(M_MATELEMLIST, sizeof(Index_t) * m_matElemlist.size(), m_matElemlist.data());
+      packer.Add(M_NODELIST, sizeof(Index_t) * m_nodelist.size(), m_nodelist.data());
+
+
+      packer.Add(M_LXIM,   sizeof(Index_t) * m_lxim.size(),   m_lxim.data());  
+      packer.Add(M_LXIP,   sizeof(Index_t) * m_lxip.size(),   m_lxip.data());  
+      packer.Add(M_LETAM,  sizeof(Index_t) * m_letam.size(),  m_letam.data()); 
+      packer.Add(M_LETAP,  sizeof(Index_t) * m_letap.size(),  m_letap.data()); 
+      packer.Add(M_LZETAM, sizeof(Index_t) * m_lzetam.size(), m_lzetam.data());
+      packer.Add(M_LZETAP, sizeof(Index_t) * m_lzetap.size(), m_lzetap.data());
+
+
+      packer.Add(M_ELEMBC, sizeof(Index_t) * m_elemBC.size(), m_elemBC.data());
+  
+      packer.Add(M_DXX, sizeof(Real_t) * m_dxx.size(),  m_dxx.data());
+      packer.Add(M_DYY, sizeof(Real_t) * m_dyy.size(),  m_dyy.data());
+      packer.Add(M_DZZ, sizeof(Real_t) * m_dzz.size(),  m_dzz.data());
+
+      packer.Add(M_DELV_XI,   sizeof(Real_t) * m_delv_xi.size(),   m_delv_xi.data());   
+      packer.Add(M_DELV_ETA,  sizeof(Real_t) * m_delv_eta.size(),  m_delv_eta.data());  
+      packer.Add(M_DELV_ZETA, sizeof(Real_t) * m_delv_zeta.size(), m_delv_zeta.data()); 
+                                                                        
+      packer.Add(M_DELX_XI,   sizeof(Real_t) * m_delx_xi.size(),   m_delx_xi.data());   
+      packer.Add(M_DELX_ETA,  sizeof(Real_t) * m_delx_eta.size(),  m_delx_eta.data());  
+      packer.Add(M_DELX_ZETA, sizeof(Real_t) * m_delx_zeta.size(), m_delx_zeta.data()); 
+
+      packer.Add(M_E_,  sizeof(Real_t) * m_e.size(),  m_e.data()); 
+                                                   
+      packer.Add(M_P,  sizeof(Real_t) * m_p.size(),  m_p.data()); 
+      packer.Add(M_Q,  sizeof(Real_t) * m_q.size(),  m_q.data()); 
+      packer.Add(M_QL, sizeof(Real_t) * m_ql.size(), m_ql.data());
+      packer.Add(M_QQ, sizeof(Real_t) * m_qq.size(), m_qq.data());
+
+      packer.Add(M_V,    sizeof(Real_t) * m_v.size(),    m_v.data());   
+      packer.Add(M_VOLO, sizeof(Real_t) * m_volo.size(), m_volo.data());
+      packer.Add(M_VNEW, sizeof(Real_t) * m_vnew.size(), m_vnew.data());
+      packer.Add(M_DELV, sizeof(Real_t) * m_delv.size(), m_delv.data());
+      packer.Add(M_VDOV, sizeof(Real_t) * m_vdov.size(), m_vdov.data());
+
+      packer.Add(M_AREALG,   sizeof(Real_t) * m_arealg.size(),   m_arealg.data()); 
+                                                                      
+      packer.Add(M_SS,       sizeof(Real_t) * m_ss.size(),       m_ss.data());         
+                                                                      
+      packer.Add(M_ELEMMASS, sizeof(Real_t) * m_elemMass.size(), m_elemMass.data());
+
+      return packer.GetTotalData(len_in_bytes);
+   }
 
    // Parameters 
 

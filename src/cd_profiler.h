@@ -56,6 +56,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <vector>
 #include <list>
 #include <cstdint>
+#include <time.h>
 #include "sight.h"
 
 //using namespace cd;
@@ -73,15 +74,9 @@ public:
   Profiler() {}
   ~Profiler() {}
 //  virtual void GetProfile(const char *label)=0;
-  virtual void CollectProfile(void)=0;
-  virtual void GetPreserveInfo(void *data, 
-                          uint64_t len_in_bytes,
-                          uint32_t preserve_mask, 
-                          const char *my_name, 
-                          const char *ref_name, 
-                          uint64_t ref_offset, 
-                          const RegenObject * regen_object, 
-                          PreserveUseT data_usage){}
+  virtual void RecordProfile(ProfileType profile_type, uint64_t profile_data)=0;
+  virtual void RecordClockBegin()=0;
+  virtual void RecordClockEnd()=0;
   virtual void StartProfile(const char *label)=0;
   virtual void FinishProfile(void)=0;
   virtual void InitViz(void)=0;
@@ -95,26 +90,20 @@ public:
   NullProfiler() {}
   ~NullProfiler() {}
 //  void GetProfile(const char *label) {}
-  void CollectProfile(void) {}
-  void GetPreserveInfo(void *data, 
-                  uint64_t len_in_bytes,
-                  uint32_t preserve_mask, 
-                  const char *my_name, 
-                  const char *ref_name, 
-                  uint64_t ref_offset, 
-                  const RegenObject * regen_object, 
-                  PreserveUseT data_usage) {}
+  void RecordProfile(ProfileType profile_type, uint64_t profile_data) {}
+  void RecordClockBegin() {}
+  void RecordClockEnd() {}
   void StartProfile(const char *label) {}
   void FinishProfile(void) {}
   void InitViz(void) {}
   void FinalizeViz(void) {}
   LabelT label(void) {return LabelT();}
+  void ClearSightObj(void){}
 };
 
 class CDProfiler : public Profiler {
   /// sight-related member data
   static std::list<Viz*> vizStack_;
-  LabelT current_label_;
   uint64_t  sibling_id_;
   uint64_t  level_;
 
@@ -131,8 +120,13 @@ class CDProfiler : public Profiler {
   uint64_t this_point_;
   uint64_t that_point_;
 
+  clock_t this_time_;
+  clock_t that_time_;
+
 public:
-  std::map<std::string, uint64_t*> profile_data_;
+  LabelT current_label_;
+  std::map<std::string, array<uint64_t,MAX_PROFILE_DATA>> profile_data_;
+  static std::map<std::string, bool> onOff_;
   CDProfiler() 
   {
     sibling_id_ = 0;
@@ -149,15 +143,9 @@ public:
   ~CDProfiler() {}
   void InitProfile(std::string label="INITIAL_LABEL");
 //  void GetProfile(const char *label);
-  void CollectProfile(void);
-  void GetPreserveInfo(void *data, 
-                  uint64_t len_in_bytes,
-                  CDPreserveT preserve_mask, 
-                  const char *my_name, 
-                  const char *ref_name, 
-                  uint64_t ref_offset, 
-                  const RegenObject * regen_object, 
-                  PreserveUseT data_usage);
+  void RecordProfile(ProfileType profile_type, uint64_t profile_data);
+  void RecordClockBegin();
+  void RecordClockEnd();
   void StartProfile(const char *label);
   void FinishProfile(void);
   void InitViz(void);
@@ -181,23 +169,26 @@ private:
 class Viz {
 public:
   Viz(void) {
-    std::cout << "Viz is called" << std::endl; //getchar();
+//    std::cout << "Viz is called" << std::endl; //getchar();
 
   }
   virtual ~Viz(void) {
-    std::cout << "~Viz is called" << std::endl;
+//    std::cout << "~Viz is called" << std::endl;
   }
   virtual sightObj *GetSightObj()=0;
 };
 
+#if _ENABLE_MODULE
 class Module : public Viz {
   /// All modules that are currently live
-  module *m;
+  compModule *m;
+  CDProfiler *profiler;
+  vector<port> externalOutputs;
   context usr_profile_input;
   context usr_profile_output;
   bool usr_profile_enable;
 public:
-  Module(bool usr_profile_en=false);
+  Module(CDProfiler *profiler_p, bool usr_profile_en=false);
   ~Module(void);
   void SetUsrProfileInput(std::pair<std::string, long> name_list);
   void SetUsrProfileInput(std::initializer_list<std::pair<std::string, long>> name_list);
@@ -206,7 +197,9 @@ public:
   void AddUsrProfile(std::string key, long val, int mode);
   sightObj *GetSightObj() { return m; }
 };
+#endif
 
+#if _ENABLE_HIERGRAPH
 class HierGraph : public Viz {
 public:
   static flowgraph *fg;
@@ -215,7 +208,9 @@ public:
   ~HierGraph(void);
   sightObj *GetSightObj() { return fg; }
 };
+#endif
 
+#if _ENABLE_ATTR
 class Attribute : public Viz {
   static attrIf *attrScope;
   attrAnd *attrKey;
@@ -225,7 +220,9 @@ public:
   ~Attribute(void);
   sightObj *GetSightObj() { return attrVal; }
 };
+#endif
 
+#if _ENABLE_COMP
 class Comparison : public Viz {
   comparison *compTag;
 //  static std::vector<int> compKeyStack;
@@ -235,15 +232,9 @@ public:
   ~Comparison(void);
   sightObj *GetSightObj() { return compTag; }
 };
+#endif
 
-class CDNode : public Viz {
-  /// All CD Nodes that are currently live
-  CDNode *cdViz;
-public:
-  CDNode(void);
-  ~CDNode(void);
-};
-
+#if _ENABLE_SCOPE
 class Scope : public Viz {
 public:
   /// All scopes that are currently live
@@ -262,6 +253,9 @@ public:
   ScopeGraph(void);
   ~ScopeGraph(void);
 };
+
+#endif
+
 
 
 } // namespace cd ends

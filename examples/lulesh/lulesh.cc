@@ -162,7 +162,7 @@ Additional BSD Notice
 
 #if _CD
 //#include "cds.h"
-#include "cds.h"
+//#include "cds.h"
 using namespace cd;
 #define NUM_CDS_IN_LEVEL_1   1
 #define NUM_CDS_IN_LEVEL_2   8
@@ -229,7 +229,9 @@ void TimeIncrement(Domain& domain)
    CDHandle* cdh = GetCurrentCD();
    CD_Begin(cdh, false, "TimeIncrement");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   //DumpPreserve();
+   unsigned int len=0;
+   void *internal=domain.Serialize(len);
+   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
 #endif
 
 
@@ -306,10 +308,14 @@ void CollectDomainNodesToElemNodes(Domain &domain,
 #if _CD
    CDHandle* cdh = GetCurrentCD();
    CD_Begin(cdh, false, "CollectDomainNodesToElemNodes");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+
    GetCurrentCD()->Preserve(elemX, sizeof(elemX), kCopy, "elemX", 0, 0, 0, kUnsure);
    GetCurrentCD()->Preserve(elemY, sizeof(elemY), kCopy, "elemY", 0, 0, 0, kUnsure);
    GetCurrentCD()->Preserve(elemZ, sizeof(elemZ), kCopy, "elemZ", 0, 0, 0, kUnsure);
+   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   unsigned int len=0;
+   void *internal=domain.Serialize(len);
+   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -371,10 +377,13 @@ void InitStressTermsForElems(Domain &domain,
    CDHandle* cdh = GetCurrentCD();
    CD_Begin(cdh, false, "InitStressTermsForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   unsigned int len=0;
+   void *internal=domain.Serialize(len);
+   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
    for (Index_t i = 0 ; i < numElem ; ++i){
       sigxx[i] = sigyy[i] = sigzz[i] =  - domain.p(i) - domain.q(i) ;
    }
@@ -401,7 +410,6 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
    CDHandle* cdh = GetCurrentCD();
    CD_Begin(cdh, false, "CalcElemShapeFunctionDerivatives");
    GetCurrentCD()->Preserve(b, sizeof(b), kCopy, "b", 0, 0, 0, kUnsure);
-   //DumpPreserve();
 #endif
 
   const Real_t x0 = x[0] ;   const Real_t x1 = x[1] ;
@@ -637,6 +645,9 @@ void IntegrateStressForElems( Domain &domain,
    CDHandle* cdh = GetCurrentCD();
    CD_Begin(cdh, false, "IntegrateStressForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   unsigned int len=0;
+   void *internal=domain.Serialize(len);
+   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -668,7 +679,7 @@ void IntegrateStressForElems( Domain &domain,
 #endif
 
 
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
   for( Index_t k=0 ; k<numElem ; ++k )
   {
     const Index_t* const elemToNode = domain.nodelist(k);
@@ -732,13 +743,15 @@ void IntegrateStressForElems( Domain &domain,
 
    CD_Begin(cdh, false, "Write data in IntegrateStressForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   //DumpPreserve();
+   len=0;
+   internal=domain.Serialize(len);
+   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
 #endif
 
   if (numthreads > 1) {
      // If threaded, then we need to copy the data out of the temporary
      // arrays used above into the final forces field
-#pragma omp parallel for firstprivate(numNode)
+//#pragma omp parallel for firstprivate(numNode)
      for( Index_t gnode=0 ; gnode<numNode ; ++gnode )
      {
         Index_t count = domain.nodeElemCount(gnode) ;
@@ -935,6 +948,9 @@ void CalcFBHourglassForceForElems( Domain &domain,
    CDHandle* cdh = GetCurrentCD();
    CD_Begin(cdh, false, "CalcFBHourglassForceForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   unsigned int len=0;
+   void *internal=domain.Serialize(len);
+   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -1008,7 +1024,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
 #endif
 
 
-#pragma omp parallel for firstprivate(numElem, hourg)
+//#pragma omp parallel for firstprivate(numElem, hourg)
    for(Index_t i2=0;i2<numElem;++i2){
       Real_t *fx_local, *fy_local, *fz_local ;
       Real_t hgfx[8], hgfy[8], hgfz[8] ;
@@ -1027,6 +1043,9 @@ void CalcFBHourglassForceForElems( Domain &domain,
       CD_Begin(cd, false, "Loop in CalcFBHourglassForceForElems");
       cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
       //DumpPreserve();
+      len=0;
+      internal=domain.Serialize(len);
+      GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
 #endif
 
       for(Index_t i1=0;i1<4;++i1){
@@ -1141,6 +1160,9 @@ void CalcFBHourglassForceForElems( Domain &domain,
 #if _CD
       CD_Begin(cd, false, "Write elems in CalcFBHourglassForceForElems");
       cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+      len=0;
+      internal=domain.Serialize(len);
+      GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
       //DumpPreserve();
 #endif
 
@@ -1225,12 +1247,15 @@ void CalcFBHourglassForceForElems( Domain &domain,
    CD_Complete(cdh);
    CD_Begin(cdh, false, "Collect elems in CalcFBHourglassForceForElems");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   len=0;
+   internal=domain.Serialize(len);
+   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
    if (numthreads > 1) {
      // Collect the data from the local arrays into the final force arrays
-#pragma omp parallel for firstprivate(numNode)
+//#pragma omp parallel for firstprivate(numNode)
       for( Index_t gnode=0 ; gnode<numNode ; ++gnode )
       {
          Index_t count = domain.nodeElemCount(gnode) ;
@@ -1275,6 +1300,9 @@ void CalcHourglassControlForElems(Domain& domain,
    CDHandle* cdh = GetCurrentCD();
    CD_Begin(cdh, false, "CalcHourglassControlForElem");
    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   unsigned int len=0;
+   void *internal=domain.Serialize(len);
+   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 
 //   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_6_1, "CD6_1", kStrict, 0, 0, &err);
@@ -1291,7 +1319,7 @@ void CalcHourglassControlForElems(Domain& domain,
    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
 
    /* start loop over elements */
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
    for (Index_t i=0 ; i<numElem ; ++i){
       Real_t  x1[8],  y1[8],  z1[8] ;
       Real_t pfx[8], pfy[8], pfz[8] ;
@@ -1304,8 +1332,11 @@ void CalcHourglassControlForElems(Domain& domain,
 
 #if _CD
       CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh, false, "Negative check in CalcHourglassControlForelem");
+      CD_Begin(cdh, false, "Negative check in CalcHourglassControlForelem");
       GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+      unsigned int len=0;
+      void *internal=domain.Serialize(len);
+      GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
       //DumpPreserve(); 
 #endif
 
@@ -1373,10 +1404,13 @@ void CalcVolumeForceForElems(Domain& domain)
 #if _CD
    CDHandle* cdh = GetCurrentCD();
    CD_Begin(cdh, false, "CalcVolumeForceForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   //DumpPreserve();
-//   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_5_0, "CD5_0", kStrict, 0, 0, &err);
    CDHandle* cd = GetCurrentCD()->Create("CalcVolumeForceForElems", kStrict, 0, 0, &err); // CD5_0
+// Belong to CD 5 ///////////////////////////////////////////////////////////
+   CD_Begin(cd, false, "Negative check in CalcVolumeForceForElems");
+   cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   unsigned int len=0;
+   void *internal=domain.Serialize(len);
+   cd->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
 #endif
 
    Index_t numElem = domain.numElem() ;
@@ -1396,16 +1430,8 @@ void CalcVolumeForceForElems(Domain& domain)
                                sigxx, sigyy, sigzz, determ, numElem,
                                domain.numNode()) ;
 
-
-// Belong to CD 5 ///////////////////////////////////////////////////////////
-#if _CD
-   CD_Begin(cd, false, "Negative check in CalcVolumeForceForElems");
-   cd->Preserve(determ, sizeof(*determ), kCopy, "determ", 0, 0, 0, kUnsure);
-   //DumpPreserve();
-#endif
-
       // check for negative element volume
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
       for ( Index_t k=0 ; k<numElem ; ++k ) {
          if (determ[k] <= Real_t(0.0)) {
 //#if USE_MPI            
@@ -1416,11 +1442,6 @@ void CalcVolumeForceForElems(Domain& domain)
          }
       }
 
-#if _CD
-   cd->Detect();
-   cd->Complete();
-#endif
-/////////////////////////////////////////////////////////////////////////////
 
       CalcHourglassControlForElems(domain, determ, hgcoef) ;
 
@@ -1431,10 +1452,11 @@ void CalcVolumeForceForElems(Domain& domain)
    }
 
 #if _CD
+   cd->Detect();
+   cd->Complete();
    cd->Destroy();    // CD5_0 is destroyed
-   GetCurrentCD()->Detect();
+   cdh->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -1454,21 +1476,18 @@ static inline void CalcForceForNodes(Domain& domain)
 
 #if _CD
    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh, false, "CalcForceForNodes");
-   //DumpPreserve();
+   CD_Begin(cdh, false, "CalcForceForNodes"); // Do not preserve Domain under this level
 
-//   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+
    // Seems possible to start fine-grain CDs from here
    // Spawn multiple children
    CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_4_0, "CalcForceForNodes", kStrict, 0, 0, &err); // CD4_0
 
    CD_Begin(cd, false, "loop in CalcForceForNodes");
-   cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   //DumpPreserve();
 #endif
 
 
-#pragma omp parallel for firstprivate(numNode)
+//#pragma omp parallel for firstprivate(numNode)
   for (Index_t i=0; i<numNode; ++i) {
      domain.fx(i) = Real_t(0.0) ;
      domain.fy(i) = Real_t(0.0) ;
@@ -1526,7 +1545,7 @@ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
    //DumpPreserve();
 #endif
 
-#pragma omp parallel for firstprivate(numNode)
+//#pragma omp parallel for firstprivate(numNode)
    for (Index_t i = 0; i < numNode; ++i) {
       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
@@ -1557,22 +1576,22 @@ void ApplyAccelerationBoundaryConditionsForNodes(Domain& domain)
    Index_t size = domain.sizeX();
    Index_t numNodeBC = (size+1)*(size+1) ;
 
-#pragma omp parallel
+//#pragma omp parallel
    {
       if (!domain.symmXempty() != 0) {
-#pragma omp for nowait firstprivate(numNodeBC)
+//#pragma omp for nowait firstprivate(numNodeBC)
          for(Index_t i=0 ; i<numNodeBC ; ++i)
             domain.xdd(domain.symmX(i)) = Real_t(0.0) ;
       }
 
       if (!domain.symmYempty() != 0) {
-#pragma omp for nowait firstprivate(numNodeBC)
+//#pragma omp for nowait firstprivate(numNodeBC)
          for(Index_t i=0 ; i<numNodeBC ; ++i)
             domain.ydd(domain.symmY(i)) = Real_t(0.0) ;
       }
 
       if (!domain.symmZempty() != 0) {
-#pragma omp for nowait firstprivate(numNodeBC)
+//#pragma omp for nowait firstprivate(numNodeBC)
          for(Index_t i=0 ; i<numNodeBC ; ++i)
             domain.zdd(domain.symmZ(i)) = Real_t(0.0) ;
       }
@@ -1599,7 +1618,7 @@ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
    //DumpPreserve();
 #endif
 
-#pragma omp parallel for firstprivate(numNode)
+//#pragma omp parallel for firstprivate(numNode)
    for ( Index_t i = 0 ; i < numNode ; ++i )
    {
      Real_t xdtmp, ydtmp, zdtmp ;
@@ -1636,7 +1655,7 @@ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
    //DumpPreserve();
 #endif
 
-#pragma omp parallel for firstprivate(numNode)
+//#pragma omp parallel for firstprivate(numNode)
    for ( Index_t i = 0 ; i < numNode ; ++i )
    {
      domain.x(i) += domain.xd(i) * dt ;
@@ -2026,7 +2045,7 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
 #endif
 
   // loop over all elements
-#pragma omp parallel for firstprivate(numElem, deltaTime)
+//#pragma omp parallel for firstprivate(numElem, deltaTime)
   for( Index_t k=0 ; k<numElem ; ++k )
   {
     Real_t B[3][8] ; /** shape function derivatives */
@@ -2139,7 +2158,7 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
 #endif
 
       // element loop to do some stuff not included in the elemlib function.
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
       for ( Index_t k=0 ; k<numElem ; ++k )
       {
          // calc strain rate and apply as constraint (only done in FB element)
@@ -2191,7 +2210,7 @@ void CalcMonotonicQGradientsForElems(Domain& domain, Real_t vnew[])
 
    Index_t numElem = domain.numElem();
 
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
    for (Index_t i = 0 ; i < numElem ; ++i ) {
 
 #if _CD
@@ -2367,7 +2386,7 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
 //   CDHandle* cd = GetCurrentCD()->Create("CalcMonotonicQRegionForElems", kStrict, 0, 0, &err); //CD4_2
 #endif
 
-#pragma omp parallel for firstprivate(qlc_monoq, qqc_monoq, monoq_limiter_mult, monoq_max_slope, ptiny)
+//#pragma omp parallel for firstprivate(qlc_monoq, qqc_monoq, monoq_limiter_mult, monoq_max_slope, ptiny)
    for ( Index_t ielem = 0 ; ielem < domain.regElemSize(r); ++ielem ) {
       Index_t i = domain.regElemlist(r,ielem);
       Real_t qlin, qquad ;
@@ -2696,14 +2715,14 @@ void CalcPressureForElems(Real_t* p_new, Real_t* bvc,
    //DumpPreserve();
 #endif
 
-#pragma omp parallel for firstprivate(length)
+//#pragma omp parallel for firstprivate(length)
    for (Index_t i = 0; i < length ; ++i) {
       Real_t c1s = Real_t(2.0)/Real_t(3.0) ;
       bvc[i] = c1s * (compression[i] + Real_t(1.));
       pbvc[i] = c1s;
    }
 
-#pragma omp parallel for firstprivate(length, pmin, p_cut, eosvmax)
+//#pragma omp parallel for firstprivate(length, pmin, p_cut, eosvmax)
    for (Index_t i = 0 ; i < length ; ++i){
       Index_t elem = regElemList[i];
       
@@ -2750,7 +2769,7 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
 
    Real_t *pHalfStep = Allocate<Real_t>(length) ;
 
-#pragma omp parallel for firstprivate(length, emin)
+//#pragma omp parallel for firstprivate(length, emin)
    for (Index_t i = 0 ; i < length ; ++i) {
       e_new[i] = e_old[i] - Real_t(0.5) * delvc[i] * (p_old[i] + q_old[i])
          + Real_t(0.5) * work[i];
@@ -2777,7 +2796,7 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
    //DumpPreserve();
 #endif
 
-#pragma omp parallel for firstprivate(length, rho0)
+//#pragma omp parallel for firstprivate(length, rho0)
    for (Index_t i = 0 ; i < length ; ++i) {
       Real_t vhalf = Real_t(1.) / (Real_t(1.) + compHalfStep[i]) ;
 
@@ -2802,7 +2821,7 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
               - Real_t(4.0)*(pHalfStep[i] + q_new[i])) ;
    }
 
-#pragma omp parallel for firstprivate(length, emin, e_cut)
+//#pragma omp parallel for firstprivate(length, emin, e_cut)
    for (Index_t i = 0 ; i < length ; ++i) {
 
       e_new[i] += Real_t(0.5) * work[i];
@@ -2830,7 +2849,7 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
 
 #endif
 
-#pragma omp parallel for firstprivate(length, rho0, emin, e_cut)
+//#pragma omp parallel for firstprivate(length, rho0, emin, e_cut)
    for (Index_t i = 0 ; i < length ; ++i){
       const Real_t sixth = Real_t(1.0) / Real_t(6.0) ;
       Index_t elem = regElemList[i];
@@ -2880,7 +2899,7 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
    //DumpPreserve();
 #endif
 
-#pragma omp parallel for firstprivate(length, rho0, q_cut)
+//#pragma omp parallel for firstprivate(length, rho0, q_cut)
    for (Index_t i = 0 ; i < length ; ++i){
       Index_t elem = regElemList[i];
 
@@ -2927,7 +2946,7 @@ void CalcSoundSpeedForElems(Domain &domain,
    //DumpPreserve();
 #endif
 
-#pragma omp parallel for firstprivate(rho0, ss4o3)
+//#pragma omp parallel for firstprivate(rho0, ss4o3)
    for (Index_t i = 0; i < len ; ++i) {
       Index_t elem = regElemList[i];
       Real_t ssTmp = (pbvc[i] * enewc[i] + vnewc[elem] * vnewc[elem] *
@@ -2999,7 +3018,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
    for(Int_t j = 0; j < rep; j++) {
 
       /* compress data, minimal set */
-#pragma omp parallel
+//#pragma omp parallel
       {
 
 #if _CD
@@ -3010,7 +3029,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
 #endif
 
 
-#pragma omp for nowait firstprivate(numElemReg)
+//#pragma omp for nowait firstprivate(numElemReg)
          for (Index_t i=0; i<numElemReg; ++i) {
             Index_t elem = regElemList[i];
             e_old[i] = domain.e(elem) ;
@@ -3021,7 +3040,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
             ql_old[i] = domain.ql(elem) ;
          }
 
-#pragma omp for firstprivate(numElemReg)
+//#pragma omp for firstprivate(numElemReg)
          for (Index_t i = 0; i < numElemReg ; ++i) {
             Index_t elem = regElemList[i];
             Real_t vchalf ;
@@ -3032,7 +3051,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
 
       /* Check for v > eosvmax or v < eosvmin */
          if ( eosvmin != Real_t(0.) ) {
-#pragma omp for nowait firstprivate(numElemReg, eosvmin)
+//#pragma omp for nowait firstprivate(numElemReg, eosvmin)
             for(Index_t i=0 ; i<numElemReg ; ++i) {
                Index_t elem = regElemList[i];
                if (vnewc[elem] <= eosvmin) { /* impossible due to calling func? */
@@ -3041,7 +3060,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
             }
          }
          if ( eosvmax != Real_t(0.) ) {
-#pragma omp for nowait firstprivate(numElemReg, eosvmax)
+//#pragma omp for nowait firstprivate(numElemReg, eosvmax)
             for(Index_t i=0 ; i<numElemReg ; ++i) {
                Index_t elem = regElemList[i];
                if (vnewc[elem] >= eosvmax) { /* impossible due to calling func? */
@@ -3052,7 +3071,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
             }
          }
 
-#pragma omp for nowait firstprivate(numElemReg)
+//#pragma omp for nowait firstprivate(numElemReg)
          for (Index_t i = 0 ; i < numElemReg ; ++i) {
             work[i] = Real_t(0.) ; 
          }
@@ -3088,7 +3107,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
    //DumpPreserve();
 #endif
 
-#pragma omp parallel for firstprivate(numElemReg)
+//#pragma omp parallel for firstprivate(numElemReg)
    for (Index_t i=0; i<numElemReg; ++i) {
       Index_t elem = regElemList[i];
       domain.p(elem) = p_new[i] ;
@@ -3160,7 +3179,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
     Real_t eosvmin = domain.eosvmin() ;
     Real_t eosvmax = domain.eosvmax() ;
 
-#pragma omp parallel
+//#pragma omp parallel
     {
 
 #if _CD
@@ -3172,7 +3191,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 
        // Bound the updated relative volumes with eosvmin/max
        if (eosvmin != Real_t(0.)) {
-#pragma omp for firstprivate(numElem)
+//#pragma omp for firstprivate(numElem)
           for(Index_t i=0 ; i<numElem ; ++i) {
              if (vnew[i] < eosvmin)
                 vnew[i] = eosvmin ;
@@ -3180,7 +3199,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
        }
 
        if (eosvmax != Real_t(0.)) {
-#pragma omp for nowait firstprivate(numElem)
+//#pragma omp for nowait firstprivate(numElem)
           for(Index_t i=0 ; i<numElem ; ++i) {
              if (vnew[i] > eosvmax)
                 vnew[i] = eosvmax ;
@@ -3196,7 +3215,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
        // This check may not make perfect sense in LULESH, but
        // it's representative of something in the full code -
        // just leave it in, please
-#pragma omp for nowait firstprivate(numElem)
+//#pragma omp for nowait firstprivate(numElem)
        for (Index_t i=0; i<numElem; ++i) {
 
 #if _CD
@@ -3303,7 +3322,7 @@ void UpdateVolumesForElems(Domain &domain, Real_t *vnew,
 
 
    if (length != 0) {
-#pragma omp parallel for firstprivate(length, v_cut)
+//#pragma omp parallel for firstprivate(length, v_cut)
       for(Index_t i=0 ; i<length ; ++i) {
          Real_t tmpV = vnew[i] ;
 
@@ -3378,7 +3397,7 @@ void CalcCourantConstraintForElems(Domain &domain, Index_t length,
 #endif
 
 
-#pragma omp parallel firstprivate(length, qqc)
+//#pragma omp parallel firstprivate(length, qqc)
    {
       Real_t   qqc2 = Real_t(64.0) * qqc * qqc ;
       Real_t   dtcourant_tmp = dtcourant;
@@ -3390,7 +3409,7 @@ void CalcCourantConstraintForElems(Domain &domain, Index_t length,
       Index_t thread_num = 0;
 #endif      
 
-#pragma omp for 
+//#pragma omp for 
       for (Index_t i = 0 ; i < length ; ++i) {
          Index_t indx = regElemlist[i] ;
          Real_t dtf = domain.ss(indx) * domain.ss(indx) ;
@@ -3468,7 +3487,7 @@ void CalcHydroConstraintForElems(Domain &domain, Index_t length,
    Real_t  dthydro_per_thread[1];
 #endif
 
-#pragma omp parallel firstprivate(length, dvovmax)
+//#pragma omp parallel firstprivate(length, dvovmax)
    {
       Real_t dthydro_tmp = dthydro ;
       Index_t hydro_elem = -1 ;
@@ -3479,7 +3498,7 @@ void CalcHydroConstraintForElems(Domain &domain, Index_t length,
       Index_t thread_num = 0;
 #endif      
 
-#pragma omp for
+//#pragma omp for
       for (Index_t i = 0 ; i < length ; ++i) {
          Index_t indx = regElemlist[i] ;
 

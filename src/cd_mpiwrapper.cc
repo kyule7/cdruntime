@@ -501,6 +501,9 @@ int MPI_Isend(const void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cd = GetCurrentCD();
+#if _PROFILER
+  cur_cd->profiler_->RecordProfile(LOGGING_OVERHEAD, count);
+#endif
   if (cur_cd == NULL)
   {
     LOG_DEBUG("Warning: MPI_Isend out of CD context...\n");
@@ -560,6 +563,11 @@ int MPI_Irecv(void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cd = GetCurrentCD();
+
+#if _PROFILER
+  cur_cd->profiler_->RecordProfile(LOGGING_OVERHEAD, count);
+#endif
+
   if (cur_cd == NULL)
   {
     LOG_DEBUG("Warning: MPI_Irecv out of CD context...\n");

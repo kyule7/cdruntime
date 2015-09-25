@@ -35,6 +35,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _UTIL_H 
 #define _UTIL_H
 
+#define GCC_VERSION_LOWER 1
+
 /**
  * @file util.h
  * @author Jinsuk Chung, Kyushick Lee
@@ -58,6 +60,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 // system specific or machine specific utils resides here.
 using namespace cd;
+using namespace std;
 
 namespace cd {
 /** \addtogroup utilities Utilities for CD runtime
@@ -74,6 +77,15 @@ uint64_t rdtsc(void)
   __asm__ __volatile__ ("rdtsc" : "=a"(low), "=d"(high));
   return ((uint64_t)low) | (((uint64_t)high) << 32);
 }
+
+#if GCC_VERSION_LOWER
+template <typename T> string to_string(const T& n)
+{
+    ostringstream stm ;
+    stm << n ;
+    return stm.str() ;
+}
+#endif
 
 class Util {
 public:
@@ -98,21 +110,21 @@ static const char* GetBaseFilePath(void)
  * -> This might not be a good thing when we recover actually the stack content can be different... 
  * is it? or is it not?  let's assume it does...
  */ 
-static std::string GetUniqueCDFileName(const CDID &cd_id, const char *basepath, const char *data_name) 
+static string GetUniqueCDFileName(const CDID &cd_id, const char *basepath, const char *data_name) 
 {
-  std::string base(basepath);
+  string base(basepath);
   
-  std::ostringstream filename(base);
+  ostringstream filename(base);
 
-//  std::cout << "base file name: "<< base << std::endl; //filename.str() << std::endl << std::endl;
+//  cout << "base file name: "<< base << endl; //filename.str() << endl << endl;
 //  filename << cd_id.level() << '.' << cd_id.rank_in_level() << '.' << cd_id.object_id() << '.' << cd_id.sequential_id() << '.' << cd_id.task_in_color() << '.' << data_name << ".cd";
-  base += std::to_string(cd_id.level())         + std::string(".") 
-        + std::to_string(cd_id.rank_in_level()) + std::string(".") 
-        + std::to_string(cd_id.object_id())     + std::string(".") 
-        + std::to_string(cd_id.sequential_id()) + std::string(".") 
-        + std::to_string(cd_id.task_in_color()) + std::string(".") 
-        + std::string(data_name)                + std::string(".cd");
-//  std::cout << "file name for this cd: "<< base << std::endl; // filename.str() << std::endl << std::endl; //dbgBreak(); 
+  base += to_string(cd_id.level())         + string(".") 
+        + to_string(cd_id.rank_in_level()) + string(".") 
+        + to_string(cd_id.object_id())     + string(".") 
+        + to_string(cd_id.sequential_id()) + string(".") 
+        + to_string(cd_id.task_in_color()) + string(".") 
+        + string(data_name)                + string(".cd");
+//  cout << "file name for this cd: "<< base << endl; // filename.str() << endl << endl; //dbgBreak(); 
 //  return filename.str();
   return base;
 }
@@ -121,31 +133,31 @@ static std::string GetUniqueCDFileName(const CDID &cd_id, const char *basepath, 
  * @brief PFS-related
  *
  */ 
-static std::string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, const char* data_name, const PrvMediumT preservationMedium )
+static string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, const char* data_name, const PrvMediumT preservationMedium )
 {  
-  std::string base(basepath);
-  std::ostringstream filename(base);
+  string base(basepath);
+  ostringstream filename(base);
   
   if( (preservationMedium == kHDD) || (preservationMedium == kSSD) ) {
 //    filename << cd_id.level() << '.' << cd_id.rank_in_level() << '.' << cd_id.object_id() << '.' << cd_id.sequential_id() << '.' << cd_id.task_in_color() << '.' << data_name << ".cd";
-    base += std::to_string(cd_id.level())         + std::string(".") 
-          + std::to_string(cd_id.rank_in_level()) + std::string(".") 
-          + std::to_string(cd_id.object_id())     + std::string(".") 
-          + std::to_string(cd_id.sequential_id()) + std::string(".") 
-          + std::to_string(cd_id.task_in_color()) + std::string(".") 
-          + std::string(data_name)                + std::string(".cd");
+    base += to_string(cd_id.level())         + string(".") 
+          + to_string(cd_id.rank_in_level()) + string(".") 
+          + to_string(cd_id.object_id())     + string(".") 
+          + to_string(cd_id.sequential_id()) + string(".") 
+          + to_string(cd_id.task_in_color()) + string(".") 
+          + string(data_name)                + string(".cd");
   }
   else if( preservationMedium == kPFS ) { 
 //    filename << cd_id.level() << '.' << cd_id.rank_in_level() << '.' << cd_id.sequential_id();
-    base += std::to_string(cd_id.level()) + std::string(".") 
-          + std::to_string(cd_id.rank_in_level()) + std::string(".") 
-          + std::to_string(cd_id.sequential_id());
+    base += to_string(cd_id.level()) + string(".") 
+          + to_string(cd_id.rank_in_level()) + string(".") 
+          + to_string(cd_id.sequential_id());
   }
   else {
     //This case is ERROR.
     ERROR_MESSAGE("We should not get here! there is something wrong.\n");
   }
-  std::cout << "GenPath : " << filename.str() << ", base : " << base << endl;
+  cout << "GenPath : " << filename.str() << ", base : " << base << endl;
   //return filename.str();
   return base;
 }
@@ -188,7 +200,7 @@ static uint64_t GenCDObjID()
   return gen_object_id++;
 }
 
-static std::map<uint32_t, uint32_t> object_id;
+static map<uint32_t, uint32_t> object_id;
 
 static uint64_t GenCDObjID(uint32_t level) 
 {

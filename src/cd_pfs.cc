@@ -33,7 +33,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 #include "cd_pfs.h"
-
+#include "util.h"
 
 using namespace cd;
 using namespace cd::internal;
@@ -86,8 +86,8 @@ PFSHandle::PFSHandle( const PFSHandle& that )
 
 void PFSHandle::Init( const char* file_path )
 {
-	std::stringstream temp_file_name;
-	temp_file_name << Util::GetUniqueCDFileName( ptr_cd_->GetCDID(), file_path, NULL, kPFS ) + std::string(".") + std::to_string(sharing_group_id_) + std::string(".cd");
+	stringstream temp_file_name;
+	temp_file_name << Util::GetUniqueCDFileName( ptr_cd_->GetCDID(), file_path, NULL, kPFS ) + string(".") + to_string(sharing_group_id_) + string(".cd");
 	PFS_file_path_ = temp_file_name.str();
 	PFS_current_offset_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;
 	PFS_current_chunk_begin_ = PFS_rank_in_file_communicator_ * PFS_chunk_size_;

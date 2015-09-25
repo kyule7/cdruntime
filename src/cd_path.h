@@ -114,13 +114,16 @@ private:
   {
     //printf("GetCurrentCD is called\n");
     if(uniquePath_ != NULL ) {
+      //printf("path is not null\n");
       if( !uniquePath_->empty() ) {
+        //printf("path is not empty\n");
         if( uniquePath_->back()->GetExecMode() == kExecution ) {
           
-//          printf("Active CD is %d\n", uniquePath_->back()->level() );
+          //printf("Active CD is %d\n", uniquePath_->back()->level() );
           return uniquePath_->back();
         }
         else {
+          //printf("parent called is %d\n", uniquePath_->back()->level() );
           return GetParentCD(uniquePath_->back()->level());
         }
       }
@@ -163,7 +166,7 @@ private:
   static CDHandle* GetParentCD(int current_level)
   { 
     CD_DEBUG("CDPath::GetParentCD current level : %d\n", current_level);
-//    printf("CDPath::GetParentCD current level : %d at %d\n", current_level, myTaskID);
+//    //printf("CDPath::GetParentCD current level : %d at %d\n", current_level, myTaskID);
 //    if(current_level > 100) {
 //      std::cout << GetCurrentCD()->GetCDName() << " / " << GetCurrentCD()->node_id() << std::endl;
 //

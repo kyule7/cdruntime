@@ -48,6 +48,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *  It will be helpful to take a look at how to interact with CDs to inject errors through CD runtime.
  * - \ref sec_example_error_injection
  */
+#if ERROR_INJECTION_ENABLED
+
 #include <cstdio>
 #include <iostream>
 #include <random>
@@ -545,4 +547,4 @@ public:
 
 } // namespace cd ends
 #endif
-
+#endif

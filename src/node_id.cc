@@ -35,6 +35,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "node_id.h"
+#include "util.h"
 using namespace cd;
 
 
@@ -114,7 +115,7 @@ std::ostream &cd::internal::operator<<(std::ostream &str, const NodeID &node_id)
              << ')';
 }
 
-std::string NodeID::GetString(void) const 
+string NodeID::GetString(void) const 
 {
-  return ( std::string("(") + std::to_string(task_in_color_) + std::string("/") + std::to_string(size_) + std::string(")") );
+  return ( string("(") + to_string(task_in_color_) + string("/") + to_string(size_) + string(")") );
 }

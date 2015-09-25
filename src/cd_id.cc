@@ -92,7 +92,7 @@ CDNameT  CDID::cd_name(void)       const { return cd_name_; }
 NodeID   CDID::node_id(void)       const { return node_id_; }
 bool     CDID::IsHead(void)        const { return node_id_.IsHead(); }
 
-std::string CDID::GetPhaseID(void) const { return std::to_string(cd_name_.level_) + std::string("_") + std::to_string(object_id_); }
+string CDID::GetPhaseID(void) const { return to_string(cd_name_.level_) + string("_") + to_string(object_id_); }
 void CDID::SetCDID(const NodeID& node_id)   { node_id_ = node_id; }
 void CDID::SetSequentialID(uint32_t seq_id) { sequential_id_ = seq_id; }
 
@@ -113,7 +113,7 @@ bool CDID::operator==(const CDID& that) const
 }
 
 
-std::ostream& operator<<(std::ostream& str, const CDID& cd_id)
+ostream& operator<<(ostream& str, const CDID& cd_id)
 {
   return str<< "Level: "<< cd_id.level() << ", CDNode" << cd_id.color() << ", Obj# " << cd_id.object_id() << ", Seq# " << cd_id.sequential_id();
 }
@@ -160,10 +160,10 @@ void CDID::Print(void)
   CD_DEBUG("    IsHead: %d\n"          , IsHead());
 }
 
-std::string CDID::GetString(void) const 
+string CDID::GetString(void) const 
 {
-  return ( std::string("CDName : ") + cd_name_.GetString() 
-         + std::string(", Node ID : ") + node_id_.GetString() 
-         + std::string(", Obj#") + std::to_string(object_id_) 
-         + std::string(", Seq#") + std::to_string(sequential_id_) );
+  return ( string("CDName : ") + cd_name_.GetString() 
+         + string(", Node ID : ") + node_id_.GetString() 
+         + string(", Obj#") + to_string(object_id_) 
+         + string(", Seq#") + to_string(sequential_id_) );
 }
