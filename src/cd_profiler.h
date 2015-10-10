@@ -48,62 +48,47 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #if _PROFILER
 
-#include "cd.h"
-#include "cd_global.h"
-#include "cd_def_internal.h" 
-#include "cd_handle.h"
-#include <array>
-#include <vector>
-#include <list>
-#include <cstdint>
 #include <time.h>
+#include "profiler_interface.h"
 #include "sight.h"
 
 //using namespace cd;
+using namespace std;
 using namespace sight;
 using namespace sight::structure;
-#define LabelT std::string
 
 namespace cd {
 
 class Viz;
-
-class Profiler {
-  friend class CDHandle;
-public:
-  Profiler() {}
-  ~Profiler() {}
-//  virtual void GetProfile(const char *label)=0;
-  virtual void RecordProfile(ProfileType profile_type, uint64_t profile_data)=0;
-  virtual void RecordClockBegin()=0;
-  virtual void RecordClockEnd()=0;
-  virtual void StartProfile(const char *label)=0;
-  virtual void FinishProfile(void)=0;
-  virtual void InitViz(void)=0;
-  virtual void FinalizeViz(void)=0;
-  virtual LabelT label(void)=0;
-  virtual void ClearSightObj(void)=0;
-};
-
-class NullProfiler : public Profiler {
-public:
-  NullProfiler() {}
-  ~NullProfiler() {}
-//  void GetProfile(const char *label) {}
-  void RecordProfile(ProfileType profile_type, uint64_t profile_data) {}
-  void RecordClockBegin() {}
-  void RecordClockEnd() {}
-  void StartProfile(const char *label) {}
-  void FinishProfile(void) {}
-  void InitViz(void) {}
-  void FinalizeViz(void) {}
-  LabelT label(void) {return LabelT();}
-  void ClearSightObj(void){}
-};
+class Attribute;
+class Comparison;
+class Module;
+class HierGraph;
+class Scope;
 
 class CDProfiler : public Profiler {
   /// sight-related member data
-  static std::list<Viz*> vizStack_;
+//  static std::list<Viz*> vizStack_;
+#if _ENABLE_ATTR
+ Attribute *attr_;
+#endif
+
+#if _ENABLE_COMP
+  Comparison *comp_;  
+#endif
+
+#if _ENABLE_MODULE
+  Module *module_;
+#endif
+
+#if _ENABLE_HIERGRAPH
+  HierGraph *hierGraph_;
+#endif
+
+#if _ENABLE_SCOPE
+  Scope *scope_;
+#endif
+
   uint64_t  sibling_id_;
   uint64_t  level_;
 
@@ -112,6 +97,7 @@ class CDProfiler : public Profiler {
   bool is_child_destroyed;
   bool collect_profile_;
   bool usr_profile_enable;
+  bool isStarted;
 //  std::vector<std::pair<std::string, long>>  usr_profile;
   int sightObj_count_;
   std::map<sight::structure::dbgStream*, int> sightObj_mark_;
@@ -123,11 +109,13 @@ class CDProfiler : public Profiler {
   clock_t this_time_;
   clock_t that_time_;
 
+  CDProfiler *parent_;
+
 public:
   LabelT current_label_;
   std::map<std::string, array<uint64_t,MAX_PROFILE_DATA>> profile_data_;
   static std::map<std::string, bool> onOff_;
-  CDProfiler() 
+  CDProfiler(CDProfiler *prv_cdp) : parent_(prv_cdp) 
   {
     sibling_id_ = 0;
     level_ = 0;
@@ -135,24 +123,25 @@ public:
     that_point_ = 0;
     collect_profile_ = false;
     is_child_destroyed = false;
+    isStarted = false;
     //profile_data_(MAX_PROFILE_DATA)
     
-    current_label_ = "INITIAL_LABEL";
+    current_label_ = "INITIAL_PROFILER_LABEL";
     profile_data_.clear();
   }
   ~CDProfiler() {}
-  void InitProfile(std::string label="INITIAL_LABEL");
+  void InitProfile(std::string label="INITIAL_PROFILER_LABEL");
 //  void GetProfile(const char *label);
   void RecordProfile(ProfileType profile_type, uint64_t profile_data);
   void RecordClockBegin();
   void RecordClockEnd();
-  void StartProfile(const char *label);
+  void StartProfile(const string &label);
   void FinishProfile(void);
   void InitViz(void);
   void FinalizeViz(void);
   LabelT label() { return current_label_; }
   void ClearSightObj(void);
-
+  void CreateSightObj(void);
 private:
   void GetLocalAvg(void);
   // FIXME
@@ -167,8 +156,12 @@ private:
 // and when we want a specific visualization with a new widget in sight, we simply inherit Viz class to extend it.
 // By default, there are hiergraph (flowgraph) / module / scope / graph / comparison / attribute widgets supported by CDs.
 class Viz {
+  friend class CDProfiler;
+protected:
+  CDProfiler *profiler_;
 public:
-  Viz(void) {
+  Viz(CDProfiler *profiler) : profiler_(profiler)
+  {
 //    std::cout << "Viz is called" << std::endl; //getchar();
 
   }
@@ -180,15 +173,15 @@ public:
 
 #if _ENABLE_MODULE
 class Module : public Viz {
+  friend class CDProfiler;
   /// All modules that are currently live
   compModule *m;
-  CDProfiler *profiler;
   vector<port> externalOutputs;
   context usr_profile_input;
   context usr_profile_output;
   bool usr_profile_enable;
 public:
-  Module(CDProfiler *profiler_p, bool usr_profile_en=false);
+  Module(CDProfiler *profiler, bool usr_profile_en=false);
   ~Module(void);
   void SetUsrProfileInput(std::pair<std::string, long> name_list);
   void SetUsrProfileInput(std::initializer_list<std::pair<std::string, long>> name_list);
@@ -201,10 +194,11 @@ public:
 
 #if _ENABLE_HIERGRAPH
 class HierGraph : public Viz {
+  friend class CDProfiler;
 public:
   static flowgraph *fg;
 public:
-  HierGraph(void);
+  HierGraph(CDProfiler *profiler);
   ~HierGraph(void);
   sightObj *GetSightObj() { return fg; }
 };
@@ -212,11 +206,14 @@ public:
 
 #if _ENABLE_ATTR
 class Attribute : public Viz {
+  friend class CDProfiler;
+  static attr   *attrInitVal;
   static attrIf *attrScope;
+  
   attrAnd *attrKey;
   attr    *attrVal;
 public:
-  Attribute(void);
+  Attribute(CDProfiler *profiler);
   ~Attribute(void);
   sightObj *GetSightObj() { return attrVal; }
 };
@@ -224,11 +221,12 @@ public:
 
 #if _ENABLE_COMP
 class Comparison : public Viz {
+  friend class CDProfiler;
   comparison *compTag;
 //  static std::vector<int> compKeyStack;
 //  static std::list<comparison*> compStack;
 public:
-  Comparison(void);
+  Comparison(CDProfiler *profiler);
   ~Comparison(void);
   sightObj *GetSightObj() { return compTag; }
 };
@@ -236,23 +234,18 @@ public:
 
 #if _ENABLE_SCOPE
 class Scope : public Viz {
+  friend class CDProfiler;
 public:
   /// All scopes that are currently live
+  static graph* scopeGraph;
+  scope *prv_s;
   scope *s;
 public:
-  Scope(void);
+  Scope(Scope *parent_scope, CDProfiler *profiler);
   ~Scope(void);
   sightObj *GetSightObj() { return s; }
 };
 
-class ScopeGraph : public Scope {
-public:
-  static graph* scopeGraph;
-  scope *prv_s;
-public:
-  ScopeGraph(void);
-  ~ScopeGraph(void);
-};
 
 #endif
 

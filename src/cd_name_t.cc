@@ -56,11 +56,11 @@ CDNameT::CDNameT(const CDNameT &parent_cdname, int num_children, int color)
   level_         = parent_cdname.level() + 1;
   rank_in_level_ = num_children*(parent_cdname.rank_in_level()) + color;
   size_          = num_children;
-/*  cout << "level: " << level_ 
-            << ", rank_in_level created : " << rank_in_level_ 
-            << ", numchild: " << num_children << ", parent rank : " 
-            << parent_cdname.rank_in_level() 
-            << ", color : "<< color << endl;*/ 
+  //cout << "level: " << level_ << " parent level : " << parent_cdname.level()
+//            << ", rank_in_level created : " << rank_in_level_ 
+//            << ", numchild: " << num_children << ", parent rank : " 
+//            << parent_cdname.rank_in_level() 
+//            << ", color : "<< color << endl; 
 }
 
 CDNameT::CDNameT(const CDNameT& that)

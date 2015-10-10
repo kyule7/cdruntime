@@ -371,12 +371,13 @@ namespace cd {
 
 #define CDPrologue() \
   app_side = false;\
+  profiler_->RecordClockBegin();
 
 #else
 
+
 #define CDPrologue() \
-  app_side = false;\
-  profiler_->RecordClockBegin();
+  app_side = false;
 
 #endif
 //  static inline void CDPrologue(void) 
@@ -396,12 +397,12 @@ namespace cd {
 
 #define CDEpilogue() \
   app_side = true;\
+  profiler_->RecordClockEnd();
 
 #else
 
 #define CDEpilogue() \
-  app_side = true;\
-  profiler_->RecordClockEnd();
+  app_side = true;
 
 #endif
 //  static inline void CDEpilogue(void) 
@@ -519,7 +520,7 @@ extern FILE *cdoutApp;
 
 
 #define INITIAL_CDOBJ_NAME "INITIAL_NAME"
-#define INITIAL_CDOBJ_LABEL "INITIAL_LABEL"
+#define INITIAL_CDOBJ_LABEL "INITIAL_CDOBJ_LABEL"
 
 #define MAX_FILE_PATH 2048
 #define CD_FILEPATH_INVALID "./error_logs/"

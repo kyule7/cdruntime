@@ -83,6 +83,7 @@ class CDPath : public std::vector<CDHandle*> {
   friend class HandleEntrySearch;
   friend class HandleEntrySend;
   friend CDHandle *cd::GetCurrentCD(void);
+  friend CDHandle *cd::GetLeafCD(void);
   friend CDHandle *cd::GetRootCD(void);
   friend CDHandle *cd::GetParentCD(void);
   friend CDHandle *cd::GetParentCD(int current_level);
@@ -131,6 +132,22 @@ private:
     return NULL;
   }
   
+ /** @brief Get CDHandle of leaf CD level. 
+  *
+  * \return Pointer to the CDHandle at the leaf CD level.
+  */
+  static CDHandle* GetLeafCD(void) 
+  {
+    //printf("GetCurrentCD is called\n");
+    if(uniquePath_ != NULL ) {
+      //printf("path is not null\n");
+      if( !uniquePath_->empty() ) {
+        return uniquePath_->back();
+      }
+    }
+    return NULL;
+  }
+
  /** @brief Get CDHandle of Root CD 
   *
   * \return Pointer to CDHandle of root

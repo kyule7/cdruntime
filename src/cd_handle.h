@@ -55,6 +55,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "node_id.h"
 #include "sys_err_t.h"
 #include "cd.h"
+#include "profiler_interface.h"
 
 #if _PROFILER
 #include "cd_profiler.h"
@@ -422,7 +423,7 @@ class CDHandle {
     CDErrT Begin(bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                       //!< contained by this CD or whether its to be run by a single task 
                                       //!< only with the programmer responsible for synchronization. 
-                 const char* label=0
+                 const char* label=NULL
                 );
   /** @brief Completes a CD 
    *

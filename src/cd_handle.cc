@@ -230,7 +230,7 @@ void CD_Finalize(void)
 
 #if _PROFILER
   // Profiler-related  
-  cout << CDPath::GetRootCD() << " " << CDPath::GetRootCD()->profiler_ << endl << endl;
+  //cout << CDPath::GetRootCD() << " " << CDPath::GetRootCD()->profiler_ << endl << endl;
   CDPath::GetRootCD()->profiler_->FinalizeViz();
 #endif
   CDPath::GetRootCD()->InternalDestroy(false);
@@ -252,6 +252,9 @@ void CD_Finalize(void)
 
 CDHandle *GetCurrentCD(void) 
 { return CDPath::GetCurrentCD(); }
+
+CDHandle *GetLeafCD(void)
+{ return CDPath::GetLeafCD(); }
   
 CDHandle *GetRootCD(void)    
 { return CDPath::GetRootCD(); }
@@ -345,9 +348,12 @@ CDHandle::CDHandle()
   SplitCD = &SplitCD_3D;
 
 #if _PROFILER
-  profiler_ = new CDProfiler();
+  if(GetCurrentCD() != NULL)  // non-root CDs
+    profiler_ = new CreateProfiler(CDPROFILER, GetCurrentCD()->profiler_);
+  else
+    profiler_ = new CreateProfiler(CDPROFILER, NULL);
 #else
-  //profiler_ = new NullProfiler();
+//    profiler_ = new NullProfiler();
 #endif
 
 #if _ERROR_INJECTION_ENABLED
@@ -378,9 +384,12 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
 
 
 #if _PROFILER
-  profiler_ = new CDProfiler();
+  if(GetCurrentCD() != NULL)  // non-root CDs
+    profiler_ = new CreateProfiler(CDPROFILER, GetCurrentCD()->profiler_);
+  else
+    profiler_ = new CreateProfiler(CDPROFILER, NULL);
 #else
-  //profiler_ = new NullProfiler();
+//    profiler_ = new NullProfiler();
 #endif
 
 #if _ERROR_INJECTION_ENABLED
@@ -446,6 +455,7 @@ CDHandle* CDHandle::Create(const char* name,
 
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), 1, 0);
+  CD_DEBUG("New CD Name : %s\n", new_cd_name.GetString().c_str());
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
@@ -552,6 +562,8 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
   CD_DEBUG("new_color : %d in %s\n", new_color, node_id_.GetString().c_str());
 
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
+  //cout << name << " " << new_cd_name.GetString() << endl;
+  CD_DEBUG("New CD Name : %s\n", new_cd_name.GetString().c_str());
 
   CD_DEBUG("Remote Entry Dir size: %lu", ptr_cd_->remote_entry_directory_map_.size());
 
@@ -677,6 +689,8 @@ CDErrT CDHandle::InternalDestroy(bool collective)
 
 #if _PROFILER
   CD_DEBUG("Calling finish profiler\n");
+  
+  profiler_->ClearSightObj();
 
   //if(ptr_cd()->cd_exec_mode_ == 0) { 
 //    profiler_->FinishProfile();
@@ -724,9 +738,10 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 #if _PROFILER
   // Profile-related
   cddbg << "calling get profile" <<endl; //cddbgBreak();
-  if(label == NULL) label = "INITIAL_LABEL";
-  cddbg << "label "<< label <<endl; //cddbgBreak();
-  profiler_->StartProfile(label);
+//  if(label == NULL) 
+//    label = "INITIAL_LABEL";
+//  cddbg << "label "<< label <<endl; //cddbgBreak();
+  profiler_->StartProfile(ptr_cd()->label_);
 #endif
 
   CDEpilogue();
@@ -1067,8 +1082,8 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     if(cd_error_injector_ != NULL && ptr_cd_ != NULL) {
       CD_DEBUG("EIE It is after : reexec # : %d, exec mode : %d at level #%u\n", ptr_cd_->num_reexecution_, GetExecMode(), level());
       CD_DEBUG("recreated? %d, recreated? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
-      cout << cd_error_injector_ << " " << ptr_cd_<< endl;
-      cout << cd_error_injector_->InjectAndTest() << " " << ptr_cd_->recreated() << " " << ptr_cd_->reexecuted() << endl;
+      //cout << cd_error_injector_ << " " << ptr_cd_<< endl;
+      //cout << cd_error_injector_->InjectAndTest() << " " << ptr_cd_->recreated() << " " << ptr_cd_->reexecuted() << endl;
       if(cd_error_injector_->InjectAndTest() && ptr_cd_->recreated() == false && ptr_cd_->reexecuted() == false) {
         CD_DEBUG("EIE Reached SetMailBox. recreated? %d, reexecuted? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
         SetMailBox(kErrorOccurred);

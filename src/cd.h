@@ -343,7 +343,7 @@ update the preserved data.
     virtual CDErrT Destroy(void);
 
     CDErrT Begin(bool collective=true, 
-                 const char* label=0);
+                 const char* label=NULL);
 
     CDErrT Complete(bool collective=true, 
                     bool update_preservations=true);

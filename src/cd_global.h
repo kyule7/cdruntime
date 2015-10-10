@@ -352,6 +352,16 @@ namespace cd {
  */
   CDHandle *GetCurrentCD(void);
 
+/**@brief Accessor function to current leaf CD.
+ * 
+ * It is the same as GetCurrentCD() except that it returns the leaf CD even though it is not active yet.
+ *
+ *  @return returns a pointer to the handle of the leaf CD; Returns
+ *  0 if CD runtime is not yet initialized or because of a CD
+ *  implementation bug.
+ */
+  CDHandle *GetLeafCD(void);
+
  /**@brief Accessor function to a CDHandle at a root level in CD hierachy.
   * @return returns a pointer to the handle of the root CD; Returns
   * 0 if CD runtime is not yet initialized or because of a CD

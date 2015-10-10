@@ -47,7 +47,7 @@ using std::endl;
 
 std::map<std::string, bool> CDProfiler::onOff_;
 
-std::list<Viz*> CDProfiler::vizStack_;
+//std::list<Viz*> CDProfiler::vizStack_;
 
 #if _ENABLE_MODULE
 //modularApp*            Module::ma;
@@ -58,10 +58,11 @@ flowgraph *HierGraph::fg;
 #endif
 
 #if _ENABLE_SCOPE
-graph *ScopeGraph::scopeGraph;
+graph *Scope::scopeGraph;
 #endif
 
 #if _ENABLE_ATTR
+attr   *Attribute::attrInitVal;
 attrIf *Attribute::attrScope;
 //std::list<attrAnd*>    Attribute::attrStack;
 //std::list<attr*>       Attribute::attrValStack;
@@ -91,55 +92,41 @@ attrIf *Attribute::attrScope;
 // PRV_REF_DATA     |   O
 // OVERLAPPED_DATA  |   O
 // SYSTEM_BIT_VECTOR|   X
-void CDProfiler::StartProfile(const char *label)
+void CDProfiler::StartProfile(const string &label)
 {
-//  cout << "current_label_ : " << current_label_ << ", label : " << label << endl;
+  CD_DEBUG("current_label : %s, label : %s\n", current_label_.c_str(), label.c_str());
+  cddbg << "current_label_ : " << current_label_ << ", label : " << label << endl;
 
-  if(current_label_ != label) {
-//    cout << "diff" << endl;
+//  cout << "current_label_ : " << current_label_ << ", label : " << label << endl; //getchar();
+  /// Timer on
+  this_point_ = rdtsc();
+
+  if(current_label_ != label) { // The very beginning or diff sequential CDs
+
     current_label_ = label;
+    profile_data_[current_label_];
 
-    // Profile starts -- ATTR | COMP | MODULE | SCOPE | CDNODE -- 
-    profile_data_[current_label_];// = new uint64_t[MAX_PROFILE_DATA];
+    if(isStarted == false) { // The very beginning. Should not clear sight objects
+      isStarted = true;
+    }
+    else { // diff sequential CDs. Clear sight objects
+//      cout << "clear sight obj : " << label << endl; //getchar();
+      ClearSightObj();
+    }
+
+//    cout << "create sight obj : " << label << endl; getchar();
+    CreateSightObj();
+
   }
   
 //  profile_data_[current_label_][LOOP_COUNT]++;
   
 
-  /// Timer on
-  this_point_ = rdtsc();
 
   // Initialize sightObj_count
 //  sightObj_count_ = getSOStackDepth();
 //  sightObj_mark_ = markSOStack();
 
-#if _ENABLE_ATTR
-  vizStack_.push_back(new Attribute());
-#endif
-
-#if _ENABLE_COMP
-  vizStack_.push_back(new Comparison());
-#endif
-
-#if _ENABLE_MODULE
-  vizStack_.push_back(new Module(this));
-#endif
-
-#if _ENABLE_HIERGRAPH
-  vizStack_.push_back(new HierGraph());
-#endif
-
-#if _ENABLE_SCOPE
-  vizStack_.push_back(new Scope());
-#endif
-
-#if _ENABLE_SCOPEGRAPH
-  vizStack_.push_back(new ScopeGraph());
-#endif
-
-#if _ENABLE_CDNODE
-  vizStack_.push_back(new CDNode());
-#endif
 
 }
 
@@ -180,9 +167,8 @@ void CDProfiler::InitViz()
 
 
 #if _ENABLE_ATTR
-  attr *attrVal = new attr("INIT", 1);
-  vizStack_.push_back(attrVal);
-  attrScope = new attrIf(new attrEQ("INIT", 1));
+  Attribute::attrInitVal = new attr("INIT", 1);
+  Attribute::attrScope   = new attrIf(new attrEQ("INIT", 1));
 #endif
 
 #if _ENABLE_MODULE
@@ -193,8 +179,10 @@ void CDProfiler::InitViz()
   HierGraph::fg = new flowgraph("CD Hierarchical Graph App");
 #endif
 
-#if _ENABLE_SCOPEGRAPH
-  ScopeGraph::scopeGraph = new graph();
+#if _ENABLE_SCOPE
+#if _ENABLE_GRAPH
+  Scope::scopeGraph = new graph();
+#endif
 #endif
 
 
@@ -208,11 +196,13 @@ void CDProfiler::FinalizeViz(void)
 //  if( GetCurrentCD() != GetRootCD() ) assert(0);
 
   // Destroy SightObj
-  cddbg << "reached here? becore while in FinalizeViz() "<<vizStack_.size() << endl;
+  cddbg << "reached here? becore while in FinalizeViz() " << endl;
 
-#if _ENABLE_SCOPEGRAPH
-  assert(scopeGraph);
-  delete scopeGraph;
+#if _ENABLE_SCOPE
+#if _ENABLE_GRAPH
+  assert(Scope::scopeGraph);
+  delete Scope::scopeGraph;
+#endif
 #endif
 
 #if _ENABLE_HIERGRAPH
@@ -221,25 +211,73 @@ void CDProfiler::FinalizeViz(void)
 #endif
 
 #if _ENABLE_ATTR
-  assert(attrScope);
-  delete attrScope;
+  assert(Attribute::attrScope);
+  delete Attribute::attrScope;
 
-  assert(vizStack_.size() > 0);
-  assert(vizStack_.back() != NULL);
-  delete vizStack_.back();
-  vizStack_.pop_back();
+  assert(Attribute::attrInitVal);
+  delete Attribute::attrInitVal;
 #endif
 
 }
 
 
+void CDProfiler::CreateSightObj(void)
+{
+#if _ENABLE_ATTR
+ attr_ = new Attribute(this);
+#endif
+
+#if _ENABLE_COMP
+  comp_ = new Comparison(this);
+#endif
+
+#if _ENABLE_MODULE
+  module_ = new Module(this);
+#endif
+
+#if _ENABLE_HIERGRAPH
+  hierGraph_ = new HierGraph(this);
+#endif
+
+#if _ENABLE_SCOPE
+  if(parent_ != NULL)
+    scope_ = new Scope(parent_->scope_, this);
+  else
+    scope_ = new Scope(NULL, this);
+#endif
+
+}
 
 void CDProfiler::ClearSightObj(void)
 {
-  for(auto it=vizStack_.rbegin(); it!=vizStack_.rend(); ++it) {
-    delete vizStack_.back();
-    vizStack_.pop_back();
-  }
+#if _ENABLE_SCOPE
+  assert(scope_);
+  delete scope_;
+#endif
+
+#if _ENABLE_HIERGRAPH
+  assert(hierGraph_);
+  delete hierGraph_;
+#endif
+
+#if _ENABLE_MODULE
+  assert(module_);
+  delete module_;
+#endif
+
+#if _ENABLE_COMP
+  assert(comp_);
+  delete comp_;
+#endif
+
+#if _ENABLE_ATTR
+  assert(attr_);
+  delete attr_;
+#endif
+
+
+
+
 }
 
 void CDProfiler::FinishProfile(void) // it is called in Destroy()
@@ -259,7 +297,9 @@ void CDProfiler::FinishProfile(void) // it is called in Destroy()
   /// Calcualate the execution time
   (profile_data_)[current_label_][EXEC_CYCLE] += (that_point_) - (this_point_);
 
-  ClearSightObj();
+//  if(isSameSequentialCD) {
+//    ClearSightObj();
+//  }
 }
 
 
@@ -308,52 +348,31 @@ void CDProfiler::GetLocalAvg(void)
 
 
 
-// -------------- CD Node -----------------------------------------------------------------------------
-
-#if _ENABLE_CDNODE
-CDNode::CDNode(void)
-{
-//  CDNode* cdn = new CDNode(txt()<<current_label_, txt()<<GetCDID()); 
-//  this->cdStack.push_back(cdn);
-//  cddbg << "{{{ CDNode Test -- "<<this->this_cd_->cd_id_<<", #cdStack="<<cdStack.size()<<endl;
-}
-
-CDNode::~CDNode(void)
-{
-//  if(cdStack.back() != NULL){
-//    cddbg<<"add new info"<<endl;
-///*
-//    cdStack.back()->setStageNode( "preserve", "data_copy", profile_data_[current_label_]PRV_COPY_DATA]    );
-//    cdStack.back()->setStageNode( "preserve", "data_overlapped", profile_data_[current_label_][OVERLAPPED_DATA]  );
-//    cdStack.back()->setStageNode( "preserve", "data_ref", profile_data_[current_label_][PRV_REF_DATA]     );
-//*/
-//    
-//    //scope s("Preserved Stats");
-//    PreserveStageNode psn(txt()<<"Preserve Stage");
-//    cddbg << "data_copy="<<profile_data_[current_label_][PRV_COPY_DATA]<<endl;
-//    cddbg << "data_overlapped="<<profile_data_[current_label_][OVERLAPPED_DATA]<<endl;
-//    cddbg << "data_ref="<<profile_data_[current_label_][PRV_REF_DATA]<<endl;
-//
-//  }
-
-//  cddbg << " }}} CDNode Test -- "<<this->this_cd_->cd_id_<<", #cdStack="<<cdStack.size()<<endl;
-//  assert(cdStack.size()>0);
-//  assert(cdStack.back() != NULL);
-//  delete cdStack.back();
-//  cdStack.pop_back();
-}
-
-#endif
-
 // -------------- Scope -------------------------------------------------------------------------------
 #if _ENABLE_SCOPE
 
-Scope::Scope(void)
+Scope::Scope(Scope *parent_scope, CDProfiler *profiler) : Viz(profiler)
 {
-  string label = GetCurrentCD()->profiler_->label();
+  if(parent_scope)
+    prv_s = parent_scope->s;
+  else
+    prv_s = NULL;
 
-  /// create a new scope at each Begin() call
-  s = new scope(txt()<<label<<", cd_id="<<GetCurrentCD()->node_id().color());
+//  if(profiler->profile_data_.find(label) == profiler->profile_data_.end()) {
+    /// create a new scope at each Begin() call
+  s = new scope(txt() << profiler_->current_label_ << "\n"
+                      << "LOOP COUNT : " << profiler_->profile_data_[profiler_->current_label_][LOOP_COUNT]
+                      << "EXEC CYCLE : " << profiler_->profile_data_[profiler_->current_label_][EXEC_CYCLE]
+                      << "LOGGING VOL: " << profiler_->profile_data_[profiler_->current_label_][LOGGING_OVERHEAD]
+                      << "CDOVHERHEAD: " << profiler_->profile_data_[profiler_->current_label_][CD_OVERHEAD]
+               );
+//  }
+
+#if _ENABLE_GRAPH
+  if(prv_s != NULL) {
+    scopeGraph->addDirEdge(prv_s->getAnchor(), s->getAnchor());
+  }
+#endif
 }
 
 Scope::~Scope(void)
@@ -363,29 +382,14 @@ Scope::~Scope(void)
   delete s;
 }
 
-ScopeGraph::ScopeGraph(void)
-{
-  cddbg << "destroy scope" << endl;
-  string label = GetCurrentCD()->profiler_->label();
-  /// create a new scope at each Begin() call
-  s = new scope(txt()<<label<<", cd_id="<<GetCurrentCD()->node_id().color());
-  /// Connect edge between previous node to newly created node
-  if(prv_s != NULL)
-    scopeGraph->addDirEdge(prv_s->getAnchor(), s->getAnchor());
-}
-
-ScopeGraph::~ScopeGraph(void)
-{
-  cddbg << "destroy scopegraph" << endl;
-}
 #endif
 
 
 // -------------- Module ------------------------------------------------------------------------------
 #if _ENABLE_MODULE
-Module::Module(CDProfiler *profiler_p, bool usr_profile_en)
+Module::Module(CDProfiler *profiler, bool usr_profile_en) : Viz(profiler)
 {
-  profiler = profiler_p;
+//  profiler = profiler_p;
   std::map<std::string, array<uint64_t,MAX_PROFILE_DATA>> &profile_data_ = profiler->profile_data_;
   LabelT &current_label_ = profiler->current_label_;
 //  CDHandle *cdh = GetCurrentCD();
@@ -506,10 +510,11 @@ void Module::AddUsrProfile(std::string key, long val, int mode)
 
 // -------------- Comparison --------------------------------------------------------------------------
 #if _ENABLE_COMP
-Comparison::Comparison(void)
+Comparison::Comparison(CDProfiler *profiler) : Viz(profiler)
 {
 
-  compTag = new comparison(txt() << cd::myTaskID);
+//  cout << GetCurrentCD()->GetCDName().GetString().c_str() << " from task#" << myTaskID << endl;
+  compTag = new comparison(txt() << GetCurrentCD()->GetCDName().GetString().c_str());
 //  comparison* comp = new comparison(node_id().color());
 //  compStack.push_back(comp);
 
@@ -542,7 +547,7 @@ Comparison::~Comparison(void)
 
 // -------------- HierGraph ---------------------------------------------------------------------------
 #if _ENABLE_HIERGRAPH
-HierGraph::HierGraph(void)
+HierGraph::HierGraph(CDProfiler *profiler) : Viz(profiler)
 {
   cddbg<<"CreateHierGraph call"<<endl;
   NodeID node_id = GetCurrentCD()->node_id();
@@ -560,7 +565,7 @@ HierGraph::~HierGraph(void)
 
 
 #if _ENABLE_ATTR
-Attribute::Attribute(void)
+Attribute::Attribute(CDProfiler *profiler) : Viz(profiler)
 {
   string label = GetCurrentCD()->profiler_->label();
 

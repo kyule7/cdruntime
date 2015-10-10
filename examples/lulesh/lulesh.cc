@@ -209,9 +209,9 @@ void Release(T **ptr)
 #if _CD
 //inline void //DumpPreserve(void)
 //{
-////   int tmp[(int)(1000/(GetCurrentCD()->ptr_cd()->GetCDID().level_ + 1))] = {0};
-//   int* tmp = new int(1000/(GetCurrentCD()->level()+1));
-//   GetCurrentCD()->Preserve(tmp, sizeof(tmp), kCopy, "tmp", 0, 0, 0, kUnsure);
+////   int tmp[(int)(1000/(GetLeafCD()->ptr_cd()->GetCDID().level_ + 1))] = {0};
+//   int* tmp = new int(1000/(GetLeafCD()->level()+1));
+//   GetLeafCD()->Preserve(tmp, sizeof(tmp), kCopy, "tmp", 0, 0, 0, kUnsure);
 //   delete tmp;
 //}
 #endif
@@ -226,12 +226,12 @@ void TimeIncrement(Domain& domain)
    Real_t targetdt = domain.stoptime() - domain.time() ;
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "TimeIncrement");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    unsigned int len=0;
-   void *internal=domain.Serialize(len);
-   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+//   void *internal=domain.Serialize(len);
+//   GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
 #endif
 
 
@@ -288,7 +288,7 @@ void TimeIncrement(Domain& domain)
    ++domain.cycle() ;
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -306,16 +306,16 @@ void CollectDomainNodesToElemNodes(Domain &domain,
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CollectDomainNodesToElemNodes");
 
-   GetCurrentCD()->Preserve(elemX, sizeof(elemX), kCopy, "elemX", 0, 0, 0, kUnsure);
-   GetCurrentCD()->Preserve(elemY, sizeof(elemY), kCopy, "elemY", 0, 0, 0, kUnsure);
-   GetCurrentCD()->Preserve(elemZ, sizeof(elemZ), kCopy, "elemZ", 0, 0, 0, kUnsure);
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(elemX, sizeof(elemX), kCopy, "elemX", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(elemY, sizeof(elemY), kCopy, "elemY", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(elemZ, sizeof(elemZ), kCopy, "elemZ", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    unsigned int len=0;
-   void *internal=domain.Serialize(len);
-   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+//   void *internal=domain.Serialize(len);
+//   GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -356,7 +356,7 @@ void CollectDomainNodesToElemNodes(Domain &domain,
    elemZ[7] = domain.z(nd7i);
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 #endif
 
@@ -374,12 +374,12 @@ void InitStressTermsForElems(Domain &domain,
    //
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "InitStressTermsForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    unsigned int len=0;
-   void *internal=domain.Serialize(len);
-   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+//   void *internal=domain.Serialize(len);
+//   GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -389,7 +389,7 @@ void InitStressTermsForElems(Domain &domain,
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -407,9 +407,9 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcElemShapeFunctionDerivatives");
-   GetCurrentCD()->Preserve(b, sizeof(b), kCopy, "b", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(b, sizeof(b), kCopy, "b", 0, 0, 0, kUnsure);
 #endif
 
   const Real_t x0 = x[0] ;   const Real_t x1 = x[1] ;
@@ -494,7 +494,7 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
   *volume = Real_t(8.) * ( fjxet * cjxet + fjyet * cjyet + fjzet * cjzet);
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -551,11 +551,11 @@ void CalcElemNodeNormals(Real_t pfx[8],
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcElemNodeNormals");
-   GetCurrentCD()->Preserve(pfx, sizeof(pfx), kCopy, "pfx", 0, 0, 0, kUnsure);
-   GetCurrentCD()->Preserve(pfy, sizeof(pfy), kCopy, "pfy", 0, 0, 0, kUnsure);
-   GetCurrentCD()->Preserve(pfz, sizeof(pfz), kCopy, "pfz", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(pfx, sizeof(pfx), kCopy, "pfx", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(pfy, sizeof(pfy), kCopy, "pfy", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(pfz, sizeof(pfz), kCopy, "pfz", 0, 0, 0, kUnsure);
 
    //DumpPreserve();
 #endif
@@ -609,7 +609,7 @@ void CalcElemNodeNormals(Real_t pfx[8],
                   x[6], y[6], z[6], x[5], y[5], z[5]);
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -642,12 +642,12 @@ void IntegrateStressForElems( Domain &domain,
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "IntegrateStressForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    unsigned int len=0;
-   void *internal=domain.Serialize(len);
-   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+//   void *internal=domain.Serialize(len);
+//   GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -674,8 +674,8 @@ void IntegrateStressForElems( Domain &domain,
   // loop over all elements
 
 #if _CD
-//   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_6_0, "CD6_0", kStrict, 0, 0, &err);
-   CDHandle* cd = GetCurrentCD()->Create("IntegrateStressForElems", kStrict, 0, 0, &err); // CD6_0
+//   CDHandle* cd = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_6_0, "CD6_0", kStrict, 0, 0, &err);
+   CDHandle* cd = GetLeafCD()->Create("IntegrateStressForElems", kStrict, 0, 0, &err); // CD6_0
 #endif
 
 
@@ -700,9 +700,9 @@ void IntegrateStressForElems( Domain &domain,
 
 
 #if _CD
-    CDHandle* cdh = GetCurrentCD();
+    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "SumElemStressesToNodeForces");
-    GetCurrentCD()->Preserve(B, sizeof(B), kCopy, "B", 0, 0, 0, kUnsure);
+    GetLeafCD()->Preserve(B, sizeof(B), kCopy, "B", 0, 0, 0, kUnsure);
     //DumpPreserve();
 #endif
 
@@ -728,7 +728,7 @@ void IntegrateStressForElems( Domain &domain,
     }
 
 #if _CD
-    GetCurrentCD()->Detect();
+    GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -738,14 +738,14 @@ void IntegrateStressForElems( Domain &domain,
 #if _CD
    cd->Destroy(); // CD6_0 is destroyed
 
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 
    CD_Begin(cdh, false, "Write data in IntegrateStressForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    len=0;
-   internal=domain.Serialize(len);
-   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+//   internal=domain.Serialize(len);
+//   GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
 #endif
 
   if (numthreads > 1) {
@@ -775,7 +775,7 @@ void IntegrateStressForElems( Domain &domain,
   }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -826,11 +826,11 @@ void CalcElemVolumeDerivative(Real_t dvdx[8],
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcElemVolumeDerivative");
-   GetCurrentCD()->Preserve(dvdx, sizeof(dvdx), kCopy, "dvdx", 0, 0, 0, kUnsure);
-   GetCurrentCD()->Preserve(dvdy, sizeof(dvdy), kCopy, "dvdy", 0, 0, 0, kUnsure);
-   GetCurrentCD()->Preserve(dvdz, sizeof(dvdz), kCopy, "dvdz", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(dvdx, sizeof(dvdx), kCopy, "dvdx", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(dvdy, sizeof(dvdy), kCopy, "dvdy", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(dvdz, sizeof(dvdz), kCopy, "dvdz", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -868,7 +868,7 @@ void CalcElemVolumeDerivative(Real_t dvdx[8],
            &dvdx[7], &dvdy[7], &dvdz[7]);
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -883,9 +883,9 @@ void CalcElemFBHourglassForce(Real_t *xd, Real_t *yd, Real_t *zd,  Real_t hourga
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcElemFBHourglassForce");
-   GetCurrentCD()->Preserve(&coefficient, sizeof(coefficient), kCopy, "coefficient", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&coefficient, sizeof(coefficient), kCopy, "coefficient", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -926,7 +926,7 @@ void CalcElemFBHourglassForce(Real_t *xd, Real_t *yd, Real_t *zd,  Real_t hourga
 
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -945,12 +945,12 @@ void CalcFBHourglassForceForElems( Domain &domain,
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcFBHourglassForceForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    unsigned int len=0;
    void *internal=domain.Serialize(len);
-   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -1019,8 +1019,8 @@ void CalcFBHourglassForceForElems( Domain &domain,
 /*    compute the hourglass modes */
 
 #if _CD
-//   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_7, "CD7", kStrict, 0, 0, &err);
-   CDHandle* cd = GetCurrentCD()->Create("CalcFBHourglassForceForElems", kStrict, 0, 0, &err); // CD7
+//   CDHandle* cd = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_7, "CD7", kStrict, 0, 0, &err);
+   CDHandle* cd = GetLeafCD()->Create("CalcFBHourglassForceForElems", kStrict, 0, 0, &err); // CD7
 #endif
 
 
@@ -1044,8 +1044,8 @@ void CalcFBHourglassForceForElems( Domain &domain,
       cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
       //DumpPreserve();
       len=0;
-      internal=domain.Serialize(len);
-      GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+//      internal=domain.Serialize(len);
+//      GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
 #endif
 
       for(Index_t i1=0;i1<4;++i1){
@@ -1161,8 +1161,8 @@ void CalcFBHourglassForceForElems( Domain &domain,
       CD_Begin(cd, false, "Write elems in CalcFBHourglassForceForElems");
       cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
       len=0;
-      internal=domain.Serialize(len);
-      GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+//      internal=domain.Serialize(len);
+//      GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
       //DumpPreserve();
 #endif
 
@@ -1243,13 +1243,13 @@ void CalcFBHourglassForceForElems( Domain &domain,
 #if _CD
    cd->Destroy(); // CD7 is destroyed
    
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
    CD_Begin(cdh, false, "Collect elems in CalcFBHourglassForceForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    len=0;
-   internal=domain.Serialize(len);
-   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+//   internal=domain.Serialize(len);
+//   GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -1281,7 +1281,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
 
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -1297,16 +1297,16 @@ void CalcHourglassControlForElems(Domain& domain,
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcHourglassControlForElem");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    unsigned int len=0;
-   void *internal=domain.Serialize(len);
-   GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+//   void *internal=domain.Serialize(len);
+//   GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 
-//   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_6_1, "CD6_1", kStrict, 0, 0, &err);
-   CDHandle* cd = GetCurrentCD()->Create("CalcHourglassControlForElems", kStrict, 0, 0, &err); //CD6_1
+//   CDHandle* cd = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_6_1, "CD6_1", kStrict, 0, 0, &err);
+   CDHandle* cd = GetLeafCD()->Create("CalcHourglassControlForElems", kStrict, 0, 0, &err); //CD6_1
 #endif
 
    Index_t numElem = domain.numElem() ;
@@ -1331,12 +1331,12 @@ void CalcHourglassControlForElems(Domain& domain,
 
 
 #if _CD
-      CDHandle* cdh = GetCurrentCD();
+      CDHandle* cdh = GetLeafCD();
       CD_Begin(cdh, false, "Negative check in CalcHourglassControlForelem");
-      GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+      GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
       unsigned int len=0;
-      void *internal=domain.Serialize(len);
-      GetCurrentCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+//      void *internal=domain.Serialize(len);
+//      GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
       //DumpPreserve(); 
 #endif
 
@@ -1364,7 +1364,7 @@ void CalcHourglassControlForElems(Domain& domain,
       }  // check ends
 
 #if _CD
-      GetCurrentCD()->Detect();
+      GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -1387,7 +1387,7 @@ void CalcHourglassControlForElems(Domain& domain,
 
 #if _CD
    cd->Destroy(); // CD6_1 is destroyed
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -1402,15 +1402,15 @@ void CalcVolumeForceForElems(Domain& domain)
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcVolumeForceForElems");
-   CDHandle* cd = GetCurrentCD()->Create("CalcVolumeForceForElems", kStrict, 0, 0, &err); // CD5_0
+   CDHandle* cd = cdh->Create("CalcVolumeForceForElems", kStrict, 0, 0, &err); // CD5_0
 // Belong to CD 5 ///////////////////////////////////////////////////////////
    CD_Begin(cd, false, "Negative check in CalcVolumeForceForElems");
    cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    unsigned int len=0;
-   void *internal=domain.Serialize(len);
-   cd->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+//   void *internal=domain.Serialize(len);
+//   cd->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
 #endif
 
    Index_t numElem = domain.numElem() ;
@@ -1475,13 +1475,13 @@ static inline void CalcForceForNodes(Domain& domain)
 
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcForceForNodes"); // Do not preserve Domain under this level
 
 
    // Seems possible to start fine-grain CDs from here
    // Spawn multiple children
-   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_4_0, "CalcForceForNodes", kStrict, 0, 0, &err); // CD4_0
+   CDHandle* cd = cdh->Create(NUM_CDS_IN_LEVEL_4_0, "CalcForceForNodes", kStrict, 0, 0, &err); // CD4_0
 
    CD_Begin(cd, false, "loop in CalcForceForNodes");
 #endif
@@ -1504,7 +1504,7 @@ static inline void CalcForceForNodes(Domain& domain)
 
 #if _CD
 
-   cd->Destroy();    // CD4_0 is destroyed
+  cd->Destroy();    // CD4_0 is destroyed
 
 //  fine-grain CD ends
 
@@ -1525,9 +1525,8 @@ static inline void CalcForceForNodes(Domain& domain)
 
 
 #if _CD
-   GetCurrentCD()->Detect();
+   cdh->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -1539,9 +1538,9 @@ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
 {
    
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcAccelerationForNodes");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -1553,7 +1552,7 @@ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -1567,9 +1566,9 @@ void ApplyAccelerationBoundaryConditionsForNodes(Domain& domain)
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "ApplyAccelerationBoundaryConditionsForNodes");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   cdh->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -1598,9 +1597,8 @@ void ApplyAccelerationBoundaryConditionsForNodes(Domain& domain)
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   cdh->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -1612,9 +1610,9 @@ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
                           Index_t numNode)
 {
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcVelocityForNodes");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   cdh->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -1637,7 +1635,7 @@ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   cdh->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -1649,9 +1647,9 @@ static inline
 void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
 {
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcPositionForNodes");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   cdh->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -1663,9 +1661,8 @@ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
      domain.z(i) += domain.zd(i) * dt ;
    }
 #if _CD
-   GetCurrentCD()->Detect();
+   cdh->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -1677,9 +1674,9 @@ void LagrangeNodal(Domain& domain)
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "LagrangeNodal");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   cdh->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -1692,8 +1689,8 @@ void LagrangeNodal(Domain& domain)
 
 
 #if _CD
-   //CDHandle* cd = GetCurrentCD()->Create(GetCurrrentCD()->GetNodeID(), NUM_CDS_IN_LEVEL_3_0, "CD3_0", kStrict, 0, 0, &err);
-   CDHandle* cd = GetCurrentCD()->Create("LagrangeNodal before Communication", kStrict, 0, 0, &err); // LEVEL_3_0
+   //CDHandle* cd = GetLeafCD()->Create(GetCurrrentCD()->GetNodeID(), NUM_CDS_IN_LEVEL_3_0, "CD3_0", kStrict, 0, 0, &err);
+   CDHandle* cd = cdh->Create("LagrangeNodal before Communication", kStrict, 0, 0, &err); // LEVEL_3_0
 #endif
 
   /* time of boundary condition evaluation is beginning of step for force and
@@ -1713,9 +1710,10 @@ void LagrangeNodal(Domain& domain)
 #endif
 
    // TODO 0724   
-#if _CD
+#if _CD 
+   // FIXME
    // fine-grain CDs
-   cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_3_1, "LagrangeNodal after Communication", kStrict, 0, 0, &err); // CD3_1
+   cd = cdh->Create(NUM_CDS_IN_LEVEL_3_1, "LagrangeNodal after Communication", kStrict, 0, 0, &err); // CD3_1
 #endif
 
    CalcAccelerationForNodes(domain, domain.numNode());
@@ -1747,9 +1745,8 @@ void LagrangeNodal(Domain& domain)
 #endif
 
 #if _CD
-   GetCurrentCD()->Detect();
+   cdh->Detect();
    CD_Complete(cdh);
-;
 #endif  
 
   return;
@@ -1773,9 +1770,9 @@ Real_t CalcElemVolume( const Real_t x0, const Real_t x1,
 {
 
 #if _CD
-//   CDHandle* cdh = GetCurrentCD();
+//   CDHandle* cdh = GetLeafCD();
 //   CD_Begin(cdh, false, "CalcElemVolume");
-//   GetCurrentCD()->Preserve(&x0, sizeof(x0), kCopy, "x0", 0, 0, 0, kUnsure);
+//   GetLeafCD()->Preserve(&x0, sizeof(x0), kCopy, "x0", 0, 0, 0, kUnsure);
 #endif
 
   Real_t twelveth = Real_t(1.0)/Real_t(12.0);
@@ -1848,7 +1845,7 @@ Real_t CalcElemVolume( const Real_t x0, const Real_t x1,
 
 
 #if _CD
-//   GetCurrentCD()->Detect();
+//   GetLeafCD()->Detect();
 //   CD_Complete(cdh);
 #endif
 
@@ -1899,9 +1896,9 @@ Real_t CalcElemCharacteristicLength( const Real_t x[8],
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcElemCharacteristicLength");
-//   GetCurrentCD()->Preserve(&volume, sizeof(volume), kCopy, "volume", 0, 0, 0, kUnsure);
+   //cdh->Preserve(&volume, sizeof(volume), kCopy, "volume", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -1940,7 +1937,7 @@ Real_t CalcElemCharacteristicLength( const Real_t x[8],
    charLength = Real_t(4.0) * volume / SQRT(charLength);
 
 #if _CD
-   GetCurrentCD()->Detect();
+   cdh->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -1960,9 +1957,9 @@ void CalcElemVelocityGradient( const Real_t* const xvel,
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcElemVelocityGradient");
-//   GetCurrentCD()->Preserve(&detJ, sizeof(detJ), kCopy, "detJ", 0, 0, 0, kUnsure);
+//   GetLeafCD()->Preserve(&detJ, sizeof(detJ), kCopy, "detJ", 0, 0, 0, kUnsure);
 //DumpPreserve();
 #endif
 
@@ -2021,9 +2018,8 @@ void CalcElemVelocityGradient( const Real_t* const xvel,
   d[3]  = Real_t( .5) * ( dzddy + dyddz );
 
 #if _CD
-   GetCurrentCD()->Detect();
+   cdh->Detect();
    CD_Complete(cdh);
-;
 #endif
 }
 
@@ -2035,13 +2031,13 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcKinematicsForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   cdh->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 
-//   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_4_1, "CD4_1", kStrict, 0, 0, &err);
-   CDHandle* cd = GetCurrentCD()->Create("CalcKinematicsForElems", kStrict, 0, 0, &err); //CD4_1
+//   CDHandle* cd = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_4_1, "CD4_1", kStrict, 0, 0, &err);
+   CDHandle* cd = cdh->Create("Loop_in_CalcKinematicsForElems", kStrict, 0, 0, &err); //CD4_1
 #endif
 
   // loop over all elements
@@ -2077,9 +2073,8 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
                                              volume);
 
  #if _CD
-    CDHandle* cdh = GetCurrentCD();
-   CD_Begin(cdh, false, "Get Nodal Velocity in CalcKinematicsForElems");
-    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+    CD_Begin(cd, false, "Get Nodal Velocity in CalcKinematicsForElems");
+    cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
     //DumpPreserve();
 #endif
    
@@ -2101,9 +2096,8 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
     }
 
 #if _CD
-    GetCurrentCD()->Detect();
-   CD_Complete(cdh);
-;
+    cd->Detect();
+    CD_Complete(cd);
 #endif
 
     CalcElemShapeFunctionDerivatives( x_local, y_local, z_local,
@@ -2121,9 +2115,9 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
 
 #if _CD
    cd->Destroy(); // CD4_1 is destroyed
-   GetCurrentCD()->Detect();
+
+   cdh->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -2134,12 +2128,12 @@ static inline
 void CalcLagrangeElements(Domain& domain, Real_t* vnew)
 {
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcLagrangeElements");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   cdh->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
    // Fine-grain CD
-   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_3_2, "CalcLagrangeElements", kStrict, 0, 0, &err); // CD3_2
+   CDHandle* cd = cdh->Create(NUM_CDS_IN_LEVEL_3_2, "CalcLagrangeElements", kStrict, 0, 0, &err); // CD3_2
 #endif
 
    Index_t numElem = domain.numElem() ;
@@ -2151,9 +2145,9 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
       CalcKinematicsForElems(domain, vnew, deltatime, numElem) ;
 
 #if _CD
-      CDHandle* cdh = GetCurrentCD();
+      CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "Epilog in CalcLagrangeElements");
-      GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+      GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
       //DumpPreserve();
 #endif
 
@@ -2185,9 +2179,8 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
       }
 
 #if _CD
-      GetCurrentCD()->Detect();
+   cdh->Detect();
    CD_Complete(cdh);
-;
 #endif
 
       domain.DeallocateStrains();
@@ -2195,7 +2188,7 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
 
 #if _CD
    cd->Destroy();  // CD3_2 is destroyed
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -2214,9 +2207,9 @@ void CalcMonotonicQGradientsForElems(Domain& domain, Real_t vnew[])
    for (Index_t i = 0 ; i < numElem ; ++i ) {
 
 #if _CD
-      CDHandle* cdh = GetCurrentCD();
+      CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcMonotonicQGradientsForElems");
-      GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+      GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
       //DumpPreserve();
 #endif
 
@@ -2359,7 +2352,7 @@ void CalcMonotonicQGradientsForElems(Domain& domain, Real_t vnew[])
       domain.delv_eta(i) = ax*dxv + ay*dyv + az*dzv ;
 
 #if _CD
-      GetCurrentCD()->Detect();
+      GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -2382,8 +2375,8 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
    Real_t qqc_monoq = domain.qqc_monoq();
 
 #if _CD
-//   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_4_2, "CD4_2", kStrict, 0, 0, &err);
-//   CDHandle* cd = GetCurrentCD()->Create("CalcMonotonicQRegionForElems", kStrict, 0, 0, &err); //CD4_2
+//   CDHandle* cd = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_4_2, "CD4_2", kStrict, 0, 0, &err);
+//   CDHandle* cd = GetLeafCD()->Create("CalcMonotonicQRegionForElems", kStrict, 0, 0, &err); //CD4_2
 #endif
 
 //#pragma omp parallel for firstprivate(qlc_monoq, qqc_monoq, monoq_limiter_mult, monoq_max_slope, ptiny)
@@ -2395,9 +2388,9 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
       Real_t delvm, delvp ;
 
 #if _CD
-//   CDHandle* cdh = GetCurrentCD();
+//   CDHandle* cdh = GetLeafCD();
 //   CD_Begin(cdh, false, "CalcMonotonicQRegionForElems");
-//   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+//   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -2527,7 +2520,7 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
       domain.ql(i) = qlin  ;
 
 #if _CD
-//      GetCurrentCD()->Detect();
+//      GetLeafCD()->Detect();
 //   CD_Complete(cdh);
 #endif
 
@@ -2558,9 +2551,9 @@ void CalcMonotonicQForElems(Domain& domain, Real_t vnew[])
    for (Index_t r=0 ; r<domain.numReg() ; ++r) {
 
 #if _CD
-      CDHandle* cdh = GetCurrentCD();
+      CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcMonotonicQForElems");
-      GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+      GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
       //DumpPreserve();
 #endif
 
@@ -2569,7 +2562,7 @@ void CalcMonotonicQForElems(Domain& domain, Real_t vnew[])
       }
 
 #if _CD
-      GetCurrentCD()->Detect();
+      GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -2589,9 +2582,9 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
    // MONOTONIC Q option
    //
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcQForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -2616,7 +2609,7 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
    
 #if _CD    
       // fine-grain CD 
-      CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_3_3, "CalcQForElems before Communication", kStrict, 0, 0, &err); //CD3_3
+      CDHandle* cd = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_3_3, "CalcQForElems before Communication", kStrict, 0, 0, &err); //CD3_3
 #endif
 
       /* Calculate velocity gradients */
@@ -2646,17 +2639,17 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
 
 #if _CD    
       // fine-grain CD
-      cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_3_4, "CalcQForElems after Communication", kStrict, 0, 0, &err); // CD3_4
+      cd = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_3_4, "CalcQForElems after Communication", kStrict, 0, 0, &err); // CD3_4
 #endif
 
       CalcMonotonicQForElems(domain, vnew) ;
 
 #if _CD
       // It is still fine-grain CDs
-      CDHandle* cdh = GetCurrentCD();
+      CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "Epilog in CalcQForElems");
-      GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-      GetCurrentCD()->Preserve(vnew, sizeof(vnew), kCopy, "vnew", 0, 0, 0, kUnsure);
+      GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+      GetLeafCD()->Preserve(vnew, sizeof(vnew), kCopy, "vnew", 0, 0, 0, kUnsure);
       //DumpPreserve();
 #endif
 
@@ -2682,7 +2675,7 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
       }
 
 #if _CD
-      GetCurrentCD()->Detect();
+      GetLeafCD()->Detect();
    CD_Complete(cd);
       cd->Destroy();    // CD3_4 is destroyed
       // fine-grain CD ends
@@ -2691,7 +2684,7 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -2709,9 +2702,9 @@ void CalcPressureForElems(Real_t* p_new, Real_t* bvc,
                           Index_t length, Index_t *regElemList)
 {
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcPressureForElems");
-   GetCurrentCD()->Preserve(p_new, sizeof(*p_new), kCopy, "p_new", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(p_new, sizeof(*p_new), kCopy, "p_new", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -2739,7 +2732,7 @@ void CalcPressureForElems(Real_t* p_new, Real_t* bvc,
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -2760,9 +2753,9 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
                         Index_t length, Index_t *regElemList)
 {
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcEnergyForElems 0");
-   GetCurrentCD()->Preserve(compression, sizeof(*compression), kCopy, "compression", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(compression, sizeof(*compression), kCopy, "compression", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -2780,7 +2773,7 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 #endif
 
@@ -2790,9 +2783,9 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
 
 
 #if _CD
-   cdh = GetCurrentCD();
+   cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcEnergyForElems 1");
-   GetCurrentCD()->Preserve(&eosvmax, sizeof(eosvmax), kCopy, "eosvmax", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&eosvmax, sizeof(eosvmax), kCopy, "eosvmax", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -2834,7 +2827,7 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
       }
    }
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 #endif
 
@@ -2842,9 +2835,9 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
                         pmin, p_cut, eosvmax, length, regElemList);
 
 #if _CD
-   cdh = GetCurrentCD();
+   cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcEnergyForElems 2");
-   GetCurrentCD()->Preserve(p_new, sizeof(*p_new), kCopy, "p_new", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(p_new, sizeof(*p_new), kCopy, "p_new", 0, 0, 0, kUnsure);
    //DumpPreserve();
 
 #endif
@@ -2884,7 +2877,7 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -2893,9 +2886,9 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
                         pmin, p_cut, eosvmax, length, regElemList);
 
 #if _CD
-   cdh = GetCurrentCD();
+   cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcEnergyForElems 3");
-   GetCurrentCD()->Preserve(p_new, sizeof(*p_new), kCopy, "p_new", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(p_new, sizeof(*p_new), kCopy, "p_new", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -2922,7 +2915,7 @@ void CalcEnergyForElems(Real_t* p_new, Real_t* e_new, Real_t* q_new,
    Release(&pHalfStep) ;
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -2940,9 +2933,9 @@ void CalcSoundSpeedForElems(Domain &domain,
                             Index_t len, Index_t *regElemList)
 {
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcSoundSpeedForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -2961,7 +2954,7 @@ void CalcSoundSpeedForElems(Domain &domain,
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -2974,9 +2967,9 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
                      Int_t numElemReg, Index_t *regElemList, Int_t rep)
 {
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "EvalEOSForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -3010,8 +3003,8 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
    Real_t *pbvc = Allocate<Real_t>(numElemReg) ;
 
 #if _CD
-//   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_5_1, "CD5_1", kStrict, 0, 0, &err);
-   CDHandle* cd = GetCurrentCD()->Create("Loop in EvalEOSForElems", kStrict, 0, 0, &err); //CD5_1
+//   CDHandle* cd = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_5_1, "CD5_1", kStrict, 0, 0, &err);
+   CDHandle* cd = GetLeafCD()->Create("Loop in EvalEOSForElems", kStrict, 0, 0, &err); //CD5_1
 #endif
 
    //loop to add load imbalance based on region number 
@@ -3022,9 +3015,9 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
       {
 
 #if _CD
-         CDHandle* cdh = GetCurrentCD();
+         CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "loop 0 in EvalEOSForElems");
-         GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+         GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
          //DumpPreserve();
 #endif
 
@@ -3079,7 +3072,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
 
 
 #if _CD
-         GetCurrentCD()->Detect();
+         GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -3100,10 +3093,10 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
 
 #if _CD
    cd->Destroy();    // CD5_1 is destroyed
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
    CD_Begin(cdh, false, "loop 1 in EvalEOSForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -3116,7 +3109,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 #endif
 
@@ -3125,9 +3118,9 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
                           pbvc, bvc, ss4o3,
                           numElemReg, regElemList) ;
 #if _CD
-   cdh = GetCurrentCD();
+   cdh = GetLeafCD();
    CD_Begin(cdh, false, "Epilog in EvalEOSForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -3147,7 +3140,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
    Release(&e_old) ;
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -3160,9 +3153,9 @@ static inline
 void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 {
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "ApplyMaterialPropertiesForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -3172,7 +3165,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 
 #if _CD
     // fine-grain CD start
-    CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_3_5, "ApplyMaterialPropertiesForElems", kStrict, 0, 0, &err); // CD3_5
+    CDHandle* cd = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_3_5, "ApplyMaterialPropertiesForElems", kStrict, 0, 0, &err); // CD3_5
 #endif
 
     /* Expose all of the variables needed for material evaluation */
@@ -3183,9 +3176,9 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
     {
 
 #if _CD
-    CDHandle* cdh = GetCurrentCD();
+    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "loop 0 in ApplyMaterialPropertiesForElems");
-    GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+    GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
     //DumpPreserve();
 #endif
 
@@ -3207,7 +3200,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
        }
 
 #if _CD
-       GetCurrentCD()->Detect();
+       GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -3219,9 +3212,9 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
        for (Index_t i=0; i<numElem; ++i) {
 
 #if _CD
-          CDHandle* cdh = GetCurrentCD();
+          CDHandle* cdh = GetLeafCD();
           CD_Begin(cdh, false, "loop 1 in ApplyMaterialPropertiesForElems");
-          GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+          GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
           //DumpPreserve();
 #endif
 
@@ -3243,7 +3236,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
           }
 
 #if _CD
-          GetCurrentCD()->Detect();
+          GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -3256,9 +3249,9 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
     for (Int_t r=0 ; r<domain.numReg() ; r++) {
 
 #if _CD
-       CDHandle* cdh = GetCurrentCD();
+       CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "loop 2 in ApplyMaterialPropertiesForElems");
-       GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+       GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
        //DumpPreserve();
 #endif
 
@@ -3278,15 +3271,15 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 	      rep = 10 * (1+ domain.cost());
 
 #if _CD
-//       CDHandle* cd2 = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_4_3, "CD4_3", kStrict, 0, 0, &err);
-       CDHandle* cd2 = GetCurrentCD()->Create("EvalEOSForElems", kStrict, 0, 0, &err); //CD4_3
+//       CDHandle* cd2 = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_4_3, "CD4_3", kStrict, 0, 0, &err);
+       CDHandle* cd2 = GetLeafCD()->Create("EvalEOSForElems", kStrict, 0, 0, &err); //CD4_3
 #endif
 
        EvalEOSForElems(domain, vnew, numElemReg, regElemList, rep);
 
 #if _CD
        cd2->Destroy();  // CD4_3 is destroyed
-       GetCurrentCD()->Detect();
+       GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -3300,7 +3293,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
   }   // if-statement ends
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -3314,9 +3307,9 @@ void UpdateVolumesForElems(Domain &domain, Real_t *vnew,
                            Real_t v_cut, Index_t length)
 {
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "UpdateVolumesForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -3334,7 +3327,7 @@ void UpdateVolumesForElems(Domain &domain, Real_t *vnew,
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -3374,9 +3367,9 @@ void CalcCourantConstraintForElems(Domain &domain, Index_t length,
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcCourantConstraintForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -3447,7 +3440,7 @@ void CalcCourantConstraintForElems(Domain &domain, Index_t length,
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -3465,9 +3458,9 @@ void CalcHydroConstraintForElems(Domain &domain, Index_t length,
 {
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcHydroConstraintForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -3528,7 +3521,7 @@ void CalcHydroConstraintForElems(Domain &domain, Index_t length,
    }
 
 #if _CD
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -3547,12 +3540,12 @@ void CalcTimeConstraintsForElems(Domain& domain) {
 
 #if _CD
    // CD2
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcTimeConstraintsForElems");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
    // Fine-grain CDs start
-   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_3_6, "CalcTimeConstraintsForElems", kStrict, 0, 0, &err); // CD3_6
+   CDHandle* cd = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_3_6, "CalcTimeConstraintsForElems", kStrict, 0, 0, &err); // CD3_6
 #endif
 
    for (Index_t r=0 ; r < domain.numReg() ; ++r) {
@@ -3571,7 +3564,7 @@ void CalcTimeConstraintsForElems(Domain& domain) {
 
 #if _CD
    cd->Destroy(); // CD3_6 is destroyed
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif
@@ -3590,12 +3583,12 @@ void LagrangeLeapFrog(Domain& domain)
 
 
 #if _CD
-   CDHandle* cdh = GetCurrentCD();
+   CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "LagrangeLeapFrog");
-   GetCurrentCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    //DumpPreserve();
-   CDHandle* cd = GetCurrentCD()->Create(NUM_CDS_IN_LEVEL_2, "LagrangeLeapFrog", kStrict, 0, 0, &err);
-//   CDHandle* cd = GetCurrentCD()->Create("LagrangeLeapFrog", kStrict, 0, 0, &err);  // CD2
+   CDHandle* cd = cdh->Create(NUM_CDS_IN_LEVEL_2, "LagrangeLeapFrog", kStrict, 0, 0, &err);
+//   CDHandle* cd = GetLeafCD()->Create("LagrangeLeapFrog", kStrict, 0, 0, &err);  // CD2
 #endif
 
    /* calculate nodal forces, accelerations, velocities, positions, with
@@ -3640,7 +3633,7 @@ void LagrangeLeapFrog(Domain& domain)
  
 #if _CD
    cd->Destroy(); // CD2 is destroyed
-   GetCurrentCD()->Detect();
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
 ;
 #endif

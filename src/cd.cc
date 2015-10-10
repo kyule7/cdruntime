@@ -217,7 +217,7 @@ CD::CD(CDHandle* cd_parent,
   if(name != NULL)
     name_ = name; 
     //label_ = INITIAL_CDOBJ_LABEL; 
-    label_ = string(INITIAL_CDOBJ_LABEL); 
+  label_ = string(INITIAL_CDOBJ_LABEL); 
 
   sys_detect_bit_vector_ = 0; 
   cd_id_ = cd_id;
@@ -349,7 +349,6 @@ void CD::Initialize(CDHandle* cd_parent,
 
   cd_type_  = cd_type;
   name_     = name;
-  //label_ = INITIAL_CDOBJ_LABEL; 
   label_ = string(INITIAL_CDOBJ_LABEL); 
   cd_id_    = cd_id;
   if(exec_count_[cd_id_.GetPhaseID()] == 0) {
