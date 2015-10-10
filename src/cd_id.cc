@@ -33,6 +33,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "cd_config.h"
 #include "cd_id.h"
 #include "util.h"
 using namespace cd;

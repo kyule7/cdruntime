@@ -37,7 +37,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_MPIWRAPPER_H
 #define _CD_MPIWRAPPER_H
 
-#if _MPI_VER
+#include "cd_features.h"
+
+#if CD_MPI_ENABLED
 
 #include <stdio.h>
 #include <mpi.h>

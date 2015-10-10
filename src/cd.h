@@ -44,7 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * @brief Containment Domains API v0.2 (C++)
  */
 
-
+#include "cd_features.h"
 #include "cd_global.h"
 #include "cd_def_internal.h"
 #include "cd_handle.h"
@@ -64,12 +64,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <functional>
 
 
-#ifdef comm_log
+#if CD_COMM_LOG_ENABLED
 //SZ
 #include "cd_comm_log.h"
 #endif
 
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
 #include "cd_malloc.h"
 #endif
 
@@ -170,7 +170,7 @@ class CD : public Serializable {
 //  public:
     bool GetBegin_(void){return begin_;}
 
-#if _MPI_VER
+#if CD_MPI_ENABLED
     // This flag is unique for each process. 
     static CDFlagT *pendingFlag_;
     CDMailBoxT pendingWindow_;
@@ -281,7 +281,7 @@ update the preserved data.
     // handler for log-related things
     CDLogHandle log_handle_;
 
-#ifdef comm_log
+#if CD_COMM_LOG_ENABLED
   public:
     //SZ
     CommLog *comm_log_ptr_;
@@ -295,7 +295,7 @@ update the preserved data.
     //CDHandle*            cd_parent_;
 #endif
 
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
     //GONG
     CommLog *libc_log_ptr_;
     //GONG
@@ -418,7 +418,7 @@ public:
     bool     recreated(void)     const { return recreated_; }
     bool     reexecuted(void)    const { return reexecuted_; }
     CDType GetCDType();
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
     CommLog *libc_log_ptr()      const { return libc_log_ptr_; }
 #endif
     // These should be virtual because I am going to use polymorphism for those methods.
@@ -532,7 +532,7 @@ public:
     CDInternalErrT InvokeErrorHandler(void);
     CDInternalErrT InvokeAllErrorHandler(void);
     // Test the completion of internal-CD communications
-#if _MPI_VER
+#if CD_MPI_ENABLED
     bool TestComm(bool test_untile_done=false);
     bool TestReqComm(bool is_all_valid=true);
     bool TestRecvComm(bool is_all_valid=true);
@@ -553,7 +553,7 @@ public:
     virtual void Deserialize(void* object) {
     }
 
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
 public:
     //GONG: duplicated for libc logging
     CommLogErrT CommLogCheckAlloc_libc(unsigned long length);
@@ -562,7 +562,7 @@ public:
     unsigned int PullMemLogs(void);
 #endif
 
-#ifdef comm_log
+#if CD_COMM_LOG_ENABLED
 public:
     //SZ
     //FIXME: no function should return CommLogErrT, change to CD error types...
@@ -608,7 +608,7 @@ public:
 //    static void  free(void *p);
 #endif
 
-#if _MPI_VER
+#if CD_MPI_ENABLED
     CDEventHandleT ReadMailBox(CDFlagT &event);
     virtual CDInternalErrT InternalCheckMailBox(void);
     void DecPendingCounter(void);
@@ -701,7 +701,7 @@ class HeadCD : public CD {
     void Deserialize(void* object) 
     {    }
 
-#if _MPI_VER
+#if CD_MPI_ENABLED
     virtual CDFlagT *event_flag();
 
     CDErrT SetMailBox(const CDEventT &event, int task_id);

@@ -36,6 +36,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_DEF_INTERNAL_H
 #define _CD_DEF_INTERNAL_H
 
+#include <cstdio>
+#include <csetjmp>
+#include <string>
+#include <vector>
+#include <map>
+#include <unordered_map>
+#include "cd_features.h"
+#define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
+
+using namespace cd;
+using namespace cd::internal;
+using namespace cd::interface;
+using namespace cd::logging;
+
 namespace cd {
   namespace internal {
 
@@ -59,20 +73,8 @@ namespace cd {
   }
 }
 
-using namespace cd;
-using namespace cd::internal;
-using namespace cd::interface;
-using namespace cd::logging;
 
-#include <cstdio>
-#include <csetjmp>
-#include <string>
-#include <vector>
-#include <map>
-#include <unordered_map>
-#define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
-
-#if _MPI_VER 
+#if CD_MPI_ENABLED 
 
 #include <mpi.h>
 //#define ROOT_COLOR    MPI_COMM_WORLD
@@ -203,7 +205,7 @@ namespace cd {
 /** @} */ // end profiler-related group ===========================================
 
 
-#ifdef comm_log
+#if CD_COMM_LOG_ENABLED
   //SZ
   enum CommLogErrT {kCommLogOK=0, 
                     kCommLogInitFailed, 
@@ -239,7 +241,7 @@ namespace cd {
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
 
   extern int myTaskID;
-#if _MPI_VER
+#if CD_MPI_ENABLED
   extern int handled_event_count;
   extern int max_tag_bit;
   extern int max_tag_level_bit;
@@ -421,7 +423,7 @@ namespace cd {
 
  /** @} */ // End runtime_logging group =====================================================
 
-#if _MPI_VER
+#if CD_MPI_ENABLED
   extern inline void IncHandledEventCounter(void)
   { handled_event_count++; }
 #endif
@@ -453,13 +455,13 @@ namespace cd {
   { fprintf(stderr, __VA_ARGS__); assert(0); }
 
 
-#if _CD_DEBUG == 0  // No printouts -----------
+#if CD_DEBUG_DEST == CD_DEBUG_SILENT  // No printouts 
 
 #define CD_DEBUG(...) 
 #define LOG_DEBUG(...) 
 #define LIBC_DEBUG(...)
  
-#elif _CD_DEBUG == 1  // Print to fileout -----
+#elif CD_DEBUG_DEST == CD_DEBUG_TO_FILE  // Print to fileout
 
 extern FILE *cdout;
 extern FILE *cdoutApp;
@@ -486,7 +488,7 @@ extern FILE *cdoutApp;
 
 
 
-#elif _CD_DEBUG == 2  // print to stdout ------
+#elif CD_DEBUG_DEST == CD_DEBUG_STDOUT  // print to stdout 
 
 #define CD_DEBUG(...) \
   fprintf(stdout, __VA_ARGS__)
@@ -508,6 +510,11 @@ extern FILE *cdoutApp;
       else fprintf(stdout, __VA_ARGS__);\
     }*/
 
+
+#elif CD_DEBUG_DEST == CD_DEBUG_STDERR  // print to stderr
+
+#define CD_DEBUG(...) \
+  fprintf(stderr, __VA_ARGS__)
 
 #else  // -------------------------------------
 

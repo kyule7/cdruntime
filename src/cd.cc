@@ -33,6 +33,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "cd_config.h"
 #include "cd.h"
 #include "cd_path.h"
 
@@ -169,7 +170,7 @@ CD::CD(void)
   num_reexecution_ = 0;
   Init();  
   
-#ifdef comm_log
+#if comm_log
   // SZ
   // create instance for comm_log_ptr_ for relaxed CDs
   // if no parent assigned, then means this is root, so log mode will be kGenerateLog at creation point
@@ -259,7 +260,7 @@ CD::CD(CDHandle* cd_parent,
 
   Init();  
 
-#ifdef comm_log
+#if comm_log
   // SZ
   // create instance for comm_log_ptr_
   // comm_log is per thread per CD
@@ -294,7 +295,7 @@ CD::CD(CDHandle* cd_parent,
     LOG_DEBUG("With cd_parent = %p, set child's seq_id_ to parent's child_seq_id_(%d)\n", cd_parent, tmp_seq_id);
     cd_id_.SetSequentialID(tmp_seq_id);
 
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
     //GONG
     libc_log_ptr_ = new CommLog(this, kGenerateLog);
 #endif
@@ -310,7 +311,7 @@ CD::CD(CDHandle* cd_parent,
       comm_log_ptr_ = new CommLog(this, kGenerateLog);
     }
 
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
     //GONG:
     libc_log_ptr_ = new CommLog(this, kGenerateLog);
 #endif
@@ -366,11 +367,11 @@ void CD::Init()
   cd_exec_mode_  = kSuspension;
   option_save_context_ = 0;
 
-#ifdef comm_log
+#if comm_log
   comm_log_ptr_ = NULL;
   incomplete_log_size_unit_ = 100;
 #endif
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
   libc_log_ptr_ = NULL;
   cur_pos_mem_alloc_log = 0;
   replay_pos_mem_alloc_log = 0;
@@ -402,7 +403,7 @@ CD::~CD()
 //  cd_parent_->RemoveChild(this);
   //FIXME : This will be done at the CDHandle::Destroy()
 
-#ifdef comm_log
+#if comm_log
   //Delete comm_log_ptr_
   if (comm_log_ptr_ != NULL)
   {
@@ -650,7 +651,7 @@ inline CD::CDInternalErrT CD::InternalDestroy(void)
 #endif
 
 
-#ifdef comm_log
+#if comm_log
   if (GetParentHandle()!=NULL)
   {
     GetParentHandle()->ptr_cd_->child_seq_id_ = cd_id_.sequential_id();
@@ -695,7 +696,7 @@ CDErrT CD::Begin(bool collective, const char* label)
   if(label != NULL)
     label_ = string(label);
 
-#ifdef comm_log
+#if comm_log
   //SZ: if in reexecution, need to unpack logs to childs
   if (GetParentHandle()!=NULL)
   {
@@ -726,7 +727,7 @@ CDErrT CD::Begin(bool collective, const char* label)
       }
     }
 
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
     //GONG: as long as parent CD is in replay(check with ), child CD needs to unpack logs
     if(GetParentHandle()->ptr_cd_->libc_log_ptr_->GetCommLogMode() == kReplayLog){
       LOG_DEBUG("unpack libc logs to children - replay mode\n");
@@ -811,7 +812,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   }
 
 
-#ifdef comm_log
+#if comm_log
   // SZ: pack logs and push to parent
   if (GetParentHandle()!=NULL) {
     if (MASK_CDTYPE(cd_type_) == kRelaxed) {
@@ -820,7 +821,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
           LOG_DEBUG("Pushing logs to parent...\n");
           comm_log_ptr_->PackAndPushLogs(GetParentHandle()->ptr_cd_);
 
-#if _DEBUG
+#if CD_DEBUG_ENABLED
           LOG_DEBUG("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
           LOG_DEBUG("\nchild comm_log print:\n");
           comm_log_ptr_->Print();
@@ -838,7 +839,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
             GetParentHandle()->ptr_cd_->comm_log_ptr_->SetCommLogMode(kGenerateLog);
           }
 
-#if _DEBUG
+#if CD_DEBUG_ENABLED
           LOG_DEBUG("\n~~~~~~~~~~~~~~~~~~~~~~~\n");
           LOG_DEBUG("parent comm_log print:\n");
           GetParentHandle()->ptr_cd_->comm_log_ptr_->Print();
@@ -874,7 +875,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   }
 #endif
 
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
   //GONG
   if(GetParentHandle()!=NULL) {
     if(IsParentLocal()) {
@@ -988,7 +989,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 
 
 
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
 //GONG
 bool CD::PushedMemLogSearch(void* p, CD *curr_cd)
 {
@@ -2408,7 +2409,7 @@ CDErrT CD::InternalReexecute(void)
   reexecuted_ = true; 
   num_reexecution_++;
 
-#ifdef comm_log
+#if comm_log
   // SZ
   //// change the comm_log_mode_ into CommLog class
   //comm_log_mode_ = kReplayLog;  
@@ -2420,7 +2421,7 @@ CDErrT CD::InternalReexecute(void)
   child_seq_id_ = 0;
 #endif
 
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
   //GONG
   if(libc_log_ptr_!=NULL){
     libc_log_ptr_->ReInit();
@@ -3757,7 +3758,7 @@ void CD::DeleteEntryDirectory(void)
 
 
 
-#ifdef libc_log
+#if CD_LIBC_LOG_ENABLED
 //GONG
 CommLogErrT CD::CommLogCheckAlloc_libc(unsigned long length)
 {
@@ -3781,7 +3782,7 @@ bool CD::IsNewLogGenerated_libc()
 
 
 
-#ifdef comm_log
+#if comm_log
 //SZ
 CommLogErrT CD::CommLogCheckAlloc(unsigned long length)
 {
@@ -3905,7 +3906,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
     // ProbeAndLogData:
     // 1) change Isend/Irecv entry to complete state if there is any
     // 2) log data if Irecv
-#if _DEBUG
+#if CD_DEBUG_ENABLED
     LOG_DEBUG("Print Incomplete Log before calling comm_log_ptr_->ProbeAndLogData\n");
     PrintIncompleteLog();
 #endif
@@ -4284,7 +4285,7 @@ CD::CDInternalErrT CD::Sync(ColorT color)
   return CDInternalErrT::kOK;
 }
 
-//#ifdef comm_log
+//#if comm_log
 //CD *CD::IsLogable(bool *logable_)
 //{
 ////  LIBC_DEBUG("logable_execmode\n");      

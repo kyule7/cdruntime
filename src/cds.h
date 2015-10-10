@@ -34,6 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_handle.h"
+#include "cd_features.h"
 using namespace cd;
 using namespace cd::logging;
 

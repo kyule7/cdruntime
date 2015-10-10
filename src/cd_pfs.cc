@@ -33,6 +33,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 #include "cd_pfs.h"
+#include "cd_config.h"
 #include "util.h"
 
 using namespace cd;
@@ -118,7 +119,8 @@ void PFSHandle::Copy( const PFSHandle& that )
 	PFS_rank_in_file_communicator_ = that.PFS_rank_in_file_communicator_;
 	degree_of_sharing_ = that.degree_of_sharing_;
 }
-#if _MPI_VER
+
+#if CD_MPI_ENABLED
 
 int PFSHandle::Open_File( void )
 {

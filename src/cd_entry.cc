@@ -33,10 +33,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "cd_config.h"
 #include "cd_entry.h"
 #include "cd_path.h"
 #include "cd_def_internal.h"
-//#define u u
 
 using namespace cd;
 using namespace cd::internal;

@@ -37,8 +37,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <mpi.h>
+
 #include "cds.h"
+
+#if CD_MPI_ENABLED
+#include <mpi.h>
+#endif
 
 #define KILO 1024
 #define MEGA 1048576
@@ -276,9 +280,13 @@ int TestCDHierarchy(void)
 
 int main(int argc, char* argv[])
 {
+
+#if CD_MPI_ENABLED
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD,  &numProcs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+#endif
+
   int ret=0;
 
   dbgApp.open((string("./dbg_logs/output_app_")+to_string(myRank)).c_str());
@@ -294,8 +302,9 @@ int main(int argc, char* argv[])
 
   dbgApp.close();
 
+#if CD_MPI_ENABLED
   MPI_Finalize();
-
+#endif
 
   return 0;
 } 

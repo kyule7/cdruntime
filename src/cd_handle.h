@@ -51,13 +51,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <ucontext.h>
 #include <functional>
+#include "cd_features.h"
 #include "cd_global.h"
 #include "node_id.h"
 #include "sys_err_t.h"
 #include "cd.h"
 #include "profiler_interface.h"
 
-#if _PROFILER
+#if CD_PROFILER_ENABLED
 #include "cd_profiler.h"
 #endif
 
@@ -201,7 +202,7 @@ class CDHandle {
     CD    *ptr_cd_;   //!< Pointer to CD object which will not exposed to users.
     NodeID node_id_;  //!< NodeID contains the information to access to the task.
 
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
     CDErrorInjector *cd_error_injector_; //!< Error injector interface.
     static MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.
 #endif
@@ -209,9 +210,9 @@ class CDHandle {
     SplitFuncT SplitCD; //!<function object that will be set to some appropriate split strategy.
 
   public:
-#if _PROFILER 
+#if CD_PROFILER_ENABLED 
     Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
-                          //!< It will be valid when `_PROFILER` compile-time flag is on.
+                          //!< It will be valid when `CD_PROFILER_ENABLED` compile-time flag is on.
 #endif
 
     int     jmp_val_;     //!< Temporary flag related to longjmp/setjmp
@@ -873,7 +874,7 @@ class CDHandle {
  * @param [in] created memory error injector object.
  */
 
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
     inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
     { memory_error_injector_ = memory_error_injector; }
 #else
@@ -894,7 +895,7 @@ class CDHandle {
  * -\ref sec_example_error_injection
  * @param [in] newly created error injector object.
  */
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
     inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector)
     {
       app_side = false;
@@ -1044,7 +1045,7 @@ class CDHandle {
 /// Set mail box.
     CDErrT SetMailBox(CDEventT event);
 
-#if _MPI_VER
+#if CD_MPI_ENABLED
 
 /// Get NodeID with given new_color and new_task.
     CDErrT GetNewNodeID(const ColorT& my_color, 

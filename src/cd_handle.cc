@@ -34,6 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include <sys/stat.h>
+#include "cd_config.h"
 #include "cd_handle.h"
 #include "cd_def_internal.h"
 #include "cd_path.h"
@@ -49,16 +50,16 @@ using namespace std;
 /// General usage is that it stores any strings, numbers as a string internally,
 /// and when cddbg.flush() is called, it write the internally stored strings to file,
 /// then clean up the internal storage.
-#if _DEBUG
+#if CD_DEBUG_ENABLED
 cd::DebugBuf cd::cddbg;
 #endif
 
-#if _CD_DEBUG == 1  // Print to fileout -----
+#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE  // Print to fileout -----
 FILE *cdout=NULL;
 FILE *cdoutApp=NULL;
 #endif
 
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
 MemoryErrorInjector *CDHandle::memory_error_injector_ = NULL;
 #endif
 
@@ -81,7 +82,7 @@ bool cd::app_side = true;
 /// It is not possible to set MPI_TAG_UB to some value by application.
 /// So, I decided to check the MAX_TAG_UB value from MPI runtime at initialization routine
 /// and set the right bit positions in CDID::GenMsgTag(ENTRY_TAG_T tag), CDID::GenMsgTagForSameCD(int msg_type, int task_in_color) functions.
-#if _MPI_VER
+#if CD_MPI_ENABLED
 int  cd::max_tag_bit = 0;
 int  cd::max_tag_level_bit = 0;
 int  cd::max_tag_task_bit  = 0;
@@ -100,7 +101,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   myTaskID      = myTask;
   totalTaskSize = numTask;
 
-#if _CD_DEBUG == 1
+#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
   char *filepath = getenv( "CD_DEBUG_OUT" );
   string basepath;
   string filename("/cddbg_log_rank_");
@@ -132,7 +133,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 
   basepath = basepath + filename + to_string(static_cast<unsigned long long>(myTaskID));
 
-#if _MPI_VER  
+#if CD_MPI_ENABLED  
   // Synchronization is needed. Otherwise, some task may execute CD_DEBUG before head creates directory 
   PMPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -141,7 +142,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
  
 #endif
 
-#if _DEBUG
+#if CD_DEBUG_ENABLED
   std::string output_filename2("./output/cddbg_output_");
   output_filename2 += to_string(static_cast<unsigned long long>(myTaskID));
   cddbg.open(output_filename2.c_str());
@@ -152,7 +153,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   CD::CDInternalErrT internal_err;
 
   char preservation_unique_name[ L_tmpnam ];
-#if _MPI_VER
+#if CD_MPI_ENABLED
   char processor_name[ MPI_MAX_PROCESSOR_NAME ];
   NodeID new_node_id(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
   if( new_node_id.IsHead() )
@@ -186,16 +187,16 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
-#if _PROFILER
+#if CD_PROFILER_ENABLED
   // Profiler-related
   root_cd_handle->profiler_->InitViz();
 #endif
 
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
   CDHandle::memory_error_injector_ = NULL;
 #endif
 
-#if _DEBUG
+#if CD_DEBUG_ENABLED
   cddbg.flush();
 #endif
 
@@ -207,11 +208,11 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 
 inline void WriteDbgStream(void)
 {
-#if _CD_DEBUG == 1
+#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
   fclose(cdout);
 #endif
 
-#if _DEBUG
+#if CD_DEBUG_ENABLED
   cddbg.flush();
   cddbg.close();
 #endif
@@ -228,18 +229,18 @@ void CD_Finalize(void)
   assert(CDPath::GetCDPath()->back()!=NULL);
 
 
-#if _PROFILER
+#if CD_PROFILER_ENABLED
   // Profiler-related  
   //cout << CDPath::GetRootCD() << " " << CDPath::GetRootCD()->profiler_ << endl << endl;
   CDPath::GetRootCD()->profiler_->FinalizeViz();
 #endif
   CDPath::GetRootCD()->InternalDestroy(false);
 
-#if _DEBUG
+#if CD_DEBUG_ENABLED
   WriteDbgStream();
 #endif
 
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
   if(CDHandle::memory_error_injector_ != NULL);
     delete CDHandle::memory_error_injector_;
 #endif
@@ -347,7 +348,7 @@ CDHandle::CDHandle()
 {
   SplitCD = &SplitCD_3D;
 
-#if _PROFILER
+#if CD_PROFILER_ENABLED
   if(GetCurrentCD() != NULL)  // non-root CDs
     profiler_ = new CreateProfiler(CDPROFILER, GetCurrentCD()->profiler_);
   else
@@ -356,7 +357,7 @@ CDHandle::CDHandle()
 //    profiler_ = new NullProfiler();
 #endif
 
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
   cd_error_injector_ = NULL;
 #endif
 
@@ -383,7 +384,7 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
   SplitCD = &SplitCD_3D;
 
 
-#if _PROFILER
+#if CD_PROFILER_ENABLED
   if(GetCurrentCD() != NULL)  // non-root CDs
     profiler_ = new CreateProfiler(CDPROFILER, GetCurrentCD()->profiler_);
   else
@@ -392,7 +393,7 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
 //    profiler_ = new NullProfiler();
 #endif
 
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
   cd_error_injector_ = NULL;
 #endif
 
@@ -414,12 +415,12 @@ CDHandle::~CDHandle()
 
   }
 
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
   if(cd_error_injector_ != NULL);
     delete cd_error_injector_;
 #endif
 
-#if _PROFILER
+#if CD_PROFILER_ENABLED
   if(profiler_ != NULL);
     delete profiler_;
 #endif
@@ -500,7 +501,7 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
                            CDErrT *error)
 {
   CDPrologue();
-#if _MPI_VER
+#if CD_MPI_ENABLED
 
   CD_DEBUG("CDHandle::Create Node ID : %s\n", node_id_.GetString().c_str());
   // Create a new CDHandle and CD object
@@ -604,7 +605,7 @@ CDHandle* CDHandle::Create(uint32_t color,
                            CDErrT *error )
 {
   CDPrologue();
-#if _MPI_VER
+#if CD_MPI_ENABLED
 
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
   int err=0;
@@ -687,7 +688,7 @@ CDErrT CDHandle::InternalDestroy(bool collective)
     CDPath::GetParentCD()->RemoveChild(this);
   }
 
-#if _PROFILER
+#if CD_PROFILER_ENABLED
   CD_DEBUG("Calling finish profiler\n");
   
   profiler_->ClearSightObj();
@@ -718,7 +719,7 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
   CDErrT err = ptr_cd_->Begin(collective, label);
 
 
-#if _MPI_VER
+#if CD_MPI_ENABLED
   CD_DEBUG("[CDHandle::Begin] Do Barrier at level#%u, reexec: %d\n", ptr_cd_->level(), ptr_cd_->num_reexecution_);
   
   if(node_id_.size() > 1) {
@@ -735,7 +736,7 @@ CDErrT CDHandle::Begin(bool collective, const char* label)
 
 #endif
 
-#if _PROFILER
+#if CD_PROFILER_ENABLED
   // Profile-related
   cddbg << "calling get profile" <<endl; //cddbgBreak();
 //  if(label == NULL) 
@@ -753,7 +754,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   CDPrologue();
 
 
-#if _MPI_VER
+#if CD_MPI_ENABLED
 
 //  if(IsHead()) {
 //    if(node_id_.size() > 1) {
@@ -799,7 +800,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
 
-#if _PROFILER
+#if CD_PROFILER_ENABLED
   cddbg << "calling collect profile" <<endl; //cddbgBreak();
   // Profile-related
 //  if(ptr_cd()->cd_exec_mode_ == 0) { 
@@ -840,7 +841,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 {
   CDPrologue();
 
-#if _PROFILER
+#if CD_PROFILER_ENABLED
   if(ptr_cd()->cd_exec_mode_ == 0) {
     if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
       profiler_->RecordProfile(PRV_COPY_DATA, len);
@@ -852,7 +853,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 #endif
 
 
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
   if(memory_error_injector_ != NULL) {
     memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
     memory_error_injector_->Inject();
@@ -885,7 +886,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
 
   assert(ptr_cd_ != 0);
 
-#if _PROFILER
+#if CD_PROFILER_ENABLED
   if(ptr_cd()->cd_exec_mode_ == 0) {
     if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
       profiler_->RecordProfile(PRV_COPY_DATA, len);
@@ -896,7 +897,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   }
 #endif
 
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
   if(memory_error_injector_ != NULL) {
     memory_error_injector_->Inject();
   }
@@ -997,14 +998,14 @@ CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 
   assert(ptr_cd_ != 0);
   CDErrT err = kOK;
-#if _PROFILER
+#if CD_PROFILER_ENABLED
 //    if(!test_true) {
 //      profiler_->ClearSightObj();
 //    }
 #endif
 
 
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
   if(cd_error_injector_ != NULL) {
     if(cd_error_injector_->InjectAndTest()) {
       test = false;
@@ -1062,7 +1063,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     err = kError;
   }
 
-#if _MPI_VER
+#if CD_MPI_ENABLED
 
   if(internal_err == CD::CDInternalErrT::kErrorReported) {
     cddbg << "HERE?" << endl;
@@ -1075,7 +1076,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
   }
   else {
-#if _ERROR_INJECTION_ENABLED
+#if CD_ERROR_INJECTION_ENABLED
 
     CD_DEBUG("EIE Before\n");
     CD_DEBUG("Is it NULL? %p, recreated? %d, reexecuted? %d\n", cd_error_injector_, ptr_cd_->recreated(), ptr_cd_->reexecuted());
@@ -1293,7 +1294,7 @@ uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_l
 
 CDErrT CDHandle::CheckMailBox(void)
 {
-#if _MPI_VER
+#if CD_MPI_ENABLED
   CDErrT cd_err = ptr_cd()->CheckMailBox();
   return cd_err;
 #else
@@ -1303,7 +1304,7 @@ CDErrT CDHandle::CheckMailBox(void)
 
 CDErrT CDHandle::SetMailBox(CDEventT event)
 {
-#if _MPI_VER
+#if CD_MPI_ENABLED
   return ptr_cd()->SetMailBox(event);
 #else
   return kOK;

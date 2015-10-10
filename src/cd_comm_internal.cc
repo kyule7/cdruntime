@@ -33,11 +33,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "cd_config.h"
+
 #if _MPI_VER
 
+//#include "cd_global.h"
 #include "cd_handle.h"
 #include "cd.h"
-#include "cd_global.h"
 #include "cd_def_internal.h"
 using namespace cd;
 using namespace cd::internal;

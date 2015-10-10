@@ -41,18 +41,25 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <string>
 #include <math.h>
 #include <sstream>
+
+#include "cd_features.h"
 #include "cd_global.h"
 #include "cd_def_internal.h" 
 #include "cd.h"
 
-#if _MPI_VER
+#if CD_PROFILER_ENABLED
+
 #include <mpi.h>
 #define CommFree MPI_Comm_free
 #define CommGroupFree MPI_Group_free
+
 #else
+
 #define CommFree free
 #define CommGroupFree free
+
 #endif
+
 namespace cd {
   namespace internal {
 

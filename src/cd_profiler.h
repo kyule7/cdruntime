@@ -46,7 +46,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  */
 
-#if _PROFILER
+#include "cd_features.h"
+#if CD_PROFILER_ENABLED
 
 #include <time.h>
 #include "profiler_interface.h"

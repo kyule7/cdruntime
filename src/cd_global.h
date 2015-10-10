@@ -62,13 +62,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
+#include "cd_features.h"
 // This could be different from MPI program to PGAS program
 // key is the unique ID from 0 for each CD node.
 // value is the unique ID for mpi communication group or thread group.
 // For MPI, there is a communicator number so it is the group ID,
 // For PGAS, there should be a group ID, or we should generate it. 
 
-#if _MPI_VER 
+#if CD_MPI_ENABLED 
 #include <mpi.h>
 #define ROOT_COLOR    MPI_COMM_WORLD
 #define INITIAL_COLOR MPI_COMM_NULL
@@ -81,7 +82,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 
 
-#if _MPI_VER
+#if CD_MPI_ENABLED
 ///@addtogroup cd_defs 
 ///@{
 ///@var typedef ColorT
@@ -101,7 +102,7 @@ typedef int           ColorT;
 namespace cd {
   class CDHandle;
   class DebugBuf;
-#if _DEBUG
+#if CD_DEBUG_ENABLED
 //  extern std::ostringstream dbg;
   extern DebugBuf cddbg;
 #define dbgBreak nullFunc
