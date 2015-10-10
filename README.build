@@ -1,0 +1,140 @@
+Building from git repository
+----------------------------
+
+After a checkout, you need to generate the configure script
+and some extra automake files.  Do this by running::
+
+    autoreconf --install
+
+Configure Examples
+------------------
+
+Build for MPI::
+
+    configure --enable-parallel=mpi --enable-logging CXX=mpic++ CXXFLAGS="-std=c++11 -Wall -g -O"
+
+Single-threaded build::
+
+    configure CXXFLAGS="-std=c++11 -Wall -g -O"
+
+Defaults from original git checkout::
+
+    configure --enable-parallel=mpi --enable-logging CXX=mpic++ CXXFLAGS="-std=gnu++0x -Wall -g -O -fPIC"  --enable-debug --enable-error-injection --enable-keep-preservation-files
+
+Random
+------
+
+This perl fragment will identify most of the conditional compilation flags.
+
+perl -ane 'print "$ARGV: $_" if /\s*#if/' *.h
+
+To verify preprocessor symbols are defined, pass -Wundef
+
+    configure CXXFLAGS="-std=c++11 -Wall -Wundef -g -O"
+
+
+Issues
+------
+
+* tests are not built by default
+* The things in tests should (?) be built as part of make check. 
+  (MPI and batch issues complicate this a bit on some systems, though possibly
+  no more than in a cross-compilation environment.)
+* shared library support is not complete
+* --with-sight implementation is incomplete, due to inability to test
+* subdirectory test_user_defined_hierarhcy contains a spelling error.  Should 
+  be test_user_defined_hierarchy
+* Use of #ifdef and #if in CD sources are inconsistent!  
+  (comm_log and libc_log are #ifdef, but others are #if)
+* Old Makefile contains system-specififc (TACC) flags
+* Does profiler support work?
+* Fix warning::
+
+    /home/eroman/src/cdruntime/src/cd_handle.cc:160: warning: the use of `tmpnam_r' is dangerous, better use `mkstemp'
+
+* Fix warning::
+
+    mpic++ -DHAVE_CONFIG_H -I. -I../../src -I..     -std=c++11 -Wall -MT cd.o -MD -MP -MF .deps/cd.Tpo -c -o cd.o ../../src/cd.cc
+../../src/cd.cc: In member function ‘cd::internal::CD::CDInternalErrT cd::internal::CD::InternalDestroy()’:
+../../src/cd.cc:628:7: warning: unused variable ‘task_count’ [-Wunused-variable]
+   int task_count = cd_id_.task_count();
+       ^
+Fixed
+-----
+
+* Requires -fpermissive to compile on Ubuntu 14.04.2 LTS
+* Fix warning::
+
+    cd_comm_internal.cc:1062:37: warning: invalid conversion from ‘const void*’ to ‘void*’ [-fpermissive]
+
+* Makefile.extern kind of a mess.
+
+Old Makefile variables
+----------------------
+
+* PROFILER_ENABLED=0
+* LOGGING_ENABLED=1
+* LIBC_LOGGING_ENABLED=0
+* ERROR_INJECTION_ENABLED=1
+
+* DEBUG_VAR = 1
+* MPI_VER_VAR = 1
+* PGAS_VER_VAR = 0
+* SINGLE_VER_VAR = 0
+
+Preprocessor symbols
+--------------------
+
+#if _CD_DEBUG == 0  // No printouts -----------
+#if _DEBUG
+#if DEFINE_COLOR
+#if _ERROR_INJECTION_ENABLED
+#if _MPI_VER  
+#if _PRV_FILE_NOT_ERASED
+#if _SINGLE_VER
+
+lulesh
+------
+
+#if _CD    
+#if VIZ_MESH            
+#if USE_MPI      
+#if !defined(USE_MPI)
+#if _OPENMP      
+
+Not used
+--------
+
+#if _WORK
+
+Profiling
+---------
+
+#if _PROFILER
+#if _ENABLE_ATTR
+#if _ENABLE_CDNODE
+#if _ENABLE_COMP
+#if _ENABLE_HIERGRAPH
+#if _ENABLE_MODULE
+#if _ENABLE_SCOPE
+#if _ENABLE_SCOPEGRAPH
+
+Other Notes
+-----------
+
+autoconf structure (from GNU docs)::
+
+     Autoconf requirements
+     AC_INIT(package, version, bug-report-address)
+     information on the package
+     checks for programs
+     checks for libraries
+     checks for header files
+     checks for types
+     checks for structures
+     checks for compiler characteristics
+     checks for library functions
+     checks for system services
+     AC_CONFIG_FILES([file...])
+     AC_OUTPUT
+

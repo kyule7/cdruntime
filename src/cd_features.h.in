@@ -1,0 +1,33 @@
+#ifndef _CD_FEATURES_H
+#define _CD_FEATURES_H
+/*
+ * Public header file for configuration-time features.  
+ *
+ * This file should define values for ALL preprocessor symbols required
+ * for correctly compiling clients.
+ *
+ * This means that if a public header file does a 
+ * #if CD_FOO
+ * then cd_features.h should
+ * #define CD_FOO
+ * 
+ * Unlike config.h, which is ONLY to be used internally during the CD 
+ * runtime, this file is intended to be exported to client programs, so that
+ * they can test the CD library for the presence of configuration-specific  
+ * build flags.
+ */
+
+#define CD_DEBUG_SILENT 0
+#define CD_DEBUG_TO_FILE 1
+#define CD_DEBUG_STDOUT 2
+#define CD_DEBUG_STDERR 3
+
+#define CD_DEBUG_ENABLED @cd_debug_enabled@
+#define CD_DEBUG_DEST @cd_debug_dest@
+#define CD_ERROR_INJECTION_ENABLED @cd_error_injection_enabled@
+#define CD_MPI_ENABLED @cd_mpi_enabled@
+#define CD_COMM_LOG_ENABLED @cd_comm_log_enabled@
+#define CD_LIBC_LOG_ENABLED @cd_libc_log_enabled@
+#define CD_PROFILER_ENABLED @cd_profiler_enabled@
+
+#endif /* _CD_FEATURES_H */
