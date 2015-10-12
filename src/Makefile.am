@@ -1,5 +1,13 @@
 #lib_LIBRARIES = libcds.a
-include_HEADERS = cds.h
+include_HEADERS = cds.h \
+									cd_global.h \
+									cd_features.h \
+									cd_handle.h \
+									node_id.h \
+									sys_err_t.h \
+									serializable.h \
+									profiler_interface.h \
+									error_injector.h
 
 # Libtool-related
 lib_LTLIBRARIES = libcds.la

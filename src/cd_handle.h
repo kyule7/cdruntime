@@ -50,22 +50,24 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  */
 
 #include <ucontext.h>
+#include <setjmp.h>
 #include <functional>
 #include "cd_features.h"
 #include "cd_global.h"
 #include "node_id.h"
-#include "sys_err_t.h"
-#include "cd.h"
 #include "profiler_interface.h"
-
-#if CD_PROFILER_ENABLED
-#include "cd_profiler.h"
-#endif
-
 #include "error_injector.h"
-//using namespace cd;
+#include "sys_err_t.h"
+
+//#if CD_PROFILER_ENABLED
+//#include "cd_profiler.h"
+//#endif
+//#include "sys_err_t.h"
+//#include "cd.h"
+
 using namespace cd::interface;
 using namespace cd::internal;
+
 
 /**@addtogroup cd_init_funcs
  * User must exeplicitly initialize and finalize CD runtime 
@@ -80,6 +82,7 @@ using namespace cd::internal;
  */
 
 namespace cd {
+
 /**@}
  * @addtogroup cd_init_funcs
  * @{
@@ -875,8 +878,8 @@ class CDHandle {
  */
 
 #if CD_ERROR_INJECTION_ENABLED
-    inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
-    { memory_error_injector_ = memory_error_injector; }
+    inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector);
+//    { memory_error_injector_ = memory_error_injector; }
 #else
 //    inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector) {}
 #endif
@@ -896,24 +899,24 @@ class CDHandle {
  * @param [in] newly created error injector object.
  */
 #if CD_ERROR_INJECTION_ENABLED
-    inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector)
-    {
-      app_side = false;
-      CD_DEBUG("RegisterErrorInjector: %d at level #%u\n", GetExecMode(), level());
-      if(cd_error_injector_ == NULL && recreated() == false && reexecuted() == false) {
-        CD_DEBUG("Registered!!\n");
-        cd_error_injector_ = cd_error_injector;
-        cd_error_injector_->task_in_color_ = task_in_color();
-        cd_error_injector_->rank_in_level_ = rank_in_level();
-      }
-      else {
-        CD_DEBUG("Failed to be Registered!!\n");
-        delete cd_error_injector;
-      }
-      app_side = true;
-    }
+    void RegisterErrorInjector(CDErrorInjector *cd_error_injector);
+//    {
+//      app_side = false;
+//      CD_DEBUG("RegisterErrorInjector: %d at level #%u\n", GetExecMode(), level());
+//      if(cd_error_injector_ == NULL && recreated() == false && reexecuted() == false) {
+//        CD_DEBUG("Registered!!\n");
+//        cd_error_injector_ = cd_error_injector;
+//        cd_error_injector_->task_in_color_ = task_in_color();
+//        cd_error_injector_->rank_in_level_ = rank_in_level();
+//      }
+//      else {
+//        CD_DEBUG("Failed to be Registered!!\n");
+//        delete cd_error_injector;
+//      }
+//      app_side = true;
+//    }
 #else
-//    inline void RegisterErrorInjector(CDErrorInjector *cd_error_injector) {}
+    void RegisterErrorInjector(CDErrorInjector *cd_error_injector) {}
 #endif
 
  /** @} */ // Ends cd_split
@@ -1065,7 +1068,7 @@ class CDHandle {
   public:
 
 /// Check the mode of current CD.
-    CDExecMode GetExecMode(void) const;
+    int GetExecMode(void) const;
 
 /**@defgroup cd_accessor CD accessors
  * @brief The accessors of CDHandle which might be useful.

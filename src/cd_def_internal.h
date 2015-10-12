@@ -46,23 +46,23 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
 
 namespace cd {
-  namespace internal {
-
-    class CD;
-    class HeadCD;
-    class CDPath;
-    class CDEntry;
-    class DataHandle;
-    class NodeID;
-    class CDNameT;
-    class CDID;
-    class CDEvent;
-    class PFSHandle;
-  }
-  namespace logging {
-    class CommLog;
-    class RuntimeLogger;
-  }
+//  namespace internal {
+//
+//    class CD;
+//    class HeadCD;
+//    class CDPath;
+//    class CDEntry;
+//    class DataHandle;
+//    class NodeID;
+//    class CDNameT;
+//    class CDID;
+//    class CDEvent;
+//    class PFSHandle;
+//  }
+//  namespace logging {
+//    class CommLog;
+//    class RuntimeLogger;
+//  }
   namespace interface {
 
   }
@@ -80,7 +80,7 @@ using namespace cd::logging;
 //#define INITIAL_COLOR MPI_COMM_NULL
 //#define ROOT_HEAD_ID  0
 //typedef MPI_Comm      ColorT;
-typedef MPI_Group     CommGroupT;
+//typedef MPI_Group     CommGroupT;
 typedef MPI_Request   CommRequestT;
 typedef MPI_Status    CommStatusT;
 typedef int           CDFlagT;
@@ -142,7 +142,7 @@ typedef uint32_t ENTRY_TAG_T;
 namespace cd {
 
   class CDHandle;
-  class Serializable;
+//  class Serializable;
   class Packer; 
   class Unpacker; 
 //  class Util;
@@ -181,18 +181,7 @@ namespace cd {
 /** \addtogroup profiler-related
  *@{
  */
-/** @brief Profile-related enumerator
- *
- */
-  enum ProfileType      { LOOP_COUNT, 
-                          EXEC_CYCLE, 
-                          PRV_COPY_DATA, 
-                          PRV_REF_DATA, 
-                          OVERLAPPED_DATA, 
-                          SYSTEM_BIT_VECTOR,
-                          CD_OVERHEAD, 
-                          LOGGING_OVERHEAD, 
-                          MAX_PROFILE_DATA };
+
 /** @brief Profile format
  *
  */
@@ -221,16 +210,16 @@ namespace cd {
                     };
 #endif
 
-  enum CDEventT { kNoEvent=0,
-                  // Head -> Non-Head
-                  kAllPause=1,
-                  kAllResume=2,
-                  kAllReexecute=4,
-                  kEntrySend=8, 
-                  // Non-Head -> Head
-                  kEntrySearch=16,
-                  kErrorOccurred=32,
-                  kReserved=64 };
+//  enum CDEventT { kNoEvent=0,
+//                  // Head -> Non-Head
+//                  kAllPause=1,
+//                  kAllResume=2,
+//                  kAllReexecute=4,
+//                  kEntrySend=8, 
+//                  // Non-Head -> Head
+//                  kEntrySearch=16,
+//                  kErrorOccurred=32,
+//                  kReserved=64 };
 
   enum CDEventHandleT { kEventNone = 0,
                         kEventResolved,
@@ -355,9 +344,9 @@ namespace cd {
 //    return eventStr;
 
   }
-    enum CtxtPrvMode { kExcludeStack=0, 
-                       kIncludeStack
-                     };
+//    enum CtxtPrvMode { kExcludeStack=0, 
+//                       kIncludeStack
+//                     };
 
 
 
@@ -541,7 +530,7 @@ extern FILE *cdoutApp;
 #define CD_SHARING_DEGREE 64
 #define dout clog
 
-#define DEFAULT_MEDIUM kDRAM
+//#define DEFAULT_MEDIUM kDRAM
 
 #define CheckHere() \
   if(cd::app_side) assert(0);

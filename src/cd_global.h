@@ -74,15 +74,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define ROOT_COLOR    MPI_COMM_WORLD
 #define INITIAL_COLOR MPI_COMM_NULL
 #define ROOT_HEAD_ID  0
-#else
-#define ROOT_COLOR    0 
-#define INITIAL_COLOR 0
-#define ROOT_HEAD_ID  0
-#endif
 
-
-
-#if CD_MPI_ENABLED
 ///@addtogroup cd_defs 
 ///@{
 ///@var typedef ColorT
@@ -91,17 +83,67 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 ///@typedef ColorT is used for non-single task program.OR
 typedef MPI_Comm      ColorT;
 ///@}
+typedef MPI_Group     CommGroupT;
+
 #else
+
+#define ROOT_COLOR    0 
+#define INITIAL_COLOR 0
+#define ROOT_HEAD_ID  0
 typedef int           ColorT;
+typedef int           CommGroupT;
 #endif
+
+
+namespace cd {
+  namespace internal {
+
+    class CD;
+    class HeadCD;
+    class CDPath;
+    class CDEntry;
+    class DataHandle;
+    class NodeID;
+    class CDNameT;
+    class CDID;
+    class CDEvent;
+    class PFSHandle;
+  }
+  namespace interface {
+    class Profiler;
+    class ErrorInjector; 
+    class ErrorProb;
+    class UniformRandom;
+    class LogNormal;
+    class Exponential;
+    class Normal;
+    class Poisson;
+    class ErrorInjector;
+    class CDErrorInjector;
+    class MemoryErrorInjector;
+    class NodeFailureInjector;
+  }
+  namespace logging {
+    class CommLog;
+    class RuntimeLogger;
+  }
+  class SysErrT;
+  class RegenObject;
+  class RecoverObject;
+  class CDHandle;
+  class DebugBuf;
+}
+
+
+
+
+#define DEFAULT_MEDIUM kDRAM
 
 #define THREE_ARGS_MACRO(_IN0,_IN1,_IN2,FUNC,...) FUNC
 #define TWO_ARGS_MACRO(_IN0,_IN1,FUNC,...) FUNC
 
 
 namespace cd {
-  class CDHandle;
-  class DebugBuf;
 #if CD_DEBUG_ENABLED
 //  extern std::ostringstream dbg;
   extern DebugBuf cddbg;
@@ -271,33 +313,37 @@ namespace cd {
  * only). Relaxed CDs typically incur additional runtime overhead
  * compared to strict CDs.
  */
-    enum CDType  { kStrict=1,   ///< A strict CD
-                   kRelaxed=2,   ///< A relaxed CD
-                   kDefaultCD=5   ///< Default is strict CD
-                 };
+  enum CDType  { kStrict=1,   ///< A strict CD
+                 kRelaxed=2,   ///< A relaxed CD
+                 kDefaultCD=5   ///< Default is strict CD
+               };
 
 /** @brief Type to indicate whether preserved data is from read-only
  * or potentially read/write application data
  *
  * \sa CDHandle::Preserve(), CDHandle::Complete()
  */
-    enum PreserveUseT { kUnsure =0, //!< Not sure whether data being preserved will be written 
-                                    //!< by the CD (treated as Read/Write for now, but may be optimized later)
-                        kReadOnly = 1, //!< Data to be preserved is read-only within this CD
-                        kReadWrite = 2 //!< Data to be preserved will be modified by this CD
-    };
+  enum PreserveUseT { kUnsure =0, //!< Not sure whether data being preserved will be written 
+                                  //!< by the CD (treated as Read/Write for now, but may be optimized later)
+                      kReadOnly = 1, //!< Data to be preserved is read-only within this CD
+                      kReadWrite = 2 //!< Data to be preserved will be modified by this CD
+  };
   
 /** @brief Type to indicate where to preserve data
  *
  * \sa CD::GetPlaceToPreserve()
  */
-    enum PrvMediumT { kDRAM=4,  //!< Preserve to DRAM
-                      kHDD=8,   //!< Preserve to HDD
-                      kSSD=16,  //!< Preserve to SSD
-                      kPFS=32   //!< Preserve to Parallel File System
-                    };
+  enum PrvMediumT { kDRAM=4,  //!< Preserve to DRAM
+                    kHDD=8,   //!< Preserve to HDD
+                    kSSD=16,  //!< Preserve to SSD
+                    kPFS=32   //!< Preserve to Parallel File System
+                  };
 
 /** @} */ // End group cd_defs ===========================================
+
+    enum CtxtPrvMode { kExcludeStack=0, 
+                       kIncludeStack
+                     };
 
 /**@addtogroup PGAS_funcs 
  * @{
@@ -381,6 +427,41 @@ namespace cd {
   CDHandle *GetParentCD(int current_level);
 
   /** @} */ // End cd_accessor_funcs group =====================================================
+
+
+  enum CDEventT { kNoEvent=0,
+                  // Head -> Non-Head
+                  kAllPause=1,
+                  kAllResume=2,
+                  kAllReexecute=4,
+                  kEntrySend=8, 
+                  // Non-Head -> Head
+                  kEntrySearch=16,
+                  kErrorOccurred=32,
+                  kReserved=64 };
+
+/** \addtogroup profiler-related
+ *@{
+ */
+
+/** @brief Profile-related enumerator
+ *
+ */
+  enum ProfileType      { LOOP_COUNT, 
+                          EXEC_CYCLE, 
+                          PRV_COPY_DATA, 
+                          PRV_REF_DATA, 
+                          OVERLAPPED_DATA, 
+                          SYSTEM_BIT_VECTOR,
+                          CD_OVERHEAD, 
+                          LOGGING_OVERHEAD, 
+                          MAX_PROFILE_DATA };
+
+/** @} */ // end profiler-related group ===========================================
+
+
+
+
 
 /**@class cd::DebugBuf
  * @brief Utility class for debugging.

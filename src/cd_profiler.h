@@ -51,6 +51,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <time.h>
 #include "profiler_interface.h"
+//#include "cd.h"
+#include "cd_global.h"
+//#include "cd_def_internal.h"
 #include "sight.h"
 
 //using namespace cd;

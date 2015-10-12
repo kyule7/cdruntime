@@ -35,9 +35,24 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <sys/stat.h>
 #include "cd_config.h"
+#include "cd_features.h"
 #include "cd_handle.h"
 #include "cd_def_internal.h"
 #include "cd_path.h"
+
+
+//#include "cd_features.h"
+//#include "cd_global.h"
+#include "node_id.h"
+#include "sys_err_t.h"
+#include "cd.h"
+//#include "profiler_interface.h"
+
+#if CD_PROFILER_ENABLED
+#include "cd_profiler.h"
+#endif
+
+//#include "error_injector.h"
 
 
 using namespace cd;
@@ -950,7 +965,7 @@ int     CDHandle::task_in_color(void)  const { return node_id_.task_in_color(); 
 int     CDHandle::head(void)           const { return node_id_.head(); }
 int     CDHandle::task_size(void)      const { return node_id_.size(); }
 
-CDExecMode CDHandle::GetExecMode(void) const { return ptr_cd_->cd_exec_mode_; }
+int CDHandle::GetExecMode(void) const { return ptr_cd_->cd_exec_mode_; }
 // FIXME
 bool CDHandle::IsHead(void) const { return node_id_.IsHead(); }
 
@@ -1211,6 +1226,27 @@ float CDHandle::RequireErrorProbability (SysErrT error_type, uint32_t error_num,
 
 
 
+#if CD_ERROR_INJECTION_ENABLED
+inline void CDHandle::RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
+{ memory_error_injector_ = memory_error_injector; }
+
+void CDHandle::RegisterErrorInjector(CDErrorInjector *cd_error_injector)
+{
+  app_side = false;
+  CD_DEBUG("RegisterErrorInjector: %d at level #%u\n", GetExecMode(), level());
+  if(cd_error_injector_ == NULL && recreated() == false && reexecuted() == false) {
+    CD_DEBUG("Registered!!\n");
+    cd_error_injector_ = cd_error_injector;
+    cd_error_injector_->task_in_color_ = task_in_color();
+    cd_error_injector_->rank_in_level_ = rank_in_level();
+  }
+  else {
+    CD_DEBUG("Failed to be Registered!!\n");
+    delete cd_error_injector;
+  }
+  app_side = true;
+}
+#endif
 //void CDHandle::RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
 //{ CDHandle::memory_error_injector_ = memory_error_injector; }
 //

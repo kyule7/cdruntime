@@ -36,6 +36,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "node_id.h"
 #include "util.h"
+
+#include "cd_def_internal.h" 
+#include "packer.h"
+#include "unpacker.h"
 using namespace cd;
 
 

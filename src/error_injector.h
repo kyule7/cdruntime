@@ -52,18 +52,25 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #if CD_ERROR_INJECTION_ENABLED
 
-#include <cstdio>
-#include <iostream>
+//#include <cstdio>
+//#include <iostream>
+//#include <cstdio>
 #include <random>
-#include <cstdio>
-#include "cd_def_internal.h"
+//#include "cd_def_internal.h"
 #include "cd_global.h"
 
 #define DEFAULT_ERROR_THRESHOLD 0.0
 
 namespace cd {
+  namespace interface {
 
 
+enum RandType { kUniform = 0,
+                kExponential,
+                kLogNormal,
+                kNormal,
+                kPoisson
+              };
 
 class ErrorProb {
 protected:
@@ -81,36 +88,9 @@ protected:
   double low_;
   double high_;
 public:
-  double GenErrorVal(void) {
-    distribution_.reset();
-    double rand_var = distribution_(generator_);
-    std::cout << "rand var: " <<rand_var << std::endl;
-    return rand_var;
-  }
+  double GenErrorVal(void);
 
-  void TestErrorProb(int num_bucket=10) {
-    std::cout << "Uniform Randomi, low_ : " << low_ <<", high : "<< high_ << std::endl;
-    const int nrolls = 10000;  // number for test
-    const int nstars = 100;    // maximum number of stars to distribute
-    int bucket[num_bucket];
-    
-    for (int i=0; i<num_bucket; ++i) {
-      bucket[i] = 0;
-    }
-
-    for (int i=0; i<nrolls; ++i) {
-      double number = distribution_(generator_);
-      if(number < 0) std::cout << "negative : " << number << std::endl;
-      if ((number>=0.0) && (number<static_cast<double>(num_bucket))) 
-        ++bucket[static_cast<int>(number)];
-    } 
-
-    for (int i=0; i<num_bucket; ++i) {
-      std::cout << i << "-" << (i+1) << ":\t";
-      std::cout << std::string(bucket[i]*nstars/nrolls, '*') << std::endl;
-    }
-
-  }
+  void TestErrorProb(int num_bucket=10);
 
   UniformRandom(void) 
     : distribution_(0.0, 1.0), low_(0.0), high_(1.0) {}
@@ -125,34 +105,11 @@ protected:
   double mean_;
   double std_;
 public:
-  double GenErrorVal(void) {
-    distribution_.reset();
-    return distribution_(generator_);
-  }
+  double GenErrorVal(void);
 
-  void TestErrorProb(int num_bucket=10) {
-    std::cout << "Log Normal, mean : " << mean_ << ", std : " << std_ << std::endl;
-    const int nrolls = 10000;  // number for test
-    const int nstars = 100;    // maximum number of stars to distribute
-    int bucket[num_bucket];
+  void TestErrorProb(int num_bucket=10);
 
-    for (int i=0; i<num_bucket; ++i) {
-      bucket[i] = 0;
-    }
-    for (int i=0; i<nrolls; ++i) {
-      double number = distribution_(generator_);
-      if(number < 0) std::cout << "negative : " << number << std::endl;
-      if ((number>=0.0) && (number<static_cast<double>(num_bucket))) 
-        ++bucket[static_cast<int>(number)];
-    } 
-
-    for (int i=0; i<num_bucket; ++i) {
-      std::cout << i << "-" << (i+1) << ":\t";
-      std::cout << std::string(bucket[i]*nstars/nrolls, '*') << std::endl;
-    }
-
-  }
-  LogNormal(void) 
+    LogNormal(void) 
     : distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
   LogNormal(double mean, double std) 
     : distribution_(mean, std), mean_(mean), std_(std) {}
@@ -164,33 +121,10 @@ protected:
   std::exponential_distribution<double> distribution_;
   double lamda_;
 public:
-  double GenErrorVal(void) {
-    distribution_.reset();
-    return distribution_(generator_);
-  }
+  double GenErrorVal(void);
 
-  void TestErrorProb(int num_bucket=10) {
-    std::cout << "Exponential, lamda : " << lamda_ << std::endl;
-    const int nrolls = 10000;  // number for test
-    const int nstars = 100;    // maximum number of stars to distribute
-    int bucket[num_bucket];
+  void TestErrorProb(int num_bucket=10);
 
-    for (int i=0; i<num_bucket; ++i) {
-      bucket[i] = 0;
-    }
-    for (int i=0; i<nrolls; ++i) {
-      double number = distribution_(generator_);
-      if(number < 0) std::cout << "negative : " << number << std::endl;
-      if ((number>=0.0) && (number<static_cast<double>(num_bucket))) 
-        ++bucket[static_cast<int>(number)];
-    } 
-
-    for (int i=0; i<num_bucket; ++i) {
-      std::cout << i << "-" << (i+1) << ":\t";
-      std::cout << std::string(bucket[i]*nstars/nrolls, '*') << std::endl;
-    }
-
-  }
   Exponential(void) 
     : distribution_(1.0), lamda_(1.0) {}
 
@@ -206,35 +140,10 @@ protected:
   double mean_;
   double std_;
 public:
-  double GenErrorVal(void) {
-    distribution_.reset();
-    return distribution_(generator_);
-  }
+  double GenErrorVal(void);
 
-  void TestErrorProb(int num_bucket=10) {
-    std::cout << "Normal mean : " << mean_ << ", std : " << std_ << std::endl;
-    const int nrolls = 10000;  // number for test
-    const int nstars = 100;    // maximum number of stars to distribute
-    int bucket[num_bucket];
+  void TestErrorProb(int num_bucket=10);
 
-    for (int i=0; i<num_bucket; ++i) {
-      bucket[i] = 0;
-    }
-    for (int i=0; i<nrolls; ++i) {
-      double number = distribution_(generator_);
-      if(number < 0) number *= -1;
-      if(number < 0) std::cout << "negative : " << number << std::endl;
-
-      if ((number>=0.0) && (number<static_cast<double>(num_bucket))) 
-        ++bucket[static_cast<int>(number)];
-    } 
-
-    for (int i=0; i<num_bucket; ++i) {
-      std::cout << i << "-" << (i+1) << ":\t";
-      std::cout << std::string(bucket[i]*nstars/nrolls, '*') << std::endl;
-    }
-
-  }
   Normal(void) 
     : distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
   Normal(double mean, double std) 
@@ -247,32 +156,10 @@ protected:
   std::poisson_distribution<int> distribution_;
   double mean_;
 public:
-  double GenErrorVal(void) {
-    return static_cast<double>(distribution_(generator_));
-  }
+  double GenErrorVal(void);
   
-  void TestErrorProb(int num_bucket=10) {
-    std::cout << "Poisson mean : " << mean_ << std::endl;
-    const int nrolls = 10000;  // number for test
-    const int nstars = 100;    // maximum number of stars to distribute
-    int bucket[num_bucket];
+  void TestErrorProb(int num_bucket=10);
 
-    for (int i=0; i<num_bucket; ++i) {
-      bucket[i] = 0;
-    }
-    for (int i=0; i<nrolls; ++i) {
-      double number = distribution_(generator_);
-      if(number < 0) std::cout << "negative : " << number << std::endl;
-      if ((number>=0.0) && (number<static_cast<double>(num_bucket))) 
-        ++bucket[static_cast<int>(number)];
-    } 
-
-    for (int i=0; i<num_bucket; ++i) {
-      std::cout << i << "-" << (i+1) << ":\t";
-      std::cout << std::string(bucket[i]*nstars/nrolls, '*') << std::endl;
-    }
-
-  }
 
   Poisson(void) 
     : distribution_(1.0), mean_(1.0) {}
@@ -280,15 +167,6 @@ public:
     : distribution_(mean), mean_(mean) {}
   virtual ~Poisson() {}
 };
-
-
-  enum RandType { kUniform = 0,
-                  kExponential,
-                  kLogNormal,
-                  kNormal,
-                  kPoisson
-                };
-
 
 /**@addtogroup error_injector
  * @{
@@ -315,65 +193,22 @@ protected:
 
 public:
 
-  ErrorInjector(void) {
-    rand_generator_ = new UniformRandom();
-    enabled_    = false;
-    logfile_    = stdout;
-    threshold_  = DEFAULT_ERROR_THRESHOLD;
-  }
+  ErrorInjector(void);
 
-  ErrorInjector(double threshold, RandType random_type=kUniform, FILE *logfile=stdout) {
-    rand_generator_ = CreateErrorProb(random_type);
-    enabled_    = false;
-    logfile_    = stdout;
-    threshold_  = threshold;
-  }
+  ErrorInjector(double threshold, RandType random_type=kUniform, FILE *logfile=stdout);
 
-  ErrorInjector(bool enabled, double threshold, RandType random_type=kUniform, FILE *logfile=stdout) {
-    rand_generator_ = CreateErrorProb(random_type);
-    enabled_    = enabled;
-    logfile_    = stdout;
-    threshold_  = threshold;
-  }
+  ErrorInjector(bool enabled, double threshold, RandType random_type=kUniform, FILE *logfile=stdout);
 
   virtual ~ErrorInjector(void) {}
 
-  void Init(RandType random_type, FILE *logfile=stdout) {
-    if(rand_generator_ == NULL)
-      rand_generator_ = CreateErrorProb(random_type);
-    enabled_    = false;
-    logfile_    = stdout;
-  }
+  void Init(RandType random_type, FILE *logfile=stdout);
   
   void Enable(void)  { enabled_=true; }
   void Disable(void) { enabled_=false; }
   void SetLogfile(FILE *logfile) { logfile_ = logfile; }
   virtual bool InjectAndTest(void)=0;
 protected:
-  inline ErrorProb *CreateErrorProb(RandType random_type)
-{
-  ErrorProb *random_number = NULL;
-    switch(random_type) {
-      case kUniform : 
-        random_number = new UniformRandom();
-        break; 
-      case kExponential : 
-        random_number = new Exponential();
-        break; 
-      case kLogNormal :
-        random_number = new LogNormal();
-        break; 
-      case kNormal :
-        random_number = new Normal();
-        break; 
-      case kPoisson :
-        random_number = new Poisson();
-        break; 
-      default :
-        random_number = new Exponential();
-    }
-  return random_number;
-}     
+  inline ErrorProb *CreateErrorProb(RandType random_type);
 };
 
 /** @} */ // Ends error_injector
@@ -412,120 +247,31 @@ class CDErrorInjector : public ErrorInjector {
   uint32_t task_in_color_;
   bool force_to_fail_;
 public:
-  CDErrorInjector(void) 
-    : ErrorInjector(0.0, kUniform, stdout) {
-    force_to_fail_ = false;
-  }
+  CDErrorInjector(void);
 
-  CDErrorInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
-    : ErrorInjector(true, error_rate, rand_type, logfile) {
-    force_to_fail_ = false;
-  }
+  CDErrorInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
   CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail, 
-                  double error_rate) 
-    : ErrorInjector(true, error_rate, kUniform, stdout) {
-    for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
-      CD_DEBUG("push back cd %u\n", *it);
-      cd_to_fail_.push_back(*it);
-    }
-    for(auto it=task_list_to_fail.begin(); it!=task_list_to_fail.end(); ++it) {
-      CD_DEBUG("push back task %u\n", *it);
-      task_to_fail_.push_back(*it);
-    }
-    force_to_fail_ = true;
-    CD_DEBUG("EIE CDErrorInjector created!\n");
-  }
+                  double error_rate);
 
   CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail, 
-                  double error_rate, RandType rand_type, FILE *logfile) 
-    : ErrorInjector(true, error_rate, rand_type, logfile) {
-    for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
-      cd_to_fail_.push_back(*it);
-    }
-    for(auto it=task_list_to_fail.begin(); it!=task_list_to_fail.end(); ++it) {
-      task_to_fail_.push_back(*it);
-    }
-    force_to_fail_ = true;
-  }
+                  double error_rate, RandType rand_type, FILE *logfile);
+
   CDErrorInjector(uint32_t cd_to_fail, uint32_t task_to_fail, 
-                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
-    : ErrorInjector(true, error_rate, rand_type, logfile) {
-    cd_to_fail_.push_back(cd_to_fail);
-    task_to_fail_.push_back(task_to_fail); 
-    force_to_fail_ = true;
-  }
-
+                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
   CDErrorInjector(uint32_t cd_to_fail, uint32_t task_to_fail, uint32_t rank_in_level, uint32_t task_in_color,
-                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
-    : ErrorInjector(error_rate, rand_type, logfile) {
-    cd_to_fail_.push_back(cd_to_fail);
-    task_to_fail_.push_back(task_to_fail); 
-    rank_in_level_ = rank_in_level;
-    task_in_color_ = task_in_color;
-    force_to_fail_ = true;
-  }
+                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
   CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail,
                   uint32_t rank_in_level, uint32_t task_in_color,
-                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
-    : ErrorInjector(error_rate, rand_type, logfile) {
-    for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
-      cd_to_fail_.push_back(*it);
-    }
-    for(auto it=task_list_to_fail.begin(); it!=task_list_to_fail.end(); ++it) {
-      task_to_fail_.push_back(*it);
-    }
- 
-    rank_in_level_ = rank_in_level;
-    task_in_color_ = task_in_color;
-    force_to_fail_ = true;
-  }
-  void RegisterTarget(uint32_t rank_in_level, uint32_t task_in_color)
-  {
-    rank_in_level_ = rank_in_level;
-    task_in_color_ = task_in_color;
-  }
-
-  virtual bool InjectAndTest()
-  {
-    if(enabled_ == false) return false;
-
-    if( force_to_fail_ ) {
-      CD_DEBUG("force_to_fail is turned on. cd fail list size : %zu, task fail list size : %zu\n", cd_to_fail_.size(), task_to_fail_.size());
-
-      for(auto it=cd_to_fail_.begin(); it!=cd_to_fail_.end(); ++it) {
-        CD_DEBUG("cd_to_fail : %u = %u\n", *it, rank_in_level_);
-        if(*it == rank_in_level_) {
-          CD_DEBUG("cd failed rank_in_level #%u\n", *it);
-          return true;
-        }
-      }
-
-      for(auto it=task_to_fail_.begin(); it!=task_to_fail_.end(); ++it) {
-        CD_DEBUG("task_to_fail : %u = %u\n", *it, task_in_color_);
-        if(*it == task_in_color_) {
-          CD_DEBUG("task failed task_in_color #%u\n", *it);
-          return true;
-        }
-      }
-
-      CD_DEBUG("\n");
-//      enabled_ = false; // Turn off error injection in the reexecution.
-      return false; // if it reach this point. No tasks/CDs are registered to be failed.
-                    // So, return false.
-    }
-    double rand_var = rand_generator_->GenErrorVal();
-    bool error = threshold_ < rand_var;
-    CD_DEBUG("task #%d failed : %f(threshold) < %f(random var)\n", task_in_color_, threshold_, rand_var);
-    CD_DEBUG("EIE\n");
-
-    enabled_ = false;
-    return error;
-  }
+                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
   virtual ~CDErrorInjector(void) {}
+
+  void RegisterTarget(uint32_t rank_in_level, uint32_t task_in_color);
+
+  virtual bool InjectAndTest();
 };
 
 
@@ -546,7 +292,8 @@ public:
 
 /** @} */ // Ends error_injector
 
-
+} // namespace interface ends
 } // namespace cd ends
+
 #endif
 #endif

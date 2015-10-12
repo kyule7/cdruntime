@@ -55,10 +55,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  */
 
 #include "cd_global.h"
-#include "cd_def_internal.h" 
 #include "serializable.h"
-#include "packer.h"
-#include "unpacker.h"
+//#include "cd_def_internal.h" 
+//#include "packer.h"
+//#include "unpacker.h"
 
 using std::endl;
 
@@ -112,7 +112,7 @@ public:
   bool   IsHead(void)        const;
   std::string GetString(void) const;
 private:
-  void   set_head(int head);
+  void set_head(int head);
   void init_node_id(ColorT color, int task_in_color, int head, int size);
   void *Serialize(uint32_t &len_in_bytes);
   void Deserialize(void *object);

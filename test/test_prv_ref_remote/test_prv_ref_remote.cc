@@ -37,6 +37,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <map>
+
 #include <mpi.h>
 #include "cds.h"
 

@@ -46,12 +46,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  */
 
 #include "cd_global.h"
+namespace cd {
 
-class cd::Serializable
-{
+class Serializable {
   public:
     virtual void *Serialize(uint32_t &len_in_bytes)=0;
     virtual void Deserialize(void *object)=0;
 
 };
+
+}
 #endif

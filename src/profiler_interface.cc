@@ -42,8 +42,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "util.h"
 #include <cstdint>
 
+//#include "cd.h"
+//#include "cd_global.h"
+//#include "cd_def_internal.h" 
+//#include "cd_handle.h"
 
-Profiler *cd::CreateProfiler(PROFILER_TYPE prof_type, void *arg)
+Profiler *cd::interface::CreateProfiler(PROFILER_TYPE prof_type, void *arg)
 {
   switch(prof_type) {
     case NULLPROFILER :
