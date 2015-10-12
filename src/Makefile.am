@@ -28,7 +28,5 @@ libcds_la_SOURCES = \
   	                sys_err_t.cc \
   	                unpacker.cc
 
-#pkglib_LIBRARIES = libcdspkg.la
-#pkginclude_HEADERS = cdspkg.h
 #libcds_la_CPPFLAGS = $(cpp_flags)
 #libcds_la_LIBADD = $(external_libs)

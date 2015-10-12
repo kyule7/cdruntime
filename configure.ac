@@ -3,68 +3,6 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AM_PROG_AR
 LT_INIT
 
-#AC_MSG_NOTICE([Top CD runtime directory : $(top_srcdir)])
-#AC_MSG_NOTICE([notice: ${abs_top_builddir}])
-#AC_MSG_NOTICE([notice+ac: ${abs_top_builddir}])
-#AC_CONFIG_COMMANDS_PRE([echo "pre+ac: ${ac_abs_top_builddir}"])
-#AC_CONFIG_COMMANDS_PRE([echo "pre: ${abs_top_builddir}"])
-#AC_CONFIG_COMMANDS_POST([echo "post+ac: ${ac_abs_top_builddir}"])
-#AC_CONFIG_COMMANDS_POST([echo "post: ${abs_top_builddir}"])
-#AC_CONFIG_COMMANDS([echo],
-#AC_PREFIX_DEFAULT($ac_top_srcdir)
-dnl 
-dnl Various paths.
-dnl 
-dnl srcroot=$srcdir
-dnl if test "x${srcroot}" = "x." ; then
-dnl   srcroot=""
-dnl else
-dnl   srcroot="${srcroot}/"
-dnl fi
-dnl AC_SUBST([srcroot])
-dnl abs_srcroot="`cd "$srcdir"; pwd`/"
-dnl AC_SUBST([abs_srcroot])
-dnl 
-dnl objroot=""
-dnl AC_SUBST([objroot])
-dnl abs_objroot="`pwd`/"
-dnl AC_SUBST([abs_objroot])
-
-dnl Set install paths.
-#if test "x$prefix" = "xNONE" ; then
-#  prefix=$top_srcdir
-#  bindir=$top_srcdir/bin
-#  libdir=$top_srcdir/lib
-#  includedir=$top_srcdir/include
-#fi
-#
-#if test "x$exec_prefix" = "xNONE" ; then
-#  exec_prefix=$prefix
-#fi
-#
-#PREFIX=$prefix
-#AC_SUBST([PREFIX])
-
-#BINDIR=`eval echo $bindir`
-#BINDIR=`eval echo $BINDIR`
-#AC_SUBST([BINDIR])
-#
-#DATADIR=`eval echo $datadir`
-#DATADIR=`eval echo $DATADIR`
-#AC_SUBST([DATADIR])
-#
-#LIBDIR=`eval echo $libdir`
-#LIBDIR=`eval echo $LIBDIR`
-#AC_SUBST([LIBDIR])
-#
-#INCLUDEDIR=`eval echo $includedir`
-#INCLUDEDIR=`eval echo $INCLUDEDIR`
-#AC_SUBST([INCLUDEDIR])
-
-#MANDIR=`eval echo $mandir`
-#MANDIR=`eval echo $MANDIR`
-#AC_SUBST([MANDIR])
-
 AC_PREFIX_DEFAULT($PWD)
 
 # debugging output via --enable-debug
@@ -176,7 +114,7 @@ AS_IF([test "x$enable_parallel" = x"no" -a "x$enable_logging" = x"yes"],
 
 AC_PROG_CC
 AC_PROG_CXX
-AC_PROG_RANLIB
+dnl AC_PROG_RANLIB
 AC_CONFIG_HEADERS([cd_config.h])
 AC_CONFIG_FILES([
  Makefile
@@ -186,5 +124,6 @@ AC_CONFIG_FILES([
  test/test_simple_hierarchy/Makefile
  test/test_user_defined_hierarhcy/Makefile
  test/test_prv_ref_remote/Makefile
+ examples/Makefile
 ])
 AC_OUTPUT
