@@ -45,11 +45,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_features.h"
 #define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
 
-using namespace cd;
-using namespace cd::internal;
-using namespace cd::interface;
-using namespace cd::logging;
-
 namespace cd {
   namespace internal {
 
@@ -73,6 +68,10 @@ namespace cd {
   }
 }
 
+using namespace cd;
+using namespace cd::internal;
+using namespace cd::interface;
+using namespace cd::logging;
 
 #if CD_MPI_ENABLED 
 
