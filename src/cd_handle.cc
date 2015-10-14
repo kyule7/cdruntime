@@ -41,7 +41,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_path.h"
 
 
-//#include "cd_features.h"
+#include "cd_features.h"
 //#include "cd_global.h"
 #include "node_id.h"
 #include "sys_err_t.h"
@@ -208,6 +208,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #endif
 
 #if CD_ERROR_INJECTION_ENABLED
+  // To be safe
   CDHandle::memory_error_injector_ = NULL;
 #endif
 

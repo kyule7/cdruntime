@@ -31,6 +31,7 @@ libcds_la_SOURCES = \
   	                libc_rn.cc \
   	                node_id.cc \
   	                packer.cc \
+  	                error_injector.cc \
 										profiler_interface.cc \
   	                recover_object.cc \
   	                sys_err_t.cc \

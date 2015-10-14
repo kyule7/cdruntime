@@ -251,19 +251,22 @@ public:
 
   CDErrorInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
-  CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail, 
-                  double error_rate);
-
-  CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail, 
-                  double error_rate, RandType rand_type, FILE *logfile);
-
   CDErrorInjector(uint32_t cd_to_fail, uint32_t task_to_fail, 
                   double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
   CDErrorInjector(uint32_t cd_to_fail, uint32_t task_to_fail, uint32_t rank_in_level, uint32_t task_in_color,
                   double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
-  CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail,
+  CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, 
+                  std::initializer_list<uint32_t> task_list_to_fail, 
+                  double error_rate);
+
+  CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, 
+                  std::initializer_list<uint32_t> task_list_to_fail, 
+                  double error_rate, RandType rand_type, FILE *logfile);
+
+  CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, 
+                  std::initializer_list<uint32_t> task_list_to_fail,
                   uint32_t rank_in_level, uint32_t task_in_color,
                   double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
