@@ -115,7 +115,7 @@ AS_IF([test "x$enable_parallel" = x"no" -a "x$enable_logging" = x"yes"],
 AC_PROG_CC
 AC_PROG_CXX
 dnl AC_PROG_RANLIB
-AC_CONFIG_HEADERS([cd_config.h])
+AC_CONFIG_HEADERS([src/cd_config.h])
 AC_CONFIG_FILES([
  Makefile
  src/Makefile
