@@ -61,7 +61,7 @@ DebugBuf dbgApp;
 CDErrT err;
 int  numProcs = 0;
 int  myRank = 0;
-std::map<int*, string> arrayName;
+std::map<uint32_t*, string> arrayName;
 #define NUM_TEST_BLOCKS 10
 #define SIZE_BLOCK (25*1024)  //100,000kByte
 #define ARRAY_A_SIZE 32
@@ -81,7 +81,7 @@ static __inline__ long long getCounter(void)
 
 
 
-void PrintData(int *array, int length)
+void PrintData(uint32_t *array, int length)
 {
   if(arrayName.find(array) != arrayName.end())
     dbgApp <<"Print Data "<< arrayName[array] << ", Size: " << length << endl;
@@ -92,14 +92,14 @@ void PrintData(int *array, int length)
   dbgApp <<"\n=========================="<<endl;
 }
 
-void CorruptData(int *array, int length)
+void CorruptData(uint32_t *array, int length)
 {
   for(int i=0; i<length; i++) {
     array[i] = (-20 + i);
   }
 }
 
-bool CheckArray(int *array, int length)
+bool CheckArray(uint32_t *array, int length)
 {
   for(int i=0; i<length; i++) {
     if(array[i] < 0) {
@@ -109,20 +109,47 @@ bool CheckArray(int *array, int length)
   return true;
 }
 
+class UserObject1 {
+    uint32_t data0[8]{0x89ABCDEF, 0x01234567, 0x6789ABCD, 0xCDAB8967, 0xFEDCBA56, 0x10000000, 0x50055521};
+    double data1[8]{0.001, 1.394, 391832.29, 392.35, 10000, 32, 32.125, 64.0625};
+    bool data2[8]{1, 0, 0, 0, 0, 1, 1};
+    char data3[8]{'a', '3', '5', '8', 'b', '\0', 'c'};
+  public:
+    Serdes serdes;
+  
+    UserObject1(void) {
+//    data0 = {0x89ABCDEF, 0x01234567, 0x6789ABCD, 0xCDAB8967, 0xFEDCBA56, 0x10000000, 0x50055521};
+//    data1 = {0.001, 1.394, 391832.29, 392.35, 10000, 32, 32.125, 64.0625};
+//    data2 = {1, 0, 0, 0, 0, 1, 1};
+//    data3 = {'a', '3', '5', '8', 'b', '\0', 'c'};
+      serdes.Register(0, data0, sizeof(data0));
+      printf("data0 is registered. size : %lu\n", sizeof(data0));
+      serdes.Register(1, data1, sizeof(data1));
+      printf("data1 is registered. size : %lu\n", sizeof(data1));
+      serdes.Register(2, data2, sizeof(data2));
+      printf("data2 is registered. size : %lu\n", sizeof(data2));
+      serdes.Register(3, data3, sizeof(data3));
+      printf("data3 is registered. size : %lu\n", sizeof(data3));
+    }
+};
+
 // Test basic preservation scheme.
 int TestCDHierarchy(void)
 {
-  int arrayA[ARRAY_A_SIZE] = {3,5,0,6};
-  int arrayB[ARRAY_B_SIZE] = {1,2,3,4,5,6,7,8};
-  int arrayC[ARRAY_C_SIZE] = {5,};
-  int arrayD[ARRAY_D_SIZE] = {9,8,7,6,5,4,3,2,1,};
+  uint32_t arrayA[ARRAY_A_SIZE] = {0xABCDEFCD,0xCE53AE3B,0xABF31FD0,0xFA34FDA4};
+  uint32_t arrayB[ARRAY_B_SIZE] = {1,2,3,4,5,6,7,8};
+  uint32_t arrayC[ARRAY_C_SIZE] = {5,};
+  uint32_t arrayD[ARRAY_D_SIZE] = {9,8,7,6,5,4,3,2,1,};
   arrayName[arrayA] = "arrayA";
   arrayName[arrayB] = "arrayB";
   arrayName[arrayC] = "arrayC";
   arrayName[arrayD] = "arrayD";
-  int test_results[8] = {0,};
-  int test_result = 0;
-  int num_reexecution = 0;
+//  int test_results[8] = {0,};
+//  int test_result = 0;
+//  int num_reexecution = 0;
+
+  // User-defined object
+  UserObject1 userObj1;
 
   dbgApp << "\n==== TestCDHierarchy Start ====\n" << endl; 
 	CDHandle *root = CD_Init(numProcs, myRank);
@@ -140,8 +167,10 @@ int TestCDHierarchy(void)
 //	child_lv1->RegisterErrorInjector(new CDErrorInjector({}, {3,4}, 0.0));
   dbgApp << "\t\tLevel 1 CD Begin...\n" << endl;
 
-  int arrayE[ARRAY_E_SIZE] = {1,2,3,4,5,6,7,8};
+  uint32_t arrayE[ARRAY_E_SIZE] = {1,2,3,4,5,6,7,8};
   arrayName[arrayE] = "arrayE";
+
+  userObj1.serdes.RegisterTarget({0, 1, 2, 3});
 
   child_lv1->Preserve(arrayA, sizeof(arrayA), kCopy, 
                       (string("arrayA-")+to_string(myRank)).c_str()); // arrayA-rankID
@@ -164,8 +193,8 @@ int TestCDHierarchy(void)
 //
 //  child_lv1->CDAssert(CheckArray(arrayA, sizeof(arrayA)));
 
-  int arrayF[ARRAY_F_SIZE] = {0,};
-  int arrayG[ARRAY_G_SIZE] = {0,};
+  uint32_t arrayF[ARRAY_F_SIZE] = {0,};
+  uint32_t arrayG[ARRAY_G_SIZE] = {0,};
   arrayName[arrayF] = "arrayF";
   arrayName[arrayG] = "arrayG";
 

@@ -123,3 +123,8 @@ string NodeID::GetString(void) const
 {
   return ( string("(") + to_string(task_in_color_) + string("/") + to_string(size_) + string(")") );
 }
+
+string NodeID::GetStringID(void) const 
+{
+  return ( to_string(task_in_color_) + string("_") + to_string(size_) );
+}

@@ -146,6 +146,7 @@ public:
    //SZ: print function
     void Print(void);
     std::string GetString(void) const;
+    std::string GetStringID(void) const;
 private:
 
     void SetCDID(const NodeID& new_node_id);

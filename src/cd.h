@@ -272,22 +272,15 @@ update the preserved data.
     /// Should not be CDEntry*. 
     std::list<CDEntry>::iterator iterator_entry_;   
   
-    //  std::vector<cd_log> log_directory_;
-    //  pthread_mutex_t mutex_;      //
-    //  pthread_mutex_t log_directory_mutex_;
-
-    // SZ: please change the following name, otherwise it will be confused
-    //     communication logging handler
-    // handler for log-related things
-    CDLogHandle log_handle_;
+    CDFileHandle file_handle_;
+    // PFS
+    PFSHandle *pfs_handler_;
 
 #if CD_COMM_LOG_ENABLED
   public:
     //SZ
     CommLog *comm_log_ptr_;
-
     uint32_t child_seq_id_;
-
     unsigned long incomplete_log_size_unit_;
     unsigned long incomplete_log_size_;
     std::vector<IncompleteLogEntry> incomplete_log_;
@@ -303,8 +296,6 @@ update the preserved data.
     unsigned long cur_pos_mem_alloc_log;
     unsigned long replay_pos_mem_alloc_log;
 #endif
-    // PFS
-    PFSHandle *pfs_handler_;
 
   protected:
 //  public:
@@ -363,6 +354,14 @@ update the preserved data.
                     const RegenObject * regen_object=0, // regen object
                     PreserveUseT data_usage=kUnsure);   // for optimization
   
+    CDErrT Preserve(Serdes &serdes, 
+                    uint32_t preserve_mask, 
+                    const char *my_name, 
+                    const char *ref_name, 
+                    uint64_t ref_offset, 
+                    const RegenObject *regen_object, 
+                    PreserveUseT data_usage);
+
     // Collective version
     // Kyushick : Why do we need collective Preserve call as an API?
     // I think we need collective method when CDs want to preserve data to Global file system
@@ -543,6 +542,7 @@ public:
 
 
     CDInternalErrT Sync(ColorT color); 
+    CDInternalErrT SyncFile(void); 
     void *SerializeRemoteEntryDir(uint32_t& len_in_byte);
     void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
 

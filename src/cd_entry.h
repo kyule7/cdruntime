@@ -93,7 +93,8 @@ class CDEntry : public Serializable
     {
       src_data_ = src_data;
       dst_data_ = dst_data;
-      if(entry_name.empty()) entry_tag_ = 0;
+      if(entry_name.empty()) 
+        entry_tag_ = 0;
       else {
         entry_tag_ = cd_hash(entry_name);
         tag2str[entry_tag_] = entry_name;
@@ -107,7 +108,8 @@ class CDEntry : public Serializable
       src_data_ = src_data;
       dst_data_ = dst_data;
       ptr_cd_ = const_cast<CD *>(ptr_cd);
-      if(entry_name.empty()) entry_tag_ = 0;
+      if(entry_name.empty()) 
+        entry_tag_ = 0;
       else {
         entry_tag_ = cd_hash(entry_name);
         tag2str[entry_tag_] = entry_name;
@@ -155,13 +157,12 @@ class CDEntry : public Serializable
     }
 
     CDEntryErrT SaveMem(void);
-    CDEntryErrT SaveFile(std::string base, bool open);
+    CDEntryErrT SaveFile(std::string base);
     // PFS
     CDEntryErrT SavePFS(void);
     CDEntryErrT Save(void);
 
-    void CloseFile(void) {}
-
+    FILE *GetFilePointer(void);
 
     //FIXME We need another Restore function that would accept offset and length, 
     // so basically it will use dst_data_ as base and then offset and length is used to restore only partial of the original. 
@@ -169,7 +170,7 @@ class CDEntry : public Serializable
     // it will first try to find the entry it self by going up and look into parent's directories. 
     // After finding one, it will retrive the dst_data_ and then copy from them.
 
-    CDEntryErrT Restore(bool open, struct tsn_log_struct *log);
+//    CDEntryErrT Restore(bool open, struct tsn_log_struct *log);
     CDEntryErrT Restore(void);
 //    CDEntryErrT InternalRestore(DataHandle *buffer);
     CDEntryErrT InternalRestore(DataHandle *buffer, bool local_found=false);

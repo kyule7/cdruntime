@@ -42,6 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <errno.h>
 #include "cd_features.h"
 #define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
 
@@ -517,14 +518,15 @@ extern FILE *cdoutApp;
 #define INITIAL_CDOBJ_NAME "INITIAL_NAME"
 #define INITIAL_CDOBJ_LABEL "INITIAL_CDOBJ_LABEL"
 
-#define MAX_FILE_PATH 2048
+#define MAX_FILE_PATH 256
 #define CD_FILEPATH_INVALID "./error_logs/"
 #define INIT_FILE_PATH "INITIAL_FILE_PATH"
-#define CD_FILEPATH_DEFAULT "./HDD/"
-#define CD_FILEPATH_PFS "./PFS/"
-#define CD_FILEPATH_HDD "./HDD/"
-#define CD_FILEPATH_SSD "./SSD/"
-#define CD_DEFAULT_PRV_FILEPATH "./"
+#define CD_FILEPATH_PFS "PFS/"
+#define CD_FILEPATH_HDD "HDD/"
+#define CD_FILEPATH_SSD "SSD/"
+#define CD_DEFAULT_PRV_BASEPATH "./"
+#define CD_DEFAULT_PRV_FILENAME "prv_files_%s_XXXXXX"
+#define CD_DEFAULT_FILEPATH "./prv_files_XXXXXX"
 #define CD_DEFAULT_DEBUG_OUT "./debug_logs/"
 
 #define CD_SHARING_DEGREE 64

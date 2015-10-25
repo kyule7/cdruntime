@@ -54,64 +54,71 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 namespace cd {
   namespace internal {
 
-class CDLogHandle;
+class CDFileHandle;
 
-class Path {
+class FilePath {
   friend class CD;
-  friend class CDLogHandle;
-private:
-  std::string filepath_;
-  Path() 
-    : filepath_(CD_FILEPATH_DEFAULT) {
-  }
-  Path(const std::string &filepath) 
-    : filepath_(filepath) {
-  }
-  Path(const char *filepath) 
-    : filepath_(filepath) {
-  }
-
-  void SetFilePath(std::string filepath) { filepath_ = filepath; }
-
-  std::string GetFilePath(void) { return filepath_; }
-
-  Path &operator=(const Path &that) {
-    filepath_ = that.filepath_;
-    return *this;
-  }
-
-  Path &operator=(const char *filepath) {
-    filepath_ = filepath;
-    return *this;
-  }
+  friend class CDFileHandle;
+  private:
+    std::string filename_;
+    std::string basepath_;
+  public:
+    static std::string prv_basePath_;
+  private:
+    FilePath(void);
+    FilePath(const std::string &basepath, 
+             const std::string &filename); 
+    std::string GetFilePath(void);
+    void SetFilePath(const std::string &basepath, 
+                     const std::string &filename);
+  
+    // assignment
+    FilePath &operator=(const FilePath &that) {
+      basepath_ = that.basepath_;
+      filename_ = that.filename_;
+      return *this;
+    }
+  
+    // assignment
+    FilePath &operator=(const char *basepath_) {
+      basepath_ = basepath_;
+      return *this;
+    }
 };
 
 
 
-class CDLogHandle {
+class CDFileHandle {
   friend class CD;
   friend class HeadCD;
-
-//  CDLog file_log_;
-  bool opened_;
-  Path path_;
-  std::string unique_basepath_;
-
-public:
-  CDLogHandle(void) : opened_(false), path_(CD_FILEPATH_DEFAULT) {}
-  CDLogHandle(const PrvMediumT& prv_medium, const std::string& parentUniqueName = "") : opened_(false)
-  {
-    if(parentUniqueName != "" && prv_medium != kDRAM)
-      SetFilePath(prv_medium, parentUniqueName);
-  }
-  ~CDLogHandle() {}
-
-  std::string GetFilePath(void);
-  void InitOpenFile() { opened_ = false; }
-  bool IsOpen()   { return opened_;  }
-  void OpenFilePath(void);     
-  void CloseAndDeletePath( void );
-  void SetFilePath(const PrvMediumT& prv_medium, const std::string& filepath);
+  friend class CDEntry;
+    int file_desc_;
+    FILE *fp_;
+    long fpos_generator_;
+    bool opened_;
+    char unique_filename_[MAX_FILE_PATH];
+    FilePath filePath_;
+  public:
+    CDFileHandle(void);
+    CDFileHandle(const PrvMediumT& prv_medium, 
+                 const std::string &basepath, 
+                 const std::string &filename);
+    ~CDFileHandle();
+  
+    void InitOpenFile(void) { opened_ = false; }
+    bool IsOpen(void) { return opened_; }
+    long UpdateFilePos(long offset) 
+    { 
+      // For multi-threaded env, this needs to be atomic
+      return fpos_generator_ += offset; 
+    }
+    void OpenFilePath(void);     
+    void CloseAndDeletePath( void );
+    char *GetFilePath(void);
+    std::string GetBasePath(void);
+    void SetFilePath(const PrvMediumT& prv_medium, 
+                     const std::string &basepath, 
+                     const std::string &filename);
 };
 
 

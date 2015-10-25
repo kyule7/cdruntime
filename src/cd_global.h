@@ -137,7 +137,7 @@ namespace cd {
 
 
 
-#define DEFAULT_MEDIUM kDRAM
+#define DEFAULT_MEDIUM kHDD
 
 #define THREE_ARGS_MACRO(_IN0,_IN1,_IN2,FUNC,...) FUNC
 #define TWO_ARGS_MACRO(_IN0,_IN1,FUNC,...) FUNC

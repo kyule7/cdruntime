@@ -111,6 +111,7 @@ public:
   int    size(void)          const;
   bool   IsHead(void)        const;
   std::string GetString(void) const;
+  std::string GetStringID(void) const;
 private:
   void set_head(int head);
   void init_node_id(ColorT color, int task_in_color, int head, int size);

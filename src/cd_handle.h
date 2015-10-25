@@ -58,7 +58,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "profiler_interface.h"
 #include "error_injector.h"
 #include "sys_err_t.h"
-
+#include "serdes.h"
 //#if CD_PROFILER_ENABLED
 //#include "cd_profiler.h"
 //#endif
@@ -429,6 +429,7 @@ class CDHandle {
                                       //!< only with the programmer responsible for synchronization. 
                  const char* label=NULL
                 );
+
   /** @brief Completes a CD 
    *
    * Completes the CD and sets its parent as the current CD for the calling
@@ -531,6 +532,43 @@ class CDHandle {
                                        //!< __currently must be in same address space
                                        //!< as calling task, but will extend to PGAS fat pointers later 
                     uint64_t len=0,   //!< [in] Length of preserved data (Bytes)
+                    uint32_t preserve_mask=kCopy, //!< [in] Allowed types of preservation 
+                                                  //!< (e.g., kCopy|kRef|kRegen), default only via copy
+                    const char *my_name=0,  //!< [in] Optional C-string representing the name of this
+                                            //!< preserved data for later preserve-via-reference
+
+                    const char *ref_name=0, //!< [in] Optional C-string representing
+                                            //!< a user-specified name that was set by a previous preserve call at the parent.; 
+                                            //!< __Do we also need an offset into parent preservation?__
+
+                    uint64_t ref_offset=0,  //!< [in] explicit offset within the named region at the other CD (for restoration via reference)
+                    const RegenObject *regen_object=0, //!< [in] optional user-specified function for
+                                                       //!< regenerating values instead of restoring by copying
+
+                    PreserveUseT data_usage=kUnsure //!< [in] This flag is used
+                                                    //!< to optimize consecutive Complete/Begin calls
+                                                    //!< where there is significant overlap in
+                                                    //!< preserved state that is unmodified (see Complete()).
+                    );
+
+/**@brief (Non-collective) Preserve user-defined class object
+ * 
+ * User need to define which member variables will be de/serialized at constructor with serdes object in it.
+ * This will be passed through Preserve().
+ * In execution mode, serializer will be invoked in CD runtime side.
+ * When failure happens, deserializer will be invoked to restore class object. 
+ * To selectively preserve/restore user-defined class member variables, 
+ * users might want to register those members of interest before passing through Preserve().
+ * They can register them by serdes.RegisterTarget({MemberID0, MemberID1, ...}).
+ * At Serdes interface module, it is explained more in detail with example. 
+ *
+ * @return kOK on success and kError otherwise.
+ *
+ * \sa Serdes, Complete()
+ */
+    CDErrT Preserve(Serdes &serdes, //!< [in] Serdes object in user-defined class.
+                                    //!< This will be invoked in CD runtime
+                                    //!< to de/serialize class object
                     uint32_t preserve_mask=kCopy, //!< [in] Allowed types of preservation 
                                                   //!< (e.g., kCopy|kRef|kRegen), default only via copy
                     const char *my_name=0,  //!< [in] Optional C-string representing the name of this

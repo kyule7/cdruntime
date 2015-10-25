@@ -148,7 +148,7 @@ CDFlagT *CD::pendingFlag_;
 /// inside Create() 
 
 CD::CD(void)
-  : log_handle_(DEFAULT_MEDIUM)
+  : file_handle_()
 {
   reexecuted_ = false;
   recreated_ = false;
@@ -194,7 +194,9 @@ CD::CD(CDHandle* cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
-  : log_handle_( prv_medium, (cd_parent ? cd_parent->ptr_cd_->log_handle_.unique_basepath_ : "") )
+: file_handle_(prv_medium, 
+               ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : string(CD_DEFAULT_PRV_BASEPATH)), 
+               cd_id.GetStringID() + string("_XXXXXX") )
 {
   //GONG
   begin_ = false;
@@ -417,7 +419,7 @@ CD::~CD()
 #endif
 }
 
-CDHandle* CD::Create(CDHandle* parent, 
+CDHandle *CD::Create(CDHandle* parent, 
                      const char* name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
@@ -440,15 +442,15 @@ CDHandle* CD::Create(CDHandle* parent,
 
 }
 
-CDHandle* CD::CreateRootCD(const char* name, 
+CDHandle *CD::CreateRootCD(const char* name, 
                            const CDID& root_cd_id, 
                            CDType cd_type, 
-                           const string &basepath,
+                           const string &basefilepath,
                            uint64_t sys_bit_vector, 
                            CD::CDInternalErrT *cd_internal_err)
 {
   /// Create CD object with new CDID
-  CDHandle* new_cd_handle = NULL;
+  CDHandle *new_cd_handle = NULL;
   PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
 
   *cd_internal_err = InternalCreate(NULL, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
@@ -456,8 +458,11 @@ CDHandle* CD::CreateRootCD(const char* name,
   // Only root define hash function.
   str_hash = str_hash_map.hash_function();
 
+  // It sets filepath for preservation with base filename.
+  // If CD_PRV_BASEPATH is set in env, 
+  // the file path will be basefilepath/CDID_XXXXXX.
   if(new_prv_medium != kDRAM)
-    new_cd_handle->ptr_cd_->log_handle_.SetFilePath(new_prv_medium, basepath);
+    new_cd_handle->ptr_cd_->file_handle_.SetFilePath(new_prv_medium, basefilepath, root_cd_id.GetStringID() + string("_XXXXXX"));
 
   assert(new_cd_handle != NULL);
 
@@ -529,7 +534,7 @@ CD::InternalCreate(CDHandle* parent,
 
 
     if( new_cd->GetPlaceToPreserve() == kPFS ) 
-      new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->log_handle_.path_.GetFilePath().c_str() ); 
+      new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
 
     *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
   }
@@ -577,7 +582,7 @@ CD::InternalCreate(CDHandle* parent,
 
 
     if( new_cd->GetPlaceToPreserve() == kPFS ) 
-      new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->log_handle_.path_.GetFilePath().c_str() ); 
+      new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
 
     *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
   }
@@ -609,7 +614,7 @@ CD::InternalCreate(CDHandle* parent,
 //    PMPI_Bcast( processor_name, MPI_MAX_PROCESSOR_NAME, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
 //  #endif
 //    cout << preservation_unique_name << " " << processor_name << " / " << new_cd_id.node_id() << endl;
-//    (*new_cd_handle)->ptr_cd_->log_handle_.SetFilePath( new_prv_medium, string(preservation_unique_name) + string(processor_name) );
+//    (*new_cd_handle)->ptr_cd_->file_handle_.SetFilePath( new_prv_medium, string(preservation_unique_name) + string(processor_name) );
 
   return CD::CDInternalErrT::kOK;
 }
@@ -781,7 +786,6 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   CD_DEBUG("\nCD::Complete : %s %s \t Reexec: %d\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec);
 
   begin_ = false;
-
 
 //  Sync(color());
 
@@ -1365,138 +1369,6 @@ CD::CDInternalErrT CD::GatherEntryDirMapToHead()
 
 
 
-/*  CD::preserve(char* data_p, int data_l, enum preserveType prvTy, enum mediumLevel medLvl)
- *  Register data information to preserve if needed.
- *  (For now, since we restore per CD, this registration per cd_entry would be thought unnecessary.
- *  We can already know the data to preserve which is likely to be corrupted in future, 
- *  and its address information as well which is in the current memory space.
- *  Main Purpose: 1. Initialize cd_entry information
- *       2. cd_entry::preserveEntry function call. 
- *          -> performs appropriate operation for preservation per cd_entry such as actual COPY.
- *  We assume that the AS *dst_data could be known from Run-time system 
- *  and it hands to us the AS itself from current rank or another rank.
- *  However, regarding COPY type, it stores the back-up data in current memory space beforehand. 
- *  So it allocates(ManGetNewAllocation) memory space for back-up data
- *  and it copies the data from current or another rank to the address 
- *  for the back-up data in my current memory space. 
- *  And we assume that the data from current or another rank for preservation 
- *  can be also known from Run-time system.
- *  ManGetNewAllocation is for memory allocation for CD and cd_entry.
- *  CD_MALLOC is for memory allocation for Preservation with COPY.
- *
- *  Jinsuk: For re-execution we will use this function call to restore the data. 
- *  So basically it needs to know whether it is in re-execution mode or not.
- *
- */
-
-
-/*
-CDErrT CD::Preserve(void* data, 
-                    uint64_t len_in_bytes, 
-                    uint32_t preserve_mask, 
-                    const char* my_name, 
-                    const char* ref_name, 
-                    uint64_t ref_offset, 
-                    const RegenObject* regen_object, 
-                    PreserveUseT data_usage)
-{
-
-  // FIXME MALLOC should use different ones than the ones for normal malloc
-  // For example, it should bypass malloc wrap functions.
-  // FIXME for now let's just use regular malloc call 
-  if(cd_exec_mode_ == kExecution ) {
-//    return ((CDErrT)kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? (CDErrT)kOK : (CDErrT)kError;
-//    return (kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? kOK : kError;
-    return InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
-  }
-  else if(cd_exec_mode_ == kReexecution) {
-    // it is in re-execution mode, so instead of preserving data, restore the data.
-    // Two options, one is to do the job here, 
-    // another is that just skip and do nothing here but do the restoration job in different place, 
-    // and go though all the CDEntry and call Restore() method. 
-    // The later option seems to be more efficient but it is not clear that 
-    // whether this brings some consistency issue as restoration is done at the very beginning 
-    // while preservation was done one by one 
-    // and sometimes there could be some computation in between the preservations.. (but wait is it true?)
-  
-    // Jinsuk: Because we want to make sure the order is the same as preservation, we go with  Wait...... It does not make sense... 
-    // Jinsuk: For now let's do nothing and just restore the entire directory at once.
-    // Jinsuk: Caveat: if user is going to read or write any memory space that will be eventually preserved, 
-    // FIRST user need to preserve that region and use them. 
-    // Otherwise current way of restoration won't work. 
-    // Right now restore happens one by one. 
-    // Everytime restore is called one entry is restored. 
-    if( iterator_entry_ == entry_directory_.end() ) {
-      //ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
-      // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
-      // we reached the last preserve function call. 
-
-      //Since we have reached the last point already now convert current execution mode into kExecution
-      //      LOG_DEBUG("Now reached end of entry directory, now switching to normal execution mode\n");
-      cd_exec_mode_  = kExecution;    
-  //  return InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
-      return (kOK==InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage)) ? kOK : kError;
-    }
-    else {
-      //     LOG_DEBUG("Reexecution mode...\n");
-      CDEntry cd_entry = *iterator_entry_;
-      iterator_entry_++;
-#if _WORK
-      bool use_file = (bool)ref_name;
-      bool open = true;
-//      if(cd_id_.level()<=1)
-//        use_file = true;
-      if( use_file == true) {
-
-//        if(cd_id_.level()==1) {  // HDD
-//          bool _isOpenHDD = IsOpen();
-//          if(!_isOpenHDD)  
-//            OpenFilePath(); // set flag 'open_HDD'       
-//          return cd_entry.Restore(_isOpenHDD, &HDDlog);
-//        }
-//        else { // SSD
-//          bool _isOpenSSD = IsOpen();
-//          if(!_isOpenSSD)
-//            OpenFilePath(); // set flag 'open_SSD'       
-//          return cd_entry.Restore(_isOpenSSD, &SSDlog);
-//        }
-        switch(GetPlaceToPreserve()) {
-          case kDRAM:
-            assert(0);
-            break;
-          case kHDD:
-//            bool _isOpenHDD = IsOpen();
-            if( !IsOpen() )  
-              OpenFilePath(); // set flag 'open_HDD'       
-            return cd_entry.Restore(IsOpen(), &HDDlog);
-        
-          case kSSD:
-//            bool _isOpenSSD = IsOpen();
-            if( !IsOpen() )
-              OpenFilePath(); // set flag 'open_SSD'       
-            return cd_entry.Restore(IsOpen(), &SSDlog);
-        
-          case kPFS:
-            assert(0);
-            break;
-          default:
-            break;
-        }
-
-      }
-      else {
-        return cd_entry.Restore(open, &HDDlog);
-      }
-#else
-      return cd_entry.Restore() kOK : kError;
-#endif
-    }
-
-  } // Reexecution ends
-  return kError; // we should not encounter this point
-
-}
-*/
 
 // FIXME
 PrvMediumT CD::GetPlaceToPreserve()
@@ -1700,6 +1572,47 @@ bool CD::TestComm(bool test_until_done)
 //  return is_all_valid;
 //} 
 
+/*  This is old comments, but left here just in case.
+ *
+ *  CD::Preserve(char* data_p, int data_l, enum preserveType prvTy, enum mediumLevel medLvl)
+ *  Register data information to preserve if needed.
+ *  (For now, since we restore per CD, this registration per cd_entry would be thought unnecessary.
+ *  We can already know the data to preserve which is likely to be corrupted in future, 
+ *  and its address information as well which is in the current memory space.
+ *  Main Purpose: 1. Initialize cd_entry information
+ *       2. cd_entry::preserveEntry function call. 
+ *          -> performs appropriate operation for preservation per cd_entry such as actual COPY.
+ *  We assume that the AS *dst_data could be known from Run-time system 
+ *  and it hands to us the AS itself from current rank or another rank.
+ *  However, regarding COPY type, it stores the back-up data in current memory space beforehand. 
+ *  So it allocates(ManGetNewAllocation) memory space for back-up data
+ *  and it copies the data from current or another rank to the address 
+ *  for the back-up data in my current memory space. 
+ *  And we assume that the data from current or another rank for preservation 
+ *  can be also known from Run-time system.
+ *  ManGetNewAllocation is for memory allocation for CD and cd_entry.
+ *  CD_MALLOC is for memory allocation for Preservation with COPY.
+ *
+ *  Jinsuk: For re-execution we will use this function call to restore the data. 
+ *  So basically it needs to know whether it is in re-execution mode or not.
+ *  it is in re-execution mode, so instead of preserving data, restore the data.
+ *  Two options, one is to do the job here, 
+ *  another is that just skip and do nothing here but do the restoration job in different place, 
+ *  and go though all the CDEntry and call Restore() method. 
+ *  The later option seems to be more efficient but it is not clear that 
+ *  whether this brings some consistency issue as restoration is done at the very beginning 
+ *  while preservation was done one by one 
+ *  and sometimes there could be some computation in between the preservations.. (but wait is it true?)
+ *  
+ *  Jinsuk: Because we want to make sure the order is the same as preservation, we go with  Wait...... It does not make sense... 
+ *  Jinsuk: For now let's do nothing and just restore the entire directory at once.
+ *  Jinsuk: Caveat: if user is going to read or write any memory space that will be eventually preserved, 
+ *  FIRST user need to preserve that region and use them. 
+ *  Otherwise current way of restoration won't work. 
+ *  Right now restore happens one by one. 
+ *  Everytime restore is called one entry is restored. 
+ *
+ */
 
 CDErrT CD::Preserve(void *data, 
                     uint64_t len_in_bytes, 
@@ -1975,6 +1888,210 @@ CDErrT CD::Preserve(void *data,
   return kError; // we should not encounter this point
 }
 
+CDErrT CD::Preserve(Serdes &serdes, 
+                    uint32_t preserve_mask, 
+                    const char *my_name, 
+                    const char *ref_name, 
+                    uint64_t ref_offset, 
+                    const RegenObject *regen_object, 
+                    PreserveUseT data_usage)
+{
+#if 0
+  void *object = NULL;
+//  serdes(cd_exec_mode, &object);
+//  Preserve(object, serdes.length_, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
+
+  if(cd_exec_mode_  == kExecution ) { // Normal execution mode -> Preservation
+//////////////////////////////////////////////////////////////////////////////////////////////////
+    serdes(cd_exec_mode, &object);
+    CDEntrh *cd_entry = new CDEntry(DataHandle(DataHandle::kSource, object, serdes.length_, cd_id_.node_id_), 
+                           DataHandle(DataHandle::kMemory, object, serdes.length_, cd_id_.node_id_), 
+                           my_name, this);
+
+    entry_directory_.push_back(*cd_entry);
+
+    CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
+
+    if( !my_name.empty() ) {
+
+      if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
+        entry_directory_map_[cd_hash(my_name)] = cd_entry;
+        assert(entry_directory_map_[cd_hash(my_name)]);
+        assert(entry_directory_map_[cd_hash(my_name)]->src_data_.address_data());
+
+        CD_DEBUG("Register local entry dir. my_name : %s - %u, value : %d, address: %p\n", 
+                entry_directory_map_[cd_hash(my_name)]->name().c_str(), 
+                cd_hash(my_name), 
+                *(reinterpret_cast<int*>(entry_directory_map_[cd_hash(my_name)]->src_data_.address_data())),
+                cd_entry->dst_data_.address_data());
+      } 
+      else{
+        remote_entry_directory_map_[cd_hash(my_name)] = cd_entry;
+        assert(remote_entry_directory_map_[cd_hash(my_name)]);
+        assert(remote_entry_directory_map_[cd_hash(my_name)]->src_data_.address_data());
+        CD_DEBUG("Register remote entry dir. my_name : %s - %u, value : %d, address: %p\n", 
+                remote_entry_directory_map_[cd_hash(my_name)]->name().c_str(), 
+                cd_hash(my_name), 
+                *(reinterpret_cast<int*>(remote_entry_directory_map_[cd_hash(my_name)]->src_data_.address_data())),
+                cd_entry->dst_data_.address_data());
+
+      }
+
+    }
+    else {
+      ERROR_MESSAGE("No entry name is provided. Currently it is not supported.\n");
+    }
+//////////////////////////////////////////////////////////////////////////////////////////////////
+  }
+  else if(cd_exec_mode_ == kReexecution) { // Re-execution mode -> Restoration
+
+    CD_DEBUG("\n\nReexecution!!! entry directory size : %zu\n\n", entry_directory_.size());
+
+    if( iterator_entry_ != entry_directory_.end() ) { // normal case
+
+      printf("Reexecution mode start...\n");
+      CD_DEBUG("\n\nNow reexec!!! %d\n\n", iterator_entry_count++);
+//////////////////////////////////////////////////////////////////////////////////////////////////
+      serdes(cd_exec_mode, &object);
+      cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
+                             DataHandle(DataHandle::kMemory, 0, len_in_bytes, cd_id_.node_id_), 
+                             my_name, this);
+
+      CDEntry::CDEntryErrT err = cd_entry->SaveMem();
+
+      entry_directory_.push_back(*cd_entry);
+
+      CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
+
+      if( !my_name.empty() ) {
+
+        if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
+          entry_directory_map_[cd_hash(my_name)] = cd_entry;
+          assert(entry_directory_map_[cd_hash(my_name)]);
+          assert(entry_directory_map_[cd_hash(my_name)]->src_data_.address_data());
+
+          CD_DEBUG("Register local entry dir. my_name : %s - %u, value : %d, address: %p\n", 
+                  entry_directory_map_[cd_hash(my_name)]->name().c_str(), 
+                  cd_hash(my_name), 
+                  *(reinterpret_cast<int*>(entry_directory_map_[cd_hash(my_name)]->src_data_.address_data())),
+                  cd_entry->dst_data_.address_data());
+        } 
+        else{
+          remote_entry_directory_map_[cd_hash(my_name)] = cd_entry;
+          assert(remote_entry_directory_map_[cd_hash(my_name)]);
+          assert(remote_entry_directory_map_[cd_hash(my_name)]->src_data_.address_data());
+          CD_DEBUG("Register remote entry dir. my_name : %s - %u, value : %d, address: %p\n", 
+                  remote_entry_directory_map_[cd_hash(my_name)]->name().c_str(), 
+                  cd_hash(my_name), 
+                  *(reinterpret_cast<int*>(remote_entry_directory_map_[cd_hash(my_name)]->src_data_.address_data())),
+                  cd_entry->dst_data_.address_data());
+
+        }
+
+      }
+      else {
+        ERROR_MESSAGE("No entry name is provided. Currently it is not supported.\n");
+      }
+//////////////////////////////////////////////////////////////////////////////////////////////////
+      ++iterator_entry_;
+
+
+      if(iterator_entry_ != entry_directory_.end()) {
+
+#if _MPI_VER
+        CheckMailBox();
+        if(IsHead()) { 
+        
+          TestComm();
+          TestReqComm();
+
+          if(task_size() > 1) {
+            PMPI_Win_fence(0, mailbox_);
+            CheckMailBox();
+          }
+          TestRecvComm();
+
+        }
+        else {
+          TestComm();
+          TestReqComm();
+          if(task_size() > 1) {
+            PMPI_Win_fence(0, mailbox_);
+            CheckMailBox(); 
+          }
+          TestRecvComm();
+        }
+#endif
+
+      }
+      else { // The end of entry directory
+
+#if _MPI_VER
+        CD_DEBUG("Test Asynch messages until start at %s / %s\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+  
+        while( !(TestComm()) ); 
+ 
+        if(IsHead()) { 
+          CheckMailBox();
+          if(task_size() > 1) {
+            PMPI_Win_fence(0, mailbox_);
+          }
+        }
+        else {
+  
+          if(task_size() > 1) {
+            PMPI_Win_fence(0, mailbox_);
+          }
+          CheckMailBox();
+  
+        }
+  
+        while(!TestRecvComm());
+    
+        CD_DEBUG("Test Asynch messages until done \n");
+  
+#endif
+  
+        cd_exec_mode_ = kExecution;
+        // This point means the beginning of body stage. Request EntrySearch at this routine
+      }
+
+      return cd_err;
+ 
+    }
+    else {  // abnormal case
+      //return CDErrT::kOK;
+
+      CD_DEBUG("The end of reexec!!!\n");
+      // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
+      // we reached the last preserve function call. 
+      // Since we have reached the last point already now convert current execution mode into kExecution
+      
+//      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
+      CD_DEBUG("Now reached end of entry directory, now switching to normal execution mode\n");
+
+      cd_exec_mode_  = kExecution;
+
+      serdes(cd_exec_mode, &object);
+    }
+
+    CD_DEBUG("Reexecution mode finished...\n");
+  }   // Re-execution mode ends
+  else {  // Suspension mode
+    // Is it okay ?
+    // Is it possible to call Preserve() at Suspension mode?
+    assert(0);
+  }
+
+  
+  return kError; // we should not encounter this point
+  }
+
+#endif
+  return kError;
+}
+
+
 // Non-blocking Preserve
 CDErrT CD::Preserve(CDEvent &cd_event,     
                     void *data_ptr, 
@@ -2064,17 +2181,21 @@ CD::InternalPreserve(void *data,
           }
           return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
         }
-        case kHDD: {
-          CD_DEBUG("[MEDIUM TYPE : kHDD] ------------------------------------------\n");
+        case kHDD: 
+        case kSSD:
+        {
+          CD_DEBUG("[MEDIUM TYPE : File %d] ------------------------------------------\n", GetPlaceToPreserve());
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                                 DataHandle(DataHandle::kOSFile, 0, len_in_bytes, cd_id_.node_id_), 
+                                 DataHandle(DataHandle::kOSFile, 0, len_in_bytes, cd_id_.node_id_, 
+                                            file_handle_.GetFilePath(),
+                                            file_handle_.fp_, 
+                                            file_handle_.UpdateFilePos(len_in_bytes)), 
                                  my_name, this);
-//          cd_entry->set_my_cd(this); 
 
-          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_HDD'       
-          CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path_.GetFilePath(), log_handle_.IsOpen());
+          CDEntry::CDEntryErrT err = cd_entry->SaveFile(file_handle_.GetFilePath());
 
           entry_directory_.push_back(*cd_entry); 
+
           CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
 
           if( !my_name.empty() ) {
@@ -2099,54 +2220,6 @@ CD::InternalPreserve(void *data,
                       cd_hash(my_name), 
                       *(reinterpret_cast<int*>(remote_entry_directory_map_[cd_hash(my_name)]->src_data_.address_data())),
                       cd_entry->dst_data_.address_data());
-            }
-          }
-          else {
-            ERROR_MESSAGE("No entry name is provided. Currently it is not supported.\n");
-          }
-
-          return (err == CDEntry::CDEntryErrT::kOK)? CDInternalErrT::kOK : CDInternalErrT::kEntryError;
-        }
-        case kSSD: {
-          CD_DEBUG("[MEDIUM TYPE : kSSD] ------------------------------------------\n");
-          cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                                 DataHandle(DataHandle::kOSFile, 0, len_in_bytes, cd_id_.node_id_), 
-                                 my_name, this);
-//          cd_entry->set_my_cd(this); 
-
-          if( !log_handle_.IsOpen() ) log_handle_.OpenFilePath(); // set flag 'open_SSD'       
-          CDEntry::CDEntryErrT err = cd_entry->SaveFile(log_handle_.path_.GetFilePath(), log_handle_.IsOpen());
-
-          entry_directory_.push_back(*cd_entry);  
-          CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
-
-          if( !my_name.empty() ) {
-            if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
-              entry_directory_map_[cd_hash(my_name)] = cd_entry;
-
-              assert(entry_directory_map_[cd_hash(my_name)]);
-              assert(entry_directory_map_[cd_hash(my_name)]->src_data_.address_data());
-
-              CD_DEBUG("Register local entry dir. my_name : %s - %u, value : %d, address: %p\n", 
-                      entry_directory_map_[cd_hash(my_name)]->name().c_str(), 
-                      cd_hash(my_name), 
-                      *(reinterpret_cast<int*>(entry_directory_map_[cd_hash(my_name)]->src_data_.address_data())),
-                      cd_entry->dst_data_.address_data());
-
-            }
-            else {
-              remote_entry_directory_map_[cd_hash(my_name)] = cd_entry;
-
-              assert(remote_entry_directory_map_[cd_hash(my_name)]);
-              assert(remote_entry_directory_map_[cd_hash(my_name)]->src_data_.address_data());
-
-
-              CD_DEBUG("Register remote entry dir. my_name : %s - %u, value : %d, address: %p\n", 
-                      remote_entry_directory_map_[cd_hash(my_name)]->name().c_str(), 
-                      cd_hash(my_name), 
-                      *(reinterpret_cast<int*>(remote_entry_directory_map_[cd_hash(my_name)]->src_data_.address_data())),
-                      cd_entry->dst_data_.address_data());
-
             }
           }
           else {
@@ -2162,10 +2235,10 @@ CD::InternalPreserve(void *data,
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
                                  DataHandle(DataHandle::kPFS, 0, len_in_bytes, cd_id_.node_id_), 
                                  my_name, this);
-//          cd_entry->set_my_cd(this); 
 
           //Do we need to check for anything special for accessing to the global filesystem? 
-          //Potentially=> CDEntry::CDEntryErrT err = cd_entry->SavePFS(log_handle_.path_.GetFilePath(), log_handle_.isPFSAccessible(), &(log_handle_.PFSlog));
+          //Potentially=> CDEntry::CDEntryErrT err = cd_entry->SavePFS(file_handle_.GetFilePath(), 
+          //file_handle_.isPFSAccessible(), &(file_handle_.PFSlog));
           //I don't know what should I do with the log parameter. I just add it for compatibility.
           CDEntry::CDEntryErrT err = cd_entry->SavePFS(); 
 
@@ -4285,35 +4358,10 @@ CD::CDInternalErrT CD::Sync(ColorT color)
   return CDInternalErrT::kOK;
 }
 
-//#if comm_log
-//CD *CD::IsLogable(bool *logable_)
-//{
-////  LIBC_DEBUG("logable_execmode\n");      
-//  CDHandle* current = GetCurrentCD();
-//  CD* c_CD;
-//  if(current==NULL){
-////    LIBC_DEBUG("\tbefore root CD\n");
-//  }
-//  else
-//  {
-//    c_CD = current->ptr_cd();
-//    if(c_CD == NULL)
-//    {
-////      LIBC_DEBUG("\tCD object associated with CD handle\n");
-//    }
-//    else
-//    {
-//      if(c_CD->libc_log_ptr() == NULL && c_CD->GetBegin_())
-//      {
-////        LIBC_DEBUG("\tno libc_log in current CD\n");
-//      }
-//      else 
-//      {
-////        LIBC_DEBUG("\tnow we have libc_log object\n");
-//        *logable_ = true;
-//      }
-//    }
-//  }
-//  return c_CD;
-//}
-//#endif
+CD::CDInternalErrT CD::SyncFile(void)
+{
+
+  // STUB
+  //
+  return CDInternalErrT::kOK;
+}

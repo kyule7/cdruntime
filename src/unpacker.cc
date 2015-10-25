@@ -56,8 +56,8 @@ Unpacker::~Unpacker()
 
 char *Unpacker::GetAt(const char *src_data, uint32_t find_id, uint32_t &return_size, uint32_t &return_id)
 {
-  char *str_return_data;
-  uint32_t id, size, pos;
+  char *str_return_data=NULL;
+  uint32_t id=-1, size, pos;
 
   reading_pos_=0;
   table_size_ = GetWord(src_data + reading_pos_);
@@ -66,9 +66,7 @@ char *Unpacker::GetAt(const char *src_data, uint32_t find_id, uint32_t &return_s
   while ( reading_pos_ < table_size_ )
   {
     id = GetWord( src_data + reading_pos_ );
-    if( id == find_id )  
-
-    {
+    if( id == find_id ) {
       size = GetWord(src_data + reading_pos_ + 4); // FIXME: Currently assumed uint32_t is 4 bytes long.
       pos  = GetWord(src_data + reading_pos_ + 8);
       str_return_data = new char[size];
@@ -78,25 +76,22 @@ char *Unpacker::GetAt(const char *src_data, uint32_t find_id, uint32_t &return_s
 
       break;
     }
-    else
-    {
+    else {
       reading_pos_ = reading_pos_ + 12;
     }
   }
-  if( id == find_id ) 
 
-  {
+  if( id == find_id ) {
     return str_return_data;
   }
-  else 
-  {
+  else {
     return NULL;
   }
 }
 
 uint32_t Unpacker::GetAt(const char *src_data, uint32_t find_id, void *return_data)
 {
-  uint32_t id=0;
+  uint32_t id=-1;
   char *pData;
   uint32_t return_size;
   pData = GetAt(src_data, find_id, return_size, id);
@@ -114,7 +109,7 @@ uint32_t Unpacker::GetAt(const char *src_data, uint32_t find_id, void *return_da
 
 char *Unpacker::GetAt(const char *src_data, uint32_t find_id, uint32_t &return_size)
 {
-  uint32_t id;
+  uint32_t id=-1;
   return GetAt(src_data,find_id,return_size,id);
 }
 

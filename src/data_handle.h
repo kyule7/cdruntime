@@ -76,7 +76,13 @@ class DataHandle : public Serializable {
   friend class HeadCD;
   friend std::ostream& operator<<(std::ostream& str, const DataHandle& dh);
   public:
-    enum HandleType { kMemory = 0, kOSFile, kReference, kSource, kPFS };
+    enum HandleType { 
+      kMemory=0, 
+      kOSFile, 
+      kReference, 
+      kSource, 
+      kPFS 
+    };
   private:
     enum { 
       DATA_PACKER_NODE_ID=0,
@@ -90,10 +96,13 @@ class DataHandle : public Serializable {
 
     HandleType  handle_type_;
     //DRAM
-    void*       address_data_;
-    uint64_t    len_;
+    void *address_data_;
+    uint64_t len_;
+
     //FILE
-    char file_name_[MAX_FILE_PATH];
+    char file_name_[MAX_FILE_PATH]; // This is matched with CDFileHandle::unique_filename_
+    FILE *fp_; // This is matched with CDFileHandle::fp_
+    long fpos_;
 
     //Parallel Filesystem
     COMMLIB_Offset  parallel_file_offset_;
@@ -101,47 +110,66 @@ class DataHandle : public Serializable {
     //Reference
     ENTRY_TAG_T ref_name_;
     uint64_t ref_offset_;
-    NodeID      node_id_;
+    NodeID node_id_;
 
-//  public: 
-    DataHandle() 
-      : handle_type_(kMemory), address_data_(0), len_(0), ref_name_(0), ref_offset_(0) 
+  private:
+    DataHandle(void) 
+      : handle_type_(kMemory), address_data_(0), len_(0), fp_(NULL), fpos_(0), ref_name_(0), ref_offset_(0) 
     { 
       strcpy(file_name_, INIT_FILE_PATH);
     }
 
-    DataHandle(std::string ref_name, uint64_t ref_offset, const NodeID &node_id) 
-      : handle_type_(kReference), address_data_(0), len_(0), ref_offset_(ref_offset) 
+//    DataHandle(std::string ref_name, uint64_t ref_offset, 
+//               const NodeID &node_id) 
+//      : handle_type_(kReference), address_data_(0), len_(0), ref_offset_(ref_offset) 
+//    { 
+//      strcpy(file_name_, INIT_FILE_PATH); 
+//      ref_name_ = cd_hash(ref_name); 
+//      tag2str[ref_name_] = ref_name; 
+//      node_id_ = node_id; 
+//    }
+//
+//    DataHandle(const char* file_name, 
+//               const NodeID &node_id)
+//      : handle_type_(kOSFile), address_data_(0), len_(0), ref_name_(0), ref_offset_(0) 
+//    { 
+//      strcpy(file_name_, file_name); 
+//      node_id_ = node_id; 
+//    }
+//
+//    DataHandle(void* address_data, const uint64_t& len, 
+//               const NodeID &node_id)
+//      : handle_type_(kMemory), address_data_(address_data), len_(len), ref_name_(0), ref_offset_(0) 
+//    { 
+//      strcpy(file_name_, INIT_FILE_PATH); 
+//      node_id_ = node_id; 
+//    }
+
+    // DataHandle for preservation to memory
+    DataHandle(HandleType handle_type, 
+               void* address_data, const uint64_t& len, 
+               const NodeID &node_id)
+      : handle_type_(handle_type), address_data_(address_data), len_(len), fp_(NULL), fpos_(0), ref_name_(0), ref_offset_(0)
     { 
       strcpy(file_name_, INIT_FILE_PATH); 
-      ref_name_ = cd_hash(ref_name); 
-      tag2str[ref_name_] = ref_name; 
       node_id_ = node_id; 
     }
 
-    DataHandle(const char* file_name, const NodeID &node_id)
-      : handle_type_(kOSFile), address_data_(0), len_(0), ref_name_(0), ref_offset_(0) 
+    // DataHandle for preservation to file system
+    DataHandle(HandleType handle_type, 
+               void* address_data, const uint64_t& len, 
+               const NodeID &node_id, const std::string &file_name, FILE *fp=NULL, long fpos=0)
+      : handle_type_(handle_type), address_data_(address_data), len_(len), fp_(fp), fpos_(fpos), ref_name_(0), ref_offset_(0)
     { 
-      strcpy(file_name_, file_name); 
+      strcpy(file_name_, file_name.c_str()); 
       node_id_ = node_id; 
     }
 
-    DataHandle(void* address_data, const uint64_t& len, const NodeID &node_id)
-      : handle_type_(kMemory), address_data_(address_data), len_(len), ref_name_(0), ref_offset_(0) 
-    { 
-      strcpy(file_name_, INIT_FILE_PATH); 
-      node_id_ = node_id; 
-    }
-
-    DataHandle(HandleType handle_type, void* address_data, const uint64_t& len, const NodeID &node_id)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), ref_name_(0), ref_offset_(0)
-    { 
-      strcpy(file_name_, INIT_FILE_PATH); 
-      node_id_ = node_id; 
-    }
-
-    DataHandle(HandleType handle_type, void* address_data, const uint64_t& len, std::string ref_name, uint64_t ref_offset)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), ref_offset_(ref_offset) 
+    // DataHandle for preservation via reference
+    DataHandle(HandleType handle_type, 
+               void* address_data, const uint64_t& len, 
+               std::string ref_name, uint64_t ref_offset)
+      : handle_type_(handle_type), address_data_(address_data), len_(len), fpos_(0), ref_offset_(ref_offset) 
     { 
       // There is no NodeID passed to newly created DataHandle object.
       // The reason for this is that we do not track the destinatino information when we preserve,
@@ -180,6 +208,9 @@ public:
     }
 
   std::string GetString(void) const;
+  uint64_t GetOffset(void) const {
+    return fpos_ + ref_offset_;
+  }
 private:
 //  public: 
     //we need serialize deserialize interface here.

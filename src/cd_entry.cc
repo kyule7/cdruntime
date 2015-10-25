@@ -37,6 +37,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_entry.h"
 #include "cd_path.h"
 #include "cd_def_internal.h"
+#include <fcntl.h>
+#include <unistd.h>
 
 using namespace cd;
 using namespace cd::internal;
@@ -53,21 +55,21 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
   else if( dst_data_.handle_type() == DataHandle::kOSFile )  {
 
 #if _PRV_FILE_NOT_ERASED
-    char cmd[256];
-    char backup_dir[256];
-    sprintf(backup_dir, "mkdir backup_results");
-    int ret = system(backup_dir);
-    sprintf(cmd, "mv %s ./backup_results/", dst_data_.file_name_);
-    ret = system(cmd);
-#else
-    char cmd[256];
-    sprintf(cmd, "rm -f %s", dst_data_.file_name_);
-    int ret = system(cmd);
+//    char cmd[256];
+//    char backup_dir[256];
+//    sprintf(backup_dir, "mkdir backup_results");
+//    int ret = system(backup_dir);
+//    sprintf(cmd, "mv %s ./backup_results/", dst_data_.file_name_);
+//    ret = system(cmd);
+//#else
+//    char cmd[256];
+//    sprintf(cmd, "rm -f %s", dst_data_.file_name_);
+//    int ret = system(cmd);
 #endif
 
-    if( ret == -1 ) {
-      ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
-    }
+//    if( ret == -1 ) {
+//      ERROR_MESSAGE("Failed to create a directory for preservation data (SSD)");
+//    }
   }
 
   return CDEntry::CDEntryErrT::kOK;
@@ -101,31 +103,29 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
   return kOK;
 }
 
-CDEntry::CDEntryErrT CDEntry::SaveFile(string base_, bool isOpen)
+CDEntry::CDEntryErrT CDEntry::SaveFile(string base_)
 {
   // Get file name to write if it is currently NULL
-  char* str; 
-  if( !strcmp(dst_data_.file_name_, INIT_FILE_PATH) ) {
-    // assume cd_id_ is unique (sequential cds will have different cd_id) 
-    // and address data is also unique by natural
-    const char* data_name;
-    str = new char[30];
-    if(entry_tag_ == 0) {
-      sprintf(str, "%d", rand());
-      data_name = str;
-    }
-    else  {
-      data_name = tag2str[entry_tag_].c_str();
-    }
-
-    const char *file_name = Util::GetUniqueCDFileName(ptr_cd_->GetCDID(), base_.c_str(), data_name).c_str();
-    strcpy(dst_data_.file_name_, file_name); 
-  }
-
-  FILE *fp = fopen(dst_data_.file_name_, "w");
-  if( fp!= NULL ) {
+//  char* str; 
+//  if( !strcmp(dst_data_.file_name_, INIT_FILE_PATH) ) {
+//    // assume cd_id_ is unique (sequential cds will have different cd_id) 
+//    // and address data is also unique by natural
+//    const char* data_name;
+//    str = new char[30];
+//    if(entry_tag_ == 0) {
+//      sprintf(str, "%d", rand());
+//      data_name = str;
+//    }
+//    else  {
+//      data_name = tag2str[entry_tag_].c_str();
+//    }
+//
+//    const char *file_name = Util::GetUniqueCDFileName(ptr_cd_->GetCDID(), base_.c_str(), data_name).c_str();
+//    strcpy(dst_data_.file_name_, file_name); 
+//  }
+  FILE *fp = GetFilePointer();
+  if( fp != NULL ) {
     fwrite(src_data_.address_data(), sizeof(char), src_data_.len(), fp);
-    fclose(fp);
 
     CD_DEBUG("Write to a file. \n");
 
@@ -376,7 +376,7 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
 #endif
     return kEntrySearchRemote;
   }
-  else {
+  else { // Preservation via copy/ref local 
     if(buffer->handle_type() == DataHandle::kMemory)  {
       CD_DEBUG("Local Case -> kMemory\n");
   
@@ -397,26 +397,33 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
       }
   
     }
-    else if( buffer->handle_type() == DataHandle::kOSFile)  {
+    else if(buffer->handle_type() == DataHandle::kOSFile)  {
       CD_DEBUG("Local Case -> kOSFile\n");
 
       //FIXME we need to collect file writes and write as a chunk. We don't want to have too many files per one CD.   
-  
-      FILE *fp = fopen(buffer->file_name_, "r");
+      FILE *fp = buffer->fp_;
+      int fd = fileno(fp);
+      if(fcntl(fd, F_GETFD) == -1) {
+//        if(errno == EBADF) { // fd is not an open file descriptor
+//          fp = fdopen(fd, "r");
+//        }
+//        else { 
+//          fp = fopen(buffer->file_name_, "r"); 
+//        }
+        fp = fopen(buffer->file_name_, "r"); 
+      }
+
+      // Now, fp should be valid pointer
       if( fp!= NULL )  {
-        if( buffer->ref_offset() != 0 ) { 
-          fseek(fp, buffer->ref_offset(), SEEK_SET); 
-        }
-
+        fseek(fp, buffer->GetOffset() , SEEK_SET); 
         fread(src_data_.address_data(), 1, src_data_.len(), fp);
-
+        fclose(fp);
         CD_DEBUG("Read data from OS file system\n");
 
-        fclose(fp);
         return CDEntryErrT::kOK;
       }
       else {
-        CD_DEBUG("Error in fopen\n");
+        CD_DEBUG("[WARNING] File Descriptor is invalid during restoration from %s. %s", buffer->file_name_, strerror(errno));
         return CDEntryErrT::kFileOpenError;
       }
     } 
@@ -430,7 +437,10 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
 
 }
 
-
+FILE *CDEntry::GetFilePointer(void)
+{
+  return ptr_cd_->file_handle_.fp_;
+}
 
 ostream& cd::internal::operator<<(ostream& str, const CDEntry& cd_entry)
 {
@@ -452,6 +462,7 @@ string CDEntry::GetString(void) const
          + string("\n========================================\n") );
 }
 
+/*
 CDEntry::CDEntryErrT CDEntry::Save(void)
 {
   //Direction is from src_data_ to dst_data_
@@ -515,5 +526,6 @@ CDEntry::CDEntryErrT CDEntry::Save(void)
   return kOK;
 
 }
+*/
 
 

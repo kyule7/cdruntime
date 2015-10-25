@@ -82,6 +82,8 @@ AS_IF([test x"$enable_keep_preservation_files" = x"yes"],
         [WANT_KEEP_PRESERVATION_FILES=1], [WANT_KEEP_PRESERVATION_FILES=0])
 AC_DEFINE_UNQUOTED(_PRV_FILE_NOT_ERASED, $WANT_ERROR_INJECTION,
           [Define to 1 to keep preservation files after program exits.])
+AC_DEFINE_UNQUOTED(_PRV_FILE_BASEPATH, $WANT_ERROR_INJECTION,
+          [Define to 1 to keep preservation files after program exits.])
 
 # parallel library support
 AC_ARG_ENABLE([parallel],

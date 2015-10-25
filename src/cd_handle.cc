@@ -116,89 +116,81 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   myTaskID      = myTask;
   totalTaskSize = numTask;
 
-#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
+  string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
+#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE || CD_DEBUG_ENABLED
   char *filepath = getenv( "CD_DEBUG_OUT" );
-  string basepath;
-  string filename("/cddbg_log_rank_");
+  char dbg_log_filename[] = "cddbg_log_rank_";
 
   if(filepath != NULL) {
-    basepath = filepath;
+    // Overwrite filepath with CD_DEBUG_OUT value
+    dbg_basepath = filepath;
   }
-  else {
 
-    if(myTaskID == 0) {
-      struct stat sb;
-      if (stat("./debug_logs", &sb) == 0 && S_ISDIR(sb.st_mode)) {
-//        printf("Path exists!\n");
-      }
-      else {
-        char debug_dir[32];
-        sprintf(debug_dir, "mkdir ./debug_logs");
-        
-        int ret = system(debug_dir);
-
-  
-        if(ret == -1)
-          ERROR_MESSAGE("ERROR: Failed to create directory for debug info. %s\n", debug_dir);
-      }
+  if(myTaskID == 0) {
+    struct stat sb;
+    if (stat(dbg_basepath.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+      printf("Path exists!\n");
     }
-
-    basepath = CD_DEFAULT_DEBUG_OUT;
+    else {
+      char debug_dir[256];
+      sprintf(debug_dir, "mkdir -p %s", dbg_basepath.c_str());
+      printf("debug dir path size : %d\n", (int)sizeof(debug_dir));
+      if( system(debug_dir) == -1 )
+        ERROR_MESSAGE("ERROR: Failed to create directory for debug info. %s\n", debug_dir);
+    }
   }
+  
+  char dbg_filepath[256]={};
+  snprintf(dbg_filepath, 256, "%s%s%d", dbg_basepath.c_str(), dbg_log_filename, myTaskID);
+  printf("dbg filepath : %s\n", dbg_filepath);
+//  dbg_basepath = dbg_basepath + log_filename + to_string(static_cast<unsigned long long>(myTaskID));
 
-  basepath = basepath + filename + to_string(static_cast<unsigned long long>(myTaskID));
+  cdout = fopen(dbg_filepath, "w");
 
 #if CD_MPI_ENABLED  
   // Synchronization is needed. Otherwise, some task may execute CD_DEBUG before head creates directory 
   PMPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  cdout = fopen(basepath.c_str(), "w");
  
 #endif
 
 #if CD_DEBUG_ENABLED
-  std::string output_filename2("./output/cddbg_output_");
-  output_filename2 += to_string(static_cast<unsigned long long>(myTaskID));
-  cddbg.open(output_filename2.c_str());
+  char app_dbg_log_filename[] = "cddbg_app_output_";
+  char app_dbg_filepath[256]={};
+  snprintf(app_dbg_filepath, 256, "%s%s%d", dbg_basepath.c_str(), app_dbg_log_filename, myTaskID);
+  printf("app dbg filepath : %s\n", app_dbg_filepath);
+  cddbg.open(app_dbg_filepath);
 #endif
 
   cd::internal::Initialize();
 
+  // Base filepath setup for preservation
+  char *filepath_env = getenv("CD_PRV_BASEPATH");
+  if(filepath_env != NULL) {
+    FilePath::prv_basePath_ = filepath_env;
+  }
+
+//  if(myTaskID == 0) {
+//    struct stat sb;
+//    if (stat(prv_basePath_.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+//      printf("Prv Path exists!\n");
+//    }
+//    else {
+//      char prv_file_dir[256];
+//      sprintf(prv_file_dir, "mkdir -p %s", prv_basePath_.c_str());
+//      printf("preservation file path size : %d\n", (int)sizeof(prv_file_dir));
+//      if( system(prv_file_dir) == -1 )
+//        ERROR_MESSAGE("ERROR: Failed to create directory for debug info. %s\n", prv_file_dir);
+//    }
+//  }
+
+  NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask); 
   CD::CDInternalErrT internal_err;
-
-  char preservation_unique_name[ L_tmpnam ];
-#if CD_MPI_ENABLED
-  char processor_name[ MPI_MAX_PROCESSOR_NAME ];
-  NodeID new_node_id(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
-  if( new_node_id.IsHead() )
-  {
-     if( tmpnam_r( preservation_unique_name ) )
-     {
-       CD_DEBUG("[CD_Init] this is the temporary path created for run: %s\n", preservation_unique_name);
-     }
-     else
-       ERROR_MESSAGE("Failed to generate an unique filepath.\n");
-
-     int len;
-     PMPI_Get_processor_name( processor_name, &len );
-  }
-
-  PMPI_Bcast( preservation_unique_name, L_tmpnam, MPI_BYTE, new_node_id.head(), MPI_COMM_WORLD );
-  PMPI_Bcast( processor_name, MPI_MAX_PROCESSOR_NAME, MPI_BYTE, new_node_id.head(), MPI_COMM_WORLD );
-  string base_filepath = string(preservation_unique_name) + string(processor_name);
-#else
-
-  if( tmpnam_r( preservation_unique_name ) ) {
-    CD_DEBUG("[CD_Init] this is the temporary path created for run: %s\n", preservation_unique_name);
-  }
-  else
-    ERROR_MESSAGE("Failed to generate an unique filepath.\n");
-
-  string base_filepath = string(preservation_unique_name);
-#endif
-
-  CDHandle* root_cd_handle = CD::CreateRootCD("Root", CDID(CDNameT(0), NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask)), static_cast<CDType>(kStrict | prv_medium), base_filepath, 0, &internal_err);
+  CDHandle* root_cd_handle = CD::CreateRootCD("Root", CDID(CDNameT(0), new_node_id), 
+                                              static_cast<CDType>(kStrict | prv_medium), 
+                                              FilePath::prv_basePath_, 
+                                              0, &internal_err);
 
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
@@ -584,6 +576,11 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
 
   CD_DEBUG("Remote Entry Dir size: %lu", ptr_cd_->remote_entry_directory_map_.size());
 
+  // Sync buffer with file to prevent important metadata 
+  // or preservation file at buffer in parent level from being lost.
+  ptr_cd_->SyncFile();
+
+  // Make a superset
   CollectHeadInfoAndEntry(new_node_id); 
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
@@ -636,6 +633,11 @@ CDHandle* CDHandle::Create(uint32_t color,
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, color);
 
+  // Sync buffer with file to prevent important metadata 
+  // or preservation file at buffer in parent level from being lost.
+  ptr_cd_->SyncFile();
+
+  // Make a superset
   CollectHeadInfoAndEntry(new_node_id); 
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
@@ -881,6 +883,47 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   /// It will be averaged out with the number of seq. CDs.
   assert(ptr_cd_ != 0);
   CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+                                 my_name, ref_name, ref_offset, 
+                                 regen_object, data_usage);
+
+  CDEpilogue();
+  return err;
+}
+
+CDErrT CDHandle::Preserve(Serdes &serdes,                           
+                          uint32_t preserve_mask, 
+                          const char *my_name, 
+                          const char *ref_name, 
+                          uint64_t ref_offset, 
+                          const RegenObject *regen_object, 
+                          PreserveUseT data_usage)
+{
+  CDPrologue();
+  
+//#if CD_PROFILER_ENABLED
+//  if(ptr_cd()->cd_exec_mode_ == 0) {
+//    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
+//      profiler_->RecordProfile(PRV_COPY_DATA, len);
+//    }
+//    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
+//      profiler_->RecordProfile(PRV_REF_DATA, len);
+//    }
+//  }
+//#endif
+//
+//
+//#if CD_ERROR_INJECTION_ENABLED
+//  if(memory_error_injector_ != NULL) {
+//    memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
+//    memory_error_injector_->Inject();
+//  }
+//#endif
+  
+  /// Preserve meta-data
+  /// Accumulated volume of data to be preserved for Sequential CDs. 
+  /// It will be averaged out with the number of seq. CDs.
+  assert(ptr_cd_ != 0);
+  CDErrT err = ptr_cd_->Preserve(serdes, preserve_mask, 
                                  my_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
 

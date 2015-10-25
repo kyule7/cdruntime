@@ -1066,7 +1066,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
     else
     {
       LOG_DEBUG("In kReplay mode, replaying from logs...\n");
-      CommLogErrT ret;
+      CommLogErrT ret = kCommLogOK;
       for (ii=0;ii<count;ii++)
       {
         ret = cur_cd->ptr_cd()->ProbeData(&array_of_requests[ii],0);

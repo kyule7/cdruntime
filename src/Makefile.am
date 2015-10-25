@@ -5,6 +5,7 @@ include_HEADERS = cds.h \
 									cd_handle.h \
 									node_id.h \
 									sys_err_t.h \
+									serdes.h \
 									serializable.h \
 									profiler_interface.h \
 									error_injector.h
@@ -34,6 +35,7 @@ libcds_la_SOURCES = \
   	                error_injector.cc \
 										profiler_interface.cc \
   	                recover_object.cc \
+										serdes.cc \
   	                sys_err_t.cc \
   	                unpacker.cc
 
