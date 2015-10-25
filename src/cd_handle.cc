@@ -45,7 +45,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include "cd_global.h"
 #include "node_id.h"
 #include "sys_err_t.h"
-#include "cd.h"
+#include "cd_internal.h"
 //#include "profiler_interface.h"
 
 #if CD_PROFILER_ENABLED
@@ -140,6 +140,11 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
     }
   }
   
+#if CD_MPI_ENABLED  
+  // Synchronization is needed. Otherwise, some task may execute CD_DEBUG before head creates directory 
+  PMPI_Barrier(MPI_COMM_WORLD);
+#endif
+
   char dbg_filepath[256]={};
   snprintf(dbg_filepath, 256, "%s%s%d", dbg_basepath.c_str(), dbg_log_filename, myTaskID);
   printf("dbg filepath : %s\n", dbg_filepath);
@@ -147,10 +152,6 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 
   cdout = fopen(dbg_filepath, "w");
 
-#if CD_MPI_ENABLED  
-  // Synchronization is needed. Otherwise, some task may execute CD_DEBUG before head creates directory 
-  PMPI_Barrier(MPI_COMM_WORLD);
-#endif
 
  
 #endif

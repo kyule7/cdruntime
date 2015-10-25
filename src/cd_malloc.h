@@ -40,7 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdint.h>
 #include <stdio.h>
 #include <dlfcn.h>
-#include "cd.h"
+#include "cd_internal.h"
 #include "cd_global.h"
 #include "cd_def_internal.h"
 

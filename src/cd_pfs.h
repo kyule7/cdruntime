@@ -45,7 +45,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_features.h"
 #include "cd_global.h"
 #include "cd_def_internal.h" 
-#include "cd.h"
+#include "cd_internal.h"
 
 #if CD_PROFILER_ENABLED
 

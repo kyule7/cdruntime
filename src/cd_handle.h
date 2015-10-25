@@ -63,7 +63,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include "cd_profiler.h"
 //#endif
 //#include "sys_err_t.h"
-//#include "cd.h"
+//#include "cd_internal.h"
 
 using namespace cd::interface;
 using namespace cd::internal;

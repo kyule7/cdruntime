@@ -39,7 +39,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <string>
 #include <map>
 
-#include "cds.h"
+#include "cd.h"
 
 #if CD_MPI_ENABLED
 #include <mpi.h>

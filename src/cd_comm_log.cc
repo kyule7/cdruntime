@@ -37,7 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifdef comm_log
 
 #include "cd_comm_log.h"
-#include "cd.h"
+#include "cd_internal.h"
 #include <string.h>
 
 using namespace cd;

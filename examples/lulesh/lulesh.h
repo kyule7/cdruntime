@@ -17,7 +17,7 @@
 #if _CD
 #include "packer.h"
 #include "unpacker.h"
-#include "cds.h"
+#include "cd.h"
 #endif
 //**************************************************
 // Allow flexibility for arithmetic representations 

@@ -161,8 +161,8 @@ Additional BSD Notice
 #include "lulesh.h"
 
 #if _CD
-//#include "cds.h"
-//#include "cds.h"
+//#include "cd.h"
+//#include "cd.h"
 using namespace cd;
 #define NUM_CDS_IN_LEVEL_1   1
 #define NUM_CDS_IN_LEVEL_2   8

@@ -1,5 +1,5 @@
-#lib_LIBRARIES = libcds.a
-include_HEADERS = cds.h \
+#lib_LIBRARIES = libcd.a
+include_HEADERS = cd.h \
 									cd_global.h \
 									cd_features.h \
 									cd_handle.h \
@@ -11,9 +11,9 @@ include_HEADERS = cds.h \
 									error_injector.h
 
 # Libtool-related
-lib_LTLIBRARIES = libcds.la
+lib_LTLIBRARIES = libcd.la
 
-libcds_la_SOURCES = \
+libcd_la_SOURCES = \
   	                cd.cc \
   	                cd_comm_internal.cc \
   	                cd_comm_log.cc \
@@ -39,5 +39,5 @@ libcds_la_SOURCES = \
   	                sys_err_t.cc \
   	                unpacker.cc
 
-#libcds_la_CPPFLAGS = $(cpp_flags)
-#libcds_la_LIBADD = $(external_libs)
+#libcd_la_CPPFLAGS = $(cpp_flags)
+#libcd_la_LIBADD = $(external_libs)

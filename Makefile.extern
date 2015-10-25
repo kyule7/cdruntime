@@ -14,8 +14,8 @@ CD_AUTOTUNER= ${CD_ROOT}/autotuner
 CD_CFLAGS =-I${CD_SRC} -I${CD_INTERFACE}
 
 CD_LINKFLAGS =-Wl,-rpath ${CD_LIB} \
-              ${CD_LIB}/libcds.so \
-              -L${CD_LIB} -lcds 
+              ${CD_LIB}/libcd.so \
+              -L${CD_LIB} -lcd 
 
 VIZ_LINKFLAGS =-Wl,-rpath ${SIGHT_ROOT} \
               ${SIGHT_ROOT}/libsight_structure.so \

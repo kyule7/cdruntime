@@ -40,7 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <map>
 
 #include <mpi.h>
-#include "cds.h"
+#include "cd.h"
 
 #define KILO 1024
 #define MEGA 1048576

@@ -7,7 +7,7 @@ EXEC_PROFILED = $(LULESH_EXEC)
 
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=1 -D_DEBUG=0
 #CD_CFLAGS = -I../../src 
-#CD_LINKFLAGS = -L../../lib -Wl,-rpath ../../lib -lcds
+#CD_LINKFLAGS = -L../../lib -Wl,-rpath ../../lib -lcd
 
 
 SERCXX   = g++ -DUSE_MPI=0 
@@ -33,7 +33,7 @@ LULESH_O      = $(SOURCE_LULESH:.cc=.o)
 #TEST_MPI_O    = $(SOURCE_TEST_MPI:.cc=.o)
 
 #cd_profiler_H := ${CD_ROOT}/src/*.h \
-#                 ${CD_ROOT}/lib/libcds.so
+#                 ${CD_ROOT}/lib/libcd.so
 #all_H        :=  ${cd_profiler_H}
 
 .cc.o:  
