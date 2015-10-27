@@ -14,14 +14,14 @@ include_HEADERS = cd.h \
 lib_LTLIBRARIES = libcd.la
 
 libcd_la_SOURCES = \
-  	                cd.cc \
+  	                cd_internal.cc \
   	                cd_comm_internal.cc \
   	                cd_comm_log.cc \
   	                cd_entry.cc \
   	                cd_event.cc \
   	                cd_handle.cc \
   	                cd_id.cc \
-  	                cd_log_handle.cc \
+  	                cd_file_handle.cc \
   	                cd_malloc.cc \
   	                cd_mpiwrapper.cc \
   	                cd_name_t.cc \

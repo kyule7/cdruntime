@@ -32,7 +32,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 */
-#include "cd_log_handle.h"
+#include "cd_file_handle.h"
 #include "cd_def_internal.h"
 #include "cd_config.h"
 #include <sys/stat.h>

@@ -51,7 +51,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_entry.h"
 #include "util.h"
 #include "cd_id.h"
-#include "cd_log_handle.h"
+#include "cd_file_handle.h"
 #include "recover_object.h"
 #include "serializable.h"
 #include "event_handler.h"
