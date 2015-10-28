@@ -146,7 +146,7 @@ int TestCDHierarchy(void)
   arrayName[arrayD] = "arrayD";
 //  int test_results[8] = {0,};
 //  int test_result = 0;
-//  int num_reexecution = 0;
+  int num_reexecution = 0;
 
   // User-defined object
   UserObject1 userObj1;
@@ -268,6 +268,11 @@ int TestCDHierarchy(void)
 
   // Detect Error here
   root->Detect();
+
+  if(num_reexecution == 0) {
+    root->CDAssert(0);
+    num_reexecution++;
+  }
 
   CD_Complete(root);
   dbgApp << "Root CD Complete...\n" << endl;

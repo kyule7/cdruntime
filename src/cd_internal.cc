@@ -2184,10 +2184,12 @@ CD::InternalPreserve(void *data,
         case kHDD: 
         case kSSD:
         {
+          char *filepath = file_handle_.GetFilePath();
           CD_DEBUG("[MEDIUM TYPE : File %d] ------------------------------------------\n", GetPlaceToPreserve());
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
                                  DataHandle(DataHandle::kOSFile, 0, len_in_bytes, cd_id_.node_id_, 
-                                            file_handle_.GetFilePath(),
+//                                            file_handle_.GetFilePath(),
+                                            filepath,
                                             file_handle_.fp_, 
                                             file_handle_.UpdateFilePos(len_in_bytes)), 
                                  my_name, this);

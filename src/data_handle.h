@@ -289,6 +289,8 @@ private:
       address_data_= that.address_data_;
       len_         = that.len();
       strcpy(file_name_, that.file_name_);
+      fp_ = that.fp_;
+      fpos_ = that.fpos_;
       ref_name_    = that.ref_name_;
       ref_offset_  = that.ref_offset_;
       return *this;

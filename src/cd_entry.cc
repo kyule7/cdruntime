@@ -403,6 +403,7 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
       //FIXME we need to collect file writes and write as a chunk. We don't want to have too many files per one CD.   
       FILE *fp = buffer->fp_;
       int fd = fileno(fp);
+      bool file_opened = false;
       if(fcntl(fd, F_GETFD) == -1) {
 //        if(errno == EBADF) { // fd is not an open file descriptor
 //          fp = fdopen(fd, "r");
@@ -411,13 +412,17 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
 //          fp = fopen(buffer->file_name_, "r"); 
 //        }
         fp = fopen(buffer->file_name_, "r"); 
+        file_opened = true;
       }
 
       // Now, fp should be valid pointer
       if( fp!= NULL )  {
         fseek(fp, buffer->GetOffset() , SEEK_SET); 
         fread(src_data_.address_data(), 1, src_data_.len(), fp);
-        fclose(fp);
+        if(file_opened == true) {
+          fclose(fp);
+          file_opened = false;
+        }
         CD_DEBUG("Read data from OS file system\n");
 
         return CDEntryErrT::kOK;
