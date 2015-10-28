@@ -61,7 +61,8 @@ map<uint32_t, uint32_t> Util::object_id;
 map<string, uint32_t> CD::exec_count_;
 
 bool CD::need_reexec = false;
-uint32_t CD::reexec_level = 0;
+bool CD::need_escalation = false;
+uint32_t CD::reexec_level = 0xFFFFFFFF;
 
 void cd::internal::Initialize(void)
 {
@@ -257,7 +258,8 @@ CD::CD(CDHandle* cd_parent,
   recoverObj_ = new RecoverObject;
 
 //  need_reexec = false;
-  reexec_level = cd_id.level();
+//  reexec_level = cd_id.level();
+//  reexec_level = 0;
   num_reexecution_ = 0;
 
   Init();  
@@ -788,10 +790,15 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   begin_ = false;
 
 //  Sync(color());
-
+if(collective) {
   if(task_size() > 1) {
     PMPI_Win_fence(0, mailbox_);
   }
+  CheckMailBox();
+  if(task_size() > 1) {
+    PMPI_Win_fence(0, mailbox_);
+  }
+}
 
   if(need_reexec) { 
     // Before longjmp, it should decrement the event counts handled so far.
@@ -801,18 +808,23 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 #endif
 
     need_reexec = false;
+    need_escalation = false;
+    reexec_level = 0xFFFFFFFF;
     //this->Recover(); 
     CD_DEBUG("\n\n\n\n Reexec from level #%u from level #%u\n\n\n\n", reexec_level, level());
-//    CDHandle *curr_cdh = CDPath::GetCurrentCD();
-////    CDHandle *cdh = CDPath::GetCDLevel(reexec_level);
-////    while(cdh != curr_cdh) {
-////      curr_cdh->ptr_cd()->Complete();
-////      curr_cdh->ptr_cd()->Destroy();
-////      curr_cdh = CDPath::GetParentCD(curr_cdh->level());
-////    }
-//    
-//    curr_cdh->ptr_cd()->Recover(); 
-    Recover();
+    CDHandle *curr_cdh = CDPath::GetCurrentCD();
+//    CDHandle *cdh = CDPath::GetCDLevel(reexec_level);
+    uint32_t level = curr_cdh->level();
+    printf("%d > %d\n", reexec_level, level);
+    assert(reexec_level > level); // This should not happen. 
+    while(reexec_level < level) { // Escalation. 
+      curr_cdh->Complete(false);
+      curr_cdh->Destroy();
+      curr_cdh = CDPath::GetParentCD(--level);
+    }
+    
+    curr_cdh->ptr_cd()->Recover(); 
+//    GetCDLevel()->Recover();
   }
 
 
@@ -2399,13 +2411,44 @@ CD::CDInternalErrT CD::Assert(bool test)
 
 #if _MPI_VER
   if(test == false) {
+    need_reexec = true;
+//    bool need_escalation = false;
     if(totalTaskSize != 1) {
-      SetMailBox(kErrorOccurred);
-      internal_err = kErrorReported;
+      
+      // Before Assert(false), some other tasks might raise error flag in this task,
+      // and that can be less than this point, which means escalation request.
+      // reexec_level was set to a number less than current task's level,
+      // Then do not set it to current task's level, because it needs to be escalated.
+      if(reexec_level > level()) {
+        reexec_level = level();
+      }
+      else {
+        need_escalation = true;
+      }
+
+      if(task_size() > 1) {
+        if(need_escalation) {
+          GetParentCD(reexec_level)->SetMailBox(kErrorOccurred);
+        }
+        else {
+          SetMailBox(kErrorOccurred);
+        }
+        internal_err = kErrorReported;
+      }
+      else {
+        if(need_escalation) {
+          SetMailBox(kErrorOccurred);
+          internal_err = kErrorReported;
+        }
+        else {
+          // Do not report
+        }
+      }
+      // SetMailBox for MPI-version is done
     }
     else { // This is just for the case that it is compiled with MPI_VER but rank size is 1.
-      //Recover();  // It will go back to the begin point eventually by longjmp
-      need_reexec = true;
+      if(need_escalation) 
+//        reexec_level = level();
       return internal_err;  // Actually this will not be reached. 
     }
   }
@@ -2428,13 +2471,25 @@ CD::CDInternalErrT CD::Assert(bool test)
 #else
   if(test == false) {
     need_reexec = true;
-//    Recover();    
   }
 
 #endif
 
   return internal_err;
 }
+
+//void CD::SetRecoverFlag(void) {
+//  // Before Assert(false), some other tasks might raise error flag in this task,
+//  // and that can be less than this point, which means escalation request.
+//  // reexec_level was set to a number less than current task's level,
+//  // Then do not set it to current task's level, because it needs to be escalated.
+//  if(reexec_level > level()) {
+//    reexec_level = level();
+//  }
+//  else {
+//    need_escalation = true;
+//  }
+//}
 
 CD::CDInternalErrT CD::RegisterDetection(uint32_t system_name_mask, 
                                      uint32_t system_loc_mask)

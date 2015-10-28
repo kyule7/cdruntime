@@ -207,6 +207,7 @@ class CD : public Serializable {
     int             num_reexecution_;
 
     static bool need_reexec;
+    static bool need_escalation;
     static uint32_t reexec_level;
 
     /// Detection-related meta data

@@ -133,6 +133,8 @@ class UserObject1 {
     }
 };
 
+int num_reexecution = 0;
+
 // Test basic preservation scheme.
 int TestCDHierarchy(void)
 {
@@ -146,7 +148,6 @@ int TestCDHierarchy(void)
   arrayName[arrayD] = "arrayD";
 //  int test_results[8] = {0,};
 //  int test_result = 0;
-  int num_reexecution = 0;
 
   // User-defined object
   UserObject1 userObj1;
@@ -265,7 +266,7 @@ int TestCDHierarchy(void)
   dbgApp << string(1<<1, '\t').c_str() << "Level 1 CD Complete...\n" << endl;
   child_lv1->Destroy();
   dbgApp << string(1<<1, '\t').c_str() << "Level 1 CD Destroyed...\n" << endl;
-
+  printf("num execution : %d at #%d\n", num_reexecution, myRank);
   // Detect Error here
   root->Detect();
 

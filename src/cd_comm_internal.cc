@@ -1429,6 +1429,14 @@ void CD::DecPendingCounter(void)
 //  PMPI_Win_unlock(task_in_color(), pendingWindow_);
 }
 
+//void CD::IncPendingCounter(void)
+//{
+////  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, pendingWindow_);
+//  (*pendingFlag_) += handled_event_count;
+//  // Initialize handled_event_count;
+//  handled_event_count = 0;
+////  PMPI_Win_unlock(task_in_color(), pendingWindow_);
+//}
 
 #endif
 

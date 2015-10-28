@@ -831,7 +831,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   CDErrT ret=INITIAL_ERR_VAL;
 
   // Profile will be acquired inside CD::Complete()
-  ret = ptr_cd_->Complete();
+  ret = ptr_cd_->Complete(collective);
 
 
   if ( collective == true ) {

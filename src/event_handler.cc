@@ -477,8 +477,14 @@ void HandleAllReexecute::HandleEvent(void)
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();
 
-  ptr_cd_->need_reexec = true;
-  ptr_cd_->reexec_level = ptr_cd_->level();
+  CD::need_reexec  = true;
+//  CD::reexec_level = ptr_cd_->level();
+  if(CD::reexec_level > ptr_cd_->level()) {
+    CD::reexec_level = ptr_cd_->level();
+  }
+  else {
+    CD::need_escalation = true;
+  }
 #else
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();

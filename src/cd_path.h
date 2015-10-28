@@ -118,7 +118,7 @@ private:
       //printf("path is not null\n");
       if( !uniquePath_->empty() ) {
         //printf("path is not empty\n");
-        if( uniquePath_->back()->GetExecMode() == kExecution ) {
+        if( uniquePath_->back()->GetExecMode() == kExecution || kReexecution ) {
           
           //printf("Active CD is %d\n", uniquePath_->back()->level() );
           return uniquePath_->back();
