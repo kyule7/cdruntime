@@ -58,6 +58,7 @@ double UniformRandom::GenErrorVal(void)
   return rand_var;
 }
 
+/*
 void UniformRandom::TestErrorProb(int num_bucket) 
 {
   std::cout << "Uniform Randomi, low_ : " << low_ <<", high : "<< high_ << std::endl;
@@ -82,7 +83,6 @@ void UniformRandom::TestErrorProb(int num_bucket)
   }
 
 }
-
 
 // LogNromal
 double LogNormal::GenErrorVal(void) 
@@ -211,12 +211,12 @@ void Poisson::TestErrorProb(int num_bucket)
   }
 
 }
-
+*/
 
 // ErrorInjector
 ErrorInjector::ErrorInjector(void)
 {
-  rand_generator_ = new UniformRandom();
+  rand_generator_ = //new UniformRandom();
   enabled_    = false;
   logfile_    = stdout;
   threshold_  = DEFAULT_ERROR_THRESHOLD;
@@ -249,25 +249,25 @@ void ErrorInjector::Init(RandType rand_type, FILE *logfile)
 ErrorProb *ErrorInjector::CreateErrorProb(RandType rand_type)
 {
   ErrorProb *random_number = NULL;
-    switch(rand_type) {
-      case kUniform : 
-        random_number = new UniformRandom();
-        break; 
-      case kExponential : 
-        random_number = new Exponential();
-        break; 
-      case kLogNormal :
-        random_number = new LogNormal();
-        break; 
-      case kNormal :
-        random_number = new Normal();
-        break; 
-      case kPoisson :
-        random_number = new Poisson();
-        break; 
-      default :
-        random_number = new Exponential();
-    }
+//    switch(rand_type) {
+//      case kUniform : 
+//        random_number = new UniformRandom();
+//        break; 
+//      case kExponential : 
+//        random_number = new Exponential();
+//        break; 
+//      case kLogNormal :
+//        random_number = new LogNormal();
+//        break; 
+//      case kNormal :
+//        random_number = new Normal();
+//        break; 
+//      case kPoisson :
+//        random_number = new Poisson();
+//        break; 
+//      default :
+//        random_number = new Exponential();
+//    }
   return random_number;
 }
 

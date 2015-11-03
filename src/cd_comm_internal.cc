@@ -1060,7 +1060,7 @@ CD::CDInternalErrT CD::RemoteSetMailBox(CD *curr_cd, const CDEventT &event)
     PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, mailbox);
   
     // Inform the type of event to be requested
-    PMPI_Accumulate(&event, 1, MPI_INT, 
+    PMPI_Accumulate((void *)&event, 1, MPI_INT, 
                     head_id, curr_cd->task_in_color(), 1, MPI_INT, 
                     MPI_BOR, mailbox);
     CD_DEBUG("MPI Accumulate (Set event flag) done for task #%u (head)\n", head_id);
@@ -1119,7 +1119,7 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
 
         CD_DEBUG("Set event start\n");
 
-        PMPI_Accumulate(&event, 1, MPI_INT, 
+        PMPI_Accumulate((void *)&event, 1, MPI_INT, 
                        task_id, 0, 1, MPI_INT, 
                        MPI_BOR, mailbox_);
         PMPI_Win_unlock(task_id, mailbox_);

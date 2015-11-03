@@ -82,6 +82,7 @@ public:
   virtual ~ErrorProb(void) {}
 };
 
+/*
 class UniformRandom : public ErrorProb {
 protected:
   std::uniform_real_distribution<double> distribution_;
@@ -167,6 +168,9 @@ public:
     : distribution_(mean), mean_(mean) {}
   virtual ~Poisson() {}
 };
+*/
+
+
 
 /**@addtogroup error_injector
  * @{

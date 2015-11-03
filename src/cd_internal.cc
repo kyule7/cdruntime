@@ -4006,7 +4006,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
     // recursively go up to search parent's incomplete_log_
     while (tmp_cd->GetParentHandle() != NULL)
     {
-      tmp_cd = GetParentHandle()->ptr_cd_; 
+      tmp_cd = tmp_cd->GetParentHandle()->ptr_cd_; 
       for (it = tmp_cd->incomplete_log_.begin(); 
            it != tmp_cd->incomplete_log_.end(); 
            it++)
@@ -4046,6 +4046,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
       CD* tmp_cd = this;
       while (tmp_cd->GetParentHandle() != NULL)
       {
+        tmp_cd = tmp_cd->GetParentHandle()->ptr_cd_; 
         if (MASK_CDTYPE(tmp_cd->GetParentHandle()->ptr_cd()->cd_type_)==kRelaxed)
         {
           found = GetParentHandle()->ptr_cd()->comm_log_ptr_

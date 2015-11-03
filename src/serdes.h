@@ -41,6 +41,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <list>
 #include <map>
 #include <initializer_list>
+#include <cstdint>
 /*
 // User needs to define Serdes methods in his/her class
 // User defines this in his/her class.

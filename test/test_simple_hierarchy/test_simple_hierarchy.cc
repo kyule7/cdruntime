@@ -110,10 +110,10 @@ bool CheckArray(uint32_t *array, int length)
 }
 
 class UserObject1 {
-    uint32_t data0[8]{0x89ABCDEF, 0x01234567, 0x6789ABCD, 0xCDAB8967, 0xFEDCBA56, 0x10000000, 0x50055521};
-    double data1[8]{0.001, 1.394, 391832.29, 392.35, 10000, 32, 32.125, 64.0625};
-    bool data2[8]{1, 0, 0, 0, 0, 1, 1};
-    char data3[8]{'a', '3', '5', '8', 'b', '\0', 'c'};
+    uint32_t data0[8] = {0x89ABCDEF, 0x01234567, 0x6789ABCD, 0xCDAB8967, 0xFEDCBA56, 0x10000000, 0x50055521};
+    double data1[8] = {0.001, 1.394, 391832.29, 392.35, 10000, 32, 32.125, 64.0625};
+    bool data2[8] = {1, 0, 0, 0, 0, 1, 1};
+    char data3[8] = {'a', '3', '5', '8', 'b', '\0', 'c'};
   public:
     Serdes serdes;
   
@@ -171,14 +171,14 @@ int TestCDHierarchy(void)
   uint32_t arrayE[ARRAY_E_SIZE] = {1,2,3,4,5,6,7,8};
   arrayName[arrayE] = "arrayE";
 
-  userObj1.serdes.RegisterTarget({0, 1, 2, 3});
+//  userObj1.serdes.RegisterTarget({0, 1, 2, 3});
 
   child_lv1->Preserve(arrayA, sizeof(arrayA), kCopy, 
-                      (string("arrayA-")+to_string(myRank)).c_str()); // arrayA-rankID
+                      (string("arrayA-")+to_string((unsigned long long)myRank)).c_str()); // arrayA-rankID
   child_lv1->Preserve(arrayB, sizeof(arrayB), kCopy, 
-                      (string("arrayB-")+to_string(myRank)).c_str()); // arrayB-rankID
+                      (string("arrayB-")+to_string((unsigned long long)myRank)).c_str()); // arrayB-rankID
   child_lv1->Preserve(arrayE, sizeof(arrayE), kCopy, 
-                      (string("arrayE-")+to_string(myRank)).c_str()); // arrayE-rankID
+                      (string("arrayE-")+to_string((unsigned long long)myRank)).c_str()); // arrayE-rankID
 
   dbgApp << "\t\tPreserve via copy: arrayA, arrayB, arrayE\n\n" << endl;
 
@@ -207,11 +207,11 @@ int TestCDHierarchy(void)
   dbgApp << string(2<<1, '\t').c_str() <<"Level 2 CD Begin...\n" << endl;
 
   child_lv2->Preserve(arrayA, sizeof(arrayA), kRef, 
-                      "a_lv2", (string("arrayA-")+to_string(myRank)).c_str()); // local
+                      "a_lv2", (string("arrayA-")+to_string((unsigned long long)myRank)).c_str()); // local
   child_lv2->Preserve(arrayB, sizeof(arrayB), kRef, 
-                      "b_lv2", (string("arrayB-")+to_string(myRank)).c_str());
+                      "b_lv2", (string("arrayB-")+to_string((unsigned long long)myRank)).c_str());
   child_lv2->Preserve(arrayE, sizeof(arrayE), kRef, 
-                      "e_lv2", (string("arrayE-")+to_string(myRank)).c_str());
+                      "e_lv2", (string("arrayE-")+to_string((unsigned long long)myRank)).c_str());
   child_lv2->Preserve(arrayC, sizeof(arrayC), kCopy, "arrayC");
   dbgApp << string(2<<1, '\t').c_str()<<"Preserve via ref : arrayA (local), arrayB (local), arrayE (local)" << endl;
   dbgApp << string(2<<1, '\t').c_str()<<"Preserve via copy: arrayC\n" << endl;
@@ -233,8 +233,8 @@ int TestCDHierarchy(void)
   CD_Begin(child_lv3);
   dbgApp << string(3<<1, '\t').c_str() << "Level 3 CD Begin...\n" << endl;
 
-  child_lv3->Preserve(arrayA, sizeof(arrayA), kRef, "child_a", (string("arrayA-")+to_string(myRank)).c_str()); // local
-  child_lv3->Preserve(arrayB, sizeof(arrayB), kRef, "child_b", (string("arrayB-")+to_string(myRank)).c_str()); // local
+  child_lv3->Preserve(arrayA, sizeof(arrayA), kRef, "child_a", (string("arrayA-")+to_string((unsigned long long)myRank)).c_str()); // local
+  child_lv3->Preserve(arrayB, sizeof(arrayB), kRef, "child_b", (string("arrayB-")+to_string((unsigned long long)myRank)).c_str()); // local
   child_lv3->Preserve(arrayC, sizeof(arrayC), kRef, "child_c", "arrayC");
   child_lv3->Preserve(arrayD, sizeof(arrayD), kCopy, "arrayD");
   dbgApp << string(3<<1, '\t').c_str() << "Preserve via ref : arrayA (local), arrayB (local), arrayC (local)" << endl;
@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
 
   int ret=0;
 
-  dbgApp.open((string("./output/output_app_")+to_string(myRank)).c_str());
+  dbgApp.open((string("./output/output_app_")+to_string((unsigned long long)myRank)).c_str());
   dbgApp << "\n==== TestSimpleHierarchy ====\n" << endl;
 
   ret = TestCDHierarchy();

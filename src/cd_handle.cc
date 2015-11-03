@@ -117,7 +117,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   totalTaskSize = numTask;
 
   string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
-#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE || CD_DEBUG_ENABLED
+#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
   char *filepath = getenv( "CD_DEBUG_OUT" );
   char dbg_log_filename[] = "cddbg_log_rank_";
 
