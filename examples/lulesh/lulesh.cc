@@ -3704,7 +3704,7 @@ int main(int argc, char *argv[])
 #if _CD
    CDHandle* root_cd = CD_Init(numRanks, myRank);
    std::cout << root_cd->ptr_cd() << std::endl; 
-   std::cout << "task: " << root_cd->task_in_color() << std::endl; 
+//   std::cout << "task: " << root_cd->task_in_color() << std::endl; 
    //getchar();
 //   if(CDPath.empty())
 //    printf("huh?\n");
@@ -3713,7 +3713,7 @@ int main(int argc, char *argv[])
 
    CD_Begin(root_cd, false, "Root Begin");
 
-   printf("--root--\n");
+//   printf("--root--\n");
    root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
@@ -3759,7 +3759,7 @@ int main(int argc, char *argv[])
 
    CDHandle* cd1 = root_cd->Create(NUM_CDS_IN_LEVEL_1, "Main Loop", kStrict, 0, 0, &err);
 #endif
-   printf("-- Main Loop start --\n");
+//   printf("-- Main Loop start --\n");
    // Main loop start
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
 //#if _CD

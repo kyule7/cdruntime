@@ -73,12 +73,12 @@ void CDFileHandle::OpenFilePath(void)
   struct stat sb;
   const char* basepath = filePath_.basepath_.c_str();
   if(stat(basepath, &sb) == 0 && S_ISDIR(sb.st_mode)) {
-    printf("Prv Path exists!\n");
+//    printf("Prv Path exists!\n");
   }
   else {
     char cmd[256];
     sprintf(cmd, "mkdir -p %s", basepath);
-    printf("preservation file path size : %d\n", (int)sizeof(cmd));
+//    printf("preservation file path size : %d\n", (int)sizeof(cmd));
     if( system(cmd) == -1 )
       ERROR_MESSAGE("ERROR: Failed to create directory for debug info. %s\n", cmd);
   }
@@ -87,9 +87,9 @@ void CDFileHandle::OpenFilePath(void)
   fp_ = fdopen(file_desc_, "w");
 #if _PRV_FILE_NOT_ERASED
   unlink(unique_filename_);
-  printf("unlink : %s\n", unique_filename_);
+//  printf("unlink : %s\n", unique_filename_);
 #endif
-  printf("[CD_Init] this is the temporary path created for run: %s\n", unique_filename_);
+//  printf("[CD_Init] this is the temporary path created for run: %s\n", unique_filename_);
   if(file_desc_ != -1){
     opened_ = true;
     CD_DEBUG("[CD_Init] this is the temporary path created for run: %s\n", filePath_.GetFilePath().c_str());

@@ -129,12 +129,12 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   if(myTaskID == 0) {
     struct stat sb;
     if (stat(dbg_basepath.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
-      printf("Path exists!\n");
+//      printf("Path exists!\n");
     }
     else {
       char debug_dir[256];
       sprintf(debug_dir, "mkdir -p %s", dbg_basepath.c_str());
-      printf("debug dir path size : %d\n", (int)sizeof(debug_dir));
+//      printf("debug dir path size : %d\n", (int)sizeof(debug_dir));
       if( system(debug_dir) == -1 )
         ERROR_MESSAGE("ERROR: Failed to create directory for debug info. %s\n", debug_dir);
     }
@@ -147,7 +147,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 
   char dbg_filepath[256]={};
   snprintf(dbg_filepath, 256, "%s%s%d", dbg_basepath.c_str(), dbg_log_filename, myTaskID);
-  printf("dbg filepath : %s\n", dbg_filepath);
+//  printf("dbg filepath : %s\n", dbg_filepath);
 //  dbg_basepath = dbg_basepath + log_filename + to_string(static_cast<unsigned long long>(myTaskID));
 
   cdout = fopen(dbg_filepath, "w");
@@ -160,7 +160,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   char app_dbg_log_filename[] = "cddbg_app_output_";
   char app_dbg_filepath[256]={};
   snprintf(app_dbg_filepath, 256, "%s%s%d", dbg_basepath.c_str(), app_dbg_log_filename, myTaskID);
-  printf("app dbg filepath : %s\n", app_dbg_filepath);
+//  printf("app dbg filepath : %s\n", app_dbg_filepath);
   cddbg.open(app_dbg_filepath);
 #endif
 
