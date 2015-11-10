@@ -46,6 +46,9 @@ namespace cd {
   namespace logging {
     
 struct LogTableElement {
+#if CD_TEST_ENABLED
+  friend class cd::cd_test::Test;
+#endif
   unsigned long pos_; // starting position of logged data in log_queue_
   unsigned long length_; // length of logged data
   bool completed_;
@@ -53,17 +56,29 @@ struct LogTableElement {
   unsigned long counter_;
   unsigned long reexec_counter_;
   bool isrepeated_;
+  uint32_t thread_; // src-thread for read op and dst-thread for write op
+#if _PGAS_VER
+  bool iswriteop_;
+  uint32_t sync_counter_; // target-side SC
+  uint32_t incoming_write_counter_; // target-side IWC
+#endif
+ 
   LogTableElement(void) {
     counter_=0;
     reexec_counter_=0;
     isrepeated_=false;
+#if _PGAS_VER
+    iswriteop_=false;
+#endif
   }
-    
 };
     
 class CommLog {
     friend class cd::internal::CD;
     friend class cd::internal::HeadCD;
+#if CD_TEST_ENABLED
+    friend class cd::cd_test::Test;
+#endif
 //    friend CD* IsLogable(bool *logable_);
   public:
     //CommLog();
@@ -95,6 +110,7 @@ class CommLog {
     // need to check if running out queues
     CommLogErrT LogData(const void * data_ptr, 
                         unsigned long data_length, 
+                        uint32_t thread=0,
                         bool completed=true,
                         unsigned long flag=0,
                         bool isrecv=0,
@@ -170,7 +186,8 @@ class CommLog {
                             bool completed, 
                             unsigned long flag);
 
-    CommLogErrT WriteLogTable (const void * data_ptr, 
+    CommLogErrT WriteLogTable (uint32_t thread,
+                              const void * data_ptr, 
                               unsigned long data_length, 
                               bool completed,
                               unsigned long flag,

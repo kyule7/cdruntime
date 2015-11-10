@@ -179,6 +179,7 @@ CD::CD(void)
 
   LOG_DEBUG("Set child_seq_id_ to 0\n");
   child_seq_id_ = 0;
+  SetCDLoggingMode(kStrictCD);
 
   //// init incomplete_log_
   //incomplete_log_size_ = incomplete_log_size_unit_;
@@ -282,13 +283,24 @@ CD::CD(CDHandle* cd_parent,
         CommLogMode parent_log_mode = cd_parent->ptr_cd()->comm_log_ptr_->GetCommLogMode();
         LOG_DEBUG("With cd_parent (%p) relaxed CD, creating CommLog with parent's mode %d\n", cd_parent, parent_log_mode);
         comm_log_ptr_ = new CommLog(this, parent_log_mode);
+        if (parent_log_mode == kGenerateLog){
+          SetCDLoggingMode(kRelaxedCDGen);
+        }
+        else{
+          SetCDLoggingMode(kRelaxedCDRead);
+        }
       }
       //SZ: if parent is a strict CD, then child CD is always in kGenerateLog mode at creation point
       else
       {
         LOG_DEBUG("With cd_parent (%p) strict CD, creating CommLog with kGenerateLog mode\n", cd_parent);
         comm_log_ptr_ = new CommLog(this, kGenerateLog);
+        SetCDLoggingMode(kRelaxedCDGen);
       }
+    }
+    else 
+    {
+      SetCDLoggingMode(kStrictCD);
     }
 
     // set child's child_seq_id_  to 0 
@@ -313,6 +325,10 @@ CD::CD(CDHandle* cd_parent,
     {
       LOG_DEBUG("With cd_parent = NULL, creating CommLog with mode kGenerateLog\n");
       comm_log_ptr_ = new CommLog(this, kGenerateLog);
+      SetCDLoggingMode(kRelaxedCDGen);
+    }
+    else {
+      SetCDLoggingMode(kStrictCD);
     }
 
 #if CD_LIBC_LOG_ENABLED
@@ -707,6 +723,12 @@ CDErrT CD::Begin(bool collective, const char* label)
   //SZ: if in reexecution, need to unpack logs to childs
   if (GetParentHandle()!=NULL)
   {
+#if _PGAS_VER
+    // increment parent's SC value and record in current CD
+    sync_counter_ = GetParentHandle()->ptr_cd()->GetSyncCounter();
+    sync_counter_++;
+    LOG_DEBUG("Increment SC at CD::Begin, with SC (%d) after.\n", sync_counter_);
+#endif
     // Only need to if for both parent and child are relaxed CDs, 
     // if child is relaxed but parent is strict, then create the CommLog object with kGenerateLog mode
     // if child is strict, then do not need to do anything for comm_log_ptr_...
@@ -728,6 +750,7 @@ CDErrT CD::Begin(bool collective, const char* label)
         }
         else
         {
+          comm_log_ptr_->SetCommLogMode(kReplayLog);
           //SZ: FIXME: need to figure out a way to unpack logs if child is not in the same address space with parent
           LOG_DEBUG("Should not be here to unpack logs!!\n");
         }
@@ -760,6 +783,13 @@ CDErrT CD::Begin(bool collective, const char* label)
 
 #endif
   }
+#if _PGAS_VER
+  else {
+    // as CD_Begin will start a new epoch, so sync_counter_ will be 1 instead of 0
+    sync_counter_ = 1;
+    LOG_DEBUG("Increment SC at root's CD::Begin, with SC (%d) after.\n", sync_counter_);
+  }
+#endif
 
 #endif
   if( cd_exec_mode_ != kReexecution ) { // normal execution
@@ -807,15 +837,15 @@ if(collective) {
     DecPendingCounter();
 #endif
 
+    CD_DEBUG("\n\n\n\n Reexec from level #%u from level #%u\n\n\n\n", reexec_level, level());
     need_reexec = false;
     need_escalation = false;
     reexec_level = 0xFFFFFFFF;
     //this->Recover(); 
-    CD_DEBUG("\n\n\n\n Reexec from level #%u from level #%u\n\n\n\n", reexec_level, level());
     CDHandle *curr_cdh = CDPath::GetCurrentCD();
 //    CDHandle *cdh = CDPath::GetCDLevel(reexec_level);
     uint32_t level = curr_cdh->level();
-    printf("%d > %d\n", reexec_level, level);
+//    printf("%d > %d\n", reexec_level, level);
     assert(reexec_level > level); // This should not happen. 
     while(reexec_level < level) { // Escalation. 
       curr_cdh->Complete(false);
@@ -888,6 +918,17 @@ if(collective) {
       //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
       LOG_DEBUG("Should not come to here...\n");
     }
+
+#if _LOG_PROFILING
+    GetParentHandle()->ptr_cd()->CombineNumLogEntryAndLogVolume(num_log_entry_, tot_log_volume_);
+    num_log_entry_ = 0;
+    tot_log_volume_ = 0;
+#endif
+
+#if _PGAS_VER
+    GetParentHandle()->ptr_cd()->SetSyncCounter(++sync_counter_); 
+    LOG_DEBUG("Set parent's SC at CD::Complete with value (%d).\n", sync_counter_);
+#endif
   }
 #endif
 
@@ -2151,9 +2192,15 @@ CD::InternalPreserve(void *data,
       switch(GetPlaceToPreserve()) {
         case kDRAM: {
           CD_DEBUG("[MEDIUM TYPE : kDRAM] ------------------------------------------\n");
+#if _PGAS_VER
+          cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
+                                 DataHandle(DataHandle::kMemory, 0, len_in_bytes, cd_id_.node_id_), 
+                                 my_name, this, GetSyncCounter());
+#else
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
                                  DataHandle(DataHandle::kMemory, 0, len_in_bytes, cd_id_.node_id_), 
                                  my_name, this);
+#endif
 //          cd_entry->set_my_cd(this);
 
           CDEntry::CDEntryErrT err = cd_entry->SaveMem();
@@ -2543,8 +2590,10 @@ CDErrT CD::InternalReexecute(void)
   // SZ
   //// change the comm_log_mode_ into CommLog class
   //comm_log_mode_ = kReplayLog;  
-  if (MASK_CDTYPE(cd_type_) == kRelaxed)
+  if (MASK_CDTYPE(cd_type_) == kRelaxed) {
     comm_log_ptr_->ReInit();
+    SetCDLoggingMode(kRelaxedCDRead);
+  }
   
   //SZ: reset to child_seq_id_ = 0 
   LOG_DEBUG("Reset child_seq_id_ to 0 at the point of re-execution\n");
@@ -2553,7 +2602,7 @@ CDErrT CD::InternalReexecute(void)
 
 #if CD_LIBC_LOG_ENABLED
   //GONG
-  if(libc_log_ptr_!=NULL){
+  if(libc_log_ptr_!=NULL) {
     libc_log_ptr_->ReInit();
     LOG_DEBUG("reset log_table_reexec_pos_\n");
     //  libc_log_ptr_->Print();
@@ -3991,8 +4040,10 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
   int found = 0;
   std::vector<IncompleteLogEntry>::iterator it;
   CD* tmp_cd = this;
+  LOG_DEBUG("size of incomplete_log_=%ld\n",incomplete_log_.size());
   for (it=incomplete_log_.begin(); it!=incomplete_log_.end(); it++)
   {
+    LOG_DEBUG("it->flag_=%ld, and flag=%ld\n", it->flag_, flag);
     if (it->flag_ == flag) 
     {
       found = 1;
@@ -4007,6 +4058,9 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
     while (tmp_cd->GetParentHandle() != NULL)
     {
       tmp_cd = tmp_cd->GetParentHandle()->ptr_cd_; 
+      LOG_DEBUG("tmp_cd's level=%ld\n",(unsigned long)tmp_cd->cd_id_.level());
+      LOG_DEBUG("tmp_cd->incomplete_log_.size()=%ld\n",
+                    tmp_cd->incomplete_log_.size());
       for (it = tmp_cd->incomplete_log_.begin(); 
            it != tmp_cd->incomplete_log_.end(); 
            it++)
@@ -4049,7 +4103,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
         tmp_cd = tmp_cd->GetParentHandle()->ptr_cd_; 
         if (MASK_CDTYPE(tmp_cd->GetParentHandle()->ptr_cd()->cd_type_)==kRelaxed)
         {
-          found = GetParentHandle()->ptr_cd()->comm_log_ptr_
+          found = tmp_cd->GetParentHandle()->ptr_cd()->comm_log_ptr_
             ->ProbeAndLogDataPacked((void*)(it->addr_), it->length_, flag, it->isrecv_);
           if (found)
             break;
@@ -4064,12 +4118,20 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
       }
     }
     // need to log that wait op completes 
-    comm_log_ptr_->LogData((MPI_Request*)flag, 0);
+#if _MPI_VER
+    comm_log_ptr_->LogData((MPI_Request*)flag, 0, it->thread_);
+#elif _PGAS_VER
+    comm_log_ptr_->LogData((void*)flag, 0, it->thread_);
+#endif
   }
   else if (comm_log_ptr_ != NULL)
   {
     // need to log that wait op completes 
-    comm_log_ptr_->LogData((MPI_Request*)flag, 0);
+#if _MPI_VER
+    comm_log_ptr_->LogData((MPI_Request*)flag, 0, it->thread_);
+#elif _PGAS_VER
+    comm_log_ptr_->LogData((void*)flag, 0, it->thread_);
+#endif
   }
 
   // delete the incomplete log entry
@@ -4079,7 +4141,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 }
 
 //SZ
-CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, 
+CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, uint32_t task_id, 
                       bool completed, unsigned long flag, bool isrecv, bool isrepeated)
 {
   if (comm_log_ptr_ == NULL)
@@ -4087,7 +4149,11 @@ CommLogErrT CD::LogData(const void *data_ptr, unsigned long length,
     ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to log data!\n");
     return kCommLogError;
   }
-  return comm_log_ptr_->LogData(data_ptr, length, completed, flag, isrecv, isrepeated);
+#if _LOG_PROFILING
+  num_log_entry_++;
+  tot_log_volume_+=length;
+#endif
+  return comm_log_ptr_->LogData(data_ptr, length, task_id, completed, flag, isrecv, isrepeated);
 }
 
 //SZ
@@ -4098,7 +4164,13 @@ CommLogErrT CD::ProbeData(const void *data_ptr, unsigned long length)
     ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to read data!\n");
     return kCommLogError;
   }
-  return comm_log_ptr_->ProbeData(data_ptr, length);
+  CommLogErrT tmp_return = comm_log_ptr_->ProbeData(data_ptr, length);
+  if (tmp_return == kCommLogCommLogModeFlip){
+    SetCDLoggingMode(kRelaxedCDGen);
+    LOG_DEBUG("CDLoggingMode changed to %d\n", GetCDLoggingMode());
+  }
+
+  return tmp_return;
 }
 
 //SZ
@@ -4109,7 +4181,13 @@ CommLogErrT CD::ReadData(void *data_ptr, unsigned long length)
     ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to read data!\n");
     return kCommLogError;
   }
-  return comm_log_ptr_->ReadData(data_ptr, length);
+  CommLogErrT tmp_return = comm_log_ptr_->ReadData(data_ptr, length);
+  if (tmp_return == kCommLogCommLogModeFlip){
+    SetCDLoggingMode(kRelaxedCDGen);
+    LOG_DEBUG("CDLoggingMode changed to %d\n", GetCDLoggingMode());
+  }
+
+  return tmp_return;
 }
 
 //SZ
@@ -4151,8 +4229,8 @@ void CD::PrintIncompleteLog()
 #endif
 //commLog ends 
 
-CDType CD::GetCDType()
-{ return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
+//CDType CD::GetCDType()
+//{ return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
 
 CD::CDInternalErrT CD::InvokeAllErrorHandler(void) {
   CDInternalErrT err = kOK;

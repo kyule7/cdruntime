@@ -32,8 +32,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 */
-
 #include "cd_config.h"
+
 #ifdef comm_log
 
 #include "cd_comm_log.h"
@@ -334,11 +334,11 @@ bool CommLog::ProbeAndLogDataPacked(void * addr,
 bool CommLog::FoundRepeatedEntry(const void * data_ptr, unsigned long data_length, 
                                  bool completed, unsigned long flag)
 {
-  LOG_DEBUG("Inside FoundRepeatedEntry:\n");
-  LOG_DEBUG("isrepeated_=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].isrepeated_);
-  LOG_DEBUG("length_=%ld vs data_length=%ld\n", log_table_.base_ptr_[log_table_.cur_pos_-1].length_, data_length);
-  LOG_DEBUG("completed_=%d vs completed=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].completed_, completed);
-  LOG_DEBUG("flag_=%ld vs flag=%ld\n", log_table_.base_ptr_[log_table_.cur_pos_-1].flag_, flag);
+  //LOG_DEBUG("Inside FoundRepeatedEntry:\n");
+  //LOG_DEBUG("isrepeated_=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].isrepeated_);
+  //LOG_DEBUG("length_=%ld vs data_length=%ld\n", log_table_.base_ptr_[log_table_.cur_pos_-1].length_, data_length);
+  //LOG_DEBUG("completed_=%d vs completed=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].completed_, completed);
+  //LOG_DEBUG("flag_=%ld vs flag=%ld\n", log_table_.base_ptr_[log_table_.cur_pos_-1].flag_, flag);
 
   return log_table_.base_ptr_[log_table_.cur_pos_-1].isrepeated_ &&
       log_table_.base_ptr_[log_table_.cur_pos_-1].length_ == data_length &&
@@ -348,12 +348,9 @@ bool CommLog::FoundRepeatedEntry(const void * data_ptr, unsigned long data_lengt
 }
 
 
-CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length, 
+CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length, uint32_t thread,
                           bool completed, unsigned long flag, bool isrecv, bool isrepeated)
 {
-// FIXME
-//  bool tmp_app_side = app_side;
-//  app_side = false;
   LOG_DEBUG("LogData of address (%p) and length(%ld)\n", data_ptr, data_length);
 
   CommLogErrT ret;
@@ -366,13 +363,12 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
     {
       LOG_DEBUG("Found current repeating log entry matching!\n");
       log_table_.base_ptr_[log_table_.cur_pos_-1].counter_++;
-//      app_side = tmp_app_side;
       return kCommLogOK;
     }
     LOG_DEBUG("Current repeating log entry NOT matching!\n");
   }
 
-  ret = WriteLogTable(data_ptr, data_length, completed, flag, isrepeated);
+  ret = WriteLogTable(thread, data_ptr, data_length, completed, flag, isrepeated);
   if (ret == kCommLogAllocFailed) 
   {
     ERROR_MESSAGE("Log Table Realloc Failed!\n");
@@ -400,6 +396,7 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
     tmp_log_entry.flag_ = (unsigned long) flag;
     tmp_log_entry.complete_ = false;
     tmp_log_entry.isrecv_ = isrecv;
+    tmp_log_entry.thread_ = thread;
 
 #ifdef libc_log
     //GONG
@@ -414,12 +411,11 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length,
 
   new_log_generated_ = true;
 
-//  app_side = tmp_app_side;
   return kCommLogOK;
 }
 
 
-CommLogErrT CommLog::WriteLogTable (const void * data_ptr, unsigned long data_length, 
+CommLogErrT CommLog::WriteLogTable (uint32_t thread, const void * data_ptr, unsigned long data_length, 
                                   bool completed, unsigned long flag, bool isrepeated)
 {
   CommLogErrT ret;
@@ -436,6 +432,7 @@ CommLogErrT CommLog::WriteLogTable (const void * data_ptr, unsigned long data_le
   log_table_.base_ptr_[log_table_.cur_pos_].counter_ = 1;
   log_table_.base_ptr_[log_table_.cur_pos_].reexec_counter_ = 0;
   log_table_.base_ptr_[log_table_.cur_pos_].isrepeated_ = isrepeated;
+  log_table_.base_ptr_[log_table_.cur_pos_].thread_ = thread;
   log_table_.cur_pos_++;
 
   return kCommLogOK;

@@ -73,8 +73,6 @@ enum RandType { kUniform = 0,
               };
 
 class ErrorProb {
-protected:
-  std::random_device generator_;
 public:
   virtual double GenErrorVal(void)=0;
 
@@ -82,24 +80,15 @@ public:
   virtual ~ErrorProb(void) {}
 };
 
-/*
+
 class UniformRandom : public ErrorProb {
-protected:
-  std::uniform_real_distribution<double> distribution_;
-  double low_;
-  double high_;
 public:
   double GenErrorVal(void);
 
   void TestErrorProb(int num_bucket=10);
 
-  UniformRandom(void) 
-    : distribution_(0.0, 1.0), low_(0.0), high_(1.0) {}
-  UniformRandom(double low, double high) 
-    : distribution_(low, high), low_(low), high_(high) {}
-  virtual ~UniformRandom() {}
 };
-
+/*
 class LogNormal : public ErrorProb {
 protected:
   std::lognormal_distribution<double> distribution_;

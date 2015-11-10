@@ -175,6 +175,10 @@ class CDHandle {
   friend CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   friend void CD_Finalize(void);
 
+#if CD_TEST_ENABLED
+  friend class cd_test::Test;
+#endif
+
   public:
 
 /**@defgroup cd_split CD split interface
@@ -1199,6 +1203,10 @@ class CDHandle {
     int      ctxt_prv_mode(void);
 
 
+  private:
+#if CD_TEST_ENABLED
+    void PrintCommLog(void) const;
+#endif
 };
 
 } // namespace cd ends

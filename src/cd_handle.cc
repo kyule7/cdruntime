@@ -1420,3 +1420,8 @@ jmp_buf* CDHandle::jump_buffer()
 
 bool     CDHandle::recreated(void)     const { return ptr_cd_->recreated_; }
 bool     CDHandle::reexecuted(void)    const { return ptr_cd_->reexecuted_; }
+#if CD_TEST_ENABLED
+void CDHandle::PrintCommLog(void) const {
+  ptr_cd_->comm_log_ptr_->Print();
+}
+#endif

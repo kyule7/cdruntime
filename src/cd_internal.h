@@ -129,6 +129,9 @@ class CD : public Serializable {
     friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
     friend void Initialize(void);
     friend void Finalize(void);
+#if CD_TEST_ENABLED
+    friend class cd_test::Test;
+#endif
 
 //    friend CD* IsLogable(bool *logable_);
 //    friend CDEntry *CDHandle::InternalGetEntry(std::string entry_name);
@@ -285,6 +288,7 @@ update the preserved data.
     unsigned long incomplete_log_size_unit_;
     unsigned long incomplete_log_size_;
     std::vector<IncompleteLogEntry> incomplete_log_;
+    CDLoggingMode cd_logging_mode_;
     ////SZ: attempted to move from HeadCD class, but we can use CDPath class
     //CDHandle*            cd_parent_;
 #endif
@@ -417,7 +421,7 @@ public:
     bool     IsHead(void)        const { return cd_id_.IsHead(); }
     bool     recreated(void)     const { return recreated_; }
     bool     reexecuted(void)    const { return reexecuted_; }
-    CDType GetCDType();
+    CDType   GetCDType(void) const { return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
 #if CD_LIBC_LOG_ENABLED
     CommLog *libc_log_ptr()      const { return libc_log_ptr_; }
 #endif
@@ -577,7 +581,7 @@ public:
     ////SZ
     //CommLogErrT ProbeAndReadData(unsigned long flag);
     //SZ
-    CommLogErrT LogData(const void *data_ptr, unsigned long length, 
+    CommLogErrT LogData(const void *data_ptr, unsigned long length, uint32_t task_id=0,
                       bool completed=true, unsigned long flag=0,
                       bool isrecv=0, bool isrepeated=0);
     //SZ
@@ -593,29 +597,22 @@ public:
     //GONG: duplicated for libc
     bool IsNewLogGenerated_libc();
     //SZ
-public:
-//    CDType GetCDType();
     //SZ
     void PrintIncompleteLog();
-
-public:
-//    static CD   *IsLogable(bool *logable_);
-//    static int   cd_fprintf(FILE *str, const char *format, va_list &args);
-//    static int   fclose(FILE *fp);
-//    static FILE *fopen(const char *file, const char *mode);
-//    static void *valloc(size_t size);
-//    static void *calloc(size_t num, size_t size);
-//    static void *malloc(size_t size);
-//    static void  free(void *p);
+    //SZ
+    CDLoggingMode GetCDLoggingMode() {return cd_logging_mode_;}
+    void SetCDLoggingMode(CDLoggingMode cd_logging_mode) {cd_logging_mode_ = cd_logging_mode;}
 #endif
 
 #if CD_MPI_ENABLED
+  private:
     CDEventHandleT ReadMailBox(CDFlagT &event);
     virtual CDInternalErrT InternalCheckMailBox(void);
     void DecPendingCounter(void);
     CDErrT CheckMailBox(void);
     virtual CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);
+    bool CheckIntraCDMsg(void);
 #endif
 
  }; // class CD ends
@@ -646,6 +643,9 @@ class HeadCD : public CD {
                      CDType cd_type, 
                      uint64_t sys_bit_vector, 
                      CDHandle** new_cd_handle);
+#if CD_TEST_ENABLED
+  friend class cd_test::Test;
+#endif
   private:
     /// Link information of CD hierarchy   
     /// This is a kind of CD object but represents the corresponding task group of each CD
@@ -710,6 +710,8 @@ class HeadCD : public CD {
     virtual CDErrT SetMailBox(const CDEventT &event);
     CDEventHandleT ReadMailBox(CDFlagT *p_event, int idx=0);
     virtual CDInternalErrT InternalCheckMailBox(void);
+
+//    bool CheckIntraCDMsg(void);
 //    CDInternalErrT InvokeErrorHandler(void);
 //    virtual bool TestComm(bool test_untile_done=false);
 #endif    

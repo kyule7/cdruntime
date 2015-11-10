@@ -37,9 +37,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #if CD_ERROR_INJECTION_ENABLED
 
 #include <cstdio>
+#include <cstdlib>
 #include <iostream>
-#include <random>
-#include <cstdio>
+//#include <random>
 #include "cd_def_internal.h"
 #include "cd_global.h"
 
@@ -52,16 +52,12 @@ using namespace cd::interface;
 // Uniform Random
 double UniformRandom::GenErrorVal(void) 
 {
-  distribution_.reset();
-  double rand_var = distribution_(generator_);
-  std::cout << "rand var: " <<rand_var << std::endl;
-  return rand_var;
+  return drand48();
 }
 
-/*
+
 void UniformRandom::TestErrorProb(int num_bucket) 
 {
-  std::cout << "Uniform Randomi, low_ : " << low_ <<", high : "<< high_ << std::endl;
   const int nrolls = 10000;  // number for test
   const int nstars = 100;    // maximum number of stars to distribute
   int bucket[num_bucket];
@@ -71,7 +67,7 @@ void UniformRandom::TestErrorProb(int num_bucket)
   }
 
   for (int i=0; i<nrolls; ++i) {
-    double number = distribution_(generator_);
+    double number = GenErrorVal();
     if(number < 0) std::cout << "negative : " << number << std::endl;
     if ((number>=0.0) && (number<static_cast<double>(num_bucket))) 
       ++bucket[static_cast<int>(number)];
@@ -84,10 +80,10 @@ void UniformRandom::TestErrorProb(int num_bucket)
 
 }
 
+/*
 // LogNromal
 double LogNormal::GenErrorVal(void) 
 {
-  distribution_.reset();
   return distribution_(generator_);
 }
 
@@ -216,7 +212,7 @@ void Poisson::TestErrorProb(int num_bucket)
 // ErrorInjector
 ErrorInjector::ErrorInjector(void)
 {
-  rand_generator_ = //new UniformRandom();
+  rand_generator_ = new UniformRandom();
   enabled_    = false;
   logfile_    = stdout;
   threshold_  = DEFAULT_ERROR_THRESHOLD;
@@ -224,7 +220,7 @@ ErrorInjector::ErrorInjector(void)
 
 ErrorInjector::ErrorInjector(double threshold, RandType rand_type, FILE *logfile) 
 {
-  rand_generator_ = CreateErrorProb(rand_type);
+  rand_generator_ = new UniformRandom();
   enabled_    = false;
   logfile_    = stdout;
   threshold_  = threshold;
@@ -232,7 +228,7 @@ ErrorInjector::ErrorInjector(double threshold, RandType rand_type, FILE *logfile
 
 ErrorInjector::ErrorInjector(bool enabled, double threshold, RandType rand_type, FILE *logfile) 
 {
-  rand_generator_ = CreateErrorProb(rand_type);
+  rand_generator_ = new UniformRandom();
   enabled_    = enabled;
   logfile_    = stdout;
   threshold_  = threshold;
@@ -240,8 +236,7 @@ ErrorInjector::ErrorInjector(bool enabled, double threshold, RandType rand_type,
 
 void ErrorInjector::Init(RandType rand_type, FILE *logfile)
 {
-  if(rand_generator_ == NULL)
-    rand_generator_ = CreateErrorProb(rand_type);
+  rand_generator_ = new UniformRandom();
   enabled_    = false;
   logfile_    = stdout;
 }

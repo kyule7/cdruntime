@@ -37,12 +37,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_MPIWRAPPER_H
 #define _CD_MPIWRAPPER_H
 
-#include "cd_features.h"
-
-#if CD_MPI_ENABLED
+#if _MPI_VER
 
 #include <stdio.h>
 #include <mpi.h>
+#include "cd_global.h"
+
+using namespace cd;
 
 // blocking p2p communication
 int MPI_Send(const void *buf, 
@@ -84,7 +85,7 @@ int MPI_Sendrecv(const void *sendbuf,
                  void *recvbuf, 
                  int recvcount, 
                  MPI_Datatype recvtype, 
-                 int source, 
+                 int src, 
                  int recvtag, 
                  MPI_Comm comm, 
                  MPI_Status *status);
@@ -93,7 +94,7 @@ int MPI_Sendrecv_replace(void *buf,
                          MPI_Datatype datatype, 
                          int dest, 
                          int sendtag,
-                         int source, 
+                         int src, 
                          int recvtag, 
                          MPI_Comm comm, 
                          MPI_Status *status);

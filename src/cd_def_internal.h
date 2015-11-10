@@ -209,6 +209,11 @@ namespace cd {
   enum CommLogMode { kGenerateLog=0,
                        kReplayLog
                     };
+  //SZ
+  enum CDLoggingMode {kOutOfCD=0,
+                      kStrictCD,
+                      kRelaxedCDGen,
+                      kRelaxedCDRead};
 #endif
 
 //  enum CDEventT { kNoEvent=0,
@@ -423,6 +428,7 @@ namespace cd {
 
     // data structure to store incompleted log entries
     struct IncompleteLogEntry{
+      uint32_t thread_;
       //void * addr_;
       unsigned long addr_;
       unsigned long length_;
@@ -434,6 +440,7 @@ namespace cd {
       bool pushed_;
       unsigned int level_;
       //bool valid_;
+      //SZ
     };
 
   }

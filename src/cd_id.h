@@ -103,7 +103,9 @@ class CDID {
   friend class CDEntry;
   friend class HandleEntrySearch;
   friend class HandleEntrySend;
-
+#if CD_TEST_ENABLED
+  friend class cd_test::Test;
+#endif
 private:
     CDNameT  cd_name_; //!< CD name
 

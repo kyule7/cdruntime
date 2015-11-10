@@ -1,6 +1,6 @@
 AC_INIT([cdruntime], [1.0], [cds@lph.ece.utexas.edu])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-dnl AM_PROG_AR
+AM_PROG_AR
 LT_INIT
 
 AC_PREFIX_DEFAULT($PWD)
@@ -126,6 +126,7 @@ AC_CONFIG_FILES([
  test/test_simple_hierarchy/Makefile
  test/test_user_defined_hierarhcy/Makefile
  test/test_prv_ref_remote/Makefile
+ test/test_serdes/Makefile
  examples/Makefile
 ])
 AC_OUTPUT

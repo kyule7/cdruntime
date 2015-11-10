@@ -127,6 +127,10 @@ namespace cd {
     class CommLog;
     class RuntimeLogger;
   }
+  namespace cd_test {
+    class Test;
+  }
+
   class SysErrT;
   class RegenObject;
   class RecoverObject;

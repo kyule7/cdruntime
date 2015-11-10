@@ -1438,6 +1438,13 @@ void CD::DecPendingCounter(void)
 ////  PMPI_Win_unlock(task_in_color(), pendingWindow_);
 //}
 
+// TODO
+bool CD::CheckIntraCDMsg(void)
+{
+  // STUB
+  return true;
+}
+
 #endif
 
 
