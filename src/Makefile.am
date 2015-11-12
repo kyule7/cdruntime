@@ -39,5 +39,7 @@ libcd_la_SOURCES = \
   	                sys_err_t.cc \
   	                unpacker.cc
 
+libcd_la_LDFLAGS = -export-dynamic #-export-symbols-regex
+libcd_la_CPPFLAGS = -std=gnu++0x -Wall -g -O -fPIC
 #libcd_la_CPPFLAGS = $(cpp_flags)
 #libcd_la_LIBADD = $(external_libs)

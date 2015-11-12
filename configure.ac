@@ -64,6 +64,17 @@ AS_IF([test x"$enable_libc_logging" = x"yes"],
 ])
 AC_SUBST(cd_libc_log_enabled, $WANT_LIBC_LOGGING)
 
+dnl Test enable 
+AC_ARG_ENABLE([cd_test], 
+    [AS_HELP_STRING([--enable-cd-test], [Turn on internal test mode])])
+AS_IF([test x"$enable_cd_test" = x"yes"], 
+[
+    WANT_CD_TEST=1
+],[
+    WANT_CD_TEST=0
+])
+AC_SUBST(cd_test_enabled, $WANT_CD_TEST)
+
 # error injection
 AC_ARG_ENABLE([error-injection], 
     [AS_HELP_STRING([--enable-error-injection], [Turn on error injection])])

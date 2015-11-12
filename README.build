@@ -21,6 +21,8 @@ Defaults from original git checkout::
 
     configure --enable-parallel=mpi --enable-logging CXX=mpic++ CXXFLAGS="-std=gnu++0x -Wall -g -O -fPIC"  --enable-debug --enable-error-injection --enable-keep-preservation-files
 
+USE THIS!!
+    configure --enable-parallel=mpi --enable-logging CXX=mpic++ --enable-debug --enable-cd-test --enable-error-injection --enable-keep-preservation-files
 Random
 ------
 
