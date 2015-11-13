@@ -1439,11 +1439,62 @@ void CD::DecPendingCounter(void)
 //}
 
 // TODO
-bool CD::CheckIntraCDMsg(void)
+bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
 {
-  // STUB
-  return true;
+  int global_rank_id = -1;
+  int local_rank_id = -1;
+  int status = MPI_Group_translate_ranks(target_group, 1, &target_id, cd::whole_group, &global_rank_id);
+  if(status != MPI_SUCCESS) {
+    // error
+  }
+  int size = task_size();
+  int group_ranks[size];
+  int result_ranks[size];
+  for(int i=0; i<size; i++) {
+    group_ranks[i] = i;
+  }
+    
+  status = MPI_Group_translate_ranks(group(), size, group_ranks, cd::whole_group, result_ranks);
+
+  bool found = false;
+  for(int i=0; i<size; i++) {
+    if(result_ranks[i] == global_rank_id) { 
+      found = true; 
+      break; 
+    }
+  }
+
+  status = MPI_Group_translate_ranks(cd::whole_group, 1, &global_rank_id, group(), &local_rank_id);
+//  if(status != MPI_SUCCESS) {
+//    // this case the task is not in the current group
+//    // it should return false
+//  }
+
+  printf("Translate rank_id = %d->%d->%d at %s\n\n", target_id, global_rank_id, local_rank_id, GetCDID().GetString().c_str());
+  return found;
 }
+
+//bool CD::CheckSubGroup(MPI_Comm &target)
+//{
+//  bool subset = false;
+//  int target_size;
+//  MPI_Comm_size(target, &target_size);
+//  MPI_Comm_size(target, &target_size);
+//  int target_ranks[target_size];
+//  int ranks_from_target[target_size];
+//  int ranks_from_cd[size()];
+//  // Gather IDs
+//  if( target_size <= size() ) {
+//    MPI_Gather()
+//    status = MPI_Group_translate_ranks(target_group, target_size, target_ranks, whole_group, ranks_from_target);
+//    status = MPI_Group_translate_ranks(group(), size(), group_ranks, whole_group, ranks_from_cd);
+//
+//    // compare ranks_from_cd and ranks_from_target
+//
+//  } // else subset is false
+//  
+//  return subset;
+//}
 
 #endif
 

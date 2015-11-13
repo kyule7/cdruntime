@@ -236,6 +236,7 @@ namespace cd {
 
   extern int myTaskID;
 #if CD_MPI_ENABLED
+  extern MPI_Group whole_group;
   extern int handled_event_count;
   extern int max_tag_bit;
   extern int max_tag_level_bit;
@@ -435,12 +436,27 @@ namespace cd {
       unsigned long flag_;
       bool complete_;
       bool isrecv_;
+      bool intra_cd_msg_;
       //GONG
       void* p_;
       bool pushed_;
       unsigned int level_;
       //bool valid_;
       //SZ
+      IncompleteLogEntry() {
+        thread_ = 0;
+        //void * addr_;
+        addr_ = 0;
+        length_ = 0;
+        flag_ = 0;
+        complete_ = 0;
+        isrecv_ = 0;
+        intra_cd_msg_ = false;
+        //GONG
+        p_ = 0;
+        pushed_ = 0;
+        level_ = 0;
+      }
     };
 
   }

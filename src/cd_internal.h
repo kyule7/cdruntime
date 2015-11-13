@@ -171,7 +171,7 @@ class CD : public Serializable {
     //GONG
     bool begin_;
 //  public:
-    bool GetBegin_(void){return begin_;}
+    bool GetBegin_(void) {return begin_;}
 
 #if CD_MPI_ENABLED
     // This flag is unique for each process. 
@@ -411,13 +411,14 @@ public:
     CDID     &GetCDID(void)       { return cd_id_; }
     CDNameT  &GetCDName(void)     { return cd_id_.cd_name_; }
     NodeID   &GetNodeID(void)     { return cd_id_.node_id_; }
-    uint32_t level(void)         const { return cd_id_.cd_name_.level(); }
-    uint32_t rank_in_level(void) const { return cd_id_.cd_name_.rank_in_level(); }
-    uint32_t sibling_num(void)   const { return cd_id_.cd_name_.size(); }
-    ColorT   color(void)         const { return cd_id_.node_id_.color(); }
-    int      task_in_color(void) const { return cd_id_.node_id_.task_in_color(); }
-    int      head(void)          const { return cd_id_.node_id_.head(); }
-    int      task_size(void)     const { return cd_id_.node_id_.size(); }
+    uint32_t level(void)         const { return cd_id_.cd_name_.level_; }
+    uint32_t rank_in_level(void) const { return cd_id_.cd_name_.rank_in_level_; }
+    uint32_t sibling_num(void)   const { return cd_id_.cd_name_.size_; }
+    ColorT   color(void)         const { return cd_id_.node_id_.color_; }
+    CommGroupT group(void)       const { return cd_id_.node_id_.task_group_; }
+    int      task_in_color(void) const { return cd_id_.node_id_.task_in_color_; }
+    int      head(void)          const { return cd_id_.node_id_.head_; }
+    int      task_size(void)     const { return cd_id_.node_id_.size_; }
     bool     IsHead(void)        const { return cd_id_.IsHead(); }
     bool     recreated(void)     const { return recreated_; }
     bool     reexecuted(void)    const { return reexecuted_; }
@@ -583,7 +584,7 @@ public:
     //SZ
     CommLogErrT LogData(const void *data_ptr, unsigned long length, uint32_t task_id=0,
                       bool completed=true, unsigned long flag=0,
-                      bool isrecv=0, bool isrepeated=0);
+                      bool isrecv=0, bool isrepeated=0, bool intra_cd_msg=false);
     //SZ
     CommLogErrT ProbeData(const void *data_ptr, unsigned long length);
     //SZ
@@ -612,10 +613,11 @@ public:
     CDErrT CheckMailBox(void);
     virtual CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);
-    bool CheckIntraCDMsg(void);
+  public:
+    bool CheckIntraCDMsg(int target_id, MPI_Group &target_group);
 #endif
 
- }; // class CD ends
+}; // class CD ends
 
 
 /**@class HeadCD 
@@ -711,7 +713,6 @@ class HeadCD : public CD {
     CDEventHandleT ReadMailBox(CDFlagT *p_event, int idx=0);
     virtual CDInternalErrT InternalCheckMailBox(void);
 
-//    bool CheckIntraCDMsg(void);
 //    CDInternalErrT InvokeErrorHandler(void);
 //    virtual bool TestComm(bool test_untile_done=false);
 #endif    

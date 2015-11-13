@@ -85,6 +85,7 @@ void NodeID::init_node_id(ColorT color, int task_in_color, int head, int size)
 } 
 
 ColorT NodeID::color(void)         const { return color_; }
+CommGroupT NodeID::group(void)     const { return task_group_; }
 int    NodeID::task_in_color(void) const { return task_in_color_; }
 int    NodeID::head(void)          const { return head_; }
 int    NodeID::size(void)          const { return size_; }

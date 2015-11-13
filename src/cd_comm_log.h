@@ -114,7 +114,8 @@ class CommLog {
                         bool completed=true,
                         unsigned long flag=0,
                         bool isrecv=0,
-                        bool isrepeated=0);
+                        bool isrepeated=0,
+                        bool intra_cd_msg=false);
 
     CommLogErrT ReadData(void * buffer, unsigned long length);
     CommLogErrT ProbeData(const void * buffer, unsigned long length);

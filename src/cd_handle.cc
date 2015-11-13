@@ -98,6 +98,7 @@ bool cd::app_side = true;
 /// So, I decided to check the MAX_TAG_UB value from MPI runtime at initialization routine
 /// and set the right bit positions in CDID::GenMsgTag(ENTRY_TAG_T tag), CDID::GenMsgTagForSameCD(int msg_type, int task_in_color) functions.
 #if CD_MPI_ENABLED
+MPI_Group cd::whole_group;
 int  cd::max_tag_bit = 0;
 int  cd::max_tag_level_bit = 0;
 int  cd::max_tag_task_bit  = 0;
@@ -140,7 +141,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
     }
   }
   
-#if CD_MPI_ENABLED  
+#if CD_MPI_ENABLED 
+  MPI_Comm_group(MPI_COMM_WORLD, &whole_group); 
   // Synchronization is needed. Otherwise, some task may execute CD_DEBUG before head creates directory 
   PMPI_Barrier(MPI_COMM_WORLD);
 #endif

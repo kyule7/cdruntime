@@ -75,8 +75,8 @@ namespace cd {
 class NodeID : public Serializable {
   friend class cd::CDHandle;
   friend class DataHandle;
-//  friend class CD;
-//  friend class HeadCD;
+  friend class CD;
+  friend class HeadCD;
 
 private:
 
@@ -106,6 +106,7 @@ public:
   bool operator==(const NodeID &that) const;
 
   ColorT color(void)         const;
+  CommGroupT group(void)     const;
   int    task_in_color(void) const;
   int    head(void)          const;
   int    size(void)          const;

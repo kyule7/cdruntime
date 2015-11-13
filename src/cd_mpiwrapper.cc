@@ -514,52 +514,55 @@ int MPI_Isend(const void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle * cur_cdh = GetCurrentCD();
-  if (cur_cdh == NULL) {
-    LOG_DEBUG("Warning: MPI_Isend out of CD context...\n");
-    mpi_ret = PMPI_Isend(const_cast<void *>(buf), count, datatype, dest, tag, comm, request);
-    app_side = true;
-    return mpi_ret;
-  }
-
-  switch (cur_cdh->ptr_cd()->GetCDLoggingMode()) {
-    case kStrictCD:
-      mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
-      break;
-
-    case kRelaxedCDGen: 
-      mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
-      LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
-
-      // KYU: Intra-CD msg check
-      if(cur_cdh->CheckIntraCDMsg()) {
-        printf("Intra-CD message\n");
-        cur_cdh->ptr_cd_->intra_cd_msg_cnt_++;
-      } else { // Log message for inter-CD communication
-        cur_cdh->ptr_cd()->LogData(buf, 0, dest, false, (unsigned long)request, 0);
-        cur_cdh->ptr_cd_->inter_cd_msg_cnt_++;
+  if (cur_cdh != NULL) {
+    CD *cdp = cur_cdh->ptr_cd();
+    MPI_Group g;
+    MPI_Comm_group(comm, &g);
+    switch (cdp->GetCDLoggingMode()) {
+      case kStrictCD: {
+        mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
+        break;
       }
-      break;
-
-    case kRelaxedCDRead:
-      {
+      case kRelaxedCDGen: {
+        mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
+        LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
+  
+        // KYU: Intra-CD msg check
+        if(cdp->CheckIntraCDMsg(dest, g)) {
+          printf("Intra-CD message\n");
+        } else { // Log message for inter-CD communication
+          printf("Inter-CD message\n");
+        }
+        cdp->LogData(buf, 0, dest, false, (unsigned long)request, 0, false, cdp->CheckIntraCDMsg(dest, g));
+        break;
+      }
+      case kRelaxedCDRead: {
         LOG_DEBUG("In kReplay mode, replaying from logs...\n");
+
+        // KYU: Intra-CD msg check
+        // FIXME Both case probe data
         CommLogErrT ret = cur_cdh->ptr_cd()->ProbeData(buf, 0);
-        if (ret == kCommLogCommLogModeFlip)
-        {
+
+        // End of log entry before failure. Flipped to executin mode!
+        if (ret == kCommLogCommLogModeFlip) {
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
           mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
-          cur_cdh->ptr_cd()->LogData(buf, 0, dest, false, (unsigned long)request, 0);
+          cur_cdh->ptr_cd()->LogData(buf, 0, dest, false, (unsigned long)request, 0, false, cdp->CheckIntraCDMsg(dest, g));
         }
-        else if (ret == kCommLogError)
-        {
+        else if (ret == kCommLogError) {
           ERROR_MESSAGE("Incomplete log entry for non-blocking communication! Needs to escalate, not implemented yet...\n");
         }
+        break;
       }
-      break;
-
-    default:
-      ERROR_MESSAGE("Wrong number for enum CDLoggingMode (%d)!\n", cur_cdh->ptr_cd()->GetCDLoggingMode());
-      break;
+      default: {
+        ERROR_MESSAGE("Wrong number for enum CDLoggingMode (%d)!\n", cur_cdh->ptr_cd()->GetCDLoggingMode());
+        break;
+      }
+    } // switch ends
+  }
+  else {
+    LOG_DEBUG("Warning: MPI_Isend out of CD context...\n");
+    mpi_ret = PMPI_Isend(const_cast<void *>(buf), count, datatype, dest, tag, comm, request);
   }
 
   app_side = true;
@@ -583,7 +586,10 @@ int MPI_Irecv(void *buf,
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
   CDHandle *cur_cdh = GetCurrentCD();
-  if (cur_cdh != NULL) {
+  if(cur_cdh != NULL) {
+    CD *cdp = cur_cdh->ptr_cd();
+    MPI_Group g;
+    MPI_Comm_group(comm, &g);
     switch( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
         mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
@@ -594,39 +600,61 @@ int MPI_Irecv(void *buf,
         LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
   
         // KYU: Intra-CD msg check
-        if(cur_cdh->CheckIntraCDMsg()) {
+        if(cdp->CheckIntraCDMsg(src, g)) { // Do not log for intra-CD msg
           printf("Intra-CD message\n");
-          cur_cdh->ptr_cd_->intra_cd_msg_cnt_++;
+          // FIXME Record just event, length should be 0
+          // log event to check for escalation.
+          cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (unsigned long)request, 1, false, true);
+          
         } else { // Log message for inter-CD communication
+          printf("Inter-CD message\n");
           cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (unsigned long)request, 1);
-          cur_cdh->ptr_cd_->inter_cd_msg_cnt_++;
         }
-  //      cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (unsigned long)request, 1);
         break;
       } 
       case kRelaxedCDRead: {  // Reexecution
-        // KYU: Intra-CD msg check
-        if(cur_cdh->CheckIntraCDMsg()) { // Do not log for this!
+        CommLogErrT ret = kCommLogOK;
+ 
+       // KYU: Intra-CD msg check
+        if( cdp->CheckIntraCDMsg(src, g) ) { // Do not replay intra-CD msg, but reexecute it!
   
           LOG_DEBUG("In kReplay mode, but regenerate message for intra-CD messages...\n");
           mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
+
+          // Check some event (current log entry and just skip to the next one)
+          // This should read the corresponding payload when it calls MPI_Waitxxx
+          // FIXME Do we need this?
+          ret = cur_cdh->ptr_cd()->ReadData(buf, 0);
   
         }
         else { // Do log for this to replay for inter-CD messages at error event
   
           LOG_DEBUG("In kReplay mode, replaying from logs...\n");
-          CommLogErrT ret = cur_cdh->ptr_cd()->ReadData(buf, count*type_size);
-          cur_cdh->ptr_cd_->intra_cd_msg_replayed_++;
-          if (ret == kCommLogCommLogModeFlip) {
-            LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
-            mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
-            // This message was inter-CD message. So, keep logging for this message, too.
+          ret = cur_cdh->ptr_cd()->ReadData(buf, count*type_size);
+  
+        }
+
+        // End of log entry before failure. Flipped to executin mode!
+        if (ret == kCommLogCommLogModeFlip) {
+          LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
+          mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
+
+          // This message was inter-CD message. So, keep logging for this message, too.
+          // KYU: Intra-CD msg check
+          if( cdp->CheckIntraCDMsg(src, g) ) { // Do not log for intra-CD msg
+            printf("Intra-CD message\n");
+            // FIXME Record just event, length should be 0
+            // log event to check for escalation.
+            cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (unsigned long)request, 1, false, true);
+            
+          } 
+          else { // Log message for inter-CD communication
+            printf("Inter-CD message\n");
             cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (unsigned long)request, 1);
           }
-          else if (ret == kCommLogError)        {
-            ERROR_MESSAGE("Incomplete log entry for non-blocking communication! Needs to escalate, not implemented yet...\n");
-          }
-  
+        }
+        else if (ret == kCommLogError) {
+          ERROR_MESSAGE("Incomplete log entry for non-blocking communication! Needs to escalate, not implemented yet...\n");
         }
         break;
       }
@@ -635,8 +663,7 @@ int MPI_Irecv(void *buf,
         ERROR_MESSAGE("Wrong number for enum CDLoggingMode (%d)!\n", cur_cdh->ptr_cd()->GetCDLoggingMode());
         break;
       }
-    }
-  
+    } // switch ends
   }
   else {  // cur_cdh == NULL
     LOG_DEBUG("Warning: MPI_Irecv out of CD context...\n");
@@ -655,78 +682,68 @@ int MPI_Test(MPI_Request *request,
   int mpi_ret = 0;
 
   CDHandle * cur_cdh = GetCurrentCD();
-  if (cur_cdh == NULL)
-  {
-    //LOG_DEBUG("Warning: MPI_Test out of CD context...\n");
-    mpi_ret = PMPI_Test(request, flag, status);
-    app_side = true;
-    return mpi_ret;
-  }
-
-  switch (cur_cdh->ptr_cd()->GetCDLoggingMode())
-  {
-    case kStrictCD:
-      mpi_ret = PMPI_Test(request, flag, status);
-      // delete incomplete entries...
-      if (*flag == 1)
-      {
-        cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
+  if (cur_cdh != NULL) {
+    switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
+      case kStrictCD: {
+        mpi_ret = PMPI_Test(request, flag, status);
+        // delete incomplete entries...
+        if (*flag == 1)
+        {
+          cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
+        }
+        break;
       }
-      break;
-
-    case kRelaxedCDGen:
-      mpi_ret = PMPI_Test(request, flag, status);
-      LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
-      if (*flag == 1)
-      {
-        LOG_DEBUG("Operation complete, log flag and data...\n");
-        cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0);
-        cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
+      case kRelaxedCDGen: {
+        mpi_ret = PMPI_Test(request, flag, status);
+        LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
+        if (*flag == 1)
+        {
+          LOG_DEBUG("Operation complete, log flag and data...\n");
+          cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0);
+          cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
+        }
+        else
+        {
+          //LOG_DEBUG("Operation not complete, log flag...\n");
+          cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0, true, 0, false, true);
+        }
+        break;
       }
-      else
-      {
-        //LOG_DEBUG("Operation not complete, log flag...\n");
-        cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0, true, 0, false, true);
-      }
-      break;
-
-    case kRelaxedCDRead:
-      {
+      case kRelaxedCDRead: {
         LOG_DEBUG("In kReplay mode, replaying from logs...\n");
         CommLogErrT ret = cur_cdh->ptr_cd()->ReadData(flag, sizeof(int));
-        if (ret == kCommLogOK)
-        {
-          if (*flag == 1)
-          {
+        if (ret == kCommLogOK) {
+          if (*flag == 1) {
             cur_cdh->ptr_cd()->ProbeData(request, 0);
           }
         }
-        else if (ret == kCommLogCommLogModeFlip)
-        {
+        else if (ret == kCommLogCommLogModeFlip) {
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
           mpi_ret = PMPI_Test(request, flag, status);
-          if (*flag == 1)
-          {
+          if (*flag == 1) {
             LOG_DEBUG("Operation complete, log flag and data...\n");
             cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0);
             cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
           }
-          else
-          {
+          else {
             LOG_DEBUG("Operation not complete, log flag...\n");
             cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0, true, 0, false, true);
           }
         }
-        else if (ret == kCommLogError)
-        {
+        else if (ret == kCommLogError) {
           ERROR_MESSAGE("Incomplete log entry for non-blocking communication! Needs to escalate, not implemented yet...\n");
         }
+        break;
       }
-      break;
-
-    default:
-      ERROR_MESSAGE("Wrong number for enum CDLoggingMode (%d)!\n", cur_cdh->ptr_cd()->GetCDLoggingMode());
-      break;
+      default: {
+        ERROR_MESSAGE("Wrong number for enum CDLoggingMode (%d)!\n", cur_cdh->ptr_cd()->GetCDLoggingMode());
+        break;
+      }
+    } // switch ends
+  }
+  else {
+    //LOG_DEBUG("Warning: MPI_Test out of CD context...\n");
+    mpi_ret = PMPI_Test(request, flag, status);
   }
 
   app_side = true;
@@ -744,50 +761,41 @@ int MPI_Testall(int count,
   LOG_DEBUG("here inside MPI_Testall\n");
 
   CDHandle * cur_cdh = GetCurrentCD();
-  if (cur_cdh == NULL)
-  {
-    //LOG_DEBUG("Warning: MPI_Testall out of CD context...\n");
-    mpi_ret = PMPI_Testall(count, array_of_requests, flag, array_of_statuses);
-    app_side = true;
-    return mpi_ret;
-  }
-
-  switch (cur_cdh->ptr_cd()->GetCDLoggingMode())
-  {
-    case kStrictCD:
-      mpi_ret = PMPI_Testall(count, array_of_requests, flag, array_of_statuses);
-      // delete incomplete entries...
-      if (*flag == 1)
-      {
-        for (int ii=0;ii<count;ii++)
+  if (cur_cdh != NULL) {
+    switch (cur_cdh->ptr_cd()->GetCDLoggingMode()) {
+      case kStrictCD: {
+        mpi_ret = PMPI_Testall(count, array_of_requests, flag, array_of_statuses);
+        // delete incomplete entries...
+        if (*flag == 1)
         {
-          cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
+          for (int ii=0;ii<count;ii++)
+          {
+            cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
+          }
         }
+        break;
       }
-      break;
-
-    case kRelaxedCDGen:
-      mpi_ret = PMPI_Testall(count, array_of_requests, flag, array_of_statuses);
-      LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
-      if (*flag == 1)
-      {
-        LOG_DEBUG("Operation complete, log flag and data...\n");
-        cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0);
-        for (int ii=0;ii<count;ii++)
+      case kRelaxedCDGen: {
+        mpi_ret = PMPI_Testall(count, array_of_requests, flag, array_of_statuses);
+        LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
+        if (*flag == 1)
         {
-          LOG_DEBUG("Log data with count(%d) and index(%d)...\n",count,ii);
-          cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
+          LOG_DEBUG("Operation complete, log flag and data...\n");
+          cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0);
+          for (int ii=0;ii<count;ii++)
+          {
+            LOG_DEBUG("Log data with count(%d) and index(%d)...\n",count,ii);
+            cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
+          }
+          LOG_DEBUG("Passed log flag and data...\n");
         }
-        LOG_DEBUG("Passed log flag and data...\n");
+        else
+        {
+          cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0, true, 0, false, true);
+        }
+        break;
       }
-      else
-      {
-        cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0, true, 0, false, true);
-      }
-      break;
-
-    case kRelaxedCDRead:
-      {
+      case kRelaxedCDRead: {
         LOG_DEBUG("In kReplay mode, replaying from logs...\n");
         CommLogErrT ret = cur_cdh->ptr_cd()->ReadData(flag, sizeof(int));
         if (ret == kCommLogOK)
@@ -822,14 +830,18 @@ int MPI_Testall(int count,
         {
           ERROR_MESSAGE("Incomplete log entry for non-blocking communication! Needs to escalate, not implemented yet...\n");
         }
+        break;
+      } 
+      default: {
+        ERROR_MESSAGE("Wrong number for enum CDLoggingMode (%d)!\n", cur_cdh->ptr_cd()->GetCDLoggingMode());
+        break;
       }
-      break;
-
-    default:
-      ERROR_MESSAGE("Wrong number for enum CDLoggingMode (%d)!\n", cur_cdh->ptr_cd()->GetCDLoggingMode());
-      break;
+    } // switch ends
   }
-
+  else {
+    //LOG_DEBUG("Warning: MPI_Testall out of CD context...\n");
+    mpi_ret = PMPI_Testall(count, array_of_requests, flag, array_of_statuses);
+  }
   app_side = true;
   return mpi_ret;
 }
@@ -1022,7 +1034,12 @@ int MPI_Testsome(int incount,
   return mpi_ret;
 }
 
-// wait functions 
+// wait functions
+// Kyushick modified
+// LogData : mostly for blocking. if length is 0, it recording msg event itself, msg payload 
+// ReadData : replay
+// ProbeData : read data with length 0 (barrier. it is for reading msg event itself, not msg payload)
+// ProbeAndLogData : it is only for MPI_Wait and MPI_Test.
 int MPI_Wait(MPI_Request *request, 
              MPI_Status *status)
 {
@@ -1031,56 +1048,54 @@ int MPI_Wait(MPI_Request *request,
   LOG_DEBUG("here inside MPI_Wait\n");
 
   CDHandle * cur_cdh = GetCurrentCD();
-  if (cur_cdh == NULL)
-  {
-    LOG_DEBUG("Warning: MPI_Wait out of CD context...\n");
-    mpi_ret = PMPI_Wait(request, status);
-    app_side = true;
-    return mpi_ret;
-  }
+  if (cur_cdh != NULL) {
+    switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
+      case kStrictCD: {
+        mpi_ret = PMPI_Wait(request, status);
+        // delete incomplete entries...
+        cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
+        break;
+      }
+      case kRelaxedCDGen: {
+        mpi_ret = PMPI_Wait(request, status);
+        LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
 
-  switch (cur_cdh->ptr_cd()->GetCDLoggingMode())
-  {
-    case kStrictCD:
-      mpi_ret = PMPI_Wait(request, status);
-      // delete incomplete entries...
-      cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
-      break;
-
-    case kRelaxedCDGen:
-      mpi_ret = PMPI_Wait(request, status);
-      LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
-      cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
-      break;
-
-    case kRelaxedCDRead:
-      {
+//        if( cur_cdh->CheckIntraCDMsg(dest, g) ) {
+//          printf("Intra-CD message\n");
+//        } 
+        cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
+        break;
+      } 
+      case kRelaxedCDRead: {
         LOG_DEBUG("In kReplay mode, replaying from logs...\n");
         CommLogErrT ret = cur_cdh->ptr_cd()->ProbeData(request,0);
-        if (ret == kCommLogCommLogModeFlip)
-        {
+        if (ret == kCommLogCommLogModeFlip) {
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
           LOG_DEBUG("Should not come here because error happens between Isend/Irecv and WaitXXX...\n");
           mpi_ret = PMPI_Wait(request, status);
           cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
         }
-        else if (ret == kCommLogError)
-        {
+        else if (ret == kCommLogError) {
           ERROR_MESSAGE("Incomplete log entry for non-blocking communication! Needs to escalate, not implemented yet...\n");
         }
+        break;
       }
-      break;
-
-    default:
-      ERROR_MESSAGE("Wrong number for enum CDLoggingMode (%d)!\n", cur_cdh->ptr_cd()->GetCDLoggingMode());
-      break;
+      default: {
+        ERROR_MESSAGE("Wrong number for enum CDLoggingMode (%d)!\n", cur_cdh->ptr_cd()->GetCDLoggingMode());
+        break;
+      }
+    } // switch ends
   }
-
+  else {
+    LOG_DEBUG("Warning: MPI_Wait out of CD context...\n");
+    mpi_ret = PMPI_Wait(request, status);
+  }
   app_side = true;
   return mpi_ret;
 }
 
 // wait functions 
+// Kyushick modified
 int MPI_Waitall(int count, MPI_Request array_of_requests[], 
                 MPI_Status array_of_statuses[])
 {
@@ -1089,79 +1104,71 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
   int ii=0;
   LOG_DEBUG("here inside MPI_Waitall\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
-  if (cur_cdh == NULL)
-  {
-    LOG_DEBUG("Warning: MPI_Waitall out of CD context...\n");
-    mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
-    app_side = true;
-    return mpi_ret;
-  }
-
-  switch (cur_cdh->ptr_cd()->GetCDLoggingMode())
-  {
-    case kStrictCD:
-      mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
-      // delete incomplete entries...
-      for (ii=0;ii<count;ii++)
-      {
-        cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
+  CDHandle *cur_cdh = GetCurrentCD();
+  if (cur_cdh != NULL) {
+    switch( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
+      case kStrictCD: {
+        mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
+        // delete incomplete entries...
+        for (ii=0;ii<count;ii++) {
+          cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
+        }
+        break;
       }
-      break;
-
-    case kRelaxedCDGen:
-      mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
-      LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
-
-      // KYU: Intra-CD msg check
-      if(cur_cdh->CheckIntraCDMsg()) {
-        printf("Intra-CD message\n");
-      } else { // Log message for inter-CD communication
-        cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (unsigned long)request, 1);
+      case kRelaxedCDGen: {  // execution
+        mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
+        LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
+  
+        // KYU: Intra-CD msg check
+//        printf("Intra-CD message? %d\n", cur_cdh->CheckIntraCDMsg(dest, g));
+  
+        for (ii=0;ii<count;ii++) { // probe incomplete, log data and log event
+          cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
+        }
+    
+        break;
       }
-
-      for (ii=0;ii<count;ii++)
-      {
-        cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
-      }
-      break;
-
-    case kRelaxedCDRead:
-      {
+      case kRelaxedCDRead: { // Reexecution. Replay logs!
+        // For MPI_Wait in reexecution path, this performs any useful things,
+        // MPI_Wait just check events.
         LOG_DEBUG("In kReplay mode, replaying from logs...\n");
         CommLogErrT ret = kCommLogOK;
-        for (ii=0;ii<count;ii++)
-        {
-          ret = cur_cdh->ptr_cd()->ProbeData(&array_of_requests[ii],0);
-          if (ret == kCommLogCommLogModeFlip) 
-          {
-            if (ii != 0)
-            {
+
+        for (ii=0;ii<count;ii++) {
+          // intra-CD msg, it reads event
+          ret = cur_cdh->ptr_cd()->ProbeData(&array_of_requests[ii], 0); // read event
+          if (ret == kCommLogCommLogModeFlip) {
+            if (ii != 0) {
               ERROR_MESSAGE("Partially instrumented MPI_Waitall, may cause incorrect re-execution!!\n");
             }
             break;
           }
         }
-        if (ret == kCommLogCommLogModeFlip)
-        {
+
+        if (ret == kCommLogCommLogModeFlip) { // flipped to execution
+          LOG_DEBUG("Isn't it weird to reach here because error before wait should escalate it\n");
+          assert(0);
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
           LOG_DEBUG("Should not come here because error happens between Isend/Irecv and WaitXXX...\n");
           mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
-          for (ii=0;ii<count;ii++)
-          {
+          for (ii=0;ii<count;ii++) {
             cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)&array_of_requests[ii]);
           }
         }
-        else if (ret == kCommLogError)
-        {
+        else if (ret == kCommLogError) {
           ERROR_MESSAGE("Incomplete log entry for non-blocking communication! Needs to escalate, not implemented yet...\n");
         }
+        break;
       }
-      break;
-
-    default:
-      ERROR_MESSAGE("Wrong number for enum CDLoggingMode (%d)!\n", cur_cdh->ptr_cd()->GetCDLoggingMode());
-      break;
+      default: {
+        ERROR_MESSAGE("Wrong number for enum CDLoggingMode (%d)!\n", cur_cdh->ptr_cd()->GetCDLoggingMode());
+        break;
+      }
+    } // switch ends
+  }
+  else {
+    LOG_DEBUG("Warning: MPI_Waitall out of CD context...\n");
+    mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
   }
 
   app_side = true;

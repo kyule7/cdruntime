@@ -2466,7 +2466,7 @@ CD::CDInternalErrT CD::Assert(bool test)
       // and that can be less than this point, which means escalation request.
       // reexec_level was set to a number less than current task's level,
       // Then do not set it to current task's level, because it needs to be escalated.
-      if(reexec_level > level()) {
+      if(reexec_level >= level()) {
         reexec_level = level();
       }
       else {
@@ -4094,28 +4094,36 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
     LOG_DEBUG("Print Incomplete Log before calling comm_log_ptr_->ProbeAndLogData\n");
     PrintIncompleteLog();
 #endif
-    bool found = comm_log_ptr_->ProbeAndLogData((void*)(it->addr_), it->length_, flag, it->isrecv_);
-    if (!found)
-    {
-      CD* tmp_cd = this;
-      while (tmp_cd->GetParentHandle() != NULL)
-      {
-        tmp_cd = tmp_cd->GetParentHandle()->ptr_cd_; 
-        if (MASK_CDTYPE(tmp_cd->GetParentHandle()->ptr_cd()->cd_type_)==kRelaxed)
-        {
-          found = tmp_cd->GetParentHandle()->ptr_cd()->comm_log_ptr_
-            ->ProbeAndLogDataPacked((void*)(it->addr_), it->length_, flag, it->isrecv_);
-          if (found)
-            break;
-        }
-        else {
-          break;
-        }
-      }
+
+    // For inter-CD message, we record payload, otherwise, just record event itself.
+    if(it->intra_cd_msg_ == false) { 
+      bool found = comm_log_ptr_->ProbeAndLogData((void*)(it->addr_), it->length_, flag, it->isrecv_);
       if (!found)
       {
-        LOG_DEBUG("Possible bug: not found the incomplete logs...\n");
+        CD* tmp_cd = this;
+        while (tmp_cd->GetParentHandle() != NULL)
+        {
+          tmp_cd = tmp_cd->GetParentHandle()->ptr_cd_; 
+          if (MASK_CDTYPE(tmp_cd->GetParentHandle()->ptr_cd()->cd_type_)==kRelaxed)
+          {
+            found = tmp_cd->GetParentHandle()->ptr_cd()->comm_log_ptr_
+              ->ProbeAndLogDataPacked((void*)(it->addr_), it->length_, flag, it->isrecv_);
+            if (found)
+              break;
+          }
+          else {
+            break;
+          }
+        }
+        if (!found)
+        {
+          LOG_DEBUG("Possible bug: not found the incomplete logs...\n");
+        }
       }
+  
+    }
+    else {
+      LOG_DEBUG("Skipped copying msg payload because it is intra-CD message!\n");
     }
     // need to log that wait op completes 
 #if _MPI_VER
@@ -4142,7 +4150,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 
 //SZ
 CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, uint32_t task_id, 
-                      bool completed, unsigned long flag, bool isrecv, bool isrepeated)
+                      bool completed, unsigned long flag, bool isrecv, bool isrepeated, bool intra_cd_msg)
 {
   if (comm_log_ptr_ == NULL)
   {
@@ -4153,7 +4161,7 @@ CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, uint32_t tas
   num_log_entry_++;
   tot_log_volume_+=length;
 #endif
-  return comm_log_ptr_->LogData(data_ptr, length, task_id, completed, flag, isrecv, isrepeated);
+  return comm_log_ptr_->LogData(data_ptr, length, task_id, completed, flag, isrecv, isrepeated, intra_cd_msg);
 }
 
 //SZ

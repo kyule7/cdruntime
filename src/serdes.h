@@ -71,7 +71,7 @@ namespace cd {
 
 
 class Serdes {
-  friend cd::CDHandle; // Only CDHandle can invoke operator()
+  friend class cd::CDHandle; // Only CDHandle can invoke operator()
     std::list<uint32_t> serdes_list_;
     std::map<uint32_t, std::pair<void *, size_t>> member_list_;
     uint32_t length_;
