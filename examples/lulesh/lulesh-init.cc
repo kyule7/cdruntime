@@ -35,9 +35,11 @@ Domain::Domain(Int_t numRanks, Index_t colLoc,
    m_pmin(Real_t(0.)),
    m_emin(Real_t(-1.0e+15)),
    m_dvovmax(Real_t(0.1)),
+#if SERDES_ENABLED
+//   serdes(this),
+#endif
    m_refdens(Real_t(1.0))
 {
-
    Index_t edgeElems = nx ;
    Index_t edgeNodes = edgeElems+1 ;
    this->cost() = cost;

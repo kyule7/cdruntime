@@ -49,16 +49,36 @@ NodeID::NodeID(void)
 
 NodeID::NodeID(const ColorT& color, int task, int head, int size)
   : color_(color), task_in_color_(task), head_(head), size_(size)
-{}
+{
+#if _MPI_VER 
+  MPI_Comm(color, &task_group_);
+#endif
+}
 
 NodeID::NodeID(const NodeID& that)
-  : color_(that.color()), task_in_color_(that.task_in_color()), head_(that.head()), size_(that.size())
-{}
+  : task_in_color_(that.task_in_color_), head_(that.head_), size_(that.size_)
+{
+#if _MPI_VER
+  int ret = MPI_Comm_dup(that.color_, &color_);
+  assert(ret != MPI_SUCCESS);
+  MPI_Comm(color_, &task_group_);
+#else
+  color_ = that.color_;
+  task_group_ = that.task_group_;
+#endif
+}
 
 
 NodeID &NodeID::operator=(const NodeID& that) 
 {
-  color_         = that.color();
+#if _MPI_VER
+  int ret = MPI_Comm_dup(that.color_, &color_);
+  assert(ret != MPI_SUCCESS);
+  MPI_Comm(color_, &task_group_);
+#else
+  color_ = that.color_;
+  task_group_ = that.task_group_;
+#endif
   task_in_color_ = that.task_in_color();
   head_          = that.head();
   size_          = that.size();
@@ -72,9 +92,17 @@ bool NodeID::operator==(const NodeID& that) const
 
 
 
-void NodeID::init_node_id(ColorT color, int task_in_color, int head, int size)
+void NodeID::init_node_id(ColorT color, int task_in_color, CommGroupT group, int head, int size)
 {
+#if _MPI_VER
+  int ret = MPI_Comm_dup(color, &color_);
+  assert(ret != MPI_SUCCESS);
+  MPI_Comm(color_, &task_group_);
+#else
   color_ = color;
+  task_group_ = group;
+#endif
+
   task_in_color_ = task_in_color;
   if(head == INVALID_HEAD_ID) {
     head_ = 0;

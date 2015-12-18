@@ -1443,6 +1443,8 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
 {
   int global_rank_id = -1;
   int local_rank_id = -1;
+
+  // Translate user group's rank ID to MPI_COMM_WORLD
   int status = MPI_Group_translate_ranks(target_group, 1, &target_id, cd::whole_group, &global_rank_id);
   if(status != MPI_SUCCESS) {
     // error
@@ -1453,8 +1455,15 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
   for(int i=0; i<size; i++) {
     group_ranks[i] = i;
   }
-    
+
+  // Translate task IDs of CD to MPI_COMM_WORLD  
   status = MPI_Group_translate_ranks(group(), size, group_ranks, cd::whole_group, result_ranks);
+
+  printf("\n\nRank #%d ----------------------------\n", myTaskID); 
+  for(int i=0; i<size; i++) {
+    printf("%d->%d\n", group_ranks[i], result_ranks[i]);
+  }
+  printf("\n\n"); 
 
   bool found = false;
   for(int i=0; i<size; i++) {
@@ -1470,7 +1479,7 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
 //    // it should return false
 //  }
 
-  printf("Translate rank_id = %d->%d->%d at %s\n\n", target_id, global_rank_id, local_rank_id, GetCDID().GetString().c_str());
+  printf("Translate rank_id = %d->%d->%d at %s, found? %d\n\n", target_id, global_rank_id, local_rank_id, GetCDID().GetString().c_str(), found);
   return found;
 }
 

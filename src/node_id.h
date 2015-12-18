@@ -115,7 +115,7 @@ public:
   std::string GetStringID(void) const;
 private:
   void set_head(int head);
-  void init_node_id(ColorT color, int task_in_color, int head, int size);
+  void init_node_id(ColorT color, int task_in_color, CommGroupT group, int head, int size);
   void *Serialize(uint32_t &len_in_bytes);
   void Deserialize(void *object);
 };

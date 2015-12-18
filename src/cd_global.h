@@ -317,9 +317,9 @@ namespace cd {
  * only). Relaxed CDs typically incur additional runtime overhead
  * compared to strict CDs.
  */
-  enum CDType  { kStrict=1,   ///< A strict CD
-                 kRelaxed=2,   ///< A relaxed CD
-                 kDefaultCD=5   ///< Default is strict CD
+  enum CDType  { kStrict=2,   ///< A strict CD
+                 kRelaxed=3,   ///< A relaxed CD
+                 kDefaultCD=6   ///< Default is strict CD
                };
 
 /** @brief Type to indicate whether preserved data is from read-only

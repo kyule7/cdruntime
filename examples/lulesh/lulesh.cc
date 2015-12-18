@@ -226,6 +226,7 @@ void TimeIncrement(Domain& domain)
    Real_t targetdt = domain.stoptime() - domain.time() ;
 
 #if _CD
+   BEG_CDMAPPING_FUNC(SWITCH_1_0, 0, 0);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "TimeIncrement");
    GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
@@ -288,9 +289,9 @@ void TimeIncrement(Domain& domain)
    ++domain.cycle() ;
 
 #if _CD
+   END_CDMAPPING_FUNC(SWITCH_1_0);
    GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -306,6 +307,7 @@ void CollectDomainNodesToElemNodes(Domain &domain,
 {
 
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_6_0, 0, 0);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CollectDomainNodesToElemNodes");
 
@@ -356,6 +358,7 @@ void CollectDomainNodesToElemNodes(Domain &domain,
    elemZ[7] = domain.z(nd7i);
 
 #if _CD
+   END_CDMAPPING(SWITCH_6_0);
    GetLeafCD()->Detect();
    CD_Complete(cdh);
 #endif
@@ -391,7 +394,6 @@ void InitStressTermsForElems(Domain &domain,
 #if _CD
    GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 }
 
@@ -407,6 +409,7 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
 {
 
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_6_1, 0, 0);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcElemShapeFunctionDerivatives");
    GetLeafCD()->Preserve(b, sizeof(b), kCopy, "b", 0, 0, 0, kUnsure);
@@ -494,9 +497,9 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
   *volume = Real_t(8.) * ( fjxet * cjxet + fjyet * cjyet + fjzet * cjzet);
 
 #if _CD
+   END_CDMAPPING(SWITCH_6_1);
    GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -551,6 +554,7 @@ void CalcElemNodeNormals(Real_t pfx[8],
 {
 
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_6_2, 0, 0);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcElemNodeNormals");
    GetLeafCD()->Preserve(pfx, sizeof(pfx), kCopy, "pfx", 0, 0, 0, kUnsure);
@@ -609,9 +613,9 @@ void CalcElemNodeNormals(Real_t pfx[8],
                   x[6], y[6], z[6], x[5], y[5], z[5]);
 
 #if _CD
+   END_CDMAPPING(SWITCH_6_2, 0, 0);
    GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 
@@ -626,11 +630,13 @@ void SumElemStressesToNodeForces( const Real_t B[][8],
                                   const Real_t stress_zz,
                                   Real_t fx[], Real_t fy[], Real_t fz[] )
 {
+   BEGIN_CDMAPPING(SWITCH_6_3, 0, 0);
    for(Index_t i = 0; i < 8; i++) {
       fx[i] = -( stress_xx * B[0][i] );
       fy[i] = -( stress_yy * B[1][i]  );
       fz[i] = -( stress_zz * B[2][i] );
    }
+   END_CDMAPPING(SWITCH_6_3);
 }
 
 /******************************************/
@@ -642,6 +648,7 @@ void IntegrateStressForElems( Domain &domain,
 {
 
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_5_1, 0, 0);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "IntegrateStressForElems");
    GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
@@ -678,7 +685,7 @@ void IntegrateStressForElems( Domain &domain,
    CDHandle* cd = GetLeafCD()->Create("IntegrateStressForElems", kStrict, 0, 0, &err); // CD6_0
 #endif
 
-
+  
 //#pragma omp parallel for firstprivate(numElem)
   for( Index_t k=0 ; k<numElem ; ++k )
   {
@@ -730,7 +737,6 @@ void IntegrateStressForElems( Domain &domain,
 #if _CD
     GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
   }
@@ -740,6 +746,9 @@ void IntegrateStressForElems( Domain &domain,
 
    GetLeafCD()->Detect();
    CD_Complete(cdh);
+
+
+  SPLIT_CDMAPPING(SWITCH_5_2, 0, 0, "ReleaseData_IntegrateStressForElems"); /// ReleaseData_IntegrateStressForElems
 
    CD_Begin(cdh, false, "Write data in IntegrateStressForElems");
    GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
@@ -775,9 +784,9 @@ void IntegrateStressForElems( Domain &domain,
   }
 
 #if _CD
+  END_CDMAPPING(SWITCH_5_1); ///
    GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -883,6 +892,7 @@ void CalcElemFBHourglassForce(Real_t *xd, Real_t *yd, Real_t *zd,  Real_t hourga
 {
 
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_7_0, 0, 0);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcElemFBHourglassForce");
    GetLeafCD()->Preserve(&coefficient, sizeof(coefficient), kCopy, "coefficient", 0, 0, 0, kUnsure);
@@ -926,9 +936,9 @@ void CalcElemFBHourglassForce(Real_t *xd, Real_t *yd, Real_t *zd,  Real_t hourga
 
 
 #if _CD
+   END_CDMAPPING(SWITCH_7_0);
    GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -945,12 +955,13 @@ void CalcFBHourglassForceForElems( Domain &domain,
 {
 
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_6_4, 0, 0);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcFBHourglassForceForElems");
    GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
    unsigned int len=0;
-   void *internal=domain.Serialize(len);
-   GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
+   //void *internal=domain.Serialize(len);
+   //GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
 #endif
 
@@ -1019,6 +1030,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
 /*    compute the hourglass modes */
 
 #if _CD
+   BEGIN_CDMAPPING_LOOP(LOOP_SWITCH_6_5); // Create level? or Sequentialize? (Not creating level)
 //   CDHandle* cd = GetLeafCD()->Create(NUM_CDS_IN_LEVEL_7, "CD7", kStrict, 0, 0, &err);
    CDHandle* cd = GetLeafCD()->Create("CalcFBHourglassForceForElems", kStrict, 0, 0, &err); // CD7
 #endif
@@ -1040,6 +1052,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
       Real_t ss1, mass1, volume13 ;
 
 #if _CD
+      BEGIN_CDMAPPING(SWITCH_6_5, 0, 0);
       CD_Begin(cd, false, "Loop in CalcFBHourglassForceForElems");
       cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
       //DumpPreserve();
@@ -1149,6 +1162,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
       coefficient = - hourg * Real_t(0.01) * ss1 * mass1 / volume13;
 
 #if _CD
+      END_CDMAPPING(SWITCH_6_5);
       cd->Detect();
       cd->Complete();
 #endif
@@ -1158,6 +1172,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
                       coefficient, hgfx, hgfy, hgfz);
 
 #if _CD
+      BEGIN_CDMAPPING(SWITCH_6_6, 0, 0);
       CD_Begin(cd, false, "Write elems in CalcFBHourglassForceForElems");
       cd->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
       len=0;
@@ -1234,6 +1249,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
       }
 
 #if _CD
+      END_CDMAPPING(SWITCH_6_6);
       cd->Detect();
       cd->Complete();
 #endif
@@ -1241,6 +1257,8 @@ void CalcFBHourglassForceForElems( Domain &domain,
    }  // loop for CD7 ends
 
 #if _CD
+   END_CDMAPPING_LOOP(LOOP_SWITCH_6_5);
+
    cd->Destroy(); // CD7 is destroyed
    
    GetLeafCD()->Detect();
@@ -1251,6 +1269,10 @@ void CalcFBHourglassForceForElems( Domain &domain,
 //   internal=domain.Serialize(len);
 //   GetLeafCD()->Preserve(internal, len, kCopy, "domain_internal", 0, 0, 0, kUnsure);
    //DumpPreserve();
+   
+   
+   
+   BEGIN_CDMAPPING(SWITCH_6_7, 0, 0);
 #endif
 
    if (numthreads > 1) {
@@ -1278,12 +1300,10 @@ void CalcFBHourglassForceForElems( Domain &domain,
       Release(&fx_elem) ;
    }
 
-
-
 #if _CD
+   END_CDMAPPING(SWITCH_6_7);
    GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 
@@ -1297,6 +1317,7 @@ void CalcHourglassControlForElems(Domain& domain,
 {
 
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_5_3, 0, 0);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcHourglassControlForElem");
    GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
@@ -1364,9 +1385,9 @@ void CalcHourglassControlForElems(Domain& domain,
       }  // check ends
 
 #if _CD
-      GetLeafCD()->Detect();
+   END_CDMAPPING(SWITCH_5_3);
+   GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
    }  // loop ends
@@ -1475,6 +1496,7 @@ static inline void CalcForceForNodes(Domain& domain)
 
 
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_3_0, 0, domain, "domain", kCopy);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcForceForNodes"); // Do not preserve Domain under this level
 
@@ -1538,6 +1560,7 @@ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
 {
    
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_3_1, 0, domain, "domain", kCopy,);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcAccelerationForNodes");
    GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
@@ -1554,7 +1577,6 @@ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
 #if _CD
    GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -1566,6 +1588,7 @@ void ApplyAccelerationBoundaryConditionsForNodes(Domain& domain)
 {
 
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_3_2, 0, domain, "domain", kCopy,);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "ApplyAccelerationBoundaryConditionsForNodes");
    cdh->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
@@ -1609,7 +1632,9 @@ static inline
 void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
                           Index_t numNode)
 {
-#if _CD
+   BEGIN_CDMAPPING(SWITCH_3_2, 0, domain, "domain", kCopy,);
+   BEGIN_CDMAPPING(0, 0, domain, "domain", kCopy,);
+   { \
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcVelocityForNodes");
    cdh->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
@@ -1637,7 +1662,6 @@ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
 #if _CD
    cdh->Detect();
    CD_Complete(cdh);
-;
 #endif
 }
 
@@ -1647,6 +1671,7 @@ static inline
 void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
 {
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_3_3, 0, domain, "domain", kCopy,);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcPositionForNodes");
    cdh->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
@@ -1674,10 +1699,7 @@ void LagrangeNodal(Domain& domain)
 {
 
 #if _CD
-   CDHandle* cdh = GetLeafCD();
-   CD_Begin(cdh, false, "LagrangeNodal");
-   cdh->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   //DumpPreserve();
+   BEGIN_CDMAPPING(SWITCH_2_0, 0, domain, "domain", kCopy);
 #endif
 
 #ifdef SEDOV_SYNC_POS_VEL_EARLY
@@ -1687,19 +1709,9 @@ void LagrangeNodal(Domain& domain)
    const Real_t delt = domain.deltatime() ;
    Real_t u_cut = domain.u_cut() ;
 
-
-#if _CD
-   //CDHandle* cd = GetLeafCD()->Create(GetCurrrentCD()->GetNodeID(), NUM_CDS_IN_LEVEL_3_0, "CD3_0", kStrict, 0, 0, &err);
-   CDHandle* cd = cdh->Create("LagrangeNodal before Communication", kStrict, 0, 0, &err); // LEVEL_3_0
-#endif
-
   /* time of boundary condition evaluation is beginning of step for force and
    * acceleration boundary conditions. */
   CalcForceForNodes(domain);  //DONE 0723
-
-#if _CD
-   cd->Destroy(); // CD3_0 is destroyed
-#endif
 
 #if USE_MPI  
 #ifdef SEDOV_SYNC_POS_VEL_EARLY
@@ -1707,13 +1719,6 @@ void LagrangeNodal(Domain& domain)
             domain.sizeX + 1, domain.sizeY + 1, domain.sizeZ + 1,
             false, false) ;
 #endif
-#endif
-
-   // TODO 0724   
-#if _CD 
-   // FIXME
-   // fine-grain CDs
-   cd = cdh->Create(NUM_CDS_IN_LEVEL_3_1, "LagrangeNodal after Communication", kStrict, 0, 0, &err); // CD3_1
 #endif
 
    CalcAccelerationForNodes(domain, domain.numNode());
@@ -1730,12 +1735,12 @@ void LagrangeNodal(Domain& domain)
 
 #if USE_MPI
 #ifdef SEDOV_SYNC_POS_VEL_EARLY
-  fieldData[0] = &Domain::x ;
-  fieldData[1] = &Domain::y ;
-  fieldData[2] = &Domain::z ;
-  fieldData[3] = &Domain::xd ;
-  fieldData[4] = &Domain::yd ;
-  fieldData[5] = &Domain::zd ;
+   fieldData[0] = &Domain::x ;
+   fieldData[1] = &Domain::y ;
+   fieldData[2] = &Domain::z ;
+   fieldData[3] = &Domain::xd ;
+   fieldData[4] = &Domain::yd ;
+   fieldData[5] = &Domain::zd ;
 
    CommSend(domain, MSG_SYNC_POS_VEL, 6, fieldData,
             domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() + 1,
@@ -1744,12 +1749,9 @@ void LagrangeNodal(Domain& domain)
 #endif
 #endif
 
-#if _CD
-   cdh->Detect();
-   CD_Complete(cdh);
-#endif  
+   BEGIN_CDMAPPING(SWITCH_2_0, 0, domain, "domain", kCopy,);
 
-  return;
+   return;
 }
 
 /******************************************/
@@ -2146,7 +2148,7 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
 
 #if _CD
       CDHandle* cdh = GetLeafCD();
-   CD_Begin(cdh, false, "Epilog in CalcLagrangeElements");
+      CD_Begin(cdh, false, "Epilog in CalcLagrangeElements");
       GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
       //DumpPreserve();
 #endif
@@ -3367,6 +3369,7 @@ void CalcCourantConstraintForElems(Domain &domain, Index_t length,
 {
 
 #if _CD
+   BEGIN_CDMAPPING(SWITCH_2_5, 0, 0);
    CDHandle* cdh = GetLeafCD();
    CD_Begin(cdh, false, "CalcCourantConstraintForElems");
    GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
@@ -3442,7 +3445,6 @@ void CalcCourantConstraintForElems(Domain &domain, Index_t length,
 #if _CD
    GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 
@@ -3566,7 +3568,6 @@ void CalcTimeConstraintsForElems(Domain& domain) {
    cd->Destroy(); // CD3_6 is destroyed
    GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -3582,18 +3583,47 @@ void LagrangeLeapFrog(Domain& domain)
 
 
 
-#if _CD
-   CDHandle* cdh = GetLeafCD();
-   CD_Begin(cdh, false, "LagrangeLeapFrog");
-   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
-   //DumpPreserve();
-   CDHandle* cd = cdh->Create(NUM_CDS_IN_LEVEL_2, "LagrangeLeapFrog", kStrict, 0, 0, &err);
-//   CDHandle* cd = GetLeafCD()->Create("LagrangeLeapFrog", kStrict, 0, 0, &err);  // CD2
-#endif
+//#if _CD
+//   BEGIN_CDMAPPING(SWITCH_1_0, 0, domain, "domain", kCopy,);
+//
+//
+//
+//   CDHandle* cdh = GetLeafCD();
+//   CD_Begin(cdh, false, "LagrangeLeapFrog");
+//#if SWITCH_2_0_0 > 0
+//      CDHandle *child_0_0_1 = GetLeafCD()->Create(SWITCH_0_0_1 >> 6, "TimeIncrement", SWITCH_0_0_1 & 0x3F);
+//      CD_Begin(child_0_0_1, false, "TimeIncrement");
+//#elif SWITCH_2_0_0 == 0
+//      CD_Begin(child_0_0_1, false, "TimeIncrement");
+//#endif
+//   GetLeafCD()->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+//   //DumpPreserve();
+//   CDHandle* cd = cdh->Create(NUM_CDS_IN_LEVEL_2, "LagrangeLeapFrog", kStrict, 0, 0, &err);
+////   CDHandle* cd = GetLeafCD()->Create("LagrangeLeapFrog", kStrict, 0, 0, &err);  // CD2
+//#endif
 
+
+
+#if SWITCH_2_0_0 > 0
+      CDHandle *cdh = GetLeafCD();
+      CDHandle *child = cdh->Create(SWITCH_2_0_0 >> 6, "LagrangeNodal", SWITCH_2_0_0 & 0x3F);
+      CD_Begin(child, false, "LagrangeNodal");
+      child->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+#elif SWITCH_2_0_0 == 0
+      CDHandle *cdh = GetLeafCD();
+      CD_Begin(cdh, false, "LagrangeNodal");
+      cdh->Preserve(&domain, sizeof(domain), kCopy, "domain", 0, 0, 0, kUnsure);
+#endif
    /* calculate nodal forces, accelerations, velocities, positions, with
     * applied boundary conditions and slide surface considerations */
-   LagrangeNodal(domain);  // DONE 0723
+   LagrangeNodal(domain);  
+#if SWITCH_2_0_0 > 0
+      CD_Complete(child);
+      child->Destroy();
+#elif SWITCH_2_0_0 == 0
+      CD_Complete(child);
+#endif
+   CDMAPPING_BEGIN(SWITCH_1_1_0);
 
 
 #ifdef SEDOV_SYNC_POS_VEL_LATE
@@ -3632,10 +3662,10 @@ void LagrangeLeapFrog(Domain& domain)
 
  
 #if _CD
+   END_CDMAPPING(SWITCH_1_0, 0, domain, "domain", kCopy,);
    cd->Destroy(); // CD2 is destroyed
    GetLeafCD()->Detect();
    CD_Complete(cdh);
-;
 #endif
 
 }
@@ -3703,19 +3733,10 @@ int main(int argc, char *argv[])
 
 #if _CD
    CDHandle* root_cd = CD_Init(numRanks, myRank);
-   std::cout << root_cd->ptr_cd() << std::endl; 
-//   std::cout << "task: " << root_cd->task_in_color() << std::endl; 
-   //getchar();
-//   if(CDPath.empty())
-//    printf("huh?\n");
-//   else
-//    printf("??\n");
-
    CD_Begin(root_cd, false, "Root Begin");
-
-//   printf("--root--\n");
-   root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom", 0, 0, 0, kUnsure);
-   //DumpPreserve();
+   root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom");
+   locDom->serdes.SetOp(SERDES_ALL);
+   root_cd->Preserve(&(locDom->serdes), kCopy, "AllMembers");
 #endif
 
 #if USE_MPI   
@@ -3743,31 +3764,49 @@ int main(int argc, char *argv[])
 #endif
    
 
-//debug to see region sizes
-#if _DEBUG
-//   for(Int_t i = 0; i < locDom->numReg(); i++)
-//      std::cout << "region: " << i + 1<< ", size: " << locDom->regElemSize(i) <<std::endl;
+
+#if SWITCH_0_0_0 > 0
+   CDHandle* cdlv1 = root_cd->Create(SWITCH_0_0_0, "Main Loop", kStrict);
+#elif SWITCH_0_0_0 == 0
+   CD_Complete();
 #endif
 
-#if _CD
-   root_cd->Detect();
-   root_cd->Complete();
 
-   CD_Begin(root_cd, false, "Root Before Main Loop");
-   root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom", 0, 0, 0, kUnsure);
-   //DumpPreserve();
 
-   CDHandle* cd1 = root_cd->Create(NUM_CDS_IN_LEVEL_1, "Main Loop", kStrict, 0, 0, &err);
-#endif
-//   printf("-- Main Loop start --\n");
    // Main loop start
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
-//#if _CD
-//      cd1->Begin(///true, "Root Before Main Loop");
-//#endif
       // Main functions in the loop
-      TimeIncrement(*locDom) ;
-      LagrangeLeapFrog(*locDom) ;
+
+#if SWITCH_0_0_1 > 0
+      CDHandle *child_0_0_1 = GetLeafCD()->Create(SWITCH_0_0_1 >> 6, "TimeIncrement", SWITCH_0_0_1 & 0x3F);
+      CD_Begin(child_0_0_1, false, "TimeIncrement");
+#elif SWITCH_0_0_1 == 0
+      CD_Begin(child_0_0_1, false, "TimeIncrement");
+#endif
+
+      TimeIncrement(*locDom);
+
+#if SWITCH_0_0_1 > 0
+      CD_Complete(child_0_0_1);
+      child_0_0_1->Destroy();
+#elif SWITCH_0_0_1 == 0
+      CD_Complete(child_0_0_1);
+#endif
+
+#if SWITCH_0_0_2 > 0
+      CDHandle *child_0_0_2 = GetLeafCD()->Create(SWITCH_0_0_2 >> 6, "LagrangeLeapFrog", SWITCH_0_0_2 & 0x3F);
+      CD_Begin(child_0_0_2, false, "LagrangeLeapFrog");
+#elif SWITCH_0_0_2 == 0
+      CD_Begin(child_0_0_2, false, "LagrangeLeapFrog");
+#endif
+      LagrangeLeapFrog(*locDom);
+
+#if SWITCH_0_0_2 > 0
+      CD_Complete(child_0_0_2);
+      child_0_0_2->Destroy();
+#elif SWITCH_0_0_2 == 0
+      CD_Complete(child_0_0_2);
+#endif
 
 #if _DEBUG
       if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) {
@@ -3776,20 +3815,26 @@ int main(int argc, char *argv[])
       }
 #endif
 
-//#if _CD
-//      cd1->Complete();
-//#endif
+#if _CD      
+      SPLIT_CDMAPPING(SWITCH_0_1, iter++); // Complete/Begin
+   #if SWITCH_0_1
+      root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom");
+      locDom->serdes.SetOp(SERDES_ALL);
+      root_cd->Preserve(&(locDom->serdes), kCopy, "AllMembers");
+   #endif
+#endif
    }
+
+#if SWITCH_0_0_0 > 0
+   cdlv1->Destroy();
+#endif
 
 
 #if _CD
-   cd1->Destroy();
-   root_cd->Detect();
-   root_cd->Complete();
-
-   CD_Begin(root_cd, false, "Root After Main Loop");
-   root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom", 0, 0, 0, kUnsure);
-   //DumpPreserve();
+   END_CDMAPPING_LOOP(SWITCH_0_0, root_cd); // Complete/Destroy or Complete/Begin or Nothing
+#if SWITCH_0_0
+   root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom");
+#endif
 #endif
 
    // Use reduced max elapsed time
@@ -3799,6 +3844,7 @@ int main(int argc, char *argv[])
 #else
    elapsed_time = (clock() - start) / CLOCKS_PER_SEC;
 #endif
+
    double elapsed_timeG;
 #if USE_MPI   
    MPI_Reduce(&elapsed_time, &elapsed_timeG, 1, MPI_DOUBLE,
@@ -3815,6 +3861,7 @@ int main(int argc, char *argv[])
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);
    }
+
 #if _CD
    root_cd->Detect();
    root_cd->Complete();

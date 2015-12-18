@@ -93,7 +93,7 @@ class cd::Packer
 
 
 ///@brief Add data to pack in packer data structure.
-    virtual uint32_t Add(uint32_t id, uint32_t length, void *position);
+    virtual uint32_t Add(uint32_t id, uint32_t length, const void *position);
 
 ///@brief Get total size required for table (metadata) and data.
     virtual char *GetTotalData(uint32_t &total_data_size);

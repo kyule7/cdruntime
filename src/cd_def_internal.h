@@ -95,7 +95,7 @@ typedef MPI_File      COMMLIB_File;
 //#define INITIAL_COLOR 0
 //#define ROOT_HEAD_ID  0
 //typedef int           ColorT;
-typedef int           CommGroupT;
+//typedef int           CommGroupT;
 typedef int           CommRequestT;
 typedef int           CommStatusT;
 // FIXME
@@ -428,7 +428,7 @@ namespace cd {
   namespace logging {
 
     // data structure to store incompleted log entries
-    struct IncompleteLogEntry{
+    struct IncompleteLogEntry {
       uint32_t thread_;
       //void * addr_;
       unsigned long addr_;
@@ -443,7 +443,7 @@ namespace cd {
       unsigned int level_;
       //bool valid_;
       //SZ
-      IncompleteLogEntry() {
+      IncompleteLogEntry(void) {
         thread_ = 0;
         //void * addr_;
         addr_ = 0;
@@ -482,13 +482,13 @@ extern FILE *cdoutApp;
   fprintf(cdout, __VA_ARGS__)
 
 
-#define LOG_DEBUG(...) /*\
+#define LOG_DEBUG(...) \
   { if(cd::app_side) {\
       cd::app_side=false;\
       fprintf(stdout, __VA_ARGS__);\
       cd::app_side = true;}\
     else fprintf(stdout, __VA_ARGS__);\
-  }*/
+  }
 
 #define LIBC_DEBUG(...) /*\
     { if(cd::app_side) {\

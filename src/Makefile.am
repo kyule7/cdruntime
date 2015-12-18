@@ -8,7 +8,9 @@ include_HEADERS = cd.h \
 									serdes.h \
 									serializable.h \
 									profiler_interface.h \
-									error_injector.h
+									error_injector.h \
+  	              packer.h \
+  	              unpacker.h 
 
 # Libtool-related
 lib_LTLIBRARIES = libcd.la

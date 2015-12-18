@@ -94,7 +94,7 @@ Packer::~Packer()
 
 
 
-uint32_t Packer::Add(uint32_t id, uint32_t length, void *ptr_data)
+uint32_t Packer::Add(uint32_t id, uint32_t length, const void *ptr_data)
 {
 
   CD_DEBUG("id : %u, length : %u, ptr_data : %p\n", id, length, ptr_data);
