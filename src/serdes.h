@@ -74,7 +74,7 @@ class Serdes {
   friend class cd::CDHandle; // Only CDHandle can invoke operator()
     std::list<uint32_t> serdes_list_;
     std::map<uint32_t, std::pair<void *, size_t>> member_list_;
-    uint32_t length_;
+    uint64_t length_;
   public:
     void Register(uint32_t member_id, void *member, size_t member_size);
     void ClearTarget(void);

@@ -94,18 +94,18 @@ Packer::~Packer()
 
 
 
-uint32_t Packer::Add(uint32_t id, uint32_t length, const void *ptr_data)
+uint32_t Packer::Add(uint32_t id, uint64_t length, const void *ptr_data)
 {
 
-  CD_DEBUG("id : %u, length : %u, ptr_data : %p\n", id, length, ptr_data);
+  CD_DEBUG("id : %u, length : %lu, ptr_data : %p\n", id, length, ptr_data);
 
   // Class user does not need to know the current writing position.	
-  return AddData(id , length ,  used_data_size_, (char *)ptr_data); 
+  return AddData(id , (uint32_t)length ,  used_data_size_, (char *)ptr_data); 
 }
 
 
 //TODO: We can put checksum, or ECC at the end of this buffer. We can work on this later not now. 
-char *Packer::GetTotalData(uint32_t &total_data_size) 
+char *Packer::GetTotalData(uint64_t &total_data_size) 
 {
   CD_DEBUG("GetTotalData\n");
 

@@ -227,7 +227,7 @@ int TestCDHierarchy(void)
 
 //  child_lv2->CDAssert(CheckArray(arrayE, sizeof(arrayE)));
 
-  CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kStrict, 0, 0, &err);
+  CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kDRAM|kStrict, 0, 0, &err);
   dbgApp << string(2<<1, '\t').c_str() << "CD2 Creates Level 3 CD. # of children CDs = " << LV3 << "\n" << endl;
 
   CD_Begin(child_lv3);

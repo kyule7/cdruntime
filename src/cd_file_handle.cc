@@ -153,7 +153,7 @@ void CDFileHandle::SetFilePath(const PrvMediumT& prv_medium, const std::string &
 /// FilePath ///////////////////////////////////
 FilePath::FilePath(void)
 { 
-  basepath_ = CD_DEFAULT_PRV_BASEPATH;
+  basepath_ = prv_basePath_;
   filename_ = CD_DEFAULT_PRV_FILENAME;
 }
 

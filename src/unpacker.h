@@ -90,7 +90,7 @@ class cd::Unpacker
 
 
 ///@brief Get next data from data table.
-    char *GetNext(char *src_data,  uint32_t &dwGetID, uint32_t &return_size);  
+    char *GetNext(char *src_data,  uint32_t &dwGetID, uint32_t &return_size, bool alloc=true, void *dst=NULL, uint64_t dst_size=0);  
 
 ///@brief Get next data from data table.
     void *GetNext(void *str_return_data, void *src_data,  uint32_t &return_id, uint32_t &return_size);

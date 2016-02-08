@@ -77,6 +77,7 @@ class NodeID : public Serializable {
   friend class DataHandle;
   friend class CD;
   friend class HeadCD;
+  friend class CDID;
 
 private:
 
@@ -106,7 +107,7 @@ public:
   bool operator==(const NodeID &that) const;
 
   ColorT color(void)         const;
-  CommGroupT group(void)     const;
+  CommGroupT &group(void);
   int    task_in_color(void) const;
   int    head(void)          const;
   int    size(void)          const;
@@ -116,7 +117,7 @@ public:
 private:
   void set_head(int head);
   void init_node_id(ColorT color, int task_in_color, CommGroupT group, int head, int size);
-  void *Serialize(uint32_t &len_in_bytes);
+  void *Serialize(uint64_t &len_in_bytes);
   void Deserialize(void *object);
 };
 

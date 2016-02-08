@@ -18,7 +18,9 @@
 #include "packer.h"
 #include "unpacker.h"
 #include "cd.h"
-#include "serdes.h"
+#include "cd_mapping.h"
+//#include "serdes.h"
+//#include "cd_handle.h"
 using namespace std;
 #endif
 //**************************************************
@@ -30,39 +32,165 @@ using namespace std;
 // CD
 #define SERDES_ENABLED 1
 
-#define BEG_CDMAPPING_FUNC(ENABLE, CHILD_NUM, child_num, ...) { \
-#if ENABLE==2 \
-  CREATE_AND_BEGIN(CHILD_NUM, 
+#define CDFLAG_SIZE 6
+#define CDFLAG_MASK 0x3F
 
-#define CREATE_AND_BEGIN(CHILD_NUM, CD_TYPE,child_num, ...)  \
-  string funcName(__func__); \
-  fprintf(stdout, "%s\", funcName.c_str()); \
-  CDHandle* cdh = GetLeafCD(); \
-  CDHandle* child = cdh->Create(CHILD_NUM, (funcName+cdh->GetString()).c_str(), CD_TYPE); \
-  CD_Begin(child, false, funcName.c_str()); \
+#define CDMAPPING_BEGIN_NESTED(SWITCH, CDH, FUNC_NAME, SERDES_OPS, CD_TYPE) \
+  CDH = GetCurrentCD()->Create(SWITCH >> CDFLAG_SIZE, \
+                                  (string(FUNC_NAME)+GetCurrentCD()->node_id().GetStringID()).c_str(), \
+                                   SWITCH & CDFLAG_MASK); \
+  CD_Begin(CDH, false, FUNC_NAME); \
+  CDH->Preserve(domain.serdes.SetOp(SERDES_OPS), \
+                CD_TYPE | kSerdes, (string("AllMembers_")+string(FUNC_NAME)).c_str()); 
 
+#define CDMAPPING_BEGIN_SEQUENTIAL(SWITCH, CDH, FUNC_NAME, SERDES_OPS, CD_TYPE) \
+  CD_Complete(CDH); \
+  CD_Begin(CDH, false, FUNC_NAME); \
+  CDH->Preserve(domain.serdes.SetOp(SERDES_OPS), \
+                CD_TYPE | kSerdes, (string("AllMembers_")+string(FUNC_NAME)).c_str()); 
 
-#define END_CDMAPPING() { \
-  cdh->Detect(); \
-  CD_Complete(cdh); \
-}
+#define CDMAPPING_END_NESTED(SWITCH, CDH) \
+   CDH->Detect(); \
+   CD_Complete(CDH); \
+   CDH->Destroy(); 
 
+#define  M__NO_SERDES          0x0000000000000000  // 0
+/* COORDINATES */
+#define  M__X                  0x0000000000000001  // 1
+#define  M__Y                  0x0000000000000002  // 2                      
+#define  M__Z                  0x0000000000000004  // 3                      
+/* VELOCITIES */
+#define  M__XD                 0x0000000000000008  // 4                      
+#define  M__YD                 0x0000000000000010  // 5                      
+#define  M__ZD                 0x0000000000000020  // 6                      
+/* ACCELERATIONS */
+#define  M__XDD                0x0000000000000040  // 7                      
+#define  M__YDD                0x0000000000000080  // 8                      
+#define  M__ZDD                0x0000000000000100  // 9                      
+/* FORCES */
+#define  M__FX                 0x0000000000000200  // 10                     
+#define  M__FY                 0x0000000000000400  // 11                     
+#define  M__FZ                 0x0000000000000800  // 12                     
+/* MASS */
+#define  M__NODALMASS          0x0000000000001000  // 13                     
+/* SYMMETRY PLANE NODESETS */
+#define  M__SYMMX              0x0000000000002000  // 14                     
+#define  M__SYMMY              0x0000000000004000  // 15                     
+#define  M__SYMMZ              0x0000000000008000  // 16                     
+/* MATERIAL INDEXSET */
+#define  M__MATELEMLIST        0x0000000000010000  // 17                     
+/* ELEMTONODE CONNECTIVITY */
+#define  M__NODELIST           0x0000000000020000  // 18                     
+/* ELEMENT CONNECTIVITY ACROSS EACH FACE */
+#define  M__LXIM               0x0000000000040000  // 19                     
+#define  M__LXIP               0x0000000000080000  // 20                     
+#define  M__LETAM              0x0000000000100000  // 21                     
+#define  M__LETAP              0x0000000000200000  // 22                     
+#define  M__LZETAM             0x0000000000400000  // 23                     
+#define  M__LZETAP             0x0000000000800000  // 24                     
+/* SYMMETRY/FREE-SURFACE FLAGS FOR EACH ELEM FACE */
+#define  M__ELEMBC             0x0000000001000000  // 25                     
+/* PRINCIPAL STRAINS -- TEMPORARY */
+#define  M__DXX                0x0000000002000000  // 26                     
+#define  M__DYY                0x0000000004000000  // 27                     
+#define  M__DZZ                0x0000000008000000  // 28                     
+/* VELOCITY GRADIENT -- TEMPORARY */
+#define  M__DELV_XI            0x0000000010000000  // 29                     
+#define  M__DELV_ETA           0x0000000020000000  // 30                     
+#define  M__DELV_ZETA          0x0000000040000000  // 31                     
+/* COORDINATE GRADIENT -- TEMPORARY */
+#define  M__DELX_XI            0x0000000080000000  // 32                     
+#define  M__DELX_ETA           0x0000000100000000  // 33                     
+#define  M__DELX_ZETA          0x0000000200000000  // 34                     
+/* ENERGY */
+#define  M__E                  0x0000000400000000  // 35                     
+/* PRESSURE */
+#define  M__P                  0x0000000800000000  // 36                     
+/* PRESSURE */
+/* Q */
+#define  M__Q                  0x0000001000000000  // 37                     
+/* LINEAR TERM FOR Q */
+#define  M__QL                 0x0000002000000000  // 38                     
+/* QUADRATIC TERM FOR Q */
+#define  M__QQ                 0x0000004000000000  // 39                     
+/* RELATIVE VOLUME */
+#define  M__V                  0x0000008000000000  // 40                     
+/* REFERENCE VOLUME */
+#define  M__VOLO               0x0000010000000000  // 41                     
+/* NEW RELATIVE VOLUME -- TEMPORARY */
+#define  M__VNEW               0x0000020000000000  // 42                     
+/* M__VNEW - M__V */
+#define  M__DELV               0x0000040000000000  // 43                     
+/* VOLUME DERIVATIVE OVER VOLUME */
+#define  M__VDOV               0x0000080000000000  // 44                     
+   /* CHARACTERISTIC LENGTH OF AN ELEMENT */
+#define  M__AREALG             0x0000100000000000  // 45                     
+/* "SOUND SPEED" */
+#define  M__SS                 0x0000200000000000  // 46                     
+/* MASS */
+#define  M__ELEMMASS           0x0000400000000000  // 47         
 
-#define BEGIN_CDMAPPING(createNextLevel, child_num, ...) { \
-  string funcName(__func__); \
-  fprintf(stdout, "%s\", funcName.c_str()); \
-  CDHandle* cdh = GetLeafCD(); \
-  CD_Begin(cdh, false, funcName.c_str()); \
-  if(createNextLevel) { \
-    cdh->Create(child_num, string, kStrict, 0, 0, &err); \
-  } \
-}
-
-#define END_CDMAPPING() { \
-  cdh->Detect(); \
-  CD_Complete(cdh); \
-}
-
+/* REGION */
+#define  M__REGELEMSIZE        0x0000800000000000  // 48                     
+#define  M__REGELEMLIST        0x0001000000000000  // 49                     
+#define  M__REGELEMLIST_INNER  0x0002000000000000  // 50                     
+#define  M__REG_NUMLIST        0x0004000000000000  // 51                     
+#define  M__SERDES_ALL         0x0007FFFFFFFFFFFF  // 52
+#define  TOTAL_ELEMENT_COUNT   53
+#define  ID__NO_SERDES         0  
+#define  ID__X                 1
+#define  ID__Y                 2 
+#define  ID__Z                 3 
+#define  ID__XD                4 
+#define  ID__YD                5 
+#define  ID__ZD                6 
+#define  ID__XDD               7 
+#define  ID__YDD               8 
+#define  ID__ZDD               9 
+#define  ID__FX                10
+#define  ID__FY                11
+#define  ID__FZ                12
+#define  ID__NODALMASS         13
+#define  ID__SYMMX             14
+#define  ID__SYMMY             15
+#define  ID__SYMMZ             16
+#define  ID__MATELEMLIST       17
+#define  ID__NODELIST          18
+#define  ID__LXIM              19
+#define  ID__LXIP              20
+#define  ID__LETAM             21
+#define  ID__LETAP             22
+#define  ID__LZETAM            23
+#define  ID__LZETAP            24
+#define  ID__ELEMBC            25
+#define  ID__DXX               26
+#define  ID__DYY               27
+#define  ID__DZZ               28
+#define  ID__DELV_XI           29
+#define  ID__DELV_ETA          30
+#define  ID__DELV_ZETA         31
+#define  ID__DELX_XI           32
+#define  ID__DELX_ETA          33
+#define  ID__DELX_ZETA         34
+#define  ID__E                 35
+#define  ID__P                 36
+#define  ID__Q                 37
+#define  ID__QL                38
+#define  ID__QQ                39
+#define  ID__V                 40
+#define  ID__VOLO              41
+#define  ID__VNEW              42
+#define  ID__DELV              43
+#define  ID__VDOV              44
+#define  ID__AREALG            45
+#define  ID__SS                46
+#define  ID__ELEMMASS          47
+#define  ID__REGELEMSIZE       48
+#define  ID__REGELEMLIST       49
+#define  ID__REGELEMLIST_INNER 50
+#define  ID__REG_NUMLIST       51
+#define  ID__SERDES_ALL        52
+/////////////////////////////////////////////////////////////////////
 
 // Precision specification
 typedef float        real4 ;
@@ -382,151 +510,6 @@ class Domain {
    Index_t *nodeElemCornerList(Index_t idx)
    { return &m_nodeElemCornerList[m_nodeElemStart[idx]] ; }
 
-#if 0
-   enum DOMAIN_DATA_ID {
-    M_X ,  /* COORDINATES */
-    M_Y ,
-    M_Z ,
-
-    M_XD , /* VELOCITIES */
-    M_YD ,
-    M_ZD ,
-
-    M_XDD , /* ACCELERATIONS */
-    M_YDD ,
-    M_ZDD ,
-
-    M_FX ,  /* FORCES */
-    M_FY ,
-    M_FZ ,
-
-    M_NODALMASS ,  /* MASS */
-
-    M_SYMMX ,  /* SYMMETRY PLANE NODESETS */
-    M_SYMMY ,
-    M_SYMMZ ,
-
-
-    M_MATELEMLIST ,  /* MATERIAL INDEXSET */
-    M_NODELIST ,     /* ELEMTONODE CONNECTIVITY */
-
-    M_LXIM ,  /* ELEMENT CONNECTIVITY ACROSS EACH FACE */
-    M_LXIP ,
-    M_LETAM ,
-    M_LETAP ,
-    M_LZETAM ,
-    M_LZETAP ,
-
-    M_ELEMBC ,  /* SYMMETRY/FREE-SURFACE FLAGS FOR EACH ELEM FACE */
-
-    M_DXX ,  /* PRINCIPAL STRAINS -- TEMPORARY */
-    M_DYY ,
-    M_DZZ ,
-
-    M_DELV_XI ,    /* VELOCITY GRADIENT -- TEMPORARY */
-    M_DELV_ETA ,
-    M_DELV_ZETA ,
-
-    M_DELX_XI ,    /* COORDINATE GRADIENT -- TEMPORARY */
-    M_DELX_ETA ,
-    M_DELX_ZETA ,
-   
-    M_E_ ,   /* ENERGY */
-
-    M_P ,   /* PRESSURE */
-    M_Q ,   /* Q */
-    M_QL ,  /* LINEAR TERM FOR Q */
-    M_QQ ,  /* QUADRATIC TERM FOR Q */
-
-    M_V ,     /* RELATIVE VOLUME */
-    M_VOLO ,  /* REFERENCE VOLUME */
-    M_VNEW ,  /* NEW RELATIVE VOLUME -- TEMPORARY */
-    M_DELV ,  /* M_VNEW - M_V */
-    M_VDOV ,  /* VOLUME DERIVATIVE OVER VOLUME */
-
-    M_AREALG ,  /* CHARACTERISTIC LENGTH OF AN ELEMENT */
-   
-    M_SS ,      /* "SOUND SPEED" */
-
-    M_ELEMMASS ,  /* MASS */
-
-    TOTAL_ELEMENT_COUNT
-
-   };
-
-
-   void *Serialize(uint32_t &len_in_bytes) {
-      Packer packer;
-      packer.Add(M_X, sizeof(Real_t) * m_x.size(), m_x.data());
-      packer.Add(M_Y, sizeof(Real_t) * m_y.size(), m_y.data());
-      packer.Add(M_Z, sizeof(Real_t) * m_z.size(), m_z.data());
-
-      packer.Add(M_XD, sizeof(Real_t) * m_xd.size(), m_xd.data());
-      packer.Add(M_YD, sizeof(Real_t) * m_yd.size(), m_yd.data());
-      packer.Add(M_ZD, sizeof(Real_t) * m_zd.size(), m_zd.data());
-
-      packer.Add(M_XDD, sizeof(Real_t) * m_xdd.size(), m_xdd.data());
-      packer.Add(M_YDD, sizeof(Real_t) * m_ydd.size(), m_ydd.data());
-      packer.Add(M_ZDD, sizeof(Real_t) * m_zdd.size(), m_zdd.data());
-
-      packer.Add(M_FX, sizeof(Real_t) * m_fx.size(), m_x.data());
-      packer.Add(M_FY, sizeof(Real_t) * m_fy.size(), m_y.data());
-      packer.Add(M_FZ, sizeof(Real_t) * m_fz.size(), m_z.data());
-
-      packer.Add(M_NODALMASS, sizeof(Real_t) * m_nodalMass.size(), m_nodalMass.data());
-
-      packer.Add(M_SYMMX, sizeof(Index_t) * m_symmX.size(), m_symmX.data());
-      packer.Add(M_SYMMY, sizeof(Index_t) * m_symmY.size(), m_symmY.data());
-      packer.Add(M_SYMMZ, sizeof(Index_t) * m_symmZ.size(), m_symmZ.data());
-
-      packer.Add(M_MATELEMLIST, sizeof(Index_t) * m_matElemlist.size(), m_matElemlist.data());
-      packer.Add(M_NODELIST, sizeof(Index_t) * m_nodelist.size(), m_nodelist.data());
-
-
-      packer.Add(M_LXIM,   sizeof(Index_t) * m_lxim.size(),   m_lxim.data());  
-      packer.Add(M_LXIP,   sizeof(Index_t) * m_lxip.size(),   m_lxip.data());  
-      packer.Add(M_LETAM,  sizeof(Index_t) * m_letam.size(),  m_letam.data()); 
-      packer.Add(M_LETAP,  sizeof(Index_t) * m_letap.size(),  m_letap.data()); 
-      packer.Add(M_LZETAM, sizeof(Index_t) * m_lzetam.size(), m_lzetam.data());
-      packer.Add(M_LZETAP, sizeof(Index_t) * m_lzetap.size(), m_lzetap.data());
-
-
-      packer.Add(M_ELEMBC, sizeof(Index_t) * m_elemBC.size(), m_elemBC.data());
-  
-      packer.Add(M_DXX, sizeof(Real_t) * m_dxx.size(),  m_dxx.data());
-      packer.Add(M_DYY, sizeof(Real_t) * m_dyy.size(),  m_dyy.data());
-      packer.Add(M_DZZ, sizeof(Real_t) * m_dzz.size(),  m_dzz.data());
-
-      packer.Add(M_DELV_XI,   sizeof(Real_t) * m_delv_xi.size(),   m_delv_xi.data());   
-      packer.Add(M_DELV_ETA,  sizeof(Real_t) * m_delv_eta.size(),  m_delv_eta.data());  
-      packer.Add(M_DELV_ZETA, sizeof(Real_t) * m_delv_zeta.size(), m_delv_zeta.data()); 
-                                                                        
-      packer.Add(M_DELX_XI,   sizeof(Real_t) * m_delx_xi.size(),   m_delx_xi.data());   
-      packer.Add(M_DELX_ETA,  sizeof(Real_t) * m_delx_eta.size(),  m_delx_eta.data());  
-      packer.Add(M_DELX_ZETA, sizeof(Real_t) * m_delx_zeta.size(), m_delx_zeta.data()); 
-
-      packer.Add(M_E_,  sizeof(Real_t) * m_e.size(),  m_e.data()); 
-                                                   
-      packer.Add(M_P,  sizeof(Real_t) * m_p.size(),  m_p.data()); 
-      packer.Add(M_Q,  sizeof(Real_t) * m_q.size(),  m_q.data()); 
-      packer.Add(M_QL, sizeof(Real_t) * m_ql.size(), m_ql.data());
-      packer.Add(M_QQ, sizeof(Real_t) * m_qq.size(), m_qq.data());
-
-      packer.Add(M_V,    sizeof(Real_t) * m_v.size(),    m_v.data());   
-      packer.Add(M_VOLO, sizeof(Real_t) * m_volo.size(), m_volo.data());
-      packer.Add(M_VNEW, sizeof(Real_t) * m_vnew.size(), m_vnew.data());
-      packer.Add(M_DELV, sizeof(Real_t) * m_delv.size(), m_delv.data());
-      packer.Add(M_VDOV, sizeof(Real_t) * m_vdov.size(), m_vdov.data());
-
-      packer.Add(M_AREALG,   sizeof(Real_t) * m_arealg.size(),   m_arealg.data()); 
-                                                                      
-      packer.Add(M_SS,       sizeof(Real_t) * m_ss.size(),       m_ss.data());         
-                                                                      
-      packer.Add(M_ELEMMASS, sizeof(Real_t) * m_elemMass.size(), m_elemMass.data());
-
-      return packer.GetTotalData(len_in_bytes);
-   }
-#endif
 
    // Parameters 
 
@@ -613,238 +596,172 @@ class Domain {
    //
 #if SERDES_ENABLED
 class DomainSerdes : public Serializable {
-   int method;
-   const Domain *dom;
-   enum DOMAIN_DATA_ID {
-    M_X ,  /* COORDINATES */
-    M_Y ,
-    M_Z ,
-
-    M_XD , /* VELOCITIES */
-    M_YD ,
-    M_ZD ,
-
-    M_XDD , /* ACCELERATIONS */
-    M_YDD ,
-    M_ZDD ,
-
-    M_FX ,  /* FORCES */
-    M_FY ,
-    M_FZ ,
-
-    M_NODALMASS ,  /* MASS */
-
-    M_SYMMX ,  /* SYMMETRY PLANE NODESETS */
-    M_SYMMY ,
-    M_SYMMZ ,
-
-
-    M_MATELEMLIST ,  /* MATERIAL INDEXSET */
-    M_NODELIST ,     /* ELEMTONODE CONNECTIVITY */
-
-    M_LXIM ,  /* ELEMENT CONNECTIVITY ACROSS EACH FACE */
-    M_LXIP ,
-    M_LETAM ,
-    M_LETAP ,
-    M_LZETAM ,
-    M_LZETAP ,
-
-    M_ELEMBC ,  /* SYMMETRY/FREE-SURFACE FLAGS FOR EACH ELEM FACE */
-
-    M_DXX ,  /* PRINCIPAL STRAINS -- TEMPORARY */
-    M_DYY ,
-    M_DZZ ,
-
-    M_DELV_XI ,    /* VELOCITY GRADIENT -- TEMPORARY */
-    M_DELV_ETA ,
-    M_DELV_ZETA ,
-
-    M_DELX_XI ,    /* COORDINATE GRADIENT -- TEMPORARY */
-    M_DELX_ETA ,
-    M_DELX_ZETA ,
-   
-    M_E_ ,   /* ENERGY */
-
-    M_P ,   /* PRESSURE */
-    M_Q ,   /* Q */
-    M_QL ,  /* LINEAR TERM FOR Q */
-    M_QQ ,  /* QUADRATIC TERM FOR Q */
-
-    M_V ,     /* RELATIVE VOLUME */
-    M_VOLO ,  /* REFERENCE VOLUME */
-    M_VNEW ,  /* NEW RELATIVE VOLUME -- TEMPORARY */
-    M_DELV ,  /* M_VNEW - M_V */
-    M_VDOV ,  /* VOLUME DERIVATIVE OVER VOLUME */
-
-    M_AREALG ,  /* CHARACTERISTIC LENGTH OF AN ELEMENT */
-   
-    M_SS ,      /* "SOUND SPEED" */
-
-    M_ELEMMASS ,  /* MASS */
-
-    SERDES_ALL,
-
-    TOTAL_ELEMENT_COUNT
-
-   };
+    uint64_t serdes_vec;
+    Domain *dom;
+    struct SerdesInfo {
+      uint64_t size;
+      void *src;
+      public:
+      SerdesInfo(void) {}
+      SerdesInfo(const uint64_t &_size, const void *_src)
+        : size(_size), src(const_cast<void *>(_src)) {}
+      SerdesInfo &operator=(const SerdesInfo &that) {
+        size = that.size;
+        src = that.src;
+        return *this;
+      }
+    };
+    static SerdesInfo serdes_table[TOTAL_ELEMENT_COUNT];
+    static bool serdes_table_init; 
   public:
-    DomainSerdes(void) {
-      method = 3;
-      dom = NULL;
+    DomainSerdes(const Domain *domain=NULL) {
+      serdes_vec = M__NO_SERDES;
+      dom = const_cast<Domain *>(domain);
+//      if(serdes_table_init == false) {
+//        InitSerdesTable();
+//        serdes_table_init = true;
+//      }
     }
-    DomainSerdes(const Domain *domain) {
-      method = 3;
-      dom = domain;
+
+    void InitSerdesTable(void) {
+      serdes_table[ID__X]           = SerdesInfo(sizeof(Real_t)  * dom->m_x.size(), dom->m_x.data());
+      serdes_table[ID__Y]           = SerdesInfo(sizeof(Real_t)  * dom->m_y.size(), dom->m_y.data());
+      serdes_table[ID__Z]           = SerdesInfo(sizeof(Real_t)  * dom->m_z.size(), dom->m_z.data());
+      serdes_table[ID__XD]          = SerdesInfo(sizeof(Real_t)  * dom->m_xd.size(), dom->m_xd.data());
+      serdes_table[ID__YD]          = SerdesInfo(sizeof(Real_t)  * dom->m_yd.size(), dom->m_yd.data());
+      serdes_table[ID__ZD]          = SerdesInfo(sizeof(Real_t)  * dom->m_zd.size(), dom->m_zd.data());
+      serdes_table[ID__XDD]         = SerdesInfo(sizeof(Real_t)  * dom->m_xdd.size(), dom->m_xdd.data());
+      serdes_table[ID__YDD]         = SerdesInfo(sizeof(Real_t)  * dom->m_ydd.size(), dom->m_ydd.data());
+      serdes_table[ID__ZDD]         = SerdesInfo(sizeof(Real_t)  * dom->m_zdd.size(), dom->m_zdd.data());
+      serdes_table[ID__FX]          = SerdesInfo(sizeof(Real_t)  * dom->m_fx.size(), dom->m_x.data());
+      serdes_table[ID__FY]          = SerdesInfo(sizeof(Real_t)  * dom->m_fy.size(), dom->m_y.data());
+      serdes_table[ID__FZ]          = SerdesInfo(sizeof(Real_t)  * dom->m_fz.size(), dom->m_z.data());
+      serdes_table[ID__NODALMASS]   = SerdesInfo(sizeof(Real_t)  * dom->m_nodalMass.size(), dom->m_nodalMass.data());
+      serdes_table[ID__SYMMX]       = SerdesInfo(sizeof(Index_t) * dom->m_symmX.size(), dom->m_symmX.data());
+      serdes_table[ID__SYMMY]       = SerdesInfo(sizeof(Index_t) * dom->m_symmY.size(), dom->m_symmY.data());
+      serdes_table[ID__SYMMZ]       = SerdesInfo(sizeof(Index_t) * dom->m_symmZ.size(), dom->m_symmZ.data());
+      serdes_table[ID__MATELEMLIST] = SerdesInfo(sizeof(Index_t) * dom->m_matElemlist.size(), dom->m_matElemlist.data());
+      serdes_table[ID__NODELIST]    = SerdesInfo(sizeof(Index_t) * dom->m_nodelist.size(), dom->m_nodelist.data());
+      serdes_table[ID__LXIM]        = SerdesInfo(sizeof(Index_t) * dom->m_lxim.size(),   dom->m_lxim.data());  
+      serdes_table[ID__LXIP]        = SerdesInfo(sizeof(Index_t) * dom->m_lxip.size(),   dom->m_lxip.data());  
+      serdes_table[ID__LETAM]       = SerdesInfo(sizeof(Index_t) * dom->m_letam.size(),  dom->m_letam.data()); 
+      serdes_table[ID__LETAP]       = SerdesInfo(sizeof(Index_t) * dom->m_letap.size(),  dom->m_letap.data()); 
+      serdes_table[ID__LZETAM]      = SerdesInfo(sizeof(Index_t) * dom->m_lzetam.size(), dom->m_lzetam.data());
+      serdes_table[ID__LZETAP]      = SerdesInfo(sizeof(Index_t) * dom->m_lzetap.size(), dom->m_lzetap.data());
+      serdes_table[ID__ELEMBC]      = SerdesInfo(sizeof(Index_t) * dom->m_elemBC.size(), dom->m_elemBC.data());
+      serdes_table[ID__DXX]         = SerdesInfo(sizeof(Real_t)  * dom->m_dxx.size(),  dom->m_dxx.data());
+      serdes_table[ID__DYY]         = SerdesInfo(sizeof(Real_t)  * dom->m_dyy.size(),  dom->m_dyy.data());
+      serdes_table[ID__DZZ]         = SerdesInfo(sizeof(Real_t)  * dom->m_dzz.size(),  dom->m_dzz.data());
+      serdes_table[ID__DELV_XI]     = SerdesInfo(sizeof(Real_t)  * dom->m_delv_xi.size(),   dom->m_delv_xi.data());   
+      serdes_table[ID__DELV_ETA]    = SerdesInfo(sizeof(Real_t)  * dom->m_delv_eta.size(),  dom->m_delv_eta.data());  
+      serdes_table[ID__DELV_ZETA]   = SerdesInfo(sizeof(Real_t)  * dom->m_delv_zeta.size(), dom->m_delv_zeta.data()); 
+      serdes_table[ID__DELX_XI]     = SerdesInfo(sizeof(Real_t)  * dom->m_delx_xi.size(),   dom->m_delx_xi.data());   
+      serdes_table[ID__DELX_ETA]    = SerdesInfo(sizeof(Real_t)  * dom->m_delx_eta.size(),  dom->m_delx_eta.data());  
+      serdes_table[ID__DELX_ZETA]   = SerdesInfo(sizeof(Real_t)  * dom->m_delx_zeta.size(), dom->m_delx_zeta.data()); 
+      serdes_table[ID__E]           = SerdesInfo(sizeof(Real_t)  * dom->m_e.size(),  dom->m_e.data()); 
+      serdes_table[ID__P]           = SerdesInfo(sizeof(Real_t)  * dom->m_p.size(),  dom->m_p.data()); 
+      serdes_table[ID__Q]           = SerdesInfo(sizeof(Real_t)  * dom->m_q.size(),  dom->m_q.data()); 
+      serdes_table[ID__QL]          = SerdesInfo(sizeof(Real_t)  * dom->m_ql.size(), dom->m_ql.data());
+      serdes_table[ID__QQ]          = SerdesInfo(sizeof(Real_t)  * dom->m_qq.size(), dom->m_qq.data());
+      serdes_table[ID__V]           = SerdesInfo(sizeof(Real_t)  * dom->m_v.size(),    dom->m_v.data());   
+      serdes_table[ID__VOLO]        = SerdesInfo(sizeof(Real_t)  * dom->m_volo.size(), dom->m_volo.data());
+      serdes_table[ID__VNEW]        = SerdesInfo(sizeof(Real_t)  * dom->m_vnew.size(), dom->m_vnew.data());
+      serdes_table[ID__DELV]        = SerdesInfo(sizeof(Real_t)  * dom->m_delv.size(), dom->m_delv.data());
+      serdes_table[ID__VDOV]        = SerdesInfo(sizeof(Real_t)  * dom->m_vdov.size(), dom->m_vdov.data());
+      serdes_table[ID__AREALG]      = SerdesInfo(sizeof(Real_t)  * dom->m_arealg.size(),   dom->m_arealg.data()); 
+      serdes_table[ID__SS]          = SerdesInfo(sizeof(Real_t)  * dom->m_ss.size(),       dom->m_ss.data());         
+      serdes_table[ID__ELEMMASS]    = SerdesInfo(sizeof(Real_t)  * dom->m_elemMass.size(), dom->m_elemMass.data());
+
+      Index_t &numRegSize  = dom->numReg();
+      Index_t &numElemSize = dom->numElem();
+      serdes_table[ID__REGELEMSIZE]       = SerdesInfo(sizeof(Index_t) * numRegSize, dom->m_regElemSize);
+      serdes_table[ID__REGELEMLIST]       = SerdesInfo(sizeof(Index_t*)* numRegSize, dom->m_regElemlist);
+      SerdesInfo *serdesRegElem = new SerdesInfo[numRegSize];
+      serdes_table[ID__REGELEMLIST_INNER] = SerdesInfo(sizeof(SerdesInfo) * numRegSize, serdesRegElem);
+      printf("Init numRegSize %d\n", dom->m_numReg); //getchar();
+      for(int i=0; i<numRegSize; ++i) {
+        serdesRegElem[i] = SerdesInfo((dom->m_regElemSize)[i], (dom->m_regElemlist)[i]);
+              printf("Init %d \t %p\n", (dom->m_regElemSize)[i], (dom->m_regElemlist)[i]); 
+              //ngetchar();
+      }
+      // serdes_table[ID__REGELEMLIST_INNER].src[j].size
+      //serdesRegElem[i] = SerdesInfo(sizeof(Index_t) * (dom->m_regElemSize)[i], (dom->m_regElemlist)[i]);
+      serdes_table[ID__REG_NUMLIST]       = SerdesInfo(sizeof(Index_t) * numElemSize, dom->m_regNumList);
     }
-    void SetSerdesOption (int option) {
-      method = option;
+
+    DomainSerdes &SetOp (const uint64_t &vec) {
+      serdes_vec = vec;
+      return *this;
     }
     
     // With this interface, user can switch to a different serializer with a method flag.
-    virtual void *Serialize(uint32_t &len_in_bytes) {
+    void *Serialize(uint64_t &len_in_bytes) {
       // User define whatever they want.
-      cout << "[UserClass2] ";
-      switch(method) {
-        case SERDES_ALL:
-          return SerializeAll(len_in_bytes);
-        case 1:
-          return SerializeMethod1(len_in_bytes);
-        case 2:
-          return SerializeMethod2(len_in_bytes);
-        case 3:
-          return SerializeMethod3(len_in_bytes);
-        defualt:
-          return NULL;
+ //     printf("%s\n", __func__);
+      Packer packer;
+      uint64_t vec = serdes_vec;
+      uint32_t i=1;
+      while(vec != 0) {
+//        printf("loop i = %u, vec = %lu\n", i, vec);
+        if(vec & 0x1) {
+          if(i != ID__REGELEMLIST_INNER) {
+//            printf("1111\n");
+//            getchar();
+            packer.Add(i, serdes_table[i].size, serdes_table[i].src);
+          } else {
+//            printf("2222\n");
+//            getchar();
+            Index_t &numRegSize = dom->numReg();
+            for(int j=0; j<numRegSize; ++j) {
+//              printf("%lu \t %p\n", 
+//                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size,
+//                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src);
+              packer.Add(j, 
+                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size,
+                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src);
+//                         ((Index_t *)(serdes_table[ID__REGELEMSIZE].src))[j], 
+//                         ((Index_t **)(serdes_table[ID__REGELEMLIST].src))[j]);
+            }
+          }
+        }
+        i++;
+        vec >>= 1;
       }
     }
 
     virtual void Deserialize(void *object) {
-    // Deserialize object and restore to each member.
-      cout << "[UserClass2] ";
-    
-      switch(method) {
-        case 0:
-          DeserializeAll(object);
-          break;
-        case 1:
-          DeserializeMethod1(object);
-          break;
-        case 2:
-          DeserializeMethod2(object);
-          break;
-        case 3:
-        DeserializeMethod3(object);
-          break;
-        defualt:
-          return;
+      // Deserialize object and restore to each member.
+      printf("%s\n", __func__);
+      Unpacker unpacker;
+      uint64_t vec = serdes_vec;
+      uint32_t return_id = 0, return_size = 0;
+      uint32_t i=1;
+      while(vec != 0) {
+//        printf("loop i = %u, vec = %lu\n", i, vec);
+        if(vec & 0x1) {
+          if(i != ID__REGELEMLIST_INNER) {
+            unpacker.GetNext((char *)object, return_id, return_size, false, serdes_table[i].src, serdes_table[i].size);
+          } else {
+            Index_t &numRegSize = dom->numReg();
+            for(int j=0; j<numRegSize; ++j) {
+              unpacker.GetNext((char *)object, return_id, return_size, false, 
+                               ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src,
+                               ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size);
+//                               ((Index_t **)(serdes_table[ID__REGELEMLIST].src))[j],
+//                               ((Index_t *)(serdes_table[ID__REGELEMSIZE].src))[j]); 
+            }
+          }
+        }
+        i++;
+        vec >>= 1;
       }
-    }
 
-    void *SerializeAll(uint32_t &len_in_bytes) {
-      // Serialize Method 0
-      cout << "Serialize Method 0\n" << endl;
-      Packer packer;
-      packer.Add(M_X, sizeof(Real_t)   * dom->m_x.size(), dom->m_x.data());
-      packer.Add(M_Y, sizeof(Real_t)   * dom->m_y.size(), dom->m_y.data());
-      packer.Add(M_Z, sizeof(Real_t)   * dom->m_z.size(), dom->m_z.data());
-
-      packer.Add(M_XD, sizeof(Real_t)  * dom->m_xd.size(), dom->m_xd.data());
-      packer.Add(M_YD, sizeof(Real_t)  * dom->m_yd.size(), dom->m_yd.data());
-      packer.Add(M_ZD, sizeof(Real_t)  * dom->m_zd.size(), dom->m_zd.data());
-
-      packer.Add(M_XDD, sizeof(Real_t) * dom->m_xdd.size(), dom->m_xdd.data());
-      packer.Add(M_YDD, sizeof(Real_t) * dom->m_ydd.size(), dom->m_ydd.data());
-      packer.Add(M_ZDD, sizeof(Real_t) * dom->m_zdd.size(), dom->m_zdd.data());
-
-      packer.Add(M_FX, sizeof(Real_t)  * dom->m_fx.size(), dom->m_x.data());
-      packer.Add(M_FY, sizeof(Real_t)  * dom->m_fy.size(), dom->m_y.data());
-      packer.Add(M_FZ, sizeof(Real_t)  * dom->m_fz.size(), dom->m_z.data());
-
-      packer.Add(M_NODALMASS, sizeof(Real_t) * dom->m_nodalMass.size(), dom->m_nodalMass.data());
-
-      packer.Add(M_SYMMX, sizeof(Index_t) * dom->m_symmX.size(), dom->m_symmX.data());
-      packer.Add(M_SYMMY, sizeof(Index_t) * dom->m_symmY.size(), dom->m_symmY.data());
-      packer.Add(M_SYMMZ, sizeof(Index_t) * dom->m_symmZ.size(), dom->m_symmZ.data());
-
-      packer.Add(M_MATELEMLIST, sizeof(Index_t) * dom->m_matElemlist.size(), dom->m_matElemlist.data());
-      packer.Add(M_NODELIST, sizeof(Index_t) * dom->m_nodelist.size(), dom->m_nodelist.data());
-
-      packer.Add(M_LXIM,   sizeof(Index_t) * dom->m_lxim.size(),   dom->m_lxim.data());  
-      packer.Add(M_LXIP,   sizeof(Index_t) * dom->m_lxip.size(),   dom->m_lxip.data());  
-      packer.Add(M_LETAM,  sizeof(Index_t) * dom->m_letam.size(),  dom->m_letam.data()); 
-      packer.Add(M_LETAP,  sizeof(Index_t) * dom->m_letap.size(),  dom->m_letap.data()); 
-      packer.Add(M_LZETAM, sizeof(Index_t) * dom->m_lzetam.size(), dom->m_lzetam.data());
-      packer.Add(M_LZETAP, sizeof(Index_t) * dom->m_lzetap.size(), dom->m_lzetap.data());
-
-
-      packer.Add(M_ELEMBC, sizeof(Index_t) * dom->m_elemBC.size(), dom->m_elemBC.data());
-  
-      packer.Add(M_DXX, sizeof(Real_t) * dom->m_dxx.size(),  dom->m_dxx.data());
-      packer.Add(M_DYY, sizeof(Real_t) * dom->m_dyy.size(),  dom->m_dyy.data());
-      packer.Add(M_DZZ, sizeof(Real_t) * dom->m_dzz.size(),  dom->m_dzz.data());
-
-      packer.Add(M_DELV_XI,   sizeof(Real_t) * dom->m_delv_xi.size(),   dom->m_delv_xi.data());   
-      packer.Add(M_DELV_ETA,  sizeof(Real_t) * dom->m_delv_eta.size(),  dom->m_delv_eta.data());  
-      packer.Add(M_DELV_ZETA, sizeof(Real_t) * dom->m_delv_zeta.size(), dom->m_delv_zeta.data()); 
-                                                                        
-      packer.Add(M_DELX_XI,   sizeof(Real_t) * dom->m_delx_xi.size(),   dom->m_delx_xi.data());   
-      packer.Add(M_DELX_ETA,  sizeof(Real_t) * dom->m_delx_eta.size(),  dom->m_delx_eta.data());  
-      packer.Add(M_DELX_ZETA, sizeof(Real_t) * dom->m_delx_zeta.size(), dom->m_delx_zeta.data()); 
-
-      packer.Add(M_E_,  sizeof(Real_t) * dom->m_e.size(),  dom->m_e.data()); 
-                                                   
-      packer.Add(M_P,  sizeof(Real_t) * dom->m_p.size(),  dom->m_p.data()); 
-      packer.Add(M_Q,  sizeof(Real_t) * dom->m_q.size(),  dom->m_q.data()); 
-      packer.Add(M_QL, sizeof(Real_t) * dom->m_ql.size(), dom->m_ql.data());
-      packer.Add(M_QQ, sizeof(Real_t) * dom->m_qq.size(), dom->m_qq.data());
-
-      packer.Add(M_V,    sizeof(Real_t) * dom->m_v.size(),    dom->m_v.data());   
-      packer.Add(M_VOLO, sizeof(Real_t) * dom->m_volo.size(), dom->m_volo.data());
-      packer.Add(M_VNEW, sizeof(Real_t) * dom->m_vnew.size(), dom->m_vnew.data());
-      packer.Add(M_DELV, sizeof(Real_t) * dom->m_delv.size(), dom->m_delv.data());
-      packer.Add(M_VDOV, sizeof(Real_t) * dom->m_vdov.size(), dom->m_vdov.data());
-
-      packer.Add(M_AREALG,   sizeof(Real_t) * dom->m_arealg.size(),   dom->m_arealg.data()); 
-                                                                      
-      packer.Add(M_SS,       sizeof(Real_t) * dom->m_ss.size(),       dom->m_ss.data());         
-                                                                      
-      packer.Add(M_ELEMMASS, sizeof(Real_t) * dom->m_elemMass.size(), dom->m_elemMass.data());
-
-      return packer.GetTotalData(len_in_bytes);
-    }
-    void *SerializeMethod1(uint32_t &len_in_bytes) {
-      // Serialize Method 1
-      cout << "Serialize Method 1\n" << endl;
-    }
-    void *SerializeMethod2(uint32_t &len_in_bytes) {
-      // Serialize Method 2
-      cout << "Serialize Method 2\n" << endl;
-    }
-    void *SerializeMethod3(uint32_t &len_in_bytes) {
-      // Serialize Method 3
-      cout << "Serialize Method 3\n" << endl;
-    }
-    
-    void DeserializeAll(void *object) {
-      // Deserialize Method 0
-      cout << "Deserialize Method 0\n" << endl;
-    }
-    void DeserializeMethod1(void *object) {
-      // Deserialize Method 1
-      cout << "Deserialize Method 1\n" << endl;
-    }
-    void DeserializeMethod2(void *object) {
-      // Deserialize Method 2
-      cout << "Deserialize Method 2\n" << endl;
-    }
-    void DeserializeMethod3(void *object) {
-      // Deserialize Method 3
-      cout << "Deserialize Method 3\n" << endl;
     }
 };
 #endif
 #if SERDES_ENABLED
    // CD
+public:
    DomainSerdes serdes;
 #endif
    /* Node-centered */

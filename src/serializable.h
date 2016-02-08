@@ -50,9 +50,8 @@ namespace cd {
 
 class Serializable {
   public:
-    virtual void *Serialize(uint32_t &len_in_bytes)=0;
+    virtual void *Serialize(uint64_t &len_in_bytes)=0;
     virtual void Deserialize(void *object)=0;
-
 };
 
 }

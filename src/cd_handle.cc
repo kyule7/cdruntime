@@ -438,14 +438,14 @@ CDHandle::~CDHandle()
 
 }
 
-void CDHandle::Init(CD* ptr_cd, const NodeID& node_id)
+void CDHandle::Init(CD *ptr_cd, const NodeID& node_id)
 { 
   ptr_cd_   = ptr_cd;
   node_id_  = node_id;
 }
 
 // Non-collective
-CDHandle* CDHandle::Create(const char* name, 
+CDHandle* CDHandle::Create(const char *name, 
                            int cd_type, 
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
@@ -460,9 +460,7 @@ CDHandle* CDHandle::Create(const char* name,
   // and populate its data structure correctly (CDID, etc...)
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
   
-  NodeID new_node_id(node_id_.color(), INVALID_TASK_ID, INVALID_HEAD_ID, node_id_.size());
-  GetNewNodeID(new_node_id);
-  SetHead(new_node_id);
+  NodeID new_node_id = GenNewNodeID(0);
 
 
   // Generate CDID
@@ -490,14 +488,13 @@ CDErrT CDHandle::RegisterSplitMethod(SplitFuncT split_func)
 }
 
 
-CDErrT CDHandle::GetNewNodeID(NodeID& new_node)
+NodeID CDHandle::GenNewNodeID(const int &new_head)
 {
-  CDErrT err = kOK;
   // just set the same as parent.
-  new_node = node_id_;
-  
+  NodeID new_node = node_id_;
+  new_node.set_head(new_head);
   //new_node.init_node_id(node_id_.color(), 0, INVALID_HEAD_ID,1);
-  return err;
+  return new_node;
 }
 
 
@@ -551,24 +548,23 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
   int new_color=0, new_task = 0;
   int err=0;
 
-  ColorT new_comm;
-  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, new_size);
+//  ColorT new_comm = 0;
+//  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, new_size);
+  NodeID new_node_id(node_id_);
 
-  CD_DEBUG("[Before] old: %s, new: %s\n", node_id_.GetString().c_str(), new_node_id.GetString().c_str());
+//  CD_DEBUG("[Before] old: %s, new: %s\n", node_id_.GetString().c_str(), new_node_id.GetString().c_str());
  
   if(num_children > 1) {
     err = SplitCD(node_id_.task_in_color(), node_id_.size(), num_children, new_color, new_task);
-    err = GetNewNodeID(node_id_.color(), new_color, new_task, new_node_id);
+    new_node_id = GenNewNodeID(node_id_.color(), new_color, new_task, 0);
     assert(new_size == new_node_id.size());
   }
   else if(num_children == 1) {
-    err = GetNewNodeID(new_node_id);
+    new_node_id = GenNewNodeID(0);
   }
   else {
     ERROR_MESSAGE("Number of children to create is wrong.\n");
   }
-
-  SetHead(new_node_id);
 
   // Generate CDID
   CD_DEBUG("new_color : %d in %s\n", new_color, node_id_.GetString().c_str());
@@ -626,12 +622,9 @@ CDHandle* CDHandle::Create(uint32_t color,
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
   int err=0;
 
-  ColorT new_comm;
-  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, num_children);
-
-  err = GetNewNodeID(node_id_.color(), color, task_in_color, new_node_id);
-
-  SetHead(new_node_id);
+//  ColorT new_comm;
+//  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, num_children);
+  NodeID new_node_id = GenNewNodeID(node_id_.color(), color, task_in_color, 0);
 
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, color);
@@ -893,7 +886,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   return err;
 }
 
-CDErrT CDHandle::Preserve(Serdes &serdes,                           
+CDErrT CDHandle::Preserve(Serializable &serdes,                           
                           uint32_t preserve_mask, 
                           const char *my_name, 
                           const char *ref_name, 
@@ -922,11 +915,12 @@ CDErrT CDHandle::Preserve(Serdes &serdes,
 //  }
 //#endif
   
+//  void *serialized_obj = Serialize(uint32_t& len_in_bytes)
   /// Preserve meta-data
   /// Accumulated volume of data to be preserved for Sequential CDs. 
   /// It will be averaged out with the number of seq. CDs.
-  assert(ptr_cd_ != 0);
-  CDErrT err = ptr_cd_->Preserve(serdes, preserve_mask, 
+  assert(ptr_cd_ != 0); 
+  CDErrT err = ptr_cd_->Preserve((void *)&serdes, 0, preserve_mask, 
                                  my_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
 
@@ -1019,7 +1013,7 @@ bool CDHandle::IsHead(void) const { return node_id_.IsHead(); }
 // FIXME
 // For now task_id_==0 is always Head which is not good!
 // head is always task id 0 for now
-void CDHandle::SetHead(NodeID& new_node_id) { new_node_id.set_head(0); }
+//void CDHandle::SetHead(NodeID& new_node_id) { new_node_id.set_head(0); }
 
 int       CDHandle::GetSeqID(void)     const { return ptr_cd_->GetCDID().sequential_id(); }
 CDHandle *CDHandle::GetParent(void)    const { return CDPath::GetParentCD(ptr_cd_->GetCDName().level()); }

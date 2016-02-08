@@ -77,9 +77,24 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
 
 
 
+CDEntry::CDEntryErrT CDEntry::Save(void) {
+  uint32_t prv_medium = MASK_MEDIUM(preserve_type_);
+
+  if( CHECK_PRV_TYPE(prv_medium, kDRAM) ) {
+    return SaveMem();
+  } else if( (CHECK_PRV_TYPE(prv_medium, kHDD)) || (CHECK_PRV_TYPE(prv_medium,kSSD)) ) {
+    return SaveFile();
+  } else if( CHECK_PRV_TYPE(prv_medium, kPFS)) {
+    return SavePFS();
+  } else {
+    ERROR_MESSAGE("wrong preserve medium : %u\n", prv_medium);
+  }
+
+}
+
 CDEntry::CDEntryErrT CDEntry::SaveMem(void)
 {
-
+  printf("%s\n", __func__);
   if(dst_data_.address_data() == NULL) {
     void *allocated_space = DATA_MALLOC(dst_data_.len() * sizeof(char));
 
@@ -103,8 +118,9 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
   return kOK;
 }
 
-CDEntry::CDEntryErrT CDEntry::SaveFile(string base_)
+CDEntry::CDEntryErrT CDEntry::SaveFile(void)
 {
+//  printf("%s\n", __func__);
   // Get file name to write if it is currently NULL
 //  char* str; 
 //  if( !strcmp(dst_data_.file_name_, INIT_FILE_PATH) ) {
@@ -131,7 +147,8 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(string base_)
 
     return kOK;
   }
-  else return kFileOpenError;
+  else 
+    return kFileOpenError;
   
 }
 
@@ -140,6 +157,7 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(string base_)
 
 CDEntry::CDEntryErrT CDEntry::SavePFS(void)
 {
+  printf("%s\n", __func__);
   //First we should check for PFS file => I think we have checked it before calling this function (not sure).
   //PMPI_Status preserve_status;//This variable can be used to non-blocking writes to PFS. By checking this variable we can understand whether write has been finished or not.
   //PMPI_File_get_position( ptr_cd_->PFS_d_, &(dst_data_.parallel_file_offset_));
@@ -387,8 +405,13 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
         CD_DEBUG("%lu (src) - %lu (buffer), offset : %lu\n", src_data_.len(), buffer->len(), buffer->ref_offset());
         CD_DEBUG("%p - %p\n", src_data_.address_data(), buffer->address_data());
         assert( src_data_.len() == buffer->len() );
-  
-        memcpy(src_data_.address_data(), (char *)buffer->address_data()+(buffer->ref_offset()), buffer->len()); 
+
+        if( !CHECK_PRV_TYPE(preserve_type_, kSerdes) ) { 
+          memcpy(src_data_.address_data(), (char *)buffer->address_data()+(buffer->ref_offset()), buffer->len());
+        } else {
+          CD_DEBUG("Deserialize in CDEntry\n");
+          (static_cast<Serializable *>(src_data_.address_data_))->Deserialize(dst_data_.address_data_);
+        }
   
         CD_DEBUG("Succeeds in memcpy %lu size data. %p --> %p\n", dst_data_.len(), dst_data_.address_data(), src_data_.address_data());
       }

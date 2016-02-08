@@ -109,6 +109,7 @@ typedef int           COMMLIB_File;
 
 typedef uint32_t ENTRY_TAG_T;
 
+#define CD_FLAG_T uint32_t
 #define MAX_ENTRY_BUFFER_SIZE 1024
 
 #define MSG_TAG_ENTRY_TAG 1073741824 // 2^30
@@ -130,8 +131,8 @@ typedef uint32_t ENTRY_TAG_T;
 
 #define CHECK_EVENT_NO_EVENT(X) (X == 0)
 #define CHECK_PRV_TYPE(X,Y)     ((X & Y) == Y)
-#define MASK_CDTYPE(X)         (X & 0x3)
-#define MASK_MEDIUM(X)          (X & 0xFFFFFFFC)
+#define MASK_CDTYPE(X)          (X & 0x03)
+#define MASK_MEDIUM(X)          (X & 0xFC)
 #define CHECK_EVENT(X,Y)        ((X & Y) == Y)
 #define CHECK_NO_EVENT(X)       (X == 0)
 #define SET_EVENT(X,Y)          (X |= Y)
@@ -482,13 +483,13 @@ extern FILE *cdoutApp;
   fprintf(cdout, __VA_ARGS__)
 
 
-#define LOG_DEBUG(...) \
+#define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
       cd::app_side=false;\
       fprintf(stdout, __VA_ARGS__);\
       cd::app_side = true;}\
     else fprintf(stdout, __VA_ARGS__);\
-  }
+  }*/
 
 #define LIBC_DEBUG(...) /*\
     { if(cd::app_side) {\

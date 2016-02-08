@@ -34,6 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "cd_config.h"
 #include "node_id.h"
 #include "util.h"
 
@@ -45,13 +46,21 @@ using namespace cd;
 
 NodeID::NodeID(void)
   : color_(0), task_in_color_(0), head_(0), size_(-1) 
-{}
+{
+//  printf("\nnodeid0\n"); 
+//  assert(0);
+}
 
 NodeID::NodeID(const ColorT& color, int task, int head, int size)
-  : color_(color), task_in_color_(task), head_(head), size_(size)
+  : task_in_color_(task), head_(head), size_(size)
 {
-#if _MPI_VER 
-  MPI_Comm(color, &task_group_);
+#if _MPI_VER
+//  int ret = MPI_Comm_dup(color, &color_);
+  color_ = color;
+//  assert(color_);
+  if(color_ != 0)
+    MPI_Comm_group(color_, &task_group_);
+//  printf("\nnodeid1\n");
 #endif
 }
 
@@ -59,10 +68,16 @@ NodeID::NodeID(const NodeID& that)
   : task_in_color_(that.task_in_color_), head_(that.head_), size_(that.size_)
 {
 #if _MPI_VER
-  int ret = MPI_Comm_dup(that.color_, &color_);
-  assert(ret != MPI_SUCCESS);
-  MPI_Comm(color_, &task_group_);
+//  int ret = MPI_Comm_dup(that.color_, &color_); 
+  color_ = that.color_;
+//  printf("ret : %d %d\n", ret, MPI_SUCCESS);
+//  assert(ret == MPI_SUCCESS);
+//  assert(color_);
+  if(color_ != 0)
+    MPI_Comm_group(color_, &task_group_);
+//  printf("\nnodeid2\n");
 #else
+  printf("\nnodeid2222\n");
   color_ = that.color_;
   task_group_ = that.task_group_;
 #endif
@@ -72,9 +87,13 @@ NodeID::NodeID(const NodeID& that)
 NodeID &NodeID::operator=(const NodeID& that) 
 {
 #if _MPI_VER
-  int ret = MPI_Comm_dup(that.color_, &color_);
-  assert(ret != MPI_SUCCESS);
-  MPI_Comm(color_, &task_group_);
+//  int ret = MPI_Comm_dup(that.color_, &color_);
+  color_ = that.color_;
+//  printf("ret : %d\n", ret);
+//  assert(ret == MPI_SUCCESS);
+  if(color_ != 0)
+    MPI_Comm_group(color_, &task_group_);
+//  printf("\nnodeid3\n");
 #else
   color_ = that.color_;
   task_group_ = that.task_group_;
@@ -90,14 +109,16 @@ bool NodeID::operator==(const NodeID& that) const
   return (color_ == that.color()) && (task_in_color_ == that.task_in_color()) && (size_ == that.size());
 }
 
-
-
 void NodeID::init_node_id(ColorT color, int task_in_color, CommGroupT group, int head, int size)
 {
 #if _MPI_VER
-  int ret = MPI_Comm_dup(color, &color_);
-  assert(ret != MPI_SUCCESS);
-  MPI_Comm(color_, &task_group_);
+  color_ = color;
+  //int ret = MPI_Comm_dup(color, &color_);
+  //assert(ret == MPI_SUCCESS);
+  //assert(color_);
+  if(color_ != 0)
+    MPI_Comm_group(color_, &task_group_);
+  printf("\nnodeid4\n");
 #else
   color_ = color;
   task_group_ = group;
@@ -113,14 +134,14 @@ void NodeID::init_node_id(ColorT color, int task_in_color, CommGroupT group, int
 } 
 
 ColorT NodeID::color(void)         const { return color_; }
-CommGroupT NodeID::group(void)     const { return task_group_; }
+CommGroupT &NodeID::group(void)     { return task_group_; }
 int    NodeID::task_in_color(void) const { return task_in_color_; }
 int    NodeID::head(void)          const { return head_; }
 int    NodeID::size(void)          const { return size_; }
 bool   NodeID::IsHead(void)        const { return head_ == task_in_color_; }
 void   NodeID::set_head(int head)        { head_ = head; } 
 
-void *NodeID::Serialize(uint32_t& len_in_bytes)
+void *NodeID::Serialize(uint64_t& len_in_bytes)
 {
   Packer node_id_packer;
   node_id_packer.Add(NODEID_PACKER_COLOR, sizeof(ColorT), &color_);

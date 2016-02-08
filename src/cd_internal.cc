@@ -196,9 +196,10 @@ CD::CD(CDHandle* cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
-: file_handle_(prv_medium, 
-               ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : string(CD_DEFAULT_PRV_BASEPATH)), 
-               cd_id.GetStringID() + string("_XXXXXX") )
+ :  cd_id_(cd_id),
+    file_handle_(prv_medium, 
+                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::prv_basePath_), 
+                 cd_id.GetStringID() + string("_XXXXXX") )
 {
   //GONG
   begin_ = false;
@@ -225,7 +226,6 @@ CD::CD(CDHandle* cd_parent,
   label_ = string(INITIAL_CDOBJ_LABEL); 
 
   sys_detect_bit_vector_ = 0; 
-  cd_id_ = cd_id;
   // FIXME 
   // cd_id_ = 0; 
   // We need to call which returns unique id for this cd. 
@@ -509,7 +509,10 @@ CD::InternalCreate(CDHandle* parent,
 {
   CD_DEBUG("Internal Create... level #%u, Node ID : %s\n", new_cd_id.level(), new_cd_id.node_id().GetString().c_str());
 
-  PrvMediumT new_prv_medium = static_cast<PrvMediumT>((MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : MASK_MEDIUM(cd_type));
+  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(
+                                  (MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : 
+                                                                   MASK_MEDIUM(cd_type)
+                              );
 
   if( !new_cd_id.IsHead() ) {
 
@@ -1199,14 +1202,14 @@ void* CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, v
 
 
 
-void *CD::SerializeRemoteEntryDir(uint32_t& len_in_bytes) 
+void *CD::SerializeRemoteEntryDir(uint64_t& len_in_bytes) 
 {
   Packer entry_dir_packer;
   uint32_t entry_count = 0;
 
   for(auto it = remote_entry_directory_map_.begin(); 
            it!= remote_entry_directory_map_.end(); ++it) {
-    uint32_t entry_len=0;
+    uint64_t entry_len=0;
     void *packed_entry_p=0;
     if( !it->second->name().empty() ){ 
       packed_entry_p = it->second->Serialize(entry_len);
@@ -1717,9 +1720,6 @@ CDErrT CD::Preserve(void *data,
     // Everytime restore is called one entry is restored.
     CD_DEBUG("\n\nReexecution!!! entry directory size : %zu\n\n", entry_directory_.size());
 
-
-
-
     if( iterator_entry_ != entry_directory_.end() ) { // normal case
 
 //      printf("Reexecution mode start...\n");
@@ -1729,6 +1729,7 @@ CDErrT CD::Preserve(void *data,
       ++iterator_entry_;
 
       CDErrT cd_err;
+
       switch( cd_entry->Restore() ) {
         case CDEntry::CDEntryErrT::kOK : 
           cd_err = CDErrT::kOK; 
@@ -1941,208 +1942,6 @@ CDErrT CD::Preserve(void *data,
   return kError; // we should not encounter this point
 }
 
-CDErrT CD::Preserve(Serdes &serdes, 
-                    uint32_t preserve_mask, 
-                    const char *my_name, 
-                    const char *ref_name, 
-                    uint64_t ref_offset, 
-                    const RegenObject *regen_object, 
-                    PreserveUseT data_usage)
-{
-#if 0
-  void *object = NULL;
-//  serdes(cd_exec_mode, &object);
-//  Preserve(object, serdes.length_, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage);
-
-  if(cd_exec_mode_  == kExecution ) { // Normal execution mode -> Preservation
-//////////////////////////////////////////////////////////////////////////////////////////////////
-    serdes(cd_exec_mode, &object);
-    CDEntrh *cd_entry = new CDEntry(DataHandle(DataHandle::kSource, object, serdes.length_, cd_id_.node_id_), 
-                           DataHandle(DataHandle::kMemory, object, serdes.length_, cd_id_.node_id_), 
-                           my_name, this);
-
-    entry_directory_.push_back(*cd_entry);
-
-    CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
-
-    if( !my_name.empty() ) {
-
-      if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
-        entry_directory_map_[cd_hash(my_name)] = cd_entry;
-        assert(entry_directory_map_[cd_hash(my_name)]);
-        assert(entry_directory_map_[cd_hash(my_name)]->src_data_.address_data());
-
-        CD_DEBUG("Register local entry dir. my_name : %s - %u, value : %d, address: %p\n", 
-                entry_directory_map_[cd_hash(my_name)]->name().c_str(), 
-                cd_hash(my_name), 
-                *(reinterpret_cast<int*>(entry_directory_map_[cd_hash(my_name)]->src_data_.address_data())),
-                cd_entry->dst_data_.address_data());
-      } 
-      else{
-        remote_entry_directory_map_[cd_hash(my_name)] = cd_entry;
-        assert(remote_entry_directory_map_[cd_hash(my_name)]);
-        assert(remote_entry_directory_map_[cd_hash(my_name)]->src_data_.address_data());
-        CD_DEBUG("Register remote entry dir. my_name : %s - %u, value : %d, address: %p\n", 
-                remote_entry_directory_map_[cd_hash(my_name)]->name().c_str(), 
-                cd_hash(my_name), 
-                *(reinterpret_cast<int*>(remote_entry_directory_map_[cd_hash(my_name)]->src_data_.address_data())),
-                cd_entry->dst_data_.address_data());
-
-      }
-
-    }
-    else {
-      ERROR_MESSAGE("No entry name is provided. Currently it is not supported.\n");
-    }
-//////////////////////////////////////////////////////////////////////////////////////////////////
-  }
-  else if(cd_exec_mode_ == kReexecution) { // Re-execution mode -> Restoration
-
-    CD_DEBUG("\n\nReexecution!!! entry directory size : %zu\n\n", entry_directory_.size());
-
-    if( iterator_entry_ != entry_directory_.end() ) { // normal case
-
-      printf("Reexecution mode start...\n");
-      CD_DEBUG("\n\nNow reexec!!! %d\n\n", iterator_entry_count++);
-//////////////////////////////////////////////////////////////////////////////////////////////////
-      serdes(cd_exec_mode, &object);
-      cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                             DataHandle(DataHandle::kMemory, 0, len_in_bytes, cd_id_.node_id_), 
-                             my_name, this);
-
-      CDEntry::CDEntryErrT err = cd_entry->SaveMem();
-
-      entry_directory_.push_back(*cd_entry);
-
-      CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
-
-      if( !my_name.empty() ) {
-
-        if( !CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
-          entry_directory_map_[cd_hash(my_name)] = cd_entry;
-          assert(entry_directory_map_[cd_hash(my_name)]);
-          assert(entry_directory_map_[cd_hash(my_name)]->src_data_.address_data());
-
-          CD_DEBUG("Register local entry dir. my_name : %s - %u, value : %d, address: %p\n", 
-                  entry_directory_map_[cd_hash(my_name)]->name().c_str(), 
-                  cd_hash(my_name), 
-                  *(reinterpret_cast<int*>(entry_directory_map_[cd_hash(my_name)]->src_data_.address_data())),
-                  cd_entry->dst_data_.address_data());
-        } 
-        else{
-          remote_entry_directory_map_[cd_hash(my_name)] = cd_entry;
-          assert(remote_entry_directory_map_[cd_hash(my_name)]);
-          assert(remote_entry_directory_map_[cd_hash(my_name)]->src_data_.address_data());
-          CD_DEBUG("Register remote entry dir. my_name : %s - %u, value : %d, address: %p\n", 
-                  remote_entry_directory_map_[cd_hash(my_name)]->name().c_str(), 
-                  cd_hash(my_name), 
-                  *(reinterpret_cast<int*>(remote_entry_directory_map_[cd_hash(my_name)]->src_data_.address_data())),
-                  cd_entry->dst_data_.address_data());
-
-        }
-
-      }
-      else {
-        ERROR_MESSAGE("No entry name is provided. Currently it is not supported.\n");
-      }
-//////////////////////////////////////////////////////////////////////////////////////////////////
-      ++iterator_entry_;
-
-
-      if(iterator_entry_ != entry_directory_.end()) {
-
-#if _MPI_VER
-        CheckMailBox();
-        if(IsHead()) { 
-        
-          TestComm();
-          TestReqComm();
-
-          if(task_size() > 1) {
-            PMPI_Win_fence(0, mailbox_);
-            CheckMailBox();
-          }
-          TestRecvComm();
-
-        }
-        else {
-          TestComm();
-          TestReqComm();
-          if(task_size() > 1) {
-            PMPI_Win_fence(0, mailbox_);
-            CheckMailBox(); 
-          }
-          TestRecvComm();
-        }
-#endif
-
-      }
-      else { // The end of entry directory
-
-#if _MPI_VER
-        CD_DEBUG("Test Asynch messages until start at %s / %s\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-  
-        while( !(TestComm()) ); 
- 
-        if(IsHead()) { 
-          CheckMailBox();
-          if(task_size() > 1) {
-            PMPI_Win_fence(0, mailbox_);
-          }
-        }
-        else {
-  
-          if(task_size() > 1) {
-            PMPI_Win_fence(0, mailbox_);
-          }
-          CheckMailBox();
-  
-        }
-  
-        while(!TestRecvComm());
-    
-        CD_DEBUG("Test Asynch messages until done \n");
-  
-#endif
-  
-        cd_exec_mode_ = kExecution;
-        // This point means the beginning of body stage. Request EntrySearch at this routine
-      }
-
-      return cd_err;
- 
-    }
-    else {  // abnormal case
-      //return CDErrT::kOK;
-
-      CD_DEBUG("The end of reexec!!!\n");
-      // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
-      // we reached the last preserve function call. 
-      // Since we have reached the last point already now convert current execution mode into kExecution
-      
-//      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
-      CD_DEBUG("Now reached end of entry directory, now switching to normal execution mode\n");
-
-      cd_exec_mode_  = kExecution;
-
-      serdes(cd_exec_mode, &object);
-    }
-
-    CD_DEBUG("Reexecution mode finished...\n");
-  }   // Re-execution mode ends
-  else {  // Suspension mode
-    // Is it okay ?
-    // Is it possible to call Preserve() at Suspension mode?
-    assert(0);
-  }
-
-  
-  return kError; // we should not encounter this point
-  }
-
-#endif
-  return kError;
-}
 
 
 // Non-blocking Preserve
@@ -2181,6 +1980,10 @@ CD::InternalPreserve(void *data,
 
     CDEntry* cd_entry = 0;
 
+    void *dst_data = NULL;
+    if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
+      dst_data = (static_cast<Serializable *>(data))->Serialize(len_in_bytes);
+    }
 
     // Get cd_entry
     if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) { // via-copy, so it saves data right now!
@@ -2194,16 +1997,17 @@ CD::InternalPreserve(void *data,
           CD_DEBUG("[MEDIUM TYPE : kDRAM] ------------------------------------------\n");
 #if _PGAS_VER
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                                 DataHandle(DataHandle::kMemory, 0, len_in_bytes, cd_id_.node_id_), 
+                                 DataHandle(DataHandle::kMemory, dst_data, len_in_bytes, cd_id_.node_id_), 
                                  my_name, this, GetSyncCounter());
 #else
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                                 DataHandle(DataHandle::kMemory, 0, len_in_bytes, cd_id_.node_id_), 
-                                 my_name, this);
+                                 DataHandle(DataHandle::kMemory, dst_data, len_in_bytes, cd_id_.node_id_), 
+                                 my_name, this, (uint32_t)prv_medium_ | (uint32_t)preserve_mask);
 #endif
-//          cd_entry->set_my_cd(this);
 
-          CDEntry::CDEntryErrT err = cd_entry->SaveMem();
+//          if(!CHECK_PRV_TYPE(preserve_mask, kSerdes)) {
+//          CDEntry::CDEntryErrT err = cd_entry->SaveMem();
+          CDEntry::CDEntryErrT err = cd_entry->Save();
 
           entry_directory_.push_back(*cd_entry);
 
@@ -2246,14 +2050,15 @@ CD::InternalPreserve(void *data,
           char *filepath = file_handle_.GetFilePath();
           CD_DEBUG("[MEDIUM TYPE : File %d] ------------------------------------------\n", GetPlaceToPreserve());
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                                 DataHandle(DataHandle::kOSFile, 0, len_in_bytes, cd_id_.node_id_, 
+                                 DataHandle(DataHandle::kOSFile, dst_data, len_in_bytes, cd_id_.node_id_, 
 //                                            file_handle_.GetFilePath(),
                                             filepath,
                                             file_handle_.fp_, 
                                             file_handle_.UpdateFilePos(len_in_bytes)), 
-                                 my_name, this);
+                                 my_name, this, (uint32_t)prv_medium_ | (uint32_t)preserve_mask);
 
-          CDEntry::CDEntryErrT err = cd_entry->SaveFile(file_handle_.GetFilePath());
+//          CDEntry::CDEntryErrT err = cd_entry->SaveFile();
+          CDEntry::CDEntryErrT err = cd_entry->Save();
 
           entry_directory_.push_back(*cd_entry); 
 
@@ -2294,14 +2099,15 @@ CD::InternalPreserve(void *data,
           CD_DEBUG("[MEDIUM TYPE : kPFS] ------------------------------------------\n");
 
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                                 DataHandle(DataHandle::kPFS, 0, len_in_bytes, cd_id_.node_id_), 
-                                 my_name, this);
+                                 DataHandle(DataHandle::kPFS, dst_data, len_in_bytes, cd_id_.node_id_), 
+                                 my_name, this, (uint32_t)prv_medium_ | (uint32_t)preserve_mask);
 
           //Do we need to check for anything special for accessing to the global filesystem? 
           //Potentially=> CDEntry::CDEntryErrT err = cd_entry->SavePFS(file_handle_.GetFilePath(), 
           //file_handle_.isPFSAccessible(), &(file_handle_.PFSlog));
           //I don't know what should I do with the log parameter. I just add it for compatibility.
-          CDEntry::CDEntryErrT err = cd_entry->SavePFS(); 
+//          CDEntry::CDEntryErrT err = cd_entry->SavePFS(); 
+          CDEntry::CDEntryErrT err = cd_entry->Save(); 
 
           entry_directory_.push_back(*cd_entry); 
           CD_DEBUG("Push back one entry. entry directory size : %zu\n", entry_directory_.size());
@@ -2350,7 +2156,7 @@ CD::InternalPreserve(void *data,
       // set handle type and ref_name/ref_offset
       cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
                              DataHandle(DataHandle::kReference, 0, len_in_bytes, ref_name, ref_offset), 
-                             my_name, this);
+                             my_name, this, (uint32_t)prv_medium_ | (uint32_t)preserve_mask);
 //      cd_entry->set_my_cd(this); // this required for tracking parent later.. this is needed only when via ref
 
       entry_directory_.push_back(*cd_entry);  

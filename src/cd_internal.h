@@ -356,16 +356,9 @@ update the preserved data.
                     const char *my_name=0,        // data name
                     const char *ref_name=0,       // reference name
                     uint64_t ref_offset=0,        // reference offset
-                    const RegenObject * regen_object=0, // regen object
+                    const RegenObject *regen_object=0, // regen object
                     PreserveUseT data_usage=kUnsure);   // for optimization
   
-    CDErrT Preserve(Serdes &serdes, 
-                    uint32_t preserve_mask, 
-                    const char *my_name, 
-                    const char *ref_name, 
-                    uint64_t ref_offset, 
-                    const RegenObject *regen_object, 
-                    PreserveUseT data_usage);
 
     // Collective version
     // Kyushick : Why do we need collective Preserve call as an API?
@@ -415,7 +408,7 @@ public:
     uint32_t rank_in_level(void) const { return cd_id_.cd_name_.rank_in_level_; }
     uint32_t sibling_num(void)   const { return cd_id_.cd_name_.size_; }
     ColorT   color(void)         const { return cd_id_.node_id_.color_; }
-    CommGroupT group(void)       const { return cd_id_.node_id_.task_group_; }
+    CommGroupT &group(void)       { return cd_id_.node_id_.task_group_; }
     int      task_in_color(void) const { return cd_id_.node_id_.task_in_color_; }
     int      head(void)          const { return cd_id_.node_id_.head_; }
     int      task_size(void)     const { return cd_id_.node_id_.size_; }
@@ -549,10 +542,10 @@ public:
 
     CDInternalErrT Sync(ColorT color); 
     CDInternalErrT SyncFile(void); 
-    void *SerializeRemoteEntryDir(uint32_t& len_in_byte);
+    void *SerializeRemoteEntryDir(uint64_t& len_in_byte);
     void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
 
-    virtual void *Serialize(uint32_t& len_in_bytes) {
+    virtual void *Serialize(uint64_t& len_in_bytes) {
       return NULL;  
     }
   
@@ -696,7 +689,7 @@ class HeadCD : public CD {
     virtual CDErrT RemoveChild(CDHandle* cd_child); 
 
 
-    void *Serialize(uint32_t& len_in_bytes)
+    void *Serialize(uint64_t& len_in_bytes)
     {
       return NULL;  
     }

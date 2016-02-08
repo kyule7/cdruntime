@@ -148,6 +148,41 @@ namespace cd {
 
 
 namespace cd {
+
+#define BIT_0  1        
+#define BIT_1  2        
+#define BIT_2  4        
+#define BIT_3  8        
+#define BIT_4  16       
+#define BIT_5  32       
+#define BIT_6  64       
+#define BIT_7  128      
+#define BIT_8  256      
+#define BIT_9  512      
+#define BIT_10 1024      
+#define BIT_11 2048      
+#define BIT_12 4096      
+#define BIT_13 8192      
+#define BIT_14 16384     
+#define BIT_15 32768     
+#define BIT_16 65536     
+#define BIT_17 131072    
+#define BIT_18 262144    
+#define BIT_19 524288    
+#define BIT_19 524288    
+#define BIT_20 1048576   
+#define BIT_21 2097152   
+#define BIT_22 4194304   
+#define BIT_23 8388608   
+#define BIT_24 16777216   
+#define BIT_25 33554432   
+#define BIT_26 67108864   
+#define BIT_27 134217728   
+#define BIT_28 268435456   
+#define BIT_29 536870912   
+#define BIT_30 1073741824   
+#define BIT_31 2147483648  
+
 #if CD_DEBUG_ENABLED
 //  extern std::ostringstream dbg;
   extern DebugBuf cddbg;
@@ -270,30 +305,35 @@ namespace cd {
  *
  * \sa RegenObject, CDHandle::Preserve()
  */
-  enum CDPreserveT  { kCopy=1, //!< Prevervation via copy copies
-                               //!< the data to be preserved into
-                               //!< another storage/mem location
-                               //!< Preservation via reference
-                      kRef=2, //!< Preservation via reference     
-                              //!< indicates that restoration can
-                              //!< occur by restoring data that is
-                              //!< already preserved in another
-                              //!< CD. __Restriction:__ in the
-                              //!< current version of the API only
-                              //!< the parent can be used as a
-                              //!< reference. 
-                      kRegen=4, //!< Preservation via regenaration
-                                //!< is done by calling a
-                                //!< user-provided function to
-                                //!< regenerate the data during
-                                //!< restoration instead of copying
-                                //!< it from preserved storage.
-                      kCoop=8   //!< This flag is used for preservation-via-reference 
-                                //!< in the case that the referred copy is in remote task.
-                                //!< This flag can be used with kCopy
-                                //!< such as kCopy | kCoop.
-                                //!< Then, this entry can be referred by lower level.
-                                
+  enum CDPreserveT  { kCopy=BIT_9, //!< Prevervation via copy copies
+                                   //!< the data to be preserved into
+                                   //!< another storage/mem location
+                                   //!< Preservation via reference
+                      kRef=BIT_10, //!< Preservation via reference     
+                                  //!< indicates that restoration can
+                                  //!< occur by restoring data that is
+                                  //!< already preserved in another
+                                  //!< CD. __Restriction:__ in the
+                                  //!< current version of the API only
+                                  //!< the parent can be used as a
+                                  //!< reference. 
+                      kRegen=BIT_11, //!< Preservation via regenaration
+                                    //!< is done by calling a
+                                    //!< user-provided function to
+                                    //!< regenerate the data during
+                                    //!< restoration instead of copying
+                                    //!< it from preserved storage.
+                      kCoop=BIT_12,  //!< This flag is used for preservation-via-reference 
+                                    //!< in the case that the referred copy is in remote task.
+                                    //!< This flag can be used with kCopy
+                                    //!< such as kCopy | kCoop.
+                                    //!< Then, this entry can be referred by lower level.
+                      kSerdes=BIT_13, //!< This flag indicates the preservation is done by
+                                      //!< serialization, which mean it does not need to 
+                                      //!< duplicate the data because serialized data is
+                                      //!< already another form of preservation.
+                                      //!< This can be used such as kCopy | kSerdes
+                      kReserved=BIT_14
                     };
 /** @} */ // end of preservation_funcs
 
@@ -317,36 +357,44 @@ namespace cd {
  * only). Relaxed CDs typically incur additional runtime overhead
  * compared to strict CDs.
  */
-  enum CDType  { kStrict=2,   ///< A strict CD
-                 kRelaxed=3,   ///< A relaxed CD
-                 kDefaultCD=6   ///< Default is strict CD
+  enum CDType  { kStrict=BIT_0,    //!< A strict CD
+                 kRelaxed=BIT_1,  //!< A relaxed CD
+                 kDefaultCD=5 //!< Default is kStrict | kDRAM
                };
+
+  
+/** @brief Type to indicate where to preserve data
+ *
+ * \sa CD::GetPlaceToPreserve()
+ */
+  enum PrvMediumT { kDRAM=BIT_2,  //!< Preserve to DRAM
+                    kHDD=BIT_3,   //!< Preserve to HDD
+                    kSSD=BIT_4,  //!< Preserve to SSD
+                    kPFS=BIT_5,   //!< Preserve to Parallel File System
+                    kReserveMedium0=BIT_6,  //!< Preserve to Parallel File System
+                    kReserveMedium1=BIT_7,  //!< Preserve to Parallel File System
+                    kReserveMedium2=BIT_8   //!< Preserve to Parallel File System
+                  };
+
+
+
+
 
 /** @brief Type to indicate whether preserved data is from read-only
  * or potentially read/write application data
  *
  * \sa CDHandle::Preserve(), CDHandle::Complete()
  */
-  enum PreserveUseT { kUnsure =0, //!< Not sure whether data being preserved will be written 
-                                  //!< by the CD (treated as Read/Write for now, but may be optimized later)
-                      kReadOnly = 1, //!< Data to be preserved is read-only within this CD
-                      kReadWrite = 2 //!< Data to be preserved will be modified by this CD
-  };
-  
-/** @brief Type to indicate where to preserve data
- *
- * \sa CD::GetPlaceToPreserve()
- */
-  enum PrvMediumT { kDRAM=4,  //!< Preserve to DRAM
-                    kHDD=8,   //!< Preserve to HDD
-                    kSSD=16,  //!< Preserve to SSD
-                    kPFS=32   //!< Preserve to Parallel File System
-                  };
+  enum PreserveUseT { kUnsure=BIT_15,   //!< Not sure whether data being preserved will be written 
+                                        //!< by the CD (treated as Read/Write for now, but may be optimized later)
+                      kReadOnly=BIT_16, //!< Data to be preserved is read-only within this CD
+                      kReadWrite=BIT_17 //!< Data to be preserved will be modified by this CD
+                    };
 
 /** @} */ // End group cd_defs ===========================================
 
-    enum CtxtPrvMode { kExcludeStack=0, 
-                       kIncludeStack
+    enum CtxtPrvMode { kExcludeStack=BIT_18, 
+                       kIncludeStack=BIT_19
                      };
 
 /**@addtogroup PGAS_funcs 
@@ -442,7 +490,7 @@ namespace cd {
                   // Non-Head -> Head
                   kEntrySearch=16,
                   kErrorOccurred=32,
-                  kReserved=64 };
+                  kReservedEvent=64 };
 
 /** \addtogroup profiler-related
  *@{

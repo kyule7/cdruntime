@@ -118,6 +118,13 @@ class DataHandle : public Serializable {
     { 
       strcpy(file_name_, INIT_FILE_PATH);
     }
+    DataHandle(const DataHandle &that) 
+      : handle_type_(that.handle_type_), address_data_(that.address_data_), len_(that.len_), 
+        fp_(that.fp_), fpos_(that.fpos_), ref_name_(that.ref_name_), ref_offset_(that.ref_offset_),
+        node_id_(that.node_id_) 
+    { 
+      strcpy(file_name_, INIT_FILE_PATH);
+    }
 
 //    DataHandle(std::string ref_name, uint64_t ref_offset, 
 //               const NodeID &node_id) 
@@ -149,20 +156,20 @@ class DataHandle : public Serializable {
     DataHandle(HandleType handle_type, 
                void* address_data, const uint64_t& len, 
                const NodeID &node_id)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), fp_(NULL), fpos_(0), ref_name_(0), ref_offset_(0)
+      : handle_type_(handle_type), address_data_(address_data), len_(len), 
+        fp_(NULL), fpos_(0), ref_name_(0), ref_offset_(0), node_id_(node_id)
     { 
       strcpy(file_name_, INIT_FILE_PATH); 
-      node_id_ = node_id; 
     }
 
     // DataHandle for preservation to file system
     DataHandle(HandleType handle_type, 
                void* address_data, const uint64_t& len, 
                const NodeID &node_id, const std::string &file_name, FILE *fp=NULL, long fpos=0)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), fp_(fp), fpos_(fpos), ref_name_(0), ref_offset_(0)
+      : handle_type_(handle_type), address_data_(address_data), len_(len), 
+        fp_(fp), fpos_(fpos), ref_name_(0), ref_offset_(0), node_id_(node_id)
     { 
       strcpy(file_name_, file_name.c_str()); 
-      node_id_ = node_id; 
     }
 
     // DataHandle for preservation via reference
@@ -214,12 +221,12 @@ public:
 private:
 //  public: 
     //we need serialize deserialize interface here.
-    void *Serialize(uint32_t& len_in_bytes)
+    void *Serialize(uint64_t& len_in_bytes)
     {
       CD_DEBUG("\nData Handle Serialize\n");
 
       Packer data_packer;
-      uint32_t node_id_packed_len=0;
+      uint64_t node_id_packed_len=0;
       void *node_id_packed_p = node_id_.Serialize(node_id_packed_len);
       assert(node_id_packed_len != 0);
       data_packer.Add(DATA_PACKER_NODE_ID, node_id_packed_len, node_id_packed_p);

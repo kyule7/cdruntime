@@ -520,6 +520,7 @@ int MPI_Isend(const void *buf,
     MPI_Comm_group(comm, &g);
     switch (cdp->GetCDLoggingMode()) {
       case kStrictCD: {
+        printf("test send: strict CD\t"); cdp->CheckIntraCDMsg(dest, g);
         mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
         break;
       }
@@ -592,6 +593,7 @@ int MPI_Irecv(void *buf,
     MPI_Comm_group(comm, &g);
     switch( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
+//printf("test recv: strict CD\t"); cdp->CheckIntraCDMsg(src, g);
         mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
         break;
       }
@@ -1051,6 +1053,7 @@ int MPI_Wait(MPI_Request *request,
   if (cur_cdh != NULL) {
     switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
+//printf("test wait : strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
         mpi_ret = PMPI_Wait(request, status);
         // delete incomplete entries...
         cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
@@ -1108,6 +1111,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
   if (cur_cdh != NULL) {
     switch( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
+//printf("test waitall: strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
         mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
         // delete incomplete entries...
         for (ii=0;ii<count;ii++) {

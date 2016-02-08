@@ -555,6 +555,7 @@ class CDHandle {
                                                     //!< preserved state that is unmodified (see Complete()).
                     );
 
+
 /**@brief (Non-collective) Preserve user-defined class object
  * 
  * User need to define which member variables will be de/serialized at constructor with serdes object in it.
@@ -570,9 +571,9 @@ class CDHandle {
  *
  * \sa Serdes, Complete()
  */
-    CDErrT Preserve(Serdes &serdes, //!< [in] Serdes object in user-defined class.
-                                    //!< This will be invoked in CD runtime
-                                    //!< to de/serialize class object
+    CDErrT Preserve(Serializable &serdes, //!< [in] Serdes object in user-defined class.
+                                          //!< This will be invoked in CD runtime
+                                          //!< to de/serialize class object
                     uint32_t preserve_mask=kCopy, //!< [in] Allowed types of preservation 
                                                   //!< (e.g., kCopy|kRef|kRegen), default only via copy
                     const char *my_name=0,  //!< [in] Optional C-string representing the name of this
@@ -581,8 +582,8 @@ class CDHandle {
                     const char *ref_name=0, //!< [in] Optional C-string representing
                                             //!< a user-specified name that was set by a previous preserve call at the parent.; 
                                             //!< __Do we also need an offset into parent preservation?__
-
-                    uint64_t ref_offset=0,  //!< [in] explicit offset within the named region at the other CD (for restoration via reference)
+                    uint64_t ref_offset=0,  //!< [in] explicit offset within the named region at the other CD 
+                                            //!< (for restoration via reference)
                     const RegenObject *regen_object=0, //!< [in] optional user-specified function for
                                                        //!< regenerating values instead of restoring by copying
 
@@ -592,7 +593,8 @@ class CDHandle {
                                                     //!< preserved state that is unmodified (see Complete()).
                     );
 
-/** @brief (Not supported yet) Non-blocking preserve data to be restored when recovering (typically reexecuting the CD from right after its Begin() call.
+/** @brief (Not supported yet) Non-blocking preserve data to be restored when recovering 
+ * (typically reexecuting the CD from right after its Begin() call.
  * 
  * 
  * Preserves application data so that it can be restored for correct
@@ -624,7 +626,8 @@ class CDHandle {
  */
     CDErrT Preserve(CDEvent &cd_event, //!< [in,out] enqueue this call onto the cd_event
                     void *data_ptr=0, //!< [in] pointer to data to be preserved;
-                                      //!< __currently must be in same address space as calling task, but will extend to PGAS fat pointers later
+                                      //!< __currently must be in same address space as calling task, 
+                                      //!< but will extend to PGAS fat pointers later
                     uint64_t len=0,   //!< [in] Length of preserved data (Bytes)
                     uint32_t preserve_mask=kCopy, //!< [in] Allowed types of preservation 
                                                   //!< (e.g.,kCopy|kRef|kRegen), default only via copy
@@ -637,7 +640,8 @@ class CDHandle {
                     const RegenObject *regen_object=0, //!< [in] optional user-specified function for
                                                        //!< regenerating values instead of restoring by copying
                     PreserveUseT data_usage=kUnsure //!< [in] This flag is used to optimize consecutive Complete/Begin calls
-                                                    //!< where there is significant overlap in preserved state that is unmodified (see Complete()).
+                                                    //!< where there is significant overlap in preserved state 
+                                                    //!< that is unmodified (see Complete()).
                     );
 
 
@@ -1078,11 +1082,11 @@ class CDHandle {
 
 
 /// Get NodeID with given new_color and new_task
-    CDErrT GetNewNodeID(NodeID& new_node);
+    NodeID GenNewNodeID(const int &new_head);
 
 
-/// Select Head among task group that are corresponding to one CD.
-    void SetHead(NodeID& new_node_id);
+// Select Head among task group that are corresponding to one CD.
+//    void SetHead(NodeID& new_node_id);
 
 /// Check mail box.
     CDErrT CheckMailBox(void);
@@ -1093,10 +1097,11 @@ class CDHandle {
 #if CD_MPI_ENABLED
 
 /// Get NodeID with given new_color and new_task.
-    CDErrT GetNewNodeID(const ColorT& my_color, 
-                        const int& new_color, 
-                        const int& new_task, 
-                        NodeID& new_node);
+    NodeID GenNewNodeID(const ColorT &my_color, 
+                        const int &new_color, 
+                        const int &new_task, 
+                        const int &new_head
+                        );
 
 /// Collect child CDs' head information.
     void CollectHeadInfoAndEntry(const NodeID &new_node_id);

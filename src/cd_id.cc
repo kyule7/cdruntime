@@ -44,7 +44,7 @@ using namespace cd;
 CDID::CDID() 
   : domain_id_(0), sequential_id_(0)
 {
-  object_id_ = 0;
+  object_id_ = 0; 
 }
 
 CDID::CDID(const CDNameT& cd_name, const NodeID& new_node_id)
@@ -63,7 +63,7 @@ CDID::CDID(const CDNameT& cd_name, const NodeID& new_node_id)
 
 }
 
-CDID::CDID(const CDID& that)
+CDID::CDID(const CDID &that)
   : cd_name_(that.cd_name()), node_id_(that.node_id())
 {
   domain_id_     = that.domain_id();
@@ -79,19 +79,19 @@ CDID::CDID(const CDID& that)
   object_id_ = 0;
 }
 
-uint32_t CDID::level(void)         const { return cd_name_.level(); }
-uint32_t CDID::rank_in_level(void) const { return cd_name_.rank_in_level(); }
-uint32_t CDID::sibling_count(void) const { return cd_name_.size(); }
-ColorT   CDID::color(void)         const { return node_id_.color(); }
-int      CDID::task_in_color(void) const { return node_id_.task_in_color(); }
-int      CDID::head(void)          const { return node_id_.head(); }
-int      CDID::task_count(void)    const { return node_id_.size(); }
-uint32_t CDID::object_id(void)     const { return object_id_; }
-uint32_t CDID::sequential_id(void) const { return sequential_id_; }
-uint32_t CDID::domain_id(void)     const { return domain_id_; }
-CDNameT  CDID::cd_name(void)       const { return cd_name_; }
-NodeID   CDID::node_id(void)       const { return node_id_; }
-bool     CDID::IsHead(void)        const { return node_id_.IsHead(); }
+uint32_t  CDID::level(void)         const { return cd_name_.level_; }
+uint32_t  CDID::rank_in_level(void) const { return cd_name_.rank_in_level_; }
+uint32_t  CDID::sibling_count(void) const { return cd_name_.size_; }
+ColorT    CDID::color(void)         const { return node_id_.color_; }
+int       CDID::task_in_color(void) const { return node_id_.task_in_color_; }
+int       CDID::head(void)          const { return node_id_.head_; }
+int       CDID::task_count(void)    const { return node_id_.size_; }
+uint32_t  CDID::object_id(void)     const { return object_id_; }
+uint32_t  CDID::sequential_id(void) const { return sequential_id_; }
+uint32_t  CDID::domain_id(void)     const { return domain_id_; }
+CDNameT   CDID::cd_name(void)       const { return cd_name_; }
+NodeID    CDID::node_id(void)       const { return node_id_; }
+bool      CDID::IsHead(void)        const { return node_id_.IsHead(); }
 
 string CDID::GetPhaseID(void) const { return to_string(cd_name_.level_) + string("_") + to_string(object_id_); }
 void CDID::SetCDID(const NodeID& node_id)   { node_id_ = node_id; }
@@ -99,11 +99,11 @@ void CDID::SetSequentialID(uint32_t seq_id) { sequential_id_ = seq_id; }
 
 CDID &CDID::operator=(const CDID& that)
 {
-  domain_id_     = that.domain_id();
-  sequential_id_ = that.sequential_id();
-  cd_name_       = that.cd_name();
-  node_id_       = that.node_id();
-  object_id_     = that.object_id();
+  domain_id_     = that.domain_id_;
+  sequential_id_ = that.sequential_id_;
+  cd_name_       = that.cd_name_;
+  node_id_       = that.node_id_;
+  object_id_     = that.object_id_;
   return *this;
 }
 

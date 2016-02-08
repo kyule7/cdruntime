@@ -74,15 +74,19 @@ void TestMPIFunc(const ColorT& new_color, const int& color_for_split)
 */
 }
 
-CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, const int& new_task, NodeID& new_node)
+NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, const int &new_task, const int &new_head_id)
 {
 #if _MPI_VER
-    CDErrT err = kOK;
 //    dbg<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
-    PMPI_Comm_split(my_color, new_color, new_task, &(new_node.color_));
-    PMPI_Comm_size(new_node.color(), &(new_node.size_));
-    PMPI_Comm_rank(new_node.color(), &(new_node.task_in_color_));
-    PMPI_Comm_group(new_node.color(), &(new_node.task_group_));
+    int new_size=0, 
+        new_task_id=0;
+    ColorT new_comm;
+    PMPI_Comm_split(my_color, new_color, new_task, &new_comm);
+    PMPI_Comm_size(new_comm, &new_size);
+    PMPI_Comm_rank(new_comm, &new_task_id);
+
+//    PMPI_Comm_group(new_node.color(), &(new_node.task_group_));
+//    new_node.set_head(new_head);
 //    TestMPIFunc(node_id_.color(), node_id_.task_in_color());
 //    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
 //    if(new_color == 0) 
@@ -93,15 +97,12 @@ CDErrT CDHandle::GetNewNodeID(const ColorT& my_color, const int& new_color, cons
 //    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
 //    if(new_color == 0) 
 //      dbg<<"\n--------DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
-    return err;
 
+    return NodeID(new_comm, new_task_id, new_head_id, new_size);
 #elif _PGAS_VER
-    CDErrT err = kOK;
-    int size = new_node.size();
-//    assert(size == new_node.size());
-    return err;
+    return NodeID(new_comm, new_task_id, new_head_id, new_size);
 #else
-    return kOK;
+    return node_id_;
 #endif
 }
 
@@ -140,7 +141,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
     CD_DEBUG("%s\n", it->second->GetString().c_str());
 
   }
-  uint32_t serialized_len_in_bytes=0;
+  uint64_t serialized_len_in_bytes=0;
 
   void *serialized_entry = ptr_cd()->SerializeRemoteEntryDir(serialized_len_in_bytes); 
 
@@ -179,7 +180,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 //  PMPI_Type_commit(&rType);
 
 
-  CD_DEBUG("\n\nNote : %p, %u, %d, remote entry dir map size : %lu\n\n", 
+  CD_DEBUG("\n\nNote : %p, %lu, %d, remote entry dir map size : %lu\n\n", 
            serialized_entry, serialized_len_in_bytes, recv_count, 
            ptr_cd()->remote_entry_directory_map_.size());
 
@@ -1443,7 +1444,7 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
 {
   int global_rank_id = -1;
   int local_rank_id = -1;
-
+//  printf("target_id %d, group %p\n", target_id, &target_group);
   // Translate user group's rank ID to MPI_COMM_WORLD
   int status = MPI_Group_translate_ranks(target_group, 1, &target_id, cd::whole_group, &global_rank_id);
   if(status != MPI_SUCCESS) {
@@ -1456,14 +1457,15 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
     group_ranks[i] = i;
   }
 
+//  cout << "group : " << group() << " group rank : " << group_ranks[size-1] << " whole group : " << cd::whole_group << endl;
   // Translate task IDs of CD to MPI_COMM_WORLD  
   status = MPI_Group_translate_ranks(group(), size, group_ranks, cd::whole_group, result_ranks);
 
-  printf("\n\nRank #%d ----------------------------\n", myTaskID); 
-  for(int i=0; i<size; i++) {
-    printf("%d->%d\n", group_ranks[i], result_ranks[i]);
-  }
-  printf("\n\n"); 
+//  printf("\n\nRank #%d ----------------------------\n", myTaskID); 
+//  for(int i=0; i<size; i++) {
+//    printf("%d->%d\n", group_ranks[i], result_ranks[i]);
+//  }
+//  printf("\n\n"); 
 
   bool found = false;
   for(int i=0; i<size; i++) {
@@ -1480,6 +1482,7 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
 //  }
 
   printf("Translate rank_id = %d->%d->%d at %s, found? %d\n\n", target_id, global_rank_id, local_rank_id, GetCDID().GetString().c_str(), found);
+  if(target_id != local_rank_id) //getchar();
   return found;
 }
 

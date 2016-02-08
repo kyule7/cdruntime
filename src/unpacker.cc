@@ -113,13 +113,13 @@ char *Unpacker::GetAt(const char *src_data, uint32_t find_id, uint32_t &return_s
   return GetAt(src_data,find_id,return_size,id);
 }
 
-char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_size)
+char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_size, bool alloc, void *dst, uint64_t dst_size)
 {
   char *str_return_data;
   uint32_t id, size, pos;
 
-    CD_DEBUG("==========================================================\n");
-		CD_DEBUG("[Unpacker::GetNext] src_data : %p, return id : %u, return size : %u\n", (void *)src_data, return_id, return_size);
+  CD_DEBUG("==========================================================\n");
+  CD_DEBUG("[Unpacker::GetNext] src_data : %p, return id : %u, return size : %u\n", (void *)src_data, return_id, return_size);
 
   table_size_ = GetWord(src_data);
   CD_DEBUG("table size : %u\n", table_size_);
@@ -128,12 +128,18 @@ char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_s
     id   = GetWord( src_data + cur_pos_ );
     size = GetWord( src_data + cur_pos_ + 4);
     pos  = GetWord( src_data + cur_pos_ + 8);
-    str_return_data = new char[size];
+
+    if(alloc)
+      str_return_data = new char[size];
+    else {
+      str_return_data = (char *)dst;
+      assert(dst_size == size);
+    }
     
     CD_DEBUG("[Get Info from table] id : %u (%p), size : %u (%p), pos : %u (%p)\n",
-						 id, (void *)((char *)src_data + cur_pos_),
-  					 size, (void *)((char *)src_data + cur_pos_+4),
- 						 pos, (void *)((char *)src_data + cur_pos_+8));
+             id, (void *)((char *)src_data + cur_pos_),
+             size, (void *)((char *)src_data + cur_pos_+4),
+             pos, (void *)((char *)src_data + cur_pos_+8));
 
     CD_DEBUG("Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), (void *)str_return_data);
 
@@ -157,9 +163,9 @@ void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint32_t &return
 {
   
   CD_DEBUG("==========================================================\n");
-	CD_DEBUG("[Unpacker::GetNext] str_return_data: %p, src_data : %p, return_id : %u, return_size : %u\n",
-					 str_return_data, src_data, return_id, return_size);
-
+  CD_DEBUG("[Unpacker::GetNext] str_return_data: %p, src_data : %p, return_id : %u, return_size : %u\n",
+           str_return_data, src_data, return_id, return_size);
+  
   uint32_t id, size, pos;
 
   table_size_ = GetWord(src_data);
@@ -171,9 +177,9 @@ void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint32_t &return
     pos  = GetWord( (char *)src_data + cur_pos_ + 8 );
 
     CD_DEBUG("[Get Info from table] id: %u (%p), size : %u (%p), pos : %u (%p)\n",
-						 id, (void *)((char *)src_data + cur_pos_),
-						 size, (void *)((char *)src_data + cur_pos_+4),
-						 pos, (void *)((char *)src_data + cur_pos_+8));
+             id, (void *)((char *)src_data + cur_pos_),
+             size, (void *)((char *)src_data + cur_pos_+4),
+             pos, (void *)((char *)src_data + cur_pos_+8));
 
     CD_DEBUG("Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), str_return_data);
 
@@ -201,7 +207,7 @@ void Unpacker::SeekInit()
 
 uint32_t Unpacker::GetWord(void *src_data)
 {
-	CD_DEBUG("[Unpacker::GetWord] src_data : %p\n", (void *)src_data);
+  CD_DEBUG("[Unpacker::GetWord] src_data : %p\n", (void *)src_data);
   uint32_t return_value;
   memcpy( &return_value, src_data, sizeof(uint32_t) );
   return return_value;

@@ -36,7 +36,7 @@ Domain::Domain(Int_t numRanks, Index_t colLoc,
    m_emin(Real_t(-1.0e+15)),
    m_dvovmax(Real_t(0.1)),
 #if SERDES_ENABLED
-//   serdes(this),
+   serdes(this),
 #endif
    m_refdens(Real_t(1.0))
 {
@@ -413,55 +413,55 @@ Domain::CreateRegionIndexSets(Int_t nr, Int_t balance)
       //Determine the relative weights of all the regions.
       for (Index_t i=0 ; i<numReg() ; ++i) {
          regElemSize(i) = 0;
-	 costDenominator += pow((i+1), balance);  //Total cost of all regions
-	 regBinEnd[i] = costDenominator;  //Chance of hitting a given region is (regBinEnd[i] - regBinEdn[i-1])/costDenominator
+      	 costDenominator += pow((i+1), balance);  //Total cost of all regions
+      	 regBinEnd[i] = costDenominator;  //Chance of hitting a given region is (regBinEnd[i] - regBinEdn[i-1])/costDenominator
       }
       //Until all elements are assigned
       while (nextIndex < numElem()) {
-	 //pick the region
-	 regionVar = rand() % costDenominator;
-	 Index_t i = 0;
-         while(regionVar >= regBinEnd[i])
-	    i++;
-         //rotate the regions based on MPI rank.  Rotation is Rank % NumRegions
-	 regionNum = ((i + myRank) % numReg()) + 1;
-	 // make sure we don't pick the same region twice in a row
-         while(regionNum == lastReg) {
-	    regionVar = rand() % costDenominator;
-	    i = 0;
-            while(regionVar >= regBinEnd[i])
-	       i++;
-	    regionNum = ((i + myRank) % numReg()) + 1;
-         }
-	 //Pick the bin size of the region and determine the number of elements.
-         binSize = rand() % 1000;
-	 if(binSize < 773) {
-	   elements = rand() % 15 + 1;
-	 }
-	 else if(binSize < 937) {
-	   elements = rand() % 16 + 16;
-	 }
-	 else if(binSize < 970) {
-	   elements = rand() % 32 + 32;
-	 }
-	 else if(binSize < 974) {
-	   elements = rand() % 64 + 64;
-	 } 
-	 else if(binSize < 978) {
-	   elements = rand() % 128 + 128;
-	 }
-	 else if(binSize < 981) {
-	   elements = rand() % 256 + 256;
-	 }
-	 else
-	    elements = rand() % 1537 + 512;
-	 runto = elements + nextIndex;
-	 //Store the elements.  If we hit the end before we run out of elements then just stop.
+      	 //pick the region
+      	 regionVar = rand() % costDenominator;
+      	 Index_t i = 0;
+               while(regionVar >= regBinEnd[i])
+      	    i++;
+               //rotate the regions based on MPI rank.  Rotation is Rank % NumRegions
+      	 regionNum = ((i + myRank) % numReg()) + 1;
+      	 // make sure we don't pick the same region twice in a row
+               while(regionNum == lastReg) {
+      	    regionVar = rand() % costDenominator;
+      	    i = 0;
+                  while(regionVar >= regBinEnd[i])
+      	       i++;
+      	    regionNum = ((i + myRank) % numReg()) + 1;
+               }
+      	 //Pick the bin size of the region and determine the number of elements.
+               binSize = rand() % 1000;
+      	 if(binSize < 773) {
+      	   elements = rand() % 15 + 1;
+      	 }
+      	 else if(binSize < 937) {
+      	   elements = rand() % 16 + 16;
+      	 }
+      	 else if(binSize < 970) {
+      	   elements = rand() % 32 + 32;
+      	 }
+      	 else if(binSize < 974) {
+      	   elements = rand() % 64 + 64;
+      	 } 
+      	 else if(binSize < 978) {
+      	   elements = rand() % 128 + 128;
+      	 }
+      	 else if(binSize < 981) {
+      	   elements = rand() % 256 + 256;
+      	 }
+      	 else
+      	    elements = rand() % 1537 + 512;
+      	 runto = elements + nextIndex;
+      	 //Store the elements.  If we hit the end before we run out of elements then just stop.
          while (nextIndex < runto && nextIndex < numElem()) {
-	    this->regNumList(nextIndex) = regionNum;
-	    nextIndex++;
-	 }
-	 lastReg = regionNum;
+      	    this->regNumList(nextIndex) = regionNum;
+      	    nextIndex++;
+      	 }
+      	 lastReg = regionNum;
       } 
    }
    // Convert regNumList to region index sets

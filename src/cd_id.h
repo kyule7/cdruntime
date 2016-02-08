@@ -125,25 +125,25 @@ public:
     // TODO Initialize member values to zero or something, for now I will put just zero but this is less efficient.
     CDID(void);
     CDID(const CDNameT& cd_name, const NodeID& new_node_id);
-    CDID(const CDID& that);
+    CDID(const CDID &that);
     ~CDID(void) {}
 
     CDID &operator=(const CDID& that);
     bool operator==(const CDID& that) const;
    
-    uint32_t level(void)         const;
-    uint32_t rank_in_level(void) const;
-    uint32_t sibling_count(void) const;
-    ColorT   color(void)         const;
-    int      task_in_color(void) const;
-    int      head(void)          const;
-    int      task_count(void)    const;
-    uint32_t object_id(void)     const;
-    uint32_t sequential_id(void) const;
-    uint32_t domain_id(void)     const;
-    CDNameT  cd_name(void)       const;
-    NodeID   node_id(void)       const;
-    bool     IsHead(void)        const;
+    uint32_t  level(void)         const;
+    uint32_t  rank_in_level(void) const;
+    uint32_t  sibling_count(void) const;
+    ColorT    color(void)         const;
+    int       task_in_color(void) const;
+    int       head(void)          const;
+    int       task_count(void)    const;
+    uint32_t  object_id(void)     const;
+    uint32_t  sequential_id(void) const;
+    uint32_t  domain_id(void)     const;
+    CDNameT   cd_name(void)       const;
+    NodeID    node_id(void)       const;
+    bool      IsHead(void)        const;
     std::string GetPhaseID(void) const;
    //SZ: print function
     void Print(void);
