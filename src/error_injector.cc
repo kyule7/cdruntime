@@ -50,8 +50,9 @@ using namespace cd::interface;
 
 
 // Uniform Random
-double UniformRandom::GenErrorVal(void) 
+float UniformRandom::GenErrorVal(void) 
 {
+  srand48(clock());
   return drand48();
 }
 
@@ -67,9 +68,9 @@ void UniformRandom::TestErrorProb(int num_bucket)
   }
 
   for (int i=0; i<nrolls; ++i) {
-    double number = GenErrorVal();
+    float number = GenErrorVal();
     if(number < 0) std::cout << "negative : " << number << std::endl;
-    if ((number>=0.0) && (number<static_cast<double>(num_bucket))) 
+    if ((number>=0.0) && (number<static_cast<float>(num_bucket))) 
       ++bucket[static_cast<int>(number)];
   } 
 
@@ -82,7 +83,7 @@ void UniformRandom::TestErrorProb(int num_bucket)
 
 /*
 // LogNromal
-double LogNormal::GenErrorVal(void) 
+float LogNormal::GenErrorVal(void) 
 {
   return distribution_(generator_);
 }
@@ -98,9 +99,9 @@ void LogNormal::TestErrorProb(int num_bucket)
     bucket[i] = 0;
   }
   for (int i=0; i<nrolls; ++i) {
-    double number = distribution_(generator_);
+    float number = distribution_(generator_);
     if(number < 0) std::cout << "negative : " << number << std::endl;
-    if ((number>=0.0) && (number<static_cast<double>(num_bucket))) 
+    if ((number>=0.0) && (number<static_cast<float>(num_bucket))) 
       ++bucket[static_cast<int>(number)];
   } 
 
@@ -113,7 +114,7 @@ void LogNormal::TestErrorProb(int num_bucket)
 
 
 // Exponenitial
-double Exponential::GenErrorVal(void) 
+float Exponential::GenErrorVal(void) 
 {
   distribution_.reset();
   return distribution_(generator_);
@@ -130,9 +131,9 @@ void Exponential::TestErrorProb(int num_bucket)
     bucket[i] = 0;
   }
   for (int i=0; i<nrolls; ++i) {
-    double number = distribution_(generator_);
+    float number = distribution_(generator_);
     if(number < 0) std::cout << "negative : " << number << std::endl;
-    if ((number>=0.0) && (number<static_cast<double>(num_bucket))) 
+    if ((number>=0.0) && (number<static_cast<float>(num_bucket))) 
       ++bucket[static_cast<int>(number)];
   } 
 
@@ -145,7 +146,7 @@ void Exponential::TestErrorProb(int num_bucket)
 
 
 // Normal
-double Normal::GenErrorVal(void) 
+float Normal::GenErrorVal(void) 
 {
   distribution_.reset();
   return distribution_(generator_);
@@ -162,11 +163,11 @@ void Normal::TestErrorProb(int num_bucket)
     bucket[i] = 0;
   }
   for (int i=0; i<nrolls; ++i) {
-    double number = distribution_(generator_);
+    float number = distribution_(generator_);
     if(number < 0) number *= -1;
     if(number < 0) std::cout << "negative : " << number << std::endl;
 
-    if ((number>=0.0) && (number<static_cast<double>(num_bucket))) 
+    if ((number>=0.0) && (number<static_cast<float>(num_bucket))) 
       ++bucket[static_cast<int>(number)];
   } 
 
@@ -179,9 +180,9 @@ void Normal::TestErrorProb(int num_bucket)
 
 
 // Poisson
-double Poisson::GenErrorVal(void) 
+float Poisson::GenErrorVal(void) 
 {
-  return static_cast<double>(distribution_(generator_));
+  return static_cast<float>(distribution_(generator_));
 }
 
 void Poisson::TestErrorProb(int num_bucket) 
@@ -195,9 +196,9 @@ void Poisson::TestErrorProb(int num_bucket)
     bucket[i] = 0;
   }
   for (int i=0; i<nrolls; ++i) {
-    double number = distribution_(generator_);
+    float number = distribution_(generator_);
     if(number < 0) std::cout << "negative : " << number << std::endl;
-    if ((number>=0.0) && (number<static_cast<double>(num_bucket))) 
+    if ((number>=0.0) && (number<static_cast<float>(num_bucket))) 
       ++bucket[static_cast<int>(number)];
   } 
 
@@ -215,23 +216,23 @@ ErrorInjector::ErrorInjector(void)
   rand_generator_ = new UniformRandom();
   enabled_    = false;
   logfile_    = stdout;
-  threshold_  = DEFAULT_ERROR_THRESHOLD;
+  error_rate_  = DEFAULT_ERROR_THRESHOLD;
 }
 
-ErrorInjector::ErrorInjector(double threshold, RandType rand_type, FILE *logfile) 
+ErrorInjector::ErrorInjector(float error_rate, RandType rand_type, FILE *logfile) 
 {
   rand_generator_ = new UniformRandom();
   enabled_    = false;
   logfile_    = stdout;
-  threshold_  = threshold;
+  error_rate_  = error_rate;
 }
 
-ErrorInjector::ErrorInjector(bool enabled, double threshold, RandType rand_type, FILE *logfile) 
+ErrorInjector::ErrorInjector(bool enabled, float error_rate, RandType rand_type, FILE *logfile) 
 {
   rand_generator_ = new UniformRandom();
   enabled_    = enabled;
   logfile_    = stdout;
-  threshold_  = threshold;
+  error_rate_  = error_rate;
 }
 
 void ErrorInjector::Init(RandType rand_type, FILE *logfile)
@@ -266,6 +267,72 @@ ErrorProb *ErrorInjector::CreateErrorProb(RandType rand_type)
   return random_number;
 }
 
+uint64_t ErrorInjector::Inject(void) {
+  return InjectError(error_rate_);
+}
+uint64_t ErrorInjector::InjectError(const float &error_prob)
+{
+  float rand_var = rand_generator_->GenErrorVal();
+  int error = rand_var < error_prob;
+//  CD_DEBUG("Error %f(error_prob) < %f(random var)\n", error_prob, rand_var);
+  CD_DEBUG("Error %f(error_prob) < %f(random var)   ERROR? %d\n", error_prob, rand_var, error);
+  printf("Error %f < %f(threshold) ERROR? %d\n", rand_var, error_prob, error);
+  CD_DEBUG("EIE\n");
+
+  return error;
+}
+
+uint64_t SystemErrorInjector::Inject(void) 
+{
+  uint64_t error_occurred = NO_ERROR_INJECTED;
+  clock_t curr_clk = clock();
+  double period = (double)(curr_clk - prev_clk_)/CLOCKS_PER_SEC;
+//    std::cout << "curr : " << curr_clk << " - prev : " << prev_clk_ << std::endl;
+  prev_clk_ = curr_clk;
+  // Check if error happened at every CD level. 
+  // At each CD level, there is a claim that 
+  // the CD can cover for recovery against a certain type of error.
+  // Check this from leaf to root CD. 
+  // If there is error occurred at upper level,
+  // that overwrites rollback_point.
+  for(auto it=sc_.failure_rate_.rbegin(); it!=sc_.failure_rate_.rend(); ++it) {
+//      printf("\nfailure prob %lu (%f x %lf) : %f\n", it->first, it->second, period, GetErrorProb(it->second, period));
+    if( InjectError(GetErrorProb(it->second, period)) ) { 
+      error_occurred |= it->first;
+      printf("ERROR!!! %lx\n", error_occurred);
+    }
+    CD_DEBUG("error rate %lu : %f (%lx)\n\n\n", it->first, it->second, error_occurred);// == (int)(it->first));
+//    printf("error rate %lu : %f (%lx)\n", it->first, it->second, error_occurred);// == (int)(it->first));
+  }
+  return error_occurred;
+}
+//MultiTypeErrorInjector::MultiTypeErrorInjector(const std::initializer_list<std::pair<uint32_t, float>> &err_type_list)
+//{
+//  // FIXME : make sure how order map structure is.
+//  for(auto it=err_type_list.begin(); it!=err_type_list.end(); ++it) {
+//    if(error_prob_bin_.size() != 0) {
+//      error_prob_bin_[it->first] = it->second;
+//    } else {
+//      error_prob_bin_[it->first] = it->second + error_prob_bin_.end()->second;
+//    }
+//  }
+//}
+//
+//
+//uint32_t MultiTypeErrorInjector::Inject(void) 
+//{
+//  float rand_var = rand_generator_->GenErrorVal();
+//
+// /*      a     b    c      no error
+// *  +-------+----+----+------------------+
+// *  0      .2   .3   .4                  1
+// */
+//  for(auto it=error_prob_bin_.begin(); it!=error_prob_bin_.end(); ++it) {
+//    if(rand_var < it->second) {
+//      return it->first;
+//    }
+//  }
+//}
 
 
 // CDErrorInjector
@@ -275,7 +342,7 @@ CDErrorInjector::CDErrorInjector(void)
   force_to_fail_ = false;
 }
 
-CDErrorInjector::CDErrorInjector(double error_rate, RandType rand_type, FILE *logfile) 
+CDErrorInjector::CDErrorInjector(float error_rate, RandType rand_type, FILE *logfile) 
   : ErrorInjector(true, error_rate, rand_type, logfile) 
 {
   force_to_fail_ = false;
@@ -283,7 +350,7 @@ CDErrorInjector::CDErrorInjector(double error_rate, RandType rand_type, FILE *lo
 
 CDErrorInjector::CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, 
                                  std::initializer_list<uint32_t> task_list_to_fail, 
-                                 double error_rate) 
+                                 float error_rate) 
   : ErrorInjector(true, error_rate, kUniform, stdout) 
 {
   for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
@@ -300,7 +367,7 @@ CDErrorInjector::CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail
 
 CDErrorInjector::CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, 
                                  std::initializer_list<uint32_t> task_list_to_fail, 
-                                 double error_rate, RandType rand_type, FILE *logfile) 
+                                 float error_rate, RandType rand_type, FILE *logfile) 
   : ErrorInjector(true, error_rate, rand_type, logfile) 
 {
   for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
@@ -313,7 +380,7 @@ CDErrorInjector::CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail
 }
 
 CDErrorInjector::CDErrorInjector(uint32_t cd_to_fail, uint32_t task_to_fail, 
-                double error_rate, RandType rand_type, FILE *logfile) 
+                float error_rate, RandType rand_type, FILE *logfile) 
   : ErrorInjector(true, error_rate, rand_type, logfile) 
 {
   cd_to_fail_.push_back(cd_to_fail);
@@ -326,7 +393,7 @@ CDErrorInjector::CDErrorInjector(uint32_t cd_to_fail,
                                  uint32_t task_to_fail, 
                                  uint32_t rank_in_level, 
                                  uint32_t task_in_color,
-                                 double error_rate, 
+                                 float error_rate, 
                                  RandType rand_type, 
                                  FILE *logfile) 
   : ErrorInjector(error_rate, rand_type, logfile) 
@@ -340,7 +407,7 @@ CDErrorInjector::CDErrorInjector(uint32_t cd_to_fail,
 
 CDErrorInjector::CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, std::initializer_list<uint32_t> task_list_to_fail,
                 uint32_t rank_in_level, uint32_t task_in_color,
-                double error_rate, RandType rand_type, FILE *logfile) 
+                float error_rate, RandType rand_type, FILE *logfile) 
   : ErrorInjector(error_rate, rand_type, logfile) 
 {
   for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
@@ -361,7 +428,7 @@ void CDErrorInjector::RegisterTarget(uint32_t rank_in_level, uint32_t task_in_co
   task_in_color_ = task_in_color;
 }
 
-bool CDErrorInjector::InjectAndTest()
+uint64_t CDErrorInjector::Inject(void)
 {
   if(enabled_ == false) return false;
 
@@ -389,20 +456,14 @@ bool CDErrorInjector::InjectAndTest()
     return false; // if it reach this point. No tasks/CDs are registered to be failed.
                   // So, return false.
   }
-  double rand_var = rand_generator_->GenErrorVal();
-  bool error = threshold_ < rand_var;
-  CD_DEBUG("task #%d failed : %f(threshold) < %f(random var)\n", task_in_color_, threshold_, rand_var);
+  float rand_var = rand_generator_->GenErrorVal();
+  int error = error_rate_ < rand_var;
+  CD_DEBUG("task #%d failed : %f(error_rate) < %f(random var)\n", task_in_color_, error_rate_, rand_var);
   CD_DEBUG("EIE\n");
 
   enabled_ = false;
   return error;
 }
-
-
-
-
-
-
 
 /** @} */ // Ends error_injector
 

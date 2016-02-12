@@ -143,45 +143,77 @@ namespace cd {
 
 #define DEFAULT_MEDIUM kHDD
 
+#define FOUR_ARGS_MACRO(_IN0,_IN1,_IN2,_IN3,FUNC,...) FUNC
 #define THREE_ARGS_MACRO(_IN0,_IN1,_IN2,FUNC,...) FUNC
 #define TWO_ARGS_MACRO(_IN0,_IN1,FUNC,...) FUNC
 
 
 namespace cd {
 
-#define BIT_0  1        
-#define BIT_1  2        
-#define BIT_2  4        
-#define BIT_3  8        
-#define BIT_4  16       
-#define BIT_5  32       
-#define BIT_6  64       
-#define BIT_7  128      
-#define BIT_8  256      
-#define BIT_9  512      
-#define BIT_10 1024      
-#define BIT_11 2048      
-#define BIT_12 4096      
-#define BIT_13 8192      
-#define BIT_14 16384     
-#define BIT_15 32768     
-#define BIT_16 65536     
-#define BIT_17 131072    
-#define BIT_18 262144    
-#define BIT_19 524288    
-#define BIT_19 524288    
-#define BIT_20 1048576   
-#define BIT_21 2097152   
-#define BIT_22 4194304   
-#define BIT_23 8388608   
-#define BIT_24 16777216   
-#define BIT_25 33554432   
-#define BIT_26 67108864   
-#define BIT_27 134217728   
-#define BIT_28 268435456   
-#define BIT_29 536870912   
-#define BIT_30 1073741824   
-#define BIT_31 2147483648  
+#define BIT_0     0x0000000000000001  
+#define BIT_1     0x0000000000000002                       
+#define BIT_2     0x0000000000000004                       
+#define BIT_3     0x0000000000000008                       
+#define BIT_4     0x0000000000000010                       
+#define BIT_5     0x0000000000000020                       
+#define BIT_6     0x0000000000000040                       
+#define BIT_7     0x0000000000000080                       
+#define BIT_8     0x0000000000000100                       
+#define BIT_9     0x0000000000000200                       
+#define BIT_10    0x0000000000000400                       
+#define BIT_11    0x0000000000000800                       
+#define BIT_12    0x0000000000001000                       
+#define BIT_13    0x0000000000002000                       
+#define BIT_14    0x0000000000004000                       
+#define BIT_15    0x0000000000008000                       
+#define BIT_16    0x0000000000010000                       
+#define BIT_17    0x0000000000020000                       
+#define BIT_18    0x0000000000040000                       
+#define BIT_19    0x0000000000080000                       
+#define BIT_20    0x0000000000100000                       
+#define BIT_21    0x0000000000200000                       
+#define BIT_22    0x0000000000400000                       
+#define BIT_23    0x0000000000800000                       
+#define BIT_24    0x0000000001000000                       
+#define BIT_25    0x0000000002000000                       
+#define BIT_26    0x0000000004000000                       
+#define BIT_27    0x0000000008000000                       
+#define BIT_28    0x0000000010000000                       
+#define BIT_29    0x0000000020000000                       
+#define BIT_30    0x0000000040000000                       
+#define BIT_31    0x0000000080000000                       
+#define BIT_32    0x0000000100000000                       
+#define BIT_33    0x0000000200000000                       
+#define BIT_34    0x0000000400000000                       
+#define BIT_35    0x0000000800000000                       
+#define BIT_36    0x0000001000000000                       
+#define BIT_37    0x0000002000000000                       
+#define BIT_38    0x0000004000000000                       
+#define BIT_39    0x0000008000000000                       
+#define BIT_40    0x0000010000000000                       
+#define BIT_41    0x0000020000000000                       
+#define BIT_42    0x0000040000000000                       
+#define BIT_43    0x0000080000000000                       
+#define BIT_44    0x0000100000000000                       
+#define BIT_45    0x0000200000000000                       
+#define BIT_46    0x0000400000000000           
+#define BIT_47    0x0000800000000000                       
+#define BIT_48    0x0001000000000000                       
+#define BIT_49    0x0002000000000000                       
+#define BIT_50    0x0004000000000000                       
+#define BIT_51    0x0008000000000000                       
+#define BIT_52    0x0010000000000000           
+#define BIT_53    0x0020000000000000                       
+#define BIT_54    0x0040000000000000                       
+#define BIT_55    0x0080000000000000                       
+#define BIT_56    0x0100000000000000                       
+#define BIT_57    0x0200000000000000                       
+#define BIT_58    0x0400000000000000           
+#define BIT_59    0x0800000000000000                       
+#define BIT_60    0x1000000000000000                       
+#define BIT_61    0x2000000000000000                       
+#define BIT_62    0x4000000000000000                       
+#define BIT_63    0x8000000000000000                       
 
 #if CD_DEBUG_ENABLED
 //  extern std::ostringstream dbg;
@@ -246,20 +278,20 @@ namespace cd {
  *
  * \sa SysErrLocT, DeclareErrName(), UndeclareErrName()
  */
-  enum SysErrNameT  { kNoHWError=0,   //!< No errors/failures.
-                      kSoftMem=1,     //!< Soft memory error.
-                                      //!< (info includes address range and perhaps syndrome)
-                      kDegradedMem=2, //!< Hard memory error that disabled some memory capacity.
-                                      //!< (info includes address range(s))
-                      kSoftComm=4,    //!< Soft communication error.
-                                      //!< (info includes message info)
-                      kDegradedComm=8, //!< Some channel loss.
-                      kSoftComp=16,    //!< Soft compute error.
-                                       //!< (info includes affected PC and perhaps bounds on the error?)
-                      kDegradedResource=32, //!< Resource lost __some__ functionality.
-                      kHardResource=64, //!< Resource entirely lost.
-                                        //!< (control/reachability failure).
-                      kFileSys=128      //!< Some file system error.
+  enum SysErrNameT  { kNoHWError=0,             //!< No errors/failures.
+                      kSoftMem=BIT_0,           //!< Soft memory error.
+                                                //!< (info includes address range and perhaps syndrome)
+                      kDegradedMem=BIT_1,       //!< Hard memory error that disabled some memory capacity.
+                                                //!< (info includes address range(s))
+                      kSoftComm=BIT_2,          //!< Soft communication error.
+                                                //!< (info includes message info)
+                      kDegradedComm=BIT_3,      //!< Some channel loss.
+                      kSoftComp=BIT_4,          //!< Soft compute error.
+                                                //!< (info includes affected PC and perhaps bounds on the error?)
+                      kDegradedResource=BIT_5,  //!< Resource lost __some__ functionality.
+                      kHardResource=BIT_6,      //!< Resource entirely lost.
+                                                //!< (control/reachability failure).
+                      kFileSys=BIT_7            //!< Some file system error.
                     };
 
 /** @brief Type for specifying errors and failure location names
@@ -275,15 +307,15 @@ namespace cd {
  *
  * \sa SysErrNameT, DeclareErrLoc(), UndeclareErrLoc()
  */
-  enum SysErrLocT   { kNoSysErr=0,      //!< No errors/failures
-                      kIntraCore=1,     //!< Within a part of a core
-                      kCore=2,          //!< A core
-                      kProc=4,          //!< Processor
-                      kNode=8,          //!< Same as processor?
-                      kModule=16,       //!< Module
-                      kCabinet=32,      //!< A cabinet
-                      kCabinetGroup=64, //!< Some grouping of cabinets
-                      kSystem=128       //!< Entire system
+  enum SysErrLocT   { kNoSysErr=0,           //!< No errors/failures
+                      kIntraCore=BIT_16,     //!< Within a part of a core
+                      kCore=BIT_17,          //!< A core
+                      kProc=BIT_18,          //!< Processor
+                      kNode=BIT_19,          //!< Same as processor?
+                      kModule=BIT_20,        //!< Module
+                      kCabinet=BIT_21,       //!< A cabinet
+                      kCabinetGroup=BIT_22,  //!< Some grouping of cabinets
+                      kSystem=BIT_23         //!< Entire system
                     };
 
 /** @} */ // end of error_reporting
@@ -305,11 +337,11 @@ namespace cd {
  *
  * \sa RegenObject, CDHandle::Preserve()
  */
-  enum CDPreserveT  { kCopy=BIT_9, //!< Prevervation via copy copies
+  enum CDPreserveT  { kCopy=BIT_8, //!< Prevervation via copy copies
                                    //!< the data to be preserved into
                                    //!< another storage/mem location
                                    //!< Preservation via reference
-                      kRef=BIT_10, //!< Preservation via reference     
+                      kRef=BIT_9, //!< Preservation via reference     
                                   //!< indicates that restoration can
                                   //!< occur by restoring data that is
                                   //!< already preserved in another
@@ -317,23 +349,24 @@ namespace cd {
                                   //!< current version of the API only
                                   //!< the parent can be used as a
                                   //!< reference. 
-                      kRegen=BIT_11, //!< Preservation via regenaration
+                      kRegen=BIT_10, //!< Preservation via regenaration
                                     //!< is done by calling a
                                     //!< user-provided function to
                                     //!< regenerate the data during
                                     //!< restoration instead of copying
                                     //!< it from preserved storage.
-                      kCoop=BIT_12,  //!< This flag is used for preservation-via-reference 
+                      kCoop=BIT_11,  //!< This flag is used for preservation-via-reference 
                                     //!< in the case that the referred copy is in remote task.
                                     //!< This flag can be used with kCopy
                                     //!< such as kCopy | kCoop.
                                     //!< Then, this entry can be referred by lower level.
-                      kSerdes=BIT_13, //!< This flag indicates the preservation is done by
+                      kSerdes=BIT_12, //!< This flag indicates the preservation is done by
                                       //!< serialization, which mean it does not need to 
                                       //!< duplicate the data because serialized data is
                                       //!< already another form of preservation.
                                       //!< This can be used such as kCopy | kSerdes
-                      kReserved=BIT_14
+                      kReservedPrvT0=BIT_13,
+                      kReservedPrvT1=BIT_14
                     };
 /** @} */ // end of preservation_funcs
 
@@ -373,7 +406,6 @@ namespace cd {
                     kPFS=BIT_5,   //!< Preserve to Parallel File System
                     kReserveMedium0=BIT_6,  //!< Preserve to Parallel File System
                     kReserveMedium1=BIT_7,  //!< Preserve to Parallel File System
-                    kReserveMedium2=BIT_8   //!< Preserve to Parallel File System
                   };
 
 
@@ -653,14 +685,18 @@ I think there will be some problem...
 ISSUE 2 (Kyushick)
 We are increasing the number of reexecution inside Begin(). So, the point of time when we mark rollback point is not after Begin() but before Begin()
 */
-#define THREE_ARGS_MACRO(_IN0,_IN1,_IN2,FUNC,...) FUNC
-#define CD_Begin(...) THREE_ARGS_MACRO(__VA_ARGS__, CD_BEGIN3, CD_BEGIN2, CD_BEGIN1)(__VA_ARGS__)
+//#define THREE_ARGS_MACRO(_IN0,_IN1,_IN2,FUNC,...) FUNC
+//#define CD_Begin(...) THREE_ARGS_MACRO(__VA_ARGS__, CD_BEGIN2, CD_BEGIN1, CD_BEGIN0)(__VA_ARGS__)
+#define FOUR_ARGS_MACRO(_IN0,_IN1,_IN2,_IN3,FUNC,...) FUNC
+#define CD_Begin(...) FOUR_ARGS_MACRO(__VA_ARGS__, CD_BEGIN3, CD_BEGIN2, CD_BEGIN1, CD_BEGIN0)(__VA_ARGS__)
 
 // Macros for setjump / getcontext
 // So users should call this in their application, not call cd_handle->Begin().
-#define CD_BEGIN1(X) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
-#define CD_BEGIN2(X,Y) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y);
-#define CD_BEGIN3(X,Y,Z) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y,Z);
+#define CD_BEGIN0(X) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
+#define CD_BEGIN1(X,Y) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y);
+#define CD_BEGIN2(X,Y,Z) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y,Z);
+#define CD_BEGIN3(X,Y,Z,W) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y,Z,W);
+
 //#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
 #define CD_Complete(X) (X)->Complete()   
 

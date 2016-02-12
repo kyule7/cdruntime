@@ -164,6 +164,7 @@ Additional BSD Notice
 //#if _CD
 using namespace cd;
 //class DomainSerdes;
+int counter=0;
 Domain::DomainSerdes::SerdesInfo Domain::DomainSerdes::serdes_table[TOTAL_ELEMENT_COUNT];
 bool Domain::DomainSerdes::serdes_table_init = false; 
 //#endif
@@ -565,7 +566,7 @@ void IntegrateStressForElems( Domain &domain,
 #if SWITCH_5_1_1  > SEQUENTIAL_CD
    CDHandle *cdh_5_1_1 = GetCurrentCD()->Create(CD_MAP_5_1_1 >> CDFLAG_SIZE, 
                             (string("Loop_IntegrateStressForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
-                            CD_MAP_5_1_1 & CDFLAG_MASK); 
+                            CD_MAP_5_1_1 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_5_1_1)); 
 #elif SWITCH_5_1_1 == SEQUENTIAL_CD
    CDHandle *cdh_5_1_1 = GetCurrentCD();
    CD_Complete(cdh_5_1_1); 
@@ -916,7 +917,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
 #if SWITCH_7_0_0  > SEQUENTIAL_CD
    CDHandle *cdh_7_0_0 = GetCurrentCD()->Create(CD_MAP_7_0_0 >> CDFLAG_SIZE, 
                             (string("Loop_CalcFBHourglassForceForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
-                            CD_MAP_7_0_0 & CDFLAG_MASK); 
+                            CD_MAP_7_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_7_0_0)); 
 #elif SWITCH_7_0_0 == SEQUENTIAL_CD
    CDHandle *cdh_7_0_0 = GetCurrentCD();
    CD_Complete(cdh_7_0_0); 
@@ -1190,7 +1191,7 @@ void CalcHourglassControlForElems(Domain& domain,
 #if SWITCH_6_4_0  > SEQUENTIAL_CD
    CDHandle *cdh_6_4_0 = GetCurrentCD()->Create(CD_MAP_6_4_0 >> CDFLAG_SIZE, 
                             (string("Loop_CalcHourglassControlForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
-                            CD_MAP_6_4_0 & CDFLAG_MASK); 
+                            CD_MAP_6_4_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_6_4_0)); 
 #elif SWITCH_6_4_0 == SEQUENTIAL_CD
    CDHandle *cdh_6_4_0 = GetCurrentCD();
    CD_Complete(cdh_6_4_0); 
@@ -2969,7 +2970,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 #if SWITCH_4_5_0  > SEQUENTIAL_CD
     CDHandle *cdh_4_5_0 = GetCurrentCD()->Create(CD_MAP_4_5_0 >> CDFLAG_SIZE, 
                             (string("Loop_EvalEOSForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
-                            CD_MAP_4_5_0 & CDFLAG_MASK); 
+                            CD_MAP_4_5_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_4_5_0)); 
 #elif SWITCH_4_5_0 == SEQUENTIAL_CD
     CDHandle *cdh_4_5_0 = GetCurrentCD();
     CD_Complete(cdh_4_5_0); 
@@ -3510,15 +3511,13 @@ int main(int argc, char *argv[])
 #if SWITCH_0_0_0  > SEQUENTIAL_CD
    CDHandle *cdh_0_0_0 = root_cd->Create(CD_MAP_0_0_0 >> CDFLAG_SIZE, 
                                          (string("MainLoop")+root_cd->node_id().GetStringID()).c_str(), 
-                                         CD_MAP_0_0_0 & CDFLAG_MASK); 
+                                         CD_MAP_0_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_0_0_0)); 
 #elif SWITCH_0_0_0 == SEQUENTIAL_CD
    CD_Complete(root_cd); 
    CDHandle *cdh_0_0_0 = root_cd;
 #endif
-
    // Main loop start
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
-
       // Main functions in the loop
 #if SWITCH_0_0_0  > SEQUENTIAL_CD || SWITCH_0_0_0 == SEQUENTIAL_CD
       CD_Begin(cdh_0_0_0, false, "MainLoop"); 
@@ -3526,10 +3525,11 @@ int main(int argc, char *argv[])
       cdh_0_0_0->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "MainLoop"); 
 #endif
 
+      printf("\n\n== Loop %d ==================================\n\n", counter++); //getchar();
 #if SWITCH_1_1_0  > SEQUENTIAL_CD
       CDHandle *cdh_1_1_0 = GetLeafCD()->Create(CD_MAP_1_1_0 >> CDFLAG_SIZE, 
                                       (string("TimeIncrement")+GetLeafCD()->node_id().GetStringID()).c_str(), 
-                                       CD_MAP_1_1_0 & CDFLAG_MASK); 
+                                       CD_MAP_1_1_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_1_1_0)); 
       CD_Begin(cdh_1_1_0, false, "TimeIncrement"); 
       cdh_1_1_0->Preserve(locDom, sizeof(locDom), kCopy, "locDom_TimeIncrement");
 #elif SWITCH_1_1_0 == SEQUENTIAL_CD
@@ -3554,7 +3554,7 @@ int main(int argc, char *argv[])
 #if SWITCH_1_2_0  > SEQUENTIAL_CD
       CDHandle *cdh_1_2_0 = GetLeafCD()->Create(CD_MAP_1_2_0 >> CDFLAG_SIZE, 
                                       (string("LagrangeLeapFrog")+GetLeafCD()->node_id().GetStringID()).c_str(), 
-                                       CD_MAP_1_2_0 & CDFLAG_MASK); 
+                                       CD_MAP_1_2_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_1_2_0)); 
       CD_Begin(cdh_1_2_0, false, "LagrangeLeapFrog"); 
       cdh_1_2_0->Preserve(locDom, sizeof(locDom), kCopy, "locDom_LagrangeLeapFrog");
       cdh_1_2_0->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_LagrangeLeapFrog");

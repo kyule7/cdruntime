@@ -32,13 +32,14 @@ using namespace std;
 // CD
 #define SERDES_ENABLED 1
 
-#define CDFLAG_SIZE 6
-#define CDFLAG_MASK 0x3F
+#define CDFLAG_SIZE 16
+#define CDFLAG_MASK 0xFF
+#define ERROR_FLAG_SHIFT(X) (((X)>>8) & 0xFF)
 
 #define CDMAPPING_BEGIN_NESTED(SWITCH, CDH, FUNC_NAME, SERDES_OPS, CD_TYPE) \
   CDH = GetCurrentCD()->Create(SWITCH >> CDFLAG_SIZE, \
                                   (string(FUNC_NAME)+GetCurrentCD()->node_id().GetStringID()).c_str(), \
-                                   SWITCH & CDFLAG_MASK); \
+                                   SWITCH & CDFLAG_MASK, ERROR_FLAG_SHIFT(SWITCH)); \
   CD_Begin(CDH, false, FUNC_NAME); \
   CDH->Preserve(domain.serdes.SetOp(SERDES_OPS), \
                 CD_TYPE | kSerdes, (string("AllMembers_")+string(FUNC_NAME)).c_str()); 
@@ -698,6 +699,7 @@ class DomainSerdes : public Serializable {
     void *Serialize(uint64_t &len_in_bytes) {
       // User define whatever they want.
  //     printf("%s\n", __func__);
+      CD_DEBUG("LULESH %s\n", __func__);
       Packer packer;
       uint64_t vec = serdes_vec;
       uint32_t i=1;
@@ -726,12 +728,13 @@ class DomainSerdes : public Serializable {
         }
         i++;
         vec >>= 1;
-      }
+      } // while ends
+      return packer.GetTotalData(len_in_bytes);
     }
 
     virtual void Deserialize(void *object) {
       // Deserialize object and restore to each member.
-      printf("%s\n", __func__);
+      CD_DEBUG("LULESH %s, obj: %p\n", __func__, object);
       Unpacker unpacker;
       uint64_t vec = serdes_vec;
       uint32_t return_id = 0, return_size = 0;
@@ -740,8 +743,10 @@ class DomainSerdes : public Serializable {
 //        printf("loop i = %u, vec = %lu\n", i, vec);
         if(vec & 0x1) {
           if(i != ID__REGELEMLIST_INNER) {
+            CD_DEBUG("ID : %d\n", i);
             unpacker.GetNext((char *)object, return_id, return_size, false, serdes_table[i].src, serdes_table[i].size);
           } else {
+            CD_DEBUG("ID : %d (INNER)\n", i);
             Index_t &numRegSize = dom->numReg();
             for(int j=0; j<numRegSize; ++j) {
               unpacker.GetNext((char *)object, return_id, return_size, false, 

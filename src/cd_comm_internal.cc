@@ -80,6 +80,16 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, cons
 //    dbg<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
     int new_size=0, 
         new_task_id=0;
+
+    if(task_size() > 1) {
+      PMPI_Win_fence(0, ptr_cd_->mailbox_);
+    }
+    CheckMailBox();
+    if(CD::need_reexec) {
+      ptr_cd_->GetCDToRecover()->Recover();
+    }
+
+
     ColorT new_comm;
     PMPI_Comm_split(my_color, new_color, new_task, &new_comm);
     PMPI_Comm_size(new_comm, &new_size);
@@ -1457,8 +1467,14 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
     group_ranks[i] = i;
   }
 
+//  MPI_Group g = group();
+//  if(g == 0) {
+//    MPI_Comm_group(color(), &g);
+//  }
+//  assert(g);
 //  cout << "group : " << group() << " group rank : " << group_ranks[size-1] << " whole group : " << cd::whole_group << endl;
-  // Translate task IDs of CD to MPI_COMM_WORLD  
+
+  // Translate task IDs of CD to MPI_COMM_WORLD    
   status = MPI_Group_translate_ranks(group(), size, group_ranks, cd::whole_group, result_ranks);
 
 //  printf("\n\nRank #%d ----------------------------\n", myTaskID); 
@@ -1475,14 +1491,16 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
     }
   }
 
-  status = MPI_Group_translate_ranks(cd::whole_group, 1, &global_rank_id, group(), &local_rank_id);
+//  assert(g);
+//  status = MPI_Group_translate_ranks(cd::whole_group, 1, &global_rank_id, group(), &local_rank_id);
 //  if(status != MPI_SUCCESS) {
 //    // this case the task is not in the current group
 //    // it should return false
 //  }
 
-  printf("Translate rank_id = %d->%d->%d at %s, found? %d\n\n", target_id, global_rank_id, local_rank_id, GetCDID().GetString().c_str(), found);
-  if(target_id != local_rank_id) //getchar();
+  //printf("Translate rank_id = %d->%d->%d at %s, found? %d\n\n", 
+  //    target_id, global_rank_id, local_rank_id, GetCDID().GetString().c_str(), found);
+//  if(target_id != local_rank_id) //getchar();
   return found;
 }
 

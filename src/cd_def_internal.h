@@ -140,6 +140,32 @@ typedef uint32_t ENTRY_TAG_T;
 #define TAG_MASK(X) ((2<<(X-1)) - 1)
 #define TAG_MASK2(X) ((2<<(X-1)) - 2)
 
+#define ERROR_TYPE_0      0x00001 
+#define ERROR_TYPE_1      0x00002 
+#define ERROR_TYPE_2      0x00004 
+#define ERROR_TYPE_3      0x00008 
+#define ERROR_TYPE_4      0x00010 
+#define ERROR_TYPE_5      0x00020 
+#define ERROR_TYPE_6      0x00040 
+#define ERROR_TYPE_7      0x00080 
+//#define ERROR_RATE_TYPE_0 0.0005
+//#define ERROR_RATE_TYPE_1 0.001
+//#define ERROR_RATE_TYPE_2 0.02
+//#define ERROR_RATE_TYPE_3 0.04
+//#define ERROR_RATE_TYPE_4 0.06
+//#define ERROR_RATE_TYPE_5 0.08
+//#define ERROR_RATE_TYPE_6 0.1
+//#define ERROR_RATE_TYPE_7 0.15
+#define ERROR_RATE_TYPE_0 0.002
+#define ERROR_RATE_TYPE_1 0.004
+#define ERROR_RATE_TYPE_2 0.006
+#define ERROR_RATE_TYPE_3 0.008
+#define ERROR_RATE_TYPE_4 0.01
+#define ERROR_RATE_TYPE_5 0.02
+#define ERROR_RATE_TYPE_6 0.04
+#define ERROR_RATE_TYPE_7 0.05
+#define ROOT_SYS_DETECT_VEC 0xFFFFFFFFFFFFFFFF
+
 //GONG: global variable to represent the current context for malloc wrapper
 namespace cd {
 
@@ -483,13 +509,13 @@ extern FILE *cdoutApp;
   fprintf(cdout, __VA_ARGS__)
 
 
-#define LOG_DEBUG(...) /*\
+#define LOG_DEBUG(...) \
   { if(cd::app_side) {\
       cd::app_side=false;\
-      fprintf(stdout, __VA_ARGS__);\
+      fprintf(cdout, __VA_ARGS__);\
       cd::app_side = true;}\
-    else fprintf(stdout, __VA_ARGS__);\
-  }*/
+    else fprintf(cdout, __VA_ARGS__);\
+  }
 
 #define LIBC_DEBUG(...) /*\
     { if(cd::app_side) {\

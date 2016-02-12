@@ -111,7 +111,7 @@ private:
   *
   * \return Pointer to the CDHandle at the leaf CD level.
   */
-  static CDHandle* GetCurrentCD(void) 
+  static CDHandle *GetCurrentCD(void) 
   {
     //printf("GetCurrentCD is called\n");
     if(uniquePath_ != NULL ) {
@@ -136,7 +136,7 @@ private:
   *
   * \return Pointer to the CDHandle at the leaf CD level.
   */
-  static CDHandle* GetLeafCD(void) 
+  static CDHandle *GetLeafCD(void) 
   {
     //printf("GetCurrentCD is called\n");
     if(uniquePath_ != NULL ) {
@@ -152,7 +152,7 @@ private:
   *
   * \return Pointer to CDHandle of root
   */
-  static CDHandle* GetRootCD(void)    
+  static CDHandle *GetRootCD(void)    
   { 
     if(uniquePath_ != NULL) { 
       if( !uniquePath_->empty() ) {
@@ -166,7 +166,7 @@ private:
   *
   * \return Pointer to CDHandle of parent
   */
-  static CDHandle* GetParentCD(void)
+  static CDHandle *GetParentCD(void)
   { 
     if(uniquePath_ != NULL) {
       if( uniquePath_->size() > 1 ) {
@@ -180,7 +180,7 @@ private:
   *
   * \return Pointer to CDHandle of parent
   */
-  static CDHandle* GetParentCD(int current_level)
+  static CDHandle *GetParentCD(int current_level)
   { 
     CD_DEBUG("CDPath::GetParentCD current level : %d\n", current_level);
 //    //printf("CDPath::GetParentCD current level : %d at %d\n", current_level, myTaskID);
@@ -203,7 +203,7 @@ private:
   *
   * \return Pointer to CDHandle at a level
   */
-  static CDHandle* GetCDLevel(int level)
+  static CDHandle *GetCDLevel(int level)
   { 
     if(uniquePath_ != NULL) {
       if( uniquePath_->size() > 1 ) {

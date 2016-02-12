@@ -51,6 +51,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_global.h"
 #include <vector>
+#include <map>
 //#include "cd_def_internal.h" 
 
 namespace cd {
@@ -226,7 +227,12 @@ public:
   char* printSysErrInfo(void) { return NULL; } 
 };
 
-
+struct SystemConfig {
+  std::map<uint64_t, float> failure_rate_;
+  float &operator[](const uint64_t &idx) {
+    return failure_rate_[idx];
+  }
+};
 
 
 /** @brief Create a new error/failure type name

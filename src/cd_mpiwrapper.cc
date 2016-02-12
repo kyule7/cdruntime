@@ -520,7 +520,7 @@ int MPI_Isend(const void *buf,
     MPI_Comm_group(comm, &g);
     switch (cdp->GetCDLoggingMode()) {
       case kStrictCD: {
-        printf("test send: strict CD\t"); cdp->CheckIntraCDMsg(dest, g);
+//        printf("test send: strict CD\t"); cdp->CheckIntraCDMsg(dest, g);
         mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
         break;
       }
@@ -2389,6 +2389,12 @@ int MPI_Finalize(void)
   
   app_side = true;
   return mpi_ret;
+}
+int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],
+                              MPI_Group group2, int ranks2[]) {
+  assert(group2);
+  return PMPI_Group_translate_ranks(group1, n, ranks1,
+                                    group2, ranks2);
 }
 //// -------------------------------------------------------------------------------------------------------
 //// persistent communication requests

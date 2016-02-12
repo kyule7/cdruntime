@@ -76,6 +76,9 @@ FILE *cdoutApp=NULL;
 
 #if CD_ERROR_INJECTION_ENABLED
 MemoryErrorInjector *CDHandle::memory_error_injector_ = NULL;
+SystemErrorInjector *CDHandle::system_error_injector_ = NULL;
+#define CHECK_SYS_ERR_VEC(X,Y) \
+  (((X) & (Y)) == (X))
 #endif
 
 
@@ -107,8 +110,22 @@ int  cd::max_tag_rank_bit  = 0;
 int cd::myTaskID = 0;
 int cd::totalTaskSize = 1;
 
+cd::SystemConfig cd::CDHandle::system_config_;
 namespace cd {
 // Global functions -------------------------------------------------------
+
+void LoadSystemConfig(SystemConfig &system_config)
+{
+  system_config[ERROR_TYPE_0]  = ERROR_RATE_TYPE_0;
+  system_config[ERROR_TYPE_1]  = ERROR_RATE_TYPE_1;
+  system_config[ERROR_TYPE_2]  = ERROR_RATE_TYPE_2;
+  system_config[ERROR_TYPE_3]  = ERROR_RATE_TYPE_3;
+  system_config[ERROR_TYPE_4]  = ERROR_RATE_TYPE_4;
+  system_config[ERROR_TYPE_5]  = ERROR_RATE_TYPE_5;
+  system_config[ERROR_TYPE_6]  = ERROR_RATE_TYPE_6;
+  system_config[ERROR_TYPE_7]  = ERROR_RATE_TYPE_7;
+}
+
 /// KL
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
@@ -116,6 +133,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   CDPrologue();
   myTaskID      = myTask;
   totalTaskSize = numTask;
+
+  LoadSystemConfig(CDHandle::system_config_);
 
   string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
 #if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
@@ -153,8 +172,6 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //  dbg_basepath = dbg_basepath + log_filename + to_string(static_cast<unsigned long long>(myTaskID));
 
   cdout = fopen(dbg_filepath, "w");
-
-
  
 #endif
 
@@ -190,10 +207,10 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask); 
   CD::CDInternalErrT internal_err;
-  CDHandle* root_cd_handle = CD::CreateRootCD("Root", CDID(CDNameT(0), new_node_id), 
+  CDHandle *root_cd_handle = CD::CreateRootCD("Root", CDID(CDNameT(0), new_node_id), 
                                               static_cast<CDType>(kStrict | prv_medium), 
                                               FilePath::prv_basePath_, 
-                                              0, &internal_err);
+                                              ROOT_SYS_DETECT_VEC, &internal_err);
 
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
@@ -205,6 +222,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #if CD_ERROR_INJECTION_ENABLED
   // To be safe
   CDHandle::memory_error_injector_ = NULL;
+  CDHandle::system_error_injector_ = new SystemErrorInjector(CDHandle::system_config_);
 #endif
 
 #if CD_DEBUG_ENABLED
@@ -254,6 +272,9 @@ void CD_Finalize(void)
 #if CD_ERROR_INJECTION_ENABLED
   if(CDHandle::memory_error_injector_ != NULL);
     delete CDHandle::memory_error_injector_;
+
+  if(CDHandle::system_error_injector_ != NULL);
+    delete CDHandle::system_error_injector_;
 #endif
 
   cd::internal::Finalize();
@@ -355,7 +376,7 @@ int SplitCD_3D(const int& my_task_id,
 //               int& new_task);
 
 CDHandle::CDHandle()
-  : ptr_cd_(0), node_id_()
+  : ptr_cd_(0), node_id_(), ctxt_(CDPath::GetRootCD()->ctxt_)
 {
   SplitCD = &SplitCD_3D;
 
@@ -390,7 +411,7 @@ CDHandle::CDHandle()
 /// clear children list
 /// request to add me as a children to parent (to Head CD object)
 CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id) 
-  : ptr_cd_(ptr_cd), node_id_(node_id)
+  : ptr_cd_(ptr_cd), node_id_(node_id), ctxt_(ptr_cd->ctxt_)
 {
   SplitCD = &SplitCD_3D;
 
@@ -445,7 +466,7 @@ void CDHandle::Init(CD *ptr_cd, const NodeID& node_id)
 }
 
 // Non-collective
-CDHandle* CDHandle::Create(const char *name, 
+CDHandle *CDHandle::Create(const char *name, 
                            int cd_type, 
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
@@ -469,7 +490,7 @@ CDHandle* CDHandle::Create(const char *name,
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
-  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
+  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
   
@@ -501,7 +522,7 @@ NodeID CDHandle::GenNewNodeID(const int &new_head)
 
 
 // Collective
-CDHandle* CDHandle::Create(uint32_t  num_children,
+CDHandle *CDHandle::Create(uint32_t  num_children,
                            const char* name, 
                            int cd_type, 
                            uint32_t error_name_mask, 
@@ -584,7 +605,7 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
-  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
+  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
@@ -607,7 +628,7 @@ CDHandle* CDHandle::Create(uint32_t  num_children,
 
 
 // Collective
-CDHandle* CDHandle::Create(uint32_t color, 
+CDHandle *CDHandle::Create(uint32_t color, 
                            uint32_t task_in_color, 
                            uint32_t num_children, 
                            const char* name, 
@@ -638,7 +659,7 @@ CDHandle* CDHandle::Create(uint32_t color,
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
-  CDHandle* new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
+  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
 
@@ -656,7 +677,7 @@ CDHandle* CDHandle::Create(uint32_t color,
 }
 
 
-CDHandle* CDHandle::CreateAndBegin(uint32_t num_children, 
+CDHandle *CDHandle::CreateAndBegin(uint32_t num_children, 
                                    const char* name, 
                                    int cd_type, 
                                    uint32_t error_name_mask, 
@@ -664,7 +685,7 @@ CDHandle* CDHandle::CreateAndBegin(uint32_t num_children,
                                    CDErrT *error )
 {
   CDPrologue();
-  CDHandle* new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
+  CDHandle *new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
   new_cdh->Begin(false, name);
   CDEpilogue();
   return new_cdh;
@@ -726,10 +747,13 @@ CDErrT CDHandle::InternalDestroy(bool collective)
 }
 
 
-CDErrT CDHandle::Begin(bool collective, const char* label)
+CDErrT CDHandle::Begin(bool collective, const char *label, const uint64_t &sys_error_vec)
 {
   CDPrologue();
   assert(ptr_cd_ != 0);
+  if(sys_error_vec != 0) // sys_error_vec is zero, then do not update it in Begin.
+    ptr_cd_->sys_detect_bit_vector_ = sys_error_vec;
+
   CDErrT err = ptr_cd_->Begin(collective, label);
 
 
@@ -1032,14 +1056,14 @@ bool CDHandle::operator==(const CDHandle &other) const
 CDErrT CDHandle::Stop()
 { return ptr_cd_->Stop(); }
 
-CDErrT CDHandle::AddChild(CDHandle* cd_child)
+CDErrT CDHandle::AddChild(CDHandle *cd_child)
 {
   CDErrT err=INITIAL_ERR_VAL;
   ptr_cd_->AddChild(cd_child);
   return err;
 }
 
-CDErrT CDHandle::RemoveChild(CDHandle* cd_child)  
+CDErrT CDHandle::RemoveChild(CDHandle *cd_child)  
 {
   CDErrT err=INITIAL_ERR_VAL;
   ptr_cd_->RemoveChild(cd_child);
@@ -1063,7 +1087,7 @@ CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 
 #if CD_ERROR_INJECTION_ENABLED
   if(cd_error_injector_ != NULL) {
-    if(cd_error_injector_->InjectAndTest()) {
+    if(cd_error_injector_->Inject()) {
       test = false;
       err = kAppError;
     }
@@ -1113,20 +1137,22 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
   std::vector<SysErrT> ret_prepare;
   CDErrT err = kOK;
-  CD::CDInternalErrT internal_err = ptr_cd_->Detect();
+  int rollback_point = -1;
 
-  if(internal_err == CD::CDInternalErrT::kErrorReported) {
-    err = kError;
-  }
+  int err_desc = (int)ptr_cd_->Detect(rollback_point);
+#if CD_ERROR_INJECTION_ENABLED
+  err_desc = CheckErrorOccurred(rollback_point);
+#endif
 
 #if CD_MPI_ENABLED
 
-  if(internal_err == CD::CDInternalErrT::kErrorReported) {
-    cddbg << "HERE?" << endl;
-    SetMailBox(kErrorOccurred);
+  if(err_desc == CD::CDInternalErrT::kErrorReported) {
+    err = kError;
+    cddbg << "Here? rollback from "<< rollback_point << endl;
+    //cout << "Here? rollback from "<< rollback_point << endl;
+    CDPath::GetCDLevel(rollback_point)->SetMailBox(kErrorOccurred);
     err = kAppError;
     
-//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
 //    Sync(CDPath::GetCoarseCD(this)->color());
 //    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 
@@ -1140,8 +1166,8 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
       CD_DEBUG("EIE It is after : reexec # : %d, exec mode : %d at level #%u\n", ptr_cd_->num_reexecution_, GetExecMode(), level());
       CD_DEBUG("recreated? %d, recreated? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
       //cout << cd_error_injector_ << " " << ptr_cd_<< endl;
-      //cout << cd_error_injector_->InjectAndTest() << " " << ptr_cd_->recreated() << " " << ptr_cd_->reexecuted() << endl;
-      if(cd_error_injector_->InjectAndTest() && ptr_cd_->recreated() == false && ptr_cd_->reexecuted() == false) {
+      //cout << cd_error_injector_->Inject() << " " << ptr_cd_->recreated() << " " << ptr_cd_->reexecuted() << endl;
+      if(cd_error_injector_->Inject() && ptr_cd_->recreated() == false && ptr_cd_->reexecuted() == false) {
         CD_DEBUG("EIE Reached SetMailBox. recreated? %d, reexecuted? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
         SetMailBox(kErrorOccurred);
         err = kAppError;
@@ -1176,41 +1202,8 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   CheckMailBox();
 
 
-  if(IsHead()) { 
-
-//    Sync(CDPath::GetCoarseCD(this)->color());
-//    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-//
-//    CheckMailBox();
-//    
-//    Sync(CDPath::GetCoarseCD(this)->color());
-//    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
-//    CheckMailBox();
-//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
-    
-  }
-  else {
-    
-//    Sync(CDPath::GetCoarseCD(this)->color());
-//    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-//    
-//    
-//    Sync(CDPath::GetCoarseCD(this)->color());
-//    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 2 (Head) - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-    
-//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
-//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
-    CheckMailBox();
-
-  }
-
 #endif
 
-//  if(IsHead() && ptr_cd()->GetCDID().level() == 1) {
-//    ptr_cd_->HandleAllResume(this);
-//    cout <<"============ Resumed ================" << endl;
-//  }
   if(err_ret_val != NULL)
     *err_ret_val = err;
 
@@ -1268,8 +1261,32 @@ float CDHandle::RequireErrorProbability (SysErrT error_type, uint32_t error_num,
 
 
 #if CD_ERROR_INJECTION_ENABLED
-inline void CDHandle::RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
-{ memory_error_injector_ = memory_error_injector; }
+//void CDHandle::RegisterErrorInjector(const ErrorType &error_type, ErrorInjector *error_injector)
+//{
+//  app_side = false;
+//
+//  CD_DEBUG("RegisterErrorInjector: %d at level #%u\n", GetExecMode(), level());
+//  if(cd_error_injector_ == NULL) {
+//    if( recreated() == false && reexecuted() == false ) {
+//      CD_DEBUG("Registered!!\n");
+//      error_injector_dir_[error_type] = error_injector;
+//    }
+//    else {
+//      CD_DEBUG("Failed to be Registered!!\n");
+//      delete cd_error_injector;
+//    }
+//  }
+//  else {
+//    CD_DEBUG("No injector registered!!\n");
+//  }
+//
+//  error_injector_dir_[error_type] = error_injector;
+//
+//  app_side = true;
+//}
+
+void CDHandle::RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
+{ CDHandle::memory_error_injector_ = memory_error_injector; }
 
 void CDHandle::RegisterErrorInjector(CDErrorInjector *cd_error_injector)
 {
@@ -1287,25 +1304,38 @@ void CDHandle::RegisterErrorInjector(CDErrorInjector *cd_error_injector)
   }
   app_side = true;
 }
-#endif
-//void CDHandle::RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
-//{ CDHandle::memory_error_injector_ = memory_error_injector; }
-//
-//
-//inline void CDHandle::RegisterErrorInjector(CDErrorInjector *cd_error_injector)
-//{
-//  cd_error_injector_ = cd_error_injector;
-//  cd_error_injector_->task_in_color_ = task_in_color();
-//  cd_error_injector_->rank_in_level_ = rank_in_level();
-//}
 
-//CDEntry *CDHandle::InternalGetEntry(std::string entry_name)
-//{
-//  ENTRY_TAG_T entry_tag = cd_hash(entry_name);
-//  tag2str[entry_tag] = entry_tag;
-//  return ptr_cd_->InternalGetEntry(entry_tag);
-//  //FIXME need some way to ask to accomplish this functionality...  // Remote request
-//}
+
+int CDHandle::CheckErrorOccurred(int &rollback_point)
+{
+  uint64_t sys_err_vec = system_error_injector_->Inject();
+  bool found = false;
+  //cout << "sys_err_vec " << sys_err_vec << endl;
+  CD_DEBUG("[%s] sys_err_vec : %lx\n", __func__, sys_err_vec);
+  if(sys_err_vec == NO_ERROR_INJECTED) {
+    return (int)CD::CDInternalErrT::kOK;
+  } else {
+    CDHandle *cdh = this;
+    // Find CD level that claimed "the raised sys_err_vec is covered."
+    // If sys_err_vec > 
+    while(cdh != NULL) {
+
+      printf("CHECK %lx %lx = %d\n", sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_));
+      if(CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_)) {
+        rollback_point = cdh->level();
+        found = true;
+        CD_DEBUG("\nFOUND LEVEL FOR REEXEC \n");
+        printf("\nFOUND LEVEL FOR REEXEC at #%d\n", rollback_point);
+        break;
+      }
+      cdh = CDPath::GetParentCD(cdh->level());
+    }
+    if(found == false) assert(0);
+    return (int)CD::CDInternalErrT::kErrorReported;
+  }
+}
+
+#endif
 
 void CDHandle::Recover (uint32_t error_name_mask, 
                         uint32_t error_loc_mask, 
@@ -1314,11 +1344,6 @@ void CDHandle::Recover (uint32_t error_name_mask,
   // STUB
 }
 
-//CDErrT CDHandle::SetPGASType (void *data_ptr, uint64_t len, CDPGASUsageT region_type)
-//{
-//   // STUB
-//  return kOK;
-//}
 
 int CDHandle::ctxt_prv_mode()
 {
@@ -1337,7 +1362,7 @@ void CDHandle::CommitPreserveBuff()
 //  cddbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << endl; cddbgBreak();
   }
   else {
-    ptr_cd_->ctxt_ = this->ctxt_;
+//    ptr_cd_->ctxt_ = this->ctxt_;
   }
 //  }
   CDEpilogue();
@@ -1348,18 +1373,22 @@ uint64_t CDHandle::SetSystemBitVector(uint64_t error_name_mask, uint64_t error_l
 {
   uint64_t sys_bit_vec = 0;
   if(error_name_mask == 0) {
-
+    // STUB
   }
   else {
-
+    // STUB
   }
 
   if(error_loc_mask == 0) {
-
+    // STUB
   }
   else {
-
+    // STUB
   }
+
+  // FIXME
+  sys_bit_vec = error_name_mask | error_loc_mask;
+
   return sys_bit_vec;
 }
 
@@ -1382,6 +1411,7 @@ CDErrT CDHandle::CheckMailBox(void)
 CDErrT CDHandle::SetMailBox(CDEventT event)
 {
 #if CD_MPI_ENABLED
+  CD_DEBUG("%s at level #%u\n", __func__, level());
   return ptr_cd()->SetMailBox(event);
 #else
   return kOK;

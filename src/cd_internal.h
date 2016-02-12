@@ -374,8 +374,8 @@ update the preserved data.
                     const RegenObject *regen_object=0, 
                     PreserveUseT data_usage=kUnsure);
   
-    CDInternalErrT Detect(); 
-    CDErrT Restore();
+    CDInternalErrT Detect(int &rollback_point); 
+    CDErrT Restore(void);
   
 //  DISCUSS: Jinsuk: About longjmp setjmp: By running some experiement, 
 //  I confirm that this only works when stack is just there. 
@@ -552,6 +552,8 @@ public:
     virtual void Deserialize(void* object) {
     }
 
+    CD *GetCDToRecover(void);
+    CDInternalErrT CompleteLogs(void);
 #if CD_LIBC_LOG_ENABLED
 public:
     //GONG: duplicated for libc logging
@@ -653,9 +655,9 @@ class HeadCD : public CD {
     /// If children CD is gone, this Head CD sends children CD.
     /// So, when we create CDs, 
     /// we should send Head CDHandle and its CD to its parent CD
-    std::list<CDHandle*> cd_children_;
+    std::list<CDHandle *> cd_children_;
 
-    CDHandle*            cd_parent_;
+    CDHandle *cd_parent_;
 
 //    std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     // event related

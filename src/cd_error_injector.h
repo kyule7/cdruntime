@@ -1,5 +1,44 @@
+#ifndef _ERROR_INJECTOR_H
+#define _ERROR_INJECTOR_H
+
+#include "error_injector.h"
+#include "sys_err_t.h"
+
+class SystemErrorInjector : public ErrorInjector {
+  SystemConfig &system_config;
+  clock_t prev_clk_;
+
+  MultiErrorInjector(SystemConfig &sc)
+  {
+    system_config = sc;
+    prev_clk_ = clock();
+  }
+
+  int Inject(void) {
+    for(auto it!=system_config.begin(); it!=system_config.end(); ++it) {
+      InjectError();      
+
+    }
+    CDHandle *cdh = cdh_;
+    while(cdh != NULL) {
+      cdh->error_injector_->Inject(cdh->failure_rate());
+      cdh = GetParentCD(cdh->level());
+    }
+  }
+
+  // Specialize error prob for specific CD granularity or task set
+  // It is only valid at the current CD level where it is called
+  void TestTargetToFail(std::initializer_list<uint32_t> cd_list_to_fail, 
+                        std::initializer_list<uint32_t> task_list_to_fail, 
+                        float error_rate)
+  {
+    err_desc = new CDErrorDesc(cd_list_to_fail, task_list_to_fail, error_rate);
+  }
+};
 
 
+
+/*
 class ErrorInjector {
 public:
   enum RandType { kUniform = 0,
@@ -118,3 +157,6 @@ public:
   }
 
 }
+*/
+
+#endif

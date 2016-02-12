@@ -209,9 +209,11 @@ class CDHandle {
     CD    *ptr_cd_;   //!< Pointer to CD object which will not exposed to users.
     NodeID node_id_;  //!< NodeID contains the information to access to the task.
 
+    static SystemConfig system_config_;
 #if CD_ERROR_INJECTION_ENABLED
     CDErrorInjector *cd_error_injector_; //!< Error injector interface.
     static MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.
+    static SystemErrorInjector *system_error_injector_; //!< Error injector interface.
 #endif
 
     SplitFuncT SplitCD; //!<function object that will be set to some appropriate split strategy.
@@ -224,7 +226,7 @@ class CDHandle {
 
     int     jmp_val_;     //!< Temporary flag related to longjmp/setjmp
     jmp_buf jmp_buffer_;  //!< Temporary buffer related to longjmp/setjmp
-    ucontext_t ctxt_;     //!< Temporary buffer related to setcontext/getcontext
+    ucontext_t &ctxt_;     //!< Temporary buffer related to setcontext/getcontext
 
   private:
     CDHandle(); //!< Default constructor of CDHandle. 
@@ -268,7 +270,7 @@ class CDHandle {
  * child CD.\n Returns 0 on an error (error code returned in a parameter).
  *
  */
-    CDHandle* Create(const char* name=0, //!< [in] Optional user-specified
+    CDHandle *Create(const char* name=0, //!< [in] Optional user-specified
                                          //!< name that can be used to "re-create" the same CD object
                                          //!< if it was not destroyed yet; useful for resuing preserved
                                          //!< state in CD trees that are not loop based.
@@ -300,7 +302,7 @@ class CDHandle {
  *         Returns 0 on an error.
  *
  */
-    CDHandle* Create(uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
+    CDHandle *Create(uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
                                              //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
                      const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                        //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
@@ -336,7 +338,7 @@ class CDHandle {
  * child CD; returns 0 on an error.
  *
  */
-    CDHandle* Create(uint32_t color,              //!< [in] The "color" of the new child to which this task will belong to.
+    CDHandle *Create(uint32_t color,              //!< [in] The "color" of the new child to which this task will belong to.
                      uint32_t task_in_color, //!< [in] The total number of tasks that are collectively creating
                                                   //!< the child numbered "color"; the collective waits for this number
                                                   //!< of tasks to arrive before creating the child.
@@ -374,7 +376,7 @@ class CDHandle {
  * child CD; returns 0 on an error.
  *
  */
-    CDHandle* CreateAndBegin(uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
+    CDHandle *CreateAndBegin(uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
                                              //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
                              const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                                //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
@@ -431,7 +433,8 @@ class CDHandle {
     CDErrT Begin(bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                       //!< contained by this CD or whether its to be run by a single task 
                                       //!< only with the programmer responsible for synchronization. 
-                 const char* label=NULL
+                 const char* label=NULL,
+                 const uint64_t &sys_err_vec=0
                 );
 
   /** @brief Completes a CD 
@@ -925,7 +928,6 @@ class CDHandle {
 
 #if CD_ERROR_INJECTION_ENABLED
     inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector);
-//    { memory_error_injector_ = memory_error_injector; }
 #else
 //    inline void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector) {}
 #endif
@@ -946,21 +948,6 @@ class CDHandle {
  */
 #if CD_ERROR_INJECTION_ENABLED
     void RegisterErrorInjector(CDErrorInjector *cd_error_injector);
-//    {
-//      app_side = false;
-//      CD_DEBUG("RegisterErrorInjector: %d at level #%u\n", GetExecMode(), level());
-//      if(cd_error_injector_ == NULL && recreated() == false && reexecuted() == false) {
-//        CD_DEBUG("Registered!!\n");
-//        cd_error_injector_ = cd_error_injector;
-//        cd_error_injector_->task_in_color_ = task_in_color();
-//        cd_error_injector_->rank_in_level_ = rank_in_level();
-//      }
-//      else {
-//        CD_DEBUG("Failed to be Registered!!\n");
-//        delete cd_error_injector;
-//      }
-//      app_side = true;
-//    }
 #else
     void RegisterErrorInjector(CDErrorInjector *cd_error_injector) {}
 #endif
@@ -1066,18 +1053,20 @@ class CDHandle {
     CDErrT InternalDestroy(bool collective);
 
 /// Add children CD to my CD.
-    CDErrT AddChild(CDHandle* cd_child);
+    CDErrT AddChild(CDHandle *cd_child);
 
 /// Delete a child CD in my children CD list
-    CDErrT RemoveChild(CDHandle* cd_child);  
+    CDErrT RemoveChild(CDHandle *cd_child);  
     
 /// Stop every task in this CD
     CDErrT Stop(void);
   
-
+#if CD_ERROR_INJECTION_ENABLED
+    int CheckErrorOccurred(int &rollback_point);
+#endif
 /// Set bit vector for error types to handle in this CD.
     uint64_t SetSystemBitVector(uint64_t error_name_mask, 
-                                uint64_t error_loc_mask);
+                                uint64_t error_loc_mask=0);
 
 
 

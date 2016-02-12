@@ -68,7 +68,7 @@
 /* doRecv flag only works with regular block structure */
 void CommRecv(Domain& domain, int msgType, Index_t xferFields,
               Index_t dx, Index_t dy, Index_t dz, bool doRecv, bool planeOnly) {
-  printf("Check %s\n", __func__);
+  //printf("Check %s\n", __func__);
    if (domain.numRanks() == 1)
       return ;
 
@@ -368,7 +368,7 @@ void CommSend(Domain& domain, int msgType,
               Index_t xferFields, Domain_member *fieldData,
               Index_t dx, Index_t dy, Index_t dz, bool doSend, bool planeOnly)
 {
-  printf("Check %s\n", __func__);
+  //printf("Check %s\n", __func__);
 
    if (domain.numRanks() == 1)
       return ;

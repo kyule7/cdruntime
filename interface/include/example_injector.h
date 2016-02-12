@@ -39,10 +39,10 @@ typedef struct InjectedError{
 } InjectedError;
 
 class ExampleInjector : public MemoryErrorInjector {
-  int64_t        ARange; //allocated size of range array
-  int64_t        CRange; //allocate Range in chunks of size CRange
-  int64_t        NRange; //length of Range array
-  ErrorRange *Range; //array of data blocks where errors may be injected
+  int64_t     ARange; //allocated size of range array
+  int64_t     CRange; //allocate Range in chunks of size CRange
+  int64_t     NRange; //length of Range array
+  ErrorRange *Range;  //array of data blocks where errors may be injected
   int64_t    TotalRange; //total data size of all elements in Range
 
   //These are the soft errors
@@ -211,7 +211,7 @@ public:
   }
   
 
-  void Inject(){
+  virtual int Inject(void){
 
     if( enabled_==false ) return;
     double tnow = gtod();
@@ -253,7 +253,7 @@ public:
       HardError_tLast = tnow;
    }
 
-    return;
+    return 0;
   }
       
 };

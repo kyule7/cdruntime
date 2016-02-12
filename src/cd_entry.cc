@@ -77,19 +77,25 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
 
 
 
-CDEntry::CDEntryErrT CDEntry::Save(void) {
+CDEntry::CDEntryErrT CDEntry::Save(void) 
+{
   uint32_t prv_medium = MASK_MEDIUM(preserve_type_);
 
-  if( CHECK_PRV_TYPE(prv_medium, kDRAM) ) {
-    return SaveMem();
-  } else if( (CHECK_PRV_TYPE(prv_medium, kHDD)) || (CHECK_PRV_TYPE(prv_medium,kSSD)) ) {
-    return SaveFile();
-  } else if( CHECK_PRV_TYPE(prv_medium, kPFS)) {
-    return SavePFS();
-  } else {
-    ERROR_MESSAGE("wrong preserve medium : %u\n", prv_medium);
+  if(CHECK_PRV_TYPE(preserve_type_, kSerdes) == false) {
+    if( CHECK_PRV_TYPE(prv_medium, kDRAM) ) {
+      return SaveMem();
+    } else if( (CHECK_PRV_TYPE(prv_medium, kHDD)) || (CHECK_PRV_TYPE(prv_medium,kSSD)) ) {
+      return SaveFile();
+    } else if( CHECK_PRV_TYPE(prv_medium, kPFS)) {
+      return SavePFS();
+    } else {
+      ERROR_MESSAGE("wrong preserve medium : %u\n", prv_medium);
+    }
   }
-
+  else {
+    CD_DEBUG("[%s] SERDES\n", __func__);
+    return CDEntryErrT::kOK;
+  }
 }
 
 CDEntry::CDEntryErrT CDEntry::SaveMem(void)
