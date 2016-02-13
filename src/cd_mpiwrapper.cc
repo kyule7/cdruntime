@@ -530,9 +530,9 @@ int MPI_Isend(const void *buf,
   
         // KYU: Intra-CD msg check
         if(cdp->CheckIntraCDMsg(dest, g)) {
-          printf("Intra-CD message\n");
+          //printf("Intra-CD message\n");
         } else { // Log message for inter-CD communication
-          printf("Inter-CD message\n");
+          //printf("Inter-CD message\n");
         }
         cdp->LogData(buf, 0, dest, false, (unsigned long)request, 0, false, cdp->CheckIntraCDMsg(dest, g));
         break;
@@ -603,13 +603,13 @@ int MPI_Irecv(void *buf,
   
         // KYU: Intra-CD msg check
         if(cdp->CheckIntraCDMsg(src, g)) { // Do not log for intra-CD msg
-          printf("Intra-CD message\n");
+          //printf("Intra-CD message\n");
           // FIXME Record just event, length should be 0
           // log event to check for escalation.
           cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (unsigned long)request, 1, false, true);
           
         } else { // Log message for inter-CD communication
-          printf("Inter-CD message\n");
+          //printf("Inter-CD message\n");
           cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (unsigned long)request, 1);
         }
         break;
@@ -644,14 +644,14 @@ int MPI_Irecv(void *buf,
           // This message was inter-CD message. So, keep logging for this message, too.
           // KYU: Intra-CD msg check
           if( cdp->CheckIntraCDMsg(src, g) ) { // Do not log for intra-CD msg
-            printf("Intra-CD message\n");
+            //printf("Intra-CD message\n");
             // FIXME Record just event, length should be 0
             // log event to check for escalation.
             cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (unsigned long)request, 1, false, true);
             
           } 
           else { // Log message for inter-CD communication
-            printf("Inter-CD message\n");
+            //printf("Inter-CD message\n");
             cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (unsigned long)request, 1);
           }
         }
@@ -1143,7 +1143,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
           ret = cur_cdh->ptr_cd()->ProbeData(&array_of_requests[ii], 0); // read event
           if (ret == kCommLogCommLogModeFlip) {
             if (ii != 0) {
-              ERROR_MESSAGE("Partially instrumented MPI_Waitall, may cause incorrect re-execution!!\n");
+//              ERROR_MESSAGE("Partially instrumented MPI_Waitall, may cause incorrect re-execution!!\n"); FIXME
             }
             break;
           }
@@ -1151,7 +1151,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
 
         if (ret == kCommLogCommLogModeFlip) { // flipped to execution
           LOG_DEBUG("Isn't it weird to reach here because error before wait should escalate it\n");
-          assert(0);
+//          assert(0); FIXME
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
           LOG_DEBUG("Should not come here because error happens between Isend/Irecv and WaitXXX...\n");
           mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
@@ -2395,6 +2395,14 @@ int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],
   assert(group2);
   return PMPI_Group_translate_ranks(group1, n, ranks1,
                                     group2, ranks2);
+}
+
+int MPI_Win_fence(int assert, MPI_Win win)
+{
+  CD_DEBUG("[%s] called %s at %u\n", __func__, GetCurrentCD()->ptr_cd()->name(), GetCurrentCD()->ptr_cd()->level());
+  //fflush(cdout);
+  int ret = PMPI_Win_fence(assert, win);
+  return ret;
 }
 //// -------------------------------------------------------------------------------------------------------
 //// persistent communication requests

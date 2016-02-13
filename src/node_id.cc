@@ -77,7 +77,7 @@ NodeID::NodeID(const NodeID& that)
     MPI_Comm_group(color_, &task_group_);
 //  printf("\nnodeid2\n");
 #else
-  printf("\nnodeid2222\n");
+  //printf("\nnodeid2222\n");
   color_ = that.color_;
   task_group_ = that.task_group_;
 #endif
@@ -118,7 +118,7 @@ void NodeID::init_node_id(ColorT color, int task_in_color, CommGroupT group, int
   //assert(color_);
   if(color_ != 0)
     MPI_Comm_group(color_, &task_group_);
-  printf("\nnodeid4\n");
+  //printf("\nnodeid4\n");
 #else
   color_ = color;
   task_group_ = group;

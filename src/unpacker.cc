@@ -134,7 +134,7 @@ char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_s
     else {
       str_return_data = (char *)dst;
       if(dst_size != size) {
-        printf("dst_size : %lu, size from packer : %d\n", dst_size, size);
+        CD_DEBUG("dst_size : %lu, size from packer : %d\n", dst_size, size);
         assert(0);
       }
       assert(dst_size == size);

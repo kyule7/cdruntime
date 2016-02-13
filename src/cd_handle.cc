@@ -60,6 +60,8 @@ using namespace cd::interface;
 using namespace cd::internal;
 using namespace std;
 
+
+
 /// KL
 /// cddbg is a global variable to be used for debugging purpose.
 /// General usage is that it stores any strings, numbers as a string internally,
@@ -81,6 +83,11 @@ SystemErrorInjector *CDHandle::system_error_injector_ = NULL;
   (((X) & (Y)) == (X))
 #endif
 
+clock_t cd::tot_begin_clk;
+clock_t cd::tot_end_clk;
+clock_t cd::begin_clk;
+clock_t cd::end_clk;
+clock_t cd::elapsed_time;
 
 /// KL
 /// uniquePath is a singleton object per process, which is used for CDPath.
@@ -131,6 +138,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   //GONG
   CDPrologue();
+  cd::tot_begin_clk = clock();
   myTaskID      = myTask;
   totalTaskSize = numTask;
 
@@ -260,7 +268,6 @@ void CD_Finalize(void)
 
 #if CD_PROFILER_ENABLED
   // Profiler-related  
-  //cout << CDPath::GetRootCD() << " " << CDPath::GetRootCD()->profiler_ << endl << endl;
   CDPath::GetRootCD()->profiler_->FinalizeViz();
 #endif
   CDPath::GetRootCD()->InternalDestroy(false);
@@ -278,7 +285,36 @@ void CD_Finalize(void)
 #endif
 
   cd::internal::Finalize();
+  cd::tot_end_clk = clock();
 
+#if CD_MPI_ENABLED
+  double cd_elapsed = ((double)cd::elapsed_time) / CLOCKS_PER_SEC;
+  double tot_elapsed= ((double)(cd::tot_end_clk - cd::tot_begin_clk)) / CLOCKS_PER_SEC;
+  double sendbuf[4] = {tot_elapsed, 
+                       tot_elapsed * tot_elapsed,
+                       cd_elapsed,
+                       cd_elapsed  * cd_elapsed
+                      };
+//  printf("\n\n=====================================\n");
+//  printf("%lf\t%lf\t%lf\t%lf\n", sendbuf[0],sendbuf[1],sendbuf[2],sendbuf[3]);
+//  printf("=====================================\n\n");
+  double recvbuf[4] = {0.0,0.0,0.0,0.0};
+  MPI_Reduce(sendbuf, recvbuf, 4, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  if(cd::myTaskID == 0) {
+//  printf("\n\n=====================================\n");
+//  printf("%lf\t%lf\t%lf\t%lf\n", recvbuf[0],recvbuf[1],recvbuf[2],recvbuf[3]);
+//  printf("=====================================\n\n");
+    printf("\n\n============================================\n");
+    printf("Total elapsed time : %lf (%lf) (var: %lf)\n", recvbuf[0]/cd::totalTaskSize, 
+                                                            sendbuf[0], 
+                                                            (recvbuf[1] - recvbuf[0]*recvbuf[0]/cd::totalTaskSize)/cd::totalTaskSize);
+    printf("CD overhead time : %lf (%lf) (var: %lf)\n", recvbuf[2]/cd::totalTaskSize, 
+                                                          sendbuf[2], 
+                                                          (recvbuf[3] - recvbuf[2]*recvbuf[2]/cd::totalTaskSize)/cd::totalTaskSize);
+    printf("Ratio : %lf \n", (recvbuf[2] / recvbuf[0]) * 100); 
+    printf("============================================\n\n");
+  }
+#endif
   CDEpilogue();
 }
 
@@ -591,7 +627,6 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   CD_DEBUG("new_color : %d in %s\n", new_color, node_id_.GetString().c_str());
 
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
-  //cout << name << " " << new_cd_name.GetString() << endl;
   CD_DEBUG("New CD Name : %s\n", new_cd_name.GetString().c_str());
 
   CD_DEBUG("Remote Entry Dir size: %lu", ptr_cd_->remote_entry_directory_map_.size());
@@ -1146,11 +1181,24 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
 #if CD_MPI_ENABLED
 
+  CD_DEBUG("[%s] rollback from %u to %d (%d == %d)\n", __func__, level(), rollback_point, err_desc, CD::CDInternalErrT::kErrorReported);
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     err = kError;
-    cddbg << "Here? rollback from "<< rollback_point << endl;
-    //cout << "Here? rollback from "<< rollback_point << endl;
-    CDPath::GetCDLevel(rollback_point)->SetMailBox(kErrorOccurred);
+    // FIXME
+//    if((unsigned)rollback_point == level()) 
+//      CD::need_reexec = true;
+//    else
+//      CDPath::GetCDLevel(rollback_point)->SetMailBox(kErrorOccurred);
+
+    CD::need_reexec = true;
+    CD::reexec_level = rollback_point;
+    if(task_size() > 1) {
+      CDPath::GetCDLevel(rollback_point)->SetMailBox(kErrorOccurred);
+    } else {
+      if((unsigned)rollback_point != level())
+        CDPath::GetCDLevel(rollback_point)->SetMailBox(kErrorOccurred);
+    }
+
     err = kAppError;
     
 //    Sync(CDPath::GetCoarseCD(this)->color());
@@ -1165,8 +1213,6 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     if(cd_error_injector_ != NULL && ptr_cd_ != NULL) {
       CD_DEBUG("EIE It is after : reexec # : %d, exec mode : %d at level #%u\n", ptr_cd_->num_reexecution_, GetExecMode(), level());
       CD_DEBUG("recreated? %d, recreated? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
-      //cout << cd_error_injector_ << " " << ptr_cd_<< endl;
-      //cout << cd_error_injector_->Inject() << " " << ptr_cd_->recreated() << " " << ptr_cd_->reexecuted() << endl;
       if(cd_error_injector_->Inject() && ptr_cd_->recreated() == false && ptr_cd_->reexecuted() == false) {
         CD_DEBUG("EIE Reached SetMailBox. recreated? %d, reexecuted? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
         SetMailBox(kErrorOccurred);
@@ -1310,7 +1356,6 @@ int CDHandle::CheckErrorOccurred(int &rollback_point)
 {
   uint64_t sys_err_vec = system_error_injector_->Inject();
   bool found = false;
-  //cout << "sys_err_vec " << sys_err_vec << endl;
   CD_DEBUG("[%s] sys_err_vec : %lx\n", __func__, sys_err_vec);
   if(sys_err_vec == NO_ERROR_INJECTED) {
     return (int)CD::CDInternalErrT::kOK;
@@ -1320,12 +1365,12 @@ int CDHandle::CheckErrorOccurred(int &rollback_point)
     // If sys_err_vec > 
     while(cdh != NULL) {
 
-      printf("CHECK %lx %lx = %d\n", sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_));
+      CD_DEBUG("CHECK %lx %lx = %d\n", sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_));
       if(CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_)) {
         rollback_point = cdh->level();
         found = true;
-        CD_DEBUG("\nFOUND LEVEL FOR REEXEC \n");
-        printf("\nFOUND LEVEL FOR REEXEC at #%d\n", rollback_point);
+//        CD_DEBUG("\nFOUND LEVEL FOR REEXEC \n");
+        CD_DEBUG("\nFOUND LEVEL FOR REEXEC at #%d\n", rollback_point);
         break;
       }
       cdh = CDPath::GetParentCD(cdh->level());

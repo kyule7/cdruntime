@@ -273,6 +273,7 @@ int MPI_Finalize(void);
 
 int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],
                               MPI_Group group2, int ranks2[]);
+int MPI_Win_fence(int assert, MPI_Win win);
 #endif
 
 #endif

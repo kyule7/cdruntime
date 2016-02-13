@@ -797,6 +797,15 @@ CDErrT CD::Begin(bool collective, const char* label)
 #endif
 
 #endif
+
+  if(collective && task_size() > 1) {
+    MPI_Win_fence(0, mailbox_);
+    CD_DEBUG("Barrier!!!! Important!!\n");
+    //PMPI_Barrier(color());
+  } else {
+    CD_DEBUG("No Barrier!!!!! %d %u\n", collective, task_size());
+  }
+
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
@@ -804,6 +813,7 @@ CDErrT CD::Begin(bool collective, const char* label)
   else {
     //printf("don't need reexec next time. Now it is in reexec mode\n");
     need_reexec = false;
+    reexec_level = INVALID_ROLLBACK_POINT;
   }
 //  else {
 //    cout << "Begin again! " << endl; //getchar();
@@ -819,6 +829,7 @@ CD *CD::GetCDToRecover(void)
     CDHandle *curr_cdh = CDPath::GetCurrentCD();
 
 #if _MPI_VER
+    // Before longjmp, it should decrement the event counts handled so far.
     DecPendingCounter();
 #endif
 
@@ -832,7 +843,7 @@ CD *CD::GetCDToRecover(void)
 //    printf("%d > %d\n", reexec_level, level);
 
     if(reexec_level >= level) {
-      printf("\n\nReexec from level #%u from level #%u\n\n", reexec_level, level);
+      CD_DEBUG("\n\nReexec from level #%u from level #%u\n\n", reexec_level, level);
       assert(reexec_level >= level); // This should not happen. 
     }
     while(reexec_level < level && reexec_level != INVALID_ROLLBACK_POINT) { // Escalation. 
@@ -846,7 +857,7 @@ CD *CD::GetCDToRecover(void)
       curr_cdh = CDPath::GetParentCD(level--);
     }
     
-    reexec_level = INVALID_ROLLBACK_POINT;
+//    reexec_level = INVALID_ROLLBACK_POINT;
 
     return curr_cdh->ptr_cd_;
 }
@@ -861,57 +872,27 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   CD_DEBUG("\nCD::Complete : %s %s \t Reexec: %d\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec);
 
   begin_ = false;
-
+  bool my_need_reexec = need_reexec;
   // This is important synchronization point to guarantee the correctness of CD-enabled program.
   if(collective) {
     if(task_size() > 1) {
-      PMPI_Win_fence(0, mailbox_);
+      CD_DEBUG("[%s] 1\n", __func__);
+      MPI_Win_fence(0, mailbox_);
     }
     CheckMailBox();
     if(task_size() > 1) {
-      PMPI_Win_fence(0, mailbox_);
+      CD_DEBUG("[%s] 1\n", __func__);
+      MPI_Win_fence(0, mailbox_);
     }
     CheckMailBox();
   }
-  printf("\nCD::Complete (%s): %s %s \t Reexec: %d from %d to %d\n", 
-      name_.c_str(), GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec, level(), reexec_level);
-  
-  if(need_reexec) { 
-    // Before longjmp, it should decrement the event counts handled so far.
 
-//#if _MPI_VER
-//    DecPendingCounter();
-//#endif
-//
-//    CD_DEBUG("\n\n\n\n Reexec from level #%u from level #%u\n\n\n\n", reexec_level, level());
-//    need_reexec = false;
-//    need_escalation = false;
-////    reexec_level = 0xFFFFFFFF;
-//    //this->Recover(); 
-//    CDHandle *curr_cdh = CDPath::GetCurrentCD();
-////    CDHandle *cdh = CDPath::GetCDLevel(reexec_level);
-//    uint32_t level = curr_cdh->level();
-////    printf("%d > %d\n", reexec_level, level);
-//
-//    if(reexec_level >= level) {
-//      printf("\n\nReexec from level #%u from level #%u\n\n", reexec_level, level);
-//      assert(reexec_level >= level); // This should not happen. 
-//    }
-//    while(reexec_level < level && reexec_level != INVALID_ROLLBACK_POINT) { // Escalation. 
-////      curr_cdh->Complete(false);
-//#if CD_PROFILER_ENABLED
-//      curr_cdh->profiler_->FinishProfile();
-//#endif
-//      curr_cdh->ptr_cd_->CompleteLogs();
-//      curr_cdh->ptr_cd_->DeleteEntryDirectory();
-//      curr_cdh->Destroy();
-//      curr_cdh = CDPath::GetParentCD(level--);
-//    }
-//    
-//    reexec_level = INVALID_ROLLBACK_POINT;
-    
-    GetCDToRecover()->Recover(); 
-//    GetCDLevel()->Recover();
+  //printf("\nCD::Complete (%s): %s %s \t Reexec: %d from %d to %d\n", 
+  //    name_.c_str(), GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec, level(), reexec_level);
+ 
+   
+  if(need_reexec) { 
+    GetCDToRecover()->Recover(my_need_reexec == need_reexec); 
   }
 
   CompleteLogs();
@@ -932,10 +913,14 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   return CDErrT::kOK;
 }
 
+
+
+
 CD::CDInternalErrT CD::CompleteLogs(void) {
 #if comm_log
   // SZ: pack logs and push to parent
   if (GetParentHandle()!=NULL) {
+    // This is for pushing complete log to parent
     if (MASK_CDTYPE(cd_type_) == kRelaxed) {
       if (IsParentLocal()) {
         if (IsNewLogGenerated() && MASK_CDTYPE(GetParentHandle()->ptr_cd_->cd_type_) == kRelaxed) {
@@ -975,7 +960,7 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
       }
     }
 
-    // push incomplete_log_
+    // push incomplete_log_ to parent
     if (IsParentLocal() && incomplete_log_.size()!=0) {
       //vector<struct IncompleteLogEntry> *pincomplog 
       //                                    = &(GetParentHandle()->ptr_cd_->incomplete_log_);
@@ -1140,7 +1125,7 @@ bool CD::PushedMemLogSearch(void* p, CD *curr_cd)
     }
     else
     {
-      printf("CANNOT find parent CD\n");
+      CD_DEBUG("CANNOT find parent CD\n");
       assert(0);
 //      exit(1);
     }
@@ -1174,7 +1159,7 @@ unsigned int CD::PullMemLogs()
     }
     else
     {
-      printf("CANNOT find parent CD\n");
+      CD_DEBUG("CANNOT find parent CD\n");
       assert(0);
     }
   }
@@ -1234,22 +1219,20 @@ void* CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, v
     }
     else
     {
-      printf("CANNOT find parent CD\n");
-      assert(0);
+      ERROR_MESSAGE("CANNOT find parent CD\n");
 //      exit(1);
     }
   }
   else
   {
-    printf("rootCD is trying to search further\n");
+    ERROR_MESSAGE("rootCD is trying to search further\n");
     assert(0);
 //    exit(1);
   }
   
   if(ret == NULL)
   {
-    printf("somethig wrong!\n");
-    assert(0);
+    ERROR_MESSAGE("somethig wrong!\n");
 //    exit(1);
   
   }
@@ -1957,8 +1940,10 @@ CDErrT CD::Preserve(void *data,
         CD_DEBUG("Test Asynch messages until done \n");
 
 #endif
-        printf("Return to kExec\n");
+        CD_DEBUG("Return to kExec\n");
         cd_exec_mode_ = kExecution;
+        need_reexec = false;
+        reexec_level = INVALID_ROLLBACK_POINT;
         // This point means the beginning of body stage. Request EntrySearch at this routine
       }
 
@@ -2309,8 +2294,23 @@ CD::CDInternalErrT CD::Detect(int &rollback_point)
   return internal_err;
 }
 
-void CD::Recover(void)
-{ 
+void CD::Recover(bool collective)
+//void CD::Recover()
+{
+  if(collective) {
+    if(task_size() > 1) {
+      CD_DEBUG("[%s] fence in at %s level %u\n", __func__, name_.c_str(), level());
+    //  PMPI_Barrier(color());
+      MPI_Win_fence(0, mailbox_);
+      MPI_Win_fence(0, mailbox_);
+      CD_DEBUG("[%s] fence out \n\n", __func__);
+    } else {
+      CD_DEBUG("[%s] No fence\n", __func__);
+    }
+  } else {
+    CD_DEBUG("[%s] Not call fence %s\n", __func__, name_.c_str());
+
+  }
   recoverObj_->Recover(this); 
 } 
 
@@ -2452,6 +2452,7 @@ CDErrT CD::InternalReexecute(void)
   reexecuted_ = true; 
   num_reexecution_++;
 
+
 #if comm_log
   // SZ
   //// change the comm_log_mode_ into CommLog class
@@ -2489,7 +2490,7 @@ CDErrT CD::InternalReexecute(void)
     longjmp(jmp_buffer_, jmp_val_);
   }
   else if (ctxt_prv_mode_ == kIncludeStack) {
-    printf("setcontext at level : %d -> %d (reexec from) (%s)\n", level(), reexec_level, name_.c_str());
+    CD_DEBUG("setcontext at level : %d -> %d (reexec from) (%s)\n", level(), reexec_level, name_.c_str());
     setcontext(&ctxt_); 
   }
 
@@ -3796,7 +3797,6 @@ void CD::DeleteEntryDirectory(void)
 //  Tag tag_gen;
 //  CDNameT cd_name = ptr_cd()->GetCDName();
 //  tag_gen << tag << node_id_.task_in_color_ <<'-'<<cd_name.level()<<'-'<<cd_name.rank_in_level();
-////  cout << const_cast<char*>(tag_gen.str().c_str()) << endl; getchar();
 //  return const_cast<char*>(tag_gen.str().c_str());
 //}
 
@@ -4003,9 +4003,9 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
   {
     // need to log that wait op completes 
 #if _MPI_VER
-    std::cout << comm_log_ptr_ << " " << flag << " " << &*it << std::endl;
-    std::cout << it->thread_ << std::endl;
-    comm_log_ptr_->LogData((MPI_Request*)flag, 0, it->thread_);
+   // std::cout << it->thread_ << std::endl;
+    if( &*it != 0 ) // FIXME
+      comm_log_ptr_->LogData((MPI_Request*)flag, 0, it->thread_);
 //    comm_log_ptr_->LogData(&flag, 0, it->thread_);
 #elif _PGAS_VER
     comm_log_ptr_->LogData((void*)flag, 0, it->thread_);
@@ -4123,7 +4123,7 @@ CD::CDInternalErrT CD::InvokeAllErrorHandler(void) {
 
 CD::CDInternalErrT CD::InvokeErrorHandler(void)
 {
-  CD_DEBUG("[CD::InvokeErrorHandler] event queue size : %zu\n", cd_event_.size());
+  CD_DEBUG("\n[CD::InvokeErrorHandler] event queue size : %zu\n", cd_event_.size());
   CDInternalErrT cd_err = kOK;
 
   while(!cd_event_.empty()) {

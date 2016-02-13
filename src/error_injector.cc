@@ -276,7 +276,7 @@ uint64_t ErrorInjector::InjectError(const float &error_prob)
   int error = rand_var < error_prob;
 //  CD_DEBUG("Error %f(error_prob) < %f(random var)\n", error_prob, rand_var);
   CD_DEBUG("Error %f(error_prob) < %f(random var)   ERROR? %d\n", error_prob, rand_var, error);
-  printf("Error %f < %f(threshold) ERROR? %d\n", rand_var, error_prob, error);
+  //printf("Error %f < %f(threshold) ERROR? %d\n", rand_var, error_prob, error);
   CD_DEBUG("EIE\n");
 
   return error;
@@ -299,7 +299,7 @@ uint64_t SystemErrorInjector::Inject(void)
 //      printf("\nfailure prob %lu (%f x %lf) : %f\n", it->first, it->second, period, GetErrorProb(it->second, period));
     if( InjectError(GetErrorProb(it->second, period)) ) { 
       error_occurred |= it->first;
-      printf("ERROR!!! %lx\n", error_occurred);
+      //printf("ERROR!!! %lx\n", error_occurred);
     }
     CD_DEBUG("error rate %lu : %f (%lx)\n\n\n", it->first, it->second, error_occurred);// == (int)(it->first));
 //    printf("error rate %lu : %f (%lx)\n", it->first, it->second, error_occurred);// == (int)(it->first));

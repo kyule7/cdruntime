@@ -100,7 +100,7 @@ CDEntry::CDEntryErrT CDEntry::Save(void)
 
 CDEntry::CDEntryErrT CDEntry::SaveMem(void)
 {
-  printf("%s\n", __func__);
+  CD_DEBUG("%s\n", __func__);
   if(dst_data_.address_data() == NULL) {
     void *allocated_space = DATA_MALLOC(dst_data_.len() * sizeof(char));
 
@@ -163,7 +163,7 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(void)
 
 CDEntry::CDEntryErrT CDEntry::SavePFS(void)
 {
-  printf("%s\n", __func__);
+  CD_DEBUG("%s\n", __func__);
   //First we should check for PFS file => I think we have checked it before calling this function (not sure).
   //PMPI_Status preserve_status;//This variable can be used to non-blocking writes to PFS. By checking this variable we can understand whether write has been finished or not.
   //PMPI_File_get_position( ptr_cd_->PFS_d_, &(dst_data_.parallel_file_offset_));

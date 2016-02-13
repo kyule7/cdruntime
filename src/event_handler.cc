@@ -485,6 +485,7 @@ void HandleAllReexecute::HandleEvent(void)
   else {
     CD::need_escalation = true;
   }
+  CD_DEBUG("[%s] need reexec %d from %d\n", __func__, CD::need_reexec, CD::reexec_level);
 #else
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();

@@ -80,13 +80,37 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, cons
 //    dbg<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
     int new_size=0, 
         new_task_id=0;
+    CD_DEBUG("[%s] need_reexec??? %d from %u (%s)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->name_.c_str());
 
     if(task_size() > 1) {
-      PMPI_Win_fence(0, ptr_cd_->mailbox_);
+      CD_DEBUG("[%s] CheckMailBox before calling MPI_Comm_split at level %d (%s)\n", __func__, level(), ptr_cd_->name_.c_str());
+      //printf("[%s] CheckMailBox before calling MPI_Comm_split at level %d (%s)\n", __func__, level(), ptr_cd_->name_.c_str());
+      MPI_Win_fence(0, ptr_cd_->mailbox_);
+//      PMPI_Barrier(color());
+    } else {
+      CD_DEBUG("[%s] Not synched.....level %d (%s)\n", __func__, level(), ptr_cd_->name_.c_str());
     }
     CheckMailBox();
+    
+    if(task_size() > 1) {
+      CD_DEBUG("[%s 2] CheckMailBox before calling MPI_Comm_split at level %d (%s)\n", __func__, level(), ptr_cd_->name_.c_str());
+      //printf("[%s 2] CheckMailBox before calling MPI_Comm_split at level %d (%s)\n", __func__, level(), ptr_cd_->name_.c_str());
+      MPI_Win_fence(0, ptr_cd_->mailbox_);
+//      PMPI_Barrier(color());
+    } else {
+      CD_DEBUG("[%s 2] Not synched.....level %d (%s)\n", __func__, level(), ptr_cd_->name_.c_str());
+    }
+    CheckMailBox();
+
+    CD_DEBUG("[%s] need_reexec? %d from %u (%s)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->name_.c_str());
+    //printf("[%s] need_reexec? %d from %u (%s)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->name_.c_str());
     if(CD::need_reexec) {
-      ptr_cd_->GetCDToRecover()->Recover();
+      CD_DEBUG("\n\nReexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n");
+      ptr_cd_->GetCDToRecover()->Recover(false);
+//      CD *cd_to_recover = ptr_cd_->GetCDToRecover();
+//      cd_to_recover->recoverObj_->Recover(cd_to_recover);
+    } else {
+      CD_DEBUG("\n\nReexec is false\n");
     }
 
 
@@ -622,7 +646,7 @@ CDErrT CD::CheckMailBox(void)
       else {
         CD_DEBUG("[ReadMailBox] Searching for CD Level having non-single task. Current Level #%u\n", curr_cdh->ptr_cd()->GetCDID().level());
       }
-      CD_DEBUG("\n--------------------------------------------------------\n");
+      CD_DEBUG("\n-- level %u ------------------------------------------------------\n\n", level());
 
       // If current CD is Root CD and GetParentCD is called, it returns NULL
       CD_DEBUG("ReadMailBox %s / %s at level #%u\n", 
@@ -1056,7 +1080,7 @@ CD::CDInternalErrT CD::RemoteSetMailBox(CD *curr_cd, const CDEventT &event)
   if(event != CDEventT::kNoEvent) {
     PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, curr_cd->pendingWindow_);
 
-    CD_DEBUG("Set CD Event %s at level #%u. CD Name %s\n", event2str(event).c_str(), curr_cd->level(), curr_cd->GetCDName().GetString().c_str());
+    CD_DEBUG("[%s] Set CD Event %s at level #%u. CD Name %s (%s)\n", __func__, event2str(event).c_str(), curr_cd->level(), curr_cd->GetCDName().GetString().c_str(), name_.c_str());
 
     // Increment pending request count at the target task (requestee)
     PMPI_Accumulate(&val, 1, MPI_INT, 
@@ -1454,6 +1478,7 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
 {
   int global_rank_id = -1;
   int local_rank_id = -1;
+  return false;
 //  printf("target_id %d, group %p\n", target_id, &target_group);
   // Translate user group's rank ID to MPI_COMM_WORLD
   int status = MPI_Group_translate_ranks(target_group, 1, &target_id, cd::whole_group, &global_rank_id);

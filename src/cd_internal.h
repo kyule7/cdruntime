@@ -415,6 +415,7 @@ public:
     bool     IsHead(void)        const { return cd_id_.IsHead(); }
     bool     recreated(void)     const { return recreated_; }
     bool     reexecuted(void)    const { return reexecuted_; }
+    char    *name(void)          const { return (char *)name_.c_str(); }
     CDType   GetCDType(void) const { return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
 #if CD_LIBC_LOG_ENABLED
     CommLog *libc_log_ptr()      const { return libc_log_ptr_; }
@@ -460,7 +461,7 @@ public:
  *  If user does not register it, CD::Reexecute() is called by default. 
  *
  */
-    void Recover(void);
+    void Recover(bool collective=true);
 
 /** @brief Method to test if this CD can recover from an error/location mask
  *

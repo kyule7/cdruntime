@@ -199,6 +199,7 @@ void Release(T **ptr)
 static inline
 void TimeIncrement(Domain& domain)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
    Real_t targetdt = domain.stoptime() - domain.time() ;
 
    if ((domain.dtfixed() <= Real_t(0.0)) && (domain.cycle() != Int_t(0))) {
@@ -265,6 +266,7 @@ void CollectDomainNodesToElemNodes(Domain &domain,
                                    Real_t elemY[8],
                                    Real_t elemZ[8])
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
    Index_t nd0i = elemToNode[0] ;
    Index_t nd1i = elemToNode[1] ;
@@ -311,6 +313,7 @@ void InitStressTermsForElems(Domain &domain,
                              Real_t *sigxx, Real_t *sigyy, Real_t *sigzz,
                              Index_t numElem)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
    //
    // pull in the stresses appropriate to the hydro integration
    //
@@ -333,6 +336,7 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
                                        Real_t b[][8],
                                        Real_t* const volume )
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
 
   const Real_t x0 = x[0] ;   const Real_t x1 = x[1] ;
@@ -466,6 +470,7 @@ void CalcElemNodeNormals(Real_t pfx[8],
                          const Real_t y[8],
                          const Real_t z[8])
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
    for (Index_t i = 0 ; i < 8 ; ++i) {
       pfx[i] = Real_t(0.0);
@@ -526,6 +531,7 @@ void SumElemStressesToNodeForces( const Real_t B[][8],
                                   const Real_t stress_zz,
                                   Real_t fx[], Real_t fy[], Real_t fz[] )
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
    for(Index_t i = 0; i < 8; i++) {
       fx[i] = -( stress_xx * B[0][i] );
       fy[i] = -( stress_yy * B[1][i]  );
@@ -540,6 +546,7 @@ void IntegrateStressForElems( Domain &domain,
                               Real_t *sigxx, Real_t *sigyy, Real_t *sigzz,
                               Real_t *determ, Index_t numElem, Index_t numNode)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
 
 #if _OPENMP
@@ -577,7 +584,7 @@ void IntegrateStressForElems( Domain &domain,
   for( Index_t k=0 ; k<numElem ; ++k )
   {
 #if SWITCH_5_1_1  > SEQUENTIAL_CD || SWITCH_5_1_1 == SEQUENTIAL_CD
-     CD_Begin(cdh_5_1_1, false, "Loop_IntegrateStressForElems"); 
+     CD_Begin(cdh_5_1_1, true, "Loop_IntegrateStressForElems"); 
      cdh_5_1_1->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_IntegrateStressForElems"); 
      cdh_5_1_1->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_IntegrateStressForElems"); 
 #endif
@@ -758,6 +765,7 @@ void CalcElemVolumeDerivative(Real_t dvdx[8],
                               const Real_t y[8],
                               const Real_t z[8])
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
 
    VoluDer(x[1], x[2], x[3], x[4], x[5], x[7],
@@ -850,6 +858,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
                                    Real_t hourg, Index_t numElem,
                                    Index_t numNode)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
 #if _OPENMP
    Index_t numthreads = omp_get_max_threads();
@@ -927,7 +936,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
    for(Index_t i2=0;i2<numElem;++i2) {
 
 #if SWITCH_7_0_0  > SEQUENTIAL_CD || SWITCH_7_0_0 == SEQUENTIAL_CD
-     CD_Begin(cdh_7_0_0, false, "Loop_CalcFBHourglassForceForElems"); 
+     CD_Begin(cdh_7_0_0, true, "Loop_CalcFBHourglassForceForElems"); 
      cdh_7_0_0->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_CalcFBHourglassForceForElems"); 
      cdh_7_0_0->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_CalcFBHourglassForceForElems"); 
 #endif
@@ -1177,6 +1186,7 @@ static inline
 void CalcHourglassControlForElems(Domain& domain,
                                   Real_t determ[], Real_t hgcoef)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
 
    Index_t numElem = domain.numElem() ;
@@ -1202,7 +1212,7 @@ void CalcHourglassControlForElems(Domain& domain,
    for (Index_t i=0 ; i<numElem ; ++i){
 
 #if SWITCH_6_4_0  > SEQUENTIAL_CD || SWITCH_6_4_0 == SEQUENTIAL_CD
-      CD_Begin(cdh_6_4_0, false, "Loop_CalcHourglassControlForElems"); 
+      CD_Begin(cdh_6_4_0, true, "Loop_CalcHourglassControlForElems"); 
       cdh_6_4_0->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_CalcHourglassControlForElems"); 
       cdh_6_4_0->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_CalcHourglassControlForElems"); 
 #endif
@@ -1318,6 +1328,7 @@ void CalcHourglassControlForElems(Domain& domain,
 static inline
 void CalcVolumeForceForElems(Domain& domain)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
    Index_t numElem = domain.numElem() ;
    if (numElem != 0) {
@@ -1405,6 +1416,7 @@ void CalcVolumeForceForElems(Domain& domain)
 
 static inline void CalcForceForNodes(Domain& domain)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
   Index_t numNode = domain.numNode() ;
 
 #if USE_MPI  
@@ -1459,6 +1471,7 @@ static inline void CalcForceForNodes(Domain& domain)
 static inline
 void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
    
 
 //#pragma omp parallel for firstprivate(numNode)
@@ -1475,6 +1488,7 @@ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
 static inline
 void ApplyAccelerationBoundaryConditionsForNodes(Domain& domain)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
    Index_t size = domain.sizeX();
    Index_t numNodeBC = (size+1)*(size+1) ;
@@ -1508,6 +1522,7 @@ static inline
 void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
                           Index_t numNode)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
 //#pragma omp parallel for firstprivate(numNode)
    for ( Index_t i = 0 ; i < numNode ; ++i )
@@ -1534,6 +1549,7 @@ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
 static inline
 void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
 //#pragma omp parallel for firstprivate(numNode)
    for ( Index_t i = 0 ; i < numNode ; ++i )
@@ -1550,6 +1566,7 @@ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
 static inline
 void LagrangeNodal(Domain& domain)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
 
 #ifdef SEDOV_SYNC_POS_VEL_EARLY
@@ -1690,6 +1707,7 @@ Real_t CalcElemVolume( const Real_t x0, const Real_t x1,
                const Real_t z4, const Real_t z5,
                const Real_t z6, const Real_t z7 )
 {
+   //DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
   Real_t twelveth = Real_t(1.0)/Real_t(12.0);
 
@@ -1782,6 +1800,7 @@ Real_t AreaFace( const Real_t x0, const Real_t x1,
                  const Real_t z0, const Real_t z1,
                  const Real_t z2, const Real_t z3)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
    Real_t fx = (x2 - x0) - (x3 - x1);
    Real_t fy = (y2 - y0) - (y3 - y1);
    Real_t fz = (z2 - z0) - (z3 - z1);
@@ -1804,6 +1823,7 @@ Real_t CalcElemCharacteristicLength( const Real_t x[8],
                                      const Real_t z[8],
                                      const Real_t volume)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
    Real_t a, charLength = Real_t(0.0);
 
@@ -1852,6 +1872,7 @@ void CalcElemVelocityGradient( const Real_t* const xvel,
                                 const Real_t detJ,
                                 Real_t* const d )
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
   const Real_t inv_detJ = Real_t(1.0) / detJ ;
   Real_t dyddx, dxddy, dzddx, dxddz, dzddy, dyddz;
@@ -1915,6 +1936,7 @@ void CalcElemVelocityGradient( const Real_t* const xvel,
 void CalcKinematicsForElems( Domain &domain, Real_t *vnew, 
                              Real_t deltaTime, Index_t numElem )
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
   // loop over all elements
 //#pragma omp parallel for firstprivate(numElem, deltaTime)
@@ -2442,6 +2464,7 @@ void CalcMonotonicQRegionForElems(Domain &domain, Int_t r,
 static inline
 void CalcMonotonicQForElems(Domain& domain, Real_t vnew[])
 {  
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
    //
    // initialize parameters
    // 
@@ -2468,6 +2491,7 @@ void CalcMonotonicQForElems(Domain& domain, Real_t vnew[])
 static inline
 void CalcQForElems(Domain& domain, Real_t vnew[])
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
    //
    // MONOTONIC Q option
    //
@@ -2908,6 +2932,7 @@ void EvalEOSForElems(Domain& domain, Real_t *vnewc,
 static inline
 void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
    Index_t numElem = domain.numElem() ;
 
@@ -2977,7 +3002,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 #endif
     for (Int_t r=0 ; r<domain.numReg() ; r++) {
 #if SWITCH_4_5_0  > SEQUENTIAL_CD || SWITCH_4_5_0 == SEQUENTIAL_CD
-       CD_Begin(cdh_4_5_0, false, "Loop_EvalEOSForElems"); 
+       CD_Begin(cdh_4_5_0, true, "Loop_EvalEOSForElems"); 
        cdh_4_5_0->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_EvalEOSForElems"); 
        cdh_4_5_0->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_EvalEOSForElems"); 
 #endif
@@ -3022,6 +3047,7 @@ static inline
 void UpdateVolumesForElems(Domain &domain, Real_t *vnew,
                            Real_t v_cut, Index_t length)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
    if (length != 0) {
 //#pragma omp parallel for firstprivate(length, v_cut)
@@ -3043,6 +3069,7 @@ void UpdateVolumesForElems(Domain &domain, Real_t *vnew,
 static inline
 void LagrangeElements(Domain& domain, Index_t numElem)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
   Real_t *vnew = Allocate<Real_t>(numElem) ;  /* new relative vol -- temp */
 
@@ -3126,6 +3153,7 @@ void CalcCourantConstraintForElems(Domain &domain, Index_t length,
                                    Index_t *regElemlist,
                                    Real_t qqc, Real_t& dtcourant)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
 
 #if _OPENMP   
@@ -3205,6 +3233,7 @@ static inline
 void CalcHydroConstraintForElems(Domain &domain, Index_t length,
                                  Index_t *regElemlist, Real_t dvovmax, Real_t& dthydro)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
 
 #if _OPENMP   
@@ -3271,6 +3300,7 @@ void CalcHydroConstraintForElems(Domain &domain, Index_t length,
 
 static inline
 void CalcTimeConstraintsForElems(Domain& domain) {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 
    // Initialize conditions to a very large value
    domain.dtcourant() = 1.0e+20;
@@ -3325,6 +3355,7 @@ void CalcTimeConstraintsForElems(Domain& domain) {
 static inline
 void LagrangeLeapFrog(Domain& domain)
 {
+   DEBUG_PRINT("\n\n=====================================\n\t[%s]\n=====================================\n\n", __func__);
 #ifdef SEDOV_SYNC_POS_VEL_LATE
    Domain_member fieldData[6] ;
 #endif
@@ -3520,7 +3551,7 @@ int main(int argc, char *argv[])
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
       // Main functions in the loop
 #if SWITCH_0_0_0  > SEQUENTIAL_CD || SWITCH_0_0_0 == SEQUENTIAL_CD
-      CD_Begin(cdh_0_0_0, false, "MainLoop"); 
+      CD_Begin(cdh_0_0_0, true, "MainLoop"); 
       cdh_0_0_0->Preserve(locDom, sizeof(locDom), kCopy, "MainLoop"); 
       cdh_0_0_0->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "MainLoop"); 
 #endif
@@ -3530,12 +3561,12 @@ int main(int argc, char *argv[])
       CDHandle *cdh_1_1_0 = GetLeafCD()->Create(CD_MAP_1_1_0 >> CDFLAG_SIZE, 
                                       (string("TimeIncrement")+GetLeafCD()->node_id().GetStringID()).c_str(), 
                                        CD_MAP_1_1_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_1_1_0)); 
-      CD_Begin(cdh_1_1_0, false, "TimeIncrement"); 
+      CD_Begin(cdh_1_1_0, true, "TimeIncrement"); 
       cdh_1_1_0->Preserve(locDom, sizeof(locDom), kCopy, "locDom_TimeIncrement");
 #elif SWITCH_1_1_0 == SEQUENTIAL_CD
       CDHandle *cdh_1_1_0 = GetCurrentCD();
       CD_Complete(cdh_1_1_0);
-      CD_Begin(cdh_1_1_0, false, "TimeIncrement"); 
+      CD_Begin(cdh_1_1_0, true, "TimeIncrement"); 
       cdh_1_1_0->Preserve(locDom, sizeof(locDom), kCopy, "locDom_TimeIncrement");
       cdh_1_1_0->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_TimeIncrement");
 #endif
@@ -3555,7 +3586,7 @@ int main(int argc, char *argv[])
       CDHandle *cdh_1_2_0 = GetLeafCD()->Create(CD_MAP_1_2_0 >> CDFLAG_SIZE, 
                                       (string("LagrangeLeapFrog")+GetLeafCD()->node_id().GetStringID()).c_str(), 
                                        CD_MAP_1_2_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_1_2_0)); 
-      CD_Begin(cdh_1_2_0, false, "LagrangeLeapFrog"); 
+      CD_Begin(cdh_1_2_0, true, "LagrangeLeapFrog"); 
       cdh_1_2_0->Preserve(locDom, sizeof(locDom), kCopy, "locDom_LagrangeLeapFrog");
       cdh_1_2_0->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_LagrangeLeapFrog");
 #elif SWITCH_1_2_0 == SEQUENTIAL_CD

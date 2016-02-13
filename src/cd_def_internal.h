@@ -43,6 +43,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <map>
 #include <unordered_map>
 #include <errno.h>
+#include <ctime>
 #include "cd_features.h"
 #define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
 
@@ -156,14 +157,14 @@ typedef uint32_t ENTRY_TAG_T;
 //#define ERROR_RATE_TYPE_5 0.08
 //#define ERROR_RATE_TYPE_6 0.1
 //#define ERROR_RATE_TYPE_7 0.15
-#define ERROR_RATE_TYPE_0 0.002
-#define ERROR_RATE_TYPE_1 0.004
-#define ERROR_RATE_TYPE_2 0.006
-#define ERROR_RATE_TYPE_3 0.008
-#define ERROR_RATE_TYPE_4 0.01
-#define ERROR_RATE_TYPE_5 0.02
-#define ERROR_RATE_TYPE_6 0.04
-#define ERROR_RATE_TYPE_7 0.05
+#define ERROR_RATE_TYPE_0 0.0001
+#define ERROR_RATE_TYPE_1 0.0005
+#define ERROR_RATE_TYPE_2 0.001
+#define ERROR_RATE_TYPE_3 0.002
+#define ERROR_RATE_TYPE_4 0.004
+#define ERROR_RATE_TYPE_5 0.005
+#define ERROR_RATE_TYPE_6 0.01
+#define ERROR_RATE_TYPE_7 0.02
 #define ROOT_SYS_DETECT_VEC 0xFFFFFFFFFFFFFFFF
 
 //GONG: global variable to represent the current context for malloc wrapper
@@ -383,6 +384,11 @@ namespace cd {
 //                     };
 
 
+extern clock_t tot_begin_clk;
+extern clock_t tot_end_clk;
+extern clock_t begin_clk;
+extern clock_t end_clk;
+extern clock_t elapsed_time;
 
 /**@addtogroup runtime_logging 
  * @{
@@ -395,23 +401,15 @@ namespace cd {
 
 #define CDPrologue() \
   app_side = false;\
+  clock_t begin_clk = clock(); \
   profiler_->RecordClockBegin();
 
 #else
 
-
 #define CDPrologue() \
-  app_side = false;
-
+  app_side = false; \
+  clock_t begin_clk = clock(); 
 #endif
-//  static inline void CDPrologue(void) 
-//  { 
-//    app_side = false; 
-//#if _PROFILER
-//    profiler_->RecordClockBegin();
-//#endif
-//  }
-
 
 
 /**@brief Set current context as application side. 
@@ -420,23 +418,19 @@ namespace cd {
 #if _PROFILER
 
 #define CDEpilogue() \
-  app_side = true;\
+  app_side = true; \
+  clock_t end_clk = clock(); \
+  elapsed_time += end_clk - begin_clk; \
   profiler_->RecordClockEnd();
 
 #else
 
 #define CDEpilogue() \
-  app_side = true;
+  app_side = true; \
+  clock_t end_clk = clock(); \
+  elapsed_time += end_clk - begin_clk; \
 
 #endif
-//  static inline void CDEpilogue(void) 
-//  { 
-//    app_side = true; 
-//#if _PROFILER
-//    profiler_->RecordClockEnd();
-//#endif
-//    
-//  }
 
 /**@brief Check current context is application side. 
  * @return true/false
@@ -509,13 +503,13 @@ extern FILE *cdoutApp;
   fprintf(cdout, __VA_ARGS__)
 
 
-#define LOG_DEBUG(...) \
+#define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
       cd::app_side=false;\
       fprintf(cdout, __VA_ARGS__);\
       cd::app_side = true;}\
     else fprintf(cdout, __VA_ARGS__);\
-  }
+  }*/
 
 #define LIBC_DEBUG(...) /*\
     { if(cd::app_side) {\

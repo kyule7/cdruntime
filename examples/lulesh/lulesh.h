@@ -40,13 +40,13 @@ using namespace std;
   CDH = GetCurrentCD()->Create(SWITCH >> CDFLAG_SIZE, \
                                   (string(FUNC_NAME)+GetCurrentCD()->node_id().GetStringID()).c_str(), \
                                    SWITCH & CDFLAG_MASK, ERROR_FLAG_SHIFT(SWITCH)); \
-  CD_Begin(CDH, false, FUNC_NAME); \
+  CD_Begin(CDH, true, FUNC_NAME); \
   CDH->Preserve(domain.serdes.SetOp(SERDES_OPS), \
                 CD_TYPE | kSerdes, (string("AllMembers_")+string(FUNC_NAME)).c_str()); 
 
 #define CDMAPPING_BEGIN_SEQUENTIAL(SWITCH, CDH, FUNC_NAME, SERDES_OPS, CD_TYPE) \
   CD_Complete(CDH); \
-  CD_Begin(CDH, false, FUNC_NAME); \
+  CD_Begin(CDH, true, FUNC_NAME); \
   CDH->Preserve(domain.serdes.SetOp(SERDES_OPS), \
                 CD_TYPE | kSerdes, (string("AllMembers_")+string(FUNC_NAME)).c_str()); 
 
@@ -54,6 +54,9 @@ using namespace std;
    CDH->Detect(); \
    CD_Complete(CDH); \
    CDH->Destroy(); 
+
+//#define DEBUG_PRINT printf
+#define DEBUG_PRINT(...)
 
 #define  M__NO_SERDES          0x0000000000000000  // 0
 /* COORDINATES */
@@ -679,10 +682,10 @@ class DomainSerdes : public Serializable {
       serdes_table[ID__REGELEMLIST]       = SerdesInfo(sizeof(Index_t*)* numRegSize, dom->m_regElemlist);
       SerdesInfo *serdesRegElem = new SerdesInfo[numRegSize];
       serdes_table[ID__REGELEMLIST_INNER] = SerdesInfo(sizeof(SerdesInfo) * numRegSize, serdesRegElem);
-      printf("Init numRegSize %d\n", dom->m_numReg); //getchar();
+//      printf("Init numRegSize %d\n", dom->m_numReg); //getchar();
       for(int i=0; i<numRegSize; ++i) {
         serdesRegElem[i] = SerdesInfo((dom->m_regElemSize)[i], (dom->m_regElemlist)[i]);
-              printf("Init %d \t %p\n", (dom->m_regElemSize)[i], (dom->m_regElemlist)[i]); 
+              //printf("Init %d \t %p\n", (dom->m_regElemSize)[i], (dom->m_regElemlist)[i]); 
               //ngetchar();
       }
       // serdes_table[ID__REGELEMLIST_INNER].src[j].size
