@@ -14,7 +14,7 @@
 #include <math.h>
 #include <vector>
 
-#if _CD
+//#if _CD
 #include "packer.h"
 #include "unpacker.h"
 #include "cd.h"
@@ -22,7 +22,8 @@
 //#include "serdes.h"
 //#include "cd_handle.h"
 using namespace std;
-#endif
+//#endif
+
 //**************************************************
 // Allow flexibility for arithmetic representations 
 //**************************************************
@@ -30,6 +31,8 @@ using namespace std;
 #define MAX(a, b) ( ((a) > (b)) ? (a) : (b))
 
 // CD
+#if _CD
+
 #define SERDES_ENABLED 1
 
 #define CDFLAG_SIZE 16
@@ -55,9 +58,39 @@ using namespace std;
    CD_Complete(CDH); \
    CDH->Destroy(); 
 
+#define CDMAPPING_BEGIN_NESTED_ONLY(SWITCH, CDH, FUNC_NAME, SERDES_OPS, CD_TYPE) \
+  CDH = GetCurrentCD()->Create(SWITCH >> CDFLAG_SIZE, \
+                                  (string(FUNC_NAME)+GetCurrentCD()->node_id().GetStringID()).c_str(), \
+                                   SWITCH & CDFLAG_MASK, ERROR_FLAG_SHIFT(SWITCH)); \
+  CD_Begin(CDH, true, FUNC_NAME); 
+
+#define CDMAPPING_BEGIN_SEQUENTIAL_ONLY(SWITCH, CDH, FUNC_NAME) \
+  CD_Complete(CDH); \
+  CD_Begin(CDH, true, FUNC_NAME); 
+
+
+//Nested?
+//-------
+//Create
+//Begin
+//-------
+//
+//Sequential?
+//-------
+//Complete
+//Begin
+//-------
+//
+//Nothing?
+//-------
+//Preserve
+//-------
+
+
 //#define DEBUG_PRINT printf
 #define DEBUG_PRINT(...)
 
+/////////////////////////////////////////////////////////////////////
 #define  M__NO_SERDES          0x0000000000000000  // 0
 /* COORDINATES */
 #define  M__X                  0x0000000000000001  // 1
@@ -140,7 +173,9 @@ using namespace std;
 #define  M__REGELEMLIST_INNER  0x0002000000000000  // 50                     
 #define  M__REG_NUMLIST        0x0004000000000000  // 51                     
 #define  M__SERDES_ALL         0x0007FFFFFFFFFFFF  // 52
+/////////////////////////////////////////////////////////////////////
 #define  TOTAL_ELEMENT_COUNT   53
+/////////////////////////////////////////////////////////////////////
 #define  ID__NO_SERDES         0  
 #define  ID__X                 1
 #define  ID__Y                 2 
@@ -195,6 +230,23 @@ using namespace std;
 #define  ID__REG_NUMLIST       51
 #define  ID__SERDES_ALL        52
 /////////////////////////////////////////////////////////////////////
+
+#else // if _CD ends
+
+#define SERDES_ENABLED 0
+
+#define CDFLAG_SIZE 16
+#define CDFLAG_MASK 0xFF
+#define ERROR_FLAG_SHIFT(X) (((X)>>8) & 0xFF)
+
+#define CDMAPPING_BEGIN_NESTED(...)
+#define CDMAPPING_BEGIN_SEQUENTIAL(...) 
+#define CDMAPPING_END_NESTED(...) 
+#define DEBUG_PRINT(...)
+#define CD_DEBUG(...)
+
+
+#endif
 
 // Precision specification
 typedef float        real4 ;

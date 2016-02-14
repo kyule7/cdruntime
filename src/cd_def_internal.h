@@ -386,6 +386,15 @@ namespace cd {
 
 extern clock_t tot_begin_clk;
 extern clock_t tot_end_clk;
+
+extern clock_t msg_begin_clk;
+extern clock_t msg_end_clk;
+extern clock_t msg_elapsed_time;
+
+extern clock_t log_begin_clk;
+extern clock_t log_end_clk;
+extern clock_t log_elapsed_time;
+
 extern clock_t begin_clk;
 extern clock_t end_clk;
 extern clock_t elapsed_time;
@@ -394,6 +403,27 @@ extern clock_t elapsed_time;
  * @{
  */
 
+extern clock_t msg_begin_clk;
+extern clock_t msg_end_clk;
+extern clock_t msg_elapsed_time;
+
+#define MsgPrologue() \
+  app_side = false; \
+  msg_begin_clk = clock(); 
+
+#define MsgEpilogue() \
+  app_side = true; \
+  msg_end_clk = clock(); \
+  msg_elapsed_time += msg_end_clk - msg_begin_clk; 
+
+#define LogPrologue() \
+  log_begin_clk = clock(); 
+
+#define LogEpilogue() \
+  log_end_clk = clock(); \
+  log_elapsed_time += log_end_clk - log_begin_clk; 
+
+
 /**@brief Set current context as non-application side. 
  * @return true/false
  */
@@ -401,14 +431,14 @@ extern clock_t elapsed_time;
 
 #define CDPrologue() \
   app_side = false;\
-  clock_t begin_clk = clock(); \
+  begin_clk = clock(); \
   profiler_->RecordClockBegin();
 
 #else
 
 #define CDPrologue() \
   app_side = false; \
-  clock_t begin_clk = clock(); 
+  begin_clk = clock(); 
 #endif
 
 
@@ -419,7 +449,7 @@ extern clock_t elapsed_time;
 
 #define CDEpilogue() \
   app_side = true; \
-  clock_t end_clk = clock(); \
+  end_clk = clock(); \
   elapsed_time += end_clk - begin_clk; \
   profiler_->RecordClockEnd();
 
@@ -427,7 +457,7 @@ extern clock_t elapsed_time;
 
 #define CDEpilogue() \
   app_side = true; \
-  clock_t end_clk = clock(); \
+  end_clk = clock(); \
   elapsed_time += end_clk - begin_clk; \
 
 #endif

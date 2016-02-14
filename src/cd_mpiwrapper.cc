@@ -43,8 +43,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_path.h"
 #include "cd_global.h"
 #include "cd_comm_log.h"
-
+#include "cd_def_internal.h"
 using namespace cd;
+clock_t cd::msg_begin_clk;
+clock_t cd::msg_end_clk;
+clock_t cd::msg_elapsed_time;
 
 // -------------------------------------------------------------------------------------------------------
 // blocking p2p communication
@@ -60,7 +63,7 @@ int MPI_Send(const void *buf,
              int tag, 
              MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret=0;
   LOG_DEBUG("here inside MPI_Send\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -70,7 +73,7 @@ int MPI_Send(const void *buf,
   {
     LOG_DEBUG("Warning: MPI_Send out of CD context...\n");
     mpi_ret = PMPI_Send(const_cast<void *>(buf), count, datatype, dest, tag, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -104,7 +107,7 @@ int MPI_Send(const void *buf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -117,7 +120,7 @@ int MPI_Ssend(const void *buf,
               int tag, 
               MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret=0;
   LOG_DEBUG("here inside MPI_Ssend\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -127,7 +130,7 @@ int MPI_Ssend(const void *buf,
   {
     LOG_DEBUG("Warning: MPI_Ssend out of CD context...\n");
     mpi_ret = PMPI_Ssend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -161,7 +164,7 @@ int MPI_Ssend(const void *buf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -175,7 +178,7 @@ int MPI_Rsend(const void *buf,
               int tag, 
               MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret=0;
   LOG_DEBUG("here inside MPI_Rsend\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -185,7 +188,7 @@ int MPI_Rsend(const void *buf,
   {
     LOG_DEBUG("Warning: MPI_Rsend out of CD context...\n");
     mpi_ret = PMPI_Rsend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -219,7 +222,7 @@ int MPI_Rsend(const void *buf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -233,7 +236,7 @@ int MPI_Bsend(const void *buf,
               int tag, 
               MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret=0;
   LOG_DEBUG("here inside MPI_Bsend\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -243,7 +246,7 @@ int MPI_Bsend(const void *buf,
   {
     LOG_DEBUG("Warning: MPI_Bsend out of CD context...\n");
     mpi_ret = PMPI_Bsend(const_cast<void *>(buf), count, datatype, dest, tag, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -277,7 +280,7 @@ int MPI_Bsend(const void *buf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -291,7 +294,7 @@ int MPI_Recv(void *buf,
              MPI_Comm comm, 
              MPI_Status *status)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret=0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
@@ -304,7 +307,7 @@ int MPI_Recv(void *buf,
   {
     LOG_DEBUG("Warning: MPI_Recv out of CD context...\n");
     mpi_ret = PMPI_Recv(const_cast<void *>(buf), count, datatype, src, tag, comm, status);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -338,7 +341,7 @@ int MPI_Recv(void *buf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -357,7 +360,7 @@ int MPI_Sendrecv(const void *sendbuf,
                  MPI_Comm comm, 
                  MPI_Status *status)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret=0;
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
@@ -371,7 +374,7 @@ int MPI_Sendrecv(const void *sendbuf,
     LOG_DEBUG("Warning: MPI_Sendrecv out of CD context...\n");
     mpi_ret = PMPI_Sendrecv(const_cast<void *>(sendbuf), sendcount, sendtype, dest, sendtag,
                           recvbuf, recvcount, recvtype, src, recvtag, comm, status);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -418,7 +421,7 @@ int MPI_Sendrecv(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -434,7 +437,7 @@ int MPI_Sendrecv_replace(void *buf,
                          MPI_Comm comm, 
                          MPI_Status *status)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret=0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
@@ -446,7 +449,7 @@ int MPI_Sendrecv_replace(void *buf,
   {
     LOG_DEBUG("Warning: MPI_Sendrecv_replace out of CD context...\n");
     mpi_ret = PMPI_Sendrecv_replace(buf, count, datatype, dest, sendtag, src, recvtag, comm, status);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -490,7 +493,7 @@ int MPI_Sendrecv_replace(void *buf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -508,7 +511,7 @@ int MPI_Isend(const void *buf,
               MPI_Comm comm, 
               MPI_Request *request)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret=0;
   LOG_DEBUG("here inside MPI_Isend\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -566,7 +569,7 @@ int MPI_Isend(const void *buf,
     mpi_ret = PMPI_Isend(const_cast<void *>(buf), count, datatype, dest, tag, comm, request);
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -579,7 +582,7 @@ int MPI_Irecv(void *buf,
               MPI_Comm comm, 
               MPI_Request *request)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret=0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
@@ -671,7 +674,7 @@ int MPI_Irecv(void *buf,
     LOG_DEBUG("Warning: MPI_Irecv out of CD context...\n");
     mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
   }
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -680,7 +683,7 @@ int MPI_Test(MPI_Request *request,
              int * flag,
              MPI_Status *status)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
 
   CDHandle * cur_cdh = GetCurrentCD();
@@ -748,7 +751,7 @@ int MPI_Test(MPI_Request *request,
     mpi_ret = PMPI_Test(request, flag, status);
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -758,7 +761,7 @@ int MPI_Testall(int count,
                 int *flag,
                 MPI_Status array_of_statuses[])
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Testall\n");
 
@@ -844,7 +847,7 @@ int MPI_Testall(int count,
     //LOG_DEBUG("Warning: MPI_Testall out of CD context...\n");
     mpi_ret = PMPI_Testall(count, array_of_requests, flag, array_of_statuses);
   }
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -854,7 +857,7 @@ int MPI_Testany(int count,
                 int *flag,
                 MPI_Status *status)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Testany\n");
 
@@ -863,7 +866,7 @@ int MPI_Testany(int count,
   {
     //LOG_DEBUG("Warning: MPI_Testany out of CD context...\n");
     mpi_ret = PMPI_Testany(count, array_of_requests, index, flag, status);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -933,7 +936,7 @@ int MPI_Testany(int count,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -943,7 +946,7 @@ int MPI_Testsome(int incount,
                  int array_of_indices[],
                  MPI_Status array_of_statuses[])
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Testsome\n");
 
@@ -952,7 +955,7 @@ int MPI_Testsome(int incount,
   {
     //LOG_DEBUG("Warning: MPI_Testsome out of CD context...\n");
     mpi_ret = PMPI_Testsome(incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -1032,7 +1035,7 @@ int MPI_Testsome(int incount,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1045,7 +1048,7 @@ int MPI_Testsome(int incount,
 int MPI_Wait(MPI_Request *request, 
              MPI_Status *status)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Wait\n");
 
@@ -1093,7 +1096,7 @@ int MPI_Wait(MPI_Request *request,
     LOG_DEBUG("Warning: MPI_Wait out of CD context...\n");
     mpi_ret = PMPI_Wait(request, status);
   }
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1102,7 +1105,7 @@ int MPI_Wait(MPI_Request *request,
 int MPI_Waitall(int count, MPI_Request array_of_requests[], 
                 MPI_Status array_of_statuses[])
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int ii=0;
   LOG_DEBUG("here inside MPI_Waitall\n");
@@ -1175,7 +1178,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
     mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1183,7 +1186,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
 int MPI_Waitany(int count, MPI_Request *array_of_requests, 
                 int *index, MPI_Status *status)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Waitany\n");
 
@@ -1192,7 +1195,7 @@ int MPI_Waitany(int count, MPI_Request *array_of_requests,
   {
     LOG_DEBUG("Warning: MPI_Waitany out of CD context...\n");
     mpi_ret = PMPI_Waitany(count, array_of_requests, index, status);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -1239,7 +1242,7 @@ int MPI_Waitany(int count, MPI_Request *array_of_requests,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1249,7 +1252,7 @@ int MPI_Waitsome(int incount,
                  int array_of_indices[],
                  MPI_Status array_of_statuses[])
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int ii=0;
   LOG_DEBUG("here inside MPI_Waitsome\n");
@@ -1259,7 +1262,7 @@ int MPI_Waitsome(int incount,
   {
     LOG_DEBUG("Warning: MPI_Waitsome out of CD context...\n");
     mpi_ret = PMPI_Waitsome(incount, array_of_requests, outcount, array_of_indices, array_of_statuses);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -1321,7 +1324,7 @@ int MPI_Waitsome(int incount,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1332,7 +1335,7 @@ int MPI_Waitsome(int incount,
 // MPI_Barrier
 int MPI_Barrier (MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret=0;
 
   int myrank;
@@ -1344,7 +1347,7 @@ int MPI_Barrier (MPI_Comm comm)
   {
     LOG_DEBUG("Warning: MPI_Barrier out of CD context...\n");
     mpi_ret = PMPI_Barrier(comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -1378,7 +1381,7 @@ int MPI_Barrier (MPI_Comm comm)
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1389,7 +1392,7 @@ int MPI_Bcast (void *buffer,
                int root,
                MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret=0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
@@ -1400,7 +1403,7 @@ int MPI_Bcast (void *buffer,
   {
     LOG_DEBUG("Warning: MPI_Bcast out of CD context...\n");
     mpi_ret = PMPI_Bcast(buffer, count, datatype, root, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -1434,7 +1437,7 @@ int MPI_Bcast (void *buffer,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1448,7 +1451,7 @@ int MPI_Gather(const void *sendbuf,
                int root, 
                MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
@@ -1459,7 +1462,7 @@ int MPI_Gather(const void *sendbuf,
   {
     LOG_DEBUG("Warning: MPI_Gather out of CD context...\n");
     mpi_ret = PMPI_Gather(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -1513,7 +1516,7 @@ int MPI_Gather(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1529,7 +1532,7 @@ int MPI_Gatherv(const void *sendbuf,
                 int root, 
                 MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
@@ -1540,7 +1543,7 @@ int MPI_Gatherv(const void *sendbuf,
   {
     LOG_DEBUG("Warning: MPI_Gatherv out of CD context...\n");
     mpi_ret = PMPI_Gatherv(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(displs), recvtype, root, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -1628,7 +1631,7 @@ int MPI_Gatherv(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1642,7 +1645,7 @@ int MPI_Allgather(const void *sendbuf,
                   MPI_Datatype recvtype,
                   MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int myrank;
   PMPI_Comm_rank(comm, &myrank);
@@ -1655,7 +1658,7 @@ int MPI_Allgather(const void *sendbuf,
   {
     LOG_DEBUG("Warning: MPI_Allgather out of CD context...\n");
     mpi_ret = PMPI_Allgather(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -1697,7 +1700,7 @@ int MPI_Allgather(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1712,7 +1715,7 @@ int MPI_Allgatherv(const void *sendbuf,
                    MPI_Datatype recvtype,
                    MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int myrank;
   PMPI_Comm_rank(comm, &myrank);
@@ -1725,7 +1728,7 @@ int MPI_Allgatherv(const void *sendbuf,
   {
     LOG_DEBUG("Warning: MPI_Allgatherv out of CD context...\n");
     mpi_ret = PMPI_Allgatherv(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(displs), recvtype, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -1794,7 +1797,7 @@ int MPI_Allgatherv(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1808,7 +1811,7 @@ int MPI_Reduce(const void *sendbuf,
                int root,
                MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
@@ -1819,7 +1822,7 @@ int MPI_Reduce(const void *sendbuf,
   {
     LOG_DEBUG("Warning: MPI_Reduce out of CD context...\n");
     mpi_ret = PMPI_Reduce(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, root, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -1880,7 +1883,7 @@ int MPI_Reduce(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1893,7 +1896,7 @@ int MPI_Allreduce(const void *sendbuf,
                   MPI_Op op, 
                   MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int myrank;
   PMPI_Comm_rank(comm, &myrank);
@@ -1906,7 +1909,7 @@ int MPI_Allreduce(const void *sendbuf,
   {
     LOG_DEBUG("Warning: MPI_Allreduce out of CD context...\n");
     mpi_ret = PMPI_Allreduce(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -1940,7 +1943,7 @@ int MPI_Allreduce(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -1954,7 +1957,7 @@ int MPI_Alltoall(const void *sendbuf,
                  MPI_Datatype recvtype,
                  MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int myrank;
   PMPI_Comm_rank(comm, &myrank);
@@ -1967,7 +1970,7 @@ int MPI_Alltoall(const void *sendbuf,
   {
     LOG_DEBUG("Warning: MPI_Alltoall out of CD context...\n");
     mpi_ret = PMPI_Alltoall(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -2009,7 +2012,7 @@ int MPI_Alltoall(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -2025,7 +2028,7 @@ int MPI_Alltoallv(const void *sendbuf,
                   MPI_Datatype recvtype,
                   MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int myrank;
   PMPI_Comm_rank(comm, &myrank);
@@ -2039,7 +2042,7 @@ int MPI_Alltoallv(const void *sendbuf,
     LOG_DEBUG("Warning: MPI_Alltoallv out of CD context...\n");
     mpi_ret = PMPI_Alltoallv(const_cast<void *>(sendbuf), const_cast<int *>(sendcnts), const_cast<int *>(sdispls), sendtype, 
                              recvbuf, const_cast<int *>(recvcnts), const_cast<int *>(rdispls), recvtype, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -2113,7 +2116,7 @@ int MPI_Alltoallv(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -2128,7 +2131,7 @@ int MPI_Scatter(const void *sendbuf,
                 int root, 
                 MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
@@ -2139,7 +2142,7 @@ int MPI_Scatter(const void *sendbuf,
   {
     LOG_DEBUG("Warning: MPI_Scatter out of CD context...\n");
     mpi_ret = PMPI_Scatter(const_cast<void *>(sendbuf), sendcnt, sendtype, recvbuf, recvcnt, recvtype, root, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -2173,7 +2176,7 @@ int MPI_Scatter(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -2189,7 +2192,7 @@ int MPI_Scatterv(const void *sendbuf,
                  int root, 
                  MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
@@ -2201,7 +2204,7 @@ int MPI_Scatterv(const void *sendbuf,
     LOG_DEBUG("Warning: MPI_Scatterv out of CD context...\n");
     mpi_ret = PMPI_Scatterv(const_cast<void *>(sendbuf), const_cast<int *>(sendcnts), const_cast<int *>(displs), sendtype, 
                             recvbuf, recvcnt, recvtype, root, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -2238,7 +2241,7 @@ int MPI_Scatterv(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -2251,7 +2254,7 @@ int MPI_Reduce_scatter(const void *sendbuf,
                        MPI_Op op,
                        MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
@@ -2262,7 +2265,7 @@ int MPI_Reduce_scatter(const void *sendbuf,
   {
     LOG_DEBUG("Warning: MPI_Reduce_scatter out of CD context...\n");
     mpi_ret = PMPI_Reduce_scatter(const_cast<void *>(sendbuf), recvbuf, const_cast<int *>(recvcnts), datatype, op, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -2304,7 +2307,7 @@ int MPI_Reduce_scatter(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
@@ -2317,7 +2320,7 @@ int MPI_Scan(const void *sendbuf,
              MPI_Op op,
              MPI_Comm comm)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
@@ -2330,7 +2333,7 @@ int MPI_Scan(const void *sendbuf,
   {
     LOG_DEBUG("Warning: MPI_Scan out of CD context...\n");
     mpi_ret = PMPI_Scan(const_cast<void *>(sendbuf), recvbuf, count, datatype, op, comm);
-    app_side = true;
+    MsgEpilogue();
     return mpi_ret;
   }
 
@@ -2364,30 +2367,30 @@ int MPI_Scan(const void *sendbuf,
       break;
   }
 
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 
 int MPI_Init(int *argc, char ***argv)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
 
   mpi_ret = PMPI_Init(argc, argv);
 
   
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 int MPI_Finalize(void)
 {
-  app_side = false;
+  MsgPrologue();
   int mpi_ret = 0;
 
   mpi_ret = PMPI_Finalize();
 
   
-  app_side = true;
+  MsgEpilogue();
   return mpi_ret;
 }
 int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],
@@ -2416,7 +2419,7 @@ int MPI_Win_fence(int assert, MPI_Win win)
 //                  MPI_Comm comm,
 //                  MPI_Request *request)
 //{
-//  app_side = false;
+//  MsgPrologue();
 //  int mpi_ret = 0;
 //
 //  LOG_DEBUG("here inside MPI_Send_init\n");
@@ -2426,7 +2429,7 @@ int MPI_Win_fence(int assert, MPI_Win win)
 //  {
 //    LOG_DEBUG("Warning: MPI_Send_init out of CD context...\n");
 //    mpi_ret = PMPI_Send_init(buf, count, datatype, dest, tag, comm, request);
-//    app_side = true;
+//    MsgEpilogue();
 //    return mpi_ret;
 //  }
 //  switch (cur_cdh->ptr_cd()->GetCDLoggingMode())
@@ -2473,7 +2476,7 @@ int MPI_Win_fence(int assert, MPI_Win win)
 //  //  mpi_ret = PMPI_Send_init(buf, count, datatype, dest, tag, comm, request);
 //  //}
 //
-//  app_side = true;
+//  MsgEpilogue();
 //  return mpi_ret;
 //}
 

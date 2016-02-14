@@ -45,6 +45,10 @@ using namespace std;
 
 #define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 
+clock_t cd::log_begin_clk;
+clock_t cd::log_end_clk;
+clock_t cd::log_elapsed_time;
+
 int iterator_entry_count=0;
 uint64_t cd::gen_object_id=0;
 
@@ -3807,7 +3811,10 @@ void CD::DeleteEntryDirectory(void)
 //GONG
 CommLogErrT CD::CommLogCheckAlloc_libc(unsigned long length)
 {
-  return libc_log_ptr_->CheckChildLogAlloc(length);
+  LogPrologue();
+  CommLogErrT ret = libc_log_ptr_->CheckChildLogAlloc(length);
+  LogEpilogue();
+  return ret;
 }
 
 //GONG
@@ -3831,7 +3838,10 @@ bool CD::IsNewLogGenerated_libc()
 //SZ
 CommLogErrT CD::CommLogCheckAlloc(unsigned long length)
 {
-  return comm_log_ptr_->CheckChildLogAlloc(length);
+  LogPrologue();
+  CommLogErrT ret = comm_log_ptr_->CheckChildLogAlloc(length);
+  LogEpilogue();
+  return ret;
 }
 
 
@@ -3902,6 +3912,7 @@ CommLogErrT CD::ProbeAndReadData(unsigned long flag)
 //SZ
 CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 {
+  LogPrologue();
   // look for the entry in incomplete_log_
   int found = 0;
   std::vector<IncompleteLogEntry>::iterator it;
@@ -4015,6 +4026,8 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
   // delete the incomplete log entry
   if(found)
     tmp_cd->incomplete_log_.erase(it);
+
+  LogEpilogue();
   return kCommLogOK;
 }
 
@@ -4022,50 +4035,58 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, uint32_t task_id, 
                       bool completed, unsigned long flag, bool isrecv, bool isrepeated, bool intra_cd_msg)
 {
-  if (comm_log_ptr_ == NULL)
-  {
+  LogPrologue();
+  CommLogErrT ret;
+  if (comm_log_ptr_ == NULL) {
     ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to log data!\n");
-    return kCommLogError;
+    ret = kCommLogError;
   }
 #if _LOG_PROFILING
   num_log_entry_++;
   tot_log_volume_+=length;
 #endif
-  return comm_log_ptr_->LogData(data_ptr, length, task_id, completed, flag, isrecv, isrepeated, intra_cd_msg);
+  ret = comm_log_ptr_->LogData(data_ptr, length, task_id, completed, flag, isrecv, isrepeated, intra_cd_msg);
+  LogEpilogue();
+  return ret;
 }
 
 //SZ
 CommLogErrT CD::ProbeData(const void *data_ptr, unsigned long length)
 {
-  if (comm_log_ptr_ == NULL)
-  {
+  LogPrologue();
+  CommLogErrT ret;
+  if (comm_log_ptr_ == NULL) {
     ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to read data!\n");
-    return kCommLogError;
+    ret = kCommLogError;
   }
-  CommLogErrT tmp_return = comm_log_ptr_->ProbeData(data_ptr, length);
-  if (tmp_return == kCommLogCommLogModeFlip){
+  ret = comm_log_ptr_->ProbeData(data_ptr, length);
+  if (ret == kCommLogCommLogModeFlip){
     SetCDLoggingMode(kRelaxedCDGen);
     LOG_DEBUG("CDLoggingMode changed to %d\n", GetCDLoggingMode());
   }
 
-  return tmp_return;
+  LogEpilogue();
+  return ret;
 }
 
 //SZ
 CommLogErrT CD::ReadData(void *data_ptr, unsigned long length)
 {
+  LogPrologue();
+  CommLogErrT ret;
   if (comm_log_ptr_ == NULL)
   {
     ERROR_MESSAGE("Null pointer of comm_log_ptr_ when trying to read data!\n");
     return kCommLogError;
   }
-  CommLogErrT tmp_return = comm_log_ptr_->ReadData(data_ptr, length);
-  if (tmp_return == kCommLogCommLogModeFlip){
+  ret = comm_log_ptr_->ReadData(data_ptr, length);
+  if (ret == kCommLogCommLogModeFlip){
     SetCDLoggingMode(kRelaxedCDGen);
     LOG_DEBUG("CDLoggingMode changed to %d\n", GetCDLoggingMode());
   }
+  LogEpilogue();
 
-  return tmp_return;
+  return ret;
 }
 
 //SZ

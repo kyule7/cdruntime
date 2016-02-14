@@ -289,17 +289,23 @@ void CD_Finalize(void)
 
 #if CD_MPI_ENABLED
   double cd_elapsed = ((double)cd::elapsed_time) / CLOCKS_PER_SEC;
+  double msg_elapsed = ((double)cd::msg_elapsed_time) / CLOCKS_PER_SEC;
+  double log_elapsed = ((double)cd::log_elapsed_time) / CLOCKS_PER_SEC;
   double tot_elapsed= ((double)(cd::tot_end_clk - cd::tot_begin_clk)) / CLOCKS_PER_SEC;
-  double sendbuf[4] = {tot_elapsed, 
+  double sendbuf[8] = {tot_elapsed, 
                        tot_elapsed * tot_elapsed,
                        cd_elapsed,
-                       cd_elapsed  * cd_elapsed
+                       cd_elapsed  * cd_elapsed,
+                       msg_elapsed,
+                       msg_elapsed  * msg_elapsed,
+                       log_elapsed,
+                       log_elapsed  * log_elapsed
                       };
 //  printf("\n\n=====================================\n");
 //  printf("%lf\t%lf\t%lf\t%lf\n", sendbuf[0],sendbuf[1],sendbuf[2],sendbuf[3]);
 //  printf("=====================================\n\n");
-  double recvbuf[4] = {0.0,0.0,0.0,0.0};
-  MPI_Reduce(sendbuf, recvbuf, 4, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  double recvbuf[8] = {0.0,0.0,0.0,0.0,0.0,0.0};
+  MPI_Reduce(sendbuf, recvbuf, 8, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   if(cd::myTaskID == 0) {
 //  printf("\n\n=====================================\n");
 //  printf("%lf\t%lf\t%lf\t%lf\n", recvbuf[0],recvbuf[1],recvbuf[2],recvbuf[3]);
@@ -311,7 +317,16 @@ void CD_Finalize(void)
     printf("CD overhead time : %lf (%lf) (var: %lf)\n", recvbuf[2]/cd::totalTaskSize, 
                                                           sendbuf[2], 
                                                           (recvbuf[3] - recvbuf[2]*recvbuf[2]/cd::totalTaskSize)/cd::totalTaskSize);
-    printf("Ratio : %lf \n", (recvbuf[2] / recvbuf[0]) * 100); 
+    printf("Msg overhead time : %lf (%lf) (var: %lf)\n", recvbuf[4]/cd::totalTaskSize, 
+                                                          sendbuf[4], 
+                                                          (recvbuf[5] - recvbuf[4]*recvbuf[4]/cd::totalTaskSize)/cd::totalTaskSize);
+    printf("Log overhead time : %lf (%lf) (var: %lf)\n", recvbuf[6]/cd::totalTaskSize, 
+                                                          sendbuf[6], 
+                                                          (recvbuf[7] - recvbuf[6]*recvbuf[6]/cd::totalTaskSize)/cd::totalTaskSize);
+    printf("Ratio : %lf (Total) %lf (CD runtime) %lf (logging)\n", 
+                            ((recvbuf[2]+recvbuf[4]) / recvbuf[0]) * 100,
+                             (recvbuf[2] / recvbuf[0]) * 100, 
+                             (recvbuf[4] / recvbuf[0]) * 100); 
     printf("============================================\n\n");
   }
 #endif

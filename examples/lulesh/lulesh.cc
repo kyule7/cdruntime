@@ -161,13 +161,13 @@ Additional BSD Notice
 #include "lulesh.h"
 
 //#define SERDES_ENABLED 1
-//#if _CD
+#if _CD
 using namespace cd;
 //class DomainSerdes;
 int counter=0;
 Domain::DomainSerdes::SerdesInfo Domain::DomainSerdes::serdes_table[TOTAL_ELEMENT_COUNT];
 bool Domain::DomainSerdes::serdes_table_init = false; 
-//#endif
+#endif
 
 /*********************************/
 /* Data structure implementation */
@@ -570,11 +570,12 @@ void IntegrateStressForElems( Domain &domain,
      fz_elem = Allocate<Real_t>(numElem8) ;
   }
 
-#if SWITCH_5_1_1  > SEQUENTIAL_CD
+
+#if _CD && (SWITCH_5_1_1  > SEQUENTIAL_CD)
    CDHandle *cdh_5_1_1 = GetCurrentCD()->Create(CD_MAP_5_1_1 >> CDFLAG_SIZE, 
                             (string("Loop_IntegrateStressForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
                             CD_MAP_5_1_1 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_5_1_1)); 
-#elif SWITCH_5_1_1 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_1_1 == SEQUENTIAL_CD)
    CDHandle *cdh_5_1_1 = GetCurrentCD();
    CD_Complete(cdh_5_1_1); 
 #endif
@@ -583,10 +584,10 @@ void IntegrateStressForElems( Domain &domain,
 //#pragma omp parallel for firstprivate(numElem)
   for( Index_t k=0 ; k<numElem ; ++k )
   {
-#if SWITCH_5_1_1  > SEQUENTIAL_CD || SWITCH_5_1_1 == SEQUENTIAL_CD
-     CD_Begin(cdh_5_1_1, true, "Loop_IntegrateStressForElems"); 
-     cdh_5_1_1->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_IntegrateStressForElems"); 
-     cdh_5_1_1->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_IntegrateStressForElems"); 
+#if _CD && (SWITCH_5_1_1  > SEQUENTIAL_CD || SWITCH_5_1_1 == SEQUENTIAL_CD)
+      CD_Begin(cdh_5_1_1, true, "Loop_IntegrateStressForElems"); 
+      cdh_5_1_1->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_IntegrateStressForElems"); 
+      cdh_5_1_1->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_IntegrateStressForElems"); 
 #endif
 
       const Index_t* const elemToNode = domain.nodelist(k);
@@ -595,10 +596,10 @@ void IntegrateStressForElems( Domain &domain,
       Real_t y_local[8] ;
       Real_t z_local[8] ;
 
-#if SWITCH_6_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_0_0  > SEQUENTIAL_CD)
       CDHandle *cdh_6_0_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_6_0_0, cdh_6_0_0, "CollectDomainNodesToElemNodes1", M__SERDES_ALL, kCopy);
-#elif SWITCH_6_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_0_0 == SEQUENTIAL_CD)
       CDHandle *cdh_6_0_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_6_0_0, cdh_6_0_0, "CollectDomainNodesToElemNodes1", M__SERDES_ALL, kCopy);
 #endif
@@ -606,48 +607,48 @@ void IntegrateStressForElems( Domain &domain,
       // get nodal coordinates from global arrays and copy into local arrays.
       CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
 
-#if SWITCH_6_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_0_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_6_0_0, cdh_6_0_0);
-#elif SWITCH_6_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_0_0 == SEQUENTIAL_CD)
       cdh_6_0_0->Detect(); 
 #endif
 
-#if SWITCH_6_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_1_0  > SEQUENTIAL_CD)
       CDHandle *cdh_6_1_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_6_1_0, cdh_6_1_0, "CalcElemShapeFunctionDerivatives1", M__SERDES_ALL, kCopy);
-#elif SWITCH_6_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_1_0 == SEQUENTIAL_CD)
       CDHandle *cdh_6_1_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_6_1_0, cdh_6_1_0, "CalcElemShapeFunctionDerivatives1", M__SERDES_ALL, kCopy);
 #endif
       // Volume calculation involves extra work for numerical consistency
       CalcElemShapeFunctionDerivatives(x_local, y_local, z_local,
                                          B, &determ[k]);
-#if SWITCH_6_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_1_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_6_1_0, cdh_6_1_0);
-#elif SWITCH_6_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_1_0 == SEQUENTIAL_CD)
       cdh_6_1_0->Detect(); 
 #endif
 
-#if SWITCH_6_2_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_2_0  > SEQUENTIAL_CD)
       CDHandle *cdh_6_2_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_6_2_0, cdh_6_2_0, "CalcElemNodeNormals", M__SERDES_ALL, kCopy);
-#elif SWITCH_6_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_2_0 == SEQUENTIAL_CD)
       CDHandle *cdh_6_2_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_6_2_0, cdh_6_2_0, "CalcElemNodeNormals", M__SERDES_ALL, kCopy);
 #endif
-    CalcElemNodeNormals( B[0] , B[1], B[2],
-                          x_local, y_local, z_local );
-#if SWITCH_6_2_0  > SEQUENTIAL_CD
+      CalcElemNodeNormals( B[0] , B[1], B[2],
+                           x_local, y_local, z_local );
+#if _CD && (SWITCH_6_2_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_6_2_0, cdh_6_2_0);
-#elif SWITCH_6_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_2_0 == SEQUENTIAL_CD)
       cdh_6_2_0->Detect(); 
 #endif
 
 
-#if SWITCH_6_3_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_3_0  > SEQUENTIAL_CD)
       CDHandle *cdh_6_3_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_6_3_0, cdh_6_3_0, "SumElemStressesToNodeForces", M__SERDES_ALL, kCopy);
-#elif SWITCH_6_3_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_3_0 == SEQUENTIAL_CD)
       CDHandle *cdh_6_3_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_6_3_0, cdh_6_3_0, "SumElemStressesToNodeForces", M__SERDES_ALL, kCopy);
 #endif
@@ -672,13 +673,13 @@ void IntegrateStressForElems( Domain &domain,
           domain.fz(gnode) += fz_local[lnode];
        }
     }
-#if SWITCH_6_3_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_3_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_6_3_0, cdh_6_3_0);
-#elif SWITCH_6_3_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_3_0 == SEQUENTIAL_CD)
       cdh_6_3_0->Detect(); 
 #endif
 
-#if SWITCH_5_1_1  > SEQUENTIAL_CD || SWITCH_5_1_1 == SEQUENTIAL_CD
+#if _CD && (SWITCH_5_1_1  > SEQUENTIAL_CD || SWITCH_5_1_1 == SEQUENTIAL_CD)
      cdh_5_1_1->Detect();
      CD_Complete(cdh_5_1_1);
 #endif
@@ -687,9 +688,9 @@ void IntegrateStressForElems( Domain &domain,
 
 
   //FIXME CDBegin in the inner scope and CDComplete in the outer scope.
-#if SWITCH_5_1_1  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_1_1  > SEQUENTIAL_CD)
    cdh_5_1_1->Destroy();
-#elif SWITCH_5_1_1 == SEQUENTIAL_CD 
+#elif _CD && (SWITCH_5_1_1 == SEQUENTIAL_CD)
    CD_Begin(cdh_5_1_1, false, "After_Loop_IntegrateStressForElems");
 #endif
 
@@ -923,11 +924,11 @@ void CalcFBHourglassForceForElems( Domain &domain,
 /*************************************************/
 /*    compute the hourglass modes */
 
-#if SWITCH_7_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_7_0_0  > SEQUENTIAL_CD)
    CDHandle *cdh_7_0_0 = GetCurrentCD()->Create(CD_MAP_7_0_0 >> CDFLAG_SIZE, 
                             (string("Loop_CalcFBHourglassForceForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
                             CD_MAP_7_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_7_0_0)); 
-#elif SWITCH_7_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_7_0_0 == SEQUENTIAL_CD)
    CDHandle *cdh_7_0_0 = GetCurrentCD();
    CD_Complete(cdh_7_0_0); 
 #endif
@@ -935,7 +936,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
 //#pragma omp parallel for firstprivate(numElem, hourg)
    for(Index_t i2=0;i2<numElem;++i2) {
 
-#if SWITCH_7_0_0  > SEQUENTIAL_CD || SWITCH_7_0_0 == SEQUENTIAL_CD
+#if _CD && (SWITCH_7_0_0  > SEQUENTIAL_CD || SWITCH_7_0_0 == SEQUENTIAL_CD)
      CD_Begin(cdh_7_0_0, true, "Loop_CalcFBHourglassForceForElems"); 
      cdh_7_0_0->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_CalcFBHourglassForceForElems"); 
      cdh_7_0_0->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_CalcFBHourglassForceForElems"); 
@@ -1055,22 +1056,17 @@ void CalcFBHourglassForceForElems( Domain &domain,
 
       coefficient = - hourg * Real_t(0.01) * ss1 * mass1 / volume13;
 
-#if SWITCH_7_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_7_1_0  > SEQUENTIAL_CD)
       CDHandle *cdh_7_1_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_7_1_0, cdh_7_1_0, "CalcElemFBHourglassForce", M__SERDES_ALL, kCopy);
-#elif SWITCH_7_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_7_1_0 == SEQUENTIAL_CD)
       CDHandle *cdh_7_1_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_7_1_0, cdh_7_1_0, "CalcElemFBHourglassForce", M__SERDES_ALL, kCopy);
 #endif
       CalcElemFBHourglassForce(xd1,yd1,zd1,
-                      hourgam,
-                      coefficient, hgfx, hgfy, hgfz);
-#if SWITCH_7_1_0  > SEQUENTIAL_CD
-      CDMAPPING_END_NESTED(CD_MAP_7_1_0, cdh_7_1_0);
-#elif SWITCH_7_1_0 == SEQUENTIAL_CD
-      cdh_7_1_0->Detect(); 
-#endif
-
+                               hourgam,
+                               coefficient, 
+                               hgfx, hgfy, hgfz);
 
       // With the threaded version, we write into local arrays per elem
       // so we don't have to worry about race conditions
@@ -1139,7 +1135,15 @@ void CalcFBHourglassForceForElems( Domain &domain,
          domain.fz(n7si2) += hgfz[7];
       }
 
-#if SWITCH_7_0_0  > SEQUENTIAL_CD || SWITCH_7_0_0 == SEQUENTIAL_CD
+
+#if _CD && (SWITCH_7_1_0  > SEQUENTIAL_CD)
+      CDMAPPING_END_NESTED(CD_MAP_7_1_0, cdh_7_1_0);
+#elif _CD && (SWITCH_7_1_0 == SEQUENTIAL_CD)
+      cdh_7_1_0->Detect(); 
+#endif
+
+
+#if _CD && (SWITCH_7_0_0  > SEQUENTIAL_CD || SWITCH_7_0_0 == SEQUENTIAL_CD)
      cdh_7_0_0->Detect();
      CD_Complete(cdh_7_0_0);
 #endif
@@ -1147,9 +1151,9 @@ void CalcFBHourglassForceForElems( Domain &domain,
    }  // loop for CD7 ends
 
   //FIXME CDBegin in the inner scope and CDComplete in the outer scope.
-#if SWITCH_7_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_7_0_0  > SEQUENTIAL_CD)
    cdh_7_0_0->Destroy();
-#elif SWITCH_7_0_0 == SEQUENTIAL_CD 
+#elif _CD && (SWITCH_7_0_0 == SEQUENTIAL_CD)
    CD_Begin(cdh_7_0_0, false, "After_Loop_CalcFBHourglassForceForElems");
 #endif
 
@@ -1198,11 +1202,11 @@ void CalcHourglassControlForElems(Domain& domain,
    Real_t *y8n  = Allocate<Real_t>(numElem8) ;
    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
 
-#if SWITCH_6_4_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_4_0  > SEQUENTIAL_CD)
    CDHandle *cdh_6_4_0 = GetCurrentCD()->Create(CD_MAP_6_4_0 >> CDFLAG_SIZE, 
                             (string("Loop_CalcHourglassControlForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
                             CD_MAP_6_4_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_6_4_0)); 
-#elif SWITCH_6_4_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_4_0 == SEQUENTIAL_CD)
    CDHandle *cdh_6_4_0 = GetCurrentCD();
    CD_Complete(cdh_6_4_0); 
 #endif
@@ -1211,7 +1215,7 @@ void CalcHourglassControlForElems(Domain& domain,
 //#pragma omp parallel for firstprivate(numElem)
    for (Index_t i=0 ; i<numElem ; ++i){
 
-#if SWITCH_6_4_0  > SEQUENTIAL_CD || SWITCH_6_4_0 == SEQUENTIAL_CD
+#if _CD && (SWITCH_6_4_0  > SEQUENTIAL_CD || SWITCH_6_4_0 == SEQUENTIAL_CD)
       CD_Begin(cdh_6_4_0, true, "Loop_CalcHourglassControlForElems"); 
       cdh_6_4_0->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_CalcHourglassControlForElems"); 
       cdh_6_4_0->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_CalcHourglassControlForElems"); 
@@ -1222,39 +1226,32 @@ void CalcHourglassControlForElems(Domain& domain,
 
       Index_t* elemToNode = domain.nodelist(i);
 
-#if SWITCH_6_5_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_5_0  > SEQUENTIAL_CD)
       CDHandle *cdh_6_5_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_6_5_0, cdh_6_5_0, "CollectDomainNodesToElemNodes2", M__SERDES_ALL, kCopy);
-#elif SWITCH_6_5_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_5_0 == SEQUENTIAL_CD)
       CDHandle *cdh_6_5_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_6_5_0, cdh_6_5_0, "CollectDomainNodesToElemNodes2", M__SERDES_ALL, kCopy);
 #endif
       CollectDomainNodesToElemNodes(domain, elemToNode, x1, y1, z1);
 
-#if SWITCH_6_5_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_5_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_6_5_0, cdh_6_5_0);
-#elif SWITCH_6_5_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_5_0 == SEQUENTIAL_CD)
       cdh_6_5_0->Detect(); 
 #endif
 
 
 
-#if SWITCH_6_6_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_6_0  > SEQUENTIAL_CD)
       CDHandle *cdh_6_6_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_6_6_0, cdh_6_6_0, "CalcElemVolumeDerivative", M__SERDES_ALL, kCopy);
-#elif SWITCH_6_6_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_6_6_0 == SEQUENTIAL_CD)
       CDHandle *cdh_6_6_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_6_6_0, cdh_6_6_0, "CalcElemVolumeDerivative", M__SERDES_ALL, kCopy);
 #endif
 
       CalcElemVolumeDerivative(pfx, pfy, pfz, x1, y1, z1);
-
-#if SWITCH_6_6_0  > SEQUENTIAL_CD
-      CDMAPPING_END_NESTED(CD_MAP_6_6_0, cdh_6_6_0);
-#elif SWITCH_6_6_0 == SEQUENTIAL_CD
-      cdh_6_6_0->Detect(); 
-#endif
-
 
       /* load into temporary storage for FB Hour Glass control */
       for(Index_t ii=0;ii<8;++ii){
@@ -1270,6 +1267,14 @@ void CalcHourglassControlForElems(Domain& domain,
 
       determ[i] = domain.volo(i) * domain.v(i);
 
+
+#if _CD && (SWITCH_6_6_0  > SEQUENTIAL_CD)
+      CDMAPPING_END_NESTED(CD_MAP_6_6_0, cdh_6_6_0);
+#elif _CD && (SWITCH_6_6_0 == SEQUENTIAL_CD)
+      cdh_6_6_0->Detect(); 
+#endif
+
+
       /* Do a check for negative volumes */
       if ( domain.v(i) <= Real_t(0.0) ) {
 //#if USE_MPI         
@@ -1279,26 +1284,25 @@ void CalcHourglassControlForElems(Domain& domain,
 //#endif
       }  // check ends
 
-
-#if SWITCH_6_4_0  > SEQUENTIAL_CD || SWITCH_6_4_0 == SEQUENTIAL_CD
+#if _CD && (SWITCH_6_4_0  > SEQUENTIAL_CD || SWITCH_6_4_0 == SEQUENTIAL_CD)
      cdh_6_4_0->Detect();
      CD_Complete(cdh_6_4_0);
 #endif
    }  // loop ends
 
   //FIXME CDBegin in the inner scope and CDComplete in the outer scope.
-#if SWITCH_6_4_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_6_4_0  > SEQUENTIAL_CD)
    cdh_6_4_0->Destroy();
-#elif SWITCH_6_4_0 == SEQUENTIAL_CD 
+#elif _CD && (SWITCH_6_4_0 == SEQUENTIAL_CD) 
    CD_Begin(cdh_6_4_0, false, "After_Loop_CalcHourglassControlForElems");
 #endif
 
-#if SWITCH_6_7_0  > SEQUENTIAL_CD
-      CDHandle *cdh_6_7_0 = 0;
-      CDMAPPING_BEGIN_NESTED(CD_MAP_6_7_0, cdh_6_7_0, "CalcFBHourglassForceForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_6_7_0 == SEQUENTIAL_CD
-      CDHandle *cdh_6_7_0 = GetCurrentCD();
-      CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_6_7_0, cdh_6_7_0, "CalcFBHourglassForceForElems", M__SERDES_ALL, kCopy);
+#if _CD && (SWITCH_6_7_0  > SEQUENTIAL_CD)
+   CDHandle *cdh_6_7_0 = 0;
+   CDMAPPING_BEGIN_NESTED(CD_MAP_6_7_0, cdh_6_7_0, "CalcFBHourglassForceForElems", M__SERDES_ALL, kCopy);
+#elif _CD && (SWITCH_6_7_0 == SEQUENTIAL_CD)
+   CDHandle *cdh_6_7_0 = GetCurrentCD();
+   CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_6_7_0, cdh_6_7_0, "CalcFBHourglassForceForElems", M__SERDES_ALL, kCopy);
 #endif
    if ( hgcoef > Real_t(0.) ) {
       CalcFBHourglassForceForElems( domain,
@@ -1306,10 +1310,10 @@ void CalcHourglassControlForElems(Domain& domain,
                                     hgcoef, numElem, domain.numNode()) ;
    }
 
-#if SWITCH_6_7_0  > SEQUENTIAL_CD
-      CDMAPPING_END_NESTED(CD_MAP_6_7_0, cdh_6_7_0);
-#elif SWITCH_6_7_0 == SEQUENTIAL_CD
-      cdh_6_7_0->Detect(); 
+#if _CD && (SWITCH_6_7_0  > SEQUENTIAL_CD)
+   CDMAPPING_END_NESTED(CD_MAP_6_7_0, cdh_6_7_0);
+#elif _CD && (SWITCH_6_7_0 == SEQUENTIAL_CD)
+   cdh_6_7_0->Detect(); 
 #endif
 
    Release(&z8n) ;
@@ -1338,27 +1342,27 @@ void CalcVolumeForceForElems(Domain& domain)
       Real_t *sigzz  = Allocate<Real_t>(numElem) ;
       Real_t *determ = Allocate<Real_t>(numElem) ;
 
-#if SWITCH_5_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_0_0  > SEQUENTIAL_CD)
       CDHandle *cdh_5_0_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_5_0_0, cdh_5_0_0, "InitStressTermsForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_5_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_0_0 == SEQUENTIAL_CD)
       CDHandle *cdh_5_0_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_5_0_0, cdh_5_0_0, "InitStressTermsForElems", M__SERDES_ALL, kCopy);
 #endif
       /* Sum contributions to total stress tensor */
       InitStressTermsForElems(domain, sigxx, sigyy, sigzz, numElem);
 
-#if SWITCH_5_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_0_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_5_0_0, cdh_5_0_0);
-#elif SWITCH_5_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_0_0 == SEQUENTIAL_CD)
       cdh_5_0_0->Detect(); 
 #endif
 
 
-#if SWITCH_5_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_1_0  > SEQUENTIAL_CD)
       CDHandle *cdh_5_1_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_5_1_0, cdh_5_1_0, "IntegrateStressForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_5_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_1_0 == SEQUENTIAL_CD)
       CDHandle *cdh_5_1_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_5_1_0, cdh_5_1_0, "IntegrateStressForElems", M__SERDES_ALL, kCopy);
 #endif
@@ -1368,9 +1372,9 @@ void CalcVolumeForceForElems(Domain& domain)
                                sigxx, sigyy, sigzz, determ, numElem,
                                domain.numNode()) ;
 
-#if SWITCH_5_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_1_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_5_1_0, cdh_5_1_0);
-#elif SWITCH_5_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_1_0 == SEQUENTIAL_CD)
       cdh_5_1_0->Detect(); 
 #endif
 
@@ -1388,19 +1392,19 @@ void CalcVolumeForceForElems(Domain& domain)
       }
 
 
-#if SWITCH_5_2_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_2_0  > SEQUENTIAL_CD)
       CDHandle *cdh_5_2_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_5_2_0, cdh_5_2_0, "CalcHourglassControlForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_5_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_2_0 == SEQUENTIAL_CD)
       CDHandle *cdh_5_2_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_5_2_0, cdh_5_2_0, "CalcHourglassControlForElems", M__SERDES_ALL, kCopy);
 #endif
 
       CalcHourglassControlForElems(domain, determ, hgcoef) ;
 
-#if SWITCH_5_2_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_2_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_5_2_0, cdh_5_2_0);
-#elif SWITCH_5_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_2_0 == SEQUENTIAL_CD)
       cdh_5_2_0->Detect(); 
 #endif
 
@@ -1434,10 +1438,10 @@ static inline void CalcForceForNodes(Domain& domain)
      domain.fz(i) = Real_t(0.0) ;
   }
 
-#if SWITCH_4_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_0_0  > SEQUENTIAL_CD)
    CDHandle *cdh_4_0_0 = 0;
    CDMAPPING_BEGIN_NESTED(CD_MAP_4_0_0, cdh_4_0_0, "CalcVolumeForceForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_4_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_4_0_0 == SEQUENTIAL_CD)
    CDHandle *cdh_4_0_0 = GetCurrentCD();
    CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_4_0_0, cdh_4_0_0, "CalcVolumeForceForElems", M__SERDES_ALL, kCopy);
 #endif
@@ -1445,9 +1449,9 @@ static inline void CalcForceForNodes(Domain& domain)
   /* Calcforce calls partial, force, hourq */
   CalcVolumeForceForElems(domain) ;
 
-#if SWITCH_4_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_0_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_4_0_0, cdh_4_0_0);
-#elif SWITCH_4_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_4_0_0 == SEQUENTIAL_CD)
    cdh_4_0_0->Detect(); 
 #endif
 
@@ -1576,10 +1580,10 @@ void LagrangeNodal(Domain& domain)
    const Real_t delt = domain.deltatime() ;
    Real_t u_cut = domain.u_cut() ;
 
-#if SWITCH_3_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_0_0  > SEQUENTIAL_CD)
    CDHandle *cdh_3_0_0 = 0;
    CDMAPPING_BEGIN_NESTED(CD_MAP_3_0_0, cdh_3_0_0, "CalcForceForNodes", M__SERDES_ALL, kCopy);
-#elif SWITCH_3_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_0_0 == SEQUENTIAL_CD)
    CDHandle *cdh_3_0_0 = GetCurrentCD();
    CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_3_0_0, cdh_3_0_0, "CalcForceForNodes", M__SERDES_ALL, kCopy);
 #endif
@@ -1588,9 +1592,9 @@ void LagrangeNodal(Domain& domain)
     * acceleration boundary conditions. */
    CalcForceForNodes(domain); 
 
-#if SWITCH_3_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_0_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_3_0_0, cdh_3_0_0);
-#elif SWITCH_3_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_0_0 == SEQUENTIAL_CD)
    cdh_3_0_0->Detect(); 
 #endif
 
@@ -1606,68 +1610,68 @@ void LagrangeNodal(Domain& domain)
 
 
 
-#if SWITCH_3_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_1_0  > SEQUENTIAL_CD)
    CDHandle *cdh_3_1_0 = 0;
    CDMAPPING_BEGIN_NESTED(CD_MAP_3_1_0, cdh_3_1_0, "CalcAccelerationForNodes", M__SERDES_ALL, kCopy);
-#elif SWITCH_3_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_1_0 == SEQUENTIAL_CD)
    CDHandle *cdh_3_1_0 = GetCurrentCD();
    CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_3_1_0, cdh_3_1_0, "CalcAccelerationForNodes", M__SERDES_ALL, kCopy);
 #endif
 
    CalcAccelerationForNodes(domain, domain.numNode());
 
-#if SWITCH_3_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_1_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_3_1_0, cdh_3_1_0);
-#elif SWITCH_3_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_1_0 == SEQUENTIAL_CD)
    cdh_3_1_0->Detect(); 
 #endif
    
 
    
-#if SWITCH_3_2_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_2_0  > SEQUENTIAL_CD)
    CDHandle *cdh_3_2_0 = 0;
    CDMAPPING_BEGIN_NESTED(CD_MAP_3_2_0, cdh_3_2_0, "ApplyAccelerationBoundaryConditionsForNodes", M__SERDES_ALL, kCopy);
-#elif SWITCH_3_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_2_0 == SEQUENTIAL_CD)
    CDHandle *cdh_3_2_0 = GetCurrentCD();
    CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_3_2_0, cdh_3_2_0, "ApplyAccelerationBoundaryConditionsForNodes", M__SERDES_ALL, kCopy);
 #endif
    ApplyAccelerationBoundaryConditionsForNodes(domain);
 
-#if SWITCH_3_2_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_2_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_3_2_0, cdh_3_2_0);
-#elif SWITCH_3_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_2_0 == SEQUENTIAL_CD)
    cdh_3_2_0->Detect(); 
 #endif
 
 
 
-#if SWITCH_3_3_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_3_0  > SEQUENTIAL_CD)
    CDHandle *cdh_3_3_0 = 0;
    CDMAPPING_BEGIN_NESTED(CD_MAP_3_3_0, cdh_3_3_0, "CalcVelocityForNodes", M__SERDES_ALL, kCopy);
-#elif SWITCH_3_3_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_3_0 == SEQUENTIAL_CD)
    CDHandle *cdh_3_3_0 = GetCurrentCD();
    CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_3_3_0, cdh_3_3_0, "CalcVelocityForNodes", M__SERDES_ALL, kCopy);
 #endif
    CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
-#if SWITCH_3_3_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_3_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_3_3_0, cdh_3_3_0);
-#elif SWITCH_3_3_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_3_0 == SEQUENTIAL_CD)
    cdh_3_3_0->Detect(); 
 #endif
 
 
 
-#if SWITCH_3_4_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_4_0  > SEQUENTIAL_CD)
    CDHandle *cdh_3_4_0 = 0;
    CDMAPPING_BEGIN_NESTED(CD_MAP_3_4_0, cdh_3_4_0, "CalcPositionForNodes", M__SERDES_ALL, kCopy);
-#elif SWITCH_3_4_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_4_0 == SEQUENTIAL_CD)
    CDHandle *cdh_3_4_0 = GetCurrentCD();
    CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_3_4_0, cdh_3_4_0, "CalcPositionForNodes", M__SERDES_ALL, kCopy);
 #endif
    CalcPositionForNodes( domain, delt, domain.numNode() );
-#if SWITCH_3_4_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_4_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_3_4_0, cdh_3_4_0);
-#elif SWITCH_3_4_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_4_0 == SEQUENTIAL_CD)
    cdh_3_4_0->Detect(); 
 #endif
 
@@ -1956,10 +1960,10 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
     Real_t relativeVolume ;
     const Index_t* const elemToNode = domain.nodelist(k) ;
 
-#if SWITCH_5_4_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_4_0  > SEQUENTIAL_CD)
     CDHandle *cdh_5_4_0 = 0;
     CDMAPPING_BEGIN_NESTED(CD_MAP_5_4_0, cdh_5_4_0, "CollectDomainNodesToElemNodes3", M__SERDES_ALL, kCopy);
-#elif SWITCH_5_4_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_4_0 == SEQUENTIAL_CD)
     CDHandle *cdh_5_4_0 = GetCurrentCD();
     CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_5_4_0, cdh_5_4_0, "CollectDomainNodesToElemNodes3", M__SERDES_ALL, kCopy);
 #endif
@@ -1967,16 +1971,16 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
     // get nodal coordinates from global arrays and copy into local arrays.
     CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
 
-#if SWITCH_5_4_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_4_0  > SEQUENTIAL_CD)
     CDMAPPING_END_NESTED(CD_MAP_5_4_0, cdh_5_4_0);
-#elif SWITCH_5_4_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_4_0 == SEQUENTIAL_CD)
     cdh_5_4_0->Detect(); 
 #endif
 
-#if SWITCH_5_5_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_5_0  > SEQUENTIAL_CD)
     CDHandle *cdh_5_5_0 = 0;
     CDMAPPING_BEGIN_NESTED(CD_MAP_5_5_0, cdh_5_5_0, "CalcElemVolume", M__SERDES_ALL, kCopy);
-#elif SWITCH_5_5_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_5_0 == SEQUENTIAL_CD)
     CDHandle *cdh_5_5_0 = GetCurrentCD();
     CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_5_5_0, cdh_5_5_0, "CalcElemVolume", M__SERDES_ALL, kCopy);
 #endif
@@ -1986,16 +1990,16 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
     relativeVolume = volume / domain.volo(k) ;
     vnew[k] = relativeVolume ;
     domain.delv(k) = relativeVolume - domain.v(k) ;
-#if SWITCH_5_5_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_5_0  > SEQUENTIAL_CD)
     CDMAPPING_END_NESTED(CD_MAP_5_5_0, cdh_5_5_0);
-#elif SWITCH_5_5_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_5_0 == SEQUENTIAL_CD)
     cdh_5_5_0->Detect(); 
 #endif
 
-#if SWITCH_5_6_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_6_0  > SEQUENTIAL_CD)
     CDHandle *cdh_5_6_0 = 0;
     CDMAPPING_BEGIN_NESTED(CD_MAP_5_6_0, cdh_5_6_0, "CalcElemCharacteristicLength", M__SERDES_ALL, kCopy);
-#elif SWITCH_5_6_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_6_0 == SEQUENTIAL_CD)
     CDHandle *cdh_5_6_0 = GetCurrentCD();
     CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_5_6_0, cdh_5_6_0, "CalcElemCharacteristicLength", M__SERDES_ALL, kCopy);
 #endif
@@ -2003,17 +2007,17 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
     domain.arealg(k) = CalcElemCharacteristicLength(x_local, y_local, z_local,
                                              volume);
 
-#if SWITCH_5_6_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_6_0  > SEQUENTIAL_CD)
     CDMAPPING_END_NESTED(CD_MAP_5_6_0, cdh_5_6_0);
-#elif SWITCH_5_6_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_6_0 == SEQUENTIAL_CD)
     cdh_5_6_0->Detect(); 
 #endif
 
    
-#if SWITCH_5_7_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_7_0  > SEQUENTIAL_CD)
     CDHandle *cdh_5_7_0 = 0;
     CDMAPPING_BEGIN_NESTED(CD_MAP_5_7_0, cdh_5_7_0, "InnerLoopInCalcKinematicsForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_5_7_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_7_0 == SEQUENTIAL_CD)
     CDHandle *cdh_5_7_0 = GetCurrentCD();
     CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_5_7_0, cdh_5_7_0, "InnerLoopInCalcKinematicsForElems", M__SERDES_ALL, kCopy);
 #endif
@@ -2033,42 +2037,42 @@ void CalcKinematicsForElems( Domain &domain, Real_t *vnew,
        y_local[j] -= dt2 * yd_local[j];
        z_local[j] -= dt2 * zd_local[j];
     }
-#if SWITCH_5_7_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_7_0  > SEQUENTIAL_CD)
     CDMAPPING_END_NESTED(CD_MAP_5_7_0, cdh_5_7_0);
-#elif SWITCH_5_7_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_7_0 == SEQUENTIAL_CD)
     cdh_5_7_0->Detect(); 
 #endif
 
 
-#if SWITCH_5_8_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_8_0  > SEQUENTIAL_CD)
     CDHandle *cdh_5_8_0 = 0;
     CDMAPPING_BEGIN_NESTED(CD_MAP_5_8_0, cdh_5_8_0, "CalcElemShapeFunctionDerivatives2", M__SERDES_ALL, kCopy);
-#elif SWITCH_5_8_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_8_0 == SEQUENTIAL_CD)
     CDHandle *cdh_5_8_0 = GetCurrentCD();
     CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_5_8_0, cdh_5_8_0, "CalcElemShapeFunctionDerivatives2", M__SERDES_ALL, kCopy);
 #endif
     CalcElemShapeFunctionDerivatives( x_local, y_local, z_local,
                                       B, &detJ );
 
-#if SWITCH_5_8_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_8_0  > SEQUENTIAL_CD)
     CDMAPPING_END_NESTED(CD_MAP_5_8_0, cdh_5_8_0);
-#elif SWITCH_5_8_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_8_0 == SEQUENTIAL_CD)
     cdh_5_8_0->Detect(); 
 #endif
 
 
-#if SWITCH_5_9_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_9_0  > SEQUENTIAL_CD)
     CDHandle *cdh_5_9_0 = 0;
     CDMAPPING_BEGIN_NESTED(CD_MAP_5_9_0, cdh_5_9_0, "CalcElemVelocityGradient", M__SERDES_ALL, kCopy);
-#elif SWITCH_5_9_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_9_0 == SEQUENTIAL_CD)
     CDHandle *cdh_5_9_0 = GetCurrentCD();
     CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_5_9_0, cdh_5_9_0, "CalcElemVelocityGradient", M__SERDES_ALL, kCopy);
 #endif
     CalcElemVelocityGradient( xd_local, yd_local, zd_local,
                                B, detJ, D );
-#if SWITCH_5_9_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_5_9_0  > SEQUENTIAL_CD)
     CDMAPPING_END_NESTED(CD_MAP_5_9_0, cdh_5_9_0);
-#elif SWITCH_5_9_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_5_9_0 == SEQUENTIAL_CD)
     cdh_5_9_0->Detect(); 
 #endif
 
@@ -2093,27 +2097,27 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
 
       domain.AllocateStrains(numElem);
 
-#if SWITCH_4_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_1_0  > SEQUENTIAL_CD)
       CDHandle *cdh_4_1_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_4_1_0, cdh_4_1_0, "CalcKinematicsForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_4_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_4_1_0 == SEQUENTIAL_CD)
       CDHandle *cdh_4_1_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_4_1_0, cdh_4_1_0, "CalcKinematicsForElems", M__SERDES_ALL, kCopy);
 #endif
 
       CalcKinematicsForElems(domain, vnew, deltatime, numElem) ;
 
-#if SWITCH_4_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_1_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_4_1_0, cdh_4_1_0);
-#elif SWITCH_4_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_4_1_0 == SEQUENTIAL_CD)
       cdh_4_1_0->Detect(); 
 #endif
 
 
-#if SWITCH_4_2_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_2_0  > SEQUENTIAL_CD)
       CDHandle *cdh_4_2_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_4_2_0, cdh_4_2_0, "LoopInCalcLagrangeElements", M__SERDES_ALL, kCopy);
-#elif SWITCH_4_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_4_2_0 == SEQUENTIAL_CD)
       CDHandle *cdh_4_2_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_4_2_0, cdh_4_2_0, "LoopInCalcLagrangeElements", M__SERDES_ALL, kCopy);
 #endif
@@ -2143,9 +2147,9 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
          }
       }
 
-#if SWITCH_4_2_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_2_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_4_2_0, cdh_4_2_0);
-#elif SWITCH_4_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_4_2_0 == SEQUENTIAL_CD)
       cdh_4_2_0->Detect(); 
 #endif
 
@@ -2513,10 +2517,10 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
 #endif   
 
    
-#if SWITCH_4_3_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_3_0  > SEQUENTIAL_CD)
       CDHandle *cdh_4_3_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_4_3_0, cdh_4_3_0, "CalcMonotonicQGradientsForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_4_3_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_4_3_0 == SEQUENTIAL_CD)
       CDHandle *cdh_4_3_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_4_3_0, cdh_4_3_0, "CalcMonotonicQGradientsForElems", M__SERDES_ALL, kCopy);
 #endif
@@ -2524,9 +2528,9 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
       /* Calculate velocity gradients */
       CalcMonotonicQGradientsForElems(domain, vnew);
 
-#if SWITCH_4_3_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_3_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_4_3_0, cdh_4_3_0);
-#elif SWITCH_4_3_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_4_3_0 == SEQUENTIAL_CD)
       cdh_4_3_0->Detect(); 
 #endif
 
@@ -2548,17 +2552,17 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
 #endif      
 
 
-#if SWITCH_4_4_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_4_0  > SEQUENTIAL_CD)
       CDHandle *cdh_4_4_0 = 0;
       CDMAPPING_BEGIN_NESTED(CD_MAP_4_4_0, cdh_4_4_0, "CalcMonotonicQForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_4_4_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_4_4_0 == SEQUENTIAL_CD)
       CDHandle *cdh_4_4_0 = GetCurrentCD();
       CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_4_4_0, cdh_4_4_0, "CalcMonotonicQForElems", M__SERDES_ALL, kCopy);
 #endif
       CalcMonotonicQForElems(domain, vnew) ;
-#if SWITCH_4_4_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_4_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_4_4_0, cdh_4_4_0);
-#elif SWITCH_4_4_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_4_4_0 == SEQUENTIAL_CD)
       cdh_4_4_0->Detect(); 
 #endif
 
@@ -2992,16 +2996,16 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 
     }  // pragma omp parallel ends
 
-#if SWITCH_4_5_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_5_0  > SEQUENTIAL_CD)
     CDHandle *cdh_4_5_0 = GetCurrentCD()->Create(CD_MAP_4_5_0 >> CDFLAG_SIZE, 
                             (string("Loop_EvalEOSForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
                             CD_MAP_4_5_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_4_5_0)); 
-#elif SWITCH_4_5_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_4_5_0 == SEQUENTIAL_CD)
     CDHandle *cdh_4_5_0 = GetCurrentCD();
     CD_Complete(cdh_4_5_0); 
 #endif
     for (Int_t r=0 ; r<domain.numReg() ; r++) {
-#if SWITCH_4_5_0  > SEQUENTIAL_CD || SWITCH_4_5_0 == SEQUENTIAL_CD
+#if _CD && (SWITCH_4_5_0  > SEQUENTIAL_CD || SWITCH_4_5_0 == SEQUENTIAL_CD)
        CD_Begin(cdh_4_5_0, true, "Loop_EvalEOSForElems"); 
        cdh_4_5_0->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_EvalEOSForElems"); 
        cdh_4_5_0->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_EvalEOSForElems"); 
@@ -3025,16 +3029,16 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 
 
        EvalEOSForElems(domain, vnew, numElemReg, regElemList, rep);
-#if SWITCH_4_5_0  > SEQUENTIAL_CD || SWITCH_4_5_0 == SEQUENTIAL_CD
+#if _CD && (SWITCH_4_5_0  > SEQUENTIAL_CD || SWITCH_4_5_0 == SEQUENTIAL_CD)
        cdh_4_5_0->Detect();
        CD_Complete(cdh_4_5_0);
 #endif
 
     }
 
-#if SWITCH_4_5_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_4_5_0  > SEQUENTIAL_CD)
    cdh_4_5_0->Destroy();
-#elif SWITCH_4_5_0 == SEQUENTIAL_CD 
+#elif _CD && (SWITCH_4_5_0 == SEQUENTIAL_CD)
    CD_Begin(cdh_4_5_0, false, "After_Loop_EvalEOSForElems");
 #endif
   }   // if-statement ends
@@ -3073,27 +3077,27 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 
   Real_t *vnew = Allocate<Real_t>(numElem) ;  /* new relative vol -- temp */
 
-#if SWITCH_3_5_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_5_0  > SEQUENTIAL_CD)
    CDHandle *cdh_3_5_0 = 0;
    CDMAPPING_BEGIN_NESTED(CD_MAP_3_5_0, cdh_3_5_0, "CalcLagrangeElements", M__SERDES_ALL, kCopy);
-#elif SWITCH_3_5_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_5_0 == SEQUENTIAL_CD)
    CDHandle *cdh_3_5_0 = GetCurrentCD();
    CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_3_5_0, cdh_3_5_0, "CalcLagrangeElements", M__SERDES_ALL, kCopy);
 #endif
 
   CalcLagrangeElements(domain, vnew) ;
 
-#if SWITCH_3_5_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_5_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_3_5_0, cdh_3_5_0);
-#elif SWITCH_3_5_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_5_0 == SEQUENTIAL_CD)
    cdh_3_5_0->Detect(); 
 #endif
 
 
-#if SWITCH_3_6_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_6_0  > SEQUENTIAL_CD)
    CDHandle *cdh_3_6_0 = 0;
    CDMAPPING_BEGIN_NESTED(CD_MAP_3_6_0, cdh_3_6_0, "CalcQForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_3_6_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_6_0 == SEQUENTIAL_CD)
    CDHandle *cdh_3_6_0 = GetCurrentCD();
    CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_3_6_0, cdh_3_6_0, "CalcQForElems", M__SERDES_ALL, kCopy);
 #endif
@@ -3101,45 +3105,45 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   /* Calculate Q.  (Monotonic q option requires communication) */
   CalcQForElems(domain, vnew) ;
 
-#if SWITCH_3_6_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_6_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_3_6_0, cdh_3_6_0);
-#elif SWITCH_3_6_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_6_0 == SEQUENTIAL_CD)
    cdh_3_6_0->Detect(); 
 #endif
 
 
 
-#if SWITCH_3_7_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_7_0  > SEQUENTIAL_CD)
    CDHandle *cdh_3_7_0 = 0;
    CDMAPPING_BEGIN_NESTED(CD_MAP_3_7_0, cdh_3_7_0, "ApplyMaterialPropertiesForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_3_7_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_7_0 == SEQUENTIAL_CD)
    CDHandle *cdh_3_7_0 = GetCurrentCD();
    CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_3_7_0, cdh_3_7_0, "ApplyMaterialPropertiesForElems", M__SERDES_ALL, kCopy);
 #endif
 
    ApplyMaterialPropertiesForElems(domain, vnew) ;
 
-#if SWITCH_3_7_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_7_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_3_7_0, cdh_3_7_0);
-#elif SWITCH_3_7_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_7_0 == SEQUENTIAL_CD)
    cdh_3_7_0->Detect(); 
 #endif
 
 
 
-#if SWITCH_3_8_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_8_0  > SEQUENTIAL_CD)
    CDHandle *cdh_3_8_0 = 0;
    CDMAPPING_BEGIN_NESTED(CD_MAP_3_8_0, cdh_3_8_0, "UpdateVolumesForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_3_8_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_8_0 == SEQUENTIAL_CD)
    CDHandle *cdh_3_8_0 = GetCurrentCD();
    CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_3_8_0, cdh_3_8_0, "UpdateVolumesForElems", M__SERDES_ALL, kCopy);
 #endif
   UpdateVolumesForElems(domain, vnew,
                         domain.v_cut(), numElem) ;
 
-#if SWITCH_3_8_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_8_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_3_8_0, cdh_3_8_0);
-#elif SWITCH_3_8_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_8_0 == SEQUENTIAL_CD)
    cdh_3_8_0->Detect(); 
 #endif
   Release(&vnew);
@@ -3309,12 +3313,14 @@ void CalcTimeConstraintsForElems(Domain& domain) {
 
    for (Index_t r=0 ; r < domain.numReg() ; ++r) {
 
-#if SWITCH_3_9_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_9_0  > SEQUENTIAL_CD)
       CDHandle *cdh_3_9_0 = 0;
-      CDMAPPING_BEGIN_NESTED(CD_MAP_3_9_0, cdh_3_9_0, "CalcCourantConstraintForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_3_9_0 == SEQUENTIAL_CD
+      CDMAPPING_BEGIN_NESTED_ONLY(CD_MAP_3_9_0, cdh_3_9_0, "CalcCourantConstraintForElems", M__SERDES_ALL, kCopy);
+      cdh_3_9_0->Preserve(&(domain.dtcourant()), sizeof(Real_t), kCopy, "SWITCH_3_9_0_dtcourant"); 
+#elif _CD && (SWITCH_3_9_0 == SEQUENTIAL_CD)
       CDHandle *cdh_3_9_0 = GetCurrentCD();
-      CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_3_9_0, cdh_3_9_0, "CalcCourantConstraintForElems", M__SERDES_ALL, kCopy);
+      CDMAPPING_BEGIN_SEQUENTIAL_ONLY(CD_MAP_3_9_0, cdh_3_9_0, "CalcCourantConstraintForElems");
+      cdh_3_9_0->Preserve(&(domain.dtcourant()), sizeof(Real_t), kCopy, "SWITCH_3_9_0_dtcourant"); 
 #endif
       /* evaluate time constraint */
       CalcCourantConstraintForElems(domain, domain.regElemSize(r),
@@ -3322,28 +3328,30 @@ void CalcTimeConstraintsForElems(Domain& domain) {
                                     domain.qqc(),
                                     domain.dtcourant()) ;
 
-#if SWITCH_3_9_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_9_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_3_9_0, cdh_3_9_0);
-#elif SWITCH_3_9_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_9_0 == SEQUENTIAL_CD)
       cdh_3_9_0->Detect(); 
 #endif
 
 
-#if SWITCH_3_10_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_10_0  > SEQUENTIAL_CD)
       CDHandle *cdh_3_10_0 = 0;
-      CDMAPPING_BEGIN_NESTED(CD_MAP_3_10_0, cdh_3_10_0, "CalcHydroConstraintForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_3_10_0 == SEQUENTIAL_CD
+      CDMAPPING_BEGIN_NESTED_ONLY(CD_MAP_3_10_0, cdh_3_10_0, "CalcHydroConstraintForElems", M__SERDES_ALL, kCopy);
+      cdh_3_10_0->Preserve(&(domain.dthydro()), sizeof(Real_t), kCopy, "SWITCH_3_10_0_dthydro"); 
+#elif _CD && (SWITCH_3_10_0 == SEQUENTIAL_CD)
       CDHandle *cdh_3_10_0 = GetCurrentCD();
-      CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_3_10_0, cdh_3_10_0, "CalcHydroConstraintForElems", M__SERDES_ALL, kCopy);
+      CDMAPPING_BEGIN_SEQUENTIAL_ONLY(CD_MAP_3_10_0, cdh_3_10_0, "CalcHydroConstraintForElems");
+      cdh_3_10_0->Preserve(&(domain.dthydro()), sizeof(Real_t), kCopy, "SWITCH_3_10_0_dthydro"); 
 #endif
       /* check hydro constraint */
       CalcHydroConstraintForElems(domain, domain.regElemSize(r),
                                   domain.regElemlist(r),
                                   domain.dvovmax(),
                                   domain.dthydro()) ;
-#if SWITCH_3_10_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_3_10_0  > SEQUENTIAL_CD)
       CDMAPPING_END_NESTED(CD_MAP_3_10_0, cdh_3_10_0);
-#elif SWITCH_3_10_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_3_10_0 == SEQUENTIAL_CD)
       cdh_3_10_0->Detect(); 
 #endif
    }
@@ -3361,21 +3369,21 @@ void LagrangeLeapFrog(Domain& domain)
 #endif
 
 
-#if SWITCH_2_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_2_0_0  > SEQUENTIAL_CD)
    CDHandle *cdh_2_0_0 = 0;
-   CDMAPPING_BEGIN_NESTED(CD_MAP_2_0_0, cdh_2_0_0, "LagrangeNodal", M__SERDES_ALL, kCopy);
-#elif SWITCH_2_0_0 == SEQUENTIAL_CD
+   CDMAPPING_BEGIN_NESTED(CD_MAP_2_0_0, cdh_2_0_0, "LagrangeNodal", M__X | M__Y | M__Z, kCopy);
+#elif _CD && (SWITCH_2_0_0 == SEQUENTIAL_CD)
    CDHandle *cdh_2_0_0 = GetCurrentCD();
-   CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_2_0_0, cdh_2_0_0, "LagrangeNodal", M__SERDES_ALL, kCopy);
+   CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_2_0_0, cdh_2_0_0, "LagrangeNodal", M__X | M__Y | M__Z, kCopy);
 #endif
 
    /* calculate nodal forces, accelerations, velocities, positions, with
     * applied boundary conditions and slide surface considerations */
    LagrangeNodal(domain);  
 
-#if SWITCH_2_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_2_0_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_2_0_0, cdh_2_0_0);
-#elif SWITCH_2_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_2_0_0 == SEQUENTIAL_CD)
    cdh_2_0_0->Detect(); 
 #endif
 
@@ -3384,21 +3392,26 @@ void LagrangeLeapFrog(Domain& domain)
 #endif
 
 
-#if SWITCH_2_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_2_1_0  > SEQUENTIAL_CD)
    CDHandle *cdh_2_1_0 = 0;
-   CDMAPPING_BEGIN_NESTED(CD_MAP_2_1_0, cdh_2_1_0, "LagrangeElements", M__SERDES_ALL, kCopy);
-#elif SWITCH_2_1_0 == SEQUENTIAL_CD
+   CDMAPPING_BEGIN_NESTED(CD_MAP_2_1_0, cdh_2_1_0, "LagrangeElements", M__X | M__Y | M__Z, kCopy);
+#elif _CD && (SWITCH_2_1_0 == SEQUENTIAL_CD)
    CDHandle *cdh_2_1_0 = GetCurrentCD();
-   CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_2_1_0, cdh_2_1_0, "LagrangeElements", M__SERDES_ALL, kCopy);
+   CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_2_1_0, cdh_2_1_0, "LagrangeElements", 
+       (M__VOLO | M__V | M__X | M__X  | M__Y  | M__Z  | 
+                                M__XD | M__YD | M__ZD |
+                                M__DXX| M__DYY| M__DZZ), 
+       kCopy);
+   cdh_2_1_0->Preserve(&(domain.deltatime()), sizeof(Real_t), kRef, "SWITCH_3_10_0_dthydro"); 
 #endif
 
    /* calculate element quantities (i.e. velocity gradient & q), and update
     * material states */
    LagrangeElements(domain, domain.numElem());
 
-#if SWITCH_2_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_2_1_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_2_1_0, cdh_2_1_0);
-#elif SWITCH_2_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_2_1_0 == SEQUENTIAL_CD)
    cdh_2_1_0->Detect(); 
 #endif
 
@@ -3422,19 +3435,19 @@ void LagrangeLeapFrog(Domain& domain)
 #endif   
 
 
-#if SWITCH_2_2_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_2_2_0  > SEQUENTIAL_CD)
    CDHandle *cdh_2_2_0 = 0;
    CDMAPPING_BEGIN_NESTED(CD_MAP_2_2_0, cdh_2_2_0, "CalcTimeConstraintsForElems", M__SERDES_ALL, kCopy);
-#elif SWITCH_2_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_2_2_0 == SEQUENTIAL_CD)
    CDHandle *cdh_2_2_0 = GetCurrentCD();
    CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_2_2_0, cdh_2_2_0, "CalcTimeConstraintsForElems", M__SERDES_ALL, kCopy);
 #endif
 
    CalcTimeConstraintsForElems(domain);
 
-#if SWITCH_2_2_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_2_2_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_2_2_0, cdh_2_2_0);
-#elif SWITCH_2_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_2_2_0 == SEQUENTIAL_CD)
    cdh_2_2_0->Detect(); 
 #endif
 
@@ -3504,11 +3517,11 @@ int main(int argc, char *argv[])
    // Build the main data structure and initialize it
    locDom = new Domain(numRanks, col, row, plane, opts.nx,
                        side, opts.numReg, opts.balance, opts.cost) ;
-   locDom->serdes.InitSerdesTable();
 #if _CD
+   locDom->serdes.InitSerdesTable();
    CDHandle* root_cd = CD_Init(numRanks, myRank);
    CD_Begin(root_cd, false, "Root");
-#if SWITCH_PRESERVE_INIT
+#if _CD && SWITCH_PRESERVE_INIT
    root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom_Root");
    root_cd->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Root");
 #endif
@@ -3539,31 +3552,34 @@ int main(int argc, char *argv[])
 #endif
    
 
-#if SWITCH_0_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD)
    CDHandle *cdh_0_0_0 = root_cd->Create(CD_MAP_0_0_0 >> CDFLAG_SIZE, 
                                          (string("MainLoop")+root_cd->node_id().GetStringID()).c_str(), 
                                          CD_MAP_0_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_0_0_0)); 
-#elif SWITCH_0_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_0_0_0 == SEQUENTIAL_CD)
    CD_Complete(root_cd); 
    CDHandle *cdh_0_0_0 = root_cd;
 #endif
    // Main loop start
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
       // Main functions in the loop
-#if SWITCH_0_0_0  > SEQUENTIAL_CD || SWITCH_0_0_0 == SEQUENTIAL_CD
+#if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD || SWITCH_0_0_0 == SEQUENTIAL_CD)
       CD_Begin(cdh_0_0_0, true, "MainLoop"); 
       cdh_0_0_0->Preserve(locDom, sizeof(locDom), kCopy, "MainLoop"); 
       cdh_0_0_0->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "MainLoop"); 
 #endif
 
+#if _CD
       printf("\n\n== Loop %d ==================================\n\n", counter++); //getchar();
-#if SWITCH_1_1_0  > SEQUENTIAL_CD
+#endif
+
+#if _CD && (SWITCH_1_1_0  > SEQUENTIAL_CD)
       CDHandle *cdh_1_1_0 = GetLeafCD()->Create(CD_MAP_1_1_0 >> CDFLAG_SIZE, 
                                       (string("TimeIncrement")+GetLeafCD()->node_id().GetStringID()).c_str(), 
                                        CD_MAP_1_1_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_1_1_0)); 
       CD_Begin(cdh_1_1_0, true, "TimeIncrement"); 
       cdh_1_1_0->Preserve(locDom, sizeof(locDom), kCopy, "locDom_TimeIncrement");
-#elif SWITCH_1_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_1_1_0 == SEQUENTIAL_CD)
       CDHandle *cdh_1_1_0 = GetCurrentCD();
       CD_Complete(cdh_1_1_0);
       CD_Begin(cdh_1_1_0, true, "TimeIncrement"); 
@@ -3573,23 +3589,23 @@ int main(int argc, char *argv[])
 
       TimeIncrement(*locDom);
 
-#if SWITCH_1_1_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_1_1_0  > SEQUENTIAL_CD)
       cdh_1_1_0->Detect(); 
       CD_Complete(cdh_1_1_0); 
       cdh_1_1_0->Destroy(); 
-#elif SWITCH_1_1_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_1_1_0 == SEQUENTIAL_CD)
       cdh_1_1_0->Detect(); 
 #endif
 
 
-#if SWITCH_1_2_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_1_2_0  > SEQUENTIAL_CD)
       CDHandle *cdh_1_2_0 = GetLeafCD()->Create(CD_MAP_1_2_0 >> CDFLAG_SIZE, 
                                       (string("LagrangeLeapFrog")+GetLeafCD()->node_id().GetStringID()).c_str(), 
                                        CD_MAP_1_2_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_1_2_0)); 
       CD_Begin(cdh_1_2_0, true, "LagrangeLeapFrog"); 
       cdh_1_2_0->Preserve(locDom, sizeof(locDom), kCopy, "locDom_LagrangeLeapFrog");
       cdh_1_2_0->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_LagrangeLeapFrog");
-#elif SWITCH_1_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_1_2_0 == SEQUENTIAL_CD)
       CDHandle *cdh_1_2_0 = GetCurrentCD(); 
       CD_Complete(cdh_1_2_0);
 
@@ -3600,11 +3616,11 @@ int main(int argc, char *argv[])
 
       LagrangeLeapFrog(*locDom);
 
-#if SWITCH_1_2_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_1_2_0  > SEQUENTIAL_CD)
       cdh_1_2_0->Detect(); 
       CD_Complete(cdh_1_2_0); 
       cdh_1_2_0->Destroy(); 
-#elif SWITCH_1_2_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_1_2_0 == SEQUENTIAL_CD)
       cdh_1_2_0->Detect(); 
 #endif
 
@@ -3615,16 +3631,16 @@ int main(int argc, char *argv[])
       }
 #endif
 
-#if SWITCH_0_0_0  > SEQUENTIAL_CD || SWITCH_0_0_0 == SEQUENTIAL_CD
+#if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD || SWITCH_0_0_0 == SEQUENTIAL_CD)
       cdh_0_0_0->Detect();
       CD_Complete(cdh_0_0_0);
 #endif
 
    }
 
-#if SWITCH_0_0_0  > SEQUENTIAL_CD
+#if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD)
    cdh_0_0_0->Destroy();
-#elif SWITCH_0_0_0 == SEQUENTIAL_CD
+#elif _CD && (SWITCH_0_0_0 == SEQUENTIAL_CD)
    CD_Begin(cdh_0_0_0, false, "After_Main_Loop");
 #endif
 
