@@ -58,7 +58,7 @@ using namespace std;
    CD_Complete(CDH); \
    CDH->Destroy(); 
 
-#define CDMAPPING_BEGIN_NESTED_ONLY(SWITCH, CDH, FUNC_NAME) \
+#define CDMAPPING_BEGIN_NESTED_ONLY(SWITCH, CDH, FUNC_NAME, SERDES_OPS, CD_TYPE) \
   CDH = GetCurrentCD()->Create(SWITCH >> CDFLAG_SIZE, \
                                   (string(FUNC_NAME)+GetCurrentCD()->node_id().GetStringID()).c_str(), \
                                    SWITCH & CDFLAG_MASK, ERROR_FLAG_SHIFT(SWITCH)); \
@@ -85,6 +85,8 @@ using namespace std;
 //-------
 //Preserve
 //-------
+//
+//
 
 
 //#define DEBUG_PRINT printf
