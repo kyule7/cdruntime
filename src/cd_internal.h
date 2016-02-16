@@ -127,6 +127,7 @@ class CD : public Serializable {
     friend class cd::logging::CommLog;
     friend class cd::logging::RuntimeLogger;
     friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+    friend int MPI_Win_fence(int assert, MPI_Win win);
     friend void Initialize(void);
     friend void Finalize(void);
 #if CD_TEST_ENABLED
@@ -208,7 +209,8 @@ class CD : public Serializable {
     /// Flag for normal execution or reexecution.
     CDExecMode      cd_exec_mode_;
     int             num_reexecution_;
-
+//    static std::map<std::string,int> num_exec_map_;
+    static std::unordered_map<std::string,std::pair<int,int>> num_exec_map_;
     static bool need_reexec;
     static bool need_escalation;
     static uint32_t reexec_level;
@@ -415,6 +417,8 @@ public:
     bool     IsHead(void)        const { return cd_id_.IsHead(); }
     bool     recreated(void)     const { return recreated_; }
     bool     reexecuted(void)    const { return reexecuted_; }
+    int      num_reexec(void)    const { return num_reexecution_; }
+    std::unordered_map<std::string,std::pair<int,int>> &num_exec_map(void)    const { return num_exec_map_; }
     char    *name(void)          const { return (char *)name_.c_str(); }
     CDType   GetCDType(void) const { return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
 #if CD_LIBC_LOG_ENABLED

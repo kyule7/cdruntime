@@ -65,6 +65,8 @@ map<uint32_t, uint32_t> Util::object_id;
 
 map<string, uint32_t> CD::exec_count_;
 
+unordered_map<string,pair<int,int>> CD::num_exec_map_;
+
 bool CD::need_reexec = false;
 bool CD::need_escalation = false;
 uint32_t CD::reexec_level = INVALID_ROLLBACK_POINT;
@@ -723,6 +725,15 @@ CDErrT CD::Begin(bool collective, const char* label)
   begin_ = true;
 
   CD_DEBUG("Inside CD::Begin\n");
+  auto rit = num_exec_map_.find(name_);
+  if(rit == num_exec_map_.end()){ 
+    num_exec_map_[name_].first = 1;
+    num_exec_map_[name_].second = 0;
+    cout << "first! " << name_ << endl;
+  } else {
+    num_exec_map_[name_].first += 1;
+    cout << "not first! " << name_ << " " << num_exec_map_[name_].first << endl;
+  }
 
 //  label_[string(label)] = 0;
   if(label != NULL)
@@ -804,7 +815,7 @@ CDErrT CD::Begin(bool collective, const char* label)
 
   if(collective && task_size() > 1) {
     MPI_Win_fence(0, mailbox_);
-    CD_DEBUG("Barrier!!!! Important!!\n");
+    CD_DEBUG("[%s] Barrier!!!! Important!!\n", __func__);
     //PMPI_Barrier(color());
   } else {
     CD_DEBUG("No Barrier!!!!! %d %u\n", collective, task_size());
@@ -838,6 +849,7 @@ CD *CD::GetCDToRecover(void)
 #endif
 
     CD_DEBUG("\n\n\n\n Reexec from level #%u from level #%u\n\n\n\n", reexec_level, level());
+    printf("\n\n\n\n Reexec from level #%u from level #%u\n\n\n\n", reexec_level, level());
     need_reexec = false;
     need_escalation = false;
 //    reexec_level = 0xFFFFFFFF;
@@ -885,7 +897,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     }
     CheckMailBox();
     if(task_size() > 1) {
-      CD_DEBUG("[%s] 1\n", __func__);
+      CD_DEBUG("[%s] 2\n", __func__);
       MPI_Win_fence(0, mailbox_);
     }
     CheckMailBox();
@@ -896,7 +908,9 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
  
    
   if(need_reexec) { 
-    GetCDToRecover()->Recover(my_need_reexec == need_reexec); 
+//    GetCDToRecover()->Recover(my_need_reexec == need_reexec); 
+    CD *cdp = GetCDToRecover();
+    cdp->Recover(cdp->level() < level()); 
   }
 
   CompleteLogs();
@@ -2301,19 +2315,22 @@ CD::CDInternalErrT CD::Detect(int &rollback_point)
 void CD::Recover(bool collective)
 //void CD::Recover()
 {
+
   if(collective) {
     if(task_size() > 1) {
-      CD_DEBUG("[%s] fence in at %s level %u\n", __func__, name_.c_str(), level());
+      CD_DEBUG("[%s] fence 1 in at %s level %u\n", __func__, name_.c_str(), level());
     //  PMPI_Barrier(color());
       MPI_Win_fence(0, mailbox_);
+      CheckMailBox();
+      CD_DEBUG("[%s] fence 2 in at %s level %u\n", __func__, name_.c_str(), level());
       MPI_Win_fence(0, mailbox_);
+      CheckMailBox();
       CD_DEBUG("[%s] fence out \n\n", __func__);
     } else {
       CD_DEBUG("[%s] No fence\n", __func__);
     }
   } else {
     CD_DEBUG("[%s] Not call fence %s\n", __func__, name_.c_str());
-
   }
   recoverObj_->Recover(this); 
 } 
@@ -2456,6 +2473,12 @@ CDErrT CD::InternalReexecute(void)
   reexecuted_ = true; 
   num_reexecution_++;
 
+  auto rit = num_exec_map_.find(name_);
+  if(rit == num_exec_map_.end()){
+    assert(0); 
+  } else {
+    num_exec_map_[name_].second += 1;
+  }
 
 #if comm_log
   // SZ

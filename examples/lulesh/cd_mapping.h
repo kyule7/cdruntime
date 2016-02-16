@@ -147,9 +147,9 @@
 #define CD_MAP_1_2_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //
 #define SWITCH_2_0_0  1                                                   //       LagrangeNodal
 #define CD_MAP_2_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) //   
-#define SWITCH_3_0_0  3                                                   //           CalcForceForNodes 
-#define CD_MAP_3_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) 
 //                    *************************************************** CommRecvSBN ***************************************************** 
+#define SWITCH_3_0_0  3                                                   //           CalcForceForNodes 
+#define CD_MAP_3_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //
 #define SWITCH_4_0_0  3                                                   //               CalcVolumeForceForElems ** MAP FINEGRAINED
 #define CD_MAP_4_0_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_1) //                 # O{fx,fy,xz}, I{nodelist,x,y,z}  
 #define SWITCH_5_0_0  0                                                   //                   InitStressTermsForElems

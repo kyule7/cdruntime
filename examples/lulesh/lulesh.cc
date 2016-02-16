@@ -168,6 +168,7 @@ int counter=0;
 Domain::DomainSerdes::SerdesInfo Domain::DomainSerdes::serdes_table[TOTAL_ELEMENT_COUNT];
 bool Domain::DomainSerdes::serdes_table_init = false; 
 #endif
+std::map<std::string,int> func_cnt;
 
 /*********************************/
 /* Data structure implementation */
@@ -1442,15 +1443,15 @@ static inline void CalcForceForNodes(Domain& domain)
                                M__XD | M__YD | M__ZD |
                                M__XDD| M__YDD| M__ZDD )
                               ), kCopy | kSerdes, "SWITCH_3_0_0_CalcForceForNodes"); 
-#elif _CD && (SWITCH_3_0_0 == SEQUENTIAL_CD)
-   CDHandle *cdh_3_0_0 = GetLeafCD();
-   CD_Begin(cdh_3_0_0, true, "CalcForceForNodes"); 
-   cdh_3_0_0->Preserve(domain.serdes.SetOp(
-                              (M__FX | M__FY | M__FZ |
-                               M__X  | M__Y  | M__Z  |
-                               M__XD | M__YD | M__ZD |
-                               M__XDD| M__YDD| M__ZDD )
-                              ), kCopy | kSerdes, "SWITCH_3_0_0_CalcForceForNodes"); 
+//#elif _CD && (SWITCH_3_0_0 == SEQUENTIAL_CD)
+//   CDHandle *cdh_3_0_0 = GetLeafCD();
+//   CD_Begin(cdh_3_0_0, true, "CalcForceForNodes"); 
+//   cdh_3_0_0->Preserve(domain.serdes.SetOp(
+//                              (M__FX | M__FY | M__FZ |
+//                               M__X  | M__Y  | M__Z  |
+//                               M__XD | M__YD | M__ZD |
+//                               M__XDD| M__YDD| M__ZDD )
+//                              ), kCopy | kSerdes, "SWITCH_3_0_0_CalcForceForNodes"); 
 #endif
 
 
@@ -1467,13 +1468,12 @@ static inline void CalcForceForNodes(Domain& domain)
                               (M__FX | M__FY | M__FZ 
                               ), 
                               kCopy);
-#elif _CD && (SWITCH_4_0_0 == SEQUENTIAL_CD)
-   CDHandle *cdh_4_0_0 = GetCurrentCD();
-#define CD_MAP_4_0_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                 # O{fx,fy,xz}, I{nodelist,x,y,z}  
-   CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_4_0_0, cdh_4_0_0, "CalcVolumeForceForElems", 
-                              (M__FX | M__FY | M__FZ 
-                              ), 
-                              kCopy);
+//#elif _CD && (SWITCH_4_0_0 == SEQUENTIAL_CD)
+//   CDHandle *cdh_4_0_0 = GetCurrentCD();
+//   CDMAPPING_BEGIN_SEQUENTIAL(CD_MAP_4_0_0, cdh_4_0_0, "CalcVolumeForceForElems", 
+//                              (M__FX | M__FY | M__FZ 
+//                              ), 
+//                              kCopy);
 #endif
 
   /* Calcforce calls partial, force, hourq */
@@ -1481,16 +1481,16 @@ static inline void CalcForceForNodes(Domain& domain)
 
 #if _CD && (SWITCH_4_0_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_4_0_0, cdh_4_0_0);
-#elif _CD && (SWITCH_4_0_0 == SEQUENTIAL_CD)
-   cdh_4_0_0->Detect(); 
+//#elif _CD && (SWITCH_4_0_0 == SEQUENTIAL_CD)
+//   cdh_4_0_0->Detect(); 
 #endif
 
 
 #if _CD && (SWITCH_3_0_0  > SEQUENTIAL_CD)
    CDMAPPING_END_NESTED(CD_MAP_3_0_0, cdh_3_0_0);
-#elif _CD && (SWITCH_3_0_0 == SEQUENTIAL_CD)
-   cdh_3_0_0->Detect(); 
-   CD_Complete(cdh_3_0_0);
+//#elif _CD && (SWITCH_3_0_0 == SEQUENTIAL_CD)
+//   cdh_3_0_0->Detect(); 
+//   CD_Complete(cdh_3_0_0);
 #endif
 
 
@@ -3717,9 +3717,6 @@ int main(int argc, char *argv[])
    CDHandle *cdh_0_0_0 = root_cd->Create(CD_MAP_0_0_0 >> CDFLAG_SIZE, 
                                          (string("MainLoop")+root_cd->node_id().GetStringID()).c_str(), 
                                          CD_MAP_0_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_0_0_0)); 
-//#elif _CD && (SWITCH_1_0_0 == SEQUENTIAL_CD)
-//   CD_Complete(root_cd); 
-//   CDHandle *cdh_1_0_0 = root_cd;
 #endif
 
 

@@ -2399,11 +2399,15 @@ int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],
   return PMPI_Group_translate_ranks(group1, n, ranks1,
                                     group2, ranks2);
 }
-
+unsigned epoch_num = 0;
 int MPI_Win_fence(int assert, MPI_Win win)
 {
-  CD_DEBUG("[%s] called %s at %u\n", __func__, GetCurrentCD()->ptr_cd()->name(), GetCurrentCD()->ptr_cd()->level());
-  //fflush(cdout);
+  CD_DEBUG("[%s %u] called %s at %u (#reexec: %d)\n", __func__, epoch_num++,GetCurrentCD()->ptr_cd()->name(), GetCurrentCD()->ptr_cd()->level(), GetCurrentCD()->ptr_cd()->num_reexec());
+  auto &reexec_map = GetCurrentCD()->ptr_cd()->num_exec_map();
+  for(auto it=reexec_map.begin(); it!=reexec_map.end(); ++it) {
+    CD_DEBUG("%s : %d/%d\n", it->first.c_str(), it->second.second,it->second.first);
+  }
+  fflush(cdout);
   int ret = PMPI_Win_fence(assert, win);
   return ret;
 }

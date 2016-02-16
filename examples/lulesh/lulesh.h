@@ -88,7 +88,19 @@ using namespace std;
 
 
 //#define DEBUG_PRINT printf
-#define DEBUG_PRINT(...)
+#define DEBUG_PRINT(...) \
+//  printf(__VA_ARGS__); \
+//  auto it = func_cnt.find(std::string(__func__)); \
+//  if(it == func_cnt.end()) { \
+//    func_cnt[std::string(__func__)] = 1; \
+//  } else { \
+//    func_cnt[std::string(__func__)] += 1; \
+//  } \
+//  printf("[%s] exec : %d\n", __func__, func_cnt[std::string(__func__)]);
+  
+
+#include <map>
+#include <string>
 
 /////////////////////////////////////////////////////////////////////
 #define  M__NO_SERDES          0x0000000000000000  // 0
