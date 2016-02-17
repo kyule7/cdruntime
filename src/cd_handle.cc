@@ -1267,7 +1267,9 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
   if(err_ret_val != NULL)
     *err_ret_val = err;
-
+#if CD_DEBUG_DEST == 1
+  fflush(cdout);
+#endif
   CDEpilogue();
   return ret_prepare;
 

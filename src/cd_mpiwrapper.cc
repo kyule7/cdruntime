@@ -34,6 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_config.h"
+#include "cd_features.h"
 
 #if _MPI_VER
 
@@ -524,11 +525,11 @@ int MPI_Isend(const void *buf,
     switch (cdp->GetCDLoggingMode()) {
       case kStrictCD: {
 //        printf("test send: strict CD\t"); cdp->CheckIntraCDMsg(dest, g);
-        mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
+//        mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
         break;
       }
       case kRelaxedCDGen: {
-        mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
+//        mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
         LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
   
         // KYU: Intra-CD msg check
@@ -550,7 +551,7 @@ int MPI_Isend(const void *buf,
         // End of log entry before failure. Flipped to executin mode!
         if (ret == kCommLogCommLogModeFlip) {
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
-          mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
+//          mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
           cur_cdh->ptr_cd()->LogData(buf, 0, dest, false, (unsigned long)request, 0, false, cdp->CheckIntraCDMsg(dest, g));
         }
         else if (ret == kCommLogError) {
@@ -566,7 +567,7 @@ int MPI_Isend(const void *buf,
   }
   else {
     LOG_DEBUG("Warning: MPI_Isend out of CD context...\n");
-    mpi_ret = PMPI_Isend(const_cast<void *>(buf), count, datatype, dest, tag, comm, request);
+//    mpi_ret = PMPI_Isend(const_cast<void *>(buf), count, datatype, dest, tag, comm, request);
   }
 
   MsgEpilogue();
@@ -597,11 +598,11 @@ int MPI_Irecv(void *buf,
     switch( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
 //printf("test recv: strict CD\t"); cdp->CheckIntraCDMsg(src, g);
-        mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
+//        mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
         break;
       }
       case kRelaxedCDGen: { // Execution
-        mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
+//        mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
         LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
   
         // KYU: Intra-CD msg check
@@ -624,7 +625,7 @@ int MPI_Irecv(void *buf,
         if( cdp->CheckIntraCDMsg(src, g) ) { // Do not replay intra-CD msg, but reexecute it!
   
           LOG_DEBUG("In kReplay mode, but regenerate message for intra-CD messages...\n");
-          mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
+//          mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
 
           // Check some event (current log entry and just skip to the next one)
           // This should read the corresponding payload when it calls MPI_Waitxxx
@@ -642,7 +643,7 @@ int MPI_Irecv(void *buf,
         // End of log entry before failure. Flipped to executin mode!
         if (ret == kCommLogCommLogModeFlip) {
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
-          mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
+//          mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
 
           // This message was inter-CD message. So, keep logging for this message, too.
           // KYU: Intra-CD msg check
@@ -672,7 +673,7 @@ int MPI_Irecv(void *buf,
   }
   else {  // cur_cdh == NULL
     LOG_DEBUG("Warning: MPI_Irecv out of CD context...\n");
-    mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
+//    mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
   }
   MsgEpilogue();
   return mpi_ret;
@@ -1057,13 +1058,13 @@ int MPI_Wait(MPI_Request *request,
     switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
 //printf("test wait : strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
-        mpi_ret = PMPI_Wait(request, status);
+//        mpi_ret = PMPI_Wait(request, status);
         // delete incomplete entries...
         cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
         break;
       }
       case kRelaxedCDGen: {
-        mpi_ret = PMPI_Wait(request, status);
+// FIXME        mpi_ret = PMPI_Wait(request, status);
         LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
 
 //        if( cur_cdh->CheckIntraCDMsg(dest, g) ) {
@@ -1078,7 +1079,7 @@ int MPI_Wait(MPI_Request *request,
         if (ret == kCommLogCommLogModeFlip) {
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
           LOG_DEBUG("Should not come here because error happens between Isend/Irecv and WaitXXX...\n");
-          mpi_ret = PMPI_Wait(request, status);
+//FIXME          mpi_ret = PMPI_Wait(request, status);
           cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
         }
         else if (ret == kCommLogError) {
@@ -1094,7 +1095,7 @@ int MPI_Wait(MPI_Request *request,
   }
   else {
     LOG_DEBUG("Warning: MPI_Wait out of CD context...\n");
-    mpi_ret = PMPI_Wait(request, status);
+//    mpi_ret = PMPI_Wait(request, status);
   }
   MsgEpilogue();
   return mpi_ret;
@@ -2403,11 +2404,14 @@ unsigned epoch_num = 0;
 int MPI_Win_fence(int assert, MPI_Win win)
 {
   CD_DEBUG("[%s %u] called %s at %u (#reexec: %d)\n", __func__, epoch_num++,GetCurrentCD()->ptr_cd()->name(), GetCurrentCD()->ptr_cd()->level(), GetCurrentCD()->ptr_cd()->num_reexec());
+#if CD_DEBUG_DEST == 1
   auto &reexec_map = GetCurrentCD()->ptr_cd()->num_exec_map();
   for(auto it=reexec_map.begin(); it!=reexec_map.end(); ++it) {
     CD_DEBUG("%s : %d/%d\n", it->first.c_str(), it->second.second,it->second.first);
   }
+
   fflush(cdout);
+#endif
   int ret = PMPI_Win_fence(assert, win);
   return ret;
 }

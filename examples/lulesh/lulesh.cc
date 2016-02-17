@@ -3650,7 +3650,7 @@ int main(int argc, char *argv[])
 #if _OPENMP
       printf("Num threads: %d\n", omp_get_max_threads());
 #endif
-      printf("Total number of elements: %lld\n\n", numRanks*opts.nx*opts.nx*opts.nx);
+      printf("Total number of elements: %lld\n\n", (long long int)numRanks*opts.nx*opts.nx*opts.nx);
       printf("To run other sizes, use -s <integer>.\n");
       printf("To run a fixed number of iterations, use -i <integer>.\n");
       printf("To run a more or less balanced region set, use -b <integer>.\n");
@@ -3742,24 +3742,35 @@ int main(int argc, char *argv[])
       Domain_member fieldData[6] ;
 #endif
 
+  Domain &domain = *locDom;
 #if _CD && (SWITCH_2_0_0  >= SEQUENTIAL_CD)
-      CDHandle *cdh_2_0_0 = cdh_1_0_0;
+      //CDHandle *cdh_2_0_0 = cdh_1_0_0;
+      CD_Begin(cdh_1_0_0, true, "LagrangeNodal"); 
+      CDHandle *cdh_2_0_0 = cdh_1_0_0->Create(CD_MAP_2_0_0 >> CDFLAG_SIZE, 
+                                  (string("LagrangeNodal")+cdh_1_0_0->node_id().GetStringID()).c_str(),
+                                   CD_MAP_2_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_2_0_0));
       CD_Begin(cdh_2_0_0, true, "LagrangeNodal"); 
-//      cdh_2_0_0->Preserve(domain.serdes.SetOp(
-//                                (M__FX | M__FY | M__FZ |
-//                                 M__X  | M__Y  | M__Z  |
-//                                 M__XD | M__YD | M__ZD |
-//                                 M__XDD| M__YDD| M__ZDD )
-//                                ), kCopy | kSerdes, "SWITCH_2_0_0_LagrangeNodal"); 
+      cdh_2_0_0->Preserve(domain.serdes.SetOp(
+                                (M__FX | M__FY | M__FZ |
+                                 M__X  | M__Y  | M__Z  |
+                                 M__XD | M__YD | M__ZD |
+                                 M__XDD| M__YDD| M__ZDD )
+                                ), kCopy | kSerdes, "SWITCH_2_0_0_LagrangeNodal"); 
 #endif
 
       /* calculate nodal forces, accelerations, velocities, positions, with
        * applied boundary conditions and slide surface considerations */
       LagrangeNodal(*locDom);  
 
+
+#if _CD && (SWITCH_2_0_0  >= SEQUENTIAL_CD)
+      CDMAPPING_END_NESTED(CD_MAP_2_0_0, cdh_2_0_0);
+#endif
+
+
 #ifdef SEDOV_SYNC_POS_VEL_LATE
 #endif
-  Domain &domain = *locDom;
+
 #if _CD && (SWITCH_2_1_0  > SEQUENTIAL_CD)
   
   CDHandle *cdh_2_1_0 = GetCurrentCD()->Create(CD_MAP_2_1_0 >> CDFLAG_SIZE, 
@@ -3845,8 +3856,8 @@ int main(int argc, char *argv[])
       }
 #endif
 
-#if _CD && (SWITCH_2_0_0  >= SEQUENTIAL_CD)
-      CD_Complete(cdh_2_0_0); 
+#if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
+      CD_Complete(cdh_1_0_0); 
 #endif
 
 

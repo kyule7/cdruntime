@@ -169,6 +169,7 @@ class CD : public Serializable {
 
     bool recreated_;
     bool reexecuted_;
+    bool is_window_reused_;
     //GONG
     bool begin_;
 //  public:
@@ -547,6 +548,7 @@ public:
 
     CDInternalErrT Sync(ColorT color); 
     CDInternalErrT SyncFile(void); 
+    static void SyncCDs(CD *cd_lv_to_sync);
     void *SerializeRemoteEntryDir(uint64_t& len_in_byte);
     void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
 
@@ -557,7 +559,8 @@ public:
     virtual void Deserialize(void* object) {
     }
 
-    CD *GetCDToRecover(void);
+//    CD *GetCDToRecover(bool escalate);
+    static CDHandle *GetCDToRecover(CDHandle *cd_level, bool collective=true);
     CDInternalErrT CompleteLogs(void);
 #if CD_LIBC_LOG_ENABLED
 public:

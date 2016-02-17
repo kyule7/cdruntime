@@ -59,7 +59,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <list>
 #include <cstdint>
 #include <string>
-
+#include <map>
 using namespace std;
 #define LabelT string
 
@@ -70,8 +70,18 @@ enum PROFILER_TYPE {
   CDPROFILER=1
 };
 
+
+struct RuntimeInfo {
+  uint32_t total_exec_;
+  uint32_t reexec_;
+  double total_exec_time_;
+  double reexec_time_;
+};
+
 class Profiler {
   friend class CDHandle;
+private:
+  static std::map<uint32_t,std::map<std::string,RuntimeInfo>> num_exec_map_;
 public:
   Profiler() {}
   ~Profiler() {}

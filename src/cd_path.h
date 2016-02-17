@@ -203,7 +203,7 @@ private:
   *
   * \return Pointer to CDHandle at a level
   */
-  static CDHandle *GetCDLevel(int level)
+  static CDHandle *GetCDLevel(uint32_t level)
   { 
     if(uniquePath_ != NULL) {
       if( uniquePath_->size() > 1 ) {

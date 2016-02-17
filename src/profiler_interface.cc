@@ -44,8 +44,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 //#include "cd_internal.h"
 //#include "cd_global.h"
-//#include "cd_def_internal.h" 
+#include "cd_def_internal.h" 
 //#include "cd_handle.h"
+using namespace cd;
+using namespace std;
+
+clock_t cd::prof_begin_clk;
+clock_t cd::prof_end_clk;
 
 Profiler *cd::interface::CreateProfiler(PROFILER_TYPE prof_type, void *arg)
 {
@@ -61,4 +66,41 @@ Profiler *cd::interface::CreateProfiler(PROFILER_TYPE prof_type, void *arg)
 
 }
 
+
+  const uint32_t level = level();
+  auto rit = num_exec_map_[level].find(name_);
+  if(rit == num_exec_map_[level].end()) { 
+    num_exec_map_[level][name_] = RuntimeInfo(1,0,0.0,0.0);
+  } else {
+    num_exec_map_[level][name_].total_exec_ += 1;
+  }
+
+  num_exec_map_[level][name_].total_exec_time_ += end - begin;
+  num_exec_map_[level][name_].total_exec_time_ += end - begin;
+
+void Profiler::RecordBegin(bool reexecution)
+{
+  const uint32_t level = level();
+  auto rit = num_exec_map_[level].find(name_);
+  if(rit == num_exec_map_[level].end()) { 
+    num_exec_map_[level][name_] = RuntimeInfo(1,0,0.0,0.0);
+  } else {
+    num_exec_map_[level][name_].total_exec_ += 1;
+  }
+  if(reexecution) {
+    prof_clk_end = clock();
+
+    prof_clk_begin = clock();
+}
+
+void Profiler::RecordEnd(bool reexecution)
+{
+  prof_clk_end = clock();
+  const double period = prof_clk_end - prof_clk_begin;
+  num_exec_map_[level][name_].total_exec_time_ += period;
+  if(reexecution) {
+    num_exec_map_[level][name_].reexec_time_ += period;
+    num_exec_map_[level][name_].reexec_ += 1;
+  }
+}
 #endif

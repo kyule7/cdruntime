@@ -36,7 +36,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_config.h"
 
 #if _MPI_VER
-
+#include "cd_path.h"
 #include "cd_global.h"
 #include "cd_handle.h"
 #include "cd_internal.h"
@@ -106,7 +106,7 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, cons
     //printf("[%s] need_reexec? %d from %u (%s)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->name_.c_str());
     if(CD::need_reexec) {
       CD_DEBUG("\n\nReexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n");
-      ptr_cd_->GetCDToRecover()->Recover(false);
+      CD::GetCDToRecover(this, false)->ptr_cd()->Recover();
 //      CD *cd_to_recover = ptr_cd_->GetCDToRecover();
 //      cd_to_recover->recoverObj_->Recover(cd_to_recover);
     } else {
@@ -985,11 +985,12 @@ CDErrT CD::SetMailBox(const CDEventT &event)
 {
   CD_DEBUG("\n\n=================== Set Mail Box Start ==========================\n");
   CD_DEBUG("\n[CD::SetMailBox] myTaskID #%d, event : %s, Is it Head? : %d\n", myTaskID, event2str(event).c_str(), IsHead());
+  //printf("\n[CD::SetMailBox] myTaskID #%d, event : %s, Is it Head? : %d\n", myTaskID, event2str(event).c_str(), IsHead());
 
   CD::CDInternalErrT ret=kOK;
 //  int val = 1;
 
-  CDHandle *curr_cdh = GetCurrentCD();
+  CDHandle *curr_cdh = CDPath::GetCDLevel(level());
 //  int head_id = head();
   if(event == CDEventT::kNoEvent) {
 
@@ -1204,10 +1205,11 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event)
   // Therefore, it locally register the event handler right away, 
   // and all the tasks including head task can reexecute after the CheckMailBox.
   CD_DEBUG("\n[HeadCD::SetMailBox] event %s at level #%u --------\n", event2str(event).c_str(), level());
+  //printf("\n[HeadCD::SetMailBox] event %s at level #%u --------\n", event2str(event).c_str(), level());
 
   CDInternalErrT ret = kOK;
 
-  CDHandle *curr_cdh = GetCurrentCD();
+  CDHandle *curr_cdh = CDPath::GetCDLevel(level());
   while( curr_cdh->task_size() == 1 ) {
     if(curr_cdh == GetRootCD()) {
       ERROR_MESSAGE("[SetMailBox] there is a single task in the root CD\n");
@@ -1275,6 +1277,10 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(HeadCD *curr_cd, const CDEventT &even
         CD_DEBUG("kErrorOccurred in HeadCD::SetMailBox\n");
 
         curr_cd->cd_event_.push_back(new HandleErrorOccurred(curr_cd));
+//        EventHandler *err_handler = new HandleErrorOccurred(curr_cd);
+//        err_handler->HandleEvent();
+//        IncHandledEventCounter();
+//        delete err_handler;
         error_occurred = true;
         // it is not needed to register here. I will be registered by HandleErrorOccurred functor.
     }
@@ -1457,11 +1463,12 @@ CDErrT CD::SetMailBox(CDEventT &event)
 
 void CD::DecPendingCounter(void)
 {
-//  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, pendingWindow_);
+  CD *rootcd = CDPath::GetRootCD()->ptr_cd();
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, rootcd->task_in_color(), 0, rootcd->pendingWindow_);
   (*pendingFlag_) -= handled_event_count;
+  PMPI_Win_unlock(rootcd->task_in_color(), rootcd->pendingWindow_);
   // Initialize handled_event_count;
   handled_event_count = 0;
-//  PMPI_Win_unlock(task_in_color(), pendingWindow_);
 }
 
 //void CD::IncPendingCounter(void)

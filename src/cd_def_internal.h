@@ -157,7 +157,7 @@ typedef uint32_t ENTRY_TAG_T;
 //#define ERROR_RATE_TYPE_5 0.08
 //#define ERROR_RATE_TYPE_6 0.1
 //#define ERROR_RATE_TYPE_7 0.15
-#define ERROR_RATE_TYPE_0 0.0001
+#define ERROR_RATE_TYPE_0 0.01
 #define ERROR_RATE_TYPE_1 0.0005
 #define ERROR_RATE_TYPE_2 0.001
 #define ERROR_RATE_TYPE_3 0.002
@@ -395,6 +395,9 @@ extern clock_t log_begin_clk;
 extern clock_t log_end_clk;
 extern clock_t log_elapsed_time;
 
+extern clock_t prof_begin_clk;
+extern clock_t prof_end_clk;
+
 extern clock_t begin_clk;
 extern clock_t end_clk;
 extern clock_t elapsed_time;
@@ -402,10 +405,6 @@ extern clock_t elapsed_time;
 /**@addtogroup runtime_logging 
  * @{
  */
-
-extern clock_t msg_begin_clk;
-extern clock_t msg_end_clk;
-extern clock_t msg_elapsed_time;
 
 #define MsgPrologue() \
   app_side = false; \
