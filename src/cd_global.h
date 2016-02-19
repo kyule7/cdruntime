@@ -538,7 +538,8 @@ namespace cd {
                           OVERLAPPED_DATA, 
                           SYSTEM_BIT_VECTOR,
                           CD_OVERHEAD, 
-                          LOGGING_OVERHEAD, 
+                          MSG_LOGGING, 
+                          RUNTIME_LOGGING, 
                           MAX_PROFILE_DATA };
 
 /** @} */ // end profiler-related group ===========================================

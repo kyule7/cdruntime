@@ -211,7 +211,7 @@ class CD : public Serializable {
     CDExecMode      cd_exec_mode_;
     int             num_reexecution_;
 //    static std::map<std::string,int> num_exec_map_;
-    static std::unordered_map<std::string,std::pair<int,int>> num_exec_map_;
+//    static std::unordered_map<std::string,std::pair<int,int>> num_exec_map_;
     static bool need_reexec;
     static bool need_escalation;
     static uint32_t reexec_level;
@@ -347,14 +347,13 @@ update the preserved data.
     CDErrT Complete(bool collective=true, 
                     bool update_preservations=true);
 
-
   /// Jinsuk: Really simple preservation function. 
   /// This will use default storage. 
   /// It can be set when creating this instance, 
   /// or later by calling set_ something function. 
   
     CDErrT Preserve(void *data,                   // address in the local process 
-                    uint64_t len_in_bytes,        // data size to preserve
+                    uint64_t &len_in_bytes,        // data size to preserve
                     uint32_t preserve_mask=kCopy, // preservation method
                     const char *my_name=0,        // data name
                     const char *ref_name=0,       // reference name
@@ -369,7 +368,7 @@ update the preserved data.
     // So user set some medium type
     CDErrT Preserve(CDEvent &cd_event,            // Event object to synch
                     void *data_ptr, 
-                    uint64_t len, 
+                    uint64_t &len, 
                     uint32_t preserve_mask=kCopy, 
                     const char *my_name=0, 
                     const char *ref_name=0, 
@@ -419,7 +418,7 @@ public:
     bool     recreated(void)     const { return recreated_; }
     bool     reexecuted(void)    const { return reexecuted_; }
     int      num_reexec(void)    const { return num_reexecution_; }
-    std::unordered_map<std::string,std::pair<int,int>> &num_exec_map(void)    const { return num_exec_map_; }
+//    std::unordered_map<std::string,std::pair<int,int>> &num_exec_map(void)    const { return num_exec_map_; }
     char    *name(void)          const { return (char *)name_.c_str(); }
     CDType   GetCDType(void) const { return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
 #if CD_LIBC_LOG_ENABLED
@@ -497,7 +496,7 @@ public:
 
     CDInternalErrT InternalDestroy(void);
     CDInternalErrT InternalPreserve(void *data, 
-                                    uint64_t len_in_bytes,
+                                    uint64_t &len_in_bytes,
                                     uint32_t preserve_mask, 
                                     std::string my_name, 
                                     const char *ref_name, 
@@ -549,10 +548,10 @@ public:
     CDInternalErrT Sync(ColorT color); 
     CDInternalErrT SyncFile(void); 
     static void SyncCDs(CD *cd_lv_to_sync);
-    void *SerializeRemoteEntryDir(uint64_t& len_in_byte);
+    void *SerializeRemoteEntryDir(uint64_t &len_in_bytes);
     void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
 
-    virtual void *Serialize(uint64_t& len_in_bytes) {
+    virtual void *Serialize(uint64_t &len_in_bytes) {
       return NULL;  
     }
   
@@ -699,7 +698,7 @@ class HeadCD : public CD {
     virtual CDErrT RemoveChild(CDHandle* cd_child); 
 
 
-    void *Serialize(uint64_t& len_in_bytes)
+    void *Serialize(uint64_t &len_in_bytes)
     {
       return NULL;  
     }

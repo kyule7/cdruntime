@@ -116,7 +116,7 @@ void CDProfiler::StartProfile(const string &label)
     }
     else { // diff sequential CDs. Clear sight objects
 //      cout << "clear sight obj : " << label << endl; //getchar();
-      ClearSightObj();
+      Delete();
     }
 
 //    cout << "create sight obj : " << label << endl; getchar();
@@ -253,7 +253,7 @@ void CDProfiler::CreateSightObj(void)
 
 }
 
-void CDProfiler::ClearSightObj(void)
+void CDProfiler::Delete(void)
 {
 #if _ENABLE_SCOPE
   assert(scope_);
@@ -303,7 +303,7 @@ void CDProfiler::FinishProfile(void) // it is called in Destroy()
   (profile_data_)[current_label_][EXEC_CYCLE] += (that_point_) - (this_point_);
 
 //  if(isSameSequentialCD) {
-//    ClearSightObj();
+//    Delete();
 //  }
 }
 

@@ -34,31 +34,34 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_config.h"
-#if _PROFILER
+#include "cd_features.h"
 
-#include "cd_path.h"
-#include "cd_global.h"
-#include "cd_profiler.h"
-#include "util.h"
-#include <cstdint>
+#if CD_PROFILER_ENABLED
+
+//#include "cd_path.h"
+//#include "cd_global.h"
+#include "profiler_interface.h"
+#include "cd_def_internal.h" 
 
 //#include "cd_internal.h"
-//#include "cd_global.h"
-#include "cd_def_internal.h" 
+#include "cd_global.h"
 //#include "cd_handle.h"
 using namespace cd;
+using namespace cd::interface;
 using namespace std;
 
 clock_t cd::prof_begin_clk;
 clock_t cd::prof_end_clk;
+clock_t cd::prof_sync_clk;
+std::map<uint32_t,std::map<std::string,RuntimeInfo>> Profiler::num_exec_map;
 
-Profiler *cd::interface::CreateProfiler(PROFILER_TYPE prof_type, void *arg)
+Profiler *Profiler::CreateProfiler(int prof_type, void *arg)
 {
   switch(prof_type) {
-    case NULLPROFILER :
-      return dynamic_cast<Profiler *>(new NullProfiler());
-    case CDPROFILER : 
-      return dynamic_cast<Profiler *>(new CDProfiler(static_cast<CDProfiler *>(arg)));
+    case 0 :
+      return new Profiler(static_cast<CDHandle *>(arg));
+//    case CDPROFILER : 
+//      return dynamic_cast<Profiler *>(new CDProfiler(static_cast<CDProfiler *>(arg)));
     default :
       ERROR_MESSAGE("Undifined Profiler Type!\n");
   }
@@ -66,41 +69,122 @@ Profiler *cd::interface::CreateProfiler(PROFILER_TYPE prof_type, void *arg)
 
 }
 
-
-  const uint32_t level = level();
-  auto rit = num_exec_map_[level].find(name_);
-  if(rit == num_exec_map_[level].end()) { 
-    num_exec_map_[level][name_] = RuntimeInfo(1,0,0.0,0.0);
-  } else {
-    num_exec_map_[level][name_].total_exec_ += 1;
-  }
-
-  num_exec_map_[level][name_].total_exec_time_ += end - begin;
-  num_exec_map_[level][name_].total_exec_time_ += end - begin;
-
-void Profiler::RecordBegin(bool reexecution)
+void Profiler::BeginRecord(void)
 {
-  const uint32_t level = level();
-  auto rit = num_exec_map_[level].find(name_);
-  if(rit == num_exec_map_[level].end()) { 
-    num_exec_map_[level][name_] = RuntimeInfo(1,0,0.0,0.0);
-  } else {
-    num_exec_map_[level][name_].total_exec_ += 1;
-  }
-  if(reexecution) {
-    prof_clk_end = clock();
+  const uint32_t level = cdh_->level();
+  string name = cdh_->GetName();
+  auto rit = num_exec_map[level].find(name);
 
-    prof_clk_begin = clock();
+  if(rit == num_exec_map[level].end()) { 
+    num_exec_map[level][name] = RuntimeInfo(1);
+  } else {
+    num_exec_map[level][name].total_exec_ += 1;
+  }
+
+  if(cdh_->GetExecMode() == kReexecution) {
+    end_clk_  = clock();
+    sync_clk_ = clock();
+    num_exec_map[level][name].total_time_ += (double)(end_clk_  - begin_clk_) / CLOCKS_PER_SEC;
+    num_exec_map[level][name].sync_time_  += (double)(sync_clk_ - begin_clk_) / CLOCKS_PER_SEC;
+    num_exec_map[level][name].reexec_     += 1;
+    reexecuted_ = true;
+  }
+  begin_clk_ = clock();
 }
 
-void Profiler::RecordEnd(bool reexecution)
+void Profiler::EndRecord(void)
 {
-  prof_clk_end = clock();
-  const double period = prof_clk_end - prof_clk_begin;
-  num_exec_map_[level][name_].total_exec_time_ += period;
-  if(reexecution) {
-    num_exec_map_[level][name_].reexec_time_ += period;
-    num_exec_map_[level][name_].reexec_ += 1;
+  const uint32_t level = cdh_->level();
+  string name = cdh_->GetName();
+  end_clk_ = clock();
+  num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLOCKS_PER_SEC;
+  if(reexecuted_) {
+    num_exec_map[level][name].reexec_time_ += (double)(end_clk_  - begin_clk_) / CLOCKS_PER_SEC;
+    reexecuted_ = false;
   }
 }
-#endif
+
+void Profiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
+{
+  const uint32_t level = cdh_->level();
+  string name = cdh_->GetName();
+  switch(profile_type) {
+    case PRV_COPY_DATA: {
+      num_exec_map[level][name].prv_copy_ = profile_data;
+      break;
+    }
+    case PRV_REF_DATA : {
+      num_exec_map[level][name].prv_ref_ = profile_data;
+      break;
+    }
+    case MSG_LOGGING : {
+      num_exec_map[level][name].msg_logging_ = profile_data;
+      break;
+    }
+    default:
+      ERROR_MESSAGE("Invalid profile type to record : %d\n", profile_type);
+  }
+}
+string RuntimeInfo::GetString(void)
+{
+  char stringout[256];
+  snprintf(stringout, 256, 
+    "# Execution:\t%lu\n# Reexecution:\t%lu\nTotal Execution Time:\t%lf[s]\nReexecution Time:\t%lf[s]\nSync Time (CDs):\t%lf[s]\nPreservation(Total):\t%lu[B]\nPreservation(Ref):\t%lu[B]\nComm Logging:\t%lu[B]\nError Vector:\t%lx", 
+                         total_exec_,
+                         reexec_,
+                         total_time_,
+                         reexec_time_,
+                         sync_time_,
+                         prv_copy_,
+                         prv_ref_,
+                         msg_logging_,
+                         sys_err_vec_);
+  return string(stringout);
+}
+
+void Profiler::Print(void) {
+  for(auto it=num_exec_map.begin(); it!=num_exec_map.end(); ++it) {
+    CD_DEBUG("Level %u --------------------------------\n", it->first);
+    for(auto jt=it->second.begin(); jt!=it->second.end(); ++jt) {
+      CD_DEBUG("%s : %s\n", jt->first.c_str(), jt->second.GetString().c_str());
+    }
+    CD_DEBUG("\n");
+  }
+  CD_DEBUG("-----------------------------------------\n");
+}
+
+void MergeInfoPerLevel(RuntimeInfo &info_total, const RuntimeInfo &info_per_level) {
+
+
+}
+
+RuntimeInfo Profiler::GetTotalInfo(void) {
+  RuntimeInfo info_total;
+  for(auto it=num_exec_map.begin(); it!=num_exec_map.end(); ++it) {
+    RuntimeInfo info_per_level;
+    CD_DEBUG("Level %u --------------------------------\n", it->first);
+    //if(myTaskID == 0)
+      printf("Level %u --------------------------------\n", it->first);
+    for(auto jt=it->second.begin(); jt!=it->second.end(); ++jt) { //map<string,RuntimeInfo>>
+      CD_DEBUG("%s : %s\n", jt->first.c_str(), jt->second.GetString().c_str());
+      info_per_level += jt->second;
+    }
+    CD_DEBUG("-- Summary --\n");
+    CD_DEBUG("%s", info_per_level.GetString().c_str());
+    CD_DEBUG("\n");
+    //if(myTaskID == 0) 
+    {
+      printf("-- Summary --\n");
+      printf("%s", info_per_level.GetString().c_str());
+      printf("\n");
+    }
+    MergeInfoPerLevel(info_total, info_per_level);
+  }
+  CD_DEBUG("-----------------------------------------\n");
+  CD_DEBUG("Total Summary ---------------------------\n");
+  CD_DEBUG("%s", info_total.GetString().c_str());
+  CD_DEBUG("-----------------------------------------\n");
+  return info_total;
+}
+
+#endif // profiler enabled

@@ -272,10 +272,6 @@ void CD_Finalize(void)
 #endif
   CDPath::GetRootCD()->InternalDestroy(false);
 
-#if CD_DEBUG_ENABLED
-  WriteDbgStream();
-#endif
-
 #if CD_ERROR_INJECTION_ENABLED
   if(CDHandle::memory_error_injector_ != NULL);
     delete CDHandle::memory_error_injector_;
@@ -326,9 +322,15 @@ void CD_Finalize(void)
     printf("Ratio : %lf (Total) %lf (CD runtime) %lf (logging)\n", 
                             ((recvbuf[2]+recvbuf[4]) / recvbuf[0]) * 100,
                              (recvbuf[2] / recvbuf[0]) * 100, 
-                             (recvbuf[4] / recvbuf[0]) * 100); 
-    printf("============================================\n\n");
+                             (recvbuf[4] / recvbuf[0]) * 100);
+    printf("Profile Result =================================\n");
+    printf("%s\n", Profiler::GetTotalInfo().GetString().c_str());
+    printf("================================================\n\n");
   }
+#endif
+
+#if CD_DEBUG_ENABLED
+  WriteDbgStream();
 #endif
   CDEpilogue();
 }
@@ -429,15 +431,12 @@ int SplitCD_3D(const int& my_task_id,
 CDHandle::CDHandle()
   : ptr_cd_(0), node_id_(), ctxt_(CDPath::GetRootCD()->ctxt_)
 {
+  // FIXME
+  assert(0);
   SplitCD = &SplitCD_3D;
 
 #if CD_PROFILER_ENABLED
-  if(GetCurrentCD() != NULL)  // non-root CDs
-    profiler_ = new CreateProfiler(CDPROFILER, GetCurrentCD()->profiler_);
-  else
-    profiler_ = new CreateProfiler(CDPROFILER, NULL);
-#else
-//    profiler_ = new NullProfiler();
+  profiler_ = Profiler::CreateProfiler(0, this);
 #endif
 
 #if CD_ERROR_INJECTION_ENABLED
@@ -466,14 +465,8 @@ CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id)
 {
   SplitCD = &SplitCD_3D;
 
-
 #if CD_PROFILER_ENABLED
-  if(GetCurrentCD() != NULL)  // non-root CDs
-    profiler_ = new CreateProfiler(CDPROFILER, GetCurrentCD()->profiler_);
-  else
-    profiler_ = new CreateProfiler(CDPROFILER, NULL);
-#else
-//    profiler_ = new NullProfiler();
+  profiler_ = Profiler::CreateProfiler(0, this);
 #endif
 
 #if CD_ERROR_INJECTION_ENABLED
@@ -776,7 +769,7 @@ CDErrT CDHandle::InternalDestroy(bool collective)
 #if CD_PROFILER_ENABLED
   CD_DEBUG("Calling finish profiler\n");
   
-  profiler_->ClearSightObj();
+  profiler_->Delete();
 
   //if(ptr_cd()->cd_exec_mode_ == 0) { 
 //    profiler_->FinishProfile();
@@ -830,7 +823,7 @@ CDErrT CDHandle::Begin(bool collective, const char *label, const uint64_t &sys_e
 //  if(label == NULL) 
 //    label = "INITIAL_LABEL";
 //  cddbg << "label "<< label <<endl; //cddbgBreak();
-  profiler_->StartProfile(ptr_cd()->label_);
+  profiler_->StartProfile();
 #endif
 
   CDEpilogue();
@@ -929,6 +922,22 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 {
   CDPrologue();
 
+
+  /// Preserve meta-data
+  /// Accumulated volume of data to be preserved for Sequential CDs. 
+  /// It will be averaged out with the number of seq. CDs.
+  assert(ptr_cd_ != 0);
+  CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+                                 my_name, ref_name, ref_offset, 
+                                 regen_object, data_usage);
+
+#if CD_ERROR_INJECTION_ENABLED
+  if(memory_error_injector_ != NULL) {
+    memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
+    memory_error_injector_->Inject();
+  }
+#endif
+
 #if CD_PROFILER_ENABLED
   if(ptr_cd()->cd_exec_mode_ == 0) {
     if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
@@ -937,24 +946,10 @@ CDErrT CDHandle::Preserve(void *data_ptr,
     else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
       profiler_->RecordProfile(PRV_REF_DATA, len);
     }
+    //assert(len);
+    //printf("serialize len0 : %lu\n", len);
   }
 #endif
-
-
-#if CD_ERROR_INJECTION_ENABLED
-  if(memory_error_injector_ != NULL) {
-    memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
-    memory_error_injector_->Inject();
-  }
-#endif
-  
-  /// Preserve meta-data
-  /// Accumulated volume of data to be preserved for Sequential CDs. 
-  /// It will be averaged out with the number of seq. CDs.
-  assert(ptr_cd_ != 0);
-  CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
-                                 my_name, ref_name, ref_offset, 
-                                 regen_object, data_usage);
 
   CDEpilogue();
   return err;
@@ -994,10 +989,28 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   /// Accumulated volume of data to be preserved for Sequential CDs. 
   /// It will be averaged out with the number of seq. CDs.
   assert(ptr_cd_ != 0); 
-  CDErrT err = ptr_cd_->Preserve((void *)&serdes, 0, preserve_mask, 
+  uint64_t len = 0;
+#if CD_PROFILER_ENABLED
+  bool is_execution = (GetExecMode() == kExecution);
+#endif
+  CDErrT err = ptr_cd_->Preserve((void *)&serdes, len, kSerdes | preserve_mask, 
                                  my_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
 
+#if CD_PROFILER_ENABLED
+  if(is_execution) {
+    //printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
+    if(len==0) getchar();
+    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
+      profiler_->RecordProfile(PRV_COPY_DATA, len);
+    }
+    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
+      profiler_->RecordProfile(PRV_REF_DATA, len);
+    }
+//    assert(len);
+  }
+#endif
+  
   CDEpilogue();
   return err;
 }
@@ -1017,7 +1030,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   assert(ptr_cd_ != 0);
 
 #if CD_PROFILER_ENABLED
-  if(ptr_cd()->cd_exec_mode_ == 0) {
+  if(GetExecMode() == kExecution) {
     if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
       profiler_->RecordProfile(PRV_COPY_DATA, len);
     }
@@ -1130,7 +1143,7 @@ CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
   CDErrT err = kOK;
 #if CD_PROFILER_ENABLED
 //    if(!test_true) {
-//      profiler_->ClearSightObj();
+//      profiler_->Delete();
 //    }
 #endif
 

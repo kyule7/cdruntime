@@ -37,6 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define _CD_DEF_INTERNAL_H
 
 #include <cstdio>
+#include <cstdint>
 #include <csetjmp>
 #include <string>
 #include <vector>
@@ -397,6 +398,7 @@ extern clock_t log_elapsed_time;
 
 extern clock_t prof_begin_clk;
 extern clock_t prof_end_clk;
+extern clock_t prof_sync_clk;
 
 extern clock_t begin_clk;
 extern clock_t end_clk;
@@ -520,6 +522,7 @@ extern clock_t elapsed_time;
 #if CD_DEBUG_DEST == CD_DEBUG_SILENT  // No printouts 
 
 #define CD_DEBUG(...) 
+#define CD_DEBUG_FLUSH
 #define LOG_DEBUG(...) 
 #define LIBC_DEBUG(...)
  
@@ -531,6 +534,8 @@ extern FILE *cdoutApp;
 #define CD_DEBUG(...) \
   fprintf(cdout, __VA_ARGS__)
 
+#define CD_DEBUG_FLUSH \
+  fflush(cdout)
 
 #define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
@@ -555,6 +560,7 @@ extern FILE *cdoutApp;
 #define CD_DEBUG(...) \
   fprintf(stdout, __VA_ARGS__)
 
+#define CD_DEBUG_FLUSH 
 
 #define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
@@ -578,11 +584,14 @@ extern FILE *cdoutApp;
 #define CD_DEBUG(...) \
   fprintf(stderr, __VA_ARGS__)
 
+#define CD_DEBUG_FLUSH
+
 #else  // -------------------------------------
 
 #define CD_DEBUG(...) \
   fprintf(stderr, __VA_ARGS__)
 
+#define CD_DEBUG_FLUSH
 #endif
 
 

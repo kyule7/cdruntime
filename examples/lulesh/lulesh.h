@@ -759,6 +759,7 @@ class DomainSerdes : public Serializable {
 
     DomainSerdes &SetOp (const uint64_t &vec) {
       serdes_vec = vec;
+//      printf("serdes vec : %lx\n", serdes_vec);
       return *this;
     }
     
@@ -766,10 +767,11 @@ class DomainSerdes : public Serializable {
     void *Serialize(uint64_t &len_in_bytes) {
       // User define whatever they want.
  //     printf("%s\n", __func__);
-      CD_DEBUG("LULESH %s\n", __func__);
+      CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
       Packer packer;
       uint64_t vec = serdes_vec;
       uint32_t i=1;
+//      printf("[%s] %lx ", __func__, vec);
       while(vec != 0) {
 //        printf("loop i = %u, vec = %lu\n", i, vec);
         if(vec & 0x1) {
@@ -796,6 +798,7 @@ class DomainSerdes : public Serializable {
         i++;
         vec >>= 1;
       } // while ends
+//      printf("id: %d\n",i);
       return packer.GetTotalData(len_in_bytes);
     }
 

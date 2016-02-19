@@ -47,24 +47,26 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  */
 
 #include "cd_features.h"
+#include "cd_handle.h"
+#if CD_PROFILER_ENABLED
 //#include "cd_internal.h"
 //#include "cd_global.h"
 //#include "cd_def_internal.h"
-//
- 
-#include "cd_handle.h"
-
-#include <array>
-#include <vector>
-#include <list>
-#include <cstdint>
+//#include <array>
+//#include <vector>
+//#include <list>
 #include <string>
 #include <map>
+#include <cstdint>
+#include <cstdio>
+
 using namespace std;
 #define LabelT string
 
 namespace cd {
   namespace interface {
+
+    
 enum PROFILER_TYPE {
   NULLPROFILER=0,
   CDPROFILER=1
@@ -72,50 +74,119 @@ enum PROFILER_TYPE {
 
 
 struct RuntimeInfo {
-  uint32_t total_exec_;
-  uint32_t reexec_;
-  double total_exec_time_;
-  double reexec_time_;
+  uint64_t total_exec_;
+  uint64_t reexec_;
+  uint64_t prv_copy_;
+  uint64_t prv_ref_;
+  uint64_t msg_logging_;
+  uint64_t sys_err_vec_;
+  double   total_time_;
+  double   reexec_time_;
+  double   sync_time_;
+  RuntimeInfo(void) 
+    : total_exec_(0), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
+      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0) {}
+  RuntimeInfo(const uint64_t &total_exec) 
+    : total_exec_(total_exec), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
+      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0) {}
+  RuntimeInfo(const RuntimeInfo &record) {
+    total_exec_  = record.total_exec_;
+    reexec_      = record.reexec_;
+    prv_copy_    = record.prv_copy_;
+    prv_ref_     = record.prv_ref_;
+    msg_logging_ = record.msg_logging_;
+    sys_err_vec_ = record.sys_err_vec_;
+    total_time_  = record.total_time_;
+    reexec_time_ = record.reexec_time_;
+    sync_time_   = record.sync_time_;
+  }
+  std::string GetString(void);
+  RuntimeInfo &operator+=(const RuntimeInfo &record) {
+    total_exec_  += record.total_exec_;
+    reexec_      += record.reexec_;
+    prv_copy_    += record.prv_copy_;
+    prv_ref_     += record.prv_ref_;
+    msg_logging_ += record.msg_logging_;
+    sys_err_vec_ |= record.sys_err_vec_;
+    total_time_  += record.total_time_;
+    reexec_time_ += record.reexec_time_;
+    sync_time_   += record.sync_time_;
+    return *this;
+  }
+  RuntimeInfo &operator=(const RuntimeInfo &record) {
+    total_exec_  = record.total_exec_;
+    reexec_      = record.reexec_;
+    prv_copy_    = record.prv_copy_;
+    prv_ref_     = record.prv_ref_;
+    msg_logging_ = record.msg_logging_;
+    sys_err_vec_ = record.sys_err_vec_;
+    total_time_  = record.total_time_;
+    reexec_time_ = record.reexec_time_;
+    sync_time_   = record.sync_time_;
+    return *this;
+  }
+  void MergeInfoPerLevel(RuntimeInfo &info_total, const RuntimeInfo &info_per_level) {
+    info_total.total_exec_  += info_per_level.total_exec_;
+    info_total.reexec_      += info_per_level.reexec_;
+    info_total.prv_copy_    += info_per_level.prv_copy_;
+    info_total.prv_ref_     += info_per_level.prv_ref_;
+    info_total.msg_logging_ += info_per_level.msg_logging_;
+    info_total.sys_err_vec_ |= info_per_level.sys_err_vec_;
+  }
 };
 
 class Profiler {
-  friend class CDHandle;
+  friend class cd::CDHandle;
+  CDHandle *cdh_;
+  bool reexecuted_;
+  clock_t begin_clk_;
+  clock_t end_clk_;
+  clock_t sync_clk_;
+  static std::map<uint32_t,std::map<std::string,RuntimeInfo>> num_exec_map;
+public:
+  Profiler() : cdh_(NULL), reexecuted_(false) {}
+  Profiler(CDHandle *cdh) : cdh_(cdh), reexecuted_(false) {}
+  virtual ~Profiler() {}
+  static Profiler *CreateProfiler(int prof_type=0, void *arg=NULL);
+  static void Print(void);
+  static RuntimeInfo GetTotalInfo(void);
+  virtual void InitViz(void){}
+  virtual void FinalizeViz(void){}
+  std::map<uint32_t,std::map<std::string,RuntimeInfo>> &GetProfInfo(void) { return Profiler::num_exec_map; }
 private:
-  static std::map<uint32_t,std::map<std::string,RuntimeInfo>> num_exec_map_;
-public:
-  Profiler() {}
-  ~Profiler() {}
+  void BeginRecord(void);
+  void EndRecord(void);
+  virtual void RecordProfile(ProfileType profile_type, uint64_t profile_data);
+  virtual void RecordClockBegin(){}
+  virtual void RecordClockEnd(){}
+  virtual void StartProfile() { BeginRecord(); }
+  virtual void FinishProfile(void) { EndRecord(); }
+  virtual void Delete(void){}
+  virtual LabelT label(void){ return string();}
 //  virtual void GetProfile(const char *label)=0;
-  virtual void RecordProfile(ProfileType profile_type, uint64_t profile_data)=0;
-  virtual void RecordClockBegin()=0;
-  virtual void RecordClockEnd()=0;
-  virtual void StartProfile(const string &label)=0;
-  virtual void FinishProfile(void)=0;
-  virtual void InitViz(void)=0;
-  virtual void FinalizeViz(void)=0;
-  virtual void ClearSightObj(void)=0;
-  virtual LabelT label(void)=0;
 };
 
-class NullProfiler : public Profiler {
-public:
-  NullProfiler() {}
-  ~NullProfiler() {}
-//  void GetProfile(const char *label) {}
-  void RecordProfile(ProfileType profile_type, uint64_t profile_data) {}
-  void RecordClockBegin() {}
-  void RecordClockEnd() {}
-  void StartProfile(const string &label) {}
-  void FinishProfile(void) {}
-  void InitViz(void) {}
-  void FinalizeViz(void) {}
-  void ClearSightObj(void) {}
-  LabelT label(void) {return LabelT();}
-};
+//class NullProfiler : public Profiler {
+//public:
+//  NullProfiler() {}
+//  ~NullProfiler() {}
+////  void GetProfile(const char *label) {}
+//  void RecordProfile(ProfileType profile_type, uint64_t profile_data) {}
+//  void RecordClockBegin() {}
+//  void RecordClockEnd() {}
+//  void StartProfile(const string &label) {}
+//  void FinishProfile(void) {}
+//  void InitViz(void) {}
+//  void FinalizeViz(void) {}
+//  void Delete(void) {}
+//  LabelT label(void) {return LabelT();}
+//};
+//
+//Profiler *CreateProfiler(PROFILER_TYPE prof_type, void *arg=NULL);
 
-Profiler *CreateProfiler(PROFILER_TYPE prof_type, void *arg=NULL);
 
+  } // interface ends
+} // cd ends
+#endif // profiler enabled
 
-}
-}
 #endif

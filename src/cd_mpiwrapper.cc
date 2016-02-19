@@ -2405,12 +2405,8 @@ int MPI_Win_fence(int assert, MPI_Win win)
 {
   CD_DEBUG("[%s %u] called %s at %u (#reexec: %d)\n", __func__, epoch_num++,GetCurrentCD()->ptr_cd()->name(), GetCurrentCD()->ptr_cd()->level(), GetCurrentCD()->ptr_cd()->num_reexec());
 #if CD_DEBUG_DEST == 1
-  auto &reexec_map = GetCurrentCD()->ptr_cd()->num_exec_map();
-  for(auto it=reexec_map.begin(); it!=reexec_map.end(); ++it) {
-    CD_DEBUG("%s : %d/%d\n", it->first.c_str(), it->second.second,it->second.first);
-  }
-
-  fflush(cdout);
+  Profiler::Print();
+  CD_DEBUG_FLUSH;
 #endif
   int ret = PMPI_Win_fence(assert, win);
   return ret;

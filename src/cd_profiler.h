@@ -46,8 +46,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  */
 
-#include "cd_features.h"
-#if CD_PROFILER_ENABLED
+//#include "cd_features.h"
+#include "cd_config.h"
+
+#if _PROFILER
 
 #include <time.h>
 #include "profiler_interface.h"

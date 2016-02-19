@@ -65,7 +65,7 @@ map<uint32_t, uint32_t> Util::object_id;
 
 map<string, uint32_t> CD::exec_count_;
 
-unordered_map<string,pair<int,int>> CD::num_exec_map_;
+//unordered_map<string,pair<int,int>> CD::num_exec_map_;
 
 bool CD::need_reexec = false;
 bool CD::need_escalation = false;
@@ -738,15 +738,15 @@ CDErrT CD::Begin(bool collective, const char* label)
   begin_ = true;
 
   CD_DEBUG("Inside CD::Begin\n");
-  auto rit = num_exec_map_.find(name_);
-  if(rit == num_exec_map_.end()){ 
-    num_exec_map_[name_].first = 1;
-    num_exec_map_[name_].second = 0;
-//    cout << "first! " << name_ << endl;
-  } else {
-    num_exec_map_[name_].first += 1;
-//    cout << "not first! " << name_ << " " << num_exec_map_[name_].first << endl;
-  }
+//  auto rit = num_exec_map_.find(name_);
+//  if(rit == num_exec_map_.end()){ 
+//    num_exec_map_[name_].first = 1;
+//    num_exec_map_[name_].second = 0;
+////    cout << "first! " << name_ << endl;
+//  } else {
+//    num_exec_map_[name_].first += 1;
+////    cout << "not first! " << name_ << " " << num_exec_map_[name_].first << endl;
+//  }
 
 //  label_[string(label)] = 0;
   if(label != NULL)
@@ -902,10 +902,20 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     if(collective)
       SyncCDs(target->ptr_cd());
 
-    //printf("...1\n");
-    need_reexec = false;
-    need_escalation = false;
-    return target;
+    // It is possible for other task set to reexec_level lower than original.
+    // It handles that case.
+    if(level != reexec_level) { 
+      target->ptr_cd_->CompleteLogs();
+      target->ptr_cd_->DeleteEntryDirectory();
+      target->Destroy();
+      return GetCDToRecover(CDPath::GetCDLevel(--level), true);
+    }
+    else {
+      //printf("...1\n");
+      need_reexec = false;
+      need_escalation = false;
+      return target;
+    }
   }
   else if(level > reexec_level && reexec_level != INVALID_ROLLBACK_POINT) {
     //printf("...2\n");
@@ -1029,7 +1039,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     //bool initiator = orig_reexec_level <= reexec_level && level() != reexec_level;
     // FIXME
     bool initiator = orig_reexec_level <= reexec_level && (CDPath::GetCDLevel(reexec_level)->task_size() != task_size());
-    printf("initiator? %d = %u <= %u\n", initiator, orig_reexec_level, reexec_level);
+//    printf("initiator? %d = %u <= %u\n", initiator, orig_reexec_level, reexec_level);
 //    CD_DEBUG("initiator? %d = %u <= %u\n", initiator, orig_reexec_level, reexec_level);
 //    GetCDToRecover(reexec_level < cd_id_.cd_name_.level() && reexec_level != INVALID_ROLLBACK_POINT)->Recover(false);
 //    reexec_level == level() -> false
@@ -1388,7 +1398,7 @@ void* CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, v
 
 
 
-void *CD::SerializeRemoteEntryDir(uint64_t& len_in_bytes) 
+void *CD::SerializeRemoteEntryDir(uint64_t &len_in_bytes) 
 {
   Packer entry_dir_packer;
   uint32_t entry_count = 0;
@@ -1857,7 +1867,7 @@ bool CD::TestComm(bool test_until_done)
  */
 
 CDErrT CD::Preserve(void *data, 
-                    uint64_t len_in_bytes, 
+                    uint64_t &len_in_bytes, 
                     uint32_t preserve_mask, 
                     const char *my_name, 
                     const char *ref_name, 
@@ -2135,7 +2145,7 @@ CDErrT CD::Preserve(void *data,
 // Non-blocking Preserve
 CDErrT CD::Preserve(CDEvent &cd_event,     
                     void *data_ptr, 
-                    uint64_t len, 
+                    uint64_t &len, 
                     uint32_t preserve_mask, 
                     const char *my_name, 
                     const char *ref_name, 
@@ -2149,7 +2159,7 @@ CDErrT CD::Preserve(CDEvent &cd_event,
 
 CD::CDInternalErrT 
 CD::InternalPreserve(void *data, 
-                     uint64_t len_in_bytes, 
+                     uint64_t &len_in_bytes, 
                      uint32_t preserve_mask, 
                      std::string my_name, 
                      const char *ref_name, 
@@ -2171,7 +2181,10 @@ CD::InternalPreserve(void *data,
     void *dst_data = NULL;
     if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
       dst_data = (static_cast<Serializable *>(data))->Serialize(len_in_bytes);
+     // printf("[%s] serialize len2 : %lu\n", __func__,len_in_bytes);
+      assert(len_in_bytes);
     }
+   // printf("[%s] serialize len2 : %lu\n", __func__,len_in_bytes);
 
     // Get cd_entry
     if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) { // via-copy, so it saves data right now!
@@ -2383,7 +2396,7 @@ CD::InternalPreserve(void *data,
   }
 
   ERROR_MESSAGE("Something wrong\n");
-   return kExecModeError; 
+  return kExecModeError; 
 
 }
 
@@ -2599,12 +2612,12 @@ CDErrT CD::InternalReexecute(void)
   reexecuted_ = true;
   num_reexecution_++;
 
-  auto rit = num_exec_map_.find(name_);
-  if(rit == num_exec_map_.end()){
-    assert(0); 
-  } else {
-    num_exec_map_[name_].second += 1;
-  }
+//  auto rit = num_exec_map_.find(name_);
+//  if(rit == num_exec_map_.end()){
+//    assert(0); 
+//  } else {
+//    num_exec_map_[name_].second += 1;
+//  }
 
 #if comm_log
   // SZ
