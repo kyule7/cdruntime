@@ -905,6 +905,9 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     // It is possible for other task set to reexec_level lower than original.
     // It handles that case.
     if(level != reexec_level) { 
+#if CD_PROFILER_ENABLED
+      target->profiler_->FinishProfile();
+#endif
       target->ptr_cd_->CompleteLogs();
       target->ptr_cd_->DeleteEntryDirectory();
       target->Destroy();
@@ -925,6 +928,9 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 //    } else {
 //      assert(CDPath::GetCDLevel(reexec_level)->color() == target->color());
 //    }
+#if CD_PROFILER_ENABLED
+    target->profiler_->FinishProfile();
+#endif
     target->ptr_cd_->CompleteLogs();
     target->ptr_cd_->DeleteEntryDirectory();
     target->Destroy();

@@ -72,7 +72,7 @@ Profiler *Profiler::CreateProfiler(int prof_type, void *arg)
 void Profiler::BeginRecord(void)
 {
   const uint32_t level = cdh_->level();
-  string name = cdh_->GetName();
+  string name = cdh_->GetLabel();
   auto rit = num_exec_map[level].find(name);
 
   if(rit == num_exec_map[level].end()) { 
@@ -95,7 +95,7 @@ void Profiler::BeginRecord(void)
 void Profiler::EndRecord(void)
 {
   const uint32_t level = cdh_->level();
-  string name = cdh_->GetName();
+  string name = cdh_->GetLabel();
   end_clk_ = clock();
   num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLOCKS_PER_SEC;
   if(reexecuted_) {
@@ -107,7 +107,7 @@ void Profiler::EndRecord(void)
 void Profiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
 {
   const uint32_t level = cdh_->level();
-  string name = cdh_->GetName();
+  string name = cdh_->GetLabel();
   switch(profile_type) {
     case PRV_COPY_DATA: {
       num_exec_map[level][name].prv_copy_ = profile_data;
@@ -146,7 +146,7 @@ void Profiler::Print(void) {
   for(auto it=num_exec_map.begin(); it!=num_exec_map.end(); ++it) {
     CD_DEBUG("Level %u --------------------------------\n", it->first);
     for(auto jt=it->second.begin(); jt!=it->second.end(); ++jt) {
-      CD_DEBUG("%s : %s\n", jt->first.c_str(), jt->second.GetString().c_str());
+      CD_DEBUG("\n[%s]\n%s\n", jt->first.c_str(), jt->second.GetString().c_str());
     }
     CD_DEBUG("\n");
   }

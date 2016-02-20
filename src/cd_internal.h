@@ -188,7 +188,6 @@ class CD : public Serializable {
     // Label for Begin/Complete pair. It is mainly for Loop interation.
     // The Begin/Complete pair that has the same computation will have the same label_
     // and we can optimize CD with this label_ later.
-    //std::map<std::string, uint64_t> label_;
     std::string label_;
     
     // Name of this CD
@@ -420,6 +419,7 @@ public:
     int      num_reexec(void)    const { return num_reexecution_; }
 //    std::unordered_map<std::string,std::pair<int,int>> &num_exec_map(void)    const { return num_exec_map_; }
     char    *name(void)          const { return (char *)name_.c_str(); }
+    char    *label(void)         const { return (char *)label_.c_str(); }
     CDType   GetCDType(void) const { return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
 #if CD_LIBC_LOG_ENABLED
     CommLog *libc_log_ptr()      const { return libc_log_ptr_; }

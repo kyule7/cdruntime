@@ -209,7 +209,7 @@ class CDHandle {
     CD    *ptr_cd_;   //!< Pointer to CD object which will not exposed to users.
     NodeID node_id_;  //!< NodeID contains the information to access to the task.
 
-    static SystemConfig system_config_;
+//    static SystemConfig system_config_;
 #if CD_ERROR_INJECTION_ENABLED
     CDErrorInjector *cd_error_injector_; //!< Error injector interface.
     static MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.

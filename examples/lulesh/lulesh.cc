@@ -3863,11 +3863,10 @@ int main(int argc, char *argv[])
 
    }
 
-#if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD)
+//#if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD)
    cdh_0_0_0->Destroy();
-#elif _CD && (SWITCH_0_0_0 == SEQUENTIAL_CD)
-   CD_Begin(cdh_0_0_0, false, "After_Main_Loop");
-#endif
+//#elif _CD && (SWITCH_0_0_0 == SEQUENTIAL_CD)
+//#endif
 
 
 
@@ -3887,6 +3886,10 @@ int main(int argc, char *argv[])
    elapsed_timeG = elapsed_time;
 #endif
 
+#if _CD
+   root_cd->Detect();
+   root_cd->Complete();
+#endif
    // Write out final viz file */
    if (opts.viz) {
       DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
@@ -3897,8 +3900,8 @@ int main(int argc, char *argv[])
    }
 
 #if _CD
-   root_cd->Detect();
-   root_cd->Complete();
+//   root_cd->Detect();
+//   root_cd->Complete();
    CD_Finalize();
 #endif
 

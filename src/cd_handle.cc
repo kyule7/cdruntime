@@ -117,21 +117,21 @@ int  cd::max_tag_rank_bit  = 0;
 int cd::myTaskID = 0;
 int cd::totalTaskSize = 1;
 
-cd::SystemConfig cd::CDHandle::system_config_;
+//cd::SystemConfig cd::CDHandle::system_config_;
 namespace cd {
 // Global functions -------------------------------------------------------
 
-void LoadSystemConfig(SystemConfig &system_config)
-{
-  system_config[ERROR_TYPE_0]  = ERROR_RATE_TYPE_0;
-  system_config[ERROR_TYPE_1]  = ERROR_RATE_TYPE_1;
-  system_config[ERROR_TYPE_2]  = ERROR_RATE_TYPE_2;
-  system_config[ERROR_TYPE_3]  = ERROR_RATE_TYPE_3;
-  system_config[ERROR_TYPE_4]  = ERROR_RATE_TYPE_4;
-  system_config[ERROR_TYPE_5]  = ERROR_RATE_TYPE_5;
-  system_config[ERROR_TYPE_6]  = ERROR_RATE_TYPE_6;
-  system_config[ERROR_TYPE_7]  = ERROR_RATE_TYPE_7;
-}
+//void LoadSystemConfig(SystemConfig &system_config)
+//{
+//  system_config[ERROR_TYPE_0]  = ERROR_RATE_TYPE_0;
+//  system_config[ERROR_TYPE_1]  = ERROR_RATE_TYPE_1;
+//  system_config[ERROR_TYPE_2]  = ERROR_RATE_TYPE_2;
+//  system_config[ERROR_TYPE_3]  = ERROR_RATE_TYPE_3;
+//  system_config[ERROR_TYPE_4]  = ERROR_RATE_TYPE_4;
+//  system_config[ERROR_TYPE_5]  = ERROR_RATE_TYPE_5;
+//  system_config[ERROR_TYPE_6]  = ERROR_RATE_TYPE_6;
+//  system_config[ERROR_TYPE_7]  = ERROR_RATE_TYPE_7;
+//}
 
 /// KL
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
@@ -142,7 +142,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   myTaskID      = myTask;
   totalTaskSize = numTask;
 
-  LoadSystemConfig(CDHandle::system_config_);
+  cd::system_config.LoadSystemConfig();
 
   string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
 #if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
@@ -230,7 +230,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #if CD_ERROR_INJECTION_ENABLED
   // To be safe
   CDHandle::memory_error_injector_ = NULL;
-  CDHandle::system_error_injector_ = new SystemErrorInjector(CDHandle::system_config_);
+  CDHandle::system_error_injector_ = new SystemErrorInjector(system_config);
 #endif
 
 #if CD_DEBUG_ENABLED

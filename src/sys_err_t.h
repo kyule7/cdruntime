@@ -232,8 +232,10 @@ struct SystemConfig {
   float &operator[](const uint64_t &idx) {
     return failure_rate_[idx];
   }
+  static void LoadSystemConfig(char *configFile=NULL);
 };
 
+extern SystemConfig system_config;
 
 /** @brief Create a new error/failure type name
  *

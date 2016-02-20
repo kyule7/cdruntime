@@ -153,14 +153,14 @@ public:
   virtual void InitViz(void){}
   virtual void FinalizeViz(void){}
   std::map<uint32_t,std::map<std::string,RuntimeInfo>> &GetProfInfo(void) { return Profiler::num_exec_map; }
+  virtual void StartProfile() { BeginRecord(); }
+  virtual void FinishProfile(void) { EndRecord(); }
 private:
   void BeginRecord(void);
   void EndRecord(void);
   virtual void RecordProfile(ProfileType profile_type, uint64_t profile_data);
   virtual void RecordClockBegin(){}
   virtual void RecordClockEnd(){}
-  virtual void StartProfile() { BeginRecord(); }
-  virtual void FinishProfile(void) { EndRecord(); }
   virtual void Delete(void){}
   virtual LabelT label(void){ return string();}
 //  virtual void GetProfile(const char *label)=0;

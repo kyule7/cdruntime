@@ -34,7 +34,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "sys_err_t.h"
+#include "system_config.h"
 using namespace cd;
+
+SystemConfig cd::system_config;
 
 uint64_t SoftMemErrInfo::get_pa_start(void)     { return pa_start_; }
 uint64_t SoftMemErrInfo::get_va_start(void)     { return va_start_; }
@@ -72,4 +75,46 @@ CDErrT UndeclareErrLoc(uint32_t error_name_id)
 {
   // STUB
   return kOK;
+}
+
+
+void SystemConfig::LoadSystemConfig(char *configFile)
+{
+  if(configFile == NULL) {
+#ifdef ERROR_TYPE_0
+  system_config[ERROR_TYPE_0]  = ERROR_RATE_TYPE_0;
+#endif
+#ifdef ERROR_TYPE_1
+  system_config[ERROR_TYPE_1]  = ERROR_RATE_TYPE_1;
+#endif
+#ifdef ERROR_TYPE_2
+  system_config[ERROR_TYPE_2]  = ERROR_RATE_TYPE_2;
+#endif
+#ifdef ERROR_TYPE_3
+  system_config[ERROR_TYPE_3]  = ERROR_RATE_TYPE_3;
+#endif
+#ifdef ERROR_TYPE_4
+  system_config[ERROR_TYPE_4]  = ERROR_RATE_TYPE_4;
+#endif
+#ifdef ERROR_TYPE_5
+  system_config[ERROR_TYPE_5]  = ERROR_RATE_TYPE_5;
+#endif
+#ifdef ERROR_TYPE_6
+  system_config[ERROR_TYPE_6]  = ERROR_RATE_TYPE_6;
+#endif
+#ifdef ERROR_TYPE_7
+  system_config[ERROR_TYPE_7]  = ERROR_RATE_TYPE_7;
+#endif
+#ifdef ERROR_TYPE_8
+  system_config[ERROR_TYPE_8]  = ERROR_RATE_TYPE_8;
+#endif
+#ifdef ERROR_TYPE_9
+  system_config[ERROR_TYPE_9]  = ERROR_RATE_TYPE_9;
+#endif
+  }
+  else {
+
+    // Read and parse system info, pass it to CD runtime
+
+  }
 }
