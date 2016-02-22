@@ -50,9 +50,9 @@ using namespace cd::interface;
 
 
 // Uniform Random
-float UniformRandom::GenErrorVal(void) 
+long double UniformRandom::GenErrorVal(void) 
 {
-  srand48(clock());
+  srand48(clock()+myTaskID);
   return drand48();
 }
 
@@ -68,7 +68,7 @@ void UniformRandom::TestErrorProb(int num_bucket)
   }
 
   for (int i=0; i<nrolls; ++i) {
-    float number = GenErrorVal();
+    long double number = GenErrorVal();
     if(number < 0) std::cout << "negative : " << number << std::endl;
     if ((number>=0.0) && (number<static_cast<float>(num_bucket))) 
       ++bucket[static_cast<int>(number)];
@@ -267,17 +267,26 @@ ErrorProb *ErrorInjector::CreateErrorProb(RandType rand_type)
   return random_number;
 }
 
+long double ErrorInjector::GetErrorProb(float error_rate, float unit_time) 
+{
+//  long double result = (1.0 - exp((-1.0)*(long double)error_rate*(long double)unit_time));
+//  printf("result %Le = 1.0 - exp(-1.0*%f*%f\n", result, error_rate, unit_time);
+//  CD_DEBUG("result %Le = 1.0 - exp(-1.0*%f*%f\n", result, error_rate, unit_time);
+  return ((long double)1.0 - exp((-1.0)*(long double)error_rate*(long double)unit_time));
+}
+
 uint64_t ErrorInjector::Inject(void) {
   return InjectError(error_rate_);
 }
-uint64_t ErrorInjector::InjectError(const float &error_prob)
+uint64_t ErrorInjector::InjectError(const long double &error_prob)
 {
-  float rand_var = rand_generator_->GenErrorVal();
+//  printf("error prob = %Le\n", error_prob);
+//  CD_DEBUG("error prob = %Le\n", error_prob);
+  long double rand_var = rand_generator_->GenErrorVal();
   int error = rand_var < error_prob;
 //  CD_DEBUG("Error %f(error_prob) < %f(random var)\n", error_prob, rand_var);
-  CD_DEBUG("Error %f(error_prob) < %f(random var)   ERROR? %d\n", error_prob, rand_var, error);
+  CD_DEBUG("Error %Le(error_prob) < %Le(random var)   ERROR? %d\n", error_prob, rand_var, error);
   //printf("Error %f < %f(threshold) ERROR? %d\n", rand_var, error_prob, error);
-  CD_DEBUG("EIE\n");
 
   return error;
 }
@@ -295,11 +304,13 @@ uint64_t SystemErrorInjector::Inject(void)
   // Check this from leaf to root CD. 
   // If there is error occurred at upper level,
   // that overwrites rollback_point.
+//  int cnt = 0;
   for(auto it=sc_.failure_rate_.rbegin(); it!=sc_.failure_rate_.rend(); ++it) {
-//      printf("\nfailure prob %lu (%f x %lf) : %f\n", it->first, it->second, period, GetErrorProb(it->second, period));
+//      printf("\nfailure prob %lu (%f x %Le) : %f\n", it->first, it->second, period, GetErrorProb(it->second, period));
+//    printf("error injection iter %d\n", cnt++);
     if( InjectError(GetErrorProb(it->second, period)) ) { 
       error_occurred |= it->first;
-      //printf("ERROR!!! %lx\n", error_occurred);
+//      printf("ERROR!!! %lx, curr: %lx\n", error_occurred, it->first);
     }
     CD_DEBUG("error rate %lu : %f (%lx)\n\n\n", it->first, it->second, error_occurred);// == (int)(it->first));
 //    printf("error rate %lu : %f (%lx)\n", it->first, it->second, error_occurred);// == (int)(it->first));
@@ -456,9 +467,9 @@ uint64_t CDErrorInjector::Inject(void)
     return false; // if it reach this point. No tasks/CDs are registered to be failed.
                   // So, return false.
   }
-  float rand_var = rand_generator_->GenErrorVal();
+  long double rand_var = rand_generator_->GenErrorVal();
   int error = error_rate_ < rand_var;
-  CD_DEBUG("task #%d failed : %f(error_rate) < %f(random var)\n", task_in_color_, error_rate_, rand_var);
+  CD_DEBUG("task #%d failed : %f(error_rate) < %Le(random var)\n", task_in_color_, error_rate_, rand_var);
   CD_DEBUG("EIE\n");
 
   enabled_ = false;

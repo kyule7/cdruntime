@@ -124,6 +124,7 @@ typedef uint32_t ENTRY_TAG_T;
 #define INIT_ENTRY_SRC   0
 #define INVALID_TASK_ID -1
 #define INVALID_HEAD_ID -1
+#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 #define NUM_FLAGS 1024
 
 
@@ -235,14 +236,17 @@ namespace cd {
                     kCommLogError};
   
   //SZ
-  enum CommLogMode { kGenerateLog=0,
-                       kReplayLog
+  enum CommLogMode { kGenerateLog=1,
+                     kReplayLog=2,
+                     kInvalidLogMode=-1
                     };
   //SZ
-  enum CDLoggingMode {kOutOfCD=0,
-                      kStrictCD,
-                      kRelaxedCDGen,
-                      kRelaxedCDRead};
+  enum CDLoggingMode { kOutOfCD=1,
+                       kStrictCD=2,
+                       kRelaxedCDGen=4,
+                       kRelaxedCDRead=8,
+                       kInvalidLoggingMode=-1
+                     };
 #endif
 
 //  enum CDEventT { kNoEvent=0,

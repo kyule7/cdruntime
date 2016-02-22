@@ -43,7 +43,7 @@ using namespace cd::interface;
 using namespace cd::logging;
 using namespace std;
 
-#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
+//#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 
 clock_t cd::log_begin_clk;
 clock_t cd::log_end_clk;
@@ -676,7 +676,7 @@ CD::CDInternalErrT CD::InternalDestroy(void)
 {
 
 #if _MPI_VER
-  CD_DEBUG("[%s] clean up CD meta data (%d windows)\n", __func__, task_size());
+  CD_DEBUG("[%s] clean up CD meta data (%d windows) at %s (%s) level #%u\n", __func__, task_size(), name_.c_str(), label_.c_str(), level());
 
 #if CD_DEBUG_DEST == 1
     fflush(cdout);
@@ -840,8 +840,8 @@ CDErrT CD::Begin(bool collective, const char* label)
   }
   else {
     //printf("don't need reexec next time. Now it is in reexec mode\n");
-    need_reexec = false;
-    reexec_level = INVALID_ROLLBACK_POINT;
+//    need_reexec = false;
+//    reexec_level = INVALID_ROLLBACK_POINT;
   }
 //  else {
 //    cout << "Begin again! " << endl; //getchar();
@@ -886,7 +886,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #endif
   uint32_t level = target->level();
   CD_DEBUG("[%s] level : %u (current) == %u (reexec_level)\n", __func__, level, reexec_level);
-  //printf("[%s] level : %u (current) == %u (reexec_level)\n", __func__, level, reexec_level);
+//  printf("#### [%s] level : %u (current) == %u (reexec_level) ####\n", __func__, level, reexec_level);
   if(level == reexec_level) {
     // for tasks that detect error at completion point or collective create point.
     // It already called SyncCDs() at that point,
@@ -906,6 +906,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     // It handles that case.
     if(level != reexec_level) { 
 #if CD_PROFILER_ENABLED
+//      if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
       target->profiler_->FinishProfile();
 #endif
       target->ptr_cd_->CompleteLogs();
@@ -929,6 +930,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 //      assert(CDPath::GetCDLevel(reexec_level)->color() == target->color());
 //    }
 #if CD_PROFILER_ENABLED
+//    if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
     target->profiler_->FinishProfile();
 #endif
     target->ptr_cd_->CompleteLogs();
@@ -1011,6 +1013,8 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 CDErrT CD::Complete(bool collective, bool update_preservations)
 {
   CD_DEBUG("\nCD::Complete : %s %s \t Reexec: %d\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec);
+//  if(need_reexec)
+//    printf("#### level : %u (current) == %u (reexec_level) ####\n", __func__, level(), reexec_level);
 
 //  printf("\nCD::Complete (%s): %s %s \t Reexec: %d from %u to %u\n", 
 //      name_.c_str(), GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec, level(), reexec_level);
@@ -1044,6 +1048,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 
     //bool initiator = orig_reexec_level <= reexec_level && level() != reexec_level;
     // FIXME
+//    printf("GetCDLevel : %u (cur %u), path size: %lu\n", reexec_level, level(), CDPath::uniquePath_->size());
     bool initiator = orig_reexec_level <= reexec_level && (CDPath::GetCDLevel(reexec_level)->task_size() != task_size());
 //    printf("initiator? %d = %u <= %u\n", initiator, orig_reexec_level, reexec_level);
 //    CD_DEBUG("initiator? %d = %u <= %u\n", initiator, orig_reexec_level, reexec_level);
@@ -2102,8 +2107,22 @@ CDErrT CD::Preserve(void *data,
 #endif
         CD_DEBUG("Return to kExec\n");
         cd_exec_mode_ = kExecution;
-        need_reexec = false;
-        reexec_level = INVALID_ROLLBACK_POINT;
+
+        // It is also possible case that current task sets reexec from upper level,
+        // but actually it was reexecuting some lower level CDs. 
+        // while executing lower-level reexecution,
+        // reexec_level was set to upper level, 
+        // which means escalation request from another task. 
+        // Therefore, this flag should be carefully reset to exec mode.
+        // level == reexec_level enough condition for resetting to exec mode,
+        // because nobody overwrited these flags set by current flag.
+        // (In other word, nobody requested escalation requests)
+        // This current task is performing reexecution corresponding to these flag set by itself.
+        if(level() == reexec_level) {
+          need_reexec = false;
+          reexec_level = INVALID_ROLLBACK_POINT;
+//          printf("Reexec %u\n", reexec_level);
+        }
         // This point means the beginning of body stage. Request EntrySearch at this routine
       }
 
@@ -2448,7 +2467,7 @@ CDErrT CD::Restore()
  *  (2) 
  *
  */
-CD::CDInternalErrT CD::Detect(int &rollback_point)
+CD::CDInternalErrT CD::Detect(uint32_t &rollback_point)
 {
   CD::CDInternalErrT internal_err = kOK;
   rollback_point = -1;
@@ -4260,7 +4279,8 @@ CommLogErrT CD::ReadData(void *data_ptr, unsigned long length)
 //SZ
 CommLogMode CD::GetCommLogMode()
 {
-  return comm_log_ptr_->GetCommLogMode();
+  if(comm_log_ptr_ == NULL) return kInvalidLogMode;
+  else return comm_log_ptr_->GetCommLogMode();
 }
 
 //SZ

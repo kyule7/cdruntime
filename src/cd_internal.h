@@ -375,7 +375,7 @@ update the preserved data.
                     const RegenObject *regen_object=0, 
                     PreserveUseT data_usage=kUnsure);
   
-    CDInternalErrT Detect(int &rollback_point); 
+    CDInternalErrT Detect(uint32_t &rollback_point); 
     CDErrT Restore(void);
   
 //  DISCUSS: Jinsuk: About longjmp setjmp: By running some experiement, 
@@ -612,6 +612,7 @@ public:
     CDEventHandleT ReadMailBox(CDFlagT &event);
     virtual CDInternalErrT InternalCheckMailBox(void);
     void DecPendingCounter(void);
+    void IncPendingCounter(void);
     CDErrT CheckMailBox(void);
     virtual CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);

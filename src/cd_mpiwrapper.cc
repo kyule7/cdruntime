@@ -1058,13 +1058,13 @@ int MPI_Wait(MPI_Request *request,
     switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
 //printf("test wait : strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
-        mpi_ret = PMPI_Wait(request, status);
+//        mpi_ret = PMPI_Wait(request, status);
         // delete incomplete entries...
         cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
         break;
       }
       case kRelaxedCDGen: {
-        mpi_ret = PMPI_Wait(request, status);
+//        mpi_ret = PMPI_Wait(request, status);
         LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
 
 //        if( cur_cdh->CheckIntraCDMsg(dest, g) ) {
@@ -1079,7 +1079,7 @@ int MPI_Wait(MPI_Request *request,
         if (ret == kCommLogCommLogModeFlip) {
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
           LOG_DEBUG("Should not come here because error happens between Isend/Irecv and WaitXXX...\n");
-          mpi_ret = PMPI_Wait(request, status);
+//          mpi_ret = PMPI_Wait(request, status);
           cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
         }
         else if (ret == kCommLogError) {
@@ -2403,7 +2403,7 @@ int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],
 unsigned epoch_num = 0;
 int MPI_Win_fence(int assert, MPI_Win win)
 {
-  CD_DEBUG("[%s %u] called %s at %u (#reexec: %d)\n", __func__, epoch_num++,GetCurrentCD()->ptr_cd()->name(), GetCurrentCD()->ptr_cd()->level(), GetCurrentCD()->ptr_cd()->num_reexec());
+  CD_DEBUG("[%s %u] called %s at %u (#reexec: %d, reexecInfo:%d(%u))\n", __func__, epoch_num++, GetCurrentCD()->ptr_cd()->name(), GetCurrentCD()->ptr_cd()->level(), GetCurrentCD()->ptr_cd()->num_reexec(), GetCurrentCD()->need_reexec(), GetCurrentCD()->reexec_level());
 #if CD_DEBUG_DEST == 1
   Profiler::Print();
   CD_DEBUG_FLUSH;

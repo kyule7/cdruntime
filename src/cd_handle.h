@@ -171,6 +171,7 @@ class CDHandle {
   friend class internal::CD;
   friend class internal::HeadCD;
   friend class internal::CDEntry;
+  friend class interface::Profiler;
   friend class RegenObject;
   friend CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   friend void CD_Finalize(void);
@@ -1062,7 +1063,7 @@ class CDHandle {
     CDErrT Stop(void);
   
 #if CD_ERROR_INJECTION_ENABLED
-    int CheckErrorOccurred(int &rollback_point);
+    int CheckErrorOccurred(uint32_t &rollback_point);
 #endif
 /// Set bit vector for error types to handle in this CD.
     uint64_t SetSystemBitVector(uint64_t error_name_mask, 
@@ -1100,8 +1101,12 @@ class CDHandle {
 #endif
 
     bool     recreated(void)     const;
-    bool     reexecuted(void)     const;
+    bool     reexecuted(void)    const;
+//    bool     need_reexec(void)   const;
+//    uint32_t reexec_level(void)  const;
   public:
+    bool     need_reexec(void)   const;
+    uint32_t reexec_level(void)  const;
 
 /// Check the mode of current CD.
     int GetExecMode(void) const;
@@ -1197,6 +1202,9 @@ class CDHandle {
     int      ctxt_prv_mode(void);
 
 
+    CDType   GetCDType(void) const;
+    int GetCommLogMode(void) const;
+    int GetCDLoggingMode(void) const;
   private:
 #if CD_TEST_ENABLED
     void PrintCommLog(void) const;

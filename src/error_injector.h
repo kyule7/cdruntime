@@ -76,7 +76,7 @@ enum RandType { kUniform = 0,
 
 class ErrorProb {
 public:
-  virtual float GenErrorVal(void)=0;
+  virtual long double GenErrorVal(void)=0;
 
   ErrorProb(void) {}
   virtual ~ErrorProb(void) {}
@@ -85,7 +85,7 @@ public:
 
 class UniformRandom : public ErrorProb {
 public:
-  float GenErrorVal(void);
+  long double GenErrorVal(void);
   void TestErrorProb(int num_bucket=10);
 };
 /*
@@ -196,11 +196,8 @@ public:
   void SetLogfile(FILE *logfile) { logfile_ = logfile; }
   virtual uint64_t Inject(void);
 protected:
-  uint64_t InjectError(const float &error_rate);
-  float GetErrorProb(float error_rate, float unit_time) {
-    return (1.0 - exp((-1.0)*error_rate*unit_time));
-
-  }
+  uint64_t InjectError(const long double &error_rate);
+  long double GetErrorProb(float error_rate, float unit_time);
   inline ErrorProb *CreateErrorProb(RandType random_type);
 };
 

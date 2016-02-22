@@ -125,13 +125,13 @@ struct RuntimeInfo {
     sync_time_   = record.sync_time_;
     return *this;
   }
-  void MergeInfoPerLevel(RuntimeInfo &info_total, const RuntimeInfo &info_per_level) {
-    info_total.total_exec_  += info_per_level.total_exec_;
-    info_total.reexec_      += info_per_level.reexec_;
-    info_total.prv_copy_    += info_per_level.prv_copy_;
-    info_total.prv_ref_     += info_per_level.prv_ref_;
-    info_total.msg_logging_ += info_per_level.msg_logging_;
-    info_total.sys_err_vec_ |= info_per_level.sys_err_vec_;
+  void MergeInfoPerLevel(const RuntimeInfo &info_per_level) {
+    total_exec_  += info_per_level.total_exec_;
+    reexec_      += info_per_level.reexec_;
+    prv_copy_    += info_per_level.prv_copy_;
+    prv_ref_     += info_per_level.prv_ref_;
+    msg_logging_ += info_per_level.msg_logging_;
+    sys_err_vec_ |= info_per_level.sys_err_vec_;
   }
 };
 
@@ -143,6 +143,7 @@ class Profiler {
   clock_t end_clk_;
   clock_t sync_clk_;
   static std::map<uint32_t,std::map<std::string,RuntimeInfo>> num_exec_map;
+  static uint32_t current_level_; // It is used to detect escalation
 public:
   Profiler() : cdh_(NULL), reexecuted_(false) {}
   Profiler(CDHandle *cdh) : cdh_(cdh), reexecuted_(false) {}

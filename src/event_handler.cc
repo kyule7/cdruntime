@@ -473,7 +473,7 @@ void HandleAllReexecute::HandleEvent(void)
 #if 1
   if(ptr_cd_->task_size() == 1) assert(0);
 
-  CD_DEBUG("CD Event kAllReexecute\t\t");
+  CD_DEBUG("[%s] CD Event kAllReexecute\t\t", __func__);
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();
 
@@ -485,7 +485,7 @@ void HandleAllReexecute::HandleEvent(void)
   else {
     CD::need_escalation = true;
   }
-  CD_DEBUG("[%s] need reexec %d from %d\n", __func__, CD::need_reexec, CD::reexec_level);
+  CD_DEBUG("[%s] need reexec (%d) O-->%u (cur %u)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->level());
 #else
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();

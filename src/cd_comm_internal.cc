@@ -646,7 +646,7 @@ CDErrT CD::CheckMailBox(void)
       else {
         CD_DEBUG("[ReadMailBox] Searching for CD Level having non-single task. Current Level #%u\n", curr_cdh->ptr_cd()->GetCDID().level());
       }
-      CD_DEBUG("\n-- level %u ------------------------------------------------------\n\n", level());
+      CD_DEBUG("\n-- level %u ------------------------------------------------------\n\n", curr_cdh->level());
 
       // If current CD is Root CD and GetParentCD is called, it returns NULL
       CD_DEBUG("ReadMailBox %s / %s at level #%u\n", 
@@ -1112,7 +1112,7 @@ CD::CDInternalErrT CD::RemoteSetMailBox(CD *curr_cd, const CDEventT &event)
 
 CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
 {
-  CD_DEBUG("\n\n=================== Set Mail Box (%s, %d) Start! myTaskID #%d ==========================\n", event2str(event).c_str(), task_id, myTaskID);
+  CD_DEBUG("\n\n=================== Set Mail Box (%s, %d) Start! myTaskID #%d at %s level #%u ==========================\n", event2str(event).c_str(), task_id, myTaskID, name_.c_str(), level());
  
   if(event == CDEventT::kErrorOccurred || event == CDEventT::kEntrySearch) {
     ERROR_MESSAGE("[HeadCD::SetMailBox(event, task_id)] Error, the event argument is something wrong. event: %s\n", event2str(event).c_str());
@@ -1259,9 +1259,9 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event)
 
 CD::CDInternalErrT HeadCD::LocalSetMailBox(HeadCD *curr_cd, const CDEventT &event)
 {
-  CD_DEBUG("HeadCD::LocalSetMailBox Event : %s\n", event2str(event).c_str());
-
+  CD_DEBUG("HeadCD::LocalSetMailBox Event : %s at %s level #%u\n", event2str(event).c_str(), name_.c_str(), level());
   CDInternalErrT ret=kOK;
+
   if(event != kNoEvent) {
     if(curr_cd->task_in_color() != head()) assert(0);
   
@@ -1269,14 +1269,13 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(HeadCD *curr_cd, const CDEventT &even
       ERROR_MESSAGE("HeadCD::LocalSetMailBox -> Event: %s\n", event2str(event).c_str());
     }
 
-//  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, pendingWindow_);
-    (*pendingFlag_)++;
-//  PMPI_Win_unlock(task_in_color(), pendingWindow_);
+    IncPendingCounter();
 
     if( CHECK_EVENT(event, kErrorOccurred) ) {
         CD_DEBUG("kErrorOccurred in HeadCD::SetMailBox\n");
 
         curr_cd->cd_event_.push_back(new HandleErrorOccurred(curr_cd));
+        //FIXME
 //        EventHandler *err_handler = new HandleErrorOccurred(curr_cd);
 //        err_handler->HandleEvent();
 //        IncHandledEventCounter();
@@ -1296,7 +1295,6 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(HeadCD *curr_cd, const CDEventT &even
         assert(0);
         curr_cd->cd_event_.push_back(new HandleEntrySend(curr_cd));
     }
-  
   }
   return ret;
 }
@@ -1471,14 +1469,13 @@ void CD::DecPendingCounter(void)
   handled_event_count = 0;
 }
 
-//void CD::IncPendingCounter(void)
-//{
-////  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, pendingWindow_);
-//  (*pendingFlag_) += handled_event_count;
-//  // Initialize handled_event_count;
-//  handled_event_count = 0;
-////  PMPI_Win_unlock(task_in_color(), pendingWindow_);
-//}
+void CD::IncPendingCounter(void)
+{
+  CD *rootcd = CDPath::GetRootCD()->ptr_cd();
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, rootcd->task_in_color(), 0, rootcd->pendingWindow_);
+  (*pendingFlag_) += 1;
+  PMPI_Win_unlock(rootcd->task_in_color(), rootcd->pendingWindow_);
+}
 
 // TODO
 bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)

@@ -3728,7 +3728,11 @@ int main(int argc, char *argv[])
       CD_Begin(cdh_1_0_0, true, "TimeIncrement"); 
       cdh_1_0_0->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime"); 
 #endif
-
+//#if _CD
+//      if(myRank == 0) {
+//        printf("\n\n== Loop %d ==================================\n\n", counter++); //getchar();
+//      }
+//#endif
       TimeIncrement(*locDom);
 
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
@@ -3850,16 +3854,9 @@ int main(int argc, char *argv[])
       }
 #endif
 
-#if _CD
-      if(myRank == 0) {
-        printf("\n\n== Loop %d ==================================\n\n", counter++); //getchar();
-      }
-#endif
-
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
       CD_Complete(cdh_1_0_0); 
 #endif
-
 
    }
 
