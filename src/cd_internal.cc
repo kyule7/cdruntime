@@ -886,6 +886,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #endif
   uint32_t level = target->level();
   CD_DEBUG("[%s] level : %u (current) == %u (reexec_level)\n", __func__, level, reexec_level);
+  printf("[%s] level : %u (current) == %u (reexec_level)\n", __func__, level, reexec_level);
 //  printf("#### [%s] level : %u (current) == %u (reexec_level) ####\n", __func__, level, reexec_level);
   if(level == reexec_level) {
     // for tasks that detect error at completion point or collective create point.
@@ -915,6 +916,15 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       return GetCDToRecover(CDPath::GetCDLevel(--level), true);
     }
     else {
+      if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kRelaxed) {
+        target->ptr_cd_->ProbeIncompleteLogs();
+      }
+      if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kStrict) {
+        target->ptr_cd_->InvalidateIncompleteLogs();
+      }
+      else {
+        ERROR_MESSAGE("[%s] Wrong control path. CD type is %d\n", __func__, target->ptr_cd_->cd_type_);
+      }
       //printf("...1\n");
       need_reexec = false;
       need_escalation = false;
@@ -1123,25 +1133,30 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
         //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
         LOG_DEBUG("Should not come to here...\n");
       }
+
+      // push incomplete_log_ to parent
+      if (IsParentLocal() && incomplete_log_.size()!=0) {
+        //vector<struct IncompleteLogEntry> *pincomplog 
+        //                                    = &(GetParentHandle()->ptr_cd_->incomplete_log_);
+        CD* ptmp = GetParentHandle()->ptr_cd_;
+  
+        // push incomplete logs to parent
+        ptmp->incomplete_log_.insert(ptmp->incomplete_log_.end(),
+                                     incomplete_log_.begin(),
+                                     incomplete_log_.end());
+  
+        // clear incomplete_log_ of current CD 
+        incomplete_log_.clear();
+      }
+      else if (!IsParentLocal()) {
+        //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
+        LOG_DEBUG("Should not come to here...\n");
+      }
+
+      ProbeIncompleteLogs();
     }
-
-    // push incomplete_log_ to parent
-    if (IsParentLocal() && incomplete_log_.size()!=0) {
-      //vector<struct IncompleteLogEntry> *pincomplog 
-      //                                    = &(GetParentHandle()->ptr_cd_->incomplete_log_);
-      CD* ptmp = GetParentHandle()->ptr_cd_;
-
-      // push incomplete logs to parent
-      ptmp->incomplete_log_.insert(ptmp->incomplete_log_.end(),
-                                   incomplete_log_.begin(),
-                                   incomplete_log_.end());
-
-      // clear incomplete_log_ of current CD 
-      incomplete_log_.clear();
-    }
-    else if (!IsParentLocal()) {
-      //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
-      LOG_DEBUG("Should not come to here...\n");
+    else { // kStrict CDs
+      InvalidateIncompleteLogs();
     }
 
 #if _LOG_PROFILING
@@ -4096,6 +4111,61 @@ CommLogErrT CD::ProbeAndReadData(unsigned long flag)
 }
 #endif
 
+
+// KL
+// When task has matching MPI calls such as the pair of MPI_Irecv and MPI_Wait,
+// it is possible to call MPI_Irecv twice and MPI_Wait once.
+// Possible situation is like below.
+// Task 1 called MPI_Irecv and got escalation event before reacing MPI_Wait. 
+// It escalates to beginning of CD and invokes MPI_Irecv again. 
+// Then it calls MPI_Wait. 
+// The problem is that strict CD does not log MPI calls 
+// but regenerate messages in reexecution path.
+// Possible solution is invalidating the original MPI_Irecv with MPI_Cancel 
+// inside CD runtime and calls new MPI_Irecv in reexecution path.
+CommLogErrT CD::InvalidateIncompleteLogs(void)
+{
+  LogPrologue();
+  printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
+#if _MPI_VER
+  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
+    PMPI_Cancel(reinterpret_cast<MPI_Request *>(&(it->flag_)));
+  }
+#endif
+  LogEpilogue();
+  return kCommLogOK;
+}
+
+// KL
+// This function call is for resolving the above problem in relaxed CD case.
+// CD could just escalate in the case that there are some incomplete logs in failure.
+// However, it can be resolved by letting the corresponding message
+// be delivered, but not completed in the process of recovery action.
+// Before longjmp to the beginning of CD, CD runtime can keep probing asynchronously 
+// all the incomplete logs happened in the current CD until all of them are probed.
+// Then, it reexecute from the beginning. This mechanism assumed that every incomplete
+// logs will be eventually resolved, which should be correct.
+// Otherwise, the normal app semantic will be also problematic because it will keep waiting
+// at MPI_Wait in the case of MPI_Irecv in application side.
+CommLogErrT CD::ProbeIncompleteLogs(void)
+{
+  LogPrologue();
+  printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
+#if _MPI_VER
+  const size_t num_log = incomplete_log_.size();
+  MPI_Status incompl_log_stat[num_log];
+
+  uint32_t idx=0;
+  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
+    // It will be blocking until each incomplete msg is resolved.
+    PMPI_Probe(it->taskID_, it->tag_, it->comm_,  &(incompl_log_stat[idx]));
+    idx++;
+  }
+#endif
+  LogEpilogue();
+  return kCommLogOK;
+}
+
 //SZ
 CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 {
@@ -4149,8 +4219,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
   
   // ProbeAndLogData for comm_log_ptr_ if relaxed CD
   // If NOT found, then work has been completed by previous Test Ops
-  if (comm_log_ptr_ != NULL && found)
-  {
+  if (comm_log_ptr_ != NULL && found) {
     // ProbeAndLogData:
     // 1) change Isend/Irecv entry to complete state if there is any
     // 2) log data if Irecv
@@ -4191,22 +4260,22 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
     }
     // need to log that wait op completes 
 #if _MPI_VER
-    comm_log_ptr_->LogData((MPI_Request*)flag, 0, it->thread_);
-//    comm_log_ptr_->LogData(&flag, 0, it->thread_);
+    comm_log_ptr_->LogData((MPI_Request*)flag, 0, it->taskID_);
+//    comm_log_ptr_->LogData(&flag, 0, it->taskID_);
 #elif _PGAS_VER
-    comm_log_ptr_->LogData((void*)flag, 0, it->thread_);
+    comm_log_ptr_->LogData((void*)flag, 0, it->taskID_);
 #endif
   }
-  else if (comm_log_ptr_ != NULL)
-  {
+  else if (comm_log_ptr_ != NULL) {
     // need to log that wait op completes 
 #if _MPI_VER
-   // std::cout << it->thread_ << std::endl;
-    if( &*it != 0 ) // FIXME
-      comm_log_ptr_->LogData((MPI_Request*)flag, 0, it->thread_);
-//    comm_log_ptr_->LogData(&flag, 0, it->thread_);
+   // std::cout << it->taskID_ << std::endl;
+//    if( &*it != 0 ) // FIXME
+    ERROR_MESSAGE("[%s] Wrong control flow!\n", __func__);
+      comm_log_ptr_->LogData((MPI_Request*)flag, 0, it->taskID_);
+//    comm_log_ptr_->LogData(&flag, 0, it->taskID_);
 #elif _PGAS_VER
-    comm_log_ptr_->LogData((void*)flag, 0, it->thread_);
+    comm_log_ptr_->LogData((void*)flag, 0, it->taskID_);
 #endif
   }
 
@@ -4220,7 +4289,8 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 
 //SZ
 CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, uint32_t task_id, 
-                      bool completed, unsigned long flag, bool isrecv, bool isrepeated, bool intra_cd_msg)
+                      bool completed, unsigned long flag, bool isrecv, bool isrepeated, 
+                      bool intra_cd_msg, int tag, ColorT comm)
 {
   LogPrologue();
   CommLogErrT ret;
@@ -4232,7 +4302,7 @@ CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, uint32_t tas
   num_log_entry_++;
   tot_log_volume_+=length;
 #endif
-  ret = comm_log_ptr_->LogData(data_ptr, length, task_id, completed, flag, isrecv, isrepeated, intra_cd_msg);
+  ret = comm_log_ptr_->LogData(data_ptr, length, task_id, completed, flag, isrecv, isrepeated, intra_cd_msg, tag, comm);
   LogEpilogue();
   return ret;
 }
@@ -4270,6 +4340,9 @@ CommLogErrT CD::ReadData(void *data_ptr, unsigned long length)
   if (ret == kCommLogCommLogModeFlip){
     SetCDLoggingMode(kRelaxedCDGen);
     LOG_DEBUG("CDLoggingMode changed to %d\n", GetCDLoggingMode());
+  }
+  else if(ret == kCommLogMissing) {
+    // Report escalation
   }
   LogEpilogue();
 

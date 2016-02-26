@@ -348,8 +348,10 @@ bool CommLog::FoundRepeatedEntry(const void * data_ptr, unsigned long data_lengt
 }
 
 
-CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length, uint32_t thread,
-                          bool completed, unsigned long flag, bool isrecv, bool isrepeated, bool intra_cd_msg)
+CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length, uint32_t taskID,
+                          bool completed, unsigned long flag, 
+                          bool isrecv, bool isrepeated, 
+                          bool intra_cd_msg, int tag, ColorT comm)
 {
   LOG_DEBUG("LogData of address (%p) and length(%ld)\n", data_ptr, data_length);
 
@@ -368,7 +370,7 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length, u
     LOG_DEBUG("Current repeating log entry NOT matching!\n");
   }
 
-  ret = WriteLogTable(thread, data_ptr, data_length, completed, flag, isrepeated);
+  ret = WriteLogTable(taskID, data_ptr, data_length, completed, flag, isrepeated);
   if (ret == kCommLogAllocFailed) 
   {
     ERROR_MESSAGE("Log Table Realloc Failed!\n");
@@ -396,8 +398,10 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length, u
     tmp_log_entry.flag_ = (unsigned long) flag;
     tmp_log_entry.complete_ = false;
     tmp_log_entry.isrecv_ = isrecv;
-    tmp_log_entry.thread_ = thread;
+    tmp_log_entry.taskID_ = taskID;
     tmp_log_entry.intra_cd_msg_ = intra_cd_msg;
+    tmp_log_entry.tag_ = tag;
+    tmp_log_entry.comm_ = comm;
 
 #ifdef libc_log
     //GONG
@@ -416,7 +420,7 @@ CommLogErrT CommLog::LogData(const void * data_ptr, unsigned long data_length, u
 }
 
 
-CommLogErrT CommLog::WriteLogTable (uint32_t thread, const void * data_ptr, unsigned long data_length, 
+CommLogErrT CommLog::WriteLogTable (uint32_t taskID, const void * data_ptr, unsigned long data_length, 
                                   bool completed, unsigned long flag, bool isrepeated)
 {
   CommLogErrT ret;
@@ -433,7 +437,7 @@ CommLogErrT CommLog::WriteLogTable (uint32_t thread, const void * data_ptr, unsi
   log_table_.base_ptr_[log_table_.cur_pos_].counter_ = 1;
   log_table_.base_ptr_[log_table_.cur_pos_].reexec_counter_ = 0;
   log_table_.base_ptr_[log_table_.cur_pos_].isrepeated_ = isrepeated;
-  log_table_.base_ptr_[log_table_.cur_pos_].thread_ = thread;
+  log_table_.base_ptr_[log_table_.cur_pos_].taskID_ = taskID;
   log_table_.cur_pos_++;
 
   return kCommLogOK;
@@ -686,8 +690,10 @@ CommLogErrT CommLog::ReadData(void * buffer, unsigned long length)
   // if not completed, return kCommLogError, and needs to escalate
   if (log_table_.base_ptr_[log_table_reexec_pos_].completed_==false)
   {
-    ERROR_MESSAGE("Error happens between isend/irecv and wait, needs to escalate...\n");
-    return kCommLogError;
+    // Escalation to parent CD which is strict.
+    // Report this event to head.
+//    ERROR_MESSAGE("Error happens between isend/irecv and wait, needs to escalate...\n");
+    return kCommLogMissing;
   }
 
   if (length != 0)

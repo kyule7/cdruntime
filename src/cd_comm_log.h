@@ -56,7 +56,7 @@ struct LogTableElement {
   unsigned long counter_;
   unsigned long reexec_counter_;
   bool isrepeated_;
-  uint32_t thread_; // src-thread for read op and dst-thread for write op
+  uint32_t taskID_; // src-task for read op and dst-task for write op
 #if _PGAS_VER
   bool iswriteop_;
   uint32_t sync_counter_; // target-side SC
@@ -110,12 +110,14 @@ class CommLog {
     // need to check if running out queues
     CommLogErrT LogData(const void * data_ptr, 
                         unsigned long data_length, 
-                        uint32_t thread=0,
+                        uint32_t taskID=0,
                         bool completed=true,
                         unsigned long flag=0,
                         bool isrecv=0,
                         bool isrepeated=0,
-                        bool intra_cd_msg=false);
+                        bool intra_cd_msg=false,
+                        int  tag=INVALID_MSG_TAG,
+                        ColorT comm=INVALID_COLOR);
 
     CommLogErrT ReadData(void * buffer, unsigned long length);
     CommLogErrT ProbeData(const void * buffer, unsigned long length);

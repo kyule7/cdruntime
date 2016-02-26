@@ -90,6 +90,7 @@ typedef int           CDFlagT;
 typedef MPI_Win       CDMailBoxT;
 typedef MPI_Offset    COMMLIB_Offset;
 typedef MPI_File      COMMLIB_File;
+#define INVALID_COLOR MPI_COMM_NULL
 
 #else
 
@@ -105,6 +106,7 @@ typedef int           CDFlagT;
 typedef int           CDMailBoxT;
 typedef int           COMMLIB_Offset;
 typedef int           COMMLIB_File;
+#define INVALID_COLOR -1
 
 #endif
 
@@ -125,6 +127,7 @@ typedef uint32_t ENTRY_TAG_T;
 #define INVALID_TASK_ID -1
 #define INVALID_HEAD_ID -1
 #define INVALID_ROLLBACK_POINT 0xFFFFFFFF
+#define INVALID_MSG_TAG -1
 #define NUM_FLAGS 1024
 
 
@@ -233,6 +236,7 @@ namespace cd {
                     kCommLogReInitFailed,
                     kCommLogCommLogModeFlip,
                     kCommLogChildLogNotFound,
+                    kCommLogMissing,
                     kCommLogError};
   
   //SZ
@@ -241,10 +245,10 @@ namespace cd {
                      kInvalidLogMode=-1
                     };
   //SZ
-  enum CDLoggingMode { kOutOfCD=1,
+  enum CDLoggingMode { kOutOfCD=1, 
                        kStrictCD=2,
-                       kRelaxedCDGen=4,
-                       kRelaxedCDRead=8,
+                       kRelaxedCDGen=4, // kRelaxed and kExec
+                       kRelaxedCDRead=8, // kRelaxed and kRexec
                        kInvalidLoggingMode=-1
                      };
 #endif
@@ -485,14 +489,17 @@ extern clock_t elapsed_time;
 
     // data structure to store incompleted log entries
     struct IncompleteLogEntry {
-      uint32_t thread_;
+      uint32_t taskID_;
       //void * addr_;
       unsigned long addr_;
       unsigned long length_;
       unsigned long flag_;
       bool complete_;
       bool isrecv_;
+      // KL
       bool intra_cd_msg_;
+      MPI_Comm comm_;
+      uint32_t tag_;
       //GONG
       void* p_;
       bool pushed_;
@@ -500,14 +507,17 @@ extern clock_t elapsed_time;
       //bool valid_;
       //SZ
       IncompleteLogEntry(void) {
-        thread_ = 0;
+        taskID_ = 0;
         //void * addr_;
         addr_ = 0;
         length_ = 0;
         flag_ = 0;
         complete_ = 0;
         isrecv_ = 0;
+        //KL
         intra_cd_msg_ = false;
+        comm_ = MPI_COMM_NULL;
+        tag_  = INVALID_MSG_TAG;
         //GONG
         p_ = 0;
         pushed_ = 0;

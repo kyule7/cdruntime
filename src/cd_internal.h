@@ -572,6 +572,9 @@ public:
 
 #if CD_COMM_LOG_ENABLED
 public:
+    //KL
+    CommLogErrT InvalidateIncompleteLogs(void);
+    CommLogErrT ProbeIncompleteLogs(void);
     //SZ
     //FIXME: no function should return CommLogErrT, change to CD error types...
     CommLogErrT CommLogCheckAlloc(unsigned long length);
@@ -581,12 +584,12 @@ public:
     CDHandle* GetParentHandle();
     //SZ
     CommLogErrT ProbeAndLogData(unsigned long flag);
-    ////SZ
-    //CommLogErrT ProbeAndReadData(unsigned long flag);
     //SZ
     CommLogErrT LogData(const void *data_ptr, unsigned long length, uint32_t task_id=0,
                       bool completed=true, unsigned long flag=0,
-                      bool isrecv=0, bool isrepeated=0, bool intra_cd_msg=false);
+                      bool isrecv=0, bool isrepeated=0, 
+                      // KL : added these three things
+                      bool intra_cd_msg=false, int tag=INVALID_MSG_TAG, ColorT comm=INVALID_COLOR);
     //SZ
     CommLogErrT ProbeData(const void *data_ptr, unsigned long length);
     //SZ

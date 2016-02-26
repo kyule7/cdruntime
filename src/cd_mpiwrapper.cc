@@ -610,11 +610,14 @@ int MPI_Irecv(void *buf,
           //printf("Intra-CD message\n");
           // FIXME Record just event, length should be 0
           // log event to check for escalation.
-          cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (unsigned long)request, 1, false, true);
+//    CommLogErrT LogData(const void *data_ptr, unsigned long length, uint32_t task_id=0,
+//                      bool completed=true, unsigned long flag=0,
+//                      bool isrecv=0, bool isrepeated=0, bool intra_cd_msg=false);
+          cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (unsigned long)request, 1, false, true, tag, comm);
           
         } else { // Log message for inter-CD communication
           //printf("Inter-CD message\n");
-          cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (unsigned long)request, 1);
+          cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (unsigned long)request, 1, false, false, tag, comm);
         }
         break;
       } 
@@ -651,12 +654,12 @@ int MPI_Irecv(void *buf,
             //printf("Intra-CD message\n");
             // FIXME Record just event, length should be 0
             // log event to check for escalation.
-            cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (unsigned long)request, 1, false, true);
+            cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (unsigned long)request, 1, false, true, tag, comm);
             
           } 
           else { // Log message for inter-CD communication
             //printf("Inter-CD message\n");
-            cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (unsigned long)request, 1);
+            cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (unsigned long)request, 1, false, false, tag, comm);
           }
         }
         else if (ret == kCommLogError) {
@@ -1058,13 +1061,13 @@ int MPI_Wait(MPI_Request *request,
     switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
 //printf("test wait : strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
-//        mpi_ret = PMPI_Wait(request, status);
+        mpi_ret = PMPI_Wait(request, status);
         // delete incomplete entries...
         cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
         break;
       }
       case kRelaxedCDGen: {
-//        mpi_ret = PMPI_Wait(request, status);
+        mpi_ret = PMPI_Wait(request, status);
         LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
 
 //        if( cur_cdh->CheckIntraCDMsg(dest, g) ) {
@@ -1079,7 +1082,7 @@ int MPI_Wait(MPI_Request *request,
         if (ret == kCommLogCommLogModeFlip) {
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
           LOG_DEBUG("Should not come here because error happens between Isend/Irecv and WaitXXX...\n");
-//          mpi_ret = PMPI_Wait(request, status);
+          mpi_ret = PMPI_Wait(request, status);
           cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
         }
         else if (ret == kCommLogError) {
