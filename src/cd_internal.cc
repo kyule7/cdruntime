@@ -886,7 +886,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #endif
   uint32_t level = target->level();
   CD_DEBUG("[%s] level : %u (current) == %u (reexec_level)\n", __func__, level, reexec_level);
-  printf("[%s] level : %u (current) == %u (reexec_level)\n", __func__, level, reexec_level);
+//  printf("[%s] level : %u (current) == %u (reexec_level)\n", __func__, level, reexec_level);
 //  printf("#### [%s] level : %u (current) == %u (reexec_level) ####\n", __func__, level, reexec_level);
   if(level == reexec_level) {
     // for tasks that detect error at completion point or collective create point.
@@ -4126,7 +4126,8 @@ CommLogErrT CD::ProbeAndReadData(unsigned long flag)
 CommLogErrT CD::InvalidateIncompleteLogs(void)
 {
   LogPrologue();
-  printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
+  //printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
+  CD_DEBUG("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
 #if _MPI_VER
   for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
     PMPI_Cancel(reinterpret_cast<MPI_Request *>(&(it->flag_)));
@@ -4150,7 +4151,8 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
 CommLogErrT CD::ProbeIncompleteLogs(void)
 {
   LogPrologue();
-  printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
+  //printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
+  CD_DEBUG("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
 #if _MPI_VER
   const size_t num_log = incomplete_log_.size();
   MPI_Status incompl_log_stat[num_log];

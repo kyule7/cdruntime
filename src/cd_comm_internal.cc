@@ -1477,6 +1477,33 @@ void CD::IncPendingCounter(void)
   PMPI_Win_unlock(rootcd->task_in_color(), rootcd->pendingWindow_);
 }
 
+
+
+int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
+  int flag = 0, ret = 0;
+  while(1) {
+    ret = PMPI_Test(request, &flag, status);
+    if(flag != 0) 
+      return ret;
+    else {
+      assert(need_reexec == false); // should be false at this point.
+      CheckMailBox();
+      if(need_reexec) { // This could be set inside CD::CheckMailBox()
+        CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
+            __func__, level(), reexec_level, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+
+        GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
+
+      } else {
+        CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
+            __func__, level(), reexec_level, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+      }
+    }
+  }
+}
+
+
+
 // TODO
 bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
 {

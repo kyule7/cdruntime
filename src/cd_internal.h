@@ -211,9 +211,13 @@ class CD : public Serializable {
     int             num_reexecution_;
 //    static std::map<std::string,int> num_exec_map_;
 //    static std::unordered_map<std::string,std::pair<int,int>> num_exec_map_;
+#if 1
+  public:
     static bool need_reexec;
     static bool need_escalation;
     static uint32_t reexec_level;
+#endif
+  protected:
 
     /// Detection-related meta data
     // bit vector that will mask error types that can be handled in this CD
@@ -620,6 +624,7 @@ public:
     virtual CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);
   public:
+    int  BlockUntilValid(MPI_Request *request, MPI_Status *status);
     bool CheckIntraCDMsg(int target_id, MPI_Group &target_group);
 #endif
 

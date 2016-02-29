@@ -1043,6 +1043,7 @@ int MPI_Testsome(int incount,
   return mpi_ret;
 }
 
+
 // wait functions
 // Kyushick modified
 // LogData : mostly for blocking. if length is 0, it recording msg event itself, msg payload 
@@ -1056,18 +1057,22 @@ int MPI_Wait(MPI_Request *request,
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Wait\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle *cur_cdh = GetCurrentCD();
   if (cur_cdh != NULL) {
     switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
 //printf("test wait : strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
-        mpi_ret = PMPI_Wait(request, status);
+//        mpi_ret = PMPI_Wait(request, status);
+        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
+        assert(CD::need_reexec == false);
         // delete incomplete entries...
         cur_cdh->ptr_cd()->ProbeAndLogData((unsigned long)request);
         break;
       }
       case kRelaxedCDGen: {
-        mpi_ret = PMPI_Wait(request, status);
+//        mpi_ret = PMPI_Wait(request, status);
+        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
+        assert(CD::need_reexec == false);
         LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
 
 //        if( cur_cdh->CheckIntraCDMsg(dest, g) ) {

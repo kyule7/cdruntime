@@ -1229,6 +1229,10 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
 //    CD::need_reexec = true;
 //    CD::reexec_level = rollback_point;
+    
+    printf("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
+        rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+
     CDHandle *rb_cdh = CDPath::GetCDLevel(rollback_point);
     if(rb_cdh->task_size() > 1) {
       rb_cdh->SetMailBox(kErrorOccurred);
