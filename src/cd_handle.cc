@@ -432,7 +432,7 @@ int SplitCD_3D(const int& my_task_id,
 //               int& new_task);
 
 CDHandle::CDHandle()
-  : ptr_cd_(0), node_id_(), ctxt_(CDPath::GetRootCD()->ctxt_)
+  : ptr_cd_(0), node_id_(-1), ctxt_(CDPath::GetRootCD()->ctxt_)
 {
   // FIXME
   assert(0);
@@ -559,10 +559,14 @@ CDErrT CDHandle::RegisterSplitMethod(SplitFuncT split_func)
 NodeID CDHandle::GenNewNodeID(const int &new_head)
 {
   // just set the same as parent.
-  NodeID new_node = node_id_;
-  new_node.set_head(new_head);
+  NodeID new_node_id = node_id_;
+#if CD_MPI_ENABLED
+  PMPI_Comm_dup(node_id_.color_, &(new_node_id.color_));
+  PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
+#endif
+  new_node_id.set_head(new_head);
   //new_node.init_node_id(node_id_.color(), 0, INVALID_HEAD_ID,1);
-  return new_node;
+  return new_node_id;
 }
 
 
@@ -646,7 +650,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   // or preservation file at buffer in parent level from being lost.
   ptr_cd_->SyncFile();
 
-  // Make a superset
+  // Make a superset of CD preservation entries
   CollectHeadInfoAndEntry(new_node_id); 
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
@@ -798,36 +802,17 @@ CDErrT CDHandle::InternalDestroy(bool collective)
 CDErrT CDHandle::Begin(bool collective, const char *label, const uint64_t &sys_error_vec)
 {
   CDPrologue();
+
   assert(ptr_cd_ != 0);
-  if(sys_error_vec != 0) // sys_error_vec is zero, then do not update it in Begin.
+
+  // sys_error_vec is zero, then do not update it in Begin.
+  if(sys_error_vec != 0) 
     ptr_cd_->sys_detect_bit_vector_ = sys_error_vec;
 
   CDErrT err = ptr_cd_->Begin(collective, label);
 
-
-#if CD_MPI_ENABLED
-  CD_DEBUG("[CDHandle::Begin] Do Barrier at level#%u, reexec: %d\n", ptr_cd_->level(), ptr_cd_->num_reexecution_);
-  
-  if(node_id_.size() > 1) {
-//    Sync(node_id_.color());
-    CD_DEBUG("\n\n[Barrier] CDHandle::Begin - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-  }
-  //CheckMailBox();
-
-//  cddbg << jmp_buffer_ << endl; cddbgBreak();
-  //TODO It is illegal to call a collective Begin() on a CD that was created without a collective Create()??
-  if ( collective ) {
-    // Sync();
-  }
-
-#endif
-
 #if CD_PROFILER_ENABLED
   // Profile-related
-  cddbg << "calling get profile" <<endl; //cddbgBreak();
-//  if(label == NULL) 
-//    label = "INITIAL_LABEL";
-//  cddbg << "label "<< label <<endl; //cddbgBreak();
   profiler_->StartProfile();
 #endif
 
@@ -841,79 +826,17 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
                                                                       level(), CD::need_reexec, CD::reexec_level);
 
-#if CD_MPI_ENABLED
-
-//  if(IsHead()) {
-//    if(node_id_.size() > 1) {
-//      Sync(node_id_.color());
-//      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-//    }
-//    CheckMailBox();
-//
-//  }
-//  else {
-//    CheckMailBox();
-//    if(node_id_.size() > 1) {
-//      Sync(node_id_.color());
-//      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 1 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-//    }
-//  }
-//
-//
-//
-////  CheckMailBox();
-//  if(IsHead()) {
-//    if(node_id_.size() > 1) {
-//      Sync(node_id_.color());
-//      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 (Head) - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-//    }
-//    CheckMailBox();
-//
-//  }
-//  else {
-//    CheckMailBox();
-//    if(node_id_.size() > 1) {
-//      Sync(node_id_.color());
-//      CD_DEBUG("\n\n[Barrier] CDHandle::Complete 2 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-//    }
-//  }
-//  if(node_id_.size() > 1) {
-//    Sync(node_id_.color());
-//    CD_DEBUG("\n\n[Barrier] CDHandle::Complete 3 - %s / %s\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-//  }
-//
-#endif
-
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
 
-
-//FIXME
-  CDErrT ret=INITIAL_ERR_VAL;
-
   // Profile will be acquired inside CD::Complete()
-  ret = ptr_cd_->Complete(collective);
+  CDErrT ret = ptr_cd_->Complete(collective);
 
 #if CD_PROFILER_ENABLED
-  cddbg << "calling collect profile" <<endl; //cddbgBreak();
   // Profile-related
-//  if(ptr_cd()->cd_exec_mode_ == 0) {
-//    if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level(), ptr_cd_->label_.c_str()); 
-    profiler_->FinishProfile();
-//  }
+  profiler_->FinishProfile();
 #endif
 
-  if ( collective == true ) {
-
-    //int sync_ret = Sync();
-    // sync_ret check, go to error routine if it fails.
-
-  }
-  else {  // Non-collective Begin()
-
-
-  }
-  
   CDEpilogue();
   return ret;
 }
@@ -929,7 +852,9 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 {
   CDPrologue();
 
-
+#if CD_PROFILER_ENABLED
+  bool is_execution = (GetExecMode() == kExecution);
+#endif
   /// Preserve meta-data
   /// Accumulated volume of data to be preserved for Sequential CDs. 
   /// It will be averaged out with the number of seq. CDs.
@@ -946,15 +871,13 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 #endif
 
 #if CD_PROFILER_ENABLED
-  if(ptr_cd()->cd_exec_mode_ == 0) {
+  if(is_execution) {
     if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
       profiler_->RecordProfile(PRV_COPY_DATA, len);
     }
     else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
       profiler_->RecordProfile(PRV_REF_DATA, len);
     }
-    //assert(len);
-    //printf("serialize len0 : %lu\n", len);
   }
 #endif
 
@@ -972,26 +895,6 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
 {
   CDPrologue();
   
-//#if CD_PROFILER_ENABLED
-//  if(ptr_cd()->cd_exec_mode_ == 0) {
-//    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
-//      profiler_->RecordProfile(PRV_COPY_DATA, len);
-//    }
-//    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
-//      profiler_->RecordProfile(PRV_REF_DATA, len);
-//    }
-//  }
-//#endif
-//
-//
-//#if CD_ERROR_INJECTION_ENABLED
-//  if(memory_error_injector_ != NULL) {
-//    memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
-//    memory_error_injector_->Inject();
-//  }
-//#endif
-  
-//  void *serialized_obj = Serialize(uint32_t& len_in_bytes)
   /// Preserve meta-data
   /// Accumulated volume of data to be preserved for Sequential CDs. 
   /// It will be averaged out with the number of seq. CDs.
@@ -1007,7 +910,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
 #if CD_PROFILER_ENABLED
   if(is_execution) {
     //printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
-    if(len==0) getchar();
+//    if(len==0) getchar();
     if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
       profiler_->RecordProfile(PRV_COPY_DATA, len);
     }
@@ -1035,9 +938,25 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   CDPrologue();
 
   assert(ptr_cd_ != 0);
+#if CD_PROFILER_ENABLED
+  bool is_execution = (GetExecMode() == kExecution);
+#endif
+
+  // TODO CDEvent object need to be handled separately, 
+  // this is essentially shared object among multiple nodes.
+  CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+                              my_name, ref_name, ref_offset,  
+                              regen_object, data_usage);
+
+#if CD_ERROR_INJECTION_ENABLED
+  if(memory_error_injector_ != NULL) {
+    memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
+    memory_error_injector_->Inject();
+  }
+#endif
 
 #if CD_PROFILER_ENABLED
-  if(GetExecMode() == kExecution) {
+  if(is_execution) {
     if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
       profiler_->RecordProfile(PRV_COPY_DATA, len);
     }
@@ -1046,18 +965,6 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
     }
   }
 #endif
-
-#if CD_ERROR_INJECTION_ENABLED
-  if(memory_error_injector_ != NULL) {
-    memory_error_injector_->Inject();
-  }
-#endif
-
-  // TODO CDEvent object need to be handled separately, 
-  // this is essentially shared object among multiple nodes.
-  CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
-                              my_name, ref_name, ref_offset,  
-                              regen_object, data_usage);
   CDEpilogue();
   return err;
 }
@@ -1083,34 +990,25 @@ char *CDHandle::GetLabel(void) const
   }
 }
 
-CDID     &CDHandle::GetCDID(void)       { return ptr_cd_->GetCDID(); }
-CDNameT  &CDHandle::GetCDName(void)     { return ptr_cd_->GetCDName(); }
-NodeID   &CDHandle::node_id(void)       { return node_id_; }
-
-CD       *CDHandle::ptr_cd(void)       const { return ptr_cd_; }
-void     CDHandle::SetCD(CD* ptr_cd)         { ptr_cd_=ptr_cd; }
-
-uint32_t CDHandle::level(void)         const { return ptr_cd_->GetCDName().level(); }
-uint32_t CDHandle::rank_in_level(void) const { return ptr_cd_->GetCDName().rank_in_level(); }
-uint32_t CDHandle::sibling_num(void)   const { return ptr_cd_->GetCDName().size(); }
-
-ColorT  CDHandle::color(void)          const { return node_id_.color(); }
-ColorT  CDHandle::GetNodeID(void)      const { return node_id_.color(); }
-int     CDHandle::task_in_color(void)  const { return node_id_.task_in_color(); }
-int     CDHandle::head(void)           const { return node_id_.head(); }
-int     CDHandle::task_size(void)      const { return node_id_.size(); }
-
-int CDHandle::GetExecMode(void) const { return ptr_cd_->cd_exec_mode_; }
-// FIXME
-bool CDHandle::IsHead(void) const { return node_id_.IsHead(); }
-
+CDID     &CDHandle::GetCDID(void)             { return ptr_cd_->GetCDID(); }
+CDNameT  &CDHandle::GetCDName(void)           { return ptr_cd_->GetCDName(); }
+NodeID   &CDHandle::node_id(void)             { return node_id_; }
+CD       *CDHandle::ptr_cd(void)        const { return ptr_cd_; }
+void      CDHandle::SetCD(CD* ptr_cd)         { ptr_cd_=ptr_cd; }
+uint32_t  CDHandle::level(void)         const { return ptr_cd_->GetCDName().level(); }
+uint32_t  CDHandle::rank_in_level(void) const { return ptr_cd_->GetCDName().rank_in_level(); }
+uint32_t  CDHandle::sibling_num(void)   const { return ptr_cd_->GetCDName().size(); }
+ColorT    CDHandle::color(void)         const { return node_id_.color(); }
+int       CDHandle::task_in_color(void) const { return node_id_.task_in_color(); }
+int       CDHandle::head(void)          const { return node_id_.head(); }
+int       CDHandle::task_size(void)     const { return node_id_.size(); }
+int       CDHandle::GetExecMode(void)   const { return ptr_cd_->cd_exec_mode_; }
+int       CDHandle::GetSeqID(void)      const { return ptr_cd_->GetCDID().sequential_id(); }
+CDHandle *CDHandle::GetParent(void)     const { return CDPath::GetParentCD(ptr_cd_->GetCDName().level()); }
+bool      CDHandle::IsHead(void)        const { return node_id_.IsHead(); } // FIXME
 // FIXME
 // For now task_id_==0 is always Head which is not good!
 // head is always task id 0 for now
-//void CDHandle::SetHead(NodeID& new_node_id) { new_node_id.set_head(0); }
-
-int       CDHandle::GetSeqID(void)     const { return ptr_cd_->GetCDID().sequential_id(); }
-CDHandle *CDHandle::GetParent(void)    const { return CDPath::GetParentCD(ptr_cd_->GetCDName().level()); }
 
 bool CDHandle::operator==(const CDHandle &other) const 
 {
@@ -1120,8 +1018,6 @@ bool CDHandle::operator==(const CDHandle &other) const
   bool size   = (other.node_id_.size()   == node_id_.size());
   return (ptr_cd && color && task && size);
 }
-
-
 
 CDErrT CDHandle::Stop()
 { return ptr_cd_->Stop(); }
@@ -1140,7 +1036,6 @@ CDErrT CDHandle::RemoveChild(CDHandle *cd_child)
   return err;
 }
 
-
 CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 {
   CDPrologue();
@@ -1148,6 +1043,7 @@ CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 
   assert(ptr_cd_ != 0);
   CDErrT err = kOK;
+
 #if CD_PROFILER_ENABLED
 //    if(!test_true) {
 //      profiler_->Delete();

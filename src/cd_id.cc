@@ -42,7 +42,7 @@ using namespace cd;
 //for now I will put just zero but this is less efficient.
 
 CDID::CDID() 
-  : domain_id_(0), sequential_id_(0)
+  : node_id_(-1), domain_id_(0), sequential_id_(0)
 {
   object_id_ = 0; 
 }

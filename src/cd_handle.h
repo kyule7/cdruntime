@@ -1170,11 +1170,6 @@ class CDHandle {
 ///       In MPI version, color means a communicator.
     ColorT   color(void)         const;
 
-
-///@brief Get color of the current CD.
-///       In MPI version, color means a communicator.
-    ColorT   GetNodeID(void)         const;
-
 ///@brief Get task ID in the task group of this CD.
     int      task_in_color(void) const;
 
@@ -1201,11 +1196,12 @@ class CDHandle {
 ///       There are two flavors: Include stack and Exclude stack.
     int      ctxt_prv_mode(void);
 
-
     CDType   GetCDType(void) const;
     int GetCommLogMode(void) const;
     int GetCDLoggingMode(void) const;
+
   private:
+
 #if CD_TEST_ENABLED
     void PrintCommLog(void) const;
 #endif

@@ -114,7 +114,7 @@ class DataHandle : public Serializable {
 
   private:
     DataHandle(void) 
-      : handle_type_(kMemory), address_data_(0), len_(0), fp_(NULL), fpos_(0), ref_name_(0), ref_offset_(0) 
+      : handle_type_(kMemory), address_data_(0), len_(0), fp_(NULL), fpos_(0), ref_name_(0), ref_offset_(0), node_id_(-1) 
     { 
       strcpy(file_name_, INIT_FILE_PATH);
     }
@@ -175,8 +175,8 @@ class DataHandle : public Serializable {
     // DataHandle for preservation via reference
     DataHandle(HandleType handle_type, 
                void* address_data, const uint64_t& len, 
-               std::string ref_name, uint64_t ref_offset)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), fpos_(0), ref_offset_(ref_offset) 
+               std::string ref_name, uint64_t ref_offset, const NodeID &node_id)
+      : handle_type_(handle_type), address_data_(address_data), len_(len), fpos_(0), ref_offset_(ref_offset), node_id_(node_id)
     { 
       // There is no NodeID passed to newly created DataHandle object.
       // The reason for this is that we do not track the destinatino information when we preserve,

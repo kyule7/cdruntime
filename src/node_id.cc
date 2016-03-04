@@ -44,10 +44,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 
 
-NodeID::NodeID(void)
-  : color_(0), task_in_color_(0), head_(0), size_(-1) 
+NodeID::NodeID(int head)
+  : task_in_color_(-1), head_(head), size_(-1) 
 {
-//  printf("\nnodeid0\n"); 
+#if _MPI_VER
+  color_ = MPI_COMM_NULL;
+#else
+  color_ = -1; 
+#endif
+//  if(myTaskID == 0) {
+//    printf("\nnodeid0\n"); 
+//  }
 //  assert(0);
 }
 
@@ -60,7 +67,10 @@ NodeID::NodeID(const ColorT& color, int task, int head, int size)
 //  assert(color_);
   if(color_ != 0)
     MPI_Comm_group(color_, &task_group_);
-//  printf("\nnodeid1\n");
+
+  if(myTaskID == 0) {
+    printf("\nnodeid1\n"); getchar();
+  }
 #endif
 }
 
@@ -75,7 +85,9 @@ NodeID::NodeID(const NodeID& that)
 //  assert(color_);
   if(color_ != 0)
     MPI_Comm_group(color_, &task_group_);
-//  printf("\nnodeid2\n");
+//  if(myTaskID == 0) {
+//    printf("\nnodeid2\n"); getchar();
+//  }
 #else
   //printf("\nnodeid2222\n");
   color_ = that.color_;
@@ -93,7 +105,9 @@ NodeID &NodeID::operator=(const NodeID& that)
 //  assert(ret == MPI_SUCCESS);
   if(color_ != 0)
     MPI_Comm_group(color_, &task_group_);
-//  printf("\nnodeid3\n");
+  if(myTaskID == 0) {
+    printf("\nnodeid3\n"); getchar();
+  }
 #else
   color_ = that.color_;
   task_group_ = that.task_group_;

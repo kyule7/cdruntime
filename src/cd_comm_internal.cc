@@ -76,10 +76,7 @@ void TestMPIFunc(const ColorT& new_color, const int& color_for_split)
 
 NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, const int &new_task, const int &new_head_id)
 {
-#if _MPI_VER
 //    dbg<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
-    int new_size=0, 
-        new_task_id=0;
     CD_DEBUG("[%s] need_reexec??? %d from %u (%s)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->name_.c_str());
 
     if(task_size() > 1) {
@@ -114,11 +111,11 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, cons
     }
 
 
-    ColorT new_comm;
-    PMPI_Comm_split(my_color, new_color, new_task, &new_comm);
-    PMPI_Comm_size(new_comm, &new_size);
-    PMPI_Comm_rank(new_comm, &new_task_id);
-
+    NodeID new_node_id(new_head_id);
+    PMPI_Comm_split(my_color, new_color, new_task, &(new_node_id.color_));
+    PMPI_Comm_size(new_node_id.color_, &(new_node_id.size_));
+    PMPI_Comm_rank(new_node_id.color_, &(new_node_id.task_in_color_));
+    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
 //    PMPI_Comm_group(new_node.color(), &(new_node.task_group_));
 //    new_node.set_head(new_head);
 //    TestMPIFunc(node_id_.color(), node_id_.task_in_color());
@@ -132,12 +129,7 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, cons
 //    if(new_color == 0) 
 //      dbg<<"\n--------DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
 
-    return NodeID(new_comm, new_task_id, new_head_id, new_size);
-#elif _PGAS_VER
-    return NodeID(new_comm, new_task_id, new_head_id, new_size);
-#else
-    return node_id_;
-#endif
+  return new_node_id;
 }
 
 /// Synchronize the CD object in every task of that CD.
@@ -614,26 +606,27 @@ CDErrT CD::CheckMailBox(void)
   int event_count = *pendingFlag_;
 
   // Reset handled event counter
-  handled_event_count = 0;
+  //handled_event_count = 0;
+  assert(handled_event_count == 0);
   CDHandle *curr_cdh = GetCurrentCD();
 
-  CD_DEBUG("\n\n=================== Check Mail Box Start [Level #%u], # of pending events : %d ========================\n", level(), event_count);
+//  CD_DEBUG("\n\n=================== Check Mail Box Start [Level #%u], # of pending events : %d ========================\n", level(), event_count);
   
-  CD_DEBUG("Label Check : %s\n", label_.c_str());
+//  CD_DEBUG("Label Check : %s\n", label_.c_str());
   if(event_count == 0) {
-    CD_DEBUG("No event is detected\n");
+//    CD_DEBUG("No event is detected\n");
 
     //FIXME
-    CD_DEBUG("\n-----------------KYU--------------------------------------------------\n");
-    int temp = handled_event_count;
+//    CD_DEBUG("\n-----------------KYU--------------------------------------------------\n");
+//    int temp = handled_event_count;
     InvokeErrorHandler();
-    CD_DEBUG("\nCheck MailBox is done. handled_event_count : %d --> %d, pending events : %d ", 
-             temp, handled_event_count, *pendingFlag_);
+//    CD_DEBUG("\nCheck MailBox is done. handled_event_count : %d --> %d, pending events : %d ", 
+//             temp, handled_event_count, *pendingFlag_);
   
     DecPendingCounter();
   
-    CD_DEBUG(" --> %d\n", *pendingFlag_);
-    CD_DEBUG("-------------------------------------------------------------------\n");
+//    CD_DEBUG(" --> %d\n", *pendingFlag_);
+//    CD_DEBUG("-------------------------------------------------------------------\n");
 
   }
   else if(event_count > 0) {
@@ -680,7 +673,7 @@ CDErrT CD::CheckMailBox(void)
     ERROR_MESSAGE("Pending event counter is less than zero. Something wrong!");
   }
   
-  CD_DEBUG("=================== Check Mail Box Done  [Level #%d] =====================================================\n\n", level());
+//  CD_DEBUG("=================== Check Mail Box Done  [Level #%d] =====================================================\n\n", level());
 
   return static_cast<CDErrT>(ret);
 }
@@ -1263,7 +1256,8 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(HeadCD *curr_cd, const CDEventT &even
   CDInternalErrT ret=kOK;
 
   if(event != kNoEvent) {
-    if(curr_cd->task_in_color() != head()) assert(0);
+    if(curr_cd->task_in_color() != head()) 
+      assert(0);
   
     if(event == kAllResume || event == kAllPause  || event == kEntrySearch ) {//|| event == kEntrySend) {
       ERROR_MESSAGE("HeadCD::LocalSetMailBox -> Event: %s\n", event2str(event).c_str());

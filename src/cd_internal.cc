@@ -628,47 +628,14 @@ CD::InternalCreate(CDHandle* parent,
            new_cd_id.node_id().GetString().c_str(), 
            (*new_cd_handle)->node_id().GetString().c_str());
 
-//  char preservation_unique_name[ L_tmpnam ];
-//  char processor_name[ MPI_MAX_PROCESSOR_NAME ];
-//  if( parent == NULL && new_cd_id.IsHead())
-//  {
-//    if( new_cd_id.IsHead() )
-//    {
-//     if( tmpnam_r( preservation_unique_name ) )
-//     {
-//       CD_DEBUG("[CD::InternalCreate] this is the temporary path created for run: %s\n", preservation_unique_name);
-//       printf("[CD::InternalCreate] this is the temporary path created for run: %s\n", preservation_unique_name);
-//     }
-//     else
-//       ERROR_MESSAGE("Failed to generate an unique filepath.\n");
-//
-//     int len;
-//     PMPI_Get_processor_name( processor_name, &len );
-//    }
-//  }
-//  #if _MPI_VER
-//    PMPI_Bcast( preservation_unique_name, L_tmpnam, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
-//    PMPI_Bcast( processor_name, MPI_MAX_PROCESSOR_NAME, MPI_BYTE, new_cd_id.head(), MPI_COMM_WORLD );
-//  #endif
-//    cout << preservation_unique_name << " " << processor_name << " / " << new_cd_id.node_id() << endl;
-//    (*new_cd_handle)->ptr_cd_->file_handle_.SetFilePath( new_prv_medium, string(preservation_unique_name) + string(processor_name) );
-
   return CD::CDInternalErrT::kOK;
 }
 
 
-
-
-
-
-
-
-
-
-// FIXME 11092014
 void AttachChildCD(HeadCD *new_cd)
 {
-  
+  // STUB
+  // This routine is not needed for MPI-version CD runtime  
 }
 
 inline 
@@ -2396,7 +2363,7 @@ CD::InternalPreserve(void *data,
 
       // set handle type and ref_name/ref_offset
       cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                             DataHandle(DataHandle::kReference, 0, len_in_bytes, ref_name, ref_offset), 
+                             DataHandle(DataHandle::kReference, 0, len_in_bytes, ref_name, ref_offset, cd_id_.node_id_), 
                              my_name, this, (uint32_t)prv_medium_ | (uint32_t)preserve_mask);
 //      cd_entry->set_my_cd(this); // this required for tracking parent later.. this is needed only when via ref
 
@@ -4407,7 +4374,7 @@ CD::CDInternalErrT CD::InvokeAllErrorHandler(void) {
 
 CD::CDInternalErrT CD::InvokeErrorHandler(void)
 {
-  CD_DEBUG("\n[CD::InvokeErrorHandler] event queue size : %zu\n", cd_event_.size());
+//  CD_DEBUG("\n[CD::InvokeErrorHandler] event queue size : %zu\n", cd_event_.size());
   CDInternalErrT cd_err = kOK;
 
   while(!cd_event_.empty()) {
@@ -4423,7 +4390,7 @@ CD::CDInternalErrT CD::InvokeErrorHandler(void)
   }
   
 #if _MPI_VER
-  CD_DEBUG("Handled : %d, current pending flag (# pending events) : %d\n", handled_event_count, *pendingFlag_);
+//  CD_DEBUG("Handled : %d, current pending flag (# pending events) : %d\n", handled_event_count, *pendingFlag_);
 #endif
 
 

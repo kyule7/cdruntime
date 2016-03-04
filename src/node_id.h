@@ -98,7 +98,7 @@ private:
   CommGroupT task_group_;
 
 public:
-  NodeID(void); 
+  NodeID(int head); 
   NodeID(const ColorT &color, int task, int head, int size);
   NodeID(const NodeID &that);
   ~NodeID(void){}
