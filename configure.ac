@@ -1,6 +1,6 @@
 AC_INIT([cdruntime], [1.0], [cds@lph.ece.utexas.edu])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-AM_PROG_AR
+dnl AM_PROG_AR
 LT_INIT
 
 AC_PREFIX_DEFAULT($PWD)

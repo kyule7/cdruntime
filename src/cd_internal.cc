@@ -74,10 +74,11 @@ uint32_t CD::reexec_level = INVALID_ROLLBACK_POINT;
 void cd::internal::Initialize(void)
 {
 #if _MPI_VER
-  PMPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &(CD::pendingFlag_));
+//  PMPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &(CD::pendingFlag_));
 
   // Initialize pending flag
-  *CD::pendingFlag_ = 0;
+//  *CD::pendingFlag_ = 0;
+  CD::pendingFlag_ = 0;
 #endif
 
 #if _MPI_VER
@@ -116,7 +117,7 @@ void cd::internal::Finalize(void)
 {
 
 #if _MPI_VER
-  PMPI_Free_mem(CD::pendingFlag_);
+//  PMPI_Free_mem(CD::pendingFlag_);
 #endif
 
 }
@@ -124,7 +125,8 @@ void cd::internal::Finalize(void)
 
 
 #if _MPI_VER
-CDFlagT *CD::pendingFlag_; 
+//CDFlagT *CD::pendingFlag_=0; 
+CDFlagT CD::pendingFlag_=0; 
 #endif
 
 /// Actual CD Object only exists in a single node and in a single process.
@@ -558,7 +560,7 @@ CD::InternalCreate(CDHandle* parent,
       CD_DEBUG("CD MPI Win create for %u windows done.\n", task_count);
 
       // FIXME : should it be MPI_COMM_WORLD?
-      PMPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
+      PMPI_Win_create(&new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
 
       CD_DEBUG("HeadCD mpi win create for %u pending window done, new Node ID : %s\n", task_count, new_cd_id.node_id_.GetString().c_str());
@@ -606,7 +608,7 @@ CD::InternalCreate(CDHandle* parent,
       CD_DEBUG("HeadCD mpi win create for %u mailbox done\n", task_count);
 
       // FIXME : should it be MPI_COMM_WORLD?
-      PMPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
+      PMPI_Win_create(&new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
 
       CD_DEBUG("HeadCD mpi win create for %u pending window done, new Node ID : %s\n", task_count, new_cd_id.node_id_.GetString().c_str());

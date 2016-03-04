@@ -177,7 +177,8 @@ class CD : public Serializable {
 
 #if CD_MPI_ENABLED
     // This flag is unique for each process. 
-    static CDFlagT *pendingFlag_;
+//    static CDFlagT *pendingFlag_;
+    static CDFlagT pendingFlag_;
     CDMailBoxT pendingWindow_;
 
     // Every mailbox resides in head 

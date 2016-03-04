@@ -59,62 +59,65 @@ NodeID::NodeID(int head)
 }
 
 NodeID::NodeID(const ColorT& color, int task, int head, int size)
-  : task_in_color_(task), head_(head), size_(size)
+  : color_(color), task_in_color_(task), head_(head), size_(size)
 {
 #if _MPI_VER
 //  int ret = MPI_Comm_dup(color, &color_);
-  color_ = color;
+//  color_ = color;
 //  assert(color_);
-  if(color_ != 0)
-    MPI_Comm_group(color_, &task_group_);
+//  if(color_ != 0)
+//    MPI_Comm_group(color_, &task_group_);
 
-  if(myTaskID == 0) {
-    printf("\nnodeid1\n"); getchar();
-  }
+//  if(myTaskID == 0) {
+//    printf("\nnodeid1\n"); getchar();
+//  }
 #endif
 }
 
 NodeID::NodeID(const NodeID& that)
-  : task_in_color_(that.task_in_color_), head_(that.head_), size_(that.size_)
+  : color_(that.color_), task_in_color_(that.task_in_color_), head_(that.head_), size_(that.size_)
 {
 #if _MPI_VER
 //  int ret = MPI_Comm_dup(that.color_, &color_); 
-  color_ = that.color_;
+//  color_ = that.color_;
 //  printf("ret : %d %d\n", ret, MPI_SUCCESS);
 //  assert(ret == MPI_SUCCESS);
 //  assert(color_);
-  if(color_ != 0)
-    MPI_Comm_group(color_, &task_group_);
+//  if(color_ != 0)
+//    MPI_Comm_group(color_, &task_group_);
 //  if(myTaskID == 0) {
 //    printf("\nnodeid2\n"); getchar();
 //  }
 #else
   //printf("\nnodeid2222\n");
-  color_ = that.color_;
-  task_group_ = that.task_group_;
+//  color_ = that.color_;
+//  task_group_ = that.task_group_;
 #endif
+  task_group_ = that.task_group_;
 }
 
 
 NodeID &NodeID::operator=(const NodeID& that) 
 {
-#if _MPI_VER
-//  int ret = MPI_Comm_dup(that.color_, &color_);
-  color_ = that.color_;
-//  printf("ret : %d\n", ret);
-//  assert(ret == MPI_SUCCESS);
-  if(color_ != 0)
-    MPI_Comm_group(color_, &task_group_);
-  if(myTaskID == 0) {
-    printf("\nnodeid3\n"); getchar();
-  }
-#else
+//#if _MPI_VER
+////  int ret = MPI_Comm_dup(that.color_, &color_);
+//  color_ = that.color_;
+////  printf("ret : %d\n", ret);
+////  assert(ret == MPI_SUCCESS);
+////  if(color_ != 0)
+////    MPI_Comm_group(color_, &task_group_);
+////  if(myTaskID == 0) {
+////    printf("\nnodeid3\n"); getchar();
+////  }
+//#else
+//  color_ = that.color_;
+//  task_group_ = that.task_group_;
+//#endif
   color_ = that.color_;
   task_group_ = that.task_group_;
-#endif
-  task_in_color_ = that.task_in_color();
-  head_          = that.head();
-  size_          = that.size();
+  task_in_color_ = that.task_in_color_;
+  head_          = that.head_;
+  size_          = that.size_;
   return *this;
 }
 
