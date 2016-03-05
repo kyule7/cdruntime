@@ -79,15 +79,15 @@ class CommLog {
 #if CD_TEST_ENABLED
     friend class cd::cd_test::Test;
 #endif
-//    friend CD* IsLogable(bool *logable_);
+//    friend CD *IsLogable(bool *logable_);
   public:
     //CommLog();
 
-    CommLog(CD* my_cd, CommLogMode comm_log_mode);
-    //CommLog(CD* my_cd, CommLogMode comm_log_mode, unsigned long num_threads_in_cd);
-    CommLog(CD* my_cd, CommLogMode comm_log_mode, 
+    CommLog(CD *my_cd, CommLogMode comm_log_mode);
+    //CommLog(CD *my_cd, CommLogMode comm_log_mode, unsigned long num_threads_in_cd);
+    CommLog(CD *my_cd, CommLogMode comm_log_mode, 
         unsigned long queue_size_unit, unsigned long table_size_unit);
-    CommLog(CD* my_cd, CommLogMode comm_log_mode, unsigned long queue_size_unit, 
+    CommLog(CD *my_cd, CommLogMode comm_log_mode, unsigned long queue_size_unit, 
         unsigned long table_size_unit, unsigned long child_log_size_unit);
 
     ~CommLog();
@@ -131,9 +131,9 @@ class CommLog {
     CommLogErrT CheckChildLogAlloc(unsigned long length);
 
     // copy logs to children cds
-    CommLogErrT UnpackLogsToChildCD(CD* child_cd);
+    CommLogErrT UnpackLogsToChildCD(CD *child_cd);
     //GONG: duplicated for libc logging
-    CommLogErrT UnpackLogsToChildCD_libc(CD* child_cd);
+    CommLogErrT UnpackLogsToChildCD_libc(CD *child_cd);
     CommLogErrT FindChildLogs(CDID child_cd_id, char** src_ptr);
     CommLogErrT UnpackLogs(char * src_ptr);
 
@@ -169,10 +169,10 @@ class CommLog {
     //// In re-executation, when a CD is created, need to trigger this init
     //// This init will not allocate any space for table and queue,
     //// because when unpacking data, the space will be allocated..
-    //void ReInit(CD* my_cd, unsigned long num_threads_in_cd);
-    //void ReInit(CD* my_cd, unsigned long num_threads_in_cd, 
+    //void ReInit(CD *my_cd, unsigned long num_threads_in_cd);
+    //void ReInit(CD *my_cd, unsigned long num_threads_in_cd, 
     //    unsigned long queue_size_unit, unsigned long table_size_unit);
-    //void ReInit(CD* my_cd, unsigned long num_threads_in_cd, unsigned long queue_size_unit, 
+    //void ReInit(CD *my_cd, unsigned long num_threads_in_cd, unsigned long queue_size_unit, 
     //    unsigned long table_size_unit, unsigned long child_log_size_unit);
 
   private:
@@ -201,7 +201,7 @@ class CommLog {
     
 
   private:
-    CD* my_cd_;
+    CD *my_cd_;
     //SZ: as we have multiple CD objects for multi threads CDs,
     //    so we not need to consider the case that multiple threads are in the same CD
     //unsigned long num_threads_in_cd_;

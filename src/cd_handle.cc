@@ -463,7 +463,7 @@ CDHandle::CDHandle()
 /// sibling ID set up, cd_info set up
 /// clear children list
 /// request to add me as a children to parent (to Head CD object)
-CDHandle::CDHandle(CD* ptr_cd, const NodeID& node_id) 
+CDHandle::CDHandle(CD *ptr_cd, const NodeID& node_id) 
   : ptr_cd_(ptr_cd), node_id_(node_id), ctxt_(ptr_cd->ctxt_)
 {
   SplitCD = &SplitCD_3D;
@@ -574,7 +574,7 @@ NodeID CDHandle::GenNewNodeID(const int &new_head)
 
 // Collective
 CDHandle *CDHandle::Create(uint32_t  num_children,
-                           const char* name, 
+                           const char *name, 
                            int cd_type, 
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
@@ -681,7 +681,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 CDHandle *CDHandle::Create(uint32_t color, 
                            uint32_t task_in_color, 
                            uint32_t num_children, 
-                           const char* name, 
+                           const char *name, 
                            int cd_type, 
                            uint32_t error_name_mask, 
                            uint32_t error_loc_mask, 
@@ -728,7 +728,7 @@ CDHandle *CDHandle::Create(uint32_t color,
 
 
 CDHandle *CDHandle::CreateAndBegin(uint32_t num_children, 
-                                   const char* name, 
+                                   const char *name, 
                                    int cd_type, 
                                    uint32_t error_name_mask, 
                                    uint32_t error_loc_mask, 
@@ -994,7 +994,7 @@ CDID     &CDHandle::GetCDID(void)             { return ptr_cd_->GetCDID(); }
 CDNameT  &CDHandle::GetCDName(void)           { return ptr_cd_->GetCDName(); }
 NodeID   &CDHandle::node_id(void)             { return node_id_; }
 CD       *CDHandle::ptr_cd(void)        const { return ptr_cd_; }
-void      CDHandle::SetCD(CD* ptr_cd)         { ptr_cd_=ptr_cd; }
+void      CDHandle::SetCD(CD *ptr_cd)         { ptr_cd_=ptr_cd; }
 uint32_t  CDHandle::level(void)         const { return ptr_cd_->GetCDName().level(); }
 uint32_t  CDHandle::rank_in_level(void) const { return ptr_cd_->GetCDName().rank_in_level(); }
 uint32_t  CDHandle::sibling_num(void)   const { return ptr_cd_->GetCDName().size(); }

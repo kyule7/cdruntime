@@ -49,34 +49,9 @@ int requested_event_count = 0;
 int cd::handled_event_count = 0;
 
 
-
-
-void TestMPIFunc(const ColorT& new_color, const int& color_for_split)
-{
-/*
-  int sendBuf[3] = {1, 2, 3};
-  int recvBuf[3] = {0, 0, 0};
-//  for(int i=0; i<3; ++i) 
-//    sendBuf[i] += color_for_split-1;
-
-  for(int i=0; i<color_for_split*100000; i++) { int a = 5 * 5; } 
-  dbg<<"\n-------------------------------------------------------------------\n"<<endl;
-  dbg<<new_color<<"[Before Allreduce-----]\nsendBuf : {"<<sendBuf[0]<<", "<<sendBuf[1]<<", "<<sendBuf[2]<<"}"<<endl;
-  dbg<<"recvBuf : {"<<recvBuf[0]<<", "<<recvBuf[1]<<", "<<recvBuf[2]<<"}"<<endl;
-
-  PMPI_Allreduce(sendBuf, recvBuf, 3, MPI_INT, PMPI_SUM, new_color);
-//  PMPI_Barrier(PMPI_COMM_WORLD); 
-  for(int i=0; i<color_for_split*100000; i++) { int a = 5 * 5; } 
-  dbg<< new_color<<"[After Allreduce-----]\nsendBuf : {"<<sendBuf[0]<<", "<<sendBuf[1]<<", "<<sendBuf[2]<<"}"<<endl;
-  dbg<<"recvBuf : {"<<recvBuf[0]<<", "<<recvBuf[1]<<", "<<recvBuf[2]<<"}"<<endl;
-  dbg<<"\n-------------------------------------------------------------------\n"<<endl;
-  //dbgBreak();
-*/
-}
-
 NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, const int &new_task, const int &new_head_id)
 {
-//    dbg<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
+//  dbg<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
     CD_DEBUG("[%s] need_reexec??? %d from %u (%s)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->name_.c_str());
 
     if(task_size() > 1) {
@@ -110,24 +85,11 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, cons
       CD_DEBUG("\n\nReexec is false\n");
     }
 
-
-    NodeID new_node_id(new_head_id);
-    PMPI_Comm_split(my_color, new_color, new_task, &(new_node_id.color_));
-    PMPI_Comm_size(new_node_id.color_, &(new_node_id.size_));
-    PMPI_Comm_rank(new_node_id.color_, &(new_node_id.task_in_color_));
-    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
-//    PMPI_Comm_group(new_node.color(), &(new_node.task_group_));
-//    new_node.set_head(new_head);
-//    TestMPIFunc(node_id_.color(), node_id_.task_in_color());
-//    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
-//    if(new_color == 0) 
-//      dbg<<"\n--------PRE DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
-//
-//    TestMPIFunc(new_node.color(), new_color);
-//
-//    for(int i=0; i<new_color*100000; i++) { int a = 5 * 5; } 
-//    if(new_color == 0) 
-//      dbg<<"\n--------DONE-----------------------------------------------------------\n\n\n\n\n\n\n\n\n"<<endl;
+  NodeID new_node_id(new_head_id);
+  PMPI_Comm_split(my_color, new_color, new_task, &(new_node_id.color_));
+  PMPI_Comm_size(new_node_id.color_, &(new_node_id.size_));
+  PMPI_Comm_rank(new_node_id.color_, &(new_node_id.task_in_color_));
+  PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
 
   return new_node_id;
 }

@@ -136,7 +136,7 @@ class DataHandle : public Serializable {
 //      node_id_ = node_id; 
 //    }
 //
-//    DataHandle(const char* file_name, 
+//    DataHandle(const char *file_name, 
 //               const NodeID &node_id)
 //      : handle_type_(kOSFile), address_data_(0), len_(0), ref_name_(0), ref_offset_(0) 
 //    { 
@@ -144,7 +144,7 @@ class DataHandle : public Serializable {
 //      node_id_ = node_id; 
 //    }
 //
-//    DataHandle(void* address_data, const uint64_t& len, 
+//    DataHandle(void *address_data, const uint64_t& len, 
 //               const NodeID &node_id)
 //      : handle_type_(kMemory), address_data_(address_data), len_(len), ref_name_(0), ref_offset_(0) 
 //    { 
@@ -154,7 +154,7 @@ class DataHandle : public Serializable {
 
     // DataHandle for preservation to memory
     DataHandle(HandleType handle_type, 
-               void* address_data, const uint64_t& len, 
+               void *address_data, const uint64_t& len, 
                const NodeID &node_id)
       : handle_type_(handle_type), address_data_(address_data), len_(len), 
         fp_(NULL), fpos_(0), ref_name_(0), ref_offset_(0), node_id_(node_id)
@@ -164,7 +164,7 @@ class DataHandle : public Serializable {
 
     // DataHandle for preservation to file system
     DataHandle(HandleType handle_type, 
-               void* address_data, const uint64_t& len, 
+               void *address_data, const uint64_t& len, 
                const NodeID &node_id, const std::string &file_name, FILE *fp=NULL, long fpos=0)
       : handle_type_(handle_type), address_data_(address_data), len_(len), 
         fp_(fp), fpos_(fpos), ref_name_(0), ref_offset_(0), node_id_(node_id)
@@ -174,7 +174,7 @@ class DataHandle : public Serializable {
 
     // DataHandle for preservation via reference
     DataHandle(HandleType handle_type, 
-               void* address_data, const uint64_t& len, 
+               void *address_data, const uint64_t& len, 
                std::string ref_name, uint64_t ref_offset, const NodeID &node_id)
       : handle_type_(handle_type), address_data_(address_data), len_(len), fpos_(0), ref_offset_(ref_offset), node_id_(node_id)
     { 
@@ -201,7 +201,7 @@ public:
     std::string ref_name(void)     const { return tag2str[ref_name_]; }
     ENTRY_TAG_T ref_name_tag(void) const { return ref_name_; }
     uint64_t    ref_offset(void)   const { return ref_offset_; }
-    void*       address_data(void) const { return address_data_; }
+    void       *address_data(void) const { return address_data_; }
     uint64_t    len(void)          const { return len_; }
     HandleType  handle_type(void)  const { return handle_type_; }
     NodeID      node_id(void)      const { return node_id_; }
@@ -246,7 +246,7 @@ private:
 
       return data_packer.GetTotalData(len_in_bytes);  
     }
-    void Deserialize(void* object) 
+    void Deserialize(void *object) 
     {
       CD_DEBUG("\nData Handle Deserialize %p\n", object);
 

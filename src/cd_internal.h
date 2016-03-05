@@ -87,7 +87,7 @@ namespace cd {
 //  bool complete_;
 //  bool isrecv_;
 //  //GONG
-//  void* p_;
+//  void *p_;
 //  bool pushed_;
 //  unsigned int level_;
 //  //bool valid_;
@@ -297,7 +297,7 @@ update the preserved data.
     std::vector<IncompleteLogEntry> incomplete_log_;
     CDLoggingMode cd_logging_mode_;
     ////SZ: attempted to move from HeadCD class, but we can use CDPath class
-    //CDHandle*            cd_parent_;
+    //CDHandle *           cd_parent_;
 #endif
 
 #if CD_LIBC_LOG_ENABLED
@@ -313,8 +313,8 @@ update the preserved data.
 //  public:
     CD();
 
-    CD(CDHandle* cd_parent, 
-       const char* name, 
+    CD(CDHandle *cd_parent, 
+       const char *name, 
        const CDID& cd_id, 
        CDType cd_type, 
        PrvMediumT prv_medium, 
@@ -322,21 +322,21 @@ update the preserved data.
 
     virtual ~CD();
 
-    void Initialize(CDHandle* cd_parent, 
-                    const char* name, 
+    void Initialize(CDHandle *cd_parent, 
+                    const char *name, 
                     CDID cd_id, 
                     CDType cd_type, 
                     uint64_t sys_bit_vector);
     void Init(void);
 
-    virtual CDHandle* Create(CDHandle* parent, 
-                     const char* name, 
+    virtual CDHandle *Create(CDHandle *parent, 
+                     const char *name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
                      uint64_t sys_bit_vector, 
                      CDInternalErrT* cd_err=0);
 
-    static CDHandle* CreateRootCD(const char* name, 
+    static CDHandle *CreateRootCD(const char *name, 
                      const CDID& child_cd_id, 
                      CDType cd_type,
                      const std::string &basepath, 
@@ -346,7 +346,7 @@ update the preserved data.
     virtual CDErrT Destroy(void);
 
     CDErrT Begin(bool collective=true, 
-                 const char* label=NULL);
+                 const char *label=NULL);
 
     CDErrT Complete(bool collective=true, 
                     bool update_preservations=true);
@@ -383,7 +383,8 @@ update the preserved data.
     CDInternalErrT Detect(uint32_t &rollback_point); 
     CDErrT Restore(void);
   
-//  DISCUSS: Jinsuk: About longjmp setjmp: By running some experiement, 
+//  [DISCUSSION]
+//  Jinsuk: About longjmp setjmp: By running some experiement, 
 //  I confirm that this only works when stack is just there. 
 //  That means, if we want to jump to a function context 
 //  which does not exist in stack anymore, 
@@ -394,7 +395,6 @@ update the preserved data.
 //  I think that Just always pairing them in the same function is much cleaner. 
   
     CDInternalErrT Assert(bool test);
-  
  
     CDInternalErrT RegisterDetection(uint32_t system_name_mask, 
                                      uint32_t system_loc_mask);
@@ -407,14 +407,14 @@ update the preserved data.
                                     uint32_t error_loc_mask, 
                                     CDErrT(*recovery_func)(std::vector< SysErrT > errors)=0);
 public:
-    CDID     &GetCDID(void)       { return cd_id_; }
-    CDNameT  &GetCDName(void)     { return cd_id_.cd_name_; }
-    NodeID   &GetNodeID(void)     { return cd_id_.node_id_; }
+    CDID     &GetCDID(void)            { return cd_id_; }
+    CDNameT  &GetCDName(void)          { return cd_id_.cd_name_; }
+    NodeID   &GetNodeID(void)          { return cd_id_.node_id_; }
     uint32_t level(void)         const { return cd_id_.cd_name_.level_; }
     uint32_t rank_in_level(void) const { return cd_id_.cd_name_.rank_in_level_; }
     uint32_t sibling_num(void)   const { return cd_id_.cd_name_.size_; }
     ColorT   color(void)         const { return cd_id_.node_id_.color_; }
-    CommGroupT &group(void)       { return cd_id_.node_id_.task_group_; }
+    CommGroupT &group(void)            { return cd_id_.node_id_.task_group_; }
     int      task_in_color(void) const { return cd_id_.node_id_.task_in_color_; }
     int      head(void)          const { return cd_id_.node_id_.head_; }
     int      task_size(void)     const { return cd_id_.node_id_.size_; }
@@ -422,18 +422,18 @@ public:
     bool     recreated(void)     const { return recreated_; }
     bool     reexecuted(void)    const { return reexecuted_; }
     int      num_reexec(void)    const { return num_reexecution_; }
-//    std::unordered_map<std::string,std::pair<int,int>> &num_exec_map(void)    const { return num_exec_map_; }
     char    *name(void)          const { return (char *)name_.c_str(); }
     char    *label(void)         const { return (char *)label_.c_str(); }
-    CDType   GetCDType(void) const { return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
+    CDType   GetCDType(void)     const { return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
+//    std::unordered_map<std::string,std::pair<int,int>> &num_exec_map(void)    const { return num_exec_map_; }
 #if CD_LIBC_LOG_ENABLED
     CommLog *libc_log_ptr()      const { return libc_log_ptr_; }
 #endif
     // These should be virtual because I am going to use polymorphism for those methods.
-    virtual CDErrT Stop(CDHandle* cdh=NULL);
+    virtual CDErrT Stop(CDHandle *cdh=NULL);
     virtual CDErrT Resume(void);
-    virtual CDErrT AddChild(CDHandle* cd_child);
-    virtual CDErrT RemoveChild(CDHandle* cd_child);
+    virtual CDErrT AddChild(CDHandle *cd_child);
+    virtual CDErrT RemoveChild(CDHandle *cd_child);
 
   protected:
  
@@ -492,8 +492,8 @@ public:
     // we can change it to preserve file by flag when we compile cd runtime. (with MEMORY=0)
     // We need some good strategy to decide the most efficient medium of the CD for preservation.
     PrvMediumT GetPlaceToPreserve(void);
-    static CDInternalErrT InternalCreate(CDHandle* parent, 
-                     const char* name, 
+    static CDInternalErrT InternalCreate(CDHandle *parent, 
+                     const char *name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
                      uint64_t sys_bit_vector, 
@@ -560,7 +560,7 @@ public:
       return NULL;  
     }
   
-    virtual void Deserialize(void* object) {
+    virtual void Deserialize(void *object) {
     }
 
 //    CD *GetCDToRecover(bool escalate);
@@ -570,8 +570,8 @@ public:
 public:
     //GONG: duplicated for libc logging
     CommLogErrT CommLogCheckAlloc_libc(unsigned long length);
-    void* MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, void* p_update = NULL);
-    bool PushedMemLogSearch(void* p, CD *curr_cd);
+    void *MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, void *p_update = NULL);
+    bool PushedMemLogSearch(void *p, CD *curr_cd);
     unsigned int PullMemLogs(void);
 #endif
 
@@ -586,7 +586,7 @@ public:
     //SZ 
     bool IsParentLocal();
     //SZ
-    CDHandle* GetParentHandle();
+    CDHandle *GetParentHandle();
     //SZ
     CommLogErrT ProbeAndLogData(unsigned long flag);
     //SZ
@@ -651,8 +651,8 @@ class HeadCD : public CD {
 //    friend class HandleEntrySend;
   friend class CommLog;
 
-  friend CDInternalErrT CD::InternalCreate(CDHandle* parent, 
-                     const char* name, 
+  friend CDInternalErrT CD::InternalCreate(CDHandle *parent, 
+                     const char *name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
                      uint64_t sys_bit_vector, 
@@ -684,8 +684,8 @@ class HeadCD : public CD {
 
 
     HeadCD();
-    HeadCD(CDHandle* cd_parent, 
-             const char* name, 
+    HeadCD(CDHandle *cd_parent, 
+             const char *name, 
              const CDID& cd_id, 
              CDType cd_type, 
              PrvMediumT prv_medium, 
@@ -693,19 +693,19 @@ class HeadCD : public CD {
     virtual ~HeadCD();
 
     CDHandle *cd_parent(void);
-    void set_cd_parent(CDHandle* cd_parent);
-    virtual CDHandle *Create(CDHandle* parent, 
-                             const char* name, 
+    void set_cd_parent(CDHandle *cd_parent);
+    virtual CDHandle *Create(CDHandle *parent, 
+                             const char *name, 
                              const CDID& child_cd_id, 
                              CDType cd_type, 
                              uint64_t sys_bit_vector, 
                              CDInternalErrT* cd_err=0);
     virtual CDErrT Destroy(void);
     virtual CDErrT Reexecute(void);
-    virtual CDErrT Stop(CDHandle* cdh=NULL);
+    virtual CDErrT Stop(CDHandle *cdh=NULL);
     virtual CDErrT Resume(void); // Does this make any sense?
-    virtual CDErrT AddChild(CDHandle* cd_child); 
-    virtual CDErrT RemoveChild(CDHandle* cd_child); 
+    virtual CDErrT AddChild(CDHandle *cd_child); 
+    virtual CDErrT RemoveChild(CDHandle *cd_child); 
 
 
     void *Serialize(uint64_t &len_in_bytes)
@@ -713,7 +713,7 @@ class HeadCD : public CD {
       return NULL;  
     }
   
-    void Deserialize(void* object) 
+    void Deserialize(void *object) 
     {    }
 
 #if CD_MPI_ENABLED

@@ -59,11 +59,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "error_injector.h"
 #include "sys_err_t.h"
 #include "serdes.h"
-//#if CD_PROFILER_ENABLED
-//#include "cd_profiler.h"
-//#endif
-//#include "sys_err_t.h"
-//#include "cd_internal.h"
 
 using namespace cd::interface;
 using namespace cd::internal;
@@ -232,7 +227,7 @@ class CDHandle {
   private:
     CDHandle(); //!< Default constructor of CDHandle. 
 
-    CDHandle(CD* ptr_cd, const NodeID& node_id); //!< Normally this constructor will be called when CD is created. 
+    CDHandle(CD *ptr_cd, const NodeID& node_id); //!< Normally this constructor will be called when CD is created. 
                                                  //!<CDHandle pointer is returned when `CDHandle::Create()` is called.
 
    ~CDHandle(); 
@@ -271,7 +266,7 @@ class CDHandle {
  * child CD.\n Returns 0 on an error (error code returned in a parameter).
  *
  */
-    CDHandle *Create(const char* name=0, //!< [in] Optional user-specified
+    CDHandle *Create(const char *name=0, //!< [in] Optional user-specified
                                          //!< name that can be used to "re-create" the same CD object
                                          //!< if it was not destroyed yet; useful for resuing preserved
                                          //!< state in CD trees that are not loop based.
@@ -305,7 +300,7 @@ class CDHandle {
  */
     CDHandle *Create(uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
                                              //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
-                     const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
+                     const char *name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                        //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
                      int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
                                              //!< User can also set preservation medium for children CDs 
@@ -345,7 +340,7 @@ class CDHandle {
                                                   //!< of tasks to arrive before creating the child.
                      uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
                                              //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
-                     const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
+                     const char *name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                        //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
                      int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
                                              //!< User can also set preservation medium for children CDs 
@@ -379,7 +374,7 @@ class CDHandle {
  */
     CDHandle *CreateAndBegin(uint32_t  numchildren, //!< [in] The total number of CDs that will be collectively created by the current CD object.
                                              //!< This collective CDHandle::Create() waits for all tasks in the current CD to arrive before creating new children.
-                             const char* name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
+                             const char *name, //!< [in] Optional user-specified name that can be used to "re-create" the same CD object
                                                //!< if it was not destroyed yet; useful for resuing preserved state in CD trees that are not loop based.
                              int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
                                                      //!< User can also set preservation medium for children CDs 
@@ -434,7 +429,7 @@ class CDHandle {
     CDErrT Begin(bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                       //!< contained by this CD or whether its to be run by a single task 
                                       //!< only with the programmer responsible for synchronization. 
-                 const char* label=NULL,
+                 const char *label=NULL,
                  const uint64_t &sys_err_vec=0
                 );
 
@@ -995,7 +990,7 @@ class CDHandle {
  * vast majority of accesses) within a code block are such. This
  * might be easier than casting.
  */
-  CDErrT SetPGASType(void* data_ptr, //!< [in] pointer to data to be "Typed";
+  CDErrT SetPGASType(void *data_ptr, //!< [in] pointer to data to be "Typed";
                                   //!< __currently must be in same address space
                                   //!< as calling task, but will extend to
                                   //!< PGAS fat pointers later  
@@ -1024,7 +1019,7 @@ class CDHandle {
  * \return kOK on success.
  *
  */
-  CDErrT SetPGASOwnerWrites(void* data_ptr,
+  CDErrT SetPGASOwnerWrites(void *data_ptr,
           //!< [in] pointer to data to be "Typed";
           //!< __currently must be in same address space
           //!< as calling task, but will extend to
@@ -1044,7 +1039,7 @@ class CDHandle {
   private:  // Internal use -------------------------------------------------------------
 
 /// \brief Initialize for CDHandle object.
-    void Init(CD* ptr_cd, const NodeID& node_id);
+    void Init(CD *ptr_cd, const NodeID &node_id);
 
 /// \brief Search CDEntry with entry_name given. 
 /// It is needed when its children preserve data via reference and search through its ancestors. 
@@ -1069,14 +1064,8 @@ class CDHandle {
     uint64_t SetSystemBitVector(uint64_t error_name_mask, 
                                 uint64_t error_loc_mask=0);
 
-
-
 /// Get NodeID with given new_color and new_task
     NodeID GenNewNodeID(const int &new_head);
-
-
-// Select Head among task group that are corresponding to one CD.
-//    void SetHead(NodeID& new_node_id);
 
 /// Check mail box.
     CDErrT CheckMailBox(void);
@@ -1151,7 +1140,7 @@ class CDHandle {
     CD      *ptr_cd(void)        const;
 
 ///@brief Set CD for this CDHandle. 
-    void     SetCD(CD* ptr_cd);
+    void     SetCD(CD *ptr_cd);
 
 ///@brief Check if the current task int this CD is head task.
 ///@return true if it is head, otherwise false.
