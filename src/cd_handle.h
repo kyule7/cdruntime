@@ -1065,7 +1065,7 @@ class CDHandle {
                                 uint64_t error_loc_mask=0);
 
 /// Get NodeID with given new_color and new_task
-    NodeID GenNewNodeID(const int &new_head);
+    static NodeID GenNewNodeID(const int &new_head, const NodeID &new_node_id);
 
 /// Check mail box.
     CDErrT CheckMailBox(void);
