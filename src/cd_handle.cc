@@ -912,8 +912,8 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
 
 #if CD_PROFILER_ENABLED
   if(is_execution) {
-    //printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
-//    if(len==0) getchar();
+//    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
+    if(len==0) getchar();
     if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
       profiler_->RecordProfile(PRV_COPY_DATA, len);
     }
@@ -1154,7 +1154,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   }
   else {
 #if CD_ERROR_INJECTION_ENABLED
-
+/*
     CD_DEBUG("EIE Before\n");
     CD_DEBUG("Is it NULL? %p, recreated? %d, reexecuted? %d\n", cd_error_injector_, ptr_cd_->recreated(), ptr_cd_->reexecuted());
     if(cd_error_injector_ != NULL && ptr_cd_ != NULL) {
@@ -1183,8 +1183,8 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 //      PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
 //      CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 //      CheckMailBox();
-      
     }
+*/    
 
 #endif
 

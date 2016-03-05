@@ -565,7 +565,7 @@ CDErrT CD::CheckMailBox(void)
 {
 
   CD::CDInternalErrT ret=kOK;
-  int event_count = pendingFlag_;
+  int event_count = *pendingFlag_;
 //  int event_count = *pendingFlag_;
   assert(event_count <= 1024);
   // Reset handled event counter
@@ -624,11 +624,11 @@ CDErrT CD::CheckMailBox(void)
     InvokeErrorHandler();
 
     CD_DEBUG("\nCheck MailBox is done. handled_event_count : %d --> %d, pending events : %d", 
-             temp, handled_event_count, pendingFlag_);
+             temp, handled_event_count, *pendingFlag_);
   
     DecPendingCounter();
   
-    CD_DEBUG(" --> %d\n", pendingFlag_);
+    CD_DEBUG(" --> %d\n", *pendingFlag_);
     CD_DEBUG("-------------------------------------------------------------------\n");
 
   }
@@ -673,7 +673,7 @@ CD::CDInternalErrT CD::InternalCheckMailBox(void)
   CDInternalErrT ret = kOK;
   assert(event_flag_);
   CD_DEBUG("\nInternalCheckMailBox\n");
-  CD_DEBUG("pending counter : %d\n", pendingFlag_);
+  CD_DEBUG("pending counter : %d\n", *pendingFlag_);
   CD_DEBUG("\nTask : %s / %s, Error #%d\n", 
            GetCDName().GetString().c_str(), 
            GetNodeID().GetString().c_str(), 
@@ -718,7 +718,7 @@ CD::CDInternalErrT HeadCD::InternalCheckMailBox(void)
   assert(event_flag_);
 
   CD_DEBUG("\n\nInternalCheckMailBox CHECK IT OUT HEAD\n");
-  CD_DEBUG("pending counter : %d\n", pendingFlag_);
+  CD_DEBUG("pending counter : %d\n", *pendingFlag_);
 
   for(int i=0; i<task_size(); i++) {
     CD_DEBUG("\nTask[%d] (%s / %s), Error #%d\n", 
@@ -1103,7 +1103,7 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
         CD_DEBUG("Finished to increment the pending counter at task #%d\n", task_id);
     
         if(task_id == task_in_color()) { 
-          CD_DEBUG("after accumulate --> pending counter : %d\n", pendingFlag_);
+          CD_DEBUG("after accumulate --> pending counter : %d\n", *pendingFlag_);
         }
         
         // Inform the type of event to be requested
@@ -1420,7 +1420,7 @@ void CD::DecPendingCounter(void)
 {
   CD *rootcd = CDPath::GetRootCD()->ptr_cd();
   PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, rootcd->task_in_color(), 0, rootcd->pendingWindow_);
-  (pendingFlag_) -= handled_event_count;
+  (*pendingFlag_) -= handled_event_count;
   PMPI_Win_unlock(rootcd->task_in_color(), rootcd->pendingWindow_);
   // Initialize handled_event_count;
   handled_event_count = 0;
@@ -1430,30 +1430,35 @@ void CD::IncPendingCounter(void)
 {
   CD *rootcd = CDPath::GetRootCD()->ptr_cd();
   PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, rootcd->task_in_color(), 0, rootcd->pendingWindow_);
-  (pendingFlag_) += 1;
+  (*pendingFlag_) += 1;
   PMPI_Win_unlock(rootcd->task_in_color(), rootcd->pendingWindow_);
 }
 
 
 
+bool printed = false;
 int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
   int flag = 0, ret = 0;
   while(1) {
     ret = PMPI_Test(request, &flag, status);
-    if(flag != 0) 
+    if(flag != 0) {
+      printed = false;
       return ret;
-    else {
+    } else {
       assert(need_reexec == false); // should be false at this point.
       CheckMailBox();
       if(need_reexec) { // This could be set inside CD::CheckMailBox()
         CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
             __func__, level(), reexec_level, label_.c_str(), cd_id_.node_id_.GetString().c_str());
-
+        printed = false;
 //        GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
         break;
       } else {
-        CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
-            __func__, level(), reexec_level, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+        if(printed == false) {
+          CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
+              __func__, level(), reexec_level, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+          printed = true;
+        }
       }
     }
   }
