@@ -1072,7 +1072,7 @@ class CDHandle {
 
 
 /// Get NodeID with given new_color and new_task
-    NodeID GenNewNodeID(const int &new_head);
+    static NodeID GenNewNodeID(const int &new_head, const NodeID &new_node_id);
 
 
 // Select Head among task group that are corresponding to one CD.

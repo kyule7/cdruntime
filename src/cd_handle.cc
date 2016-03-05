@@ -169,7 +169,6 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   }
   
 #if CD_MPI_ENABLED 
-  MPI_Comm_group(MPI_COMM_WORLD, &whole_group); 
   // Synchronization is needed. Otherwise, some task may execute CD_DEBUG before head creates directory 
   PMPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -213,7 +212,11 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //    }
 //  }
 
-  NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask); 
+  NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
+#if CD_MPI_ENABLED 
+  PMPI_Comm_group(MPI_COMM_WORLD, &whole_group); 
+  new_node_id = CDHandle::GenNewNodeID(0, new_node_id);
+#endif
   CD::CDInternalErrT internal_err;
   CDHandle *root_cd_handle = CD::CreateRootCD("Root", CDID(CDNameT(0), new_node_id), 
                                               static_cast<CDType>(kStrict | prv_medium), 
@@ -528,7 +531,7 @@ CDHandle *CDHandle::Create(const char *name,
   // and populate its data structure correctly (CDID, etc...)
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
   
-  NodeID new_node_id = GenNewNodeID(0);
+  NodeID new_node_id = GenNewNodeID(0, node_id_);
 
 
   // Generate CDID
@@ -556,12 +559,12 @@ CDErrT CDHandle::RegisterSplitMethod(SplitFuncT split_func)
 }
 
 
-NodeID CDHandle::GenNewNodeID(const int &new_head)
+NodeID CDHandle::GenNewNodeID(const int &new_head, const NodeID &node_id)
 {
   // just set the same as parent.
-  NodeID new_node_id = node_id_;
+  NodeID new_node_id(node_id);
 #if CD_MPI_ENABLED
-  PMPI_Comm_dup(node_id_.color_, &(new_node_id.color_));
+  PMPI_Comm_dup(node_id.color_, &(new_node_id.color_));
   PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
 #endif
   new_node_id.set_head(new_head);
@@ -632,7 +635,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
     assert(new_size == new_node_id.size());
   }
   else if(num_children == 1) {
-    new_node_id = GenNewNodeID(0);
+    new_node_id = GenNewNodeID(0, node_id_);
   }
   else {
     ERROR_MESSAGE("Number of children to create is wrong.\n");
