@@ -146,30 +146,87 @@ typedef uint32_t ENTRY_TAG_T;
 #define TAG_MASK(X) ((2<<(X-1)) - 1)
 #define TAG_MASK2(X) ((2<<(X-1)) - 2)
 
-//#define ERROR_TYPE_0      0x00001 
-//#define ERROR_TYPE_1      0x00002 
-//#define ERROR_TYPE_2      0x00004 
-//#define ERROR_TYPE_3      0x00008 
-//#define ERROR_TYPE_4      0x00010 
-//#define ERROR_TYPE_5      0x00020 
-//#define ERROR_TYPE_6      0x00040 
-//#define ERROR_TYPE_7      0x00080 
-////#define ERROR_RATE_TYPE_0 0.0005
-////#define ERROR_RATE_TYPE_1 0.001
-////#define ERROR_RATE_TYPE_2 0.02
-////#define ERROR_RATE_TYPE_3 0.04
-////#define ERROR_RATE_TYPE_4 0.06
-////#define ERROR_RATE_TYPE_5 0.08
-////#define ERROR_RATE_TYPE_6 0.1
-////#define ERROR_RATE_TYPE_7 0.15
-//#define ERROR_RATE_TYPE_0 0.01
-//#define ERROR_RATE_TYPE_1 0.0005
-//#define ERROR_RATE_TYPE_2 0.001
-//#define ERROR_RATE_TYPE_3 0.002
-//#define ERROR_RATE_TYPE_4 0.004
-//#define ERROR_RATE_TYPE_5 0.005
-//#define ERROR_RATE_TYPE_6 0.01
-//#define ERROR_RATE_TYPE_7 0.02
+
+
+// DEBUG related
+#define ERROR_MESSAGE(...) \
+  { fprintf(stderr, __VA_ARGS__); assert(0); }
+
+
+#if CD_DEBUG_DEST == CD_DEBUG_SILENT  // No printouts 
+
+#define CD_DEBUG(...) 
+#define CD_DEBUG_FLUSH
+#define LOG_DEBUG(...) 
+#define LIBC_DEBUG(...)
+ 
+#elif CD_DEBUG_DEST == CD_DEBUG_TO_FILE  // Print to fileout
+
+extern FILE *cdout;
+extern FILE *cdoutApp;
+
+#define CD_DEBUG(...) \
+  fprintf(cdout, __VA_ARGS__)
+
+#define CD_DEBUG_FLUSH \
+  fflush(cdout)
+
+#define LOG_DEBUG(...) /*\
+  { if(cd::app_side) {\
+      cd::app_side=false;\
+      fprintf(cdout, __VA_ARGS__);\
+      cd::app_side = true;}\
+    else fprintf(cdout, __VA_ARGS__);\
+  }*/
+
+#define LIBC_DEBUG(...) /*\
+    { if(cd::app_side) {\
+        cd::app_side=false;\
+        fprintf(stdout, __VA_ARGS__);\
+        cd::app_side = true;}\
+      else fprintf(stdout, __VA_ARGS__);\
+    }*/
+
+
+
+#elif CD_DEBUG_DEST == CD_DEBUG_STDOUT  // print to stdout 
+
+#define CD_DEBUG(...) \
+  fprintf(stdout, __VA_ARGS__)
+
+#define CD_DEBUG_FLUSH 
+
+#define LOG_DEBUG(...) /*\
+  { if(cd::app_side) {\
+      cd::app_side=false;\
+      fprintf(stdout, __VA_ARGS__);\
+      cd::app_side = true;}\
+    else fprintf(stdout, __VA_ARGS__);\
+  }*/
+
+#define LIBC_DEBUG(...)/* \
+    { if(cd::app_side) {\
+        cd::app_side=false;\
+        fprintf(stdout, __VA_ARGS__);\
+        cd::app_side = true;}\
+      else fprintf(stdout, __VA_ARGS__);\
+    }*/
+
+
+#elif CD_DEBUG_DEST == CD_DEBUG_STDERR  // print to stderr
+
+#define CD_DEBUG(...) \
+  fprintf(stderr, __VA_ARGS__)
+
+#define CD_DEBUG_FLUSH
+
+#else  // -------------------------------------
+
+#define CD_DEBUG(...) \
+  fprintf(stderr, __VA_ARGS__)
+
+#define CD_DEBUG_FLUSH
+#endif
 #define ROOT_SYS_DETECT_VEC 0xFFFFFFFFFFFFFFFF
 
 //GONG: global variable to represent the current context for malloc wrapper
@@ -489,32 +546,26 @@ extern clock_t elapsed_time;
 
     // data structure to store incompleted log entries
     struct IncompleteLogEntry {
+      void    *addr_;
+      uint64_t length_;
       uint32_t taskID_;
-      //void * addr_;
-      unsigned long addr_;
-      unsigned long length_;
-      unsigned long flag_;
-      bool complete_;
-      bool isrecv_;
-      // KL
-      bool intra_cd_msg_;
-      MPI_Comm comm_;
       uint32_t tag_;
+      MPI_Comm comm_;
+      void    *flag_;
+      bool     complete_;
+      bool     isrecv_;
+      bool     intra_cd_msg_;
       //GONG
-      void* p_;
-      bool pushed_;
-      unsigned int level_;
-      //bool valid_;
-      //SZ
+      void    *p_;
+      bool     pushed_;
+      uint32_t level_;
       IncompleteLogEntry(void) {
         taskID_ = 0;
-        //void * addr_;
-        addr_ = 0;
+        addr_ = NULL;
         length_ = 0;
-        flag_ = 0;
+        flag_ = NULL;
         complete_ = 0;
         isrecv_ = 0;
-        //KL
         intra_cd_msg_ = false;
         comm_ = MPI_COMM_NULL;
         tag_  = INVALID_MSG_TAG;
@@ -523,90 +574,54 @@ extern clock_t elapsed_time;
         pushed_ = 0;
         level_ = 0;
       }
+      IncompleteLogEntry(const void *addr, 
+                         uint64_t length, 
+                         uint32_t taskID, 
+                         uint32_t tag, 
+                         const MPI_Comm &comm, 
+                         void    *flag, 
+                         bool complete) 
+        : addr_(const_cast<void *>(addr)), length_(length), taskID_(taskID), tag_(tag), 
+          comm_(comm), flag_(flag), complete_(complete) 
+      {
+        CD_DEBUG("pushed back:%p\n", flag);
+        p_ = NULL;
+        pushed_ = 0;
+        level_ = 0;
+        isrecv_ = 0;
+        intra_cd_msg_ = false;
+      }
+      void Print(void) {
+        printf("\n== Incomplete Log Entry ==\ntaskID:%u\nlength:%lu\naddr:%p\ntag:%u\ncomm:%u\nflag:%p\ncomplete:%d\nisrecv:%d\nintra_msg:%d\np:%p\npushed:%d\nlevel:%u\n==========================\n", taskID_, length_, addr_, tag_, comm_, flag_, complete_, isrecv_, intra_cd_msg_, p_, pushed_, level_);
+      }
+
     };
+
+    class IncompleteLogStore : public std::vector<IncompleteLogEntry> {
+      uint32_t unit_size_;
+    public:
+      IncompleteLogStore(){}
+      IncompleteLogStore(uint32_t unit_size) : unit_size_(unit_size) {}
+      std::vector<IncompleteLogEntry>::iterator find(void *flag) {
+        std::vector<IncompleteLogEntry>::iterator it = begin();
+        for(; it!=end(); ++it) {
+          if(it->flag_ == flag) 
+            break;
+        }
+        return it;
+      }
+    };
+//    struct IncompleteLog : public std::vector<IncompleteLogEntry> {
+//      std::vector<IncompleteLogEntry>::iterator &find(uint64_t flag) {
+//
+//
+//      }
+//    };
 
   }
 
 } // namespace cd ends
 
-#define ERROR_MESSAGE(...) \
-  { fprintf(stderr, __VA_ARGS__); assert(0); }
-
-
-#if CD_DEBUG_DEST == CD_DEBUG_SILENT  // No printouts 
-
-#define CD_DEBUG(...) 
-#define CD_DEBUG_FLUSH
-#define LOG_DEBUG(...) 
-#define LIBC_DEBUG(...)
- 
-#elif CD_DEBUG_DEST == CD_DEBUG_TO_FILE  // Print to fileout
-
-extern FILE *cdout;
-extern FILE *cdoutApp;
-
-#define CD_DEBUG(...) \
-  fprintf(cdout, __VA_ARGS__)
-
-#define CD_DEBUG_FLUSH \
-  fflush(cdout)
-
-#define LOG_DEBUG(...) /*\
-  { if(cd::app_side) {\
-      cd::app_side=false;\
-      fprintf(cdout, __VA_ARGS__);\
-      cd::app_side = true;}\
-    else fprintf(cdout, __VA_ARGS__);\
-  }*/
-
-#define LIBC_DEBUG(...) /*\
-    { if(cd::app_side) {\
-        cd::app_side=false;\
-        fprintf(stdout, __VA_ARGS__);\
-        cd::app_side = true;}\
-      else fprintf(stdout, __VA_ARGS__);\
-    }*/
-
-
-
-#elif CD_DEBUG_DEST == CD_DEBUG_STDOUT  // print to stdout 
-
-#define CD_DEBUG(...) \
-  fprintf(stdout, __VA_ARGS__)
-
-#define CD_DEBUG_FLUSH 
-
-#define LOG_DEBUG(...) /*\
-  { if(cd::app_side) {\
-      cd::app_side=false;\
-      fprintf(stdout, __VA_ARGS__);\
-      cd::app_side = true;}\
-    else fprintf(stdout, __VA_ARGS__);\
-  }*/
-
-#define LIBC_DEBUG(...)/* \
-    { if(cd::app_side) {\
-        cd::app_side=false;\
-        fprintf(stdout, __VA_ARGS__);\
-        cd::app_side = true;}\
-      else fprintf(stdout, __VA_ARGS__);\
-    }*/
-
-
-#elif CD_DEBUG_DEST == CD_DEBUG_STDERR  // print to stderr
-
-#define CD_DEBUG(...) \
-  fprintf(stderr, __VA_ARGS__)
-
-#define CD_DEBUG_FLUSH
-
-#else  // -------------------------------------
-
-#define CD_DEBUG(...) \
-  fprintf(stderr, __VA_ARGS__)
-
-#define CD_DEBUG_FLUSH
-#endif
 
 
 
@@ -624,6 +639,8 @@ extern FILE *cdoutApp;
 #define CD_DEFAULT_PRV_FILENAME "prv_files_%s_XXXXXX"
 #define CD_DEFAULT_FILEPATH "./prv_files_XXXXXX"
 #define CD_DEFAULT_DEBUG_OUT "./debug_logs/"
+
+#define DEFAULT_INCOMPL_LOG_SIZE 64
 
 #define CD_SHARING_DEGREE 64
 #define dout clog

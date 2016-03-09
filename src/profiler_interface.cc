@@ -102,7 +102,7 @@ void Profiler::BeginRecord(void)
 //    num_exec_map[level][name].reexec_ += 1;
 //  }
 
-  if( is_reexecuted && (!(cdh_->recreated())) ) {
+  if( is_reexecuted || (!(cdh_->recreated())) ) {
     if(myTaskID == 0) printf("%sRe-exec %s %s (%d %d %d)\n",string(cdh_->level(), '\t').c_str(),  cdh_->GetName(), 
         name.c_str(), cdh_->GetCDType(), cdh_->GetCDLoggingMode(), cdh_->GetCommLogMode());
     end_clk_  = clock();

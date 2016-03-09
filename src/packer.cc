@@ -97,7 +97,7 @@ Packer::~Packer()
 uint32_t Packer::Add(uint32_t id, uint64_t length, const void *ptr_data)
 {
 
-  CD_DEBUG("id : %u, length : %lu, ptr_data : %p\n", id, length, ptr_data);
+//  CD_DEBUG("id : %u, length : %lu, ptr_data : %p\n", id, length, ptr_data);
 
   // Class user does not need to know the current writing position.	
   return AddData(id , (uint32_t)length ,  used_data_size_, (char *)ptr_data); 
@@ -269,27 +269,27 @@ uint32_t Packer::AddData(uint32_t id, uint32_t length, uint32_t position, char *
 {
   uint32_t ret;
 
-  CD_DEBUG("\n==========================================================\n");
-  CD_DEBUG("[Packer::AddData] Before CheckRealloc ptr_table : %p\n", (void *)ptr_table_);
+//  CD_DEBUG("\n==========================================================\n");
+//  CD_DEBUG("[Packer::AddData] Before CheckRealloc ptr_table : %p\n", (void *)ptr_table_);
 
   if ( (ret = CheckRealloc(length)) != kOK ) 
   {
     return ret;  
   }
 
-  CD_DEBUG("Before write word, ptr_table : %p\n", (void *)ptr_table_);
+//  CD_DEBUG("Before write word, ptr_table : %p\n", (void *)ptr_table_);
 
   WriteWord(ptr_table_ + used_table_size_, id); 
   WriteWord(ptr_table_ + used_table_size_ + 4, length); 
   WriteWord(ptr_table_ + used_table_size_ + 8, position); 
 
-  CD_DEBUG("[Get Info from table] id : %u (%p), length : %u (%p), position : %u (%p), ptr_data : %p\n",
-				  id, (void*)(ptr_table_ + used_table_size_), 
-					length, (void*)(ptr_table_ + used_table_size_ + 4), 
-					position, (void*)(ptr_table_ + used_table_size_ + 8), 
-					(void*)ptr_data);
-  CD_DEBUG("Bring data from %p to %p\n", (void *)ptr_data, (void *)(ptr_data_ + position));
-  CD_DEBUG("==========================================================\n");
+//  CD_DEBUG("[Get Info from table] id : %u (%p), length : %u (%p), position : %u (%p), ptr_data : %p\n",
+//				  id, (void*)(ptr_table_ + used_table_size_), 
+//					length, (void*)(ptr_table_ + used_table_size_ + 4), 
+//					position, (void*)(ptr_table_ + used_table_size_ + 8), 
+//					(void*)ptr_data);
+//  CD_DEBUG("Bring data from %p to %p\n", (void *)ptr_data, (void *)(ptr_data_ + position));
+//  CD_DEBUG("==========================================================\n");
 
   used_table_size_ += UNITSIZE;    
   WriteData(ptr_data,length,position); 

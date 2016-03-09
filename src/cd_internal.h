@@ -292,12 +292,10 @@ update the preserved data.
     //SZ
     CommLog *comm_log_ptr_;
     uint32_t child_seq_id_;
-    unsigned long incomplete_log_size_unit_;
-    unsigned long incomplete_log_size_;
-    std::vector<IncompleteLogEntry> incomplete_log_;
+    //KYU: FIXME later I want to merge this flag and exec_mode flag.
     CDLoggingMode cd_logging_mode_;
-    ////SZ: attempted to move from HeadCD class, but we can use CDPath class
-    //CDHandle *           cd_parent_;
+    //KYU
+    IncompleteLogStore incomplete_log_;
 #endif
 
 #if CD_LIBC_LOG_ENABLED
@@ -435,6 +433,7 @@ public:
     virtual CDErrT AddChild(CDHandle *cd_child);
     virtual CDErrT RemoveChild(CDHandle *cd_child);
 
+    void PrintDebug();
   protected:
  
 /**@addtogroup internal_recovery 
@@ -578,6 +577,7 @@ public:
 #if CD_COMM_LOG_ENABLED
 public:
     //KL
+    bool DeleteIncompleteLog(void *flag);
     CommLogErrT InvalidateIncompleteLogs(void);
     CommLogErrT ProbeIncompleteLogs(void);
     //SZ
@@ -588,10 +588,10 @@ public:
     //SZ
     CDHandle *GetParentHandle();
     //SZ
-    CommLogErrT ProbeAndLogData(unsigned long flag);
+    CommLogErrT ProbeAndLogData(void *flag);
     //SZ
     CommLogErrT LogData(const void *data_ptr, unsigned long length, uint32_t task_id=0,
-                      bool completed=true, unsigned long flag=0,
+                      bool completed=true, void *flag=NULL,
                       bool isrecv=0, bool isrepeated=0, 
                       // KL : added these three things
                       bool intra_cd_msg=false, int tag=INVALID_MSG_TAG, ColorT comm=INVALID_COLOR);

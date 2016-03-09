@@ -49,12 +49,12 @@ struct LogTableElement {
 #if CD_TEST_ENABLED
   friend class cd::cd_test::Test;
 #endif
-  unsigned long pos_; // starting position of logged data in log_queue_
-  unsigned long length_; // length of logged data
+  uint64_t pos_; // starting position of logged data in log_queue_
+  uint64_t length_; // length of logged data
   bool completed_;
-  unsigned long flag_;
-  unsigned long counter_;
-  unsigned long reexec_counter_;
+  void *flag_;
+  uint64_t counter_;
+  uint64_t reexec_counter_;
   bool isrepeated_;
   uint32_t taskID_; // src-task for read op and dst-task for write op
 #if _PGAS_VER
@@ -84,58 +84,58 @@ class CommLog {
     //CommLog();
 
     CommLog(CD *my_cd, CommLogMode comm_log_mode);
-    //CommLog(CD *my_cd, CommLogMode comm_log_mode, unsigned long num_threads_in_cd);
+    //CommLog(CD *my_cd, CommLogMode comm_log_mode, uint64_t num_threads_in_cd);
     CommLog(CD *my_cd, CommLogMode comm_log_mode, 
-        unsigned long queue_size_unit, unsigned long table_size_unit);
-    CommLog(CD *my_cd, CommLogMode comm_log_mode, unsigned long queue_size_unit, 
-        unsigned long table_size_unit, unsigned long child_log_size_unit);
+        uint64_t queue_size_unit, uint64_t table_size_unit);
+    CommLog(CD *my_cd, CommLogMode comm_log_mode, uint64_t queue_size_unit, 
+        uint64_t table_size_unit, uint64_t child_log_size_unit);
 
     ~CommLog();
 
     // add cd_id
-    void SetCD(CD * my_cd)
+    void SetCD(CD *my_cd)
     {
       my_cd_ = my_cd;
     }
 
     bool ProbeAndLogData(void* addr, 
-                         unsigned long length, 
-                         unsigned long flag,
+                         uint64_t length, 
+                         void *flag,
                          bool isrecv);
     bool ProbeAndLogDataPacked(void* addr, 
-                               unsigned long length, 
-                               unsigned long flag,
+                               uint64_t length, 
+                               void *flag,
                                bool isrecv);
     // log new data into the queue
     // need to check if running out queues
-    CommLogErrT LogData(const void * data_ptr, 
-                        unsigned long data_length, 
+    CommLogErrT LogData(const void *data_ptr, 
+                        uint64_t data_length, 
                         uint32_t taskID=0,
                         bool completed=true,
-                        unsigned long flag=0,
+                        void *flag=0,
                         bool isrecv=0,
                         bool isrepeated=0,
                         bool intra_cd_msg=false,
                         int  tag=INVALID_MSG_TAG,
                         ColorT comm=INVALID_COLOR);
 
-    CommLogErrT ReadData(void * buffer, unsigned long length);
-    CommLogErrT ProbeData(const void * buffer, unsigned long length);
-    //CommLogErrT FindNextTableElement(unsigned long * index);
+    CommLogErrT ReadData(void *buffer, uint64_t length);
+    CommLogErrT ProbeData(const void *buffer, uint64_t length);
+    //CommLogErrT FindNextTableElement(uint64_t *index);
 
     // push logs to parent
-    CommLogErrT PackAndPushLogs(CD * parent_cd);
+    CommLogErrT PackAndPushLogs(CD *parent_cd);
     //GONG: duplicated for libc logging
-    CommLogErrT PackAndPushLogs_libc(CD * parent_cd);
-    CommLogErrT PackLogs(CommLog * parent_cl_ptr, unsigned long length);
-    CommLogErrT CheckChildLogAlloc(unsigned long length);
+    CommLogErrT PackAndPushLogs_libc(CD *parent_cd);
+    CommLogErrT PackLogs(CommLog *parent_cl_ptr, uint64_t length);
+    CommLogErrT CheckChildLogAlloc(uint64_t length);
 
     // copy logs to children cds
     CommLogErrT UnpackLogsToChildCD(CD *child_cd);
     //GONG: duplicated for libc logging
     CommLogErrT UnpackLogsToChildCD_libc(CD *child_cd);
     CommLogErrT FindChildLogs(CDID child_cd_id, char** src_ptr);
-    CommLogErrT UnpackLogs(char * src_ptr);
+    CommLogErrT UnpackLogs(char *src_ptr);
 
     bool IsNewLogGenerated_()
     {
@@ -169,11 +169,11 @@ class CommLog {
     //// In re-executation, when a CD is created, need to trigger this init
     //// This init will not allocate any space for table and queue,
     //// because when unpacking data, the space will be allocated..
-    //void ReInit(CD *my_cd, unsigned long num_threads_in_cd);
-    //void ReInit(CD *my_cd, unsigned long num_threads_in_cd, 
-    //    unsigned long queue_size_unit, unsigned long table_size_unit);
-    //void ReInit(CD *my_cd, unsigned long num_threads_in_cd, unsigned long queue_size_unit, 
-    //    unsigned long table_size_unit, unsigned long child_log_size_unit);
+    //void ReInit(CD *my_cd, uint64_t num_threads_in_cd);
+    //void ReInit(CD *my_cd, uint64_t num_threads_in_cd, 
+    //    uint64_t queue_size_unit, uint64_t table_size_unit);
+    //void ReInit(CD *my_cd, uint64_t num_threads_in_cd, uint64_t queue_size_unit, 
+    //    uint64_t table_size_unit, uint64_t child_log_size_unit);
 
   private:
     CommLogErrT InitAlloc();
@@ -183,20 +183,20 @@ class CommLog {
     void InitInternal();
 
     CommLogErrT IncreaseLogTableSize();
-    CommLogErrT IncreaseLogQueueSize(unsigned long length);
-    bool FoundRepeatedEntry(const void * data_ptr, 
-                            unsigned long data_length, 
+    CommLogErrT IncreaseLogQueueSize(uint64_t length);
+    bool FoundRepeatedEntry(const void *data_ptr, 
+                            uint64_t data_length, 
                             bool completed, 
-                            unsigned long flag);
+                            void *flag);
 
     CommLogErrT WriteLogTable (uint32_t thread,
-                              const void * data_ptr, 
-                              unsigned long data_length, 
+                              const void *data_ptr, 
+                              uint64_t data_length, 
                               bool completed,
-                              unsigned long flag,
+                              void *flag,
                               bool isrepeated);
-    CommLogErrT WriteLogQueue (const void * data_ptr, 
-                               unsigned long data_length,
+    CommLogErrT WriteLogQueue (const void *data_ptr, 
+                               uint64_t data_length,
                                bool completed);
     
 
@@ -204,42 +204,42 @@ class CommLog {
     CD *my_cd_;
     //SZ: as we have multiple CD objects for multi threads CDs,
     //    so we not need to consider the case that multiple threads are in the same CD
-    //unsigned long num_threads_in_cd_;
-    unsigned long queue_size_unit_;
-    unsigned long table_size_unit_;
-    unsigned long child_log_size_unit_;
+    //uint64_t num_threads_in_cd_;
+    uint64_t queue_size_unit_;
+    uint64_t table_size_unit_;
+    uint64_t child_log_size_unit_;
 
     CommLogMode comm_log_mode_;
 
 
     // struct to describe current address and bound address of a log queue
     struct LogQueue {
-      char * base_ptr_; 
-      unsigned long cur_pos_;
+      char *base_ptr_; 
+      uint64_t cur_pos_;
 
       // queue size by default is queue_size_unit_, and can be increased during runtime
       // but need to be multiples of queue_size_unit_ 
       // TODO: may need to consider the size growth method of C++ vector
-      unsigned long queue_size_;
+      uint64_t queue_size_;
       LogQueue(void) : base_ptr_(NULL) {}
     }; 
     LogQueue log_queue_;
 
     // this level of indirection is used to cover multiple threads/tasks within one CD
     struct LogTable {
-      LogTableElement * base_ptr_;
+      LogTableElement *base_ptr_;
 
-      unsigned long cur_pos_;
+      uint64_t cur_pos_;
       
       // table size by default is table_size_unit_, and can be increased during runtime
       // but need to be multiples of table_size_unit_ 
-      unsigned long table_size_;
+      uint64_t table_size_;
 
       LogTable(void) : base_ptr_(NULL) {}
     };
     LogTable log_table_;
 
-    unsigned long log_table_reexec_pos_;
+    uint64_t log_table_reexec_pos_;
 
     // to state if new logs are generated in current CD
     bool new_log_generated_;
@@ -250,9 +250,9 @@ class CommLog {
     // allocate child_log_ptr_ when pushing data to parents
     // pack all children's log data and then copy into child_log_ptr array
     struct ChildLogQueue{
-      char * base_ptr_;
-      unsigned long size_;
-      unsigned long cur_pos_;
+      char *base_ptr_;
+      uint64_t size_;
+      uint64_t cur_pos_;
       ChildLogQueue(void) : base_ptr_(NULL) {}
     };
     ChildLogQueue child_log_;

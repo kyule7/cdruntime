@@ -1434,10 +1434,16 @@ void CD::IncPendingCounter(void)
   PMPI_Win_unlock(rootcd->task_in_color(), rootcd->pendingWindow_);
 }
 
+void CD::PrintDebug() {
 
+  CD_DEBUG("[%s] pending event:%u, incomplete log:%lu\n", __func__, *pendingFlag_, incomplete_log_.size());
+  CD_DEBUG_FLUSH;
 
+}
 bool printed = false;
 int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
+  CD_DEBUG("[%s] pending event:%u, incomplete log:%lu\n", __func__, *pendingFlag_, incomplete_log_.size());
+  CD_DEBUG_FLUSH;
   int flag = 0, ret = 0;
   while(1) {
     ret = PMPI_Test(request, &flag, status);
@@ -1450,6 +1456,7 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
       if(need_reexec) { // This could be set inside CD::CheckMailBox()
         CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
             __func__, level(), reexec_level, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+        CD_DEBUG_FLUSH;
         printed = false;
 //        GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
         break;
@@ -1457,6 +1464,7 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
         if(printed == false) {
           CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
               __func__, level(), reexec_level, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+          CD_DEBUG_FLUSH;
           printed = true;
         }
       }

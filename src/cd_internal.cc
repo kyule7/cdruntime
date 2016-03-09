@@ -158,7 +158,8 @@ CDFlagT *CD::pendingFlag_ = NULL;
 /// inside Create() 
 
 CD::CD(void)
-  : file_handle_()
+  : file_handle_(),
+    incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 {
   reexecuted_ = false;
   recreated_ = false;
@@ -191,9 +192,6 @@ CD::CD(void)
   child_seq_id_ = 0;
   SetCDLoggingMode(kStrictCD);
 
-  //// init incomplete_log_
-  //incomplete_log_size_ = incomplete_log_size_unit_;
-  //incomplete_log_.resize(incomplete_log_size_);
 #endif
 }
 
@@ -209,7 +207,8 @@ CD::CD(CDHandle* cd_parent,
  :  cd_id_(cd_id),
     file_handle_(prv_medium, 
                  ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::prv_basePath_), 
-                 cd_id.GetStringID() + string("_XXXXXX") )
+                 cd_id.GetStringID() + string("_XXXXXX") ),
+    incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 {
   //GONG
   begin_ = false;
@@ -352,9 +351,6 @@ CD::CD(CDHandle* cd_parent,
     child_seq_id_ = 0;
   }
 
-  //// init incomplete_log_
-  //incomplete_log_size_ = incomplete_log_size_unit_;
-  //incomplete_log_.resize(incomplete_log_size_);
 #endif
 
 }
@@ -403,7 +399,6 @@ void CD::Init()
 
 #if comm_log
   comm_log_ptr_ = NULL;
-  incomplete_log_size_unit_ = 100;
 #endif
 #if CD_LIBC_LOG_ENABLED
   libc_log_ptr_ = NULL;
@@ -1107,7 +1102,7 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
       if (IsParentLocal() && incomplete_log_.size()!=0) {
         //vector<struct IncompleteLogEntry> *pincomplog 
         //                                    = &(GetParentHandle()->ptr_cd_->incomplete_log_);
-        CD* ptmp = GetParentHandle()->ptr_cd_;
+        CD *ptmp = GetParentHandle()->ptr_cd_;
   
         // push incomplete logs to parent
         ptmp->incomplete_log_.insert(ptmp->incomplete_log_.end(),
@@ -1125,7 +1120,9 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
       ProbeIncompleteLogs();
     }
     else { // kStrict CDs
-      InvalidateIncompleteLogs();
+//      ProbeIncompleteLogs();
+      //InvalidateIncompleteLogs();
+      //printf("%s %s %lu\n", GetCDID().GetString().c_str(), label_.c_str(), incomplete_log_.size());
     }
 
 #if _LOG_PROFILING
@@ -1196,7 +1193,7 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
   {
     if (IsParentLocal() && mem_alloc_log_.size()!=0)
     {
-      CD* ptmp = GetParentHandle()->ptr_cd_;
+      CD *ptmp = GetParentHandle()->ptr_cd_;
       // push memory allocation logs to parent
       std::vector<IncompleteLogEntry>::iterator ii;
       for(it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
@@ -1251,7 +1248,7 @@ bool CD::PushedMemLogSearch(void* p, CD *curr_cd)
   if(cdh_temp != NULL)
   {
 //    cdh_temp = CDPath::GetParentCD(curr_cd->level());
-    CD* parent_CD = cdh_temp->ptr_cd();
+    CD *parent_CD = cdh_temp->ptr_cd();
     if(parent_CD!=NULL)
     {
       if(parent_CD->mem_alloc_log_.size()!=0)
@@ -1292,7 +1289,7 @@ unsigned int CD::PullMemLogs()
   std::vector<IncompleteLogEntry>::iterator it;  
   if(cdh_temp != NULL)
   {
-    CD* parent_CD = cdh_temp->ptr_cd();
+    CD *parent_CD = cdh_temp->ptr_cd();
     if(parent_CD!=NULL)
     {
       for(it=parent_CD->mem_alloc_log_.begin(); it!=parent_CD->mem_alloc_log_.end();it++)
@@ -1332,7 +1329,7 @@ void* CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, v
 //  if(GetCDID().level()!=0)
   if(cdh_temp != NULL)
   {
-    CD* parent_CD = cdh_temp->ptr_cd();
+    CD *parent_CD = cdh_temp->ptr_cd();
     if(parent_CD!=NULL)
     {
       //GONG:       
@@ -4037,7 +4034,7 @@ CommLogErrT CD::ProbeAndReadData(unsigned long flag)
   // look for the entry in incomplete_log_
   int found = 0;
   std::vector<struct IncompleteLogEntry>::iterator it;
-  CD* tmp_cd = this;
+  CD *tmp_cd = this;
   for (it=incomplete_log_.begin(); it!=incomplete_log_.end(); it++)
   {
     if (it->flag_ == flag) 
@@ -4098,11 +4095,25 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
   //printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
   if(incomplete_log_.size()!=0) {
     CD_DEBUG("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
-    printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
+//    printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
   }
 #if _MPI_VER
-  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
-    PMPI_Cancel(reinterpret_cast<MPI_Request *>(&(it->flag_)));
+  void *flag = NULL; //
+//  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
+////    PMPI_Cancel(reinterpret_cast<MPI_Request>(it->flag_));
+//    flag = it->flag_;
+//    printf("%lx\n", flag);
+//    PMPI_Cancel((MPI_Request *)(it->flag_));
+//    auto jt = it;
+//    incomplete_log_.erase(jt);
+//  }
+  while(incomplete_log_.size() != 0) {
+    auto incompl_log = incomplete_log_.back();
+    incomplete_log_.pop_back();
+    flag = incompl_log.flag_;
+//    printf("Trying to cancel ptr:%lx\n", flag);
+    CD_DEBUG("Trying to cancel ptr:%lx\n", flag); CD_DEBUG_FLUSH;
+    PMPI_Cancel((MPI_Request *)(incompl_log.flag_));
   }
 #endif
   LogEpilogue();
@@ -4126,7 +4137,7 @@ CommLogErrT CD::ProbeIncompleteLogs(void)
   //printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
   if(incomplete_log_.size()!=0) {
     CD_DEBUG("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
-    printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
+//    printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
   }
 #if _MPI_VER
   const size_t num_log = incomplete_log_.size();
@@ -4143,46 +4154,63 @@ CommLogErrT CD::ProbeIncompleteLogs(void)
   return kCommLogOK;
 }
 
+bool CD::DeleteIncompleteLog(void *flag)
+{
+  bool deleted = false;
+//  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
+//    auto jt = it;
+//    if(it->flag_ == flag) {
+//      incomplete_log_.erase(jt);
+//      deleted = true;
+//    }
+//  }
+  auto it = incomplete_log_.find(flag);
+  if(it != incomplete_log_.end()) {
+    incomplete_log_.erase(it);
+    deleted = true;
+    CD_DEBUG("FIND flag %p\n", flag);
+  }
+  
+  return deleted;
+}
+
+
 //SZ
-CommLogErrT CD::ProbeAndLogData(unsigned long flag)
+CommLogErrT CD::ProbeAndLogData(void *flag)
 {
   LogPrologue();
   // look for the entry in incomplete_log_
   int found = 0;
   std::vector<IncompleteLogEntry>::iterator it;
-  CD* tmp_cd = this;
+  CD *tmp_cd = this;
   LOG_DEBUG("size of incomplete_log_=%ld\n",incomplete_log_.size());
-  for (it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it)
-  {
-    LOG_DEBUG("it->flag_=%ld, and flag=%ld\n", it->flag_, flag);
-    if (it->flag_ == flag) 
-    {
+  for (it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
+    LOG_DEBUG("it->flag_=%p, and flag=%p\n", it->flag_, flag);
+    if (it->flag_ == flag) {
       found = 1;
       LOG_DEBUG("Found the entry in incomplete_log_ in current CD\n");
       break;
     }
   }
 
-  if (found == 0)
-  {
+  if (found == 0) {
     // recursively go up to search parent's incomplete_log_
-    while (tmp_cd->GetParentHandle() != NULL)
-    {
+    while (tmp_cd->GetParentHandle() != NULL) {
       tmp_cd = tmp_cd->GetParentHandle()->ptr_cd_; 
-      LOG_DEBUG("tmp_cd's level=%ld\n",(unsigned long)tmp_cd->cd_id_.level());
+      LOG_DEBUG("tmp_cd's level=%lu\n",(unsigned long)tmp_cd->cd_id_.level());
       LOG_DEBUG("tmp_cd->incomplete_log_.size()=%ld\n",
                     tmp_cd->incomplete_log_.size());
       for (it = tmp_cd->incomplete_log_.begin(); 
            it != tmp_cd->incomplete_log_.end(); 
-           ++it)
+           ++it) 
       {
-        if (it->flag_ == flag){
+        if (it->flag_ == flag) {
           found = 1;
           LOG_DEBUG("Found the entry in incomplete_log_ in one parent CD\n");
           break;
         }
       }
-      if (found){
+      if (found) {
         break;
       }
     }
@@ -4206,24 +4234,23 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 #endif
 
     // For inter-CD message, we record payload, otherwise, just record event itself.
+    // FIXME
     if(it->intra_cd_msg_ == false) { 
-      bool found = comm_log_ptr_->ProbeAndLogData((void*)(it->addr_), it->length_, flag, it->isrecv_);
-      if (!found)
-      {
-        CD* tmp_cd = this;
-        while (tmp_cd->GetParentHandle() != NULL)
-        {
-          tmp_cd = tmp_cd->GetParentHandle()->ptr_cd_; 
-          if (MASK_CDTYPE(tmp_cd->GetParentHandle()->ptr_cd()->cd_type_)==kRelaxed)
-          {
+      bool found = comm_log_ptr_->ProbeAndLogData(it->addr_, it->length_, flag, it->isrecv_);
+      if (!found)  {
+        CD *tmp_cd = this;
+        while (tmp_cd->GetParentHandle() != NULL)  {
+          //tmp_cd = tmp_cd->GetParentHandle()->ptr_cd_; 
+          if (MASK_CDTYPE(tmp_cd->GetParentHandle()->ptr_cd()->cd_type_)==kRelaxed) {
             found = tmp_cd->GetParentHandle()->ptr_cd()->comm_log_ptr_
-              ->ProbeAndLogDataPacked((void*)(it->addr_), it->length_, flag, it->isrecv_);
+              ->ProbeAndLogDataPacked(it->addr_, it->length_, flag, it->isrecv_);
             if (found)
               break;
           }
           else {
             break;
           }
+          tmp_cd = tmp_cd->GetParentHandle()->ptr_cd_; 
         }
         if (!found)
         {
@@ -4266,7 +4293,7 @@ CommLogErrT CD::ProbeAndLogData(unsigned long flag)
 
 //SZ
 CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, uint32_t task_id, 
-                      bool completed, unsigned long flag, bool isrecv, bool isrepeated, 
+                      bool completed, void *flag, bool isrecv, bool isrepeated, 
                       bool intra_cd_msg, int tag, ColorT comm)
 {
   LogPrologue();
@@ -4340,14 +4367,6 @@ bool CD::IsNewLogGenerated()
 }
 
 
-//SZ
-//  struct IncompleteLogEntry{
-//    unsigned long addr_;
-//    unsigned long length_;
-//    unsigned long flag_;
-//    bool complete_;
-//    bool isrecv_;
-//  };
 void CD::PrintIncompleteLog()
 {
   if (incomplete_log_.size()==0) return;
