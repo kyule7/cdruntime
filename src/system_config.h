@@ -11,9 +11,9 @@
 //#define ERROR_TYPE_7      0x00080 
 //#define ERROR_TYPE_8      0x00100 
 //#define ERROR_TYPE_9      0x00200 
-#define ERROR_RATE_TYPE_0 0.1
-#define ERROR_RATE_TYPE_1 0.1
-#define ERROR_RATE_TYPE_2 0.02
+#define ERROR_RATE_TYPE_0 0.001
+#define ERROR_RATE_TYPE_1 0.005
+#define ERROR_RATE_TYPE_2 0.01
 #define ERROR_RATE_TYPE_3 0.02
 #define ERROR_RATE_TYPE_4 0.06
 #define ERROR_RATE_TYPE_5 0.08

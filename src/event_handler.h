@@ -92,14 +92,14 @@ class HandleAllReexecute : public CDEventHandler {
 public:
   HandleAllReexecute(CD *ptr_cd) 
     : CDEventHandler(ptr_cd) {}
-  ~HandleAllReexecute(){}
+  virtual ~HandleAllReexecute(){}
   virtual void HandleEvent(void);
 };
 class HandleEntrySend : public CDEventHandler {
 public:
   HandleEntrySend(CD *ptr_cd) 
     : CDEventHandler(ptr_cd) {}
-  ~HandleEntrySend(){}
+  virtual ~HandleEntrySend(){}
   virtual void HandleEvent(void);
 };
 
@@ -110,9 +110,20 @@ class HandleErrorOccurred : public HeadCDEventHandler {
 public:
   HandleErrorOccurred(HeadCD *ptr_cd, int task_id=0) 
     : HeadCDEventHandler(ptr_cd), task_id_(task_id) {}
-  ~HandleErrorOccurred() { cddbg << "HandleErrorOccurred is destroyed" << endl; }
+  virtual ~HandleErrorOccurred() { cddbg << "HandleErrorOccurred is destroyed" << endl; }
   virtual void HandleEvent(void);
 };
+
+//class HandleEscalationDetected : public HeadCDEventHandler {
+//  int task_id_;
+//public:
+//  HandleEscalationDetected(HeadCD *ptr_cd, int task_id=0) 
+//    : HeadCDEventHandler(ptr_cd), task_id_(task_id) {}
+//  virtual ~HandleEscalationDetected(void) { cddbg << "HandleErrorOccurred is destroyed" << endl; }
+//  virtual void HandleEvent(void);
+//
+//};
+
 
 class HandleEntrySearch : public HeadCDEventHandler {
   int task_id_;
@@ -121,7 +132,7 @@ public:
     : HeadCDEventHandler(ptr_cd) {
     task_id_ = task_id;
   }
-  ~HandleEntrySearch() {}
+  virtual ~HandleEntrySearch() {}
   virtual void HandleEvent(void);
 };
 
@@ -129,7 +140,7 @@ class HandleAllResume : public HeadCDEventHandler {
 public:
   HandleAllResume(HeadCD *ptr_cd) 
     : HeadCDEventHandler(ptr_cd) {}
-  ~HandleAllResume() {}
+  virtual ~HandleAllResume() {}
   virtual void HandleEvent(void);
 };
 

@@ -272,7 +272,7 @@ class CDHandle {
                                          //!< state in CD trees that are not loop based.
                      int cd_type=kDefaultCD, //!< [in] Strict or relaxed. 
                                              //!< User can also set preservation medium for children CDs 
-                                             //!< when creating them. (ex. kStrict | kDRAM)
+                                             //!< when creating them. (ex. kStrict | kHDD)
                      uint32_t error_name_mask=0, //!< [in] each `1` in the mask indicates that this CD
                                                  //!< should be able to recover from that error type.
                      uint32_t error_loc_mask=0, //!< [in] each `1` in the mask indicates that this CD

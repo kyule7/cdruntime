@@ -515,14 +515,15 @@ namespace cd {
 
   enum CDEventT { kNoEvent=0,
                   // Head -> Non-Head
-                  kAllPause=1,
-                  kAllResume=2,
-                  kAllReexecute=4,
-                  kEntrySend=8, 
+                  kAllPause=BIT_1,
+                  kAllResume=BIT_2,
+                  kAllReexecute=BIT_3,
+                  kAllEscalate=BIT_4,
+                  kEntrySend=BIT_5, 
                   // Non-Head -> Head
-                  kEntrySearch=16,
-                  kErrorOccurred=32,
-                  kReservedEvent=64 };
+                  kEntrySearch=BIT_6,
+                  kErrorOccurred=BIT_7,
+                  kEscalationDetected=BIT_8 };
 
 /** \addtogroup profiler-related
  *@{

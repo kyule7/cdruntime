@@ -943,31 +943,25 @@ CDErrT CD::SetMailBox(const CDEventT &event)
   CD_DEBUG("\n[CD::SetMailBox] myTaskID #%d, event : %s, Is it Head? : %d\n", myTaskID, event2str(event).c_str(), IsHead());
   //printf("\n[CD::SetMailBox] myTaskID #%d, event : %s, Is it Head? : %d\n", myTaskID, event2str(event).c_str(), IsHead());
 
-  CD::CDInternalErrT ret=kOK;
-//  int val = 1;
-
+  CD::CDInternalErrT ret = kOK;
   CDHandle *curr_cdh = CDPath::GetCDLevel(level());
-//  int head_id = head();
-  if(event == CDEventT::kNoEvent) {
 
-    CD_DEBUG("\n=================== Set Mail Box Done ==========================\n");
+  if(event != CDEventT::kNoEvent) {
 
-    return static_cast<CDErrT>(ret);  
-  }
-//  if(task_size() == 1) {
     // This is the leaf that has just single task in a CD
     CD_DEBUG("[SetMailBox Leaf and have 1 task] size is %u. Check mailbox at the upper level.\n", task_size());
-
+  
     while( curr_cdh->node_id_.size()==1 ) {
       if(curr_cdh == GetRootCD()) {
         ERROR_MESSAGE("[SetMailBox] there is a single task in the root CD\n");
       }
-      CD_DEBUG("[SetMailBox|Searching for CD Level having non-single task] Current Level : %u\n", curr_cdh->ptr_cd()->GetCDID().level());
-
+      CD_DEBUG("[SetMailBox|Searching for CD Level having non-single task] Current Level : %u\n", 
+          curr_cdh->ptr_cd()->GetCDID().level());
+  
       // If current CD is Root CD and GetParentCD is called, it returns NULL
       curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
     }
- 
+  
     CD_DEBUG("[SetMailBox] %s / %s at level #%u\n", 
              curr_cdh->ptr_cd()->GetCDName().GetString().c_str(), 
              curr_cdh->node_id_.GetString().c_str(), 
@@ -976,48 +970,13 @@ CDErrT CD::SetMailBox(const CDEventT &event)
              GetCDName().GetString().c_str(), 
              GetNodeID().GetString().c_str(), 
              level());
-
-//    head_id = curr_cdh->node_id().head();
-//  }
-
-  if(curr_cdh->IsHead()) 
-    assert(0);
-
-  CD_DEBUG("Before RemoteSetMailBox\n");
-
-//  curr_cdh->ptr_cd()
-  ret = RemoteSetMailBox(curr_cdh->ptr_cd(), event);
   
-/*
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, curr_cdh->ptr_cd()->pendingWindow_);
-  if(event != CDEventT::kNoEvent) {
-    dbg << "Set CD Event kErrorOccurred. Level : " << level() <<" CD Name : " << GetCDName()<< endl;
-    // Increment pending request count at the target task (requestee)
-    PMPI_Accumulate(&val, 1, MPI_INT, 
-                    head_id, 0, 1, MPI_INT, 
-                    MPI_SUM, curr_cdh->ptr_cd()->pendingWindow_);
-    dbg << "MPI Accumulate done for tast #"<< head_id <<" (head)"<< endl; //getchar();
+    if(curr_cdh->IsHead()) 
+      assert(0);
+  
+    ret = RemoteSetMailBox(curr_cdh->ptr_cd(), event);
+  
   }
-  PMPI_Win_unlock(head_id, curr_cdh->ptr_cd()->pendingWindow_);
-
-  CDMailBoxT &mailbox = curr_cdh->ptr_cd()->mailbox_;
-
-
-
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, mailbox);
-
-  // Inform the type of event to be requested
-  dbg << "Set event start" << endl; //getchar();
-  if(event != CDEventT::kNoEvent) {
-    PMPI_Accumulate(&event, 1, MPI_INT, 
-                    head_id, curr_cdh->node_id_.task_in_color(), 1, MPI_INT, 
-                    MPI_BOR, mailbox);
-  }
-  dbg << "MPI Accumulate done for task #"<< head_id <<"(head)"<< endl; //getchar();
-
-  PMPI_Win_unlock(head_id, mailbox);
-*/
-
   CD_DEBUG("\n=================== Set Mail Box Done ==========================\n");
   return static_cast<CDErrT>(ret);
 }
@@ -1034,31 +993,32 @@ CD::CDInternalErrT CD::RemoteSetMailBox(CD *curr_cd, const CDEventT &event)
   int head_id = curr_cd->head();
   int val = 1;
 
-  if(event != CDEventT::kNoEvent) {
-    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, curr_cd->pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, curr_cd->pendingWindow_);
 
-    CD_DEBUG("[%s] Set CD Event %s at level #%u. CD Name %s (%s)\n", __func__, event2str(event).c_str(), curr_cd->level(), curr_cd->GetCDName().GetString().c_str(), name_.c_str());
+  CD_DEBUG("[%s] Set CD Event %s at level #%u. CD Name %s (%s)\n", __func__, 
+      event2str(event).c_str(), curr_cd->level(), 
+      curr_cd->GetCDName().GetString().c_str(), name_.c_str());
 
-    // Increment pending request count at the target task (requestee)
-    PMPI_Accumulate(&val, 1, MPI_INT, 
-                    head_id, 0, 1, MPI_INT, 
-                    MPI_SUM, curr_cd->pendingWindow_);
-    CD_DEBUG("MPI Accumulate (Increment pending counter) done for task #%u (head)\n", head_id);
+  // Increment pending request count at the target task (requestee)
+  PMPI_Accumulate(&val, 1, MPI_INT, 
+                  head_id, 0, 1, MPI_INT, 
+                  MPI_SUM, curr_cd->pendingWindow_);
+  CD_DEBUG("MPI Accumulate (Increment pending counter) done for task #%u (head)\n", head_id);
   
-    PMPI_Win_unlock(head_id, curr_cd->pendingWindow_);
+  PMPI_Win_unlock(head_id, curr_cd->pendingWindow_);
   
-    CDMailBoxT &mailbox = curr_cd->mailbox_;
+  CDMailBoxT &mailbox = curr_cd->mailbox_;
 
-    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, mailbox);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, mailbox);
   
-    // Inform the type of event to be requested
-    PMPI_Accumulate((void *)&event, 1, MPI_INT, 
-                    head_id, curr_cd->task_in_color(), 1, MPI_INT, 
-                    MPI_BOR, mailbox);
-    CD_DEBUG("MPI Accumulate (Set event flag) done for task #%u (head)\n", head_id);
+  // Inform the type of event to be requested
+  PMPI_Accumulate((void *)&event, 1, MPI_INT, 
+                  head_id, curr_cd->task_in_color(), 1, MPI_INT, 
+                  MPI_BOR, mailbox);
+  CD_DEBUG("MPI Accumulate (Set event flag) done for task #%u (head)\n", head_id);
 
-    PMPI_Win_unlock(head_id, mailbox);
-  }
+  PMPI_Win_unlock(head_id, mailbox);
+
   CD_DEBUG("MPI Accumulate done for task #%u (head)\n", head_id);
   CD_DEBUG("[CD::RemoteSetMailBox] Done.\n");
 
@@ -1068,10 +1028,12 @@ CD::CDInternalErrT CD::RemoteSetMailBox(CD *curr_cd, const CDEventT &event)
 
 CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
 {
-  CD_DEBUG("\n\n=================== Set Mail Box (%s, %d) Start! myTaskID #%d at %s level #%u ==========================\n", event2str(event).c_str(), task_id, myTaskID, name_.c_str(), level());
+  CD_DEBUG("\n\n=================== Set Mail Box (%s, %d) Start! myTaskID #%d at %s level #%u ==========================\n", 
+      event2str(event).c_str(), task_id, myTaskID, name_.c_str(), level());
  
   if(event == CDEventT::kErrorOccurred || event == CDEventT::kEntrySearch) {
-    ERROR_MESSAGE("[HeadCD::SetMailBox(event, task_id)] Error, the event argument is something wrong. event: %s\n", event2str(event).c_str());
+    ERROR_MESSAGE("[HeadCD::SetMailBox(event, task_id)] Error, the event argument is something wrong. event: %s\n", 
+        event2str(event).c_str());
   }
 
   if(task_size() == 1) {
@@ -1090,7 +1052,8 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
       // Increment pending request count at the target task (requestee)
       if(event != CDEventT::kNoEvent) {
         PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_id, 0, pendingWindow_);
-        CD_DEBUG("Set CD Event %s at level #%u. CD Name : %s\n", event2str(event).c_str(), level(), GetCDName().GetString().c_str());
+        CD_DEBUG("Set CD Event %s at level #%u. CD Name : %s\n", 
+                  event2str(event).c_str(), level(), GetCDName().GetString().c_str());
         CD_DEBUG("Accumulate event at %d\n", task_id);
   
         PMPI_Accumulate(&val, 1, MPI_INT, 

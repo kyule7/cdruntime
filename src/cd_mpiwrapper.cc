@@ -2442,10 +2442,15 @@ int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],
   return PMPI_Group_translate_ranks(group1, n, ranks1,
                                     group2, ranks2);
 }
-unsigned epoch_num = 0;
+
+std::map<uint32_t, uint32_t> epoch_num;
+//unsigned epoch_num = 0;
 int MPI_Win_fence(int assert, MPI_Win win)
 {
-  CD_DEBUG("[%s %u] called %s at %u (#reexec: %d, reexecInfo:%d(%u))\n", __func__, epoch_num++, GetCurrentCD()->ptr_cd()->name(), GetCurrentCD()->ptr_cd()->level(), GetCurrentCD()->ptr_cd()->num_reexec(), GetCurrentCD()->need_reexec(), GetCurrentCD()->reexec_level());
+  CD_DEBUG("[%s %u|%u] called %s at %u (nid %s)(#reexec: %d, (%d)reexec level %u))\n", __func__, 
+    GetCurrentCD()->ptr_cd()->level(), epoch_num[GetCurrentCD()->ptr_cd()->level()]++, 
+    GetCurrentCD()->ptr_cd()->name(), GetCurrentCD()->ptr_cd()->level(), GetCurrentCD()->node_id().GetString().c_str(),
+    GetCurrentCD()->ptr_cd()->num_reexec(), GetCurrentCD()->need_reexec(), GetCurrentCD()->reexec_level());
 #if CD_DEBUG_DEST == 1
 //  Profiler::Print();
   CD_DEBUG_FLUSH;

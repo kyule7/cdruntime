@@ -402,22 +402,24 @@ namespace cd {
 
   extern inline std::string event2str(int event) {
     switch(event) {
-      case 0:
+      case BIT_0:
         return "kNoEvent";
-      case 1:
+      case BIT_1:
         return "kAllPause";
-      case 2:
+      case BIT_2:
         return "kAllResume";
-      case 4:
+      case BIT_3:
         return "kAllReexecute";
-      case 8:
+      case BIT_4:
+        return "kAllEscalate";
+      case BIT_5:
         return "kEntrySend";
-      case 16:
+      case BIT_6:
         return "kEntrySearch";
-      case 32:
+      case BIT_7:
         return "kErrorOccurred";
-      case 64:
-        return "kReserved";
+      case BIT_8:
+        return "kEscalationDetected";
       default:
         return "UNDEFINED EVENT";
     }

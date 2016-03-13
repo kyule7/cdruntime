@@ -427,7 +427,7 @@ void HandleAllResume::HandleEvent(void)
 
   CD_DEBUG("CD Event kAllResume\t\t\t");
 
-    *(ptr_cd_->event_flag_) &= ~kAllResume;
+  *(ptr_cd_->event_flag_) &= ~kAllResume;
 
   IncHandledEventCounter();
 
@@ -468,14 +468,12 @@ void HandleAllPause::HandleEvent(void)
 
 void HandleAllReexecute::HandleEvent(void)
 {
+  CD_DEBUG("[%s] CD Event kAllReexecute\t\t", __func__);
 #if _MPI_VER
 
 #if 1
-  if(ptr_cd_->task_size() == 1) assert(0);
-
-  CD_DEBUG("[%s] CD Event kAllReexecute\t\t", __func__);
-  *(ptr_cd_->event_flag_) &= ~kAllReexecute;
-  IncHandledEventCounter();
+  if(ptr_cd_->task_size() == 1) 
+    assert(0);
 
   CD::need_reexec  = true;
 //  CD::reexec_level = ptr_cd_->level();
@@ -485,11 +483,43 @@ void HandleAllReexecute::HandleEvent(void)
   else {
     CD::need_escalation = true;
   }
+
+  // Important note by Kyusick
+  // Polling-based event handling mechanism has potential deadlock issue.
+  // For example, there are N tasks in the same CD,
+  // and N-1 tasks observed kAllReexecute event at parent level,
+  // but 1 task did not for some reason.
+  // MPI_Win_fence cannot guarantee that everybody observes the same event,
+  // because kAllReexecute is "putted" by parent-level CD (communicator for MPI).
+  // To guarantee this, we cannot use parent-level MPI_Win_fence, either,
+  // because we should not synchronize parent-level task group at lower level
+  // just for checking MailBox. 
+  // For this reason, I decided to regard upper-level kAllreexecute as kErrorOccurred.
+  // But I differentiated it with kEscalationDetected.
+  // If any task observe upper level's escalation request, 
+  // it first reports to head at current level.
+  // Once head observed kEscalationDetected or kAllreexecute at upper level (escalation) itself,
+  // it calls SetMailBox(kAllReexecute).
+  // This guarantees that anybody does not proceed to complete being unaware of some error events.
+  // Whenever non-head tasks observes kAllReexecute, it "Get" the rollback point from head.
+  if(ptr_cd_->level() < GetCurrentCD()->level()) {
+    GetCurrentCD()->SetMailBox(kErrorOccurred);
+
+
+    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cd->mailbox_info_);
+    PMPI_Accumulate(&(ptr_cd_->node_id_.level_), 1, MPI_UNSIGNED,
+                    head_id, 0, 1, MPI_UNSIGNED, 
+                    MPI_MIN, cd->mailbox_info_);
+    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cd->mailbox_info_);
+  }
+
+  *(ptr_cd_->event_flag_) &= ~kAllReexecute;
+  IncHandledEventCounter();
+
   CD_DEBUG("[%s] need reexec (%d) O-->%u (cur %u)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->level());
 #else
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();
-
 #endif
 
 #endif

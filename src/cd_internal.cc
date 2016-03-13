@@ -497,11 +497,11 @@ CDHandle *CD::CreateRootCD(const char* name,
 }
 
 
-CDErrT CD::Destroy(void)
+CDErrT CD::Destroy(bool collective)
 {
   CD_DEBUG("CD::Destroy\n");
   CDErrT err=CDErrT::kOK;
-  InternalDestroy();
+  InternalDestroy(collective);
 
 
   return err;
@@ -636,7 +636,7 @@ void AttachChildCD(HeadCD *new_cd)
 }
 
 inline 
-CD::CDInternalErrT CD::InternalDestroy(void)
+CD::CDInternalErrT CD::InternalDestroy(bool collective)
 {
 
 #if _MPI_VER
@@ -645,6 +645,16 @@ CD::CDInternalErrT CD::InternalDestroy(void)
 #if CD_DEBUG_DEST == 1
     fflush(cdout);
 #endif
+  bool orig_need_reexec = need_reexec;
+  if(collective)
+    SyncCDs(this);
+
+//  if(need_reexec != orig_need_reexec) {
+//    CD_DEBUG("\n\n[%s]Reexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n", __func__);
+//    CD::GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
+//  } else {
+//    CD_DEBUG("\n\nReexec is false\n");
+//  }
   
   if(task_size() > 1 && (is_window_reused_==false)) {  
     PMPI_Win_free(&pendingWindow_);
@@ -681,6 +691,12 @@ CD::CDInternalErrT CD::InternalDestroy(void)
 
   delete this;
 
+  if(need_reexec != orig_need_reexec) {
+    CD_DEBUG("\n\n[%s]Reexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n", __func__);
+    CD::GetCDToRecover(GetParentCD(level()), true)->ptr_cd()->Recover();
+  } else {
+    CD_DEBUG("\n\nReexec is false\n");
+  }
   return CDInternalErrT::kOK;
 
 }
@@ -790,12 +806,24 @@ CDErrT CD::Begin(bool collective, const char* label)
 
 #endif
 
-  if(collective && task_size() > 1) {
-    MPI_Win_fence(0, mailbox_);
-    CD_DEBUG("[%s] Barrier!!!! Important!!\n", __func__);
-    //PMPI_Barrier(color());
+//  if(collective && task_size() > 1) {
+//    MPI_Win_fence(0, mailbox_);
+//    CD_DEBUG("[%s] Barrier!!!! Important!!\n", __func__);
+//    //PMPI_Barrier(color());
+//  } else {
+//    CD_DEBUG("No Barrier!!!!! %d %u\n", collective, task_size());
+//  }
+
+  if(cd_exec_mode_ == kReexecution || collective)
+    SyncCDs(this);
+
+  if(CD::need_reexec) {
+    CD_DEBUG("\n\n[%s]Reexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n", __func__);
+    CD::GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
+//    CD *cd_to_recover = ptr_cd_->GetCDToRecover();
+//    cd_to_recover->recoverObj_->Recover(cd_to_recover);
   } else {
-    CD_DEBUG("No Barrier!!!!! %d %u\n", collective, task_size());
+    CD_DEBUG("\n\nReexec is false\n");
   }
 
   if( cd_exec_mode_ != kReexecution ) { // normal execution
@@ -909,7 +937,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #endif
     target->ptr_cd_->CompleteLogs();
     target->ptr_cd_->DeleteEntryDirectory();
-    target->Destroy();
+    target->Destroy(false);
     
     return GetCDToRecover(CDPath::GetCDLevel(--level), true);
   } else {
@@ -1019,11 +1047,18 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     // It will somehow coordinate tasks in the same CD in level 3, not the other tasks in different CDs at level 3.
     // The tasks corresponding to the CD in level 3 will reach some point,
     // and it detected that it needs to go to level 1 by some tasks in the different CD in the same level 3.
-
+    // 0309
+    // Rethink the condition to sync
+    // <Example>
+    // Task0 is at level 4 and reexec_level is 3
+    // The other thread is at level 3. And They are waiting for Task0.
+    // This case Task0 must call sync.
+    // 
+    //
     //bool initiator = orig_reexec_level <= reexec_level && level() != reexec_level;
     // FIXME
 //    printf("GetCDLevel : %u (cur %u), path size: %lu\n", reexec_level, level(), CDPath::uniquePath_->size());
-    bool initiator = orig_reexec_level <= reexec_level && (CDPath::GetCDLevel(reexec_level)->task_size() != task_size());
+    bool initiator = true;//orig_reexec_level <= reexec_level && (CDPath::GetCDLevel(reexec_level)->task_size() != task_size());
 //    printf("initiator? %d = %u <= %u\n", initiator, orig_reexec_level, reexec_level);
 //    CD_DEBUG("initiator? %d = %u <= %u\n", initiator, orig_reexec_level, reexec_level);
 //    GetCDToRecover(reexec_level < cd_id_.cd_name_.level() && reexec_level != INVALID_ROLLBACK_POINT)->Recover(false);
@@ -2901,12 +2936,12 @@ CDHandle *HeadCD::Create(CDHandle* parent,
 }
 
 
-CDErrT HeadCD::Destroy(void)
+CDErrT HeadCD::Destroy(bool collective)
 {
   CD_DEBUG("HeadCD::Destroy\n");
   CDErrT err=CDErrT::kOK;
 
-  InternalDestroy();
+  InternalDestroy(collective);
 
   return err;
 }

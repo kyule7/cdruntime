@@ -341,7 +341,7 @@ update the preserved data.
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err);
 
-    virtual CDErrT Destroy(void);
+    virtual CDErrT Destroy(bool collective=true);
 
     CDErrT Begin(bool collective=true, 
                  const char *label=NULL);
@@ -498,7 +498,7 @@ public:
                      uint64_t sys_bit_vector, 
                      CDHandle** new_cd_handle);
 
-    CDInternalErrT InternalDestroy(void);
+    CDInternalErrT InternalDestroy(bool collective);
     CDInternalErrT InternalPreserve(void *data, 
                                     uint64_t &len_in_bytes,
                                     uint32_t preserve_mask, 
@@ -700,7 +700,7 @@ class HeadCD : public CD {
                              CDType cd_type, 
                              uint64_t sys_bit_vector, 
                              CDInternalErrT* cd_err=0);
-    virtual CDErrT Destroy(void);
+    virtual CDErrT Destroy(bool collective=true);
     virtual CDErrT Reexecute(void);
     virtual CDErrT Stop(CDHandle *cdh=NULL);
     virtual CDErrT Resume(void); // Does this make any sense?

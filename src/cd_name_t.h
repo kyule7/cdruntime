@@ -75,7 +75,7 @@ private:
   // Level in the CD hierarhcy. It increases at Create() and destroys at Destroy.
   uint32_t level_;  
   uint32_t rank_in_level_;
-  uint32_t size_;    // The number of sibling CDs
+  uint32_t size_;    // The number of CDs in the same level
 public:
   CDNameT(void);
   CDNameT(uint64_t level, uint64_t rank_in_level=0, uint64_t size=1);
