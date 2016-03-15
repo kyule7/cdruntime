@@ -52,7 +52,7 @@ int cd::handled_event_count = 0;
 NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, const int &new_task, const int &new_head_id)
 {
 //  dbg<<"new_color : " << new_color <<", new_task: "<<new_task<<", new_node.color(): "<<new_node.color()<<endl;
-    CD_DEBUG("[%s] need_reexec??? %d from %u (%s)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->name_.c_str());
+    CD_DEBUG("[%s] need_reexec??? %d from %u (%s)\n", __func__, CD::need_reexec, *CD::rollback_point_, ptr_cd_->name_.c_str());
 
     if(task_size() > 1) {
       CD_DEBUG("[%s] CheckMailBox before calling MPI_Comm_split at level %d (%s)\n", __func__, level(), ptr_cd_->name_.c_str());
@@ -74,8 +74,8 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, cons
     }
     CheckMailBox();
 
-    CD_DEBUG("[%s] need_reexec? %d from %u (%s)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->name_.c_str());
-    //printf("[%s] need_reexec? %d from %u (%s)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->name_.c_str());
+    CD_DEBUG("[%s] need_reexec? %d from %u (%s)\n", __func__, CD::need_reexec, *CD::rollback_point_, ptr_cd_->name_.c_str());
+    //printf("[%s] need_reexec? %d from %u (%s)\n", __func__, CD::need_reexec, *CD::rollback_point_, ptr_cd_->name_.c_str());
     if(CD::need_reexec) {
       CD_DEBUG("\n\nReexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n");
       CD::GetCDToRecover(this, false)->ptr_cd()->Recover();
@@ -565,6 +565,7 @@ CDErrT CD::CheckMailBox(void)
 {
 
   CD::CDInternalErrT ret=kOK;
+  DecPendingCounter();
   int event_count = *pendingFlag_;
 //  int event_count = *pendingFlag_;
   assert(event_count <= 1024);
@@ -1379,42 +1380,56 @@ CDErrT CD::SetMailBox(CDEventT &event)
 
 void CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
 {
-  printf("[%s] cur level : %u size:%u\n", __func__, level(), task_size());
-  CD *cur_cd = CDPath::GetCoarseCD(this);
-  printf("[%s] check level : %u size:%u\n", __func__, cur_cd->level(), cur_cd->task_size());
+//  printf("[%s] cur level : %u size:%u\n", __func__, level(), task_size());
+//  CD *cur_cd = CDPath::GetCoarseCD(this);
+  CD *cur_cd = CDPath::GetRootCD()->ptr_cd();
+//  printf("[%s] check level : %u size:%u\n", __func__, cur_cd->level(), cur_cd->task_size());
   uint32_t head_id = head();
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cur_cd->rollbackWindow_);
+#if 1
   if(remote == true) {
+    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cur_cd->rollbackWindow_);
     PMPI_Accumulate(&rollback_lv, 1, MPI_UNSIGNED,
                     head_id, 0,   1, MPI_UNSIGNED, 
                     MPI_MIN, cur_cd->rollbackWindow_);
+    PMPI_Win_unlock(head_id, cur_cd->rollbackWindow_);
   }
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cur_cd->task_in_color(), 0, cur_cd->rollbackWindow_);
+  // This is important. It is necessary to set it locally, too.
   if(rollback_lv < *(cur_cd->rollback_point_)) {
     *(cur_cd->rollback_point_) = rollback_lv;
+//    printf("\nTHIS???\n");
+  } else {
+//    printf("\nTHAT???\n");
   }
-  PMPI_Win_unlock(head_id, cur_cd->rollbackWindow_);
+  if(*(cur_cd->rollback_point_) != INVALID_ROLLBACK_POINT)
+    need_reexec = true;
+  PMPI_Win_unlock(cur_cd->task_in_color(), cur_cd->rollbackWindow_);
+#endif
 }
 
 uint32_t CD::CheckRollbackPoint(bool remote) 
 {
-  printf("[%s] cur level : %u size : %u\n", __func__,  level(), task_size());
-  CD *cur_cd = CDPath::GetCoarseCD(this);
-  printf("[%s] check level : %u size : %u\n", __func__, cur_cd->level(), cur_cd->task_size());
+//  printf("[%s] cur level : %u size : %u\n", __func__,  level(), task_size());
+//  CD *cur_cd = CDPath::GetCoarseCD(this);
+  CD *cur_cd = CDPath::GetRootCD()->ptr_cd();
+//  printf("[%s] check level : %u size : %u\n", __func__, cur_cd->level(), cur_cd->task_size());
   uint32_t rollback_lv = INVALID_ROLLBACK_POINT;
   uint32_t head_id = cur_cd->head();
   // Read lock is used because everybody will just read it.
 //  printf("%p\n", &rollbackWindow_);
-  PMPI_Win_lock_all(0, cur_cd->rollbackWindow_);
-//  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cur_cd->rollbackWindow_);
+//  PMPI_Win_lock_all(0, cur_cd->rollbackWindow_);
+#if 1
+  PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, cur_cd->rollbackWindow_);
   if(remote == true) { 
-    // Update reexec_level_ from head
-    MPI_Get(cur_cd->rollback_point_, 1, MPI_UNSIGNED, 
+    // Update *rollback_point__ from head
+    PMPI_Get(cur_cd->rollback_point_, 1, MPI_UNSIGNED, 
             head_id, 0,     1, MPI_UNSIGNED,
-            cur_cd->rollbackWindow_); // Read reexec_level from head.
+            cur_cd->rollbackWindow_); // Read *rollback_point_ from head.
   }
   rollback_lv = *(cur_cd->rollback_point_);
-//  PMPI_Win_unlock(head_id, cur_cd->rollbackWindow_);
-  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
+  PMPI_Win_unlock(head_id, cur_cd->rollbackWindow_);
+#endif
+//  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
 
   return rollback_lv;
 }
@@ -1458,7 +1473,7 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
       CheckMailBox();
       if(need_reexec) { // This could be set inside CD::CheckMailBox()
         CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
-            __func__, level(), reexec_level, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+            __func__, level(), *rollback_point_, label_.c_str(), cd_id_.node_id_.GetString().c_str());
         CD_DEBUG_FLUSH;
         printed = false;
 //        GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
@@ -1466,7 +1481,7 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
       } else {
         if(printed == false) {
           CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
-              __func__, level(), reexec_level, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+              __func__, level(), *rollback_point_, label_.c_str(), cd_id_.node_id_.GetString().c_str());
           CD_DEBUG_FLUSH;
           printed = true;
         }

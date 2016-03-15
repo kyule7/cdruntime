@@ -1095,7 +1095,7 @@ class CDHandle {
 //    uint32_t reexec_level(void)  const;
   public:
     bool     need_reexec(void)   const;
-    uint32_t reexec_level(void)  const;
+    uint32_t rollback_point(void)  const;
 
 /// Check the mode of current CD.
     int GetExecMode(void) const;

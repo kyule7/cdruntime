@@ -640,6 +640,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
  
   if(num_children > 1) {
     err = SplitCD(node_id_.task_in_color(), node_id_.size(), num_children, new_color, new_task);
+    CD_DEBUG("[%s], GenNewNodeID\n", __func__);
     new_node_id = GenNewNodeID(node_id_.color(), new_color, new_task, 0);
     assert(new_size == new_node_id.size());
   }
@@ -756,7 +757,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 CDErrT CDHandle::Destroy(bool collective) {
   CDPrologue();
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
-                                                                      level(), CD::need_reexec, CD::reexec_level);
+                                                                      level(), CD::need_reexec, *CD::rollback_point_);
   CDErrT err = InternalDestroy(collective);
   CDEpilogue();
   return err;
@@ -836,7 +837,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 {
   CDPrologue();
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
-                                                                      level(), CD::need_reexec, CD::reexec_level);
+                                                                      level(), CD::need_reexec, *CD::rollback_point_);
 
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
@@ -1113,7 +1114,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   CDPrologue();
   CD_DEBUG("[%s] check mode : %d at %s %s level %u (reexecInfo %d (%u))\n", __func__, ptr_cd()->cd_exec_mode_, 
                                                           ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
-                                                          level(), CD::need_reexec, CD::reexec_level);
+                                                          level(), CD::need_reexec, *CD::rollback_point_);
 
   std::vector<SysErrT> ret_prepare;
   CDErrT err = kOK;
@@ -1136,7 +1137,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 //      CDPath::GetCDLevel(rollback_point)->SetMailBox(kErrorOccurred);
 
 //    CD::need_reexec = true;
-//    CD::reexec_level = rollback_point;
+//    *CD::rollback_point_ = rollback_point;
     
     printf("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
         rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
@@ -1145,10 +1146,10 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     if(rb_cdh->task_size() > 1) {
       rb_cdh->SetMailBox(kErrorOccurred);
     } else {
-      if(rollback_point < CD::reexec_level) {
+      if(rollback_point < *CD::rollback_point_) {
         CD::need_reexec = true;
-        CD::reexec_level = rollback_point;
-//        printf("reexec_level %d\n", CD::reexec_level);
+        *CD::rollback_point_ = rollback_point;
+//        printf("*rollback_point_ %d\n", *CD::rollback_point_);
 //        rb_cdh->SetMailBox(kErrorOccurred);
       }
 //      if(rollback_point != level())
@@ -1451,7 +1452,7 @@ jmp_buf* CDHandle::jump_buffer()
 bool     CDHandle::recreated(void)     const { return ptr_cd_->recreated_; }
 bool     CDHandle::reexecuted(void)    const { return ptr_cd_->reexecuted_; }
 bool     CDHandle::need_reexec(void)   const { return CD::need_reexec; }
-uint32_t CDHandle::reexec_level(void)  const { return CD::reexec_level; }
+uint32_t CDHandle::rollback_point(void)  const { return *CD::rollback_point_; }
 CDType   CDHandle::GetCDType(void)     const { return ptr_cd_->GetCDType(); }
 int CDHandle::GetCommLogMode(void) const {return ptr_cd_->GetCommLogMode(); }
 int CDHandle::GetCDLoggingMode(void) const {return ptr_cd_->cd_logging_mode_;}

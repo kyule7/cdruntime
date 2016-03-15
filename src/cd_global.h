@@ -515,11 +515,12 @@ namespace cd {
 
   enum CDEventT { kNoEvent=0,
                   // Head -> Non-Head
-                  kAllPause=BIT_1,
-                  kAllResume=BIT_2,
-                  kAllReexecute=BIT_3,
-                  kAllEscalate=BIT_4,
-                  kEntrySend=BIT_5, 
+                  kAllPause=BIT_0,
+                  kAllResume=BIT_1,
+                  kAllReexecute=BIT_2,
+                  kAllEscalate=BIT_3,
+                  kEntrySend=BIT_4, 
+                  kReserved=BIT_5, 
                   // Non-Head -> Head
                   kEntrySearch=BIT_6,
                   kErrorOccurred=BIT_7,

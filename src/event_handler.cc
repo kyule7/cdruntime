@@ -465,7 +465,101 @@ void HandleAllPause::HandleEvent(void)
 
 #endif
 }
+#if 1
+// *rollback_point__ is important and shared variable among tasks.
+// I restricted the update ov *rollback_point__ only in HandleAllReexecute,
+// it should be never updated in other places.
 
+/**
+ * Important note by Kyusick
+ * Polling-based event handling mechanism has potential deadlock issue.
+ * For example, there are N tasks in the same CD,
+ * and N-1 tasks observed kAllReexecute event at parent level,
+ * but 1 task did not for some reason.
+ * MPI_Win_fence cannot guarantee that everybody observes the same event,
+ * because kAllReexecute is "putted" by parent-level CD (communicator for MPI).
+ * To guarantee this, we cannot use parent-level MPI_Win_fence, either,
+ * because we should not synchronize parent-level task group at lower level
+ * just for checking MailBox. 
+ * For this reason, I decided to regard upper-level kAllreexecute as kErrorOccurred.
+ * But I differentiated it with kEscalationDetected.
+ * If any task observe upper level's escalation request, 
+ * it first reports to head at current level.
+ * Once head observed kEscalationDetected or kAllreexecute at upper level (escalation) itself,
+ * it calls SetMailBox(kAllReexecute).
+ * This guarantees that anybody does not proceed to complete being unaware of some error events.
+ * Whenever non-head tasks observes kAllReexecute, it "Get" the rollback point from head.
+ *
+ * Semantics of HandleAllReexecute
+ * If HandleAllReexecute is reported from the head in current CD level,
+ * perform reexecution from the Begin in that level.
+ * If HandleAllRexecute is reported from a head in upper CD level,
+ * report it to head in the current CD level and read the rollbackpoint from head.
+ * The rollback point may be or may not be the same as the rollback point the task reported.
+ * Only kReexecute event from the head in the same level is valid for some action.
+ */
+void HandleAllReexecute::HandleEvent(void)
+{
+  CD_DEBUG("[%s] CD Event kAllReexecute\t\t", __func__);
+#if _MPI_VER
+
+  if(ptr_cd_->task_size() == 1) 
+    assert(0);
+
+  uint32_t rollback_lv  = ptr_cd_->level();
+  uint32_t current_lv   = GetCurrentCD()->level();
+  uint32_t rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local
+
+  // Basic assumption of rollback_lv == current_lv is that
+  // kAllReexecute event is set by head in current level,
+  // which means everybody observes this flag at CD::Complete.
+  if(rollback_lv == current_lv) {
+    // Only when rollback level is higher than rollback_point, update rollback_point.
+    if(rollback_lv < rollback_point) { // rollback_lv == current_lv
+      assert(rollback_point == INVALID_ROLLBACK_POINT);
+    }
+
+    // Only kReexecute event from the head in the same level is valid for some action.
+    ptr_cd_->SetRollbackPoint(rollback_lv, false); // false means local
+  } 
+  else if(rollback_lv < current_lv) { // It needs to report escalation to head. 
+
+    // If current rollback_point is set to upper level,
+    // it does not report it to head,
+    // assuming original rollback_point which is already upper than rollback_lv
+    // set its rollback point in head.
+    if(rollback_lv < rollback_point) { 
+      CD_DEBUG("rollback_lv:%u < %u (rollback_point) \n", rollback_lv, rollback_point);
+      
+      // Do not set need_reexec = true, yet.
+      // This should be set by kAllReexecute from head task in the leaf CD.
+      CD *cur_cd = GetCurrentCD()->ptr_cd();
+      cur_cd->SetMailBox(kErrorOccurred);
+      cur_cd->SetRollbackPoint(rollback_lv, true); // true means remote
+    } else {
+      CD_DEBUG("rollback_lv:%u >= %u (rollback_point) \n", rollback_lv, rollback_point);
+    }
+  }
+  else {
+    ERROR_MESSAGE("Invalid rollback level %u. It cannot be larger than current level %u\n", 
+                  rollback_lv, GetCurrentCD()->level());
+  }
+
+//  CD::need_reexec  = true;
+//    CD::mailbox_entries[REEXEC_LEVEL] = ptr_cd_->level();
+//    ptr_cd_->SetRollbackPoint(rollback_lv, false);
+
+  *(ptr_cd_->event_flag_) &= ~kAllReexecute;
+  IncHandledEventCounter();
+
+  rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local
+  CD_DEBUG("[%s] need reexec from %u (orig reexec_lv:%u) (cur %u)\n", __func__, 
+           rollback_lv, rollback_point, ptr_cd_->level());
+
+#endif
+}
+
+#else
 void HandleAllReexecute::HandleEvent(void)
 {
   CD_DEBUG("[%s] CD Event kAllReexecute\t\t", __func__);
@@ -476,9 +570,9 @@ void HandleAllReexecute::HandleEvent(void)
     assert(0);
 
   CD::need_reexec  = true;
-//  CD::reexec_level = ptr_cd_->level();
-  if(CD::reexec_level > ptr_cd_->level()) {
-    CD::reexec_level = ptr_cd_->level();
+//  CD::*rollback_point_ = ptr_cd_->level();
+  if(CD::*rollback_point_ > ptr_cd_->level()) {
+    CD::*rollback_point_ = ptr_cd_->level();
   }
   else {
     CD::need_escalation = true;
@@ -516,7 +610,7 @@ void HandleAllReexecute::HandleEvent(void)
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();
 
-  CD_DEBUG("[%s] need reexec (%d) O-->%u (cur %u)\n", __func__, CD::need_reexec, CD::reexec_level, ptr_cd_->level());
+  CD_DEBUG("[%s] need reexec (%d) O-->%u (cur %u)\n", __func__, CD::need_reexec, CD::*rollback_point_, ptr_cd_->level());
 #else
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();
@@ -524,7 +618,7 @@ void HandleAllReexecute::HandleEvent(void)
 
 #endif
 }
-
+#endif
 
 
 

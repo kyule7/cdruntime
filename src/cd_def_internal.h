@@ -39,6 +39,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <cstdio>
 #include <cstdint>
 #include <csetjmp>
+#include <cstdarg>
 #include <string>
 #include <vector>
 #include <map>
@@ -86,7 +87,7 @@ using namespace cd::logging;
 //typedef MPI_Group     CommGroupT;
 typedef MPI_Request   CommRequestT;
 typedef MPI_Status    CommStatusT;
-typedef int           CDFlagT;
+typedef uint32_t      CDFlagT;
 typedef MPI_Win       CDMailBoxT;
 typedef MPI_Offset    COMMLIB_Offset;
 typedef MPI_File      COMMLIB_File;
@@ -102,7 +103,7 @@ typedef MPI_File      COMMLIB_File;
 typedef int           CommRequestT;
 typedef int           CommStatusT;
 // FIXME
-typedef int           CDFlagT;
+typedef uint32_t      CDFlagT;
 typedef int           CDMailBoxT;
 typedef int           COMMLIB_Offset;
 typedef int           COMMLIB_File;
@@ -148,10 +149,39 @@ typedef uint32_t ENTRY_TAG_T;
 
 
 
+
+
+
+
 // DEBUG related
 #define ERROR_MESSAGE(...) \
   { fprintf(stderr, __VA_ARGS__); assert(0); }
 
+/* Eric:  Should be using vsnprintf to a buffer with explicit flush, 
+ *        Add a comment to this line rather than a pair of fprintf's 
+ *        to format the strings.
+ *
+ * The major disadvantage of two printf's is that they can be mixed
+ * up when multiple threads/ranks are writing to the same output, confusing
+ * the output.
+ */
+static inline 
+int cd_debug_trace(FILE *stream, const char *source_file,
+                                 const char *function, int line_num,
+                                 const char *fmt, ...)
+{
+    int bytes;
+    va_list argp;
+    bytes = fprintf(stream, "%s:%d: %s: ", source_file, line_num, function);
+    va_start(argp, fmt);
+    bytes += vfprintf(stream, fmt, argp);
+    va_end(argp);
+    fflush(stream);
+    return bytes;
+}
+
+#define CD_DEBUG_TRACE_INFO(stream, ...) \
+  cd_debug_trace(stream, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 #if CD_DEBUG_DEST == CD_DEBUG_SILENT  // No printouts 
 
@@ -166,7 +196,7 @@ extern FILE *cdout;
 extern FILE *cdoutApp;
 
 #define CD_DEBUG(...) \
-  fprintf(cdout, __VA_ARGS__)
+  CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__)
 
 #define CD_DEBUG_FLUSH \
   fflush(cdout)
@@ -174,17 +204,17 @@ extern FILE *cdoutApp;
 #define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
       cd::app_side=false;\
-      fprintf(cdout, __VA_ARGS__);\
+      CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__);\
       cd::app_side = true;}\
-    else fprintf(cdout, __VA_ARGS__);\
+    else CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__);\
   }*/
 
 #define LIBC_DEBUG(...) /*\
     { if(cd::app_side) {\
         cd::app_side=false;\
-        fprintf(stdout, __VA_ARGS__);\
+        CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
         cd::app_side = true;}\
-      else fprintf(stdout, __VA_ARGS__);\
+      else CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
     }*/
 
 
@@ -192,41 +222,47 @@ extern FILE *cdoutApp;
 #elif CD_DEBUG_DEST == CD_DEBUG_STDOUT  // print to stdout 
 
 #define CD_DEBUG(...) \
-  fprintf(stdout, __VA_ARGS__)
+  CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__)
 
 #define CD_DEBUG_FLUSH 
 
 #define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
       cd::app_side=false;\
-      fprintf(stdout, __VA_ARGS__);\
+      CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
       cd::app_side = true;}\
-    else fprintf(stdout, __VA_ARGS__);\
+    else CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
   }*/
 
 #define LIBC_DEBUG(...)/* \
     { if(cd::app_side) {\
         cd::app_side=false;\
-        fprintf(stdout, __VA_ARGS__);\
+        CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
         cd::app_side = true;}\
-      else fprintf(stdout, __VA_ARGS__);\
+      else CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
     }*/
 
 
 #elif CD_DEBUG_DEST == CD_DEBUG_STDERR  // print to stderr
 
 #define CD_DEBUG(...) \
-  fprintf(stderr, __VA_ARGS__)
+  CD_DEBUG_TRACE_INFO(stderr, __VA_ARGS__)
 
 #define CD_DEBUG_FLUSH
 
 #else  // -------------------------------------
 
 #define CD_DEBUG(...) \
-  fprintf(stderr, __VA_ARGS__)
+  CD_DEBUG_TRACE_INFO(stderr, __VA_ARGS__)
 
 #define CD_DEBUG_FLUSH
 #endif
+
+
+
+
+
+
 #define ROOT_SYS_DETECT_VEC 0xFFFFFFFFFFFFFFFF
 
 //GONG: global variable to represent the current context for malloc wrapper
@@ -402,16 +438,18 @@ namespace cd {
 
   extern inline std::string event2str(int event) {
     switch(event) {
-      case BIT_0:
+      case 0:
         return "kNoEvent";
-      case BIT_1:
+      case BIT_0:
         return "kAllPause";
-      case BIT_2:
+      case BIT_1:
         return "kAllResume";
-      case BIT_3:
+      case BIT_2:
         return "kAllReexecute";
-      case BIT_4:
+      case BIT_3:
         return "kAllEscalate";
+      case BIT_4:
+        return "kEntrySend";
       case BIT_5:
         return "kEntrySend";
       case BIT_6:

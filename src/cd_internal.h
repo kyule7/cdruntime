@@ -218,7 +218,7 @@ class CD : public Serializable {
   public:
     static bool need_reexec;
     static bool need_escalation;
-    static uint32_t reexec_level;
+//    static uint32_t reexec_level;
 #endif
   protected:
 

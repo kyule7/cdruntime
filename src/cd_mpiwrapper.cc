@@ -534,6 +534,7 @@ int MPI_Isend(const void *buf,
         CD_DEBUG("send1 %u\n", (int)(*request));
         mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
         CD_DEBUG("send2 %u\n", (int)(*request));
+        GetCurrentCD()->ptr_cd()->PrintDebug();
         break;
       }
       case kRelaxedCDGen: {
@@ -612,6 +613,7 @@ int MPI_Irecv(void *buf,
         cdp->incomplete_log_.push_back(
             IncompleteLogEntry(buf, 0, src, tag, comm, (void *)request, false)
             );
+        GetCurrentCD()->ptr_cd()->PrintDebug();
 //printf("test recv: strict CD\t"); cdp->CheckIntraCDMsg(src, g);
         mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
         break;
@@ -1085,8 +1087,10 @@ int MPI_Wait(MPI_Request *request,
     switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
 //printf("test wait : strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
-        mpi_ret = PMPI_Wait(request, status);
+        GetCurrentCD()->ptr_cd()->PrintDebug();
         cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
+        mpi_ret = PMPI_Wait(request, status);
+//        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
 //        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        assert(CD::need_reexec == false);
         // delete incomplete entries...
@@ -1159,6 +1163,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
           CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); CD_DEBUG_FLUSH;
 
         }
+        GetCurrentCD()->ptr_cd()->PrintDebug();
         // delete incomplete entries...
 //        for (ii=0;ii<count;ii++) {
 //          cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[ii]);
@@ -2450,7 +2455,7 @@ int MPI_Win_fence(int assert, MPI_Win win)
   CD_DEBUG("[%s %u|%u] called %s at %u (nid %s)(#reexec: %d, (%d)reexec level %u))\n", __func__, 
     GetCurrentCD()->ptr_cd()->level(), epoch_num[GetCurrentCD()->ptr_cd()->level()]++, 
     GetCurrentCD()->ptr_cd()->name(), GetCurrentCD()->ptr_cd()->level(), GetCurrentCD()->node_id().GetString().c_str(),
-    GetCurrentCD()->ptr_cd()->num_reexec(), GetCurrentCD()->need_reexec(), GetCurrentCD()->reexec_level());
+    GetCurrentCD()->ptr_cd()->num_reexec(), GetCurrentCD()->need_reexec(), GetCurrentCD()->rollback_point());
 #if CD_DEBUG_DEST == 1
 //  Profiler::Print();
   CD_DEBUG_FLUSH;
