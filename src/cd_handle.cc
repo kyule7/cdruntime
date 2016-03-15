@@ -77,6 +77,7 @@ FILE *cdoutApp=NULL;
 #endif
 
 #if CD_ERROR_INJECTION_ENABLED
+#define RANDOM_SEED 17
 MemoryErrorInjector *CDHandle::memory_error_injector_ = NULL;
 SystemErrorInjector *CDHandle::system_error_injector_ = NULL;
 #define CHECK_SYS_ERR_VEC(X,Y) \
@@ -231,6 +232,14 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #endif
 
 #if CD_ERROR_INJECTION_ENABLED
+  double random_seed = 0.0;
+  if(myTaskID == 0) {
+    random_seed = clock();
+    CD_DEBUG("Random seed: %lf\n", random_seed);
+  }
+  random_seed = 137378;
+  PMPI_Bcast(&random_seed, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  srand48(random_seed * (double)(RANDOM_SEED + myTaskID));
   // To be safe
   CDHandle::memory_error_injector_ = NULL;
   CDHandle::system_error_injector_ = new SystemErrorInjector(system_config);

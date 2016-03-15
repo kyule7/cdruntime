@@ -502,16 +502,16 @@ void HandleAllReexecute::HandleEvent(void)
   // it calls SetMailBox(kAllReexecute).
   // This guarantees that anybody does not proceed to complete being unaware of some error events.
   // Whenever non-head tasks observes kAllReexecute, it "Get" the rollback point from head.
-  if(ptr_cd_->level() < GetCurrentCD()->level()) {
-    GetCurrentCD()->SetMailBox(kErrorOccurred);
-
-
-    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cd->mailbox_info_);
-    PMPI_Accumulate(&(ptr_cd_->node_id_.level_), 1, MPI_UNSIGNED,
-                    head_id, 0, 1, MPI_UNSIGNED, 
-                    MPI_MIN, cd->mailbox_info_);
-    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cd->mailbox_info_);
-  }
+//  if(ptr_cd_->level() < GetCurrentCD()->level()) {
+//    GetCurrentCD()->SetMailBox(kErrorOccurred);
+//
+//
+//    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cd->mailbox_info_);
+//    PMPI_Accumulate(&(ptr_cd_->node_id_.level_), 1, MPI_UNSIGNED,
+//                    head_id, 0, 1, MPI_UNSIGNED, 
+//                    MPI_MIN, cd->mailbox_info_);
+//    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cd->mailbox_info_);
+//  }
 
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
   IncHandledEventCounter();

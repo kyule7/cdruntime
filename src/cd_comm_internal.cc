@@ -1377,7 +1377,47 @@ CDErrT CD::SetMailBox(CDEventT &event)
 */
 #endif
 
+void CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
+{
+  printf("[%s] cur level : %u size:%u\n", __func__, level(), task_size());
+  CD *cur_cd = CDPath::GetCoarseCD(this);
+  printf("[%s] check level : %u size:%u\n", __func__, cur_cd->level(), cur_cd->task_size());
+  uint32_t head_id = head();
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cur_cd->rollbackWindow_);
+  if(remote == true) {
+    PMPI_Accumulate(&rollback_lv, 1, MPI_UNSIGNED,
+                    head_id, 0,   1, MPI_UNSIGNED, 
+                    MPI_MIN, cur_cd->rollbackWindow_);
+  }
+  if(rollback_lv < *(cur_cd->rollback_point_)) {
+    *(cur_cd->rollback_point_) = rollback_lv;
+  }
+  PMPI_Win_unlock(head_id, cur_cd->rollbackWindow_);
+}
 
+uint32_t CD::CheckRollbackPoint(bool remote) 
+{
+  printf("[%s] cur level : %u size : %u\n", __func__,  level(), task_size());
+  CD *cur_cd = CDPath::GetCoarseCD(this);
+  printf("[%s] check level : %u size : %u\n", __func__, cur_cd->level(), cur_cd->task_size());
+  uint32_t rollback_lv = INVALID_ROLLBACK_POINT;
+  uint32_t head_id = cur_cd->head();
+  // Read lock is used because everybody will just read it.
+//  printf("%p\n", &rollbackWindow_);
+  PMPI_Win_lock_all(0, cur_cd->rollbackWindow_);
+//  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cur_cd->rollbackWindow_);
+  if(remote == true) { 
+    // Update reexec_level_ from head
+    MPI_Get(cur_cd->rollback_point_, 1, MPI_UNSIGNED, 
+            head_id, 0,     1, MPI_UNSIGNED,
+            cur_cd->rollbackWindow_); // Read reexec_level from head.
+  }
+  rollback_lv = *(cur_cd->rollback_point_);
+//  PMPI_Win_unlock(head_id, cur_cd->rollbackWindow_);
+  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
+
+  return rollback_lv;
+}
 
 void CD::DecPendingCounter(void)
 {

@@ -71,13 +71,20 @@ bool CD::need_reexec = false;
 bool CD::need_escalation = false;
 uint32_t CD::reexec_level = INVALID_ROLLBACK_POINT;
 
+#if _MPI_VER
+CDFlagT *CD::pendingFlag_ = NULL; 
+CDFlagT *CD::rollback_point_ = NULL; 
+#endif
+
 void cd::internal::Initialize(void)
 {
 #if _MPI_VER
   PMPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &(CD::pendingFlag_));
+  PMPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &(CD::rollback_point_));
 
   // Initialize pending flag
   *CD::pendingFlag_ = 0;
+  *CD::rollback_point_ = INVALID_ROLLBACK_POINT;
 //  CD::pendingFlag_ = 0;
 #endif
 
@@ -115,19 +122,12 @@ void cd::internal::Initialize(void)
 
 void cd::internal::Finalize(void)
 {
-
 #if _MPI_VER
   PMPI_Free_mem(CD::pendingFlag_);
+  PMPI_Free_mem(CD::rollback_point_);
 #endif
-
 }
 
-
-
-#if _MPI_VER
-CDFlagT *CD::pendingFlag_ = NULL; 
-//CDFlagT CD::pendingFlag_=0; 
-#endif
 
 /// Actual CD Object only exists in a single node and in a single process.
 /// Potentially copy of CD Object can exist but it should not be used directly. 
@@ -507,7 +507,104 @@ CDErrT CD::Destroy(bool collective)
   return err;
 }
 
- 
+#if 1
+CD::CDInternalErrT 
+CD::InternalCreate(CDHandle* parent, 
+                   const char* name, 
+                   const CDID& new_cd_id, 
+                   CDType cd_type, 
+                   uint64_t sys_bit_vector, 
+                   CDHandle** new_cd_handle)
+{
+  CD_DEBUG("Internal Create... level #%u, Node ID : %s\n", new_cd_id.level(), new_cd_id.node_id().GetString().c_str());
+
+  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(
+                                  (MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : 
+                                                               MASK_MEDIUM(cd_type)
+                              );
+  int task_count = new_cd_id.task_count();
+  uint32_t num_mailbox_to_create = 0;
+  CD *new_cd = NULL;
+  if( !new_cd_id.IsHead() ) {
+    CD_DEBUG("Mask medium : %d\n", MASK_MEDIUM(cd_type));
+    new_cd = new CD(parent, name, new_cd_id, 
+                    static_cast<CDType>(MASK_CDTYPE(cd_type)), 
+                    new_prv_medium, 
+                    sys_bit_vector);
+#if _MPI_VER
+    if(task_count > 1) {
+      num_mailbox_to_create = 1;
+    } 
+#endif
+  }
+  else {
+    // Create a CD object for head.
+    CD_DEBUG("Mask medium : %d\n", MASK_MEDIUM(cd_type));
+    new_cd = new HeadCD(parent, name, new_cd_id, 
+                        static_cast<CDType>(MASK_CDTYPE(cd_type)), 
+                        new_prv_medium, 
+                        sys_bit_vector);
+#if _MPI_VER
+    if(task_count > 1) {
+      num_mailbox_to_create = task_count;
+    }
+#endif
+  }
+//  printf("# mailbox %u\n", num_mailbox_to_create);
+  if(num_mailbox_to_create != 0) { 
+    CD_DEBUG("# mailbox to create : %u\n", num_mailbox_to_create);
+//    printf("# mailbox to create : %u\n", num_mailbox_to_create);
+    PMPI_Alloc_mem(num_mailbox_to_create*sizeof(CDFlagT), 
+                  MPI_INFO_NULL, &(new_cd->event_flag_));
+  
+    // Initialization of event flags
+    for(uint32_t i=0; i<num_mailbox_to_create; i++) {
+      new_cd->event_flag_[i] = 0;
+    }
+
+    // Create memory region where RDMA is enabled
+    MPI_Win_create(new_cd->event_flag_, num_mailbox_to_create*sizeof(CDFlagT), sizeof(CDFlagT),
+                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
+  
+//    // FIXME : should it be MPI_COMM_WORLD?
+//    MPI_Win_create(&mailbox_entries_[PENDING_FLAG], sizeof(CDFlagT), sizeof(CDFlagT), 
+//                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
+//    MPI_Win_create(&mailbox_entries_[REEXEC_LEVEL], sizeof(CDFlagT), sizeof(CDFlagT), 
+//                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->reexecWindow_));
+    CD_DEBUG("mpi win create for %u pending window done, new Node ID : %s\n", 
+              task_count, new_cd_id.node_id_.GetString().c_str());
+
+    new_cd->is_window_reused_ = false;
+  } 
+  else {
+    new_cd->is_window_reused_ = true;
+  }
+
+  if(task_count > 1) {
+    CD_DEBUG("Create pending/reexec windows %u level:%u %p\n", task_count, new_cd_id.level(), &(new_cd->pendingWindow_));
+    // FIXME : should it be MPI_COMM_WORLD?
+    MPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
+                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
+    MPI_Win_create(new_cd->rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
+                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->rollbackWindow_));
+    CD_DEBUG("After Create pending/reexec windows %u level:%u %p \n", task_count, new_cd_id.level(), &(new_cd->pendingWindow_));
+  }
+
+  if( new_cd->GetPlaceToPreserve() == kPFS ) 
+    new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
+
+  *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
+
+  
+//    AttachChildCD(new_cd);
+  CD_DEBUG("Done. New Node ID: %s -- %s\n", 
+           new_cd_id.node_id().GetString().c_str(), 
+           (*new_cd_handle)->node_id().GetString().c_str());
+
+  return CD::CDInternalErrT::kOK;
+}
+
+#else
 CD::CDInternalErrT 
 CD::InternalCreate(CDHandle* parent, 
                    const char* name, 
@@ -627,7 +724,7 @@ CD::InternalCreate(CDHandle* parent,
 
   return CD::CDInternalErrT::kOK;
 }
-
+#endif
 
 void AttachChildCD(HeadCD *new_cd)
 {
@@ -646,8 +743,8 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
     fflush(cdout);
 #endif
   bool orig_need_reexec = need_reexec;
-  if(collective)
-    SyncCDs(this);
+//  if(collective)
+//    SyncCDs(this);
 
 //  if(need_reexec != orig_need_reexec) {
 //    CD_DEBUG("\n\n[%s]Reexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n", __func__);
@@ -658,6 +755,7 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
   
   if(task_size() > 1 && (is_window_reused_==false)) {  
     PMPI_Win_free(&pendingWindow_);
+    PMPI_Win_free(&rollbackWindow_);
     PMPI_Win_free(&mailbox_);
     PMPI_Free_mem(event_flag_);
     CD_DEBUG("[%s Window] CD's Windows are destroyed.\n", __func__);
@@ -691,12 +789,12 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
 
   delete this;
 
-  if(need_reexec != orig_need_reexec) {
-    CD_DEBUG("\n\n[%s]Reexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n", __func__);
-    CD::GetCDToRecover(GetParentCD(level()), true)->ptr_cd()->Recover();
-  } else {
-    CD_DEBUG("\n\nReexec is false\n");
-  }
+//  if(need_reexec != orig_need_reexec) {
+//    CD_DEBUG("\n\n[%s]Reexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n", __func__);
+//    CD::GetCDToRecover(GetParentCD(level()), true)->ptr_cd()->Recover();
+//  } else {
+//    CD_DEBUG("\n\nReexec is false\n");
+//  }
   return CDInternalErrT::kOK;
 
 }
@@ -905,7 +1003,8 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       target->ptr_cd_->CompleteLogs();
       target->ptr_cd_->DeleteEntryDirectory();
       target->Destroy();
-      return GetCDToRecover(CDPath::GetCDLevel(--level), true);
+      CDHandle *next_cdh = CDPath::GetCDLevel(--level);
+      return GetCDToRecover(next_cdh, next_cdh->task_size() > target->task_size());
     }
     else {
       if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kRelaxed) {
@@ -924,13 +1023,12 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     }
   }
   else if(level > reexec_level && reexec_level != INVALID_ROLLBACK_POINT) {
-    //printf("...2\n");
-//    if( CDPath::GetCDLevel(reexec_level)->task_size() != target->task_size() ){
+
+    // This synchronization corresponds to that in Complete or Create of other tasks in the different CDs.
+    // The tasks in the same CD should reach here together. (No tasks execute further Complete/Create)
     if(collective)
       SyncCDs(target->ptr_cd());
-//    } else {
-//      assert(CDPath::GetCDLevel(reexec_level)->color() == target->color());
-//    }
+
 #if CD_PROFILER_ENABLED
 //    if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
     target->profiler_->FinishProfile();
@@ -938,8 +1036,8 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     target->ptr_cd_->CompleteLogs();
     target->ptr_cd_->DeleteEntryDirectory();
     target->Destroy(false);
-    
-    return GetCDToRecover(CDPath::GetCDLevel(--level), true);
+    CDHandle *next_cdh = CDPath::GetCDLevel(--level);
+    return GetCDToRecover(next_cdh, next_cdh->task_size() > target->task_size());
   } else {
     ERROR_MESSAGE("Invalid eslcation point %u (current %u)\n", reexec_level, level);
     return NULL;
@@ -1058,7 +1156,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     //bool initiator = orig_reexec_level <= reexec_level && level() != reexec_level;
     // FIXME
 //    printf("GetCDLevel : %u (cur %u), path size: %lu\n", reexec_level, level(), CDPath::uniquePath_->size());
-    bool initiator = true;//orig_reexec_level <= reexec_level && (CDPath::GetCDLevel(reexec_level)->task_size() != task_size());
+    bool initiator = false; //orig_reexec_level <= reexec_level && (CDPath::GetCDLevel(reexec_level)->task_size() != task_size());
 //    printf("initiator? %d = %u <= %u\n", initiator, orig_reexec_level, reexec_level);
 //    CD_DEBUG("initiator? %d = %u <= %u\n", initiator, orig_reexec_level, reexec_level);
 //    GetCDToRecover(reexec_level < cd_id_.cd_name_.level() && reexec_level != INVALID_ROLLBACK_POINT)->Recover(false);
@@ -1066,7 +1164,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    bool collective = MPI_Group_compare(group());
 //    printf("initiator? %d = %u <= %u\n", initiator, orig_reexec_level, reexec_level);
     CD_DEBUG("initiator? %d = %u <= %u\n", initiator, orig_reexec_level, reexec_level);
-    GetCDToRecover(GetCurrentCD(), initiator)->ptr_cd()->Recover();
+    GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
   }
 
   CompleteLogs();
@@ -4146,8 +4244,8 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
     auto incompl_log = incomplete_log_.back();
     incomplete_log_.pop_back();
     flag = incompl_log.flag_;
-//    printf("Trying to cancel ptr:%lx\n", flag);
-    CD_DEBUG("Trying to cancel ptr:%lx\n", flag); CD_DEBUG_FLUSH;
+//    printf("Trying to cancel ptr:%p\n", flag);
+    CD_DEBUG("Trying to cancel ptr:%p\n", flag); CD_DEBUG_FLUSH;
     PMPI_Cancel((MPI_Request *)(incompl_log.flag_));
   }
 #endif

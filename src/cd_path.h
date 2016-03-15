@@ -231,6 +231,18 @@ private:
     return curr_cdh;
   }
 
+  static CD *GetCoarseCD(CD* curr_cdh) {
+    while( curr_cdh->task_size() == 1 ) {
+      if(curr_cdh == GetRootCD()->ptr_cd()) {
+        //CD_DEBUG("There is a single task in the root CD\n");
+//        assert(0);
+        return curr_cdh;
+      }
+      curr_cdh = CDPath::GetParentCD(curr_cdh->level())->ptr_cd();
+    } 
+    return curr_cdh;
+  }
+
 };
 
 /** @} */ // End cd_hierarchy

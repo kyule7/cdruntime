@@ -178,8 +178,10 @@ class CD : public Serializable {
 #if CD_MPI_ENABLED
     // This flag is unique for each process. 
     static CDFlagT *pendingFlag_;
+    static CDFlagT *rollback_point_;
 //    static CDFlagT pendingFlag_;
     CDMailBoxT pendingWindow_;
+    CDMailBoxT rollbackWindow_;
 
     // Every mailbox resides in head 
     CDFlagT *event_flag_;
@@ -621,6 +623,8 @@ public:
     virtual CDInternalErrT InternalCheckMailBox(void);
     void DecPendingCounter(void);
     void IncPendingCounter(void);
+    void SetRollbackPoint(const uint32_t &rollback_lv, bool remote);
+    uint32_t CheckRollbackPoint(bool remote);
     CDErrT CheckMailBox(void);
     virtual CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);
