@@ -623,13 +623,11 @@ CDErrT CD::CheckMailBox(void)
 
     int temp = handled_event_count;
     InvokeErrorHandler();
+    uint32_t old_pendingFlag = *pendingFlag_;
 
-    CD_DEBUG("\nCheck MailBox is done. handled_event_count : %d --> %d, pending events : %d", 
-             temp, handled_event_count, *pendingFlag_);
-  
     DecPendingCounter();
-  
-    CD_DEBUG(" --> %d\n", *pendingFlag_);
+    CD_DEBUG("\nCheck MailBox is done. handled_event_count : %u --> %u, pending events : %u --> %u\n", 
+              temp, handled_event_count, old_pendingFlag, *pendingFlag_);
     CD_DEBUG("-------------------------------------------------------------------\n");
 
   }

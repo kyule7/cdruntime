@@ -1212,7 +1212,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    bool collective = MPI_Group_compare(group());
 //    printf("initiator? %d = %u <= %u\n", initiator, orig_rollback_point, *rollback_point_);
     CD_DEBUG("initiator? %d = %u <= %u\n", initiator, orig_rollback_point, *rollback_point_);
-    GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
+    GetCDToRecover( GetCurrentCD(), GetParentCD(level())->task_size() > task_size() )->ptr_cd()->Recover();
   }
 
   CompleteLogs();
