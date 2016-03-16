@@ -1392,18 +1392,19 @@ void CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
                     head_id, 0,   1, MPI_UNSIGNED, 
                     MPI_MIN, cur_cd->rollbackWindow_);
     PMPI_Win_unlock(head_id, cur_cd->rollbackWindow_);
-  }
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cur_cd->task_in_color(), 0, cur_cd->rollbackWindow_);
-  // This is important. It is necessary to set it locally, too.
-  if(rollback_lv < *(cur_cd->rollback_point_)) {
-    *(cur_cd->rollback_point_) = rollback_lv;
-//    printf("\nTHIS???\n");
   } else {
-//    printf("\nTHAT???\n");
+    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cur_cd->task_in_color(), 0, cur_cd->rollbackWindow_);
+    // This is important. It is necessary to set it locally, too.
+    if(rollback_lv < *(cur_cd->rollback_point_)) {
+      *(cur_cd->rollback_point_) = rollback_lv;
+  //    printf("\nTHIS???\n");
+    } else {
+  //    printf("\nTHAT???\n");
+    }
+    if(*(cur_cd->rollback_point_) != INVALID_ROLLBACK_POINT)
+      need_reexec = true;
+    PMPI_Win_unlock(cur_cd->task_in_color(), cur_cd->rollbackWindow_);
   }
-  if(*(cur_cd->rollback_point_) != INVALID_ROLLBACK_POINT)
-    need_reexec = true;
-  PMPI_Win_unlock(cur_cd->task_in_color(), cur_cd->rollbackWindow_);
 #endif
 }
 
