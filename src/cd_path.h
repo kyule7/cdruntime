@@ -207,7 +207,12 @@ private:
   { 
     if(uniquePath_ != NULL) {
       if( uniquePath_->size() > 1 ) {
-        return uniquePath_->at(level); 
+        if(level < uniquePath_->size()) {
+          return uniquePath_->at(level); 
+        } else {
+          uint32_t s = uniquePath_->size();
+          CD_DEBUG("level %u >= %u #cdobj\n", level, s);
+        }
       }
     }
     return NULL;

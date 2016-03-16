@@ -534,7 +534,9 @@ void HandleAllReexecute::HandleEvent(void)
       // Do not set need_reexec = true, yet.
       // This should be set by kAllReexecute from head task in the leaf CD.
       CD *cur_cd = GetCurrentCD()->ptr_cd();
-      cur_cd->SetMailBox(kErrorOccurred);
+      if(cur_cd->reported_error_ == false) {
+        cur_cd->SetMailBox(kErrorOccurred);
+      }
       cur_cd->SetRollbackPoint(rollback_lv, true); // true means remote
     } else {
       CD_DEBUG("rollback_lv:%u >= %u (rollback_point) \n", rollback_lv, rollback_point);

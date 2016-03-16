@@ -568,7 +568,7 @@ CDErrT CD::CheckMailBox(void)
   DecPendingCounter();
   int event_count = *pendingFlag_;
 //  int event_count = *pendingFlag_;
-  assert(event_count <= 1024);
+  //assert(event_count <= 1024);
   // Reset handled event counter
   //handled_event_count = 0;
   assert(handled_event_count == 0);
@@ -991,7 +991,9 @@ CD::CDInternalErrT CD::RemoteSetMailBox(CD *curr_cd, const CDEventT &event)
 
   int head_id = curr_cd->head();
   int val = 1;
-
+  if(event == kErrorOccurred) {
+    curr_cd->reported_error_ = true;
+  }
   PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, curr_cd->pendingWindow_);
 
   CD_DEBUG("[%s] Set CD Event %s at level #%u. CD Name %s (%s)\n", __func__, 
@@ -1417,15 +1419,17 @@ uint32_t CD::CheckRollbackPoint(bool remote)
 //  printf("%p\n", &rollbackWindow_);
 //  PMPI_Win_lock_all(0, cur_cd->rollbackWindow_);
 #if 1
-  PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, cur_cd->rollbackWindow_);
   if(remote == true) { 
+    PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, cur_cd->rollbackWindow_);
     // Update *rollback_point__ from head
     PMPI_Get(cur_cd->rollback_point_, 1, MPI_UNSIGNED, 
             head_id, 0,     1, MPI_UNSIGNED,
             cur_cd->rollbackWindow_); // Read *rollback_point_ from head.
+    PMPI_Win_unlock(head_id, cur_cd->rollbackWindow_);
   }
+  PMPI_Win_lock(MPI_LOCK_SHARED, cur_cd->task_in_color(), 0, cur_cd->rollbackWindow_);
   rollback_lv = *(cur_cd->rollback_point_);
-  PMPI_Win_unlock(head_id, cur_cd->rollbackWindow_);
+  PMPI_Win_unlock(cur_cd->task_in_color(), cur_cd->rollbackWindow_);
 #endif
 //  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
 

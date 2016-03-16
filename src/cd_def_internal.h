@@ -172,7 +172,8 @@ int cd_debug_trace(FILE *stream, const char *source_file,
 {
     int bytes;
     va_list argp;
-    bytes = fprintf(stream, "%s:%d: %s: ", source_file, line_num, function);
+//    bytes = fprintf(stream, "%s:%d: %s: ", source_file, line_num, function);
+    bytes = fprintf(stream, "[%s] ", function);
     va_start(argp, fmt);
     bytes += vfprintf(stream, fmt, argp);
     va_end(argp);

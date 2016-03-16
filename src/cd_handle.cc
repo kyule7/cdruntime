@@ -237,7 +237,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
     random_seed = clock();
     CD_DEBUG("Random seed: %lf\n", random_seed);
   }
-  random_seed = 137378;
+//  random_seed = 137378;
   PMPI_Bcast(&random_seed, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   srand48(random_seed * (double)(RANDOM_SEED + myTaskID));
   // To be safe

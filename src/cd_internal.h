@@ -170,6 +170,7 @@ class CD : public Serializable {
     bool recreated_;
     bool reexecuted_;
     bool is_window_reused_;
+    bool reported_error_;
     //GONG
     bool begin_;
 //  public:
