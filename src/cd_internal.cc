@@ -2228,12 +2228,12 @@ CDErrT CD::Preserve(void *data,
         // (In other word, nobody requested escalation requests)
         // This current task is performing reexecution corresponding to these flag set by itself.
         if(level() == *rollback_point_) {
-CD *root = CDPath::GetRootCD()->ptr_cd();
-PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, myTaskID, 0, root->rollbackWindow_);
-          need_reexec = false;
-          need_escalation = false;
-          *rollback_point_ = INVALID_ROLLBACK_POINT;        
-PMPI_Win_unlock(myTaskID, root->rollbackWindow_);
+//CD *root = CDPath::GetRootCD()->ptr_cd();
+//PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, myTaskID, 0, root->rollbackWindow_);
+//          need_reexec = false;
+//          need_escalation = false;
+//          *rollback_point_ = INVALID_ROLLBACK_POINT;        
+//PMPI_Win_unlock(myTaskID, root->rollbackWindow_);
 //          printf("Reexec %u\n", *rollback_point_);
         }
         // This point means the beginning of body stage. Request EntrySearch at this routine
