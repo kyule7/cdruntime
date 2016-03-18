@@ -989,9 +989,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #endif
   uint32_t level = target->level();
   uint32_t rollback_lv = target->ptr_cd()->CheckRollbackPoint(false);
-  CD_DEBUG("[%s] level : %u (current) == %u (*rollback_point_)\n", __func__, level, rollback_lv);
-//  printf("[%s] level : %u (current) == %u (*rollback_point_)\n", __func__, level, *rollback_point_);
-//  printf("#### [%s] level : %u (current) == %u (*rollback_point_) ####\n", __func__, level, *rollback_point_);
+  CD_DEBUG("[%s] level : %u (current) == %u (rollback_point)\n", __func__, level, rollback_lv);
   if(level == rollback_lv) {
     // for tasks that detect error at completion point or collective create point.
     // It already called SyncCDs() at that point,
@@ -1086,32 +1084,29 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
  */
 CDErrT CD::Complete(bool collective, bool update_preservations)
 {
-  CD_DEBUG("\nCD::Complete : %s %s \t Reexec: %d\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec);
-//  printf("\nCD::Complete : %s %s \t Reexec: %d\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec);
-//  if(need_reexec)
-//    printf("#### level : %u (current) == %u (*rollback_point_) ####\n", __func__, level(), *rollback_point_);
-
-//  printf("\nCD::Complete (%s): %s %s \t Reexec: %d from %u to %u\n", 
-//      name_.c_str(), GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec, level(), *rollback_point_);
   begin_ = false;
+  uint32_t orig_rollback_point = CheckRollbackPoint(false);
 //  bool my_need_reexec = need_reexec;
+  CD_DEBUG("\nCD::Complete : %s %s \t Reexec(%d) from %u\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec, orig_rollback_point);
 
   // This is important synchronization point 
   // to guarantee the correctness of CD-enabled program.
   uint32_t orig_rollback_point = CheckRollbackPoint(false);
+  uint32_t new_rollback_point = orig_rollback_point;
   if(collective) {
     SyncCDs(this);
   }
+
   if(task_size() > 1) {
 //    MPI_Win_fence(0, rollbackWindow_);
-    uint32_t new_rollback_point = CheckRollbackPoint(false);
+    new_rollback_point = CheckRollbackPoint(false);
 //    printf("1 new reexec level = %u\n", new_rollback_point);
 
     int head_id = GetNodeID().head_;
     PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, rollbackWindow_);
     PMPI_Get(&new_rollback_point, 1, MPI_UNSIGNED, 
              head_id, 0, 1, MPI_UNSIGNED,
-             rollbackWindow_); // Read *rollback_point_ from head.
+             rollbackWindow_); // Read rollback_point from head.
 //    MPI_Win_fence(0, rollbackWindow_);
     PMPI_Win_unlock(head_id, rollbackWindow_);
 //  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
@@ -1120,7 +1115,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   }
 
   if(need_reexec) { 
-    // If another task set *rollback_point_ lower than this task (error occurred at this task),
+    // If another task set rollback_point lower than this task (error occurred at this task),
     // initiator is false. 
     // Let's say it was set to 3. But another task set to 1. Then it is false;
     // Or originally it is INVALID_ROLLBACK_POINT, then it is false.
@@ -1139,7 +1134,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     // 0309
     // Rethink the condition to sync
     // <Example>
-    // Task0 is at level 4 and *rollback_point_ is 3
+    // Task0 is at level 4 and rollback_point is 3
     // The other thread is at level 3. And They are waiting for Task0.
     // This case Task0 must call sync.
     // 
@@ -1153,14 +1148,14 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    GetCDToRecover(*rollback_point_ < cd_id_.cd_name_.level() && *rollback_point_ != INVALID_ROLLBACK_POINT)->Recover(false);
 //    *rollback_point_ == level() -> false
 //    bool collective = MPI_Group_compare(group());
-//    printf("initiator? %d = %u <= %u\n", initiator, orig_rollback_point, *rollback_point_);
-    CD_DEBUG("initiator? %d = %u <= %u\n", initiator, orig_rollback_point, *rollback_point_);
+    CD_DEBUG("initiator? %d = %u <= %u\n", initiator, orig_rollback_point, new_rollback_point);
     GetCDToRecover( GetCurrentCD(), GetParentCD(level())->task_size() > task_size() )->ptr_cd()->Recover();
   }
   else {
     CD_DEBUG("Complete. No error\n");
     reported_error_ = false;
   }
+
   CompleteLogs();
 
   // Increase sequential ID by one
@@ -1170,11 +1165,9 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   /// We might modify this in the profiler to support the overlapped data among sequential CDs.
   DeleteEntryDirectory();
 
-
   // TODO ASSERT( cd_exec_mode_  != kSuspension );
   // FIXME don't we have to wait for others to be completed?  
   cd_exec_mode_ = kSuspension; 
-
 
   return CDErrT::kOK;
 }
@@ -2220,14 +2213,14 @@ CDErrT CD::Preserve(void *data,
         // It is also possible case that current task sets reexec from upper level,
         // but actually it was reexecuting some lower level CDs. 
         // while executing lower-level reexecution,
-        // *rollback_point_ was set to upper level, 
+        // rollback_point was set to upper level, 
         // which means escalation request from another task. 
         // Therefore, this flag should be carefully reset to exec mode.
-        // level == *rollback_point_ enough condition for resetting to exec mode,
+        // level == rollback_point enough condition for resetting to exec mode,
         // because nobody overwrited these flags set by current flag.
         // (In other word, nobody requested escalation requests)
         // This current task is performing reexecution corresponding to these flag set by itself.
-        if(level() == *rollback_point_) {
+//        if(level() == *rollback_point_) {
 //CD *root = CDPath::GetRootCD()->ptr_cd();
 //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, myTaskID, 0, root->rollbackWindow_);
 //          need_reexec = false;
@@ -2235,7 +2228,7 @@ CDErrT CD::Preserve(void *data,
 //          *rollback_point_ = INVALID_ROLLBACK_POINT;        
 //PMPI_Win_unlock(myTaskID, root->rollbackWindow_);
 //          printf("Reexec %u\n", *rollback_point_);
-        }
+//        }
         // This point means the beginning of body stage. Request EntrySearch at this routine
       }
 
@@ -2692,7 +2685,7 @@ CD::CDInternalErrT CD::Assert(bool test)
 //void CD::SetRecoverFlag(void) {
 //  // Before Assert(false), some other tasks might raise error flag in this task,
 //  // and that can be less than this point, which means escalation request.
-//  // *rollback_point_ was set to a number less than current task's level,
+//  // rollback_point was set to a number less than current task's level,
 //  // Then do not set it to current task's level, because it needs to be escalated.
 //  if(*rollback_point_ > level()) {
 //    *rollback_point_ = level();
@@ -2794,7 +2787,7 @@ CDErrT CD::InternalReexecute(void)
     longjmp(jmp_buffer_, jmp_val_);
   }
   else if (ctxt_prv_mode_ == kIncludeStack) {
-    CD_DEBUG("setcontext at level : %d (*rollback_point_: %d) (%s)\n", level(), *rollback_point_, name_.c_str());
+    CD_DEBUG("setcontext at level : %d (rollback_point: %d) (%s)\n", level(), *rollback_point_, name_.c_str());
     setcontext(&ctxt_); 
   }
 
