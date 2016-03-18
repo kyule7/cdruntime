@@ -626,6 +626,7 @@ public:
     void IncPendingCounter(void);
     void SetRollbackPoint(const uint32_t &rollback_lv, bool remote);
     uint32_t CheckRollbackPoint(bool remote);
+    void CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &new_rollback_point);
     CDErrT CheckMailBox(void);
     virtual CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);

@@ -207,7 +207,7 @@ private:
   { 
     if(uniquePath_ != NULL) {
       if( uniquePath_->size() > 1 ) {
-        if(level < uniquePath_->size()) {
+        if(level < (uint32_t)uniquePath_->size()) {
           return uniquePath_->at(level); 
         } else {
           uint32_t s = uniquePath_->size();

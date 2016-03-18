@@ -1143,15 +1143,17 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
         rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
 
     CDHandle *rb_cdh = CDPath::GetCDLevel(rollback_point);
+    assert(rb_cdh != NULL);
     if(rb_cdh->task_size() > 1) {
       rb_cdh->SetMailBox(kErrorOccurred);
     } else {
-      if(rollback_point < *CD::rollback_point_) {
-        CD::need_reexec = true;
-        *CD::rollback_point_ = rollback_point;
-//        printf("*rollback_point_ %d\n", *CD::rollback_point_);
-//        rb_cdh->SetMailBox(kErrorOccurred);
-      }
+      ptr_cd_->SetRollbackPoint(rollback_point, false);
+//      if(rollback_point < *CD::rollback_point_) {
+//        CD::need_reexec = true;
+//        *CD::rollback_point_ = rollback_point;
+////        printf("*rollback_point_ %d\n", *CD::rollback_point_);
+////        rb_cdh->SetMailBox(kErrorOccurred);
+//      }
 //      if(rollback_point != level())
 //        CDPath::GetCDLevel(rollback_point)->SetMailBox(kErrorOccurred);
     }

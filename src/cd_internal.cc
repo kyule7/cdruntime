@@ -916,8 +916,8 @@ CDErrT CD::Begin(bool collective, const char* label)
 //    CD_DEBUG("No Barrier!!!!! %d %u\n", collective, task_size());
 //  }
 
-//  if(cd_exec_mode_ == kReexecution || collective)
-//    SyncCDs(this);
+  if(cd_exec_mode_ == kReexecution || collective)
+    SyncCDs(this);
 //
 //  if(CD::need_reexec) {
 //    CD_DEBUG("\n\n[%s]Reexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n", __func__);
@@ -1091,7 +1091,6 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 
   // This is important synchronization point 
   // to guarantee the correctness of CD-enabled program.
-  uint32_t orig_rollback_point = CheckRollbackPoint(false);
   uint32_t new_rollback_point = orig_rollback_point;
   if(collective) {
     SyncCDs(this);
@@ -1116,7 +1115,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 
   if(need_reexec) { 
     // If another task set rollback_point lower than this task (error occurred at this task),
-    // initiator is false. 
+    // need_sync is false. 
     // Let's say it was set to 3. But another task set to 1. Then it is false;
     // Or originally it is INVALID_ROLLBACK_POINT, then it is false.
     // (ex. 0xFFFFFFF > any other level. 
@@ -1139,17 +1138,19 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     // This case Task0 must call sync.
     // 
     //
-    //bool initiator = orig_rollback_point <= *rollback_point_ && level() != *rollback_point_;
+    //bool need_sync = orig_rollback_point <= *rollback_point_ && level() != *rollback_point_;
     // FIXME
 //    printf("GetCDLevel : %u (cur %u), path size: %lu\n", *rollback_point_, level(), CDPath::uniquePath_->size());
-    bool initiator = false; //orig_rollback_point <= *rollback_point_ && (CDPath::GetCDLevel(*rollback_point_)->task_size() != task_size());
-//    printf("initiator? %d = %u <= %u\n", initiator, orig_rollback_point, *rollback_point_);
-//    CD_DEBUG("initiator? %d = %u <= %u\n", initiator, orig_rollback_point, *rollback_point_);
+    bool need_sync = false; //orig_rollback_point <= *rollback_point_ && (CDPath::GetCDLevel(*rollback_point_)->task_size() != task_size());
+//    bool need_sync = GetParentCD(level())->task_size() > task_size();
+//    printf("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, *rollback_point_);
+//    CD_DEBUG("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, *rollback_point_);
 //    GetCDToRecover(*rollback_point_ < cd_id_.cd_name_.level() && *rollback_point_ != INVALID_ROLLBACK_POINT)->Recover(false);
 //    *rollback_point_ == level() -> false
 //    bool collective = MPI_Group_compare(group());
-    CD_DEBUG("initiator? %d = %u <= %u\n", initiator, orig_rollback_point, new_rollback_point);
-    GetCDToRecover( GetCurrentCD(), GetParentCD(level())->task_size() > task_size() )->ptr_cd()->Recover();
+    CD_DEBUG("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, new_rollback_point);
+    
+    GetCDToRecover( GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }
   else {
     CD_DEBUG("Complete. No error\n");
