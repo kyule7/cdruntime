@@ -1489,9 +1489,10 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
     } else {
       assert(need_reexec == false); // should be false at this point.
       CheckMailBox();
-      if(need_reexec) { // This could be set inside CD::CheckMailBox()
+      uint32_t rollback_point = CheckRollbackPoint(false);
+      if(rollback_point != INVALID_ROLLBACK_POINT) { // This could be set inside CD::CheckMailBox()
         CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
-            __func__, level(), *rollback_point_, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+            __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
         CD_DEBUG_FLUSH;
         printed = false;
 //        GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
@@ -1499,11 +1500,12 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
       } else {
         if(printed == false) {
           CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
-              __func__, level(), *rollback_point_, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+              __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
           CD_DEBUG_FLUSH;
           printed = true;
         }
-      }
+      } 
+      // checking mailbox ends
     }
   }
 
