@@ -336,7 +336,7 @@ void CD_Finalize(void)
                              (recvbuf[2] / recvbuf[0]) * 100, 
                              (recvbuf[4] / recvbuf[0]) * 100);
 
-#if CD_DEBUG_ENABLED
+#if CD_DEBUG_ENABLED && CD_PROFILER_ENABLED 
     printf("Profile Result =================================\n");
     printf("%s\n", Profiler::GetTotalInfo().GetString().c_str());
     printf("================================================\n\n");

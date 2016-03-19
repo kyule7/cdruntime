@@ -745,7 +745,7 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
 #if CD_DEBUG_DEST == 1
     fflush(cdout);
 #endif
-  bool orig_need_reexec = need_reexec;
+//  bool orig_need_reexec = need_reexec;
 //  if(collective)
 //    SyncCDs(this);
 
