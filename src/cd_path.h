@@ -206,7 +206,7 @@ private:
   static CDHandle *GetCDLevel(uint32_t level)
   { 
     if(uniquePath_ != NULL) {
-      if( uniquePath_->size() > 1 ) {
+      if( uniquePath_->size() > 0 ) {
         if(level < (uint32_t)uniquePath_->size()) {
           return uniquePath_->at(level); 
         } else {

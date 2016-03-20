@@ -915,7 +915,7 @@ CDErrT CD::Begin(bool collective, const char* label)
 //  } else {
 //    CD_DEBUG("No Barrier!!!!! %d %u\n", collective, task_size());
 //  }
-
+  CD_DEBUG("Sync \n");
   if(cd_exec_mode_ == kReexecution || collective)
     SyncCDs(this);
 //
@@ -1029,7 +1029,10 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       target->ptr_cd_->DeleteEntryDirectory();
       target->Destroy();
       CDHandle *next_cdh = CDPath::GetCDLevel(--level);
-      return GetCDToRecover(next_cdh, next_cdh->task_size() > target->task_size());
+//      bool need_sync_next_cdh = GetParentCD(next_cdh->level())->task_size() > next_cdh->task_size();
+      bool need_sync_next_cdh = next_cdh->task_size() > target->task_size();
+      CD_DEBUG("level#%u (next_cdh) need sync? %u\n", next_cdh->level(), need_sync_next_cdh);
+      return GetCDToRecover(next_cdh, need_sync_next_cdh);
     }
     else {
       if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kRelaxed) {
@@ -1070,7 +1073,10 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     target->ptr_cd_->DeleteEntryDirectory();
     target->Destroy(false);
     CDHandle *next_cdh = CDPath::GetCDLevel(--level);
-    return GetCDToRecover(next_cdh, next_cdh->task_size() > target->task_size());
+//    bool need_sync_next_cdh = GetParentCD(next_cdh->level())->task_size() > next_cdh->task_size();
+    bool need_sync_next_cdh = next_cdh->task_size() > target->task_size();
+    CD_DEBUG("level#%u (next_cdh) need sync? %u\n", next_cdh->level(), need_sync_next_cdh);
+    return GetCDToRecover(next_cdh, need_sync_next_cdh);
   } else {
     ERROR_MESSAGE("Invalid eslcation point %u (current %u)\n", rollback_lv, level);
     return NULL;
@@ -1098,7 +1104,6 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 
   if(task_size() > 1) {
 //    MPI_Win_fence(0, rollbackWindow_);
-    new_rollback_point = CheckRollbackPoint(false);
 //    printf("1 new reexec level = %u\n", new_rollback_point);
 
     int head_id = GetNodeID().head_;
@@ -1112,8 +1117,9 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     SetRollbackPoint(new_rollback_point, false);
 //    printf("2 new reexec level = %u\n", new_rollback_point);
   }
+  new_rollback_point = CheckRollbackPoint(false);
 
-  if(need_reexec) { 
+  if(new_rollback_point != INVALID_ROLLBACK_POINT) { 
     // If another task set rollback_point lower than this task (error occurred at this task),
     // need_sync is false. 
     // Let's say it was set to 3. But another task set to 1. Then it is false;

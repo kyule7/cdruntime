@@ -271,7 +271,7 @@ long double ErrorInjector::GetErrorProb(float error_rate, float unit_time)
 {
 //  long double result = (1.0 - exp((-1.0)*(long double)error_rate*(long double)unit_time));
 //  printf("result %Le = 1.0 - exp(-1.0*%f*%f\n", result, error_rate, unit_time);
-//  CD_DEBUG("result %Le = 1.0 - exp(-1.0*%f*%f\n", result, error_rate, unit_time);
+//  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "result %Le = 1.0 - exp(-1.0*%f*%f\n", result, error_rate, unit_time);
   return ((long double)1.0 - exp((-1.0)*(long double)error_rate*(long double)unit_time));
 }
 
@@ -281,11 +281,11 @@ uint64_t ErrorInjector::Inject(void) {
 uint64_t ErrorInjector::InjectError(const long double &error_prob)
 {
 //  printf("error prob = %Le\n", error_prob);
-//  CD_DEBUG("error prob = %Le\n", error_prob);
+//  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "error prob = %Le\n", error_prob);
   long double rand_var = rand_generator_->GenErrorVal();
   int error = rand_var < error_prob;
-//  CD_DEBUG("Error %f(error_prob) < %f(random var)\n", error_prob, rand_var);
-  CD_DEBUG("Error %Le(error_prob) < %Le(random var)   ERROR? %d\n", error_prob, rand_var, error);
+//  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error %f(error_prob) < %f(random var)\n", error_prob, rand_var);
+  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error %Le(error_prob) < %Le(random var)   ERROR? %d\n", error_prob, rand_var, error);
   //printf("Error %f < %f(threshold) ERROR? %d\n", rand_var, error_prob, error);
 
   return error;
@@ -312,7 +312,7 @@ uint64_t SystemErrorInjector::Inject(void)
       error_occurred |= it->first;
 //      printf("ERROR!!! %lx, curr: %lx\n", error_occurred, it->first);
     }
-    CD_DEBUG("error rate %lu : %f (%lx)\n\n\n", it->first, it->second, error_occurred);// == (int)(it->first));
+    CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "error rate %lu : %f (%lx)\n\n\n", it->first, it->second, error_occurred);// == (int)(it->first));
 //    printf("error rate %lu : %f (%lx)\n", it->first, it->second, error_occurred);// == (int)(it->first));
   }
   return error_occurred;
@@ -365,15 +365,15 @@ CDErrorInjector::CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail
   : ErrorInjector(true, error_rate, kUniform, stdout) 
 {
   for(auto it=cd_list_to_fail.begin(); it!=cd_list_to_fail.end(); ++it) {
-    CD_DEBUG("push back cd %u\n", *it);
+    CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "push back cd %u\n", *it);
     cd_to_fail_.push_back(*it);
   }
   for(auto it=task_list_to_fail.begin(); it!=task_list_to_fail.end(); ++it) {
-    CD_DEBUG("push back task %u\n", *it);
+    CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "push back task %u\n", *it);
     task_to_fail_.push_back(*it);
   }
   force_to_fail_ = true;
-  CD_DEBUG("EIE CDErrorInjector created!\n");
+  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "EIE CDErrorInjector created!\n");
 }
 
 CDErrorInjector::CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, 
@@ -444,33 +444,33 @@ uint64_t CDErrorInjector::Inject(void)
   if(enabled_ == false) return false;
 
   if( force_to_fail_ ) {
-    CD_DEBUG("force_to_fail is turned on. cd fail list size : %zu, task fail list size : %zu\n", cd_to_fail_.size(), task_to_fail_.size());
+    CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "force_to_fail is turned on. cd fail list size : %zu, task fail list size : %zu\n", cd_to_fail_.size(), task_to_fail_.size());
 
     for(auto it=cd_to_fail_.begin(); it!=cd_to_fail_.end(); ++it) {
-      CD_DEBUG("cd_to_fail : %u = %u\n", *it, rank_in_level_);
+      CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "cd_to_fail : %u = %u\n", *it, rank_in_level_);
       if(*it == rank_in_level_) {
-        CD_DEBUG("cd failed rank_in_level #%u\n", *it);
+        CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "cd failed rank_in_level #%u\n", *it);
         return true;
       }
     }
 
     for(auto it=task_to_fail_.begin(); it!=task_to_fail_.end(); ++it) {
-      CD_DEBUG("task_to_fail : %u = %u\n", *it, task_in_color_);
+      CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "task_to_fail : %u = %u\n", *it, task_in_color_);
       if(*it == task_in_color_) {
-        CD_DEBUG("task failed task_in_color #%u\n", *it);
+        CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "task failed task_in_color #%u\n", *it);
         return true;
       }
     }
 
-    CD_DEBUG("\n");
+    CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "\n");
 //      enabled_ = false; // Turn off error injection in the reexecution.
     return false; // if it reach this point. No tasks/CDs are registered to be failed.
                   // So, return false.
   }
   long double rand_var = rand_generator_->GenErrorVal();
   int error = error_rate_ < rand_var;
-  CD_DEBUG("task #%d failed : %f(error_rate) < %Le(random var)\n", task_in_color_, error_rate_, rand_var);
-  CD_DEBUG("EIE\n");
+  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "task #%d failed : %f(error_rate) < %Le(random var)\n", task_in_color_, error_rate_, rand_var);
+  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "EIE\n");
 
   enabled_ = false;
   return error;

@@ -1127,7 +1127,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
 #if CD_MPI_ENABLED
 
-  CD_DEBUG("[%s] rollback from %u to %u (%d == %d)\n", __func__, level(), rollback_point, err_desc, CD::CDInternalErrT::kErrorReported);
+  CD_DEBUG("[%s] rollback %u -> %u (%d == %d)\n", __func__, rollback_point, level(), err_desc, CD::CDInternalErrT::kErrorReported);
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     err = kError;
     // FIXME
@@ -1146,8 +1146,10 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     assert(rb_cdh != NULL);
     if(rb_cdh->task_size() > 1) {
       rb_cdh->SetMailBox(kErrorOccurred);
-    } else {
+    } 
+    if(IsHead()) {
       ptr_cd_->SetRollbackPoint(rollback_point, false);
+    }
 //      if(rollback_point < *CD::rollback_point_) {
 //        CD::need_reexec = true;
 //        *CD::rollback_point_ = rollback_point;
@@ -1156,7 +1158,6 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 //      }
 //      if(rollback_point != level())
 //        CDPath::GetCDLevel(rollback_point)->SetMailBox(kErrorOccurred);
-    }
 
     err = kAppError;
     

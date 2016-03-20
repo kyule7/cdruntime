@@ -151,7 +151,7 @@
 #define SWITCH_3_0_0  3                                                   //           CalcForceForNodes 
 #define CD_MAP_3_0_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_1) //
 #define SWITCH_4_0_0  3                                                   //               CalcVolumeForceForElems ** MAP FINEGRAINED
-#define CD_MAP_4_0_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_2) //                 # O{fx,fy,xz}, I{nodelist,x,y,z}  
+#define CD_MAP_4_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_2) //                 # O{fx,fy,xz}, I{nodelist,x,y,z}  
 #define SWITCH_5_0_0  0                                                   //                   InitStressTermsForElems
 #define CD_MAP_5_0_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                     # O{sigxx,yy,zz}, I{nodelist,x,y,z}
 #define SWITCH_5_1_0  0                                                   //                   IntegrateStressForElems

@@ -500,7 +500,6 @@ void HandleAllPause::HandleEvent(void)
  */
 void HandleAllReexecute::HandleEvent(void)
 {
-  CD_DEBUG("[%s] CD Event kAllReexecute\t\t", __func__);
 #if _MPI_VER
 
   if(ptr_cd_->task_size() == 1) 
@@ -509,6 +508,8 @@ void HandleAllReexecute::HandleEvent(void)
   uint32_t rollback_lv  = ptr_cd_->level();
   uint32_t current_lv   = GetCurrentCD()->level();
   uint32_t rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local
+  CD_DEBUG("[%s] kAllReexecute need reexec from %u (orig reexec_lv:%u) (cur %u)\n", __func__, 
+           rollback_lv, rollback_point, current_lv);
 
   // Basic assumption of rollback_lv == current_lv is that
   // kAllReexecute event is set by head in current level,
@@ -555,8 +556,8 @@ void HandleAllReexecute::HandleEvent(void)
   IncHandledEventCounter();
 
   rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local
-  CD_DEBUG("[%s] need reexec from %u (orig reexec_lv:%u) (cur %u)\n", __func__, 
-           rollback_lv, rollback_point, ptr_cd_->level());
+  CD_DEBUG("[%s] kAllReexecute need reexec from %u (orig reexec_lv:%u) (cur %u)\n", __func__, 
+           rollback_lv, rollback_point, current_lv);
 
 #endif
 }

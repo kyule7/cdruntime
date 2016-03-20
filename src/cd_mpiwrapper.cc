@@ -1087,10 +1087,11 @@ int MPI_Wait(MPI_Request *request,
     switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
 //printf("test wait : strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
-        GetCurrentCD()->ptr_cd()->PrintDebug();
-        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
+//        GetCurrentCD()->ptr_cd()->PrintDebug();
+//        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
         mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        mpi_ret = PMPI_Wait(request, status);
+        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
 //        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
 //        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        assert(CD::need_reexec == false);
