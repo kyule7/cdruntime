@@ -130,9 +130,9 @@
 #define SWITCH_PRESERVE_INIT 1
 
 #define ERROR_VEC_0 0x0F00
-#define ERROR_VEC_1 0x0700
-#define ERROR_VEC_2 0x0300
-#define ERROR_VEC_3 0x0100
+#define ERROR_VEC_1 0x0E00
+#define ERROR_VEC_2 0x0C00
+#define ERROR_VEC_3 0x0800
 //#define ERROR_VEC_4 0x0F00
 //#define ERROR_VEC_5 0x0700
 //#define ERROR_VEC_6 0x0300

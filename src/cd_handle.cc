@@ -757,7 +757,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 CDErrT CDHandle::Destroy(bool collective) {
   CDPrologue();
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
-                                                                      level(), CD::need_reexec, *CD::rollback_point_);
+                                                                      level(), need_reexec(), *CD::rollback_point_);
   CDErrT err = InternalDestroy(collective);
   CDEpilogue();
   return err;
@@ -837,7 +837,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 {
   CDPrologue();
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
-                                                                      level(), CD::need_reexec, *CD::rollback_point_);
+                                                                      level(), need_reexec(), *CD::rollback_point_);
 
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
@@ -1114,7 +1114,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   CDPrologue();
   CD_DEBUG("[%s] check mode : %d at %s %s level %u (reexecInfo %d (%u))\n", __func__, ptr_cd()->cd_exec_mode_, 
                                                           ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
-                                                          level(), CD::need_reexec, *CD::rollback_point_);
+                                                          level(), need_reexec(), *CD::rollback_point_);
 
   std::vector<SysErrT> ret_prepare;
   CDErrT err = kOK;
@@ -1456,7 +1456,7 @@ jmp_buf* CDHandle::jump_buffer()
 
 bool     CDHandle::recreated(void)     const { return ptr_cd_->recreated_; }
 bool     CDHandle::reexecuted(void)    const { return ptr_cd_->reexecuted_; }
-bool     CDHandle::need_reexec(void)   const { return CD::need_reexec; }
+bool     CDHandle::need_reexec(void)   const { return *CD::rollback_point_ != INVALID_ROLLBACK_POINT; }
 uint32_t CDHandle::rollback_point(void)  const { return *CD::rollback_point_; }
 CDType   CDHandle::GetCDType(void)     const { return ptr_cd_->GetCDType(); }
 int CDHandle::GetCommLogMode(void) const {return ptr_cd_->GetCommLogMode(); }

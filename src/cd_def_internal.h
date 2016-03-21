@@ -148,7 +148,7 @@ typedef uint32_t ENTRY_TAG_T;
 #define MASK_CDTYPE(X)          (X & 0x03)
 #define MASK_MEDIUM(X)          (X & 0xFC)
 #define CHECK_EVENT(X,Y)        ((X & Y) == Y)
-#define CHECK_NO_EVENT(X)       (X == 0)
+#define CHECK_NO_EVENT(X)       (((X) == 0))
 #define SET_EVENT(X,Y)          (X |= Y)
 
 #define TAG_MASK(X) ((2<<(X-1)) - 1)

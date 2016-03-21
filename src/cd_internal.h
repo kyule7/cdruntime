@@ -217,7 +217,7 @@ class CD : public Serializable {
 //    static std::unordered_map<std::string,std::pair<int,int>> num_exec_map_;
 #if 1
   public:
-    static bool need_reexec;
+//    static bool need_reexec;
     static bool need_escalation;
 //    static int handled_event_count;
 //    static uint32_t reexec_level;
@@ -628,12 +628,13 @@ public:
     uint32_t DecPendingCounter(void);
     uint32_t IncPendingCounter(void);
     CDFlagT GetEventFlag(void);
-    void SetRollbackPoint(const uint32_t &rollback_lv, bool remote);
+    uint32_t SetRollbackPoint(const uint32_t &rollback_lv, bool remote);
     uint32_t CheckRollbackPoint(bool remote);
     void CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &new_rollback_point);
     CDErrT CheckMailBox(void);
-    virtual CDErrT SetMailBox(const CDEventT &event);
-    CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);
+    CDErrT SetMailBox(const CDEventT &event);
+    CDInternalErrT RemoteSetMailBox(const CDEventT &event);
+//    CDInternalErrT LocalSetMailBox(const CDEventT &event);
 //    static inline void IncHandledEventCounter(void) { handled_event_count++; }
   public:
     
@@ -659,6 +660,7 @@ class HeadCD : public CD {
   friend class RegenObject;   
   friend class CDEntry;  
   friend class RecoverObject;
+  friend class CD;
 //    friend class HandleAllReexecute;
 //    friend class HandleEntrySearch;
 //    friend class HandleEntrySend;
@@ -734,8 +736,8 @@ class HeadCD : public CD {
     CDFlagT *GetEventFlag(void);
 
     CDErrT SetMailBox(const CDEventT &event, int task_id);
-    CDInternalErrT LocalSetMailBox(HeadCD *curr_cd, const CDEventT &event);
-    virtual CDErrT SetMailBox(const CDEventT &event);
+    CDInternalErrT LocalSetMailBox(const CDEventT &event);
+//    virtual CDErrT SetMailBox(const CDEventT &event);
     CDEventHandleT ReadMailBox(CDFlagT *p_event, uint32_t idx=0);
     virtual CDInternalErrT InternalCheckMailBox(void);
 

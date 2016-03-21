@@ -67,7 +67,7 @@ map<string, uint32_t> CD::exec_count_;
 
 //unordered_map<string,pair<int,int>> CD::num_exec_map_;
 
-bool CD::need_reexec = false;
+//bool CD::need_reexec = false;
 bool CD::need_escalation = false;
 //uint32_t *CD::rollback_point_ = INVALID_ROLLBACK_POINT;
 
@@ -1112,11 +1112,15 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 //      need_escalation = false;
 //
 //      CD *root = CDPath::GetRootCD()->ptr_cd();
-      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, target->task_in_color(), 0, target->ptr_cd()->rollbackWindow_);
-      need_reexec = false;
+      CD *cdp = CDPath::GetCoarseCD(target->ptr_cd_);
+      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cdp->task_in_color(), 0, cdp->rollbackWindow_);
+      //need_reexec = false;
       need_escalation = false;
       *rollback_point_ = INVALID_ROLLBACK_POINT;        
-      PMPI_Win_unlock(target->task_in_color(), target->ptr_cd()->rollbackWindow_);
+      PMPI_Win_unlock(cdp->task_in_color(), cdp->rollbackWindow_);
+
+      target->ptr_cd_->reported_error_ = false;
+      //cdp->reported_error_ = false;
 #if CD_PROFILER_ENABLED
       check_sync_clk = false;
 #endif
@@ -1158,7 +1162,8 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   begin_ = false;
   uint32_t orig_rollback_point = CheckRollbackPoint(false);
 //  bool my_need_reexec = need_reexec;
-  CD_DEBUG("\nCD::Complete : %s %s \t Reexec(%d) from %u\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), need_reexec, orig_rollback_point);
+  CD_DEBUG("\nCD::Complete : %s %s \t Reexec from %u\n", 
+          GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
 
   // This is important synchronization point 
   // to guarantee the correctness of CD-enabled program.
@@ -1212,7 +1217,11 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     //bool need_sync = orig_rollback_point <= *rollback_point_ && level() != *rollback_point_;
     // FIXME
 //    printf("GetCDLevel : %u (cur %u), path size: %lu\n", *rollback_point_, level(), CDPath::uniquePath_->size());
-    bool need_sync = false; //orig_rollback_point <= *rollback_point_ && (CDPath::GetCDLevel(*rollback_point_)->task_size() != task_size());
+
+    // If this task did not expect to reexecute, but is tunred out to be, it does not need sync.
+    //bool need_sync = orig_rollback_point == INVALID_ROLLBACK_POINT
+    bool need_sync = false;
+//    bool need_sync = orig_rollback_point != INVALID_ROLLBACK_POINT; //orig_rollback_point <= *rollback_point_ && (CDPath::GetCDLevel(*rollback_point_)->task_size() != task_size());
 //    bool need_sync = GetParentCD(level())->task_size() > task_size();
 //    printf("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, *rollback_point_);
 //    CD_DEBUG("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, *rollback_point_);
@@ -2686,7 +2695,8 @@ CD::CDInternalErrT CD::Assert(bool test)
 
 #if _MPI_VER
   if(test == false) {
-    need_reexec = true;
+    SetRollbackPoint(level(), false);
+//    need_reexec = true;
 //    bool need_escalation = false;
     if(totalTaskSize != 1) {
       

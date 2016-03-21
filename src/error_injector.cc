@@ -52,7 +52,7 @@ using namespace cd::interface;
 // Uniform Random
 long double UniformRandom::GenErrorVal(void) 
 {
-  srand48(clock()+myTaskID);
+//  srand48(clock()+myTaskID);
   return drand48();
 }
 
@@ -269,10 +269,12 @@ ErrorProb *ErrorInjector::CreateErrorProb(RandType rand_type)
 
 long double ErrorInjector::GetErrorProb(float error_rate, float unit_time) 
 {
-//  long double result = (1.0 - exp((-1.0)*(long double)error_rate*(long double)unit_time));
+  long double temp = exp((-1.0)*(long double)error_rate*(long double)unit_time);
+  long double result = (1.0 - temp);
 //  printf("result %Le = 1.0 - exp(-1.0*%f*%f\n", result, error_rate, unit_time);
-//  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "result %Le = 1.0 - exp(-1.0*%f*%f\n", result, error_rate, unit_time);
-  return ((long double)1.0 - exp((-1.0)*(long double)error_rate*(long double)unit_time));
+  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "result %Le = 1.0 - exp(-%f*%f)   %Le\n", result, error_rate, unit_time, temp);
+  return result; 
+  //return ((long double)1.0 - exp((-1.0)*(long double)error_rate*(long double)unit_time));
 }
 
 uint64_t ErrorInjector::Inject(void) {
@@ -283,9 +285,9 @@ uint64_t ErrorInjector::InjectError(const long double &error_prob)
 //  printf("error prob = %Le\n", error_prob);
 //  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "error prob = %Le\n", error_prob);
   long double rand_var = rand_generator_->GenErrorVal();
-  int error = rand_var < error_prob;
+  int error = error_prob > rand_var;
 //  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error %f(error_prob) < %f(random var)\n", error_prob, rand_var);
-  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error %Le(error_prob) < %Le(random var)   ERROR? %d\n", error_prob, rand_var, error);
+  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error %Le(error_prob) > %Le(random var)   ERROR? %d\n", error_prob, rand_var, error);
   //printf("Error %f < %f(threshold) ERROR? %d\n", rand_var, error_prob, error);
 
   return error;
@@ -312,7 +314,8 @@ uint64_t SystemErrorInjector::Inject(void)
       error_occurred |= it->first;
 //      printf("ERROR!!! %lx, curr: %lx\n", error_occurred, it->first);
     }
-    CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "error rate %lu : %f (%lx)\n\n\n", it->first, it->second, error_occurred);// == (int)(it->first));
+    CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "error rate %lu : %f (%lx) [period:%lf]\n", it->first, it->second, error_occurred,period);// == (int)(it->first));
+
 //    printf("error rate %lu : %f (%lx)\n", it->first, it->second, error_occurred);// == (int)(it->first));
   }
   return error_occurred;

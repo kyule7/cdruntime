@@ -1104,7 +1104,7 @@ int MPI_Wait(MPI_Request *request,
       case kRelaxedCDGen: {
 //        mpi_ret = PMPI_Wait(request, status);
         mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
-        assert(CD::need_reexec == false);
+        assert(cur_cdh->need_reexec() == false);
         LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
 
 //        if( cur_cdh->CheckIntraCDMsg(dest, g) ) {
