@@ -1190,7 +1190,6 @@ class CDHandle {
     int GetCDLoggingMode(void) const;
 
   private:
-
 #if CD_TEST_ENABLED
     void PrintCommLog(void) const;
 #endif

@@ -1091,7 +1091,9 @@ int MPI_Wait(MPI_Request *request,
 //        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
         mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        mpi_ret = PMPI_Wait(request, status);
-        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
+        if(mpi_ret != MPI_ERR_NEED_ESCALATE) {
+         cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
+        }
 //        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
 //        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        assert(CD::need_reexec == false);
@@ -1136,6 +1138,10 @@ int MPI_Wait(MPI_Request *request,
     mpi_ret = PMPI_Wait(request, status);
   }
   MsgEpilogue();
+  if(mpi_ret == MPI_ERR_NEED_ESCALATE) {
+    cur_cdh->ptr_cd()->Escalate(cur_cdh, true); 
+//    GetCurrentCD()->ptr_cd()->GetCDToRecover(GetCurrentCD(), true)->ptr_cd()->Recover();
+  }
   return mpi_ret;
 }
 

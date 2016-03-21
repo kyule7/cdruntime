@@ -47,6 +47,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <errno.h>
 #include <ctime>
 #include "cd_features.h"
+#include "cd_def_debug.h"
 #define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
 
 namespace cd {
@@ -123,6 +124,12 @@ typedef uint32_t ENTRY_TAG_T;
 #define MSG_MAX_TAG_SIZE  1073741824 // 2^30. TAG is
 //#define GEN_MSG_TAG(X) 
 
+#define CD_INT32_MAX  (0x0FFFFFFF)
+#define CD_INT32_MIN  (0x10000000)
+#define CD_UINT32_MAX (0xFFFFFFFF)
+#define CD_UINT64_MAX (0xFFFFFFFFFFFFFFFF)
+#define MPI_ERR_NEED_ESCALATE (0xFF00)
+
 #define INIT_TAG_VALUE   0
 #define INIT_ENTRY_SRC   0
 #define INVALID_TASK_ID -1
@@ -146,132 +153,6 @@ typedef uint32_t ENTRY_TAG_T;
 
 #define TAG_MASK(X) ((2<<(X-1)) - 1)
 #define TAG_MASK2(X) ((2<<(X-1)) - 2)
-
-
-
-
-
-
-
-// DEBUG related
-#define ERROR_MESSAGE(...) \
-  { fprintf(stderr, __VA_ARGS__); assert(0); }
-
-/* Eric:  Should be using vsnprintf to a buffer with explicit flush, 
- *        Add a comment to this line rather than a pair of fprintf's 
- *        to format the strings.
- *
- * The major disadvantage of two printf's is that they can be mixed
- * up when multiple threads/ranks are writing to the same output, confusing
- * the output.
- */
-static inline 
-int cd_debug_trace(FILE *stream, const char *source_file,
-                                 const char *function, int line_num,
-                                 const char *fmt, ...)
-{
-    int bytes;
-    va_list argp;
-//    bytes = fprintf(stream, "%s:%d: %s: ", source_file, line_num, function);
-    bytes = fprintf(stream, "[%s] ", function);
-    va_start(argp, fmt);
-    bytes += vfprintf(stream, fmt, argp);
-    va_end(argp);
-    fflush(stream);
-    return bytes;
-}
-#define DEBUG_OFF_MAILBOX 1
-#define DEBUG_OFF_ERRORINJ 1
-#define CD_DEBUG_TRACE_INFO(stream, ...) \
-  cd_debug_trace(stream, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-
-#if CD_DEBUG_DEST == CD_DEBUG_SILENT  // No printouts 
-
-#define CD_DEBUG(...) 
-#define CD_DEBUG_COND(...)
-#define CD_DEBUG_FLUSH
-#define LOG_DEBUG(...) 
-#define LIBC_DEBUG(...)
- 
-#elif CD_DEBUG_DEST == CD_DEBUG_TO_FILE  // Print to fileout
-
-extern FILE *cdout;
-extern FILE *cdoutApp;
-
-#define CD_DEBUG(...) \
-  CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__)
-
-#define CD_DEBUG_COND(DEBUG_OFF, ...) \
-if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
-
-#define CD_DEBUG_FLUSH \
-  fflush(cdout)
-
-#define LOG_DEBUG(...) /*\
-  { if(cd::app_side) {\
-      cd::app_side=false;\
-      CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__);\
-      cd::app_side = true;}\
-    else CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__);\
-  }*/
-
-#define LIBC_DEBUG(...) /*\
-    { if(cd::app_side) {\
-        cd::app_side=false;\
-        CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
-        cd::app_side = true;}\
-      else CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
-    }*/
-
-
-
-#elif CD_DEBUG_DEST == CD_DEBUG_STDOUT  // print to stdout 
-
-#define CD_DEBUG(...) \
-  CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__)
-
-#define CD_DEBUG_COND(DEBUG_OFF, ...) \
-if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
-
-#define CD_DEBUG_FLUSH 
-
-#define LOG_DEBUG(...) /*\
-  { if(cd::app_side) {\
-      cd::app_side=false;\
-      CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
-      cd::app_side = true;}\
-    else CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
-  }*/
-
-#define LIBC_DEBUG(...)/* \
-    { if(cd::app_side) {\
-        cd::app_side=false;\
-        CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
-        cd::app_side = true;}\
-      else CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
-    }*/
-
-
-#elif CD_DEBUG_DEST == CD_DEBUG_STDERR  // print to stderr
-
-#define CD_DEBUG(...) \
-  CD_DEBUG_TRACE_INFO(stderr, __VA_ARGS__)
-
-#define CD_DEBUG_COND(DEBUG_OFF, ...) \
-if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
-
-#define CD_DEBUG_FLUSH
-
-#else  // -------------------------------------
-
-#define CD_DEBUG(...) \
-  CD_DEBUG_TRACE_INFO(stderr, __VA_ARGS__)
-
-#define CD_DEBUG_FLUSH
-#endif
-
-
-
 
 
 
@@ -593,7 +474,7 @@ extern clock_t elapsed_time;
 #endif
 
 
-
+#if 1
   namespace logging {
 
     // data structure to store incompleted log entries
@@ -663,14 +544,24 @@ extern clock_t elapsed_time;
         return it;
       }
     };
-//    struct IncompleteLog : public std::vector<IncompleteLogEntry> {
-//      std::vector<IncompleteLogEntry>::iterator &find(uint64_t flag) {
-//
-//
-//      }
-//    };
 
-  }
+//    class MsgHandle {
+//      public:
+//        static int  BlockUntilValid(CD *cd_p, MPI_Request *request, MPI_Status *status) {
+//          return cd_p->BlockUntilValid(request, status);
+//        }
+//    
+//        static void Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
+//          (leaf->ptr_cd()->GetCDToRecover(leaf, need_sync_to_reexec))->ptr_cd()->Recover();
+//        }
+//    
+//        // TODO
+//        static bool CheckIntraCDMsg(CD *cd_p, int target_id, MPI_Group &target_group) {
+//          return cd_p->CheckIntraCDMsg(target_id, target_group);
+//        }
+//    };
+  } // namespace logging ends
+#endif
 
 } // namespace cd ends
 

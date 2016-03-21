@@ -238,7 +238,7 @@ void HandleEntrySearch::HandleEvent(void)
 
   }
 
-  ptr_cd_->event_flag_[entry_requester_id] &= ~kEntrySearch;
+//  ptr_cd_->event_flag_[entry_requester_id] &= ~kEntrySearch;
   IncHandledEventCounter();
 
 #endif
@@ -366,12 +366,12 @@ void HandleEntrySend::HandleEvent(void)
     }
     CD_DEBUG("CD Event kEntrySend\t\t\t");
   
-    if(ptr_cd_->IsHead()) {
-      ptr_cd_->event_flag_[ptr_cd_->task_in_color()] &= ~kEntrySend;
-    }
-    else {
-      *(ptr_cd_->event_flag_) &= ~kEntrySend;
-    }
+//    if(ptr_cd_->IsHead()) {
+//      ptr_cd_->event_flag_[ptr_cd_->task_in_color()] &= ~kEntrySend;
+//    }
+//    else {
+//      *(ptr_cd_->event_flag_) &= ~kEntrySend;
+//    }
     IncHandledEventCounter();
   }
 #endif
@@ -396,7 +396,7 @@ void HandleErrorOccurred::HandleEvent(void)
 
   // Resume
   CD_DEBUG("\n== HandleErrorOccurred::HandleEvent HeadCD Event kErrorOccurred is handled!!\n");
-  ptr_cd_->event_flag_[task_id] &= ~kErrorOccurred;
+//  ptr_cd_->event_flag_[task_id] &= ~kErrorOccurred;
   IncHandledEventCounter();
 
   // reset this flag for the next error
@@ -427,7 +427,7 @@ void HandleAllResume::HandleEvent(void)
 
   CD_DEBUG("CD Event kAllResume\t\t\t");
 
-  *(ptr_cd_->event_flag_) &= ~kAllResume;
+//  *(ptr_cd_->event_flag_) &= ~kAllResume;
 
   IncHandledEventCounter();
 
@@ -459,7 +459,7 @@ void HandleAllPause::HandleEvent(void)
     ptr_cd_->need_reexec = true;
   }
 #else
-  *(ptr_cd_->event_flag_) &= ~kAllPause;
+//  *(ptr_cd_->event_flag_) &= ~kAllPause;
   IncHandledEventCounter();
 #endif
 
@@ -552,7 +552,8 @@ void HandleAllReexecute::HandleEvent(void)
 //    CD::mailbox_entries[REEXEC_LEVEL] = ptr_cd_->level();
 //    ptr_cd_->SetRollbackPoint(rollback_lv, false);
 
-  *(ptr_cd_->event_flag_) &= ~kAllReexecute;
+//  *(ptr_cd_->event_flag_) &= ~kAllReexecute;
+
   IncHandledEventCounter();
 
   rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local

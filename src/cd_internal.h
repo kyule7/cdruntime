@@ -546,7 +546,7 @@ public:
     bool TestComm(bool test_untile_done=false);
     bool TestReqComm(bool is_all_valid=true);
     bool TestRecvComm(bool is_all_valid=true);
-    virtual CDFlagT *event_flag();
+//    virtual CDFlagT *event_flag();
 #endif
 
   protected:
@@ -620,10 +620,13 @@ public:
 
 #if CD_MPI_ENABLED
   private:
-    CDEventHandleT ReadMailBox(CDFlagT &event);
+    CDEventHandleT ReadMailBox(const CDFlagT &event);
     virtual CDInternalErrT InternalCheckMailBox(void);
-    void DecPendingCounter(void);
-    void IncPendingCounter(void);
+    void     UnsetEventFlag(CDFlagT &event_flag, CDFlagT event_mask);
+    uint32_t GetPendingCounter(void);
+    uint32_t DecPendingCounter(void);
+    uint32_t IncPendingCounter(void);
+    CDFlagT GetEventFlag(void);
     void SetRollbackPoint(const uint32_t &rollback_lv, bool remote);
     uint32_t CheckRollbackPoint(bool remote);
     void CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &new_rollback_point);
@@ -631,6 +634,8 @@ public:
     virtual CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);
   public:
+    
+    void Escalate(CDHandle *leaf, bool need_sync_to_reexec);
     int  BlockUntilValid(MPI_Request *request, MPI_Status *status);
     bool CheckIntraCDMsg(int target_id, MPI_Group &target_group);
 #endif
@@ -723,12 +728,13 @@ class HeadCD : public CD {
     {    }
 
 #if CD_MPI_ENABLED
-    virtual CDFlagT *event_flag();
+//    virtual CDFlagT *event_flag();
+    CDFlagT *GetEventFlag(void);
 
     CDErrT SetMailBox(const CDEventT &event, int task_id);
     CDInternalErrT LocalSetMailBox(HeadCD *curr_cd, const CDEventT &event);
     virtual CDErrT SetMailBox(const CDEventT &event);
-    CDEventHandleT ReadMailBox(CDFlagT *p_event, int idx=0);
+    CDEventHandleT ReadMailBox(CDFlagT *p_event, uint32_t idx=0);
     virtual CDInternalErrT InternalCheckMailBox(void);
 
 //    CDInternalErrT InvokeErrorHandler(void);

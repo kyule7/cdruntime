@@ -1147,7 +1147,9 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     if(rb_cdh->task_size() > 1) {
       rb_cdh->SetMailBox(kErrorOccurred);
     } 
-    if(IsHead()) {
+
+    // If there is a single task in a CD, everybody is the head in that level.
+    if(IsHead()) { 
       ptr_cd_->SetRollbackPoint(rollback_point, false);
     }
 //      if(rollback_point < *CD::rollback_point_) {
