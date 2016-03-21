@@ -45,6 +45,7 @@ using namespace cd::internal;
 using namespace std;
 
 
+int EventHandler::handled_event_count = 0;
 
 void HandleEntrySearch::HandleEvent(void)
 {

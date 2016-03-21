@@ -48,7 +48,8 @@ using namespace cd::internal;
 using namespace std;
 
 int requested_event_count = 0;
-int cd::handled_event_count = 0;
+//int cd::handled_event_count = 0;
+//int CD::handled_event_count = 0;
 
 
 NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, const int &new_task, const int &new_head_id)
@@ -587,9 +588,9 @@ CDErrT CD::CheckMailBox(void)
   //assert(event_count <= 1024);
   // Reset handled event counter
   //handled_event_count = 0;
-  assert(handled_event_count == 0);
+  assert(EventHandler::handled_event_count == 0);
   CDHandle *curr_cdh = GetCurrentCD();
-  uint32_t temp = handled_event_count;
+  uint32_t temp = EventHandler::handled_event_count;
 
 //  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\n\n=================== Check Mail Box Start [Level #%u], # of pending events : %d ========================\n", level(), event_count);
   
@@ -648,7 +649,7 @@ CDErrT CD::CheckMailBox(void)
     InvokeErrorHandler();
     uint32_t remained_event_count = DecPendingCounter();
     CD_DEBUG("\nCheck MailBox is done. handled_event_count : %u --> %u, pending events : %d --> %u\n", 
-                  temp, handled_event_count, event_count, remained_event_count);
+                  temp, EventHandler::handled_event_count, event_count, remained_event_count);
     CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "-------------------------------------------------------------------\n");
 
   }
@@ -699,7 +700,7 @@ CD::CDInternalErrT CD::InternalCheckMailBox(void)
 
   CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\tResolved? : %d\n", resolved);
   CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "cd event queue size : %lu, handled event count : %d\n", 
-           cd_event_.size(), handled_event_count);
+           cd_event_.size(), EventHandler::handled_event_count);
 
   return ret;
 }
@@ -748,7 +749,7 @@ CD::CDInternalErrT HeadCD::InternalCheckMailBox(void)
   }
   CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\tResolved? : %d\n", resolved);
   CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "cd event queue size : %lu, handled event count : %d\n", 
-           cd_event_.size(), handled_event_count);
+           cd_event_.size(), EventHandler::handled_event_count);
 
 #if LOCK_PER_MAILBOX
   delete event;
@@ -828,7 +829,7 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, uint32_t idx)
       assert(task_size() > 1); 
       if(error_occurred == true) {
         CD_DEBUG("Event kErrorOccurred %d", idx);
-        IncHandledEventCounter();
+        EventHandler::IncHandledEventCounter();
       }
       else {
         CD_DEBUG("Event kErrorOccurred %d (Initiator)", idx);
@@ -836,9 +837,9 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, uint32_t idx)
         error_occurred = true;
       }
 #if LOCK_PER_MAILBOX
-        UnsetEventFlag(event_flag_[idx], kErrorOccurred); 
+      UnsetEventFlag(event_flag_[idx], kErrorOccurred); 
 #else
-        event_flag_[idx] &= ~kErrorOccurred;
+      event_flag_[idx] &= ~kErrorOccurred;
 #endif
     } // kErrorOccurred ends
 
@@ -869,7 +870,7 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, uint32_t idx)
       }
       else {
         // Search Entry
-//        IncHandledEventCounter();
+//        EventHandler::IncHandledEventCounter();
       }
 #endif
     }
@@ -1492,11 +1493,12 @@ uint32_t CD::DecPendingCounter(void)
   uint32_t pending_counter = CD_UINT32_MAX;
   CD *coarse_cd = CDPath::GetCoarseCD(this);
   PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, coarse_cd->task_in_color(), 0, coarse_cd->pendingWindow_);
-  (*pendingFlag_) -= handled_event_count;
+  (*pendingFlag_) -= EventHandler::handled_event_count;
   pending_counter = (*pendingFlag_);
   PMPI_Win_unlock(coarse_cd->task_in_color(), coarse_cd->pendingWindow_);
   // Initialize handled_event_count;
-  handled_event_count = 0;
+  CD_DEBUG("handled : %d, pending_counter : %u\n", EventHandler::handled_event_count, pending_counter);
+  EventHandler::handled_event_count = 0;
   return pending_counter;
 }
 

@@ -760,27 +760,51 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
   if(task_size() > 1 && (is_window_reused_==false)) {  
     PMPI_Win_free(&pendingWindow_);
     PMPI_Win_free(&rollbackWindow_);
-
-    for(int i=0; i<task_size(); i++) {
-      if(event_flag_[i] != 0) {
-        CDFlagT event = event_flag_[i];
+    if(IsHead()) {
+      for(int i=0; i<task_size(); i++) {
+        if(event_flag_[i] != 0) {
+          const CDFlagT event = event_flag_[i];
+          if(CHECK_EVENT(event, kErrorOccurred)) {
+            EventHandler::IncHandledEventCounter();
+          }
+          if(CHECK_EVENT(event, kAllReexecute)) {
+            EventHandler::IncHandledEventCounter();
+          }
+          if(CHECK_EVENT(event, kEntrySearch)) {
+            EventHandler::IncHandledEventCounter();
+          }
+          if(CHECK_EVENT(event, kEntrySend)) {
+            EventHandler::IncHandledEventCounter();
+          }
+          if(CHECK_EVENT(event, kAllPause)) {
+            EventHandler::IncHandledEventCounter();
+          }
+          if(CHECK_EVENT(event, kAllResume)) {
+            EventHandler::IncHandledEventCounter();
+          }
+        }
+      }
+    }
+    else {
+      if(*event_flag_ != 0) {
+        const CDFlagT event = *event_flag_;
         if(CHECK_EVENT(event, kErrorOccurred)) {
-          IncHandledEventCounter();
+          EventHandler::IncHandledEventCounter();
         }
         if(CHECK_EVENT(event, kAllReexecute)) {
-          IncHandledEventCounter();
+          EventHandler::IncHandledEventCounter();
         }
         if(CHECK_EVENT(event, kEntrySearch)) {
-          IncHandledEventCounter();
+          EventHandler::IncHandledEventCounter();
         }
         if(CHECK_EVENT(event, kEntrySend)) {
-          IncHandledEventCounter();
+          EventHandler::IncHandledEventCounter();
         }
         if(CHECK_EVENT(event, kAllPause)) {
-          IncHandledEventCounter();
+          EventHandler::IncHandledEventCounter();
         }
         if(CHECK_EVENT(event, kAllResume)) {
-          IncHandledEventCounter();
+          EventHandler::IncHandledEventCounter();
         }
       }
     }

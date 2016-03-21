@@ -219,6 +219,7 @@ class CD : public Serializable {
   public:
     static bool need_reexec;
     static bool need_escalation;
+//    static int handled_event_count;
 //    static uint32_t reexec_level;
 #endif
   protected:
@@ -633,6 +634,7 @@ public:
     CDErrT CheckMailBox(void);
     virtual CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(CD *curr_cd, const CDEventT &event);
+//    static inline void IncHandledEventCounter(void) { handled_event_count++; }
   public:
     
     void Escalate(CDHandle *leaf, bool need_sync_to_reexec);

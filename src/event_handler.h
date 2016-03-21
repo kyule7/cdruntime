@@ -54,9 +54,11 @@ namespace cd {
 
 class EventHandler {
 public:
+  static int handled_event_count;
   EventHandler() {}
   virtual ~EventHandler(void) {}
   virtual void HandleEvent(void) {cddbg << "EventHandler::HandleEvent is called" << endl;}
+  static inline void IncHandledEventCounter(void) { handled_event_count++; }
 };
 
 class CDEventHandler : public EventHandler {

@@ -260,7 +260,7 @@ namespace cd {
   extern int myTaskID;
 #if CD_MPI_ENABLED
   extern MPI_Group whole_group;
-  extern int handled_event_count;
+//  extern int handled_event_count;
   extern int max_tag_bit;
   extern int max_tag_level_bit;
   extern int max_tag_rank_bit;
@@ -468,10 +468,10 @@ extern clock_t elapsed_time;
 
  /** @} */ // End runtime_logging group =====================================================
 
-#if CD_MPI_ENABLED
-  extern inline void IncHandledEventCounter(void)
-  { handled_event_count++; }
-#endif
+//#if CD_MPI_ENABLED
+//  extern inline void IncHandledEventCounter(void)
+//  { handled_event_count++; }
+//#endif
 
 
 #if 1
