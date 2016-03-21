@@ -46,9 +46,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_comm_log.h"
 #include "cd_def_internal.h"
 using namespace cd;
-clock_t cd::msg_begin_clk;
-clock_t cd::msg_end_clk;
-clock_t cd::msg_elapsed_time;
+CD_CLOCK_T cd::msg_begin_clk;
+CD_CLOCK_T cd::msg_end_clk;
+CD_CLOCK_T cd::msg_elapsed_time;
 
 // -------------------------------------------------------------------------------------------------------
 // blocking p2p communication
@@ -2429,24 +2429,24 @@ int MPI_Scan(const void *sendbuf,
 
 int MPI_Init(int *argc, char ***argv)
 {
-  MsgPrologue();
+  app_side = false; 
   int mpi_ret = 0;
 
   mpi_ret = PMPI_Init(argc, argv);
 
   
-  MsgEpilogue();
+  app_side = true; 
   return mpi_ret;
 }
 int MPI_Finalize(void)
 {
-  MsgPrologue();
+  app_side = false; 
   int mpi_ret = 0;
 
   mpi_ret = PMPI_Finalize();
 
   
-  MsgEpilogue();
+  app_side = true; 
   return mpi_ret;
 }
 int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],

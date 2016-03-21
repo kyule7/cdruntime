@@ -45,9 +45,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <map>
 #include <unordered_map>
 #include <errno.h>
-#include <ctime>
 #include "cd_features.h"
 #include "cd_def_debug.h"
+#include "cd_def_interface.h"
 #define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
 
 namespace cd {
@@ -382,25 +382,35 @@ namespace cd {
 //                       kIncludeStack
 //                     };
 
+//#if CD_MPI_ENABLED
+//#define CD_CLOCK_T double
+//#define CLK_NORMALIZER (1.0)
+//#define CD_CLOCK MPI_Wtime
+//#else
+//#include <ctime>
+//#define CD_CLOCK_T clock_t
+//#define CLK_NORMALIZER CLOCKS_PER_SEC
+//#define CD_CLOCK clock
+//#endif
 
-extern clock_t tot_begin_clk;
-extern clock_t tot_end_clk;
+extern CD_CLOCK_T tot_begin_clk;
+extern CD_CLOCK_T tot_end_clk;
 
-extern clock_t msg_begin_clk;
-extern clock_t msg_end_clk;
-extern clock_t msg_elapsed_time;
+extern CD_CLOCK_T msg_begin_clk;
+extern CD_CLOCK_T msg_end_clk;
+extern CD_CLOCK_T msg_elapsed_time;
 
-extern clock_t log_begin_clk;
-extern clock_t log_end_clk;
-extern clock_t log_elapsed_time;
+extern CD_CLOCK_T log_begin_clk;
+extern CD_CLOCK_T log_end_clk;
+extern CD_CLOCK_T log_elapsed_time;
 
-extern clock_t prof_begin_clk;
-extern clock_t prof_end_clk;
-extern clock_t prof_sync_clk;
+extern CD_CLOCK_T prof_begin_clk;
+extern CD_CLOCK_T prof_end_clk;
+extern CD_CLOCK_T prof_sync_clk;
 
-extern clock_t begin_clk;
-extern clock_t end_clk;
-extern clock_t elapsed_time;
+extern CD_CLOCK_T begin_clk;
+extern CD_CLOCK_T end_clk;
+extern CD_CLOCK_T elapsed_time;
 
 /**@addtogroup runtime_logging 
  * @{
@@ -408,18 +418,18 @@ extern clock_t elapsed_time;
 
 #define MsgPrologue() \
   app_side = false; \
-  msg_begin_clk = clock(); 
+  msg_begin_clk = CD_CLOCK(); 
 
 #define MsgEpilogue() \
   app_side = true; \
-  msg_end_clk = clock(); \
+  msg_end_clk = CD_CLOCK(); \
   msg_elapsed_time += msg_end_clk - msg_begin_clk; 
 
 #define LogPrologue() \
-  log_begin_clk = clock(); 
+  log_begin_clk = CD_CLOCK(); 
 
 #define LogEpilogue() \
-  log_end_clk = clock(); \
+  log_end_clk = CD_CLOCK(); \
   log_elapsed_time += log_end_clk - log_begin_clk; 
 
 
@@ -430,14 +440,14 @@ extern clock_t elapsed_time;
 
 #define CDPrologue() \
   app_side = false;\
-  begin_clk = clock(); \
+  begin_clk = CD_CLOCK(); \
   profiler_->RecordClockBegin();
 
 #else
 
 #define CDPrologue() \
   app_side = false; \
-  begin_clk = clock(); 
+  begin_clk = CD_CLOCK(); 
 #endif
 
 
@@ -448,7 +458,7 @@ extern clock_t elapsed_time;
 
 #define CDEpilogue() \
   app_side = true; \
-  end_clk = clock(); \
+  end_clk = CD_CLOCK(); \
   elapsed_time += end_clk - begin_clk; \
   profiler_->RecordClockEnd();
 
@@ -456,7 +466,7 @@ extern clock_t elapsed_time;
 
 #define CDEpilogue() \
   app_side = true; \
-  end_clk = clock(); \
+  end_clk = CD_CLOCK(); \
   elapsed_time += end_clk - begin_clk; \
 
 #endif

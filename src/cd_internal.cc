@@ -45,9 +45,9 @@ using namespace std;
 
 //#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 
-clock_t cd::log_begin_clk;
-clock_t cd::log_end_clk;
-clock_t cd::log_elapsed_time;
+CD_CLOCK_T cd::log_begin_clk;
+CD_CLOCK_T cd::log_end_clk;
+CD_CLOCK_T cd::log_elapsed_time;
 
 int iterator_entry_count=0;
 uint64_t cd::gen_object_id=0;
@@ -1041,7 +1041,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #if CD_PROFILER_ENABLED
   static bool check_sync_clk = false;
   if(check_sync_clk == false) {
-    prof_sync_clk = clock();
+    prof_sync_clk = CD_CLOCK();
     check_sync_clk = true;
   }
 #endif

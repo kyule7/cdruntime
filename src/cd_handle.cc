@@ -84,11 +84,11 @@ SystemErrorInjector *CDHandle::system_error_injector_ = NULL;
   (((X) & (Y)) == (X))
 #endif
 
-clock_t cd::tot_begin_clk;
-clock_t cd::tot_end_clk;
-clock_t cd::begin_clk;
-clock_t cd::end_clk;
-clock_t cd::elapsed_time;
+CD_CLOCK_T cd::tot_begin_clk;
+CD_CLOCK_T cd::tot_end_clk;
+CD_CLOCK_T cd::begin_clk;
+CD_CLOCK_T cd::end_clk;
+CD_CLOCK_T cd::elapsed_time;
 
 /// KL
 /// uniquePath is a singleton object per process, which is used for CDPath.
@@ -139,7 +139,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   //GONG
   CDPrologue();
-  cd::tot_begin_clk = clock();
+  cd::tot_begin_clk = CD_CLOCK();
   myTaskID      = myTask;
   totalTaskSize = numTask;
 
@@ -234,7 +234,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #if CD_ERROR_INJECTION_ENABLED
   double random_seed = 0.0;
   if(myTaskID == 0) {
-    random_seed = clock();
+    random_seed = CD_CLOCK();
     CD_DEBUG("Random seed: %lf\n", random_seed);
   }
 //  random_seed = 137378;
@@ -293,13 +293,13 @@ void CD_Finalize(void)
 #endif
 
   cd::internal::Finalize();
-  cd::tot_end_clk = clock();
+  cd::tot_end_clk = CD_CLOCK();
 
 #if CD_MPI_ENABLED
-  double cd_elapsed = ((double)cd::elapsed_time) / CLOCKS_PER_SEC;
-  double msg_elapsed = ((double)cd::msg_elapsed_time) / CLOCKS_PER_SEC;
-  double log_elapsed = ((double)cd::log_elapsed_time) / CLOCKS_PER_SEC;
-  double tot_elapsed= ((double)(cd::tot_end_clk - cd::tot_begin_clk)) / CLOCKS_PER_SEC;
+  double cd_elapsed = ((double)cd::elapsed_time) / CLK_NORMALIZER;
+  double msg_elapsed = ((double)cd::msg_elapsed_time) / CLK_NORMALIZER;
+  double log_elapsed = ((double)cd::log_elapsed_time) / CLK_NORMALIZER;
+  double tot_elapsed= ((double)(cd::tot_end_clk - cd::tot_begin_clk)) / CLK_NORMALIZER;
   double sendbuf[8] = {tot_elapsed, 
                        tot_elapsed * tot_elapsed,
                        cd_elapsed,

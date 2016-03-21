@@ -50,9 +50,9 @@ using namespace cd;
 using namespace cd::interface;
 using namespace std;
 
-clock_t cd::prof_begin_clk;
-clock_t cd::prof_end_clk;
-clock_t cd::prof_sync_clk;
+CD_CLOCK_T cd::prof_begin_clk;
+CD_CLOCK_T cd::prof_end_clk;
+CD_CLOCK_T cd::prof_sync_clk;
 std::map<uint32_t,std::map<std::string,RuntimeInfo>> Profiler::num_exec_map;
 uint32_t Profiler::current_level_ = 0; // It is used to detect escalation
 
@@ -105,11 +105,11 @@ void Profiler::BeginRecord(void)
   if( is_reexecuted || ((cdh_->recreated() == true)) ) {
     if(myTaskID == 0) printf("%sRe-exec %s %s (%d %d %d)\n",string(cdh_->level(), '\t').c_str(),  cdh_->GetName(), 
         name.c_str(), cdh_->GetCDType(), cdh_->GetCDLoggingMode(), cdh_->GetCommLogMode());
-//    sync_clk_ = clock();
+//    sync_clk_ = CD_CLOCK();
 //    num_exec_map[level][name].reexec_ += 1;
-//    num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLOCKS_PER_SEC;
+//    num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
     if(is_reexecuted)
-      num_exec_map[level][name].sync_time_  += (double)(clock() - prof_sync_clk) / CLOCKS_PER_SEC;
+      num_exec_map[level][name].sync_time_  += (double)(CD_CLOCK() - prof_sync_clk) / CLK_NORMALIZER;
     reexecuted_ = true;
   }
   else {
@@ -124,7 +124,7 @@ void Profiler::BeginRecord(void)
 //
 //    reexecuted_ = true;
 //  }
-  begin_clk_ = clock();
+  begin_clk_ = CD_CLOCK();
 }
 
 void Profiler::EndRecord(void)
@@ -134,16 +134,16 @@ void Profiler::EndRecord(void)
 //  if(current_level_ != level)
 //    printf("\n\nSomething is wrong : %s\n\n", name.c_str());
 
-  end_clk_ = clock();
+  end_clk_ = CD_CLOCK();
   //sync_clk_ = end_clk_;
-  num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLOCKS_PER_SEC;
+  num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
 
   if(reexecuted_ || cdh_->recreated()) {
     if(myTaskID == 0) 
       printf("%sEnd Rexec %s %s (%d %d %d)\n", string(cdh_->level(), '\t').c_str(), cdh_->GetName(), name.c_str(), 
           cdh_->GetCDType(), cdh_->GetCDLoggingMode(), cdh_->GetCommLogMode());
-    num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLOCKS_PER_SEC;
-    num_exec_map[level][name].reexec_time_ += (double)(end_clk_ - begin_clk_) / CLOCKS_PER_SEC;
+    num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
+    num_exec_map[level][name].reexec_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
     num_exec_map[level][name].reexec_ += 1;
     reexecuted_ = false;
   }
@@ -153,7 +153,7 @@ void Profiler::EndRecord(void)
           cdh_->GetCDType(), cdh_->GetCDLoggingMode(), cdh_->GetCommLogMode());
   } 
 //  else if(cdh_->recreated()) {
-//    num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLOCKS_PER_SEC;
+//    num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
 //    reexecuted_ = false;
 //  }
 }

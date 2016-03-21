@@ -52,7 +52,7 @@ using namespace cd::interface;
 // Uniform Random
 long double UniformRandom::GenErrorVal(void) 
 {
-//  srand48(clock()+myTaskID);
+//  srand48(CD_CLOCK()+myTaskID);
   return drand48();
 }
 
@@ -296,8 +296,8 @@ uint64_t ErrorInjector::InjectError(const long double &error_prob)
 uint64_t SystemErrorInjector::Inject(void) 
 {
   uint64_t error_occurred = NO_ERROR_INJECTED;
-  clock_t curr_clk = clock();
-  double period = (double)(curr_clk - prev_clk_)/CLOCKS_PER_SEC;
+  CD_CLOCK_T curr_clk = CD_CLOCK();
+  double period = (double)(curr_clk - prev_clk_)/CLK_NORMALIZER;
 //    std::cout << "curr : " << curr_clk << " - prev : " << prev_clk_ << std::endl;
   prev_clk_ = curr_clk;
   // Check if error happened at every CD level. 

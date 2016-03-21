@@ -332,13 +332,13 @@ void CDProfiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
 
 void CDProfiler::RecordClockBegin()
 {
-  this_time_ = clock();
+  this_time_ = CD_CLOCK();
 
 }
 
 void CDProfiler::RecordClockEnd()
 {
-  that_time_ = clock();
+  that_time_ = CD_CLOCK();
   profile_data_[current_label_][CD_OVERHEAD] += that_time_ - this_time_;
   
 }

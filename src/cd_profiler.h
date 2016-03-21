@@ -112,8 +112,8 @@ class CDProfiler : public Profiler {
   uint64_t this_point_;
   uint64_t that_point_;
 
-  clock_t this_time_;
-  clock_t that_time_;
+  CD_CLOCK_T this_time_;
+  CD_CLOCK_T that_time_;
 
   CDProfiler *parent_;
 

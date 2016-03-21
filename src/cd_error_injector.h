@@ -6,12 +6,12 @@
 
 class SystemErrorInjector : public ErrorInjector {
   SystemConfig &system_config;
-  clock_t prev_clk_;
+  CD_CLOCK_T prev_clk_;
 
   MultiErrorInjector(SystemConfig &sc)
   {
     system_config = sc;
-    prev_clk_ = clock();
+    prev_clk_ = CD_CLOCK();
   }
 
   int Inject(void) {

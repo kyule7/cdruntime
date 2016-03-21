@@ -59,6 +59,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <map>
 #include <cstdint>
 #include <cstdio>
+#include "cd_def_interface.h"
 
 using namespace std;
 #define LabelT string
@@ -139,9 +140,9 @@ class Profiler {
   friend class cd::CDHandle;
   CDHandle *cdh_;
   bool reexecuted_;
-  clock_t begin_clk_;
-  clock_t end_clk_;
-  clock_t sync_clk_;
+  CD_CLOCK_T begin_clk_;
+  CD_CLOCK_T end_clk_;
+  CD_CLOCK_T sync_clk_;
   static std::map<uint32_t,std::map<std::string,RuntimeInfo>> num_exec_map;
   static uint32_t current_level_; // It is used to detect escalation
 public:

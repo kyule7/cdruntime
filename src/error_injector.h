@@ -57,8 +57,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include <cstdio>
 #include <random>
 #include <cmath>
-//#include "cd_def_internal.h"
 #include "cd_global.h"
+#include "cd_def_interface.h"
 #include "sys_err_t.h"
 
 #define DEFAULT_ERROR_THRESHOLD 0.0
@@ -238,12 +238,12 @@ public:
 
 class SystemErrorInjector : public ErrorInjector {
   SystemConfig &sc_;
-  clock_t prev_clk_;
+  CD_CLOCK_T prev_clk_;
 public:
   SystemErrorInjector(SystemConfig &sc)
     : sc_(sc)
   {
-    prev_clk_ = clock();
+    prev_clk_ = CD_CLOCK();
   }
 
   virtual uint64_t Inject(void);
