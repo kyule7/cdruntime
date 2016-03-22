@@ -1053,7 +1053,8 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #endif
   uint32_t level = target->level();
   uint32_t rollback_lv = target->ptr_cd()->CheckRollbackPoint(false);
-  CD_DEBUG("[%s] level : %u (current) == %u (rollback_point)\n", cd_id_.GetString().c_str(), level, rollback_lv);
+  CD_DEBUG("[%s] level : %u (current) == %u (rollback_point)\n", 
+            target->ptr_cd()->cd_id_.GetStringID().c_str(), level, rollback_lv);
   if(level == rollback_lv) {
     // for tasks that detect error at completion point or collective create point.
     // It already called SyncCDs() at that point,

@@ -52,7 +52,6 @@ using namespace cd::interface;
 // Uniform Random
 long double UniformRandom::GenErrorVal(void) 
 {
-//  srand48(CD_CLOCK()+myTaskID);
   return drand48();
 }
 
@@ -267,87 +266,85 @@ ErrorProb *ErrorInjector::CreateErrorProb(RandType rand_type)
   return random_number;
 }
 
-long double ErrorInjector::GetErrorProb(float error_rate, float unit_time) 
+long double ErrorInjector::GetErrorProb(double error_rate, double unit_time) 
 {
-  long double temp = exp((-1.0)*(long double)error_rate*(long double)unit_time);
-  long double result = (1.0 - temp);
-//  printf("result %Le = 1.0 - exp(-1.0*%f*%f\n", result, error_rate, unit_time);
-  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "result %Le = 1.0 - exp(-%f*%f)   %Le\n", result, error_rate, unit_time, temp);
-  return result; 
-  //return ((long double)1.0 - exp((-1.0)*(long double)error_rate*(long double)unit_time));
+  long double reliability = exp((-1.0)*(long double)error_rate*(long double)unit_time);
+  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "reliability %Le = 1.0 - exp(-%f*%f)   %Le\n", reliability, error_rate, unit_time);
+  return reliability; 
 }
 
-uint64_t ErrorInjector::Inject(void) {
+uint64_t ErrorInjector::Inject(void) 
+{
   return InjectError(error_rate_);
 }
+
+// It generate an uniform-random number between 0 and 1,
+// and compare that with reliability (probability to survive from the error type)
+// If the random number is greater than reliability,
+// it injects error!
 uint64_t ErrorInjector::InjectError(const long double &error_prob)
 {
-//  printf("error prob = %Le\n", error_prob);
-//  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "error prob = %Le\n", error_prob);
   long double rand_var = rand_generator_->GenErrorVal();
-  int error = error_prob > rand_var;
-//  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error %f(error_prob) < %f(random var)\n", error_prob, rand_var);
-  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error %Le(error_prob) > %Le(random var)   ERROR? %d\n", error_prob, rand_var, error);
-  //printf("Error %f < %f(threshold) ERROR? %d\n", rand_var, error_prob, error);
+  int error = error_prob < rand_var;
+  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error %Le(prob to survive) < %Le(random var)   ERROR? %d\n", error_prob, rand_var, error);
 
   return error;
 }
 
 uint64_t SystemErrorInjector::Inject(void) 
 {
-  uint64_t error_occurred = NO_ERROR_INJECTED;
+  uint64_t error_vec = NO_ERROR_INJECTED;
   CD_CLOCK_T curr_clk = CD_CLOCK();
   double period = (double)(curr_clk - prev_clk_)/CLK_NORMALIZER;
-//    std::cout << "curr : " << curr_clk << " - prev : " << prev_clk_ << std::endl;
   prev_clk_ = curr_clk;
+
+  // [Kyushick]
   // Check if error happened at every CD level. 
   // At each CD level, there is a claim that 
   // the CD can cover for recovery against a certain type of error.
   // Check this from leaf to root CD. 
   // If there is error occurred at upper level,
   // that overwrites rollback_point.
-//  int cnt = 0;
   for(auto it=sc_.failure_rate_.rbegin(); it!=sc_.failure_rate_.rend(); ++it) {
-//      printf("\nfailure prob %lu (%f x %Le) : %f\n", it->first, it->second, period, GetErrorProb(it->second, period));
-//    printf("error injection iter %d\n", cnt++);
     if( InjectError(GetErrorProb(it->second, period)) ) { 
-      error_occurred |= it->first;
-//      printf("ERROR!!! %lx, curr: %lx\n", error_occurred, it->first);
+      error_vec |= it->first;
+//      printf("ERROR!!! %lx, curr: %lx\n", error_vec, it->first);
     }
-    CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "error rate %lu : %f (%lx) [period:%lf]\n", it->first, it->second, error_occurred,period);// == (int)(it->first));
-
-//    printf("error rate %lu : %f (%lx)\n", it->first, it->second, error_occurred);// == (int)(it->first));
+    CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error rate %lu : %f (%lx) [period:%lf]\n", 
+        it->first, it->second, error_vec, period);
   }
-  return error_occurred;
+  return error_vec;
 }
-//MultiTypeErrorInjector::MultiTypeErrorInjector(const std::initializer_list<std::pair<uint32_t, float>> &err_type_list)
-//{
-//  // FIXME : make sure how order map structure is.
-//  for(auto it=err_type_list.begin(); it!=err_type_list.end(); ++it) {
-//    if(error_prob_bin_.size() != 0) {
-//      error_prob_bin_[it->first] = it->second;
-//    } else {
-//      error_prob_bin_[it->first] = it->second + error_prob_bin_.end()->second;
-//    }
-//  }
-//}
-//
-//
-//uint32_t MultiTypeErrorInjector::Inject(void) 
-//{
-//  float rand_var = rand_generator_->GenErrorVal();
-//
-// /*      a     b    c      no error
-// *  +-------+----+----+------------------+
-// *  0      .2   .3   .4                  1
-// */
-//  for(auto it=error_prob_bin_.begin(); it!=error_prob_bin_.end(); ++it) {
-//    if(rand_var < it->second) {
-//      return it->first;
-//    }
-//  }
-//}
 
+#if 0
+MultiTypeErrorInjector::MultiTypeErrorInjector(const std::initializer_list<std::pair<uint32_t, float>> &err_type_list)
+{
+  // FIXME : make sure how order map structure is.
+  for(auto it=err_type_list.begin(); it!=err_type_list.end(); ++it) {
+    if(error_prob_bin_.size() != 0) {
+      error_prob_bin_[it->first] = it->second;
+    } else {
+      error_prob_bin_[it->first] = it->second + error_prob_bin_.end()->second;
+    }
+  }
+}
+
+
+uint32_t MultiTypeErrorInjector::Inject(void) 
+{
+  float rand_var = rand_generator_->GenErrorVal();
+
+ /*      a     b    c      no error
+ *  +-------+----+----+------------------+
+ *  0      .2   .3   .4                  1
+ */
+  for(auto it=error_prob_bin_.begin(); it!=error_prob_bin_.end(); ++it) {
+    if(rand_var < it->second) {
+      return it->first;
+    }
+  }
+}
+#endif
 
 // CDErrorInjector
 CDErrorInjector::CDErrorInjector(void) 

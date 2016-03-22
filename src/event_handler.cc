@@ -557,7 +557,7 @@ void HandleAllReexecute::HandleEvent(void)
       // assuming non-head task's rollback level at the point of time is not valid.
       while(cur_cd->level() == rollback_lv) {
         cur_cd->SetRollbackPoint(rollback_lv, true); // true means remote
-        cur_cd = GetParentCD(cur_cd->level());
+        cur_cd = CDPath::GetParentCD(cur_cd->level())->ptr_cd();
       }
     } else {
       CD_DEBUG("rollback_lv:%u >= %u (rollback_point) \n", rollback_lv, rollback_point);
