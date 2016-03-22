@@ -84,11 +84,13 @@ SystemErrorInjector *CDHandle::system_error_injector_ = NULL;
   (((X) & (Y)) == (X))
 #endif
 
-CD_CLOCK_T cd::tot_begin_clk;
-CD_CLOCK_T cd::tot_end_clk;
-CD_CLOCK_T cd::begin_clk;
-CD_CLOCK_T cd::end_clk;
-CD_CLOCK_T cd::elapsed_time;
+CD_CLOCK_T cd::tot_begin_clk=0;
+CD_CLOCK_T cd::tot_end_clk=0;
+CD_CLOCK_T cd::begin_clk=0;
+CD_CLOCK_T cd::end_clk=0;
+CD_CLOCK_T cd::elapsed_time=0;
+CD_CLOCK_T cd::prv_elapsed_time=0;
+CD_CLOCK_T cd::tree_elapsed_time=0;
 
 /// KL
 /// uniquePath is a singleton object per process, which is used for CDPath.
@@ -297,44 +299,56 @@ void CD_Finalize(void)
 
 #if CD_MPI_ENABLED
   double cd_elapsed = ((double)cd::elapsed_time) / CLK_NORMALIZER;
+  double prv_elapsed = ((double)cd::prv_elapsed_time) / CLK_NORMALIZER;
+  double tree_elapsed = ((double)cd::tree_elapsed_time) / CLK_NORMALIZER;
   double msg_elapsed = ((double)cd::msg_elapsed_time) / CLK_NORMALIZER;
   double log_elapsed = ((double)cd::log_elapsed_time) / CLK_NORMALIZER;
   double tot_elapsed= ((double)(cd::tot_end_clk - cd::tot_begin_clk)) / CLK_NORMALIZER;
-  double sendbuf[8] = {tot_elapsed, 
+  double sendbuf[12] = {tot_elapsed, 
                        tot_elapsed * tot_elapsed,
                        cd_elapsed,
                        cd_elapsed  * cd_elapsed,
                        msg_elapsed,
                        msg_elapsed  * msg_elapsed,
                        log_elapsed,
-                       log_elapsed  * log_elapsed
+                       log_elapsed  * log_elapsed,
+                       prv_elapsed,
+                       prv_elapsed * prv_elapsed,
+                       tree_elapsed,
+                       tree_elapsed * tree_elapsed
                       };
 //  printf("\n\n=====================================\n");
 //  printf("%lf\t%lf\t%lf\t%lf\n", sendbuf[0],sendbuf[1],sendbuf[2],sendbuf[3]);
 //  printf("=====================================\n\n");
-  double recvbuf[8] = {0.0,0.0,0.0,0.0,0.0,0.0};
-  MPI_Reduce(sendbuf, recvbuf, 8, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  double recvbuf[12] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  MPI_Reduce(sendbuf, recvbuf, 12, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  double tot_elapsed_avg = recvbuf[0]/cd::totalTaskSize;
+  double tot_elapsed_var = (recvbuf[1] - recvbuf[0]*recvbuf[0]/cd::totalTaskSize)/cd::totalTaskSize;
+  double cd_elapsed_avg  = recvbuf[2]/cd::totalTaskSize;
+  double cd_elapsed_var  = (recvbuf[3] - recvbuf[2]*recvbuf[2]/cd::totalTaskSize)/cd::totalTaskSize;
+  double msg_elapsed_avg = recvbuf[4]/cd::totalTaskSize;
+  double msg_elapsed_var = (recvbuf[5] - recvbuf[4]*recvbuf[4]/cd::totalTaskSize)/cd::totalTaskSize;
+  double log_elapsed_avg = recvbuf[6]/cd::totalTaskSize;
+  double log_elapsed_var = (recvbuf[7] - recvbuf[6]*recvbuf[6]/cd::totalTaskSize)/cd::totalTaskSize;
+  double prv_elapsed_avg = recvbuf[8]/cd::totalTaskSize;
+  double prv_elapsed_var = (recvbuf[9] - recvbuf[8]*recvbuf[8]/cd::totalTaskSize)/cd::totalTaskSize;
+  double tree_elapsed_avg = recvbuf[10]/cd::totalTaskSize;
+  double tree_elapsed_var = (recvbuf[11] - recvbuf[10]*recvbuf[10]/cd::totalTaskSize)/cd::totalTaskSize;
   if(cd::myTaskID == 0) {
 //  printf("\n\n=====================================\n");
 //  printf("%lf\t%lf\t%lf\t%lf\n", recvbuf[0],recvbuf[1],recvbuf[2],recvbuf[3]);
 //  printf("=====================================\n\n");
     printf("\n\n============================================\n");
-    printf("Total elapsed time : %lf (%lf) (var: %lf)\n", recvbuf[0]/cd::totalTaskSize, 
-                                                            sendbuf[0], 
-                                                            (recvbuf[1] - recvbuf[0]*recvbuf[0]/cd::totalTaskSize)/cd::totalTaskSize);
-    printf("CD overhead time : %lf (%lf) (var: %lf)\n", recvbuf[2]/cd::totalTaskSize, 
-                                                          sendbuf[2], 
-                                                          (recvbuf[3] - recvbuf[2]*recvbuf[2]/cd::totalTaskSize)/cd::totalTaskSize);
-    printf("Msg overhead time : %lf (%lf) (var: %lf)\n", recvbuf[4]/cd::totalTaskSize, 
-                                                          sendbuf[4], 
-                                                          (recvbuf[5] - recvbuf[4]*recvbuf[4]/cd::totalTaskSize)/cd::totalTaskSize);
-    printf("Log overhead time : %lf (%lf) (var: %lf)\n", recvbuf[6]/cd::totalTaskSize, 
-                                                          sendbuf[6], 
-                                                          (recvbuf[7] - recvbuf[6]*recvbuf[6]/cd::totalTaskSize)/cd::totalTaskSize);
+    printf("Total elapsed time : %lf (%lf) (var: %lf)\n", tot_elapsed_avg, tot_elapsed, tot_elapsed_var);
+    printf("CD overhead time   : %lf (%lf) (var: %lf)\n", cd_elapsed_avg, cd_elapsed, cd_elapsed_var); 
+    printf("preservation       : %lf (%lf) (var: %lf)\n", prv_elapsed_avg, prv_elapsed, prv_elapsed_var); 
+    printf("hierarchy          : %lf (%lf) (var: %lf)\n", tree_elapsed_avg, tree_elapsed, tree_elapsed_var); 
+    printf("Msg overhead time : %lf (%lf) (var: %lf)\n", msg_elapsed_avg, msg_elapsed, msg_elapsed_var);
+    printf("Log overhead time : %lf (%lf) (var: %lf)\n", log_elapsed_avg, log_elapsed, log_elapsed_var);
     printf("Ratio : %lf (Total) %lf (CD runtime) %lf (logging)\n", 
-                            ((recvbuf[2]+recvbuf[4]) / recvbuf[0]) * 100,
-                             (recvbuf[2] / recvbuf[0]) * 100, 
-                             (recvbuf[4] / recvbuf[0]) * 100);
+                            ((cd_elapsed_avg+msg_elapsed_avg) / tot_elapsed_avg) * 100,
+                             (cd_elapsed_avg / tot_elapsed_avg) * 100, 
+                             (msg_elapsed_avg / tot_elapsed_avg) * 100);
 
 #if CD_DEBUG_ENABLED && CD_PROFILER_ENABLED 
     printf("Profile Result =================================\n");
@@ -685,6 +699,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 #endif
 
   CDEpilogue();
+  tree_elapsed_time += end_clk - begin_clk;
 
   return new_cd_handle;
 }
@@ -736,6 +751,7 @@ CDHandle *CDHandle::Create(uint32_t color,
 #endif
 
   CDEpilogue();
+  tree_elapsed_time += end_clk - begin_clk;
   return new_cd_handle;
 }
 
@@ -751,6 +767,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
   CDHandle *new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
   new_cdh->Begin(false, name);
   CDEpilogue();
+  tree_elapsed_time += end_clk - begin_clk;
   return new_cdh;
 }
 
@@ -760,6 +777,7 @@ CDErrT CDHandle::Destroy(bool collective) {
                                                                       level(), need_reexec(), *CD::rollback_point_);
   CDErrT err = InternalDestroy(collective);
   CDEpilogue();
+  tree_elapsed_time += end_clk - begin_clk;
   return err;
 }
 
@@ -830,6 +848,7 @@ CDErrT CDHandle::Begin(bool collective, const char *label, const uint64_t &sys_e
 #endif
 
   CDEpilogue();
+  tree_elapsed_time += end_clk - begin_clk;
   return err;
 }
 
@@ -851,6 +870,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 #endif
 
   CDEpilogue();
+  tree_elapsed_time += end_clk - begin_clk;
   return ret;
 }
 
@@ -895,6 +915,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 #endif
 
   CDEpilogue();
+  prv_elapsed_time += end_clk - begin_clk;
   return err;
 }
 
@@ -935,6 +956,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
 #endif
   
   CDEpilogue();
+  prv_elapsed_time += end_clk - begin_clk;
   return err;
 }
 
@@ -979,6 +1001,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   }
 #endif
   CDEpilogue();
+  prv_elapsed_time += end_clk - begin_clk;
   return err;
 }
 

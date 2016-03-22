@@ -512,10 +512,12 @@ void HandleAllReexecute::HandleEvent(void)
   CD_DEBUG("[%s] kAllReexecute need reexec from %u (orig reexec_lv:%u) (cur %u)\n", __func__, 
            rollback_lv, rollback_point, current_lv);
 
+  // [Kyushick]
   // Basic assumption of rollback_lv == current_lv is that
   // kAllReexecute event is set by head in current level,
   // which means everybody observes this flag at CD::Complete.
   if(rollback_lv == current_lv) {
+    
     // Only when rollback level is higher than rollback_point, update rollback_point.
     if(rollback_lv < rollback_point) { // rollback_lv == current_lv
       assert(rollback_point == INVALID_ROLLBACK_POINT);
@@ -525,7 +527,8 @@ void HandleAllReexecute::HandleEvent(void)
     ptr_cd_->SetRollbackPoint(rollback_lv, false); // false means local
   } 
   else if(rollback_lv < current_lv) { // It needs to report escalation to head. 
-
+    
+    // [Kyushick]
     // If current rollback_point is set to upper level,
     // it does not report it to head,
     // assuming original rollback_point which is already upper than rollback_lv
@@ -539,7 +542,23 @@ void HandleAllReexecute::HandleEvent(void)
       if(cur_cd->reported_error_ == false) {
         cur_cd->SetMailBox(kErrorOccurred);
       }
-      cur_cd->SetRollbackPoint(rollback_lv, true); // true means remote
+
+      // [Kyushick]
+      // It is important to set rollback point of head tasks of levels up to rollback point.
+      // One potential concurrency bug is that
+      // the head task has lower level than some other task to escalate to.
+      // For example, head task of one CD at level 2 is escalating to level 3 from level 4,
+      // but another task in different CD at level 4 is escalating to level 2 from level 4.
+      // But both task is escalating to level 3 without problem,
+      // but head task is trying to do Begin at level 3, but some other tasks may keep 
+      // escalating to level 2.
+      // This issue can be prevented by keep updating all the head tasks for rollback level,
+      // and whenever some other task escalating, they should peek the head's rollback level
+      // assuming non-head task's rollback level at the point of time is not valid.
+      while(cur_cd->level() == rollback_lv) {
+        cur_cd->SetRollbackPoint(rollback_lv, true); // true means remote
+        cur_cd = GetParentCD(cur_cd->level());
+      }
     } else {
       CD_DEBUG("rollback_lv:%u >= %u (rollback_point) \n", rollback_lv, rollback_point);
     }

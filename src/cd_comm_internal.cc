@@ -89,15 +89,16 @@ void CD::CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &ne
   }
 
   if(task_size() > 1) {
-    new_rollback_point = CheckRollbackPoint(false);
+    new_rollback_point = CheckRollbackPoint(true); // Read from head
 
-    int head_id = GetNodeID().head_;
-    PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, rollbackWindow_);
-    PMPI_Get(&new_rollback_point, 1, MPI_UNSIGNED, 
-             head_id, 0, 1, MPI_UNSIGNED,
-             rollbackWindow_); // Read rollback_point from head.
-    PMPI_Win_unlock(head_id, rollbackWindow_);
-//  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
+//    int head_id = GetNodeID().head_;
+//    PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, rollbackWindow_);
+//    PMPI_Get(&new_rollback_point, 1, MPI_UNSIGNED, 
+//             head_id, 0, 1, MPI_UNSIGNED,
+//             rollbackWindow_); // Read rollback_point from head.
+//    PMPI_Win_unlock(head_id, rollbackWindow_);
+////  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
+    
     new_rollback_point = SetRollbackPoint(new_rollback_point, false);
   }
   CD_DEBUG("%s %s \t Reexec from %u\n", 
@@ -1337,7 +1338,7 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
 
 uint32_t CD::CheckRollbackPoint(bool remote) 
 {
-  CD_DEBUG("level %u\n", level());
+//  CD_DEBUG("level %u\n", level());
   if(task_size() > 1) {
 //  printf("[%s] cur level : %u size : %u\n", __func__,  level(), task_size());
 //  CD *cur_cd = CDPath::GetCoarseCD(this);
@@ -1351,14 +1352,15 @@ uint32_t CD::CheckRollbackPoint(bool remote)
     if(remote == true) { 
       PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, rollbackWindow_);
       // Update *rollback_point__ from head
-      PMPI_Get(rollback_point_, 1, MPI_UNSIGNED, 
+      PMPI_Get(&rollback_lv, 1, MPI_UNSIGNED, 
               head_id, 0,     1, MPI_UNSIGNED,
               rollbackWindow_); // Read *rollback_point_ from head.
       PMPI_Win_unlock(head_id, rollbackWindow_);
+    } else {
+      PMPI_Win_lock(MPI_LOCK_SHARED, task_in_color(), 0, rollbackWindow_);
+      rollback_lv = *(rollback_point_);
+      PMPI_Win_unlock(task_in_color(), rollbackWindow_);
     }
-    PMPI_Win_lock(MPI_LOCK_SHARED, task_in_color(), 0, rollbackWindow_);
-    rollback_lv = *(rollback_point_);
-    PMPI_Win_unlock(task_in_color(), rollbackWindow_);
   //  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
   
     return rollback_lv;

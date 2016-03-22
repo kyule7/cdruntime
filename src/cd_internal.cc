@@ -1042,6 +1042,8 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
   static bool check_sync_clk = false;
   if(check_sync_clk == false) {
     prof_sync_clk = CD_CLOCK();
+    end_clk = CD_CLOCK();
+    tree_elapsed_time += end_clk - begin_clk;
     check_sync_clk = true;
   }
 #endif
@@ -1051,7 +1053,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #endif
   uint32_t level = target->level();
   uint32_t rollback_lv = target->ptr_cd()->CheckRollbackPoint(false);
-  CD_DEBUG("[%s] level : %u (current) == %u (rollback_point)\n", __func__, level, rollback_lv);
+  CD_DEBUG("[%s] level : %u (current) == %u (rollback_point)\n", cd_id_.GetString().c_str(), level, rollback_lv);
   if(level == rollback_lv) {
     // for tasks that detect error at completion point or collective create point.
     // It already called SyncCDs() at that point,
@@ -1064,20 +1066,20 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 //      target->ptr_cd_->CompleteLogs();
 //      target->->ptr_cd_->DeleteEntryDirectory();
 //    }
+    
     if(collective) {
       SyncCDs(target->ptr_cd());
     }
 
     if(target->task_size() > 1) {
-//      MPI_Win_fence(0, target->ptr_cd()->rollbackWindow_);
-      uint32_t new_rollback_point = level;
-      int head_id = target->head();
-      PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, target->ptr_cd()->rollbackWindow_);
-      PMPI_Get(&new_rollback_point, 1, MPI_UNSIGNED, 
-              head_id, 0, 1, MPI_UNSIGNED,
-              target->ptr_cd()->rollbackWindow_); // Read rollback_point from head.
-      PMPI_Win_unlock(head_id, target->ptr_cd()->rollbackWindow_);
-//      MPI_Win_fence(0, target->ptr_cd()->rollbackWindow_);
+//      uint32_t new_rollback_point = level;
+//      int head_id = target->head();
+//      PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, target->ptr_cd()->rollbackWindow_);
+//      PMPI_Get(&new_rollback_point, 1, MPI_UNSIGNED, 
+//              head_id, 0, 1, MPI_UNSIGNED,
+//              target->ptr_cd()->rollbackWindow_); // Read rollback_point from head.
+//      PMPI_Win_unlock(head_id, target->ptr_cd()->rollbackWindow_);
+      uint32_t new_rollback_point = target->ptr_cd()->CheckRollbackPoint(true); // read from head
       target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
     }
     // It is possible for other task set to rollback_point lower than original.
@@ -1228,7 +1230,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    GetCDToRecover(*rollback_point_ < cd_id_.cd_name_.level() && *rollback_point_ != INVALID_ROLLBACK_POINT)->Recover(false);
 //    *rollback_point_ == level() -> false
 //    bool collective = MPI_Group_compare(group());
-    CD_DEBUG("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, new_rollback_point);
+    CD_DEBUG("\nneed_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, new_rollback_point);
     
     GetCDToRecover( GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }
