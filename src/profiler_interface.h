@@ -74,22 +74,90 @@ enum PROFILER_TYPE {
 };
 
 
-struct RuntimeInfo {
+struct CDOverhead {
+  double prv_elapsed_time_;
+  double create_elapsed_time_;
+  double destroy_elapsed_time_;
+  double begin_elapsed_time_;
+  double compl_elapsed_time_;
+  CDOverhead(void) 
+    : prv_elapsed_time_(0.0),
+      create_elapsed_time_(0.0),
+      destroy_elapsed_time_(0.0),
+      begin_elapsed_time_(0.0),
+      compl_elapsed_time_(0.0)
+  {}
+  CDOverhead(const CDOverhead &record) {
+    prv_elapsed_time_     = record.prv_elapsed_time_; 
+    create_elapsed_time_  = record.create_elapsed_time_;  
+    destroy_elapsed_time_ = record.destroy_elapsed_time_; 
+    begin_elapsed_time_   = record.begin_elapsed_time_;   
+    compl_elapsed_time_   = record.compl_elapsed_time_;   
+  }
+  virtual std::string GetString(void);
+  virtual void Print(void);
+  CDOverhead &operator+=(const CDOverhead &record) {
+    prv_elapsed_time_     += record.prv_elapsed_time_; 
+    create_elapsed_time_  += record.create_elapsed_time_;  
+    destroy_elapsed_time_ += record.destroy_elapsed_time_; 
+    begin_elapsed_time_   += record.begin_elapsed_time_;   
+    compl_elapsed_time_   += record.compl_elapsed_time_;   
+    return *this;
+  }
+  CDOverhead &operator=(const CDOverhead &record) {
+    prv_elapsed_time_     = record.prv_elapsed_time_; 
+    create_elapsed_time_  = record.create_elapsed_time_;  
+    destroy_elapsed_time_ = record.destroy_elapsed_time_; 
+    begin_elapsed_time_   = record.begin_elapsed_time_;   
+    compl_elapsed_time_   = record.compl_elapsed_time_;   
+    return *this;
+  }
+  void MergeInfoPerLevel(const CDOverhead &info_per_level) {
+    prv_elapsed_time_     += info_per_level.prv_elapsed_time_; 
+    create_elapsed_time_  += info_per_level.create_elapsed_time_;  
+    destroy_elapsed_time_ += info_per_level.destroy_elapsed_time_; 
+    begin_elapsed_time_   += info_per_level.begin_elapsed_time_;   
+    compl_elapsed_time_   += info_per_level.compl_elapsed_time_;   
+  }
+};
+
+struct CDOverheadVar : public CDOverhead {
+  double prv_elapsed_time_var_;
+  double create_elapsed_time_var_;
+  double destroy_elapsed_time_var_;
+  double begin_elapsed_time_var_;
+  double compl_elapsed_time_var_;
+  CDOverheadVar(void) 
+    : prv_elapsed_time_var_(0.0),
+      create_elapsed_time_var_(0.0),
+      destroy_elapsed_time_var_(0.0),
+      begin_elapsed_time_var_(0.0),
+      compl_elapsed_time_var_(0.0),
+      CDOverhead()
+  {}
+  virtual std::string GetString(void);
+  virtual void Print(void);
+};
+
+struct RuntimeInfo : public CDOverhead {
   uint64_t total_exec_;
   uint64_t reexec_;
   uint64_t prv_copy_;
   uint64_t prv_ref_;
   uint64_t msg_logging_;
   uint64_t sys_err_vec_;
-  double   total_time_;
-  double   reexec_time_;
-  double   sync_time_;
+  double total_time_;
+  double reexec_time_;
+  double sync_time_;
+
   RuntimeInfo(void) 
     : total_exec_(0), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
-      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0) {}
+      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0), CDOverhead() 
+  {}
   RuntimeInfo(const uint64_t &total_exec) 
     : total_exec_(total_exec), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
-      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0) {}
+      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0)
+  {}
   RuntimeInfo(const RuntimeInfo &record) {
     total_exec_  = record.total_exec_;
     reexec_      = record.reexec_;
@@ -100,8 +168,14 @@ struct RuntimeInfo {
     total_time_  = record.total_time_;
     reexec_time_ = record.reexec_time_;
     sync_time_   = record.sync_time_;
+    prv_elapsed_time_     = record.prv_elapsed_time_; 
+    create_elapsed_time_  = record.create_elapsed_time_;  
+    destroy_elapsed_time_ = record.destroy_elapsed_time_; 
+    begin_elapsed_time_   = record.begin_elapsed_time_;   
+    compl_elapsed_time_   = record.compl_elapsed_time_;   
   }
-  std::string GetString(void);
+  virtual std::string GetString(void);
+  virtual void Print(void);
   RuntimeInfo &operator+=(const RuntimeInfo &record) {
     total_exec_  += record.total_exec_;
     reexec_      += record.reexec_;
@@ -112,6 +186,11 @@ struct RuntimeInfo {
     total_time_  += record.total_time_;
     reexec_time_ += record.reexec_time_;
     sync_time_   += record.sync_time_;
+    prv_elapsed_time_     += record.prv_elapsed_time_; 
+    create_elapsed_time_  += record.create_elapsed_time_;  
+    destroy_elapsed_time_ += record.destroy_elapsed_time_; 
+    begin_elapsed_time_   += record.begin_elapsed_time_;   
+    compl_elapsed_time_   += record.compl_elapsed_time_;   
     return *this;
   }
   RuntimeInfo &operator=(const RuntimeInfo &record) {
@@ -124,6 +203,11 @@ struct RuntimeInfo {
     total_time_  = record.total_time_;
     reexec_time_ = record.reexec_time_;
     sync_time_   = record.sync_time_;
+    prv_elapsed_time_     = record.prv_elapsed_time_; 
+    create_elapsed_time_  = record.create_elapsed_time_;  
+    destroy_elapsed_time_ = record.destroy_elapsed_time_; 
+    begin_elapsed_time_   = record.begin_elapsed_time_;   
+    compl_elapsed_time_   = record.compl_elapsed_time_;   
     return *this;
   }
   void MergeInfoPerLevel(const RuntimeInfo &info_per_level) {
@@ -133,6 +217,11 @@ struct RuntimeInfo {
     prv_ref_     += info_per_level.prv_ref_;
     msg_logging_ += info_per_level.msg_logging_;
     sys_err_vec_ |= info_per_level.sys_err_vec_;
+    prv_elapsed_time_     += info_per_level.prv_elapsed_time_; 
+    create_elapsed_time_  += info_per_level.create_elapsed_time_;  
+    destroy_elapsed_time_ += info_per_level.destroy_elapsed_time_; 
+    begin_elapsed_time_   += info_per_level.begin_elapsed_time_;   
+    compl_elapsed_time_   += info_per_level.compl_elapsed_time_;   
   }
 };
 
@@ -150,8 +239,9 @@ public:
   Profiler(CDHandle *cdh) : cdh_(cdh), reexecuted_(false) {}
   virtual ~Profiler() {}
   static Profiler *CreateProfiler(int prof_type=0, void *arg=NULL);
+//  static void CreateRuntimeInfo(uint32_t level, const std::string &name);
   static void Print(void);
-  static RuntimeInfo GetTotalInfo(void);
+  static RuntimeInfo GetTotalInfo(std::map<uint32_t, RuntimeInfo> &runtime_info);
   virtual void InitViz(void){}
   virtual void FinalizeViz(void){}
   std::map<uint32_t,std::map<std::string,RuntimeInfo>> &GetProfInfo(void) { return Profiler::num_exec_map; }

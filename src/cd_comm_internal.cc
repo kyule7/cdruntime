@@ -1427,7 +1427,7 @@ uint32_t CD::DecPendingCounter(void)
   pending_counter = (*pendingFlag_);
   PMPI_Win_unlock(coarse_cd->task_in_color(), coarse_cd->pendingWindow_);
   // Initialize handled_event_count;
-  CD_DEBUG("handled : %d, pending_counter : %u\n", EventHandler::handled_event_count, pending_counter);
+//  CD_DEBUG("handled : %d, pending_counter : %u\n", EventHandler::handled_event_count, pending_counter);
   EventHandler::handled_event_count = 0;
   return pending_counter;
 }
@@ -1451,7 +1451,8 @@ void CD::PrintDebug() {
 }
 
 bool printed = false;
-int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
+int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) 
+{
   CD_DEBUG("[%s] pending event:%u, incomplete log:%lu (%p)\n", __func__, *pendingFlag_, incomplete_log_.size(), request);
   CD_DEBUG_FLUSH;
   int flag = 0, ret = 0;
@@ -1459,6 +1460,7 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
     ret = PMPI_Test(request, &flag, status);
     if(flag != 0) {
       printed = false;
+      DeleteIncompleteLog(request);
       return ret;
     } else {
 //      assert(need_reexec == false); // should be false at this point.
@@ -1489,6 +1491,64 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) {
 //  GetCDToRecover(GetCurrentCD(), true)->ptr_cd()->Recover();
 //  CDHandle *cur_cdh = GetCurrentCD();
 //  GetCDToRecover(cur_cdh, cur_cdh->task_size() > target->task_size());
+  
+  return MPI_ERR_NEED_ESCALATE;
+}
+
+int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]) 
+{
+  for (int ii=0;ii<count;ii++) {
+    CD_DEBUG("[%s] pending event:%u, incomplete log:%lu (%p)\n", 
+        cd_id_.GetStringID().c_str(), *pendingFlag_, incomplete_log_.size(), array_of_requests[ii]);
+  }
+  int flag = 0, ret = 0;
+  while(1) {
+    ret = PMPI_Testall(count, array_of_requests, &flag, array_of_statuses);
+    if(flag != 0) {
+      for (int ii=0;ii<count;ii++) {
+        bool deleted = DeleteIncompleteLog(&(array_of_requests[ii]));
+        CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); CD_DEBUG_FLUSH;
+      }
+      printed = false;
+      return ret;
+    } else {
+//      assert(need_reexec == false); // should be false at this point.
+      CheckMailBox();
+//      uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
+      uint32_t rollback_point = CheckRollbackPoint(false);
+      if(rollback_point != INVALID_ROLLBACK_POINT) { // This could be set inside CD::CheckMailBox()
+        CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
+            __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+        CD_DEBUG_FLUSH;
+        printed = false;
+//        GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
+        break;
+      } else {
+        if(printed == false) {
+          CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
+              __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+          CD_DEBUG_FLUSH;
+          printed = true;
+        }
+      } 
+      // checking mailbox ends
+    }
+  }
+
+  for (int ii=0;ii<count;ii++) {
+    PMPI_Test(&array_of_requests[ii], &flag, &array_of_statuses[ii]);
+    if(flag != 0) {
+      bool deleted = DeleteIncompleteLog(&(array_of_requests[ii]));
+      CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); CD_DEBUG_FLUSH;
+    }
+  }
+
+  // Need to sync with the other task assuming current CD does not complete because
+  // the blocking MPI call precedes CD::Complete
+//  GetCDToRecover(GetCurrentCD(), true)->ptr_cd()->Recover();
+//  CDHandle *cur_cdh = GetCurrentCD();
+//  GetCDToRecover(cur_cdh, cur_cdh->task_size() > target->task_size());
+  
   return MPI_ERR_NEED_ESCALATE;
 }
 

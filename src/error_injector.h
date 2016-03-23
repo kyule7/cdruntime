@@ -91,34 +91,34 @@ public:
 /*
 class LogNormal : public ErrorProb {
 protected:
-  std::lognormal_distribution<float> distribution_;
-  float mean_;
-  float std_;
+  std::lognormal_distribution<double> distribution_;
+  double mean_;
+  double std_;
 public:
-  float GenErrorVal(void);
+  double GenErrorVal(void);
 
   void TestErrorProb(int num_bucket=10);
 
     LogNormal(void) 
     : distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
-  LogNormal(float mean, float std) 
+  LogNormal(double mean, double std) 
     : distribution_(mean, std), mean_(mean), std_(std) {}
   virtual ~LogNormal() {}
 };
 
 class Exponential : public ErrorProb {
 protected:
-  std::exponential_distribution<float> distribution_;
-  float lamda_;
+  std::exponential_distribution<double> distribution_;
+  double lamda_;
 public:
-  float GenErrorVal(void);
+  double GenErrorVal(void);
 
   void TestErrorProb(int num_bucket=10);
 
   Exponential(void) 
     : distribution_(1.0), lamda_(1.0) {}
 
-  Exponential(float lamda) 
+  Exponential(double lamda) 
     : distribution_(lamda), lamda_(lamda) {}
 
   virtual ~Exponential() {}
@@ -126,17 +126,17 @@ public:
 
 class Normal : public ErrorProb {
 protected:
-  std::normal_distribution<float> distribution_;
-  float mean_;
-  float std_;
+  std::normal_distribution<double> distribution_;
+  double mean_;
+  double std_;
 public:
-  float GenErrorVal(void);
+  double GenErrorVal(void);
 
   void TestErrorProb(int num_bucket=10);
 
   Normal(void) 
     : distribution_(0.0, 1.0), mean_(0.0), std_(1.0) {}
-  Normal(float mean, float std) 
+  Normal(double mean, double std) 
     : distribution_(mean, std), mean_(mean), std_(std) {}
   virtual ~Normal() {}
 };
@@ -144,16 +144,16 @@ public:
 class Poisson : public ErrorProb {
 protected:
   std::poisson_distribution<int> distribution_;
-  float mean_;
+  double mean_;
 public:
-  float GenErrorVal(void);
+  double GenErrorVal(void);
   
   void TestErrorProb(int num_bucket=10);
 
 
   Poisson(void) 
     : distribution_(1.0), mean_(1.0) {}
-  Poisson(float mean) 
+  Poisson(double mean) 
     : distribution_(mean), mean_(mean) {}
   virtual ~Poisson() {}
 };
@@ -180,13 +180,13 @@ protected:
   ErrorProb *rand_generator_;
   bool enabled_;
   FILE *logfile_;
-  float error_rate_;
+  double error_rate_;
 
 public:
 
   ErrorInjector(void);
-  ErrorInjector(float error_rate, RandType random_type=kUniform, FILE *logfile=stdout);
-  ErrorInjector(bool enabled, float error_rate, RandType random_type=kUniform, FILE *logfile=stdout);
+  ErrorInjector(double error_rate, RandType random_type=kUniform, FILE *logfile=stdout);
+  ErrorInjector(bool enabled, double error_rate, RandType random_type=kUniform, FILE *logfile=stdout);
   virtual ~ErrorInjector(void) {}
 
   void Init(RandType random_type, FILE *logfile=stdout);
@@ -197,15 +197,15 @@ public:
   virtual uint64_t Inject(void);
 protected:
   uint64_t InjectError(const long double &error_rate);
-  long double GetErrorProb(float error_rate, float unit_time);
+  long double GetErrorProb(double error_rate, double unit_time);
   inline ErrorProb *CreateErrorProb(RandType random_type);
 };
 
 /** @} */ // Ends error_injector
 
 //class MultiTypeErrorInjector : public ErrorInjector {
-//  std::map<uint32_t, float> error_prob_bin_;
-//  MultiTypeErrorInjector(const std::initializer_list<std::pair<uint32_t, float>> &err_type_list);
+//  std::map<uint32_t, double> error_prob_bin_;
+//  MultiTypeErrorInjector(const std::initializer_list<std::pair<uint32_t, double>> &err_type_list);
 //  virtual uint32_t Inject(void);
 //
 //};
@@ -224,7 +224,7 @@ public:
   MemoryErrorInjector(void *data, uint64_t size)
     : ErrorInjector(0.0, kUniform, stdout), data_(data), size_(size) {}
 
-  MemoryErrorInjector(void *data, uint64_t size, float error_rate, RandType random_type=kUniform, FILE *logfile=stdout)
+  MemoryErrorInjector(void *data, uint64_t size, double error_rate, RandType random_type=kUniform, FILE *logfile=stdout)
     : ErrorInjector(error_rate, random_type, logfile), data_(data), size_(size) {}
   virtual ~MemoryErrorInjector() {}
 
@@ -232,7 +232,7 @@ public:
   virtual uint64_t Inject(void) { return NO_ERROR_INJECTED; }
   virtual int64_t SetRange(uint64_t range) {return 0;}
   virtual void PushRange(void *data, uint64_t ndata, uint64_t sdata, const char *desc){}
-  virtual void Init(float soft_error_rate=0.0, float hard_error_rate=0.0){}
+  virtual void Init(double soft_error_rate=0.0, double hard_error_rate=0.0){}
 
 };
 
@@ -260,26 +260,26 @@ class CDErrorInjector : public ErrorInjector {
 public:
   CDErrorInjector(void);
 
-  CDErrorInjector(float error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
+  CDErrorInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
   CDErrorInjector(uint32_t cd_to_fail, uint32_t task_to_fail, 
-                  float error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
+                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
   CDErrorInjector(uint32_t cd_to_fail, uint32_t task_to_fail, uint32_t rank_in_level, uint32_t task_in_color,
-                  float error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
+                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
   CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, 
                   std::initializer_list<uint32_t> task_list_to_fail, 
-                  float error_rate);
+                  double error_rate);
 
   CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, 
                   std::initializer_list<uint32_t> task_list_to_fail, 
-                  float error_rate, RandType rand_type, FILE *logfile);
+                  double error_rate, RandType rand_type, FILE *logfile);
 
   CDErrorInjector(std::initializer_list<uint32_t> cd_list_to_fail, 
                   std::initializer_list<uint32_t> task_list_to_fail,
                   uint32_t rank_in_level, uint32_t task_in_color,
-                  float error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
+                  double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout);
 
   virtual ~CDErrorInjector(void) {}
 
@@ -295,7 +295,7 @@ public:
   NodeFailureInjector(void) 
     : ErrorInjector(0.0, kUniform, stdout) {}
 
-  NodeFailureInjector(float error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
+  NodeFailureInjector(double error_rate, RandType rand_type=kUniform, FILE *logfile=stdout) 
     : ErrorInjector(error_rate, rand_type, logfile) {}
 
   virtual uint64_t Inject(void) { return NO_ERROR_INJECTED; }

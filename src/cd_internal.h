@@ -640,6 +640,7 @@ public:
     
     void Escalate(CDHandle *leaf, bool need_sync_to_reexec);
     int  BlockUntilValid(MPI_Request *request, MPI_Status *status);
+    int  BlockallUntilValid(int count, MPI_Request array_of_request[], MPI_Status array_of_status[]);
     bool CheckIntraCDMsg(int target_id, MPI_Group &target_group);
 #endif
 

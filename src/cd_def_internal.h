@@ -412,7 +412,10 @@ extern CD_CLOCK_T begin_clk;
 extern CD_CLOCK_T end_clk;
 extern CD_CLOCK_T elapsed_time;
 extern CD_CLOCK_T prv_elapsed_time;
-extern CD_CLOCK_T tree_elapsed_time;
+extern CD_CLOCK_T create_elapsed_time;
+extern CD_CLOCK_T destroy_elapsed_time;
+extern CD_CLOCK_T begin_elapsed_time;
+extern CD_CLOCK_T compl_elapsed_time;
 
 /**@addtogroup runtime_logging 
  * @{

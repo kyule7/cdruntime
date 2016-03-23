@@ -1091,9 +1091,9 @@ int MPI_Wait(MPI_Request *request,
 //        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
         mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        mpi_ret = PMPI_Wait(request, status);
-        if(mpi_ret != MPI_ERR_NEED_ESCALATE) {
-         cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
-        }
+//        if(mpi_ret != MPI_ERR_NEED_ESCALATE) {
+//         cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
+//        }
 //        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
 //        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        assert(CD::need_reexec == false);
@@ -1165,12 +1165,21 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
       case kStrictCD: {
 //printf("test waitall: strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
         CD_DEBUG("total incmpl size : %lu\n", cur_cdh->ptr_cd()->incomplete_log_.size());
-        mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
-        for (ii=0;ii<count;ii++) {
-          bool deleted = cur_cdh->ptr_cd()->DeleteIncompleteLog(&(array_of_requests[ii]));
-          CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); CD_DEBUG_FLUSH;
 
-        }
+        mpi_ret = cur_cdh->ptr_cd()->BlockallUntilValid(count, array_of_requests, array_of_statuses);
+//        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
+//        if(mpi_ret != MPI_ERR_NEED_ESCALATE) {
+//         cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
+//        }
+//
+//        mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
+//
+//        for (ii=0;ii<count;ii++) {
+//          bool deleted = cur_cdh->ptr_cd()->DeleteIncompleteLog(&(array_of_requests[ii]));
+//          CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); CD_DEBUG_FLUSH;
+//
+//        }
+
         GetCurrentCD()->ptr_cd()->PrintDebug();
         // delete incomplete entries...
 //        for (ii=0;ii<count;ii++) {

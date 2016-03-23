@@ -1043,7 +1043,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
   if(check_sync_clk == false) {
     prof_sync_clk = CD_CLOCK();
     end_clk = CD_CLOCK();
-    tree_elapsed_time += end_clk - begin_clk;
+    compl_elapsed_time += end_clk - begin_clk;
     check_sync_clk = true;
   }
 #endif
@@ -1179,19 +1179,23 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    MPI_Win_fence(0, rollbackWindow_);
 //    printf("1 new reexec level = %u\n", new_rollback_point);
 
-    int head_id = GetNodeID().head_;
-    PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, rollbackWindow_);
-    PMPI_Get(&new_rollback_point, 1, MPI_UNSIGNED, 
-             head_id, 0, 1, MPI_UNSIGNED,
-             rollbackWindow_); // Read rollback_point from head.
-//    MPI_Win_fence(0, rollbackWindow_);
-    PMPI_Win_unlock(head_id, rollbackWindow_);
-//  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
-    SetRollbackPoint(new_rollback_point, false);
+//    int head_id = GetNodeID().head_;
+//    PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, rollbackWindow_);
+//    PMPI_Get(&new_rollback_point, 1, MPI_UNSIGNED, 
+//             head_id, 0, 1, MPI_UNSIGNED,
+//             rollbackWindow_); // Read rollback_point from head.
+////    MPI_Win_fence(0, rollbackWindow_);
+//    PMPI_Win_unlock(head_id, rollbackWindow_);
+////  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
+////
+    new_rollback_point = CheckRollbackPoint(true); // read from head
+    CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
+    new_rollback_point = SetRollbackPoint(new_rollback_point, false);
+    CD_DEBUG("rollback point after set it locally:%u\n", new_rollback_point);
 //    printf("2 new reexec level = %u\n", new_rollback_point);
+  } else {
+    new_rollback_point = CheckRollbackPoint(false);
   }
-  new_rollback_point = CheckRollbackPoint(false);
-
   if(new_rollback_point != INVALID_ROLLBACK_POINT) { 
     // If another task set rollback_point lower than this task (error occurred at this task),
     // need_sync is false. 

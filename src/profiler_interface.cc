@@ -70,6 +70,14 @@ Profiler *Profiler::CreateProfiler(int prof_type, void *arg)
 
 }
 
+//void Profiler::CreateRuntimeInfo(uint32_t level, const std::string &name) 
+//{
+//  auto rit = num_exec_map[level].find(name);
+//  if(rit == num_exec_map[level].end()) { 
+//    num_exec_map[level][name] = RuntimeInfo(1);
+//  }
+//}
+
 void Profiler::BeginRecord(void)
 {
   const uint32_t level = cdh_->level();
@@ -179,11 +187,12 @@ void Profiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
       ERROR_MESSAGE("Invalid profile type to record : %d\n", profile_type);
   }
 }
+
 string RuntimeInfo::GetString(void)
 {
-  char stringout[256];
-  snprintf(stringout, 256, 
-    "# Execution:\t%lu\n# Reexecution:\t%lu\nTotal Execution Time:\t%lf[s]\nReexecution Time:\t%lf[s]\nSync Time (CDs):\t%lf[s]\nPreservation(Total):\t%lu[B]\nPreservation(Ref):\t%lu[B]\nComm Logging:\t%lu[B]\nError Vector:\t%lx", 
+  char stringout[512];
+  snprintf(stringout, 512, 
+    "# Execution:\t%lu\n# Reexecution:\t%lu\nTotal Execution Time:\t%lf[s]\nReexecution Time:\t%lf[s]\nSync Time (CDs):\t%lf[s]\nPreservation(Total):\t%lu[B]\nPreservation(Ref):\t%lu[B]\nComm Logging:\t%lu[B]\nError Vector:\t%lx\n-- CD Overhead -----------\nPreservation:\t%lf[s]\nCreate CD:\t%lf[s]\nDestroy CD:\t%lf[s]\nBegin CD:\t%lf[s]\nComplete CD:\t%lf[s]\n", 
                          total_exec_,
                          reexec_,
                          total_time_,
@@ -192,11 +201,66 @@ string RuntimeInfo::GetString(void)
                          prv_copy_,
                          prv_ref_,
                          msg_logging_,
-                         sys_err_vec_);
+                         sys_err_vec_,
+                         prv_elapsed_time_, 
+                         create_elapsed_time_,
+                         destroy_elapsed_time_,
+                         begin_elapsed_time_,
+                         compl_elapsed_time_ 
+                        );
   return string(stringout);
 }
 
-void Profiler::Print(void) {
+void RuntimeInfo::Print(void)
+{
+  printf("%s", GetString().c_str());
+}
+
+string CDOverhead::GetString(void)
+{
+  char stringout[512];
+  snprintf(stringout, 512, 
+    "-- CD Overhead -----------\nPreservation:\t%lf[s]\nCreate CD:\t%lf[s]\nDestroy CD:\t%lf[s]\nBegin CD:\t%lf[s]\nComplete CD:\t%lf[s]\n", 
+                         prv_elapsed_time_, 
+                         create_elapsed_time_,
+                         destroy_elapsed_time_,
+                         begin_elapsed_time_,
+                         compl_elapsed_time_ 
+                        );
+  return string(stringout);
+}
+
+void CDOverhead::Print(void)
+{
+  printf("%s", GetString().c_str());
+}
+
+string CDOverheadVar::GetString(void)
+{
+  char stringout[512];
+  snprintf(stringout, 512, 
+    "-- CD Overhead -----------\nPreservation:\t%lf[s] (var:%lf)\nCreate CD:\t%lf[s] (var:%lf)\nDestroy CD:\t%lf[s] (var:%lf)\nBegin CD:\t%lf[s] (var:%lf)\nComplete CD:\t%lf[s] (var:%lf)\n", 
+                         prv_elapsed_time_, 
+                         prv_elapsed_time_var_, 
+                         create_elapsed_time_,
+                         create_elapsed_time_var_,
+                         destroy_elapsed_time_,
+                         destroy_elapsed_time_var_,
+                         begin_elapsed_time_,
+                         begin_elapsed_time_var_,
+                         compl_elapsed_time_,
+                         compl_elapsed_time_var_ 
+                        );
+  return string(stringout);
+}
+
+void CDOverheadVar::Print(void)
+{
+  printf("%s", GetString().c_str());
+}
+
+void Profiler::Print(void) 
+{
   for(auto it=num_exec_map.begin(); it!=num_exec_map.end(); ++it) {
     CD_DEBUG("Level %u --------------------------------\n", it->first);
     for(auto jt=it->second.begin(); jt!=it->second.end(); ++jt) {
@@ -208,29 +272,25 @@ void Profiler::Print(void) {
 }
 
 
-RuntimeInfo Profiler::GetTotalInfo(void) {
+RuntimeInfo Profiler::GetTotalInfo(std::map<uint32_t, RuntimeInfo> &runtime_info) 
+{
   RuntimeInfo info_total;
   for(auto it=num_exec_map.begin(); it!=num_exec_map.end(); ++it) {
     RuntimeInfo info_per_level;
-    CD_DEBUG("\nLevel %u --------------------------------\n", it->first);
+    CD_DEBUG("\n-- Level %u --------------------------------\n", it->first);
     //if(myTaskID == 0)
-      printf("Level %u --------------------------------\n", it->first);
+      printf("-- Level %u --------------------------------\n", it->first);
     for(auto jt=it->second.begin(); jt!=it->second.end(); ++jt) { //map<string,RuntimeInfo>>
       CD_DEBUG("\n%s : %s\n", jt->first.c_str(), jt->second.GetString().c_str());
       info_per_level += jt->second;
     }
     CD_DEBUG("-- Summary --\n");
-    CD_DEBUG("%s", info_per_level.GetString().c_str());
-    CD_DEBUG("\n");
-    //if(myTaskID == 0) 
-    {
-      printf("-- Summary --\n");
-      printf("%s", info_per_level.GetString().c_str());
-      printf("\n");
-    }
+    CD_DEBUG("%s\n", info_per_level.GetString().c_str());
+    printf("%s\n", info_per_level.GetString().c_str());
+    
+    printf("%s", info_per_level.GetString().c_str());
     info_total.MergeInfoPerLevel(info_per_level);
-//    if(it->first == 0)
-//      info_total = info_per_level;
+    runtime_info[it->first] = info_per_level;
   }
   CD_DEBUG("-----------------------------------------\n");
   CD_DEBUG("Total Summary ---------------------------\n");
