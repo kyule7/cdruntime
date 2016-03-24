@@ -150,11 +150,11 @@ int TestPreservationViaRefRemote(void)
   arrayName[arrayE] = "arrayE";
 
   child_lv1->Preserve(arrayA, sizeof(arrayA), kCopy | kCoop, 
-                      (string("arrayA-")+to_string(myRank)).c_str()); // arrayA-rankID
+                      (string("arrayA-")+to_string((long long int)myRank)).c_str()); // arrayA-rankID
   child_lv1->Preserve(arrayB, sizeof(arrayB), kCopy | kCoop, 
-                      (string("arrayB-")+to_string(myRank)).c_str()); // arrayB-rankID
+                      (string("arrayB-")+to_string((long long int)myRank)).c_str()); // arrayB-rankID
   child_lv1->Preserve(arrayE, sizeof(arrayE), kCopy | kCoop, 
-                      (string("arrayE-")+to_string(myRank)).c_str()); // arrayE-rankID
+                      (string("arrayE-")+to_string((long long int)myRank)).c_str()); // arrayE-rankID
 
   dbgApp << "\t\tPreserve via copy: arrayA (Share), arrayB (Share), arrayE (Share)\n" << endl;
 
@@ -215,15 +215,15 @@ int TestPreservationViaRefRemote(void)
   dbgApp.flush();
 
   child_lv2->Preserve(arrayA, sizeof(arrayA), kRef, 
-                      "a_lv2", (string("arrayA-")+to_string(myRank)).c_str()); // local
+                      "a_lv2", (string("arrayA-")+to_string((long long int)myRank)).c_str()); // local
   child_lv2->Preserve(arrayF, sizeof(arrayF), kRef, 
                       "b_remote_lv2", 
-                      (string("arrayA-")+to_string((myRank+1) % numProcs)).c_str()); // remote
+                      (string("arrayA-")+to_string((long long int)(myRank+1) % numProcs)).c_str()); // remote
   child_lv2->Preserve(arrayB, sizeof(arrayB), kRef, 
-                      "b_lv2", (string("arrayB-")+to_string(myRank)).c_str()); // local
+                      "b_lv2", (string("arrayB-")+to_string((long long int)myRank)).c_str()); // local
   child_lv2->Preserve(arrayG, sizeof(arrayG), kRef, 
                       "b_remote_lv2", 
-                      (string("arrayE-")+to_string((myRank+1) % numProcs)).c_str()); // remote
+                      (string("arrayE-")+to_string((long long int)(myRank+1) % numProcs)).c_str()); // remote
   child_lv2->Preserve(arrayC, sizeof(arrayC), kCopy, "arrayC");
   dbgApp << "\t\t\t\tPreserve via ref : arrayA (local), arrayB (local), arrayF (remote), arrayG (remote)" << endl;
   dbgApp << "\t\t\t\tPreserve via copy: arrayC" << endl;
@@ -245,8 +245,8 @@ int TestPreservationViaRefRemote(void)
   dbgApp << "\t\t\t\t\t\tLevel 3 CD Begin...\n" << endl;
   dbgApp.flush();
 
-  child_lv3->Preserve(arrayA, sizeof(arrayA), kRef, "child_a", (string("arrayA")+to_string(myRank)).c_str()); // local
-  child_lv3->Preserve(arrayB, sizeof(arrayB), kRef, "child_b", (string("arrayB")+to_string(myRank)).c_str()); // local
+  child_lv3->Preserve(arrayA, sizeof(arrayA), kRef, "child_a", (string("arrayA")+to_string((long long int)myRank)).c_str()); // local
+  child_lv3->Preserve(arrayB, sizeof(arrayB), kRef, "child_b", (string("arrayB")+to_string((long long int)myRank)).c_str()); // local
   child_lv3->Preserve(arrayC, sizeof(arrayC), kRef, "child_c", "arrayC");
   child_lv3->Preserve(arrayD, sizeof(arrayD), kCopy, "arrayD");
 
@@ -303,7 +303,7 @@ int main(int argc, char* argv[])
   MPI_Comm_size(MPI_COMM_WORLD,  &numProcs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   
-  dbgApp.open((string("./dbg_logs/output_app_")+to_string(myRank)).c_str());
+  dbgApp.open((string("./dbg_logs/output_app_")+to_string((long long int)myRank)).c_str());
   dbgApp << "\n==== TestPreservationViaRefRemote ====\n" << endl; 
   int ret = TestPreservationViaRefRemote();
   if( ret == kError ) 

@@ -23,17 +23,23 @@ AC_ARG_ENABLE([profiler],
 AS_IF([test x"$enable_profiler" = x"yes"], [WANT_PROFILER=1], [WANT_PROFILER=0])
 AC_DEFINE_UNQUOTED(_PROFILER, $WANT_PROFILER, [Define to 1 to enable profiler])
 AC_SUBST(cd_profiler_enabled, $WANT_PROFILER)
-# some additonal preprocessor symbols to configure profiling
-#
-# XXX: I have no idea what these do, so please update the descriptions!
-AC_DEFINE(_ENABLE_MODULE, [1], [Define to 1 for Module])
-AC_DEFINE(_ENABLE_HIERGRAPH, [0], [Define to 1 for CD Hierarchical Graph App])
-AC_DEFINE(_ENABLE_SCOPE, [0], [Define to 1 to profile Scope])
-# XXX: Old Makefile used _ENABLE_GRAPH, but code used _ENABLE_SCOPEGRAPH
-AC_DEFINE(_ENABLE_SCOPEGRAPH, [0], [Define to 1 for ScopeGraph])
-AC_DEFINE(_ENABLE_ATTR, [0], [Define to 1 for Attribute])
-AC_DEFINE(_ENABLE_COMP, [0], [Define to 1 for Comparison])
-AC_DEFINE(_ENABLE_CDNODE, [0], [Define to 1 for CDNode])
+
+# profiling support
+AC_ARG_ENABLE([viz], 
+    [AS_HELP_STRING([--enable-viz],[Turn on visualization])])
+AS_IF([test x"$enable_viz" = x"yes"], [WANT_VIZ=1], [WANT_VIZ=0])
+AC_DEFINE_UNQUOTED(_SIGHT, $WANT_VIZ, [Define to 1 to enable visualization])
+AC_SUBST(cd_viz_enabled, $WANT_VIZ)
+dnl # some additonal preprocessor symbols to configure profiling
+dnl # XXX: I have no idea what these do, so please update the descriptions!
+dnl AC_DEFINE(_ENABLE_MODULE, [1], [Define to 1 for Module])
+dnl AC_DEFINE(_ENABLE_HIERGRAPH, [0], [Define to 1 for CD Hierarchical Graph App])
+dnl AC_DEFINE(_ENABLE_SCOPE, [0], [Define to 1 to profile Scope])
+dnl # XXX: Old Makefile used _ENABLE_GRAPH, but code used _ENABLE_SCOPEGRAPH
+dnl AC_DEFINE(_ENABLE_SCOPEGRAPH, [0], [Define to 1 for ScopeGraph])
+dnl AC_DEFINE(_ENABLE_ATTR, [0], [Define to 1 for Attribute])
+dnl AC_DEFINE(_ENABLE_COMP, [0], [Define to 1 for Comparison])
+dnl AC_DEFINE(_ENABLE_CDNODE, [0], [Define to 1 for CDNode])
 
 # comm_log is tested via ifdef, so this one is conditionally defined
 #
@@ -111,11 +117,13 @@ AC_DEFINE_UNQUOTED(_MPI_VER, $WANT_MPI, [Define to 1 for MPI support.])
 AC_DEFINE_UNQUOTED(_PGAS_VER, $WANT_PGAS, [Define to 1 for PGAS support.])
 AC_DEFINE_UNQUOTED(_SINGLE_VER, $WANT_SINGLE, [Define to 1 for serial library])
 AC_SUBST(cd_mpi_enabled, $WANT_MPI)
+AM_CONDITIONAL(HAVE_MPI, $WANT_MPI)
 
-AC_ARG_WITH([sight], 
-    [AS_HELP_STRING([--with-sight=DIR], [specify path to sight installation])],
-    [SIGHT_ROOT=$withval],
-    [SIGHT_ROOT=none])
+
+dnl AC_ARG_WITH([sight], 
+dnl     [AS_HELP_STRING([--with-sight=DIR], [specify path to sight installation])],
+dnl     [SIGHT_ROOT=$withval],
+dnl     [SIGHT_ROOT=none])
 
 # Check for incompatible build flags after argument processing is complete.
 # (i.e. Don't put any AC_ARG_ENABLE or AC_ARG_WITH directives below this line.)

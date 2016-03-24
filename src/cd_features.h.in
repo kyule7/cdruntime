@@ -30,5 +30,6 @@
 #define CD_LIBC_LOG_ENABLED @cd_libc_log_enabled@
 #define CD_PROFILER_ENABLED @cd_profiler_enabled@
 #define CD_TEST_ENABLED @cd_test_enabled@
+#define CD_VIZ_ENABLED @cd_viz_enabled@
 
 #endif /* _CD_FEATURES_H */

@@ -49,7 +49,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include "cd_features.h"
 #include "cd_config.h"
 
-#if _PROFILER
+#if _SIGHT
 
 #include <time.h>
 #include "profiler_interface.h"

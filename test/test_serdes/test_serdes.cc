@@ -95,7 +95,7 @@ class UserClass1 : public Serializable {
   public:
     UserClass1(){ cout << "UserClass1 object is created\n" << endl; } 
      
-    void *Serialize(uint32_t &len_in_bytes) {
+    void *Serialize(uint64_t &len_in_bytes) {
       // User define whatever they want.
       cout << "[UserClass1] Serialize Method 0\n" << endl;
 
@@ -120,7 +120,7 @@ class UserSerdes : public Serializable {
       method = option;
     }
 
-    virtual void *Serialize(uint32_t &len_in_bytes) {
+    virtual void *Serialize(uint64_t &len_in_bytes) {
       // User define whatever they want.
       cout << "[UserClass2] ";
       switch(method) {
@@ -158,22 +158,22 @@ class UserSerdes : public Serializable {
       }
     }
 
-    void *SerializeMethod0(uint32_t &len_in_bytes) {
+    void *SerializeMethod0(uint64_t &len_in_bytes) {
       // Serialize Method 0
       cout << "Serialize Method 0\n" << endl;
       return NULL;
     }
-    void *SerializeMethod1(uint32_t &len_in_bytes) {
+    void *SerializeMethod1(uint64_t &len_in_bytes) {
       // Serialize Method 1
       cout << "Serialize Method 1\n" << endl;
       return NULL;
     }
-    void *SerializeMethod2(uint32_t &len_in_bytes) {
+    void *SerializeMethod2(uint64_t &len_in_bytes) {
       // Serialize Method 2
       cout << "Serialize Method 2\n" << endl;
       return NULL;
     }
-    void *SerializeMethod3(uint32_t &len_in_bytes) {
+    void *SerializeMethod3(uint64_t &len_in_bytes) {
       // Serialize Method 3
       cout << "Serialize Method 3\n" << endl;
       return NULL;

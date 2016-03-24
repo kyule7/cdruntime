@@ -1,9 +1,11 @@
 SUBDIRS = \
     test_simple_hierarchy \
     test_user_defined_hierarhcy \
-    test_prv_ref_remote \
     test_serdes
 
+if HAVE_MPI
+    SUBDIRS += test_prv_ref_remote
+endif
 clean-tests:
 	cd test_simple_hierarchy; make clean; \
 	cd test_user_defined_hierarhcy; make clean; \

@@ -76,11 +76,14 @@ void CDFileHandle::OpenFilePath(void)
 //    printf("Prv Path exists!\n");
   }
   else {
-    char cmd[256];
-    sprintf(cmd, "mkdir -p %s", basepath);
-//    printf("preservation file path size : %d\n", (int)sizeof(cmd));
-    if( system(cmd) == -1 )
-      ERROR_MESSAGE("ERROR: Failed to create directory for debug info. %s\n", cmd);
+    char filepath[256];
+    sprintf(filepath, "%s", basepath);
+//    printf("preservation file path size : %d\n", (int)sizeof(filepath));
+    int ret = mkdir(filepath, S_IRWXU);
+    if(ret == -1 && errno != EEXIST) {
+      /* The EEXIST should not happen, but we check for it anyway */
+      ERROR_MESSAGE("ERROR: Failed to mkdir to preserve %s: %s\n", filepath, strerror(errno));
+    }
   }
   strcpy(unique_filename_, filePath_.GetFilePath().c_str());
   file_desc_ = mkstemp(unique_filename_);

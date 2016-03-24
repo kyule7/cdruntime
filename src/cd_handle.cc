@@ -170,10 +170,14 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
     }
     else {
       char debug_dir[256];
-      sprintf(debug_dir, "mkdir -p %s", dbg_basepath.c_str());
+      sprintf(debug_dir, "%s", dbg_basepath.c_str());
 //      printf("debug dir path size : %d\n", (int)sizeof(debug_dir));
-      if( system(debug_dir) == -1 )
-        ERROR_MESSAGE("ERROR: Failed to create directory for debug info. %s\n", debug_dir);
+      // [Eric]
+      int ret = mkdir(debug_dir, S_IRWXU);
+      if(ret == -1 && errno != EEXIST) {
+        /* The EEXIST should not happen, but we check for it anyway */
+        ERROR_MESSAGE("ERROR: Failed to mkdir %s: %s\n", debug_dir, strerror(errno));
+      }
     }
   }
   
@@ -420,7 +424,7 @@ void CD_Finalize(void)
   double compl_elapsed_avg = recvbuf[COMPL_AVG]/cd::totalTaskSize;
   double compl_elapsed_var = (recvbuf[COMPL_VAR] - recvbuf[COMPL_AVG]*recvbuf[COMPL_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
 
-
+#if CD_PROFILER_ENABLED
   std::map<uint32_t, CDOverheadVar> lv_runtime_info;
   for(auto it=runtime_info.begin(); it!=runtime_info.end(); ++it) {
     double sendbuf_lv[PROF_LEVEL_STATISTICS_NUM]  = {
@@ -449,7 +453,7 @@ void CD_Finalize(void)
     lv_runtime_info[it->first].compl_elapsed_time_var_ = (recvbuf_lv[LV_COMPL_VAR] - recvbuf_lv[LV_COMPL_AVG]*recvbuf_lv[LV_COMPL_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
 
   }
-
+#endif
 
   if(cd::myTaskID == 0) {
     printf("\n\n============================================\n");

@@ -9,20 +9,25 @@ and some extra automake files.  Do this by running::
 Configure Examples
 ------------------
 
-Build for MPI::
+Production build for MPI::
+ 
+     configure --enable-parallel=mpi --enable-logging CXX=mpic++ CXXFLAGS="-std=c++11 -Wall -g -O"
+      
+Development build for MPI (adapted from test/test_prv_ref_remote)::
 
-    configure --enable-parallel=mpi --enable-logging CXX=mpic++ CXXFLAGS="-std=c++11 -Wall -g -O"
+    configure CXX=mpic++ CXXFLAGS="-std=c++0x -Wall -g -O -Wundef -Wextra" --enable-parallel=mpi --enable-logging --enable-debug --enable-error-injection 
+
+
 
 Single-threaded build::
 
-    configure CXXFLAGS="-std=c++11 -Wall -g -O"
+    configure CXXFLAGS="-std=c++11 -Wall -g -O -Wextra -Wundef"
 
 Defaults from original git checkout::
 
-    configure --enable-parallel=mpi --enable-logging CXX=mpic++ CXXFLAGS="-std=gnu++0x -Wall -g -O -fPIC"  --enable-debug --enable-error-injection --enable-keep-preservation-files
+    configure --enable-parallel=mpi --enable-logging CXX=mpic++ CXXFLAGS="-std=gnu++0x -Wall -g -O -fPIC"  --enable-debug --enable-error-injection --enable-profiler --enable-keep-preservation-files --enable-cd-test 
 
-USE THIS!!
-    configure --enable-parallel=mpi --enable-logging CXX=mpic++ --enable-debug --enable-cd-test --enable-error-injection --enable-keep-preservation-files
+
 Random
 ------
 

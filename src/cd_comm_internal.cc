@@ -1506,7 +1506,7 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
 {
   for (int ii=0;ii<count;ii++) {
     CD_DEBUG("[%s] pending event:%u, incomplete log:%lu (%p)\n", 
-        cd_id_.GetStringID().c_str(), *pendingFlag_, incomplete_log_.size(), array_of_requests[ii]);
+        cd_id_.GetStringID().c_str(), *pendingFlag_, incomplete_log_.size(), &array_of_requests[ii]);
   }
   int flag = 0, ret = 0;
   while(1) {
