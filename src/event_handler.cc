@@ -540,7 +540,7 @@ void HandleAllReexecute::HandleEvent(void)
       // This should be set by kAllReexecute from head task in the leaf CD.
       CD *cur_cd = GetCurrentCD()->ptr_cd();
       if(cur_cd->reported_error_ == false) {
-        cur_cd->SetMailBox(kErrorOccurred);
+        CDPath::GetCoarseCD(cur_cd)->SetMailBox(kErrorOccurred);
       }
 
       // [Kyushick]

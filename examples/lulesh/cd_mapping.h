@@ -193,7 +193,7 @@
 #define SWITCH_2_1_0  3                                                   //       LagrangeElements ** MAP FINEGRAINED
 #define CD_MAP_2_1_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) //# O{vnew,delv,arealg,vdov,dxx,...},I{deltaT,volo,v,x,y,z,xd,dxx,.} 
 #define SWITCH_3_5_0  3                                                   //           CalcLagrangeElements
-#define CD_MAP_3_5_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_2) //# O{vnew,delv,arealg,vdov,dxx,...},I{deltaT,volo,v,x,y,z,xd,dxx,.}
+#define CD_MAP_3_5_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_2) //# O{vnew,delv,arealg,vdov,dxx,...},I{deltaT,volo,v,x,y,z,xd,dxx,.}
 #define SWITCH_4_1_0  0                                                   //               CalcKinematicsForElems
 #define CD_MAP_4_1_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                 # O{dxx,dyy,dzz,delv,vnew}, I{deltaT,volo,v,x,y,z}
 #define SWITCH_5_4_0  0                                                   //                   CollectDomainNodesToElemNodes
@@ -238,7 +238,7 @@
 #define CD_MAP_3_8_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //             # O{v}, I{vnew,v_cut}
 //                    *************************************************** CommRecvSYNC && CommSendSYNC ***********************
 #define SWITCH_2_2_0  3                                                   //       CalcTimeConstraintsForElems ** MAP FINEGRAINED
-#define CD_MAP_2_2_0  ((8<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) // # O{dtcourant,dthydro}, I{regElemSize,regElemlist,qqc,ss,vdov,arealg,dvovmax}
+#define CD_MAP_2_2_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) // # O{dtcourant,dthydro}, I{regElemSize,regElemlist,qqc,ss,vdov,arealg,dvovmax}
 #define SWITCH_3_9_0  0                                                   //           CalcCourantConstraintForElems (dtcourant)
 #define CD_MAP_3_9_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //              # O{dtcourant}, I{qqc,ss,vdov,arealg}
 #define SWITCH_3_10_0 0                                                   //           CalcHydroConstraintForElems (dthydro)
