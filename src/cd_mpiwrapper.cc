@@ -1244,6 +1244,9 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
   }
 
   MsgEpilogue();
+  if(mpi_ret == MPI_ERR_NEED_ESCALATE) {
+    cur_cdh->ptr_cd()->Escalate(cur_cdh, true); 
+  }
   return mpi_ret;
 }
 

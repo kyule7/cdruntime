@@ -745,16 +745,6 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
 #if CD_DEBUG_DEST == 1
     fflush(cdout);
 #endif
-//  bool orig_need_reexec = need_reexec;
-//  if(collective)
-//    SyncCDs(this);
-
-//  if(need_reexec != orig_need_reexec) {
-//    CD_DEBUG("\n\n[%s]Reexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n", __func__);
-//    CD::GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
-//  } else {
-//    CD_DEBUG("\n\nReexec is false\n");
-//  }
  
    
   if(task_size() > 1 && (is_window_reused_==false)) {  
@@ -841,12 +831,6 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
 
   delete this;
 
-//  if(need_reexec != orig_need_reexec) {
-//    CD_DEBUG("\n\n[%s]Reexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n", __func__);
-//    CD::GetCDToRecover(GetParentCD(level()), true)->ptr_cd()->Recover();
-//  } else {
-//    CD_DEBUG("\n\nReexec is false\n");
-//  }
   return CDInternalErrT::kOK;
 
 }
@@ -965,17 +949,9 @@ CDErrT CD::Begin(bool collective, const char* label)
 //    CD_DEBUG("No Barrier!!!!! %d %u\n", collective, task_size());
 //  }
   CD_DEBUG("Sync \n");
-  if(cd_exec_mode_ == kReexecution || collective)
+  if(cd_exec_mode_ == kReexecution || collective) {
     SyncCDs(this);
-//
-//  if(CD::need_reexec) {
-//    CD_DEBUG("\n\n[%s]Reexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n", __func__);
-//    CD::GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
-////    CD *cd_to_recover = ptr_cd_->GetCDToRecover();
-////    cd_to_recover->recoverObj_->Recover(cd_to_recover);
-//  } else {
-//    CD_DEBUG("\n\nReexec is false\n");
-//  }
+  }
 
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
@@ -999,37 +975,55 @@ CDErrT CD::Begin(bool collective, const char* label)
 }
 
 // static
-void CD::SyncCDs(CD *cd_lv_to_sync)
+void CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 {
-
+#if CD_PROFILER_ENABLED
+  double sync_time = 0.0;
+#endif
   if(cd_lv_to_sync->task_size() > 1) {
 
     cd_lv_to_sync->CheckMailBox();
 
     CD_DEBUG("[%s] fence 1 in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
-    //printf("[%s] fence 1 in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
+#if CD_PROFILER_ENABLED
+    CD_CLOCK_T begin_here = CD_CLOCK();
     MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
+    sync_time += CD_CLOCK() - begin_here;
 
     cd_lv_to_sync->CheckMailBox();
 
     CD_DEBUG("[%s] fence 2 in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
-    //printf("[%s] fence 2 in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
+    begin_here = CD_CLOCK();
     MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
-    
+    sync_time += CD_CLOCK() - begin_here;
+#else
+    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
+    cd_lv_to_sync->CheckMailBox();
+
+    CD_DEBUG("[%s] fence 2 in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
+    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
+#endif    
     if(cd_lv_to_sync->IsHead() == false) {
       cd_lv_to_sync->CheckMailBox();
     }
 
     CD_DEBUG("[%s] fence out \n\n", __func__);
-    //printf("[%s] fence out \n\n", __func__);
   } else {
     CD_DEBUG("[%s] No fence\n", __func__);
-    //printf("[%s] No fence\n", __func__);
   }
-
+#if CD_PROFILER_ENABLED
+  if(for_recovery == false) 
+    normal_sync_time += sync_time;
+  else
+    reexec_sync_time += sync_time;
+  
+#endif
 }
 
 void CD::Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
+#if CD_PROFILER_ENABLED
+    prof_sync_clk = CD_CLOCK();
+#endif
   CD *ptr_cd = GetCDToRecover(leaf, need_sync_to_reexec)->ptr_cd();
   CD_DEBUG("\n%s %s %u->%u\n\n", ptr_cd->label_.c_str(), ptr_cd->cd_id_.GetString().c_str(), level(), ptr_cd->level());
   ptr_cd->Recover(); 
@@ -1038,12 +1032,13 @@ void CD::Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
 // static
 CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 {
-#if CD_PROFILER_ENABLED
+#if 0//CD_PROFILER_ENABLED
   static bool check_sync_clk = false;
   if(check_sync_clk == false) {
     prof_sync_clk = CD_CLOCK();
     end_clk = CD_CLOCK();
-    compl_elapsed_time += end_clk - begin_clk;
+    elapsed_time += end_clk - begin_clk; 
+    Profiler::num_exec_map[level()][GetLabel()].compl_elapsed_time_ += end_clk - begin_clk;
     check_sync_clk = true;
   }
 #endif
@@ -1069,7 +1064,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 //    }
     
     if(collective) {
-      SyncCDs(target->ptr_cd());
+      SyncCDs(target->ptr_cd(), true);
     }
 
     if(target->task_size() > 1) {
@@ -1125,7 +1120,8 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       target->ptr_cd_->reported_error_ = false;
       //cdp->reported_error_ = false;
 #if CD_PROFILER_ENABLED
-      check_sync_clk = false;
+      recovery_sync_time += CD_CLOCK() - prof_sync_clk;
+//      check_sync_clk = false;
 #endif
       return target;
     }
@@ -1135,7 +1131,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     // This synchronization corresponds to that in Complete or Create of other tasks in the different CDs.
     // The tasks in the same CD should reach here together. (No tasks execute further Complete/Create)
     if(collective) {
-      SyncCDs(target->ptr_cd());
+      SyncCDs(target->ptr_cd(), true);
     }
 #if CD_PROFILER_ENABLED
 //    if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
@@ -1236,7 +1232,13 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    *rollback_point_ == level() -> false
 //    bool collective = MPI_Group_compare(group());
     CD_DEBUG("\nneed_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, new_rollback_point);
-    
+#if CD_PROFILER_ENABLED
+    end_clk = CD_CLOCK();
+    prof_sync_clk = end_clk;
+    elapsed_time += end_clk - begin_clk;  // Total CD overhead 
+    compl_elapsed_time += end_clk - begin_clk; // Total Complete overhead
+    Profiler::num_exec_map[level()][label_.c_str()].compl_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
+#endif
     GetCDToRecover( GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }
   else {

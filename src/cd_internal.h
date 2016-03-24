@@ -555,7 +555,7 @@ public:
 
     CDInternalErrT Sync(ColorT color); 
     CDInternalErrT SyncFile(void); 
-    static void SyncCDs(CD *cd_lv_to_sync);
+    static void SyncCDs(CD *cd_lv_to_sync, bool for_recovery=false);
     void *SerializeRemoteEntryDir(uint64_t &len_in_bytes);
     void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
 

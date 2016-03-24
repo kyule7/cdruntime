@@ -61,6 +61,13 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, cons
   CD_DEBUG("[%s] need_reexec? %d from %u (%s)\n", __func__, need_reexec(), new_rollback_point, ptr_cd_->name_.c_str());
   if(new_rollback_point != INVALID_ROLLBACK_POINT) {
     CD_DEBUG("\n\nReexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n");
+#if CD_PROFILER_ENABLED
+    end_clk = CD_CLOCK();
+    prof_sync_clk = end_clk;
+    elapsed_time += end_clk - begin_clk;  // Total CD overhead 
+    create_elapsed_time += end_clk - begin_clk; // Total Complete overhead
+    Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
+#endif
     CD::GetCDToRecover(this, false)->ptr_cd()->Recover();
   } else {
     CD_DEBUG("\n\nReexec is false\n");

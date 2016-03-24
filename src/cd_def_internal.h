@@ -411,6 +411,9 @@ extern CD_CLOCK_T prof_sync_clk;
 extern CD_CLOCK_T begin_clk;
 extern CD_CLOCK_T end_clk;
 extern CD_CLOCK_T elapsed_time;
+extern CD_CLOCK_T normal_sync_time;
+extern CD_CLOCK_T reexec_sync_time;
+extern CD_CLOCK_T recovery_sync_time;
 extern CD_CLOCK_T prv_elapsed_time;
 extern CD_CLOCK_T create_elapsed_time;
 extern CD_CLOCK_T destroy_elapsed_time;
@@ -441,40 +444,21 @@ extern CD_CLOCK_T compl_elapsed_time;
 /**@brief Set current context as non-application side. 
  * @return true/false
  */
-#if _PROFILER
-
-#define CDPrologue() \
-  app_side = false;\
-  begin_clk = CD_CLOCK(); \
-  profiler_->RecordClockBegin();
-
-#else
 
 #define CDPrologue() \
   app_side = false; \
   begin_clk = CD_CLOCK(); 
-#endif
 
 
 /**@brief Set current context as application side. 
  * @return true/false
  */
-#if _PROFILER
 
 #define CDEpilogue() \
   app_side = true; \
   end_clk = CD_CLOCK(); \
-  elapsed_time += end_clk - begin_clk; \
-  profiler_->RecordClockEnd();
+  elapsed_time += end_clk - begin_clk; 
 
-#else
-
-#define CDEpilogue() \
-  app_side = true; \
-  end_clk = CD_CLOCK(); \
-  elapsed_time += end_clk - begin_clk; \
-
-#endif
 
 /**@brief Check current context is application side. 
  * @return true/false

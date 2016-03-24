@@ -70,13 +70,13 @@ Profiler *Profiler::CreateProfiler(int prof_type, void *arg)
 
 }
 
-//void Profiler::CreateRuntimeInfo(uint32_t level, const std::string &name) 
-//{
-//  auto rit = num_exec_map[level].find(name);
-//  if(rit == num_exec_map[level].end()) { 
-//    num_exec_map[level][name] = RuntimeInfo(1);
-//  }
-//}
+void Profiler::CreateRuntimeInfo(uint32_t level, const std::string &name) 
+{
+  auto rit = num_exec_map[level].find(name);
+  if(rit == num_exec_map[level].end()) { 
+    num_exec_map[level][name] = RuntimeInfo(0);
+  }
+}
 
 void Profiler::BeginRecord(void)
 {
@@ -220,7 +220,7 @@ string CDOverhead::GetString(void)
 {
   char stringout[512];
   snprintf(stringout, 512, 
-    "-- CD Overhead -----------\nPreservation:\t%lf[s]\nCreate CD:\t%lf[s]\nDestroy CD:\t%lf[s]\nBegin CD:\t%lf[s]\nComplete CD:\t%lf[s]\n", 
+    "Preservation:%lf[s]\nCreate CD   :%lf[s]\nDestroy CD  :%lf[s]\nBegin CD    :%lf[s]\nComplete CD :%lf[s]\n", 
                          prv_elapsed_time_, 
                          create_elapsed_time_,
                          destroy_elapsed_time_,
@@ -235,11 +235,11 @@ void CDOverhead::Print(void)
   printf("%s", GetString().c_str());
 }
 
-string CDOverheadVar::GetString(void)
+string CDOverheadVar::GetStringInfo(void)
 {
   char stringout[512];
   snprintf(stringout, 512, 
-    "-- CD Overhead -----------\nPreservation:\t%lf[s] (var:%lf)\nCreate CD:\t%lf[s] (var:%lf)\nDestroy CD:\t%lf[s] (var:%lf)\nBegin CD:\t%lf[s] (var:%lf)\nComplete CD:\t%lf[s] (var:%lf)\n", 
+    "Preservation:%lf[s] (var:%lf)\nCreate CD   :%lf[s] (var:%lf)\nDestroy CD  :%lf[s] (var:%lf)\nBegin CD    :%lf[s] (var:%lf)\nComplete CD :%lf[s] (var:%lf)\n", 
                          prv_elapsed_time_, 
                          prv_elapsed_time_var_, 
                          create_elapsed_time_,
@@ -254,7 +254,7 @@ string CDOverheadVar::GetString(void)
   return string(stringout);
 }
 
-void CDOverheadVar::Print(void)
+void CDOverheadVar::PrintInfo(void)
 {
   printf("%s", GetString().c_str());
 }
@@ -279,16 +279,16 @@ RuntimeInfo Profiler::GetTotalInfo(std::map<uint32_t, RuntimeInfo> &runtime_info
     RuntimeInfo info_per_level;
     CD_DEBUG("\n-- Level %u --------------------------------\n", it->first);
     //if(myTaskID == 0)
-      printf("-- Level %u --------------------------------\n", it->first);
+//      printf("-- Level %u --------------------------------\n", it->first);
     for(auto jt=it->second.begin(); jt!=it->second.end(); ++jt) { //map<string,RuntimeInfo>>
       CD_DEBUG("\n%s : %s\n", jt->first.c_str(), jt->second.GetString().c_str());
       info_per_level += jt->second;
     }
     CD_DEBUG("-- Summary --\n");
     CD_DEBUG("%s\n", info_per_level.GetString().c_str());
-    printf("%s\n", info_per_level.GetString().c_str());
+//    printf("%s\n", info_per_level.GetString().c_str());
     
-    printf("%s", info_per_level.GetString().c_str());
+//    printf("%s", info_per_level.GetString().c_str());
     info_total.MergeInfoPerLevel(info_per_level);
     runtime_info[it->first] = info_per_level;
   }

@@ -135,8 +135,8 @@ struct CDOverheadVar : public CDOverhead {
       compl_elapsed_time_var_(0.0),
       CDOverhead()
   {}
-  virtual std::string GetString(void);
-  virtual void Print(void);
+  std::string GetStringInfo(void);
+  void PrintInfo(void);
 };
 
 struct RuntimeInfo : public CDOverhead {
@@ -156,9 +156,9 @@ struct RuntimeInfo : public CDOverhead {
   {}
   RuntimeInfo(const uint64_t &total_exec) 
     : total_exec_(total_exec), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
-      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0)
+      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0), CDOverhead()
   {}
-  RuntimeInfo(const RuntimeInfo &record) {
+  RuntimeInfo(const RuntimeInfo &record) : CDOverhead() {
     total_exec_  = record.total_exec_;
     reexec_      = record.reexec_;
     prv_copy_    = record.prv_copy_;
@@ -227,6 +227,8 @@ struct RuntimeInfo : public CDOverhead {
 
 class Profiler {
   friend class cd::CDHandle;
+  friend class cd::internal::CD;
+  friend class cd::internal::HeadCD;
   CDHandle *cdh_;
   bool reexecuted_;
   CD_CLOCK_T begin_clk_;
@@ -239,7 +241,7 @@ public:
   Profiler(CDHandle *cdh) : cdh_(cdh), reexecuted_(false) {}
   virtual ~Profiler() {}
   static Profiler *CreateProfiler(int prof_type=0, void *arg=NULL);
-//  static void CreateRuntimeInfo(uint32_t level, const std::string &name);
+  static void CreateRuntimeInfo(uint32_t level, const std::string &name);
   static void Print(void);
   static RuntimeInfo GetTotalInfo(std::map<uint32_t, RuntimeInfo> &runtime_info);
   virtual void InitViz(void){}
@@ -257,25 +259,6 @@ private:
   virtual LabelT label(void){ return string();}
 //  virtual void GetProfile(const char *label)=0;
 };
-
-//class NullProfiler : public Profiler {
-//public:
-//  NullProfiler() {}
-//  ~NullProfiler() {}
-////  void GetProfile(const char *label) {}
-//  void RecordProfile(ProfileType profile_type, uint64_t profile_data) {}
-//  void RecordClockBegin() {}
-//  void RecordClockEnd() {}
-//  void StartProfile(const string &label) {}
-//  void FinishProfile(void) {}
-//  void InitViz(void) {}
-//  void FinalizeViz(void) {}
-//  void Delete(void) {}
-//  LabelT label(void) {return LabelT();}
-//};
-//
-//Profiler *CreateProfiler(PROFILER_TYPE prof_type, void *arg=NULL);
-
 
   } // interface ends
 } // cd ends
