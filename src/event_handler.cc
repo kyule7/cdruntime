@@ -509,7 +509,8 @@ void HandleAllReexecute::HandleEvent(void)
   uint32_t rollback_lv  = ptr_cd_->level();
   uint32_t current_lv   = GetCurrentCD()->level();
   uint32_t rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local
-  CD_DEBUG("[%s] kAllReexecute need reexec from %u (orig reexec_lv:%u) (cur %u)\n", __func__, 
+  CD_DEBUG("[%s] kAllReexecute need reexec from %u (orig rollback_point:%u) (cur %u)\n", 
+           ptr_cd_->cd_id_.GetStringID().c_str(), 
            rollback_lv, rollback_point, current_lv);
 
   // [Kyushick]
@@ -538,9 +539,9 @@ void HandleAllReexecute::HandleEvent(void)
       
       // Do not set need_reexec = true, yet.
       // This should be set by kAllReexecute from head task in the leaf CD.
-      CD *cur_cd = GetCurrentCD()->ptr_cd();
+      CD *cur_cd = CDPath::GetCoarseCD(GetCurrentCD()->ptr_cd());
       if(cur_cd->reported_error_ == false) {
-        CDPath::GetCoarseCD(cur_cd)->SetMailBox(kErrorOccurred);
+        cur_cd->SetMailBox(kErrorOccurred);
       }
 
       // [Kyushick]
@@ -555,9 +556,11 @@ void HandleAllReexecute::HandleEvent(void)
       // This issue can be prevented by keep updating all the head tasks for rollback level,
       // and whenever some other task escalating, they should peek the head's rollback level
       // assuming non-head task's rollback level at the point of time is not valid.
-      while(cur_cd->level() == rollback_lv) {
+      while(cur_cd->level() >= rollback_lv) {
+        CD_DEBUG("cur %u >= %u rollback_lv\n", cur_cd->level(), rollback_lv);
         cur_cd->SetRollbackPoint(rollback_lv, true); // true means remote
         cur_cd = CDPath::GetParentCD(cur_cd->level())->ptr_cd();
+        if(cur_cd == NULL) break;
       }
     } else {
       CD_DEBUG("rollback_lv:%u >= %u (rollback_point) \n", rollback_lv, rollback_point);
@@ -577,7 +580,8 @@ void HandleAllReexecute::HandleEvent(void)
   IncHandledEventCounter();
 
   rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local
-  CD_DEBUG("[%s] kAllReexecute need reexec from %u (orig reexec_lv:%u) (cur %u)\n", __func__, 
+  CD_DEBUG("[%s] kAllReexecute need reexec from %u (new rollback_point:%u) (cur %u)\n", 
+           ptr_cd_->cd_id_.GetStringID().c_str(), 
            rollback_lv, rollback_point, current_lv);
 
 #endif

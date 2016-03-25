@@ -118,11 +118,11 @@ char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_s
   char *str_return_data;
   uint32_t id, size, pos;
 
-  CD_DEBUG("==========================================================\n");
-  CD_DEBUG("[Unpacker::GetNext] src_data : %p, return id : %u, return size : %u\n", (void *)src_data, return_id, return_size);
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Unpacker::GetNext] src_data : %p, return id : %u, return size : %u\n", (void *)src_data, return_id, return_size);
 
   table_size_ = GetWord(src_data);
-  CD_DEBUG("table size : %u\n", table_size_);
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "table size : %u\n", table_size_);
 
   if( cur_pos_ < table_size_ ) {
     id   = GetWord( src_data + cur_pos_ );
@@ -134,28 +134,28 @@ char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_s
     else {
       str_return_data = (char *)dst;
       if(dst_size != size) {
-        CD_DEBUG("dst_size : %lu, size from packer : %d\n", dst_size, size);
+        CD_DEBUG_COND(DEBUG_OFF_PACKER, "dst_size : %lu, size from packer : %d\n", dst_size, size);
         assert(0);
       }
       assert(dst_size == size);
     }
     
-    CD_DEBUG("[Get Info from table] id : %u (%p), size : %u (%p), pos : %u (%p)\n",
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Get Info from table] id : %u (%p), size : %u (%p), pos : %u (%p)\n",
              id, (void *)((char *)src_data + cur_pos_),
              size, (void *)((char *)src_data + cur_pos_+4),
              pos, (void *)((char *)src_data + cur_pos_+8));
 
-    CD_DEBUG("Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), (void *)str_return_data);
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), (void *)str_return_data);
 
     memcpy(str_return_data, src_data+table_size_+pos, size); 
 
-    CD_DEBUG("Read Data is %s", (char *)str_return_data);
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Read Data is %s", (char *)str_return_data);
  
     return_id = id;
     return_size = size;
     cur_pos_ +=12;
 
-    CD_DEBUG("==========================================================\n");
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
 
     return str_return_data;
   }
@@ -166,8 +166,8 @@ char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_s
 void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint32_t &return_id, uint32_t &return_size)
 {
   
-  CD_DEBUG("==========================================================\n");
-  CD_DEBUG("[Unpacker::GetNext] str_return_data: %p, src_data : %p, return_id : %u, return_size : %u\n",
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Unpacker::GetNext] str_return_data: %p, src_data : %p, return_id : %u, return_size : %u\n",
            str_return_data, src_data, return_id, return_size);
   
   uint32_t id, size, pos;
@@ -180,22 +180,22 @@ void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint32_t &return
     size = GetWord( (char *)src_data + cur_pos_ + 4 );
     pos  = GetWord( (char *)src_data + cur_pos_ + 8 );
 
-    CD_DEBUG("[Get Info from table] id: %u (%p), size : %u (%p), pos : %u (%p)\n",
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Get Info from table] id: %u (%p), size : %u (%p), pos : %u (%p)\n",
              id, (void *)((char *)src_data + cur_pos_),
              size, (void *)((char *)src_data + cur_pos_+4),
              pos, (void *)((char *)src_data + cur_pos_+8));
 
-    CD_DEBUG("Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), str_return_data);
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), str_return_data);
 
     memcpy(str_return_data, (char *)src_data+table_size_+pos, size); 
 
-    CD_DEBUG("Read Data is %s\n", (char *)str_return_data);
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Read Data is %s\n", (char *)str_return_data);
  
     return_id = id;
     return_size = size;
     cur_pos_ +=12;
 
-    CD_DEBUG("==========================================================\n");
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
 
     return str_return_data;
   }
@@ -211,7 +211,7 @@ void Unpacker::SeekInit()
 
 uint32_t Unpacker::GetWord(void *src_data)
 {
-  CD_DEBUG("[Unpacker::GetWord] src_data : %p\n", (void *)src_data);
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Unpacker::GetWord] src_data : %p\n", (void *)src_data);
   uint32_t return_value;
   memcpy( &return_value, src_data, sizeof(uint32_t) );
   return return_value;
@@ -219,7 +219,7 @@ uint32_t Unpacker::GetWord(void *src_data)
 
 uint32_t Unpacker::GetWord(const char *src_data)
 {
-  CD_DEBUG("[Unpacker::GetWord] src_data : %p\n", (void *)src_data);
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Unpacker::GetWord] src_data : %p\n", (void *)src_data);
   uint32_t return_value;
   memcpy( &return_value, src_data, sizeof(uint32_t) );
   return return_value;

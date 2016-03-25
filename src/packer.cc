@@ -97,7 +97,7 @@ Packer::~Packer()
 uint32_t Packer::Add(uint32_t id, uint64_t length, const void *ptr_data)
 {
 
-//  CD_DEBUG("id : %u, length : %lu, ptr_data : %p\n", id, length, ptr_data);
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "id : %u, length : %lu, ptr_data : %p\n", id, length, ptr_data);
 
   // Class user does not need to know the current writing position.	
   return AddData(id , (uint32_t)length ,  used_data_size_, (char *)ptr_data); 
@@ -107,7 +107,7 @@ uint32_t Packer::Add(uint32_t id, uint64_t length, const void *ptr_data)
 //TODO: We can put checksum, or ECC at the end of this buffer. We can work on this later not now. 
 char *Packer::GetTotalData(uint64_t &total_data_size) 
 {
-  CD_DEBUG("GetTotalData\n");
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "GetTotalData\n");
 
   // If the target to be packed is actually empty, return NULL
   if(used_table_size_ + used_data_size_ == 0) return NULL;
@@ -116,7 +116,7 @@ char *Packer::GetTotalData(uint64_t &total_data_size)
 
   uint32_t table_size = (used_table_size_+sizeof(uint32_t));
 
-  CD_DEBUG("table_size : %u, ptr_table : %p, used_table_size : %u, used_data_size : %u\n", 
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "table_size : %u, ptr_table : %p, used_table_size : %u, used_data_size : %u\n", 
 					 table_size, (void *)ptr_table_, used_table_size_, used_data_size_);
   
   memcpy(total_data, &table_size,sizeof(uint32_t) ); 
@@ -125,7 +125,7 @@ char *Packer::GetTotalData(uint64_t &total_data_size)
 
   total_data_size = used_table_size_ + used_data_size_+ sizeof(uint32_t);
 
-  CD_DEBUG("total_data : %p\n", (void *)total_data);
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "total_data : %p\n", (void *)total_data);
 
   return total_data;
 }
@@ -256,7 +256,7 @@ void Packer::WriteData(char *ptr_data, uint32_t length, uint32_t position)
   if( ptr_data != NULL ) {	
     memcpy( ptr_data_ + position, ptr_data, length );
 
-    CD_DEBUG("Written Data is %d\n", *(int*)(ptr_data_ + position));
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Written Data is %d\n", *(int*)(ptr_data_ + position));
   }
 }
 
@@ -269,27 +269,27 @@ uint32_t Packer::AddData(uint32_t id, uint32_t length, uint32_t position, char *
 {
   uint32_t ret;
 
-//  CD_DEBUG("\n==========================================================\n");
-//  CD_DEBUG("[Packer::AddData] Before CheckRealloc ptr_table : %p\n", (void *)ptr_table_);
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Packer::AddData] Before CheckRealloc ptr_table : %p\n", (void *)ptr_table_);
 
   if ( (ret = CheckRealloc(length)) != kOK ) 
   {
     return ret;  
   }
 
-//  CD_DEBUG("Before write word, ptr_table : %p\n", (void *)ptr_table_);
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "Before write word, ptr_table : %p\n", (void *)ptr_table_);
 
   WriteWord(ptr_table_ + used_table_size_, id); 
   WriteWord(ptr_table_ + used_table_size_ + 4, length); 
   WriteWord(ptr_table_ + used_table_size_ + 8, position); 
 
-//  CD_DEBUG("[Get Info from table] id : %u (%p), length : %u (%p), position : %u (%p), ptr_data : %p\n",
-//				  id, (void*)(ptr_table_ + used_table_size_), 
-//					length, (void*)(ptr_table_ + used_table_size_ + 4), 
-//					position, (void*)(ptr_table_ + used_table_size_ + 8), 
-//					(void*)ptr_data);
-//  CD_DEBUG("Bring data from %p to %p\n", (void *)ptr_data, (void *)(ptr_data_ + position));
-//  CD_DEBUG("==========================================================\n");
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Get Info from table] id : %u (%p), length : %u (%p), position : %u (%p), ptr_data : %p\n",
+				  id, (void*)(ptr_table_ + used_table_size_), 
+					length, (void*)(ptr_table_ + used_table_size_ + 4), 
+					position, (void*)(ptr_table_ + used_table_size_ + 8), 
+					(void*)ptr_data);
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)ptr_data, (void *)(ptr_data_ + position));
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
 
   used_table_size_ += UNITSIZE;    
   WriteData(ptr_data,length,position); 

@@ -1330,9 +1330,10 @@ CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 {
   CDPrologue();
-  CD_DEBUG("[%s] check mode : %d at %s %s level %u (reexecInfo %d (%u))\n", __func__, ptr_cd()->cd_exec_mode_, 
-                                                          ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
-                                                          level(), need_reexec(), *CD::rollback_point_);
+  CD_DEBUG("[%s] check mode : %d at %s %s level %u (reexecInfo %d (%u))\n", 
+      ptr_cd_->cd_id_.GetString().c_str(), ptr_cd()->cd_exec_mode_, 
+      ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
+      level(), need_reexec(), *CD::rollback_point_);
 
   std::vector<SysErrT> ret_prepare;
   CDErrT err = kOK;
@@ -1345,7 +1346,9 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
 #if CD_MPI_ENABLED
 
-  CD_DEBUG("[%s] rollback %u -> %u (%d == %d)\n", __func__, rollback_point, level(), err_desc, CD::CDInternalErrT::kErrorReported);
+  CD_DEBUG("[] rollback %u -> %u (%d == %d)\n", 
+      ptr_cd_->cd_id_.GetStringID().c_str(), 
+      rollback_point, level(), err_desc, CD::CDInternalErrT::kErrorReported);
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     err = kError;
     // FIXME
@@ -1538,7 +1541,7 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
 {
   uint64_t sys_err_vec = system_error_injector_->Inject();
   bool found = false;
-  CD_DEBUG("[%s] sys_err_vec : %lx\n", __func__, sys_err_vec);
+  CD_DEBUG("sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
   if(sys_err_vec == NO_ERROR_INJECTED) {
     return (int)CD::CDInternalErrT::kOK;
   } else {
@@ -1553,7 +1556,7 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
         rollback_point = cdh->level();
         found = true;
 //        CD_DEBUG("\nFOUND LEVEL FOR REEXEC \n");
-        CD_DEBUG("\nFOUND LEVEL FOR REEXEC at #%u\n", rollback_point);
+        CD_DEBUG("FOUND LEVEL FOR REEXEC at #%u\n\n", rollback_point);
         break;
       }
       cdh = CDPath::GetParentCD(cdh->level());

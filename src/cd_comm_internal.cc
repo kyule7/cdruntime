@@ -617,7 +617,7 @@ CDErrT CD::CheckMailBox(void)
     CD_DEBUG(" # of pending events : %d ----\n", event_count);
     while( curr_cdh != NULL ) { // Terminate when it reaches upto root
       CD_DEBUG_COND(DEBUG_OFF_MAILBOX, 
-                    "\n---- Internal Check Mail [Level #%u], # of pending events : %d ----\n", 
+                    "---- Internal Check Mail [Level #%u], # of pending events : %d ----\n", 
                     curr_cdh->ptr_cd_->level(), event_count);
 
       if( curr_cdh->node_id_.size() > 1) {
@@ -628,9 +628,6 @@ CDErrT CD::CheckMailBox(void)
                       "[ReadMailBox] Searching for CD Level having non-single task. Current Level #%u\n", 
                       curr_cdh->ptr_cd()->GetCDID().level());
       }
-      CD_DEBUG_COND(DEBUG_OFF_MAILBOX, 
-                    "\n-- level %u ------------------------------------------------------\n\n", 
-                    curr_cdh->level());
 
       // If current CD is Root CD and GetParentCD is called, it returns NULL
       CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "ReadMailBox %s / %s at level #%u\n", 
@@ -646,13 +643,13 @@ CDErrT CD::CheckMailBox(void)
       curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
     } 
 
-    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\n-------------------------------------------------------------------");
+    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "-------------------------------------------------------------------\n");
 
     InvokeErrorHandler();
     uint32_t remained_event_count = DecPendingCounter();
-    CD_DEBUG("\nCheck MailBox is done. handled_event_count : %u --> %u, pending events : %d --> %u\n", 
+    CD_DEBUG("Check MailBox is done. handled_event_count : %u --> %u, pending events : %d --> %u\n", 
                   temp, EventHandler::handled_event_count, event_count, remained_event_count);
-    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "-------------------------------------------------------------------\n");
+    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "-------------------------------------------------------------------\n\n");
 
   }
 //  else {
@@ -941,9 +938,8 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, uint32_t idx)
 
 CDErrT CD::SetMailBox(const CDEventT &event)
 {
-  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\n\n=================== Set Mail Box Start ==========================\n");
-  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\n[CD::SetMailBox] myTaskID #%d, event : %s, Is it Head? : %d\n", myTaskID, event2str(event).c_str(), IsHead());
-  //printf("\n[CD::SetMailBox] myTaskID #%d, event : %s, Is it Head? : %d\n", myTaskID, event2str(event).c_str(), IsHead());
+  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "== Set Mail Box Start == myTaskID #%d(head?%d), event : %s\n", 
+                myTaskID, IsHead(), event2str(event).c_str());
 
   CD::CDInternalErrT ret = kOK;
 //  CDHandle *curr_cdh = CDPath::GetCDLevel(level());
@@ -1020,7 +1016,7 @@ CDErrT CD::SetMailBox(const CDEventT &event)
 //    ret = CDPath::GetCoarseCD(this)->RemoteSetMailBox(event);
   
   }
-  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\n=================== Set Mail Box Done ==========================\n");
+  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "== Set Mail Box Done ==========================\n\n");
   return static_cast<CDErrT>(ret);
 }
 #if 0
@@ -1282,7 +1278,6 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(const CDEventT &event)
     const uint32_t idx = task_in_color();
     if( CHECK_EVENT(event, kErrorOccurred) ) {
       CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "kErrorOccurred in HeadCD::SetMailBox\n");
-
       IncPendingCounter();
       cd_event_.push_back(new HandleErrorOccurred(this));
       event_flag_[idx] &= ~kErrorOccurred;

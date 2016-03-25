@@ -748,8 +748,6 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
  
    
   if(task_size() > 1 && (is_window_reused_==false)) {  
-    PMPI_Win_free(&pendingWindow_);
-    PMPI_Win_free(&rollbackWindow_);
     if(IsHead()) {
       for(int i=0; i<task_size(); i++) {
         if(event_flag_[i] != 0) {
@@ -798,6 +796,9 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
         }
       }
     }
+    DecPendingCounter();
+    PMPI_Win_free(&pendingWindow_);
+    PMPI_Win_free(&rollbackWindow_);
     PMPI_Win_free(&mailbox_);
     PMPI_Free_mem(event_flag_);
     CD_DEBUG("[%s Window] CD's Windows are destroyed.\n", __func__);
@@ -1161,7 +1162,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   begin_ = false;
   uint32_t orig_rollback_point = CheckRollbackPoint(false);
 //  bool my_need_reexec = need_reexec;
-  CD_DEBUG("\nCD::Complete : %s %s \t Reexec from %u\n", 
+  CD_DEBUG("%s %s \t Reexec from %u\n", 
           GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
 
   // This is important synchronization point 
@@ -1170,6 +1171,8 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   if(collective) {
     SyncCDs(this);
   }
+  CD_DEBUG("%s %s \t Reexec from %u\n", 
+          GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
 
   if(task_size() > 1) {
 //    MPI_Win_fence(0, rollbackWindow_);
@@ -1231,7 +1234,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    GetCDToRecover(*rollback_point_ < cd_id_.cd_name_.level() && *rollback_point_ != INVALID_ROLLBACK_POINT)->Recover(false);
 //    *rollback_point_ == level() -> false
 //    bool collective = MPI_Group_compare(group());
-    CD_DEBUG("\nneed_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, new_rollback_point);
+    CD_DEBUG("## need_sync? %d = %u <= %u ##\n", need_sync, orig_rollback_point, new_rollback_point);
 #if CD_PROFILER_ENABLED
     end_clk = CD_CLOCK();
     prof_sync_clk = end_clk;
@@ -1242,7 +1245,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     GetCDToRecover( GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }
   else {
-    CD_DEBUG("Complete. No error\n");
+    CD_DEBUG("## Complete. No error! ##\n\n");
     reported_error_ = false;
   }
 

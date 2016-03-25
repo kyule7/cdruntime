@@ -63,8 +63,11 @@ int cd_debug_trace(FILE *stream, const char *source_file,
     fflush(stream);
     return bytes;
 }
+
 #define DEBUG_OFF_MAILBOX 0
 #define DEBUG_OFF_ERRORINJ 0
+#define DEBUG_OFF_PACKER 1
+
 #define CD_DEBUG_TRACE_INFO(stream, ...) \
   cd_debug_trace(stream, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
