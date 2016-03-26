@@ -103,8 +103,11 @@ class CDFileHandle {
     CDFileHandle(const PrvMediumT& prv_medium, 
                  const std::string &basepath, 
                  const std::string &filename);
-    ~CDFileHandle();
-  
+    ~CDFileHandle(void);
+    void Initialize(const PrvMediumT& prv_medium, 
+                    const std::string &basepath, 
+                    const std::string &filename);
+    void CloseFile(void);
     void InitOpenFile(void) { opened_ = false; }
     bool IsOpen(void) { return opened_; }
     long UpdateFilePos(long offset) 

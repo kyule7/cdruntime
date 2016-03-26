@@ -3720,7 +3720,9 @@ int main(int argc, char *argv[])
 #endif
 
 
+#if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
    CDHandle *cdh_1_0_0 = cdh_0_0_0;
+#endif
    // Main loop start
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
       // Main functions in the loop
@@ -3860,10 +3862,10 @@ int main(int argc, char *argv[])
 
    }
 
-//#if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD)
+#if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD)
    cdh_0_0_0->Destroy();
 //#elif _CD && (SWITCH_0_0_0 == SEQUENTIAL_CD)
-//#endif
+#endif
 
 
 

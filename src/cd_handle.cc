@@ -228,7 +228,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
 #if CD_MPI_ENABLED 
   PMPI_Comm_group(MPI_COMM_WORLD, &whole_group); 
-  new_node_id = CDHandle::GenNewNodeID(0, new_node_id);
+  new_node_id = CDHandle::GenNewNodeID(0, new_node_id, false);
 #endif
   CD::CDInternalErrT internal_err;
   CDHandle *root_cd_handle = CD::CreateRootCD("Root", CDID(CDNameT(0), new_node_id), 
@@ -468,6 +468,9 @@ void CD_Finalize(void)
     printf("Destroy           : %lf (%lf) (var: %lf)\n", destroy_elapsed_avg, destroy_elapsed, destroy_elapsed_var); 
     printf("Begin             : %lf (%lf) (var: %lf)\n", begin_elapsed_avg, begin_elapsed, begin_elapsed_var); 
     printf("Complete          : %lf (%lf) (var: %lf)\n", compl_elapsed_avg, compl_elapsed, compl_elapsed_var); 
+#if CD_PROFILER_ENABLED
+    printf("Mailbox           : %lf \n", mailbox_elapsed_time); 
+#endif
     printf("-- Logging Overhead Summary ------------\n");
     printf("Msg overhead time : %lf (%lf) (var: %lf)\n", msg_elapsed_avg, msg_elapsed, msg_elapsed_var);
     printf("Log overhead time : %lf (%lf) (var: %lf)\n", log_elapsed_avg, log_elapsed, log_elapsed_var);
@@ -683,7 +686,7 @@ CDHandle *CDHandle::Create(const char *name,
   // and populate its data structure correctly (CDID, etc...)
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
   
-  NodeID new_node_id = GenNewNodeID(0, node_id_);
+  NodeID new_node_id = GenNewNodeID(0, node_id_, CD::CheckToReuseCD(name));
 
 
   // Generate CDID
@@ -700,11 +703,6 @@ CDHandle *CDHandle::Create(const char *name,
   CDEpilogue();
   create_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-//  if(GetLabel() != NULL) 
-//    CD_DEBUG("CDS %s\n", GetLabel());
-//  else
-//    CD_DEBUG("CDS NULL\n");
-//  Profiler::CreateRuntimeInfo(new_cd_handle->level(), name);
   Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk;
 #endif
   return new_cd_handle;
@@ -719,13 +717,15 @@ CDErrT CDHandle::RegisterSplitMethod(SplitFuncT split_func)
 }
 
 
-NodeID CDHandle::GenNewNodeID(const int &new_head, const NodeID &node_id)
+NodeID CDHandle::GenNewNodeID(const int &new_head, const NodeID &node_id, bool is_reuse)
 {
   // just set the same as parent.
   NodeID new_node_id(node_id);
 #if CD_MPI_ENABLED
-  PMPI_Comm_dup(node_id.color_, &(new_node_id.color_));
-  PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
+  if(is_reuse == false) {
+    PMPI_Comm_dup(node_id.color_, &(new_node_id.color_));
+    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
+  }
 #endif
   new_node_id.set_head(new_head);
   //new_node.init_node_id(node_id_.color(), 0, INVALID_HEAD_ID,1);
@@ -788,15 +788,15 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   NodeID new_node_id(node_id_);
 
 //  CD_DEBUG("[Before] old: %s, new: %s\n", node_id_.GetString().c_str(), new_node_id.GetString().c_str());
- 
+  bool is_reuse = CD::CheckToReuseCD(name);
   if(num_children > 1) {
     err = SplitCD(node_id_.task_in_color(), node_id_.size(), num_children, new_color, new_task);
     CD_DEBUG("[%s], GenNewNodeID\n", __func__);
-    new_node_id = GenNewNodeID(node_id_.color(), new_color, new_task, 0);
-    assert(new_size == new_node_id.size());
+    new_node_id = GenNewNodeID(node_id_.color(), new_color, new_task, 0, is_reuse);
+//    assert(new_size == new_node_id.size());
   }
   else if(num_children == 1) {
-    new_node_id = GenNewNodeID(0, node_id_);
+    new_node_id = GenNewNodeID(0, node_id_, is_reuse);
   }
   else {
     ERROR_MESSAGE("Number of children to create is wrong.\n");
@@ -815,7 +815,9 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   ptr_cd_->SyncFile();
 
   // Make a superset of CD preservation entries
-  CollectHeadInfoAndEntry(new_node_id); 
+  if(is_reuse == false) {
+    CollectHeadInfoAndEntry(new_node_id); 
+  } // otherwise, it will be done later.
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
@@ -865,9 +867,10 @@ CDHandle *CDHandle::Create(uint32_t color,
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
   int err=0;
 
+  bool is_reuse = CD::CheckToReuseCD(name);
 //  ColorT new_comm;
 //  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, num_children);
-  NodeID new_node_id = GenNewNodeID(node_id_.color(), color, task_in_color, 0);
+  NodeID new_node_id = GenNewNodeID(node_id_.color(), color, task_in_color, 0, is_reuse);
 
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, color);
@@ -877,7 +880,9 @@ CDHandle *CDHandle::Create(uint32_t color,
   ptr_cd_->SyncFile();
 
   // Make a superset
-  CollectHeadInfoAndEntry(new_node_id); 
+  if(is_reuse == false) {
+    CollectHeadInfoAndEntry(new_node_id); 
+  } // otherwise, it will be done later.
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
@@ -959,7 +964,7 @@ CDErrT CDHandle::Destroy(bool collective)
   return err;
 }
 
-CDErrT CDHandle::InternalDestroy(bool collective)
+CDErrT CDHandle::InternalDestroy(bool collective, bool need_destroy)
 {
   CDErrT err;
  
@@ -999,8 +1004,9 @@ CDErrT CDHandle::InternalDestroy(bool collective)
 
   err = ptr_cd()->Destroy();
 
-//  delete ptr_cd_;
-  delete CDPath::GetCDPath()->back();
+  if(need_destroy) {
+    delete CDPath::GetCDPath()->back();
+  }
   CDPath::GetCDPath()->pop_back();
 
    
@@ -1346,7 +1352,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
 #if CD_MPI_ENABLED
 
-  CD_DEBUG("[] rollback %u -> %u (%d == %d)\n", 
+  CD_DEBUG("[%s] rollback %u -> %u (%d == %d)\n", 
       ptr_cd_->cd_id_.GetStringID().c_str(), 
       rollback_point, level(), err_desc, CD::CDInternalErrT::kErrorReported);
   if(err_desc == CD::CDInternalErrT::kErrorReported) {

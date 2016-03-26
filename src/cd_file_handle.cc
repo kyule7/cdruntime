@@ -66,6 +66,16 @@ CDFileHandle::CDFileHandle(const PrvMediumT& prv_medium,
     filePath_.SetFilePath(basepath, filename);
 }
 
+void CDFileHandle::Initialize(const PrvMediumT& prv_medium, 
+                              const std::string &basepath, 
+                              const std::string &filename) 
+{
+  opened_ = false;
+  fpos_generator_ = 0;
+  if(prv_medium != kDRAM)
+    filePath_.SetFilePath(basepath, filename);
+}
+
 void CDFileHandle::OpenFilePath(void)     
 { 
   // opend_ == true means that the corresponding filepath already exists!
@@ -102,7 +112,13 @@ void CDFileHandle::OpenFilePath(void)
   }
 
 }
-CDFileHandle::~CDFileHandle()
+
+CDFileHandle::~CDFileHandle() 
+{
+  CloseFile();
+}
+
+void CDFileHandle::CloseFile()
 {
   if(opened_)
     fclose(fp_);

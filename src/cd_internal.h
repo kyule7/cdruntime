@@ -213,8 +213,6 @@ class CD : public Serializable {
     /// Flag for normal execution or reexecution.
     CDExecMode      cd_exec_mode_;
     int             num_reexecution_;
-//    static std::map<std::string,int> num_exec_map_;
-//    static std::unordered_map<std::string,std::pair<int,int>> num_exec_map_;
 #if 1
   public:
 //    static bool need_reexec;
@@ -252,6 +250,8 @@ class CD : public Serializable {
     static std::map<ENTRY_TAG_T, CommInfo> entry_recv_req_;
 //    static std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     static std::map<std::string, uint32_t> exec_count_;
+    static std::map<std::string, CDHandle *> access_store_;
+
     // Only CDEntries that has refname will be pushed into this data structure for later quick search.
     EntryDirType entry_directory_map_;   
    
@@ -326,10 +326,14 @@ update the preserved data.
 
     void Initialize(CDHandle *cd_parent, 
                     const char *name, 
-                    CDID cd_id, 
+                    const CDID &cd_id, 
                     CDType cd_type, 
+                    PrvMediumT prv_medium, 
                     uint64_t sys_bit_vector);
-    void Init(void);
+    void InternalInitialize(CDHandle *cd_parent);
+    inline void InitializeMailBox(void); 
+    inline void FinalizeMailBox(void);
+    inline void Init(void);
 
     virtual CDHandle *Create(CDHandle *parent, 
                      const char *name, 
@@ -427,7 +431,6 @@ public:
     char    *name(void)          const { return (char *)name_.c_str(); }
     char    *label(void)         const { return (char *)label_.c_str(); }
     CDType   GetCDType(void)     const { return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
-//    std::unordered_map<std::string,std::pair<int,int>> &num_exec_map(void)    const { return num_exec_map_; }
 #if CD_LIBC_LOG_ENABLED
     CommLog *libc_log_ptr()      const { return libc_log_ptr_; }
 #endif
@@ -495,6 +498,7 @@ public:
     // we can change it to preserve file by flag when we compile cd runtime. (with MEMORY=0)
     // We need some good strategy to decide the most efficient medium of the CD for preservation.
     PrvMediumT GetPlaceToPreserve(void);
+    static bool CheckToReuseCD(const std::string &cd_obj_key);
     static CDInternalErrT InternalCreate(CDHandle *parent, 
                      const char *name, 
                      const CDID& child_cd_id, 
@@ -502,7 +506,7 @@ public:
                      uint64_t sys_bit_vector, 
                      CDHandle** new_cd_handle);
 
-    CDInternalErrT InternalDestroy(bool collective);
+    CDInternalErrT InternalDestroy(bool collective, bool need_destroy=false);
     CDInternalErrT InternalPreserve(void *data, 
                                     uint64_t &len_in_bytes,
                                     uint32_t preserve_mask, 
@@ -634,6 +638,7 @@ public:
     CDErrT CheckMailBox(void);
     CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(const CDEventT &event);
+    inline void ForwardToLowerLevel(CD *cdp, const CDEventT &event); 
 //    CDInternalErrT LocalSetMailBox(const CDEventT &event);
 //    static inline void IncHandledEventCounter(void) { handled_event_count++; }
   public:

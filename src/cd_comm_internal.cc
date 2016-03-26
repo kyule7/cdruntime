@@ -47,38 +47,47 @@ using namespace cd;
 using namespace cd::internal;
 using namespace std;
 
+CD_CLOCK_T cd::mailbox_elapsed_time = 0;
+
 int requested_event_count = 0;
 //int cd::handled_event_count = 0;
 //int CD::handled_event_count = 0;
 
 
-NodeID CDHandle::GenNewNodeID(const ColorT &my_color, const int &new_color, const int &new_task, const int &new_head_id)
+NodeID CDHandle::GenNewNodeID(const ColorT &my_color, 
+                              const int &new_color, 
+                              const int &new_task, 
+                              const int &new_head_id, 
+                              bool is_reuse)
 {
   uint32_t orig_rollback_point = INVALID_ROLLBACK_POINT;
   uint32_t new_rollback_point = INVALID_ROLLBACK_POINT;
-  ptr_cd_->CheckError(true, orig_rollback_point, new_rollback_point);
-  
-  CD_DEBUG("[%s] need_reexec? %d from %u (%s)\n", __func__, need_reexec(), new_rollback_point, ptr_cd_->name_.c_str());
-  if(new_rollback_point != INVALID_ROLLBACK_POINT) {
-    CD_DEBUG("\n\nReexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n");
-#if CD_PROFILER_ENABLED
-    end_clk = CD_CLOCK();
-    prof_sync_clk = end_clk;
-    elapsed_time += end_clk - begin_clk;  // Total CD overhead 
-    create_elapsed_time += end_clk - begin_clk; // Total Complete overhead
-    Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
-#endif
-    CD::GetCDToRecover(this, false)->ptr_cd()->Recover();
-  } else {
-    CD_DEBUG("\n\nReexec is false\n");
-  }
-
   NodeID new_node_id(new_head_id);
-  PMPI_Comm_split(my_color, new_color, new_task, &(new_node_id.color_));
-  PMPI_Comm_size(new_node_id.color_, &(new_node_id.size_));
-  PMPI_Comm_rank(new_node_id.color_, &(new_node_id.task_in_color_));
-  PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
-
+  if(is_reuse == false) {
+    ptr_cd_->CheckError(true, orig_rollback_point, new_rollback_point);
+    
+    CD_DEBUG("[%s] need_reexec? %d from %u (%s)\n", 
+              ptr_cd_->cd_id_.GetStringID().c_str(), 
+              need_reexec(), new_rollback_point, 
+              ptr_cd_->name_.c_str());
+    if(new_rollback_point != INVALID_ROLLBACK_POINT) {
+      CD_DEBUG("\n\nReexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n");
+#if CD_PROFILER_ENABLED
+      end_clk = CD_CLOCK();
+      prof_sync_clk = end_clk;
+      elapsed_time += end_clk - begin_clk;  // Total CD overhead 
+      create_elapsed_time += end_clk - begin_clk; // Total Complete overhead
+      Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
+#endif
+      CD::GetCDToRecover(this, false)->ptr_cd()->Recover();
+    } else {
+      CD_DEBUG("\n\nReexec is false\n");
+    }
+    PMPI_Comm_split(my_color, new_color, new_task, &(new_node_id.color_));
+    PMPI_Comm_size(new_node_id.color_, &(new_node_id.size_));
+    PMPI_Comm_rank(new_node_id.color_, &(new_node_id.task_in_color_));
+    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
+  } 
   return new_node_id;
 }
 
@@ -583,7 +592,9 @@ bool CD::TestComm(bool test_until_done)
 
 CDErrT CD::CheckMailBox(void)
 {
-
+#if CD_PROFILER_ENABLED
+  CD_CLOCK_T tstart = CD_CLOCK();
+#endif
   CD::CDInternalErrT ret=kOK;
   int event_count = DecPendingCounter();
 //  int event_count = *pendingFlag_;
@@ -657,6 +668,9 @@ CDErrT CD::CheckMailBox(void)
 //  }
   
 //  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "=================== Check Mail Box Done  [Level #%d] =====================================================\n\n", level());
+#if CD_PROFILER_ENABLED
+  mailbox_elapsed_time += CD_CLOCK() - tstart;
+#endif
 
   return static_cast<CDErrT>(ret);
 }
@@ -935,75 +949,69 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, uint32_t idx)
   return ret;
 }
 
+inline 
+void CD::ForwardToLowerLevel(CD *cdp, const CDEventT &event) 
+{
+  cdp->reported_error_ = true;
+  CDHandle *lower_lv_cd = CDPath::GetCoarseCD(GetCurrentCD());
+  if(cdp->task_size() > lower_lv_cd->task_size()) {
+    CD *cur_cd = lower_lv_cd->ptr_cd();
+    if(cur_cd->reported_error_ == false) {
+      CD_DEBUG("Forward kErrorOccurred to lower level(%u) from (%u)\n", 
+               cur_cd->level(), cdp->level());
+      cur_cd->reported_error_ = true;
+      cur_cd->SetMailBox(kErrorOccurred);
+      int cur_head_id = lower_lv_cd->head();
+      int val = 1;
+      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cur_head_id, 0, cur_cd->pendingWindow_);
+      // Increment pending request count at the target task (requestee)
+      PMPI_Accumulate(&val, 1, MPI_INT, 
+                      cur_head_id, 0, 1, MPI_INT, 
+                      MPI_SUM, cur_cd->pendingWindow_);
+      PMPI_Win_unlock(cur_head_id, cur_cd->pendingWindow_);
+  
+      uint32_t rollback_lv = level();
+      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cur_head_id, 0, cur_cd->rollbackWindow_);
+      PMPI_Accumulate(&rollback_lv, 1, MPI_UNSIGNED,
+                      cur_head_id, 0,   1, MPI_UNSIGNED, 
+                      MPI_MIN, cur_cd->rollbackWindow_);
+      PMPI_Win_unlock(cur_head_id, cur_cd->rollbackWindow_);
+      
+      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cur_head_id, 0, cur_cd->mailbox_);
+      // Inform the type of event to be requested
+      PMPI_Accumulate((void *)&event, 1, MPI_INT, 
+                      cur_head_id, cur_cd->task_in_color(), 1, MPI_INT, 
+                      MPI_BOR, cur_cd->mailbox_);
+      PMPI_Win_unlock(cur_head_id, cur_cd->mailbox_);
+    } else {
+      CD_DEBUG("Do not Forward kErrorOccurred to lower level(%u) from (%u)\n", 
+               cur_cd->level(), cdp->level());
+    }
+  } else {
+    CD_DEBUG("Task size is current %u <= %u lower level\n", 
+             cdp->task_size(), lower_lv_cd->task_size());
+  }
+}
 
 CDErrT CD::SetMailBox(const CDEventT &event)
 {
-  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "== Set Mail Box Start == myTaskID #%d(head?%d), event : %s\n", 
-                myTaskID, IsHead(), event2str(event).c_str());
+#if CD_PROFILER_ENABLED
+  CD_CLOCK_T tstart = CD_CLOCK();
+#endif
+  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "== Set Mail Box Start ==== [%s], TaskID #%d (head?%d)\n", 
+                event2str(event).c_str(), myTaskID, IsHead());
 
   CD::CDInternalErrT ret = kOK;
-//  CDHandle *curr_cdh = CDPath::GetCDLevel(level());
 
-//  if(event != CDEventT::kNoEvent) {
   if( !CHECK_NO_EVENT(event) ) {
     // This is the leaf that has just single task in a CD
-    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "[SetMailBox Leaf and have 1 task] size is %u. Check mailbox at the upper level.\n", task_size());
-  
-//    while( curr_cdh->node_id_.size()==1 ) {
-//      if(curr_cdh == GetRootCD()) {
-//        ERROR_MESSAGE("[SetMailBox] there is a single task in the root CD\n");
-//      }
-//      CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "[SetMailBox|Searching for CD Level having non-single task] Current Level : %u\n", 
-//          curr_cdh->ptr_cd()->GetCDID().level());
-//  
-//      // If current CD is Root CD and GetParentCD is called, it returns NULL
-//      curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
-//    }
-  
-//    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "[SetMailBox] %s / %s at level #%u\n", 
-//             curr_cdh->ptr_cd()->GetCDName().GetString().c_str(), 
-//             curr_cdh->node_id_.GetString().c_str(), 
-//             curr_cdh->ptr_cd()->GetCDID().level());
-//    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Original current CD %s / %s at level #%u\n", 
-//             GetCDName().GetString().c_str(), 
-//             GetNodeID().GetString().c_str(), 
-//             level());
-  
-//    if(curr_cdh->IsHead()) 
-//      assert(0);
     CD *cdp = CDPath::GetCoarseCD(this);
-    if(CHECK_EVENT(event, kErrorOccurred)) {
-      cdp->reported_error_ = true;
-      CDHandle *cdh = CDPath::GetCoarseCD(GetCurrentCD());
-      if(cdp->task_size() > cdh->task_size()) {
-        CD *cur_cd = cdh->ptr_cd();
-        if(cur_cd->reported_error_ == false) {
-          cur_cd->reported_error_ = true;
-          cur_cd->SetMailBox(kErrorOccurred);
-          int cur_head_id = cdh->head();
-          int val = 1;
-          PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cur_head_id, 0, cur_cd->pendingWindow_);
-          // Increment pending request count at the target task (requestee)
-          PMPI_Accumulate(&val, 1, MPI_INT, 
-                          cur_head_id, 0, 1, MPI_INT, 
-                          MPI_SUM, cur_cd->pendingWindow_);
-          PMPI_Win_unlock(cur_head_id, cur_cd->pendingWindow_);
+    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, 
+        "[current] size is %u at level %u. [check] size is %u at level %u.\n", 
+        task_size(), level(), cdp->task_size(), cdp->level());
   
-          uint32_t rollback_lv = level();
-          PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cur_head_id, 0, cur_cd->rollbackWindow_);
-          PMPI_Accumulate(&rollback_lv, 1, MPI_UNSIGNED,
-                          cur_head_id, 0,   1, MPI_UNSIGNED, 
-                          MPI_MIN, cur_cd->rollbackWindow_);
-          PMPI_Win_unlock(cur_head_id, cur_cd->rollbackWindow_);
-          
-          PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cur_head_id, 0, cur_cd->mailbox_);
-          // Inform the type of event to be requested
-          PMPI_Accumulate((void *)&event, 1, MPI_INT, 
-                          cur_head_id, cur_cd->task_in_color(), 1, MPI_INT, 
-                          MPI_BOR, cur_cd->mailbox_);
-          PMPI_Win_unlock(cur_head_id, cur_cd->mailbox_);
-        }
-      }
+    if(CHECK_EVENT(event, kErrorOccurred)) {
+      ForwardToLowerLevel(cdp, event);
     }
 
     if(cdp->IsHead()) {
@@ -1012,11 +1020,12 @@ CDErrT CD::SetMailBox(const CDEventT &event)
     else {
       ret = cdp->RemoteSetMailBox(event);
     }
- 
-//    ret = CDPath::GetCoarseCD(this)->RemoteSetMailBox(event);
-  
   }
-  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "== Set Mail Box Done ==========================\n\n");
+  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "== Set Mail Box Done ==============================\n\n");
+
+#if CD_PROFILER_ENABLED
+  mailbox_elapsed_time += CD_CLOCK() - tstart;
+#endif
   return static_cast<CDErrT>(ret);
 }
 #if 0
@@ -1306,7 +1315,7 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(const CDEventT &event)
 
 uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
 {
-  CD_DEBUG("level %u\n", level());
+  CD_DEBUG("level %u remote %d\n", level(), remote);
   if(task_size() > 1) {
 //  printf("[%s] cur level : %u size:%u\n", __func__, level(), task_size());
 //  CD *cur_cd = CDPath::GetCoarseCD(this);
@@ -1315,6 +1324,7 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
     uint32_t head_id = head();
     uint32_t rollback_point = rollback_lv;
     if(remote == true) {
+      CD_DEBUG("level %u remote set %u to head\n", level(), rollback_lv);
       PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, rollbackWindow_);
       PMPI_Accumulate(&rollback_lv, 1, MPI_UNSIGNED,
                       head_id, 0,   1, MPI_UNSIGNED, 
@@ -1330,6 +1340,7 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
 //      if(*(rollback_point_) != INVALID_ROLLBACK_POINT)
 //        need_reexec = true;
       PMPI_Win_unlock(task_in_color(), rollbackWindow_);
+      CD_DEBUG("level %u local set %u to current task #%d\n", level(), rollback_point, task_in_color());
     }
     return rollback_point; 
   }
@@ -1448,7 +1459,6 @@ uint32_t CD::IncPendingCounter(void)
 void CD::PrintDebug() {
 
   CD_DEBUG("[%s] pending event:%u, incomplete log:%lu\n", __func__, *pendingFlag_, incomplete_log_.size());
-  CD_DEBUG_FLUSH;
 
 }
 

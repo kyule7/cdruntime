@@ -540,10 +540,13 @@ void HandleAllReexecute::HandleEvent(void)
       // Do not set need_reexec = true, yet.
       // This should be set by kAllReexecute from head task in the leaf CD.
       CD *cur_cd = CDPath::GetCoarseCD(GetCurrentCD()->ptr_cd());
+
+// FIXME 0324 Kyushick
+#if 1
       if(cur_cd->reported_error_ == false) {
         cur_cd->SetMailBox(kErrorOccurred);
       }
-
+#endif
       // [Kyushick]
       // It is important to set rollback point of head tasks of levels up to rollback point.
       // One potential concurrency bug is that

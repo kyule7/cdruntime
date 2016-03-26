@@ -64,6 +64,7 @@ list<EventHandler *> CD::cd_event_;
 map<uint32_t, uint32_t> Util::object_id;
 
 map<string, uint32_t> CD::exec_count_;
+map<string, CDHandle *> CD::access_store_;
 
 //unordered_map<string,pair<int,int>> CD::num_exec_map_;
 
@@ -161,10 +162,9 @@ CD::CD(void)
   : file_handle_(),
     incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 {
-  reexecuted_ = false;
-  recreated_ = false;
+  Init();  
   is_window_reused_ = false;
-  reported_error_ = false;
+  recreated_ = false;
   cd_type_ = kStrict;
   prv_medium_ = kDRAM;
   name_ = INITIAL_CDOBJ_NAME; 
@@ -180,8 +180,6 @@ CD::CD(void)
   recoverObj_ = new RecoverObject;
 //  need_reexec = false;
 //  *rollback_point_ = 0;
-  num_reexecution_ = 0;
-  Init();  
   
 #if comm_log
   // SZ
@@ -196,11 +194,11 @@ CD::CD(void)
 #endif
 }
 
-  // FIXME: only acquire root handle when needed. 
-  // Most of the time, this might not be required.
-  // Kyushick : I cannot fully understand this comment....
-CD::CD(CDHandle* cd_parent, 
-       const char* name, 
+// FIXME: only acquire root handle when needed. 
+// Most of the time, this might not be required.
+// Kyushick : I cannot fully understand this comment....
+CD::CD(CDHandle *cd_parent, 
+       const char *name, 
        const CDID& cd_id, 
        CDType cd_type, 
        PrvMediumT prv_medium, 
@@ -211,34 +209,18 @@ CD::CD(CDHandle* cd_parent,
                  cd_id.GetStringID() + string("_XXXXXX") ),
     incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 {
-  //GONG
-  begin_ = false;
-
-  reexecuted_ = false;
-  if(cd_parent != NULL) {
-    if(cd_parent->ptr_cd_->reexecuted_ == true || cd_parent->ptr_cd_->recreated_ == true) {
-      recreated_ = true;
-    }
-    else {
-      recreated_ = false;
-    }
-  }
-  else {
-    recreated_ = false;
-  }
-
+  Init();  
   is_window_reused_ = false;
-  reported_error_ = false;
 
   cd_type_ = cd_type; 
   prv_medium_ = prv_medium; 
-
-  if(name != NULL)
-    name_ = name; 
-    //label_ = INITIAL_CDOBJ_LABEL; 
-  label_ = string(INITIAL_CDOBJ_LABEL); 
-
+  if(name != NULL) {
+    name_ = name;
+  } else {
+    name_ = cd_id_.GetStringID();
+  }
   sys_detect_bit_vector_ = sys_bit_vector; 
+
   // FIXME 
   // cd_id_ = 0; 
   // We need to call which returns unique id for this cd. 
@@ -255,12 +237,6 @@ CD::CD(CDHandle* cd_parent,
   exec_count_[cd_id_.GetPhaseID()]++;
   CD_DEBUG("exec_count[%s] = %u\n", cd_id_.GetPhaseID().c_str(), exec_count_[cd_id_.GetPhaseID()]);
 
-
-//  cddbg << "cd object is created " << cd_id_.object_id_++ <<endl;
-
-  // FIXME maybe call self generating function here?           
-  // cd_self_  = self;  //FIXME maybe call self generating function here?           
-
   // FIXME 
   // cd_id_.level() = parent_cd_id.level() + 1;
   // we need to get parent id ... 
@@ -269,14 +245,73 @@ CD::CD(CDHandle* cd_parent,
   // Kyushick : if we pass cd_parent handle to the children CD object when we create it,
   // this can be resolved. 
 
+  InternalInitialize(cd_parent);
+}
+
+void CD::Initialize(CDHandle *cd_parent, 
+                    const char *name, 
+                    const CDID& cd_id, 
+                    CDType cd_type, 
+                    PrvMediumT prv_medium, 
+                    uint64_t sys_bit_vector)
+{
+  // In this function, it should not initialize cd_id here
+  file_handle_.CloseFile();
+  file_handle_.Initialize(
+      prv_medium, 
+      ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::prv_basePath_), 
+      cd_id_.GetStringID() + string("_XXXXXX") );
+  incomplete_log_.clear();
+  Init();  
+
+  cd_type_ = cd_type; 
+  prv_medium_ = prv_medium; 
+  if(name != NULL) {
+    name_ = name;
+  } else {
+    name_ = cd_id_.GetStringID();
+  }
+  sys_detect_bit_vector_ = sys_bit_vector; 
+
+#if comm_log
+  if(comm_log_ptr_ != NULL) {
+    delete comm_log_ptr_;
+  }
+#endif
+
+#if CD_LIBC_LOG_ENABLED
+  if(libc_log_ptr_ != NULL) {
+    delete libc_log_ptr_;
+  }
+#endif
+
+  CD_DEBUG("exec_count[%s] = %u\n", cd_id_.GetPhaseID().c_str(), exec_count_[cd_id_.GetPhaseID()]);
+  if(exec_count_[cd_id_.GetPhaseID()] == 0) {
+    cd_id_.object_id_ = Util::GenCDObjID(cd_id_.level());
+  }
+  exec_count_[cd_id_.GetPhaseID()]++;
+  CD_DEBUG("exec_count[%s] = %u\n", cd_id_.GetPhaseID().c_str(), exec_count_[cd_id_.GetPhaseID()]);
+
+  InternalInitialize(cd_parent);
+  InitializeMailBox();
+}
+
+void CD::InternalInitialize(CDHandle *cd_parent)
+{
+  label_ = string(INITIAL_CDOBJ_LABEL); 
   recoverObj_ = new RecoverObject;
 
-//  need_reexec = false;
-//  *rollback_point_ = cd_id.level();
-//  *rollback_point_ = 0;
-  num_reexecution_ = 0;
-
-  Init();  
+  if(cd_parent != NULL) {
+    if(cd_parent->ptr_cd_->reexecuted_ == true || cd_parent->ptr_cd_->recreated_ == true) {
+      recreated_ = true;
+    }
+    else {
+      recreated_ = false;
+    }
+  }
+  else {
+    recreated_ = false;
+  }
 
 #if comm_log
   // SZ
@@ -357,44 +392,17 @@ CD::CD(CDHandle* cd_parent,
 
 }
 
-void CD::Initialize(CDHandle* cd_parent, 
-                    const char* name, 
-                    CDID cd_id, 
-                    CDType cd_type, 
-                    uint64_t sys_bit_vector)
-{
 
-  reexecuted_ = false;
-  if(cd_parent != NULL) {
-    if(cd_parent->ptr_cd_->reexecuted_ == true || cd_parent->ptr_cd_->recreated_ == true) {
-      recreated_ = true;
-    }
-    else {
-      recreated_ = false;
-    }
-  }
-  else {
-    recreated_ = false;
-  }
 
-  is_window_reused_ = false;
-  reported_error_ = false;
-
-  cd_type_  = cd_type;
-  name_     = name;
-  label_ = string(INITIAL_CDOBJ_LABEL); 
-  cd_id_    = cd_id;
-  if(exec_count_[cd_id_.GetPhaseID()] == 0) {
-    cd_id_.object_id_ = Util::GenCDObjID(cd_id.level());
-    exec_count_[cd_id.GetPhaseID()]++;
-  }
-  CD_DEBUG("exec_count[%s] = %u\n", cd_id_.GetPhaseID().c_str(), exec_count_[cd_id_.GetPhaseID()]);
-  sys_detect_bit_vector_ = sys_bit_vector;
-  Init();  
-}
-
+inline
 void CD::Init()
 {
+  reexecuted_ = false;
+  reported_error_ = false;
+  num_reexecution_ = 0;
+  //GONG
+  begin_ = false;
+//  child_seq_id_ = 0;
   //ctxt_prv_mode_ = kExcludeStack; 
   ctxt_prv_mode_ = kIncludeStack; 
   cd_exec_mode_  = kSuspension;
@@ -408,6 +416,7 @@ void CD::Init()
   cur_pos_mem_alloc_log = 0;
   replay_pos_mem_alloc_log = 0;
 #endif
+
 // Kyushick : I think we already initialize cd_id_ object inside cd object creator (outside of Init method)
 // So we do not have to get it here. 
 // I think this should be inside CDID object creator because there is no information to pass from CD object to CDID object
@@ -449,15 +458,15 @@ CD::~CD()
 #endif
 }
 
-CDHandle *CD::Create(CDHandle* parent, 
-                     const char* name, 
+CDHandle *CD::Create(CDHandle *parent, 
+                     const char *name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err)
 {
   /// Create CD object with new CDID
-  CDHandle* new_cd_handle = NULL;
+  CDHandle *new_cd_handle = NULL;
 
   CD_DEBUG("CD::Create %s\n", name);
 
@@ -472,7 +481,7 @@ CDHandle *CD::Create(CDHandle* parent,
 
 }
 
-CDHandle *CD::CreateRootCD(const char* name, 
+CDHandle *CD::CreateRootCD(const char *name, 
                            const CDID& root_cd_id, 
                            CDType cd_type, 
                            const string &basefilepath,
@@ -491,9 +500,11 @@ CDHandle *CD::CreateRootCD(const char* name,
   // It sets filepath for preservation with base filename.
   // If CD_PRV_BASEPATH is set in env, 
   // the file path will be basefilepath/CDID_XXXXXX.
-  if(new_prv_medium != kDRAM)
-    new_cd_handle->ptr_cd_->file_handle_.SetFilePath(new_prv_medium, basefilepath, root_cd_id.GetStringID() + string("_XXXXXX"));
-
+  if(new_prv_medium != kDRAM) {
+    new_cd_handle->ptr_cd_->file_handle_.SetFilePath(new_prv_medium, 
+                                                     basefilepath, 
+                                                     root_cd_id.GetStringID() + string("_XXXXXX"));
+  }
   assert(new_cd_handle != NULL);
 
   return new_cd_handle;
@@ -510,111 +521,128 @@ CDErrT CD::Destroy(bool collective)
   return err;
 }
 
+bool CD::CheckToReuseCD(const std::string &cd_obj_key) 
+{
+  return (access_store_.find(cd_obj_key) != access_store_.end());
+}
+
 #if 1
 CD::CDInternalErrT 
-CD::InternalCreate(CDHandle* parent, 
-                   const char* name, 
+CD::InternalCreate(CDHandle *parent, 
+                   const char *name, 
                    const CDID& new_cd_id, 
                    CDType cd_type, 
                    uint64_t sys_bit_vector, 
-                   CDHandle** new_cd_handle)
+                   CDHandle* *new_cd_handle)
 {
   CD_DEBUG("Internal Create... level #%u, Node ID : %s\n", new_cd_id.level(), new_cd_id.node_id().GetString().c_str());
-
-  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(
-                                  (MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : 
-                                                               MASK_MEDIUM(cd_type)
-                              );
-  int task_count = new_cd_id.task_count();
-  uint32_t num_mailbox_to_create = 0;
-  CD *new_cd = NULL;
-  if( !new_cd_id.IsHead() ) {
-    CD_DEBUG("Mask medium : %d\n", MASK_MEDIUM(cd_type));
-    new_cd = new CD(parent, name, new_cd_id, 
-                    static_cast<CDType>(MASK_CDTYPE(cd_type)), 
-                    new_prv_medium, 
-                    sys_bit_vector);
-#if _MPI_VER
-    if(task_count > 1) {
-      num_mailbox_to_create = 1;
-    } 
-#endif
+  string cd_obj_key(name);
+  auto cdh_it = access_store_.find(cd_obj_key);
+  if(cdh_it != access_store_.end()) {
+    *new_cd_handle = cdh_it->second;
+    CD_DEBUG("Reused! [%s] New Node ID: %s\n", 
+             cd_obj_key.c_str(), 
+             cdh_it->second->node_id_.GetString().c_str());
   }
   else {
-    // Create a CD object for head.
-    CD_DEBUG("Mask medium : %d\n", MASK_MEDIUM(cd_type));
-    new_cd = new HeadCD(parent, name, new_cd_id, 
-                        static_cast<CDType>(MASK_CDTYPE(cd_type)), 
-                        new_prv_medium, 
-                        sys_bit_vector);
+    CD_DEBUG("Newly Create!\n");
+    PrvMediumT new_prv_medium = static_cast<PrvMediumT>(
+                                    (MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : 
+                                                                 MASK_MEDIUM(cd_type)
+                                );
+    int task_count = new_cd_id.task_count();
+    uint32_t num_mailbox_to_create = 0;
+    CD *new_cd = NULL;
+    if( !new_cd_id.IsHead() ) {
+      CD_DEBUG("Mask medium : %d\n", MASK_MEDIUM(cd_type));
+      new_cd = new CD(parent, name, new_cd_id, 
+                      static_cast<CDType>(MASK_CDTYPE(cd_type)), 
+                      new_prv_medium, 
+                      sys_bit_vector);
 #if _MPI_VER
-    if(task_count > 1) {
-      num_mailbox_to_create = task_count;
-    }
+      if(task_count > 1) {
+        num_mailbox_to_create = 1;
+      } 
 #endif
-  }
-//  printf("# mailbox %u\n", num_mailbox_to_create);
-  if(num_mailbox_to_create != 0) { 
-    CD_DEBUG("# mailbox to create : %u\n", num_mailbox_to_create);
-//    printf("# mailbox to create : %u\n", num_mailbox_to_create);
-    PMPI_Alloc_mem(num_mailbox_to_create*sizeof(CDFlagT), 
-                  MPI_INFO_NULL, &(new_cd->event_flag_));
-  
-    // Initialization of event flags
-    for(uint32_t i=0; i<num_mailbox_to_create; i++) {
-      new_cd->event_flag_[i] = 0;
     }
-
-    // Create memory region where RDMA is enabled
-    MPI_Win_create(new_cd->event_flag_, num_mailbox_to_create*sizeof(CDFlagT), sizeof(CDFlagT),
-                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
+    else {
+      // Create a CD object for head.
+      CD_DEBUG("Mask medium : %d\n", MASK_MEDIUM(cd_type));
+      new_cd = new HeadCD(parent, name, new_cd_id, 
+                          static_cast<CDType>(MASK_CDTYPE(cd_type)), 
+                          new_prv_medium, 
+                          sys_bit_vector);
+#if _MPI_VER
+      if(task_count > 1) {
+        num_mailbox_to_create = task_count;
+      }
+#endif
+    }
+//  printf("# mailbox %u\n", num_mailbox_to_create);
+    if(num_mailbox_to_create != 0) { 
+      CD_DEBUG("# mailbox to create : %u\n", num_mailbox_to_create);
+//    printf("# mailbox to create : %u\n", num_mailbox_to_create);
+      PMPI_Alloc_mem(num_mailbox_to_create*sizeof(CDFlagT), 
+                    MPI_INFO_NULL, &(new_cd->event_flag_));
+    
+      // Initialization of event flags
+      for(uint32_t i=0; i<num_mailbox_to_create; i++) {
+        new_cd->event_flag_[i] = 0;
+      }
   
+      // Create memory region where RDMA is enabled
+      MPI_Win_create(new_cd->event_flag_, num_mailbox_to_create*sizeof(CDFlagT), sizeof(CDFlagT),
+                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
+    
 //    // FIXME : should it be MPI_COMM_WORLD?
 //    MPI_Win_create(&mailbox_entries_[PENDING_FLAG], sizeof(CDFlagT), sizeof(CDFlagT), 
 //                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
 //    MPI_Win_create(&mailbox_entries_[REEXEC_LEVEL], sizeof(CDFlagT), sizeof(CDFlagT), 
 //                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->rollbackWindow_));
-    CD_DEBUG("mpi win create for %u pending window done, new Node ID : %s\n", 
-              task_count, new_cd_id.node_id_.GetString().c_str());
-
-    new_cd->is_window_reused_ = false;
-  } 
-  else {
-    new_cd->is_window_reused_ = true;
-  }
-
-  if(task_count > 1) {
-    CD_DEBUG("Create pending/reexec windows %u level:%u %p\n", task_count, new_cd_id.level(), &(new_cd->pendingWindow_));
-    // FIXME : should it be MPI_COMM_WORLD?
-    MPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
-                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
-    MPI_Win_create(new_cd->rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
-                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->rollbackWindow_));
-    CD_DEBUG("After Create pending/reexec windows %u level:%u %p \n", task_count, new_cd_id.level(), &(new_cd->pendingWindow_));
-  }
-
-  if( new_cd->GetPlaceToPreserve() == kPFS ) 
-    new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
-
-  *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
-
+      CD_DEBUG("mpi win create for %u pending window done, new Node ID : %s\n", 
+                task_count, new_cd_id.node_id_.GetString().c_str());
+  
+      new_cd->is_window_reused_ = false;
+    } 
+    else {
+      new_cd->is_window_reused_ = true;
+    }
+  
+    if(task_count > 1) {
+      CD_DEBUG("Create pending/reexec windows %u level:%u %p\n", 
+                task_count, new_cd_id.level(), &(new_cd->pendingWindow_));
+      // FIXME : should it be MPI_COMM_WORLD?
+      MPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
+                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
+      MPI_Win_create(new_cd->rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
+                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->rollbackWindow_));
+      CD_DEBUG("After Create pending/reexec windows %u level:%u %p \n", 
+                task_count, new_cd_id.level(), &(new_cd->pendingWindow_));
+    }
+  
+    if( new_cd->GetPlaceToPreserve() == kPFS ) 
+      new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
+  
+    *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
+  
+    access_store_[string(name)] = *new_cd_handle;
   
 //    AttachChildCD(new_cd);
-  CD_DEBUG("Done. New Node ID: %s -- %s\n", 
-           new_cd_id.node_id().GetString().c_str(), 
-           (*new_cd_handle)->node_id().GetString().c_str());
-
+    CD_DEBUG("Done. New Node ID: %s -- %s\n", 
+             new_cd_id.node_id().GetString().c_str(), 
+             (*new_cd_handle)->node_id().GetString().c_str());
+  }
   return CD::CDInternalErrT::kOK;
 }
 
 #else
 CD::CDInternalErrT 
-CD::InternalCreate(CDHandle* parent, 
-                   const char* name, 
+CD::InternalCreate(CDHandle *parent, 
+                   const char *name, 
                    const CDID& new_cd_id, 
                    CDType cd_type, 
                    uint64_t sys_bit_vector, 
-                   CDHandle** new_cd_handle)
+                   CDHandle* *new_cd_handle)
 {
   CD_DEBUG("Internal Create... level #%u, Node ID : %s\n", new_cd_id.level(), new_cd_id.node_id().GetString().c_str());
 
@@ -735,18 +763,31 @@ void AttachChildCD(HeadCD *new_cd)
   // This routine is not needed for MPI-version CD runtime  
 }
 
-inline 
-CD::CDInternalErrT CD::InternalDestroy(bool collective)
+inline
+void CD::InitializeMailBox(void)
 {
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, pendingWindow_);
+  *pendingFlag_ = 0;
+  PMPI_Win_unlock(task_in_color(), pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, rollbackWindow_);
+  *rollback_point_ = 0;
+  PMPI_Win_unlock(task_in_color(), rollbackWindow_);
+  // Initialization of event flags
+  if(is_window_reused_==false) {
+    if(IsHead() == false) {
+      *event_flag_ = 0;
+    }
+    else {
+      for(uint32_t i=0; i<task_size(); i++) {
+        event_flag_[i] = 0;
+      }
+    }
+  } // if window is reused, do not have to init.
+}
 
-#if _MPI_VER
-  CD_DEBUG("clean up CD meta data (%d windows) at %s (%s) level #%u\n", task_size(), name_.c_str(), label_.c_str(), level());
-
-#if CD_DEBUG_DEST == 1
-    fflush(cdout);
-#endif
- 
-   
+inline
+void CD::FinalizeMailBox(void) 
+{
   if(task_size() > 1 && (is_window_reused_==false)) {  
     if(IsHead()) {
       for(int i=0; i<task_size(); i++) {
@@ -771,6 +812,8 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
             EventHandler::IncHandledEventCounter();
           }
         }
+        // initialize
+        event_flag_[i] = 0;
       }
     }
     else {
@@ -795,24 +838,16 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
           EventHandler::IncHandledEventCounter();
         }
       }
+      // initialize
+      *event_flag_ = 0;
     }
     DecPendingCounter();
-    PMPI_Win_free(&pendingWindow_);
-    PMPI_Win_free(&rollbackWindow_);
-    PMPI_Win_free(&mailbox_);
-    PMPI_Free_mem(event_flag_);
-    CD_DEBUG("[%s Window] CD's Windows are destroyed.\n", __func__);
   }
-  else
-    CD_DEBUG("[%s Window] Task size == 1 or Window is reused.\n", __func__);
+}
 
-#if CD_DEBUG_DEST == 1
-    fflush(cdout);
-#endif
-
-#endif
-
-
+inline 
+CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
+{
 #if comm_log
   if (GetParentHandle()!=NULL)
   {
@@ -820,51 +855,50 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective)
   }
 #endif
 
-  if(GetCDID().level() != 0) {   // non-root CD
+#if _MPI_VER
+  CD_DEBUG("clean up CD meta data (%d windows) at %s (%s) level #%u\n", task_size(), name_.c_str(), label_.c_str(), level());
+ 
+  FinalizeMailBox(); 
+  if(need_destroy == true) {
+    if(task_size() > 1 && (is_window_reused_==false)) {  
+      PMPI_Win_free(&pendingWindow_);
+      PMPI_Win_free(&rollbackWindow_);
+      PMPI_Win_free(&mailbox_);
+      PMPI_Free_mem(event_flag_);
+      CD_DEBUG("[%s Window] CD's Windows are destroyed.\n", __func__);
+    }
+    else
+      CD_DEBUG("[%s Window] Task size == 1 or Window is reused.\n", __func__);
+  
+  
 
+    if( GetPlaceToPreserve() == kPFS ) {
+      delete pfs_handler_;
+    }
+    delete this;
   } 
-  else {    // Root CD
-
-  }
-  if( GetPlaceToPreserve() == kPFS ) {
-    delete pfs_handler_;
-  }
-
-  delete this;
+#endif
 
   return CDInternalErrT::kOK;
-
 }
 
 
 
-/*  CD::Begin()
- *  (1) Call all the user-defined error checking functions. 
- *      Jinsuk: Why should we call error checking function at the beginning?
- *      Kyushick: It doesn't have to. I wrote it long time ago, so explanation here might be quite old.
- *    Each error checking function should call its error handling function.(mostly restore() and reexec())  
- *
+/* CD::Begin()
+ * (1) Call all the user-defined error checking functions. 
+ *     Jinsuk: Why should we call error checking function at the beginning?
+ *     Kyushick: It doesn't have to. I wrote it long time ago, so explanation here might be quite old.
+ *   Each error checking function should call its error handling function.(mostly restore() and reexec())  
  */ 
 
 // Here we don't need to follow the exact CD API this is more like internal thing. 
 // CDHandle will follow the standard interface. 
-CDErrT CD::Begin(bool collective, const char* label)
+CDErrT CD::Begin(bool collective, const char *label)
 {
   begin_ = true;
 
-  CD_DEBUG("Inside CD::Begin\n");
+  CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);
   PrintDebug();
-//  auto rit = num_exec_map_.find(name_);
-//  if(rit == num_exec_map_.end()){ 
-//    num_exec_map_[name_].first = 1;
-//    num_exec_map_[name_].second = 0;
-////    cout << "first! " << name_ << endl;
-//  } else {
-//    num_exec_map_[name_].first += 1;
-////    cout << "not first! " << name_ << " " << num_exec_map_[name_].first << endl;
-//  }
-
-//  label_[string(label)] = 0;
   if(label != NULL)
     label_ = string(label);
 
@@ -951,6 +985,7 @@ CDErrT CD::Begin(bool collective, const char* label)
 //  }
   CD_DEBUG("Sync \n");
   if(cd_exec_mode_ == kReexecution || collective) {
+//FIXME 0324 Kyushick    
     SyncCDs(this);
   }
 
@@ -1152,9 +1187,9 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
   } 
 }
 
-/*  CD::Complete()
- *  (1) Call all the user-defined error checking functions.
- *      Each error checking function should call its error handling function.(mostly restore() and reexec())  
+/* CD::Complete()
+ * (1) Call all the user-defined error checking functions.
+ *     Each error checking function should call its error handling function.(mostly restore() and reexec())  
  *
  */
 CDErrT CD::Complete(bool collective, bool update_preservations)
@@ -1171,10 +1206,11 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   if(collective) {
     SyncCDs(this);
   }
+
   CD_DEBUG("%s %s \t Reexec from %u\n", 
           GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
 
-  if(task_size() > 1) {
+  if(task_size() > 1 && (GetCurrentCD() != GetRootCD())) {
 //    MPI_Win_fence(0, rollbackWindow_);
 //    printf("1 new reexec level = %u\n", new_rollback_point);
 
@@ -1195,6 +1231,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   } else {
     new_rollback_point = CheckRollbackPoint(false);
   }
+
   if(new_rollback_point != INVALID_ROLLBACK_POINT) { 
     // If another task set rollback_point lower than this task (error occurred at this task),
     // need_sync is false. 
@@ -1397,7 +1434,7 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
         }
       }
     }
-/*    for (it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
+/*   for (it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
     {
         printf(" log - %p\n", it->p_);
     }
@@ -1431,7 +1468,7 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
       //remove log after pushing to parent 
       mem_alloc_log_.clear();
       //check parent's
-/*      std::cout<<"size(parent) :"<<ptmp->mem_alloc_log_.size()<<" app_side: "<<app_side<<std::endl;
+/*     std::cout<<"size(parent) :"<<ptmp->mem_alloc_log_.size()<<" app_side: "<<app_side<<std::endl;
       for(ii=ptmp->mem_alloc_log_.begin(); ii!=ptmp->mem_alloc_log_.end(); ii++)
         printf("parent's %p %i %i\n", ii->p_, ii->complete_, ii->pushed_);
 */        
@@ -1455,7 +1492,7 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
 
 #if CD_LIBC_LOG_ENABLED
 //GONG
-bool CD::PushedMemLogSearch(void* p, CD *curr_cd)
+bool CD::PushedMemLogSearch(void *p, CD *curr_cd)
 {
   bool ret = false;
   CDHandle *cdh_temp = CDPath::GetParentCD(curr_cd->level());
@@ -1535,10 +1572,10 @@ unsigned int CD::PullMemLogs()
 
 
 
-void* CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, void* p_update)
+void *CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, void *p_update)
 {
 //  printf("MemAllocSearch\n");
-  void* ret = NULL;
+  void *ret = NULL;
   CDHandle *cdh_temp = CDPath::GetParentCD(curr_cd->level());
 //  if(GetCDID().level()!=0)
   if(cdh_temp != NULL)
@@ -1635,7 +1672,7 @@ void CD::DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object,
   for(uint64_t i=0; i<task_count; i++) {
     Unpacker entry_dir_unpacker;
     while(1) {
-      unpacked_entry_p = entry_dir_unpacker.GetNext(begin + i * unit_size, dwGetID, return_size);
+      unpacked_entry_p = entry_dir_unpacker.GetNext(begin + i  *unit_size, dwGetID, return_size);
       if(unpacked_entry_p == NULL) {
 
 //      cddbg<<"DESER new ["<< cnt++ << "] i: "<< i <<"\ndwGetID : "<< dwGetID << endl;
@@ -1665,7 +1702,7 @@ CD::CDInternalErrT HeadCD::RequestDataMove(int sender, int receiver, const char 
   while( found_entry_list is empty ) {
     CDEntry entry = cur_entry_in_found_entry_list;
     int msg_for_sender0 = receiver;
-    char* msg_for_sender1 = found_ref_name;
+    char *msg_for_sender1 = found_ref_name;
     int msg_for_receiver = sender;
     
     PMPI_Send(receiver, head, msg_for_receiver); // it will go to receiver
@@ -2030,45 +2067,45 @@ bool CD::TestComm(bool test_until_done)
 //  return is_all_valid;
 //} 
 
-/*  This is old comments, but left here just in case.
+/* This is old comments, but left here just in case.
  *
- *  CD::Preserve(char* data_p, int data_l, enum preserveType prvTy, enum mediumLevel medLvl)
- *  Register data information to preserve if needed.
- *  (For now, since we restore per CD, this registration per cd_entry would be thought unnecessary.
- *  We can already know the data to preserve which is likely to be corrupted in future, 
- *  and its address information as well which is in the current memory space.
- *  Main Purpose: 1. Initialize cd_entry information
- *       2. cd_entry::preserveEntry function call. 
- *          -> performs appropriate operation for preservation per cd_entry such as actual COPY.
- *  We assume that the AS *dst_data could be known from Run-time system 
- *  and it hands to us the AS itself from current rank or another rank.
- *  However, regarding COPY type, it stores the back-up data in current memory space beforehand. 
- *  So it allocates(ManGetNewAllocation) memory space for back-up data
- *  and it copies the data from current or another rank to the address 
- *  for the back-up data in my current memory space. 
- *  And we assume that the data from current or another rank for preservation 
- *  can be also known from Run-time system.
- *  ManGetNewAllocation is for memory allocation for CD and cd_entry.
- *  CD_MALLOC is for memory allocation for Preservation with COPY.
+ * CD::Preserve(char *data_p, int data_l, enum preserveType prvTy, enum mediumLevel medLvl)
+ * Register data information to preserve if needed.
+ * (For now, since we restore per CD, this registration per cd_entry would be thought unnecessary.
+ * We can already know the data to preserve which is likely to be corrupted in future, 
+ * and its address information as well which is in the current memory space.
+ * Main Purpose: 1. Initialize cd_entry information
+ *      2. cd_entry::preserveEntry function call. 
+ *         -> performs appropriate operation for preservation per cd_entry such as actual COPY.
+ * We assume that the AS *dst_data could be known from Run-time system 
+ * and it hands to us the AS itself from current rank or another rank.
+ * However, regarding COPY type, it stores the back-up data in current memory space beforehand. 
+ * So it allocates(ManGetNewAllocation) memory space for back-up data
+ * and it copies the data from current or another rank to the address 
+ * for the back-up data in my current memory space. 
+ * And we assume that the data from current or another rank for preservation 
+ * can be also known from Run-time system.
+ * ManGetNewAllocation is for memory allocation for CD and cd_entry.
+ * CD_MALLOC is for memory allocation for Preservation with COPY.
  *
- *  Jinsuk: For re-execution we will use this function call to restore the data. 
- *  So basically it needs to know whether it is in re-execution mode or not.
- *  it is in re-execution mode, so instead of preserving data, restore the data.
- *  Two options, one is to do the job here, 
- *  another is that just skip and do nothing here but do the restoration job in different place, 
- *  and go though all the CDEntry and call Restore() method. 
- *  The later option seems to be more efficient but it is not clear that 
- *  whether this brings some consistency issue as restoration is done at the very beginning 
- *  while preservation was done one by one 
- *  and sometimes there could be some computation in between the preservations.. (but wait is it true?)
- *  
- *  Jinsuk: Because we want to make sure the order is the same as preservation, we go with  Wait...... It does not make sense... 
- *  Jinsuk: For now let's do nothing and just restore the entire directory at once.
- *  Jinsuk: Caveat: if user is going to read or write any memory space that will be eventually preserved, 
- *  FIRST user need to preserve that region and use them. 
- *  Otherwise current way of restoration won't work. 
- *  Right now restore happens one by one. 
- *  Everytime restore is called one entry is restored. 
+ * Jinsuk: For re-execution we will use this function call to restore the data. 
+ * So basically it needs to know whether it is in re-execution mode or not.
+ * it is in re-execution mode, so instead of preserving data, restore the data.
+ * Two options, one is to do the job here, 
+ * another is that just skip and do nothing here but do the restoration job in different place, 
+ * and go though all the CDEntry and call Restore() method. 
+ * The later option seems to be more efficient but it is not clear that 
+ * whether this brings some consistency issue as restoration is done at the very beginning 
+ * while preservation was done one by one 
+ * and sometimes there could be some computation in between the preservations.. (but wait is it true?)
+ * 
+ * Jinsuk: Because we want to make sure the order is the same as preservation, we go with  Wait...... It does not make sense... 
+ * Jinsuk: For now let's do nothing and just restore the entire directory at once.
+ * Jinsuk: Caveat: if user is going to read or write any memory space that will be eventually preserved, 
+ * FIRST user need to preserve that region and use them. 
+ * Otherwise current way of restoration won't work. 
+ * Right now restore happens one by one. 
+ * Everytime restore is called one entry is restored. 
  *
  */
 
@@ -2388,7 +2425,7 @@ CD::InternalPreserve(void *data,
                      std::string my_name, 
                      const char *ref_name, 
                      uint64_t ref_offset, 
-                     const RegenObject* regen_object, 
+                     const RegenObject *regen_object, 
                      PreserveUseT data_usage)
 {
   CD_DEBUG("\n[CD::InternalPreserve] cd_exec_mode : %d\n", cd_exec_mode_);
@@ -2400,7 +2437,7 @@ CD::InternalPreserve(void *data,
     // Let's move all these allocation deallocation stuff to CDEntry. 
     // Object itself will know better than class CD. 
 
-    CDEntry* cd_entry = 0;
+    CDEntry *cd_entry = 0;
 
     void *dst_data = NULL;
     if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
@@ -2627,12 +2664,12 @@ CD::InternalPreserve(void *data,
 
 
 
-/*  CD::Restore()
- *  (1) Copy preserved data to application data. It calls restoreEntry() at each node of entryDirectory list.
+/* CD::Restore()
+ * (1) Copy preserved data to application data. It calls restoreEntry() at each node of entryDirectory list.
  *
- *  (2) Do something for process state
+ * (2) Do something for process state
  *
- *  (3) Logged data for recovery would be just replayed when reexecuted. We need to do something for this.
+ * (3) Logged data for recovery would be just replayed when reexecuted. We need to do something for this.
  */
 CDErrT CD::Restore()
 {
@@ -2660,10 +2697,10 @@ CDErrT CD::Restore()
 
 
 
-/*  CD::detect()
- *  (1) Call all the user-defined error checking functions.
- *    Each error checking function should call its error handling function.(mostly restore() and reexec())  
- *  (2) 
+/* CD::Detect()
+ * (1) Call all the user-defined error checking functions.
+ *   Each error checking function should call its error handling function.(mostly restore() and reexec())  
+ * (2) 
  *
  */
 CD::CDInternalErrT CD::Detect(uint32_t &rollback_point)
@@ -2895,7 +2932,7 @@ CDErrT CD::InternalReexecute(void)
 
 // Let's say re-execution is being performed and thus all the children should be stopped, 
 // need to provide a way to stop currently running task and then re-execute from some point. 
-CDErrT CD::Stop(CDHandle* cdh)
+CDErrT CD::Stop(CDHandle *cdh)
 {
   //TODO Stop current CD.... here how? what needs to be done? 
   // may be wait for others to complete? wait for an event?
@@ -2913,7 +2950,7 @@ CDErrT CD::Resume(void)
   return CDErrT::kOK;
 }
 
-CDErrT CD::AddChild(CDHandle* cd_child) 
+CDErrT CD::AddChild(CDHandle *cd_child) 
 { 
   // Do nothing?
   if(cd_child->IsHead()) {
@@ -2923,7 +2960,7 @@ CDErrT CD::AddChild(CDHandle* cd_child)
   return CDErrT::kOK;  
 }
 
-CDErrT CD::RemoveChild(CDHandle* cd_child) 
+CDErrT CD::RemoveChild(CDHandle *cd_child) 
 {
   // Do nothing?
   return CDErrT::kOK;
@@ -2942,8 +2979,8 @@ HeadCD::HeadCD()
   error_occurred = false;
 }
 
-HeadCD::HeadCD( CDHandle* cd_parent, 
-                    const char* name, 
+HeadCD::HeadCD( CDHandle *cd_parent, 
+                    const char *name, 
                     const CDID& cd_id, 
                     CDType cd_type, 
                     PrvMediumT prv_medium, 
@@ -3084,8 +3121,8 @@ HeadCD::~HeadCD()
 //    PMPI_Free_mem(event_flag_);
 }
 
-CDHandle *HeadCD::Create(CDHandle* parent, 
-                     const char* name, 
+CDHandle *HeadCD::Create(CDHandle *parent, 
+                     const char *name, 
                      const CDID& child_cd_id, 
                      CDType cd_type, 
                      uint64_t sys_bit_vector, 
@@ -3107,7 +3144,7 @@ CDHandle *HeadCD::Create(CDHandle* parent,
 
 
   /// Create CD object with new CDID
-  CDHandle* new_cd_handle = NULL;
+  CDHandle *new_cd_handle = NULL;
   *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
 
@@ -3130,7 +3167,7 @@ CDErrT HeadCD::Destroy(bool collective)
   return err;
 }
 
-CDErrT HeadCD::Stop(CDHandle* cdh)
+CDErrT HeadCD::Stop(CDHandle *cdh)
 {
 
 //  if(IsLocalObject()){
@@ -3217,7 +3254,7 @@ CDErrT HeadCD::AddChild(CDHandle *cd_child)
 //#endif
 //}
 
-CDErrT HeadCD::RemoveChild(CDHandle* cd_child) 
+CDErrT HeadCD::RemoveChild(CDHandle *cd_child) 
 {
   //FIXME Not optimized operation. 
   // Search might be slow, perhaps change this to different data structure. 
@@ -3228,12 +3265,12 @@ CDErrT HeadCD::RemoveChild(CDHandle* cd_child)
 }
 
 
-CDHandle* HeadCD::cd_parent(void)
+CDHandle *HeadCD::cd_parent(void)
 {
   return cd_parent_;
 }
 
-void HeadCD::set_cd_parent(CDHandle* cd_parent)
+void HeadCD::set_cd_parent(CDHandle *cd_parent)
 {
   cd_parent_ = cd_parent;
 }
@@ -3255,7 +3292,7 @@ CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name)
   }
   else if(it != entry_directory_map_.end()) {
     // Found entry at local directory
-    CDEntry* cd_entry = entry_directory_map_.find(entry_name)->second;
+    CDEntry *cd_entry = entry_directory_map_.find(entry_name)->second;
     
     CD_DEBUG("[InternalGetEntry Local] ref_name: %s, address: %p\n", 
               entry_directory_map_[entry_name]->dst_data_.ref_name().c_str(), 
@@ -3268,7 +3305,7 @@ CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name)
   }
   else if(jt != remote_entry_directory_map_.end()) {
     // Found entry at local directory, but it is a buffer to send remotely.
-    CDEntry* cd_entry = remote_entry_directory_map_.find(entry_name)->second;
+    CDEntry *cd_entry = remote_entry_directory_map_.find(entry_name)->second;
 
     CD_DEBUG("[InternalGetEntry Remote] ref_name: %s, address: %p\n", 
               remote_entry_directory_map_[entry_name]->dst_data_.ref_name().c_str(), 
@@ -3312,7 +3349,7 @@ void CD::DeleteEntryDirectory(void)
       it != entry_directory_.end(); ) {
 
 
-/* Serializer test
+/*Serializer test
     uint32_t entry_len=0;
     void *ser_entry = it->Serialize(entry_len);
 
@@ -3359,7 +3396,7 @@ void CD::DeleteEntryDirectory(void)
 
 
 
-//char *CD::GenTag(const char* tag)
+//char *CD::GenTag(const char *tag)
 //{
 //  Tag tag_gen;
 //  CDNameT cd_name = ptr_cd()->GetCDName();
@@ -3417,7 +3454,7 @@ bool CD::IsParentLocal()
 }
 
 //SZ
-CDHandle* CD::GetParentHandle()
+CDHandle *CD::GetParentHandle()
 {
   return CDPath::GetParentCD(level());
 }
@@ -3869,7 +3906,7 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
 
 //    if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
 
-//    CDEntry* entry = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
+//    CDEntry *entry = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
 //    cddbg <<"ref name: "    << entry->dst_data_.ref_name() 
 //              << ", at level: " << entry->ptr_cd()->GetCDID().level()<<endl;
 //    if( entry != 0 ) {
@@ -3878,7 +3915,7 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
       //if ref_name does not exit, we believe it's original. 
       //Otherwise, there is original copy somewhere else, maybe grand parent has it. 
 
-      CDEntry* entry = NULL;
+      CDEntry *entry = NULL;
       while( parent_cd != NULL ) {
         CD_DEBUG("InternalGetEntry at level #%u\n", parent_cd->ptr_cd()->GetCDID().level());
 
@@ -3936,7 +3973,7 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
     }
 //    if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
 
-//    CDEntry* entry = parent_cd->ptr_cd()->InternalGetEntry(entry_tag_to_search);
+//    CDEntry *entry = parent_cd->ptr_cd()->InternalGetEntry(entry_tag_to_search);
 //    cddbg <<"ref name: "    << entry->dst_data_.ref_name() 
 //              << ", at level: " << entry->ptr_cd()->GetCDID().level()<<endl;
 //    if( entry != 0 ) {
@@ -3945,7 +3982,7 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
       //if ref_name does not exit, we believe it's original. 
       //Otherwise, there is original copy somewhere else, maybe grand parent has it. 
 
-      CDEntry* entry = NULL;
+      CDEntry *entry = NULL;
       while( parent_cd != NULL ) {
         cddbg << "InternalGetEntry at Level: " << parent_cd->ptr_cd()->GetCDID().level()<<endl;
         entry = parent_cd->ptr_cd()->InternalGetEntry(entry_tag_to_search);

@@ -1046,7 +1046,7 @@ class CDHandle {
 /// If it cannot find in current CD object, it outputs NULL 
 //    cd::CDEntry* InternalGetEntry(std::string entry_name);
 
-    CDErrT InternalDestroy(bool collective);
+    CDErrT InternalDestroy(bool collective, bool need_destroy=false);
 
 /// Add children CD to my CD.
     CDErrT AddChild(CDHandle *cd_child);
@@ -1065,7 +1065,7 @@ class CDHandle {
                                 uint64_t error_loc_mask=0);
 
 /// Get NodeID with given new_color and new_task
-    static NodeID GenNewNodeID(const int &new_head, const NodeID &new_node_id);
+    static NodeID GenNewNodeID(const int &new_head, const NodeID &new_node_id, bool is_reuse);
 
 /// Check mail box.
     CDErrT CheckMailBox(void);
@@ -1079,7 +1079,8 @@ class CDHandle {
     NodeID GenNewNodeID(const ColorT &my_color, 
                         const int &new_color, 
                         const int &new_task, 
-                        const int &new_head
+                        const int &new_head,
+                        bool is_reuse
                         );
 
 /// Collect child CDs' head information.
