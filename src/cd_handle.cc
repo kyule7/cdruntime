@@ -203,27 +203,11 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   cddbg.open(app_dbg_filepath);
 #endif
 
-  cd::internal::Initialize();
-
   // Base filepath setup for preservation
   char *filepath_env = getenv("CD_PRV_BASEPATH");
   if(filepath_env != NULL) {
     FilePath::prv_basePath_ = filepath_env;
   }
-
-//  if(myTaskID == 0) {
-//    struct stat sb;
-//    if (stat(prv_basePath_.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
-//      printf("Prv Path exists!\n");
-//    }
-//    else {
-//      char prv_file_dir[256];
-//      sprintf(prv_file_dir, "mkdir -p %s", prv_basePath_.c_str());
-//      printf("preservation file path size : %d\n", (int)sizeof(prv_file_dir));
-//      if( system(prv_file_dir) == -1 )
-//        ERROR_MESSAGE("ERROR: Failed to create directory for debug info. %s\n", prv_file_dir);
-//    }
-//  }
 
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
 #if CD_MPI_ENABLED 
@@ -237,6 +221,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
                                               ROOT_SYS_DETECT_VEC, &internal_err);
 
   CDPath::GetCDPath()->push_back(root_cd_handle);
+  cd::internal::Initialize();
 
 #if CD_PROFILER_ENABLED
   // Profiler-related

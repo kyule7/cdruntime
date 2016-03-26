@@ -180,9 +180,8 @@ class CD : public Serializable {
     // This flag is unique for each process. 
     static CDFlagT *pendingFlag_;
     static CDFlagT *rollback_point_;
-//    static CDFlagT pendingFlag_;
-    CDMailBoxT pendingWindow_;
-    CDMailBoxT rollbackWindow_;
+    static CDMailBoxT pendingWindow_;
+    static CDMailBoxT rollbackWindow_;
 
     // Every mailbox resides in head 
     CDFlagT *event_flag_;

@@ -1191,6 +1191,8 @@ class CDHandle {
     int GetCDLoggingMode(void) const;
 
   private:
+
+    CommGroupT &group(void) { return node_id_.task_group_; }
 #if CD_TEST_ENABLED
     void PrintCommLog(void) const;
 #endif

@@ -75,6 +75,8 @@ bool CD::need_escalation = false;
 #if _MPI_VER
 CDFlagT *CD::pendingFlag_ = NULL; 
 CDFlagT *CD::rollback_point_ = NULL; 
+CDMailBoxT CD::pendingWindow_;
+CDMailBoxT CD::rollbackWindow_;
 #endif
 
 void cd::internal::Initialize(void)
@@ -86,7 +88,11 @@ void cd::internal::Initialize(void)
   // Initialize pending flag
   *CD::pendingFlag_ = 0;
   *CD::rollback_point_ = INVALID_ROLLBACK_POINT;
-//  CD::pendingFlag_ = 0;
+
+  MPI_Win_create(CD::pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
+                 MPI_INFO_NULL, GetRootCD()->color(), &CD::pendingWindow_);
+  MPI_Win_create(CD::rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
+                 MPI_INFO_NULL, GetRootCD()->color(), &CD::rollbackWindow_);
 #endif
 
 #if _MPI_VER
@@ -124,6 +130,8 @@ void cd::internal::Initialize(void)
 void cd::internal::Finalize(void)
 {
 #if _MPI_VER
+  PMPI_Win_free(&CD::pendingWindow_);
+  PMPI_Win_free(&CD::rollbackWindow_);
   PMPI_Free_mem(CD::pendingFlag_);
   PMPI_Free_mem(CD::rollback_point_);
 #endif
@@ -594,11 +602,6 @@ CD::InternalCreate(CDHandle *parent,
       MPI_Win_create(new_cd->event_flag_, num_mailbox_to_create*sizeof(CDFlagT), sizeof(CDFlagT),
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
     
-//    // FIXME : should it be MPI_COMM_WORLD?
-//    MPI_Win_create(&mailbox_entries_[PENDING_FLAG], sizeof(CDFlagT), sizeof(CDFlagT), 
-//                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
-//    MPI_Win_create(&mailbox_entries_[REEXEC_LEVEL], sizeof(CDFlagT), sizeof(CDFlagT), 
-//                   MPI_INFO_NULL, new_cd_id.color(), &(new_cd->rollbackWindow_));
       CD_DEBUG("mpi win create for %u pending window done, new Node ID : %s\n", 
                 task_count, new_cd_id.node_id_.GetString().c_str());
   
@@ -610,14 +613,14 @@ CD::InternalCreate(CDHandle *parent,
   
     if(task_count > 1) {
       CD_DEBUG("Create pending/reexec windows %u level:%u %p\n", 
-                task_count, new_cd_id.level(), &(new_cd->pendingWindow_));
+                task_count, new_cd_id.level(), &(pendingWindow_));
       // FIXME : should it be MPI_COMM_WORLD?
-      MPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
-                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
-      MPI_Win_create(new_cd->rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
-                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->rollbackWindow_));
+//      MPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
+//                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
+//      MPI_Win_create(new_cd->rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
+//                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->rollbackWindow_));
       CD_DEBUG("After Create pending/reexec windows %u level:%u %p \n", 
-                task_count, new_cd_id.level(), &(new_cd->pendingWindow_));
+                task_count, new_cd_id.level(), &(pendingWindow_));
     }
   
     if( new_cd->GetPlaceToPreserve() == kPFS ) 
@@ -766,12 +769,12 @@ void AttachChildCD(HeadCD *new_cd)
 inline
 void CD::InitializeMailBox(void)
 {
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
   *pendingFlag_ = 0;
-  PMPI_Win_unlock(task_in_color(), pendingWindow_);
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, rollbackWindow_);
-  *rollback_point_ = 0;
-  PMPI_Win_unlock(task_in_color(), rollbackWindow_);
+  PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+  *rollback_point_ = INVALID_ROLLBACK_POINT;
+  PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
   // Initialization of event flags
   if(is_window_reused_==false) {
     if(IsHead() == false) {
@@ -861,8 +864,8 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
   FinalizeMailBox(); 
   if(need_destroy == true) {
     if(task_size() > 1 && (is_window_reused_==false)) {  
-      PMPI_Win_free(&pendingWindow_);
-      PMPI_Win_free(&rollbackWindow_);
+//      PMPI_Win_free(&pendingWindow_);
+//      PMPI_Win_free(&rollbackWindow_);
       PMPI_Win_free(&mailbox_);
       PMPI_Free_mem(event_flag_);
       CD_DEBUG("[%s Window] CD's Windows are destroyed.\n", __func__);
@@ -1094,23 +1097,12 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     // then it needs to call SyncCDs to be coordinated with
     // the other tasks in the other CDs of current level,
     // but in the same CDs at the level to escalate to.
-//    if(need_destroy) {  
-//      target->ptr_cd_->CompleteLogs();
-//      target->->ptr_cd_->DeleteEntryDirectory();
-//    }
     
     if(collective) {
       SyncCDs(target->ptr_cd(), true);
     }
 
     if(target->task_size() > 1) {
-//      uint32_t new_rollback_point = level;
-//      int head_id = target->head();
-//      PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, target->ptr_cd()->rollbackWindow_);
-//      PMPI_Get(&new_rollback_point, 1, MPI_UNSIGNED, 
-//              head_id, 0, 1, MPI_UNSIGNED,
-//              target->ptr_cd()->rollbackWindow_); // Read rollback_point from head.
-//      PMPI_Win_unlock(head_id, target->ptr_cd()->rollbackWindow_);
       uint32_t new_rollback_point = target->ptr_cd()->CheckRollbackPoint(true); // read from head
       target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
     }
@@ -1141,17 +1133,11 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       else {
         ERROR_MESSAGE("[%s] Wrong control path. CD type is %d\n", __func__, target->ptr_cd_->cd_type_);
       }
-      //printf("...1\n");
-//      need_reexec = false;
-//      need_escalation = false;
-//
-//      CD *root = CDPath::GetRootCD()->ptr_cd();
-      CD *cdp = CDPath::GetCoarseCD(target->ptr_cd_);
-      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cdp->task_in_color(), 0, cdp->rollbackWindow_);
-      //need_reexec = false;
+
+      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
       need_escalation = false;
       *rollback_point_ = INVALID_ROLLBACK_POINT;        
-      PMPI_Win_unlock(cdp->task_in_color(), cdp->rollbackWindow_);
+      PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
 
       target->ptr_cd_->reported_error_ = false;
       //cdp->reported_error_ = false;
@@ -1211,23 +1197,10 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
           GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
 
   if(task_size() > 1 && (GetCurrentCD() != GetRootCD())) {
-//    MPI_Win_fence(0, rollbackWindow_);
-//    printf("1 new reexec level = %u\n", new_rollback_point);
-
-//    int head_id = GetNodeID().head_;
-//    PMPI_Win_lock(MPI_LOCK_SHARED, head_id, 0, rollbackWindow_);
-//    PMPI_Get(&new_rollback_point, 1, MPI_UNSIGNED, 
-//             head_id, 0, 1, MPI_UNSIGNED,
-//             rollbackWindow_); // Read rollback_point from head.
-////    MPI_Win_fence(0, rollbackWindow_);
-//    PMPI_Win_unlock(head_id, rollbackWindow_);
-////  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
-////
     new_rollback_point = CheckRollbackPoint(true); // read from head
     CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
     new_rollback_point = SetRollbackPoint(new_rollback_point, false);
     CD_DEBUG("rollback point after set it locally:%u\n", new_rollback_point);
-//    printf("2 new reexec level = %u\n", new_rollback_point);
   } else {
     new_rollback_point = CheckRollbackPoint(false);
   }
