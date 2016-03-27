@@ -1078,7 +1078,7 @@ int MPI_Wait(MPI_Request *request,
     CD_DEBUG("[%s] %s %s ptr:%p\n", __func__, 
       GetCurrentCD()->GetCDID().GetString().c_str(),
       GetCurrentCD()->GetLabel(), request);
-      CD_DEBUG_FLUSH;
+      
     GetCurrentCD()->ptr_cd()->PrintDebug();
   }
 
@@ -1176,7 +1176,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
 //
 //        for (ii=0;ii<count;ii++) {
 //          bool deleted = cur_cdh->ptr_cd()->DeleteIncompleteLog(&(array_of_requests[ii]));
-//          CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); CD_DEBUG_FLUSH;
+//          CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); 
 //
 //        }
 
@@ -2478,7 +2478,7 @@ int MPI_Win_fence(int assert, MPI_Win win)
     GetCurrentCD()->ptr_cd()->num_reexec(), GetCurrentCD()->need_reexec(), GetCurrentCD()->rollback_point());
 #if CD_DEBUG_DEST == 1
 //  Profiler::Print();
-  CD_DEBUG_FLUSH;
+  
 #endif
   int ret = PMPI_Win_fence(assert, win);
   return ret;

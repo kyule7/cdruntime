@@ -83,7 +83,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 ///@typedef ColorT is used for non-single task program.OR
 typedef MPI_Comm      ColorT;
 ///@}
-typedef MPI_Group     CommGroupT;
+typedef MPI_Group     GroupT;
 
 #else
 
@@ -91,7 +91,7 @@ typedef MPI_Group     CommGroupT;
 #define INITIAL_COLOR 0
 #define ROOT_HEAD_ID  0
 typedef int           ColorT;
-typedef int           CommGroupT;
+typedef int           GroupT;
 #endif
 
 

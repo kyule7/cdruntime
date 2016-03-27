@@ -36,6 +36,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "unpacker.h"
 #include <string.h>
 
+#define DEBUG_OFF_PACKER 1
 
 using namespace cd;
 using std::endl;

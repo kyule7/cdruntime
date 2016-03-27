@@ -64,10 +64,6 @@ int cd_debug_trace(FILE *stream, const char *source_file,
     return bytes;
 }
 
-#define DEBUG_OFF_MAILBOX 0
-#define DEBUG_OFF_ERRORINJ 0
-#define DEBUG_OFF_PACKER 1
-
 #define CD_DEBUG_TRACE_INFO(stream, ...) \
   cd_debug_trace(stream, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
@@ -75,7 +71,6 @@ int cd_debug_trace(FILE *stream, const char *source_file,
 
 #define CD_DEBUG(...) 
 #define CD_DEBUG_COND(...)
-#define CD_DEBUG_FLUSH
 #define LOG_DEBUG(...) 
 #define LIBC_DEBUG(...)
  
@@ -89,9 +84,6 @@ extern FILE *cdoutApp;
 
 #define CD_DEBUG_COND(DEBUG_OFF, ...) \
 if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
-
-#define CD_DEBUG_FLUSH \
-  fflush(cdout)
 
 #define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
@@ -119,7 +111,6 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
 #define CD_DEBUG_COND(DEBUG_OFF, ...) \
 if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
 
-#define CD_DEBUG_FLUSH 
 
 #define LOG_DEBUG(...) /*\
   { if(cd::app_side) {\
@@ -146,14 +137,12 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
 #define CD_DEBUG_COND(DEBUG_OFF, ...) \
 if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
 
-#define CD_DEBUG_FLUSH
 
 #else  // -------------------------------------
 
 #define CD_DEBUG(...) \
   CD_DEBUG_TRACE_INFO(stderr, __VA_ARGS__)
 
-#define CD_DEBUG_FLUSH
 #endif
 
 

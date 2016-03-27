@@ -419,7 +419,7 @@ public:
     uint32_t rank_in_level(void) const { return cd_id_.cd_name_.rank_in_level_; }
     uint32_t sibling_num(void)   const { return cd_id_.cd_name_.size_; }
     ColorT   color(void)         const { return cd_id_.node_id_.color_; }
-    CommGroupT &group(void)            { return cd_id_.node_id_.task_group_; }
+    GroupT  &group(void)               { return cd_id_.node_id_.task_group_; }
     int      task_in_color(void) const { return cd_id_.node_id_.task_in_color_; }
     int      head(void)          const { return cd_id_.node_id_.head_; }
     int      task_size(void)     const { return cd_id_.node_id_.size_; }

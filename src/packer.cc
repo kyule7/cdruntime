@@ -38,6 +38,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <string.h>
 
 
+#define DEBUG_OFF_PACKER 1
 #define UNITSIZE 12  // One unit of data is consist of 12 bytes.
 
 

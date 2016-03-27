@@ -42,6 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_internal.h"
 #include "cd_def_internal.h"
 
+#define DEBUG_OFF_MAILBOX 1
 #define LOCK_PER_MAILBOX 0
 using namespace cd;
 using namespace cd::internal;
@@ -63,7 +64,7 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color,
   uint32_t orig_rollback_point = INVALID_ROLLBACK_POINT;
   uint32_t new_rollback_point = INVALID_ROLLBACK_POINT;
   NodeID new_node_id(new_head_id);
-  if(is_reuse == false) {
+//  if(is_reuse == false) {
     ptr_cd_->CheckError(true, orig_rollback_point, new_rollback_point);
     
     CD_DEBUG("[%s] need_reexec? %d from %u (%s)\n", 
@@ -83,11 +84,15 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color,
     } else {
       CD_DEBUG("\n\nReexec is false\n");
     }
+  if(is_reuse == false) {
     PMPI_Comm_split(my_color, new_color, new_task, &(new_node_id.color_));
     PMPI_Comm_size(new_node_id.color_, &(new_node_id.size_));
     PMPI_Comm_rank(new_node_id.color_, &(new_node_id.task_in_color_));
-    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
+//    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
   } 
+//  else {
+//    ptr_cd_->SyncCDs(ptr_cd_);
+//  } 
   return new_node_id;
 }
 
@@ -616,7 +621,7 @@ CDErrT CD::CheckMailBox(void)
   }
   else {
 //  else if(event_count > 0) {
-    CD_DEBUG(" # of pending events : %d ----\n", event_count);
+    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, " # of pending events : %d ----\n", event_count);
     while( curr_cdh != NULL ) { // Terminate when it reaches upto root
       CD_DEBUG_COND(DEBUG_OFF_MAILBOX, 
                     "---- Internal Check Mail [Level #%u], # of pending events : %d ----\n", 
@@ -649,7 +654,7 @@ CDErrT CD::CheckMailBox(void)
 
     InvokeErrorHandler();
     uint32_t remained_event_count = DecPendingCounter();
-    CD_DEBUG("Check MailBox is done. handled_event_count : %u --> %u, pending events : %d --> %u\n", 
+    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Check MailBox is done. handled_event_count : %u --> %u, pending events : %d --> %u\n", 
                   temp, EventHandler::handled_event_count, event_count, remained_event_count);
     CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "-------------------------------------------------------------------\n\n");
 
@@ -958,6 +963,8 @@ void CD::ForwardToLowerLevel(CD *cdp, const CDEventT &event)
       int global_head_id = cur_head_id;
       int head_id = cdp->head();
       PMPI_Group_translate_ranks(group(), 1, &head_id, GetRootCD()->group(), &global_head_id);
+      CD_DEBUG("MPI_Group_translate_ranks %d->%d at %s %s\n", 
+               head_id, global_head_id, cd_id_.GetString().c_str(), label_.c_str());
 
       PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_head_id, 0, pendingWindow_);
       // Increment pending request count at the target task (requestee)
@@ -1078,6 +1085,8 @@ CD::CDInternalErrT CD::RemoteSetMailBox(const CDEventT &event)
   int global_head_id = head_id;
   int val = 1;
   PMPI_Group_translate_ranks(group(), 1, &head_id, GetRootCD()->group(), &global_head_id);
+  CD_DEBUG("MPI_Group_translate_ranks %d->%d at %s %s\n", 
+           head_id, global_head_id, cd_id_.GetString().c_str(), label_.c_str());
   PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_head_id, 0, pendingWindow_);
 
   CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "[%s] Set CD Event %s at level #%u. CD Name %s (%s)\n", 
@@ -1140,6 +1149,8 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
       if(event != CDEventT::kNoEvent) {
         int global_task_id = task_id;
         PMPI_Group_translate_ranks(group(), 1, &task_id, GetRootCD()->group(), &global_task_id);
+        CD_DEBUG("MPI_Group_translate_ranks %d->%d at %s %s\n", 
+                 task_id, global_task_id, cd_id_.GetString().c_str(), label_.c_str());
 
         PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_task_id, 0, pendingWindow_);
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Set CD Event %s at level #%u. CD Name : %s\n", 
@@ -1287,7 +1298,6 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(const CDEventT &event)
 
 uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
 {
-  CD_DEBUG("level %u remote %d\n", level(), remote);
   if(task_size() > 1) {
 //  printf("[%s] cur level : %u size:%u\n", __func__, level(), task_size());
 //  CD *cur_cd = CDPath::GetCoarseCD(this);
@@ -1305,6 +1315,8 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
                       global_head_id, 0,   1, MPI_UNSIGNED, 
                       MPI_MIN, rollbackWindow_);
       PMPI_Win_unlock(global_head_id, rollbackWindow_);
+      CD_DEBUG("MPI_Group_translate_ranks %d->%d. Set %u to Head's rollback_point_ at %s %s\n", 
+               head_id, global_head_id, rollback_lv, cd_id_.GetString().c_str(), label_.c_str());
     } else {
       PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
       // This is important. It is necessary to set it locally, too.
@@ -1340,6 +1352,20 @@ uint32_t CD::CheckRollbackPoint(bool remote)
               global_head_id, 0,     1, MPI_UNSIGNED,
               rollbackWindow_); // Read *rollback_point_ from head.
       PMPI_Win_unlock(global_head_id, rollbackWindow_);
+
+      // This is important and tricky part.
+      // If head tells some lower level for rollback point than
+      // head's CD level, it is about some other task gruop, not 
+      // this task. rollback_lv is only valid when it is equal or upper level
+      // than head task.
+      if(level() < rollback_lv && (rollback_lv != INVALID_ROLLBACK_POINT)) {
+
+        //if((CDPath::GetCDLevel(rollback_lv) != NULL) && (task_size() > CDPath::GetCDLevel(rollback_lv)->task_size())) {
+          rollback_lv = INVALID_ROLLBACK_POINT;
+        //}
+      }
+      CD_DEBUG("MPI_Group_translate_ranks %d->%d. Head's rollback_point_:%u at %s %s\n", 
+               head_id, global_head_id, rollback_lv, cd_id_.GetString().c_str(), label_.c_str());
     } else {
       PMPI_Win_lock(MPI_LOCK_SHARED, GetRootCD()->task_in_color(), 0, rollbackWindow_);
       rollback_lv = *(rollback_point_);
@@ -1360,9 +1386,9 @@ CDFlagT CD::GetEventFlag(void)
   if(is_window_reused_) {
     assert(0);
   }
-  PMPI_Win_lock(MPI_LOCK_SHARED, GetRootCD()->task_in_color(), 0, pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_SHARED, task_in_color(), 0, mailbox_);
   event_flag = (*event_flag_);
-  PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+  PMPI_Win_unlock(task_in_color(), mailbox_);
   return event_flag;
 }
 
@@ -1374,9 +1400,9 @@ CDFlagT *HeadCD::GetEventFlag(void)
   if(is_window_reused_) {
     assert(0);
   }
-  PMPI_Win_lock(MPI_LOCK_SHARED, GetRootCD()->task_in_color(), 0, pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_SHARED, task_in_color(), 0, mailbox_);
   memcpy(event_flag, event_flag_, task_size());
-  PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+  PMPI_Win_unlock(task_in_color(), mailbox_);
   return event_flag;
 #else
   return event_flag_;
@@ -1387,9 +1413,9 @@ void CD::UnsetEventFlag(CDFlagT &event_flag, CDFlagT event_mask) {
   if(is_window_reused_) {
     assert(0);
   }
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
   event_flag &= ~event_mask;
-  PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+  PMPI_Win_unlock(task_in_color(), mailbox_);
 }
 
 uint32_t CD::GetPendingCounter(void)
@@ -1434,14 +1460,14 @@ bool printed = false;
 int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) 
 {
   CD_DEBUG("[%s] pending event:%u, incomplete log:%lu (%p)\n", __func__, *pendingFlag_, incomplete_log_.size(), request);
-  CD_DEBUG_FLUSH;
+  
   int flag = 0, ret = 0;
   while(1) {
     ret = PMPI_Test(request, &flag, status);
     if(flag != 0) {
       printed = false;
       DeleteIncompleteLog(request);
-      return ret;
+      break;
     } else {
 //      assert(need_reexec == false); // should be false at this point.
       CheckMailBox();
@@ -1449,21 +1475,33 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
       uint32_t rollback_point = CheckRollbackPoint(false);
       if(rollback_point != INVALID_ROLLBACK_POINT) { // This could be set inside CD::CheckMailBox()
         CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
-            __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
-        CD_DEBUG_FLUSH;
+            cd_id_.GetString().c_str(), level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+        
         printed = false;
 //        GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
+        ret = MPI_ERR_NEED_ESCALATE;
         break;
       } else {
         if(printed == false) {
           CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
               __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
-          CD_DEBUG_FLUSH;
+          rollback_point = CheckRollbackPoint(true); // read from remote
+          
           printed = true;
         }
       } 
       // checking mailbox ends
     }
+  }
+
+
+  if(ret == MPI_ERR_NEED_ESCALATE) {
+    CD_DEBUG("Error reported during MPI_Wait!\n"); 
+//    bool deleted = DeleteIncompleteLog(&(array_of_requests[ii]));
+//    CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); 
+  } 
+  else {
+    CD_DEBUG("MPI_Wait Success!\n"); 
   }
 
   // Need to sync with the other task assuming current CD does not complete because
@@ -1472,7 +1510,7 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
 //  CDHandle *cur_cdh = GetCurrentCD();
 //  GetCDToRecover(cur_cdh, cur_cdh->task_size() > target->task_size());
   
-  return MPI_ERR_NEED_ESCALATE;
+  return ret;
 }
 
 int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]) 
@@ -1487,10 +1525,10 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
     if(flag != 0) {
       for (int ii=0;ii<count;ii++) {
         bool deleted = DeleteIncompleteLog(&(array_of_requests[ii]));
-        CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); CD_DEBUG_FLUSH;
+        CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); 
       }
       printed = false;
-      return ret;
+      break;
     } else {
 //      assert(need_reexec == false); // should be false at this point.
       CheckMailBox();
@@ -1499,37 +1537,42 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
       if(rollback_point != INVALID_ROLLBACK_POINT) { // This could be set inside CD::CheckMailBox()
         CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
             __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
-        CD_DEBUG_FLUSH;
+        
         printed = false;
 //        GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
+        ret = MPI_ERR_NEED_ESCALATE;
         break;
       } else {
         if(printed == false) {
           CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
               __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
-          CD_DEBUG_FLUSH;
+          
           printed = true;
         }
       } 
       // checking mailbox ends
     }
   }
-
-  for (int ii=0;ii<count;ii++) {
-    PMPI_Test(&array_of_requests[ii], &flag, &array_of_statuses[ii]);
-    if(flag != 0) {
-      bool deleted = DeleteIncompleteLog(&(array_of_requests[ii]));
-      CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); CD_DEBUG_FLUSH;
+  if(ret == MPI_ERR_NEED_ESCALATE) {
+    CD_DEBUG("Error reported during MPI_Waitall!\n"); 
+    for (int ii=0;ii<count;ii++) {
+      PMPI_Test(&array_of_requests[ii], &flag, &array_of_statuses[ii]);
+      if(flag != 0) {
+        bool deleted = DeleteIncompleteLog(&(array_of_requests[ii]));
+        CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); 
+      }
     }
+  } 
+  else {
+    CD_DEBUG("MPI_Waitall Success!\n"); 
   }
-
   // Need to sync with the other task assuming current CD does not complete because
   // the blocking MPI call precedes CD::Complete
 //  GetCDToRecover(GetCurrentCD(), true)->ptr_cd()->Recover();
 //  CDHandle *cur_cdh = GetCurrentCD();
 //  GetCDToRecover(cur_cdh, cur_cdh->task_size() > target->task_size());
   
-  return MPI_ERR_NEED_ESCALATE;
+  return ret;
 }
 
 

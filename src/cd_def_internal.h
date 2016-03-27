@@ -85,7 +85,7 @@ using namespace cd::logging;
 //#define INITIAL_COLOR MPI_COMM_NULL
 //#define ROOT_HEAD_ID  0
 //typedef MPI_Comm      ColorT;
-//typedef MPI_Group     CommGroupT;
+//typedef MPI_Group     GroupT;
 typedef MPI_Request   CommRequestT;
 typedef MPI_Status    CommStatusT;
 typedef uint32_t      CDFlagT;
@@ -100,7 +100,7 @@ typedef MPI_File      COMMLIB_File;
 //#define INITIAL_COLOR 0
 //#define ROOT_HEAD_ID  0
 //typedef int           ColorT;
-//typedef int           CommGroupT;
+//typedef int           GroupT;
 typedef int           CommRequestT;
 typedef int           CommStatusT;
 // FIXME

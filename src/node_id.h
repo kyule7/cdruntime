@@ -95,7 +95,7 @@ private:
   int task_in_color_;
   int head_;
   int size_;
-  CommGroupT task_group_;
+  GroupT task_group_;
 
 public:
   NodeID(int head); 
@@ -107,7 +107,7 @@ public:
   bool operator==(const NodeID &that) const;
 
   ColorT color(void)         const;
-  CommGroupT &group(void);
+  GroupT &group(void);
   int    task_in_color(void) const;
   int    head(void)          const;
   int    size(void)          const;
@@ -116,7 +116,7 @@ public:
   std::string GetStringID(void) const;
 private:
   void set_head(int head);
-  void init_node_id(ColorT color, int task_in_color, CommGroupT group, int head, int size);
+  void init_node_id(ColorT color, int task_in_color, GroupT group, int head, int size);
   void *Serialize(uint64_t &len_in_bytes);
   void Deserialize(void *object);
 };

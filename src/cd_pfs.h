@@ -96,7 +96,7 @@ private:
 	uint64_t PFS_chunk_size_; //This value can be tunned. This represents the chunk dedicated to each task in the 
 				  //shared mode. When there is only one file operating on the file, this variable does not have impac
 
-	CommGroupT PFS_parallel_file_group_; //local group of ranks operating on the file (sharing the file).
+	GroupT PFS_parallel_file_group_; //local group of ranks operating on the file (sharing the file).
 	ColorT PFS_parallel_file_communicator_; //local communicator associated with the local group.
 	int PFS_rank_in_file_communicator_; //local PFS rank used for calculating next possible chunk for each rank.
 

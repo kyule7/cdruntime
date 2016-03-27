@@ -44,6 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_global.h"
 
 #define DEFAULT_ERROR_THRESHOLD 0.0
+#define DEBUG_OFF_ERRORINJ 0
 
 using namespace cd;
 using namespace cd::interface;

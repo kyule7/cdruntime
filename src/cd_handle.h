@@ -225,12 +225,12 @@ class CDHandle {
     ucontext_t &ctxt_;     //!< Temporary buffer related to setcontext/getcontext
 
   private:
-    CDHandle(); //!< Default constructor of CDHandle. 
+    CDHandle(void); //!< Default constructor of CDHandle. 
 
-    CDHandle(CD *ptr_cd, const NodeID& node_id); //!< Normally this constructor will be called when CD is created. 
+    CDHandle(CD *ptr_cd); //!< Normally this constructor will be called when CD is created. 
                                                  //!<CDHandle pointer is returned when `CDHandle::Create()` is called.
 
-   ~CDHandle(); 
+   ~CDHandle(void);
 
   public:
 
@@ -1039,7 +1039,7 @@ class CDHandle {
   private:  // Internal use -------------------------------------------------------------
 
 /// \brief Initialize for CDHandle object.
-    void Init(CD *ptr_cd, const NodeID &node_id);
+    void Init(CD *ptr_cd);
 
 /// \brief Search CDEntry with entry_name given. 
 /// It is needed when its children preserve data via reference and search through its ancestors. 
@@ -1192,7 +1192,7 @@ class CDHandle {
 
   private:
 
-    CommGroupT &group(void) { return node_id_.task_group_; }
+    GroupT &group(void);
 #if CD_TEST_ENABLED
     void PrintCommLog(void) const;
 #endif

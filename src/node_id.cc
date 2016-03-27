@@ -126,7 +126,7 @@ bool NodeID::operator==(const NodeID& that) const
   return (color_ == that.color()) && (task_in_color_ == that.task_in_color()) && (size_ == that.size());
 }
 
-void NodeID::init_node_id(ColorT color, int task_in_color, CommGroupT group, int head, int size)
+void NodeID::init_node_id(ColorT color, int task_in_color, GroupT group, int head, int size)
 {
 #if _MPI_VER
   color_ = color;
@@ -151,7 +151,7 @@ void NodeID::init_node_id(ColorT color, int task_in_color, CommGroupT group, int
 } 
 
 ColorT NodeID::color(void)         const { return color_; }
-CommGroupT &NodeID::group(void)     { return task_group_; }
+GroupT &NodeID::group(void)     { return task_group_; }
 int    NodeID::task_in_color(void) const { return task_in_color_; }
 int    NodeID::head(void)          const { return head_; }
 int    NodeID::size(void)          const { return size_; }

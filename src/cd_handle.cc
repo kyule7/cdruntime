@@ -606,8 +606,8 @@ CDHandle::CDHandle()
 /// sibling ID set up, cd_info set up
 /// clear children list
 /// request to add me as a children to parent (to Head CD object)
-CDHandle::CDHandle(CD *ptr_cd, const NodeID& node_id) 
-  : ptr_cd_(ptr_cd), node_id_(node_id), ctxt_(ptr_cd->ctxt_)
+CDHandle::CDHandle(CD *ptr_cd) 
+  : ptr_cd_(ptr_cd), node_id_(ptr_cd->cd_id_.node_id_), ctxt_(ptr_cd->ctxt_)
 {
   SplitCD = &SplitCD_3D;
 
@@ -649,10 +649,10 @@ CDHandle::~CDHandle()
 
 }
 
-void CDHandle::Init(CD *ptr_cd, const NodeID& node_id)
+void CDHandle::Init(CD *ptr_cd)
 { 
   ptr_cd_   = ptr_cd;
-  node_id_  = node_id;
+  node_id_  = ptr_cd_->cd_id_.node_id_;
 }
 
 // Non-collective
@@ -709,7 +709,7 @@ NodeID CDHandle::GenNewNodeID(const int &new_head, const NodeID &node_id, bool i
 #if CD_MPI_ENABLED
   if(is_reuse == false) {
     PMPI_Comm_dup(node_id.color_, &(new_node_id.color_));
-    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
+//    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
   }
 #endif
   new_node_id.set_head(new_head);
@@ -1224,6 +1224,7 @@ ColorT    CDHandle::color(void)         const { return node_id_.color(); }
 int       CDHandle::task_in_color(void) const { return node_id_.task_in_color(); }
 int       CDHandle::head(void)          const { return node_id_.head(); }
 int       CDHandle::task_size(void)     const { return node_id_.size(); }
+GroupT   &CDHandle::group(void)               { return ptr_cd_->cd_id_.node_id_.task_group_; }
 int       CDHandle::GetExecMode(void)   const { return ptr_cd_->cd_exec_mode_; }
 int       CDHandle::GetSeqID(void)      const { return ptr_cd_->GetCDID().sequential_id(); }
 CDHandle *CDHandle::GetParent(void)     const { return CDPath::GetParentCD(ptr_cd_->GetCDName().level()); }
@@ -1340,44 +1341,69 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   CD_DEBUG("[%s] rollback %u -> %u (%d == %d)\n", 
       ptr_cd_->cd_id_.GetStringID().c_str(), 
       rollback_point, level(), err_desc, CD::CDInternalErrT::kErrorReported);
+
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     err = kError;
     // FIXME
-//    if((unsigned)rollback_point == level()) 
-//      CD::need_reexec = true;
-//    else
-//      CDPath::GetCDLevel(rollback_point)->SetMailBox(kErrorOccurred);
-
-//    CD::need_reexec = true;
-//    *CD::rollback_point_ = rollback_point;
-    
     printf("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
-        rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+           rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
 
     CDHandle *rb_cdh = CDPath::GetCDLevel(rollback_point);
     assert(rb_cdh != NULL);
+
+#if 0
     if(rb_cdh->task_size() > 1) {
       rb_cdh->SetMailBox(kErrorOccurred);
     } 
 
     // If there is a single task in a CD, everybody is the head in that level.
-    if(IsHead()) { 
-      ptr_cd_->SetRollbackPoint(rollback_point, false);
-    }
-//      if(rollback_point < *CD::rollback_point_) {
-//        CD::need_reexec = true;
-//        *CD::rollback_point_ = rollback_point;
-////        printf("*rollback_point_ %d\n", *CD::rollback_point_);
-////        rb_cdh->SetMailBox(kErrorOccurred);
-//      }
-//      if(rollback_point != level())
-//        CDPath::GetCDLevel(rollback_point)->SetMailBox(kErrorOccurred);
+    if(task_size() > 1) {
+      if(IsHead()) {
+        ptr_cd_->SetRollbackPoint(rollback_point, false);
+      }
+    } else {
 
+      if((rb_cdh->task_size() == 1) || rb_cdh->IsHead()) {
+        ptr_cd_->SetRollbackPoint(rollback_point, false);
+      } else {
+        // If the level of rollback_point has more tasks than current task,
+        // let head inform the current task about escalation.
+        ptr_cd_->SetRollbackPoint(level(), false);
+      }
+    }
+#else
+//-------------------------------------------------
+    if(task_size() > 1) {
+      // If current level's task_size is larger than 1,
+      // upper-level task_size is always larger than 1.
+      rb_cdh->SetMailBox(kErrorOccurred);
+      if(IsHead()) {
+        ptr_cd_->SetRollbackPoint(rollback_point, false);
+      } else { // FIXME
+//        ptr_cd_->SetRollbackPoint(rollback_point, false);
+//        ptr_cd_->SetRollbackPoint(level(), false);
+      }
+    } else {
+      // It is possible that upper-level task_size is larger than 1, 
+      // even though current level's task_size is 1.
+      if(rb_cdh->task_size() > 1) {
+        rb_cdh->SetMailBox(kErrorOccurred);
+        if(rb_cdh->IsHead()) {
+          ptr_cd_->SetRollbackPoint(rollback_point, false);
+        } else {
+          // If the level of rollback_point has more tasks than current task,
+          // let head inform the current task about escalation.
+          ptr_cd_->SetRollbackPoint(level(), false);
+        }
+      } else {
+        // task_size at current level is 1, and
+        // task_size at rollback level is also 1.
+        ptr_cd_->SetRollbackPoint(rollback_point, false);
+      }
+    }
+#endif
     err = kAppError;
     
-//    Sync(CDPath::GetCoarseCD(this)->color());
-//    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-
   }
   else {
 #if CD_ERROR_INJECTION_ENABLED

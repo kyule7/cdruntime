@@ -217,7 +217,10 @@ CD::CD(CDHandle *cd_parent,
                  cd_id.GetStringID() + string("_XXXXXX") ),
     incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 {
-  Init();  
+  Init(); 
+#if CD_MPI_ENABLED
+  PMPI_Comm_group(cd_id_.node_id_.color_, &(cd_id_.node_id_.task_group_));
+#endif
   is_window_reused_ = false;
 
   cd_type_ = cd_type; 
@@ -626,7 +629,7 @@ CD::InternalCreate(CDHandle *parent,
     if( new_cd->GetPlaceToPreserve() == kPFS ) 
       new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
   
-    *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
+    *new_cd_handle = new CDHandle(new_cd);
   
     access_store_[string(name)] = *new_cd_handle;
   
@@ -700,7 +703,7 @@ CD::InternalCreate(CDHandle *parent,
     if( new_cd->GetPlaceToPreserve() == kPFS ) 
       new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
 
-    *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
+    *new_cd_handle = new CDHandle(new_cd);
   }
   else {
     // Create a CD object for head.
@@ -749,7 +752,7 @@ CD::InternalCreate(CDHandle *parent,
     if( new_cd->GetPlaceToPreserve() == kPFS ) 
       new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
 
-    *new_cd_handle = new CDHandle(new_cd, new_cd_id.node_id());
+    *new_cd_handle = new CDHandle(new_cd);
   }
   
   CD_DEBUG("[CD::InternalCreate] Done. New Node ID: %s -- %s\n", 
@@ -979,17 +982,10 @@ CDErrT CD::Begin(bool collective, const char *label)
 
 #endif
 
-//  if(collective && task_size() > 1) {
-//    MPI_Win_fence(0, mailbox_);
-//    CD_DEBUG("[%s] Barrier!!!! Important!!\n", __func__);
-//    //PMPI_Barrier(color());
-//  } else {
-//    CD_DEBUG("No Barrier!!!!! %d %u\n", collective, task_size());
-//  }
   CD_DEBUG("Sync \n");
   if(cd_exec_mode_ == kReexecution || collective) {
 //FIXME 0324 Kyushick    
-    SyncCDs(this);
+//    SyncCDs(this);
   }
 
   if( cd_exec_mode_ != kReexecution ) { // normal execution
@@ -1045,6 +1041,8 @@ void CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
     if(cd_lv_to_sync->IsHead() == false) {
       cd_lv_to_sync->CheckMailBox();
     }
+    CD_DEBUG("[%s] fence 3 in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
+    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
 
     CD_DEBUG("[%s] fence out \n\n", __func__);
   } else {
@@ -1134,10 +1132,27 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
         ERROR_MESSAGE("[%s] Wrong control path. CD type is %d\n", __func__, target->ptr_cd_->cd_type_);
       }
 
-      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
-      need_escalation = false;
-      *rollback_point_ = INVALID_ROLLBACK_POINT;        
-      PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+//      // It is also possible case that current task sets reexec from upper level,
+//      // but actually it was reexecuting some lower level CDs. 
+//      // while executing lower-level reexecution,
+//      // rollback_point was set to upper level, 
+//      // which means escalation request from another task. 
+//      // Therefore, this flag should be carefully reset to exec mode.
+//      // level == rollback_point enough condition for resetting to exec mode,
+//      // because nobody overwrited these flags set by current flag.
+//      // (In other word, nobody requested escalation requests)
+//      // This current task is performing reexecution corresponding to these flag set by itself.
+//      if(target->task_size() > 1) {
+//        MPI_Win_fence(0, target->ptr_cd_->mailbox_);
+//        //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+//        need_escalation = false;
+//        *rollback_point_ = INVALID_ROLLBACK_POINT;        
+//        //PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+//        MPI_Win_fence(0, target->ptr_cd_->mailbox_);
+//      } else {
+//        need_escalation = false;
+//        *rollback_point_ = INVALID_ROLLBACK_POINT;        
+//      }
 
       target->ptr_cd_->reported_error_ = false;
       //cdp->reported_error_ = false;
@@ -1183,7 +1198,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   begin_ = false;
   uint32_t orig_rollback_point = CheckRollbackPoint(false);
 //  bool my_need_reexec = need_reexec;
-  CD_DEBUG("%s %s \t Reexec from %u\n", 
+  CD_DEBUG("%s %s \t Reexec from %u (Before Sync)\n", 
           GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
 
   // This is important synchronization point 
@@ -1193,7 +1208,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     SyncCDs(this);
   }
 
-  CD_DEBUG("%s %s \t Reexec from %u\n", 
+  CD_DEBUG("%s %s \t Reexec from %u (After Sync)\n", 
           GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
 
   if(task_size() > 1 && (GetCurrentCD() != GetRootCD())) {
@@ -2134,12 +2149,9 @@ CDErrT CD::Preserve(void *data,
 
     if( iterator_entry_ != entry_directory_.end() ) { // normal case
 
-//      printf("Reexecution mode start...\n");
       CD_DEBUG("\n\nNow reexec!!! %d\n\n", iterator_entry_count++);
-
       CDEntry *cd_entry = &*iterator_entry_;
       ++iterator_entry_;
-
       CDErrT cd_err;
 
       switch( cd_entry->Restore() ) {
@@ -2168,39 +2180,14 @@ CDErrT CD::Preserve(void *data,
       }
 
       if(iterator_entry_ != entry_directory_.end()) {
-
-//        if(task_size() > 1) {
-//        PMPI_Win_fence(0, mailbox_);
-//        }
-
 #if _MPI_VER
         CheckMailBox();
         if(IsHead()) { 
         
-//          TestComm();
-//          CheckMailBox();
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
-//          TestReqComm();
-//          TestComm();
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
-//          TestComm();
-//          TestReqComm();
-//          CheckMailBox();
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
           TestComm();
           TestReqComm();
 
           if(task_size() > 1) {
-//            PMPI_Win_fence(0, mailbox_);
             CheckMailBox();
           }
           TestRecvComm();
@@ -2210,143 +2197,37 @@ CDErrT CD::Preserve(void *data,
           TestComm();
           TestReqComm();
           if(task_size() > 1) {
-//            PMPI_Win_fence(0, mailbox_);
             CheckMailBox(); 
           }
           TestRecvComm();
-//          TestComm();
-//          TestReqComm();
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
-//          TestComm();
-//          TestReqComm();
-//          CheckMailBox();
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
-//          TestReqComm();
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
-//          TestComm();
-//          TestRecvComm();
-//          CheckMailBox();
-//          
-//        
         }
 #endif
-
       }
       else { // The end of entry directory
-
 #if _MPI_VER
-        CD_DEBUG("Test Asynch messages until start at %s / %s\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-  
+        CD_DEBUG("Test Asynch messages until start at %s / %s\n", 
+                 GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
         while( !(TestComm()) ); 
- 
-//        if(IsHead()) { 
-//          CheckMailBox();
-//          if(task_size() > 1) {
-//            PMPI_Win_fence(0, mailbox_);
-//          }
-//        }
-//        else {
-//  
-//          if(task_size() > 1) {
-//            PMPI_Win_fence(0, mailbox_);
-//          }
-//          CheckMailBox();
-//        }
         CheckMailBox();
-
-//        if(IsHead()) { 
-//        
-//          TestComm();
-//          CheckMailBox();
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
-//          TestComm();
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 2] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
-//          TestComm();
-//          CheckMailBox();
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 3] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
-//          TestComm();
-//        }
-//        else {
-//      
-//          TestComm();
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
-//          TestComm();
-//          CheckMailBox();
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
-//          if(task_size() > 1) {
-//            CD_DEBUG("\n\n[Barrier 1] CD - %s / %s \n\n", GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-//            Sync(color());
-//          }
-//          TestComm();
-//          CheckMailBox();
-//        }
-  
         while(!TestRecvComm());
-  
         CD_DEBUG("Test Asynch messages until done \n");
-
 #endif
         CD_DEBUG("Return to kExec\n");
         cd_exec_mode_ = kExecution;
 
-        // It is also possible case that current task sets reexec from upper level,
-        // but actually it was reexecuting some lower level CDs. 
-        // while executing lower-level reexecution,
-        // rollback_point was set to upper level, 
-        // which means escalation request from another task. 
-        // Therefore, this flag should be carefully reset to exec mode.
-        // level == rollback_point enough condition for resetting to exec mode,
-        // because nobody overwrited these flags set by current flag.
-        // (In other word, nobody requested escalation requests)
-        // This current task is performing reexecution corresponding to these flag set by itself.
-//        if(level() == *rollback_point_) {
-//CD *root = CDPath::GetRootCD()->ptr_cd();
-//PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, myTaskID, 0, root->rollbackWindow_);
-//          need_reexec = false;
-//          need_escalation = false;
-//          *rollback_point_ = INVALID_ROLLBACK_POINT;        
-//PMPI_Win_unlock(myTaskID, root->rollbackWindow_);
-//          printf("Reexec %u\n", *rollback_point_);
-//        }
         // This point means the beginning of body stage. Request EntrySearch at this routine
       }
 
       return cd_err;
- 
     }
-    else {  // abnormal case
-      //return CDErrT::kOK;
-
+    else {  // abnormal case -> kReexecution mode, but iterator reaches the end.
       CD_DEBUG("The end of reexec!!!\n");
       // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
       // we reached the last preserve function call. 
       // Since we have reached the last point already now convert current execution mode into kExecution
       
-//      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
+      // For now, let us assume that it is not possible.
+      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
       CD_DEBUG("Now reached end of entry directory, now switching to normal execution mode\n");
 
       cd_exec_mode_  = kExecution;    
@@ -2688,23 +2569,6 @@ CD::CDInternalErrT CD::Detect(uint32_t &rollback_point)
 void CD::Recover(bool collective)
 //void CD::Recover()
 {
-
-//  if(collective) {
-//    if(task_size() > 1) {
-//      CD_DEBUG("[%s] fence 1 in at %s level %u\n", __func__, name_.c_str(), level());
-//    //  PMPI_Barrier(color());
-//      MPI_Win_fence(0, mailbox_);
-//      CheckMailBox();
-//      CD_DEBUG("[%s] fence 2 in at %s level %u\n", __func__, name_.c_str(), level());
-//      MPI_Win_fence(0, mailbox_);
-//      CheckMailBox();
-//      CD_DEBUG("[%s] fence out \n\n", __func__);
-//    } else {
-//      CD_DEBUG("[%s] No fence\n", __func__);
-//    }
-//  } else {
-//    CD_DEBUG("[%s] Not call fence %s\n", __func__, name_.c_str());
-//  }
   recoverObj_->Recover(this); 
 } 
 
@@ -2842,17 +2706,38 @@ CDErrT CD::InternalReexecute(void)
   // KL: I think it should be here, because recovery action might not be reexecution, but something else.
 
   CD_DEBUG("[CD::InternalReexecute] reexecuted : %d, reexecution # : %d\n", reexecuted_, num_reexecution_);
+  // This is very very tricky!!
+  // non-head task will get the rollback_level_ of head task,
+  // but if head already finished GetCDToRecover routine, then
+  // set this rollback_point_ before the other task see it,
+  // they will observe the wrong flag.
+  // To avoid this situation, it is necessary to put synch before setting the flag.
+  //
+  // It is also possible case that current task sets reexec from upper level,
+  // but actually it was reexecuting some lower level CDs. 
+  // while executing lower-level reexecution,
+  // rollback_point was set to upper level, 
+  // which means escalation request from another task. 
+  // Therefore, this flag should be carefully reset to exec mode.
+  // level == rollback_point enough condition for resetting to exec mode,
+  // because nobody overwrited these flags set by current flag.
+  // (In other word, nobody requested escalation requests)
+  // This current task is performing reexecution corresponding to these flag set by itself.
+  if(task_size() > 1) {
+    MPI_Win_fence(0, mailbox_);
+    //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+    need_escalation = false;
+    *rollback_point_ = INVALID_ROLLBACK_POINT;        
+    //PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+    MPI_Win_fence(0, mailbox_);
+  } else {
+    need_escalation = false;
+    *rollback_point_ = INVALID_ROLLBACK_POINT;        
+  }
 
   cd_exec_mode_ = kReexecution; 
   reexecuted_ = true;
   num_reexecution_++;
-
-//  auto rit = num_exec_map_.find(name_);
-//  if(rit == num_exec_map_.end()){
-//    assert(0); 
-//  } else {
-//    num_exec_map_[name_].second += 1;
-//  }
 
 #if comm_log
   // SZ
@@ -3517,7 +3402,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
     incomplete_log_.pop_back();
     flag = incompl_log.flag_;
 //    printf("Trying to cancel ptr:%p\n", flag);
-    CD_DEBUG("Trying to cancel ptr:%p\n", flag); CD_DEBUG_FLUSH;
+    CD_DEBUG("Trying to cancel ptr:%p\n", flag); 
     PMPI_Cancel((MPI_Request *)(incompl_log.flag_));
   }
 #endif
@@ -3993,14 +3878,6 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
 }
 */
 
-//void CD::DecPendingCounter(void)
-//{
-////  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, pendingWindow_);
-//  (*pendingFlag_) -= handled_event_count;
-//  // Initialize handled_event_count;
-//  handled_event_count = 0;
-////  PMPI_Win_unlock(task_in_color(), pendingWindow_);
-//}
 
 
 
