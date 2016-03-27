@@ -44,6 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #define DEBUG_OFF_MAILBOX 1
 #define LOCK_PER_MAILBOX 0
+#define MAILBOX_LOCK_ENABLED 1
 using namespace cd;
 using namespace cd::internal;
 using namespace std;
@@ -58,7 +59,7 @@ int requested_event_count = 0;
 NodeID CDHandle::GenNewNodeID(const ColorT &my_color, 
                               const int &new_color, 
                               const int &new_task, 
-                              const int &new_head_id, 
+                              int new_head_id, 
                               bool is_reuse)
 {
   uint32_t orig_rollback_point = INVALID_ROLLBACK_POINT;
@@ -610,7 +611,7 @@ CDErrT CD::CheckMailBox(void)
     //FIXME
 //    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\n-----------------KYU--------------------------------------------------\n");
 //    int temp = handled_event_count;
-    InvokeErrorHandler();
+    InvokeAllErrorHandler();
 //    CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\nCheck MailBox is done. handled_event_count : %d --> %d, pending events : %d ", 
 //             temp, handled_event_count, *pendingFlag_);
   
@@ -652,7 +653,7 @@ CDErrT CD::CheckMailBox(void)
 
     CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "-------------------------------------------------------------------\n");
 
-    InvokeErrorHandler();
+    InvokeAllErrorHandler();
     uint32_t remained_event_count = DecPendingCounter();
     CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Check MailBox is done. handled_event_count : %u --> %u, pending events : %d --> %u\n", 
                   temp, EventHandler::handled_event_count, event_count, remained_event_count);
@@ -722,7 +723,10 @@ CD::CDInternalErrT HeadCD::InternalCheckMailBox(void)
 #if LOCK_PER_MAILBOX
   CDFlagT *event = GetEventFlag();
 #else
+
+#if MAILBOX_LOCK_ENABLED
   PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
+#endif
   CDFlagT *event = event_flag_; 
 #endif
   //CDFlagT *event = event_flag_;
@@ -763,7 +767,11 @@ CD::CDInternalErrT HeadCD::InternalCheckMailBox(void)
 #if LOCK_PER_MAILBOX
   delete event;
 #else
+
+#if MAILBOX_LOCK_ENABLED
   PMPI_Win_unlock(task_in_color(), mailbox_);
+#endif
+
 #endif
 
 
@@ -1295,7 +1303,6 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(const CDEventT &event)
 }
 
 
-
 uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
 {
   if(task_size() > 1) {
@@ -1380,18 +1387,24 @@ uint32_t CD::CheckRollbackPoint(bool remote)
   }
 }
 
+inline
 CDFlagT CD::GetEventFlag(void)
 {
   CDFlagT event_flag = 0;
   if(is_window_reused_) {
     assert(0);
   }
+#if MAILBOX_LOCK_ENABLED
   PMPI_Win_lock(MPI_LOCK_SHARED, task_in_color(), 0, mailbox_);
   event_flag = (*event_flag_);
   PMPI_Win_unlock(task_in_color(), mailbox_);
+#else
+  event_flag = (*event_flag_);
+#endif
   return event_flag;
 }
 
+inline
 CDFlagT *HeadCD::GetEventFlag(void)
 {
 #if LOCK_PER_MAILBOX
@@ -1409,15 +1422,21 @@ CDFlagT *HeadCD::GetEventFlag(void)
 #endif
 }
 
+inline
 void CD::UnsetEventFlag(CDFlagT &event_flag, CDFlagT event_mask) {
   if(is_window_reused_) {
     assert(0);
   }
+#if MAILBOX_LOCK_ENABLED
   PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
   event_flag &= ~event_mask;
   PMPI_Win_unlock(task_in_color(), mailbox_);
+#else
+  event_flag &= ~event_mask;
+#endif
 }
 
+inline
 uint32_t CD::GetPendingCounter(void)
 {
   uint32_t pending_counter = CD_UINT32_MAX;
@@ -1440,6 +1459,7 @@ uint32_t CD::DecPendingCounter(void)
   return pending_counter;
 }
 
+inline
 uint32_t CD::IncPendingCounter(void)
 {
   uint32_t pending_counter = CD_UINT32_MAX;

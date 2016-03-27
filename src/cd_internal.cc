@@ -63,8 +63,9 @@ list<EventHandler *> CD::cd_event_;
 
 map<uint32_t, uint32_t> Util::object_id;
 
-map<string, uint32_t> CD::exec_count_;
+//map<string, uint32_t> CD::exec_count_;
 map<string, CDHandle *> CD::access_store_;
+map<uint32_t, CDHandle *> CD::delete_store_;
 
 //unordered_map<string,pair<int,int>> CD::num_exec_map_;
 
@@ -241,13 +242,16 @@ CD::CD(CDHandle *cd_parent,
 
   // Kyushick: Object ID should be unique for the copies of the same object?
   // For now, I decided it as an unique one
+#if 1
+  cd_id_.object_id_ = Util::GenCDObjID();
+#else
   CD_DEBUG("exec_count[%s] = %u\n", cd_id_.GetPhaseID().c_str(), exec_count_[cd_id_.GetPhaseID()]);
   if(exec_count_[cd_id_.GetPhaseID()] == 0) {
     cd_id_.object_id_ = Util::GenCDObjID(cd_id_.level());
   }
   exec_count_[cd_id_.GetPhaseID()]++;
   CD_DEBUG("exec_count[%s] = %u\n", cd_id_.GetPhaseID().c_str(), exec_count_[cd_id_.GetPhaseID()]);
-
+#endif
   // FIXME 
   // cd_id_.level() = parent_cd_id.level() + 1;
   // we need to get parent id ... 
@@ -296,12 +300,16 @@ void CD::Initialize(CDHandle *cd_parent,
   }
 #endif
 
+#if 1
+  cd_id_.object_id_ = Util::GenCDObjID();
+#else
   CD_DEBUG("exec_count[%s] = %u\n", cd_id_.GetPhaseID().c_str(), exec_count_[cd_id_.GetPhaseID()]);
   if(exec_count_[cd_id_.GetPhaseID()] == 0) {
     cd_id_.object_id_ = Util::GenCDObjID(cd_id_.level());
   }
   exec_count_[cd_id_.GetPhaseID()]++;
   CD_DEBUG("exec_count[%s] = %u\n", cd_id_.GetPhaseID().c_str(), exec_count_[cd_id_.GetPhaseID()]);
+#endif
 
   InternalInitialize(cd_parent);
   InitializeMailBox();
@@ -522,11 +530,11 @@ CDHandle *CD::CreateRootCD(const char *name,
 }
 
 
-CDErrT CD::Destroy(bool collective)
+CDErrT CD::Destroy(bool collective, bool need_destroy)
 {
   CD_DEBUG("CD::Destroy\n");
   CDErrT err=CDErrT::kOK;
-  InternalDestroy(collective);
+  InternalDestroy(collective, need_destroy);
 
 
   return err;
@@ -547,7 +555,7 @@ CD::InternalCreate(CDHandle *parent,
                    CDHandle* *new_cd_handle)
 {
   CD_DEBUG("Internal Create... level #%u, Node ID : %s\n", new_cd_id.level(), new_cd_id.node_id().GetString().c_str());
-  string cd_obj_key(name);
+  string cd_obj_key(new_cd_id.GetStringID());
   auto cdh_it = access_store_.find(cd_obj_key);
   if(cdh_it != access_store_.end()) {
     *new_cd_handle = cdh_it->second;
@@ -632,6 +640,7 @@ CD::InternalCreate(CDHandle *parent,
     *new_cd_handle = new CDHandle(new_cd);
   
     access_store_[string(name)] = *new_cd_handle;
+    delete_store_[new_cd->cd_id_.object_id_] = *new_cd_handle;
   
 //    AttachChildCD(new_cd);
     CD_DEBUG("Done. New Node ID: %s -- %s\n", 
@@ -854,18 +863,23 @@ void CD::FinalizeMailBox(void)
 inline 
 CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 {
+  if(need_destroy == false) {
+    CD_DEBUG("clean up CD meta data (%d windows) at %s (%s) level #%u\n", 
+             task_size(), name_.c_str(), label_.c_str(), level());
 #if comm_log
-  if (GetParentHandle()!=NULL)
-  {
-    GetParentHandle()->ptr_cd_->child_seq_id_ = cd_id_.sequential_id();
-  }
+    if (GetParentHandle()!=NULL)
+    {
+      GetParentHandle()->ptr_cd_->child_seq_id_ = cd_id_.sequential_id();
+    }
 #endif
+ 
+#if _MPI_VER
+    FinalizeMailBox();
+#endif 
+  }
+  else {
 
 #if _MPI_VER
-  CD_DEBUG("clean up CD meta data (%d windows) at %s (%s) level #%u\n", task_size(), name_.c_str(), label_.c_str(), level());
- 
-  FinalizeMailBox(); 
-  if(need_destroy == true) {
     if(task_size() > 1 && (is_window_reused_==false)) {  
 //      PMPI_Win_free(&pendingWindow_);
 //      PMPI_Win_free(&rollbackWindow_);
@@ -881,9 +895,10 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
     if( GetPlaceToPreserve() == kPFS ) {
       delete pfs_handler_;
     }
+#endif
+
     delete this;
   } 
-#endif
 
   return CDInternalErrT::kOK;
 }
@@ -3015,12 +3030,12 @@ CDHandle *HeadCD::Create(CDHandle *parent,
 }
 
 
-CDErrT HeadCD::Destroy(bool collective)
+CDErrT HeadCD::Destroy(bool collective, bool need_destroy)
 {
   CD_DEBUG("HeadCD::Destroy\n");
   CDErrT err=CDErrT::kOK;
 
-  InternalDestroy(collective);
+  InternalDestroy(collective, need_destroy);
 
   return err;
 }
@@ -3680,10 +3695,10 @@ void CD::PrintIncompleteLog()
 
 CD::CDInternalErrT CD::InvokeAllErrorHandler(void) {
   CDInternalErrT err = kOK;
-  CDHandle *curr_cdh = CDPath::GetCurrentCD();
-  while(curr_cdh == NULL) {
-    err = curr_cdh->ptr_cd()->InvokeErrorHandler();
-    curr_cdh = CDPath::GetParentCD(curr_cdh->level());
+  CDHandle *cdp = CDPath::GetCoarseCD(GetCurrentCD());
+  while(cdp != NULL) {
+    err = cdp->ptr_cd_->InvokeErrorHandler();
+    cdp = CDPath::GetParentCD(cdp->level());
   }
   return err;
 }

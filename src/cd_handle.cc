@@ -212,7 +212,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
 #if CD_MPI_ENABLED 
   PMPI_Comm_group(MPI_COMM_WORLD, &whole_group); 
-  new_node_id = CDHandle::GenNewNodeID(0, new_node_id, false);
+  new_node_id = CDHandle::GenNewNodeID(ROOT_HEAD_ID, new_node_id, false);
 #endif
   CD::CDInternalErrT internal_err;
   CDHandle *root_cd_handle = CD::CreateRootCD("Root", CDID(CDNameT(0), new_node_id), 
@@ -321,17 +321,18 @@ void CD_Finalize(void)
   // Profiler-related  
   CDPath::GetRootCD()->profiler_->FinalizeViz();
 #endif
-  CDPath::GetRootCD()->InternalDestroy(false);
 
-#if CD_ERROR_INJECTION_ENABLED
-  if(CDHandle::memory_error_injector_ != NULL);
-    delete CDHandle::memory_error_injector_;
 
-  if(CDHandle::system_error_injector_ != NULL);
-    delete CDHandle::system_error_injector_;
-#endif
-
-  cd::internal::Finalize();
+//#if CD_ERROR_INJECTION_ENABLED
+//  if(CDHandle::memory_error_injector_ != NULL);
+//    delete CDHandle::memory_error_injector_;
+//
+//  if(CDHandle::system_error_injector_ != NULL);
+//    delete CDHandle::system_error_injector_;
+//#endif
+//  CDPath::GetRootCD()->InternalDestroy(false);
+//
+//  cd::internal::Finalize();
   cd::tot_end_clk = CD_CLOCK();
 
 #if CD_DEBUG_ENABLED && CD_PROFILER_ENABLED 
@@ -473,7 +474,25 @@ void CD_Finalize(void)
     printf("================================================\n\n");
 #endif
   }
+#endif // CD_PROFILER_ENABLED_ENDS
+
+#if CD_ERROR_INJECTION_ENABLED
+  if(CDHandle::memory_error_injector_ != NULL);
+    delete CDHandle::memory_error_injector_;
+
+  if(CDHandle::system_error_injector_ != NULL);
+    delete CDHandle::system_error_injector_;
 #endif
+
+
+  for(auto rit=CD::delete_store_.rbegin(); rit!=CD::delete_store_.rend(); ++rit) {
+    rit->second->ptr_cd_->Destroy(false, true);
+    delete rit->second;
+  }
+//  CDPath::GetRootCD()->InternalDestroy(false, true);
+
+  cd::internal::Finalize();
+
 
 #if CD_DEBUG_ENABLED
   WriteDbgStream();
@@ -655,6 +674,11 @@ void CDHandle::Init(CD *ptr_cd)
   node_id_  = ptr_cd_->cd_id_.node_id_;
 }
 
+int CDHandle::SelectHead(uint32_t task_size)
+{
+  return (level() + 1) % task_size;
+}
+
 // Non-collective
 CDHandle *CDHandle::Create(const char *name, 
                            int cd_type, 
@@ -671,7 +695,7 @@ CDHandle *CDHandle::Create(const char *name,
   // and populate its data structure correctly (CDID, etc...)
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
   
-  NodeID new_node_id = GenNewNodeID(0, node_id_, CD::CheckToReuseCD(name));
+  NodeID new_node_id = GenNewNodeID(SelectHead(task_size()), node_id_, CD::CheckToReuseCD(name));
 
 
   // Generate CDID
@@ -702,7 +726,7 @@ CDErrT CDHandle::RegisterSplitMethod(SplitFuncT split_func)
 }
 
 
-NodeID CDHandle::GenNewNodeID(const int &new_head, const NodeID &node_id, bool is_reuse)
+NodeID CDHandle::GenNewNodeID(int new_head, const NodeID &node_id, bool is_reuse)
 {
   // just set the same as parent.
   NodeID new_node_id(node_id);
@@ -777,11 +801,11 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   if(num_children > 1) {
     err = SplitCD(node_id_.task_in_color(), node_id_.size(), num_children, new_color, new_task);
     CD_DEBUG("[%s], GenNewNodeID\n", __func__);
-    new_node_id = GenNewNodeID(node_id_.color(), new_color, new_task, 0, is_reuse);
+    new_node_id = GenNewNodeID(node_id_.color(), new_color, new_task, SelectHead(new_size), is_reuse);
 //    assert(new_size == new_node_id.size());
   }
   else if(num_children == 1) {
-    new_node_id = GenNewNodeID(0, node_id_, is_reuse);
+    new_node_id = GenNewNodeID(SelectHead(task_size()), node_id_, is_reuse);
   }
   else {
     ERROR_MESSAGE("Number of children to create is wrong.\n");
@@ -855,7 +879,7 @@ CDHandle *CDHandle::Create(uint32_t color,
   bool is_reuse = CD::CheckToReuseCD(name);
 //  ColorT new_comm;
 //  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, num_children);
-  NodeID new_node_id = GenNewNodeID(node_id_.color(), color, task_in_color, 0, is_reuse);
+  NodeID new_node_id = GenNewNodeID(node_id_.color(), color, task_in_color, SelectHead(task_size()/num_children), is_reuse);
 
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, color);
@@ -987,7 +1011,7 @@ CDErrT CDHandle::InternalDestroy(bool collective, bool need_destroy)
   assert(CDPath::GetCDPath()->size()>0);
   assert(CDPath::GetCDPath()->back() != NULL);
 
-  err = ptr_cd()->Destroy();
+  err = ptr_cd()->Destroy(collective, need_destroy);
 
   if(need_destroy) {
     delete CDPath::GetCDPath()->back();

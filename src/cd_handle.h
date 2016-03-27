@@ -1065,7 +1065,7 @@ class CDHandle {
                                 uint64_t error_loc_mask=0);
 
 /// Get NodeID with given new_color and new_task
-    static NodeID GenNewNodeID(const int &new_head, const NodeID &new_node_id, bool is_reuse);
+    static NodeID GenNewNodeID(int new_head, const NodeID &new_node_id, bool is_reuse);
 
 /// Check mail box.
     CDErrT CheckMailBox(void);
@@ -1079,7 +1079,7 @@ class CDHandle {
     NodeID GenNewNodeID(const ColorT &my_color, 
                         const int &new_color, 
                         const int &new_task, 
-                        const int &new_head,
+                        int new_head,
                         bool is_reuse
                         );
 
@@ -1193,6 +1193,7 @@ class CDHandle {
   private:
 
     GroupT &group(void);
+    int SelectHead(uint32_t task_size);
 #if CD_TEST_ENABLED
     void PrintCommLog(void) const;
 #endif

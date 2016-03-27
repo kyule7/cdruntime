@@ -127,6 +127,7 @@ class CD : public Serializable {
     friend class cd::logging::CommLog;
     friend class cd::logging::RuntimeLogger;
     friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+    friend void cd::CD_Finalize(void);
     friend int MPI_Win_fence(int assert, MPI_Win win);
     friend void Initialize(void);
     friend void Finalize(void);
@@ -248,8 +249,9 @@ class CD : public Serializable {
 //    static std::map<ENTRY_TAG_T, CommInfo> entry_send_req_;
     static std::map<ENTRY_TAG_T, CommInfo> entry_recv_req_;
 //    static std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
-    static std::map<std::string, uint32_t> exec_count_;
+//    static std::map<std::string, uint32_t> exec_count_;
     static std::map<std::string, CDHandle *> access_store_;
+    static std::map<uint32_t, CDHandle *> delete_store_;
 
     // Only CDEntries that has refname will be pushed into this data structure for later quick search.
     EntryDirType entry_directory_map_;   
@@ -348,7 +350,7 @@ update the preserved data.
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err);
 
-    virtual CDErrT Destroy(bool collective=true);
+    virtual CDErrT Destroy(bool collective=true, bool need_destroy=false);
 
     CDErrT Begin(bool collective=true, 
                  const char *label=NULL);
@@ -550,26 +552,16 @@ public:
     bool TestComm(bool test_untile_done=false);
     bool TestReqComm(bool is_all_valid=true);
     bool TestRecvComm(bool is_all_valid=true);
-//    virtual CDFlagT *event_flag();
 #endif
 
   protected:
-
-
     CDInternalErrT Sync(ColorT color); 
     CDInternalErrT SyncFile(void); 
     static void SyncCDs(CD *cd_lv_to_sync, bool for_recovery=false);
     void *SerializeRemoteEntryDir(uint64_t &len_in_bytes);
     void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
-
-    virtual void *Serialize(uint64_t &len_in_bytes) {
-      return NULL;  
-    }
-  
-    virtual void Deserialize(void *object) {
-    }
-
-//    CD *GetCDToRecover(bool escalate);
+    virtual void *Serialize(uint64_t &len_in_bytes) { return NULL; }
+    virtual void Deserialize(void *object) {}
     static CDHandle *GetCDToRecover(CDHandle *cd_level, bool collective=true);
     CDInternalErrT CompleteLogs(void);
 #if CD_LIBC_LOG_ENABLED
@@ -597,11 +589,15 @@ public:
     //SZ
     CommLogErrT ProbeAndLogData(void *flag);
     //SZ
-    CommLogErrT LogData(const void *data_ptr, unsigned long length, uint32_t task_id=0,
-                      bool completed=true, void *flag=NULL,
-                      bool isrecv=0, bool isrepeated=0, 
-                      // KL : added these three things
-                      bool intra_cd_msg=false, int tag=INVALID_MSG_TAG, ColorT comm=INVALID_COLOR);
+    CommLogErrT LogData(const void *data_ptr, 
+                        unsigned long length, 
+                        uint32_t task_id=0,
+                        bool completed=true, void *flag=NULL,
+                        bool isrecv=0, bool isrepeated=0, 
+                        // KL : added these three things
+                        bool intra_cd_msg=false, 
+                        int tag=INVALID_MSG_TAG, 
+                        ColorT comm=INVALID_COLOR);
     //SZ
     CommLogErrT ProbeData(const void *data_ptr, unsigned long length);
     //SZ
@@ -619,29 +615,28 @@ public:
     void PrintIncompleteLog();
     //SZ
     CDLoggingMode GetCDLoggingMode() {return cd_logging_mode_;}
-    void SetCDLoggingMode(CDLoggingMode cd_logging_mode) {cd_logging_mode_ = cd_logging_mode;}
+    void SetCDLoggingMode(CDLoggingMode cd_logging_mode) {
+      cd_logging_mode_ = cd_logging_mode;
+    }
 #endif
 
 #if CD_MPI_ENABLED
   private:
-    CDEventHandleT ReadMailBox(const CDFlagT &event);
-    virtual CDInternalErrT InternalCheckMailBox(void);
-    void     UnsetEventFlag(CDFlagT &event_flag, CDFlagT event_mask);
-    uint32_t GetPendingCounter(void);
-    uint32_t DecPendingCounter(void);
-    uint32_t IncPendingCounter(void);
-    CDFlagT GetEventFlag(void);
-    uint32_t SetRollbackPoint(const uint32_t &rollback_lv, bool remote);
-    uint32_t CheckRollbackPoint(bool remote);
-    void CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &new_rollback_point);
     CDErrT CheckMailBox(void);
     CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(const CDEventT &event);
+    CDEventHandleT ReadMailBox(const CDFlagT &event);
+    virtual CDInternalErrT InternalCheckMailBox(void);
+    inline void     UnsetEventFlag(CDFlagT &event_flag, CDFlagT event_mask);
+    inline uint32_t GetPendingCounter(void);
+    uint32_t DecPendingCounter(void);
+    inline uint32_t IncPendingCounter(void);
+    inline CDFlagT GetEventFlag(void);
+    uint32_t SetRollbackPoint(const uint32_t &rollback_lv, bool remote);
+    uint32_t CheckRollbackPoint(bool remote);
+    inline void CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &new_rollback_point);
     inline void ForwardToLowerLevel(CD *cdp, const CDEventT &event); 
-//    CDInternalErrT LocalSetMailBox(const CDEventT &event);
-//    static inline void IncHandledEventCounter(void) { handled_event_count++; }
   public:
-    
     void Escalate(CDHandle *leaf, bool need_sync_to_reexec);
     int  BlockUntilValid(MPI_Request *request, MPI_Status *status);
     int  BlockallUntilValid(int count, MPI_Request array_of_request[], MPI_Status array_of_status[]);
@@ -720,7 +715,7 @@ class HeadCD : public CD {
                              CDType cd_type, 
                              uint64_t sys_bit_vector, 
                              CDInternalErrT* cd_err=0);
-    virtual CDErrT Destroy(bool collective=true);
+    virtual CDErrT Destroy(bool collective=true, bool need_destroy=false);
     virtual CDErrT Reexecute(void);
     virtual CDErrT Stop(CDHandle *cdh=NULL);
     virtual CDErrT Resume(void); // Does this make any sense?
@@ -738,7 +733,7 @@ class HeadCD : public CD {
 
 #if CD_MPI_ENABLED
 //    virtual CDFlagT *event_flag();
-    CDFlagT *GetEventFlag(void);
+    inline CDFlagT *GetEventFlag(void);
 
     CDErrT SetMailBox(const CDEventT &event, int task_id);
     CDInternalErrT LocalSetMailBox(const CDEventT &event);
