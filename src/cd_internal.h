@@ -557,7 +557,7 @@ public:
   protected:
     CDInternalErrT Sync(ColorT color); 
     CDInternalErrT SyncFile(void); 
-    static void SyncCDs(CD *cd_lv_to_sync, bool for_recovery=false);
+    static uint32_t SyncCDs(CD *cd_lv_to_sync, bool for_recovery=false);
     void *SerializeRemoteEntryDir(uint64_t &len_in_bytes);
     void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
     virtual void *Serialize(uint64_t &len_in_bytes) { return NULL; }
@@ -634,7 +634,8 @@ public:
     inline CDFlagT GetEventFlag(void);
     uint32_t SetRollbackPoint(const uint32_t &rollback_lv, bool remote);
     uint32_t CheckRollbackPoint(bool remote);
-    inline void CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &new_rollback_point);
+//    inline void CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &new_rollback_point);
+    inline void CheckReexecution(void);
     inline void ForwardToLowerLevel(CD *cdp, const CDEventT &event); 
   public:
     void Escalate(CDHandle *leaf, bool need_sync_to_reexec);

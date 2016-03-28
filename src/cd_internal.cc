@@ -44,6 +44,7 @@ using namespace cd::logging;
 using namespace std;
 
 //#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
+#define BUGFIX_0327 1
 
 CD_CLOCK_T cd::log_begin_clk;
 CD_CLOCK_T cd::log_end_clk;
@@ -1027,11 +1028,39 @@ CDErrT CD::Begin(bool collective, const char *label)
 }
 
 // static
-void CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
+uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 {
 #if CD_PROFILER_ENABLED
   double sync_time = 0.0;
 #endif
+
+#if BUGFIX_0327
+
+  uint32_t new_rollback_point = INVALID_ROLLBACK_POINT;
+
+  if(cd_lv_to_sync->task_size() > 1) {
+    cd_lv_to_sync->CheckMailBox();
+    CD_DEBUG("[%s] fence in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
+    CD_CLOCK_T begin_here = CD_CLOCK();
+    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
+    sync_time += CD_CLOCK() - begin_here;
+
+    cd_lv_to_sync->CheckMailBox();
+
+    new_rollback_point = cd_lv_to_sync->CheckRollbackPoint(false);
+    CD_DEBUG("rollback point from head:%u (headID:%d at lv#%u)\n", 
+              new_rollback_point, cd_lv_to_sync->head(), cd_lv_to_sync->level());
+    uint32_t local_rollback_point = new_rollback_point;
+    PMPI_Allreduce(&local_rollback_point, &new_rollback_point, 1, 
+                   MPI_UNSIGNED, MPI_MIN, cd_lv_to_sync->color());
+//    cd_lv_to_sync->CheckMailBox();
+
+    CD_DEBUG("rollback point after broadcast:%u\n", new_rollback_point);
+
+  } else {
+    CD_DEBUG("[%s] No fence\n", __func__);
+  }
+#else
   if(cd_lv_to_sync->task_size() > 1) {
 
     cd_lv_to_sync->CheckMailBox();
@@ -1065,13 +1094,15 @@ void CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
   } else {
     CD_DEBUG("[%s] No fence\n", __func__);
   }
+#endif
+
 #if CD_PROFILER_ENABLED
   if(for_recovery == false) 
     normal_sync_time += sync_time;
   else
-    reexec_sync_time += sync_time;
-  
+    reexec_sync_time += sync_time; 
 #endif
+  return new_rollback_point; 
 }
 
 void CD::Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
@@ -1112,7 +1143,15 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     // then it needs to call SyncCDs to be coordinated with
     // the other tasks in the other CDs of current level,
     // but in the same CDs at the level to escalate to.
-    
+#if BUGFIX_0327
+    if(collective) {
+      uint32_t new_rollback_point = SyncCDs(target->ptr_cd(), true);
+      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+    } else {
+      uint32_t new_rollback_point = target->ptr_cd()->CheckRollbackPoint(true); // read from head
+      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+    }
+#else    
     if(collective) {
       SyncCDs(target->ptr_cd(), true);
     }
@@ -1121,6 +1160,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       uint32_t new_rollback_point = target->ptr_cd()->CheckRollbackPoint(true); // read from head
       target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
     }
+#endif
     // It is possible for other task set to rollback_point lower than original.
     // It handles that case.
     if(level != rollback_lv) { 
@@ -1184,9 +1224,20 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 
     // This synchronization corresponds to that in Complete or Create of other tasks in the different CDs.
     // The tasks in the same CD should reach here together. (No tasks execute further Complete/Create)
+#if BUGFIX_0327
+    if(collective) {
+      uint32_t new_rollback_point = SyncCDs(target->ptr_cd(), true);
+      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+    } else {
+      uint32_t new_rollback_point = target->ptr_cd()->CheckRollbackPoint(true); // read from head
+      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+    }
+#else
     if(collective) {
       SyncCDs(target->ptr_cd(), true);
     }
+#endif
+
 #if CD_PROFILER_ENABLED
 //    if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
     target->profiler_->FinishProfile();
@@ -1221,6 +1272,17 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   // This is important synchronization point 
   // to guarantee the correctness of CD-enabled program.
   uint32_t new_rollback_point = orig_rollback_point;
+#if BUGFIX_0327
+  if(collective) {
+    new_rollback_point = SyncCDs(this, false);
+    CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
+    new_rollback_point = SetRollbackPoint(new_rollback_point, false);
+  } else {
+    new_rollback_point = CheckRollbackPoint(false);
+    CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
+    new_rollback_point = SetRollbackPoint(new_rollback_point, false);
+  }
+#else
   if(collective) {
     SyncCDs(this);
   }
@@ -1236,7 +1298,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   } else {
     new_rollback_point = CheckRollbackPoint(false);
   }
-
+#endif
   if(new_rollback_point != INVALID_ROLLBACK_POINT) { 
     // If another task set rollback_point lower than this task (error occurred at this task),
     // need_sync is false. 

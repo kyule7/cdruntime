@@ -390,9 +390,14 @@ void HandleErrorOccurred::HandleEvent(void)
   CD_DEBUG("\n[HandleErrorOccurred::HandleEvent]\n");
 
   CDEventT all_reexecute = kAllReexecute;
-  for(int i=0; i<ptr_cd_->task_size(); i++) {
-    CD_DEBUG("SetMailBox(kAllRexecute) for error occurred of task #%d\n", i);
-    ptr_cd_->SetMailBox(all_reexecute, i);
+  if(GetCurrentCD()->level() > ptr_cd_->level()) {
+    for(int i=0; i<ptr_cd_->task_size(); i++) {
+      CD_DEBUG("SetMailBox(kAllRexecute) for error occurred of task #%d\n", i);
+      ptr_cd_->SetMailBox(all_reexecute, i);
+    }
+  }
+  else {
+    CD_DEBUG("Reexecution is coordinated by Allreduce at Complete\n");
   }
 
   // Resume
@@ -525,7 +530,7 @@ void HandleAllReexecute::HandleEvent(void)
     }
 
     // Only kReexecute event from the head in the same level is valid for some action.
-    ptr_cd_->SetRollbackPoint(rollback_lv, false); // false means local
+    rollback_point = ptr_cd_->SetRollbackPoint(rollback_lv, false); // false means local
   } 
   else if(rollback_lv < current_lv) { // It needs to report escalation to head. 
     
@@ -536,7 +541,8 @@ void HandleAllReexecute::HandleEvent(void)
     // set its rollback point in head.
     if(rollback_lv < rollback_point) { 
       CD_DEBUG("rollback_lv:%u < %u (rollback_point) \n", rollback_lv, rollback_point);
-      
+// FIXME 0327
+#if 0 
       // Do not set need_reexec = true, yet.
       // This should be set by kAllReexecute from head task in the leaf CD.
       CD *cur_cd = CDPath::GetCoarseCD(GetCurrentCD()->ptr_cd());
@@ -565,6 +571,9 @@ void HandleAllReexecute::HandleEvent(void)
         cur_cd = CDPath::GetParentCD(cur_cd->level())->ptr_cd();
         if(cur_cd == NULL) break;
       }
+#else
+      rollback_point = ptr_cd_->SetRollbackPoint(rollback_lv, false); // false means local
+#endif
     } else {
       CD_DEBUG("rollback_lv:%u >= %u (rollback_point) \n", rollback_lv, rollback_point);
     }
@@ -582,7 +591,7 @@ void HandleAllReexecute::HandleEvent(void)
 
   IncHandledEventCounter();
 
-  rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local
+//  rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local
   CD_DEBUG("[%s] kAllReexecute need reexec from %u (new rollback_point:%u) (cur %u)\n", 
            ptr_cd_->cd_id_.GetStringID().c_str(), 
            rollback_lv, rollback_point, current_lv);

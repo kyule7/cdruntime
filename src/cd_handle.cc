@@ -948,7 +948,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
   CDEpilogue();
   begin_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-//  Profiler::num_exec_map[level()][GetLabel()].begin_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][GetLabel()].begin_elapsed_time_ += end_clk - begin_clk;
 #endif
   return new_cdh;
 }
@@ -967,10 +967,6 @@ CDErrT CDHandle::Destroy(bool collective)
   CDEpilogue();
   destroy_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-//  if(GetLabel() != NULL) 
-//    CD_DEBUG("CDS %s\n", GetLabel());
-//  else
-//    CD_DEBUG("CDS NULL\n");
   Profiler::num_exec_map[cur_level][label].destroy_elapsed_time_ += end_clk - begin_clk;
 #endif
 

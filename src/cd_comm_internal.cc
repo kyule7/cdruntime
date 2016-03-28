@@ -45,6 +45,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define DEBUG_OFF_MAILBOX 1
 #define LOCK_PER_MAILBOX 0
 #define MAILBOX_LOCK_ENABLED 1
+#define BUGFIX_0327 1
 using namespace cd;
 using namespace cd::internal;
 using namespace std;
@@ -62,61 +63,61 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color,
                               int new_head_id, 
                               bool is_reuse)
 {
-  uint32_t orig_rollback_point = INVALID_ROLLBACK_POINT;
-  uint32_t new_rollback_point = INVALID_ROLLBACK_POINT;
+  ptr_cd_->CheckReexecution();
+
   NodeID new_node_id(new_head_id);
-//  if(is_reuse == false) {
-    ptr_cd_->CheckError(true, orig_rollback_point, new_rollback_point);
-    
-    CD_DEBUG("[%s] need_reexec? %d from %u (%s)\n", 
-              ptr_cd_->cd_id_.GetStringID().c_str(), 
-              need_reexec(), new_rollback_point, 
-              ptr_cd_->name_.c_str());
-    if(new_rollback_point != INVALID_ROLLBACK_POINT) {
-      CD_DEBUG("\n\nReexec (Before calling ptr_cd_->GetCDToRecover()->Recover(false);\n\n");
-#if CD_PROFILER_ENABLED
-      end_clk = CD_CLOCK();
-      prof_sync_clk = end_clk;
-      elapsed_time += end_clk - begin_clk;  // Total CD overhead 
-      create_elapsed_time += end_clk - begin_clk; // Total Complete overhead
-      Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
-#endif
-      CD::GetCDToRecover(this, false)->ptr_cd()->Recover();
-    } else {
-      CD_DEBUG("\n\nReexec is false\n");
-    }
   if(is_reuse == false) {
     PMPI_Comm_split(my_color, new_color, new_task, &(new_node_id.color_));
     PMPI_Comm_size(new_node_id.color_, &(new_node_id.size_));
     PMPI_Comm_rank(new_node_id.color_, &(new_node_id.task_in_color_));
-//    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
   } 
-//  else {
-//    ptr_cd_->SyncCDs(ptr_cd_);
-//  } 
   return new_node_id;
 }
 
-void CD::CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &new_rollback_point) 
+void CD::CheckReexecution(void) 
 {
-  orig_rollback_point = CheckRollbackPoint(false);
+  uint32_t orig_rollback_point = CheckRollbackPoint(false);
   CD_DEBUG("%s %s \t Reexec from %u\n", 
       GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
 
   // This is important synchronization point 
   // to guarantee the correctness of CD-enabled program.
-  new_rollback_point = orig_rollback_point;
+  uint32_t new_rollback_point = orig_rollback_point;
+#if BUGFIX_0327
+  if(task_size() > 1) {
+    new_rollback_point = SyncCDs(this, false);
+    SetRollbackPoint(new_rollback_point, false);
+  } else {
+    assert(0);
+//    new_rollback_point = CheckRollbackPoint(true); // read from head
+//    SetRollbackPoint(new_rollback_point, false);
+  }
+#else
   if(collective) {
     SyncCDs(this);
   }
-
   if(task_size() > 1) {
     new_rollback_point = CheckRollbackPoint(true); // Read from head
     new_rollback_point = SetRollbackPoint(new_rollback_point, false);
   }
+#endif
   CD_DEBUG("%s %s \t Reexec from %u\n", 
-      GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
+      cd_id_.GetString().c_str(), label_.c_str(), new_rollback_point);
 
+
+  if(new_rollback_point != INVALID_ROLLBACK_POINT) {
+    CD_DEBUG("\n\nReexec (Before calling GetCDToRecover()->Recover(false);\n\n");
+#if CD_PROFILER_ENABLED
+    end_clk = CD_CLOCK();
+    prof_sync_clk = end_clk;
+    elapsed_time += end_clk - begin_clk;  // Total CD overhead 
+    create_elapsed_time += end_clk - begin_clk; // Total Complete overhead
+    Profiler::num_exec_map[level()][label_].create_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
+#endif
+    CD::GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
+  } else {
+    CD_DEBUG("\n\nReexec is false\n");
+  }
 }
 
 
