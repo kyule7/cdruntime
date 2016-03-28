@@ -3737,10 +3737,11 @@ int main(int argc, char *argv[])
 //#endif
       TimeIncrement(*locDom);
 
-#if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
-      cdh_1_0_0->Detect();
-      CD_Complete(cdh_1_0_0);
-#endif
+//#if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
+//      cdh_1_0_0->Detect();
+//      CD_Complete(cdh_1_0_0);
+//      CD_Begin(cdh_1_0_0, true, "LagrangeNodal"); 
+//#endif
 
 
 
@@ -3751,7 +3752,6 @@ int main(int argc, char *argv[])
   Domain &domain = *locDom;
 #if _CD && (SWITCH_2_0_0  >= SEQUENTIAL_CD)
       //CDHandle *cdh_2_0_0 = cdh_1_0_0;
-      CD_Begin(cdh_1_0_0, true, "LagrangeNodal"); 
       CDHandle *cdh_2_0_0 = cdh_1_0_0->Create(CD_MAP_2_0_0 >> CDFLAG_SIZE, 
                                   (string("LagrangeNodal")+cdh_1_0_0->node_id().GetStringID()).c_str(),
                                    CD_MAP_2_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_2_0_0));
