@@ -555,7 +555,7 @@ CD::InternalCreate(CDHandle *parent,
                    CDHandle* *new_cd_handle)
 {
   CD_DEBUG("Internal Create... level #%u, Node ID : %s\n", new_cd_id.level(), new_cd_id.node_id().GetString().c_str());
-  string cd_obj_key(new_cd_id.GetStringID());
+  string cd_obj_key(name);
   auto cdh_it = access_store_.find(cd_obj_key);
   if(cdh_it != access_store_.end()) {
     *new_cd_handle = cdh_it->second;
@@ -883,6 +883,8 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
     if(task_size() > 1 && (is_window_reused_==false)) {  
 //      PMPI_Win_free(&pendingWindow_);
 //      PMPI_Win_free(&rollbackWindow_);
+      PMPI_Group_free(&cd_id_.node_id_.task_group_);
+      PMPI_Comm_free(&cd_id_.node_id_.color_);
       PMPI_Win_free(&mailbox_);
       PMPI_Free_mem(event_flag_);
       CD_DEBUG("[%s Window] CD's Windows are destroyed.\n", __func__);

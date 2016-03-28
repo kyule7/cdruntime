@@ -484,14 +484,18 @@ void CD_Finalize(void)
     delete CDHandle::system_error_injector_;
 #endif
 
-
   for(auto rit=CD::delete_store_.rbegin(); rit!=CD::delete_store_.rend(); ++rit) {
+    if(rit->first == 0)
+      break; 
     rit->second->ptr_cd_->Destroy(false, true);
     delete rit->second;
   }
-//  CDPath::GetRootCD()->InternalDestroy(false, true);
-
   cd::internal::Finalize();
+  assert(CDPath::GetCDPath()->size() == 1);
+  GetRootCD()->ptr_cd()->Destroy(false, true);
+  delete CDPath::GetCDPath()->back(); // delete root
+  CDPath::GetCDPath()->pop_back();
+
 
 
 #if CD_DEBUG_ENABLED
