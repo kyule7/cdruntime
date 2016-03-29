@@ -128,12 +128,12 @@ struct CDOverheadVar : public CDOverhead {
   double begin_elapsed_time_var_;
   double compl_elapsed_time_var_;
   CDOverheadVar(void) 
-    : prv_elapsed_time_var_(0.0),
+    : CDOverhead(),
+      prv_elapsed_time_var_(0.0),
       create_elapsed_time_var_(0.0),
       destroy_elapsed_time_var_(0.0),
       begin_elapsed_time_var_(0.0),
-      compl_elapsed_time_var_(0.0),
-      CDOverhead()
+      compl_elapsed_time_var_(0.0)
   {}
   std::string GetStringInfo(void);
   void PrintInfo(void);
@@ -151,12 +151,14 @@ struct RuntimeInfo : public CDOverhead {
   double sync_time_;
 
   RuntimeInfo(void) 
-    : total_exec_(0), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
-      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0), CDOverhead() 
+    : CDOverhead(),
+      total_exec_(0), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
+      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0)
   {}
   RuntimeInfo(const uint64_t &total_exec) 
-    : total_exec_(total_exec), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
-      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0), CDOverhead()
+    : CDOverhead(),
+      total_exec_(total_exec), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
+      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0)
   {}
   RuntimeInfo(const RuntimeInfo &record) : CDOverhead() {
     total_exec_  = record.total_exec_;

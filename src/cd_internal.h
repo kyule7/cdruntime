@@ -739,7 +739,7 @@ class HeadCD : public CD {
     CDErrT SetMailBox(const CDEventT &event, int task_id);
     CDInternalErrT LocalSetMailBox(const CDEventT &event);
 //    virtual CDErrT SetMailBox(const CDEventT &event);
-    CDEventHandleT ReadMailBox(CDFlagT *p_event, uint32_t idx=0);
+    CDEventHandleT ReadMailBox(CDFlagT *p_event, int idx=0);
     virtual CDInternalErrT InternalCheckMailBox(void);
 
 //    CDInternalErrT InvokeErrorHandler(void);

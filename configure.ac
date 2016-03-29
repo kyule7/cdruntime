@@ -1,7 +1,10 @@
 AC_INIT([cdruntime], [1.0], [cds@lph.ece.utexas.edu])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-dnl AM_PROG_AR
+AM_PROG_AR
 LT_INIT
+AC_PROG_CC
+AC_PROG_CXX
+dnl AC_PROG_RANLIB
 
 AC_PREFIX_DEFAULT($PWD)
 
@@ -133,9 +136,6 @@ AS_IF([test "x$enable_parallel" = x"no" -a "x$enable_logging" = x"yes"],
     [AC_MSG_FAILURE([Logging is not supported in single-threaded builds.  Please specify --disable-logging.])]
 )
 
-AC_PROG_CC
-AC_PROG_CXX
-AC_PROG_RANLIB
 AC_CONFIG_HEADERS([src/cd_config.h])
 AC_CONFIG_FILES([
  Makefile
@@ -146,6 +146,7 @@ AC_CONFIG_FILES([
  test/test_user_defined_hierarhcy/Makefile
  test/test_prv_ref_remote/Makefile
  test/test_serdes/Makefile
+ demo/degas/Makefile
  examples/Makefile
 ])
 AC_OUTPUT

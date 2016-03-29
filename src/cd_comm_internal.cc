@@ -824,7 +824,7 @@ CDEventHandleT CD::ReadMailBox(const CDFlagT &event)
 }
 
 // Locked!!!
-CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, uint32_t idx)
+CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, int idx)
 {
   CDFlagT event = *p_event;
   CD_DEBUG_COND(CHECK_NO_EVENT(event), 
@@ -1602,7 +1602,7 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
 bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
 {
   int global_rank_id = -1;
-  int local_rank_id = -1;
+  //int local_rank_id = -1;
   return false;
 //  printf("target_id %d, group %p\n", target_id, &target_group);
   // Translate user group's rank ID to MPI_COMM_WORLD

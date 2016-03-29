@@ -576,6 +576,24 @@ int SplitCD_3D(const int& my_task_id,
   return 0;
 }
 
+// CD split default
+int SplitCD_1D(const int& my_task_id, 
+                    const int& my_size, 
+                    const int& num_children,
+                    int& new_color, 
+                    int& new_task)
+{
+  if(my_size%num_children){
+    ERROR_MESSAGE("Cannot evenly split current CD with size=%d, and num_children=%d\n", my_size, num_children);
+  }
+
+  int new_size = my_size / num_children;
+  new_color=my_task_id / new_size;
+  new_task=my_task_id % new_size;
+  
+  return 0;
+}
+
 } // namespace cd ends
 
 
@@ -591,18 +609,12 @@ int SplitCD_3D(const int& my_task_id,
 
 // CDHandle Member Methods ------------------------------------------------------------
 
-//int SplitCD_3D(const int& my_task_id, 
-//               const int& my_size, 
-//               const int& num_children, 
-//               int& new_color, 
-//               int& new_task);
-
 CDHandle::CDHandle()
   : ptr_cd_(0), node_id_(-1), ctxt_(CDPath::GetRootCD()->ctxt_)
 {
   // FIXME
   assert(0);
-  SplitCD = &SplitCD_3D;
+  SplitCD = &SplitCD_1D;
 
 #if CD_PROFILER_ENABLED
   profiler_ = Profiler::CreateProfiler(0, this);
@@ -632,7 +644,7 @@ CDHandle::CDHandle()
 CDHandle::CDHandle(CD *ptr_cd) 
   : ptr_cd_(ptr_cd), node_id_(ptr_cd->cd_id_.node_id_), ctxt_(ptr_cd->ctxt_)
 {
-  SplitCD = &SplitCD_3D;
+  SplitCD = &SplitCD_1D;
 
 #if CD_PROFILER_ENABLED
   profiler_ = Profiler::CreateProfiler(0, this);

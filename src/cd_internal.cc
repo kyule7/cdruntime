@@ -794,7 +794,7 @@ void CD::InitializeMailBox(void)
       *event_flag_ = 0;
     }
     else {
-      for(uint32_t i=0; i<task_size(); i++) {
+      for(int i=0; i<task_size(); i++) {
         event_flag_[i] = 0;
       }
     }
