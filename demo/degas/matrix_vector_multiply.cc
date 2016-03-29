@@ -45,7 +45,7 @@ enum {
 
 int task_size = 0;
 int rankID = 0;
-
+FILE *fp = NULL;
 void InitArray(float *A, int coldim, int rowdim, int ops) {
   switch(ops) {
     case INDEX: {
@@ -98,11 +98,11 @@ void MatVecMul(float *A, float *B, float *C, int ydim, int xdim)
   CDHandle *root = GetCurrentCD();
   root->Preserve(A, sizeof(float)*ydim*xdim, kCopy, "arrayA");
   root->Preserve(B, sizeof(float)*xdim, kCopy, "arrayB");
-  CDHandle *parent = GetCurrentCD()->Create("OuterLoop", kStrict);
+  CDHandle *parent = GetCurrentCD()->Create("Parent", kStrict);
   for(int j=0; j<ydim; j++) {
     CD_Begin(parent, true, "OuterLoop");
     parent->Preserve(C, sizeof(float)*ydim, kCopy, "arrayC");
-    CDHandle *child = parent->Create(task_size, "InnerLoop", kStrict);
+    CDHandle *child = parent->Create(task_size, "Leaf", kStrict);
     float temp = 0.0;
     for(int i=0; i<xdim; i++) {
       CD_Begin(child, true, "InnerLoop");
@@ -111,17 +111,20 @@ void MatVecMul(float *A, float *B, float *C, int ydim, int xdim)
       child->Preserve(A, sizeof(float)*ydim*xdim, kRef, "arrayA_lv2", "arrayA");
       child->Preserve(B, sizeof(float)*xdim, kRef, "arrayB_lv2", "arrayB");
       temp += A[j*xdim + i] * B[i];
-      fprintf(stdout, "Progress: (%d,%d)\n", j, i); fflush(stdout);
+      fprintf(fp, "Progress: (%d,%d)\n", j, i); fflush(fp);
       SLEEP(SLEEP_INTERVAL);
       child->CDAssert(stat(do_reexecute, &statbuf) != 0);
       parent->CDAssert(stat(do_escalate, &statbuf) != 0);
       child->Complete();
+      fprintf(fp, "Completed child %d\n", i); fflush(fp);
     }
+    fprintf(fp, "\n"); fflush(fp);
     child->Destroy();
     C[j] = temp;
     SLEEP(SLEEP_INTERVAL);
     parent->CDAssert(stat(do_escalate, &statbuf) != 0);
     parent->Complete();
+    fprintf(fp, "Completed parent %d\n", j); fflush(fp);
   }
   parent->Destroy();
 }
@@ -141,6 +144,10 @@ int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rankID);
   MPI_Comm_size(MPI_COMM_WORLD, &task_size);
+
+  char filepath[256]={};
+  sprintf(filepath, "progress.%d", rankID);
+  fp = fopen(filepath, "w");
   
   CDHandle *root = CD_Init(task_size, rankID);
   CD_Begin(root, true, "Root");
@@ -163,6 +170,9 @@ int main(int argc, char *argv[]) {
 
   root->Complete();
   CD_Finalize();
+
+  fclose(fp);
+
   MPI_Finalize();
   free(arrayA);
   free(arrayB);

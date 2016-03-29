@@ -72,8 +72,8 @@ cd::DebugBuf cd::cddbg;
 #endif
 
 #if CD_DEBUG_DEST == CD_DEBUG_TO_FILE  // Print to fileout -----
-FILE *cdout=NULL;
-FILE *cdoutApp=NULL;
+FILE *cd::cdout=NULL;
+FILE *cd::cdoutApp=NULL;
 #endif
 
 #if CD_ERROR_INJECTION_ENABLED
@@ -341,7 +341,7 @@ void CD_Finalize(void)
   runtime_info[100] = summary;
 #endif
 
-#if CD_MPI_ENABLED
+#if CD_PROFILER_ENABLED
   double cd_elapsed   = ((double)cd::elapsed_time) / CLK_NORMALIZER;
   double normal_sync_elapsed = ((double)cd::normal_sync_time) / CLK_NORMALIZER;
   double reexec_sync_elapsed = ((double)cd::reexec_sync_time) / CLK_NORMALIZER;
@@ -410,7 +410,6 @@ void CD_Finalize(void)
   double compl_elapsed_avg = recvbuf[COMPL_AVG]/cd::totalTaskSize;
   double compl_elapsed_var = (recvbuf[COMPL_VAR] - recvbuf[COMPL_AVG]*recvbuf[COMPL_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
 
-#if CD_PROFILER_ENABLED
   std::map<uint32_t, CDOverheadVar> lv_runtime_info;
   for(auto it=runtime_info.begin(); it!=runtime_info.end(); ++it) {
     double sendbuf_lv[PROF_LEVEL_STATISTICS_NUM]  = {
@@ -439,7 +438,6 @@ void CD_Finalize(void)
     lv_runtime_info[it->first].compl_elapsed_time_var_ = (recvbuf_lv[LV_COMPL_VAR] - recvbuf_lv[LV_COMPL_AVG]*recvbuf_lv[LV_COMPL_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
 
   }
-#endif
 
   if(cd::myTaskID == 0) {
     printf("\n\n============================================\n");

@@ -1043,10 +1043,13 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
   if(cd_lv_to_sync->task_size() > 1) {
     cd_lv_to_sync->CheckMailBox();
     CD_DEBUG("[%s] fence in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
+#if CD_PROFILER_ENABLED 
     CD_CLOCK_T begin_here = CD_CLOCK();
+#endif
     MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
+#if CD_PROFILER_ENABLED
     sync_time += CD_CLOCK() - begin_here;
-
+#endif
     cd_lv_to_sync->CheckMailBox();
 
     new_rollback_point = cd_lv_to_sync->CheckRollbackPoint(false);
