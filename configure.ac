@@ -1,6 +1,6 @@
 AC_INIT([cdruntime], [1.0], [cds@lph.ece.utexas.edu])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-AM_PROG_AR
+#AM_PROG_AR
 LT_INIT
 AC_PROG_CC
 AC_PROG_CXX
@@ -120,6 +120,7 @@ AC_DEFINE_UNQUOTED(_MPI_VER, $WANT_MPI, [Define to 1 for MPI support.])
 AC_DEFINE_UNQUOTED(_PGAS_VER, $WANT_PGAS, [Define to 1 for PGAS support.])
 AC_DEFINE_UNQUOTED(_SINGLE_VER, $WANT_SINGLE, [Define to 1 for serial library])
 AC_SUBST(cd_mpi_enabled, $WANT_MPI)
+AC_SUBST(cd_pgas_enabled, $WANT_PGAS)
 AM_CONDITIONAL(HAVE_MPI, $WANT_MPI)
 
 

@@ -240,6 +240,9 @@ bool CommLog::ProbeAndLogData(void *addr,
 {
   uint64_t pos;
   bool found = false;
+  if(isrecv) {
+    // ??
+  }
   // change entry incompleted entry to completed if there is any
   // and associate it with the data
   for (pos=0; pos<log_table_.cur_pos_; pos++)
@@ -272,6 +275,9 @@ bool CommLog::ProbeAndLogDataPacked(void *addr,
                                     void *flag,
                                     bool isrecv)
 {
+  if(isrecv) {
+    // ??
+  }
   // 1) find the corresponding log entry in child_log_
   // 2) assert length 
   // 3) find corresponding log queue address and copy data in
@@ -428,6 +434,10 @@ CommLogErrT CommLog::WriteLogTable (uint32_t taskID, const void *data_ptr, uint6
   {
     ret = IncreaseLogTableSize();
     if (ret == kCommLogAllocFailed) return ret;
+  }
+
+  if(data_ptr == NULL) {
+    //??
   }
 
   log_table_.base_ptr_[log_table_.cur_pos_].pos_ = log_queue_.cur_pos_;

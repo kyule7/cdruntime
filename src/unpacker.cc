@@ -34,7 +34,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "unpacker.h"
-#include <string.h>
+#include "cd_def_internal.h" 
+#include <cstring>
 
 #define DEBUG_OFF_PACKER 1
 

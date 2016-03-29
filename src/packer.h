@@ -45,8 +45,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  */
 #include "cd_global.h"
-#include "cd_def_internal.h" 
-#include "cstdint"
+#include <cstdint>
 
 // Packer packer;
 // packer.Add(ID_NAME, 100, name_ptr);
@@ -56,7 +55,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // packer.Add(ID_SOMETHING, 10, something_ptr);
 // char *serialized_data = packer.GetTotalData( total_data_size);
 
-
+namespace cd {
 /** \addtogroup utilities Utilities for CD runtime
  *
  *@{
@@ -78,8 +77,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  */ 
 
-class cd::Packer  
-{
+class Packer {
   public:
 
 ///@brief Enumerator internally used in Packer.
@@ -129,6 +127,7 @@ class cd::Packer
     char *ptr_data_;
 };
 
+} // namespace cd ends
 
 /** @} */ // End group utilities
 #endif

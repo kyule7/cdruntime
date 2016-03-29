@@ -61,6 +61,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_interface.h"
 #include "sys_err_t.h"
 
+#include <initializer_list>
 #define DEFAULT_ERROR_THRESHOLD 0.0
 #define NO_ERROR_INJECTED 0
 namespace cd {

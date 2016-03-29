@@ -1,4 +1,4 @@
-include ../../Makefile.extern
+#include ../../Makefile.extern
 SHELL = /bin/sh
 .SUFFIXES: .cc .o
 
@@ -6,12 +6,12 @@ LULESH_EXEC   = lulesh_cd
 EXEC_PROFILED = $(LULESH_EXEC)
 
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=1 -D_DEBUG=0
-#CD_CFLAGS = -I../../src 
-#CD_LINKFLAGS = -L../../lib -Wl,-rpath ../../lib -lcd
+CD_CFLAGS = -I../../include 
+CD_LINKFLAGS = -L../../lib  -lcd
 
 
 SERCXX   = g++ -DUSE_MPI=0 
-MPICXX   = mpic++ -DUSE_MPI=1 
+MPICXX   = CC -DUSE_MPI=1 
 CXX      = $(MPICXX) 
 CXXFLAGS = -g -std=gnu++0x  -I${SILO_INCDIR} -Wall -Wno-pragmas -fmax-errors=1 ${CD_CFLAGS} ${CD_FLAGS} 
 LDFLAGS  = ${CD_LINKFLAGS}

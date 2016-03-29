@@ -37,6 +37,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_entry.h"
 #include "cd_path.h"
 #include "cd_def_internal.h"
+//#include "cd_internal.h"
+#include "serializable.h"
+#include "packer.h"
+#include "unpacker.h"
+#include "util.h"
+#include "event_handler.h"
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -470,6 +476,86 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
   //Direction is from dst_data_ to src_data_
 
 }
+
+
+
+void *CDEntry::Serialize(uint64_t &len_in_bytes) 
+{
+
+  CD_DEBUG("\nCD Entry Serialize\n");
+  Packer entry_packer;
+// uint32_t ptr_cd_packed_len=0;
+// void *ptr_cd_packed_p = ptr_cd_->Serialize(ptr_cd_packed_len);
+
+  uint64_t src_packed_len=0;
+  CD_DEBUG("\nsrc Serialize\n");
+  void *src_packed_p = src_data_.Serialize(src_packed_len);
+  uint64_t dst_packed_len=0;
+  CD_DEBUG("\ndst Serialize\n");
+  void *dst_packed_p = dst_data_.Serialize(dst_packed_len);
+//      assert(ptr_cd_packed_len != 0);
+  assert(src_packed_len != 0);
+  assert(dst_packed_len != 0);
+
+  CD_DEBUG("packed entry_entry_tag_ is : %u \n", entry_tag_);
+
+  ENTRY_TAG_T str_key = entry_tag_;
+  entry_packer.Add(ENTRY_PACKER_NAME, sizeof(str_key), &str_key); 
+//      entry_packer.Add(ENTRY_PACKER_PTRCD, ptr_cd_packed_len, ptr_cd_packed_p);
+  
+  CD_DEBUG("packed preserve_type_ is : %d \n", preserve_type_);
+
+  entry_packer.Add(ENTRY_PACKER_PRESERVETYPE, sizeof(CD_FLAG_T), &preserve_type_);
+
+  CD_DEBUG("packed src_packed_ is : %p\n", src_packed_p);
+
+  entry_packer.Add(ENTRY_PACKER_SRC, src_packed_len, src_packed_p);
+  entry_packer.Add(ENTRY_PACKER_DST, dst_packed_len, dst_packed_p); 
+
+  CD_DEBUG("\nCD Entry Serialize Done\n");
+
+  return entry_packer.GetTotalData(len_in_bytes);  
+
+}
+
+void CDEntry::Deserialize(void *object)
+{
+  CD_DEBUG("\nCD Entry Deserialize\nobject : %p\n", object);
+
+  Unpacker entry_unpacker;
+  uint32_t return_size=0;
+  uint32_t dwGetID=0;
+  void *src_unpacked=0;
+  void *dst_unpacked=0;
+
+  entry_tag_ = *(ENTRY_TAG_T *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+
+  CD_DEBUG("unpacked entry_entry_tag_ is : %u <-> %s\n", entry_tag_, tag2str[entry_tag_].c_str());
+  CD_DEBUG("1st unpacked thing in data_handle : %u, return size : %u\n", entry_tag_, return_size);
+
+  preserve_type_ = *(CD_FLAG_T *)entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+
+  CD_DEBUG("unpacked preserve_type_ is : %d\n", preserve_type_);
+  CD_DEBUG("2nd unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
+
+  CD_DEBUG("Before call GetNext for src data handle object : %p\n", object);
+  src_unpacked = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+  CD_DEBUG("After call GetNext for dst data handle object : %p\n", object);
+
+  CD_DEBUG("src_unpacked is : %p\n", src_unpacked);
+  CD_DEBUG("3rd unpacked thing in data_handle : %u, return size: %u\n", dwGetID, return_size);
+
+
+  dst_unpacked = entry_unpacker.GetNext((char *)object, dwGetID, return_size);
+  CD_DEBUG("Before call src_data.Deserialize object : %p\n", object);
+  CD_DEBUG("dst_unpacked is : %p\n", dst_unpacked);
+  CD_DEBUG("4th unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
+
+  src_data_.Deserialize(src_unpacked);
+  dst_data_.Deserialize(dst_unpacked);
+  ptr_cd_ = NULL;
+}
+
 
 FILE *CDEntry::GetFilePointer(void)
 {

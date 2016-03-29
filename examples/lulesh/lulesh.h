@@ -243,6 +243,7 @@ using namespace std;
 #define  ID__SERDES_ALL        52
 /////////////////////////////////////////////////////////////////////
 
+#define CD_DEBUG(...)
 #else // if _CD ends
 
 #define SERDES_ENABLED 0

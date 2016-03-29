@@ -951,11 +951,11 @@ class CDHandle {
  /** @} */ // Ends cd_split
 
 
+#if CD_PGAS_ENABLED
 /** \addtogroup PGAS_funcs
  *
  * @{
  */
-
 /** @brief Declare how a region of memory behaves within this CD (for Relaxed CDs) 
  *
  * Declare the behavior of a region of PGAS/GAS memory within this
@@ -1032,7 +1032,7 @@ class CDHandle {
           ) { return kOK; }
 
 /** @} */ // End PGAS_funcs =========================================================== 
-
+#endif
 
 ///@brief Commits setjmp buffer or context buffer to CD object.
     void CommitPreserveBuff(void);

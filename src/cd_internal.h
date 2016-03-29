@@ -560,8 +560,8 @@ public:
     static uint32_t SyncCDs(CD *cd_lv_to_sync, bool for_recovery=false);
     void *SerializeRemoteEntryDir(uint64_t &len_in_bytes);
     void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
-    virtual void *Serialize(uint64_t &len_in_bytes) { return NULL; }
-    virtual void Deserialize(void *object) {}
+    virtual void *Serialize(uint64_t &len_in_bytes);
+    virtual void Deserialize(void *object);
     static CDHandle *GetCDToRecover(CDHandle *cd_level, bool collective=true);
     CDInternalErrT CompleteLogs(void);
 #if CD_LIBC_LOG_ENABLED
@@ -724,14 +724,8 @@ class HeadCD : public CD {
     virtual CDErrT RemoveChild(CDHandle *cd_child); 
 
 
-    void *Serialize(uint64_t &len_in_bytes)
-    {
-      return NULL;  
-    }
-  
-    void Deserialize(void *object) 
-    {    }
-
+    void *Serialize(uint64_t &len_in_bytes);
+    void Deserialize(void *object);
 #if CD_MPI_ENABLED
 //    virtual CDFlagT *event_flag();
     inline CDFlagT *GetEventFlag(void);

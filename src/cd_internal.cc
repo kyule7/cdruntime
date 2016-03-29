@@ -36,6 +36,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_config.h"
 #include "cd_internal.h"
 #include "cd_path.h"
+#include "packer.h"
+#include "unpacker.h"
 
 using namespace cd;
 using namespace cd::internal;
@@ -45,7 +47,7 @@ using namespace std;
 
 //#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 #define BUGFIX_0327 1
-
+#define _LOG_PROFILING 0
 CD_CLOCK_T cd::log_begin_clk;
 CD_CLOCK_T cd::log_end_clk;
 CD_CLOCK_T cd::log_elapsed_time;
@@ -3820,7 +3822,23 @@ CD::CDInternalErrT CD::InvokeErrorHandler(void)
 //  return cd_err;
 //}
 
+void *CD::Serialize(uint64_t &len_in_bytes)
+{
+  return (void *)&len_in_bytes;
+}
+void CD::Deserialize(void *object)
+{
+  printf("Deserialize(%p)\n", object);
+}
 
+void *HeadCD::Serialize(uint64_t &len_in_bytes)
+{
+  return (void *)&len_in_bytes;
+}
+void HeadCD::Deserialize(void *object)
+{
+  printf("Deserialize(%p)\n", object);
+}
 //-------------------------------------------------------
 
 

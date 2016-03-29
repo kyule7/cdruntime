@@ -386,7 +386,7 @@ void HandleErrorOccurred::HandleEvent(void)
 
   if(ptr_cd_->task_size() == 1) return;
 
-  int task_id = task_id_;
+//  int task_id = task_id_;
   CD_DEBUG("\n[HandleErrorOccurred::HandleEvent]\n");
 
   CDEventT all_reexecute = kAllReexecute;

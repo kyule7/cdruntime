@@ -47,10 +47,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  */
 
 #include "cd_global.h"
+#include "cd_def_internal.h"
 #include "node_id.h"
 #include "serializable.h"
-#include "packer.h"
-#include "unpacker.h"
 #include <string>
 #include <cstring>
 
@@ -113,80 +112,23 @@ class DataHandle : public Serializable {
     NodeID node_id_;
 
   private:
-    DataHandle(void) 
-      : handle_type_(kMemory), address_data_(0), len_(0), fp_(NULL), fpos_(0), ref_name_(0), ref_offset_(0), node_id_(-1) 
-    { 
-      strcpy(file_name_, INIT_FILE_PATH);
-    }
-    DataHandle(const DataHandle &that) 
-      : handle_type_(that.handle_type_), address_data_(that.address_data_), len_(that.len_), 
-        fp_(that.fp_), fpos_(that.fpos_), ref_name_(that.ref_name_), ref_offset_(that.ref_offset_),
-        node_id_(that.node_id_) 
-    { 
-      strcpy(file_name_, INIT_FILE_PATH);
-    }
-
-//    DataHandle(std::string ref_name, uint64_t ref_offset, 
-//               const NodeID &node_id) 
-//      : handle_type_(kReference), address_data_(0), len_(0), ref_offset_(ref_offset) 
-//    { 
-//      strcpy(file_name_, INIT_FILE_PATH); 
-//      ref_name_ = cd_hash(ref_name); 
-//      tag2str[ref_name_] = ref_name; 
-//      node_id_ = node_id; 
-//    }
-//
-//    DataHandle(const char *file_name, 
-//               const NodeID &node_id)
-//      : handle_type_(kOSFile), address_data_(0), len_(0), ref_name_(0), ref_offset_(0) 
-//    { 
-//      strcpy(file_name_, file_name); 
-//      node_id_ = node_id; 
-//    }
-//
-//    DataHandle(void *address_data, const uint64_t& len, 
-//               const NodeID &node_id)
-//      : handle_type_(kMemory), address_data_(address_data), len_(len), ref_name_(0), ref_offset_(0) 
-//    { 
-//      strcpy(file_name_, INIT_FILE_PATH); 
-//      node_id_ = node_id; 
-//    }
+    DataHandle(void);
+    DataHandle(const DataHandle &that); 
 
     // DataHandle for preservation to memory
     DataHandle(HandleType handle_type, 
                void *address_data, const uint64_t& len, 
-               const NodeID &node_id)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), 
-        fp_(NULL), fpos_(0), ref_name_(0), ref_offset_(0), node_id_(node_id)
-    { 
-      strcpy(file_name_, INIT_FILE_PATH); 
-    }
+               const NodeID &node_id);
 
     // DataHandle for preservation to file system
     DataHandle(HandleType handle_type, 
                void *address_data, const uint64_t& len, 
-               const NodeID &node_id, const std::string &file_name, FILE *fp=NULL, long fpos=0)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), 
-        fp_(fp), fpos_(fpos), ref_name_(0), ref_offset_(0), node_id_(node_id)
-    { 
-      strcpy(file_name_, file_name.c_str()); 
-    }
+               const NodeID &node_id, const std::string &file_name, FILE *fp=NULL, long fpos=0);
 
     // DataHandle for preservation via reference
     DataHandle(HandleType handle_type, 
                void *address_data, const uint64_t& len, 
-               std::string ref_name, uint64_t ref_offset, const NodeID &node_id)
-      : handle_type_(handle_type), address_data_(address_data), len_(len), fpos_(0), ref_offset_(ref_offset), node_id_(node_id)
-    { 
-      // There is no NodeID passed to newly created DataHandle object.
-      // The reason for this is that we do not track the destinatino information when we preserve,
-      // but we track it in the restoration routine.
-      // Basically, it removes the overhead at failure-free execuation, 
-      // but reqires more overhead in reexecution time which is rare.
-      strcpy(file_name_, INIT_FILE_PATH); 
-      ref_name_ = cd_hash(ref_name); 
-      tag2str[ref_name_] = ref_name; 
-    }
+               std::string ref_name, uint64_t ref_offset, const NodeID &node_id);
 
     ~DataHandle() {}
 
@@ -221,74 +163,8 @@ public:
 private:
 //  public: 
     //we need serialize deserialize interface here.
-    void *Serialize(uint64_t& len_in_bytes)
-    {
-      CD_DEBUG("\nData Handle Serialize\n");
-
-      Packer data_packer;
-      uint64_t node_id_packed_len=0;
-      void *node_id_packed_p = node_id_.Serialize(node_id_packed_len);
-      assert(node_id_packed_len != 0);
-      data_packer.Add(DATA_PACKER_NODE_ID, node_id_packed_len, node_id_packed_p);
-      data_packer.Add(DATA_PACKER_HANDLE_TYPE, sizeof(HandleType), &handle_type_);
-      data_packer.Add(DATA_PACKER_ADDRESS, sizeof(void*), &address_data_);
-
-      CD_DEBUG("address data is packed : %p\n\n", address_data_);
-
-      data_packer.Add(DATA_PACKER_LEN, sizeof(uint64_t), &len_);
-      data_packer.Add(DATA_PACKER_FILENAME, sizeof(file_name_), file_name_);
- 
-//      uint64_t ref_name_key = cd_hash(ref_name);
-      data_packer.Add(DATA_PACKER_REFNAME, sizeof(uint64_t), &ref_name_); // string.size() + 1 is for '\0'
-      data_packer.Add(DATA_PACKER_REFOFFSET, sizeof(uint64_t), &ref_offset_); 
-
-      CD_DEBUG("\nData Handle Serialize Done\n");
-
-      return data_packer.GetTotalData(len_in_bytes);  
-    }
-    void Deserialize(void *object) 
-    {
-      CD_DEBUG("\nData Handle Deserialize %p\n", object);
-
-      Unpacker data_unpacker;
-      uint32_t return_size;
-      uint32_t dwGetID;
-
-      void *node_id_unpacked=0;
-      node_id_unpacked = data_unpacker.GetNext((char *)object, dwGetID, return_size);
-
-      CD_DEBUG("Before Deserialize node_id\n");
-
-      node_id_.Deserialize(node_id_unpacked);
-      
-      CD_DEBUG("1st unpacked thing in data_handle : %s, return size : %u\n", node_id_.GetString().c_str(), return_size);
-
-      handle_type_ = *(HandleType *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-
-      CD_DEBUG("2nd unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
-
-      void *tmp_address_data = data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      memcpy(&address_data_, tmp_address_data, sizeof(void *));
-
-      CD_DEBUG("3rd unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
-
-      len_ = *(uint64_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-
-      CD_DEBUG("4th unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
-
-      char *file_name_p = (char *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-      strcpy(file_name_, file_name_p);
-
-      CD_DEBUG("5th unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
-
-      ref_name_ = *(uint64_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-
-      CD_DEBUG("6th unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
-
-      ref_offset_ = *(uint64_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
-
-      CD_DEBUG("7th unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
-    }
+    void *Serialize(uint64_t& len_in_bytes);
+    void Deserialize(void *object); 
 
     DataHandle& operator=(const DataHandle& that) {
       handle_type_ = that.handle_type_;

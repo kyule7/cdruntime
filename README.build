@@ -24,8 +24,11 @@ Single-threaded build::
     configure CXXFLAGS="-std=c++11 -Wall -g -O -Wextra -Wundef"
 
 Defaults from original git checkout::
+<For Stampede in TACC>
+    configure --enable-parallel=mpi --enable-logging CXX=mpic++ CXXFLAGS="-std=gnu++0x -Wall -g -O -fPIC" --enable-debug --enable-error-injection --enable-profiler --enable-keep-preservation-files --enable-cd-test 
 
-    configure --enable-parallel=mpi --enable-logging CXX=mpic++ CXXFLAGS="-std=gnu++0x -Wall -g -O -fPIC"  --enable-debug --enable-error-injection --enable-profiler --enable-keep-preservation-files --enable-cd-test 
+<For NERSC machiens>
+    configure --enable-parallel=mpi --enable-logging CXX=CC CXXFLAGS="-std=gnu++0x -Wall -g -O -fPIC" --enable-debug --enable-error-injection --enable-profiler --enable-keep-preservation-files --enable-cd-test 
 
 
 Random

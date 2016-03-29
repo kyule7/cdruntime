@@ -26,6 +26,7 @@
 #define CD_DEBUG_DEST @cd_debug_dest@
 #define CD_ERROR_INJECTION_ENABLED @cd_error_injection_enabled@
 #define CD_MPI_ENABLED @cd_mpi_enabled@
+#define CD_PGAS_ENABLED @cd_pgas_enabled@
 #define CD_COMM_LOG_ENABLED @cd_comm_log_enabled@
 #define CD_LIBC_LOG_ENABLED @cd_libc_log_enabled@
 #define CD_PROFILER_ENABLED @cd_profiler_enabled@

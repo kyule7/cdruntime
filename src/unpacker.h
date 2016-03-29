@@ -44,8 +44,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  */
 #include "cd_global.h"
-#include "cd_def_internal.h" 
 
+namespace cd {
 
 /** \addtogroup utilities Utilities for CD runtime
  *
@@ -65,8 +65,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * and Position is the relative position starting from where consqutive data is located
  *
  */ 
-class cd::Unpacker    
-{
+class Unpacker {
   public:
     
 ///@brief Enumerator internally used in Unpacker.
@@ -115,6 +114,6 @@ class cd::Unpacker
 
 /** @} */ // End group utilities
  
-
+} // namespace cd ends
 
 #endif 
