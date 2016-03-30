@@ -2664,6 +2664,37 @@ CD::CDInternalErrT CD::Assert(bool test)
 
 
 #if _MPI_VER
+#if 1
+  CDHandle *cdh = GetCurrentCD();
+  if(test==false) {
+    if(cdh->task_size() > 1) {
+      // If current level's task_size is larger than 1,
+      // upper-level task_size is always larger than 1.
+      if(IsHead()) {
+        SetRollbackPoint(level(), false);
+      } else { 
+        SetMailBox(kErrorOccurred);
+      }
+    } else {
+      // It is possible that upper-level task_size is larger than 1, 
+      // even though current level's task_size is 1.
+      if(rb_cdh->task_size() > 1) {
+        rb_cdh->SetMailBox(kErrorOccurred);
+        if(rb_cdh->IsHead()) {
+          ptr_cd_->SetRollbackPoint(rollback_point, false);
+        } else {
+          // If the level of rollback_point has more tasks than current task,
+          // let head inform the current task about escalation.
+          ptr_cd_->SetRollbackPoint(level(), false);
+        }
+      } else {
+        // task_size at current level is 1, and
+        // task_size at rollback level is also 1.
+        ptr_cd_->SetRollbackPoint(rollback_point, false);
+      }
+    }
+  }
+#else
   if(test == false) {
     SetRollbackPoint(level(), false);
 //    need_reexec = true;
@@ -2708,6 +2739,7 @@ CD::CDInternalErrT CD::Assert(bool test)
       return internal_err;  // Actually this will not be reached. 
     }
   }
+#endif
 
 //  Sync(color());
 //  

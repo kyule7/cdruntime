@@ -68,7 +68,7 @@ int cd_debug_trace(FILE *stream, const char *source_file,
 }
 
 #define CD_DEBUG_TRACE_INFO(stream, ...) \
-  cd_debug_trace(stream, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+  cd_debug_trace(stream, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__);
 
 #if CD_DEBUG_DEST == CD_DEBUG_SILENT  // No printouts 
 
@@ -151,7 +151,7 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
 
 
 #define CD_PRINT(...) \
-  CD_DEBUG_TRACE_INFO(cdoutApp)
+  CD_DEBUG_TRACE_INFO(cdoutApp, __VA_ARGS__)
 
 
 /**@class cd::DebugBuf
