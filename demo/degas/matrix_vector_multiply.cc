@@ -93,6 +93,7 @@ void MatVecMul(float *A, float *B, float *C, int ydim, int xdim)
   char do_escalate[16];
   char do_reexecute[16];
   struct stat statbuf;
+  FILE *filep = stdout;
   sprintf(do_escalate,  "escalate.%d", rankID);
   sprintf(do_reexecute, "reexecute.%d", rankID);
   CDHandle *root = GetCurrentCD();
@@ -111,20 +112,20 @@ void MatVecMul(float *A, float *B, float *C, int ydim, int xdim)
       child->Preserve(A, sizeof(float)*ydim*xdim, kRef, "arrayA_lv2", "arrayA");
       child->Preserve(B, sizeof(float)*xdim, kRef, "arrayB_lv2", "arrayB");
       temp += A[j*xdim + i] * B[i];
-      fprintf(fp, "Progress: (%d,%d)\n", j, i); fflush(fp);
+      fprintf(filep, "Progress.%d: (%d,%d)\n", rankID, j, i); fflush(filep);
       SLEEP(SLEEP_INTERVAL);
       child->CDAssert(stat(do_reexecute, &statbuf) != 0);
       parent->CDAssert(stat(do_escalate, &statbuf) != 0);
       child->Complete();
-      fprintf(fp, "Completed child %d\n", i); fflush(fp);
+//      fprintf(filep, "Completed child %d\n", i); fflush(filep);
     }
-    fprintf(fp, "\n"); fflush(fp);
+    fprintf(filep, "\n"); fflush(filep);
     child->Destroy();
     C[j] = temp;
     SLEEP(SLEEP_INTERVAL);
     parent->CDAssert(stat(do_escalate, &statbuf) != 0);
     parent->Complete();
-    fprintf(fp, "Completed parent %d\n", j); fflush(fp);
+//    fprintf(filep, "Completed parent %d\n", j); fflush(filep);
   }
   parent->Destroy();
 }

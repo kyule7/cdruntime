@@ -41,7 +41,7 @@ namespace cd {
 
 // DEBUG related
 #define ERROR_MESSAGE(...) \
-  { fprintf(stderr, __VA_ARGS__); assert(0); }
+  { fprintf(stderr, __VA_ARGS__); fflush(stderr); assert(0); }
 
 /* Eric:  Should be using vsnprintf to a buffer with explicit flush, 
  *        Add a comment to this line rather than a pair of fprintf's 
