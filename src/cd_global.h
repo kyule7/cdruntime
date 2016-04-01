@@ -455,6 +455,18 @@ namespace cd {
 
 /** @} */ // end PGAS_funcs ===========================================
 
+
+/** \addtogroup tunable_api 
+ * @{
+ */
+  enum TuningT {
+    kON=0,
+    kSeq=1,
+    kNest=2,
+    kAuto=4
+  };
+  /** @} */ // End tunable_api group 
+
   extern int myTaskID;
   extern int totalTaskSize;
 

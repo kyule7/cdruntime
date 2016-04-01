@@ -1445,32 +1445,18 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
         CD_DEBUG("EIE Reached SetMailBox. recreated? %d, reexecuted? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
         SetMailBox(kErrorOccurred);
         err = kAppError;
-
-        
-        PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
-        CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
-
       }
       else {
-        
-        PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
-        CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
         CheckMailBox();
-
       }
     }
     else {
-      
-//      PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
-//      CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
 //      CheckMailBox();
     }
 */    
 
 #endif
 
-//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
-    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
   }
 
   CheckMailBox();
@@ -1488,6 +1474,116 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
 }
 
+CDHandle *CDHandle::Create(uint32_t onOff,
+                           const char *name, 
+                           int cd_type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask,
+                           bool collective, 
+                           CDErrT *error )
+{
+  return NULL;
+}
+CDHandle *CDHandle::Create(uint32_t onOff,
+                           uint32_t  num_children,
+                           const char *name, 
+                           int cd_type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask, 
+                           CDErrT *error)
+{
+  return NULL;
+}
+CDHandle *CDHandle::Create(uint32_t onOff,
+                           uint32_t color, 
+                           uint32_t task_in_color, 
+                           uint32_t num_children, 
+                           const char *name, 
+                           int cd_type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask, 
+                           CDErrT *error )
+{
+  return NULL;
+}
+CDHandle *CDHandle::CreateAndBegin(uint32_t onOff,
+                                   uint32_t num_children, 
+                                   const char *name, 
+                                   int cd_type, 
+                                   uint32_t error_name_mask, 
+                                   uint32_t error_loc_mask,
+                                   CDErrT *error )
+{
+  return NULL;
+}
+CDErrT CDHandle::Destroy(uint32_t onOff, bool collective) 
+{
+  return kOK;
+}
+  
+  
+CDErrT CDHandle::Begin(uint32_t onOff, bool collective, const char *label, const uint64_t &sys_error_vec)
+{
+  return kOK;
+}
+
+CDErrT CDHandle::Complete(uint32_t onOff, bool collective, bool update_preservation)
+{
+  return kOK;
+}
+CDErrT CDHandle::Preserve(uint32_t onOff,
+                          void *data_ptr, 
+                          uint64_t len, 
+                          uint32_t preserve_mask, 
+                          const char *my_name, 
+                          const char *ref_name, 
+                          uint64_t ref_offset, 
+                          const RegenObject *regen_object, 
+                          PreserveUseT data_usage)
+{
+  return kOK;
+}
+CDErrT CDHandle::Preserve(uint32_t onOff,
+                          Serializable &serdes,                           
+                          uint32_t preserve_mask, 
+                          const char *my_name, 
+                          const char *ref_name, 
+                          uint64_t ref_offset, 
+                          const RegenObject *regen_object, 
+                          PreserveUseT data_usage)
+{
+  return kOK;
+}
+CDErrT CDHandle::Preserve(uint32_t onOff,
+                          CDEvent &cd_event, 
+                          void *data_ptr, 
+                          uint64_t len, 
+                          uint32_t preserve_mask, 
+                          const char *my_name, 
+                          const char *ref_name, 
+                          uint64_t ref_offset, 
+                          const RegenObject *regen_object, 
+                          PreserveUseT data_usage)
+{
+  return kOK;
+}
+std::vector<SysErrT> CDHandle::Detect(uint32_t onOff, CDErrT *err_ret_val)
+{
+  return std::vector<SysErrT>();
+}
+
+CDErrT CDHandle::CDAssert(uint32_t onOff, bool test, const SysErrT *error_to_report)
+{
+  return kOK;
+}
+CDErrT CDHandle::CDAssertFail(uint32_t onOff, bool test_true, const SysErrT *error_to_report)
+{
+  return kOK;
+}
+CDErrT CDHandle::CDAssertNotify(uint32_t onOff, bool test_true, const SysErrT *error_to_report)
+{
+  return kOK;
+}
 CDErrT CDHandle::RegisterRecovery (uint32_t error_name_mask, uint32_t error_loc_mask, RecoverObject *recover_object)
 {
   CDPrologue();
@@ -1716,6 +1812,11 @@ jmp_buf* CDHandle::jump_buffer()
   }
 } 
 */
+
+
+
+
+
 
 bool     CDHandle::recreated(void)     const { return ptr_cd_->recreated_; }
 bool     CDHandle::reexecuted(void)    const { return ptr_cd_->reexecuted_; }
