@@ -1747,8 +1747,6 @@ void CD::DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object,
       unpacked_entry_p = entry_dir_unpacker.GetNext(begin + i  *unit_size, dwGetID, return_size);
       if(unpacked_entry_p == NULL) {
 
-//      cddbg<<"DESER new ["<< cnt++ << "] i: "<< i <<"\ndwGetID : "<< dwGetID << endl;
-//      cddbg<<"return size : "<< return_size << endl;
   
         break;
       }
@@ -1944,200 +1942,8 @@ PrvMediumT CD::GetPlaceToPreserve()
   return prv_medium_;
 }
 
-#if 0
-bool CD::TestReqComm(bool is_all_valid)
-{
-  cddbg << "\nCD::TestReqComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl
-      << "entry request req Q size : " << entry_request_req_.size() <<endl; cddbg.flush();
-  is_all_valid = true;
-  for(auto it=entry_request_req_.begin(); it!=entry_request_req_.end(); ) {
-    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-
-    if(it->second.valid_) {
-      cddbg << it->second.valid_ << " ";
-      entry_request_req_.erase(it++);
-    }
-    else {
-      cddbg << it->second.valid_ << " ";
-      is_all_valid &= it->second.valid_;
-      ++it;
-    }
-  }
-  cddbg << endl;
-  cddbg << "TestReqComm end"<<endl; cddbg.flush();
-  return is_all_valid;
-}
-
-bool CD::TestRecvComm(bool is_all_valid)
-{
-  cddbg << "\nCD::TestReqComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl
-      << "entry request req Q size : " << entry_recv_req_.size() <<endl; cddbg.flush();
-  is_all_valid = true;
-  for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ) {
-    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-
-    if(it->second.valid_) {
-      cddbg << it->second.valid_ << " ";
-      entry_recv_req_.erase(it++);
-    }
-    else {
-      cddbg << it->second.valid_ << " ";
-      is_all_valid &= it->second.valid_;
-      ++it;
-    }
-  }
-  cddbg << endl; 
-  cddbg << "TestRecvComm end"<<endl; cddbg.flush();
-  return is_all_valid;
-}
 
 
-bool CD::TestComm(bool test_until_done)
-{
-  cddbg << "\nCD::TestComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl;
-  cddbg << "entry req Q size : " << entry_req_.size() << endl 
-       << "\nentry recv Q size : " << entry_recv_req_.size() << endl
-      << "entry request req Q size : " << entry_request_req_.size() <<endl; cddbg.flush();
-//       << "\nentry search Q size : " << entry_search_req_.size()
-//       << "\nentry recv Q size : " << entry_recv_req_.size()
-//       << "\nentry send Q size : " << entry_send_req_.size() << endl;
-  bool is_all_valid = true;
-  is_all_valid = TestReqComm(is_all_valid);
-  cddbg << "==================" << endl; cddbg.flush(); 
-
-//
-//  for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ) {
-//    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-//
-//    if(it->second.valid_) {
-//      entry_recv_req_.erase(it++);
-//    }
-//    else {
-//      cout << it->second.valid_ << " ";
-//      is_all_valid &= it->second.valid_;
-//      ++it;
-//    }
-//  }
-//
-//  for(auto it=entry_send_req_.begin(); it!=entry_send_req_.end(); ) {
-//    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-//
-//    if(it->second.valid_) {
-//      entry_send_req_.erase(it++);
-//    }
-//    else {
-//      cout << it->second.valid_ << " ";
-//      is_all_valid &= it->second.valid_;
-//      ++it;
-//    }
-//  }
-
-
-  for(auto it=entry_req_.begin(); it!=entry_req_.end(); ) {
-  cddbg << "+++" << endl; cddbg.flush(); 
-    PMPI_Test(&(it->req_), &(it->valid_), &(it->stat_));
-
-    if(it->valid_) {
-      cddbg << it->valid_ << " ";
-      is_all_valid &= it->valid_;
-      entry_req_.erase(it++);
-    }
-    else {
-      cddbg << it->valid_ << " ";
-      is_all_valid &= it->valid_;
-      ++it;
-    }
-  }
-  cddbg << endl;
-  cddbg << "Is all valid : " << is_all_valid << endl;
-  cddbg.flush();
-  return is_all_valid;
-}
-
-#endif
-
-
-//bool HeadCD::TestComm(bool test_until_done)
-//{
-//  cddbg << "\nHeadCD::TestComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl;
-//  cout << "\nHeadCD::TestComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl;
-//  cout << "entry request Q size : " << entry_request_req_.size()
-//       << "\nentry search Q size : " << entry_search_req_.size()
-//       << "\nentry recv Q size : " << entry_recv_req_.size()
-//       << "\nentry send Q size : " << entry_send_req_.size() << endl;
-//  bool is_all_valid = true;
-//
-//  for(auto it=entry_request_req_.begin(); it!=entry_request_req_.end(); ) {
-//    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-//
-//    if(it->second.valid_) {
-//      entry_request_req_.erase(it++);
-//    }
-//    else {
-//      cout << it->second.valid_ << " ";
-//      is_all_valid &= it->second.valid_;
-//      ++it;
-//    }
-//  }
-//
-//
-//  for(auto it=entry_search_req_.begin(); it!=entry_search_req_.end(); ) {
-//    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-//
-//    if(it->second.valid_) {
-//      entry_search_req_.erase(it++);
-//    }
-//    else {
-//      cout << it->second.valid_ << " ";
-//      is_all_valid &= it->second.valid_;
-//      ++it;
-//    }
-//  }
-//
-//  // Here is the same as CD::TestComm
-//
-//  for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ) {
-//    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-//
-//    if(it->second.valid_) {
-//      entry_recv_req_.erase(it++);
-//    }
-//    else {
-//      cout << it->second.valid_ << " ";
-//      is_all_valid &= it->second.valid_;
-//      ++it;
-//    }
-//  }
-//
-//  for(auto it=entry_send_req_.begin(); it!=entry_send_req_.end(); ) {
-//    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-//
-//    if(it->second.valid_) {
-//      entry_send_req_.erase(it++);
-//    }
-//    else {
-//      cout << it->second.valid_ << " ";
-//      is_all_valid &= it->second.valid_;
-//      ++it;
-//    }
-//  }
-//
-//  for(auto it=entry_req_.begin(); it!=entry_req_.end(); ) {
-//    PMPI_Test(&(it->req_), &(it->valid_), &(it->stat_));
-//
-//    if(it->valid_) {
-//      entry_req_.erase(it++);
-//    }
-//    else {
-//      cout << it->valid_ << " ";
-//      is_all_valid &= it->valid_;
-//      ++it;
-//    }
-//  }
-//
-//  cout << endl;
-//  return is_all_valid;
-//} 
 
 /* This is old comments, but left here just in case.
  *
@@ -2202,7 +2008,6 @@ CDErrT CD::Preserve(void *data,
             CHECK_PRV_TYPE(preserve_mask, kCoop));
 
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
-//    cddbg<<"my_name "<< my_name<<endl;
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : 
               return CDErrT::kOK;
@@ -2992,127 +2797,6 @@ HeadCD::HeadCD( CDHandle *cd_parent,
 }
 
 
-//CD::CDInternalErrT CD::CreateInternalMemory(CD *cd_ptr, const CDID& new_cd_id)
-//{
-//  int task_count = new_cd_id.task_count();
-//  cddbg << "in CD::Create Internal Memory"<<endl;
-//  if(task_count > 1) {
-//    for(int i=0; i<task_count; ++i) {
-//    
-//      PMPI_Win_create(NULL, 0, 1,
-//                     PMPI_INFO_NULL, new_cd_id.color(), &((cd_ptr->mailbox_)[i]));
-//  
-//    }
-//  }
-//  else {
-//    cddbg << "CD::mpi win create for "<< task_count << " mailboxes"<<endl;
-//    PMPI_Win_create(NULL, 0, 1,
-//                   PMPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
-//    
-//  }
-//
-//  return CD::CDInternalErrT::kOK;
-//}
-//
-//
-//CD::CDInternalErrT CD::DestroyInternalMemory(CD *cd_ptr)
-//{
-//
-//  cddbg << "in CD::Destroy Internal Memory"<<endl;
-//  int task_count = cd_id_.task_count();
-//  if(task_count > 1) {
-//    cddbg << "mpi win free for "<< task_count << " mailboxes"<<endl;
-//    for(int i=0; i<task_count; ++i) {
-//      cddbg << i << endl;
-//      PMPI_Win_free(&(cd_ptr->mailbox_[i]));
-//    }
-//  }
-//  else {
-//    cddbg << "mpi win free for one mailbox"<<endl;
-//    PMPI_Win_free(cd_ptr->mailbox_);
-//  }
-//
-//  return CD::CDInternalErrT::kOK;
-//}
-
-//CD::CDInternalErrT HeadCD::CreateInternalMemory(HeadCD *cd_ptr, const CDID& new_cd_id)
-//{
-//  cddbg << "HeadCD create internal memory " << endl;
-//  int task_count = new_cd_id.task_count();
-//#if _MPI_VER
-////  if(new_cd_id.color() == PMPI_COMM_WORLD) {
-////    cddbg << "\n\nthis is root! " << task_count << "\n\n"<<endl;
-////    PMPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
-////                  PMPI_INFO_NULL, &event_flag_);
-////    mailbox_ = new CDMailBoxT[task_count];
-////    for(int i=0; i<task_count; ++i) {
-////      PMPI_Win_create(&((event_flag_)[i]), 1, sizeof(CDFlagT),
-////                     PMPI_INFO_NULL, PMPI_COMM_WORLD, &((mailbox_)[i]));
-////    }
-////
-////
-////    exit(-1);
-////    return CD::CDInternalErrT::kOK;
-////  }
-//
-//  PMPI_Alloc_mem(sizeof(CDFlagT)*task_count, 
-//                PMPI_INFO_NULL, &(cd_ptr->event_flag_));
-//
-//  if(task_count > 1) {
-//
-//    cddbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
-//    mailbox_ = new CDMailBoxT[task_count];
-//    for(int i=0; i<task_count; ++i) {
-//      PMPI_Win_create(&((cd_ptr->event_flag_)[i]), 1, sizeof(CDFlagT),
-//                     PMPI_INFO_NULL, new_cd_id.color(), &((cd_ptr->mailbox_)[i]));
-//    }
-//
-////      PMPI_Win_create(event_flag_, task_count, sizeof(CDFlagT),
-////                     PMPI_INFO_NULL, new_cd_id.color(), mailbox_);
-//
-//  }
-//  else {
-//    cddbg << "HeadCD mpi win create for "<< task_count << " mailboxes"<<endl;
-//    PMPI_Win_create(cd_ptr->event_flag_, task_count, sizeof(CDFlagT),
-//                   PMPI_INFO_NULL, new_cd_id.color(), cd_ptr->mailbox_);
-//    
-//  }
-//
-////  PMPI_Win_allocate(task_count*sizeof(CDFlagT), sizeof(CDFlagT), PMPI_INFO_NULL, new_cd_id.color(), &event_flag_, &mailbox_);
-//  //cddbgBreak();
-//#endif
-//  return CD::CDInternalErrT::kOK;
-//}
-//
-//CD::CDInternalErrT HeadCD::DestroyInternalMemory(HeadCD *cd_ptr)
-//{
-//#if _MPI_VER
-//  cddbg << "in HeadCD::Destroy"<<endl;
-//  int task_count = cd_id_.task_count();
-//  if(task_count > 1) {
-//    cddbg << "HeadCD mpi win free for "<< task_count << " mailboxes"<<endl;
-//    for(int i=0; i<task_count; ++i) {
-//      cddbg << i << endl;
-//      PMPI_Win_free(&(cd_ptr->mailbox_[i]));
-//    }
-//  }
-//  else {
-//    cddbg << "HeadCD mpi win free for one mailbox"<<endl;
-//    PMPI_Win_free(cd_ptr->mailbox_);
-//  }
-//  PMPI_Free_mem(cd_ptr->event_flag_);
-//
-//
-//
-////  PMPI_Win_free(&mailbox_);
-//#endif
-//  return CD::CDInternalErrT::kOK;
-//}
-
-
-
-
-
 
 HeadCD::~HeadCD()
 {
@@ -3316,8 +3000,8 @@ CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name)
       return cd_entry;
   }
   else {
-    cddbg << "ERROR: there is the same name of entry in entry_directory_map and remote_entry_directory_map.\n"<< endl;
-    assert(0);
+    ERROR_MESSAGE("ERROR: there is the same name of entry in \
+        entry_directory_map and remote_entry_directory_map.\n");
   }
 //  }
 //  catch (const std::out_of_range &oor) 
@@ -3328,54 +3012,11 @@ CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name)
 }
 
 
-//#if _MPI_VER
-//CDFlagT *CD::event_flag(void)
-//{
-//  return event_flag_;
-//}
-//
-//CDFlagT *HeadCD::event_flag(void)
-//{
-//  return event_flag_;
-//}
-//#endif
-
 
 void CD::DeleteEntryDirectory(void)
 {
-//  cddbg<<"Delete Entry In"<<endl; cddbgBreak();
-  for(std::list<CDEntry>::iterator it = entry_directory_.begin();
-      it != entry_directory_.end(); ) {
-
-
-/*Serializer test
-    uint32_t entry_len=0;
-    void *ser_entry = it->Serialize(entry_len);
-
-    cddbg << "ser entry : "<< ser_entry << endl;
-    CDEntry new_entry;
-    cddbg << "\n\n--------------------------------\n"<<endl;
-    new_entry.Deserialize(ser_entry);
-    cddbg << "before!!!! " << (it->src_data_).address_data()<<endl<<endl;
-    cddbg << "\n\n\nafter!!!! " << new_entry.src_data_.address_data()<<endl;
-
-    cddbg << "before!!!! " << it->name() <<endl<<endl;
-    cddbg << "\n\n\nafter!!!! " << new_entry.name()<<endl;
-    cddbg << (*it == new_entry) << endl;
-*/
-
-
-//    uint32_t data_handle_len=0;
-//    cddbg << "=========== Check Ser ==============" << endl;
-//    cddbg <<"[Before packed] :\t"<< it->dst_data_.node_id_ << endl << endl;
-//    void *ser_data_handle = (it->dst_data_).Serialize(data_handle_len);
-//    DataHandle new_data_handle;
-//    new_data_handle.Deserialize(ser_data_handle);
-//
-//    cddbg <<"\n\n\noriginal : "<<(it->dst_data_).file_name() << endl;
-//    cddbg <<"[After unpacked] :\t"<<new_data_handle.node_id_ << endl << endl;
-//    cddbgBreak();
-
+  for(auto it = entry_directory_.begin();
+           it != entry_directory_.end(); ) {
     it->Delete();
     entry_directory_map_.erase(it->name_tag());
     remote_entry_directory_map_.erase(it->name_tag());
@@ -3383,26 +3024,7 @@ void CD::DeleteEntryDirectory(void)
   }
 
   CD_DEBUG("Delete entry directory!\n");
-
-//  for(std::map<std::string, CDEntry*>::iterator it = entry_directory_map_.begin();
-//      it != entry_directory_map_.end(); ++it) {
-//    //entry_directory_map_.erase(it);
-//  }
-//  cddbg<<"Delete Entry Out"<<endl; cddbgBreak();
 }
-
-
-
-
-
-//char *CD::GenTag(const char *tag)
-//{
-//  Tag tag_gen;
-//  CDNameT cd_name = ptr_cd()->GetCDName();
-//  tag_gen << tag << node_id_.task_in_color_ <<'-'<<cd_name.level()<<'-'<<cd_name.rank_in_level();
-//  return const_cast<char*>(tag_gen.str().c_str());
-//}
-
 
 
 
@@ -3813,11 +3435,7 @@ void CD::PrintIncompleteLog()
     LOG_DEBUG("    isrecv_=%d\n", ii->isrecv_);
   }
 }
-#endif
-//commLog ends 
-
-//CDType CD::GetCDType()
-//{ return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
+#endif //commLog ends 
 
 CD::CDInternalErrT CD::InvokeAllErrorHandler(void) {
   CDInternalErrT err = kOK;
@@ -3829,63 +3447,30 @@ CD::CDInternalErrT CD::InvokeAllErrorHandler(void) {
   return err;
 }
 
-
 CD::CDInternalErrT CD::InvokeErrorHandler(void)
 {
-//  CD_DEBUG("\n[CD::InvokeErrorHandler] event queue size : %zu\n", cd_event_.size());
   CDInternalErrT cd_err = kOK;
 
   while(!cd_event_.empty()) {
-    CD_DEBUG("\n\n==============================\ncd event size : %zu\n", cd_event_.size());
+    CD_DEBUG("==============================\ncd event size : %zu\n", cd_event_.size());
 
     EventHandler *cd_event_handler = cd_event_.front();
     cd_event_handler->HandleEvent();
-//    delete cd_event_handler;
+    delete cd_event_handler;
     CD_DEBUG("before pop #%zu\n", cd_event_.size());
     cd_event_.pop_front();
     CD_DEBUG("after  pop #%zu\n", cd_event_.size());
     if(cd_event_.empty()) break;
   }
   
-#if _MPI_VER
-//  CD_DEBUG("Handled : %d, current pending flag (# pending events) : %d\n", handled_event_count, *pendingFlag_);
-#endif
-
-
   return cd_err;
 }
-
-//CD::CDInternalErrT HeadCD::InvokeErrorHandler(void)
-//{
-//  cddbg << "HeadCD::CDInternalErrT CD::InvokeErrorHandler(void), event queue size : " << cd_event_.size() << ", (head) event queue size : " << cd_event_.size()<< endl;
-//  CDInternalErrT cd_err = kOK;
-//
-//  while(!cd_event_.empty()) {
-//    EventHandler *headcd_event_handler = cd_event_.back();
-//    headcd_event_handler->HandleEvent();
-//    delete headcd_event_handler;
-//    cd_event_.pop_back();
-//  }
-//  while(!cd_event_.empty()) {
-//    EventHandler *cd_event_handler = cd_event_.back();
-//    cd_event_handler->HandleEvent();
-//    delete cd_event_handler;
-//    cd_event_.pop_back();
-//  }
-//
-//
-//  cddbg << "Handled event count : " << handled_event_count << endl;
-//  cddbg << "currnt pending count : " << *pendingFlag_ << endl;
-//
-//
-//
-//  return cd_err;
-//}
 
 void *CD::Serialize(uint64_t &len_in_bytes)
 {
   return (void *)&len_in_bytes;
 }
+
 void CD::Deserialize(void *object)
 {
   printf("Deserialize(%p)\n", object);
@@ -3895,13 +3480,11 @@ void *HeadCD::Serialize(uint64_t &len_in_bytes)
 {
   return (void *)&len_in_bytes;
 }
+
 void HeadCD::Deserialize(void *object)
 {
   printf("Deserialize(%p)\n", object);
 }
-//-------------------------------------------------------
-
-
 
 CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
 {
@@ -3922,10 +3505,8 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
 //    if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
 
 //    CDEntry *entry = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
-//    cddbg <<"ref name: "    << entry->dst_data_.ref_name() 
-//              << ", at level: " << entry->ptr_cd()->GetCDID().level()<<endl;
+//    CD_DEBUG("ref_name: %s at level#%u\n", entry->dst_data_.ref_name(), entry->ptr_cd()->GetCDID().level());
 //    if( entry != 0 ) {
-
       //Here, we search Parent's entry and Parent's Parent's entry and so on.
       //if ref_name does not exit, we believe it's original. 
       //Otherwise, there is original copy somewhere else, maybe grand parent has it. 
@@ -3971,72 +3552,6 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
   return entry;
 }
 
-/*
-
-CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
-{
-    cddbg << "Search Entry : " << entry_tag_to_search << "(" << tag2str[entry_tag_to_search] <<")"<< endl;
-    CDHandle *parent_cd = CDPath::GetParentCD();
-    CDEntry *entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(entry_tag_to_search);
-
-    cddbg<<"parent name: "<<parent_cd->GetName()<<endl;
-    if(entry_tmp != NULL) { 
-      cddbg << "parent dst addr : " << entry_tmp->dst_data_.address_data()
-                << ", parent entry name : " << entry_tmp->dst_data_.ref_name()<<endl;
-    } else {
-      cddbg<<"there is no reference in parent level"<<endl;
-    }
-//    if( ptr_cd_ == 0 ) { ERROR_MESSAGE("Pointer to CD object is not set."); assert(0); }
-
-//    CDEntry *entry = parent_cd->ptr_cd()->InternalGetEntry(entry_tag_to_search);
-//    cddbg <<"ref name: "    << entry->dst_data_.ref_name() 
-//              << ", at level: " << entry->ptr_cd()->GetCDID().level()<<endl;
-//    if( entry != 0 ) {
-
-      //Here, we search Parent's entry and Parent's Parent's entry and so on.
-      //if ref_name does not exit, we believe it's original. 
-      //Otherwise, there is original copy somewhere else, maybe grand parent has it. 
-
-      CDEntry *entry = NULL;
-      while( parent_cd != NULL ) {
-        cddbg << "InternalGetEntry at Level: " << parent_cd->ptr_cd()->GetCDID().level()<<endl;
-        entry = parent_cd->ptr_cd()->InternalGetEntry(entry_tag_to_search);
-
-        if(entry != NULL) {
-          found_level = parent_cd->ptr_cd()->level();
-          cout<<"\n\nI got my reference here!! found level: " << found_level << endl;
-          cout <<"Current entry name : "<< entry->name() << " with ref name : "  << entry->dst_data_.ref_name() 
-                  << ", at level: " << found_level<<endl;
-          break;
-        }
-        else {
-          parent_cd = CDPath::GetParentCD(parent_cd->ptr_cd()->level());
-          if(parent_cd != NULL) cddbg<< "Gotta go to upper level! -> " << parent_cd->GetName() << " at level "<< parent_cd->ptr_cd()->GetCDID().level() << endl;
-        }
-        cddbg.flush();
-      } 
-      if(parent_cd == NULL) entry = NULL;
-      cddbg<<"--------- CD::SearchEntry Done. Check entry " << entry <<", at " << GetNodeID() << " -----------" << endl; //(int)(entry ===NULL)<endl;
-      cddbg.flush();
-//       
-//
-//      // preservation via reference for remote copy.
-//      if(parent_cd == NULL) {
-//        if(entry == NULL) {
-//          AddEntryToSend(entry_tag_to_search);
-//          RequestEntrySearch(entry_tag_to_search);
-//        }
-//        else {
-//          cerr << "Something is wrong. It failed to search entry at local task, but an entry is populated somehow.\n" << endl;
-//          assert(0);
-//        }
-//      }
-  return entry;
-}
-*/
-
-
-
 
 //void CD::AddEntryToSend(const ENTRY_TAG_T &entry_tag_to_search) 
 //{
@@ -4046,9 +3561,8 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
 //
 //void CD::RequestEntrySearch(void)
 //{
-//  cddbg << "REQ" << endl;
 //  for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ++it) {
-//    cddbg << tag2str[*it] << endl;
+//    cout << tag2str[*it] << endl;
 //  }
 ////  PMPI_Status status;
 ////  void *entry_list_to_search;

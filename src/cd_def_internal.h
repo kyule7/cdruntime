@@ -581,7 +581,6 @@ extern CD_CLOCK_T mailbox_elapsed_time;
 #define CD_DEFAULT_PRV_BASEPATH "./"
 #define CD_DEFAULT_PRV_FILENAME "prv_files_%s_XXXXXX"
 #define CD_DEFAULT_FILEPATH "./prv_files_XXXXXX"
-#define CD_DEFAULT_DEBUG_OUT "./debug_logs/"
 
 #define DEFAULT_INCOMPL_LOG_SIZE 64
 

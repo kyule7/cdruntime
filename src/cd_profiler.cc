@@ -100,7 +100,6 @@ attrIf *Attribute::attrScope;
 void CDProfiler::StartProfile(const string &label)
 {
   CD_DEBUG("current_label : %s, label : %s\n", current_label_.c_str(), label.c_str());
-  cddbg << "current_label_ : " << current_label_ << ", label : " << label << endl;
 
 //  cout << "current_label_ : " << current_label_ << ", label : " << label << endl; //getchar();
   /// Timer on
@@ -158,8 +157,6 @@ void CDProfiler::InitViz()
 //    assert(0);
 //  }
 
-//  cddbg<< "\n---------------- Initialize Visualization --------------\n" <<endl;
-  //cddbgBreak();
 
   //SightInit(txt()<<"CDs", txt()<<"cddbg_CDs_"<<GetCDID().node_id().color()<<"_"<< GetCDID().node_id().task_in_color() );
   SightInit(txt()<<"CDs", txt()<<"cddbg_CDs_"<< GetRootCD()->task_in_color() );
@@ -195,13 +192,13 @@ void CDProfiler::InitViz()
 
 void CDProfiler::FinalizeViz(void)
 {
-  cddbg<< "\n---------------- Finalize Visualization --------------\n" <<endl;
+  CD_DEBUG("---------------- Finalize Visualization --------------\n");
 
   // Only root should call this (inside CD_Finalize)
 //  if( GetCurrentCD() != GetRootCD() ) assert(0);
 
   // Destroy SightObj
-  cddbg << "reached here? becore while in FinalizeViz() " << endl;
+  CD_DEBUG("reached here? becore while in FinalizeViz()\n");
 
 #if _ENABLE_SCOPE
 #if _ENABLE_GRAPH
@@ -287,7 +284,7 @@ void CDProfiler::Delete(void)
 
 void CDProfiler::FinishProfile(void) // it is called in Destroy()
 {
-  cddbg<< "\n\t-------- Finish Profile --------\n" <<endl;
+  CD_DEBUG("-------- Finish Profile --------\n");
 
   // outputs the preservation / detection info
   /// Timer off
@@ -345,7 +342,7 @@ void CDProfiler::RecordClockEnd()
 
 void CDProfiler::GetLocalAvg(void)
 {
-  cddbg<<"Master CD Get Local Avg"<<endl;
+  CD_DEBUG("Master CD Get Local Avg\n");
 //  for(int i=1; i < MAX_PROFILE_DATA-1; ++i) {
 //    profile_data_[current_label_][i] /= profile_data_[current_label_][LOOP_COUNT];
 //  }
@@ -382,7 +379,6 @@ Scope::Scope(Scope *parent_scope, CDProfiler *profiler) : Viz(profiler)
 
 Scope::~Scope(void)
 {
-//  cddbg << " >>> Scope  Test -- "<<this->this_cd_->cd_id_<<", #sStack="<<sStack.size()<<endl;
   assert(s != NULL);
   delete s;
 }
@@ -399,7 +395,6 @@ Module::Module(CDProfiler *profiler, bool usr_profile_en) : Viz(profiler)
   LabelT &current_label_ = profiler->current_label_;
 //  CDHandle *cdh = GetCurrentCD();
   string label = GetCurrentCD()->profiler_->label();
-//  cddbg<<"CreateModule call"<<endl;
   NodeID node_id = GetCurrentCD()->node_id();
   bool isReference = node_id.task_in_color() == 0;
   usr_profile_enable = usr_profile_en;
@@ -412,7 +407,6 @@ Module::Module(CDProfiler *profiler, bool usr_profile_en) : Viz(profiler)
 // CD_OVERHEAD, 
 // LOGGING_OVERHEAD, 
   if(usr_profile_enable==false) {
-//    cddbg<<"\n[[[[Module object created]]]]"<<endl<<endl; //cddbgBreak();
     m = new compModule( instance(txt()<<label<<"_"<<GetCurrentCD()->ptr_cd()->GetCDName(), 1, 0), 
                     inputs(port(context("Sequential CDs #",(long)profile_data_[current_label_][LOOP_COUNT],
                                         "Exec cycle", (long)profile_data_[current_label_][EXEC_CYCLE],
@@ -428,7 +422,6 @@ Module::Module(CDProfiler *profiler, bool usr_profile_en) : Viz(profiler)
   }
   else {
   
-//    cddbg<<22222<<endl<<endl; cddbgBreak();
 //    m = new module( instance(txt()<<label<<"_"<<GetCurrentCD()->ptr_cd()->GetCDName(), 2, 2), 
 //                    inputs(port(context("cd_id", txt()<<node_id.task_in_color(), 
 //                                        "sequential_id", (int)(GetCurrentCD()->ptr_cd()->GetCDID().sequential_id()))),
@@ -437,7 +430,6 @@ Module::Module(CDProfiler *profiler, bool usr_profile_en) : Viz(profiler)
     //this->mStack.push_back(m);
   }
 
-//  cddbg << "[[[ Module Test -- "<<this->this_cd_->cd_id_<<", #mStack="<<mStack.size()<<endl;
 }
 
 
@@ -554,7 +546,6 @@ Comparison::~Comparison(void)
 #if _ENABLE_HIERGRAPH
 HierGraph::HierGraph(CDProfiler *profiler) : Viz(profiler)
 {
-  cddbg<<"CreateHierGraph call"<<endl;
   NodeID node_id = GetCurrentCD()->node_id();
   CDID   cd_id = GetCurrentCD()->ptr_cd()->GetCDID();
 

@@ -200,7 +200,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   char app_dbg_filepath[256]={};
   snprintf(app_dbg_filepath, 256, "%s%s%d", dbg_basepath.c_str(), app_dbg_log_filename, myTaskID);
 //  printf("app dbg filepath : %s\n", app_dbg_filepath);
-  cddbg.open(app_dbg_filepath);
+  cddbg.setpath(app_dbg_filepath);
 #endif
 
   // Base filepath setup for preservation
@@ -240,10 +240,6 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   // To be safe
   CDHandle::memory_error_injector_ = NULL;
   CDHandle::system_error_injector_ = new SystemErrorInjector(system_config);
-#endif
-
-#if CD_DEBUG_ENABLED
-  cddbg.flush();
 #endif
 
   //GONG
@@ -626,7 +622,6 @@ CDHandle::CDHandle()
 //  if(node_id().size() > 1)
 //    PMPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), PMPI_INFO_NULL, PMPI_COMM_WORLD, &pendingWindow_);
 //  else
-//    cddbg << "KL : size is 1" << endl;
   
 }
 
@@ -655,7 +650,6 @@ CDHandle::CDHandle(CD *ptr_cd)
 //  if(node_id_.size() > 1)
 //    PMPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), PMPI_INFO_NULL, PMPI_COMM_WORLD, &pendingWindow_);
 //  else
-//    cddbg << "KL : size is 1" << endl;
 }
 
 CDHandle::~CDHandle()
@@ -1637,11 +1631,8 @@ void CDHandle::CommitPreserveBuff()
   CDPrologue();
 //  if(ptr_cd_->cd_exec_mode_ ==CD::kExecution){
   if( ptr_cd_->ctxt_prv_mode_ == kExcludeStack) {
-//  cddbg << "Commit jmp buffer!" << endl; cddbgBreak();
-//  cddbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << ", size: "<< sizeof(jmp_buf) << endl; cddbgBreak();
     memcpy(ptr_cd_->jmp_buffer_, jmp_buffer_, sizeof(jmp_buf));
     ptr_cd_->jmp_val_ = jmp_val_;
-//  cddbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << endl; cddbgBreak();
   }
   else {
 //    ptr_cd_->ctxt_ = this->ctxt_;

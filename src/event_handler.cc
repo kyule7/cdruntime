@@ -452,14 +452,11 @@ void HandleAllPause::HandleEvent(void)
 #if 0
   if(ptr_cd_->task_size() == 1) return;
   
-  cddbg << "CD Event kAllPause\t\t\t";
   *(ptr_cd_->event_flag_) &= ~kAllPause;
   IncHandledEventCounter();
-  cddbg << "Barrier resolved" << endl;
   PMPI_Barrier(ptr_cd_->color());
   cout << "\n\n[Barrier] HandleAllPause::HandleEvent " << ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl;
 
-  cddbg << "Barrier resolved" << endl;
 
   if( CHECK_EVENT(*(ptr_cd_->event_flag_), kAllReexecute) ) {
     ptr_cd_->need_reexec = true;
@@ -693,14 +690,11 @@ void HandleErrorOccurred::HandleEvent(void)
   if(error_handled) {
     // Resume
 
-    cddbg << "HeadCD Event kErrorOccurred";
     ptr_cd_->event_flag_[task_id] &= ~kErrorOccurred;
 
 
-//    cddbg << "Barrier resolved" << endl;
 //    PMPI_Barrier(ptr_cd_->color());
 //    cout << "\n\n[Barrier] HandleErrorOccurred::HandleEvent, normal "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; //getchar();
-//    cddbg << "Barrier resolved" << endl;
 
     // reset this flag for the next error
     // This will be invoked after CheckMailBox is done, 
@@ -716,7 +710,6 @@ void HandleErrorOccurred::HandleEvent(void)
     }
 
     // Resume
-    cddbg << "HeadCD Event kErrorOccurred";
     ptr_cd_->event_flag_[task_id] &= ~kErrorOccurred;
     IncHandledEventCounter();
 

@@ -37,7 +37,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define _CD_DEF_DEBUG_H
 
 #include "cd_features.h"
+#include <string>
 namespace cd {
+#define CD_DEFAULT_DEBUG_OUT "./debug_logs/"
 
 // DEBUG related
 #define ERROR_MESSAGE(...) \
@@ -171,21 +173,34 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
  *  dbg.close();
  */ 
   class DebugBuf: public std::ostringstream {
+    std::string filepath_;
+    bool is_open_;
     std::ofstream ofs_;
   public:
-    ~DebugBuf() {}
-    DebugBuf(void) {}
-    DebugBuf(const char *filename) 
-      : ofs_(filename) {}
+    ~DebugBuf(void) {}
+    DebugBuf(void) {
+      std::string fname("dbg");
+      filepath_ = std::string(CD_DEFAULT_DEBUG_OUT) + fname;
+      is_open_ = false;
+    }
+    
+    DebugBuf(const char *filepath) 
+      : filepath_(filepath), is_open_(false) {}
+
+    void setpath(const std::string &filepath)
+    {
+      filepath_ = filepath;
+    }
 /**
  * @brief Open a file to write debug information.
  *
  */
-    void open(const char *filename)
+    void open()
     {
       bool temp = app_side;
       app_side = false;
-      ofs_.open(filename);
+      ofs_.open(filepath_);
+      is_open_ = true;
       app_side = temp;
     }
 
@@ -197,7 +212,10 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
     {
       bool temp = app_side;
       app_side = false;
+      if(is_open_ == false) 
+        return;
       ofs_.close();
+      is_open_ = false;
       app_side = temp;
     }
 
@@ -211,6 +229,8 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
     {
       bool temp = app_side;
       app_side = false;
+      if(is_open_ == false) 
+        open();
       ofs_ << str();
       ofs_.flush();
       str("");
@@ -224,6 +244,8 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
     {
       bool temp = app_side;
       app_side = false;
+      if(is_open_ == false) 
+        open();
       std::ostream &os = std::ostringstream::operator<<(val);
       app_side = temp;
       return os;
@@ -232,7 +254,6 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
   };
 
 #if CD_DEBUG_ENABLED
-//  extern std::ostringstream dbg;
   extern DebugBuf cddbg;
 #define dbgBreak nullFunc
 #else
