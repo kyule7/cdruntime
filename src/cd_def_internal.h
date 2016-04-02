@@ -258,6 +258,7 @@ namespace cd {
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
 
   extern int myTaskID;
+  extern CDHandle *null_cd;
 #if CD_MPI_ENABLED
   extern MPI_Group whole_group;
 //  extern int handled_event_count;

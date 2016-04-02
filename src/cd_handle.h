@@ -202,6 +202,7 @@ class CDHandle {
 /** @} */ // End cd_split and user_interfaces
 
   private:
+    bool  null_handle_;
     CD    *ptr_cd_;   //!< Pointer to CD object which will not exposed to users.
     NodeID node_id_;  //!< NodeID contains the information to access to the task.
 
@@ -225,7 +226,7 @@ class CDHandle {
     ucontext_t &ctxt_;     //!< Temporary buffer related to setcontext/getcontext
 
   private:
-    CDHandle(void); //!< Default constructor of CDHandle. 
+    CDHandle(bool null_handle=false); //!< Default constructor of CDHandle. 
 
     CDHandle(CD *ptr_cd); //!< Normally this constructor will be called when CD is created. 
                                                  //!<CDHandle pointer is returned when `CDHandle::Create()` is called.
@@ -732,7 +733,7 @@ class CDHandle {
    *
    * @return any errors or failures detected during this CDs execution.
    */
-    std::vector<SysErrT> Detect(CDErrT* err_ret_val=0 //!< [in,out] Pointer to a variable 
+    CDErrT Detect(std::vector<SysErrT> *err_vec=NULL //!< [in,out] Pointer to a variable 
             //!<for optionally returning a CD runtime error code indicating some bug with Detect().
                                );
 
@@ -1040,13 +1041,16 @@ class CDHandle {
   
   /** @brief Check whether any errors occurred while CD the executed
    *
-   * @return any errors or failures detected during this CDs execution.
+   * @return kOK when there is no failure. For optionally returning a CD runtime 
+   * error code indicating some bug with Detect()
+   * any errors or failures detected during this CDs execution.
+   *
    */
-    std::vector<SysErrT> Detect(uint32_t onOff, //!< [in] Tuning can be done with this switch.
-        CDErrT* err_ret_val=0 //!< [in,out] Pointer to a variable 
-            //!<for optionally returning a CD runtime error code indicating some bug with Detect().
+    CDErrT Detect(uint32_t onOff, //!< [in] Tuning can be done with this switch.
+         std::vector<SysErrT> *err_vec=NULL
+            //!< [in,out] Pointer to a error vector
+            //!<  that is detected during this CDs execution.
                                );
-
   /** @} */ // End tunable_api group =========================================
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 

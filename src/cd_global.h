@@ -460,10 +460,11 @@ namespace cd {
  * @{
  */
   enum TuningT {
-    kON=0,
-    kSeq=1,
-    kNest=2,
-    kAuto=4
+    kON=1,
+    kSeq=2,
+    kNest=4,
+    kAuto=8,
+    kOFF=16
   };
   /** @} */ // End tunable_api group 
 

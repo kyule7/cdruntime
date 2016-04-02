@@ -125,7 +125,7 @@ int  cd::max_tag_rank_bit  = 0;
 #endif
 int cd::myTaskID = 0;
 int cd::totalTaskSize = 1;
-
+CDHandle *cd::null_cd = NULL;
 //cd::SystemConfig cd::CDHandle::system_config_;
 namespace cd {
 // Global functions -------------------------------------------------------
@@ -219,10 +219,10 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
                                               static_cast<CDType>(kStrict | prv_medium), 
                                               FilePath::prv_basePath_, 
                                               ROOT_SYS_DETECT_VEC, &internal_err);
-
   CDPath::GetCDPath()->push_back(root_cd_handle);
   cd::internal::Initialize();
 
+  null_cd = new CDHandle(true);
 #if CD_PROFILER_ENABLED
   // Profiler-related
   root_cd_handle->profiler_->InitViz();
@@ -490,7 +490,7 @@ void CD_Finalize(void)
   delete CDPath::GetCDPath()->back(); // delete root
   CDPath::GetCDPath()->pop_back();
 
-
+  delete null_cd;
 
 #if CD_DEBUG_ENABLED
   WriteDbgStream();
@@ -603,16 +603,16 @@ int SplitCD_1D(const int& my_task_id,
 
 // CDHandle Member Methods ------------------------------------------------------------
 
-CDHandle::CDHandle()
-  : ptr_cd_(0), node_id_(-1), ctxt_(CDPath::GetRootCD()->ctxt_)
+CDHandle::CDHandle(bool null_handle)
+  : null_handle_(null_handle), ptr_cd_(0), node_id_(-1), ctxt_(CDPath::GetRootCD()->ctxt_)
 {
   // FIXME
   assert(0);
   SplitCD = &SplitCD_1D;
 
-#if CD_PROFILER_ENABLED
-  profiler_ = Profiler::CreateProfiler(0, this);
-#endif
+//#if CD_PROFILER_ENABLED
+//  profiler_ = Profiler::CreateProfiler(0, this);
+//#endif
 
 #if CD_ERROR_INJECTION_ENABLED
   cd_error_injector_ = NULL;
@@ -635,7 +635,7 @@ CDHandle::CDHandle()
 /// clear children list
 /// request to add me as a children to parent (to Head CD object)
 CDHandle::CDHandle(CD *ptr_cd) 
-  : ptr_cd_(ptr_cd), node_id_(ptr_cd->cd_id_.node_id_), ctxt_(ptr_cd->ctxt_)
+  : null_handle_(false), ptr_cd_(ptr_cd), node_id_(ptr_cd->cd_id_.node_id_), ctxt_(ptr_cd->ctxt_)
 {
   SplitCD = &SplitCD_1D;
 
@@ -1347,7 +1347,7 @@ CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
   return kOK;
 }
 
-std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
+CDErrT CDHandle::Detect(std::vector<SysErrT> *err_vec)
 {
   CDPrologue();
   CD_DEBUG("[%s] check mode : %d at %s %s level %u (reexecInfo %d (%u))\n", 
@@ -1355,7 +1355,6 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
       ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
       level(), need_reexec(), *CD::rollback_point_);
 
-  std::vector<SysErrT> ret_prepare;
   CDErrT err = kOK;
   uint32_t rollback_point = INVALID_ROLLBACK_POINT;
 
@@ -1464,13 +1463,11 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
 #endif
 
-  if(err_ret_val != NULL)
-    *err_ret_val = err;
 #if CD_DEBUG_DEST == 1
   fflush(cdout);
 #endif
   CDEpilogue();
-  return ret_prepare;
+  return err;
 
 }
 
@@ -1482,7 +1479,14 @@ CDHandle *CDHandle::Create(uint32_t onOff,
                            bool collective, 
                            CDErrT *error )
 {
-  return NULL;
+  CDHandle *handle;
+  if(onOff == kON) {
+    handle = Create(name, cd_type, error_name_mask, error_loc_mask, error);
+  }
+  else if(onOff == kOFF) {
+    handle = CDPath::GetNullCD();
+  }
+  return handle;
 }
 CDHandle *CDHandle::Create(uint32_t onOff,
                            uint32_t  num_children,
@@ -1492,7 +1496,14 @@ CDHandle *CDHandle::Create(uint32_t onOff,
                            uint32_t error_loc_mask, 
                            CDErrT *error)
 {
-  return NULL;
+  CDHandle *handle;
+  if(onOff == kON) {
+    handle = Create(num_children, name, cd_type, error_name_mask, error_loc_mask, error);
+  }
+  else if(onOff == kOFF) {
+    handle = CDPath::GetNullCD();
+  }
+  return handle;
 }
 CDHandle *CDHandle::Create(uint32_t onOff,
                            uint32_t color, 
@@ -1504,7 +1515,14 @@ CDHandle *CDHandle::Create(uint32_t onOff,
                            uint32_t error_loc_mask, 
                            CDErrT *error )
 {
-  return NULL;
+  CDHandle *handle;
+  if(onOff == kON) {
+    handle = Create(color, task_in_color, num_children, name, cd_type, error_name_mask, error_loc_mask, error);
+  }
+  else if(onOff == kOFF) {
+    handle = CDPath::GetNullCD();
+  }
+  return handle;
 }
 CDHandle *CDHandle::CreateAndBegin(uint32_t onOff,
                                    uint32_t num_children, 
@@ -1514,17 +1532,32 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t onOff,
                                    uint32_t error_loc_mask,
                                    CDErrT *error )
 {
+  // TODO
   return NULL;
 }
 CDErrT CDHandle::Destroy(uint32_t onOff, bool collective) 
 {
-  return kOK;
+  CDErrT ret;
+  if(onOff == kON) {
+    ret = Destroy(collective);
+  }
+  else if(onOff == kOFF) {
+    ret = kOK;
+  }
+  return ret;
 }
   
   
-CDErrT CDHandle::Begin(uint32_t onOff, bool collective, const char *label, const uint64_t &sys_error_vec)
+CDErrT CDHandle::Begin(uint32_t onOff, bool collective, const char *label, const uint64_t &sys_err_vec)
 {
-  return kOK;
+  CDErrT ret;
+  if(onOff == kON) {
+    ret = Begin(collective, label, sys_err_vec);
+  }
+  else if(onOff == kOFF) {
+    ret = kOK;
+  }
+  return ret;
 }
 
 CDErrT CDHandle::Complete(uint32_t onOff, bool collective, bool update_preservation)
@@ -1567,9 +1600,10 @@ CDErrT CDHandle::Preserve(uint32_t onOff,
 {
   return kOK;
 }
-std::vector<SysErrT> CDHandle::Detect(uint32_t onOff, CDErrT *err_ret_val)
+
+CDErrT CDHandle::Detect(uint32_t onOff, std::vector<SysErrT> *err_vec)
 {
-  return std::vector<SysErrT>();
+  return kOK;
 }
 
 CDErrT CDHandle::CDAssert(uint32_t onOff, bool test, const SysErrT *error_to_report)
