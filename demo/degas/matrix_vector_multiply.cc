@@ -33,10 +33,10 @@
   } \
 }
 #define DEFAULT_SIZE    16
-#define SLEEP_INTERVAL 1
-#define SLEEP(X) sleep(X)
-//#define SLEEP(X) usleep(X)
-//#define SLEEP_INTERVAL 100000 // 0.1 sec
+//#define SLEEP_INTERVAL 1
+//#define SLEEP(X) sleep(X)
+#define SLEEP(X) usleep(X)
+#define SLEEP_INTERVAL 1000000 // 0.1 sec
 enum {
   INDEX=1,
   ONES=2,
@@ -87,22 +87,22 @@ void InitArray(float *A, int coldim, int rowdim, int ops) {
   }
 }
 
-
+//row,col
 void MatVecMul(float *A, float *B, float *C, int ydim, int xdim) 
 {
   char do_escalate[16];
   char do_reexecute[16];
   struct stat statbuf;
-  FILE *filep = stdout;
+  FILE *filep = fp;
   sprintf(do_escalate,  "escalate.%d", rankID);
   sprintf(do_reexecute, "reexecute.%d", rankID);
-  CDHandle *root = GetCurrentCD();
+  CDHandle *root = GetCurrentCD(); // root->current
   root->Preserve(A, sizeof(float)*ydim*xdim, kCopy, "arrayA");
   root->Preserve(B, sizeof(float)*xdim, kCopy, "arrayB");
-  CDHandle *parent = GetCurrentCD()->Create("Parent", kStrict);
+  CDHandle *parent = GetCurrentCD()->Create("Parent", kStrict); // parent->cd_lv1
   for(int j=0; j<ydim; j++) {
     CD_Begin(parent, true, "OuterLoop");
-    parent->Preserve(C, sizeof(float)*ydim, kCopy, "arrayC");
+    parent->Preserve(C, sizeof(float)*ydim, kCopy, "arrayC"); 
     CDHandle *child = parent->Create(task_size, "Leaf", kStrict);
     float temp = 0.0;
     for(int i=0; i<xdim; i++) {
@@ -112,14 +112,17 @@ void MatVecMul(float *A, float *B, float *C, int ydim, int xdim)
       child->Preserve(A, sizeof(float)*ydim*xdim, kRef, "arrayA_lv2", "arrayA");
       child->Preserve(B, sizeof(float)*xdim, kRef, "arrayB_lv2", "arrayB");
       temp += A[j*xdim + i] * B[i];
-      fprintf(filep, "Progress.%d: (%d,%d)\n", rankID, j, i); fflush(filep);
-      SLEEP(SLEEP_INTERVAL);
-      child->CDAssert(stat(do_reexecute, &statbuf) != 0);
+      fprintf(filep, "(%d,%2d)\n", j, i); fflush(filep);
       parent->CDAssert(stat(do_escalate, &statbuf) != 0);
+      for(int a=1; a<=10; a++) {
+        SLEEP(SLEEP_INTERVAL/10);
+        child->CDAssert(true);
+      }
+      child->CDAssert(stat(do_reexecute, &statbuf) != 0);
       child->Complete();
 //      fprintf(filep, "Completed child %d\n", i); fflush(filep);
     }
-    fprintf(filep, "\n"); fflush(filep);
+//    fprintf(filep, "\n"); fflush(filep);
     child->Destroy();
     C[j] = temp;
     SLEEP(SLEEP_INTERVAL);

@@ -6,3 +6,6 @@ $(PROGRAM): matrix_vector_multiply.cc
 
 clean:
 	rm $(PROGRAM); rm progress.*; rm reexecute.*; rm escalate.*; rm -rf debug_logs; rm -rf HDD;
+
+clean_errors:
+	rm escalate.*; rm reexecute.*;
