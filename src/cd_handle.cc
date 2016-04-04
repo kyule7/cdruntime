@@ -1296,7 +1296,7 @@ CDErrT CDHandle::RemoveChild(CDHandle *cd_child)
 CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 {
   CDPrologue();
-  CD_DEBUG("Assert : %d at level %u\n", ptr_cd()->cd_exec_mode_, ptr_cd()->level());
+//  CD_DEBUG("Assert : %d at level %u\n", ptr_cd()->cd_exec_mode_, ptr_cd()->level());
 
   assert(ptr_cd_ != 0);
   CDErrT err = kOK;

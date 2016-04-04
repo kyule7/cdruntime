@@ -99,36 +99,48 @@ void MatVecMul(float *A, float *B, float *C, int ydim, int xdim)
   CDHandle *root = GetCurrentCD(); // root->current
   root->Preserve(A, sizeof(float)*ydim*xdim, kCopy, "arrayA");
   root->Preserve(B, sizeof(float)*xdim, kCopy, "arrayB");
-  CDHandle *parent = GetCurrentCD()->Create("Parent", kStrict); // parent->cd_lv1
+#ifdef _TUNED 
+  CDHandle *parent = root->Create(2, "Parent", kStrict); // parent->cd_lv1
+#else
+  CDHandle *parent = root->Create("Parent", kStrict); // parent->cd_lv1
+#endif
+
   for(int j=0; j<ydim; j++) {
     CD_Begin(parent, true, "OuterLoop");
-    parent->Preserve(C, sizeof(float)*ydim, kCopy, "arrayC"); 
-    CDHandle *child = parent->Create(task_size, "Leaf", kStrict);
+    parent->Preserve(C, sizeof(float)*ydim, kCopy, "arrayC");
+#ifdef _TUNED 
+    CDHandle *leaf = parent->Create(task_size/2, "Leaf", kStrict);
+#else
+    CDHandle *leaf = parent;
+#endif
     float temp = 0.0;
     for(int i=0; i<xdim; i++) {
-      CD_Begin(child, true, "InnerLoop");
-      child->Preserve(&temp, sizeof(float), kCopy,"temp");
-      child->Preserve(&i, sizeof(int), kCopy,"index");
-      child->Preserve(A, sizeof(float)*ydim*xdim, kRef, "arrayA_lv2", "arrayA");
-      child->Preserve(B, sizeof(float)*xdim, kRef, "arrayB_lv2", "arrayB");
+#ifdef _TUNED
+      CD_Begin(leaf, true, "InnerLoop");
+      leaf->Preserve(&temp, sizeof(float), kCopy,"temp");
+      leaf->Preserve(&i, sizeof(int), kCopy,"index");
+      leaf->Preserve(A, sizeof(float)*ydim*xdim, kRef, "arrayA_lv2", "arrayA");
+      leaf->Preserve(B, sizeof(float)*xdim, kRef, "arrayB_lv2", "arrayB");
+#endif      
       temp += A[j*xdim + i] * B[i];
       fprintf(filep, "(%d,%2d)\n", j, i); fflush(filep);
       parent->CDAssert(stat(do_escalate, &statbuf) != 0);
       for(int a=1; a<=10; a++) {
         SLEEP(SLEEP_INTERVAL/10);
-        child->CDAssert(true);
+        leaf->CDAssert(true);
       }
-      child->CDAssert(stat(do_reexecute, &statbuf) != 0);
-      child->Complete();
-//      fprintf(filep, "Completed child %d\n", i); fflush(filep);
+      leaf->CDAssert(stat(do_reexecute, &statbuf) != 0);
+#ifdef _TUNED      
+      leaf->Complete();
+#endif      
     }
-//    fprintf(filep, "\n"); fflush(filep);
-    child->Destroy();
+#ifdef _TUNED    
+    leaf->Destroy();
+#endif    
     C[j] = temp;
     SLEEP(SLEEP_INTERVAL);
     parent->CDAssert(stat(do_escalate, &statbuf) != 0);
     parent->Complete();
-//    fprintf(filep, "Completed parent %d\n", j); fflush(filep);
   }
   parent->Destroy();
 }
@@ -136,13 +148,16 @@ void MatVecMul(float *A, float *B, float *C, int ydim, int xdim)
 int main(int argc, char *argv[]) {
   int colsize = DEFAULT_SIZE;
   int rowsize = DEFAULT_SIZE;
+  char filename[16] = "progress";
   if(argc == 2) {
-    colsize = atoi(argv[1]);
+    strcpy(filename, argv[1]);
+    colsize = atoi(argv[2]);
     rowsize = colsize;
   }
   else if(argc >= 3) { // (NxN) x (NxM)
+    strcpy(filename, argv[1]);
     colsize  = atoi(argv[2]);
-    rowsize  = colsize;
+    rowsize  = atoi(argv[3]);
   }
 
   MPI_Init(&argc, &argv);
@@ -150,7 +165,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD, &task_size);
 
   char filepath[256]={};
-  sprintf(filepath, "progress.%d", rankID);
+  sprintf(filepath, "%s.%d", filename, rankID);
   fp = fopen(filepath, "w");
   
   CDHandle *root = CD_Init(task_size, rankID);

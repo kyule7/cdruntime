@@ -397,7 +397,8 @@ void HandleErrorOccurred::HandleEvent(void)
     }
   }
   else {
-    CD_DEBUG("Reexecution is coordinated by Allreduce at Complete\n");
+    uint32_t rollback_point = ptr_cd_->SetRollbackPoint(ptr_cd_->level(), false); // false means local
+    CD_DEBUG("Reexecution is coordinated by Allreduce at Complete : %u\n", rollback_point);
   }
 
   // Resume

@@ -1344,6 +1344,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //    *rollback_point_ == level() -> false
 //    bool collective = MPI_Group_compare(group());
     CD_DEBUG("## need_sync? %d = %u <= %u ##\n", need_sync, orig_rollback_point, new_rollback_point);
+//    printf("## need_sync? %d = %u <= %u ##\n", need_sync, orig_rollback_point, new_rollback_point);
 #if CD_PROFILER_ENABLED
     end_clk = CD_CLOCK();
     prof_sync_clk = end_clk;

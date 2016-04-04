@@ -119,6 +119,7 @@ class CD : public Serializable {
     friend class CDEntry;  
     friend class PFSHandle;
     friend class HandleAllReexecute;
+    friend class HandleErrorOccurred;
     friend class HandleAllResume;
     friend class HandleAllPause;
     friend class HandleEntrySearch;
