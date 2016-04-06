@@ -2,6 +2,7 @@
 include_HEADERS = cd.h \
 									cd_global.h \
 									cd_def_interface.h \
+									cd_def_debug.h \
 									cd_features.h \
 									cd_handle.h \
 									node_id.h \

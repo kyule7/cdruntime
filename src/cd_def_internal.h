@@ -39,7 +39,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <cstdio>
 #include <cstdint>
 #include <csetjmp>
-#include <cstdarg>
 #include <string>
 #include <vector>
 #include <map>
