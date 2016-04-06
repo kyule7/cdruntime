@@ -4,6 +4,8 @@
 # monitor those files and coalesce one writeBuffer from each file into one printed writeBuffer
 
 import time, sys
+from termcolor import colored
+
 writeBuffer=[]
 commitBuffer=[]
 commited=[]
@@ -63,7 +65,7 @@ while 1:
     for log_per_task in files:
         log_per_task.SetWhere(log_per_task.file.tell())
     while not anyUpdate:
-        time.sleep(0.35)
+        time.sleep(0.5)
         for log_per_task in files:
             log_per_task.SetSeek()
             anyUpdate = anyUpdate | log_per_task.UpdateLine()
@@ -77,7 +79,23 @@ while 1:
 
             if(writeBuffer != emptyBuffer) :
                 for i in range(len(commitBuffer)):
-                    print '%6s' % commitBuffer[i].rstrip('\n'),
+
+                    if commitBuffer[i] != '':
+                        if commitBuffer[i][-1] == '#':
+                            print colored('%6s', 'yellow') % commitBuffer[i][:-1],
+                        elif commitBuffer[i][-1] == '@':
+                            print colored('%6s', 'red') % commitBuffer[i][:-1],
+                        else:
+                            print '%6s' % commitBuffer[i],
+                    else:
+                        print '%6s' % commitBuffer[i],
+
+#                    if commitBuffer[i] != '' and commitBuffer[i][-1] == '#':
+#                        print colored('%6s', 'yellow') % commitBuffer[i][:-1],
+#                    elif commitBuffer[i] != '' and commitBuffer[i][-1] == '@':
+#                        print colored('%6s', 'red') % commitBuffer[i][:-1],
+#                    else:
+#                    print '%6s' % commitBuffer[i],
                     if i == (len(commitBuffer)/2)-1:
                         print '  ',
             # Initialize

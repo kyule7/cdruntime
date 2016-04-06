@@ -320,7 +320,7 @@ void CD::Initialize(CDHandle *cd_parent,
 
 void CD::InternalInitialize(CDHandle *cd_parent)
 {
-  label_ = string(INITIAL_CDOBJ_LABEL); 
+  label_ = string(INITIAL_CDOBJ_LABEL);
   recoverObj_ = new RecoverObject;
 
   if(cd_parent != NULL) {
@@ -558,6 +558,13 @@ CD::InternalCreate(CDHandle *parent,
                    CDHandle* *new_cd_handle)
 {
   CD_DEBUG("Internal Create... level #%u, Node ID : %s\n", new_cd_id.level(), new_cd_id.node_id().GetString().c_str());
+  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
+  if(parent != NULL) {
+    new_prv_medium = static_cast<PrvMediumT>(
+                                      (MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : 
+                                                                   MASK_MEDIUM(cd_type)
+                                );
+  }
   string cd_obj_key(name);
   auto cdh_it = access_store_.find(cd_obj_key);
   if(cdh_it != access_store_.end()) {
@@ -565,13 +572,11 @@ CD::InternalCreate(CDHandle *parent,
     CD_DEBUG("Reused! [%s] New Node ID: %s\n", 
              cd_obj_key.c_str(), 
              cdh_it->second->node_id_.GetString().c_str());
+
+    (*new_cd_handle)->ptr_cd_->Initialize(parent, name, new_cd_id, cd_type, new_prv_medium, sys_bit_vector);
   }
   else {
     CD_DEBUG("Newly Create!\n");
-    PrvMediumT new_prv_medium = static_cast<PrvMediumT>(
-                                    (MASK_MEDIUM(cd_type) == 0)? parent->ptr_cd()->prv_medium_ : 
-                                                                 MASK_MEDIUM(cd_type)
-                                );
     int task_count = new_cd_id.task_count();
     uint32_t num_mailbox_to_create = 0;
     CD *new_cd = NULL;
@@ -1360,6 +1365,8 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   }
 
   CompleteLogs();
+
+  reexecuted_ = false;
 
   // Increase sequential ID by one
   cd_id_.sequential_id_++;

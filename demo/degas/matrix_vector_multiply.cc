@@ -36,7 +36,7 @@
 //#define SLEEP_INTERVAL 1
 //#define SLEEP(X) sleep(X)
 #define SLEEP(X) usleep(X)
-#define SLEEP_INTERVAL 1000000 // 0.1 sec
+#define SLEEP_INTERVAL 1200000 // 1.2 sec
 enum {
   INDEX=1,
   ONES=2,
@@ -99,7 +99,7 @@ void MatVecMul(float *A, float *B, float *C, int ydim, int xdim)
   CDHandle *root = GetCurrentCD(); // root->current
   root->Preserve(A, sizeof(float)*ydim*xdim, kCopy, "arrayA");
   root->Preserve(B, sizeof(float)*xdim, kCopy, "arrayB");
-#ifdef _TUNED 
+#ifdef _LOCAL 
   CDHandle *parent = root->Create(2, "Parent", kStrict); // parent->cd_lv1
 #else
   CDHandle *parent = root->Create("Parent", kStrict); // parent->cd_lv1
@@ -108,37 +108,51 @@ void MatVecMul(float *A, float *B, float *C, int ydim, int xdim)
   for(int j=0; j<ydim; j++) {
     CD_Begin(parent, true, "OuterLoop");
     parent->Preserve(C, sizeof(float)*ydim, kCopy, "arrayC");
-#ifdef _TUNED 
+#ifdef _LOCAL 
     CDHandle *leaf = parent->Create(task_size/2, "Leaf", kStrict);
 #else
-    CDHandle *leaf = parent;
+    CDHandle *leaf = parent->Create("Leaf", kStrict);
+    //CDHandle *leaf = parent;
 #endif
     float temp = 0.0;
     for(int i=0; i<xdim; i++) {
-#ifdef _TUNED
+#ifdef _LOCAL
       CD_Begin(leaf, true, "InnerLoop");
       leaf->Preserve(&temp, sizeof(float), kCopy,"temp");
       leaf->Preserve(&i, sizeof(int), kCopy,"index");
       leaf->Preserve(A, sizeof(float)*ydim*xdim, kRef, "arrayA_lv2", "arrayA");
       leaf->Preserve(B, sizeof(float)*xdim, kRef, "arrayB_lv2", "arrayB");
+#else
+      CD_Begin(leaf, true, "InnerLoop");
+      leaf->Preserve(&i, sizeof(int), kCopy,"index");
 #endif      
       temp += A[j*xdim + i] * B[i];
-      fprintf(filep, "(%d,%2d)\n", j, i); fflush(filep);
+      if(leaf->reexecuted()) {
+        fprintf(filep, "(%d,%2d)#\n", j, i); fflush(filep);
+      } else if (leaf->recreated()) {
+        fprintf(filep, "(%d,%2d)@\n", j, i); fflush(filep);
+      } else {
+        fprintf(filep, "(%d,%2d)\n", j, i); fflush(filep);
+      }
       parent->CDAssert(stat(do_escalate, &statbuf) != 0);
       for(int a=1; a<=10; a++) {
         SLEEP(SLEEP_INTERVAL/10);
         leaf->CDAssert(true);
       }
       leaf->CDAssert(stat(do_reexecute, &statbuf) != 0);
-#ifdef _TUNED      
+#ifdef _LOCAL      
+      leaf->Complete();
+#else
       leaf->Complete();
 #endif      
     }
-#ifdef _TUNED    
+#ifdef _LOCAL 
+    leaf->Destroy();
+#else   
     leaf->Destroy();
 #endif    
     C[j] = temp;
-    SLEEP(SLEEP_INTERVAL);
+//    SLEEP(SLEEP_INTERVAL);
     parent->CDAssert(stat(do_escalate, &statbuf) != 0);
     parent->Complete();
   }

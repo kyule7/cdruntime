@@ -1090,11 +1090,11 @@ class CDHandle {
     CDErrT Sync(ColorT color);
 #endif
 
+  public:
     bool     recreated(void)     const;
     bool     reexecuted(void)    const;
 //    bool     need_reexec(void)   const;
 //    uint32_t reexec_level(void)  const;
-  public:
     bool     need_reexec(void)   const;
     uint32_t rollback_point(void)  const;
 

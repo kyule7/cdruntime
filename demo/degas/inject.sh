@@ -6,7 +6,7 @@ then
   do
     touch reexecute.$var
   done
-  sleep 2
+  sleep 2.5
   rm reexecute.*
 elif [ $1 == escalate ]
 then
@@ -15,7 +15,7 @@ then
   do
     touch escalate.$var
   done
-  sleep 1
+  sleep 1.2
   rm escalate.*
 fi
 
