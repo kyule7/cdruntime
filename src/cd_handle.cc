@@ -463,7 +463,7 @@ void CD_Finalize(void)
                              (cd_elapsed_avg / tot_elapsed_avg) * 100, 
                              (msg_elapsed_avg / tot_elapsed_avg) * 100);
 
-#if CD_DEBUG_ENABLED && CD_PROFILER_ENABLED 
+#if CD_PROFILER_ENABLED 
     printf("Profile Result =================================\n");
     for(auto it=lv_runtime_info.begin(); it!=lv_runtime_info.end(); ++it) {
       printf("-- CD Overhead Level #%u ---------\n", it->first);
@@ -841,7 +841,10 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   if(is_reuse == false) {
     CollectHeadInfoAndEntry(new_node_id); 
   } // otherwise, it will be done later.
-
+  else {
+//    if(myTaskID == 5)
+//      printf("first time! %s\n", name);
+  }
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
   CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
@@ -863,10 +866,6 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   CDEpilogue();
   create_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-//  if(GetLabel() != NULL) 
-//    CD_DEBUG("CDS %s\n", GetLabel());
-//  else
-//    CD_DEBUG("CDS NULL\n");
   Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk;
 #endif
 
@@ -925,10 +924,6 @@ CDHandle *CDHandle::Create(uint32_t color,
   CDEpilogue();
   create_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-//  if(GetLabel() != NULL) 
-//    CD_DEBUG("CDS %s\n", GetLabel());
-//  else
-//    CD_DEBUG("CDS NULL\n");
   Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk;
 #endif
   return new_cd_handle;
@@ -947,10 +942,6 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
   CD_CLOCK_T clk = CD_CLOCK();
   create_elapsed_time += clk - begin_clk;
 #if CD_PROFILER_ENABLED
-//  if(GetLabel() != NULL) 
-//    CD_DEBUG("CDS %s\n", GetLabel());
-//  else
-//    CD_DEBUG("CDS NULL\n");
   Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk;
 #endif
   new_cdh->Begin(false, name);

@@ -85,7 +85,8 @@ void CD::CheckReexecution(void)
   uint32_t new_rollback_point = orig_rollback_point;
 #if BUGFIX_0327
   if(task_size() > 1) {
-    new_rollback_point = SyncCDs(this, false);
+//    new_rollback_point = SyncCDs(this, false);
+    new_rollback_point = CheckRollbackPoint(true);//SyncCDs(this, false);
     SetRollbackPoint(new_rollback_point, false);
   } else {
     assert(0);
@@ -93,16 +94,16 @@ void CD::CheckReexecution(void)
 //    SetRollbackPoint(new_rollback_point, false);
   }
 #else
-  if(collective) {
-    SyncCDs(this);
-  }
+//  if(collective) {
+//    SyncCDs(this);
+//  }
   if(task_size() > 1) {
     new_rollback_point = CheckRollbackPoint(true); // Read from head
     new_rollback_point = SetRollbackPoint(new_rollback_point, false);
   }
 #endif
   CD_DEBUG("%s %s \t Reexec from %u\n", 
-      cd_id_.GetString().c_str(), label_.c_str(), new_rollback_point);
+           cd_id_.GetString().c_str(), label_.c_str(), new_rollback_point);
 
 
   if(new_rollback_point != INVALID_ROLLBACK_POINT) {

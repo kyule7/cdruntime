@@ -1013,6 +1013,18 @@ CDErrT CD::Begin(bool collective, const char *label)
 //    SyncCDs(this);
   }
 
+  uint32_t new_rollback_point = SyncCDs(this, true);
+  SetRollbackPoint(new_rollback_point, false);
+
+  need_escalation = false;
+  *rollback_point_ = INVALID_ROLLBACK_POINT;        
+
+  if(new_rollback_point < level()) { 
+    bool need_sync_next_cdh = GetParentCD(level())->task_size() > task_size();
+    GetCDToRecover( GetCurrentCD(), need_sync_next_cdh )->ptr_cd()->Recover();
+  }
+
+
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
@@ -2872,17 +2884,17 @@ CDErrT CD::InternalReexecute(void)
   // because nobody overwrited these flags set by current flag.
   // (In other word, nobody requested escalation requests)
   // This current task is performing reexecution corresponding to these flag set by itself.
-  if(task_size() > 1) {
-    MPI_Win_fence(0, mailbox_);
-    //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
-    need_escalation = false;
-    *rollback_point_ = INVALID_ROLLBACK_POINT;        
-    //PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
-    MPI_Win_fence(0, mailbox_);
-  } else {
-    need_escalation = false;
-    *rollback_point_ = INVALID_ROLLBACK_POINT;        
-  }
+//  if(task_size() > 1) {
+//    MPI_Win_fence(0, mailbox_);
+//    //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+//    need_escalation = false;
+//    *rollback_point_ = INVALID_ROLLBACK_POINT;        
+//    //PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+//    MPI_Win_fence(0, mailbox_);
+//  } else {
+//    need_escalation = false;
+//    *rollback_point_ = INVALID_ROLLBACK_POINT;        
+//  }
 
   cd_exec_mode_ = kReexecution; 
   reexecuted_ = true;
