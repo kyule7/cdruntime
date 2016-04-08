@@ -152,6 +152,7 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
 
 
 #define CD_PRINT(...) \
+  printf(__VA_ARGS__)
 //  CD_DEBUG_TRACE_INFO(cdoutApp, __VA_ARGS__)
 
 

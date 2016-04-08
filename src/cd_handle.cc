@@ -612,7 +612,7 @@ CDHandle::CDHandle()
 {
   // FIXME
   assert(0);
-  SplitCD = &SplitCD_1D;
+  SplitCD = &SplitCD_3D;
 
 #if CD_PROFILER_ENABLED
   profiler_ = Profiler::CreateProfiler(0, this);
@@ -642,7 +642,7 @@ CDHandle::CDHandle()
 CDHandle::CDHandle(CD *ptr_cd) 
   : ptr_cd_(ptr_cd), node_id_(ptr_cd->cd_id_.node_id_), ctxt_(ptr_cd->ctxt_)
 {
-  SplitCD = &SplitCD_1D;
+  SplitCD = &SplitCD_3D;
 
 #if CD_PROFILER_ENABLED
   profiler_ = Profiler::CreateProfiler(0, this);
