@@ -117,11 +117,12 @@ void Profiler::BeginRecord(void)
         name.c_str(), cdh_->GetCDType(), cdh_->GetCDLoggingMode(), cdh_->GetCommLogMode());
     }
 #else
-  CD_PRINT("%sRe-exec %s %s\n", 
-            string(cdh_->level(), '\t').c_str(), 
-            cdh_->GetName(), 
-            name.c_str());
-
+    if(myTaskID == 0) {
+      CD_PRINT("%sRe-exec %s %s\n", 
+                string(cdh_->level(), '\t').c_str(), 
+                cdh_->GetName(), 
+                name.c_str());
+    }
 #endif
 //    sync_clk_ = CD_CLOCK();
 //    num_exec_map[level][name].reexec_ += 1;
@@ -135,11 +136,12 @@ void Profiler::BeginRecord(void)
     if(myTaskID == 0) printf("%sBegin Exec %s %s (%d %d %d)\n", string(cdh_->level(), '\t').c_str(), cdh_->GetName(), 
         name.c_str(), cdh_->GetCDType(), cdh_->GetCDLoggingMode(), cdh_->GetCommLogMode());
 #else
-    CD_PRINT("%sBegin Exec %s %s\n", 
-              string(cdh_->level(), '\t').c_str(), 
-              cdh_->GetName(), 
-              name.c_str());
-
+    if(myTaskID == 0) {
+      CD_PRINT("%sBegin Exec %s %s\n", 
+                string(cdh_->level(), '\t').c_str(), 
+                cdh_->GetName(), 
+                name.c_str());
+    }
 #endif
   } 
 //  else if(cdh_->recreated()) {
@@ -170,11 +172,12 @@ void Profiler::EndRecord(void)
           cdh_->GetCDType(), cdh_->GetCDLoggingMode(), cdh_->GetCommLogMode());
     }
 #else
-    CD_PRINT("%sEnd Rexec %s %s\n", 
-              string(cdh_->level(), '\t').c_str(), 
-              cdh_->GetName(), 
-              name.c_str());
-
+    if(myTaskID == 0) {
+      CD_PRINT("%sEnd Rexec %s %s\n", 
+                string(cdh_->level(), '\t').c_str(), 
+                cdh_->GetName(), 
+                name.c_str());
+    }
 #endif
     num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
     num_exec_map[level][name].reexec_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
@@ -188,10 +191,13 @@ void Profiler::EndRecord(void)
           cdh_->GetCDType(), cdh_->GetCDLoggingMode(), cdh_->GetCommLogMode());
     }
 #else
-    CD_PRINT("%sEnd Rexec %s %s\n", 
-              string(cdh_->level(), '\t').c_str(), 
-              cdh_->GetName(), 
-              name.c_str());
+
+    if(myTaskID == 0) {
+      CD_PRINT("%sEnd Rexec %s %s\n", 
+                string(cdh_->level(), '\t').c_str(), 
+                cdh_->GetName(), 
+                name.c_str());
+    }
 #endif
   } 
 //  else if(cdh_->recreated()) {
