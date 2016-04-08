@@ -335,11 +335,13 @@ void CD_Finalize(void)
 //  cd::internal::Finalize();
   cd::tot_end_clk = CD_CLOCK();
 
-#if CD_DEBUG_ENABLED && CD_PROFILER_ENABLED 
+#if CD_PROFILER_ENABLED 
   std::map<uint32_t, RuntimeInfo> runtime_info;
   RuntimeInfo summary = Profiler::GetTotalInfo(runtime_info);
   runtime_info[100] = summary;
+#endif
 
+#if CD_PROFILER_ENABLED
   double cd_elapsed   = ((double)cd::elapsed_time) / CLK_NORMALIZER;
   double normal_sync_elapsed = ((double)cd::normal_sync_time) / CLK_NORMALIZER;
   double reexec_sync_elapsed = ((double)cd::reexec_sync_time) / CLK_NORMALIZER;
@@ -450,7 +452,9 @@ void CD_Finalize(void)
     printf("Destroy           : %lf (%lf) (var: %lf)\n", destroy_elapsed_avg, destroy_elapsed, destroy_elapsed_var); 
     printf("Begin             : %lf (%lf) (var: %lf)\n", begin_elapsed_avg, begin_elapsed, begin_elapsed_var); 
     printf("Complete          : %lf (%lf) (var: %lf)\n", compl_elapsed_avg, compl_elapsed, compl_elapsed_var); 
+#if CD_PROFILER_ENABLED
     printf("Mailbox           : %lf \n", mailbox_elapsed_time); 
+#endif
     printf("-- Logging Overhead Summary ------------\n");
     printf("Msg overhead time : %lf (%lf) (var: %lf)\n", msg_elapsed_avg, msg_elapsed, msg_elapsed_var);
     printf("Log overhead time : %lf (%lf) (var: %lf)\n", log_elapsed_avg, log_elapsed, log_elapsed_var);
@@ -459,12 +463,14 @@ void CD_Finalize(void)
                              (cd_elapsed_avg / tot_elapsed_avg) * 100, 
                              (msg_elapsed_avg / tot_elapsed_avg) * 100);
 
+#if CD_DEBUG_ENABLED && CD_PROFILER_ENABLED 
     printf("Profile Result =================================\n");
     for(auto it=lv_runtime_info.begin(); it!=lv_runtime_info.end(); ++it) {
       printf("-- CD Overhead Level #%u ---------\n", it->first);
       it->second.Print();
     }
     printf("================================================\n\n");
+#endif
   }
 #endif // CD_PROFILER_ENABLED_ENDS
 
