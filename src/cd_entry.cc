@@ -37,6 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_entry.h"
 #include "cd_path.h"
 #include "cd_def_internal.h"
+#include "cd_def_debug.h"
 //#include "cd_internal.h"
 #include "serializable.h"
 #include "packer.h"
@@ -60,7 +61,7 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
   }
   else if( dst_data_.handle_type() == DataHandle::kOSFile )  {
 
-#if _PRV_FILE_NOT_ERASED
+#if _PRV_FILE_ERASED
 //    char cmd[256];
 //    char backup_dir[256];
 //    sprintf(backup_dir, "mkdir backup_results");
@@ -132,6 +133,7 @@ CDEntry::CDEntryErrT CDEntry::SaveMem(void)
 
 CDEntry::CDEntryErrT CDEntry::SaveFile(void)
 {
+  CD_DEBUG("Write to file %s\n", GetFileName()); 
 //  printf("%s\n", __func__);
   // Get file name to write if it is currently NULL
 //  char* str; 
@@ -151,6 +153,7 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(void)
 //    const char *file_name = Util::GetUniqueCDFileName(ptr_cd_->GetCDID(), base_.c_str(), data_name).c_str();
 //    strcpy(dst_data_.file_name_, file_name); 
 //  }
+  dst_data_.set_file_name(GetFileName());
   FILE *fp = GetFilePointer();
   if( fp != NULL ) {
     fwrite(src_data_.address_data(), sizeof(char), src_data_.len(), fp);
@@ -175,7 +178,7 @@ CDEntry::CDEntryErrT CDEntry::SavePFS(void)
   //PMPI_File_get_position( ptr_cd_->PFS_d_, &(dst_data_.parallel_file_offset_));
 
   // Dynamic Chunk Interleave
-  dst_data_.parallel_file_offset_ = ptr_cd_->pfs_handler_->Write( src_data_.address_data(), src_data_.len() );
+  dst_data_.parallel_file_offset_ = ptr_cd_->pfs_handle_->Write( src_data_.address_data(), src_data_.len() );
 
   return kOK;
 }
@@ -446,12 +449,14 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
 //        else { 
 //          fp = fopen(buffer->file_name_, "r"); 
 //        }
+        CD_DEBUG("filename:%s\n", buffer->file_name_);
         fp = fopen(buffer->file_name_, "r"); 
         file_opened = true;
       }
 
       // Now, fp should be valid pointer
       if( fp!= NULL )  {
+        CD_DEBUG("filename:%s\n", buffer->file_name_);
         fseek(fp, buffer->GetOffset() , SEEK_SET); 
         fread(src_data_.address_data(), 1, src_data_.len(), fp);
         if(file_opened == true) {
@@ -560,6 +565,11 @@ void CDEntry::Deserialize(void *object)
 FILE *CDEntry::GetFilePointer(void)
 {
   return ptr_cd_->file_handle_.fp_;
+}
+
+char *CDEntry::GetFileName(void)
+{
+  return ptr_cd_->file_handle_.unique_filename_;
 }
 
 ostream& cd::internal::operator<<(ostream& str, const CDEntry& cd_entry)

@@ -42,6 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include "cd_global.h"
 #include "profiler_interface.h"
 #include "cd_def_internal.h" 
+#include "cd_def_debug.h"
 
 //#include "cd_internal.h"
 #include "cd_global.h"

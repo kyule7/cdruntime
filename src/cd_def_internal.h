@@ -45,7 +45,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <unordered_map>
 #include <errno.h>
 #include "cd_features.h"
-#include "cd_def_debug.h"
+//#include "cd_def_debug.h"
 #include "cd_def_interface.h"
 #define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
 
@@ -153,10 +153,11 @@ typedef uint32_t ENTRY_TAG_T;
 #define TAG_MASK(X) ((2<<(X-1)) - 1)
 #define TAG_MASK2(X) ((2<<(X-1)) - 2)
 
-
-
 #define ROOT_SYS_DETECT_VEC 0xFFFFFFFFFFFFFFFF
 
+#define INITIAL_CDOBJ_NAME "INITIAL_NAME"
+#define INITIAL_CDOBJ_LABEL "INITIAL_CDOBJ_LABEL"
+#define DEFAULT_INCOMPL_LOG_SIZE 64
 //GONG: global variable to represent the current context for malloc wrapper
 namespace cd {
 
@@ -377,20 +378,6 @@ namespace cd {
 //    return eventStr;
 
   }
-//    enum CtxtPrvMode { kExcludeStack=0, 
-//                       kIncludeStack
-//                     };
-
-//#if CD_MPI_ENABLED
-//#define CD_CLOCK_T double
-//#define CLK_NORMALIZER (1.0)
-//#define CD_CLOCK MPI_Wtime
-//#else
-//#include <ctime>
-//#define CD_CLOCK_T clock_t
-//#define CLK_NORMALIZER CLOCKS_PER_SEC
-//#define CD_CLOCK clock
-//#endif
 
 extern CD_CLOCK_T tot_begin_clk;
 extern CD_CLOCK_T tot_end_clk;
@@ -516,17 +503,17 @@ extern CD_CLOCK_T mailbox_elapsed_time;
         : addr_(const_cast<void *>(addr)), length_(length), taskID_(taskID), tag_(tag), 
           comm_(comm), flag_(flag), complete_(complete) 
       {
-        CD_DEBUG("pushed back:%p\n", flag);
         p_ = NULL;
         pushed_ = 0;
         level_ = 0;
         isrecv_ = 0;
         intra_cd_msg_ = false;
       }
-      void Print(void) {
-        printf("\n== Incomplete Log Entry ==\ntaskID:%u\nlength:%lu\naddr:%p\ntag:%u\ncomm:%u\nflag:%p\ncomplete:%d\nisrecv:%d\nintra_msg:%d\np:%p\npushed:%d\nlevel:%u\n==========================\n", taskID_, length_, addr_, tag_, comm_, flag_, complete_, isrecv_, intra_cd_msg_, p_, pushed_, level_);
+      std::string Print(void) {
+        char buf[256];
+        sprintf(buf, "\n== Incomplete Log Entry ==\ntaskID:%u\nlength:%lu\naddr:%p\ntag:%u\ncomm:%u\nflag:%p\ncomplete:%d\nisrecv:%d\nintra_msg:%d\np:%p\npushed:%d\nlevel:%u\n==========================\n", taskID_, length_, addr_, tag_, comm_, flag_, complete_, isrecv_, intra_cd_msg_, p_, pushed_, level_);
+        return std::string(buf);
       }
-
     };
 
     class IncompleteLogStore : public std::vector<IncompleteLogEntry> {
@@ -543,54 +530,10 @@ extern CD_CLOCK_T mailbox_elapsed_time;
         return it;
       }
     };
-
-//    class MsgHandle {
-//      public:
-//        static int  BlockUntilValid(CD *cd_p, MPI_Request *request, MPI_Status *status) {
-//          return cd_p->BlockUntilValid(request, status);
-//        }
-//    
-//        static void Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
-//          (leaf->ptr_cd()->GetCDToRecover(leaf, need_sync_to_reexec))->ptr_cd()->Recover();
-//        }
-//    
-//        // TODO
-//        static bool CheckIntraCDMsg(CD *cd_p, int target_id, MPI_Group &target_group) {
-//          return cd_p->CheckIntraCDMsg(target_id, target_group);
-//        }
-//    };
   } // namespace logging ends
 #endif
 
 } // namespace cd ends
-
-
-
-
-
-#define INITIAL_CDOBJ_NAME "INITIAL_NAME"
-#define INITIAL_CDOBJ_LABEL "INITIAL_CDOBJ_LABEL"
-
-#define MAX_FILE_PATH 256
-#define CD_FILEPATH_INVALID "./error_logs/"
-#define INIT_FILE_PATH "INITIAL_FILE_PATH"
-#define CD_FILEPATH_PFS "PFS/"
-#define CD_FILEPATH_HDD "HDD/"
-#define CD_FILEPATH_SSD "SSD/"
-#define CD_DEFAULT_PRV_BASEPATH "./"
-#define CD_DEFAULT_PRV_FILENAME "prv_files_%s_XXXXXX"
-#define CD_DEFAULT_FILEPATH "./prv_files_XXXXXX"
-#define CD_DEFAULT_DEBUG_OUT "./debug_logs/"
-
-#define DEFAULT_INCOMPL_LOG_SIZE 64
-
-#define CD_SHARING_DEGREE 64
-#define dout clog
-
-//#define DEFAULT_MEDIUM kDRAM
-
-#define CheckHere() \
-  if(cd::app_side) assert(0);
 
 
 #endif

@@ -168,6 +168,7 @@ class CDEntry : public Serializable {
     CDEntryErrT Save(void);
 
     FILE *GetFilePointer(void);
+    char *GetFileName(void);
 
     //FIXME We need another Restore function that would accept offset and length, 
     // so basically it will use dst_data_ as base and then offset and length is used to restore only partial of the original. 

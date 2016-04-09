@@ -38,6 +38,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdarg.h>
 #include "cd_malloc.h"
 #include "cd_global.h"
+#include "cd_def_debug.h"
 
 //bool app_side;
 

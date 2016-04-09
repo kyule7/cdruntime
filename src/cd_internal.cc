@@ -38,6 +38,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_path.h"
 #include "packer.h"
 #include "unpacker.h"
+#include "cd_def_debug.h"
 
 using namespace cd;
 using namespace cd::internal;
@@ -217,7 +218,7 @@ CD::CD(CDHandle *cd_parent,
        uint64_t sys_bit_vector)
  :  cd_id_(cd_id),
     file_handle_(prv_medium, 
-                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::prv_basePath_), 
+//                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
                  cd_id.GetStringID() + string("_XXXXXX") ),
     incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 {
@@ -266,6 +267,25 @@ CD::CD(CDHandle *cd_parent,
   InternalInitialize(cd_parent);
 }
 
+HeadCD::HeadCD()
+{
+  error_occurred = false;
+}
+
+HeadCD::HeadCD(CDHandle *cd_parent, 
+               const char *name, 
+               const CDID& cd_id, 
+               CDType cd_type, 
+               PrvMediumT prv_medium, 
+               uint64_t sys_bit_vector)
+  : CD(cd_parent, name, cd_id, cd_type, prv_medium, sys_bit_vector)
+{
+  error_occurred = false;
+//  cd_parent_ = cd_parent;
+}
+
+
+double init_timer = 0.0;
 void CD::Initialize(CDHandle *cd_parent, 
                     const char *name, 
                     const CDID& cd_id, 
@@ -273,15 +293,17 @@ void CD::Initialize(CDHandle *cd_parent,
                     PrvMediumT prv_medium, 
                     uint64_t sys_bit_vector)
 {
+  double tstart = MPI_Wtime();
   // In this function, it should not initialize cd_id here
-  file_handle_.CloseFile();
-  file_handle_.Initialize(
-      prv_medium, 
-      ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::prv_basePath_), 
-      cd_id_.GetStringID() + string("_XXXXXX") );
+//  file_handle_.CloseFile();
+//  file_handle_.Initialize(
+//      prv_medium, 
+//      ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
+//      cd_id_.GetStringID() + string("_XXXXXX") );
   incomplete_log_.clear();
   Init();  
 
+  init_timer += MPI_Wtime() - tstart;
   cd_type_ = cd_type; 
   prv_medium_ = prv_medium; 
   if(name != NULL) {
@@ -506,7 +528,7 @@ CDHandle *CD::Create(CDHandle *parent,
 CDHandle *CD::CreateRootCD(const char *name, 
                            const CDID& root_cd_id, 
                            CDType cd_type, 
-                           const string &basefilepath,
+/*                           const string &basefilepath,*/
                            uint64_t sys_bit_vector, 
                            CD::CDInternalErrT *cd_internal_err)
 {
@@ -524,7 +546,7 @@ CDHandle *CD::CreateRootCD(const char *name,
   // the file path will be basefilepath/CDID_XXXXXX.
   if(new_prv_medium != kDRAM) {
     new_cd_handle->ptr_cd_->file_handle_.SetFilePath(new_prv_medium, 
-                                                     basefilepath, 
+                                                     /*basefilepath,*/
                                                      root_cd_id.GetStringID() + string("_XXXXXX"));
   }
   assert(new_cd_handle != NULL);
@@ -643,7 +665,7 @@ CD::InternalCreate(CDHandle *parent,
     }
   
     if( new_cd->GetPlaceToPreserve() == kPFS ) 
-      new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
+      new_cd->pfs_handle_ = new PFSHandle(new_cd, new_cd->file_handle_.GetFilePath()); 
   
     *new_cd_handle = new CDHandle(new_cd);
   
@@ -718,7 +740,7 @@ CD::InternalCreate(CDHandle *parent,
 
 
     if( new_cd->GetPlaceToPreserve() == kPFS ) 
-      new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
+      new_cd->pfs_handle_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
 
     *new_cd_handle = new CDHandle(new_cd);
   }
@@ -767,7 +789,7 @@ CD::InternalCreate(CDHandle *parent,
 #endif
 
     if( new_cd->GetPlaceToPreserve() == kPFS ) 
-      new_cd->pfs_handler_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
+      new_cd->pfs_handle_ = new PFSHandle( new_cd, new_cd->file_handle_.GetFilePath() ); 
 
     *new_cd_handle = new CDHandle(new_cd);
   }
@@ -871,9 +893,17 @@ void CD::FinalizeMailBox(void)
 inline 
 CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 {
+
   if(need_destroy == false) {
     CD_DEBUG("clean up CD meta data (%d windows) at %s (%s) level #%u\n", 
              task_size(), name_.c_str(), label_.c_str(), level());
+    // delete preservation files
+    if(prv_medium_ == kSSD || prv_medium_ == kHDD) {
+      file_handle_.Close();
+    }
+    else if(prv_medium_ == kPFS) {
+      pfs_handle_->Close();
+    }
 #if comm_log
     if (GetParentHandle()!=NULL)
     {
@@ -903,13 +933,15 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
   
 
     if( GetPlaceToPreserve() == kPFS ) {
-      delete pfs_handler_;
+      delete pfs_handle_;
     }
 #endif
 
     delete this;
+    if(myTaskID == 0)
+      printf("init overhead : %lf\n", init_timer);
   } 
-
+  
   return CDInternalErrT::kOK;
 }
 
@@ -2408,7 +2440,7 @@ CD::InternalPreserve(void *data,
     // Get cd_entry
     if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) { // via-copy, so it saves data right now!
 
-      CD_DEBUG("\nPreservation via Copy to %d(memory or file)\n", GetPlaceToPreserve());
+      CD_DEBUG("Preservation via Copy to %d(memory or file)\n", GetPlaceToPreserve());
       CD_DEBUG("Prv Mask : %d, Is it coop? %d, medium : %d, cd type : %d\n", 
                preserve_mask, CHECK_PRV_TYPE(preserve_mask, kCoop), GetPlaceToPreserve(), cd_type_);
 
@@ -2468,10 +2500,9 @@ CD::InternalPreserve(void *data,
         case kSSD:
         {
           char *filepath = file_handle_.GetFilePath();
-          CD_DEBUG("[MEDIUM TYPE : File %d] ------------------------------------------\n", GetPlaceToPreserve());
+          CD_DEBUG("[MEDIUM TYPE : File %d]:%s -- %s ----\n", GetPlaceToPreserve(), filepath, cd_id_.GetString().c_str());
           cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
                                  DataHandle(DataHandle::kOSFile, dst_data, len_in_bytes, cd_id_.node_id_, 
-//                                            file_handle_.GetFilePath(),
                                             filepath,
                                             file_handle_.fp_, 
                                             file_handle_.UpdateFilePos(len_in_bytes)), 
@@ -2983,32 +3014,6 @@ CDErrT CD::RemoveChild(CDHandle *cd_child)
 {
   // Do nothing?
   return CDErrT::kOK;
-}
-
-//FIXME 11112014
-void RegisterMeToParentHeadCD(int taskID)
-{
-  
-//  PMPI_Put(&taskID, 1, PMPI_INTEGER, cd_id().node_id().head(), target_disp, target_count, PMPI_INTEGER, &win);
-
-}
-
-HeadCD::HeadCD()
-{
-  error_occurred = false;
-}
-
-HeadCD::HeadCD( CDHandle *cd_parent, 
-                    const char *name, 
-                    const CDID& cd_id, 
-                    CDType cd_type, 
-                    PrvMediumT prv_medium, 
-                    uint64_t sys_bit_vector)
-  : CD(cd_parent, name, cd_id, cd_type, prv_medium, sys_bit_vector)
-{
-  RegisterMeToParentHeadCD(cd_id.task_in_color());
-  error_occurred = false;
-//  cd_parent_ = cd_parent;
 }
 
 

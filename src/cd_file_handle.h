@@ -47,48 +47,46 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_global.h"
 #include "cd_def_internal.h"
-//#include "transaction.h"
-//#define CDLog tsn_log_struct
-
-
+#include "cd_def_preserve.h"
 namespace cd {
   namespace internal {
 
 class CDFileHandle;
 
-class FilePath {
-  friend class CD;
-  friend class CDFileHandle;
-  private:
-    std::string filename_;
-    std::string basepath_;
-  public:
-    static std::string prv_basePath_;
-  private:
-    FilePath(void);
-    FilePath(const std::string &basepath, 
-             const std::string &filename); 
-    std::string GetFilePath(void);
-    void SetFilePath(const std::string &basepath, 
-                     const std::string &filename);
-  
-    // assignment
-    FilePath &operator=(const FilePath &that) {
-      basepath_ = that.basepath_;
-      filename_ = that.filename_;
-      return *this;
-    }
-  
-    // assignment
-    FilePath &operator=(const char *basepath_) {
-      basepath_ = basepath_;
-      return *this;
-    }
-};
+//class FilePath {
+//  friend class CD;
+//  friend class CDFileHandle;
+//  private:
+//    std::string filename_;
+//    std::string basepath_;
+//  public:
+//    static std::string global_prv_path_;
+//  private:
+//    FilePath(void);
+//    FilePath(const std::string &basepath, 
+//             const std::string &filename); 
+//    std::string GetFilePath(void);
+//    void SetFilePath(const std::string &basepath, 
+//                     const std::string &filename);
+//  
+//    // assignment
+//    FilePath &operator=(const FilePath &that) {
+//      basepath_ = that.basepath_;
+//      filename_ = that.filename_;
+//      return *this;
+//    }
+//  
+//    // assignment
+//    FilePath &operator=(const char *basepath_) {
+//      basepath_ = basepath_;
+//      return *this;
+//    }
+//};
 
 
 
 class CDFileHandle {
+  friend cd::CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   friend class CD;
   friend class HeadCD;
   friend class CDEntry;
@@ -97,17 +95,17 @@ class CDFileHandle {
     long fpos_generator_;
     bool opened_;
     char unique_filename_[MAX_FILE_PATH];
-    FilePath filePath_;
+//    FilePath filePath_;
+    static std::string global_prv_path_;
+    static std::string local_prv_path_;
   public:
     CDFileHandle(void);
     CDFileHandle(const PrvMediumT& prv_medium, 
-                 const std::string &basepath, 
                  const std::string &filename);
     ~CDFileHandle(void);
     void Initialize(const PrvMediumT& prv_medium, 
-                    const std::string &basepath, 
                     const std::string &filename);
-    void CloseFile(void);
+    void Close(void);
     void InitOpenFile(void) { opened_ = false; }
     bool IsOpen(void) { return opened_; }
     long UpdateFilePos(long offset) 
@@ -116,11 +114,8 @@ class CDFileHandle {
       return fpos_generator_ += offset; 
     }
     void OpenFilePath(void);     
-    void CloseAndDeletePath( void );
     char *GetFilePath(void);
-    std::string GetBasePath(void);
     void SetFilePath(const PrvMediumT& prv_medium, 
-                     const std::string &basepath, 
                      const std::string &filename);
 };
 

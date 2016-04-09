@@ -291,7 +291,7 @@ update the preserved data.
   
     CDFileHandle file_handle_;
     // PFS
-    PFSHandle *pfs_handler_;
+    PFSHandle *pfs_handle_;
 
 #if CD_COMM_LOG_ENABLED
   public:
@@ -347,7 +347,6 @@ update the preserved data.
     static CDHandle *CreateRootCD(const char *name, 
                      const CDID& child_cd_id, 
                      CDType cd_type,
-                     const std::string &basepath, 
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err);
 

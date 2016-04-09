@@ -35,6 +35,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_config.h"
 #include "cd_global.h"
+#include "cd_def_debug.h"
 #include "cd_handle.h"
 #include "cd_entry.h"
 #include "cd_path.h"
@@ -49,7 +50,6 @@ int EventHandler::handled_event_count = 0;
 
 void HandleEntrySearch::HandleEvent(void)
 {
-  CheckHere();
 #if _MPI_VER
 
   int entry_requester_id = task_id_;
@@ -248,7 +248,6 @@ void HandleEntrySearch::HandleEvent(void)
 
 void HandleEntrySend::HandleEvent(void)
 {
-  CheckHere();
 #if _MPI_VER
 
   CD_DEBUG("CD::HandleEntrySend\n");

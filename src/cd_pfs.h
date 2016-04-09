@@ -109,7 +109,7 @@ private:
 	PFSHandle( const PFSHandle& that ) ;
 	~PFSHandle( void ) 
  	{ 
-  		Close_and_Delete_File(); 
+  		Close(); 
   		CommGroupFree( &PFS_parallel_file_group_ );
   		CommFree( &PFS_parallel_file_communicator_ );
   	}
@@ -137,7 +137,7 @@ private:
   	*/
 	int Open_File( void );
 
-	int Close_and_Delete_File( void );
+	int Close( void );
 	void Copy( const PFSHandle& that );
 
        /**

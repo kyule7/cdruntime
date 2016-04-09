@@ -36,6 +36,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "packer.h"
 #include "cd_def_internal.h" 
+#include "cd_def_debug.h"
 #include <cstring>
 
 

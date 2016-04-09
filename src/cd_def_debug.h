@@ -37,7 +37,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define _CD_DEF_DEBUG_H
 
 #include "cd_features.h"
+#include "cd_global.h"
 #include <cstdarg>
+#include <cstdio>
+#include <sstream>
+#include <fstream>
+
 namespace cd {
 
 // DEBUG related

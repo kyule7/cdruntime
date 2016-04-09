@@ -41,6 +41,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <iostream>
 //#include <random>
 #include "cd_def_internal.h"
+#include "cd_def_debug.h"
 #include "cd_global.h"
 
 #define DEFAULT_ERROR_THRESHOLD 0.0

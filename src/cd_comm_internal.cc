@@ -41,6 +41,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_handle.h"
 #include "cd_internal.h"
 #include "cd_def_internal.h"
+#include "cd_def_debug.h"
 
 #define DEBUG_OFF_MAILBOX 1
 #define LOCK_PER_MAILBOX 0
@@ -63,7 +64,7 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color,
                               int new_head_id, 
                               bool is_reuse)
 {
-  ptr_cd_->CheckReexecution();
+//  ptr_cd_->CheckReexecution();
 
   NodeID new_node_id(new_head_id);
   if(is_reuse == false) {

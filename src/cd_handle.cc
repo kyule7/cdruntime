@@ -204,9 +204,31 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #endif
 
   // Base filepath setup for preservation
-  char *filepath_env = getenv("CD_PRV_BASEPATH");
-  if(filepath_env != NULL) {
-    FilePath::prv_basePath_ = filepath_env;
+  char *globalpath_env = getenv("CD_PRV_GLOBAL_PATH");
+  if(globalpath_env != NULL) {
+    CDFileHandle::global_prv_path_ = globalpath_env;
+  }
+  char *localpath_env = getenv("CD_PRV_LOCAL_PATH");
+  if(localpath_env != NULL) {
+    CDFileHandle::local_prv_path_ = localpath_env;
+  }
+
+  if(myTaskID == 0) {
+    // Therefore, if it is not opened, we need to check if it exists.
+    struct stat sb;
+    const char* basepath = (CDFileHandle::global_prv_path_+string(CD_FILEPATH_PFS)).c_str();
+    if(stat(basepath, &sb) == 0 && S_ISDIR(sb.st_mode)) {
+      CD_DEBUG("Prv Path exists!\n");
+    }
+    else {
+      char filepath[256];
+      sprintf(filepath, "%s", basepath);
+      int ret = mkdir(filepath, S_IRWXU);
+      if(ret == -1 && errno != EEXIST) {
+        /* The EEXIST should not happen, but we check for it anyway */
+        ERROR_MESSAGE("ERROR: Failed to mkdir to preserve %s: %s\n", filepath, strerror(errno));
+      }
+    }
   }
 
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
@@ -217,7 +239,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   CD::CDInternalErrT internal_err;
   CDHandle *root_cd_handle = CD::CreateRootCD("Root", CDID(CDNameT(0), new_node_id), 
                                               static_cast<CDType>(kStrict | prv_medium), 
-                                              FilePath::prv_basePath_, 
+                                             /* FilePath::global_prv_path_,*/ 
                                               ROOT_SYS_DETECT_VEC, &internal_err);
 
   CDPath::GetCDPath()->push_back(root_cd_handle);
@@ -1370,8 +1392,8 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     err = kError;
     // FIXME
-    printf("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
-           rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+    CD_PRINT("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
+             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
 
     CDHandle *rb_cdh = CDPath::GetCDLevel(rollback_point);
     assert(rb_cdh != NULL);

@@ -32,22 +32,23 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 */
-#include "cd_file_handle.h"
-#include "cd_def_internal.h"
 #include "cd_config.h"
+#include "cd_file_handle.h"
+#include "cd_def_debug.h"
 #include <sys/stat.h>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
 #include <cstring>
-#if _PRV_FILE_NOT_ERASED
+#if _PRV_FILE_ERASED
 #include <unistd.h>
 #endif
 using namespace std;
 using namespace cd;
 using namespace cd::internal;
 
-std::string FilePath::prv_basePath_ = CD_DEFAULT_PRV_BASEPATH;
+std::string CDFileHandle::global_prv_path_ = CD_DEFAULT_PRV_GLOBAL_BASEPATH;
+std::string CDFileHandle::local_prv_path_  = CD_DEFAULT_PRV_LOCAL_BASEPATH;
 
 /// CDFileHandle ///////////////////////////////////
 CDFileHandle::CDFileHandle(void) 
@@ -57,87 +58,50 @@ CDFileHandle::CDFileHandle(void)
 }
 
 CDFileHandle::CDFileHandle(const PrvMediumT& prv_medium, 
-                           const std::string &basepath, 
                            const std::string &filename) 
 {
   opened_ = false;
   fpos_generator_ = 0;
-  if(prv_medium != kDRAM)
-    filePath_.SetFilePath(basepath, filename);
+  SetFilePath(prv_medium, filename);
 }
 
 void CDFileHandle::Initialize(const PrvMediumT& prv_medium, 
-                              const std::string &basepath, 
                               const std::string &filename) 
 {
   opened_ = false;
   fpos_generator_ = 0;
-  if(prv_medium != kDRAM)
-    filePath_.SetFilePath(basepath, filename);
+  SetFilePath(prv_medium, filename);
 }
 
 void CDFileHandle::OpenFilePath(void)     
 { 
   // opend_ == true means that the corresponding filepath already exists!
-  // Therefore, if it is not opened, we need to check if it exists.
-  struct stat sb;
-  const char* basepath = filePath_.basepath_.c_str();
-  if(stat(basepath, &sb) == 0 && S_ISDIR(sb.st_mode)) {
-//    printf("Prv Path exists!\n");
-  }
-  else {
-    char filepath[256];
-    sprintf(filepath, "%s", basepath);
-//    printf("preservation file path size : %d\n", (int)sizeof(filepath));
-    int ret = mkdir(filepath, S_IRWXU);
-    if(ret == -1 && errno != EEXIST) {
-      /* The EEXIST should not happen, but we check for it anyway */
-      ERROR_MESSAGE("ERROR: Failed to mkdir to preserve %s: %s\n", filepath, strerror(errno));
-    }
-  }
-  strcpy(unique_filename_, filePath_.GetFilePath().c_str());
+  assert(opened_ == false);
   file_desc_ = mkstemp(unique_filename_);
-  fp_ = fdopen(file_desc_, "w");
-#if _PRV_FILE_NOT_ERASED
-  unlink(unique_filename_);
-//  printf("unlink : %s\n", unique_filename_);
-#endif
-//  printf("[CD_Init] this is the temporary path created for run: %s\n", unique_filename_);
   if(file_desc_ != -1){
     opened_ = true;
-    CD_DEBUG("[CD_Init] this is the temporary path created for run: %s\n", filePath_.GetFilePath().c_str());
+    CD_DEBUG("[CD_Init] this is the temporary path created for run: %s\n", GetFilePath());
   }
   else {
     ERROR_MESSAGE("Failed to generate an unique filepath.\n");
   }
 
+  fp_ = fdopen(file_desc_, "w");
 }
 
 CDFileHandle::~CDFileHandle() 
 {
-  CloseFile();
+  Close();
 }
 
-void CDFileHandle::CloseFile()
+void CDFileHandle::Close()
 {
-  if(opened_)
-    fclose(fp_);
-}
-
-void CDFileHandle::CloseAndDeletePath( void )
-{
-  char cmd[ 256 ];
-  sprintf(cmd, "rm -rf %s", filePath_.GetFilePath().c_str());
-  if( system(cmd) == -1 ) { 
-    ERROR_MESSAGE("Failed to remove a directory for preservation data.");
-  }
-  else 
-    opened_ = false;  
-}
-
-std::string CDFileHandle::GetBasePath(void)
-{
-  return filePath_.basepath_;
+  if(opened_) {
+//    fclose(fp_);
+#if _PRV_FILE_ERASED
+//    unlink(unique_filename_);
+#endif
+   }
 }
 
 char *CDFileHandle::GetFilePath(void)
@@ -148,45 +112,49 @@ char *CDFileHandle::GetFilePath(void)
   return unique_filename_;
 }
 
-void CDFileHandle::SetFilePath(const PrvMediumT& prv_medium, const std::string &basepath, const std::string &filename)
+void CDFileHandle::SetFilePath(const PrvMediumT& prv_medium, /*const std::string &basepath,*/ const std::string &filename)
 {
   if(prv_medium != kDRAM) {
-    if(prv_medium == kHDD) { 
-      filePath_.SetFilePath(basepath + string(CD_FILEPATH_HDD), filename);
+    string fullpath;
+    if(prv_medium == kHDD) {
+      fullpath = local_prv_path_ + filename;
     }
     else if(prv_medium == kSSD) {
-      filePath_.SetFilePath(basepath + string(CD_FILEPATH_HDD), filename);
+      fullpath = local_prv_path_ + filename;
     }
     else if(prv_medium == kPFS) { 
-      filePath_.SetFilePath(basepath + string(CD_FILEPATH_HDD), filename);
+      fullpath = global_prv_path_ + filename;
     }
     else {
       ERROR_MESSAGE("Unsupported medium : %d\n", prv_medium);
     }
+
+    strcpy(unique_filename_, fullpath.c_str());
+
   }
   else {
-    ERROR_MESSAGE("DRAM does not need to set filepath : %d\n", prv_medium);
+    CD_DEBUG("DRAM does not need to set filepath : %d\n", prv_medium);
   }
 }
 
-/// FilePath ///////////////////////////////////
-FilePath::FilePath(void)
-{ 
-  basepath_ = prv_basePath_;
-  filename_ = CD_DEFAULT_PRV_FILENAME;
-}
-
-FilePath::FilePath(const std::string &basepath, const std::string &filename) 
-{
-  SetFilePath(basepath, filename);
-}
-
-void FilePath::SetFilePath(const std::string &basepath, const std::string &filename)
-{
-  basepath_ = basepath;
-  filename_ = filename;
-}
-
-std::string FilePath::GetFilePath(void) 
-{ return basepath_+filename_; }
+///// FilePath ///////////////////////////////////
+//FilePath::FilePath(void)
+//{ 
+//  basepath_ = global_prv_path_;
+//  filename_ = CD_DEFAULT_PRV_FILENAME;
+//}
+//
+//FilePath::FilePath(const std::string &basepath, const std::string &filename) 
+//{
+//  SetFilePath(basepath, filename);
+//}
+//
+//void FilePath::SetFilePath(const std::string &basepath, const std::string &filename)
+//{
+//  basepath_ = basepath;
+//  filename_ = filename;
+//}
+//
+//std::string FilePath::GetFilePath(void) 
+//{ return basepath_+filename_; }
   

@@ -80,7 +80,7 @@ PFSHandle::PFSHandle( const PFSHandle& that )
 
 //~PFSHandle::PFSHandle( void ) 
 //{ 
-//	Close_and_Delete_File(); 
+//	Close(); 
 //	MPI_Group_free( &PFS_parallel_file_group_ );
 //	MPI_Comm_free( &PFS_parallel_file_communicator_ );
 //}
@@ -139,7 +139,7 @@ int PFSHandle::Open_File( void )
 	return CDEntry::CDEntryErrT::kOK;
 }
 
-int PFSHandle::Close_and_Delete_File( void )
+int PFSHandle::Close( void )
 {
 	int error_type;
 	error_type = MPI_File_close( &PFS_d_ );
@@ -291,7 +291,7 @@ int PFSHandle::Open_File( void )
 	return CDEntry::CDEntryErrT::kOK;
 }
 
-int PFSHandle::Close_and_Delete_File( void )
+int PFSHandle::Close( void )
 {
   assert(0);
 	return CDEntry::CDEntryErrT::kOK;

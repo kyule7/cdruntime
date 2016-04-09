@@ -46,6 +46,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  */
 #include "cd_global.h"
+#include "cd_def_debug.h"
 #include "cd_handle.h"
 #include "cd_id.h"
 
