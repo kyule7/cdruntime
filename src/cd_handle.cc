@@ -335,7 +335,7 @@ void CD_Finalize(void)
 //  cd::internal::Finalize();
   cd::tot_end_clk = CD_CLOCK();
 
-#if CD_DEBUG_ENABLED && CD_PROFILER_ENABLED 
+#if CD_PROFILER_ENABLED 
   std::map<uint32_t, RuntimeInfo> runtime_info;
   RuntimeInfo summary = Profiler::GetTotalInfo(runtime_info);
   runtime_info[100] = summary;
