@@ -1226,6 +1226,7 @@ void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, dou
     double _timeBottomStart = getTime();
     level = all_grids->num_levels-1;
     if(level>onLevel)zero_vector(all_grids->levels[level],e_id);//else use whatever was the initial guess
+    //SZNOTE: lots of MPI_Allreduce, some to exchange boundaries, some just collect max information
     IterativeSolver(all_grids->levels[level],e_id,R_id,a,b,MG_DEFAULT_BOTTOM_NORM);  // -1 == exact solution
     all_grids->levels[level]->timers.Total += (double)(getTime()-_timeBottomStart);
 
@@ -1240,6 +1241,7 @@ void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, dou
 
     // v-cycle
     all_grids->levels[level]->vcycles_from_this_level++;
+    //SZNOTE: following is a recursion function with MPI non-blocking operations
     MGVCycle(all_grids,e_id,R_id,a,b,level);
   }
 

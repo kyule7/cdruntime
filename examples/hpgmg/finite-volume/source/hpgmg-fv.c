@@ -47,7 +47,23 @@
 #include "operators.h"
 #include "solvers.h"
 //------------------------------------------------------------------------------------------------------------------------------
+#if CD
+#include "cd.h"
+#endif
+//------------------------------------------------------------------------------------------------------------------------------
 void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dtol, double rtol){
+  #if CD
+  CDHandle * bench_cd = GetLeafCD();
+  CD_Begin(bench_cd);
+  bench_cd->Preserve(all_grids, sizeof(mg_type), kCopy, "bench_all_grids");
+
+  //SZ: FIXME: should verify following preservations can use kRef
+  bench_cd->Preserve(&a, sizeof(a), kRef, "a");
+  bench_cd->Preserve(&b, sizeof(b), kRef, "b");
+  bench_cd->Preserve(&dtol, sizeof(dtol), kRef, "dtol");
+  bench_cd->Preserve(&rtol, sizeof(rtol), kRef, "rtol");
+  bench_cd->Preserve(&onLevel, sizeof(onLevel), kCopy, "rtol");
+  #endif
      int     doTiming;
      int    minSolves = 10; // do at least minSolves MGSolves
   double timePerSolve = 0;
@@ -96,6 +112,9 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
     if( (doTiming==1) && (onLevel==0) )HPM_Stop("FMGSolve()");
     #endif
   }
+  #if CD
+  CD_Complete(bench_cd);
+  #endif
 }
 
 
@@ -116,7 +135,6 @@ int main(int argc, char **argv){
   }
   #endif
     
-
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
   // initialize MPI and HPM
   #ifdef USE_MPI
@@ -245,6 +263,11 @@ int main(int argc, char **argv){
 
 
 
+#if CD
+  CDHandle* root_cd = CD_Init(num_tasks, my_rank);
+  CD_Begin(root_cd);
+#endif
+
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   if(my_rank==0){
@@ -282,6 +305,8 @@ int main(int argc, char **argv){
   #endif
   level_type level_h;
   int ghosts=stencil_get_radius();
+  
+  //SZNOTE: two MPI_Allreduce to gather information...
   create_level(&level_h,boxes_in_i,box_dim,ghosts,VECTORS_RESERVED,bc,my_rank,num_tasks);
   #ifdef USE_HELMHOLTZ
   double a=1.0;double b=1.0; // Helmholtz
@@ -292,6 +317,8 @@ int main(int argc, char **argv){
   #endif
   double h=1.0/( (double)boxes_in_i*(double)box_dim );  // [0,1]^3 problem
   initialize_problem(&level_h,h,a,b);                   // initialize VECTOR_ALPHA, VECTOR_BETA*, and VECTOR_F
+  
+  //SZNOTE: restriction and exchange boundaries within, lots of MPI non-blocking communications
   rebuild_operator(&level_h,NULL,a,b);                  // calculate Dinv and lambda_max
   if(level_h.boundary_condition.type == BC_PERIODIC){   // remove any constants from the RHS for periodic problems
     double average_value_of_f = mean(&level_h,VECTOR_F);
@@ -305,6 +332,7 @@ int main(int argc, char **argv){
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // create the MG hierarchy...
   mg_type MG_h;
+  //SZNOTE: MPI_Comm_split inside and MPI_Allreduce on splitted communicators
   MGBuild(&MG_h,&level_h,a,b,minCoarseDim);             // build the Multigrid Hierarchy 
 
 
@@ -316,10 +344,22 @@ int main(int argc, char **argv){
   double dtol=  0.0;double rtol=1e-10; // converged if ||b-Ax|| / ||b|| < rtol
   int l;
   #ifndef TEST_ERROR
+  #if CD
+  CDHandle * cd_l1 = GetCurrentCD()->Create("cd_l1", kStrictCD | kHDD);
+  CD_Begin(cd_l1);
+  cd_l1->Preserve(&dtol, sizeof(dtol), kCopy, "dtol");
+  cd_l1->Preserve(&rtol, sizeof(rtol), kCopy, "rtol");
+  cd_l1->Preserve(&a, sizeof(a), kCopy, "a");
+  cd_l1->Preserve(&b, sizeof(b), kCopy, "b");
+
+  // SZ: FIXME: a relaxed CD here, but should explore communication pattern to change to strict...
+  CDHandle *cd_l2 = GetCurrentCD()->Create(num_tasks, "cd_l2", kRelaxed | kDRAM);
+  #endif
 
   double AverageSolveTime[3];
   for(l=0;l<3;l++){
     if(l>0)restriction(MG_h.levels[l],VECTOR_F,MG_h.levels[l-1],VECTOR_F,RESTRICT_CELL);
+    //SZNOTE: actual solver, lots of MPI communications
     bench_hpgmg(&MG_h,l,a,b,dtol,rtol);
     AverageSolveTime[l] = (double)MG_h.timers.MGSolve / (double)MG_h.MGSolves_performed;
     if(my_rank==0){fprintf(stdout,"\n\n===== Timing Breakdown =========================================================\n");}
@@ -341,6 +381,12 @@ int main(int argc, char **argv){
       fprintf(stdout,"  h=%0.15e  DOF=%0.15e  time=%0.6f  DOF/s=%0.3e  MPI=%d  OMP=%d\n",MG_h.levels[l]->h,DOF,seconds,DOFs,num_tasks,OMP_Threads);
     }
   }
+
+  #if CD
+  cd_l2->Destroy();
+  CD_Complete(cd_l1);
+  cd_l1->Destroy();
+  #endif
   #endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -370,6 +416,12 @@ int main(int argc, char **argv){
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   if(my_rank==0){fprintf(stdout,"\n\n===== Done =====================================================================\n");}
+
+#if CD
+  CD_Complete(root_cd);
+  CD_Finalize();
+#endif
+
 
   #ifdef USE_MPI
   #ifdef USE_HPM // IBM performance counters for BGQ...
