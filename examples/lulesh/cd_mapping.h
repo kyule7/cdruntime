@@ -140,7 +140,7 @@
 
 //#define SWITCH_0_0_0   (8<<CDFLAG_SIZE) | kStrict  | kDRAM              // Main Loop
 #define SWITCH_0_0_0  3                                                   // Main Loop
-#define CD_MAP_0_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) // 
+#define CD_MAP_0_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM  | ERROR_VEC_0) // 
 #define SWITCH_1_0_0  3                                                   // TimeIncrement
 #define CD_MAP_1_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //
 #define SWITCH_1_2_0  0                                                   // LagrangeLeapFrog

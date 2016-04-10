@@ -119,10 +119,10 @@ void Profiler::BeginRecord(void)
     }
 #else
     if(myTaskID == 0) {
-//      CD_PRINT("%sRe-exec %s %s\n", 
-//                string(cdh_->level(), '\t').c_str(), 
-//                cdh_->GetName(), 
-//                name.c_str());
+      CD_PRINT("%sRe-exec %s %s\n", 
+                string(cdh_->level(), '\t').c_str(), 
+                cdh_->GetName(), 
+                name.c_str());
     }
 #endif
 //    sync_clk_ = CD_CLOCK();
@@ -138,10 +138,10 @@ void Profiler::BeginRecord(void)
         name.c_str(), cdh_->GetCDType(), cdh_->GetCDLoggingMode(), cdh_->GetCommLogMode());
 #else
     if(myTaskID == 0) {
-//      CD_PRINT("%sBegin Exec %s %s\n", 
-//                string(cdh_->level(), '\t').c_str(), 
-//                cdh_->GetName(), 
-//                name.c_str());
+      CD_PRINT("%sBegin Exec %s %s\n", 
+                string(cdh_->level(), '\t').c_str(), 
+                cdh_->GetName(), 
+                name.c_str());
     }
 #endif
   } 
@@ -174,10 +174,10 @@ void Profiler::EndRecord(void)
     }
 #else
     if(myTaskID == 0) {
-//      CD_PRINT("%sEnd Rexec %s %s\n", 
-//                string(cdh_->level(), '\t').c_str(), 
-//                cdh_->GetName(), 
-//                name.c_str());
+      CD_PRINT("%sEnd Rexec %s %s\n", 
+                string(cdh_->level(), '\t').c_str(), 
+                cdh_->GetName(), 
+                name.c_str());
     }
 #endif
     num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
@@ -194,10 +194,10 @@ void Profiler::EndRecord(void)
 #else
 
     if(myTaskID == 0) {
-//      CD_PRINT("%sEnd Rexec %s %s\n", 
-//                string(cdh_->level(), '\t').c_str(), 
-//                cdh_->GetName(), 
-//                name.c_str());
+      CD_PRINT("%sEnd Rexec %s %s\n", 
+                string(cdh_->level(), '\t').c_str(), 
+                cdh_->GetName(), 
+                name.c_str());
     }
 #endif
   } 

@@ -1051,12 +1051,13 @@ CDErrT CD::Begin(bool collective, const char *label)
   uint32_t new_rollback_point = SyncCDs(this, true);
   SetRollbackPoint(new_rollback_point, false);
 
-  need_escalation = false;
-  *rollback_point_ = INVALID_ROLLBACK_POINT;        
-
   if(new_rollback_point < level()) { 
     bool need_sync_next_cdh = GetParentCD(level())->task_size() > task_size();
     GetCDToRecover( GetCurrentCD(), need_sync_next_cdh )->ptr_cd()->Recover();
+  } 
+  else {
+    need_escalation = false;
+    *rollback_point_ = INVALID_ROLLBACK_POINT;        
   }
 
 
@@ -1356,7 +1357,8 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     new_rollback_point = CheckRollbackPoint(false);
   }
 #endif
-  if(new_rollback_point != INVALID_ROLLBACK_POINT) { 
+//  if(new_rollback_point != INVALID_ROLLBACK_POINT) { 
+  if(new_rollback_point <= level()) { 
     // If another task set rollback_point lower than this task (error occurred at this task),
     // need_sync is false. 
     // Let's say it was set to 3. But another task set to 1. Then it is false;

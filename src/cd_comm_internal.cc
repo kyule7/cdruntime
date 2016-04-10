@@ -108,7 +108,8 @@ void CD::CheckReexecution(void)
            cd_id_.GetString().c_str(), label_.c_str(), new_rollback_point);
 
 
-  if(new_rollback_point != INVALID_ROLLBACK_POINT) {
+//  if(new_rollback_point != INVALID_ROLLBACK_POINT) {
+  if(new_rollback_point <= level()) {//!= INVALID_ROLLBACK_POINT) {
     CD_DEBUG("\n\nReexec (Before calling GetCDToRecover()->Recover(false);\n\n");
 #if CD_PROFILER_ENABLED
     end_clk = CD_CLOCK();
@@ -597,7 +598,7 @@ CDErrT CD::CheckMailBox(void)
   CD_CLOCK_T tstart = CD_CLOCK();
 #endif
   CD::CDInternalErrT ret=kOK;
-  int event_count = DecPendingCounter();
+  int event_count = *pendingFlag_;//DecPendingCounter();
 //  int event_count = *pendingFlag_;
   //assert(event_count <= 1024);
   // Reset handled event counter
@@ -656,9 +657,11 @@ CDErrT CD::CheckMailBox(void)
     } 
 
     CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "-------------------------------------------------------------------\n");
-
+    bool is_new_event = cd_event_.size() > 0;
     InvokeAllErrorHandler();
-    uint32_t remained_event_count = DecPendingCounter();
+    uint32_t remained_event_count = event_count;
+    if(is_new_event)
+      remained_event_count = DecPendingCounter();
     CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Check MailBox is done. handled_event_count : %u --> %u, pending events : %d --> %u\n", 
                   temp, EventHandler::handled_event_count, event_count, remained_event_count);
     CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "-------------------------------------------------------------------\n\n");
@@ -1309,6 +1312,7 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(const CDEventT &event)
 
 uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
 {
+  if(rollback_lv == INVALID_ROLLBACK_POINT) return rollback_lv;
   if(task_size() > 1) {
 //  printf("[%s] cur level : %u size:%u\n", __func__, level(), task_size());
 //  CD *cur_cd = CDPath::GetCoarseCD(this);
@@ -1329,15 +1333,22 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
       CD_DEBUG("MPI_Group_translate_ranks %d->%d. Set %u to Head's rollback_point_ at %s %s\n", 
                head_id, global_head_id, rollback_lv, cd_id_.GetString().c_str(), label_.c_str());
     } else {
-      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
-      // This is important. It is necessary to set it locally, too.
-      if(rollback_lv < *(rollback_point_)) {
-        *(rollback_point_) = rollback_lv;
+      if(head_in_levels) {
+        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+        // This is important. It is necessary to set it locally, too.
+        if(rollback_lv < *(rollback_point_)) {
+          *(rollback_point_) = rollback_lv;
+        }
+        rollback_point = *(rollback_point_);
+  //      if(*(rollback_point_) != INVALID_ROLLBACK_POINT)
+  //        need_reexec = true;
+        PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+      } else {
+        if(rollback_lv < *(rollback_point_)) {
+          *(rollback_point_) = rollback_lv;
+        }
+        rollback_point = *(rollback_point_);
       }
-      rollback_point = *(rollback_point_);
-//      if(*(rollback_point_) != INVALID_ROLLBACK_POINT)
-//        need_reexec = true;
-      PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
       CD_DEBUG("level %u local set %u to current task #%d\n", level(), rollback_point, task_in_color());
     }
     return rollback_point; 
@@ -1499,9 +1510,10 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
     } else {
 //      assert(need_reexec == false); // should be false at this point.
       CheckMailBox();
-//      uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
-      uint32_t rollback_point = CheckRollbackPoint(false);
-      if(rollback_point != INVALID_ROLLBACK_POINT) { // This could be set inside CD::CheckMailBox()
+      uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
+//      uint32_t rollback_point = CheckRollbackPoint(false);
+//      if(rollback_point != INVALID_ROLLBACK_POINT) { // This could be set inside CD::CheckMailBox()
+      if(rollback_point <= level()){
         CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
             cd_id_.GetString().c_str(), level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
         
@@ -1560,9 +1572,10 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
     } else {
 //      assert(need_reexec == false); // should be false at this point.
       CheckMailBox();
-//      uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
-      uint32_t rollback_point = CheckRollbackPoint(false);
-      if(rollback_point != INVALID_ROLLBACK_POINT) { // This could be set inside CD::CheckMailBox()
+      uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
+//      uint32_t rollback_point = CheckRollbackPoint(false);
+//      if(rollback_point != INVALID_ROLLBACK_POINT) { // This could be set inside CD::CheckMailBox()
+      if(rollback_point <= level()) {
         CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
             __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
         

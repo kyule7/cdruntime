@@ -389,7 +389,8 @@ void HandleErrorOccurred::HandleEvent(void)
   CD_DEBUG("\n[HandleErrorOccurred::HandleEvent]\n");
 
   CDEventT all_reexecute = kAllReexecute;
-  if(GetCurrentCD()->level() > ptr_cd_->level()) {
+  //if(GetCurrentCD()->level() > ptr_cd_->level()) {
+  if(GetCurrentCD()->level() >= ptr_cd_->level()) {
     for(int i=0; i<ptr_cd_->task_size(); i++) {
       CD_DEBUG("SetMailBox(kAllRexecute) for error occurred of task #%d\n", i);
       ptr_cd_->SetMailBox(all_reexecute, i);
@@ -526,7 +527,8 @@ void HandleAllReexecute::HandleEvent(void)
     
     // Only when rollback level is higher than rollback_point, update rollback_point.
     if(rollback_lv < rollback_point) { // rollback_lv == current_lv
-      assert(rollback_point == INVALID_ROLLBACK_POINT);
+//      assert(rollback_point == INVALID_ROLLBACK_POINT);
+      CD_DEBUG("%u < %u\n", rollback_point, INVALID_ROLLBACK_POINT);
     }
 
     // Only kReexecute event from the head in the same level is valid for some action.

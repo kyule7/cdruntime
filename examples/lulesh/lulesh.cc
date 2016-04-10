@@ -3725,12 +3725,14 @@ int main(int argc, char *argv[])
 #endif
    // Main loop start
    int idx=0;
+   opts.its = 1000;
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
       // Main functions in the loop
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
-//    if(idx % 4 == 0) {
+//    if(idx % 10 == 0) {
       CD_Begin(cdh_1_0_0, true, "TimeIncrement"); 
       cdh_1_0_0->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime"); 
+      cdh_1_0_0->Preserve(locDom->serdes.SetOp(preserve_vec), kCopy, "main_iter_prv");
 //    }
 #endif
 //#if _CD
@@ -3860,10 +3862,10 @@ int main(int argc, char *argv[])
 #endif
 
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
-//    if(idx % 4 == 0) {
+    idx++;
+//    if(idx % 10 == 0) {
       CD_Complete(cdh_1_0_0); 
 //    }
-//    idx++;
 #endif
 
    }
