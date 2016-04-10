@@ -598,6 +598,7 @@ CD::InternalCreate(CDHandle *parent,
     (*new_cd_handle)->ptr_cd_->Initialize(parent, name, new_cd_id, cd_type, new_prv_medium, sys_bit_vector);
   }
   else {
+
     CD_DEBUG("Newly Create!\n");
     int task_count = new_cd_id.task_count();
     uint32_t num_mailbox_to_create = 0;
@@ -615,6 +616,7 @@ CD::InternalCreate(CDHandle *parent,
 #endif
     }
     else {
+
       // Create a CD object for head.
       CD_DEBUG("Mask medium : %d\n", MASK_MEDIUM(cd_type));
       new_cd = new HeadCD(parent, name, new_cd_id, 
@@ -624,6 +626,7 @@ CD::InternalCreate(CDHandle *parent,
 #if _MPI_VER
       if(task_count > 1) {
         num_mailbox_to_create = task_count;
+        head_in_levels = true;
       }
 #endif
     }

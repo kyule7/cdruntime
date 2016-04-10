@@ -54,6 +54,7 @@ using namespace std;
 CD_CLOCK_T cd::mailbox_elapsed_time = 0;
 
 int requested_event_count = 0;
+bool CD::head_in_levels = false;
 //int cd::handled_event_count = 0;
 //int CD::handled_event_count = 0;
 
@@ -1377,9 +1378,13 @@ uint32_t CD::CheckRollbackPoint(bool remote)
       CD_DEBUG("MPI_Group_translate_ranks %d->%d. Head's rollback_point_:%u at %s %s\n", 
                head_id, global_head_id, rollback_lv, cd_id_.GetString().c_str(), label_.c_str());
     } else {
-      PMPI_Win_lock(MPI_LOCK_SHARED, GetRootCD()->task_in_color(), 0, rollbackWindow_);
-      rollback_lv = *(rollback_point_);
-      PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+      if(head_in_levels) {
+        PMPI_Win_lock(MPI_LOCK_SHARED, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+        rollback_lv = *(rollback_point_);
+        PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+      } else {
+        rollback_lv = *(rollback_point_);
+      }
     }
   //  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
   

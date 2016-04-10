@@ -184,7 +184,7 @@ class CD : public Serializable {
     static CDFlagT *rollback_point_;
     static CDMailBoxT pendingWindow_;
     static CDMailBoxT rollbackWindow_;
-
+    static bool head_in_levels;
     // Every mailbox resides in head 
     CDFlagT *event_flag_;
     CDMailBoxT mailbox_;
