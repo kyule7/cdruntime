@@ -3724,11 +3724,14 @@ int main(int argc, char *argv[])
    CDHandle *cdh_1_0_0 = cdh_0_0_0;
 #endif
    // Main loop start
+   int idx=0;
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
       // Main functions in the loop
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
+//    if(idx % 4 == 0) {
       CD_Begin(cdh_1_0_0, true, "TimeIncrement"); 
       cdh_1_0_0->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime"); 
+//    }
 #endif
 //#if _CD
 //      if(myRank == 0) {
@@ -3857,7 +3860,10 @@ int main(int argc, char *argv[])
 #endif
 
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
+//    if(idx % 4 == 0) {
       CD_Complete(cdh_1_0_0); 
+//    }
+//    idx++;
 #endif
 
    }

@@ -219,7 +219,7 @@ CD::CD(CDHandle *cd_parent,
  :  cd_id_(cd_id),
     file_handle_(prv_medium, 
 //                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
-                 cd_id.GetStringID() + string("_XXXXXX") ),
+                 cd_id.GetStringID() ),
     incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 {
   Init(); 
@@ -547,7 +547,7 @@ CDHandle *CD::CreateRootCD(const char *name,
   if(new_prv_medium != kDRAM) {
     new_cd_handle->ptr_cd_->file_handle_.SetFilePath(new_prv_medium, 
                                                      /*basefilepath,*/
-                                                     root_cd_id.GetStringID() + string("_XXXXXX"));
+                                                     root_cd_id.GetStringID());
   }
   assert(new_cd_handle != NULL);
 

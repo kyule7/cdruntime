@@ -1,6 +1,5 @@
 AC_INIT([cdruntime], [1.0], [cds@lph.ece.utexas.edu])
-AM_INIT_AUTOMAKE([-Wall -Wno-extra-portability -Werror foreign])
-#AM_PROG_AR
+AM_INIT_AUTOMAKE([1.11 -Wall -Werror foreign])
 LT_INIT
 AC_PROG_CC
 AC_PROG_CXX

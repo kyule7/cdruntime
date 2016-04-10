@@ -248,6 +248,9 @@ private:
     } 
     return curr_cd;
   }
+  static CDHandle *GetNullCD(void) {
+    return null_cd;
+  }
 
 };
 

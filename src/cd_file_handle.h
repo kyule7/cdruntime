@@ -95,7 +95,7 @@ class CDFileHandle {
     long fpos_generator_;
     bool opened_;
     char unique_filename_[MAX_FILE_PATH];
-//    FilePath filePath_;
+    std::string fullpath_;
     static std::string global_prv_path_;
     static std::string local_prv_path_;
   public:

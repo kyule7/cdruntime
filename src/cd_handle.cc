@@ -60,7 +60,7 @@ using namespace cd::interface;
 using namespace cd::internal;
 using namespace std;
 
-
+CDHandle *cd::null_cd = NULL;
 
 /// KL
 /// cddbg is a global variable to be used for debugging purpose.
@@ -1237,6 +1237,164 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
 #endif
   return err;
 }
+
+
+// ----------------------- Switch APIs -----------------------------------
+CDHandle *CDHandle::CreateSW(uint32_t onOff,
+                           const char *name, 
+                           int cd_type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask,
+                           bool collective, 
+                           CDErrT *error )
+{
+  CDHandle *handle;
+  if(onOff == kON) {
+    handle = Create(name, cd_type, error_name_mask, error_loc_mask, error);
+  }
+  else if(onOff == kOFF) {
+    handle = CDPath::GetNullCD();
+  }
+  return handle;
+}
+CDHandle *CDHandle::CreateSW(uint32_t onOff,
+                           uint32_t  num_children,
+                           const char *name, 
+                           int cd_type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask, 
+                           CDErrT *error)
+{
+  CDHandle *handle;
+  if(onOff == kON) {
+    handle = Create(num_children, name, cd_type, error_name_mask, error_loc_mask, error);
+  }
+  else if(onOff == kOFF) {
+    handle = CDPath::GetNullCD();
+  }
+  return handle;
+}
+CDHandle *CDHandle::CreateSW(uint32_t onOff,
+                           uint32_t color, 
+                           uint32_t task_in_color, 
+                           uint32_t num_children, 
+                           const char *name, 
+                           int cd_type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask, 
+                           CDErrT *error )
+{
+  CDHandle *handle;
+  if(onOff == kON) {
+    handle = Create(color, task_in_color, num_children, name, cd_type, error_name_mask, error_loc_mask, error);
+  }
+  else if(onOff == kOFF) {
+    handle = CDPath::GetNullCD();
+  }
+  return handle;
+}
+CDHandle *CDHandle::CreateAndBeginSW(uint32_t onOff,
+                                   uint32_t num_children, 
+                                   const char *name, 
+                                   int cd_type, 
+                                   uint32_t error_name_mask, 
+                                   uint32_t error_loc_mask,
+                                   CDErrT *error )
+{
+  // TODO
+  return NULL;
+}
+CDErrT CDHandle::DestroySW(uint32_t onOff, bool collective) 
+{
+  CDErrT ret;
+  if(onOff == kON) {
+    ret = Destroy(collective);
+  }
+  else if(onOff == kOFF) {
+    ret = kOK;
+  }
+  return ret;
+}
+  
+  
+CDErrT CDHandle::BeginSW(uint32_t onOff, bool collective, const char *label, const uint64_t &sys_err_vec)
+{
+  CDErrT ret;
+  if(onOff == kON) {
+    ret = Begin(collective, label, sys_err_vec);
+  }
+  else if(onOff == kOFF) {
+    ret = kOK;
+  }
+  return ret;
+}
+
+CDErrT CDHandle::CompleteSW(uint32_t onOff, bool collective, bool update_preservation)
+{
+  return kOK;
+}
+CDErrT CDHandle::PreserveSW(uint32_t onOff,
+                          void *data_ptr, 
+                          uint64_t len, 
+                          uint32_t preserve_mask, 
+                          const char *my_name, 
+                          const char *ref_name, 
+                          uint64_t ref_offset, 
+                          const RegenObject *regen_object, 
+                          PreserveUseT data_usage)
+{
+  return kOK;
+}
+CDErrT CDHandle::PreserveSW(uint32_t onOff,
+                          Serializable &serdes,                           
+                          uint32_t preserve_mask, 
+                          const char *my_name, 
+                          const char *ref_name, 
+                          uint64_t ref_offset, 
+                          const RegenObject *regen_object, 
+                          PreserveUseT data_usage)
+{
+  return kOK;
+}
+CDErrT CDHandle::PreserveSW(uint32_t onOff,
+                          CDEvent &cd_event, 
+                          void *data_ptr, 
+                          uint64_t len, 
+                          uint32_t preserve_mask, 
+                          const char *my_name, 
+                          const char *ref_name, 
+                          uint64_t ref_offset, 
+                          const RegenObject *regen_object, 
+                          PreserveUseT data_usage)
+{
+  return kOK;
+}
+
+CDErrT CDHandle::DetectSW(uint32_t onOff, std::vector<SysErrT> *err_vec)
+{
+  return kOK;
+}
+
+CDErrT CDHandle::CDAssertSW(uint32_t onOff, bool test, const SysErrT *error_to_report)
+{
+  return kOK;
+}
+CDErrT CDHandle::CDAssertFailSW(uint32_t onOff, bool test_true, const SysErrT *error_to_report)
+{
+  return kOK;
+}
+CDErrT CDHandle::CDAssertNotifySW(uint32_t onOff, bool test_true, const SysErrT *error_to_report)
+{
+  return kOK;
+}
+
+
+
+
+
+
+
+
 
 
 char *CDHandle::GetName(void) const

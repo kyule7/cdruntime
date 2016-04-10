@@ -145,7 +145,7 @@
 #define CD_MAP_1_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //
 #define SWITCH_1_2_0  0                                                   // LagrangeLeapFrog
 #define CD_MAP_1_2_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //
-#define SWITCH_2_0_0  3                                                   //       LagrangeNodal
+#define SWITCH_2_0_0  0                                                   //       LagrangeNodal
 #define CD_MAP_2_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) //   
 //                    *************************************************** CommRecvSBN ***************************************************** 
 #define SWITCH_3_0_0  3                                                   //           CalcForceForNodes 
@@ -181,7 +181,7 @@
 #define SWITCH_7_1_0  0                                                   //                           CalcElemFBHourglassForce
 #define CD_MAP_7_1_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                             # O{fx,fy,fz}, I{hourgram} 
 //                    *************************************************** CommSendSBN && CommSBN && CommRecvSYNC **************************  
-#define SWITCH_3_1_0  3                                                   //           CalcAccelerationForNodes ** MAP FINEGRAINED 
+#define SWITCH_3_1_0  0                                                   //           CalcAccelerationForNodes ** MAP FINEGRAINED 
 #define CD_MAP_3_1_0  ((216<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_1) //             # O{xdd,ydd,zdd}, I{fx,fy,fz}
 #define SWITCH_3_2_0  0                                                   //           ApplyAccelerationBoundaryConditionsForNodes 
 #define CD_MAP_3_2_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //             # O{xdd,ydd,zdd}, I{symmX,symmY,symmZ}

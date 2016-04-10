@@ -55,6 +55,7 @@ CDFileHandle::CDFileHandle(void)
 {
   opened_ = false;
   fpos_generator_ = 0;
+  unique_filename_[0] = '\0';
 }
 
 CDFileHandle::CDFileHandle(const PrvMediumT& prv_medium, 
@@ -62,6 +63,7 @@ CDFileHandle::CDFileHandle(const PrvMediumT& prv_medium,
 {
   opened_ = false;
   fpos_generator_ = 0;
+  unique_filename_[0] = '\0';
   SetFilePath(prv_medium, filename);
 }
 
@@ -70,6 +72,7 @@ void CDFileHandle::Initialize(const PrvMediumT& prv_medium,
 {
   opened_ = false;
   fpos_generator_ = 0;
+  unique_filename_[0] = '\0';
   SetFilePath(prv_medium, filename);
 }
 
@@ -77,13 +80,16 @@ void CDFileHandle::OpenFilePath(void)
 { 
   // opend_ == true means that the corresponding filepath already exists!
   assert(opened_ == false);
+//  unique_filename_[strlen(unique_filename_) - 7] = '\0';
+//  strncat(unique_filename_, "_XXXXXX", 7);
+  sprintf(unique_filename_, "%s%s", fullpath_.c_str(), "_XXXXXX");
   file_desc_ = mkstemp(unique_filename_);
   if(file_desc_ != -1){
     opened_ = true;
     CD_DEBUG("[CD_Init] this is the temporary path created for run: %s\n", GetFilePath());
   }
   else {
-    ERROR_MESSAGE("Failed to generate an unique filepath.\n");
+    ERROR_MESSAGE("Failed to generate an unique filepath:%s\n", unique_filename_);
   }
 
   fp_ = fdopen(file_desc_, "w");
@@ -97,7 +103,8 @@ CDFileHandle::~CDFileHandle()
 void CDFileHandle::Close()
 {
   if(opened_) {
-//    fclose(fp_);
+    fclose(fp_);
+    opened_ = false;
 #if _PRV_FILE_ERASED
 //    unlink(unique_filename_);
 #endif
@@ -115,21 +122,18 @@ char *CDFileHandle::GetFilePath(void)
 void CDFileHandle::SetFilePath(const PrvMediumT& prv_medium, /*const std::string &basepath,*/ const std::string &filename)
 {
   if(prv_medium != kDRAM) {
-    string fullpath;
     if(prv_medium == kHDD) {
-      fullpath = local_prv_path_ + filename;
+      fullpath_ = local_prv_path_ + filename;
     }
     else if(prv_medium == kSSD) {
-      fullpath = local_prv_path_ + filename;
+      fullpath_ = local_prv_path_ + filename;
     }
     else if(prv_medium == kPFS) { 
-      fullpath = global_prv_path_ + filename;
+      fullpath_ = global_prv_path_ + filename;
     }
     else {
       ERROR_MESSAGE("Unsupported medium : %d\n", prv_medium);
     }
-
-    strcpy(unique_filename_, fullpath.c_str());
 
   }
   else {
