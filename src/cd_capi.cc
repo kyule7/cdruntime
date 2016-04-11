@@ -35,6 +35,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd.h"
 #include "cd_global.h"
+#include <cassert>
 #define TO_CDHandle(a) (reinterpret_cast<CDHandle*>(a))
 #define TO_cdhandle(a) (reinterpret_cast<cdhandle_t*>(a))
 #define TO_RegenObject(a) (reinterpret_cast<RegenObject*>(a))
@@ -78,7 +79,14 @@ void cd_destroy(cdhandle* c_handle)
 
 void cd_begin(cdhandle_t* c_handle, int collective, const char *label)
 {
-  CD_Begin(TO_CDHandle(c_handle), (bool)collective, label);
+  CDHandle *cdh = TO_CDHandle(c_handle);
+  assert(cdh);
+  if(cdh->ctxt_prv_mode() == kExcludeStack) 
+    setjmp(cdh->jmp_buffer_);  
+  else 
+    getcontext(&cdh->ctxt_); 
+  cdh->CommitPreserveBuff(); 
+  cdh->Begin((bool)collective, label);
 }
 
 void cd_complete(cdhandle_t* c_handle)
