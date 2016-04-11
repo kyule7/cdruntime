@@ -97,6 +97,8 @@ int cd_preserve(cdhandle_t*,
 
 cdhandle_t* getcurrentcd(void);
 cdhandle_t* getleafcd(void);
+void cd_detect(cdhandle_t *);
+
 
 #ifdef __cplusplus
 }
