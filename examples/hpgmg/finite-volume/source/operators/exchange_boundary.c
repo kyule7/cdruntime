@@ -9,16 +9,19 @@
 //  BC's are either the responsibility of a separate function or should be fused into the stencil
 // The argument shape indicates which of faces, edges, and corners on each box must be exchanged
 //  If the specified shape exceeds the range of defined shapes, the code will default to STENCIL_SHAPE_BOX (i.e. exchange faces, edges, and corners)
+
+//#if CD
+//#include "cd.h"
+//#endif
 void exchange_boundary(level_type * level, int id, int shape){
-  #if CD
-  //SZ:FIXME: relaxed CD with 1 rank each, better mapping needed!!!
-  CDHandle * eb_cd = GetCurrentCD()->Create("eb_cd", kRelaxed | kDRAM);
-  CD_Begin(eb_cd);
-  //SZ:FIXME: how many elements are in level?? this just preserves the first element!!!!
-  eb_cd->Preserve(level, sizeof(level_type), "eb_level");
-  eb_cd->Preserve(&id, sizeof(id), "eb_id");
-  eb_cd->Preserve(&shape, sizeof(shape), "eb_id");
-  #endif
+  //#if CD
+  //cdhandle_t * eb_cd = cd_create(1, "eb_cd", kStrict | kDRAM);
+  //cd_begin(eb_cd);
+  ////SZ:FIXME: how many elements are in level?? this just preserves the first element!!!!
+  //cd_preserve(eb_cd, level, sizeof(level_type), kCopy, "eb_level", NULL);
+  //cd_preserve(eb_cd, &id, sizeof(id), kCopy, "eb_id", NULL);
+  //cd_preserve(eb_cd, &shape, sizeof(shape), kCopy, "eb_id", NULL);
+  //#endif
   double _timeCommunicationStart = getTime();
   double _timeStart,_timeEnd;
 
@@ -124,8 +127,8 @@ void exchange_boundary(level_type * level, int id, int shape){
  
   level->timers.ghostZone_total += (double)(getTime()-_timeCommunicationStart);
   
-  #if CD
-  CD_Complete(eb_cd);
-  eb_cd->Destroy();
-  #endif
+  //#if CD
+  //cd_complete(eb_cd);
+  //cd_destroy(eb_cd);
+  //#endif
 }

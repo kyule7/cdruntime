@@ -53,16 +53,16 @@
 //------------------------------------------------------------------------------------------------------------------------------
 void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dtol, double rtol){
   #if CD
-  CDHandle * bench_cd = GetLeafCD();
-  CD_Begin(bench_cd);
-  bench_cd->Preserve(all_grids, sizeof(mg_type), kCopy, "bench_all_grids");
+  cdhandle_t * bench_cd = getleafcd();
+  cd_begin(bench_cd);
+  cd_preserve(bench_cd, all_grids, sizeof(mg_type), kCopy, "bench_all_grids", NULL);
 
   //SZ: FIXME: should verify following preservations can use kRef
-  bench_cd->Preserve(&a, sizeof(a), kRef, "a");
-  bench_cd->Preserve(&b, sizeof(b), kRef, "b");
-  bench_cd->Preserve(&dtol, sizeof(dtol), kRef, "dtol");
-  bench_cd->Preserve(&rtol, sizeof(rtol), kRef, "rtol");
-  bench_cd->Preserve(&onLevel, sizeof(onLevel), kCopy, "rtol");
+  cd_preserve(bench_cd, &a, sizeof(a), kRef, "a", "a");
+  cd_preserve(bench_cd, &b, sizeof(b), kRef, "b", "a");
+  cd_preserve(bench_cd, &dtol, sizeof(dtol), kRef, "dtol", "dtol");
+  cd_preserve(bench_cd, &rtol, sizeof(rtol), kRef, "rtol", "rtol");
+  cd_preserve(bench_cd, &onLevel, sizeof(onLevel), kCopy, "onLevel", NULL);
   #endif
      int     doTiming;
      int    minSolves = 10; // do at least minSolves MGSolves
@@ -113,7 +113,7 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
     #endif
   }
   #if CD
-  CD_Complete(bench_cd);
+  cd_complete(bench_cd);
   #endif
 }
 
@@ -264,8 +264,8 @@ int main(int argc, char **argv){
 
 
 #if CD
-  CDHandle* root_cd = CD_Init(num_tasks, my_rank);
-  CD_Begin(root_cd);
+  cdhandle_t* root_cd = cd_init(num_tasks, my_rank, kHDD);
+  cd_begin(root_cd);
 #endif
 
 
@@ -345,15 +345,16 @@ int main(int argc, char **argv){
   int l;
   #ifndef TEST_ERROR
   #if CD
-  CDHandle * cd_l1 = GetCurrentCD()->Create("cd_l1", kStrictCD | kHDD);
-  CD_Begin(cd_l1);
-  cd_l1->Preserve(&dtol, sizeof(dtol), kCopy, "dtol");
-  cd_l1->Preserve(&rtol, sizeof(rtol), kCopy, "rtol");
-  cd_l1->Preserve(&a, sizeof(a), kCopy, "a");
-  cd_l1->Preserve(&b, sizeof(b), kCopy, "b");
+  cdhandle_t * cd_l1 = cd_create(1, "cd_l1", kStrict | kHDD);
+  cd_begin(cd_l1);
+  cd_preserve(cd_l1, &dtol, sizeof(dtol), kCopy, "dtol", NULL);
+  cd_preserve(cd_l1, &rtol, sizeof(rtol), kCopy, "rtol", NULL);
+  cd_preserve(cd_l1, &a, sizeof(a), kCopy, "a", NULL);
+  cd_preserve(cd_l1, &b, sizeof(b), kCopy, "b", NULL);
 
   // SZ: FIXME: a relaxed CD here, but should explore communication pattern to change to strict...
-  CDHandle *cd_l2 = GetCurrentCD()->Create(num_tasks, "cd_l2", kRelaxed | kDRAM);
+  //cdhandle_t *cd_l2 = cd_create(num_tasks, "cd_l2", kRelaxed | kDRAM);
+  cdhandle_t *cd_l2 = cd_create(1, "cd_l2", kStrict | kDRAM);
   #endif
 
   double AverageSolveTime[3];
@@ -383,9 +384,9 @@ int main(int argc, char **argv){
   }
 
   #if CD
-  cd_l2->Destroy();
-  CD_Complete(cd_l1);
-  cd_l1->Destroy();
+  cd_destroy(cd_l2);
+  cd_complete(cd_l1);
+  cd_destroy(cd_l1);
   #endif
   #endif
 
@@ -418,8 +419,8 @@ int main(int argc, char **argv){
   if(my_rank==0){fprintf(stdout,"\n\n===== Done =====================================================================\n");}
 
 #if CD
-  CD_Complete(root_cd);
-  CD_Finalize();
+  cd_complete(root_cd);
+  cd_finalize();
 #endif
 
 

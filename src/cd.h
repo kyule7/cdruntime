@@ -33,10 +33,74 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+// C++ interface
+#ifdef __cplusplus
 #include "cd_handle.h"
 #include "cd_features.h"
 using namespace cd;
 using namespace cd::logging;
+#endif
+
+// C interface
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// enums for C interface
+enum c_cdtype {kStrict=0x0001,
+               kRelaxed=0x0002,
+               kDRAM=0x0004, 
+               kHDD=0x0008,
+               kSSD=0x0010,
+               kPFS=0x0020,
+               kCopy=0x0100, //!< Prevervation via copy copies
+               kRef=0x0200, //!< Preservation via reference     
+               kRegen=0x0400, //!< Preservation via regenaration
+               kCoop=0x0800,  //!< This flag is used for preservation-via-reference 
+               kSerdes=0x1000, //!< This flag indicates the preservation is done by
+              };
+
+struct cdhandle;
+typedef struct cdhandle cdhandle_t;
+struct regenobject;
+
+cdhandle_t * cd_init(int num_tasks, 
+                          int my_task, 
+                          int prv_medium);
+
+void cd_finalize();
+
+//SZ: should always specify # of children to create
+cdhandle_t* cd_create(uint32_t  num_children,
+                           const char *name, 
+                           int cd_type);
+
+cdhandle_t* cd_create_customized(uint32_t color,
+                                      uint32_t task_in_color,
+                                      uint32_t  numchildren,
+                                      const char *name,
+                                      int cd_type);
+
+void cd_destroy(cdhandle_t*);
+
+void cd_begin(cdhandle_t*);
+
+void cd_complete(cdhandle_t*);
+
+//FIXME: for now only supports this one preservation
+int cd_preserve(cdhandle_t*, 
+                   void *data_ptr,
+                   uint64_t len,
+                   uint32_t preserve_mask,
+                   const char *my_name, 
+                   const char *ref_name);
+
+cdhandle_t* getcurrentcd(void);
+cdhandle_t* getleafcd(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 /**
  * @mainpage Containment Domains 

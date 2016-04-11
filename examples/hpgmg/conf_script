@@ -1,2 +1,2 @@
 #./configure --CC=/opt/apps/gcc4_9/mvapich2/2.1/bin/mpicc --CFLAGS=-fopenmp --CPPFLAGS="-std=gnu++0x -I$WORK/cdresilience/include -DCD=1" --LDFLAGS="-L$WORK/cdresilience/lib" --LDLIBS="-lcd -Wl,-rpath $WORK/cdresilience/lib"
-./configure --CC=/opt/apps/gcc4_9/mvapich2/2.1/bin/mpicc --CFLAGS=-fopenmp --CPPFLAGS="-std=gnu++0x -I$WORK/cdresilience/include" --LDFLAGS="-L$WORK/cdresilience/lib" --LDLIBS="-lcd -Wl,-rpath $WORK/cdresilience/lib"
+./configure --CC=/opt/apps/gcc4_9/mvapich2/2.1/bin/mpicc --CPPFLAGS="-I$WORK/cdresilience/include -DCD=1" --LDFLAGS="-L$WORK/cdresilience/lib" --LDLIBS="-lcd -Wl,-rpath $WORK/cdresilience/lib"
