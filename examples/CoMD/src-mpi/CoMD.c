@@ -93,10 +93,10 @@ int main(int argc, char** argv)
    // Prolog
    initParallel(&argc, &argv);
 //#if _CD
-//   CDHandle* root_cd = CD_Init(nRanks, myRank); 
-//   CD_Begin(root_cd, false, "Root");
-//   root_cd->Preserve(&argc, sizeof(argc), kCopy, "argc");
-//   root_cd->Preserve(argv, sizeof(*argv), kCopy, "argv");
+//   cdhandle_t* root_cd = CD_Init(nRanks, myRank); 
+//   cd_begin(root_cd, false, "Root");
+//   root_cd->cd_preserve(&argc, sizeof(argc), kCopy, "argc");
+//   root_cd->cd_preserve(argv, sizeof(*argv), kCopy, "argv");
 //#endif   
    profileStart(totalTimer);
    initSubsystems();
@@ -119,9 +119,9 @@ int main(int argc, char** argv)
    timestampBarrier("Starting simulation\n");
 
 #if _CD
-   CDHandle* root_cd = CD_Init(nRanks, myRank); 
-   CD_Begin(root_cd, false, "Root");
-   root_cd->Preserve(sim, sizeof(*sim), kCopy, "sim");
+   cdhandle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
+   cd_begin(root_cd, 0, "Root");
+   cd_preserve(root_cd, sim, sizeof(*sim), kCopy, "sim", NULL);
 #endif   
 
    // This is the CoMD main loop
@@ -160,9 +160,9 @@ int main(int argc, char** argv)
    printPerformanceResultsYaml(yamlFile);
 
 #if _CD
-   root_cd->Detect();
-   root_cd->Complete();
-   CD_Finalize();
+   cd_detect(root_cd);
+   cd_complete(root_cd);
+   cd_finalize();
 #endif
 
    destroySimulation(&sim);
@@ -188,9 +188,9 @@ int main(int argc, char** argv)
 SimFlat* initSimulation(Command cmd)
 {
 //#if _CD
-//  CDHandle *cdh = GetCurrentCD()->Create("initSimulation", kStrict, 0x1);
-//  CD_Begin(cdh, "true", "initSim");
-//  cdh->Preserve(&cmd, sizeof(cmd), kCopy, "cmd");
+//  cdhandle_t *cdh = getcurrentcd()->Create("initSimulation", kStrict, 0x1);
+//  cd_begin(cdh, "true", "initSim");
+//  cdh->cd_preserve(&cmd, sizeof(cmd), kCopy, "cmd");
 //#endif
 
    SimFlat* sim = (SimFlat *)comdMalloc(sizeof(SimFlat));
@@ -243,8 +243,8 @@ SimFlat* initSimulation(Command cmd)
 
    kineticEnergy(sim);
 //#if _CD
-//   cdh->Detect();
-//   cdh->Complete();
+//   cdh->cd_detect();
+//   cdh->cd_complete();
 //   cdh->Destroy();
 //#endif
    return sim;
@@ -364,7 +364,8 @@ void sumAtoms(SimFlat* s)
 {
    // sum atoms across all processers
    s->atoms->nLocal = 0;
-   for (int i = 0; i < s->boxes->nLocalBoxes; i++)
+   int i = 0;
+   for (i = 0; i < s->boxes->nLocalBoxes; i++)
    {
       s->atoms->nLocal += s->boxes->nAtoms[i];
    }

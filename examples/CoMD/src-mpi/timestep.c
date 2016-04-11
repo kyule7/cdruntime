@@ -34,12 +34,12 @@ static void advancePosition(SimFlat* s, int nBoxes, real_t dt);
 double timestep(SimFlat* s, int nSteps, real_t dt)
 {
 #if _CD2
-    CDHandle *cd_lv1 = GetCurrentCD()->Create("timestep (before communication)", kStrict, 0xF);
+    cdhandle_t *cd_lv1 = cd_create(getcurrentcd(), 1, "timestep (before communication)", kStrict, 0xF);
 #endif
    for (int ii=0; ii<nSteps; ++ii)
    {
 #if _CD2
-      CD_Begin(cd_lv1, true, "level1"); 
+      cd_begin(cd_lv1, 1, "level1"); 
 #endif
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
@@ -57,8 +57,8 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       stopTimer(redistributeTimer);
 
 #if _CD2
-      CDHandle *cd_lv2 = cd_lv1->Create(getNRanks(), "timestep (after communication)", kStrict, 0xE);
-      CD_Begin(cd_lv2, true, "level2"); 
+      cdhandle_t *cd_lv2 = cd_create(cd_lv1, getNRanks(), "timestep (after communication)", kStrict, 0xE);
+      cd_begin(cd_lv2, 1, "level2"); 
 #endif
       startTimer(computeForceTimer);
       //---------------
@@ -72,17 +72,17 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
 #if _CD2
-      cd_lv2->Detect();
-      cd_lv2->Complete();
-      cd_lv2->Destroy();
-//      cd_lv1->Detect();
-      cd_lv1->Complete();
+      cd_detect(cd_lv2);
+      cd_complete(cd_lv2);
+      cd_destroy(cd_lv2);
+//      cd_detect(cd_lv1);
+      cd_complete(cd_lv1);
 #endif
    }
 
    kineticEnergy(s);
 #if _CD2
-   cd_lv1->Destroy();
+   cd_destroy(cd_lv1);
 #endif
    return s->ePotential;
 }

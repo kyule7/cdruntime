@@ -99,7 +99,7 @@ typedef struct LjPotentialSt
 static int ljForce(SimFlat* s);
 static void ljPrint(FILE* file, BasePotential* pot);
 
-void ljDestroy(BasePotential** inppot)
+void ljcd_destroy(BasePotential** inppot)
 {
    if ( ! inppot ) return;
    LjPotential* pot = (LjPotential*)(*inppot);
@@ -116,7 +116,7 @@ BasePotential* initLjPot(void)
    LjPotential *pot = (LjPotential*)comdMalloc(sizeof(LjPotential));
    pot->force = ljForce;
    pot->print = ljPrint;
-   pot->destroy = ljDestroy;
+   pot->destroy = ljcd_destroy;
    pot->sigma = 2.315;	                  // Angstrom
    pot->epsilon = 0.167;                  // eV
    pot->mass = 63.55 * amuToInternalMass; // Atomic Mass Units (amu)
@@ -145,13 +145,13 @@ void ljPrint(FILE* file, BasePotential* pot)
    fprintf(file, "  Sigma            : "FMT1" Angstroms\n", ljPot->sigma);
 }
 
-bool is_first = false;
+int is_first = 0;
 int ljForce(SimFlat* s)
 {
-   CDHandle *cd_lv3 = NULL; 
+   cdhandle_t *cd_lv3 = NULL; 
 #if _CD3
    if(is_first) {
-     cd_lv3 = GetCurrentCD()->Create("ljForce: 1st loop", kStrict, 0xC);
+     cd_lv3 = cd_create(getcurrentcd(), 1, "ljForce: 1st loop", kStrict, 0xC);
    }
 #endif
 
@@ -183,14 +183,14 @@ int ljForce(SimFlat* s)
    {
 #if _CD3
      if(is_first) {
-       CD_Begin(cd_lv3, true, "level3");
-       //cd_lv3->Preserve(....);
+       cd_begin(cd_lv3, 1, "level3");
+       //cd_lv3->cd_preserve(....);
      }
 #endif
-     CDHandle *cd_lv4 = NULL;
+     cdhandle_t *cd_lv4 = NULL;
 #if _CD4
      if(is_first) {
-       cd_lv4 = cd_lv3->Create("ljForce: 2nd Loop", kStrict, 0x8);
+       cd_lv4 = cd_create(cd_lv3, 1, "ljForce: 2nd Loop", kStrict, 0x8);
      }
 #endif
       int nIBox = s->boxes->nAtoms[iBox];
@@ -202,8 +202,8 @@ int ljForce(SimFlat* s)
       {
 #if _CD4
    if(is_first) {
-         CD_Begin(cd_lv4, true, "level4");
-         //cd_lv4->Preserve(....);
+         cd_begin(cd_lv4, 1, "level4");
+         //cd_lv4->cd_preserve(....);
     }
 #endif
          int jBox = nbrBoxes[jTmp];
@@ -262,20 +262,20 @@ int ljForce(SimFlat* s)
          } // loop over atoms in iBox
 #if _CD4
          if(is_first) {
-           cd_lv4->Detect();
-           cd_lv4->Complete();
+           cd_detect(cd_lv4);
+           cd_complete(cd_lv4);
          }
 #endif
       } // loop over neighbor boxes
 #if _CD4
       if(is_first) {
-        cd_lv4->Destroy();
+        cd_destroy(cd_lv4);
       }
 #endif
 #if _CD3
       if(is_first) {
-        cd_lv3->Detect();
-        cd_lv3->Complete();
+        cd_detect(cd_lv3);
+        cd_complete(cd_lv3);
       }
 #endif
    } // loop over local boxes in system
@@ -284,9 +284,9 @@ int ljForce(SimFlat* s)
 
 #if _CD3
    if(is_first) {
-     cd_lv3->Destroy();
+     cd_destroy(cd_lv3);
    }
 #endif
-   is_first = true;
+   is_first = 1;
    return 0;
 }

@@ -50,20 +50,25 @@ void cd_finalize()
   CD_Finalize();
 }
 
-cdhandle_t* cd_create(uint32_t  num_children,
-                           const char *name, 
-                           int cd_type)
+
+cdhandle_t* cd_create(cdhandle_t* c_handle, 
+                      uint32_t  num_children,
+                      const char *name, 
+                      int cd_type,
+                      uint32_t error_name)
 {
-  return TO_cdhandle(GetCurrentCD()->Create(num_children, name, cd_type));
+  return TO_cdhandle(TO_CDHandle(c_handle)->Create(num_children, name, cd_type, error_name));
 }
 
-cdhandle_t* cd_create_customized(uint32_t color,
+cdhandle_t* cd_create_customized(cdhandle_t *c_handle,
+                                      uint32_t color,
                                       uint32_t task_in_color,
                                       uint32_t  numchildren,
                                       const char *name,
-                                      int cd_type)
+                                      int cd_type,
+                                      uint32_t error_name)
 {
-  return TO_cdhandle(GetCurrentCD()->Create(color, task_in_color, numchildren, name, cd_type));
+  return TO_cdhandle(TO_CDHandle(c_handle)->Create(color, task_in_color, numchildren, name, cd_type, error_name));
 }
 
 void cd_destroy(cdhandle* c_handle)
@@ -71,9 +76,9 @@ void cd_destroy(cdhandle* c_handle)
   TO_CDHandle(c_handle)->Destroy();
 }
 
-void cd_begin(cdhandle_t* c_handle)
+void cd_begin(cdhandle_t* c_handle, int collective, const char *label)
 {
-  CD_Begin(TO_CDHandle(c_handle));
+  CD_Begin(TO_CDHandle(c_handle), (bool)collective, label);
 }
 
 void cd_complete(cdhandle_t* c_handle)

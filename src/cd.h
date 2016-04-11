@@ -45,7 +45,7 @@ using namespace cd::logging;
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#include <stdint.h>
 // enums for C interface
 enum c_cdtype {kStrict=0x0001,
                kRelaxed=0x0002,
@@ -71,19 +71,21 @@ cdhandle_t * cd_init(int num_tasks,
 void cd_finalize();
 
 //SZ: should always specify # of children to create
-cdhandle_t* cd_create(uint32_t  num_children,
-                           const char *name, 
-                           int cd_type);
+cdhandle_t* cd_create(cdhandle_t *c_handle,
+                      uint32_t  num_children,
+                      const char *name, 
+                      int cd_type, uint32_t error_name);
 
-cdhandle_t* cd_create_customized(uint32_t color,
-                                      uint32_t task_in_color,
-                                      uint32_t  numchildren,
-                                      const char *name,
-                                      int cd_type);
+cdhandle_t* cd_create_customized(cdhandle_t *c_handle,
+                                 uint32_t color,
+                                 uint32_t task_in_color,
+                                 uint32_t  numchildren,
+                                 const char *name,
+                                 int cd_type, uint32_t error_name);
 
 void cd_destroy(cdhandle_t*);
 
-void cd_begin(cdhandle_t*);
+void cd_begin(cdhandle_t*, int collective, const char *label);
 
 void cd_complete(cdhandle_t*);
 

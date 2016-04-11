@@ -16,20 +16,20 @@ DO_MPI = ON
 ### own.  If you need any -L or -l switches to get C standard libraries
 ### (such as -lm for the math library) put them in C_LIB.
 #CC = mpicc
-CC = mpic++
-#CFLAGS = -std=c99
-CFLAGS = -std=gnu++0x ${CD_CFLAGS} ${CD_FLAGS}
+CC = mpicc
+CFLAGS = -std=gnu11
+CFLAGS += ${CD_CFLAGS} ${CD_FLAGS}
 OPTFLAGS = -g -O5
 INCLUDES = 
 C_LIB = -lm
 
 ### Containment Domain setting
 #CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_DEBUG=0 -fpermissive -static-libstdc++
-CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -D_DEBUG=0 -fpermissive -static-libstdc++
+CD_FLAGS += -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=1 -D_CD2=0 -D_CD3=0 -D_CD4=0 -D_DEBUG=0 
 CD_ROOT=../../..
 CD_CFLAGS = -I$(CD_ROOT)/include 
 CD_LINKFLAGS = -L$(CD_ROOT)/lib  -lcd
-
+#CFLAGS += ${CD_FLAGS}
 ### If you need to specify include paths, library paths, or link flags
 ### for MPI, put them here.  Put both -L and -l switches into MPI_LIB.
 MPI_LIB =
