@@ -55,7 +55,7 @@ Packer::Packer()
 : table_size_(0), data_size_(0), used_table_size_(0), used_data_size_(0)
 {
   table_grow_unit_ = 2048; // What is the rate of growth for the table.  There are optimum size, if this is too big then initial effort is too big, if it is too small, then later realloc might happen more often.
-  data_grow_unit_ = 2048;  // Same but this goes with data section
+  data_grow_unit_ = 4194304;  // Same but this goes with data section
 
   alloc_flag_=0;   // FIXME: Might want to have separate memory allocator of our own. 
 
