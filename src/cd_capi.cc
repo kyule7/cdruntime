@@ -103,3 +103,8 @@ cdhandle_t* getleafcd(void)
   return TO_cdhandle(GetLeafCD());
 }
 
+void cd_detect(cdhandle_t* c_handle)
+{
+  TO_CDHandle(c_handle)->Detect();
+}
+
