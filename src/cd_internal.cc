@@ -448,7 +448,7 @@ void CD::Init()
   begin_ = false;
 //  child_seq_id_ = 0;
   //ctxt_prv_mode_ = kExcludeStack; 
-  ctxt_prv_mode_ = kIncludeStack; 
+  ctxt_prv_mode_ = kExcludeStack; 
   cd_exec_mode_  = kSuspension;
   option_save_context_ = 0;
 

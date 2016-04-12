@@ -77,7 +77,55 @@
                   };
 
 
+/** @} */ // End group cd_defs ===========================================
 
+
+/**@addtogroup preservation_funcs 
+ * @{
+ */
+
+/** 
+ * @brief Type for specifying preservation methods
+ *
+ * See <http://lph.ece.utexas.edu/public/CDs> for a detailed description. 
+ *
+ * The intent is for this to be used as a mask for specifying
+ * multiple legal preservation methods so that the autotuner can
+ * choose the appropriate one.
+ *
+ * \sa RegenObject, CDHandle::Preserve()
+ */
+  enum CDPreserveT  { kCopy=CD_BIT_8, //!< Prevervation via copy copies
+                                   //!< the data to be preserved into
+                                   //!< another storage/mem location
+                                   //!< Preservation via reference
+                      kRef=CD_BIT_9, //!< Preservation via reference     
+                                  //!< indicates that restoration can
+                                  //!< occur by restoring data that is
+                                  //!< already preserved in another
+                                  //!< CD. __Restriction:__ in the
+                                  //!< current version of the API only
+                                  //!< the parent can be used as a
+                                  //!< reference. 
+                      kRegen=CD_BIT_10, //!< Preservation via regenaration
+                                    //!< is done by calling a
+                                    //!< user-provided function to
+                                    //!< regenerate the data during
+                                    //!< restoration instead of copying
+                                    //!< it from preserved storage.
+                      kCoop=CD_BIT_11,  //!< This flag is used for preservation-via-reference 
+                                    //!< in the case that the referred copy is in remote task.
+                                    //!< This flag can be used with kCopy
+                                    //!< such as kCopy | kCoop.
+                                    //!< Then, this entry can be referred by lower level.
+                      kSerdes=CD_BIT_12, //!< This flag indicates the preservation is done by
+                                      //!< serialization, which mean it does not need to 
+                                      //!< duplicate the data because serialized data is
+                                      //!< already another form of preservation.
+                                      //!< This can be used such as kCopy | kSerdes
+                      kReservedPrvT0=CD_BIT_13,
+                      kReservedPrvT1=CD_BIT_14
+                    };
 
 
 /** @brief Type to indicate whether preserved data is from read-only
@@ -91,11 +139,11 @@
                       kReadWrite=CD_BIT_17 //!< Data to be preserved will be modified by this CD
                     };
 
-/** @} */ // End group cd_defs ===========================================
+/** @} */ // end of preservation_funcs
 
-    enum CtxtPrvMode { kExcludeStack=CD_BIT_18, 
-                       kIncludeStack=CD_BIT_19
-                     };
+  enum CtxtPrvMode { kExcludeStack=CD_BIT_18, 
+                     kIncludeStack=CD_BIT_19
+                   };
 
 /**@addtogroup PGAS_funcs 
  * @{

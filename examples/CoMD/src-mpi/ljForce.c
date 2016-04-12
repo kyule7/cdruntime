@@ -148,7 +148,7 @@ void ljPrint(FILE* file, BasePotential* pot)
 int is_first = 0;
 int ljForce(SimFlat* s)
 {
-   cdhandle_t *cd_lv3 = NULL; 
+   cd_handle_t *cd_lv3 = NULL; 
 #if _CD3
    if(is_first) {
      cd_lv3 = cd_create(getcurrentcd(), 1, "ljForce: 1st loop", kStrict, 0xC);
@@ -183,14 +183,18 @@ int ljForce(SimFlat* s)
    {
 #if _CD3
      if(is_first) {
-       cd_begin(cd_lv3, 1, "level3");
+       if(iBox % 16 == 0) {
+         cd_begin(cd_lv3, 1, "level3");
+       }
        //cd_lv3->cd_preserve(....);
      }
 #endif
-     cdhandle_t *cd_lv4 = NULL;
+     cd_handle_t *cd_lv4 = NULL;
 #if _CD4
      if(is_first) {
+       if(iBox % 10 == 0) {
        cd_lv4 = cd_create(cd_lv3, 1, "ljForce: 2nd Loop", kStrict, 0x8);
+       }
      }
 #endif
       int nIBox = s->boxes->nAtoms[iBox];
@@ -274,8 +278,10 @@ int ljForce(SimFlat* s)
 #endif
 #if _CD3
       if(is_first) {
-        cd_detect(cd_lv3);
-        cd_complete(cd_lv3);
+        if((iBox+1) % 16 == 0) {
+          cd_detect(cd_lv3);
+          cd_complete(cd_lv3);
+        }
       }
 #endif
    } // loop over local boxes in system

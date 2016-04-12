@@ -35,6 +35,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 // C++ interface
 #include "cd_features.h"
+#include "cd_def_common.h"
 #ifdef __cplusplus
 #include "cd_handle.h"
 using namespace cd;
@@ -42,34 +43,6 @@ using namespace cd::logging;
 #else
 #include "cd_capi.h"
 #endif
-#define FOUR_ARGS_MACRO(_IN0,_IN1,_IN2,_IN3,FUNC,...) FUNC
-#define cd_begin(...) FOUR_ARGS_MACRO(__VA_ARGS__, cd_begin3, cd_begin2, cd_begin1, cd_begin0)(__VA_ARGS__)
-
-// Macros for setjump / getcontext
-// So users should call this in their application, not call cd_handle->Begin().
-#define cd_begin0(X) \
-  cd_handle_t h\
-  if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(jmp_buffer((X))); \
-  else getcontext(ctxt((X))); \
-  commit_preserve_buff((X)); \
-  InternalBegin((X));
-
-#define cd_begin1(X,Y) \
-  if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(jmp_buffer((X))); \
-  else getcontext(ctxt((X))); \
-  commit_preserve_buff((X)); InternalBegin((X),(Y));
-
-#define cd_begin2(X,Y,Z) \
-  if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(jmp_buffer((X))); \
-  else getcontext(ctxt((X))); \
-  commit_preserve_buff((X)); InternalBegin((X),(Y),(Z));
-
-#define cd_begin3(X,Y,Z,W) \
-  if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(jmp_buffer((X))); \
-  else getcontext(ctxt((X))); \
-  commit_preserve_buff((X)); InternalBegin((X),(Y),(Z),(W));
-
-#define CD_Complete(X) InternalComplete((X))
 
 // C interface
 

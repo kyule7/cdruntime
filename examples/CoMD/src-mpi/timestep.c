@@ -34,7 +34,7 @@ static void advancePosition(SimFlat* s, int nBoxes, real_t dt);
 double timestep(SimFlat* s, int nSteps, real_t dt)
 {
 #if _CD2
-    cdhandle_t *cd_lv1 = cd_create(getcurrentcd(), 1, "timestep (before communication)", kStrict, 0xF);
+    cd_handle_t *cd_lv1 = cd_create(getcurrentcd(), 1, "timestep (before communication)", kStrict, 0xF);
 #endif
    for (int ii=0; ii<nSteps; ++ii)
    {
@@ -57,7 +57,7 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       stopTimer(redistributeTimer);
 
 #if _CD2
-      cdhandle_t *cd_lv2 = cd_create(cd_lv1, getNRanks(), "timestep (after communication)", kStrict, 0xE);
+      cd_handle_t *cd_lv2 = cd_create(cd_lv1, getNRanks(), "timestep (after communication)", kStrict, 0xE);
       cd_begin(cd_lv2, 1, "level2"); 
 #endif
       startTimer(computeForceTimer);

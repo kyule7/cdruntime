@@ -93,7 +93,7 @@ int main(int argc, char** argv)
    // Prolog
    initParallel(&argc, &argv);
 //#if _CD
-//   cdhandle_t* root_cd = CD_Init(nRanks, myRank); 
+//   cd_handle_t* root_cd = CD_Init(nRanks, myRank); 
 //   cd_begin(root_cd, false, "Root");
 //   root_cd->cd_preserve(&argc, sizeof(argc), kCopy, "argc");
 //   root_cd->cd_preserve(argv, sizeof(*argv), kCopy, "argv");
@@ -119,7 +119,7 @@ int main(int argc, char** argv)
    timestampBarrier("Starting simulation\n");
 
 #if _CD
-   cdhandle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
+   cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
    cd_begin(root_cd, 0, "Root");
    cd_preserve(root_cd, sim, sizeof(*sim), kCopy, "sim", NULL);
 #endif   
@@ -188,7 +188,7 @@ int main(int argc, char** argv)
 SimFlat* initSimulation(Command cmd)
 {
 //#if _CD
-//  cdhandle_t *cdh = getcurrentcd()->Create("initSimulation", kStrict, 0x1);
+//  cd_handle_t *cdh = getcurrentcd()->Create("initSimulation", kStrict, 0x1);
 //  cd_begin(cdh, "true", "initSim");
 //  cdh->cd_preserve(&cmd, sizeof(cmd), kCopy, "cmd");
 //#endif

@@ -312,55 +312,6 @@ namespace cd {
 /** @} */ // end of error_reporting
 
 
-
-/**@addtogroup preservation_funcs 
- * @{
- */
-
-/** 
- * @brief Type for specifying preservation methods
- *
- * See <http://lph.ece.utexas.edu/public/CDs> for a detailed description. 
- *
- * The intent is for this to be used as a mask for specifying
- * multiple legal preservation methods so that the autotuner can
- * choose the appropriate one.
- *
- * \sa RegenObject, CDHandle::Preserve()
- */
-  enum CDPreserveT  { kCopy=BIT_8, //!< Prevervation via copy copies
-                                   //!< the data to be preserved into
-                                   //!< another storage/mem location
-                                   //!< Preservation via reference
-                      kRef=BIT_9, //!< Preservation via reference     
-                                  //!< indicates that restoration can
-                                  //!< occur by restoring data that is
-                                  //!< already preserved in another
-                                  //!< CD. __Restriction:__ in the
-                                  //!< current version of the API only
-                                  //!< the parent can be used as a
-                                  //!< reference. 
-                      kRegen=BIT_10, //!< Preservation via regenaration
-                                    //!< is done by calling a
-                                    //!< user-provided function to
-                                    //!< regenerate the data during
-                                    //!< restoration instead of copying
-                                    //!< it from preserved storage.
-                      kCoop=BIT_11,  //!< This flag is used for preservation-via-reference 
-                                    //!< in the case that the referred copy is in remote task.
-                                    //!< This flag can be used with kCopy
-                                    //!< such as kCopy | kCoop.
-                                    //!< Then, this entry can be referred by lower level.
-                      kSerdes=BIT_12, //!< This flag indicates the preservation is done by
-                                      //!< serialization, which mean it does not need to 
-                                      //!< duplicate the data because serialized data is
-                                      //!< already another form of preservation.
-                                      //!< This can be used such as kCopy | kSerdes
-                      kReservedPrvT0=BIT_13,
-                      kReservedPrvT1=BIT_14
-                    };
-/** @} */ // end of preservation_funcs
-
 /** \addtogroup tunable_api 
  * @{
  */

@@ -1,7 +1,9 @@
 #lib_LIBRARIES = libcd.a
 include_HEADERS = cd.h \
+									cd_capi.h \
 									cd_global.h \
 									cd_def_interface.h \
+									cd_def_common.h \
 									cd_def_debug.h \
 									cd_features.h \
 									cd_handle.h \
