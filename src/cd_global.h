@@ -63,6 +63,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdio.h>
 #include <string>
 #include "cd_features.h"
+#include "cd_def_common.h"
 // This could be different from MPI program to PGAS program
 // key is the unique ID from 0 for each CD node.
 // value is the unique ID for mpi communication group or thread group.
@@ -137,16 +138,6 @@ namespace cd {
   class CDHandle;
   class DebugBuf;
 }
-
-
-
-
-#define DEFAULT_MEDIUM kHDD
-
-#define FOUR_ARGS_MACRO(_IN0,_IN1,_IN2,_IN3,FUNC,...) FUNC
-#define THREE_ARGS_MACRO(_IN0,_IN1,_IN2,FUNC,...) FUNC
-#define TWO_ARGS_MACRO(_IN0,_IN1,FUNC,...) FUNC
-
 
 namespace cd {
 
@@ -370,91 +361,6 @@ namespace cd {
                     };
 /** @} */ // end of preservation_funcs
 
-
-
-
-/** \addtogroup cd_defs 
- *@{
- *
- */
-/**@brief Type for specifying whether a CD is strict or relaxed
- *
- * This type is used to specify whether a CD is strict or
- * relaxed. The full definition of the semantics of strict and
- * relaxed CDs can be found in the semantics document under
- * <http://lph.ece.utexas.edu/public/CDs>. In brief, concurrent
- * tasks (threads, MPI ranks, ...) in two different strict CDs
- * cannot communicate with one another and must first complete inner
- * CDs so that communicating tasks are at the same CD context. Tasks
- * in two different relaxed CDs may communicate (verified data
- * only). Relaxed CDs typically incur additional runtime overhead
- * compared to strict CDs.
- */
-  enum CDType  { kStrict=BIT_0,    //!< A strict CD
-                 kRelaxed=BIT_1,  //!< A relaxed CD
-                 kDefaultCD=5 //!< Default is kStrict | kDRAM
-               };
-
-  
-/** @brief Type to indicate where to preserve data
- *
- * \sa CD::GetPlaceToPreserve()
- */
-  enum PrvMediumT { kDRAM=BIT_2,  //!< Preserve to DRAM
-                    kHDD=BIT_3,   //!< Preserve to HDD
-                    kSSD=BIT_4,  //!< Preserve to SSD
-                    kPFS=BIT_5,   //!< Preserve to Parallel File System
-                    kReserveMedium0=BIT_6,  //!< Preserve to Parallel File System
-                    kReserveMedium1=BIT_7,  //!< Preserve to Parallel File System
-                  };
-
-
-
-
-
-/** @brief Type to indicate whether preserved data is from read-only
- * or potentially read/write application data
- *
- * \sa CDHandle::Preserve(), CDHandle::Complete()
- */
-  enum PreserveUseT { kUnsure=BIT_15,   //!< Not sure whether data being preserved will be written 
-                                        //!< by the CD (treated as Read/Write for now, but may be optimized later)
-                      kReadOnly=BIT_16, //!< Data to be preserved is read-only within this CD
-                      kReadWrite=BIT_17 //!< Data to be preserved will be modified by this CD
-                    };
-
-/** @} */ // End group cd_defs ===========================================
-
-    enum CtxtPrvMode { kExcludeStack=BIT_18, 
-                       kIncludeStack=BIT_19
-                     };
-
-/**@addtogroup PGAS_funcs 
- * @{
- */
-
-/** @brief Different types of PGAS memory behavior for relaxed CDs.
- *
- * Please see the CD semantics document at
- * <http://lph.ece.utexas.edu/public/CDs> for a full description of
- * PGAS semantics. In brief, because of the logging/tracking
- * requirements of relaxed CDs, it is important to identify which
- * memory accesses may be for communication between relaxed CDs
- * vs. memory accesses that are private (or temporarily privatized)
- * within this CD. 
- *
- */
-  enum PGASUsageT {
-    kShared = 0,        //!< Definitely shared for actual communication
-    kPotentiallyShared, //!< Perhaps used for communication by this
-                        //!< CD, essentially equivalent to kShared for CDs.
-    kPrivatized,        //!< Shared in general, but not used for any
-                        //!< communication during this CD.
-    kPrivate            //!< Entirely private to this CD.
-  };
-
-/** @} */ // end PGAS_funcs ===========================================
-
 /** \addtogroup tunable_api 
  * @{
  */
@@ -559,87 +465,6 @@ namespace cd {
 /** @} */ // end profiler-related group ===========================================
 
 
-
-
-
-///**@class cd::DebugBuf
-// * @brief Utility class for debugging.
-// *
-// *  Like other parallel programming models, it is hard to debug CD runtime. 
-// *  So, debugging information are printed out to file using this class.
-// *  The global object of this class, dbg, is defined.
-// * 
-// *  The usage of this class is like below.
-// *  \n
-// *  \n
-// *  DebugBuf dbgApp;
-// *  dbgApp.open("./file_path_to_write"); 
-// *  dbgApp << "Debug Information" << endl;
-// *  dbg.flush(); 
-// *  dbg.close();
-// */ 
-//  class DebugBuf: public std::ostringstream {
-//    std::ofstream ofs_;
-//  public:
-//    ~DebugBuf() {}
-//    DebugBuf(void) {}
-//    DebugBuf(const char *filename) 
-//      : ofs_(filename) {}
-///**
-// * @brief Open a file to write debug information.
-// *
-// */
-//    void open(const char *filename)
-//    {
-//      bool temp = app_side;
-//      app_side = false;
-//      ofs_.open(filename);
-//      app_side = temp;
-//    }
-//
-///**
-// * @brief Close the file where debug information is written.
-// *
-// */    
-//    void close(void)
-//    {
-//      bool temp = app_side;
-//      app_side = false;
-//      ofs_.close();
-//      app_side = temp;
-//    }
-//
-// 
-///**
-// * @brief Flush the buffer that contains debugging information to the file.
-// *        After flushing it, it clears the buffer for the next use.
-// *
-// */
-//    void flush(void) 
-//    {
-//      bool temp = app_side;
-//      app_side = false;
-//      ofs_ << str();
-//      ofs_.flush();
-//      str("");
-//      clear();
-//      app_side = temp;
-//    }
-//     
-//
-//    template <typename T>
-//    std::ostream &operator<<(T val) 
-//    {
-//      bool temp = app_side;
-//      app_side = false;
-//      std::ostream &os = std::ostringstream::operator<<(val);
-//      app_side = temp;
-//      return os;
-//    }
-// 
-//  };
-
-
 /**@class cd::Tag
  * @brief Utility class to generate tag.
  *
@@ -663,56 +488,7 @@ namespace cd {
   extern CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   extern void CD_Finalize(void);
 
-
-
 }
 
-/* 
-ISSUE 1 (Kyushick)
-If we do if-else statement here and make a scope { } for that, does it make its own local scope in the stack?
-
-void Foo(void)
-{
-  double X, Y, Z;
-  ...
-  if (IsTrue == true) { 
-    int A, B, C, D;
-    ...
-    ...
-    A = B + C; B = D * A;
-    ...
-  } 
-  else {
-    int E, F;
-    ...
-    E = F * E;
-    ...
-  }
-  ...
-}
-
-there will be Foo's local scope in the stack and what about A, B, C, D, E, F ??
-A, B, C, D, E, F's life cycle will be up to the end of if-then statement. 
-So, I guess the stack will grow/shrink a bit due to this if-then statement.
-So, if we setjmp or get context within this if-then statement's scope,
-I think there will be some problem...
-
-ISSUE 2 (Kyushick)
-We are increasing the number of reexecution inside Begin(). So, the point of time when we mark rollback point is not after Begin() but before Begin()
-*/
-//#define THREE_ARGS_MACRO(_IN0,_IN1,_IN2,FUNC,...) FUNC
-//#define CD_Begin(...) THREE_ARGS_MACRO(__VA_ARGS__, CD_BEGIN2, CD_BEGIN1, CD_BEGIN0)(__VA_ARGS__)
-#define FOUR_ARGS_MACRO(_IN0,_IN1,_IN2,_IN3,FUNC,...) FUNC
-#define CD_Begin(...) FOUR_ARGS_MACRO(__VA_ARGS__, CD_BEGIN3, CD_BEGIN2, CD_BEGIN1, CD_BEGIN0)(__VA_ARGS__)
-
-// Macros for setjump / getcontext
-// So users should call this in their application, not call cd_handle->Begin().
-#define CD_BEGIN0(X) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
-#define CD_BEGIN1(X,Y) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y);
-#define CD_BEGIN2(X,Y,Z) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y,Z);
-#define CD_BEGIN3(X,Y,Z,W) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y,Z,W);
-
-//#define CD_Begin(X) (X)->Begin(); if((X)->ctxt_prv_mode() ==CD::kExcludeStack) (X)->jmp_val_=setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff();
-#define CD_Complete(X) (X)->Complete()   
 
 #endif

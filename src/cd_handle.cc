@@ -1045,8 +1045,20 @@ CDErrT CDHandle::InternalDestroy(bool collective, bool need_destroy)
   return err;
 }
 
-
+inline
 CDErrT CDHandle::Begin(bool collective, const char *label, const uint64_t &sys_error_vec)
+{
+  assert(ptr_cd_);
+  if(ptr_cd_->ctxt_prv_mode_ == kExcludeStack) 
+    setjmp(ptr_cd_->jmp_buffer_);
+  else 
+    getcontext(&(ptr_cd_->ctxt_));
+
+  CommitPreserveBuff();
+  return InternalBegin(collective, label, sys_error_vec);
+}
+
+CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_t &sys_error_vec)
 {
   CDPrologue();
 
@@ -1871,31 +1883,17 @@ CDErrT CDHandle::SetMailBox(CDEventT event)
 #endif
 }
 
-/*
-ucontext_t* CDHandle::context()
+
+ucontext_t *CDHandle::ctxt()
 {
-  if( IsHead() ) {
-
-    return &ptr_cd_->ctxt_;
-  }
-  else {
-    //FIXME: need to get the flag from remote
-
-  }
+  return &(ptr_cd_->ctxt_);
 }
 
-jmp_buf* CDHandle::jump_buffer()
+jmp_buf *CDHandle::jmp_buffer()
 {
-  if( IsHead() ) {
-
-    return &ptr_cd_->jmp_buffer_;
-  }
-  else {
-    //FIXME: need to get the flag from remote
-
-  }
+  return &(ptr_cd_->jmp_buffer_);
 } 
-*/
+
 
 bool     CDHandle::recreated(void)     const { return ptr_cd_->recreated_; }
 bool     CDHandle::reexecuted(void)    const { return ptr_cd_->reexecuted_; }

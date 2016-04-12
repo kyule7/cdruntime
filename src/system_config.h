@@ -11,15 +11,15 @@
 //#define ERROR_TYPE_7      0x00080 
 //#define ERROR_TYPE_8      0x00100 
 //#define ERROR_TYPE_9      0x00200 
-#define ERROR_RATE_TYPE_0 0.00
-#define ERROR_RATE_TYPE_1 0.00
-#define ERROR_RATE_TYPE_2 0.00
-#define ERROR_RATE_TYPE_3 0.00
-//#define ERROR_RATE_TYPE_4 0.06
-//#define ERROR_RATE_TYPE_5 0.08
-//#define ERROR_RATE_TYPE_6 0.1
-//#define ERROR_RATE_TYPE_7 0.15
-//#define ERROR_RATE_TYPE_8 0.2
-//#define ERROR_RATE_TYPE_9 0.3
+#define ERROR_RATE_TYPE_0 0.0004
+#define ERROR_RATE_TYPE_1 0.0008
+#define ERROR_RATE_TYPE_2 0.0012
+#define ERROR_RATE_TYPE_3 0.0016
+#define ERROR_RATE_TYPE_4 0.06
+#define ERROR_RATE_TYPE_5 0.08
+#define ERROR_RATE_TYPE_6 0.1
+#define ERROR_RATE_TYPE_7 0.15
+#define ERROR_RATE_TYPE_8 0.2
+#define ERROR_RATE_TYPE_9 0.3
 
 #endif

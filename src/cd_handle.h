@@ -426,7 +426,14 @@ class CDHandle {
    * @return Returns kOK when successful and kError otherwise.
    * @sa Complete()
    */
+    inline
     CDErrT Begin(bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
+                                      //!< contained by this CD or whether its to be run by a single task 
+                                      //!< only with the programmer responsible for synchronization. 
+                 const char *label=NULL,
+                 const uint64_t &sys_err_vec=0
+                );
+    CDErrT InternalBegin(bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                       //!< contained by this CD or whether its to be run by a single task 
                                       //!< only with the programmer responsible for synchronization. 
                  const char *label=NULL,
@@ -1509,6 +1516,8 @@ class CDHandle {
 ///@brief Check the current CD's context preservation mode.
 ///       There are two flavors: Include stack and Exclude stack.
     int      ctxt_prv_mode(void);
+    jmp_buf *jmp_buffer(void);
+    ucontext_t *ctxt(void);
 
     CDType   GetCDType(void) const;
     int GetCommLogMode(void) const;
@@ -1522,6 +1531,18 @@ class CDHandle {
     void PrintCommLog(void) const;
 #endif
 };
+
+#define CD_Begin(...) FOUR_ARGS_MACRO(__VA_ARGS__, CD_BEGIN3, CD_BEGIN2, CD_BEGIN1, CD_BEGIN0)(__VA_ARGS__)
+
+// Macros for setjump / getcontext
+// So users should call this in their application, not call cd_handle->Begin().
+#define CD_BEGIN0(X) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
+#define CD_BEGIN1(X,Y) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y);
+#define CD_BEGIN2(X,Y,Z) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y,Z);
+#define CD_BEGIN3(X,Y,Z,W) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y,Z,W);
+
+#define CD_Complete(X) (X)->Complete()   
+
 
 } // namespace cd ends
 #endif
