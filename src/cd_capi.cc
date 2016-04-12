@@ -93,10 +93,12 @@ jmp_buf *jmp_buffer(cd_handle_t *c_handle)
 {
   return TO_CDHandle(c_handle)->jmp_buffer();
 }
+
 ucontext_t *ctxt(cd_handle_t *c_handle)
 {
   return TO_CDHandle(c_handle)->ctxt();
 }
+
 void commit_preserve_buff(cd_handle_t *c_handle)
 {
   TO_CDHandle(c_handle)->CommitPreserveBuff();
