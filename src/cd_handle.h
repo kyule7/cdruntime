@@ -432,7 +432,17 @@ class CDHandle {
                                       //!< only with the programmer responsible for synchronization. 
                  const char *label=NULL,
                  const uint64_t &sys_err_vec=0
-                );
+                )
+    {
+      assert(ptr_cd_);
+      if(ctxt_prv_mode() == kExcludeStack) 
+        setjmp(*jmp_buffer());
+      else 
+        getcontext(ctxt());
+    
+      CommitPreserveBuff();
+      return InternalBegin(collective, label, sys_err_vec);
+    }
     CDErrT InternalBegin(bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                       //!< contained by this CD or whether its to be run by a single task 
                                       //!< only with the programmer responsible for synchronization. 

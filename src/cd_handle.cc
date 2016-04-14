@@ -1045,18 +1045,18 @@ CDErrT CDHandle::InternalDestroy(bool collective, bool need_destroy)
   return err;
 }
 
-inline
-CDErrT CDHandle::Begin(bool collective, const char *label, const uint64_t &sys_error_vec)
-{
-  assert(ptr_cd_);
-  if(ptr_cd_->ctxt_prv_mode_ == kExcludeStack) 
-    setjmp(ptr_cd_->jmp_buffer_);
-  else 
-    getcontext(&(ptr_cd_->ctxt_));
-
-  CommitPreserveBuff();
-  return InternalBegin(collective, label, sys_error_vec);
-}
+//inline
+//CDErrT CDHandle::Begin(bool collective, const char *label, const uint64_t &sys_error_vec)
+//{
+//  assert(ptr_cd_);
+//  if(ptr_cd_->ctxt_prv_mode_ == kExcludeStack) 
+//    setjmp(ptr_cd_->jmp_buffer_);
+//  else 
+//    getcontext(&(ptr_cd_->ctxt_));
+//
+//  CommitPreserveBuff();
+//  return InternalBegin(collective, label, sys_error_vec);
+//}
 
 CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_t &sys_error_vec)
 {
