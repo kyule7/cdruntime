@@ -98,6 +98,7 @@ CD_CLOCK_T cd::destroy_elapsed_time=0;
 CD_CLOCK_T cd::begin_elapsed_time=0;
 CD_CLOCK_T cd::compl_elapsed_time=0;
 
+
 /// KL
 /// uniquePath is a singleton object per process, which is used for CDPath.
 CDPath *CDPath::uniquePath_;
@@ -126,26 +127,12 @@ int  cd::max_tag_rank_bit  = 0;
 int cd::myTaskID = 0;
 int cd::totalTaskSize = 1;
 
-//cd::SystemConfig cd::CDHandle::system_config_;
 namespace cd {
 // Global functions -------------------------------------------------------
-
-//void LoadSystemConfig(SystemConfig &system_config)
-//{
-//  system_config[ERROR_TYPE_0]  = ERROR_RATE_TYPE_0;
-//  system_config[ERROR_TYPE_1]  = ERROR_RATE_TYPE_1;
-//  system_config[ERROR_TYPE_2]  = ERROR_RATE_TYPE_2;
-//  system_config[ERROR_TYPE_3]  = ERROR_RATE_TYPE_3;
-//  system_config[ERROR_TYPE_4]  = ERROR_RATE_TYPE_4;
-//  system_config[ERROR_TYPE_5]  = ERROR_RATE_TYPE_5;
-//  system_config[ERROR_TYPE_6]  = ERROR_RATE_TYPE_6;
-//  system_config[ERROR_TYPE_7]  = ERROR_RATE_TYPE_7;
-//}
 
 /// KL
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
-  //GONG
   CDPrologue();
   cd::tot_begin_clk = CD_CLOCK();
   myTaskID      = myTask;
@@ -182,7 +169,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   }
   
 #if CD_MPI_ENABLED 
-  // Synchronization is needed. Otherwise, some task may execute CD_DEBUG before head creates directory 
+  // Synchronization is needed. 
+  // Otherwise, some task may execute CD_DEBUG before head creates directory 
   PMPI_Barrier(MPI_COMM_WORLD);
 #endif
 

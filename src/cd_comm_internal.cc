@@ -1312,7 +1312,12 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(const CDEventT &event)
 
 uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
 {
-  if(rollback_lv == INVALID_ROLLBACK_POINT) return rollback_lv;
+  if(rollback_lv == INVALID_ROLLBACK_POINT) {
+    printf("[%s] do not need to set rollback_point_ : %u\n", __func__, rollback_lv);
+    return rollback_lv;
+  } else {
+    printf("[%s] neet to set rollback point\n", __func__);
+  }
   if(task_size() > 1) {
 //  printf("[%s] cur level : %u size:%u\n", __func__, level(), task_size());
 //  CD *cur_cd = CDPath::GetCoarseCD(this);
@@ -1344,6 +1349,7 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
   //        need_reexec = true;
         PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
       } else {
+        printf("[%s] set rollback_point_\n", __func__);
         if(rollback_lv < *(rollback_point_)) {
           *(rollback_point_) = rollback_lv;
         }
@@ -1352,6 +1358,13 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
       CD_DEBUG("level %u local set %u to current task #%d\n", level(), rollback_point, task_in_color());
     }
     return rollback_point; 
+  }
+  else if(totalTaskSize == 1) {
+    printf("[%s] set rollback_point_ %u for single task version\n", __func__, rollback_lv);
+    if(rollback_lv < *(rollback_point_)) {
+      *(rollback_point_) = rollback_lv;
+    }
+    return rollback_lv;
   }
   else {
     return CDPath::GetCoarseCD(this)->SetRollbackPoint(rollback_lv, remote);
@@ -1400,6 +1413,10 @@ uint32_t CD::CheckRollbackPoint(bool remote)
   //  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
   
     return rollback_lv;
+  }
+  else if(totalTaskSize == 1) {
+    printf("[%s] check rollback_point_ %u for single task version\n", __func__, *rollback_point_);
+    return *rollback_point_;
   }
   else {
     return CDPath::GetCoarseCD(this)->CheckRollbackPoint(remote);
@@ -1525,7 +1542,7 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
         if(printed == false) {
           CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
               __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
-          rollback_point = CheckRollbackPoint(true); // read from remote
+//          rollback_point = CheckRollbackPoint(true); // read from remote
           
           printed = true;
         }

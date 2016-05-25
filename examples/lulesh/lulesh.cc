@@ -3726,13 +3726,19 @@ int main(int argc, char *argv[])
    // Main loop start
    int idx=0;
    opts.its = 1000;
+   double prv_elapsed = 0.0;
+   double prv_timer = 0.0;
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
       // Main functions in the loop
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
 //    if(idx % 10 == 0) {
       CD_Begin(cdh_1_0_0, true, "TimeIncrement"); 
+      prv_timer = MPI_Wtime();
       cdh_1_0_0->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime"); 
       cdh_1_0_0->Preserve(locDom->serdes.SetOp(preserve_vec), kCopy, "main_iter_prv");
+      double prv_time = MPI_Wtime() - prv_timer;
+      printf("prv time [\t%d] : %lf\n", idx, prv_time);
+      prv_elapsed += prv_time;
 //    }
 #endif
 //#if _CD
@@ -3905,6 +3911,7 @@ int main(int argc, char *argv[])
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);
    }
+   printf("[Final] prv time  : %lf\n",  prv_elapsed);
 
 #if _CD
 //   root_cd->Detect();

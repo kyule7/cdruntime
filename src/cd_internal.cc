@@ -961,6 +961,7 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 // CDHandle will follow the standard interface. 
 CDErrT CD::Begin(bool collective, const char *label)
 {
+  printf("[%s] not here? \n", __func__);
   begin_ = true;
 
   CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);
@@ -2715,6 +2716,7 @@ void CD::Recover(bool collective)
 
 CD::CDInternalErrT CD::Assert(bool test)
 {
+  printf("[%s] assert %d\n", __func__, test);
 
   CDInternalErrT internal_err = kOK;
 
@@ -2734,6 +2736,7 @@ CD::CDInternalErrT CD::Assert(bool test)
           SetMailBox(kErrorOccurred);
         }
       } else { // a single task in a CD.
+        printf("[%s] set rollback point\n", __func__);
         SetRollbackPoint(level(), false);
       }
     }
@@ -2902,7 +2905,7 @@ CDErrT CD::InternalReexecute(void)
   //            we need to change the cd_exec_mode_ and comm_log_mode_ outside this function.
   // KL: I think it should be here, because recovery action might not be reexecution, but something else.
 
-  CD_DEBUG("[CD::InternalReexecute] reexecuted : %d, reexecution # : %d\n", reexecuted_, num_reexecution_);
+  CD_DEBUG("reexecuted : %d, reexecution # : %d\n", reexecuted_, num_reexecution_);
   // This is very very tricky!!
   // non-head task will get the rollback_level_ of head task,
   // but if head already finished GetCDToRecover routine, then
@@ -2962,6 +2965,7 @@ CDErrT CD::InternalReexecute(void)
   //TODO We need to make sure that all children has stopped before re-executing this CD.
   Stop();
 
+  printf("[%s]Rollback!\n", __func__);
 
   //TODO We need to consider collective re-start. 
   if(ctxt_prv_mode_ == kExcludeStack) {

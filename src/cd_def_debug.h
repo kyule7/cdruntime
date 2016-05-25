@@ -76,6 +76,10 @@ int cd_debug_trace(FILE *stream, const char *source_file,
 #define CD_DEBUG_TRACE_INFO(stream, ...) \
   cd_debug_trace(stream, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__);
 
+extern FILE *cdout;
+extern FILE *cdoutApp;
+
+// Set up debug printouts
 #if CD_DEBUG_DEST == CD_DEBUG_SILENT  // No printouts 
 
 #define CD_DEBUG(...) 
@@ -118,7 +122,7 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
   CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__)
 
 #define CD_DEBUG_COND(DEBUG_OFF, ...) \
-if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
+if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__); }
 
 
 #define LOG_DEBUG(...) /*\
