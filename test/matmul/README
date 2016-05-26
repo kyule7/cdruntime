@@ -1,0 +1,6 @@
+This is MPI+OpenMP matrix matrix multiplication with cache blocking technique
+It requires input arguments as following.
+
+ibrun ./test_mm {# total task} {# omp task per proc} {total mat dim} {# of matrix} {test}
+
+Matrix multiplication requires quite large amount of arithmetic computation and data movement. Therefore, it is important to understand how matrix elements are transferred to achieve high performance. This work focuses on parallelizing matrix multiplication to boost up its speed using MPI and OpenMP being aware of memory hierarchy and data movement. To extract the full hardware parallelism for dense matrix-matrix multiplication, multiple-level cache blocking, SUMMA algorithm, OpenMP dynamic threading are employed, implemented.
