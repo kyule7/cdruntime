@@ -45,7 +45,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  */
 #include "cd_global.h"
-#include <cstdint>
 
 // Packer packer;
 // packer.Add(ID_NAME, 100, name_ptr);

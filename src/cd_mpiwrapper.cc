@@ -531,9 +531,9 @@ int MPI_Isend(const void *buf,
         cdp->incomplete_log_.push_back(
             IncompleteLogEntry(buf, 0, dest, tag, comm, (void *)request, false));
 //        printf("test send: strict CD\t"); cdp->CheckIntraCDMsg(dest, g);
-        CD_DEBUG("send1 %u\n", (int)(*request));
+//        CD_DEBUG("send1 %u\n", (int)(*request));
         mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
-        CD_DEBUG("send2 %u\n", (int)(*request));
+//        CD_DEBUG("send2 %u\n", (int)(*request));
         GetCurrentCD()->ptr_cd()->PrintDebug();
         break;
       }

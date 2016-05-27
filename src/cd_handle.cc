@@ -67,9 +67,9 @@ CDHandle *cd::null_cd = NULL;
 /// General usage is that it stores any strings, numbers as a string internally,
 /// and when cddbg.flush() is called, it write the internally stored strings to file,
 /// then clean up the internal storage.
-#if CD_DEBUG_ENABLED
+//#if CD_DEBUG_ENABLED
 cd::DebugBuf cd::cddbg;
-#endif
+//#endif
 
 #if CD_DEBUG_DEST == CD_DEBUG_TO_FILE  // Print to fileout -----
 FILE *cd::cdout=NULL;
@@ -622,7 +622,7 @@ CDHandle::CDHandle()
 {
   // FIXME
   assert(0);
-  SplitCD = &SplitCD_3D;
+  SplitCD = &SplitCD_1D;
 
 #if CD_PROFILER_ENABLED
   profiler_ = Profiler::CreateProfiler(0, this);
@@ -652,7 +652,7 @@ CDHandle::CDHandle()
 CDHandle::CDHandle(CD *ptr_cd) 
   : ptr_cd_(ptr_cd), node_id_(ptr_cd->cd_id_.node_id_), ctxt_(ptr_cd->ctxt_)
 {
-  SplitCD = &SplitCD_3D;
+  SplitCD = &SplitCD_1D;
 
 #if CD_PROFILER_ENABLED
   profiler_ = Profiler::CreateProfiler(0, this);

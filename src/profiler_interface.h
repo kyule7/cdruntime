@@ -57,7 +57,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include <list>
 #include <string>
 #include <map>
-#include <cstdint>
 #include <cstdio>
 #include "cd_def_interface.h"
 
@@ -236,7 +235,7 @@ class Profiler {
   CD_CLOCK_T begin_clk_;
   CD_CLOCK_T end_clk_;
   CD_CLOCK_T sync_clk_;
-  static std::map<uint32_t,std::map<std::string,RuntimeInfo>> num_exec_map;
+  static std::map<uint32_t,std::map<std::string,RuntimeInfo> > num_exec_map;
   static uint32_t current_level_; // It is used to detect escalation
 public:
   Profiler() : cdh_(NULL), reexecuted_(false) {}
@@ -248,7 +247,7 @@ public:
   static RuntimeInfo GetTotalInfo(std::map<uint32_t, RuntimeInfo> &runtime_info);
   virtual void InitViz(void){}
   virtual void FinalizeViz(void){}
-  std::map<uint32_t,std::map<std::string,RuntimeInfo>> &GetProfInfo(void) { return Profiler::num_exec_map; }
+  std::map<uint32_t,std::map<std::string,RuntimeInfo> > &GetProfInfo(void) { return Profiler::num_exec_map; }
   virtual void StartProfile() { BeginRecord(); }
   virtual void FinishProfile(void) { EndRecord(); }
 private:

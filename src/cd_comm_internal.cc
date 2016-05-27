@@ -1313,10 +1313,10 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(const CDEventT &event)
 uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
 {
   if(rollback_lv == INVALID_ROLLBACK_POINT) {
-    printf("[%s] do not need to set rollback_point_ : %u\n", __func__, rollback_lv);
+    //printf("[%s] do not need to set rollback_point_ : %u\n", __func__, rollback_lv);
     return rollback_lv;
   } else {
-    printf("[%s] neet to set rollback point\n", __func__);
+    //printf("[%s] neet to set rollback point\n", __func__);
   }
   if(task_size() > 1) {
 //  printf("[%s] cur level : %u size:%u\n", __func__, level(), task_size());
@@ -1349,7 +1349,7 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
   //        need_reexec = true;
         PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
       } else {
-        printf("[%s] set rollback_point_\n", __func__);
+        //printf("[%s] set rollback_point_\n", __func__);
         if(rollback_lv < *(rollback_point_)) {
           *(rollback_point_) = rollback_lv;
         }
@@ -1360,7 +1360,7 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
     return rollback_point; 
   }
   else if(totalTaskSize == 1) {
-    printf("[%s] set rollback_point_ %u for single task version\n", __func__, rollback_lv);
+    //printf("[%s] set rollback_point_ %u for single task version\n", __func__, rollback_lv);
     if(rollback_lv < *(rollback_point_)) {
       *(rollback_point_) = rollback_lv;
     }
@@ -1415,7 +1415,7 @@ uint32_t CD::CheckRollbackPoint(bool remote)
     return rollback_lv;
   }
   else if(totalTaskSize == 1) {
-    printf("[%s] check rollback_point_ %u for single task version\n", __func__, *rollback_point_);
+    //printf("[%s] check rollback_point_ %u for single task version\n", __func__, *rollback_point_);
     return *rollback_point_;
   }
   else {

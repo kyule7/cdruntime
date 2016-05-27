@@ -192,12 +192,12 @@ class CDHandle {
  * @param[out] new_task    New task ID generated from split method.                   
  * @typedef function pointer/object type for splitting CDs.
  */ 
-     typedef std::function<int(const int& my_task_id,
-                           const int& my_size,       
-                           const int& num_children,  
-                           int& new_color,           
-                           int& new_task             
-                         )> SplitFuncT; 
+     typedef std::function< int(const int& my_task_id,
+                            const int& my_size,       
+                            const int& num_children,  
+                            int& new_color,           
+                            int& new_task             
+                            ) > SplitFuncT; 
  
 /** @} */ // End cd_split and user_interfaces
 

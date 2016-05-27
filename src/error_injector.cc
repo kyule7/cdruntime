@@ -270,7 +270,7 @@ ErrorProb *ErrorInjector::CreateErrorProb(RandType rand_type)
 
 long double ErrorInjector::GetErrorProb(double error_rate, double unit_time) 
 {
-  long double reliability = exp((-1.0)*(long double)error_rate*(long double)unit_time);
+  long double reliability = exp((-1.0)*(long double)error_rate*(long double)unit_time*100);
   CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "reliability %Le = 1.0 - exp(-%f*%f)   %Le\n", reliability, error_rate, unit_time);
   return reliability; 
 }
@@ -319,7 +319,7 @@ uint64_t SystemErrorInjector::Inject(void)
 }
 
 #if 0
-MultiTypeErrorInjector::MultiTypeErrorInjector(const std::initializer_list<std::pair<uint32_t, double>> &err_type_list)
+MultiTypeErrorInjector::MultiTypeErrorInjector(const std::initializer_list<std::pair<uint32_t, double> > &err_type_list)
 {
   // FIXME : make sure how order map structure is.
   for(auto it=err_type_list.begin(); it!=err_type_list.end(); ++it) {

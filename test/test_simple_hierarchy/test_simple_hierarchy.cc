@@ -57,7 +57,7 @@ using namespace cd;
 using namespace std;
 using namespace chrono;
 
-DebugBuf dbgApp;
+//DebugBuf cout;
 CDErrT err;
 int  numProcs = 0;
 int  myRank = 0;
@@ -84,12 +84,12 @@ static __inline__ long long getCounter(void)
 void PrintData(uint32_t *array, int length)
 {
   if(arrayName.find(array) != arrayName.end())
-    dbgApp <<"Print Data "<< arrayName[array] << ", Size: " << length << endl;
+    cout <<"Print Data "<< arrayName[array] << ", Size: " << length << endl;
 
   for(int i=0; i<length; i++) {
-    dbgApp << array[i] << " ";
+    cout << array[i] << " ";
   }
-  dbgApp <<"\n=========================="<<endl;
+  cout <<"\n=========================="<<endl;
 }
 
 void CorruptData(uint32_t *array, int length)
@@ -110,10 +110,10 @@ bool CheckArray(uint32_t *array, int length)
 }
 
 class UserObject1 {
-    uint32_t data0[8] = {0x89ABCDEF, 0x01234567, 0x6789ABCD, 0xCDAB8967, 0xFEDCBA56, 0x10000000, 0x50055521};
-    double data1[8] = {0.001, 1.394, 391832.29, 392.35, 10000, 32, 32.125, 64.0625};
-    bool data2[8] = {1, 0, 0, 0, 0, 1, 1};
-    char data3[8] = {'a', '3', '5', '8', 'b', '\0', 'c'};
+    uint32_t data0[8];// = {0x89ABCDEF, 0x01234567, 0x6789ABCD, 0xCDAB8967, 0xFEDCBA56, 0x10000000, 0x50055521};
+    double data1[8];// = {0.001, 1.394, 391832.29, 392.35, 10000, 32, 32.125, 64.0625};
+    bool data2[8];// = {1, 0, 0, 0, 0, 1, 1};
+    char data3[8];// = {'a', '3', '5', '8', 'b', '\0', 'c'};
   public:
     Serdes serdes;
   
@@ -152,21 +152,21 @@ int TestCDHierarchy(void)
   // User-defined object
   UserObject1 userObj1;
 
-  dbgApp << "\n==== TestCDHierarchy Start ====\n" << endl; 
+  cout << "\n==== TestCDHierarchy Start ====\n" << endl; 
 	CDHandle *root = CD_Init(numProcs, myRank);
   CD_Begin(root); 
 
-  dbgApp << "Root CD Begin...\n" << endl;
+  cout << "Root CD Begin...\n" << endl;
   root->Preserve(arrayA, sizeof(arrayA), kCopy, "a_root");
   root->Preserve(arrayB, sizeof(arrayB), kCopy, "b_root");
 
-  dbgApp << "CD Preserving..\n" << endl;
+  cout << "CD Preserving..\n" << endl;
   CDHandle* child_lv1=root->Create(LV1, "CD1", kStrict, 0, 0, &err);
-  dbgApp << "Root Creates Level 1 CD. # of children CDs = " << LV1 << "\n" << endl;
+  cout << "Root Creates Level 1 CD. # of children CDs = " << LV1 << "\n" << endl;
 
   CD_Begin(child_lv1);
 //	child_lv1->RegisterErrorInjector(new CDErrorInjector({}, {3,4}, 0.0));
-  dbgApp << "\t\tLevel 1 CD Begin...\n" << endl;
+  cout << "\t\tLevel 1 CD Begin...\n" << endl;
 
   uint32_t arrayE[ARRAY_E_SIZE] = {1,2,3,4,5,6,7,8};
   arrayName[arrayE] = "arrayE";
@@ -180,11 +180,11 @@ int TestCDHierarchy(void)
   child_lv1->Preserve(arrayE, sizeof(arrayE), kCopy, 
                       (string("arrayE-")+to_string((unsigned long long)myRank)).c_str()); // arrayE-rankID
 
-  dbgApp << "\t\tPreserve via copy: arrayA, arrayB, arrayE\n\n" << endl;
+  cout << "\t\tPreserve via copy: arrayA, arrayB, arrayE\n\n" << endl;
 
 
   // Level 1 Body
-  dbgApp << string(1<<1, '\t').c_str() << "Here is computation body of CD level 1...\n" << endl;
+  cout << string(1<<1, '\t').c_str() << "Here is computation body of CD level 1...\n" << endl;
 
   // Corrupt array arrayA and arrayB
 //  if(num_reexecution = 0) {
@@ -200,11 +200,11 @@ int TestCDHierarchy(void)
   arrayName[arrayG] = "arrayG";
 
   CDHandle* child_lv2=child_lv1->Create(LV2, "CD2", kStrict, 0, 0, &err);
-  dbgApp << string(1<<1, '\t').c_str() << "CD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
+  cout << string(1<<1, '\t').c_str() << "CD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
 
   CD_Begin(child_lv2);
 //	child_lv2->RegisterErrorInjector(new CDErrorInjector({}, {6}, 0.0));
-  dbgApp << string(2<<1, '\t').c_str() <<"Level 2 CD Begin...\n" << endl;
+  cout << string(2<<1, '\t').c_str() <<"Level 2 CD Begin...\n" << endl;
 
   child_lv2->Preserve(arrayA, sizeof(arrayA), kRef, 
                       "a_lv2", (string("arrayA-")+to_string((unsigned long long)myRank)).c_str()); // local
@@ -213,8 +213,8 @@ int TestCDHierarchy(void)
   child_lv2->Preserve(arrayE, sizeof(arrayE), kRef, 
                       "e_lv2", (string("arrayE-")+to_string((unsigned long long)myRank)).c_str());
   child_lv2->Preserve(arrayC, sizeof(arrayC), kCopy, "arrayC");
-  dbgApp << string(2<<1, '\t').c_str()<<"Preserve via ref : arrayA (local), arrayB (local), arrayE (local)" << endl;
-  dbgApp << string(2<<1, '\t').c_str()<<"Preserve via copy: arrayC\n" << endl;
+  cout << string(2<<1, '\t').c_str()<<"Preserve via ref : arrayA (local), arrayB (local), arrayE (local)" << endl;
+  cout << string(2<<1, '\t').c_str()<<"Preserve via copy: arrayC\n" << endl;
 
 
 //  if(num_reexecution = 1) {
@@ -223,49 +223,49 @@ int TestCDHierarchy(void)
 //  }
 
   // Level 2 Body
-  dbgApp << string(2<<1, '\t').c_str() << "Here is computation body of CD level 2...\n" << endl;
+  cout << string(2<<1, '\t').c_str() << "Here is computation body of CD level 2...\n" << endl;
 
 //  child_lv2->CDAssert(CheckArray(arrayE, sizeof(arrayE)));
 
   CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kDRAM|kStrict, 0, 0, &err);
-  dbgApp << string(2<<1, '\t').c_str() << "CD2 Creates Level 3 CD. # of children CDs = " << LV3 << "\n" << endl;
+  cout << string(2<<1, '\t').c_str() << "CD2 Creates Level 3 CD. # of children CDs = " << LV3 << "\n" << endl;
 
   CD_Begin(child_lv3);
-  dbgApp << string(3<<1, '\t').c_str() << "Level 3 CD Begin...\n" << endl;
+  cout << string(3<<1, '\t').c_str() << "Level 3 CD Begin...\n" << endl;
 
   child_lv3->Preserve(arrayA, sizeof(arrayA), kRef, "child_a", (string("arrayA-")+to_string((unsigned long long)myRank)).c_str()); // local
   child_lv3->Preserve(arrayB, sizeof(arrayB), kRef, "child_b", (string("arrayB-")+to_string((unsigned long long)myRank)).c_str()); // local
   child_lv3->Preserve(arrayC, sizeof(arrayC), kRef, "child_c", "arrayC");
   child_lv3->Preserve(arrayD, sizeof(arrayD), kCopy, "arrayD");
-  dbgApp << string(3<<1, '\t').c_str() << "Preserve via ref : arrayA (local), arrayB (local), arrayC (local)" << endl;
-  dbgApp << string(3<<1, '\t').c_str() << "Preserve via copy: arrayD\n" << endl;
+  cout << string(3<<1, '\t').c_str() << "Preserve via ref : arrayA (local), arrayB (local), arrayC (local)" << endl;
+  cout << string(3<<1, '\t').c_str() << "Preserve via copy: arrayD\n" << endl;
 
   // Level 3 Body
-  dbgApp << string(3<<1, '\t').c_str() << "Here is computation body of CD level 3...\n" << endl;
+  cout << string(3<<1, '\t').c_str() << "Here is computation body of CD level 3...\n" << endl;
 
 
   child_lv3->Detect();
 
   CD_Complete(child_lv3);
-  dbgApp << string(3<<1, '\t').c_str() << "Level 3 CD Complete...\n" << endl;
+  cout << string(3<<1, '\t').c_str() << "Level 3 CD Complete...\n" << endl;
   child_lv3->Destroy();
-  dbgApp << string(3<<1, '\t').c_str() << "Level 3 CD Destroyed...\n" << endl;
+  cout << string(3<<1, '\t').c_str() << "Level 3 CD Destroyed...\n" << endl;
 
   // Detect Error here
   child_lv2->Detect();
 
   CD_Complete(child_lv2);
-  dbgApp << string(2<<1, '\t').c_str() << "Level 2 CD Complete...\n" << endl;
+  cout << string(2<<1, '\t').c_str() << "Level 2 CD Complete...\n" << endl;
   child_lv2->Destroy();
-  dbgApp << string(2<<1, '\t').c_str() << "Level 2 CD Destroyed...\n" << endl;
+  cout << string(2<<1, '\t').c_str() << "Level 2 CD Destroyed...\n" << endl;
 
   // Detect Error here
   child_lv1->Detect();
 
   CD_Complete(child_lv1);
-  dbgApp << string(1<<1, '\t').c_str() << "Level 1 CD Complete...\n" << endl;
+  cout << string(1<<1, '\t').c_str() << "Level 1 CD Complete...\n" << endl;
   child_lv1->Destroy();
-  dbgApp << string(1<<1, '\t').c_str() << "Level 1 CD Destroyed...\n" << endl;
+  cout << string(1<<1, '\t').c_str() << "Level 1 CD Destroyed...\n" << endl;
   printf("num execution : %d at #%d\n", num_reexecution, myRank);
   // Detect Error here
   root->Detect();
@@ -276,10 +276,10 @@ int TestCDHierarchy(void)
   }
 
   CD_Complete(root);
-  dbgApp << "Root CD Complete...\n" << endl;
-  dbgApp << "Root CD Destroyed (Finalized) ...\n" << endl;
-  dbgApp << "\n==== TestCDHierarchy Done ====\n" << endl; 
-  dbgApp.flush();
+  cout << "Root CD Complete...\n" << endl;
+  cout << "Root CD Destroyed (Finalized) ...\n" << endl;
+  cout << "\n==== TestCDHierarchy Done ====\n" << endl; 
+  cout.flush();
 
   CD_Finalize();
 
@@ -304,8 +304,8 @@ int main(int argc, char* argv[])
 
   int ret=0;
 
-  dbgApp.open((string("./output/output_app_")+to_string((unsigned long long)myRank)).c_str());
-  dbgApp << "\n==== TestSimpleHierarchy ====\n" << endl;
+//  cout.open((string("./output/output_app_")+to_string((unsigned long long)myRank)).c_str());
+  cout << "\n==== TestSimpleHierarchy ====\n" << endl;
 
   ret = TestCDHierarchy();
   
@@ -314,7 +314,7 @@ int main(int argc, char* argv[])
   else 
     cout << "Test CD Hierarchy PASSED\n" << endl;
 
-  dbgApp.close();
+//  cout.close();
 
 #if CD_MPI_ENABLED
   MPI_Finalize();

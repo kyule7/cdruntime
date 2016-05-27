@@ -242,14 +242,14 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cdout, __VA_ARGS__); }
  
   };
 
-#if CD_DEBUG_ENABLED
+//#if CD_DEBUG_ENABLED
 //  extern std::ostringstream dbg;
   extern DebugBuf cddbg;
 #define dbgBreak nullFunc
-#else
-#define cddbg std::cout
-#define dbgBreak nullFunc
-#endif
+//#else
+//#define cddbg std::cout
+//#define dbgBreak nullFunc
+//#endif
 
   } // namespace cd ends
 #endif // file ends

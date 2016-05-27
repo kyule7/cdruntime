@@ -1,7 +1,9 @@
 #if _MPI
 #include <mpi.h>
 #include "define.h"
-
+#if _CUDA
+#include "matmul_cuda.h"
+#endif
 struct Comm_t {
   MPI_Comm communicator;
   int group_id;
@@ -207,9 +209,13 @@ void MPI_MatMatMul(FLOAT *result, FLOAT *matA, FLOAT *matB, FLOAT **tempBuff,
 //    }
 //    PRINT("\n");
 #if 1
+#if _CUDA
+    //CUDA_MatMul(result, colBuff, rowBuff, blk_size, blk_size, blk_size);
+#endif
+
 //    double mm_start = MPI_Wtime();
-    //OMP_OneLvMatMul(result, colBuff, rowBuff, blk_size, blk_size, blk_size, MIN_DIM_L1);
-    OMP_ThreeLvMatMul(result, colBuff, rowBuff, blk_size, blk_size, blk_size, MIN_DIM_L1, MIN_DIM_L2, MIN_DIM_L3);
+    OMP_OneLvMatMul(result, colBuff, rowBuff, blk_size, blk_size, blk_size, MIN_DIM_L1);
+//    OMP_ThreeLvMatMul(result, colBuff, rowBuff, blk_size, blk_size, blk_size, MIN_DIM_L1, MIN_DIM_L2, MIN_DIM_L3);
     //OMP_ThreeLvMatMul(result, input[0], input[1], mat_dim, mat_dim, mat_dim, l1_blk, l2_blk, l3_blk);
 //    mm_overhead += MPI_Wtime() - mm_start;
 //    int dim[DIM] = {sub_col_size, sub_row_size, ROW_ROW};

@@ -6,6 +6,9 @@
 #include "matmul_seq.h"
 #include "matmul_omp.h"
 #include "matmul_mpi.h"
+#if _CUDA
+#include "matmul_cuda.h"
+#endif
 FILE *fp = NULL;
 FILE *result_file = NULL;
 int rank_id=0;
@@ -32,6 +35,10 @@ int main(int argc, char *argv[]) {
   // Get rank ID and total number of tasks
   MPI_Comm_rank(MPI_COMM_WORLD, &rank_id);
   MPI_Comm_size(MPI_COMM_WORLD, &np);	
+#endif
+
+#if _CUDA
+//  cuMatMulInit(argc, argv);
 #endif
 
 #if _DEBUG == 1
@@ -259,6 +266,7 @@ int main(int argc, char *argv[]) {
   }
   free(result[0]);
   free(result[1]);
+
 
 #if _MPI
   MPI_Finalize();

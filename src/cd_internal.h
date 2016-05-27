@@ -228,7 +228,7 @@ class CD : public Serializable {
     uint64_t        sys_detect_bit_vector_;
 
     // Registered user-defined error detection routine
-    std::list<std::function<int(void)>> usr_detect_func_list_;  //custom_detect_func;
+    std::list<std::function<int(void)> > usr_detect_func_list_;  //custom_detect_func;
 
 
     /// FIXME later this should be map or list, 

@@ -37,7 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define _CD_DEF_INTERNAL_H
 
 #include <cstdio>
-#include <cstdint>
+#include <stdint.h>
 #include <csetjmp>
 #include <string>
 #include <vector>

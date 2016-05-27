@@ -40,6 +40,8 @@ extern FILE *result_file;
 
 #define ERROR(...) {printf(__VA_ARGS__); assert(0);}
 
+#define BLOCK_SIZE 32
+
 enum MAT_DIR_T {
   COL_MAJOR=0,
   ROW_MAJOR=1

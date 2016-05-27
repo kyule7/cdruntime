@@ -1,4 +1,4 @@
-/*
+ /*
 Copyright 2014, The University of Texas at Austin 
 All rights reserved.
 
@@ -45,7 +45,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_internal.h"
 #include "cd_def_internal.h"
 #include "cd_def_debug.h"
-#include <cstdint>
 using namespace sight;
 using namespace cd;
 using std::endl;
@@ -396,7 +395,7 @@ Scope::~Scope(void)
 Module::Module(CDProfiler *profiler, bool usr_profile_en) : Viz(profiler)
 {
 //  profiler = profiler_p;
-  std::map<std::string, array<uint64_t,MAX_PROFILE_DATA>> &profile_data_ = profiler->profile_data_;
+  std::map<std::string, array<uint64_t,MAX_PROFILE_DATA> > &profile_data_ = profiler->profile_data_;
   LabelT &current_label_ = profiler->current_label_;
 //  CDHandle *cdh = GetCurrentCD();
   string label = GetCurrentCD()->profiler_->label();
@@ -445,7 +444,7 @@ Module::Module(CDProfiler *profiler, bool usr_profile_en) : Viz(profiler)
 Module::~Module(void)
 {
   CDProfiler *profiler = (CDProfiler*)(GetCurrentCD()->profiler_);
-  std::map<std::string, array<uint64_t, MAX_PROFILE_DATA>> profile_data = profiler->profile_data_;
+  std::map<std::string, array<uint64_t, MAX_PROFILE_DATA> > profile_data = profiler->profile_data_;
   string label = GetCurrentCD()->profiler_->label();
 
 
@@ -477,7 +476,7 @@ void Module::SetUsrProfileInput(std::pair<std::string, long> name_list)
   AddUsrProfile(name_list.first, name_list.second, 0);
 }
 
-void Module::SetUsrProfileInput(std::initializer_list<std::pair<std::string, long>> name_list)
+void Module::SetUsrProfileInput(std::initializer_list<std::pair<std::string, long> > name_list)
 {
   for(auto il = name_list.begin() ;
       il != name_list.end(); ++il) {
@@ -490,7 +489,7 @@ void Module::SetUsrProfileOutput(std::pair<std::string, long> name_list)
   AddUsrProfile(name_list.first, name_list.second, 1);
 }
 
-void Module::SetUsrProfileOutput(std::initializer_list<std::pair<std::string, long>> name_list)
+void Module::SetUsrProfileOutput(std::initializer_list<std::pair<std::string, long> > name_list)
 {
   for(auto il = name_list.begin() ;
       il != name_list.end(); ++il) {

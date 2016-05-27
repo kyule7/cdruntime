@@ -39,7 +39,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "packer.h"
 #include "unpacker.h"
 #include "cd_def_debug.h"
-
+#include <setjmp.h>
 using namespace cd;
 using namespace cd::internal;
 using namespace cd::interface;
@@ -961,7 +961,7 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 // CDHandle will follow the standard interface. 
 CDErrT CD::Begin(bool collective, const char *label)
 {
-  printf("[%s] not here? \n", __func__);
+  //printf("[%s] not here? \n", __func__);
   begin_ = true;
 
   CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);
@@ -2716,7 +2716,7 @@ void CD::Recover(bool collective)
 
 CD::CDInternalErrT CD::Assert(bool test)
 {
-  printf("[%s] assert %d\n", __func__, test);
+  //printf("[%s] assert %d\n", __func__, test);
 
   CDInternalErrT internal_err = kOK;
 
@@ -2736,7 +2736,7 @@ CD::CDInternalErrT CD::Assert(bool test)
           SetMailBox(kErrorOccurred);
         }
       } else { // a single task in a CD.
-        printf("[%s] set rollback point\n", __func__);
+        //printf("[%s] set rollback point\n", __func__);
         SetRollbackPoint(level(), false);
       }
     }
@@ -2965,7 +2965,7 @@ CDErrT CD::InternalReexecute(void)
   //TODO We need to make sure that all children has stopped before re-executing this CD.
   Stop();
 
-  printf("[%s]Rollback!\n", __func__);
+  //printf("[%s]Rollback!\n", __func__);
 
   //TODO We need to consider collective re-start. 
   if(ctxt_prv_mode_ == kExcludeStack) {

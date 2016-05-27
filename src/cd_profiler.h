@@ -104,7 +104,7 @@ class CDProfiler : public Profiler {
   bool collect_profile_;
   bool usr_profile_enable;
   bool isStarted;
-//  std::vector<std::pair<std::string, long>>  usr_profile;
+//  std::vector<std::pair<std::string, long> >  usr_profile;
   int sightObj_count_;
   std::map<sight::structure::dbgStream*, int> sightObj_mark_;
 
@@ -119,7 +119,7 @@ class CDProfiler : public Profiler {
 
 public:
   LabelT current_label_;
-  std::map<std::string, array<uint64_t,MAX_PROFILE_DATA>> profile_data_;
+  std::map<std::string, array<uint64_t,MAX_PROFILE_DATA> > profile_data_;
   static std::map<std::string, bool> onOff_;
   CDProfiler(CDProfiler *prv_cdp) : parent_(prv_cdp) 
   {
@@ -190,9 +190,9 @@ public:
   Module(CDProfiler *profiler, bool usr_profile_en=false);
   ~Module(void);
   void SetUsrProfileInput(std::pair<std::string, long> name_list);
-  void SetUsrProfileInput(std::initializer_list<std::pair<std::string, long>> name_list);
+  void SetUsrProfileInput(std::initializer_list<std::pair<std::string, long> > name_list);
   void SetUsrProfileOutput(std::pair<std::string, long> name_list);
-  void SetUsrProfileOutput(std::initializer_list<std::pair<std::string, long>> name_list);
+  void SetUsrProfileOutput(std::initializer_list<std::pair<std::string, long> > name_list);
   void AddUsrProfile(std::string key, long val, int mode);
   sightObj *GetSightObj() { return m; }
 };

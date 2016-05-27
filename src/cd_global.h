@@ -52,7 +52,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  */
 
-#include <cstdint>
+#include <stdint.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
