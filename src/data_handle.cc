@@ -59,7 +59,7 @@ DataHandle::DataHandle(const DataHandle &that)
     ref_name_(that.ref_name_), ref_offset_(that.ref_offset_), 
     node_id_(that.node_id_) 
 { 
-  strcpy(file_name_, INIT_FILE_PATH);
+  strcpy(file_name_, that.file_name_);
 }
 
 // DataHandle for preservation to memory

@@ -439,7 +439,8 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
       CD_DEBUG("Local Case -> kOSFile\n");
 
       //FIXME we need to collect file writes and write as a chunk. We don't want to have too many files per one CD.   
-      FILE *fp = buffer->fp_;
+//      FILE *fp = buffer->fp_;
+      FILE *fp = fopen(buffer->file_name_, "r");
       int fd = fileno(fp);
       bool file_opened = false;
       if(fcntl(fd, F_GETFD) == -1) {
@@ -462,6 +463,8 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
         if(file_opened == true) {
           fclose(fp);
           file_opened = false;
+        } else {
+          fclose(fp);
         }
         CD_DEBUG("Read data from OS file system\n");
 
