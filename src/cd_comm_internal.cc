@@ -35,21 +35,22 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_config.h"
 
-#if _MPI_VER
 #include "cd_path.h"
 #include "cd_global.h"
 #include "cd_handle.h"
 #include "cd_internal.h"
 #include "cd_def_internal.h"
 #include "cd_def_debug.h"
+using namespace cd;
+using namespace cd::internal;
+using namespace std;
+
+#if _MPI_VER // CD_MPI_ENABLED
 
 #define DEBUG_OFF_MAILBOX 1
 #define LOCK_PER_MAILBOX 0
 #define MAILBOX_LOCK_ENABLED 1
 #define BUGFIX_0327 1
-using namespace cd;
-using namespace cd::internal;
-using namespace std;
 
 CD_CLOCK_T cd::mailbox_elapsed_time = 0;
 
@@ -1512,6 +1513,96 @@ void CD::PrintDebug() {
 
 }
 
+
+
+
+void CD::InitializeMailBox(void)
+{
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
+  *pendingFlag_ = 0;
+  PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+  *rollback_point_ = INVALID_ROLLBACK_POINT;
+  PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+  // Initialization of event flags
+  if(is_window_reused_==false) {
+    if(IsHead() == false) {
+      *event_flag_ = 0;
+    }
+    else {
+      for(int i=0; i<task_size(); i++) {
+        event_flag_[i] = 0;
+      }
+    }
+  } // if window is reused, do not have to init.
+}
+
+void CD::FinalizeMailBox(void) 
+{
+  if(task_size() > 1 && (is_window_reused_==false)) {  
+    if(IsHead()) {
+      for(int i=0; i<task_size(); i++) {
+        if(event_flag_[i] != 0) {
+          const CDFlagT event = event_flag_[i];
+          if(CHECK_EVENT(event, kErrorOccurred)) {
+            EventHandler::IncHandledEventCounter();
+          }
+          if(CHECK_EVENT(event, kAllReexecute)) {
+            EventHandler::IncHandledEventCounter();
+          }
+          if(CHECK_EVENT(event, kEntrySearch)) {
+            EventHandler::IncHandledEventCounter();
+          }
+          if(CHECK_EVENT(event, kEntrySend)) {
+            EventHandler::IncHandledEventCounter();
+          }
+          if(CHECK_EVENT(event, kAllPause)) {
+            EventHandler::IncHandledEventCounter();
+          }
+          if(CHECK_EVENT(event, kAllResume)) {
+            EventHandler::IncHandledEventCounter();
+          }
+        }
+        // initialize
+        event_flag_[i] = 0;
+      }
+    }
+    else {
+      if(*event_flag_ != 0) {
+        const CDFlagT event = *event_flag_;
+        if(CHECK_EVENT(event, kErrorOccurred)) {
+          EventHandler::IncHandledEventCounter();
+        }
+        if(CHECK_EVENT(event, kAllReexecute)) {
+          EventHandler::IncHandledEventCounter();
+        }
+        if(CHECK_EVENT(event, kEntrySearch)) {
+          EventHandler::IncHandledEventCounter();
+        }
+        if(CHECK_EVENT(event, kEntrySend)) {
+          EventHandler::IncHandledEventCounter();
+        }
+        if(CHECK_EVENT(event, kAllPause)) {
+          EventHandler::IncHandledEventCounter();
+        }
+        if(CHECK_EVENT(event, kAllResume)) {
+          EventHandler::IncHandledEventCounter();
+        }
+      }
+      // initialize
+      *event_flag_ = 0;
+    }
+    DecPendingCounter();
+  }
+}
+
+
+
+
+
+
+
+
 bool printed = false;
 int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status) 
 {
@@ -1712,5 +1803,25 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
 //  
 //  return subset;
 //}
+
+#else
+
+CD_CLOCK_T cd::mailbox_elapsed_time = 0;
+uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
+{
+  if(rollback_lv < *(rollback_point_)) {
+    *(rollback_point_) = rollback_lv;
+  }
+  return rollback_lv;
+}
+
+uint32_t CD::CheckRollbackPoint(bool remote) 
+{
+  //printf("[%s] ./..\n", __func__);
+  return *rollback_point_;
+}
+void CD::PrintDebug() {
+
+}
 
 #endif

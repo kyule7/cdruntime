@@ -238,9 +238,9 @@ class Profiler {
   static std::map<uint32_t,std::map<std::string,RuntimeInfo> > num_exec_map;
   static uint32_t current_level_; // It is used to detect escalation
 public:
-  Profiler() : cdh_(NULL), reexecuted_(false) {}
+  Profiler(void) : cdh_(NULL), reexecuted_(false) {}
   Profiler(CDHandle *cdh) : cdh_(cdh), reexecuted_(false) {}
-  virtual ~Profiler() {}
+  virtual ~Profiler(void) {}
   static Profiler *CreateProfiler(int prof_type=0, void *arg=NULL);
   static void CreateRuntimeInfo(uint32_t level, const std::string &name);
   static void Print(void);

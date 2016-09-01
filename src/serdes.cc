@@ -42,7 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace std;
 using namespace cd::interface;
 
-void Serdes::Register(uint32_t member_id, void *member, size_t member_size) {
+void Serdes::Register(uint64_t member_id, void *member, size_t member_size) {
   member_list_[member_id] = make_pair(member, member_size);
 }
 
@@ -51,11 +51,11 @@ void Serdes::ClearTarget(void) {
   serdes_list_.clear();
 }
 
-void Serdes::RegisterTarget(uint32_t target_id) {
+void Serdes::RegisterTarget(uint64_t target_id) {
   serdes_list_.push_back(target_id);
 }
     
-void Serdes::RegisterTarget(std::initializer_list<uint32_t> il)
+void Serdes::RegisterTarget(std::initializer_list<uint64_t> il)
 {
   for(auto it=il.begin(); it!=il.end(); ++it) {
     serdes_list_.push_back(*it);
@@ -74,7 +74,7 @@ void Serdes::operator()(int flag, void *object) {
 char *Serdes::Serialize(void) {
   Packer packer;
   for(auto it=serdes_list_.begin(); it!=serdes_list_.end(); ++it) {
-//uint32_t Packer::Add(uint32_t id, uint32_t length, void *ptr_data)
+//uint64_t Packer::Add(uint64_t id, uint64_t length, void *ptr_data)
     packer.Add(*it, member_list_[*it].second, member_list_[*it].first);
   }
   return packer.GetTotalData(length_);
@@ -82,7 +82,7 @@ char *Serdes::Serialize(void) {
 
 void Serdes::Deserialize(char *object) { 
   Unpacker unpacker;
-  uint32_t return_size, return_id;
+  uint64_t return_size, return_id;
   for(auto it=serdes_list_.begin(); it!=serdes_list_.end(); ++it) {
     void *data = unpacker.GetAt(object, *it, return_size, return_id);
     assert(return_size != member_list_[*it].second);

@@ -205,14 +205,14 @@ class CDHandle {
     CD    *ptr_cd_;   //!< Pointer to CD object which will not exposed to users.
     NodeID node_id_;  //!< NodeID contains the information to access to the task.
 
-//    static SystemConfig system_config_;
+    SplitFuncT SplitCD; //!<function object that will be set to some appropriate split strategy.
+
 #if CD_ERROR_INJECTION_ENABLED
     CDErrorInjector *cd_error_injector_; //!< Error injector interface.
     static MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.
+  public:
     static SystemErrorInjector *system_error_injector_; //!< Error injector interface.
 #endif
-
-    SplitFuncT SplitCD; //!<function object that will be set to some appropriate split strategy.
 
   public:
 #if CD_PROFILER_ENABLED 
@@ -1530,9 +1530,10 @@ class CDHandle {
     ucontext_t *ctxt(void);
 
     CDType   GetCDType(void) const;
+#if CD_MPI_ENABLED
     int GetCommLogMode(void) const;
     int GetCDLoggingMode(void) const;
-
+#endif
   private:
 
     GroupT &group(void);

@@ -32,5 +32,6 @@
 #define CD_PROFILER_ENABLED @cd_profiler_enabled@
 #define CD_TEST_ENABLED @cd_test_enabled@
 #define CD_VIZ_ENABLED @cd_viz_enabled@
+#define CD_AUTOMATED @cd_automated@
 
 #endif /* _CD_FEATURES_H */

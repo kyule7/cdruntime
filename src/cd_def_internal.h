@@ -45,28 +45,29 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <unordered_map>
 #include <errno.h>
 #include "cd_features.h"
-//#include "cd_def_debug.h"
+#include "cd_def_common.h"
 #include "cd_def_interface.h"
+#include "cd_global.h"
 #define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
 
 namespace cd {
-//  namespace internal {
-//
-//    class CD;
-//    class HeadCD;
-//    class CDPath;
-//    class CDEntry;
-//    class DataHandle;
-//    class NodeID;
-//    class CDNameT;
-//    class CDID;
-//    class CDEvent;
-//    class PFSHandle;
-//  }
-//  namespace logging {
-//    class CommLog;
-//    class RuntimeLogger;
-//  }
+  namespace internal {
+
+    class CD;
+    class HeadCD;
+    class CDPath;
+    class CDEntry;
+    class DataHandle;
+    class NodeID;
+    class CDNameT;
+    class CDID;
+    class CDEvent;
+    class PFSHandle;
+  }
+  namespace logging {
+    class CommLog;
+    class RuntimeLogger;
+  }
   namespace interface {
 
   }
@@ -112,7 +113,7 @@ typedef int           COMMLIB_File;
 #endif
 
 
-typedef uint32_t ENTRY_TAG_T;
+typedef uint64_t ENTRY_TAG_T;
 
 #define CD_FLAG_T uint32_t
 #define MAX_ENTRY_BUFFER_SIZE 1024
@@ -318,7 +319,7 @@ namespace cd {
   extern uint64_t gen_object_id;
 
   //GONG: global variable to represent the current context for malloc wrapper
-//  extern bool app_side;
+  extern bool app_side;
 
   static inline void nullFunc(void) {}
 
@@ -469,7 +470,7 @@ extern CD_CLOCK_T mailbox_elapsed_time;
       uint64_t length_;
       uint32_t taskID_;
       uint32_t tag_;
-      MPI_Comm comm_;
+      ColorT   comm_;
       void    *flag_;
       bool     complete_;
       bool     isrecv_;
@@ -486,7 +487,7 @@ extern CD_CLOCK_T mailbox_elapsed_time;
         complete_ = 0;
         isrecv_ = 0;
         intra_cd_msg_ = false;
-        comm_ = MPI_COMM_NULL;
+        comm_ = INVALID_COLOR;
         tag_  = INVALID_MSG_TAG;
         //GONG
         p_ = 0;
@@ -497,7 +498,7 @@ extern CD_CLOCK_T mailbox_elapsed_time;
                          uint64_t length, 
                          uint32_t taskID, 
                          uint32_t tag, 
-                         const MPI_Comm &comm, 
+                         const ColorT &comm, 
                          void    *flag, 
                          bool complete) 
         : addr_(const_cast<void *>(addr)), length_(length), taskID_(taskID), tag_(tag), 
@@ -511,7 +512,7 @@ extern CD_CLOCK_T mailbox_elapsed_time;
       }
       std::string Print(void) {
         char buf[256];
-        sprintf(buf, "\n== Incomplete Log Entry ==\ntaskID:%u\nlength:%lu\naddr:%p\ntag:%u\ncomm:%u\nflag:%p\ncomplete:%d\nisrecv:%d\nintra_msg:%d\np:%p\npushed:%d\nlevel:%u\n==========================\n", taskID_, length_, addr_, tag_, comm_, flag_, complete_, isrecv_, intra_cd_msg_, p_, pushed_, level_);
+        sprintf(buf, "\n== Incomplete Log Entry ==\ntaskID:%u\nlength:%lu\naddr:%p\ntag:%u\nflag:%p\ncomplete:%d\nisrecv:%d\nintra_msg:%d\np:%p\npushed:%d\nlevel:%u\n==========================\n", taskID_, length_, addr_, tag_, flag_, complete_, isrecv_, intra_cd_msg_, p_, pushed_, level_);
         return std::string(buf);
       }
     };
@@ -532,7 +533,84 @@ extern CD_CLOCK_T mailbox_elapsed_time;
     };
   } // namespace logging ends
 #endif
+  extern DebugBuf cddbg;
 
+/**@class cd::DebugBuf
+ * @brief Utility class for debugging.
+ *
+ *  Like other parallel programming models, it is hard to debug CD runtime. 
+ *  So, debugging information are printed out to file using this class.
+ *  The global object of this class, dbg, is defined.
+ * 
+ *  The usage of this class is like below.
+ *  \n
+ *  \n
+ *  DebugBuf dbgApp;
+ *  dbgApp.open("./file_path_to_write"); 
+ *  dbgApp << "Debug Information" << endl;
+ *  dbg.flush(); 
+ *  dbg.close();
+ */ 
+  class DebugBuf: public std::ostringstream {
+    std::ofstream ofs_;
+  public:
+    ~DebugBuf() {}
+    DebugBuf(void) {}
+    DebugBuf(const char *filename) 
+      : ofs_(filename) {}
+/**
+ * @brief Open a file to write debug information.
+ *
+ */
+    void open(const char *filename)
+    {
+      bool temp = app_side;
+      app_side = false;
+      ofs_.open(filename);
+      app_side = temp;
+    }
+
+/**
+ * @brief Close the file where debug information is written.
+ *
+ */    
+    void close(void)
+    {
+      bool temp = app_side;
+      app_side = false;
+      ofs_.close();
+      app_side = temp;
+    }
+
+ 
+/**
+ * @brief Flush the buffer that contains debugging information to the file.
+ *        After flushing it, it clears the buffer for the next use.
+ *
+ */
+    void flush(void) 
+    {
+      bool temp = app_side;
+      app_side = false;
+      ofs_ << str();
+      ofs_.flush();
+      str("");
+      clear();
+      app_side = temp;
+    }
+     
+
+    template <typename T>
+    std::ostream &operator<<(T val) 
+    {
+      bool temp = app_side;
+      app_side = false;
+      std::ostream &os = std::ostringstream::operator<<(val);
+      app_side = temp;
+      return os;
+    }
+ 
+  };
 } // namespace cd ends
 
 

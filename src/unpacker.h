@@ -32,7 +32,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 */
-
+#if 0
 #ifndef _UNPACKER_H
 #define _UNPACKER_H
 /**
@@ -78,6 +78,9 @@ class Unpacker {
     virtual ~Unpacker();
 
 ///@brief Get actual data in packer data structured from data table.
+    void GetAt(const char *src_data, uint32_t find_id, void *target_ptr, uint32_t &return_size, uint32_t &return_id);
+
+///@brief Get actual data in packer data structured from data table.
     char *GetAt(const char *src_data, uint32_t find_id, uint32_t &return_size, uint32_t &dwGetID); 
 
 ///@brief Get actual data in packer data structured from data table.
@@ -100,12 +103,12 @@ class Unpacker {
 
 
 
-  private:
+  protected:
     uint32_t table_size_;
     uint32_t cur_pos_;  
     uint32_t reading_pos_;
 
-  private:
+  protected:
     uint32_t GetWord(const char *src_data);
 
     uint32_t GetWord(void *src_data);
@@ -117,3 +120,5 @@ class Unpacker {
 } // namespace cd ends
 
 #endif 
+
+#endif

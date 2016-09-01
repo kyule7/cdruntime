@@ -270,7 +270,7 @@ ErrorProb *ErrorInjector::CreateErrorProb(RandType rand_type)
 
 long double ErrorInjector::GetErrorProb(double error_rate, double unit_time) 
 {
-  long double reliability = exp((-1.0)*(long double)error_rate*(long double)unit_time*100);
+  long double reliability = exp((-1.0)*(long double)error_rate*(long double)unit_time);
   CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "reliability %Le = 1.0 - exp(-%f*%f)   %Le\n", reliability, error_rate, unit_time);
   return reliability; 
 }
@@ -284,11 +284,12 @@ uint64_t ErrorInjector::Inject(void)
 // and compare that with reliability (probability to survive from the error type)
 // If the random number is greater than reliability,
 // it injects error!
-uint64_t ErrorInjector::InjectError(const long double &error_prob)
+uint64_t ErrorInjector::InjectError(const long double &survival_prob)
 {
   long double rand_var = rand_generator_->GenErrorVal();
-  int error = error_prob < rand_var;
-  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error %Le(prob to survive) < %Le(random var)   ERROR? %d\n", error_prob, rand_var, error);
+  int error = survival_prob < rand_var;
+  CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error %Le(prob to survive) < %Le(random var)   ERROR? %d\n", survival_prob, rand_var, error);
+  //printf("\tError %Le(prob to survive) < %Le(random var)   ERROR? %d\n", survival_prob, rand_var, error);
 
   return error;
 }
@@ -297,7 +298,7 @@ uint64_t SystemErrorInjector::Inject(void)
 {
   uint64_t error_vec = NO_ERROR_INJECTED;
   CD_CLOCK_T curr_clk = CD_CLOCK();
-  double period = (double)(curr_clk - prev_clk_)/CLK_NORMALIZER;
+  double period = CD_CLK_MEA(curr_clk - prev_clk_);
   prev_clk_ = curr_clk;
 
   // [Kyushick]
@@ -310,11 +311,15 @@ uint64_t SystemErrorInjector::Inject(void)
   for(auto it=sc_.failure_rate_.rbegin(); it!=sc_.failure_rate_.rend(); ++it) {
     if( InjectError(GetErrorProb(it->second, period)) ) { 
       error_vec |= it->first;
-//      printf("ERROR!!! %lx, curr: %lx\n", error_vec, it->first);
+      //printf("ERROR!!! %lx, curr: %lx\n", error_vec, it->first);
     }
     CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error rate %lu : %f (%lx) [period:%lf]\n", 
         it->first, it->second, error_vec, period);
+    //printf("Error rate %lu : %f (%lx) [period:%lf]\n", 
+    //    it->first, it->second, error_vec, period);
   }
+    //printf("Error rate (%lx) [period:%lf]\n", 
+    //     error_vec, period);
   return error_vec;
 }
 

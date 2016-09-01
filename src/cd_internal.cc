@@ -37,7 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_internal.h"
 #include "cd_path.h"
 #include "packer.h"
-#include "unpacker.h"
+//#include "unpacker.h"
 #include "cd_def_debug.h"
 #include <setjmp.h>
 using namespace cd;
@@ -77,9 +77,9 @@ map<uint32_t, CDHandle *> CD::delete_store_;
 bool CD::need_escalation = false;
 //uint32_t *CD::rollback_point_ = INVALID_ROLLBACK_POINT;
 
+CDFlagT *CD::rollback_point_ = NULL; 
 #if _MPI_VER
 CDFlagT *CD::pendingFlag_ = NULL; 
-CDFlagT *CD::rollback_point_ = NULL; 
 CDMailBoxT CD::pendingWindow_;
 CDMailBoxT CD::rollbackWindow_;
 #endif
@@ -98,6 +98,9 @@ void cd::internal::Initialize(void)
                  MPI_INFO_NULL, GetRootCD()->color(), &CD::pendingWindow_);
   MPI_Win_create(CD::rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
                  MPI_INFO_NULL, GetRootCD()->color(), &CD::rollbackWindow_);
+#else
+  CD::rollback_point_ = new CDFlagT(INVALID_ROLLBACK_POINT);
+//  CD::pendingFlag_ = new CDFlagT(0);
 #endif
 
 #if _MPI_VER
@@ -139,6 +142,9 @@ void cd::internal::Finalize(void)
   PMPI_Win_free(&CD::rollbackWindow_);
   PMPI_Free_mem(CD::pendingFlag_);
   PMPI_Free_mem(CD::rollback_point_);
+#else
+  free(CD::rollback_point_);
+//  free(CD::pendingFlag_);
 #endif
 }
 
@@ -172,8 +178,10 @@ void cd::internal::Finalize(void)
 /// inside Create() 
 
 CD::CD(void)
-  : file_handle_(),
-    incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
+  : file_handle_()
+#if CD_MPI_ENABLED
+    , incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
+#endif
 {
   Init();  
   is_window_reused_ = false;
@@ -219,8 +227,10 @@ CD::CD(CDHandle *cd_parent,
  :  cd_id_(cd_id),
     file_handle_(prv_medium, 
 //                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
-                 cd_id.GetStringID() ),
-    incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
+                 cd_id.GetStringID() )
+#if CD_MPI_ENABLED
+    , incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
+#endif
 {
   Init(); 
 #if CD_MPI_ENABLED
@@ -293,17 +303,19 @@ void CD::Initialize(CDHandle *cd_parent,
                     PrvMediumT prv_medium, 
                     uint64_t sys_bit_vector)
 {
-  double tstart = MPI_Wtime();
+  double tstart = CD_CLOCK();
   // In this function, it should not initialize cd_id here
 //  file_handle_.CloseFile();
 //  file_handle_.Initialize(
 //      prv_medium, 
 //      ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
 //      cd_id_.GetStringID() + string("_XXXXXX") );
+#if CD_MPI_ENABLED      
   incomplete_log_.clear();
+#endif
   Init();  
 
-  init_timer += MPI_Wtime() - tstart;
+  init_timer += CD_CLOCK() - tstart;
   cd_type_ = cd_type; 
   prv_medium_ = prv_medium; 
   if(name != NULL) {
@@ -337,7 +349,9 @@ void CD::Initialize(CDHandle *cd_parent,
 #endif
 
   InternalInitialize(cd_parent);
+#if CD_MPI_ENABLED
   InitializeMailBox();
+#endif
 }
 
 void CD::InternalInitialize(CDHandle *cd_parent)
@@ -345,6 +359,7 @@ void CD::InternalInitialize(CDHandle *cd_parent)
   label_ = string(INITIAL_CDOBJ_LABEL);
   recoverObj_ = new RecoverObject;
 
+  iterator_entry_ = entry_directory_.begin();
   if(cd_parent != NULL) {
     if(cd_parent->ptr_cd_->reexecuted_ == true || cd_parent->ptr_cd_->recreated_ == true) {
       recreated_ = true;
@@ -630,6 +645,8 @@ CD::InternalCreate(CDHandle *parent,
       }
 #endif
     }
+
+#if _MPI_VER
 //  printf("# mailbox %u\n", num_mailbox_to_create);
     if(num_mailbox_to_create != 0) { 
       CD_DEBUG("# mailbox to create : %u\n", num_mailbox_to_create);
@@ -670,6 +687,8 @@ CD::InternalCreate(CDHandle *parent,
     if( new_cd->GetPlaceToPreserve() == kPFS ) 
       new_cd->pfs_handle_ = new PFSHandle(new_cd, new_cd->file_handle_.GetFilePath()); 
   
+#endif
+
     *new_cd_handle = new CDHandle(new_cd);
   
     access_store_[string(name)] = *new_cd_handle;
@@ -811,6 +830,7 @@ void AttachChildCD(HeadCD *new_cd)
   // This routine is not needed for MPI-version CD runtime  
 }
 
+/*
 inline
 void CD::InitializeMailBox(void)
 {
@@ -832,6 +852,7 @@ void CD::InitializeMailBox(void)
     }
   } // if window is reused, do not have to init.
 }
+
 
 inline
 void CD::FinalizeMailBox(void) 
@@ -892,6 +913,9 @@ void CD::FinalizeMailBox(void)
     DecPendingCounter();
   }
 }
+*/
+
+
 
 inline 
 CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
@@ -904,9 +928,12 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
     if(prv_medium_ == kSSD || prv_medium_ == kHDD) {
       file_handle_.Close();
     }
+#if CD_MPI_ENABLED
     else if(prv_medium_ == kPFS) {
       pfs_handle_->Close();
     }
+#endif
+
 #if comm_log
     if (GetParentHandle()!=NULL)
     {
@@ -941,8 +968,8 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 #endif
 
     delete this;
-    if(myTaskID == 0)
-      printf("init overhead : %lf\n", init_timer);
+//    if(myTaskID == 0)
+//      printf("init overhead : %lf\n", init_timer);
   } 
   
   return CDInternalErrT::kOK;
@@ -1041,7 +1068,7 @@ CDErrT CD::Begin(bool collective, const char *label)
   }
 #endif
 
-#endif
+#endif // comm_log ends
 
   CD_DEBUG("Sync \n");
   if(cd_exec_mode_ == kReexecution || collective) {
@@ -1086,6 +1113,8 @@ CDErrT CD::Begin(bool collective, const char *label)
 // static
 uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 {
+#if CD_MPI_ENABLED
+
 #if CD_PROFILER_ENABLED
   double sync_time = 0.0;
 #endif
@@ -1162,6 +1191,10 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
     reexec_sync_time += sync_time; 
 #endif
   return new_rollback_point; 
+
+#else // CD_MPI_ENABLED ends
+  return *CD::rollback_point_;
+#endif
 }
 
 void CD::Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
@@ -1237,6 +1270,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       return GetCDToRecover(next_cdh, need_sync_next_cdh);
     }
     else {
+#if CD_MPI_ENABLED
       if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kRelaxed) {
         target->ptr_cd_->ProbeIncompleteLogs();
       }
@@ -1247,7 +1281,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       else {
         ERROR_MESSAGE("[%s] Wrong control path. CD type is %d\n", __func__, target->ptr_cd_->cd_type_);
       }
-
+#endif
 //      // It is also possible case that current task sets reexec from upper level,
 //      // but actually it was reexecuting some lower level CDs. 
 //      // while executing lower-level reexecution,
@@ -1327,7 +1361,9 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 //  bool my_need_reexec = need_reexec;
   CD_DEBUG("%s %s \t Reexec from %u (Before Sync)\n", 
           GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
+//  printf("%s check this out\n", __func__);
 
+#if CD_MPI_ENABLED
   // This is important synchronization point 
   // to guarantee the correctness of CD-enabled program.
   uint32_t new_rollback_point = orig_rollback_point;
@@ -1357,6 +1393,12 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   } else {
     new_rollback_point = CheckRollbackPoint(false);
   }
+#endif
+
+#else // CD_MPI_ENABLED ends
+  //printf("[%s] okay?\n"); fflush(stdout);
+  uint32_t new_rollback_point = CheckRollbackPoint(false); fflush(stdout);
+  //printf("[%s] new rollack point = %u\n", __func__, new_rollback_point);
 #endif
 //  if(new_rollback_point != INVALID_ROLLBACK_POINT) { 
   if(new_rollback_point <= level()) { 
@@ -1774,7 +1816,7 @@ void *CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, v
 void *CD::SerializeRemoteEntryDir(uint64_t &len_in_bytes) 
 {
   Packer entry_dir_packer;
-  uint32_t entry_count = 0;
+  uint64_t entry_count = 0;
 
   for(auto it = remote_entry_directory_map_.begin(); 
            it!= remote_entry_directory_map_.end(); ++it) {
@@ -1790,11 +1832,11 @@ void *CD::SerializeRemoteEntryDir(uint64_t &len_in_bytes)
 }
 
 
-void CD::DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size) 
+void CD::DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint64_t task_count, uint64_t unit_size) 
 {
   void *unpacked_entry_p=0;
-  uint32_t dwGetID=0;
-  uint32_t return_size=0;
+  uint64_t dwGetID=0;
+  uint64_t return_size=0;
   char *begin = (char *)object;
 
   CD_DEBUG("\n[CD::DeseralizeRemoteEntryDir] addr: %p at level #%u", object, CDPath::GetCurrentCD()->ptr_cd()->GetCDID().level());
@@ -1802,7 +1844,7 @@ void CD::DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object,
   for(uint64_t i=0; i<task_count; i++) {
     Unpacker entry_dir_unpacker;
     while(1) {
-      unpacked_entry_p = entry_dir_unpacker.GetNext(begin + i  *unit_size, dwGetID, return_size);
+      unpacked_entry_p = entry_dir_unpacker.GetNext(begin + i*unit_size, dwGetID, return_size);
       if(unpacked_entry_p == NULL) {
 
 //      cddbg<<"DESER new ["<< cnt++ << "] i: "<< i <<"\ndwGetID : "<< dwGetID << endl;
@@ -2251,6 +2293,8 @@ CDErrT CD::Preserve(void *data,
 
   CD_DEBUG("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
            data, len_in_bytes, my_name, ref_name, cd_exec_mode_); 
+//  printf("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
+//           data, len_in_bytes, my_name, ref_name, cd_exec_mode_); 
 
   CD_DEBUG("prv mask (%d) : %d(kCopy) %d(kRef) %d(kRegen) , kCoop : %d]\n\n",
            preserve_mask,
@@ -2369,7 +2413,7 @@ CDErrT CD::Preserve(void *data,
       // Since we have reached the last point already now convert current execution mode into kExecution
       
       // For now, let us assume that it is not possible.
-      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
+      //ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
       CD_DEBUG("Now reached end of entry directory, now switching to normal execution mode\n");
 
       cd_exec_mode_  = kExecution;    
@@ -2428,6 +2472,7 @@ CD::InternalPreserve(void *data,
   if(cd_exec_mode_  == kExecution ) { // Normal case
     CD_DEBUG("Normal execution mode (internal preservation call)\n");
 
+    // Kyushick: This is old comments that do now work for current version.
     // Now create entry and add to list structure.
     //FIXME Jinsuk: we don't have the way to determine the storage   
     // Let's move all these allocation deallocation stuff to CDEntry. 
@@ -2722,7 +2767,6 @@ CD::CDInternalErrT CD::Assert(bool test)
 
 
 #if _MPI_VER
-#if 1
   CDHandle *cdh = GetCurrentCD();
   if(test==false) {
 
@@ -2751,100 +2795,12 @@ CD::CDInternalErrT CD::Assert(bool test)
     else {
       ERROR_MESSAGE("(leaf) %u < %u (failed level)\n", cdh->level(), level());
     }
-//    if(cdh->task_size() > 1) {
-//      // If current level's task_size is larger than 1,
-//      // upper-level task_size is always larger than 1.
-//      if(IsHead()) {
-//        SetRollbackPoint(level(), false);
-//      } else { 
-//        SetMailBox(kErrorOccurred);
-//      }
-//    } else {
-//      // It is possible that upper-level task_size is larger than 1, 
-//      // even though current level's task_size is 1.
-//      if(rb_cdh->task_size() > 1) {
-//        rb_cdh->SetMailBox(kErrorOccurred);
-//        if(rb_cdh->IsHead()) {
-//          ptr_cd_->SetRollbackPoint(rollback_point, false);
-//        } else {
-//          // If the level of rollback_point has more tasks than current task,
-//          // let head inform the current task about escalation.
-//          ptr_cd_->SetRollbackPoint(level(), false);
-//        }
-//      } else {
-//        // task_size at current level is 1, and
-//        // task_size at rollback level is also 1.
-//        ptr_cd_->SetRollbackPoint(rollback_point, false);
-//      }
-//    }
   }
-#else
+  CheckMailBox();
+#else // CD_MPI_ENABLED ends
   if(test == false) {
     SetRollbackPoint(level(), false);
-//    need_reexec = true;
-//    bool need_escalation = false;
-    if(totalTaskSize != 1) {
-      
-      // Before Assert(false), some other tasks might raise error flag in this task,
-      // and that can be less than this point, which means escalation request.
-      // *rollback_point_ was set to a number less than current task's level,
-      // Then do not set it to current task's level, because it needs to be escalated.
-      if(*rollback_point_ >= level()) {
-        *rollback_point_ = level();
-      }
-      else {
-        need_escalation = true;
-      }
-
-      if(task_size() > 1) {
-        if(need_escalation) {
-          GetParentCD(*rollback_point_)->SetMailBox(kErrorOccurred);
-        }
-        else {
-          SetMailBox(kErrorOccurred);
-        }
-        internal_err = kErrorReported;
-      }
-      else { // There is a single task in this CD.
-        
-        if(need_escalation) { // Only escalation case need to set mailbox
-          SetMailBox(kErrorOccurred);
-          internal_err = kErrorReported;
-        }
-        else {
-          // Do not report
-        }
-      }
-      // SetMailBox for MPI-version is done
-    }
-    else { // This is just for the case that it is compiled with MPI_VER but rank size is 1.
-      if(need_escalation) 
-//        *rollback_point_ = level();
-      return internal_err;  // Actually this will not be reached. 
-    }
   }
-#endif
-
-//  Sync(color());
-//  
-//  if(IsHead()) {
-//    CheckMailBox();
-//    if(task_size() > 1) {
-//      Sync(color());
-//    }
-//  }
-//  else {
-//    if(task_size() > 1) {
-//      Sync(color());
-//    }
-//    CheckMailBox();
-//  }
-  CheckMailBox();
-#else
-  if(test == false) {
-    need_reexec = true;
-  }
-
 #endif
 
   return internal_err;
@@ -2966,7 +2922,8 @@ CDErrT CD::InternalReexecute(void)
   Stop();
 
   //printf("[%s]Rollback!\n", __func__);
-
+  // GPU
+  printf("######### level : %d (rollback_point: %d) (%s)\n", level(), *rollback_point_, name_.c_str());
   //TODO We need to consider collective re-start. 
   if(ctxt_prv_mode_ == kExcludeStack) {
 
@@ -4099,12 +4056,12 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T entry_tag_to_search, int &found_level)
 //  return CDErrT::kOK;
 //}
 
-void CD::Escalate(uint64_t error_name_mask, 
-                  uint64_t error_location_mask,
-                  std::vector<SysErrT> errors)
-{
-  // STUB
-}
+//void CD::Escalate(uint64_t error_name_mask, 
+//                  uint64_t error_location_mask,
+//                  std::vector<SysErrT> errors)
+//{
+//  // STUB
+//}
 
 bool CD::CanRecover(uint64_t error_name_mask, 
                     uint64_t error_location_mask)

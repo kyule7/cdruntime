@@ -61,7 +61,7 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
   }
   else if( dst_data_.handle_type() == DataHandle::kOSFile )  {
 
-#if _PRV_FILE_ERASED
+#if _PRV_FILE_NOT_ERASED
 //    char cmd[256];
 //    char backup_dir[256];
 //    sprintf(backup_dir, "mkdir backup_results");
@@ -172,6 +172,7 @@ CDEntry::CDEntryErrT CDEntry::SaveFile(void)
 
 CDEntry::CDEntryErrT CDEntry::SavePFS(void)
 {
+#if _MPI_VER
   CD_DEBUG("%s\n", __func__);
   //First we should check for PFS file => I think we have checked it before calling this function (not sure).
   //PMPI_Status preserve_status;//This variable can be used to non-blocking writes to PFS. By checking this variable we can understand whether write has been finished or not.
@@ -179,7 +180,7 @@ CDEntry::CDEntryErrT CDEntry::SavePFS(void)
 
   // Dynamic Chunk Interleave
   dst_data_.parallel_file_offset_ = ptr_cd_->pfs_handle_->Write( src_data_.address_data(), src_data_.len() );
-
+#endif
   return kOK;
 }
 
@@ -459,7 +460,10 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
       if( fp!= NULL )  {
         CD_DEBUG("filename:%s\n", buffer->file_name_);
         fseek(fp, buffer->GetOffset() , SEEK_SET); 
-        fread(src_data_.address_data(), 1, src_data_.len(), fp);
+        uint64_t fread_ret = fread(src_data_.address_data_, 1, src_data_.len_, fp);
+        if(fread_ret != src_data_.len_) {
+          ERROR_MESSAGE("Failed to read %s: %lu != %lu", buffer->file_name_, fread_ret, src_data_.len_);
+        }
         if(file_opened == true) {
           fclose(fp);
           file_opened = false;
@@ -531,8 +535,8 @@ void CDEntry::Deserialize(void *object)
   CD_DEBUG("\nCD Entry Deserialize\nobject : %p\n", object);
 
   Unpacker entry_unpacker;
-  uint32_t return_size=0;
-  uint32_t dwGetID=0;
+  uint64_t return_size=0;
+  uint64_t dwGetID=0;
   void *src_unpacked=0;
   void *dst_unpacked=0;
 

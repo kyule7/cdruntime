@@ -46,7 +46,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  *
  */
 #include "cd_global.h"
-#include "cd_def_debug.h"
+//#include "cd_def_debug.h"
 #include "cd_handle.h"
 #include "cd_id.h"
 
@@ -156,7 +156,7 @@ static string GetUniqueCDFileName(const CDID& cd_id, const char* basepath, const
   }
   else {
     //This case is ERROR.
-    ERROR_MESSAGE("We should not get here! there is something wrong.\n");
+//    ERROR_MESSAGE("We should not get here! there is something wrong.\n");
   }
   cout << "GenPath : " << filename.str() << ", base : " << base << endl;
   //return filename.str();

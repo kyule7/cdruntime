@@ -32,7 +32,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 */
-
+#include "cd_def_debug.h"
 #include "data_handle.h"
 #include "util.h"
 #include "packer.h"
@@ -166,8 +166,8 @@ void DataHandle::Deserialize(void *object)
   CD_DEBUG("\nData Handle Deserialize %p\n", object);
 
   Unpacker data_unpacker;
-  uint32_t return_size;
-  uint32_t dwGetID;
+  uint64_t return_size;
+  uint64_t dwGetID;
 
   void *node_id_unpacked=0;
   node_id_unpacked = data_unpacker.GetNext((char *)object, dwGetID, return_size);

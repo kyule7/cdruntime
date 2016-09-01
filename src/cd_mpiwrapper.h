@@ -269,6 +269,8 @@ int MPI_Send_init(const void *buf,
                   MPI_Comm comm,
                   MPI_Request *request);
 
+int MPI_Init(int *argc, char ***argv);
+int MPI_Init_thread(int *argc, char ***argv, int required, int *provided);
 int MPI_Finalize(void);
 
 int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],

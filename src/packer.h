@@ -75,6 +75,12 @@ namespace cd {
  * and Position is the relative position starting from where consqutive data is located
  *
  */ 
+#define PACKER_ENTRY_SIZE 24
+#define PACKER_UNIT_0 8
+#define PACKER_UNIT_1 8
+#define PACKER_UNIT_2 16
+#define TABLE_GROW_UNIT 2048
+#define DATA_GROW_UNIT 4194304
 
 class Packer {
   public:
@@ -85,47 +91,117 @@ class Packer {
                       kReallocFailed, //!< Realloc failed.
                       };
     Packer();
-    Packer(uint32_t table_grow_unit, uint32_t data_grow_unit);
+    Packer(uint64_t table_grow_unit, uint64_t data_grow_unit);
     virtual ~Packer();
 
 
 ///@brief Add data to pack in packer data structure.
-    virtual uint32_t Add(uint32_t id, uint64_t length, const void *position);
+    virtual uint64_t Add(uint64_t id, uint64_t length, const void *position);
+    virtual uint64_t Add(const void *position, uint64_t length, uint64_t id);
 
 ///@brief Get total size required for table (metadata) and data.
     virtual char *GetTotalData(uint64_t &total_data_size);
 
 ///@brief Grow buffer size internally used in packer.
-    virtual void SetBufferGrow( uint32_t table_grow_unit, uint32_t data_grow_unit);
+    virtual void SetBufferGrow( uint64_t table_grow_unit, uint64_t data_grow_unit);
+    uint64_t ClearData();
+  protected:
+    uint64_t AddData(uint64_t id, uint64_t length, uint64_t position, char *ptr_data);
+    virtual uint64_t CheckAlloc(void);
+    virtual uint64_t CheckRealloc(uint64_t length);
+    void WriteWord(char *dst_buffer,uint64_t value);
+    virtual void WriteData(char *ptr_data, uint64_t length, uint64_t position);
+    void Copy(const Packer& that);
+  protected:
 
+    uint64_t table_grow_unit_;  // Growth unit is used when we need to increase the memory allocation size. This scheme is needed because we don't know how much will be needed at the beginning.  
+    uint64_t data_grow_unit_;   // This is the same as above but it is for the data section.  (Two section exist) 
 
+    uint64_t table_size_;   //Current table size.
+    uint64_t data_size_; 
+    uint64_t used_table_size_; 
+    uint64_t used_data_size_; 
 
-  private:
-    uint32_t ClearData();
-    uint32_t AddData(uint32_t id, uint32_t length, uint32_t position, char *ptr_data);
-    uint32_t CheckAlloc();
-    uint32_t CheckRealloc(uint32_t length);
-    void WriteWord(char *dst_buffer,uint32_t value);
-    void WriteData(char *ptr_data, uint32_t length, uint32_t position);
-
-
-
-  private:
-
-    uint32_t table_grow_unit_;  // Growth unit is used when we need to increase the memory allocation size. This scheme is needed because we don't know how much will be needed at the beginning.  
-    uint32_t data_grow_unit_;   // This is the same as above but it is for the data section.  (Two section exist) 
-
-    uint32_t table_size_;   //Current table size.
-    uint32_t data_size_; 
-    uint32_t used_table_size_; 
-    uint32_t used_data_size_; 
-
-    uint32_t alloc_flag_;
+    uint64_t alloc_flag_;
 
     char *ptr_table_;
     char *ptr_data_;
 };
 
+
+// Unpacker /////////////////////////////////////////////////
+
+
+/** \addtogroup utilities Utilities for CD runtime
+ *
+ *@{
+ *
+ */
+
+/* @class cd::Unpacker
+ * @brief Unpacking data to reconstruct object 
+ * Data layout
+ * [TableLength][ID][Length][Position][ID][Length][Position][ID][Length][Position]...[DATAChunk]
+ * 
+ * First 4 byte is the size of the chunk
+ * Next following is the ones that describes all data's positions.   
+ * ID is identifier
+ * Length is the length of the data in bytes, 
+ * and Position is the relative position starting from where consqutive data is located
+ *
+ */ 
+class Unpacker {
+  public:
+    
+///@brief Enumerator internally used in Unpacker.
+    enum UnpackerErrT { kOK =0,         //!< No errors. 
+                        kMallocFailed,  //!< Malloc failed.
+                        kReallocFailed, //!< Realloc failed.
+                        kNotFound       //!< Could not find the data to unpack.
+                        };
+    Unpacker();
+    virtual ~Unpacker();
+
+///@brief Get actual data in packer data structured from data table.
+    void GetAt(const char *src_data, uint64_t find_id, void *target_ptr, uint64_t &return_size, uint64_t &return_id);
+
+///@brief Get actual data in packer data structured from data table.
+    char *GetAt(const char *src_data, uint64_t find_id, uint64_t &return_size, uint64_t &dwGetID); 
+
+///@brief Get actual data in packer data structured from data table.
+    char *GetAt(const char *src_data, uint64_t find_id, uint64_t &return_size);
+
+
+///@brief Get actual data in packer data structured from data table.
+    uint64_t GetAt(const char *src_data, uint64_t find_id, void *return_data);
+
+
+///@brief Get next data from data table.
+    char *GetNext(char *src_data,  uint64_t &dwGetID, uint64_t &return_size, bool alloc=true, void *dst=NULL, uint64_t dst_size=0);  
+
+///@brief Get next data from data table.
+    void *GetNext(void *str_return_data, void *src_data,  uint64_t &return_id, uint64_t &return_size);
+
+///@brief Initialize seek.
+    void SeekInit();
+
+
+
+
+  protected:
+    uint64_t table_size_;
+    uint64_t cur_pos_;  
+    uint64_t reading_pos_;
+
+  protected:
+    virtual void ReadData(char *str_return_data, char *src_data, uint64_t pos, uint64_t size);
+    uint64_t GetWord(const char *src_data);
+
+    uint64_t GetWord(void *src_data);
+
+};
+
+/** @} */ // End group utilities
 } // namespace cd ends
 
 /** @} */ // End group utilities

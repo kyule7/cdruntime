@@ -171,8 +171,8 @@ void *NodeID::Serialize(uint64_t& len_in_bytes)
 void NodeID::Deserialize(void* object) 
 {
   Unpacker node_id_unpacker;
-  uint32_t return_size;
-  uint32_t dwGetID;
+  uint64_t return_size;
+  uint64_t dwGetID;
   color_         = *(ColorT *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
   task_in_color_ = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);
   head_          = *(int *)node_id_unpacker.GetNext((char *)object, dwGetID, return_size);

@@ -93,10 +93,22 @@ class CDPath : public std::vector<CDHandle*> {
 
 private:
   static CDPath *uniquePath_;
-private:
-  CDPath(void) {}
+public:
+  CDPath(void) {
+  
+#if CD_MPI_ENABLED == 0 && CD_AUTOMATED == 1
+//    CDHandle *root = CD_Init(1, 0);
+//    CD_Begin(root);
+#endif
+  }
+  ~CDPath(void) {
+#if CD_MPI_ENABLED == 0 && CD_AUTOMATED == 1
+//    CD_Complete(back());
+//    CD_Finalize();
+#endif
+  }
 
-//public:
+public:
  /** @brief Get CDHandle of Root CD 
   *
   * \return Pointer to CDHandle of root
@@ -284,5 +296,9 @@ public:
 
   } // namespace internal ends
 } // namespace cd ends
+
+#if CD_MPI_ENABLED == 0 && CD_AUTOMATED == 1
+extern CDPath cd_path;
+#endif
 
 #endif

@@ -36,14 +36,33 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // C++ interface
 #include "cd_features.h"
 #include "cd_def_common.h"
-#ifdef __cplusplus
-#include "cd_handle.h"
-using namespace cd;
-using namespace cd::logging;
-#else
-#include "cd_capi.h"
+#ifdef __CUDACC__
+  #ifndef _CPP_PROG
+    #include "cd_capi.h"
+  #else
+    #include "cd_handle.h"
+    using namespace cd;
+    using namespace cd::logging;
+  #endif
+
+#else // non-cuda program
+
+  #ifdef __cplusplus
+    #include "cd_handle.h"
+    using namespace cd;
+    using namespace cd::logging;
+  #else
+    #include "cd_capi.h"
+  #endif
+
 #endif
 
+
+//#if CD_MPI_ENABLED == 0 && CD_AUTOMATED == 1
+//CDInitiator cd_init;
+////CDPath cd_path;
+////CDPath *CDPath::uniquePath_ = &cd_path;
+//#endif
 // C interface
 
 /**

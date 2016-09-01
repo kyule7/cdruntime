@@ -117,7 +117,6 @@ class CD : public Serializable {
     friend class cd::RegenObject;   
     friend class cd::RecoverObject;
     friend class CDEntry;  
-    friend class PFSHandle;
     friend class HandleAllReexecute;
     friend class HandleErrorOccurred;
     friend class HandleAllResume;
@@ -125,11 +124,14 @@ class CD : public Serializable {
     friend class HandleEntrySearch;
     friend class HandleEntrySend;
     friend class HeadCD;
-    friend class cd::logging::CommLog;
     friend class cd::logging::RuntimeLogger;
     friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
     friend void cd::CD_Finalize(void);
+#if CD_MPI_ENABLED
+    friend class PFSHandle;
+    friend class cd::logging::CommLog;
     friend int MPI_Win_fence(int assert, MPI_Win win);
+#endif
     friend void Initialize(void);
     friend void Finalize(void);
 #if CD_TEST_ENABLED
@@ -178,10 +180,10 @@ class CD : public Serializable {
 //  public:
     bool GetBegin_(void) {return begin_;}
 
+    static CDFlagT *rollback_point_;
 #if CD_MPI_ENABLED
     // This flag is unique for each process. 
     static CDFlagT *pendingFlag_;
-    static CDFlagT *rollback_point_;
     static CDMailBoxT pendingWindow_;
     static CDMailBoxT rollbackWindow_;
     static bool head_in_levels;
@@ -333,8 +335,10 @@ update the preserved data.
                     PrvMediumT prv_medium, 
                     uint64_t sys_bit_vector);
     void InternalInitialize(CDHandle *cd_parent);
-    inline void InitializeMailBox(void); 
-    inline void FinalizeMailBox(void);
+#if CD_MPI_ENABLED
+    void InitializeMailBox(void); 
+    void FinalizeMailBox(void);
+#endif
     inline void Init(void);
 
     virtual CDHandle *Create(CDHandle *parent, 
@@ -461,17 +465,17 @@ public:
  */
     virtual CDErrT Reexecute(void);
 
-/** @brief Escalate error/failure to parent
- *
- * Internal method used by Recover() to escalate
- * errors/failures that cannot be handled.
- * 
- */
-    virtual void Escalate(
-        uint64_t error_name_mask,     //!< [in] Mask of all error/fail types that require recovery
-        uint64_t error_location_mask, //!< [in] Mask of all error/fail locations that require recovery
-        std::vector<SysErrT> errors   //!< [in] Errors/failures to recover from (typically just one).
-        );
+///** @brief Escalate error/failure to parent
+// *
+// * Internal method used by Recover() to escalate
+// * errors/failures that cannot be handled.
+// * 
+// */
+//    virtual void Escalate(
+//        uint64_t error_name_mask,     //!< [in] Mask of all error/fail types that require recovery
+//        uint64_t error_location_mask, //!< [in] Mask of all error/fail locations that require recovery
+//        std::vector<SysErrT> errors   //!< [in] Errors/failures to recover from (typically just one).
+//        );
 
 /** @brief Invoke a registered recovery handler. 
  *  If user does not register it, CD::Reexecute() is called by default. 
@@ -559,7 +563,7 @@ public:
     CDInternalErrT SyncFile(void); 
     static uint32_t SyncCDs(CD *cd_lv_to_sync, bool for_recovery=false);
     void *SerializeRemoteEntryDir(uint64_t &len_in_bytes);
-    void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint32_t task_count, uint32_t unit_size);
+    void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint64_t task_count, uint64_t unit_size);
     virtual void *Serialize(uint64_t &len_in_bytes);
     virtual void Deserialize(void *object);
     static CDHandle *GetCDToRecover(CDHandle *cd_level, bool collective=true);
@@ -620,8 +624,10 @@ public:
     }
 #endif
 
-#if CD_MPI_ENABLED
   private:
+    uint32_t SetRollbackPoint(const uint32_t &rollback_lv, bool remote);
+    uint32_t CheckRollbackPoint(bool remote);
+#if CD_MPI_ENABLED
     CDErrT CheckMailBox(void);
     CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(const CDEventT &event);
@@ -632,17 +638,15 @@ public:
     uint32_t DecPendingCounter(void);
     inline uint32_t IncPendingCounter(void);
     inline CDFlagT GetEventFlag(void);
-    uint32_t SetRollbackPoint(const uint32_t &rollback_lv, bool remote);
-    uint32_t CheckRollbackPoint(bool remote);
 //    inline void CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &new_rollback_point);
     inline void CheckReexecution(void);
     inline void ForwardToLowerLevel(CD *cdp, const CDEventT &event); 
   public:
-    void Escalate(CDHandle *leaf, bool need_sync_to_reexec);
     int  BlockUntilValid(MPI_Request *request, MPI_Status *status);
     int  BlockallUntilValid(int count, MPI_Request array_of_request[], MPI_Status array_of_status[]);
     bool CheckIntraCDMsg(int target_id, MPI_Group &target_group);
 #endif
+    void Escalate(CDHandle *leaf, bool need_sync_to_reexec);
 
 }; // class CD ends
 

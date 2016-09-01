@@ -40,7 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <cstdlib>
 #include <string>
 #include <cstring>
-#if _PRV_FILE_ERASED
+#if _PRV_FILE_NOT_ERASED
 #include <unistd.h>
 #endif
 using namespace std;
@@ -105,7 +105,7 @@ void CDFileHandle::Close()
   if(opened_) {
     fclose(fp_);
     opened_ = false;
-#if _PRV_FILE_ERASED
+#if _PRV_FILE_NOT_ERASED
 //    unlink(unique_filename_);
 #endif
    }

@@ -33,6 +33,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#if 0
+
 #include "unpacker.h"
 #include "cd_def_internal.h" 
 #include "cd_def_debug.h"
@@ -45,7 +47,7 @@ using std::endl;
 using std::cout;
 
 Unpacker::Unpacker()
-:table_size_(0), cur_pos_(4), reading_pos_(0)
+:table_size_(0), cur_pos_(PACKER_UNIT_1), reading_pos_(0)
 {
 
 
@@ -57,6 +59,37 @@ Unpacker::~Unpacker()
 
 }
 
+void Unpacker::GetAt(const char *src_data, uint32_t find_id, void *target_ptr, uint32_t &return_size, uint32_t &return_id)
+{
+  uint32_t id=-1, size, pos;
+
+  reading_pos_=0;
+  table_size_ = GetWord(src_data + reading_pos_);
+  reading_pos_ += PACKER_UNIT_1;
+
+  while ( reading_pos_ < table_size_ )
+  {
+    id = GetWord( src_data + reading_pos_ );
+    if( id == find_id ) {
+      size = GetWord(src_data + reading_pos_ + PACKER_UNIT_1); // FIXME: Currently assumed uint32_t is 4 bytes long.
+      pos  = GetWord(src_data + reading_pos_ + PACKER_UNIT_2);
+      if(target_ptr == NULL) {
+        target_ptr = new char[size];
+      }
+
+      memcpy(target_ptr, src_data+table_size_+pos, size); 
+      return_id = id;
+      return_size = size;
+
+      break;
+    }
+    else {
+      reading_pos_ = reading_pos_ + PACKER_ENTRY_SIZE;
+    }
+  }
+
+}
+
 char *Unpacker::GetAt(const char *src_data, uint32_t find_id, uint32_t &return_size, uint32_t &return_id)
 {
   char *str_return_data=NULL;
@@ -64,14 +97,14 @@ char *Unpacker::GetAt(const char *src_data, uint32_t find_id, uint32_t &return_s
 
   reading_pos_=0;
   table_size_ = GetWord(src_data + reading_pos_);
-  reading_pos_+=4;
+  reading_pos_ += PACKER_UNIT_1;
 
   while ( reading_pos_ < table_size_ )
   {
     id = GetWord( src_data + reading_pos_ );
     if( id == find_id ) {
-      size = GetWord(src_data + reading_pos_ + 4); // FIXME: Currently assumed uint32_t is 4 bytes long.
-      pos  = GetWord(src_data + reading_pos_ + 8);
+      size = GetWord(src_data + reading_pos_ + PACKER_UNIT_1); // FIXME: Currently assumed uint32_t is 4 bytes long.
+      pos  = GetWord(src_data + reading_pos_ + PACKER_UNIT_2);
       str_return_data = new char[size];
       memcpy(str_return_data, src_data+table_size_+pos, size); 
       return_id = id;
@@ -80,7 +113,7 @@ char *Unpacker::GetAt(const char *src_data, uint32_t find_id, uint32_t &return_s
       break;
     }
     else {
-      reading_pos_ = reading_pos_ + 12;
+      reading_pos_ = reading_pos_ + PACKER_ENTRY_SIZE;
     }
   }
 
@@ -129,8 +162,8 @@ char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_s
 
   if( cur_pos_ < table_size_ ) {
     id   = GetWord( src_data + cur_pos_ );
-    size = GetWord( src_data + cur_pos_ + 4);
-    pos  = GetWord( src_data + cur_pos_ + 8);
+    size = GetWord( src_data + cur_pos_ + PACKER_UNIT_1);
+    pos  = GetWord( src_data + cur_pos_ + PACKER_UNIT_2);
 
     if(alloc)
       str_return_data = new char[size];
@@ -145,8 +178,8 @@ char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_s
     
     CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Get Info from table] id : %u (%p), size : %u (%p), pos : %u (%p)\n",
              id, (void *)((char *)src_data + cur_pos_),
-             size, (void *)((char *)src_data + cur_pos_+4),
-             pos, (void *)((char *)src_data + cur_pos_+8));
+             size, (void *)((char *)src_data + cur_pos_+ PACKER_UNIT_1),
+             pos, (void *)((char *)src_data + cur_pos_+ PACKER_UNIT_2));
 
     CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), (void *)str_return_data);
 
@@ -156,7 +189,7 @@ char *Unpacker::GetNext(char *src_data,  uint32_t &return_id, uint32_t &return_s
  
     return_id = id;
     return_size = size;
-    cur_pos_ +=12;
+    cur_pos_ += PACKER_ENTRY_SIZE;
 
     CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
 
@@ -180,13 +213,13 @@ void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint32_t &return
   if( cur_pos_ < table_size_ )
   {
     id   = GetWord( (char *)src_data + cur_pos_ );
-    size = GetWord( (char *)src_data + cur_pos_ + 4 );
-    pos  = GetWord( (char *)src_data + cur_pos_ + 8 );
+    size = GetWord( (char *)src_data + cur_pos_ + PACKER_UNIT_1 );
+    pos  = GetWord( (char *)src_data + cur_pos_ + PACKER_UNIT_2 );
 
     CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Get Info from table] id: %u (%p), size : %u (%p), pos : %u (%p)\n",
              id, (void *)((char *)src_data + cur_pos_),
-             size, (void *)((char *)src_data + cur_pos_+4),
-             pos, (void *)((char *)src_data + cur_pos_+8));
+             size, (void *)((char *)src_data + cur_pos_ + PACKER_UNIT_1),
+             pos, (void *)((char *)src_data + cur_pos_ + PACKER_UNIT_2));
 
     CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), str_return_data);
 
@@ -196,7 +229,7 @@ void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint32_t &return
  
     return_id = id;
     return_size = size;
-    cur_pos_ +=12;
+    cur_pos_ += PACKER_ENTRY_SIZE;
 
     CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
 
@@ -209,7 +242,7 @@ void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint32_t &return
 
 void Unpacker::SeekInit()
 {
-  cur_pos_ = 4;
+  cur_pos_ = PACKER_UNIT_0;
 }
 
 uint32_t Unpacker::GetWord(void *src_data)
@@ -229,3 +262,5 @@ uint32_t Unpacker::GetWord(const char *src_data)
 }
 
 
+
+#endif

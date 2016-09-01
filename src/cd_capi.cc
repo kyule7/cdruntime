@@ -54,7 +54,7 @@ void cd_finalize()
 }
 
 
-cd_handle_t* cd_create(cd_handle_t* c_handle, 
+cd_handle_t *cd_create(cd_handle_t *c_handle, 
                       uint32_t  num_children,
                       const char *name, 
                       int cd_type,
@@ -63,7 +63,7 @@ cd_handle_t* cd_create(cd_handle_t* c_handle,
   return TO_cdhandle(TO_CDHandle(c_handle)->Create(num_children, name, cd_type, error_name));
 }
 
-cd_handle_t* cd_create_customized(cd_handle_t *c_handle,
+cd_handle_t *cd_create_customized(cd_handle_t *c_handle,
                                       uint32_t color,
                                       uint32_t task_in_color,
                                       uint32_t  numchildren,
@@ -74,12 +74,12 @@ cd_handle_t* cd_create_customized(cd_handle_t *c_handle,
   return TO_cdhandle(TO_CDHandle(c_handle)->Create(color, task_in_color, numchildren, name, cd_type, error_name));
 }
 
-void cd_destroy(cd_handle_t* c_handle)
+void cd_destroy(cd_handle_t *c_handle)
 {
   TO_CDHandle(c_handle)->Destroy();
 }
 
-//void cd_begin(cd_handle_t* c_handle, int collective, const char *label)
+//void cd_begin(cd_handle_t *c_handle, int collective, const char *label)
 //{
 //  CD_Begin(TO_CDHandle(c_handle), (bool)collective, label);
 //}
@@ -110,14 +110,14 @@ void internal_begin(cd_handle_t *c_handle, int collective, const char *label)
 }
 
 
-void cd_complete(cd_handle_t* c_handle)
+void cd_complete(cd_handle_t *c_handle)
 {
   CD_Complete(TO_CDHandle(c_handle));
 }
 
 //FIXME: for now only supports this one preservation, and does not support RegenObject...
 //TODO: what is this ref_name? should that be the same with my_name? 
-int cd_preserve(cd_handle_t* c_handle, 
+int cd_preserve(cd_handle_t *c_handle, 
                    void *data_ptr,
                    uint64_t len,
                    uint32_t preserve_mask,
@@ -127,17 +127,26 @@ int cd_preserve(cd_handle_t* c_handle,
   return (int)(TO_CDHandle(c_handle)->Preserve(data_ptr, len, preserve_mask, my_name, ref_name));
 }
 
-cd_handle_t* getcurrentcd(void)
+int cd_preserve_serdes(cd_handle_t *c_handle, 
+                   void *data_ptr,
+                   uint32_t preserve_mask,
+                   const char *my_name, 
+                   const char *ref_name)
+{
+  return (int)(TO_CDHandle(c_handle)->Preserve(*(reinterpret_cast<Serializable *>(data_ptr)), preserve_mask, my_name, ref_name));
+}
+
+cd_handle_t *getcurrentcd(void)
 {
   return TO_cdhandle(GetCurrentCD());
 }
 
-cd_handle_t* getleafcd(void)
+cd_handle_t *getleafcd(void)
 {
   return TO_cdhandle(GetLeafCD());
 }
 
-void cd_detect(cd_handle_t* c_handle)
+void cd_detect(cd_handle_t *c_handle)
 {
   TO_CDHandle(c_handle)->Detect();
 }

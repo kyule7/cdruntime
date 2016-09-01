@@ -41,7 +41,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 
 #define DEBUG_OFF_PACKER 1
-#define UNITSIZE 12  // One unit of data is consist of 12 bytes.
 
 
 // It will pack [ID][SIZE][POS]  and data in the separate section.
@@ -54,8 +53,12 @@ using std::cout;
 Packer::Packer() 
 : table_size_(0), data_size_(0), used_table_size_(0), used_data_size_(0)
 {
-  table_grow_unit_ = 2048; // What is the rate of growth for the table.  There are optimum size, if this is too big then initial effort is too big, if it is too small, then later realloc might happen more often.
-  data_grow_unit_ = 4194304;  // Same but this goes with data section
+  // What is the rate of growth for the table.
+  //There are optimum size, if this is too big then initial effort is too big, if it is too small, then later realloc might happen more often.
+  table_grow_unit_ = TABLE_GROW_UNIT;
+
+  // Same but this goes with data section
+  data_grow_unit_ = DATA_GROW_UNIT; 
 
   alloc_flag_=0;   // FIXME: Might want to have separate memory allocator of our own. 
 
@@ -63,7 +66,7 @@ Packer::Packer()
   ptr_data_ = NULL;
 
 
-  uint32_t ret;
+  uint64_t ret;
 
   if( alloc_flag_ == 0)
   {
@@ -76,7 +79,7 @@ Packer::Packer()
 }
 
 
-Packer::Packer(uint32_t table_grow_unit, uint32_t data_grow_unit) 
+Packer::Packer(uint64_t table_grow_unit, uint64_t data_grow_unit) 
 : table_size_(0), data_size_(0), used_table_size_(0), used_data_size_(0)
 {
   table_grow_unit_ = table_grow_unit;
@@ -97,13 +100,21 @@ Packer::~Packer()
 
 
 
-uint32_t Packer::Add(uint32_t id, uint64_t length, const void *ptr_data)
+uint64_t Packer::Add(uint64_t id, uint64_t length, const void *ptr_data)
 {
 
   CD_DEBUG_COND(DEBUG_OFF_PACKER, "id : %u, length : %lu, ptr_data : %p\n", id, length, ptr_data);
 
   // Class user does not need to know the current writing position.	
-  return AddData(id , (uint32_t)length ,  used_data_size_, (char *)ptr_data); 
+  return AddData(id , (uint64_t)length ,  used_data_size_, (char *)ptr_data); 
+}
+
+uint64_t Packer::Add(const void *ptr_data, uint64_t length, uint64_t id)
+{
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "id : %u, length : %lu, ptr_data : %p\n", id, length, ptr_data);
+
+  // Class user does not need to know the current writing position.	
+  return AddData(id , (uint64_t)length ,  used_data_size_, (char *)ptr_data); 
 }
 
 
@@ -115,18 +126,18 @@ char *Packer::GetTotalData(uint64_t &total_data_size)
   // If the target to be packed is actually empty, return NULL
   if(used_table_size_ + used_data_size_ == 0) return NULL;
 
-  char *total_data = new char [used_table_size_ + used_data_size_+ sizeof(uint32_t) ];  // We should not forget the first 4 byte for indicating table size.
+  char *total_data = new char [used_table_size_ + used_data_size_+ sizeof(uint64_t) ];  // We should not forget the first 4 byte for indicating table size.
 
-  uint32_t table_size = (used_table_size_+sizeof(uint32_t));
+  uint64_t table_size = (used_table_size_+sizeof(uint64_t));
 
   CD_DEBUG_COND(DEBUG_OFF_PACKER, "table_size : %u, ptr_table : %p, used_table_size : %u, used_data_size : %u\n", 
 					 table_size, (void *)ptr_table_, used_table_size_, used_data_size_);
   
-  memcpy(total_data, &table_size,sizeof(uint32_t) ); 
-  memcpy(total_data+sizeof(uint32_t),ptr_table_,used_table_size_); 
-  memcpy(total_data+used_table_size_+sizeof(uint32_t), ptr_data_, used_data_size_); 
+  memcpy(total_data, &table_size, sizeof(uint64_t)); 
+  memcpy(total_data + sizeof(uint64_t), ptr_table_, used_table_size_); 
+  memcpy(total_data+used_table_size_+sizeof(uint64_t), ptr_data_, used_data_size_); 
 
-  total_data_size = used_table_size_ + used_data_size_+ sizeof(uint32_t);
+  total_data_size = used_table_size_ + used_data_size_+ sizeof(uint64_t);
 
   CD_DEBUG_COND(DEBUG_OFF_PACKER, "total_data : %p\n", (void *)total_data);
 
@@ -134,7 +145,7 @@ char *Packer::GetTotalData(uint64_t &total_data_size)
 }
 
 
-uint32_t Packer::ClearData()
+uint64_t Packer::ClearData()
 {
 
   if(ptr_table_ != NULL)
@@ -158,24 +169,24 @@ uint32_t Packer::ClearData()
 }
 
 
-void Packer::SetBufferGrow(uint32_t table_grow_unit, uint32_t data_grow_unit) 
+void Packer::SetBufferGrow(uint64_t table_grow_unit, uint64_t data_grow_unit) 
 {
   table_grow_unit_ = table_grow_unit;
   data_grow_unit_ = data_grow_unit;
 }
 
 
-void Packer::WriteWord(char *dst_buffer,uint32_t value)
+void Packer::WriteWord(char *dst_buffer,uint64_t value)
 {
   if(dst_buffer != NULL ){	
 //    dbg << "WriteWord\ndst_buffer : "<< (void *)dst_buffer << ", value : "<< value << endl;
-    memcpy(dst_buffer,&value,sizeof(uint32_t) );
+    memcpy(dst_buffer,&value,sizeof(uint64_t) );
   }
 }
 
 
 
-uint32_t Packer::CheckAlloc() 
+uint64_t Packer::CheckAlloc() 
 {
 
   if( ptr_table_ == NULL) 
@@ -204,10 +215,10 @@ uint32_t Packer::CheckAlloc()
 
 }
 
-uint32_t Packer::CheckRealloc(uint32_t length) 
+uint64_t Packer::CheckRealloc(uint64_t length) 
 {
 
-  if( used_table_size_ + UNITSIZE > table_size_ )
+  if( used_table_size_ + PACKER_ENTRY_SIZE > table_size_ )
   {
     char *tmp1;
 
@@ -254,23 +265,34 @@ uint32_t Packer::CheckRealloc(uint32_t length)
   return kOK;
 }
 
-void Packer::WriteData(char *ptr_data, uint32_t length, uint32_t position)
+void Packer::WriteData(char *ptr_data, uint64_t length, uint64_t position)
 {
+//  printf("[Packer::%s] %p, %llu(len), %llu(pos)\n", __func__, ptr_data, length, position); //getchar();
   if( ptr_data != NULL ) {	
     memcpy( ptr_data_ + position, ptr_data, length );
 
-    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Written Data is %d\n", *(int*)(ptr_data_ + position));
+//    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Written Data is %d\n", *(int*)(ptr_data_ + position));
   }
+}
+
+void Packer::Copy(const Packer& that) {
+  table_grow_unit_ = that.table_grow_unit_;
+  data_grow_unit_ = that.data_grow_unit_;
+  table_size_ = that.table_size_;   
+  data_size_ = that.data_size_; 
+  used_table_size_ = that.used_table_size_; 
+  used_data_size_ = that.used_data_size_; 
+  alloc_flag_ = that.alloc_flag_;
+  ptr_table_ = that.ptr_table_;
+  ptr_data_ = that.ptr_data_;        
 }
 
 
 
 
-
-
-uint32_t Packer::AddData(uint32_t id, uint32_t length, uint32_t position, char *ptr_data)
+uint64_t Packer::AddData(uint64_t id, uint64_t length, uint64_t position, char *ptr_data)
 {
-  uint32_t ret;
+  uint64_t ret;
 
   CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
   CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Packer::AddData] Before CheckRealloc ptr_table : %p\n", (void *)ptr_table_);
@@ -283,22 +305,252 @@ uint32_t Packer::AddData(uint32_t id, uint32_t length, uint32_t position, char *
   CD_DEBUG_COND(DEBUG_OFF_PACKER, "Before write word, ptr_table : %p\n", (void *)ptr_table_);
 
   WriteWord(ptr_table_ + used_table_size_, id); 
-  WriteWord(ptr_table_ + used_table_size_ + 4, length); 
-  WriteWord(ptr_table_ + used_table_size_ + 8, position); 
+  WriteWord(ptr_table_ + used_table_size_ + PACKER_UNIT_1, length); 
+  WriteWord(ptr_table_ + used_table_size_ + PACKER_UNIT_2, position); 
 
   CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Get Info from table] id : %u (%p), length : %u (%p), position : %u (%p), ptr_data : %p\n",
 				  id, (void*)(ptr_table_ + used_table_size_), 
-					length, (void*)(ptr_table_ + used_table_size_ + 4), 
-					position, (void*)(ptr_table_ + used_table_size_ + 8), 
+					length, (void*)(ptr_table_ + used_table_size_ + PACKER_UNIT_1), 
+					position, (void*)(ptr_table_ + used_table_size_ + PACKER_UNIT_2), 
 					(void*)ptr_data);
   CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)ptr_data, (void *)(ptr_data_ + position));
   CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
 
-  used_table_size_ += UNITSIZE;    
+  used_table_size_ += PACKER_ENTRY_SIZE;    
   WriteData(ptr_data,length,position); 
 
   used_data_size_ += length; 
 
   return kOK;
 }
+
+// Unpacker /////////////////////////////////////////////////
+
+Unpacker::Unpacker(void)
+:table_size_(0), cur_pos_(PACKER_UNIT_1), reading_pos_(0)
+{
+
+
+}
+
+Unpacker::~Unpacker()
+{
+
+
+}
+
+void Unpacker::GetAt(const char *src_data, uint64_t find_id, void *target_ptr, uint64_t &return_size, uint64_t &return_id)
+{
+  uint64_t id=-1, size, pos;
+
+  reading_pos_=0;
+  table_size_ = GetWord(src_data + reading_pos_);
+  reading_pos_ += PACKER_UNIT_1;
+
+  while ( reading_pos_ < table_size_ )
+  {
+    id = GetWord( src_data + reading_pos_ );
+    if( id == find_id ) {
+      size = GetWord(src_data + reading_pos_ + PACKER_UNIT_1); // FIXME: Currently assumed uint64_t is 4 bytes long.
+      pos  = GetWord(src_data + reading_pos_ + PACKER_UNIT_2);
+      if(target_ptr == NULL) {
+        target_ptr = new char[size];
+      }
+
+      memcpy(target_ptr, src_data+table_size_+pos, size); 
+      return_id = id;
+      return_size = size;
+
+      break;
+    }
+    else {
+      reading_pos_ = reading_pos_ + PACKER_ENTRY_SIZE;
+    }
+  }
+
+}
+
+char *Unpacker::GetAt(const char *src_data, uint64_t find_id, uint64_t &return_size, uint64_t &return_id)
+{
+  char *str_return_data=NULL;
+  uint64_t id=-1, size, pos;
+
+  reading_pos_=0;
+  table_size_ = GetWord(src_data + reading_pos_);
+  reading_pos_ += PACKER_UNIT_1;
+
+  while ( reading_pos_ < table_size_ )
+  {
+    id = GetWord( src_data + reading_pos_ );
+    if( id == find_id ) {
+      size = GetWord(src_data + reading_pos_ + PACKER_UNIT_1); // FIXME: Currently assumed uint64_t is 4 bytes long.
+      pos  = GetWord(src_data + reading_pos_ + PACKER_UNIT_2);
+      str_return_data = new char[size];
+      memcpy(str_return_data, src_data+table_size_+pos, size); 
+      return_id = id;
+      return_size = size;
+
+      break;
+    }
+    else {
+      reading_pos_ = reading_pos_ + PACKER_ENTRY_SIZE;
+    }
+  }
+
+  if( id == find_id ) {
+    return str_return_data;
+  }
+  else {
+    return NULL;
+  }
+}
+
+uint64_t Unpacker::GetAt(const char *src_data, uint64_t find_id, void *return_data)
+{
+  uint64_t id=-1;
+  char *pData;
+  uint64_t return_size;
+  pData = GetAt(src_data, find_id, return_size, id);
+  if( pData != NULL)
+  {
+    memcpy(return_data,pData,return_size);
+    delete [] pData;
+    return kOK;
+  }
+  else
+  {
+    return kNotFound;
+  }
+}
+
+char *Unpacker::GetAt(const char *src_data, uint64_t find_id, uint64_t &return_size)
+{
+  uint64_t id=-1;
+  return GetAt(src_data,find_id,return_size,id);
+}
+
+void Unpacker::ReadData(char *str_return_data, char *src_data, uint64_t pos, uint64_t size)
+{
+//  printf("[Unpacker::%s] %p %p %llu (pos) %llu (len)\n", __func__, str_return_data, src_data, pos, size); //getchar();
+  if( str_return_data != NULL && src_data != NULL ) {	
+    memcpy(str_return_data, src_data + table_size_ + pos, size); 
+  } else {
+    assert(0);
+  }
+}
+
+char *Unpacker::GetNext(char *src_data,  uint64_t &return_id, uint64_t &return_size, bool alloc, void *dst, uint64_t dst_size)
+{
+  char *str_return_data;
+  uint64_t id, size, pos;
+
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Unpacker::GetNext] src_data : %p, return id : %u, return size : %u\n", (void *)src_data, return_id, return_size);
+
+  table_size_ = GetWord(src_data);
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "table size : %u\n", table_size_);
+
+  if( cur_pos_ < table_size_ ) {
+    id   = GetWord( src_data + cur_pos_ );
+    size = GetWord( src_data + cur_pos_ + PACKER_UNIT_1);
+    pos  = GetWord( src_data + cur_pos_ + PACKER_UNIT_2);
+
+    if(alloc)
+      str_return_data = new char[size];
+    else {
+      str_return_data = (char *)dst;
+      if(dst_size != size) {
+        CD_DEBUG_COND(DEBUG_OFF_PACKER, "dst_size : %lu, size from packer : %d\n", dst_size, size);
+        assert(0);
+      }
+      assert(dst_size == size);
+    }
+    
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Get Info from table] id : %u (%p), size : %u (%p), pos : %u (%p)\n",
+             id, (void *)((char *)src_data + cur_pos_),
+             size, (void *)((char *)src_data + cur_pos_+ PACKER_UNIT_1),
+             pos, (void *)((char *)src_data + cur_pos_+ PACKER_UNIT_2));
+
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), (void *)str_return_data);
+
+    memcpy(str_return_data, src_data+table_size_+pos, size); 
+
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Read Data is %s", (char *)str_return_data);
+ 
+    return_id = id;
+    return_size = size;
+    cur_pos_ += PACKER_ENTRY_SIZE;
+
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
+
+    return str_return_data;
+  }
+  else
+    return NULL;
+}
+
+void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint64_t &return_id, uint64_t &return_size)
+{
+  
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Unpacker::GetNext] str_return_data: %p, src_data : %p, return_id : %u, return_size : %u\n",
+           str_return_data, src_data, return_id, return_size);
+  
+  uint64_t id, size, pos;
+
+  table_size_ = GetWord(src_data);
+
+  if( cur_pos_ < table_size_ )
+  {
+    id   = GetWord( (char *)src_data + cur_pos_ );
+    size = GetWord( (char *)src_data + cur_pos_ + PACKER_UNIT_1 );
+    pos  = GetWord( (char *)src_data + cur_pos_ + PACKER_UNIT_2 );
+
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Get Info from table] id: %u (%p), size : %u (%p), pos : %u (%p)\n",
+             id, (void *)((char *)src_data + cur_pos_),
+             size, (void *)((char *)src_data + cur_pos_ + PACKER_UNIT_1),
+             pos, (void *)((char *)src_data + cur_pos_ + PACKER_UNIT_2));
+
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), str_return_data);
+
+    memcpy(str_return_data, (char *)src_data+table_size_+pos, size); 
+
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Read Data is %s\n", (char *)str_return_data);
+ 
+    return_id = id;
+    return_size = size;
+    cur_pos_ += PACKER_ENTRY_SIZE;
+
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
+
+    return str_return_data;
+  }
+  else
+    return NULL;
+}
+
+
+void Unpacker::SeekInit()
+{
+  cur_pos_ = PACKER_UNIT_0;
+}
+
+uint64_t Unpacker::GetWord(void *src_data)
+{
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Unpacker::GetWord] src_data : %p\n", (void *)src_data);
+  uint64_t return_value;
+  memcpy( &return_value, src_data, sizeof(uint64_t) );
+  return return_value;
+}
+
+uint64_t Unpacker::GetWord(const char *src_data)
+{
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Unpacker::GetWord] src_data : %p\n", (void *)src_data);
+  uint64_t return_value;
+  memcpy( &return_value, src_data, sizeof(uint64_t) );
+  return return_value;
+}
+
+
+
 

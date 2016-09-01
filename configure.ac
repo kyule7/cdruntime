@@ -1,13 +1,13 @@
 AC_INIT([cdruntime], [1.0], [cds@lph.ece.utexas.edu])
-AM_INIT_AUTOMAKE([1.11 -Wall -Werror foreign])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+#AC_PROG_LIBTOOL
 LT_INIT
 #AM_PROG_AR
 AC_PROG_CC
 AC_PROG_CXX
 dnl AC_PROG_RANLIB
-
 AC_PREFIX_DEFAULT($PWD)
-
+AC_CONFIG_MACRO_DIR([m4])
 # debugging output via --enable-debug
 # XXX:  _CD_DEBUG Could be a separate argument
 AC_ARG_ENABLE([debug], 
@@ -56,6 +56,7 @@ AS_IF([test x"$enable_logging" = x"yes"],
     AC_DEFINE(comm_log, [1], [Define to enable communications logging])
 ],[
     WANT_LOGGING=0
+    AC_DEFINE(comm_log, [0], [Define to enable communications logging])
 ])
 AC_SUBST(cd_comm_log_enabled, $WANT_LOGGING)
 
@@ -123,7 +124,16 @@ AC_SUBST(cd_mpi_enabled, $WANT_MPI)
 AC_SUBST(cd_pgas_enabled, $WANT_PGAS)
 AM_CONDITIONAL(HAVE_MPI, $WANT_MPI)
 
-
+dnl CD_AUTOMATED
+AC_ARG_ENABLE([cd_automated], 
+    [AS_HELP_STRING([--enable-cd-automated], [Turn on automation mode])])
+AS_IF([test x"$enable_cd_automated" = x"yes"], 
+[
+    WANT_CD_AUTOMATED=1
+],[
+    WANT_CD_AUTOMATED=0
+])
+AC_SUBST(cd_automated, $WANT_CD_AUTOMATED)
 dnl AC_ARG_WITH([sight], 
 dnl     [AS_HELP_STRING([--with-sight=DIR], [specify path to sight installation])],
 dnl     [SIGHT_ROOT=$withval],
@@ -142,6 +152,7 @@ AC_CONFIG_FILES([
  Makefile
  src/Makefile
  src/cd_features.h
+ plugin/Makefile
  test/Makefile
  test/test_simple_hierarchy/Makefile
  test/test_user_defined_hierarhcy/Makefile

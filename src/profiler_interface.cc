@@ -129,7 +129,7 @@ void Profiler::BeginRecord(void)
 //    num_exec_map[level][name].reexec_ += 1;
 //    num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
     if(is_reexecuted)
-      num_exec_map[level][name].sync_time_  += (double)(CD_CLOCK() - prof_sync_clk) / CLK_NORMALIZER;
+      num_exec_map[level][name].sync_time_  += CD_CLK_MEA(CD_CLOCK() - prof_sync_clk);
     reexecuted_ = true;
   }
   else {
@@ -164,7 +164,7 @@ void Profiler::EndRecord(void)
 
   end_clk_ = CD_CLOCK();
   //sync_clk_ = end_clk_;
-  num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
+  num_exec_map[level][name].total_time_ += CD_CLK_MEA(end_clk_ - begin_clk_);
 
   if(reexecuted_ || cdh_->recreated()) {
 #if 0
@@ -180,8 +180,8 @@ void Profiler::EndRecord(void)
 //                name.c_str());
     }
 #endif
-    num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
-    num_exec_map[level][name].reexec_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
+    num_exec_map[level][name].total_time_ += CD_CLK_MEA(end_clk_ - begin_clk_);
+    num_exec_map[level][name].reexec_time_ += CD_CLK_MEA(end_clk_ - begin_clk_);
     num_exec_map[level][name].reexec_ += 1;
     reexecuted_ = false;
   }

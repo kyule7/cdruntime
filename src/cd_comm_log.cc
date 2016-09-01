@@ -34,8 +34,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 #include "cd_config.h"
 
-#ifdef comm_log
-
+#if comm_log
+#include "cd_def_debug.h"
 #include "cd_comm_log.h"
 #include "cd_internal.h"
 #include <string.h>

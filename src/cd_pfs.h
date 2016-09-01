@@ -37,19 +37,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _CD_PFS_H
 #define _CD_PFS_H
 
+#include "cd_features.h"
+
+#if CD_MPI_ENABLED
+
+#include "cd_global.h"
+#include "cd_def_internal.h" 
+#include "cd_internal.h"
 #include <iostream>
 #include <string>
 #include <math.h>
 #include <sstream>
 
-#include "cd_features.h"
-#include "cd_global.h"
-#include "cd_def_internal.h" 
-#include "cd_internal.h"
-
 #if CD_PROFILER_ENABLED
 
-#include <mpi.h>
 #define CommFree MPI_Comm_free
 #define CommGroupFree MPI_Group_free
 
@@ -152,4 +153,7 @@ private:
 
   } // namespace internal ends
 } // namespace cd ends
+#endif
+
+
 #endif

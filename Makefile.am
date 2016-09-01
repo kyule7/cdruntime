@@ -1,4 +1,5 @@
-SUBDIRS = src
+SUBDIRS = src \
+					plugin
 
 allTests:
 	cd test; make;
@@ -22,3 +23,5 @@ clean-tests:
 
 clean-examples:
 	cd examples; make clean;
+
+ACLOCAL_AMFLAGS = -I m4

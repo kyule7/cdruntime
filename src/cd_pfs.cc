@@ -36,6 +36,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_config.h"
 #include "util.h"
 
+#if CD_MPI_ENABLED
 using namespace cd;
 using namespace cd::internal;
 using namespace std;
@@ -319,6 +320,6 @@ uint64_t PFSHandle::Read_at( void* buffer, uint64_t buffer_len, COMMLIB_Offset r
     assert(0);
     return 0;
 }
-
+#endif
 
 #endif

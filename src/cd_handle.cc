@@ -60,6 +60,7 @@ using namespace cd::interface;
 using namespace cd::internal;
 using namespace std;
 
+
 CDHandle *cd::null_cd = NULL;
 
 /// KL
@@ -100,10 +101,6 @@ CD_CLOCK_T cd::compl_elapsed_time=0;
 
 
 /// KL
-/// uniquePath is a singleton object per process, which is used for CDPath.
-CDPath *CDPath::uniquePath_;
-
-/// KL
 /// app_side is a global variable to differentiate application side and CD runtime side.
 /// This switch is adopted to turn off runtime logging in CD runtime side,
 /// and turn on only in application side.
@@ -127,6 +124,15 @@ int  cd::max_tag_rank_bit  = 0;
 int cd::myTaskID = 0;
 int cd::totalTaskSize = 1;
 
+//#if CD_MPI_ENABLED == 0 && CD_AUTOMATED == 1
+//CDPath cd_path;
+/// KL
+/// uniquePath is a singleton object per process, which is used for CDPath.
+//CDPath *CDPath::uniquePath_ = &cd_path;
+//#else 
+CDPath *CDPath::uniquePath_ = NULL;
+//#endif
+
 namespace cd {
 // Global functions -------------------------------------------------------
 
@@ -135,10 +141,12 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   CDPrologue();
   cd::tot_begin_clk = CD_CLOCK();
+//  printf("here");getchar();
   myTaskID      = myTask;
   totalTaskSize = numTask;
 
   cd::system_config.LoadSystemConfig();
+//  printf("here");getchar();
 
   string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
 #if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
@@ -149,16 +157,17 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
     // Overwrite filepath with CD_DEBUG_OUT value
     dbg_basepath = filepath;
   }
+//  printf("here");getchar();
 
   if(myTaskID == 0) {
     struct stat sb;
     if (stat(dbg_basepath.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
-//      printf("Path exists!\n");
+      printf("Path exists!\n");
     }
     else {
       char debug_dir[256];
       sprintf(debug_dir, "%s", dbg_basepath.c_str());
-//      printf("debug dir path size : %d\n", (int)sizeof(debug_dir));
+      printf("debug dir path size : %d\n", (int)sizeof(debug_dir));
       // [Eric]
       int ret = mkdir(debug_dir, S_IRWXU);
       if(ret == -1 && errno != EEXIST) {
@@ -173,16 +182,21 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   // Otherwise, some task may execute CD_DEBUG before head creates directory 
   PMPI_Barrier(MPI_COMM_WORLD);
 #endif
+//  printf("here1");getchar();
 
   char dbg_filepath[256]={};
+//  printf("here2");getchar();
   snprintf(dbg_filepath, 256, "%s%s%d", dbg_basepath.c_str(), dbg_log_filename, myTaskID);
+//  printf("here3");getchar();
 //  printf("dbg filepath : %s\n", dbg_filepath);
 //  dbg_basepath = dbg_basepath + log_filename + to_string(static_cast<unsigned long long>(myTaskID));
 
   cdout = fopen(dbg_filepath, "w");
+//  printf("here");getchar();
  
 #endif
 
+//  printf("here");getchar();
 #if CD_DEBUG_ENABLED
   char app_dbg_log_filename[] = "cddbg_app_output_";
   char app_dbg_filepath[256]={};
@@ -190,6 +204,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //  printf("app dbg filepath : %s\n", app_dbg_filepath);
   cddbg.open(app_dbg_filepath);
 #endif
+//  printf("here check");getchar();
 
   // Base filepath setup for preservation
   char *globalpath_env = getenv("CD_PRV_GLOBAL_PATH");
@@ -200,8 +215,10 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   if(localpath_env != NULL) {
     CDFileHandle::local_prv_path_ = localpath_env;
   }
+//  printf("here check 2");getchar();
 
   if(myTaskID == 0) {
+//  printf("here check 3");getchar();
     // Therefore, if it is not opened, we need to check if it exists.
     struct stat sb;
     const char* basepath = (CDFileHandle::global_prv_path_+string(CD_FILEPATH_PFS)).c_str();
@@ -218,7 +235,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
       }
     }
   }
-
+//  printf("here check 23");getchar();
+//  getchar();
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
 #if CD_MPI_ENABLED 
   PMPI_Comm_group(MPI_COMM_WORLD, &whole_group); 
@@ -233,6 +251,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   CDPath::GetCDPath()->push_back(root_cd_handle);
   cd::internal::Initialize();
 
+//  printf("here check init");getchar();
 #if CD_PROFILER_ENABLED
   // Profiler-related
   root_cd_handle->profiler_->InitViz();
@@ -245,16 +264,20 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
     CD_DEBUG("Random seed: %lf\n", random_seed);
   }
 //  random_seed = 137378;
+#if CD_MPI_ENABLED  
   PMPI_Bcast(&random_seed, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+#endif
   srand48(random_seed * (double)(RANDOM_SEED + myTaskID));
   // To be safe
   CDHandle::memory_error_injector_ = NULL;
   CDHandle::system_error_injector_ = new SystemErrorInjector(system_config);
 #endif
 
+//  printf("here check flush");getchar();
 #if CD_DEBUG_ENABLED
   cddbg.flush();
 #endif
+//  printf("end here check flush");getchar();
 
   //GONG
   CDEpilogue();
@@ -352,19 +375,20 @@ void CD_Finalize(void)
 #endif
 
 #if CD_PROFILER_ENABLED
-  double cd_elapsed   = ((double)cd::elapsed_time) / CLK_NORMALIZER;
-  double normal_sync_elapsed = ((double)cd::normal_sync_time) / CLK_NORMALIZER;
-  double reexec_sync_elapsed = ((double)cd::reexec_sync_time) / CLK_NORMALIZER;
-  double recovery_sync_elapsed = ((double)cd::recovery_sync_time) / CLK_NORMALIZER;
-  double prv_elapsed  = ((double)cd::prv_elapsed_time) / CLK_NORMALIZER;
-  double create_elapsed  = ((double)cd::create_elapsed_time) / CLK_NORMALIZER;
-  double destroy_elapsed = ((double)cd::destroy_elapsed_time) / CLK_NORMALIZER;
-  double begin_elapsed   = ((double)cd::begin_elapsed_time) / CLK_NORMALIZER;
-  double compl_elapsed   = ((double)cd::compl_elapsed_time) / CLK_NORMALIZER;
-  double msg_elapsed  = ((double)cd::msg_elapsed_time) / CLK_NORMALIZER;
-  double log_elapsed  = ((double)cd::log_elapsed_time) / CLK_NORMALIZER;
-  double tot_elapsed  = ((double)(cd::tot_end_clk - cd::tot_begin_clk)) / CLK_NORMALIZER;
-  double sendbuf[PROF_STATISTICS_NUM]  = {tot_elapsed, 
+  double cd_elapsed            = CD_CLK_MEA(cd::elapsed_time);
+  double normal_sync_elapsed   = CD_CLK_MEA(cd::normal_sync_time);
+  double reexec_sync_elapsed   = CD_CLK_MEA(cd::reexec_sync_time);
+  double recovery_sync_elapsed = CD_CLK_MEA(cd::recovery_sync_time);
+  double prv_elapsed           = CD_CLK_MEA(cd::prv_elapsed_time);
+  double create_elapsed        = CD_CLK_MEA(cd::create_elapsed_time);
+  double destroy_elapsed       = CD_CLK_MEA(cd::destroy_elapsed_time);
+  double begin_elapsed         = CD_CLK_MEA(cd::begin_elapsed_time);
+  double compl_elapsed         = CD_CLK_MEA(cd::compl_elapsed_time);
+  double msg_elapsed           = CD_CLK_MEA(cd::msg_elapsed_time);
+  double log_elapsed           = CD_CLK_MEA(cd::log_elapsed_time);
+  double tot_elapsed           = CD_CLK_MEA(cd::tot_end_clk - cd::tot_begin_clk);
+  double sendbuf[PROF_STATISTICS_NUM]  = {
+                         tot_elapsed, 
                          tot_elapsed * tot_elapsed,
                          cd_elapsed,
                          cd_elapsed  * cd_elapsed,
@@ -393,8 +417,9 @@ void CD_Finalize(void)
 //  printf("%lf\t%lf\t%lf\t%lf\n", sendbuf[0],sendbuf[1],sendbuf[2],sendbuf[3]);
 //  printf("=====================================\n\n");
   double recvbuf[PROF_STATISTICS_NUM] = {0.0,};
+#if CD_MPI_ENABLED  
   MPI_Reduce(sendbuf, recvbuf, PROF_STATISTICS_NUM, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-
+#endif
   double tot_elapsed_avg = recvbuf[TOT_AVG]/cd::totalTaskSize;
   double tot_elapsed_var = (recvbuf[TOT_VAR] - recvbuf[TOT_AVG]*recvbuf[TOT_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
   double cd_elapsed_avg  = recvbuf[CD_AVG]/cd::totalTaskSize;
@@ -435,7 +460,9 @@ void CD_Finalize(void)
                            it->second.compl_elapsed_time_ *   it->second.compl_elapsed_time_
                           };
     double recvbuf_lv[PROF_LEVEL_STATISTICS_NUM] = {0.0,};
+#if CD_MPI_ENABLED  
     MPI_Reduce(sendbuf_lv, recvbuf_lv, PROF_LEVEL_STATISTICS_NUM, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+#endif
     lv_runtime_info[it->first].prv_elapsed_time_ = recvbuf_lv[LV_PRV_AVG]/cd::totalTaskSize;
     lv_runtime_info[it->first].prv_elapsed_time_var_ = (recvbuf_lv[LV_PRV_VAR] - recvbuf_lv[LV_PRV_AVG]*recvbuf_lv[LV_PRV_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
     lv_runtime_info[it->first].create_elapsed_time_ = recvbuf_lv[LV_CREAT_AVG]/cd::totalTaskSize;
@@ -462,7 +489,7 @@ void CD_Finalize(void)
     printf("Destroy           : %lf (%lf) (var: %lf)\n", destroy_elapsed_avg, destroy_elapsed, destroy_elapsed_var); 
     printf("Begin             : %lf (%lf) (var: %lf)\n", begin_elapsed_avg, begin_elapsed, begin_elapsed_var); 
     printf("Complete          : %lf (%lf) (var: %lf)\n", compl_elapsed_avg, compl_elapsed, compl_elapsed_var); 
-#if CD_PROFILER_ENABLED
+#if CD_PROFILER_ENABLED & CD_MPI_ENABLED
     printf("Mailbox           : %lf \n", mailbox_elapsed_time); 
 #endif
     printf("-- Logging Overhead Summary ------------\n");
@@ -485,10 +512,10 @@ void CD_Finalize(void)
 #endif // CD_PROFILER_ENABLED_ENDS
 
 #if CD_ERROR_INJECTION_ENABLED
-  if(CDHandle::memory_error_injector_ != NULL);
+  if(CDHandle::memory_error_injector_ != NULL)
     delete CDHandle::memory_error_injector_;
 
-  if(CDHandle::system_error_injector_ != NULL);
+  if(CDHandle::system_error_injector_ != NULL)
     delete CDHandle::system_error_injector_;
 #endif
 
@@ -681,12 +708,12 @@ CDHandle::~CDHandle()
   }
 
 #if CD_ERROR_INJECTION_ENABLED
-  if(cd_error_injector_ != NULL);
+  if(cd_error_injector_ != NULL)
     delete cd_error_injector_;
 #endif
 
 #if CD_PROFILER_ENABLED
-  if(profiler_ != NULL);
+  if(profiler_ != NULL)
     delete profiler_;
 #endif
 
@@ -856,8 +883,8 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 //      printf("first time! %s\n", name);
   }
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
-  CD::CDInternalErrT internal_err;
-  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
+//  CD::CDInternalErrT internal_err;
+  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, (CD::CDInternalErrT *)error);//&internal_err);
 
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
@@ -1078,6 +1105,8 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
 
+//  printf("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
+//                                                                      level(), need_reexec(), *CD::rollback_point_);
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
 
@@ -1248,7 +1277,7 @@ CDHandle *CDHandle::CreateSW(uint32_t onOff,
                            bool collective, 
                            CDErrT *error )
 {
-  CDHandle *handle;
+  CDHandle *handle = NULL;
   if(onOff == kON) {
     handle = Create(name, cd_type, error_name_mask, error_loc_mask, error);
   }
@@ -1265,7 +1294,7 @@ CDHandle *CDHandle::CreateSW(uint32_t onOff,
                            uint32_t error_loc_mask, 
                            CDErrT *error)
 {
-  CDHandle *handle;
+  CDHandle *handle = NULL;
   if(onOff == kON) {
     handle = Create(num_children, name, cd_type, error_name_mask, error_loc_mask, error);
   }
@@ -1284,7 +1313,7 @@ CDHandle *CDHandle::CreateSW(uint32_t onOff,
                            uint32_t error_loc_mask, 
                            CDErrT *error )
 {
-  CDHandle *handle;
+  CDHandle *handle = NULL;
   if(onOff == kON) {
     handle = Create(color, task_in_color, num_children, name, cd_type, error_name_mask, error_loc_mask, error);
   }
@@ -1306,7 +1335,7 @@ CDHandle *CDHandle::CreateAndBeginSW(uint32_t onOff,
 }
 CDErrT CDHandle::DestroySW(uint32_t onOff, bool collective) 
 {
-  CDErrT ret;
+  CDErrT ret = kOK;
   if(onOff == kON) {
     ret = Destroy(collective);
   }
@@ -1319,7 +1348,7 @@ CDErrT CDHandle::DestroySW(uint32_t onOff, bool collective)
   
 CDErrT CDHandle::BeginSW(uint32_t onOff, bool collective, const char *label, const uint64_t &sys_err_vec)
 {
-  CDErrT ret;
+  CDErrT ret = kOK;
   if(onOff == kON) {
     ret = Begin(collective, label, sys_err_vec);
   }
@@ -1653,6 +1682,16 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   CheckMailBox();
 
 
+#else // CD_MPI_ENABLED ends
+  if(err_desc == CD::CDInternalErrT::kErrorReported) {
+    // FIXME
+//    printf("### Error Injected.");
+//    printf(" Rollback Level #%u (%s %s) ###\n", 
+//             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+    ptr_cd_->SetRollbackPoint(rollback_point, false);
+  } else {
+//    printf("err:  %d\n", err_desc);
+  }
 #endif
 
   if(err_ret_val != NULL)
@@ -1763,7 +1802,8 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
 {
   uint64_t sys_err_vec = system_error_injector_->Inject();
   bool found = false;
-  CD_DEBUG("sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
+  CD_DEBUG("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
+  //printf("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
   if(sys_err_vec == NO_ERROR_INJECTED) {
     return (int)CD::CDInternalErrT::kOK;
   } else {
@@ -1888,9 +1928,12 @@ bool     CDHandle::reexecuted(void)    const { return ptr_cd_->reexecuted_; }
 bool     CDHandle::need_reexec(void)   const { return *CD::rollback_point_ != INVALID_ROLLBACK_POINT; }
 uint32_t CDHandle::rollback_point(void)  const { return *CD::rollback_point_; }
 CDType   CDHandle::GetCDType(void)     const { return ptr_cd_->GetCDType(); }
+#if CD_MPI_ENABLED
 int CDHandle::GetCommLogMode(void) const {return ptr_cd_->GetCommLogMode(); }
 int CDHandle::GetCDLoggingMode(void) const {return ptr_cd_->cd_logging_mode_;}
-#if CD_TEST_ENABLED
+#endif
+
+#if CD_MPI_ENABLED && CD_TEST_ENABLED
 void CDHandle::PrintCommLog(void) const {
   ptr_cd_->comm_log_ptr_->Print();
 }

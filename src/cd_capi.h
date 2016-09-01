@@ -38,19 +38,19 @@ struct cd_handle;
 typedef struct cd_handle cd_handle_t;
 struct regenobject;
 
-cd_handle_t * cd_init(int num_tasks, 
-                          int my_task, 
-                          int prv_medium);
+cd_handle_t *cd_init(int num_tasks, 
+                     int my_task, 
+                     int prv_medium);
 
 void cd_finalize();
 
 //SZ: should always specify # of children to create
-cd_handle_t* cd_create(cd_handle_t *c_handle,
+cd_handle_t *cd_create(cd_handle_t *c_handle,
                       uint32_t  num_children,
                       const char *name, 
                       int cd_type, uint32_t error_name);
 
-cd_handle_t* cd_create_customized(cd_handle_t *c_handle,
+cd_handle_t *cd_create_customized(cd_handle_t *c_handle,
                                  uint32_t color,
                                  uint32_t task_in_color,
                                  uint32_t  numchildren,
@@ -76,8 +76,14 @@ int cd_preserve(cd_handle_t*,
                    const char *my_name, 
                    const char *ref_name);
 
-cd_handle_t* getcurrentcd(void);
-cd_handle_t* getleafcd(void);
+int cd_preserve_serdes(cd_handle_t *c_handle, 
+                   void *data_ptr,
+                   uint32_t preserve_mask,
+                   const char *my_name, 
+                   const char *ref_name);
+
+cd_handle_t *getcurrentcd(void);
+cd_handle_t *getleafcd(void);
 void cd_detect(cd_handle_t *);
 
 

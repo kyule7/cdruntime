@@ -73,14 +73,14 @@ namespace cd {
 
 class Serdes {
   friend class cd::CDHandle; // Only CDHandle can invoke operator()
-    std::list<uint32_t> serdes_list_;
-    std::map<uint32_t, std::pair<void *, size_t> > member_list_;
+    std::list<uint64_t> serdes_list_;
+    std::map<uint64_t, std::pair<void *, size_t> > member_list_;
     uint64_t length_;
   public:
-    void Register(uint32_t member_id, void *member, size_t member_size);
+    void Register(uint64_t member_id, void *member, size_t member_size);
     void ClearTarget(void);
-    void RegisterTarget(uint32_t target_id);
-    void RegisterTarget( std::initializer_list<uint32_t> il );
+    void RegisterTarget(uint64_t target_id);
+    void RegisterTarget( std::initializer_list<uint64_t> il );
   private:
     // This will be invoked later by CD runtime
     void operator()(int flag, void *object);

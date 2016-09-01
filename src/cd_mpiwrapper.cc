@@ -36,20 +36,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_config.h"
 #include "cd_features.h"
 
-#if _MPI_VER
 
-#ifdef comm_log
-
-#include "cd_mpiwrapper.h"
 #include "cd_path.h"
 #include "cd_global.h"
-#include "cd_comm_log.h"
 #include "cd_def_internal.h"
 using namespace cd;
 CD_CLOCK_T cd::msg_begin_clk;
 CD_CLOCK_T cd::msg_end_clk;
 CD_CLOCK_T cd::msg_elapsed_time;
 
+#if _MPI_VER
+
+#ifdef comm_log
+#include "cd_mpiwrapper.h"
+#include "cd_comm_log.h"
 // -------------------------------------------------------------------------------------------------------
 // blocking p2p communication
 // -------------------------------------------------------------------------------------------------------
@@ -2441,11 +2441,31 @@ int MPI_Scan(const void *sendbuf,
 
 int MPI_Init(int *argc, char ***argv)
 {
+  printf("[%s]\n", __func__); getchar();
   app_side = false; 
   int mpi_ret = 0;
 
   mpi_ret = PMPI_Init(argc, argv);
+#if CD_AUTOMATED
+  CDHandle *root = CD_Init(1, 0);
+  CD_Begin(root);
+#endif
+  
+  app_side = true; 
+  return mpi_ret;
+}
 
+int MPI_Init_thread(int *argc, char ***argv, int required, int *provided)
+{
+  printf("[%s]\n", __func__); getchar();
+  app_side = false; 
+  int mpi_ret = 0;
+
+  mpi_ret = PMPI_Init_thread(argc, argv, required, provided);
+#if CD_AUTOMATED
+  CDHandle *root = CD_Init(1, 0);
+  CD_Begin(root);
+#endif
   
   app_side = true; 
   return mpi_ret;
@@ -2455,6 +2475,10 @@ int MPI_Finalize(void)
   app_side = false; 
   int mpi_ret = 0;
 
+#if CD_AUTOMATED
+  CD_Complete(GetCurrentCD());
+  CD_Finalize();
+#endif
   mpi_ret = PMPI_Finalize();
 
   
