@@ -459,9 +459,13 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
       // Now, fp should be valid pointer
       if( fp!= NULL )  {
         CD_DEBUG("filename:%s\n", buffer->file_name_);
-        fseek(fp, buffer->GetOffset() , SEEK_SET); 
+        int ret = fseek(fp, buffer->GetOffset() , SEEK_SET); 
+        if(ret < 0) {
+          ERROR_MESSAGE("Failed to fseek offset %lu,  ret: %d \n", buffer->GetOffset(), ret);
+        }
         uint64_t fread_ret = fread(src_data_.address_data_, 1, src_data_.len_, fp);
-        if(fread_ret != src_data_.len_) {
+        if(fread_ret < 0) {
+        //if(fread_ret != src_data_.len_) {
           ERROR_MESSAGE("Failed to read %s: %lu != %lu", buffer->file_name_, fread_ret, src_data_.len_);
         }
         if(file_opened == true) {

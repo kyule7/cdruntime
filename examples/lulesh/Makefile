@@ -1,13 +1,14 @@
 #include ../../Makefile.extern
 SHELL = /bin/sh
 .SUFFIXES: .cc .o
-
+CD_PATH=/home1/03341/kyushick/Work/CDs/overheadFix
+INTERVAL_VAL=0
 LULESH_EXEC   = lulesh_cd
 EXEC_PROFILED = $(LULESH_EXEC)
 
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=1 -D_DEBUG=0
-CD_CFLAGS = -I../../include 
-CD_LINKFLAGS = -L../../lib  -lcd
+CD_CFLAGS = -I${CD_PATH}/include 
+CD_LINKFLAGS = -L${CD_PATH}/lib -lcd -Wl,-rpath=${CD_PATH}/lib
 
 
 SERCXX   = g++ -DUSE_MPI=0 
@@ -44,7 +45,7 @@ all: lulesh_cd
 
 lulesh_cd: $(LULESH_O) 
 	@echo "\nLinking"
-	$(CXX) -o $@ $^ $(LDFLAGS) -lm
+	$(CXX) -DINTERVAL=${INTERVAL_VAL} -o $@ $^ $(LDFLAGS) -lm
 
 clean:
 	rm -rf *.o;

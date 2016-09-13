@@ -152,7 +152,6 @@ AC_CONFIG_FILES([
  Makefile
  src/Makefile
  src/cd_features.h
- plugin/Makefile
  test/Makefile
  test/test_simple_hierarchy/Makefile
  test/test_user_defined_hierarhcy/Makefile

@@ -153,7 +153,7 @@ Additional BSD Notice
 #include <ctype.h>
 #include <time.h>
 #include <iostream>
-
+#include <unistd.h>
 #if _OPENMP
 # include <omp.h>
 #endif
@@ -3611,6 +3611,27 @@ void CalcTimeConstraintsForElems(Domain& domain) {
 //
 
 
+#define CKPT_INTERVAL 0
+bool openclose = false; 
+uint32_t histogram[256];
+char histogram_filename[64];
+
+// KL
+static inline
+void InsertBin(double sample)
+{
+
+   //   printf("prv time [\t%d] : %lf\n", idx, prv_time);
+   double shifted_sample = sample - 0.003;
+   if(shifted_sample < 0) shifted_sample = 0.0;
+   uint32_t bin_idx = (uint32_t)(shifted_sample / 0.00005);
+//   printf("(%d) prv time [\t%d] : %lf\n", INTERVAL, bin_idx, sample);
+   if(bin_idx >= 256) {
+     bin_idx = 255;
+   }
+   histogram[bin_idx]++;
+}
+
 /******************************************/
 
 int main(int argc, char *argv[])
@@ -3728,18 +3749,39 @@ int main(int argc, char *argv[])
    opts.its = 1000;
    double prv_elapsed = 0.0;
    double prv_timer = 0.0;
+   uint32_t interval = atoi(getenv(CKPT_INTERVAL));
+   printf("interval:%u\n", interval);
+   {
+      char hostname[32];
+      memset(histogram, 0, sizeof(histogram));
+      memset(histogram_filename, '0', sizeof(histogram_filename));
+      memset(hostname, '0', sizeof(hostname));
+      gethostname(hostname, sizeof(hostname));
+      char hostname_cat[9];
+      memcpy(hostname_cat, hostname, 8);
+      hostname_cat[8] = '\0';
+      //printf("hostname %s\n", hostname);
+      snprintf(histogram_filename, 64, "%s.%d", hostname_cat, myRank); 
+   }
+   printf("hostname %s\n", histogram_filename);
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
       // Main functions in the loop
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
-//    if(idx % 10 == 0) {
+#if CKPT_INTERVAL != 0
+     if(idx % interval == 0) 
+#endif
+    {
       CD_Begin(cdh_1_0_0, true, "TimeIncrement"); 
       prv_timer = MPI_Wtime();
       cdh_1_0_0->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime"); 
       cdh_1_0_0->Preserve(locDom->serdes.SetOp(preserve_vec), kCopy, "main_iter_prv");
+      
       double prv_time = MPI_Wtime() - prv_timer;
-      printf("prv time [\t%d] : %lf\n", idx, prv_time);
+      InsertBin(prv_time);
+//      printf("prv time [\t%d] : %lf\n", idx, prv_time);
       prv_elapsed += prv_time;
-//    }
+      openclose = true; 
+    }
 #endif
 //#if _CD
 //      if(myRank == 0) {
@@ -3869,13 +3911,20 @@ int main(int argc, char *argv[])
 
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
     idx++;
-//    if(idx % 10 == 0) {
-      CD_Complete(cdh_1_0_0); 
-//    }
+#if CKPT_INTERVAL != 0
+    if(idx % interval == 0) 
+#endif
+    {
+      CD_Complete(cdh_1_0_0);
+      openclose = false; 
+    }
 #endif
 
    }
 
+   if(openclose) {
+      CD_Complete(cdh_1_0_0);
+   }
 #if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD)
    cdh_0_0_0->Destroy();
 //#elif _CD && (SWITCH_0_0_0 == SEQUENTIAL_CD)
@@ -3911,7 +3960,22 @@ int main(int argc, char *argv[])
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);
    }
-   printf("[Final] prv time  : %lf\n",  prv_elapsed);
+   printf("[Final] prv time  : %lf %lf\n",  prv_elapsed, prv_elapsed/idx);
+   
+#if CKPT_INTERVAL == 0
+   FILE *histfp = fopen(histogram_filename, "w");
+//   uint32_t bin_idx=0;
+//   for(auto hi=histogram.begin(); hi!=histogram.end(); ++hi) {
+//      while(bin_idx < hi->first) {
+//        fprintf(histfp, "0 ");
+//        bin_idx++;
+//      }
+   for(uint32_t i=0; i<256; i++) {   
+      fprintf(histfp, "%u ", histogram[i]);
+   }
+   fprintf(histfp, "\n");
+   fclose(histfp);
+#endif
 
 #if _CD
 //   root_cd->Detect();

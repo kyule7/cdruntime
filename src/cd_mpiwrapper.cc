@@ -2441,7 +2441,7 @@ int MPI_Scan(const void *sendbuf,
 
 int MPI_Init(int *argc, char ***argv)
 {
-  printf("[%s]\n", __func__); getchar();
+//  printf("[%s]\n", __func__); getchar();
   app_side = false; 
   int mpi_ret = 0;
 
@@ -2457,7 +2457,7 @@ int MPI_Init(int *argc, char ***argv)
 
 int MPI_Init_thread(int *argc, char ***argv, int required, int *provided)
 {
-  printf("[%s]\n", __func__); getchar();
+//  printf("[%s]\n", __func__); getchar();
   app_side = false; 
   int mpi_ret = 0;
 

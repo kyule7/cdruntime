@@ -1,5 +1,4 @@
-SUBDIRS = src \
-					plugin
+SUBDIRS = src 
 
 allTests:
 	cd test; make;

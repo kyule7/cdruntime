@@ -16,7 +16,6 @@
 
 //#if _CD
 #include "packer.h"
-#include "unpacker.h"
 #include "cd.h"
 #include "cd_mapping.h"
 //#include "serdes.h"
@@ -771,7 +770,7 @@ class DomainSerdes : public Serializable {
       CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
       Packer packer;
       uint64_t vec = serdes_vec;
-      uint32_t i=1;
+      uint64_t i=1;
 //      printf("[%s] %lx ", __func__, vec);
       while(vec != 0) {
 //        printf("loop i = %u, vec = %lu\n", i, vec);
@@ -808,8 +807,8 @@ class DomainSerdes : public Serializable {
       CD_DEBUG("LULESH %s, obj: %p\n", __func__, object);
       Unpacker unpacker;
       uint64_t vec = serdes_vec;
-      uint32_t return_id = 0, return_size = 0;
-      uint32_t i=1;
+      uint64_t return_id = 0, return_size = 0;
+      uint64_t i=1;
       while(vec != 0) {
 //        printf("loop i = %u, vec = %lu\n", i, vec);
         if(vec & 0x1) {

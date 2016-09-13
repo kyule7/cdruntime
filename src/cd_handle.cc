@@ -52,6 +52,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_profiler.h"
 #endif
 
+#include <cmath>
 //#include "error_injector.h"
 
 
@@ -883,8 +884,9 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 //      printf("first time! %s\n", name);
   }
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
-//  CD::CDInternalErrT internal_err;
-  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, (CD::CDInternalErrT *)error);//&internal_err);
+  CD::CDInternalErrT internal_err;
+//  CD::CDInternalErrrT err = kOK;
+  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
 
   CDPath::GetCDPath()->push_back(new_cd_handle);

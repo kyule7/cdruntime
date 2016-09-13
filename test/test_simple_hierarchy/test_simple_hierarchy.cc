@@ -39,7 +39,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <string>
 #include <map>
 #include "cd.h"
-
+#define CD_MPI_ENABLED 0
 #if CD_MPI_ENABLED
 #include <mpi.h>
 #endif
@@ -50,7 +50,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define GIGA 1073741824
 
 #define LV1 1
-#define LV2 8
+#define LV2 1
 #define LV3 1 
 
 using namespace cd;
@@ -153,7 +153,7 @@ int TestCDHierarchy(void)
   UserObject1 userObj1;
 
   cout << "\n==== TestCDHierarchy Start ====\n" << endl; 
-	CDHandle *root = CD_Init(numProcs, myRank);
+	CDHandle *root = CD_Init(numProcs, myRank, kHDD);
   CD_Begin(root); 
 
   cout << "Root CD Begin...\n" << endl;
