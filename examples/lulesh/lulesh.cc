@@ -154,6 +154,7 @@ Additional BSD Notice
 #include <time.h>
 #include <iostream>
 #include <unistd.h>
+#include <sys/time.h>
 #if _OPENMP
 # include <omp.h>
 #endif
@@ -167,9 +168,28 @@ using namespace cd;
 int counter=0;
 Domain::DomainSerdes::SerdesInfo Domain::DomainSerdes::serdes_table[TOTAL_ELEMENT_COUNT];
 bool Domain::DomainSerdes::serdes_table_init = false; 
-#endif
 std::map<std::string,int> func_cnt;
+#endif
+//std::map<std::string,int> func_cnt;
 
+struct Singleton {
+//  double elapsed;
+  struct timeval start;
+//  static double start_clk;
+  Singleton(void) {
+    gettimeofday(&start, NULL);
+//    elapsed = 0.0;
+  }
+  ~Singleton(void) {
+    struct timeval end;
+    gettimeofday(&end, NULL);
+    double tv_val = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec))*0.000001;
+    printf("final elapsed:%lf\n", tv_val);
+  }    
+};
+
+//double Singleton::start_clk = 0.0;
+Singleton st;
 /*********************************/
 /* Data structure implementation */
 /*********************************/
@@ -3746,11 +3766,14 @@ int main(int argc, char *argv[])
 #endif
    // Main loop start
    int idx=0;
-   opts.its = 1000;
+   opts.its = 4000;
+#if _CD
    double prv_elapsed = 0.0;
    double prv_timer = 0.0;
-   uint32_t interval = atoi(getenv(CKPT_INTERVAL));
+   uint32_t interval = (uint32_t)atoi(getenv("CKPT_INTERVAL"));
+   uint32_t prv_cnt = 0;
    printf("interval:%u\n", interval);
+#endif
    {
       char hostname[32];
       memset(histogram, 0, sizeof(histogram));
@@ -3767,11 +3790,12 @@ int main(int argc, char *argv[])
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
       // Main functions in the loop
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
-#if CKPT_INTERVAL != 0
+if(interval != 0) 
+{
      if(idx % interval == 0) 
-#endif
     {
       CD_Begin(cdh_1_0_0, true, "TimeIncrement"); 
+      prv_cnt++;
       prv_timer = MPI_Wtime();
       cdh_1_0_0->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime"); 
       cdh_1_0_0->Preserve(locDom->serdes.SetOp(preserve_vec), kCopy, "main_iter_prv");
@@ -3782,6 +3806,7 @@ int main(int argc, char *argv[])
       prv_elapsed += prv_time;
       openclose = true; 
     }
+}
 #endif
 //#if _CD
 //      if(myRank == 0) {
@@ -3911,20 +3936,22 @@ int main(int argc, char *argv[])
 
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
     idx++;
-#if CKPT_INTERVAL != 0
+if(interval != 0)
+{  
     if(idx % interval == 0) 
-#endif
     {
       CD_Complete(cdh_1_0_0);
       openclose = false; 
     }
+}
 #endif
-
    }
 
+#if _CD
    if(openclose) {
       CD_Complete(cdh_1_0_0);
    }
+#endif
 #if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD)
    cdh_0_0_0->Destroy();
 //#elif _CD && (SWITCH_0_0_0 == SEQUENTIAL_CD)
@@ -3960,9 +3987,9 @@ int main(int argc, char *argv[])
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);
    }
-   printf("[Final] prv time  : %lf %lf\n",  prv_elapsed, prv_elapsed/idx);
    
-#if CKPT_INTERVAL == 0
+#if _CD && CKPT_INTERVAL == 0
+   printf("[Final] prv time  : %lf %lf %u %d\n",  prv_elapsed, prv_elapsed/idx, prv_cnt, idx);
    FILE *histfp = fopen(histogram_filename, "w");
 //   uint32_t bin_idx=0;
 //   for(auto hi=histogram.begin(); hi!=histogram.end(); ++hi) {

@@ -14,14 +14,14 @@
 #include <math.h>
 #include <vector>
 
-//#if _CD
+#if _CD
 #include "packer.h"
 #include "cd.h"
 #include "cd_mapping.h"
 //#include "serdes.h"
 //#include "cd_handle.h"
 using namespace std;
-//#endif
+#endif
 
 //**************************************************
 // Allow flexibility for arithmetic representations 
