@@ -41,7 +41,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include "cd_internal.h"
 #include "serializable.h"
 #include "packer.h"
-#include "unpacker.h"
+//#include "unpacker.h"
 #include "util.h"
 #include "event_handler.h"
 #include <fcntl.h>
@@ -55,11 +55,11 @@ CDEntry::CDEntryErrT CDEntry::Delete(void)
 {
   // Do something
 
-  if( dst_data_.handle_type() == DataHandle::kMemory ) {
+  if( CHECK_PRV_TYPE(dst_data_.handle_type(), kDRAM) && (!CHECK_PRV_TYPE(preserve_type_, kSerdes)) ) {
     DATA_FREE( dst_data_.address_data() );
     CD_DEBUG("free preserved data\n"); 
   }
-  else if( dst_data_.handle_type() == DataHandle::kOSFile )  {
+  else if( CHECK_ANY(dst_data_.handle_type(), (kHDD | kSSD | kPFS)) )  {
 
 #if _PRV_FILE_NOT_ERASED
 //    char cmd[256];
@@ -256,7 +256,7 @@ CDEntry::CDEntryErrT CDEntry::Restore(void) {
   DataHandle *buffer = NULL;
   CDEntry *entry = NULL;
 
-  if( dst_data_.handle_type() == DataHandle::kReference ) {  
+  if( CHECK_PRV_TYPE(dst_data_.handle_type(), kRef) ) {  
     // Restoration from reference
     CD_DEBUG("[kReference] Ref name: %s\n", dst_data_.ref_name().c_str());
     
@@ -411,7 +411,7 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
     return kEntrySearchRemote;
   }
   else { // Preservation via copy/ref local 
-    if(buffer->handle_type() == DataHandle::kMemory)  {
+    if(CHECK_PRV_TYPE(buffer->handle_type(), kDRAM) ) {
       CD_DEBUG("Local Case -> kMemory\n");
   
       //FIXME we need to distinguish whether this request is on Remote or local for both 
@@ -436,7 +436,7 @@ CDEntry::CDEntryErrT CDEntry::InternalRestore(DataHandle *buffer, bool local_fou
       }
   
     }
-    else if(buffer->handle_type() == DataHandle::kOSFile)  {
+    else if( CHECK_ANY(buffer->handle_type(), (kHDD | kSSD | kPFS)) )  {
       CD_DEBUG("Local Case -> kOSFile\n");
 
       //FIXME we need to collect file writes and write as a chunk. We don't want to have too many files per one CD.   

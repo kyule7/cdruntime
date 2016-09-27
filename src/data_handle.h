@@ -76,13 +76,13 @@ class DataHandle : public Serializable {
   friend class HeadCD;
   friend std::ostream& operator<<(std::ostream& str, const DataHandle& dh);
   public:
-    enum HandleType { 
-      kMemory=0, 
-      kOSFile, 
-      kReference, 
-      kSource, 
-      kPFS 
-    };
+//    enum uint32_t { 
+//      kMemory=0, 
+//      kOSFile, 
+//      kReference, 
+//      kSource, 
+//      kPFS 
+//    };
   private:
     enum { 
       DATA_PACKER_NODE_ID=0,
@@ -94,7 +94,7 @@ class DataHandle : public Serializable {
       DATA_PACKER_REFOFFSET
     };
 
-    HandleType  handle_type_;
+    uint32_t  handle_type_;
     //DRAM
     void *address_data_;
     uint64_t len_;
@@ -117,17 +117,17 @@ class DataHandle : public Serializable {
     DataHandle(const DataHandle &that); 
 
     // DataHandle for preservation to memory
-    DataHandle(HandleType handle_type, 
+    DataHandle(uint32_t handle_type, 
                void *address_data, const uint64_t& len, 
                const NodeID &node_id);
 
     // DataHandle for preservation to file system
-    DataHandle(HandleType handle_type, 
+    DataHandle(uint32_t handle_type, 
                void *address_data, const uint64_t& len, 
                const NodeID &node_id, const std::string &file_name, FILE *fp=NULL, long fpos=0);
 
     // DataHandle for preservation via reference
-    DataHandle(HandleType handle_type, 
+    DataHandle(uint32_t handle_type, 
                void *address_data, const uint64_t& len, 
                std::string ref_name, uint64_t ref_offset, const NodeID &node_id);
 
@@ -138,7 +138,7 @@ class DataHandle : public Serializable {
     void        set_ref_offset(uint64_t ref_offset)        { ref_offset_   = ref_offset; }
     void        set_address_data(const void *address_data) { address_data_ = (void *)address_data; }
     void        set_len(uint64_t len)                      { len_ = len; }
-    void        set_handle_type(const HandleType& handle_type) { handle_type_ = handle_type; }
+    void        set_handle_type(const uint32_t& handle_type) { handle_type_ = handle_type; }
 public:
     std::string file_name(void)    const { return file_name_; }
     std::string ref_name(void)     const { return tag2str[ref_name_]; }
@@ -146,7 +146,7 @@ public:
     uint64_t    ref_offset(void)   const { return ref_offset_; }
     void       *address_data(void) const { return address_data_; }
     uint64_t    len(void)          const { return len_; }
-    HandleType  handle_type(void)  const { return handle_type_; }
+    uint32_t  handle_type(void)  const { return handle_type_; }
     NodeID      node_id(void)      const { return node_id_; }
 
 

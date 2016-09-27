@@ -663,7 +663,7 @@ class Domain {
    // IMPLEMENTATION
    //
 #if SERDES_ENABLED
-class DomainSerdes : public Serializable {
+class DomainSerdes : public PackerSerializable {
     uint64_t serdes_vec;
     Domain *dom;
     struct SerdesInfo {
@@ -690,6 +690,14 @@ class DomainSerdes : public Serializable {
 //        serdes_table_init = true;
 //      }
     }
+unsigned vec2id(unsigned long long n) {
+  unsigned cnt=0;
+  while(n != 0) {
+    n >>= 1;
+    cnt++;
+  }
+  return cnt;
+}
 
     void InitSerdesTable(void) {
       serdes_table[ID__X]           = SerdesInfo(sizeof(Real_t)  * dom->m_x.size(), dom->m_x.data());
@@ -764,21 +772,22 @@ class DomainSerdes : public Serializable {
     }
     
     // With this interface, user can switch to a different serializer with a method flag.
-    void *Serialize(uint64_t &len_in_bytes) {
-      // User define whatever they want.
- //     printf("%s\n", __func__);
+    void PreserveObject(Packer *packer) {
       CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
-      Packer packer;
+//      printf("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
       uint64_t vec = serdes_vec;
-      uint64_t i=1;
+//      uint64_t i=1;
+//      int cnt = 0;
 //      printf("[%s] %lx ", __func__, vec);
       while(vec != 0) {
+        uint32_t id = vec2id(vec);
 //        printf("loop i = %u, vec = %lu\n", i, vec);
         if(vec & 0x1) {
-          if(i != ID__REGELEMLIST_INNER) {
+          if(id != ID__REGELEMLIST_INNER) {
 //            printf("1111\n");
 //            getchar();
-            packer.Add(i, serdes_table[i].size, serdes_table[i].src);
+            
+            packer->Add(id, serdes_table[id].size, serdes_table[id].src);
           } else {
 //            printf("2222\n");
 //            getchar();
@@ -787,21 +796,28 @@ class DomainSerdes : public Serializable {
 //              printf("%lu \t %p\n", 
 //                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size,
 //                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src);
-              packer.Add(j, 
+              packer->Add(j + ID__SERDES_ALL, 
                          ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size,
                          ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src);
 //                         ((Index_t *)(serdes_table[ID__REGELEMSIZE].src))[j], 
 //                         ((Index_t **)(serdes_table[ID__REGELEMLIST].src))[j]);
             }
           }
+//          cnt++;
         }
-        i++;
+//        i++;
         vec >>= 1;
       } // while ends
-//      printf("id: %d\n",i);
+//      printf("cnt:%d\n", cnt);
+    }
+    void *Serialize(uint64_t &len_in_bytes) {
+      // User define whatever they want.
+      CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
+//      printf("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
+      Packer packer;
+      PreserveObject(&packer);
       return packer.GetTotalData(len_in_bytes);
     }
-
     virtual void Deserialize(void *object) {
       // Deserialize object and restore to each member.
       CD_DEBUG("LULESH %s, obj: %p\n", __func__, object);
@@ -810,11 +826,12 @@ class DomainSerdes : public Serializable {
       uint64_t return_id = 0, return_size = 0;
       uint64_t i=1;
       while(vec != 0) {
+        uint32_t id = vec2id(vec);
 //        printf("loop i = %u, vec = %lu\n", i, vec);
         if(vec & 0x1) {
-          if(i != ID__REGELEMLIST_INNER) {
+          if(id != ID__REGELEMLIST_INNER) {
             CD_DEBUG("ID : %d\n", i);
-            unpacker.GetNext((char *)object, return_id, return_size, false, serdes_table[i].src, serdes_table[i].size);
+            unpacker.GetNext((char *)object, return_id, return_size, false, serdes_table[id].src, serdes_table[id].size);
           } else {
             CD_DEBUG("ID : %d (INNER)\n", i);
             Index_t &numRegSize = dom->numReg();

@@ -40,7 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_def_internal.h" 
 #include "packer.h"
-#include "unpacker.h"
+//#include "unpacker.h"
 using namespace cd;
 
 

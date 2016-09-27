@@ -155,13 +155,22 @@ Additional BSD Notice
 #include <iostream>
 #include <unistd.h>
 #include <sys/time.h>
+#include <string>
+#include <functional>
 #if _OPENMP
 # include <omp.h>
 #endif
 
 #include "lulesh.h"
+#include <cassert>
 
 //#define SERDES_ENABLED 1
+#define ENABLE_HISTOGRAM 1
+#define OPTIMIZE 1
+#if OPTIMIZE == 0
+#undef _ANALYZE_PHASE
+#endif
+
 #if _CD
 using namespace cd;
 //class DomainSerdes;
@@ -169,23 +178,354 @@ int counter=0;
 Domain::DomainSerdes::SerdesInfo Domain::DomainSerdes::serdes_table[TOTAL_ELEMENT_COUNT];
 bool Domain::DomainSerdes::serdes_table_init = false; 
 std::map<std::string,int> func_cnt;
+
+uint64_t preserve_vec_all = ( M__X  | M__Y  | M__Z  | 
+                              M__XD | M__YD | M__ZD |
+                              M__XDD| M__YDD| M__ZDD|
+                              M__DXX| M__DYY| M__DZZ|
+                              M__FX | M__FY | M__FZ |
+                              M__QQ | M__QL | M__SS |
+                              M__Q  | M__E  | M__VOLO | 
+                              M__V | M__P | M__VNEW |
+                              M__DELV | M__VDOV | M__AREALG |
+                              M__DELX_ZETA  | M__DELX_XI  | M__DELX_ETA |
+                              M__SYMMX | M__SYMMY | M__SYMMZ |
+                              M__NODALMASS | M__MATELEMLIST | M__NODELIST | 
+                              M__LXIM | M__LXIP | M__LETAM | 
+                              M__LETAP | M__LZETAM | M__LZETAP | 
+                              M__ELEMBC | M__ELEMMASS | M__REGELEMSIZE |
+                              M__REGELEMLIST | M__REGELEMLIST_INNER | M__REG_NUMLIST );
+uint64_t preserve_vec_ref = ( M__SYMMX | M__SYMMY | M__SYMMZ |
+                              M__NODALMASS | M__MATELEMLIST | M__NODELIST | 
+                              M__LXIM | M__LXIP | M__LETAM | 
+                              M__LETAP | M__LZETAM | M__LZETAP | 
+                              M__ELEMBC | M__ELEMMASS | M__REGELEMSIZE |
+                              M__REGELEMLIST | M__REGELEMLIST_INNER | M__REG_NUMLIST );
+// CalcForceForNodes
+uint64_t preserve_vec_0   = ( M__FX | M__FY | M__FZ );
+// CalcAccelerationForNodes ~ CalcPositionForNodes
+uint64_t preserve_vec_1   = ( M__X  | M__Y  | M__Z  | 
+                              M__XD | M__YD | M__ZD |
+                              M__XDD| M__YDD| M__ZDD);
+// CalcLagrangeElements ~ CalcQForElems
+uint64_t preserve_vec_2   = ( M__VNEW | M__DELV | M__VDOV | M__AREALG |
+                              M__DXX| M__DYY| M__DZZ|
+                              M__DELV_ZETA  | M__DELV_XI  | M__DELV_ETA |
+                              M__DELX_ZETA  | M__DELX_XI  | M__DELX_ETA );
+
+// ApplyMaterialPropertiesForElems ~ UpdateVolumesForElems
+uint64_t preserve_vec_3   = ( M__QQ | M__QL | M__SS |
+                              M__Q  | M__E  | M__VOLO | M__V | M__P );
+int ckpt_idx=0;
+uint32_t interval = 1;
 #endif
 //std::map<std::string,int> func_cnt;
 
+#define HISTO_SIZE 512
+#define BIN_PRECISION 0.00005
+#define BIN_SHIFT 0
+bool openclose = false; 
 struct Singleton {
-//  double elapsed;
+  double prv_elapsed;
+  double prv_timer;
+  double prv_time;
+  uint32_t prv_cnt;
+  uint32_t bin_cnt;
+  uint32_t history_size;
   struct timeval start;
-//  static double start_clk;
+
+  uint32_t *histogram;
+  uint32_t *latency_history;
+#ifdef _ANALYZE_PHASE
+  uint32_t *histogram_phase;
+#endif
+  char     *histogram_filename;
+
+  // Comm related
+  MPI_Comm node_comm;
+  MPI_Comm zero_comm;
+  int myRank;
+  int numRanks;
+  int numNodeRanks;
+  int myNodeRank;
+  int numZeroRanks;
+  int myZeroRank;
+
+  int num_phase;
   Singleton(void) {
+    prv_elapsed = 0.0;
+    prv_timer = 0.0;
+    prv_time = 0.0;
+    prv_cnt = 0;
+    bin_cnt = 0;
+    history_size = 0;
+    histogram = NULL;
+    latency_history = NULL;
+#ifdef _ANALYZE_PHASE
+    histogram_phase = NULL;
+#endif
+    histogram_filename = NULL;
     gettimeofday(&start, NULL);
-//    elapsed = 0.0;
+    myRank = -1;
+    numRanks = -1;
+    numZeroRanks = -1;
+    myZeroRank = -1;
+    numZeroRanks = -1;
+    myZeroRank = -1;
+    num_phase = -1;
   }
+  
   ~Singleton(void) {
+    //printf("[Destructor] ");
+    CheckTime();
+  }
+
+  void BeginTimer(void) {
+    prv_timer = MPI_Wtime();
+  }
+
+#ifdef _ANALYZE_PHASE
+  void EndTimer(int phase) {
+    double elapsed = MPI_Wtime() - prv_timer;
+    prv_time += elapsed;
+//    printf("phase:%d\n", phase);
+    if(phase != -1)
+      InsertBin(histogram_phase+phase*HISTO_SIZE, elapsed, true);
+  }
+#else
+  void EndTimer(int phase) {
+    prv_time += MPI_Wtime() - prv_timer;
+  }
+#endif
+
+  void FinishTimer(void) {
+      InsertBin(histogram, prv_time, false);
+      prv_elapsed += prv_time;
+      prv_cnt++;
+      prv_time = 0;
+  }
+  
+  void CheckTime(void) {
     struct timeval end;
     gettimeofday(&end, NULL);
     double tv_val = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec))*0.000001;
-    printf("final elapsed:%lf\n", tv_val);
-  }    
+    if(myRank == 0)
+      printf("final elapsed:%lf\n", tv_val);
+  }
+
+  void InsertBin(uint32_t *histogram, double sample, bool phase_bin) {
+     //   printf("prv time [\t%d] : %lf\n", idx, prv_time);
+     double shifted_sample = sample - BIN_SHIFT;
+     if(shifted_sample < 0) shifted_sample = 0.0;
+     uint32_t bin_idx = (uint32_t)(shifted_sample / BIN_PRECISION);
+//     printf("(%d) prv time [\t%d] : %lf (phase:%d)\n", interval, bin_idx, sample, phase_bin);
+     if(bin_idx >= HISTO_SIZE) {
+       bin_idx = HISTO_SIZE-1;
+     }
+     histogram[bin_idx]++;
+     if(phase_bin == false) {
+       latency_history[bin_cnt++] = bin_idx;
+     }
+  }
+#ifdef _ANALYZE_PHASE
+  void AllocateHistogramForPhase(int _num_phase) {
+    assert(_num_phase != -1);
+    num_phase = _num_phase;
+    histogram_phase = new uint32_t[num_phase * HISTO_SIZE]();
+//    histogram_phase = new uint32_t*[num_phase];
+//    for(int i=0; i<num_phase; i++) {
+//      histogram_phase[i] = new uint32_t[HISTO_SIZE]();
+//    }
+  }
+#endif
+  void Initialize(int _myRank, int _numRanks, uint32_t _total_its, uint32_t &_interval) {
+    myRank = _myRank;
+    numRanks = _numRanks;
+    if(_interval == 0) { return; }
+
+    char *ckpt_var = getenv("CKPT_INTERVAL");
+    if(ckpt_var != NULL) {
+      _interval = (uint32_t)atoi(ckpt_var);
+    }
+    if(myRank == 0) 
+      printf("interval:%u\n", _interval);
+    history_size = (_total_its/_interval);
+    latency_history = new unsigned int[history_size](); // zero-initialized
+    histogram = new unsigned int[HISTO_SIZE]();
+    histogram_filename = new char[64]();
+  
+    char hostname[32] = {0};
+    gethostname(hostname, sizeof(hostname));
+    char hostname_cat[9];
+    memcpy(hostname_cat, hostname, 8);
+    hostname_cat[8] = '\0';
+    //printf("hostname %s\n", hostname);
+    snprintf(histogram_filename, 64, "local.%s.%d", hostname_cat, myRank); 
+  
+ 
+    std::hash<std::string> ptr_hash; 
+    uint64_t long_id = ptr_hash(std::string(hostname_cat));
+    //printf("hostname %s %lu\n", histogram_filename, long_id);
+    uint32_t node_id = ((uint32_t)(long_id >> 32)) ^ ((uint32_t)(long_id));
+ //   printf("hostname %s %lu (%u)\n", histogram_filename, long_id, node_id);
+ 
+    MPI_Comm_split(MPI_COMM_WORLD, node_id, myRank, &node_comm);
+    MPI_Comm_size(node_comm, &numNodeRanks) ;
+    MPI_Comm_rank(node_comm, &myNodeRank) ;
+ 
+    // for rank 0s
+    if(myNodeRank == 0) {
+      MPI_Comm_split(MPI_COMM_WORLD, 0, myRank, &zero_comm);
+    } else {
+      MPI_Comm_split(MPI_COMM_WORLD, 1, myRank, &zero_comm);
+    }
+    MPI_Comm_size(zero_comm, &numZeroRanks);
+    MPI_Comm_rank(zero_comm, &myZeroRank);
+ 
+#ifdef _ANALYZE_PHASE
+    AllocateHistogramForPhase(4);
+#endif
+ 
+//    printf("hostname %s %lu (%u): %d %d/%d %d/%d\n", 
+//        histogram_filename, long_id, node_id, 
+//        myRank, myNodeRank, numNodeRanks, myZeroRank, numZeroRanks);
+  } 
+
+  void Finalize(void) {
+    unsigned int *latency_history_global = NULL;
+    unsigned int *latency_history_semiglobal = NULL;
+    unsigned int *histogram_global = NULL; //[HISTO_SIZE]
+    unsigned int *histogram_semiglobal = NULL; //[HISTO_SIZE]
+    unsigned int *histogram_phase_global = NULL;
+    unsigned int *histogram_phase_semiglobal = NULL;
+    if(myRank == 0) {
+      latency_history_global = new unsigned int[history_size * numRanks](); // zero-initialized
+      histogram_global = new unsigned int[HISTO_SIZE * numRanks]();
+#ifdef _ANALYZE_PHASE
+      if(num_phase != -1) {
+        histogram_phase_global = new unsigned int[HISTO_SIZE * numRanks * num_phase]();
+      }
+#endif
+    }
+    if(myNodeRank == 0) {
+      // numZeroRanks = 4
+      // numRanks/numZeroRanks = 16
+      latency_history_semiglobal = new unsigned int[history_size * numNodeRanks](); // zero-initialized
+      histogram_semiglobal = new unsigned int[HISTO_SIZE * numNodeRanks]();
+#ifdef _ANALYZE_PHASE
+      if(num_phase != -1) {
+        histogram_phase_semiglobal = new unsigned int[HISTO_SIZE * numNodeRanks * num_phase]();
+      }
+#endif
+    }
+ 
+    // Gather among ranks in the same node
+    MPI_Gather(latency_history, history_size, MPI_UNSIGNED, 
+               latency_history_semiglobal, history_size, MPI_UNSIGNED, 
+               0, node_comm);
+ 
+    MPI_Gather(histogram, HISTO_SIZE, MPI_UNSIGNED, 
+               histogram_semiglobal, HISTO_SIZE, MPI_UNSIGNED, 
+               0, node_comm);
+#ifdef _ANALYZE_PHASE
+    if(num_phase != -1) {
+      MPI_Gather(histogram_phase, HISTO_SIZE * num_phase, MPI_UNSIGNED, 
+                 histogram_phase_semiglobal, HISTO_SIZE * num_phase, MPI_UNSIGNED, 
+                 0, node_comm);
+    }
+#endif
+    // Gather among zero ranks
+    if(myNodeRank == 0) {
+       MPI_Gather(latency_history_semiglobal, history_size * numNodeRanks, MPI_UNSIGNED, 
+                  latency_history_global, history_size * numNodeRanks, MPI_UNSIGNED, 
+                  0, zero_comm);
+       MPI_Gather(histogram_semiglobal, HISTO_SIZE * numNodeRanks, MPI_UNSIGNED,
+                  histogram_global, HISTO_SIZE * numNodeRanks, MPI_UNSIGNED, 
+                  0, zero_comm);
+#ifdef _ANALYZE_PHASE
+       if(num_phase != -1) {
+          MPI_Gather(histogram_phase_semiglobal, HISTO_SIZE * numNodeRanks * num_phase, MPI_UNSIGNED,
+                     histogram_phase_global, HISTO_SIZE * numNodeRanks * num_phase, MPI_UNSIGNED, 
+                     0, zero_comm);
+       }
+#endif
+    }
+
+//    printf("[Final] prv time  : %lf %lf %u %d\n",  prv_elapsed, prv_elapsed/ckpt_idx, prv_cnt, ckpt_idx);
+ 
+    if(myRank == 0) {
+      char latency_history_filename[64] = {0};
+      char unique_hist_filename[64] = {0};
+      snprintf(latency_history_filename, 64, "latency.%s.csv", histogram_filename); 
+      snprintf(unique_hist_filename, 64, "histogram.%s.csv", histogram_filename); 
+      FILE *histfp = fopen(unique_hist_filename, "w");
+      FILE *latencyfp = fopen(latency_history_filename, "w");
+
+      for(uint32_t j=0; j<numRanks; j++) {
+         uint32_t stride = HISTO_SIZE*j;
+         for(uint32_t i=0; i<HISTO_SIZE; i++) {  
+            fprintf(histfp, "%u,", histogram_global[i + stride]);
+         }
+         fprintf(histfp, "\n");
+ 
+         stride = history_size*j;
+         for(uint32_t i=0; i<history_size; i++) {   
+            fprintf(latencyfp, "%u,", latency_history_global[i + stride]);
+         }
+         fprintf(latencyfp, "\n");
+      }
+      fprintf(histfp, "\n");
+      fprintf(latencyfp, "\n");
+ 
+      fclose(histfp);
+      fclose(latencyfp);
+#ifdef _ANALYZE_PHASE
+      char history_phase_filename[64] = {0};
+      snprintf(history_phase_filename, 64, "histogram_phase.%s.csv", histogram_filename); 
+      FILE *histphasefp = fopen(history_phase_filename, "w");
+      //for(uint32_t k=0; k<num_phase; k++) {
+//      for(uint32_t j=0; j<numRanks; j++) {
+      for(uint32_t ii=0; ii<num_phase; ii++) {
+         uint32_t phase_stride = HISTO_SIZE*ii;
+//         uint32_t stride = HISTO_SIZE*num_phase*j;
+//         for(uint32_t ii=0; ii<num_phase; ii++) {
+         for(uint32_t j=0; j<numRanks; j++) {
+            uint32_t stride = phase_stride + HISTO_SIZE*num_phase*j;
+//            uint32_t stride_phase = stride + HISTO_SIZE*ii;
+            for(uint32_t i=0; i<HISTO_SIZE; i++) {  
+               fprintf(histphasefp, "%u,", histogram_phase_global[i + stride]);
+            }
+            fprintf(histphasefp, "\n");
+         }
+         fprintf(histphasefp, "\n\n\n\n");
+      }
+      fclose(histphasefp);
+#endif
+    }
+
+#if 0
+    FILE *histfp = fopen(histogram_filename, "w");
+    for(uint32_t i=0; i<HISTO_SIZE; i++) {   
+       fprintf(histfp, "%u ", histogram[i]);
+    }
+    fprintf(histfp, "\n");
+    fprintf(histfp, "\n================================================================\n");
+    for(uint32_t i=0; i<history_size; i++) {   
+       fprintf(histfp, "%u,", latency_history[i]);
+    }
+    fprintf(histfp, "\n");
+    fclose(histfp);
+#endif
+
+    if(myRank == 0) {
+      delete latency_history_global;
+      delete histogram_global;
+    }
+    if(myNodeRank == 0) {
+      delete latency_history_semiglobal;
+      delete histogram_semiglobal;
+    }
+  }
 };
 
 //double Singleton::start_clk = 0.0;
@@ -1669,6 +2009,20 @@ void LagrangeNodal(Domain& domain)
    CalcForceForNodes(domain); 
 
 
+#if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD) && OPTIMIZE
+   if(interval != 0 && ckpt_idx % interval == 0) 
+   {
+      st.BeginTimer();
+      GetCurrentCD()->Preserve(domain.serdes.SetOp(preserve_vec_0), kCopy, "AfterCalcForceForNodes");
+      st.EndTimer(0);
+#ifdef _DEBUG_PRV
+      if(st.myRank == 0) {
+        printf("preserve vec 0 AfterCalcForceForNodes\n");
+      }
+#endif
+   }
+
+#endif
 
 
 
@@ -1774,6 +2128,8 @@ void LagrangeNodal(Domain& domain)
 //   cdh_3_0_0->Detect(); 
 //#endif
 
+
+
 #if USE_MPI
 #ifdef SEDOV_SYNC_POS_VEL_EARLY
    fieldData[0] = &Domain::x ;
@@ -1788,6 +2144,21 @@ void LagrangeNodal(Domain& domain)
             false, false) ;
    CommSyncPosVel(domain) ;
 #endif
+#endif
+
+#if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD) && OPTIMIZE
+   if(interval != 0 && ckpt_idx % interval == 0) 
+   {
+      st.BeginTimer();
+      GetCurrentCD()->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "AfterCalcPositionForNodes");
+      st.EndTimer(1);
+#ifdef _DEBUG_PRV
+      if(st.myRank == 0) {
+        printf("preserve vec 1 AfterCalcPositionForNodes\n");
+      }
+#endif
+   }
+
 #endif
 
    return;
@@ -3227,8 +3598,8 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 //       M__SERDES_ALL, kCopy);
 #endif
 
-  /* Calculate Q.  (Monotonic q option requires communication) */
-  CalcQForElems(domain, vnew) ;
+   /* Calculate Q.  (Monotonic q option requires communication) */
+   CalcQForElems(domain, vnew) ;
 
 //#if _CD && (SWITCH_3_6_0  > SEQUENTIAL_CD)
 //   CDMAPPING_END_NESTED(CD_MAP_3_6_0, cdh_3_6_0);
@@ -3236,6 +3607,21 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 //   cdh_3_6_0->Detect(); 
 //#endif
 
+#if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD) && OPTIMIZE
+   if(interval != 0 && ckpt_idx % interval == 0) 
+   {
+      st.BeginTimer();
+      GetCurrentCD()->Preserve(domain.serdes.SetOp(preserve_vec_2), kCopy, "AfterCalcQForElems");
+      st.EndTimer(2);
+
+#ifdef _DEBUG_PRV
+      if(st.myRank == 0) {
+        printf("preserve vec 2 AfterCalcQForElems\n");
+      }
+#endif
+   }
+
+#endif
 
 
 #if _CD && (SWITCH_3_7_0  > SEQUENTIAL_CD)
@@ -3630,27 +4016,26 @@ void CalcTimeConstraintsForElems(Domain& domain) {
 //}
 //
 
-
-#define CKPT_INTERVAL 0
-bool openclose = false; 
-uint32_t histogram[256];
-char histogram_filename[64];
-
-// KL
-static inline
-void InsertBin(double sample)
-{
-
-   //   printf("prv time [\t%d] : %lf\n", idx, prv_time);
-   double shifted_sample = sample - 0.003;
-   if(shifted_sample < 0) shifted_sample = 0.0;
-   uint32_t bin_idx = (uint32_t)(shifted_sample / 0.00005);
-//   printf("(%d) prv time [\t%d] : %lf\n", INTERVAL, bin_idx, sample);
-   if(bin_idx >= 256) {
-     bin_idx = 255;
-   }
-   histogram[bin_idx]++;
-}
+//#define HISTO_SIZE 256
+//bool openclose = false; 
+//char histogram_filename[64] = {0};
+//uint32_t bin_cnt = 0;
+//// KL
+//static inline
+//void InsertBin(double sample)
+//{
+//
+//   //   printf("prv time [\t%d] : %lf\n", idx, prv_time);
+//   double shifted_sample = sample;
+//   if(shifted_sample < 0) shifted_sample = 0.0;
+//   uint32_t bin_idx = (uint32_t)(shifted_sample / 0.00005);
+////   printf("(%d) prv time [\t%d] : %lf\n", INTERVAL, bin_idx, sample);
+//   if(bin_idx >= HISTO_SIZE) {
+//     bin_idx = HISTO_SIZE-1;
+//   }
+//   histogram[bin_idx]++;
+//   latency_history[bin_cnt++] = bin_idx;
+//}
 
 /******************************************/
 
@@ -3684,6 +4069,8 @@ int main(int argc, char *argv[])
    opts.cost = 1;
 
    ParseCommandLineOptions(argc, argv, myRank, &opts);
+   // FIXME
+   opts.nx  = 50;
 
    if ((myRank == 0) && (opts.quiet == 0)) {
       printf("Running problem size %d^3 per domain until completion\n", opts.nx);
@@ -3740,15 +4127,6 @@ int main(int argc, char *argv[])
 #endif
 
 #if _CD && SWITCH_PRESERVE_INIT
-   uint64_t preserve_vec = ( M__X  | M__Y  | M__Z  | 
-                             M__XD | M__YD | M__ZD |
-                             M__XDD| M__YDD| M__ZDD|
-                             M__DXX| M__DYY| M__DZZ|
-                             M__FX | M__FY | M__FZ |
-                             M__QQ | M__QL | M__SS |
-                             M__Q  | M__E  | M__VOLO | M__V |
-                             M__DELV_ZETA  | M__DELV_XI  | M__DELV_ETA |
-                             M__DELX_ZETA  | M__DELX_XI  | M__DELX_ETA );
    root_cd->Preserve(locDom, sizeof(locDom), kCopy, "locDom_Root");
    root_cd->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Root");
 #endif
@@ -3765,48 +4143,81 @@ int main(int argc, char *argv[])
    CDHandle *cdh_1_0_0 = cdh_0_0_0;
 #endif
    // Main loop start
-   int idx=0;
-   opts.its = 4000;
-#if _CD
-   double prv_elapsed = 0.0;
-   double prv_timer = 0.0;
-   uint32_t interval = (uint32_t)atoi(getenv("CKPT_INTERVAL"));
-   uint32_t prv_cnt = 0;
-   printf("interval:%u\n", interval);
+//   opts.its = 4000;
+   opts.its = 600;
+   if(myRank == 0) printf("dom size:%zu\n", sizeof(*locDom));
+#if _CD   
+   st.Initialize(myRank, numRanks, opts.its, interval);
+#else
+   unsigned nointerval = 0;
+   st.Initialize(myRank, numRanks, opts.its, nointerval);
 #endif
-   {
-      char hostname[32];
-      memset(histogram, 0, sizeof(histogram));
-      memset(histogram_filename, '0', sizeof(histogram_filename));
-      memset(hostname, '0', sizeof(hostname));
-      gethostname(hostname, sizeof(hostname));
-      char hostname_cat[9];
-      memcpy(hostname_cat, hostname, 8);
-      hostname_cat[8] = '\0';
-      //printf("hostname %s\n", hostname);
-      snprintf(histogram_filename, 64, "%s.%d", hostname_cat, myRank); 
+
+#if 0
+   char *ckpt_var = getenv("CKPT_INTERVAL");
+   if(ckpt_var != NULL) {
+     interval = (uint32_t)atoi(ckpt_var);
    }
-   printf("hostname %s\n", histogram_filename);
+//   interval=1;
+   uint32_t prv_cnt = 0;
+
+   printf("interval:%u\n", interval);
+   uint32_t history_size = (opts.its/interval);
+   latency_history = new unsigned int[history_size](); // zero-initialized
+ 
+   char hostname[32] = {0};
+   gethostname(hostname, sizeof(hostname));
+   char hostname_cat[9];
+   memcpy(hostname_cat, hostname, 8);
+   hostname_cat[8] = '\0';
+   //printf("hostname %s\n", hostname);
+   snprintf(histogram_filename, 64, "%s.%d", hostname_cat, myRank); 
+ 
+
+   std::hash<std::string> ptr_hash; 
+   uint64_t long_id = ptr_hash(std::string(hostname_cat));
+   //printf("hostname %s %lu\n", histogram_filename, long_id);
+   uint32_t node_id = ((uint32_t)(long_id >> 32)) ^ ((uint32_t)(long_id));
+//   printf("hostname %s %lu (%u)\n", histogram_filename, long_id, node_id);
+
+   MPI_Comm node_comm;
+   int numNodeRanks = -1;
+   int myNodeRank = -1;
+   MPI_Comm_split(MPI_COMM_WORLD, node_id, myRank, &node_comm);
+   MPI_Comm_size(node_comm, &numNodeRanks) ;
+   MPI_Comm_rank(node_comm, &myNodeRank) ;
+
+   // for rank 0s
+   MPI_Comm zero_comm;
+   int numZeroRanks = -1;
+   int myZeroRank = -1;
+   if(myNodeRank == 0) {
+     MPI_Comm_split(MPI_COMM_WORLD, 0, myRank, &zero_comm);
+   } else {
+     MPI_Comm_split(MPI_COMM_WORLD, 1, myRank, &zero_comm);
+   }
+   MPI_Comm_size(zero_comm, &numZeroRanks);
+   MPI_Comm_rank(zero_comm, &myZeroRank);
+
+
+   printf("hostname %s %lu (%u): %d %d/%d %d/%d\n", histogram_filename, long_id, node_id, 
+       myRank, myNodeRank, numNodeRanks, myZeroRank, numZeroRanks);
+
+#endif
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
       // Main functions in the loop
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
-if(interval != 0) 
-{
-     if(idx % interval == 0) 
-    {
-      CD_Begin(cdh_1_0_0, true, "TimeIncrement"); 
-      prv_cnt++;
-      prv_timer = MPI_Wtime();
-      cdh_1_0_0->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime"); 
-      cdh_1_0_0->Preserve(locDom->serdes.SetOp(preserve_vec), kCopy, "main_iter_prv");
-      
-      double prv_time = MPI_Wtime() - prv_timer;
-      InsertBin(prv_time);
-//      printf("prv time [\t%d] : %lf\n", idx, prv_time);
-      prv_elapsed += prv_time;
-      openclose = true; 
-    }
-}
+     if(interval != 0 && ckpt_idx % interval == 0) 
+     {
+        CD_Begin(cdh_1_0_0, true, "TimeIncrement"); 
+        st.BeginTimer();
+        cdh_1_0_0->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime");
+#if OPTIMIZE == 0
+        cdh_1_0_0->Preserve(locDom->serdes.SetOp(preserve_vec_all), kCopy, "main_iter_prv");
+#endif  
+        st.EndTimer(-1);
+        openclose = true; 
+     }
 #endif
 //#if _CD
 //      if(myRank == 0) {
@@ -3898,6 +4309,23 @@ if(interval != 0)
 #endif
 #endif   
 
+#if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD) && OPTIMIZE
+   if(interval != 0 && ckpt_idx % interval == 0) 
+   {
+      st.BeginTimer();
+      GetCurrentCD()->Preserve(domain.serdes.SetOp(preserve_vec_3), kCopy, "AfterUpdateVolumesForElems");
+      st.EndTimer(3);
+
+#ifdef _DEBUG_PRV
+      if(st.myRank == 0) {
+        printf("preserve vec 3 AfterUpdateVolumesForElems\n");
+      }
+#endif
+   }
+#endif
+
+
+
 
 #if _CD && (SWITCH_2_2_0  > SEQUENTIAL_CD)
       CDHandle *cdh_2_2_0 = 0;
@@ -3935,23 +4363,27 @@ if(interval != 0)
 #endif
 
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
-    idx++;
-if(interval != 0)
-{  
-    if(idx % interval == 0) 
-    {
-      CD_Complete(cdh_1_0_0);
-      openclose = false; 
-    }
-}
+     if(interval != 0 && ckpt_idx % interval == 0) 
+     {
+       st.FinishTimer();
+     }
+ 
+     ckpt_idx++;
+ 
+     if(interval != 0 && ckpt_idx % interval == 0) 
+     {
+       CD_Complete(cdh_1_0_0);
+       openclose = false; 
+     }
 #endif
    }
 
-#if _CD
+#if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
    if(openclose) {
       CD_Complete(cdh_1_0_0);
    }
 #endif
+
 #if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD)
    cdh_0_0_0->Destroy();
 //#elif _CD && (SWITCH_0_0_0 == SEQUENTIAL_CD)
@@ -3987,9 +4419,77 @@ if(interval != 0)
    if ((myRank == 0) && (opts.quiet == 0)) {
       VerifyAndWriteFinalOutput(elapsed_timeG, *locDom, opts.nx, numRanks);
    }
-   
-#if _CD && CKPT_INTERVAL == 0
-   printf("[Final] prv time  : %lf %lf %u %d\n",  prv_elapsed, prv_elapsed/idx, prv_cnt, idx);
+
+   st.CheckTime();
+#if _CD && ENABLE_HISTOGRAM
+   st.Finalize();   
+#endif
+
+#if 0
+//#if _CD && ENABLE_HISTOGRAM
+   unsigned int *latency_history_global = NULL;
+   unsigned int *latency_history_semiglobal = NULL;
+
+   unsigned int *histogram_global = NULL; //[HISTO_SIZE]
+   unsigned int *histogram_semiglobal = NULL; //[HISTO_SIZE]
+   if(myRank == 0) {
+     latency_history_global = new unsigned int[history_size * numRanks](); // zero-initialized
+     histogram_global = new unsigned int[HISTO_SIZE * numRanks]();
+   }
+   if(myNodeRank == 0) {
+     // numZeroRanks = 4
+     // numRanks/numZeroRanks = 16
+     latency_history_semiglobal = new unsigned int[history_size * numNodeRanks](); // zero-initialized
+     histogram_semiglobal = new unsigned int[HISTO_SIZE * numNodeRanks]();
+   }
+
+   // Gather among ranks in the same node
+   MPI_Gather(latency_history, history_size, MPI_UNSIGNED, 
+              latency_history_semiglobal, history_size, MPI_UNSIGNED, 
+              0, node_comm);
+
+   MPI_Gather(histogram, HISTO_SIZE, MPI_UNSIGNED, 
+              histogram_semiglobal, HISTO_SIZE, MPI_UNSIGNED, 
+              0, node_comm);
+   // Gather among zero ranks
+   if(myNodeRank == 0) {
+      MPI_Gather(latency_history_semiglobal, history_size * numNodeRanks, MPI_UNSIGNED, 
+                 latency_history_global, history_size * numNodeRanks, MPI_UNSIGNED, 
+                 0, zero_comm);
+      MPI_Gather(histogram_semiglobal, HISTO_SIZE * numNodeRanks, MPI_UNSIGNED,
+                 histogram_global, HISTO_SIZE * numNodeRanks, MPI_UNSIGNED, 
+                 0, zero_comm);
+   }
+
+   if(myRank == 0) {
+     char latency_history_filename[64];
+     char unique_hist_filename[64];
+     snprintf(latency_history_filename, 64, "latency.%s", histogram_filename); 
+     snprintf(unique_hist_filename, 64, "histogram.%s", histogram_filename); 
+     FILE *histfp = fopen(unique_hist_filename, "w");
+     FILE *latencyfp = fopen(latency_history_filename, "w");
+     for(uint32_t j=0; j<numRanks; j++) {
+        uint32_t stride = HISTO_SIZE*j;
+        for(uint32_t i=0; i<HISTO_SIZE; i++) {  
+           fprintf(histfp, "%u,", histogram_global[i + stride]);
+        }
+        fprintf(histfp, "\n");
+
+        stride = history_size*j;
+        for(uint32_t i=0; i<history_size; i++) {   
+           fprintf(latencyfp, "%u,", latency_history_global[i + stride]);
+        }
+        fprintf(latencyfp, "\n");
+     }
+     fprintf(histfp, "\n");
+     fprintf(latencyfp, "\n");
+
+     fclose(histfp);
+     fclose(latencyfp);
+   }
+
+   printf("[Final] prv time  : %lf %lf %u %d\n",  prv_elapsed, prv_elapsed/ckpt_idx, prv_cnt, ckpt_idx);
+{
    FILE *histfp = fopen(histogram_filename, "w");
 //   uint32_t bin_idx=0;
 //   for(auto hi=histogram.begin(); hi!=histogram.end(); ++hi) {
@@ -3997,11 +4497,17 @@ if(interval != 0)
 //        fprintf(histfp, "0 ");
 //        bin_idx++;
 //      }
-   for(uint32_t i=0; i<256; i++) {   
+   for(uint32_t i=0; i<HISTO_SIZE; i++) {   
       fprintf(histfp, "%u ", histogram[i]);
    }
    fprintf(histfp, "\n");
+   fprintf(histfp, "\n================================================================\n");
+   for(uint32_t i=0; i<history_size; i++) {   
+      fprintf(histfp, "%u,", latency_history[i]);
+   }
+   fprintf(histfp, "\n");
    fclose(histfp);
+}
 #endif
 
 #if _CD

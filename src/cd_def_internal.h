@@ -144,15 +144,18 @@ typedef uint64_t ENTRY_TAG_T;
 #define DATA_FREE free
 
 #define CHECK_EVENT_NO_EVENT(X) (X == 0)
-#define CHECK_PRV_TYPE(X,Y)     ((X & Y) == Y)
-#define MASK_CDTYPE(X)          (X & 0x03)
-#define MASK_MEDIUM(X)          (X & 0xFC)
-#define CHECK_EVENT(X,Y)        ((X & Y) == Y)
+#define CHECK_TYPE(X,Y)         (((X) & (Y)) == (Y))
+#define CHECK_ANY(X,Y)          (((X) & (Y)) != 0)
+#define CHECK_PRV_TYPE(X,Y)     (((X) & (Y)) == (Y))
+#define MASK_TYPE(X,Y)          ((X) & (Y))
+#define MASK_CDTYPE(X)          ((X) & 0x03)
+#define MASK_MEDIUM(X)          ((X) & 0xFC)
+#define CHECK_EVENT(X,Y)        (((X) & (Y)) == (Y))
 #define CHECK_NO_EVENT(X)       (((X) == 0))
-#define SET_EVENT(X,Y)          (X |= Y)
+#define SET_EVENT(X,Y)          ((X) |= (Y))
 
-#define TAG_MASK(X) ((2<<(X-1)) - 1)
-#define TAG_MASK2(X) ((2<<(X-1)) - 2)
+#define TAG_MASK(X) ((2<<((X)-1)) - 1)
+#define TAG_MASK2(X) ((2<<((X)-1)) - 2)
 
 #define ROOT_SYS_DETECT_VEC 0xFFFFFFFFFFFFFFFF
 

@@ -145,7 +145,7 @@ class CDEntry : public Serializable {
 //  public:
     std::string name() const { return tag2str[entry_tag_]; }
     ENTRY_TAG_T name_tag() const { return entry_tag_; }
-    bool isViaReference() { return (dst_data_.handle_type() == DataHandle::kReference); }
+    bool isViaReference() { return (CHECK_TYPE(dst_data_.handle_type(), kRef)); }
 
 
     CDEntry& operator=(const CDEntry& that) {

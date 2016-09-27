@@ -155,10 +155,10 @@ void HandleEntrySearch::HandleEvent(void)
       char *data_to_send = NULL;
       DataHandle &target = target_entry->dst_data_;
     
-      if(target.handle_type() == DataHandle::kMemory) {
+      if(target.handle_type() == kDRAM) {
         data_to_send = static_cast<char *>(target.address_data());
       }
-      else if(target.handle_type() == DataHandle::kOSFile || target.handle_type() == DataHandle::kPFS) {
+      else if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
         data_to_send = new char[target_entry->dst_data_.len()];
         FILE *temp_fp = fopen(target.file_name().c_str(), "r");
         if( temp_fp!= NULL )  {
@@ -196,9 +196,9 @@ void HandleEntrySearch::HandleEvent(void)
     //             &(ptr_cd_->entry_send_req_[tag_to_search].req_));  
 
 
-    if(target.handle_type() == DataHandle::kOSFile || target.handle_type() == DataHandle::kPFS) {
-      delete data_to_send;
-    }
+      if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
+        delete data_to_send;
+      }
 
     }
 
@@ -323,10 +323,10 @@ void HandleEntrySend::HandleEvent(void)
     char *data_to_send = NULL;
     DataHandle &target = entry->dst_data_;
 
-    if(target.handle_type() == DataHandle::kMemory) {
+    if(target.handle_type() == kDRAM) {
       data_to_send = static_cast<char *>(target.address_data());
     }
-    else if(target.handle_type() == DataHandle::kOSFile || target.handle_type() == DataHandle::kPFS) {
+    else if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
       data_to_send = new char[entry->dst_data_.len()];
       FILE *temp_fp = fopen(target.file_name().c_str(), "r");
       if( temp_fp!= NULL )  {
@@ -361,7 +361,7 @@ void HandleEntrySend::HandleEvent(void)
                &(ptr_cd_->entry_req_.back().req_));  
 //               &(ptr_cd_->entry_send_req_[tag_to_search].req_));  
   
-    if(target.handle_type() == DataHandle::kOSFile || target.handle_type() == DataHandle::kPFS) {
+    if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
       delete data_to_send;
     }
     CD_DEBUG("CD Event kEntrySend\t\t\t");

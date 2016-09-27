@@ -33,12 +33,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
-
-#include "packer.h"
-#include "cd_def_internal.h" 
-#include "cd_def_debug.h"
+#include <cstdio>
+#include <cstdint>
+#include <cassert>
+#include <iostream>
 #include <cstring>
-
+#include "packer.h"
+using namespace cd;
+#define CD_DEBUG_COND(...)
+#define ERROR_MESSAGE(...)
 
 #define DEBUG_OFF_PACKER 1
 
@@ -47,12 +50,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 // In the bigger picture there are [Table] section in the beginning and then [Data] section.  In [Table] section we can see where the data is located.
 
-using namespace cd;
 using std::endl;
 using std::cout;
-Packer::Packer() 
+Packer::Packer(bool alloc_flag) 
 : table_size_(0), data_size_(0), used_table_size_(0), used_data_size_(0)
 {
+//  printf("[%s]\n", __func__);
   // What is the rate of growth for the table.
   //There are optimum size, if this is too big then initial effort is too big, if it is too small, then later realloc might happen more often.
   table_grow_unit_ = TABLE_GROW_UNIT;
@@ -60,7 +63,7 @@ Packer::Packer()
   // Same but this goes with data section
   data_grow_unit_ = DATA_GROW_UNIT; 
 
-  alloc_flag_=0;   // FIXME: Might want to have separate memory allocator of our own. 
+  alloc_flag_=alloc_flag;   // FIXME: Might want to have separate memory allocator of our own. 
 
   ptr_table_ = NULL;   
   ptr_data_ = NULL;
@@ -68,26 +71,27 @@ Packer::Packer()
 
   uint64_t ret;
 
-  if( alloc_flag_ == 0)
-  {
-
+  if( alloc_flag_ != 0) {
     ret = CheckAlloc();  // Allocate for the first time
-
-    if( ret == kError)
+    if( ret == kError) {
       ERROR_MESSAGE("Memory allocation failed in Packer class");
+    }
   }
 }
 
 
-Packer::Packer(uint64_t table_grow_unit, uint64_t data_grow_unit) 
+Packer::Packer(uint64_t table_grow_unit, uint64_t data_grow_unit, bool alloc_flag) 
 : table_size_(0), data_size_(0), used_table_size_(0), used_data_size_(0)
 {
+//  printf("[%s]\n", __func__);
   table_grow_unit_ = table_grow_unit;
   data_grow_unit_ = data_grow_unit;
-  alloc_flag_=0;
+  alloc_flag_ = alloc_flag;
   ptr_table_ = NULL;
   ptr_data_ = NULL;
-  CheckAlloc();
+  if(alloc_flag != 0) {
+    CheckAlloc();
+  }
 
 }
 
@@ -95,7 +99,7 @@ Packer::Packer(uint64_t table_grow_unit, uint64_t data_grow_unit)
 
 Packer::~Packer()
 {
-  ClearData();  // Delete allocated data.
+  ClearData(false);  // Delete allocated data.
 }
 
 
@@ -126,7 +130,8 @@ char *Packer::GetTotalData(uint64_t &total_data_size)
   // If the target to be packed is actually empty, return NULL
   if(used_table_size_ + used_data_size_ == 0) return NULL;
 
-  char *total_data = new char [used_table_size_ + used_data_size_+ sizeof(uint64_t) ];  // We should not forget the first 4 byte for indicating table size.
+//  char *total_data = new char [used_table_size_ + used_data_size_+ sizeof(uint64_t) ];  // We should not forget the first 4 byte for indicating table size.
+  char *total_data = (char *)malloc(used_table_size_ + used_data_size_+ sizeof(uint64_t) );  // We should not forget the first 4 byte for indicating table size.
 
   uint64_t table_size = (used_table_size_+sizeof(uint64_t));
 
@@ -144,22 +149,28 @@ char *Packer::GetTotalData(uint64_t &total_data_size)
   return total_data;
 }
 
-
-uint64_t Packer::ClearData()
+uint64_t Packer::ClearData(bool reuse)
 {
 
-  if(ptr_table_ != NULL)
-    delete [] ptr_table_;
-  if(ptr_data_ != NULL)
-    delete [] ptr_data_;
+  if(!reuse) { 
+    if(ptr_table_ != NULL) {
+//      delete [] ptr_table_;
+      free(ptr_table_);
+    }
+    if(ptr_data_ != NULL) {
+//      delete [] ptr_data_;
+      free(ptr_data_);
+    }
+    ptr_data_  = NULL;
+    ptr_table_ = NULL;
+    table_size_ = 0;
+    data_size_ = 0;
+    table_grow_unit_ = TABLE_GROW_UNIT;
+    data_grow_unit_ = DATA_GROW_UNIT; 
+  }
 
+  alloc_flag_ = true;
 
-  ptr_table_ = NULL;
-  ptr_data_  = NULL;
-  alloc_flag_=0;
-
-  table_size_ = 0;
-  data_size_ = 0;
   used_table_size_ = 0;
   used_data_size_ = 0;
 
@@ -191,20 +202,20 @@ uint64_t Packer::CheckAlloc()
 
   if( ptr_table_ == NULL) 
   {
-
-    ptr_table_ = new char[table_grow_unit_];
+//    printf("ptr_table_:%p, table_grow_unit_:%lu\n", ptr_table_, table_grow_unit_);
+//    ptr_table_ = new char[table_grow_unit_];
+    ptr_table_ = (char *)malloc(table_grow_unit_);
     //TODO: Check ASSERT(ptr_table_ != NULL);
     if(ptr_table_ == NULL ) return kMallocFailed;
     table_size_ = table_grow_unit_;
-    alloc_flag_++;
   }
   if( ptr_data_ == NULL)
   {
-    ptr_data_ = new char[data_grow_unit_];
+//    ptr_data_ = new char[data_grow_unit_];
+    ptr_data_ = (char *)malloc(data_grow_unit_);
     //TODO: Check ASSERT(ptr_data_ != NULL);
     if(ptr_data_ == NULL ) return kMallocFailed;
     data_size_ = data_grow_unit_;
-    alloc_flag_++;
   }
 
   if( ptr_data_ == NULL || ptr_table_ == NULL)
@@ -215,17 +226,21 @@ uint64_t Packer::CheckAlloc()
 
 }
 
-uint64_t Packer::CheckRealloc(uint64_t length) 
+uint64_t Packer::CheckRealloc(uint64_t length, uint64_t required_size) 
 {
-
+//  printf("[%s]\n %lu > %lu\n", __func__, length, data_size_ - used_data_size_); //getchar();
+//  printf("%s\n", __func__);// getchar();
   if( used_table_size_ + PACKER_ENTRY_SIZE > table_size_ )
   {
+    //printf("%s table\n", __func__);// getchar();
     char *tmp1;
 
-    tmp1 = new char[ table_size_ + table_grow_unit_ ];
+//    tmp1 = new char[ table_size_ + table_grow_unit_ ];
+    tmp1 = (char *)malloc( table_size_ + table_grow_unit_ );
     //TODO: check ASSERT( tmp1!=NULL );
     memcpy(tmp1,ptr_table_,table_size_);
-    delete [] ptr_table_;
+//    delete [] ptr_table_;
+    free(ptr_table_);
 
     ptr_table_ = tmp1;
 
@@ -233,41 +248,51 @@ uint64_t Packer::CheckRealloc(uint64_t length)
     if( ptr_table_ == NULL ) return kReallocFailed;
     table_size_ += table_grow_unit_;
 
-
+    table_grow_unit_ <<= 2;
+    table_grow_unit_ = (table_grow_unit_ < MEGABYTE)? table_grow_unit_ : MEGABYTE;
+    //printf("%s table %lu\n", __func__, table_grow_unit_);// getchar();
 
   }
-  if( used_data_size_ + length > data_size_ )
-  {
-    char *tmp2;
-
-    if( used_data_size_ + length < used_data_size_+data_grow_unit_ ) 
-    { // if data fits within the current memory allocation. 
-      tmp2 = new char[data_size_ + data_grow_unit_];/////////////
-      memcpy(tmp2,ptr_data_,data_size_);
-      delete [] ptr_data_;
-      ptr_data_ = tmp2;
-      //TODO: ASSERT( ptr_data_ != NULL);
-      if( ptr_data_ == NULL ) return kReallocFailed;
-      data_size_ += data_grow_unit_;
-    }
-    else // if data has grown bigger than the currently allocated memory region, get reallocation with bigger size 
-    {	
-      tmp2 = new char[data_size_ + length];
-      memcpy(tmp2,ptr_data_,data_size_);
-      delete [] ptr_data_;
-      ptr_data_ =tmp2;
-      //TODO: ASSERT( ptr_data_ != NULL);
-      if( ptr_data_ == NULL) return kReallocFailed;
-      data_size_+=length;
+//  uint64_t left_data = data_size_ - used_data_size_;
+//  if(data_size_ > GIGABYTE) { 
+//    printf("data size:%lu (used:%lu)\n", data_size_, used_data_size_);// getchar();
+//  }
+  while( length >= data_size_ - used_data_size_ ) {
+    //printf("%s data 1 %lu > %lu (%lu)\n", __func__, used_data_size_+length, data_size_, used_data_size_);//getchar();
+    uint64_t new_data_size = data_size_ + length;
+    if( data_size_ > TWO_GIGABYTE ) {
+      data_grow_unit_ = (length > data_grow_unit_)? length : data_grow_unit_;
+      new_data_size = data_size_ + data_grow_unit_;
+    } else {
+      new_data_size *= 2;
     }
 
+    // doubling
+//    new_data_size = (new_data_size > GIGABYTE)? new_data_size*2 : new_data_size + length;
+//    data_grow_unit_ += length;
+//    new_data_size = (new_data_size > TWO_GIGABYTE)? data_size_ + data_grow_unit_ : new_data_size;
+//
+//
+//    char *tmp2 = new char[new_data_size];/////////////
+    char *tmp2 = (char *)malloc(new_data_size);/////////////
+//    printf("\n\n\nalloc large [%p - %p] data_size:%lu\n\n\n", tmp2, tmp2+new_data_size, new_data_size); //getchar();
+
+    memcpy(tmp2,ptr_data_,data_size_);
+//    delete [] ptr_data_;
+    free(ptr_data_);
+    ptr_data_ = tmp2;
+    data_size_ = new_data_size;
+
+    //TODO: ASSERT( ptr_data_ != NULL);
+    assert(ptr_data_);
+    if( ptr_data_ == NULL ) return kReallocFailed;
   }
   return kOK;
 }
 
 void Packer::WriteData(char *ptr_data, uint64_t length, uint64_t position)
 {
-//  printf("[Packer::%s] %p, %llu(len), %llu(pos)\n", __func__, ptr_data, length, position); //getchar();
+//  printf("[Packer::%s] %p, %lu(len), %lu(pos)\n", __func__, ptr_data, length, position); //getchar();
   if( ptr_data != NULL ) {	
     memcpy( ptr_data_ + position, ptr_data, length );
 
@@ -294,33 +319,34 @@ uint64_t Packer::AddData(uint64_t id, uint64_t length, uint64_t position, char *
 {
   uint64_t ret;
 
-  CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
-  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Packer::AddData] Before CheckRealloc ptr_table : %p\n", (void *)ptr_table_);
+//  CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
+//  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Packer::AddData] Before CheckRealloc ptr_table : %p\n", (void *)ptr_table_);
 
   if ( (ret = CheckRealloc(length)) != kOK ) 
   {
+    assert(0);
     return ret;  
   }
 
-  CD_DEBUG_COND(DEBUG_OFF_PACKER, "Before write word, ptr_table : %p\n", (void *)ptr_table_);
+//  CD_DEBUG_COND(DEBUG_OFF_PACKER, "Before write word, ptr_table : %p\n", (void *)ptr_table_);
 
   WriteWord(ptr_table_ + used_table_size_, id); 
   WriteWord(ptr_table_ + used_table_size_ + PACKER_UNIT_1, length); 
   WriteWord(ptr_table_ + used_table_size_ + PACKER_UNIT_2, position); 
 
-  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Get Info from table] id : %u (%p), length : %u (%p), position : %u (%p), ptr_data : %p\n",
-				  id, (void*)(ptr_table_ + used_table_size_), 
-					length, (void*)(ptr_table_ + used_table_size_ + PACKER_UNIT_1), 
-					position, (void*)(ptr_table_ + used_table_size_ + PACKER_UNIT_2), 
-					(void*)ptr_data);
-  CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)ptr_data, (void *)(ptr_data_ + position));
-  CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
+//  CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Get Info from table] id : %u (%p), length : %u (%p), position : %u (%p), ptr_data : %p\n",
+//				  id, (void*)(ptr_table_ + used_table_size_), 
+//					length, (void*)(ptr_table_ + used_table_size_ + PACKER_UNIT_1), 
+//					position, (void*)(ptr_table_ + used_table_size_ + PACKER_UNIT_2), 
+//					(void*)ptr_data);
+//  CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)ptr_data, (void *)(ptr_data_ + position));
+//  CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
 
   used_table_size_ += PACKER_ENTRY_SIZE;    
   WriteData(ptr_data,length,position); 
 
   used_data_size_ += length; 
-
+//  printf("used_data_size:%lu / %lu\n", used_data_size_, data_size_);
   return kOK;
 }
 
@@ -354,7 +380,8 @@ void Unpacker::GetAt(const char *src_data, uint64_t find_id, void *target_ptr, u
       size = GetWord(src_data + reading_pos_ + PACKER_UNIT_1); // FIXME: Currently assumed uint64_t is 4 bytes long.
       pos  = GetWord(src_data + reading_pos_ + PACKER_UNIT_2);
       if(target_ptr == NULL) {
-        target_ptr = new char[size];
+//        target_ptr = new char[size];
+        target_ptr = (char *)malloc(size);
       }
 
       memcpy(target_ptr, src_data+table_size_+pos, size); 
@@ -385,7 +412,8 @@ char *Unpacker::GetAt(const char *src_data, uint64_t find_id, uint64_t &return_s
     if( id == find_id ) {
       size = GetWord(src_data + reading_pos_ + PACKER_UNIT_1); // FIXME: Currently assumed uint64_t is 4 bytes long.
       pos  = GetWord(src_data + reading_pos_ + PACKER_UNIT_2);
-      str_return_data = new char[size];
+//      str_return_data = new char[size];
+      str_return_data = (char *)malloc(size);
       memcpy(str_return_data, src_data+table_size_+pos, size); 
       return_id = id;
       return_size = size;
@@ -414,7 +442,8 @@ uint64_t Unpacker::GetAt(const char *src_data, uint64_t find_id, void *return_da
   if( pData != NULL)
   {
     memcpy(return_data,pData,return_size);
-    delete [] pData;
+//    delete [] pData;
+    free(pData);
     return kOK;
   }
   else
@@ -431,7 +460,7 @@ char *Unpacker::GetAt(const char *src_data, uint64_t find_id, uint64_t &return_s
 
 void Unpacker::ReadData(char *str_return_data, char *src_data, uint64_t pos, uint64_t size)
 {
-//  printf("[Unpacker::%s] %p %p %llu (pos) %llu (len)\n", __func__, str_return_data, src_data, pos, size); //getchar();
+//  printf("[Unpacker::%s] %p %p %lu (pos) %lu (len)\n", __func__, str_return_data, src_data, pos, size); //getchar();
   if( str_return_data != NULL && src_data != NULL ) {	
     memcpy(str_return_data, src_data + table_size_ + pos, size); 
   } else {
@@ -455,9 +484,10 @@ char *Unpacker::GetNext(char *src_data,  uint64_t &return_id, uint64_t &return_s
     size = GetWord( src_data + cur_pos_ + PACKER_UNIT_1);
     pos  = GetWord( src_data + cur_pos_ + PACKER_UNIT_2);
 
-    if(alloc)
-      str_return_data = new char[size];
-    else {
+    if(alloc) {
+//      str_return_data = new char[size];
+      str_return_data = (char *)malloc(size);
+    } else {
       str_return_data = (char *)dst;
       if(dst_size != size) {
         CD_DEBUG_COND(DEBUG_OFF_PACKER, "dst_size : %lu, size from packer : %d\n", dst_size, size);
@@ -473,7 +503,8 @@ char *Unpacker::GetNext(char *src_data,  uint64_t &return_id, uint64_t &return_s
 
     CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), (void *)str_return_data);
 
-    memcpy(str_return_data, src_data+table_size_+pos, size); 
+//    memcpy(str_return_data, src_data+table_size_+pos, size); 
+    ReadData(str_return_data, src_data, pos, size); 
 
     CD_DEBUG_COND(DEBUG_OFF_PACKER, "Read Data is %s", (char *)str_return_data);
  
@@ -527,6 +558,42 @@ void *Unpacker::GetNext(void *str_return_data, void *src_data,  uint64_t &return
   }
   else
     return NULL;
+}
+
+char *Unpacker::PeekNext(char *src_data, uint64_t &return_size, uint64_t &return_id)
+{
+  char *str_return_data = NULL;
+  uint64_t id, size, pos;
+  if(src_data == 0) return NULL;
+//  assert(src_data != 0);
+
+  table_size_ = GetWord(src_data);
+  CD_DEBUG_COND(DEBUG_OFF_PACKER, "table size : %u\n", table_size_);
+
+  if( cur_pos_ < table_size_ ) {
+    id   = GetWord( src_data + cur_pos_ );
+    size = GetWord( src_data + cur_pos_ + PACKER_UNIT_1);
+    pos  = GetWord( src_data + cur_pos_ + PACKER_UNIT_2);
+    
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "[Get Info from table] id : %u (%p), size : %u (%p), pos : %u (%p)\n",
+             id, (void *)((char *)src_data + cur_pos_),
+             size, (void *)((char *)src_data + cur_pos_+ PACKER_UNIT_1),
+             pos, (void *)((char *)src_data + cur_pos_+ PACKER_UNIT_2));
+
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Bring data from %p to %p\n", (void *)((char *)src_data+table_size_+pos), (void *)str_return_data);
+
+    str_return_data = src_data + table_size_ + pos;
+
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "Read Data is %s", (char *)str_return_data);
+ 
+    return_size = size;
+    return_id = id;
+    cur_pos_ += PACKER_ENTRY_SIZE;
+
+    CD_DEBUG_COND(DEBUG_OFF_PACKER, "==========================================================\n");
+
+  }
+  return str_return_data;
 }
 
 

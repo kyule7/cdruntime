@@ -36,15 +36,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifndef _PACKER_H
 #define _PACKER_H
 
-/**
- * @file packer.h
- * @author Jinsuk Chung, Kyushick Lee
- * @date March 2015
- *
- * \brief Packing object for serialization
- *
- */
-#include "cd_global.h"
 
 // Packer packer;
 // packer.Add(ID_NAME, 100, name_ptr);
@@ -53,45 +44,30 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // char *serialized_data = packer.GetTotalData( total_data_size);
 // packer.Add(ID_SOMETHING, 10, something_ptr);
 // char *serialized_data = packer.GetTotalData( total_data_size);
-
-namespace cd {
-/** \addtogroup utilities Utilities for CD runtime
- *
- *@{
- *
- */
-
-/**@class cd::Packer
- * @brief Packing object for serialization 
- *
- *
- * Data layout
- * [TableLength][ID][Length][Position][ID][Length][Position][ID][Length][Position]...[DATAChunk]
- * 
- * First 4 byte is the size of the chunk
- * Next following is the ones that describes all data's positions.   
- * ID is identifier
- * Length is the length of the data in bytes, 
- * and Position is the relative position starting from where consqutive data is located
- *
- */ 
+#include <stdint.h>
+#include "serializable.h"
+#define MEGABYTE        1048576
+#define GIGABYTE     1073741824 
+#define TWO_GIGABYTE 2147483648
+#define FOUR_GIGABYTE 4294967296
 #define PACKER_ENTRY_SIZE 24
 #define PACKER_UNIT_0 8
 #define PACKER_UNIT_1 8
 #define PACKER_UNIT_2 16
-#define TABLE_GROW_UNIT 2048
-#define DATA_GROW_UNIT 4194304
-
+#define TABLE_GROW_UNIT 4096
+#define DATA_GROW_UNIT 8388608 // 8KB
+namespace cd {
 class Packer {
   public:
 
 ///@brief Enumerator internally used in Packer.
-    enum PackerErrT { kOK =0,         //!< No errors. 
+    enum PackerErrT { kOK =0,         //!< No errors.
+                      kError, 
                       kMallocFailed,  //!< Malloc failed.
                       kReallocFailed, //!< Realloc failed.
                       };
-    Packer();
-    Packer(uint64_t table_grow_unit, uint64_t data_grow_unit);
+    Packer(bool alloc_flag=true);
+    Packer(uint64_t table_grow_unit, uint64_t data_grow_unit, bool alloc_flag=true);
     virtual ~Packer();
 
 
@@ -104,11 +80,14 @@ class Packer {
 
 ///@brief Grow buffer size internally used in packer.
     virtual void SetBufferGrow( uint64_t table_grow_unit, uint64_t data_grow_unit);
-    uint64_t ClearData();
+    virtual uint64_t ClearData(bool reuse);
+    char *GetDataPtr(void) { return ptr_data_; }
+    uint64_t GetDataSize(void) { return used_data_size_; }
   protected:
     uint64_t AddData(uint64_t id, uint64_t length, uint64_t position, char *ptr_data);
-    virtual uint64_t CheckAlloc(void);
-    virtual uint64_t CheckRealloc(uint64_t length);
+    uint64_t CheckAlloc(void);
+//    virtual uint64_t CheckRealloc(uint64_t length);
+    virtual uint64_t CheckRealloc(uint64_t length, uint64_t required_size=0);
     void WriteWord(char *dst_buffer,uint64_t value);
     virtual void WriteData(char *ptr_data, uint64_t length, uint64_t position);
     void Copy(const Packer& that);
@@ -122,10 +101,17 @@ class Packer {
     uint64_t used_table_size_; 
     uint64_t used_data_size_; 
 
-    uint64_t alloc_flag_;
+    bool alloc_flag_;
 
     char *ptr_table_;
     char *ptr_data_;
+  public:
+    bool Alloced(void) {
+      return alloc_flag_ != false;
+    }
+    uint64_t used_data_size(void) {
+     return used_data_size_;
+    } 
 };
 
 
@@ -177,10 +163,13 @@ class Unpacker {
 
 
 ///@brief Get next data from data table.
-    char *GetNext(char *src_data,  uint64_t &dwGetID, uint64_t &return_size, bool alloc=true, void *dst=NULL, uint64_t dst_size=0);  
+    char *GetNext(char *src_data,  uint64_t &dwGetID, uint64_t &return_size, bool alloc=true, void *dst=0, uint64_t dst_size=0);  
 
 ///@brief Get next data from data table.
     void *GetNext(void *str_return_data, void *src_data,  uint64_t &return_id, uint64_t &return_size);
+
+///@brief Peek next data from data table.
+    char *PeekNext(char *src_data, uint64_t &return_size, uint64_t &return_id);
 
 ///@brief Initialize seek.
     void SeekInit();
@@ -201,8 +190,9 @@ class Unpacker {
 
 };
 
-/** @} */ // End group utilities
-} // namespace cd ends
-
-/** @} */ // End group utilities
+class PackerSerializable : public Serializable {
+  public:
+    virtual void PreserveObject(Packer *packer)=0;
+};
+}
 #endif

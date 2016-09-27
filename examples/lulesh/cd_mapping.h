@@ -140,9 +140,9 @@
 
 //#define SWITCH_0_0_0   (8<<CDFLAG_SIZE) | kStrict  | kDRAM              // Main Loop
 #define SWITCH_0_0_0  3                                                   // Main Loop
-#define CD_MAP_0_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM  | ERROR_VEC_0) // 
+#define CD_MAP_0_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) // 
 #define SWITCH_1_0_0  3                                                   // TimeIncrement
-#define CD_MAP_1_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //
+#define CD_MAP_1_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD | ERROR_VEC_0) //
 #define SWITCH_1_2_0  0                                                   // LagrangeLeapFrog
 #define CD_MAP_1_2_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //
 #define SWITCH_2_0_0  0                                                   //       LagrangeNodal
@@ -214,7 +214,7 @@
 #define CD_MAP_3_6_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_1) //             # O{delx_zeta,delv_xi,delx_eta,delv_eta}, I{vnew}
 //                    *************************************************** CommRecvMONOQ ************************************************* 
 #define SWITCH_4_3_0  0                                                   //               CalcMonotonicQGradientsForElems
-#define CD_MAP_4_3_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //  # O{delx_zeta,delv_xi,delx_eta,delv_eta}, I{nodelist,x,xd,volo}
+#define CD_MAP_4_3_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                 # O{delx_zeta,delv_xi,delx_eta,delv_eta}, I{nodelist,x,xd,volo}
 //                    *************************************************** CommSendMONOQ && CommMonoQ ************************************
 #define SWITCH_4_4_0  0                                                   //               CalcMonotonicQForElems (loop in it)
 #define CD_MAP_4_4_0  ((8<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                 # O{qq,ql}, I{numReg,dom,zeta,xi,x_eta,v_eta...}} 

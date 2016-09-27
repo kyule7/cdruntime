@@ -36,14 +36,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "data_handle.h"
 #include "util.h"
 #include "packer.h"
-#include "unpacker.h"
+//#include "unpacker.h"
 using namespace cd;
 using namespace cd::internal;
 using namespace std;
 
 
 DataHandle::DataHandle(void) 
-  : handle_type_(kMemory), 
+  : handle_type_(kDRAM), 
     address_data_(0), len_(0), 
     fp_(NULL), fpos_(0), 
     ref_name_(0), ref_offset_(0), 
@@ -63,7 +63,7 @@ DataHandle::DataHandle(const DataHandle &that)
 }
 
 // DataHandle for preservation to memory
-DataHandle::DataHandle(HandleType handle_type, 
+DataHandle::DataHandle(uint32_t handle_type, 
                        void *address_data, const uint64_t& len, 
                        const NodeID &node_id)
   : handle_type_(handle_type), 
@@ -76,7 +76,7 @@ DataHandle::DataHandle(HandleType handle_type,
 }
 
 // DataHandle for preservation to file system
-DataHandle::DataHandle(HandleType handle_type, 
+DataHandle::DataHandle(uint32_t handle_type, 
                        void *address_data, const uint64_t& len, 
                        const NodeID &node_id, 
                        const std::string &file_name, FILE *fp, long fpos)
@@ -90,7 +90,7 @@ DataHandle::DataHandle(HandleType handle_type,
 }
 
 // DataHandle for preservation via reference
-DataHandle::DataHandle(HandleType handle_type, 
+DataHandle::DataHandle(uint32_t handle_type, 
                        void *address_data, const uint64_t& len, 
                        std::string ref_name, uint64_t ref_offset, const NodeID &node_id)
   : handle_type_(handle_type), 
@@ -144,7 +144,7 @@ void *DataHandle::Serialize(uint64_t& len_in_bytes)
   void *node_id_packed_p = node_id_.Serialize(node_id_packed_len);
   assert(node_id_packed_len != 0);
   data_packer.Add(DATA_PACKER_NODE_ID, node_id_packed_len, node_id_packed_p);
-  data_packer.Add(DATA_PACKER_HANDLE_TYPE, sizeof(HandleType), &handle_type_);
+  data_packer.Add(DATA_PACKER_HANDLE_TYPE, sizeof(uint32_t), &handle_type_);
   data_packer.Add(DATA_PACKER_ADDRESS, sizeof(void*), &address_data_);
 
   CD_DEBUG("address data is packed : %p\n\n", address_data_);
@@ -178,7 +178,7 @@ void DataHandle::Deserialize(void *object)
   
   CD_DEBUG("1st unpacked thing in data_handle : %s, return size : %u\n", node_id_.GetString().c_str(), return_size);
 
-  handle_type_ = *(HandleType *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
+  handle_type_ = *(uint32_t *)data_unpacker.GetNext((char *)object, dwGetID, return_size);
 
   CD_DEBUG("2nd unpacked thing in data_handle : %u, return size : %u\n", dwGetID, return_size);
 

@@ -47,6 +47,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_features.h"
 #include "cd_global.h"
 #include "cd_def_internal.h"
+#include "cd_def_common.h"
 #include "cd_handle.h"
 #include "cd_entry.h"
 #include "util.h"
@@ -56,6 +57,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "serializable.h"
 #include "event_handler.h"
 #include "cd_pfs.h"
+#include "packer.h"
 
 #include <list>
 
@@ -266,6 +268,8 @@ class CD : public Serializable {
 
     
     static std::list<EventHandler *> cd_event_;
+    
+    Packer packer_;
 /*  
 09.23.2014 
 It is not complete yet. I am thinking of some way to implement like cd_advance semantic which should allow

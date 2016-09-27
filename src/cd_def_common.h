@@ -138,6 +138,8 @@
                     kPFS=CD_BIT_5,   //!< Preserve to Parallel File System
                     kReserveMedium0=CD_BIT_6,  //!< Preserve to Parallel File System
                     kReserveMedium1=CD_BIT_7,  //!< Preserve to Parallel File System
+                    kLocalFile=24,
+                    kAllFile=56
                   };
 
 
@@ -187,8 +189,9 @@
                                       //!< duplicate the data because serialized data is
                                       //!< already another form of preservation.
                                       //!< This can be used such as kCopy | kSerdes
-                      kReservedPrvT0=CD_BIT_13,
-                      kReservedPrvT1=CD_BIT_14
+                      kSource=CD_BIT_13, //!< Indicates application data
+                      kReservedPrvT0=CD_BIT_14,
+                      kReservedPrvT1=CD_BIT_15
                     };
 
 
@@ -197,16 +200,16 @@
  *
  * \sa CDHandle::Preserve(), CDHandle::Complete()
  */
-  enum PreserveUseT { kUnsure=CD_BIT_15,   //!< Not sure whether data being preserved will be written 
+  enum PreserveUseT { kUnsure=CD_BIT_16,   //!< Not sure whether data being preserved will be written 
                                         //!< by the CD (treated as Read/Write for now, but may be optimized later)
-                      kReadOnly=CD_BIT_16, //!< Data to be preserved is read-only within this CD
-                      kReadWrite=CD_BIT_17 //!< Data to be preserved will be modified by this CD
+                      kReadOnly=CD_BIT_17, //!< Data to be preserved is read-only within this CD
+                      kReadWrite=CD_BIT_18 //!< Data to be preserved will be modified by this CD
                     };
 
 /** @} */ // end of preservation_funcs
 
-  enum CtxtPrvMode { kExcludeStack=CD_BIT_18, 
-                     kIncludeStack=CD_BIT_19
+  enum CtxtPrvMode { kExcludeStack=CD_BIT_19, 
+                     kIncludeStack=CD_BIT_20
                    };
 
 /**@addtogroup PGAS_funcs 

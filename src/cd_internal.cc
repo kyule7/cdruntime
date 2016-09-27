@@ -2482,9 +2482,16 @@ CD::InternalPreserve(void *data,
 
     void *dst_data = NULL;
     if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
-      dst_data = (static_cast<Serializable *>(data))->Serialize(len_in_bytes);
+      (static_cast<PackerSerializable *>(data))->PreserveObject(&packer_);
+#if 1
+      dst_data = packer_.GetDataPtr();
+      len_in_bytes = packer_.GetDataSize();
+//      if(myTaskID == 0) printf("len_in_bytes:%lu\n", len_in_bytes);
+#else
+      dst_data = packer_.GetTotalData(len_in_bytes);
+#endif
      // printf("[%s] serialize len2 : %lu\n", __func__,len_in_bytes);
-      assert(len_in_bytes);
+//      assert(len_in_bytes);
     }
    // printf("[%s] serialize len2 : %lu\n", __func__,len_in_bytes);
 
@@ -2499,12 +2506,12 @@ CD::InternalPreserve(void *data,
         case kDRAM: {
           CD_DEBUG("[MEDIUM TYPE : kDRAM] ------------------------------------------\n");
 #if _PGAS_VER
-          cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                                 DataHandle(DataHandle::kMemory, dst_data, len_in_bytes, cd_id_.node_id_), 
+          cd_entry = new CDEntry(DataHandle(kSource, data, len_in_bytes, cd_id_.node_id_), 
+                                 DataHandle(kDRAM, dst_data, len_in_bytes, cd_id_.node_id_), 
                                  my_name, this, GetSyncCounter());
 #else
-          cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                                 DataHandle(DataHandle::kMemory, dst_data, len_in_bytes, cd_id_.node_id_), 
+          cd_entry = new CDEntry(DataHandle(kSource, data, len_in_bytes, cd_id_.node_id_), 
+                                 DataHandle(kDRAM, dst_data, len_in_bytes, cd_id_.node_id_), 
                                  my_name, this, (uint32_t)prv_medium_ | (uint32_t)preserve_mask);
 #endif
 
@@ -2552,8 +2559,8 @@ CD::InternalPreserve(void *data,
         {
           char *filepath = file_handle_.GetFilePath();
           CD_DEBUG("[MEDIUM TYPE : File %d]:%s -- %s ----\n", GetPlaceToPreserve(), filepath, cd_id_.GetString().c_str());
-          cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                                 DataHandle(DataHandle::kOSFile, dst_data, len_in_bytes, cd_id_.node_id_, 
+          cd_entry = new CDEntry(DataHandle(kSource, data, len_in_bytes, cd_id_.node_id_), 
+                                 DataHandle(MASK_TYPE(preserve_mask, kLocalFile), dst_data, len_in_bytes, cd_id_.node_id_, 
                                             filepath,
                                             file_handle_.fp_, 
                                             file_handle_.UpdateFilePos(len_in_bytes)), 
@@ -2600,8 +2607,8 @@ CD::InternalPreserve(void *data,
         case kPFS: {
           CD_DEBUG("[MEDIUM TYPE : kPFS] ------------------------------------------\n");
 
-          cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                                 DataHandle(DataHandle::kPFS, dst_data, len_in_bytes, cd_id_.node_id_), 
+          cd_entry = new CDEntry(DataHandle(kSource, data, len_in_bytes, cd_id_.node_id_), 
+                                 DataHandle(kPFS, dst_data, len_in_bytes, cd_id_.node_id_), 
                                  my_name, this, (uint32_t)prv_medium_ | (uint32_t)preserve_mask);
 
           //Do we need to check for anything special for accessing to the global filesystem? 
@@ -2656,8 +2663,8 @@ CD::InternalPreserve(void *data,
       CD_DEBUG("Preservation via %d (reference)\n", GetPlaceToPreserve());
 
       // set handle type and ref_name/ref_offset
-      cd_entry = new CDEntry(DataHandle(DataHandle::kSource, data, len_in_bytes, cd_id_.node_id_), 
-                             DataHandle(DataHandle::kReference, 0, len_in_bytes, ref_name, ref_offset, cd_id_.node_id_), 
+      cd_entry = new CDEntry(DataHandle(kSource, data, len_in_bytes, cd_id_.node_id_), 
+                             DataHandle(kRef, 0, len_in_bytes, ref_name, ref_offset, cd_id_.node_id_), 
                              my_name, this, (uint32_t)prv_medium_ | (uint32_t)preserve_mask);
 //      cd_entry->set_my_cd(this); // this required for tracking parent later.. this is needed only when via ref
 
@@ -3372,6 +3379,8 @@ void CD::DeleteEntryDirectory(void)
     remote_entry_directory_map_.erase(it->name_tag());
     entry_directory_.erase(it++);
   }
+
+  packer_.ClearData(true);
 
   CD_DEBUG("Delete entry directory!\n");
 
