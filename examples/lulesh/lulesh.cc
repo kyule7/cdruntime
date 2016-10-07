@@ -420,31 +420,31 @@ struct Singleton {
     }
  
     // Gather among ranks in the same node
-    MPI_Gather(latency_history, history_size, MPI_UNSIGNED, 
+    PMPI_Gather(latency_history, history_size, MPI_UNSIGNED, 
                latency_history_semiglobal, history_size, MPI_UNSIGNED, 
                0, node_comm);
  
-    MPI_Gather(histogram, HISTO_SIZE, MPI_UNSIGNED, 
+    PMPI_Gather(histogram, HISTO_SIZE, MPI_UNSIGNED, 
                histogram_semiglobal, HISTO_SIZE, MPI_UNSIGNED, 
                0, node_comm);
 #ifdef _ANALYZE_PHASE
     if(num_phase != -1) {
-      MPI_Gather(histogram_phase, HISTO_SIZE * num_phase, MPI_UNSIGNED, 
+      PMPI_Gather(histogram_phase, HISTO_SIZE * num_phase, MPI_UNSIGNED, 
                  histogram_phase_semiglobal, HISTO_SIZE * num_phase, MPI_UNSIGNED, 
                  0, node_comm);
     }
 #endif
     // Gather among zero ranks
     if(myNodeRank == 0) {
-       MPI_Gather(latency_history_semiglobal, history_size * numNodeRanks, MPI_UNSIGNED, 
+       PMPI_Gather(latency_history_semiglobal, history_size * numNodeRanks, MPI_UNSIGNED, 
                   latency_history_global, history_size * numNodeRanks, MPI_UNSIGNED, 
                   0, zero_comm);
-       MPI_Gather(histogram_semiglobal, HISTO_SIZE * numNodeRanks, MPI_UNSIGNED,
+       PMPI_Gather(histogram_semiglobal, HISTO_SIZE * numNodeRanks, MPI_UNSIGNED,
                   histogram_global, HISTO_SIZE * numNodeRanks, MPI_UNSIGNED, 
                   0, zero_comm);
 #ifdef _ANALYZE_PHASE
        if(num_phase != -1) {
-          MPI_Gather(histogram_phase_semiglobal, HISTO_SIZE * numNodeRanks * num_phase, MPI_UNSIGNED,
+          PMPI_Gather(histogram_phase_semiglobal, HISTO_SIZE * numNodeRanks * num_phase, MPI_UNSIGNED,
                      histogram_phase_global, HISTO_SIZE * numNodeRanks * num_phase, MPI_UNSIGNED, 
                      0, zero_comm);
        }
@@ -517,16 +517,28 @@ struct Singleton {
     fclose(histfp);
 #endif
 
+#if 0
     if(myRank == 0) {
       delete latency_history_global;
       delete histogram_global;
+#ifdef _ANALYZE_PHASE
+      if(num_phase != -1) {
+        delete histogram_phase_global;
+      }
+#endif
     }
     if(myNodeRank == 0) {
       delete latency_history_semiglobal;
       delete histogram_semiglobal;
+#ifdef _ANALYZE_PHASE
+      if(num_phase != -1) {
+        delete histogram_phase_semiglobal;
+      }
+#endif
     }
-  }
-};
+#endif
+  } // Finalize ends
+}; // class Singleton ends
 
 //double Singleton::start_clk = 0.0;
 Singleton st;

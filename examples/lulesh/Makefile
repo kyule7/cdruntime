@@ -20,7 +20,7 @@ CD_FLAGS += -D_ANALYZE_PHASE #-D_DEBUG_PRV
 #CD_LINKFLAGS += -D_ANALYZE_PHASE #-D_DEBUG_PRV
 
 SERCXX   = g++ -DUSE_MPI=0 
-MPICXX   = mpic++ -DUSE_MPI=1 
+MPICXX   = mpicxx -DUSE_MPI=1 
 CXX      = $(MPICXX) 
 CXXFLAGS = -g -std=gnu++0x  -I${SILO_INCDIR} -Wall -Wno-pragmas -fmax-errors=1 ${CD_CFLAGS} ${CD_FLAGS} 
 LDFLAGS  = ${CD_LINKFLAGS}
