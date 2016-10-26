@@ -409,6 +409,7 @@ extern CD_CLOCK_T create_elapsed_time;
 extern CD_CLOCK_T destroy_elapsed_time;
 extern CD_CLOCK_T begin_elapsed_time;
 extern CD_CLOCK_T compl_elapsed_time;
+extern CD_CLOCK_T advance_elapsed_time;
 
 extern CD_CLOCK_T mailbox_elapsed_time;
 /**@addtogroup runtime_logging 

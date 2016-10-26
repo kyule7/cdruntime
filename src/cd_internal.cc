@@ -524,6 +524,7 @@ CDHandle *CD::Create(CDHandle *parent,
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err)
 {
+  printf("%s]cd size:%zu\n", __func__, sizeof(*this));
   /// Create CD object with new CDID
   CDHandle *new_cd_handle = NULL;
 
@@ -1659,7 +1660,116 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
 } // CD::Complete ends
 
 
+CDErrT Advance(bool collective)
+{
+  uint32_t orig_rollback_point = CheckRollbackPoint(false);
+//  bool my_need_reexec = need_reexec;
+  CD_DEBUG("%s %s \t Reexec from %u (Before Sync)\n", 
+          GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
+//  printf("%s check this out\n", __func__);
 
+#if CD_MPI_ENABLED
+  // This is important synchronization point 
+  // to guarantee the correctness of CD-enabled program.
+  uint32_t new_rollback_point = orig_rollback_point;
+#if BUGFIX_0327
+  if(collective) {
+    new_rollback_point = SyncCDs(this, false);
+    CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
+    new_rollback_point = SetRollbackPoint(new_rollback_point, false);
+  } else {
+    new_rollback_point = CheckRollbackPoint(false);
+    CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
+    new_rollback_point = SetRollbackPoint(new_rollback_point, false);
+  }
+#else
+  if(collective) {
+    SyncCDs(this);
+  }
+
+  CD_DEBUG("%s %s \t Reexec from %u (After Sync)\n", 
+          GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
+
+  if(task_size() > 1 && (GetCurrentCD() != GetRootCD())) {
+    new_rollback_point = CheckRollbackPoint(true); // read from head
+    CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
+    new_rollback_point = SetRollbackPoint(new_rollback_point, false);
+    CD_DEBUG("rollback point after set it locally:%u\n", new_rollback_point);
+  } else {
+    new_rollback_point = CheckRollbackPoint(false);
+  }
+#endif
+
+#else // CD_MPI_ENABLED ends
+  //printf("[%s] okay?\n"); fflush(stdout);
+  uint32_t new_rollback_point = CheckRollbackPoint(false); fflush(stdout);
+  //printf("[%s] new rollack point = %u\n", __func__, new_rollback_point);
+#endif
+//  if(new_rollback_point != INVALID_ROLLBACK_POINT) { 
+  if(new_rollback_point <= level()) { 
+    // If another task set rollback_point lower than this task (error occurred at this task),
+    // need_sync is false. 
+    // Let's say it was set to 3. But another task set to 1. Then it is false;
+    // Or originally it is INVALID_ROLLBACK_POINT, then it is false.
+    // (ex. 0xFFFFFFF > any other level. 
+    // Therefore, if orig_reexec_flag is INVALID_ROLLBACK_POINT,
+    // this conditino is always false.
+    // This is true only if this task got failed and set orig_reexec_flag to some level to reexecute from,
+    // and no other task raised some lower escalation point than this level.
+    // TODO: What if it is reported while calling GetCDToRecover??
+    // This is tricky. 
+    // Let's say, some other task is stuck at level 1. 
+    // And task A set to level 3 from 4 (escalation)
+    // It will somehow coordinate tasks in the same CD in level 3, not the other tasks in different CDs at level 3.
+    // The tasks corresponding to the CD in level 3 will reach some point,
+    // and it detected that it needs to go to level 1 by some tasks in the different CD in the same level 3.
+    // 0309
+    // Rethink the condition to sync
+    // <Example>
+    // Task0 is at level 4 and rollback_point is 3
+    // The other thread is at level 3. And They are waiting for Task0.
+    // This case Task0 must call sync.
+    // 
+    //
+    //bool need_sync = orig_rollback_point <= *rollback_point_ && level() != *rollback_point_;
+    // FIXME
+//    printf("GetCDLevel : %u (cur %u), path size: %lu\n", *rollback_point_, level(), CDPath::uniquePath_->size());
+
+    // If this task did not expect to reexecute, but is tunred out to be, it does not need sync.
+    //bool need_sync = orig_rollback_point == INVALID_ROLLBACK_POINT
+    bool need_sync = false;
+//    bool need_sync = orig_rollback_point != INVALID_ROLLBACK_POINT; //orig_rollback_point <= *rollback_point_ && (CDPath::GetCDLevel(*rollback_point_)->task_size() != task_size());
+//    bool need_sync = GetParentCD(level())->task_size() > task_size();
+//    printf("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, *rollback_point_);
+//    CD_DEBUG("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, *rollback_point_);
+//    GetCDToRecover(*rollback_point_ < cd_id_.cd_name_.level() && *rollback_point_ != INVALID_ROLLBACK_POINT)->Recover(false);
+//    *rollback_point_ == level() -> false
+//    bool collective = MPI_Group_compare(group());
+    CD_DEBUG("## need_sync? %d = %u <= %u ##\n", need_sync, orig_rollback_point, new_rollback_point);
+//    printf("## need_sync? %d = %u <= %u ##\n", need_sync, orig_rollback_point, new_rollback_point);
+#if CD_PROFILER_ENABLED
+    end_clk = CD_CLOCK();
+    prof_sync_clk = end_clk;
+    elapsed_time += end_clk - begin_clk;  // Total CD overhead 
+    compl_elapsed_time += end_clk - begin_clk; // Total Complete overhead
+    Profiler::num_exec_map[level()][label_.c_str()].compl_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
+#endif
+    GetCDToRecover( GetCurrentCD(), need_sync )->ptr_cd()->Recover();
+  }
+  else {
+    CD_DEBUG("## Complete. No error! ##\n\n");
+    reported_error_ = false;
+  }
+
+  CompleteLogs();
+
+  reexecuted_ = false;
+
+  // Increase sequential ID by one
+  cd_id_.sequential_id_++;
+
+  return ret;
+}
 
 
 #if CD_LIBC_LOG_ENABLED
@@ -2479,7 +2589,7 @@ CD::InternalPreserve(void *data,
     // Object itself will know better than class CD. 
 
     CDEntry *cd_entry = 0;
-
+    printf("entrysize:%zu\n", sizeof(CDEntry));
     void *dst_data = NULL;
     if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
       (static_cast<PackerSerializable *>(data))->PreserveObject(&packer_);
@@ -3125,6 +3235,7 @@ CDHandle *HeadCD::Create(CDHandle *parent,
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err)
 {
+  printf("%s]cd size:%zu\n", __func__,sizeof(*this));
 
   // CD runtime system are not able to be aware of how many children the current HeadCD task will have.
   // So it does not make sense to create mailboxes for children CD's HeadCD tasks at the HeadCD creation time.

@@ -180,7 +180,6 @@ class CD : public Serializable {
     //GONG
     bool begin_;
 //  public:
-    bool GetBegin_(void) {return begin_;}
 
     static CDFlagT *rollback_point_;
 #if CD_MPI_ENABLED
@@ -248,6 +247,31 @@ class CD : public Serializable {
     /// entry_directory_map_ is for preservation via reference
     /// If ref_name is passed by preservation call, it means it allows this entry to be referred to by children CDs.
     std::list<CDEntry> entry_directory_;
+
+    /// 10.12.2016
+    /// shawdow entry directory is newly introduced for two purposes.
+    /// 1. Buffer to preserve the data that will be needed in future.
+    ///    One problem of preservation of large volume is that
+    ///    there may be non-negligible contention on storage medium.
+    ///    It becomes more severe at large scale, therefore one way to
+    ///    resolve it is to distribute the preservation overhead before 
+    ///    checkpoint boundary as much as possible.
+    /// 2. Enable "Advance semantics" which mark a rollback point by
+    ///    updating preservation entries, not deleting all, then
+    ///    re-preservation all. Advance sematics are very appealing in
+    ///    some cases that child CD update a partial array iteratively,
+    ///    but parent CD can advance its rollback point by updating the
+    ///    preservation entries which is modified by children level.
+    ///    This case, shadow entry is needed for child CD to push modified 
+    ///    entry to parent for preservation, and child CD may preserve it
+    ///    via reference in future. Therefore, parent CD need an additional
+    ///    entry directory that contains child's updates for preservation, 
+    ///    but should not be involved in parent-level state restoration 
+    ///    in the case of escalation. 
+    ///    When parent CD advances the rollback point, then the shadow entries
+    ///    will add or replace/update corresponding entries in entry_directory,
+    ///    make the shadow entry directory empty for the next.
+    std::list<CDEntry> shadow_entry_directory_;
 
     static std::list<CommInfo> entry_req_;
     static std::map<ENTRY_TAG_T, CommInfo> entry_request_req_;
@@ -365,6 +389,8 @@ update the preserved data.
 
     CDErrT Complete(bool collective=true, 
                     bool update_preservations=true);
+
+    CDErrT Advance(bool collective=true);
 
   /// Jinsuk: Really simple preservation function. 
   /// This will use default storage. 

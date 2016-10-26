@@ -52,6 +52,7 @@ using namespace cd;
 
 using std::endl;
 using std::cout;
+
 Packer::Packer(bool alloc_flag) 
 : table_size_(0), data_size_(0), used_table_size_(0), used_data_size_(0)
 {

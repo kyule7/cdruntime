@@ -4150,7 +4150,7 @@ int main(int argc, char *argv[])
                                          CD_MAP_0_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_0_0_0)); 
 #endif
 
-
+   printf("cdhandle size:%zu\n", sizeof(*cdh_0_0_0));
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
    CDHandle *cdh_1_0_0 = cdh_0_0_0;
 #endif

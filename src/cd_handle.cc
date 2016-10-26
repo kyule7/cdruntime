@@ -99,6 +99,7 @@ CD_CLOCK_T cd::create_elapsed_time=0;
 CD_CLOCK_T cd::destroy_elapsed_time=0;
 CD_CLOCK_T cd::begin_elapsed_time=0;
 CD_CLOCK_T cd::compl_elapsed_time=0;
+CD_CLOCK_T cd::advance_elapsed_time=0;
 
 
 /// KL
@@ -1128,6 +1129,20 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 
   return ret;
 }
+
+CDErrT CDHandle::Advance(bool collective)
+{
+  CDPrologue();
+
+  CDErrT ret = ptr_cd_->Advance(collective);
+
+  CDEpilogue();
+  advance_elapsed_time += end_clk - begin_clk;
+#if CD_PROFILER_ENABLED
+  Profiler::num_exec_map[level()][GetLabel()].advance_elapsed_time_ += end_clk - begin_clk;
+#endif
+  return ret;
+};
 
 CDErrT CDHandle::Preserve(void *data_ptr, 
                           uint64_t len, 

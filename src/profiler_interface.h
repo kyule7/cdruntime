@@ -79,12 +79,14 @@ struct CDOverhead {
   double destroy_elapsed_time_;
   double begin_elapsed_time_;
   double compl_elapsed_time_;
+  double advance_elapsed_time_;
   CDOverhead(void) 
     : prv_elapsed_time_(0.0),
       create_elapsed_time_(0.0),
       destroy_elapsed_time_(0.0),
       begin_elapsed_time_(0.0),
-      compl_elapsed_time_(0.0)
+      compl_elapsed_time_(0.0),
+      advance_elapsed_time_(0.0)
   {}
   CDOverhead(const CDOverhead &record) {
     prv_elapsed_time_     = record.prv_elapsed_time_; 
@@ -92,6 +94,7 @@ struct CDOverhead {
     destroy_elapsed_time_ = record.destroy_elapsed_time_; 
     begin_elapsed_time_   = record.begin_elapsed_time_;   
     compl_elapsed_time_   = record.compl_elapsed_time_;   
+    advance_elapsed_time_   = record.advance_elapsed_time_;   
   }
   virtual std::string GetString(void);
   virtual void Print(void);
@@ -101,6 +104,7 @@ struct CDOverhead {
     destroy_elapsed_time_ += record.destroy_elapsed_time_; 
     begin_elapsed_time_   += record.begin_elapsed_time_;   
     compl_elapsed_time_   += record.compl_elapsed_time_;   
+    advance_elapsed_time_   += record.advance_elapsed_time_;   
     return *this;
   }
   CDOverhead &operator=(const CDOverhead &record) {
@@ -109,6 +113,7 @@ struct CDOverhead {
     destroy_elapsed_time_ = record.destroy_elapsed_time_; 
     begin_elapsed_time_   = record.begin_elapsed_time_;   
     compl_elapsed_time_   = record.compl_elapsed_time_;   
+    advance_elapsed_time_   = record.advance_elapsed_time_;   
     return *this;
   }
   void MergeInfoPerLevel(const CDOverhead &info_per_level) {
@@ -117,6 +122,7 @@ struct CDOverhead {
     destroy_elapsed_time_ += info_per_level.destroy_elapsed_time_; 
     begin_elapsed_time_   += info_per_level.begin_elapsed_time_;   
     compl_elapsed_time_   += info_per_level.compl_elapsed_time_;   
+    advance_elapsed_time_   += info_per_level.advance_elapsed_time_;   
   }
 };
 
@@ -126,13 +132,15 @@ struct CDOverheadVar : public CDOverhead {
   double destroy_elapsed_time_var_;
   double begin_elapsed_time_var_;
   double compl_elapsed_time_var_;
+  double advance_elapsed_time_var_;
   CDOverheadVar(void) 
     : CDOverhead(),
       prv_elapsed_time_var_(0.0),
       create_elapsed_time_var_(0.0),
       destroy_elapsed_time_var_(0.0),
       begin_elapsed_time_var_(0.0),
-      compl_elapsed_time_var_(0.0)
+      compl_elapsed_time_var_(0.0),
+      advance_elapsed_time_var_(0.0)
   {}
   std::string GetStringInfo(void);
   void PrintInfo(void);
@@ -174,6 +182,7 @@ struct RuntimeInfo : public CDOverhead {
     destroy_elapsed_time_ = record.destroy_elapsed_time_; 
     begin_elapsed_time_   = record.begin_elapsed_time_;   
     compl_elapsed_time_   = record.compl_elapsed_time_;   
+    advance_elapsed_time_   = record.advance_elapsed_time_;   
   }
   virtual std::string GetString(void);
   virtual void Print(void);
@@ -192,6 +201,7 @@ struct RuntimeInfo : public CDOverhead {
     destroy_elapsed_time_ += record.destroy_elapsed_time_; 
     begin_elapsed_time_   += record.begin_elapsed_time_;   
     compl_elapsed_time_   += record.compl_elapsed_time_;   
+    advance_elapsed_time_   += record.advance_elapsed_time_;   
     return *this;
   }
   RuntimeInfo &operator=(const RuntimeInfo &record) {
@@ -209,6 +219,7 @@ struct RuntimeInfo : public CDOverhead {
     destroy_elapsed_time_ = record.destroy_elapsed_time_; 
     begin_elapsed_time_   = record.begin_elapsed_time_;   
     compl_elapsed_time_   = record.compl_elapsed_time_;   
+    advance_elapsed_time_   = record.advance_elapsed_time_;   
     return *this;
   }
   void MergeInfoPerLevel(const RuntimeInfo &info_per_level) {
@@ -223,6 +234,7 @@ struct RuntimeInfo : public CDOverhead {
     destroy_elapsed_time_ += info_per_level.destroy_elapsed_time_; 
     begin_elapsed_time_   += info_per_level.begin_elapsed_time_;   
     compl_elapsed_time_   += info_per_level.compl_elapsed_time_;   
+    advance_elapsed_time_   += info_per_level.advance_elapsed_time_;   
   }
 };
 

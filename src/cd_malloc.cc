@@ -84,7 +84,7 @@ CD *RuntimeLogger::IsLogable(bool *logable_)
 		}
 		else
 		{
-			if(c_CD->libc_log_ptr() == NULL && c_CD->GetBegin_())
+			if(c_CD->libc_log_ptr() == NULL && c_CD->begin_)
 			{
 //				LIBC_DEBUG("\tno libc_log in current CD\n");
 			}

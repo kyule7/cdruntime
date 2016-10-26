@@ -490,6 +490,24 @@ class CDHandle {
                                                 //!< AdvancePointInTime functionality).
                      );
 
+  /** @brief Advances a CD 
+   *   Advance() is the other way to marks a rollback point 
+   *   by updating preservation entries, not deleting all, 
+   *   then re-preservation all like Complete/Begin pair.
+   *   Advance sematics are very appealing in
+   *   some cases that child CD update a partial array iteratively,
+   *   but parent CD can advance its rollback point by updating the
+   *   preservation entries which is modified by children level.
+   *
+   * __Important constraint: Advance() should not be called at parent level
+   * if child CD is still active.__
+   *
+   * @return Returns kOK when successful and kError otherwise.
+   * @sa Begin(), Complete()
+   */
+    CDErrT Advance(bool collective=true  //!< [in] Specify whether this call is collective
+                                         //!< across all tasks contained by this CD.
+                  );
 /** @} */ // End cd_hierarchy ==================================================================================
 
 /**@addtogroup cd_split
