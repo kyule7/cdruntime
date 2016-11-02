@@ -271,7 +271,7 @@ class CD : public Serializable {
     ///    When parent CD advances the rollback point, then the shadow entries
     ///    will add or replace/update corresponding entries in entry_directory,
     ///    make the shadow entry directory empty for the next.
-    std::list<CDEntry> shadow_entry_directory_;
+//    std::list<CDEntry> shadow_entry_directory_;
 
     static std::list<CommInfo> entry_req_;
     static std::map<ENTRY_TAG_T, CommInfo> entry_request_req_;

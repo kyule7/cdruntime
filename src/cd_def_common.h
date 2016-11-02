@@ -190,8 +190,10 @@
                                       //!< already another form of preservation.
                                       //!< This can be used such as kCopy | kSerdes
                       kSource=CD_BIT_13, //!< Indicates application data
-                      kReservedPrvT0=CD_BIT_14,
-                      kReservedPrvT1=CD_BIT_15
+                      kModify=CD_BIT_14, //!< This indicates the modified data.
+                                         //!< kModify is used for advance() call to
+                                         //!< update preservation entries which are marked with it.
+                      kReservedPrvT0=CD_BIT_15
                     };
 
 

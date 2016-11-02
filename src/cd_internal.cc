@@ -1237,13 +1237,18 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     // the other tasks in the other CDs of current level,
     // but in the same CDs at the level to escalate to.
 #if BUGFIX_0327
-    if(collective) {
-      uint32_t new_rollback_point = SyncCDs(target->ptr_cd(), true);
-      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
-    } else {
-      uint32_t new_rollback_point = target->ptr_cd()->CheckRollbackPoint(true); // read from head
-      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
-    }
+      
+    uint32_t new_rollback_point = (collective)? SyncCDs(target->ptr_cd(), true) : 
+                                  target->ptr_cd()->CheckRollbackPoint(true); // read from head
+    target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+    // FIXME
+//    if(collective) {
+//      uint32_t new_rollback_point = SyncCDs(target->ptr_cd(), true);
+//      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+//    } else {
+//      uint32_t new_rollback_point = target->ptr_cd()->CheckRollbackPoint(true); // read from head
+//      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+//    }
 #else    
     if(collective) {
       SyncCDs(target->ptr_cd(), true);
@@ -1256,7 +1261,9 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #endif
     // It is possible for other task set to rollback_point lower than original.
     // It handles that case.
-    if(level != rollback_lv) { 
+    // FIXME (11.02.2016) : should check with new_rollback_point
+//    if(level != rollback_lv) { 
+    if(level != new_rollback_point) { 
 #if CD_PROFILER_ENABLED
 //      if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
       target->profiler_->FinishProfile();
@@ -1319,13 +1326,16 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     // This synchronization corresponds to that in Complete or Create of other tasks in the different CDs.
     // The tasks in the same CD should reach here together. (No tasks execute further Complete/Create)
 #if BUGFIX_0327
-    if(collective) {
-      uint32_t new_rollback_point = SyncCDs(target->ptr_cd(), true);
-      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
-    } else {
-      uint32_t new_rollback_point = target->ptr_cd()->CheckRollbackPoint(true); // read from head
-      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
-    }
+    uint32_t new_rollback_point = (collective)? SyncCDs(target->ptr_cd(), true) : 
+                                  target->ptr_cd()->CheckRollbackPoint(true); // read from head
+    target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+//    if(collective) {
+//      uint32_t new_rollback_point = SyncCDs(target->ptr_cd(), true);
+//      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+//    } else {
+//      uint32_t new_rollback_point = target->ptr_cd()->CheckRollbackPoint(true); // read from head
+//      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+//    }
 #else
     if(collective) {
       SyncCDs(target->ptr_cd(), true);
