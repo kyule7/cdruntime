@@ -121,7 +121,6 @@ void PFSHandle::Copy( const PFSHandle& that )
 	degree_of_sharing_ = that.degree_of_sharing_;
 }
 
-#if CD_MPI_ENABLED
 
 int PFSHandle::Open_File( void )
 {
@@ -322,4 +321,3 @@ uint64_t PFSHandle::Read_at( void* buffer, uint64_t buffer_len, COMMLIB_Offset r
 }
 #endif
 
-#endif

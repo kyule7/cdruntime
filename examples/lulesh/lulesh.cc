@@ -221,8 +221,8 @@ uint32_t interval = 1;
 #endif
 //std::map<std::string,int> func_cnt;
 
-#define HISTO_SIZE 512
-#define BIN_PRECISION 0.00005
+#define HISTO_SIZE 1024
+#define BIN_PRECISION 0.001
 #define BIN_SHIFT 0
 bool openclose = false; 
 struct Singleton {
@@ -4082,7 +4082,7 @@ int main(int argc, char *argv[])
 
    ParseCommandLineOptions(argc, argv, myRank, &opts);
    // FIXME
-   opts.nx  = 50;
+//   opts.nx  = 50;
 
    if ((myRank == 0) && (opts.quiet == 0)) {
       printf("Running problem size %d^3 per domain until completion\n", opts.nx);
@@ -4156,7 +4156,7 @@ int main(int argc, char *argv[])
 #endif
    // Main loop start
 //   opts.its = 4000;
-   opts.its = 600;
+//   opts.its = 600;
    if(myRank == 0) printf("dom size:%zu\n", sizeof(*locDom));
 #if _CD   
    st.Initialize(myRank, numRanks, opts.its, interval);

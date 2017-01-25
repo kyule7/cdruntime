@@ -1670,8 +1670,10 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
 } // CD::Complete ends
 
 
-CDErrT Advance(bool collective)
+CDErrT CD::Advance(bool collective)
 {
+  CDErrT ret = CDErrT::kOK;
+#if 0
   uint32_t orig_rollback_point = CheckRollbackPoint(false);
 //  bool my_need_reexec = need_reexec;
   CD_DEBUG("%s %s \t Reexec from %u (Before Sync)\n", 
@@ -1777,7 +1779,7 @@ CDErrT Advance(bool collective)
 
   // Increase sequential ID by one
   cd_id_.sequential_id_++;
-
+#endif
   return ret;
 }
 
@@ -2599,14 +2601,14 @@ CD::InternalPreserve(void *data,
     // Object itself will know better than class CD. 
 
     CDEntry *cd_entry = 0;
-    printf("entrysize:%zu\n", sizeof(CDEntry));
+//    printf("entrysize:%zu\n", sizeof(CDEntry));
     void *dst_data = NULL;
     if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
       (static_cast<PackerSerializable *>(data))->PreserveObject(&packer_);
 #if 1
       dst_data = packer_.GetDataPtr();
       len_in_bytes = packer_.GetDataSize();
-//      if(myTaskID == 0) printf("len_in_bytes:%lu\n", len_in_bytes);
+      if(myTaskID == 0) printf("len_in_bytes:%lu\n", len_in_bytes);
 #else
       dst_data = packer_.GetTotalData(len_in_bytes);
 #endif
