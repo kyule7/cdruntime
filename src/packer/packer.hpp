@@ -19,11 +19,12 @@ namespace cd {
 template <typename EntryT> 
 class Packer {
 //  protected:
-  public:  
+  public: 
     TableStore<EntryT> *table_;
     DataStore  *data_;
+    uint64_t cur_pos_;
   public:
-    Packer(uint64_t alloc=1, TableStore<EntryT> *table=NULL, DataStore *data=NULL) {
+    Packer(uint64_t alloc=1, TableStore<EntryT> *table=NULL, DataStore *data=NULL) : cur_pos_(0) {
       if(table == NULL) {
         table_ = new TableStore<EntryT>(alloc);
       } else {
@@ -35,7 +36,7 @@ class Packer {
         data_ = data;
       }
     }
-    Packer(TableStore<EntryT> *table, DataStore *data=NULL) {
+    Packer(TableStore<EntryT> *table, DataStore *data=NULL) : cur_pos_(0) {
       if(table == NULL) {
         table_ = new TableStore<EntryT>(true);
       } else {
@@ -127,7 +128,7 @@ class Packer {
       data_->UpdateMagic(magic);
       
       // FIXME: Insert entry for the previous table chunk
-      table_->Advance(data_->used());
+      cur_pos_ = table_->Advance(data_->used());
 //       table_->Insert(entry.SetOffset(offset));
       uint64_t table_offset_check = data_->Flush(table_->GetPtr(), table_->tablesize());
       ASSERT(table_offset == table_offset_check);

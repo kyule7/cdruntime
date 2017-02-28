@@ -94,6 +94,25 @@ union Attr {
     code_ = that.code_;
     return *this;
   } 
+
+  void SetAll(uint64_t attr) {
+    code_ = (attr << 48);
+  }
+
+  void Set(uint64_t attr) {
+    code_ |= (attr << 48);
+  }
+  
+  void Unset(uint64_t attr) {
+    code_ &= ~(attr << 48);
+  }
+  
+  bool CheckAll(uint64_t attr) const 
+  { return (static_cast<uint16_t>(code_ >> 48) ^ attr) == 0; }
+
+  bool CheckAny(uint64_t attr) const
+  { return (static_cast<uint16_t>(code_ >> 48) & attr) == 0; }
+
 };
 
 #endif

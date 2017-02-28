@@ -37,6 +37,7 @@ class BaseTable {
 
   public:
     virtual void *Find(uint64_t id)=0;
+    virtual CDErrType FindWithAttr(uint64_t attr, BaseTable *that)=0;
     virtual CDErrType Find(uint64_t id, uint64_t &ret_size, uint64_t &ret_offset)=0;
     virtual CDErrType GetAt(uint64_t idx, uint64_t &ret_id, uint64_t &ret_size, uint64_t &ret_offset)=0;
     virtual CDErrType Reallocate(void)=0;
@@ -59,15 +60,15 @@ class TableStore : public BaseTable {
 //    static uint64_t data_used;
   protected:
     EntryT *ptr_;
-    EntryT prv_entry;
+    EntryT prv_entry_;
   public:
-    TableStore<EntryT>(uint64_t alloc=BASE_ENTRY_CNT) : ptr_(0), prv_entry(table_id++, 0, INVALID_NUM) { 
+    TableStore<EntryT>(uint64_t alloc=BASE_ENTRY_CNT) : ptr_(0), prv_entry_(table_id++, 0, INVALID_NUM) { 
       MYDBG("\n");
 //      if(alloc) AllocateTable();//sizeof(EntryT));
       AllocateTable(alloc);//sizeof(EntryT));
     }
     
-    TableStore<EntryT>(EntryT *ptr_table, uint32_t len_in_byte) {
+    TableStore<EntryT>(EntryT *ptr_table, uint32_t len_in_byte) : prv_entry_(table_id++, 0, INVALID_NUM) {
       MYDBG("\n");
       if(ptr_table != NULL) {
         ptr_ = ptr_table;
@@ -134,6 +135,19 @@ class TableStore : public BaseTable {
       }
       return ret;
     }
+    
+    virtual CDErrType FindWithAttr(uint64_t attr, BaseTable *that)
+    {
+      CDErrType ret = kNotFound;
+      TableStore<EntryT> *table = static_cast<TableStore<EntryT> *>(that);
+      for(uint32_t i=0; i<tail_; i++) {
+        if(ptr_[i].size_.CheckAny(attr)) {
+          table->Insert(ptr_[i]);
+          ret = kOK;
+        }
+      }
+      return ret;
+    }
 
     void *Find(uint64_t id)
     {
@@ -179,14 +193,15 @@ class TableStore : public BaseTable {
 
     virtual uint64_t Advance(uint64_t offset)
     {
-      Insert(prv_entry);
+      Insert(prv_entry_);
+      const uint64_t ret = tail_;
       const uint64_t table_size = tail_ - advance_point_;
       advance_point_ = tail_;
-      prv_entry.id_      = table_id++;
-      prv_entry.offset_  = offset;
-      prv_entry.size_.attr_.size_  = table_size; 
-      prv_entry.size_.attr_.table_ = 1;
-      return 0; 
+      prv_entry_.id_      = table_id++;
+      prv_entry_.offset_  = offset;
+      prv_entry_.size_.attr_.size_  = table_size; 
+      prv_entry_.size_.attr_.table_ = 1;
+      return ret; 
     }
 
 //    static inline 

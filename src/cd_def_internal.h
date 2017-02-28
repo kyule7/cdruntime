@@ -335,52 +335,29 @@ namespace cd {
 
   extern inline std::string event2str(int event) {
     switch(event) {
-      case 0:
+      case kNoEvent :
         return "kNoEvent";
-      case BIT_0:
+      case kAllPause :
         return "kAllPause";
-      case BIT_1:
+      case kAllResume :
         return "kAllResume";
-      case BIT_2:
+      case kAllReexecute :
         return "kAllReexecute";
-      case BIT_3:
+      case kAllEscalate :
         return "kAllEscalate";
-      case BIT_4:
+      case kEntrySend :
         return "kEntrySend";
-      case BIT_5:
-        return "kEntrySend";
-      case BIT_6:
+      case kReserved :
+        return "kReserved";
+      case kEntrySearch :
         return "kEntrySearch";
-      case BIT_7:
+      case kErrorOccurred :
         return "kErrorOccurred";
-      case BIT_8:
+      case kEscalationDetected :
         return "kEscalationDetected";
       default:
         return "UNDEFINED EVENT";
     }
-
-//    std::string eventStr;
-//    if(CHECK_NO_EVENT(event)) {
-//        eventStr = "kNoEvent";
-//    }
-//    else {
-//      if(CHECK_EVENT(event, kAllPause))
-//        eventStr += "kAllPause ";
-//      if(CHECK_EVENT(event, kAllResume))
-//        eventStr += "kAllResume ";
-//      if(CHECK_EVENT(event, kEntrySend))
-//        eventStr += "kEntrySend ";
-//      if(CHECK_EVENT(event, kEntrySearch))
-//        eventStr += "kEntrySearch ";
-//      if(CHECK_EVENT(event, kErrorOccurred))
-//        eventStr += "kErrorOccurred ";
-//      if(CHECK_EVENT(event, kReserved))
-//        eventStr += "kReserved ";
-//      if(eventStr.empty()) 
-//        eventStr = "UNDEFINED EVENT";
-//    }
-//    return eventStr;
-
   }
 
 extern CD_CLOCK_T tot_begin_clk;
