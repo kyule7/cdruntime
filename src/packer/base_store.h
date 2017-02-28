@@ -90,6 +90,10 @@ union Attr {
     attr_.size_ = that;
     return attr_.size_;
   } 
+  Attr &operator=(const Attr &that) {
+    code_ = that.code_;
+    return *this;
+  } 
 };
 
 #endif

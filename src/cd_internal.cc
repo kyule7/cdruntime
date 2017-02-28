@@ -2625,13 +2625,11 @@ CD::InternalPreserve(void *data,
 
       CD_DEBUG("Preservation via %d (reference)\n", GetPlaceToPreserve());
       uint64_t ref_id = cd_hash(ref_name);
-      entry_directory_.AddEntry(CDEntry(id, 0, ref_offset, (void*)ref_id).Set(CDEntry::kRefer));
-
-      entry_directory_.push_back(*cd_entry);  
-//      entry_directory_map_.emplace(ref_name, *cd_entry);
-//      entry_directory_map_[ref_name] = *cd_entry;
+      CDEntry entry(id, 0, ref_offset, (void*)ref_id);
+      entry.size_.attr_.refer_ = 1;
+      uint64_t offset = entry_directory_.AddEntry(entry);
       if( !my_name.empty() ) {
-        entry_directory_map_[cd_hash(my_name)] = cd_entry;
+        entry_directory_map_[cd_hash(my_name)] = offset;
 
         if( CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
           CD_DEBUG("[CD::InternalPreserve] Error : kRef | kCoop\nTried to preserve via reference but tried to allow itself as reference to other node. If it allow itself for reference locally, it is fine!");
