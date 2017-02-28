@@ -1,8 +1,8 @@
 AC_INIT([cdruntime], [1.0], [cds@lph.ece.utexas.edu])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 #AC_PROG_LIBTOOL
+AM_PROG_AR
 LT_INIT
-#AM_PROG_AR
 AC_PROG_CC
 AC_PROG_CXX
 dnl AC_PROG_RANLIB

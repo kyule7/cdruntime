@@ -246,7 +246,8 @@ class CD : public Serializable {
     /// entry_directory_ is a super set of entry_directory_map_
     /// entry_directory_map_ is for preservation via reference
     /// If ref_name is passed by preservation call, it means it allows this entry to be referred to by children CDs.
-    std::list<CDEntry> entry_directory_;
+    //std::list<CDEntry> entry_directory_;
+    CDPacker entry_directory_;
 
     /// 10.12.2016
     /// shawdow entry directory is newly introduced for two purposes.
