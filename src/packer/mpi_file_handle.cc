@@ -48,7 +48,6 @@ void MPIFileHandle::Init(const MPI_Comm &comm, const char *filepath)
     strcpy(base_filename, DEFAULT_BASE_FILEPATH);
   }
 
-  offset_ = 0;
   //viewsize_ = DEFAULT_VIEWSIZE;
   viewsize_ = 0;
   if(viewsize_ != 0) {
@@ -124,14 +123,14 @@ void MPIFileHandle::Close(void)
   fh_ = NULL;
 }
 
-CDErrType MPIFileHandle::Write(uint64_t offset, char *src, uint64_t len)
+CDErrType MPIFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64_t inc)
 {
   CDErrType ferr = kOK;
 
   MPI_Status status;
 //  CheckError( MPI_File_write(fdesc_, src, len, MPI_BYTE, &status) );
   CheckError( MPI_File_write_at(fdesc_, offset, src, len, MPI_BYTE, &status) );
-  offset_ += len;
+  offset_ = (inc >= 0)? offset_ + inc : offset_ + len;
   MYDBG("[%d] MPI Write offset:%lu,%lu, src:%p, len:%lu\n", fdesc_, offset, offset_, src, len);
   return ferr;
 }
@@ -167,7 +166,12 @@ void MPIFileHandle::FileSync(void)
   MPI_File_sync(fdesc_);
 }
 
-uint64_t MPIFileHandle::GetFileSize(void)
+void MPIFileHandle::Truncate(uint64_t newsize)
+{
+  // STUB: No support for MPI file truncate
+}
+
+int64_t MPIFileHandle::GetFileSize(void)
 {
 //  struct stat buf;
 //  fstat(fdesc_, &buf);
@@ -188,17 +192,3 @@ uint32_t MPIFileHandle::GetBlkSize(void)
   return CHUNK_ALIGNMENT;
 }
 
-FileHandle *cd::GetFileHandle(uint32_t ftype)
-{
-//  printf("GetFileHandle %u\n", ftype);
-  switch(ftype) {
-//    case kPosixFile:
-//      return PosixFileHandle::Get();
-//    case kAIOFile:
-//      return AIOFileHandle::Get();
-    case kMPIFile:
-      return MPIFileHandle::Get(MPI_COMM_WORLD);
-    default:
-      return NULL;
-  }
-}

@@ -79,54 +79,58 @@ class Packer {
     char *GetTotalData(uint64_t &total_data_size)
     {
       const uint64_t tablesize = table_->usedsize();
-      const uint64_t table_offset = data_->used();
-      const uint64_t datasize = table_offset - sizeof(MagicStore);
+      const uint64_t datasize = data_->tail();
+      const uint64_t table_offset = datasize + sizeof(MagicStore);
       const uint64_t total_size = tablesize + table_offset;
-      char *total_data = NULL;
-      if(total_size != 0) {
-        total_data_size = total_size;// + sizeof(MagicStore);
+      void *total_data = NULL;
 
-        // malloc and memcpy may be changed to some interface
-        total_data = (char *)malloc(total_data_size);
-        printf("total:%lu\n", total_data_size);
+      total_data_size = total_size;
+      if(total_size != 0) {
+        data_->Alloc(&total_data, datasize + tablesize);
+
+        printf("total:%lu\n", total_size);
         printf("[%s] (%zu+%lu+%lu)%lu %lu %u\n", __func__, 
             sizeof(MagicStore), datasize, tablesize,
-            total_data_size, table_offset, table_->type());
-        //getchar();
-        //MagicStore magic(total_data_size, table_offset+sizeof(MagicStore), table_->type());
-        //MagicStore magic(total_data_size, table_offset, table_->type());
-        data_->UpdateMagic(MagicStore(total_data_size, table_offset, table_->type()));
-        printf("Creat MagicStore(%lu %lu %u)\n", total_data_size, table_offset, table_->type());
-    
-        char *target = total_data;
+            total_size, table_offset, table_->type());
+
         // Update MagicStore
-//        memcpy(target, &magic, sizeof(MagicStore));
-        uint64_t *test_ptr = (uint64_t *)total_data;
-        printf("[%s]return:%p %lu %lu %lu\n", __func__,total_data, *test_ptr, *(test_ptr+1), *(test_ptr+2));
+        MagicStore magic(total_size, table_offset, table_->type());
+        data_->UpdateMagic(magic);
+        
+        printf("Creat MagicStore(%lu %lu %u)\n", total_size, table_offset, table_->type());
+    
+        char *target = (char *)total_data;
+        // Update MagicStore
+        *(reinterpret_cast<MagicStore *>(target-sizeof(MagicStore))) = magic;
+
         // Copy DataChunk
-//        data_->ReadAll(target, table_offset, 0); // Read MagicStore+DataChunk
         data_->ReadAll(target);
-        target += table_offset;
+        target += datasize;
 
         table_->Read(target, tablesize, 0);
-      } else {
-        total_data_size = 0;
       }
-      uint64_t *test_ptr = (uint64_t *)total_data;
-      printf("[%s]return:%p %lu %lu %lu\n", __func__,total_data, *test_ptr, *(test_ptr+1), *(test_ptr+2));
-      return total_data;
+
+      uint32_t *test_ptr = (uint32_t *)total_data;
+      printf("[%s] return:%p %u %u %u ###\n", __func__, total_data, *test_ptr, *(test_ptr+1), *(test_ptr+2));
+
+      return (char *)total_data;
     }
 
-    void WriteToFile(FILE *fp) 
+    // Flush data store to file and append table store, then update magic store
+    void WriteToFile(void) 
     {
-      uint64_t tablesize = table_->used() * table_->EntrySize();
-      uint64_t table_offset  = data_->used();
-      uint64_t total_size = tablesize + table_offset;
-//      MagicStore magic(total_size + sizeof(MagicStore));
+      // Update MagicStore
+      const uint64_t tablesize = table_->usedsize();
+      const uint64_t table_offset = data_->used() + sizeof(MagicStore);
+      const uint64_t total_size = tablesize + table_offset;
       MagicStore magic(total_size, table_offset, table_->type());
-      fwrite(&magic, sizeof(MagicStore), 1, fp);
-      fwrite(data_->GetPtr(), sizeof(char), data_->used(), fp);
-      fwrite(table_->GetPtr(), table_->EntrySize(), table_->used(), fp);
+      data_->UpdateMagic(magic);
+      
+      // FIXME: Insert entry for the previous table chunk
+      table_->Advance(data_->used());
+//       table_->Insert(entry.SetOffset(offset));
+      uint64_t table_offset_check = data_->Flush(table_->GetPtr(), table_->tablesize());
+      ASSERT(table_offset == table_offset_check);
     }
 
     CDErrType Clear(bool reuse)
@@ -143,31 +147,24 @@ class Packer {
     }
 
     ///@brief Grow buffer size internally used in packer.
-    void SetBufferGrow(uint64_t table_grow_unit, uint64_t data_grow_unit)
+    void SetBufferGrow(uint64_t data_grow_unit, uint64_t table_grow_unit=0)
     {
-      if(table_grow_unit != 0)  table_->SetGrowUnit(table_grow_unit);
-      if(data_grow_unit  != 0)  data_->SetGrowUnit(data_grow_unit);
+      if(data_grow_unit  != 0) data_->SetGrowUnit(data_grow_unit);
+      if(table_grow_unit != 0) table_->SetGrowUnit(table_grow_unit);
     }
+
     void Copy(const Packer& that) {
       that.table_->Copy(table_);
       that.data_->Copy(data_);
     }
-//    CDErrType CheckRealloc(uint64_t len)
-//    {
-//      CDErrType err = kOK;
-//      if(table_->NeedRealloc(len) != 0) {
-//        err = table_->Reallocate(len);
-//      }
-//      
-//      if(data_->NeedRealloc(len) != 0) {
-//        err = data_->Reallocate(len);
-//      }
-//      return err;
-//    }
+
     // Soon to be deprecated
 //    uint64_t Add(uint64_t id, uint64_t length, const void *position)
 //    { return Add(position, length, id); }
 };
+
+
+
 
 // The role of Unpacker is to get a proper data from serialized data+metadata by packer.
 // Unpacker takes a pointer for serialized data and ID.
@@ -254,11 +251,11 @@ class Unpacker {
       printf("[%s]type:%u, chunk:%p, offset:%lu, tablesize:%u\n", __func__,
               magic_.entry_type_, chunk, magic_.table_offset_, table_size);
 
-      uint64_t *test_ptr = (uint64_t *)(chunk + magic_.table_offset_);
+      uint32_t *test_ptr = (uint32_t *)(chunk + magic_.table_offset_);
       //printf("return:%p %lu %lu %lu\n", test_ptr, *test_ptr, *(test_ptr+1), *(test_ptr+2));
       for(uint64_t i=0; i<10; i++, test_ptr+=4) {
         
-        printf("test_ptr return:%p %lx %lx %lx\n", test_ptr, *test_ptr, *(test_ptr+1), *(test_ptr+2));
+        printf("test_ptr return:%p %u %u %u\n", test_ptr, *test_ptr, *(test_ptr+1), *(test_ptr+2));
       }
       
       //getchar();

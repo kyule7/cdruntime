@@ -13,13 +13,13 @@ class MyStore : public TableStore<CDEntry> {
   public:
     virtual void Print(void)
     {
-      MYDBG("[MyTable] %lu/%lu, grow:%lu, alloc:%u\n", used_*sizeof(CDEntry), size_, grow_unit_, allocated_);
+      MYDBG("[MyTable] %lu/%lu, grow:%lu, alloc:%u\n", tail_*sizeof(CDEntry), size_, grow_unit_, allocated_);
       //getchar();
     }
     void PrintEntry(uint64_t print_upto=0)
     {
       printf("[MyTable PrintEntry]\n"); //getchar();
-      if(print_upto == 0) print_upto = used_;
+      if(print_upto == 0) print_upto = tail_;
       for(uint64_t i=0; i<print_upto; i++) {
         ptr_[i].Print();
       }
@@ -234,6 +234,8 @@ void BoundedBufferTest(int elemsize, int chunksize) {
   delete dataA;
   free(preserved);
 }
+
+
 
 int main() {
   gettimeofday(&mytime,NULL);

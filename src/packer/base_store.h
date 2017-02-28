@@ -66,12 +66,39 @@ enum EntryType {
 // type   3bit(entrytype) 
 // dirty  1bit
 // medium 2bit (dram, file, remote, regen, ...)
-// 
+//
+#if 1 
+struct AttrInternal {
+  uint64_t size_:48;
+  uint64_t reserved_:8;
+  uint64_t table_:1;     // the entry actually points to table chunk
+  uint64_t nested_:1;    // the entry points to data+table nested in data chunk
+  uint64_t tmpshared_:1; // the etnry is temporarily shared
+  uint64_t share_:1;  // the entry is shared
+  uint64_t remote_:1; // the entry is remote
+  uint64_t refer_:1;  // the entry is refering to another entry. offset is the ID for that.
+  uint64_t dirty_:1;  // the entry is dirty. The data chunk that it points to is modified.
+  uint64_t invalid_:1;  // the entry is valid
+};
+
+union Attr {
+  uint64_t code_;
+  AttrInternal attr_;
+  Attr(void) : code_(0) {}
+  Attr(uint64_t size) : code_(size) {}
+  uint64_t operator=(uint64_t that) {
+    attr_.size_ = that;
+    return attr_.size_;
+  } 
+};
+
+#endif
+
 struct BaseEntry {
     uint64_t id_;
-    uint64_t size_;
+    Attr     size_;
     uint64_t offset_;
-    BaseEntry(void) : id_(0), size_(0), offset_(0) {}
+    BaseEntry(void) : id_(0), offset_(0) {}
     BaseEntry(uint64_t id, uint64_t size) 
       : id_(id), size_(size), offset_(0) {}
     BaseEntry(uint64_t id, uint64_t size, uint64_t offset) 
@@ -90,16 +117,16 @@ struct BaseEntry {
       size_   = that.size_;
       offset_ = that.offset_;
     }
-    void Print(void) {
-      printf("%12lx %12lx %12lx\n", id_, size_, offset_);
-    }
-    uint64_t size(void)   { return size_; }
-    uint64_t offset(void) { return offset_; }
+    void Print(void) const
+    { printf("%12lx %12lx %12lx\n", id_, size(), offset_); }
+
+    inline uint64_t size(void)   const { return size_.attr_.size_; }
+    inline uint64_t offset(void) const { return offset_; }
 };
 
 struct CDEntry {
     uint64_t id_;
-    uint64_t size_;
+    Attr size_;
     uint64_t offset_;
     char *src_;
     CDEntry(void) : id_(0), size_(0), offset_(0), src_(0) {}
@@ -122,12 +149,11 @@ struct CDEntry {
       offset_ = that.offset_;
       src_    = that.src_;
     }
-    void Print(void) {
-      printf("%12lx %12lx %12lx %p\n", id_, size_, offset_, src_);
-    }
-    uint64_t size(void)   { return size_; }
-    uint64_t offset(void) { return offset_; }
-    char    *src(void)    { return src_; }
+    void Print(void) const
+    { printf("%12lx %12lx %12lx %p\n", id_, size(), offset_, src_); }
+    inline uint64_t size(void)   const { return size_.attr_.size_; }
+    inline uint64_t offset(void) const { return offset_; }
+    inline char    *src(void)    const { return src_; }
 };
 
 //extern uint32_t entry_type[ENTRY_TYPE_CNT];

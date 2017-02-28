@@ -6,9 +6,8 @@
 #include <string>
 #include "define.h"
 #define MAX_FILEPATH_SIZE 256
-//#define CHUNK_ALIGNMENT 512
-#define CHUNK_ALIGNMENT 4096
-#define DEFAULT_BASE_FILEPATH "./"
+#define CHUNK_ALIGNMENT 512
+//#define CHUNK_ALIGNMENT 256
 #define DEFAULT_FILEPATH_POSIX "posix_filepath"
 #define DEFAULT_FILEPATH_AIO   "aio_filepath"
 #define DEFAULT_FILEPATH_MPI   "mpi_filepath"
@@ -25,33 +24,36 @@ class DataStore;
 class FileHandle {
   protected: 
     std::string filepath_;
-    FileHandle(const char *filepath=NULL) : filepath_(filepath) {}
+    uint64_t offset_;
+    FileHandle(const char *filepath=NULL) : filepath_(filepath), offset_(0) {}
     virtual ~FileHandle(void) {}
   public: 
-    virtual CDErrType Write(uint64_t offset, char *src, uint64_t chunk)=0;
+    virtual CDErrType Write(uint64_t offset, char *src, uint64_t chunk, int64_t inc=-1)=0;
     virtual char *Read(uint64_t len, uint64_t offset=0)=0;
     virtual char *ReadTo(void *dst, uint64_t len, uint64_t offset=0)=0;
     virtual void FileSync(void)=0;
-    virtual uint64_t GetFileSize(void)=0;
+    virtual void Truncate(uint64_t newsize)=0;
+    virtual int64_t GetFileSize(void)=0;
     virtual uint32_t GetBlkSize(void)=0;
+    void SetOffset(uint64_t offset) { offset_ = offset; }
 };
 
 // Singleton
 class PosixFileHandle : public FileHandle {
     static PosixFileHandle *fh_;
     int fdesc_;
-    uint64_t offset_;
   protected:
     PosixFileHandle(const char *filepath=DEFAULT_FILEPATH_POSIX);
     virtual ~PosixFileHandle(void);
   public:
     static FileHandle *Get(const char *filepath=NULL);
     void Close(void);
-    virtual CDErrType Write(uint64_t offset, char *src, uint64_t chunk);
+    virtual CDErrType Write(uint64_t offset, char *src, uint64_t chunk, int64_t inc=-1);
     virtual char *Read(uint64_t len, uint64_t offset=0);
     virtual char *ReadTo(void *dst, uint64_t len, uint64_t offset=0);
     virtual void FileSync(void);
-    virtual uint64_t GetFileSize(void);
+    virtual void Truncate(uint64_t newsize);
+    virtual int64_t GetFileSize(void);
     virtual uint32_t GetBlkSize(void);
 };
 

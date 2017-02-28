@@ -14,7 +14,7 @@ FileHandle *GetFileHandle(uint32_t ftype)
 //    case kAIOFile:
 //      return AIOFileHandle::Get();
     case kMPIFile:
-      return MPIFileHandle::Get(MPI_COMM_WORLD);
+      return MPIFileHandle::Get(MPI_COMM_WORLD, DEFAULT_FILEPATH_MPI);
     default:
       return NULL;
   }

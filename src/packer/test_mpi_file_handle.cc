@@ -24,7 +24,7 @@ public:
     int rank = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     char dbgfile[32];
-    sprintf(dbgfile, "/scratch/03341/kyushick/dbgfile.%d", rank);
+    sprintf(dbgfile, "dbgfile.%d", rank);
     dbgfp = fopen(dbgfile, "w");
   }
   virtual ~TestPosixFileHandle() {
@@ -32,7 +32,8 @@ public:
   }
 
   //void Test1(uint32_t elemsize=262144, uint32_t chunksize=1024) {
-  void Test1(uint32_t elemsize=131072, uint32_t chunksize=1024) {
+  //void Test1(uint32_t elemsize=131072, uint32_t chunksize=1024) {
+  void Test1(uint32_t elemsize=32, uint32_t chunksize=32) {
     
     printf("\n\n\n=================== %s ==(%u,%u)==================\n\n", __func__, elemsize, chunksize);
     uint64_t totsize = elemsize * chunksize;
@@ -171,8 +172,8 @@ int main(int argc, char *argv[]) {
 
   st.Initialize(rank, commsize);
 
-  TestMPIFileHandle *filehandle = new TestMPIFileHandle;
-//  TestPosixFileHandle *filehandle = new TestPosixFileHandle;
+//  TestMPIFileHandle *filehandle = new TestMPIFileHandle;
+  TestPosixFileHandle *filehandle = new TestPosixFileHandle;
 
   filehandle->Test1();
   delete filehandle;

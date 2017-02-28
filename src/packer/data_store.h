@@ -19,6 +19,7 @@ namespace cd {
 #define CD_SET(STATE,Y)   ((STATE) |=  (Y))
 //#define CHUNKSIZE_THRESHOLD_BASE 0x1000 // 4KB
 #define CHUNKSIZE_THRESHOLD_BASE 0x4000 // 16KB
+//#define CHUNKSIZE_THRESHOLD_BASE 0x200 // 16KB
 
 //enum {
 //  kGrowingMode=0x00,
@@ -43,9 +44,9 @@ class DataStore {
     uint64_t size_;
     uint64_t head_; // length written to file
     uint64_t tail_;
-    uint64_t written_len_;
     uint64_t grow_unit_;
     uint32_t allocated_;
+    uint64_t written_len_;
     uint32_t mode_; // state
     uint32_t chunksize_;
     char    *ptr_;
@@ -65,7 +66,8 @@ class DataStore {
     CDErrType WriteFile(int64_t len);
     CDErrType WriteFile(void);
     void FileSync(void);
-    void Flush(void);
+    CDErrType Flush(void);
+    uint64_t Flush(char *src, int64_t len);
   private:
     uint64_t WriteBuffer(char *src, int64_t len);
     uint64_t WriteMem(char *src, int64_t len);
@@ -83,16 +85,30 @@ class DataStore {
       return *this;
     }
 //    uint64_t used(void) { return tail_ - head_; }
-    inline uint64_t used(void)      const { return tail_; }
+    ///@brief Total bytes written to file.
+    inline uint64_t used(void)      const { return tail_ + written_len_; }
+    ///@brief Offset of file that current data store began.
+    ///       Total bytes written to file before beginning current data store.
+    inline uint64_t offset(void)    const { return written_len_; }
+    ///@brief Total bytes written to file by current data store.
     inline uint64_t tail(void)      const { return tail_; }
+    ///@brief Total bytes pushed to the current data store.
     inline uint64_t head(void)      const { return head_; }
+    ///@brief Beginning pointer in the current data store.
     inline char    *begin(void)     const { return ptr_ + (head_ % size_); }
+    ///@brief The size of data in memory buffer.
     inline int64_t  buf_used(void)  const { return (int64_t)(tail_ - head_); }
+    ///@brief Total size of buffer (buffer limit).
     inline uint64_t size(void)      const { return size_; }
+    ///@brief Buffer state.
     inline uint32_t mode(void)      const { return GET_BUFF_MODE(mode_); }
+    ///@brief File type that buffer writes data to.
     inline uint32_t ftype(void)     const { return GET_FILE_TYPE(mode_); }
+    ///@brief The size of chunk to write at a time.
     inline uint32_t chunksize(void) const { return chunksize_; }
+    ///@brief Pointer that data store allocated.
     inline char *GetPtrAlloc(void)  const { return ptr_ - sizeof(MagicStore); }
+    ///@brief Pointer that will be effectively used.
     inline char *GetPtr(void)       const { return ptr_; }
     inline void IncHead(uint64_t len)     { head_ += len; }
     inline void SetGrowUnit(uint32_t grow_unit) { grow_unit_ = grow_unit; }
@@ -101,7 +117,8 @@ class DataStore {
     { MYDBG("%lu/%lu, grow:%lu, alloc:%u\n", buf_used(), size_, grow_unit_, allocated_); }
     void UpdateMagic(const MagicStore &magic);
     void UpdateMagic(MagicStore &&magic);
-  protected: // interface
+    CDErrType FlushMagic(const MagicStore *magic);
+  public: // interface
     virtual CDErrType Free(char *ptr);
     virtual CDErrType Copy(void *dst, char *src, int64_t len);
     virtual CDErrType Alloc(void **ptr, uint64_t size);

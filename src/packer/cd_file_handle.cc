@@ -23,12 +23,16 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath)
   if(base_filepath != NULL) {
     strcpy(base_filename, base_filepath);
   } else {
+    printf("ASDF############3 %s\n", DEFAULT_BASE_FILEPATH);
     strcpy(base_filename, DEFAULT_BASE_FILEPATH);
   }
-  sprintf(full_filename, "%s/%s.%ld.%ld", base_filepath, filepath, time.tv_sec, time.tv_usec);
-  fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT, S_IRUSR | S_IWUSR);
-  MYDBG("Opened file : %s\n", full_filename);
-  offset_ = 0;
+  sprintf(full_filename, "%s/%s.%ld.%ld", base_filename, filepath, time.tv_sec, time.tv_usec);
+  //fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT | O_APPEND, S_IRUSR | S_IWUSR);
+  fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT | O_APPEND, S_IRUSR | S_IWUSR);
+  if(fdesc_ < 0) {
+    ERROR_MESSAGE("ERROR: File open path:%s\n", full_filename);
+  }
+  MYDBG("Opened file : %s\n", full_filename); //getchar();
   fh_ = this;
 }
 
@@ -57,28 +61,34 @@ void PosixFileHandle::Close(void)
   fh_ = NULL;
 }
 
-CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len)
+CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64_t inc)
 {
-  CDErrType ferr = kOK;
-  off_t ret = lseek(fdesc_, offset, SEEK_SET);
-
-  MYDBG("write (%d): %p (%lu) at file offset:%lu (== %lu)\n", 
-         fdesc_, src, len, offset, ret);
+  MYDBG("write (%d): %p (%lu) at file offset:%lu\n", 
+         fdesc_, src, len, offset);
   //getchar();
-  ssize_t written_size = write(fdesc_, src, len);
-  offset_ += len;
 
-  // Error Check
-  if(ret < 0) {
-    perror("write:");
-    ferr = kErrorFileSeek;
-    ERROR_MESSAGE("Error occurred while seeking file:%ld\n", ret);
+  CDErrType ferr = kOK;
+  if(offset != offset_) {
+    off_t ret = lseek(fdesc_, offset, SEEK_SET);
+    // Error Check
+    if(ret < 0) {
+      perror("write:");
+      ferr = kErrorFileSeek;
+      ERROR_MESSAGE("Error occurred while seeking file:%ld\n", ret);
+    }
+  } else {
+    MYDBG("offset:%lu == %lu\n", offset_, offset);
   }
 
+
+  ssize_t written_size = write(fdesc_, src, len);
+  offset_ = (inc >= 0)? offset_ + inc : offset_ + len;
+  printf("offset:%lu\n", offset_); //getchar();
+  // Error Check
   if((uint64_t)written_size != len) {
     perror("write:");
     ferr = kErrorFileWrite;
-    ERROR_MESSAGE("Error occurred while writing buffer contents to file: %d %ld\n", fdesc_, written_size);
+    ERROR_MESSAGE("Error occurred while writing buffer contents to file: %d %ld == %lu\n", fdesc_, written_size, len);
   }
 
   return ferr;
@@ -97,7 +107,8 @@ char *PosixFileHandle::Read(uint64_t len, uint64_t offset)
 char *PosixFileHandle::ReadTo(void *dst, uint64_t len, uint64_t offset)
 {
   MYDBG("%lu (file offset:%lu)\n", len, offset);
-  if(offset != 0) {
+  //if(offset != 0) 
+  {
     off_t ret = lseek(fdesc_, offset, SEEK_SET);
     if(ret < 0) {
       perror("read:");
@@ -120,13 +131,25 @@ void PosixFileHandle::FileSync(void)
   fsync(fdesc_);
 }
 
-uint64_t PosixFileHandle::GetFileSize(void)
+void PosixFileHandle::Truncate(uint64_t newsize)
 {
-  struct stat buf;
-  fstat(fdesc_, &buf);
-  uint64_t fsize = buf.st_size;
-  ASSERT(fsize == offset_);
+  MYDBG("%lu\n", newsize); //getchar();
+  int ret = ftruncate(fdesc_, newsize); 
+  if(ret != 0) {
+    perror("ftruncate:");
+    ERROR_MESSAGE("Error during truncating file:%lu\n", newsize);
+  }
+}
+
+
+int64_t PosixFileHandle::GetFileSize(void)
+{
+//  struct stat buf;
+//  fstat(fdesc_, &buf);
+//  uint64_t fsize = buf.st_size;
+//  ASSERT(fsize == offset_);
   return offset_;
+//  return offset_ - sizeof(MagicStore);
   //return fsize - sizeof(MagicStore);
 }
 

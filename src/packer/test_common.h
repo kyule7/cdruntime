@@ -6,7 +6,17 @@
 #include <cstdlib>
 extern FILE *dbgfp;
 
-
+void PrintArray(char *ori, uint64_t intsize, FILE *out=stdout) 
+{
+  intsize /= sizeof(int);
+  for(uint64_t i=0; i<intsize/16; i++) {
+    for(uint64_t j=0; j<16; j++) {
+      fprintf(out, "%5i ", ((int*)ori)[i*16 + j]);
+    }
+    fprintf(out, "\n");
+  }
+  fprintf(out, "\n");
+}
 uint64_t CompareResult(char *ori, char *prv, uint64_t size) 
 {
   uint64_t ret = 0;
@@ -16,7 +26,7 @@ uint64_t CompareResult(char *ori, char *prv, uint64_t size)
   uint64_t intsize = size/sizeof(int);
 
   fprintf(dbgfp, "\n#####################################\n");
-  //if(ret != 0) 
+  if(ret != 0) 
   {
     for(uint64_t i=0; i<intsize/16; i++) {
       for(uint64_t j=0; j<16; j++) {

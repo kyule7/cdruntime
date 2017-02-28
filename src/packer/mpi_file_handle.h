@@ -18,7 +18,6 @@ class MPIFileHandle : public FileHandle {
   protected:
     static MPIFileHandle *fh_;
     uint64_t viewsize_;
-    uint64_t offset_;
     MPI_Comm comm_;
     MPI_File fdesc_;
     MPI_Datatype ftype_;
@@ -30,11 +29,12 @@ class MPIFileHandle : public FileHandle {
   public:
     static FileHandle *Get(MPI_Comm comm, const char *filepath=NULL);
     void Close(void);
-    virtual CDErrType Write(uint64_t offset, char *src, uint64_t chunk);
+    virtual CDErrType Write(uint64_t offset, char *src, uint64_t chunk, int64_t inc=-1);
     virtual char *Read(uint64_t len, uint64_t offset=0);
     virtual char *ReadTo(void *dst, uint64_t len, uint64_t offset=0);
     virtual void FileSync(void);
-    virtual uint64_t GetFileSize(void);
+    virtual void Truncate(uint64_t newsize);
+    virtual int64_t GetFileSize(void);
     virtual uint32_t GetBlkSize(void);
 };
 

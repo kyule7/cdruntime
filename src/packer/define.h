@@ -12,7 +12,8 @@
 #define GIGABYTE     1073741824 
 #define TWO_GIGABYTE 2147483648
 #define FOUR_GIGABYTE 4294967296
-#define DEFAULT_BASE_FILEPATH "./"
+#define INVALID_NUM   0xFFFFFFFFFFFFFFFF
+#define DEFAULT_BASE_FILEPATH "."
 #define ERROR_MESSAGE(...) \
   { fprintf(stderr, __VA_ARGS__); fflush(stderr); assert(0); }
 
@@ -50,6 +51,13 @@ enum {
   kMPIFile   = 0x400
 };
 
+//struct MagicStoreEntry {
+//  uint64_t total_size_;
+//  uint64_t table_offset_;
+//  uint32_t entry_type_;
+//  uint32_t reserved_;
+//};
+
 struct MagicStore {
   uint64_t total_size_;
   uint64_t table_offset_;
@@ -61,6 +69,8 @@ struct MagicStore {
   MagicStore(uint64_t total_size, uint64_t table_offset=0, uint32_t entry_type=0);
   void Print(void);
 };
+
+
 //#define _DEBUG_ENABLED
 
 #ifdef _DEBUG_ENABLED

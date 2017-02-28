@@ -294,7 +294,7 @@ class CD : public Serializable {
     
     static std::list<EventHandler *> cd_event_;
     
-    Packer packer_;
+//    Packer packer_;
 /*  
 09.23.2014 
 It is not complete yet. I am thinking of some way to implement like cd_advance semantic which should allow
