@@ -2024,9 +2024,11 @@ CD::InternalPreserve(void *data,
       "InternalPreserve call was invoked not in kExecution mode: %u\n", cd_exec_mode_);
   CD_DEBUG("[CD::InternalPreserve] cd_exec_mode : %d (should be normal exec mode)\n", cd_exec_mode_);
   CDInternalErrT err = kOK;
+
   uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
   uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
   CDEntry *pEntry = NULL;
+
   if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) { // via-copy, so it saves data right now!
 
     MYASSERT(my_name.empty() == false, 
@@ -2095,7 +2097,6 @@ CD::InternalPreserve(void *data,
   }
 
   return ret; 
-
 }
 
 
@@ -2669,56 +2670,26 @@ RemoteCDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name)
 {
   CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
   
-  auto it = entry_directory_map_.find(entry_name);
+  CDEntry *entry = NULL;
+
   auto jt = remote_entry_directory_map_.find(entry_name);
-  if(it == entry_directory_map_.end() && jt == remote_entry_directory_map_.end()) {
+  if(jt != remote_entry_directory_map_.end()) {
+    entry = jt->second;
+  } else {
+    entry = entry_directory_.table_->Find(entry_name);
+  }
+  
+  if(entry == NULL) {
     CD_DEBUG("[InternalGetEntry Failed] There is no entry for reference of %s at level #%u\n", 
         tag2str[entry_name].c_str(), level());
-    return NULL;
   }
-  else if(it != entry_directory_map_.end()) {
-    // Found entry at local directory
-    CDEntry *cd_entry = it->second;
-    
-    CD_DEBUG("[InternalGetEntry Local] ref_name: %s, address: %p\n", 
-              entry_directory_map_[entry_name]->dst_data_.ref_name().c_str(), 
-              entry_directory_map_[entry_name]->dst_data_.address_data());
-
-//      if(cd_entry->isViaReference())
-//        return NULL;
-//      else
-      return cd_entry;
-  }
-  else if(jt != remote_entry_directory_map_.end()) {
-    // Found entry at local directory, but it is a buffer to send remotely.
-    CDEntry *cd_entry = remote_entry_directory_map_.find(entry_name)->second;
-
-    CD_DEBUG("[InternalGetEntry Remote] ref_name: %s, address: %p\n", 
-              remote_entry_directory_map_[entry_name]->dst_data_.ref_name().c_str(), 
-              remote_entry_directory_map_[entry_name]->dst_data_.address_data());
-    
-//      if(cd_entry->isViaReference())
-//        return NULL;
-//      else
-      return cd_entry;
-  }
-  else {
-    cddbg << "ERROR: there is the same name of entry in entry_directory_map and remote_entry_directory_map.\n"<< endl;
-    assert(0);
-  }
-//  }
-//  catch (const std::out_of_range &oor) 
-//  {
-//    std::cerr << "Out of Range error: " << oor.what() << '\n';
-//    return 0;
-//  }
-}
+  return entry; 
+} 
 
 void CD::DeleteEntryDirectory(void)
 {
   CD_DEBUG("Delete entry directory!\n");
   entry_directory_.Clear(true);
-  entry_directory_map_.clear();
   remote_entry_directory_map_.clear();
 }
 

@@ -308,7 +308,7 @@ class CD : public Serializable {
    
     // These are entry directory for preservation via reference 
     // in the case that the preserved copy resides in a remote node. 
-    EntryDirType entry_directory_map_;   
+    EntryDirType remote_entry_directory_map_;   
 
 
     
