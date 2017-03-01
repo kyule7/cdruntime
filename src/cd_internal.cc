@@ -2023,78 +2023,75 @@ CD::InternalPreserve(void *data,
   MYASSERT(cd_exec_mode_ == kExecution, 
       "InternalPreserve call was invoked not in kExecution mode: %u\n", cd_exec_mode_);
   CD_DEBUG("[CD::InternalPreserve] cd_exec_mode : %d (should be normal exec mode)\n", cd_exec_mode_);
-
+  CDInternalErrT err = kOK;
   uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
-  if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
-    uint64_t orig_datasize = entry_directory_.data_->used();
-    uint64_t orig_tablesize = entry_directory_.table_->used();
-    uint64_t data_offset = (static_cast<PackerSerializable *>(data))->PreserveObject(&entry_directory_);
-    uint64_t packed_size = entry_directory_.data_->used() - orig_size;
+  uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
+  CDEntry *pEntry = NULL;
+  if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) { // via-copy, so it saves data right now!
 
-    uint64_t attr = Attr::knested;
-    if(CHECK_PRV_TYPE(preserved_mask, kCopy)) { 
-    } else if(CHECK_PRV_TYPE(preserved_mask, kRef)) { 
-      CDEntry *pEntry = entry_directory_.AddEntry(data, CDEntry(id, attr, , ref_offset, (void*)ref_id));
+    MYASSERT(my_name.empty() == false, 
+        "Entry name is not specified : %s\n", my_name.c_str());
+    CD_DEBUG("Prv Mask : %d, Is it coop? %d, medium : %d, cd type : %d\n", 
+             preserve_mask, CHECK_PRV_TYPE(preserve_mask, kCoop), GetPlaceToPreserve(), cd_type_);
 
-    } else if(CHECK_PRV_TYPE(preserved_mask, kRegen)) { 
-      //TODO
-      ERROR_MESSAGE("Preservation via Regeneration is not supported, yet. :-(");
+    if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
+      attr |= Attr::knested;
+//      uint64_t orig_tablesize = entry_directory_.table_->used();
+      uint64_t orig_datasize  = entry_directory_.data_->used();
+      // FIXME:PreserveObject must append the table for serialized object to data chunk.
+      PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
+      uint64_t table_offset_in_datachunk = serializer->PreserveObject(&entry_directory_);
+      uint64_t packed_size = entry_directory_.data_->used() - orig_datasize;
+      int64_t table_size_in_datachunk = entry_directory_.data_->used() - table_offset_in_datachunk;
+      ASSERT(table_size_in_datachunk > 0);
+      pEntry = entry_directory_.table_->InsertEntry(
+          CDEntry(id, attr, table_size_in_datachunk, table_offset_in_datachunk, (char *)packed_size) );
     }
-    //CDEntry *pEntry = entry_directory_.AddEntry(data, CDEntry(id, attr, 0, ref_offset, (void*)ref_id));
-    CDEntry entry(id, attr, packed_size, orig_size, NULL);
-    entry_directory_.table_->Insert(entry
+    else { // preserve a single entry
+      pEntry = entry_directory_.AddEntry(data, CDEntry(id, len_in_bytes, 0, data));
+    }
+
+  } // end of preserve via copy
+  else if( CHECK_PRV_TYPE(preserve_mask, kRef) ) { // via-reference
+    
+    CD_DEBUG("Preservation via %d (reference)\n", GetPlaceToPreserve());
+  
+    uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
+    uint64_t ref_id = cd_hash(ref_name);
+  
+    // CDEntry for reference has different format
+    //  8B      8B         8B      8B
+    // [ID] [ATTR|SIZE] [OFFSET] [SRC]
+    //  ID  [ATTR|0]   REF_OFFSET REF_ID
+    attr |= Attr::krefer;
+    uint64_t size = 0;
+    if(CHECK_PRV_TYPE(preserve_mask, kCoop)){ 
+      attr |= (Attr::knested | Attr::ktable);
+      size = static_cast<PackerSerializable *>(data)->GetTableSize();
+    }
+
+    pEntry = entry_directory_.AddEntry(data, CDEntry(id, attr, size, ref_offset, (void*)ref_id));
+    // When restore data for reference of serdes object,
+    // check ref and nested first.
+    // then find ref_id, then read table from ref_id to ref_id+size.
+    // Then restore data 
+    ret = CDInternalErrT::kOK;
   }
-  else {
-    if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) { // via-copy, so it saves data right now!
-      MYASSERT(my_name.empty() == false, 
-          "Entry name is not specified : %s\n", my_name.c_str());
-      CD_DEBUG("Prv Mask : %d, Is it coop? %d, medium : %d, cd type : %d\n", 
-               preserve_mask, CHECK_PRV_TYPE(preserve_mask, kCoop), GetPlaceToPreserve(), cd_type_);
-  
-      CDEntry *pEntry = entry_directory_.AddEntry(data, CDEntry(id, len_in_bytes, 0, data));
-      if( CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
-        remote_entry_directory_map_[id] = pEntry;
-      }
-    } // end of preserve via copy
-    else if( CHECK_PRV_TYPE(preserve_mask, kRef) ) { // via-reference
-      
-      CD_DEBUG("Preservation via %d (reference)\n", GetPlaceToPreserve());
-  
-      uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
-      uint64_t ref_id = cd_hash(ref_name);
-  
-      // CDEntry for reference has different format
-      //  8B      8B         8B      8B
-      // [ID] [ATTR|SIZE] [OFFSET] [SRC]
-      //  ID  [ATTR|0]   REF_OFFSET REF_ID
-      uint64_t attr_ = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
-      attr |= Attr::krefer;
-      CDEntry *pEntry = entry_directory_.AddEntry(data, CDEntry(id, attr, 0, ref_offset, (void*)ref_id));
-  
-      if( (id != INVALID_NUM) && CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
-        CD_DEBUG("[CD::InternalPreserve] Error : kRef | kCoop\n"
-                 "Tried to preserve via reference "
-                 "but tried to allow itself as reference to other node. "
-                 "If it allow itself for reference locally, it is fine!");
-        remote_entry_directory_map_[id] = pEntry;
-      }
-  
-      return CDInternalErrT::kOK;
-      
-    }
-    else if( CHECK_PRV_TYPE(preserve_mask, kRegen) ) { // via-regeneration
-  
-      //TODO
-      ERROR_MESSAGE("Preservation via Regeneration is not supported, yet. :-(");
-  
-      return CDInternalErrT::kOK;
-    }
+  else if( CHECK_PRV_TYPE(preserve_mask, kRegen) ) { // via-regeneration
+    //TODO
+    ERROR_MESSAGE("Preservation via Regeneration is not supported, yet. :-(");
+    ret = CDInternalErrT::kOK;
   }
   else {  // Preservation Type is none of kCopy, kRef, kRegen.
-
     ERROR_MESSAGE("\nUnsupported preservation type : %d\n", preserve_mask);
+  }
 
-    return CDInternalErrT::kEntryError;
+  if( (id != INVALID_NUM) && CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
+    CD_DEBUG("[CD::InternalPreserve] Error : kRef | kCoop\n"
+             "Tried to preserve via reference "
+             "but tried to allow itself as reference to other node. "
+             "If it allow itself for reference locally, it is fine!");
+    remote_entry_directory_map_[id] = pEntry;
   }
 
   return ret; 

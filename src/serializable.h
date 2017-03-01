@@ -54,5 +54,12 @@ class Serializable {
     virtual void Deserialize(void *object)=0;
 };
 
+class Packer;
+class PackerSerializable : public Serializable {
+  public:
+    virtual uint64_t PreserveObject(Packer *packer)=0;
+    virtual uint64_t GetTableSize(Packer *packer)=0;
+};
+
 }
 #endif
