@@ -68,6 +68,7 @@ enum EntryType {
 // medium 2bit (dram, file, remote, regen, ...)
 //
 #if 1 
+
 struct AttrInternal {
   uint64_t size_:48;
   uint64_t reserved_:8;
@@ -82,6 +83,16 @@ struct AttrInternal {
 };
 
 union Attr {
+  enum {
+    ktable     = 0x80,
+    knested    = 0x40,  
+    ktmpshared = 0x20,
+    kshare     = 0x10,
+    kremote    = 0x08,
+    krefer     = 0x04, 
+    kdirty     = 0x02,  
+    kinvalid   = 0x01
+  };
   uint64_t code_;
   AttrInternal attr_;
   Attr(void) : code_(0) {}
@@ -107,10 +118,10 @@ union Attr {
     code_ &= ~(attr << 48);
   }
   
-  bool CheckAll(uint64_t attr) const 
+  bool CheckAll(uint16_t attr) const 
   { return (static_cast<uint16_t>(code_ >> 48) ^ attr) == 0; }
 
-  bool CheckAny(uint64_t attr) const
+  bool CheckAny(uint16_t attr) const
   { return (static_cast<uint16_t>(code_ >> 48) & attr) == 0; }
 
 };

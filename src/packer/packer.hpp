@@ -53,6 +53,8 @@ class Packer {
       delete table_;
       delete data_;
     }
+    
+    BaseTable *GetTable(void) { return table_; }
 
     ///@brief Add data to pack in packer data structure.
     uint64_t Add(char *app_data, uint64_t len, uint64_t id)

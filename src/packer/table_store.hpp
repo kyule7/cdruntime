@@ -23,21 +23,21 @@ class BaseTable {
       MYDBG("%lu/%lu, grow:%lu, alloc:%u\n", tail_, size_, grow_unit_, allocated_);
     }
 
-    inline uint64_t NeedRealloc(size_t entrysize)
+    inline bool NeedRealloc(size_t entrysize, uint64_t cnt=1)
     {
+      bool ret = false;
 //      MYDBG("[%s] entrysize:%zu, used:%lu, size:%lu\n", __func__, entrysize, tail_, size_);
-      if( (tail_ + 1) * entrysize > size_ ) {
+      while( (tail_ + cnt) * entrysize > size_ ) {
         grow_unit_ <<= 1;
         size_ = grow_unit_ * entrysize;
-        return true;
-      } else {
-        return false;
+        ret = true;
       }
+      return ret;
     }
 
   public:
     virtual void *Find(uint64_t id)=0;
-    virtual CDErrType FindWithAttr(uint64_t attr, BaseTable *that)=0;
+    virtual uint64_t FindWithAttr(uint16_t attr, BaseTable *that=NULL)=0;
     virtual CDErrType Find(uint64_t id, uint64_t &ret_size, uint64_t &ret_offset)=0;
     virtual CDErrType GetAt(uint64_t idx, uint64_t &ret_id, uint64_t &ret_size, uint64_t &ret_offset)=0;
     virtual CDErrType Reallocate(void)=0;
@@ -89,7 +89,7 @@ class TableStore : public BaseTable {
       Free(false); 
     }
 
-    EntryT &operator[](uint64_t idx) { return ptr_[idx]; }
+    EntryT &operator[](uint64_t idx) { return ptr_[idx % size_]; }
 
     CDErrType AllocateTable(uint64_t entry_cnt=BASE_ENTRY_CNT)
     {
@@ -136,17 +136,24 @@ class TableStore : public BaseTable {
       return ret;
     }
     
-    virtual CDErrType FindWithAttr(uint64_t attr, BaseTable *that)
+    virtual uint64_t FindWithAttr(uint16_t attr, BaseTable *that=NULL)
     {
-      CDErrType ret = kNotFound;
-      TableStore<EntryT> *table = static_cast<TableStore<EntryT> *>(that);
+      uint64_t num_entry = 0;
+      TableStore<EntryT> *table = NULL;
+      if(that == NULL) {
+        table = this;
+      } else {
+        table = static_cast<TableStore<EntryT> *>(that);
+      }
+
+      uint64_t orig_tail = tail_;
       for(uint32_t i=0; i<tail_; i++) {
         if(ptr_[i].size_.CheckAny(attr)) {
           table->Insert(ptr_[i]);
-          ret = kOK;
         }
       }
-      return ret;
+      num_entry = tail_ - orig_tail;
+      return num_entry;
     }
 
     void *Find(uint64_t id)
@@ -301,13 +308,26 @@ class TableStore : public BaseTable {
       }
     }
   public:
+    virtual uint64_t Insert(EntryT *newentry, uint64_t cnt)
+    {
+      uint64_t entrysize = sizeof(EntryT) * cnt;
+      if(NeedRealloc(sizeof(EntryT), cnt)) {
+        Reallocate();
+      }
+
+      // FIXME:If it is bounded buffer, this should be fixed like data store
+      memcpy(ptr_ + (tail_ % size_), newentry, entrysize);
+      tail_ += cnt;
+      return tail_*sizeof(EntryT);
+    }
+
     virtual uint64_t Insert(EntryT *newentry)
     {
       if(NeedRealloc(sizeof(EntryT))) {
         Reallocate();
       }
       ptr_[tail_] = *newentry;
-      tail_++;//= sizeof(EntryT); 
+      tail_++;
       //MYDBG("[%s] ptr:%p, (%p) used:%lu (entrysize:%zu)\n", __func__, ptr_+tail_, ptr_, tail_, sizeof(EntryT));
       delete newentry;
       return tail_*sizeof(EntryT);
@@ -320,7 +340,7 @@ class TableStore : public BaseTable {
         Reallocate();
       }
       ptr_[tail_] = newentry;
-      tail_++;//= sizeof(EntryT);
+      tail_++;
 //      MYDBG("[%s done] ptr:%p, (%p) used:%lu (entrysize:%zu)\n", __func__, ptr_+tail_, ptr_, tail_, sizeof(EntryT));
       return tail_*sizeof(EntryT);
     }

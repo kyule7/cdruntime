@@ -1728,6 +1728,8 @@ void *CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, v
 
 void *CD::SerializeRemoteEntryDir(uint64_t &len_in_bytes) 
 {
+  TableStore<CDEntry> table;
+  entry_directory_.GetTable()->FindWithAttr(kremote);
   Packer entry_dir_packer;
   uint64_t entry_count = 0;
 
@@ -1747,12 +1749,15 @@ void *CD::SerializeRemoteEntryDir(uint64_t &len_in_bytes)
 
 void CD::DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint64_t task_count, uint64_t unit_size) 
 {
+  TableStore<CDEntry> table;
+  entry_directory_.GetTable()->FindWithAttr(kremote);
   void *unpacked_entry_p=0;
   uint64_t dwGetID=0;
   uint64_t return_size=0;
   char *begin = (char *)object;
 
-  CD_DEBUG("\n[CD::DeseralizeRemoteEntryDir] addr: %p at level #%u", object, CDPath::GetCurrentCD()->ptr_cd()->GetCDID().level());
+  CD_DEBUG("\n[CD::DeseralizeRemoteEntryDir] addr: %p at level #%u", i
+      object, CDPath::GetCurrentCD()->ptr_cd()->GetCDID().level());
 
   for(uint64_t i=0; i<task_count; i++) {
     Unpacker entry_dir_unpacker;
@@ -1769,7 +1774,8 @@ void CD::DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object,
       cd_entry->Deserialize(unpacked_entry_p);
 
       if(CDPath::GetCurrentCD()->IsHead()) {
-        CD_DEBUG("Entry check before insert to entry dir: %s, addr: %p\n", tag2str[cd_entry->entry_tag_].c_str(), object);
+        CD_DEBUG("Entry check before insert to entry dir: %s, addr: %p\n", 
+            tag2str[cd_entry->entry_tag_].c_str(), object);
       }
 
       remote_entry_dir.insert(std::pair<ENTRY_TAG_T, CDEntry*>(cd_entry->entry_tag_, cd_entry));
@@ -1778,297 +1784,12 @@ void CD::DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object,
   }
 }
 
-
-
-/*
-
-CD::CDInternalErrT HeadCD::RequestDataMove(int sender, int receiver, const char *found_ref_name)
-{
-  while( found_entry_list is empty ) {
-    CDEntry entry = cur_entry_in_found_entry_list;
-    int msg_for_sender0 = receiver;
-    char *msg_for_sender1 = found_ref_name;
-    int msg_for_receiver = sender;
-    
-    PMPI_Send(receiver, head, msg_for_receiver); // it will go to receiver
-    PMPI_Send(sender, head, msg_for_sender0);    // it will go to sender
-  }
-}
-
-
-CD::CDInternalErrT CD::RequestDataMove(int sender, int receiver, const char *found_ref_name)
-{
-
-  PMPI_Recv(me, head, msg); // this task will know if I am sender or receiver with this msg from head.
-
-  if( am_I_sender() ){
-    PMPI_Send(receiver_from_msg, me, msg);
-  } else {
-    PMPI_Recv(me, sender_from_msg, msg);
-  }
-
-}
-
-CD::CDInternalErrT CD::EntrySearch()
-{
-  if( !IsHead() ) {
-    // Request HeadCD to find the entry in the entry directory
-    // It is enough to send just ref_name to Head
-
-  } 
-  else { // HeadCD
-
-    // Receive requests from the other tasks and find entry with ref_name
-    // If it find ref_name it calls, RequestDataMovement(Sender, Receiver)
-    // Receiver will be the requester for EntrySearch()
-
-  }
-
-  RequestDataMove(found_entry_list);
-  ForwardEntryToParent(unfound_entry_list);
-}
-
-
-CD::CDInternalErrT CD::GatherEntryDirMapToHead()
-{
-  char sendBuf[SEND_BUF_SIZE];
-  char recvBuf[num_sibling][SEND_BUF_SIZE];
-
-//  PMPI_Allreduce(); // Get the number of entry search requests for HeadCD
-
-  if( !IsHead() ) {
-
-    uint32_t entry_count=0;
-
-    void *packed_entry_dir_p = SerializeEntryDir(entry_count);
-    
-    PMPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
-
-  } 
-  else { // HeadCD
-    
-    PMPI_Gather(sendBuf, num_elements, INTEGER, recvBuf, recv_count, INTEGER, GetHead(), node_id_.color_);
-
-    void *entry_object = getEntryObjFromBuf();
-
-    std::vector<CDEntry> entry_dir = DeserializeEntryDir(entry_object);
-
-  }
-
-  return CD::CDInternalErrT::kOK;
-}
-*/
-
-
-//
-//void *CD::SerializeEntryDir(uint32_t& entry_count) 
-//{
-//  Packer entry_dir_packer;
-//  uint32_t len_in_bytes=0;
-//
-//  for(auto it=entry_directory_.begin(); it!=entry_directory_.end(); ++it) {
-//    uint32_t entry_len=0;
-//    void *packed_entry_p=0;
-//    if( !it->name().empty() ){ 
-//      packed_entry_p = it->Serialize(entry_len);
-//      entry_dir_packer.Add(entry_count++, entry_len, packed_entry_p);
-//      len_in_bytes += entry_len;
-//    }
-//  }
-//  
-//  return entry_dir_packer.GetTotalData(len_in_bytes);
-//}
-//
-//
-//std::vector<CDEntry> CD::DeserializeEntryDir(void *object) 
-//{
-//  std::vector<CDEntry> entry_dir;
-//  Unpacker entry_dir_unpacker;
-//  void *unpacked_entry_p=0;
-//  uint32_t dwGetID=0;
-//  uint32_t return_size=0;
-//  while(1) {
-//    unpacked_entry_p = entry_dir_unpacker.GetNext((char *)object, dwGetID, return_size);
-//    if(unpacked_entry_p == NULL) break;
-//    cd_entry.Deserialize(unpacked_entry_p);
-//    entry_dir.push_back(cd_entry);
-//  }
-//
-//  return entry_dir;  
-//}
-
-
-
-//void *HeadCD::SerializeEntryDir(uint32_t& entry_count) 
-//{
-//  Packer entry_dir_packer;
-//  uint32_t len_in_bytes=0;
-//
-//  for(auto it=entry_directory_.begin(); it!=entry_directory_.end(); ++it) {
-//    uint32_t entry_len=0;
-//    void *packed_entry_p=0;
-//    if( !it->name().empty() ){ 
-//      packed_entry_p = it->Serialize(entry_len);
-//      entry_dir_packer.Add(entry_count++, entry_len, packed_entry_p);
-//      len_in_bytes += entry_len;
-//    }
-//  }
-//
-//  for(auto it=remote_entry_directory_.begin(); it!=entry_directory_.end(); ++it) {
-//    uint32_t entry_len=0;
-//    void *packed_entry_p=0;
-//    if( !it->name().empty() ){ 
-//      packed_entry_p = it->Serialize(entry_len);
-//      entry_dir_packer.Add(entry_count++, entry_len, packed_entry_p);
-//      len_in_bytes += entry_len;
-//    }
-//  }
-//  
-//  return entry_dir_packer.GetTotalData(len_in_bytes);
-//}
-//
-//
-//void HeadCD::DeserializeEntryDir(void *object) 
-//{
-//  std::vector<CDEntry> entry_dir;
-//  Unpacker entry_dir_unpacker;
-//  void *unpacked_entry_p=0;
-//  uint32_t dwGetID=0;
-//  uint32_t return_size=0;
-//
-//  while(1) {
-//    unpacked_entry_p = entry_dir_unpacker.GetNext((char *)object, dwGetID, return_size);
-//    if(unpacked_entry_p == NULL) break;
-//    cd_entry.Deserialize(unpacked_entry_p);
-//    remote_entry_directory_.push_back(cd_entry);
-//  }
-//
-//  return entry_dir;  
-//}
-
-
-
-
-
 // FIXME
 PrvMediumT CD::GetPlaceToPreserve()
 {
 
   return prv_medium_;
 }
-
-#if 0
-bool CD::TestReqComm(bool is_all_valid)
-{
-  cddbg << "\nCD::TestReqComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl
-      << "entry request req Q size : " << entry_request_req_.size() <<endl; cddbg.flush();
-  is_all_valid = true;
-  for(auto it=entry_request_req_.begin(); it!=entry_request_req_.end(); ) {
-    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-
-    if(it->second.valid_) {
-      cddbg << it->second.valid_ << " ";
-      entry_request_req_.erase(it++);
-    }
-    else {
-      cddbg << it->second.valid_ << " ";
-      is_all_valid &= it->second.valid_;
-      ++it;
-    }
-  }
-  cddbg << endl;
-  cddbg << "TestReqComm end"<<endl; cddbg.flush();
-  return is_all_valid;
-}
-
-bool CD::TestRecvComm(bool is_all_valid)
-{
-  cddbg << "\nCD::TestReqComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl
-      << "entry request req Q size : " << entry_recv_req_.size() <<endl; cddbg.flush();
-  is_all_valid = true;
-  for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ) {
-    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-
-    if(it->second.valid_) {
-      cddbg << it->second.valid_ << " ";
-      entry_recv_req_.erase(it++);
-    }
-    else {
-      cddbg << it->second.valid_ << " ";
-      is_all_valid &= it->second.valid_;
-      ++it;
-    }
-  }
-  cddbg << endl; 
-  cddbg << "TestRecvComm end"<<endl; cddbg.flush();
-  return is_all_valid;
-}
-
-
-bool CD::TestComm(bool test_until_done)
-{
-  cddbg << "\nCD::TestComm at " << GetCDName() << " " << GetNodeID() << "\n" << endl;
-  cddbg << "entry req Q size : " << entry_req_.size() << endl 
-       << "\nentry recv Q size : " << entry_recv_req_.size() << endl
-      << "entry request req Q size : " << entry_request_req_.size() <<endl; cddbg.flush();
-//       << "\nentry search Q size : " << entry_search_req_.size()
-//       << "\nentry recv Q size : " << entry_recv_req_.size()
-//       << "\nentry send Q size : " << entry_send_req_.size() << endl;
-  bool is_all_valid = true;
-  is_all_valid = TestReqComm(is_all_valid);
-  cddbg << "==================" << endl; cddbg.flush(); 
-
-//
-//  for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ) {
-//    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-//
-//    if(it->second.valid_) {
-//      entry_recv_req_.erase(it++);
-//    }
-//    else {
-//      cout << it->second.valid_ << " ";
-//      is_all_valid &= it->second.valid_;
-//      ++it;
-//    }
-//  }
-//
-//  for(auto it=entry_send_req_.begin(); it!=entry_send_req_.end(); ) {
-//    PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
-//
-//    if(it->second.valid_) {
-//      entry_send_req_.erase(it++);
-//    }
-//    else {
-//      cout << it->second.valid_ << " ";
-//      is_all_valid &= it->second.valid_;
-//      ++it;
-//    }
-//  }
-
-
-  for(auto it=entry_req_.begin(); it!=entry_req_.end(); ) {
-  cddbg << "+++" << endl; cddbg.flush(); 
-    PMPI_Test(&(it->req_), &(it->valid_), &(it->stat_));
-
-    if(it->valid_) {
-      cddbg << it->valid_ << " ";
-      is_all_valid &= it->valid_;
-      entry_req_.erase(it++);
-    }
-    else {
-      cddbg << it->valid_ << " ";
-      is_all_valid &= it->valid_;
-      ++it;
-    }
-  }
-  cddbg << endl;
-  cddbg << "Is all valid : " << is_all_valid << endl;
-  cddbg.flush();
-  return is_all_valid;
-}
-
-#endif
-
 
 /* This is old comments, but left here just in case.
  *
