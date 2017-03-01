@@ -37,7 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_global.h"
 #include "cd_def_debug.h"
 #include "cd_handle.h"
-#include "cd_entry.h"
+#include "persistence/base_store.h"
 #include "cd_path.h"
 #include "event_handler.h"
 
@@ -112,8 +112,10 @@ void HandleEntrySearch::HandleEvent(void)
   
     // Found the entry!! 
     // Then, send it to the task that has the entry of actual copy
-    ENTRY_TAG_T tag_to_search = target_entry->name_tag();
-    int target_task_id = target_entry->dst_data_.node_id().task_in_color();
+    ENTRY_TAG_T tag_to_search = target_entry->id_;
+    // size is now task_in_color
+    int target_task_id = target_entry->size();//dst_data_.node_id().task_in_color();
+    ASSERT(target_entry->size_.attr_.remote_ == 1);
 
     CD_DEBUG("FOUND %s / %s at level #%u, target task id : %u\n", 
              found_cd->GetCDName().GetString().c_str(), 
@@ -149,7 +151,7 @@ void HandleEntrySearch::HandleEvent(void)
     }
     else {
       CD_DEBUG("HandleEntrySearch --> EntrySend (Head): entry was found at %u\n", found_level);
-      CD_DEBUG("Size of data to send : %lu (%u)\n", target_entry->dst_data_.len(), tag_to_search);
+      CD_DEBUG("sender ID : %lu (%u)\n", target_entry->size(), tag_to_search);
 
 
       char *data_to_send = NULL;
@@ -159,7 +161,7 @@ void HandleEntrySearch::HandleEvent(void)
         data_to_send = static_cast<char *>(target.address_data());
       }
       else if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
-        data_to_send = new char[target_entry->dst_data_.len()];
+        data_to_send = new char[target_entry->size()dst_data_.len()];
         FILE *temp_fp = fopen(target.file_name().c_str(), "r");
         if( temp_fp!= NULL )  {
           if( target.ref_offset() != 0 ) { 
@@ -320,33 +322,33 @@ void HandleEntrySend::HandleEvent(void)
   else {
     CD_DEBUG("HandleEntrySend: entry was found at level #%u.\n", found_level);
 
-    char *data_to_send = NULL;
-    DataHandle &target = entry->dst_data_;
-
-    if(target.handle_type() == kDRAM) {
-      data_to_send = static_cast<char *>(target.address_data());
-    }
-    else if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
-      data_to_send = new char[entry->dst_data_.len()];
-      FILE *temp_fp = fopen(target.file_name().c_str(), "r");
-      if( temp_fp!= NULL )  {
-        if( target.ref_offset() != 0 ) { 
-          fseek(temp_fp, target.ref_offset(), SEEK_SET); 
-        }
-  
-        fread(data_to_send, 1, target.len(), temp_fp);
-  
-        CD_DEBUG("Read data from OS file system\n");
-  
-        fclose(temp_fp);
-      }
-      else {
-        ERROR_MESSAGE("Error in fopen in HandleEntrySend\n");
-      }
-    }
-    else {
-      ERROR_MESSAGE("Unsupported handle type : %d\n", target.handle_type());
-    }
+    char *data_to_send = ptr_cd()->entry_directory_.GetAt(entry);
+////    DataHandle &target = entry->dst_data_;
+//
+//    if(target.handle_type() == kDRAM) {
+//      data_to_send = static_cast<char *>(target.address_data());
+//    }
+//    else if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
+//      data_to_send = new char[entry->size()];
+//      FILE *temp_fp = fopen(target.file_name().c_str(), "r");
+//      if( temp_fp!= NULL )  {
+//        if( target.ref_offset() != 0 ) { 
+//          fseek(temp_fp, target.ref_offset(), SEEK_SET); 
+//        }
+//  
+//        fread(data_to_send, 1, target.len(), temp_fp);
+//  
+//        CD_DEBUG("Read data from OS file system\n");
+//  
+//        fclose(temp_fp);
+//      }
+//      else {
+//        ERROR_MESSAGE("Error in fopen in HandleEntrySend\n");
+//      }
+//    }
+//    else {
+//      ERROR_MESSAGE("Unsupported handle type : %d\n", target.handle_type());
+//    }
     
 //    ptr_cd_->entry_send_req_[tag_to_search] = CommInfo();
     ptr_cd_->entry_req_.push_back(CommInfo()); //getchar();

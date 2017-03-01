@@ -56,15 +56,20 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_global.h"
 #include "serializable.h"
-//#include "cd_def_internal.h" 
-//#include "packer.h"
-//#include "unpacker.h"
 
 using std::endl;
 
 namespace cd {
   namespace internal {
 
+struct TaskInfo {
+  int color_id_;
+  int task_in_color_;
+  int head_;
+  int size_;
+  TaskInfo(int color_id, int task_in_color, int head, int size)
+    : color_id_(color_id), task_in_color_(task_in_color), head_(head), size_(size) {}
+};
 /**@addtogroup cd_defs 
  * @{
  */
@@ -90,11 +95,15 @@ private:
     NODEID_PACKER_HEAD,
     NODEID_PACKER_SIZE 
   };
- 
+
+  struct TaskInfo {
+    int task_in_color_;
+    int head_;
+    int size_;
+    int color_id_;
+  };
+  TaskInfo task_id_;
   ColorT color_;
-  int task_in_color_;
-  int head_;
-  int size_;
   GroupT task_group_;
 
 public:
@@ -111,6 +120,7 @@ public:
   int    task_in_color(void) const;
   int    head(void)          const;
   int    size(void)          const;
+  int    color_id(void)      const;
   bool   IsHead(void)        const;
   std::string GetString(void) const;
   std::string GetStringID(void) const;

@@ -73,7 +73,8 @@ NodeID CDHandle::GenNewNodeID(const ColorT &my_color,
     PMPI_Comm_split(my_color, new_color, new_task, &(new_node_id.color_));
     PMPI_Comm_size(new_node_id.color_, &(new_node_id.size_));
     PMPI_Comm_rank(new_node_id.color_, &(new_node_id.task_in_color_));
-  } 
+  }
+  new_node_id.color_id_ = new_color;
   return new_node_id;
 }
 
@@ -319,7 +320,8 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
     CD_DEBUG("Check it out : %p -- %p, diff : %p\n", 
              entry_to_deserialize, temp_ptr, (void *)((char *)temp_ptr - (char *)entry_to_deserialize));
 
-    ptr_cd()->DeserializeRemoteEntryDir(ptr_cd()->remote_entry_directory_map_, entry_to_deserialize, task_count, serialized_len_in_bytes); 
+    ((HeadCD *)ptr_cd())->DeserializeRemoteEntryDir(entry_to_deserialize, task_count * serialized_len_in_bytes); 
+//    ptr_cd()->DeserializeRemoteEntryDir(ptr_cd()->remote_entry_directory_map_, entry_to_deserialize, task_count, serialized_len_in_bytes); 
 //    ptr_cd()->DeserializeRemoteEntryDir(remote_entry_dir, (void *)((char *)entry_to_deserialize + 1196), task_count, serialized_len_in_bytes); 
 
     CD_DEBUG("\n\n[After] Check entries after deserialization, size : %lu, # of tasks : %u, level : %u\n", 

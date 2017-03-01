@@ -47,7 +47,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <vector>
 #include "cd_handle.h"
-#include "cd_entry.h"
 #include "cd_def_debug.h"
 /** \addtogroup cd_hierarchy  
  *
@@ -79,7 +78,6 @@ class CDPath : public std::vector<CDHandle*> {
   friend class cd::CDHandle;
   friend class CD;
   friend class HeadCD;
-  friend class CDEntry;
   friend class HandleAllReexecute;
   friend class HandleEntrySearch;
   friend class HandleEntrySend;

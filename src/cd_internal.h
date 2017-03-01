@@ -49,15 +49,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_internal.h"
 #include "cd_def_common.h"
 #include "cd_handle.h"
-#include "cd_entry.h"
+//#include "cd_entry.h"
 #include "util.h"
 #include "cd_id.h"
 #include "cd_file_handle.h"
 #include "recover_object.h"
 #include "serializable.h"
 #include "event_handler.h"
-#include "cd_pfs.h"
-#include "packer.h"
+//#include "cd_pfs.h"
+//#include "packer.h"
+#include "persistence/cd_packer.hpp"
 
 #include <list>
 
@@ -216,6 +217,8 @@ class CD : public Serializable {
 
     /// Flag for normal execution or reexecution.
     CDExecMode      cd_exec_mode_;
+    uint64_t        preserve_count_;
+    uint64_t        restore_count_;
     int             num_reexecution_;
 #if 1
   public:
@@ -284,11 +287,11 @@ class CD : public Serializable {
     static std::map<uint32_t, CDHandle *> delete_store_;
 
     // Only CDEntries that has refname will be pushed into this data structure for later quick search.
-    EntryDirType entry_directory_map_;   
+//    EntryDirType entry_directory_map_;   
    
     // These are entry directory for preservation via reference 
     // in the case that the preserved copy resides in a remote node. 
-    EntryDirType remote_entry_directory_map_;   
+    EntryDirType entry_directory_map_;   
 
 
     
@@ -594,7 +597,7 @@ public:
     CDInternalErrT SyncFile(void); 
     static uint32_t SyncCDs(CD *cd_lv_to_sync, bool for_recovery=false);
     void *SerializeRemoteEntryDir(uint64_t &len_in_bytes);
-    void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint64_t task_count, uint64_t unit_size);
+//    void DeserializeRemoteEntryDir(EntryDirType &remote_entry_dir, void *object, uint64_t task_count, uint64_t unit_size);
     virtual void *Serialize(uint64_t &len_in_bytes);
     virtual void Deserialize(void *object);
     static CDHandle *GetCDToRecover(CDHandle *cd_level, bool collective=true);
@@ -725,6 +728,8 @@ class HeadCD : public CD {
     /// we should send Head CDHandle and its CD to its parent CD
     std::list<CDHandle *> cd_children_;
 
+    TableStore<CDEntry> remote_entry_table_;
+
     CDHandle *cd_parent_;
 
 //    std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
@@ -758,6 +763,7 @@ class HeadCD : public CD {
     virtual CDErrT AddChild(CDHandle *cd_child); 
     virtual CDErrT RemoveChild(CDHandle *cd_child); 
 
+    void DeserializeRemoteEntryDir(void *object, uint64_t totsize);
 
     void *Serialize(uint64_t &len_in_bytes);
     void Deserialize(void *object);

@@ -78,6 +78,23 @@ class Packer {
       return ret;
     }
 
+    char *GetAt(uint64_t id, uint64_t &ret_size)
+    {
+      uint64_t ret_offset = 0;
+      CDErrType err = table_->Find(id, ret_size, ret_offset);
+      if(err == kNotFound) { assert(0); }
+      char *dst = new char[ret_size];
+      data_->Read(dst, ret_size, ret_offset);
+      return dst;
+    }
+
+    char *GetAt(const EntryT &entry)
+    {
+      char *dst = new char[entry.size()];
+      data_->Read(dst, entry.size(), entry.offset_);
+      return dst;
+    }
+
     ///@brief Get total size required for table (metadata) and data.
     char *GetTotalData(uint64_t &total_data_size)
     {
