@@ -77,6 +77,13 @@ class Packer {
       uint64_t ret = table_->Insert(entry.SetOffset(offset));
       return ret;
     }
+    
+    EntryT *AddEntry(char *src, EntryT &&entry)
+    {
+      uint64_t offset = data_->Write(src, entry.size());
+      EntryT *ret = table_->InsertEntry(entry.SetOffset(offset));
+      return ret;
+    }
 
     char *GetAt(uint64_t id, uint64_t &ret_size)
     {

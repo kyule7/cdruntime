@@ -46,6 +46,24 @@ using namespace cd::interface;
 using namespace cd::logging;
 using namespace std;
 
+struct RemoteCDEntry : public CDEntry {
+  int task_id_;
+  RemoteCDEntry(const CDEntry &that) {
+    copy(that);
+  }
+  void copy(const CDEntry &that) {
+    id_      = that.id_;
+    size_    = that.size_;
+    offset_  = that.offset_;
+    src_     = that.src_;
+    task_id_ = myTaskID;
+  }
+  RemoteCDEntry &operator=(const CDEntry &that) {
+    copy(that);
+    return *this;
+  }
+};
+
 //#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 #define BUGFIX_0327 1
 #define _LOG_PROFILING 0
@@ -1721,13 +1739,13 @@ void *CD::SerializeRemoteEntryDir(uint64_t &len_in_bytes)
 {
 //  entry_directory_.GetTable()->FindWithAttr(kremote);
   len_in_bytes = remote_entry_directory_map_.size();
-  CDEntry *serialized = NULL;
+  RemoteCDEntry *serialized = NULL;
   if(len_in_bytes != 0) {
-    serialized = new CDEntry[remote_entry_cnt];
-    for(auto it = remote_entry_directory_map_.begin(); 
-             it!= remote_entry_directory_map_.end(); ++it) {
-      memcpy(serialized, it->second, sizeof(CDEntry));
-      serialized += 1;
+    serialized = new RemoteCDEntry[remote_entry_cnt];
+    for(auto it = remote_entry_directory_map_.begin(), uint64_t i=0; 
+             it!= remote_entry_directory_map_.end(); 
+             ++it, i++) {
+      serialized[i] = it->second;
     }
   } 
   return serialized;
@@ -2002,47 +2020,75 @@ CD::InternalPreserve(void *data,
                      const RegenObject *regen_object, 
                      PreserveUseT data_usage)
 {
-  MYASSERT(cd_exec_mode_ == kExecution, "InternalPreserve call was invoked not in kExecution mode: %u\n", cd_exec_mode_);
-  CD_DEBUG("\n[CD::InternalPreserve] cd_exec_mode : %d\n", cd_exec_mode_);
-  CD_DEBUG("Normal execution mode (internal preservation call)\n");
+  MYASSERT(cd_exec_mode_ == kExecution, 
+      "InternalPreserve call was invoked not in kExecution mode: %u\n", cd_exec_mode_);
+  CD_DEBUG("[CD::InternalPreserve] cd_exec_mode : %d (should be normal exec mode)\n", cd_exec_mode_);
 
-  uint64_t id = cd_hash(my_name)
+  uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
   if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
-    (static_cast<PackerSerializable *>(data))->PreserveObject(&entry_directory_);
-  }
-  else if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) { // via-copy, so it saves data right now!
+    uint64_t orig_datasize = entry_directory_.data_->used();
+    uint64_t orig_tablesize = entry_directory_.table_->used();
+    uint64_t data_offset = (static_cast<PackerSerializable *>(data))->PreserveObject(&entry_directory_);
+    uint64_t packed_size = entry_directory_.data_->used() - orig_size;
 
-    CD_DEBUG("Preservation via Copy to %d(memory or file)\n", GetPlaceToPreserve());
-    CD_DEBUG("Prv Mask : %d, Is it coop? %d, medium : %d, cd type : %d\n", 
-             preserve_mask, CHECK_PRV_TYPE(preserve_mask, kCoop), GetPlaceToPreserve(), cd_type_);
-    entry_directory_.Add(data, CDEntry(id, len_in_bytes, data));
+    uint64_t attr = Attr::knested;
+    if(CHECK_PRV_TYPE(preserved_mask, kCopy)) { 
+    } else if(CHECK_PRV_TYPE(preserved_mask, kRef)) { 
+      CDEntry *pEntry = entry_directory_.AddEntry(data, CDEntry(id, attr, , ref_offset, (void*)ref_id));
 
-
-  } // end of preserve via copy
-  else if( CHECK_PRV_TYPE(preserve_mask, kRef) ) { // via-reference
-
-    CD_DEBUG("Preservation via %d (reference)\n", GetPlaceToPreserve());
-    uint64_t ref_id = cd_hash(ref_name);
-    CDEntry entry(id, 0, ref_offset, (void*)ref_id);
-    entry.size_.attr_.refer_ = 1;
-    uint64_t offset = entry_directory_.AddEntry(entry);
-    if( !my_name.empty() ) {
-      entry_directory_map_[cd_hash(my_name)] = offset;
-
-      if( CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
-        CD_DEBUG("[CD::InternalPreserve] Error : kRef | kCoop\nTried to preserve via reference but tried to allow itself as reference to other node. If it allow itself for reference locally, it is fine!");
-      }
+    } else if(CHECK_PRV_TYPE(preserved_mask, kRegen)) { 
+      //TODO
+      ERROR_MESSAGE("Preservation via Regeneration is not supported, yet. :-(");
     }
-
-    return CDInternalErrT::kOK;
-    
+    //CDEntry *pEntry = entry_directory_.AddEntry(data, CDEntry(id, attr, 0, ref_offset, (void*)ref_id));
+    CDEntry entry(id, attr, packed_size, orig_size, NULL);
+    entry_directory_.table_->Insert(entry
   }
-  else if( CHECK_PRV_TYPE(preserve_mask, kRegen) ) { // via-regeneration
-
-    //TODO
-    ERROR_MESSAGE("Preservation via Regeneration is not supported, yet. :-(");
-
-    return CDInternalErrT::kOK;
+  else {
+    if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) { // via-copy, so it saves data right now!
+      MYASSERT(my_name.empty() == false, 
+          "Entry name is not specified : %s\n", my_name.c_str());
+      CD_DEBUG("Prv Mask : %d, Is it coop? %d, medium : %d, cd type : %d\n", 
+               preserve_mask, CHECK_PRV_TYPE(preserve_mask, kCoop), GetPlaceToPreserve(), cd_type_);
+  
+      CDEntry *pEntry = entry_directory_.AddEntry(data, CDEntry(id, len_in_bytes, 0, data));
+      if( CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
+        remote_entry_directory_map_[id] = pEntry;
+      }
+    } // end of preserve via copy
+    else if( CHECK_PRV_TYPE(preserve_mask, kRef) ) { // via-reference
+      
+      CD_DEBUG("Preservation via %d (reference)\n", GetPlaceToPreserve());
+  
+      uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
+      uint64_t ref_id = cd_hash(ref_name);
+  
+      // CDEntry for reference has different format
+      //  8B      8B         8B      8B
+      // [ID] [ATTR|SIZE] [OFFSET] [SRC]
+      //  ID  [ATTR|0]   REF_OFFSET REF_ID
+      uint64_t attr_ = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
+      attr |= Attr::krefer;
+      CDEntry *pEntry = entry_directory_.AddEntry(data, CDEntry(id, attr, 0, ref_offset, (void*)ref_id));
+  
+      if( (id != INVALID_NUM) && CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
+        CD_DEBUG("[CD::InternalPreserve] Error : kRef | kCoop\n"
+                 "Tried to preserve via reference "
+                 "but tried to allow itself as reference to other node. "
+                 "If it allow itself for reference locally, it is fine!");
+        remote_entry_directory_map_[id] = pEntry;
+      }
+  
+      return CDInternalErrT::kOK;
+      
+    }
+    else if( CHECK_PRV_TYPE(preserve_mask, kRegen) ) { // via-regeneration
+  
+      //TODO
+      ERROR_MESSAGE("Preservation via Regeneration is not supported, yet. :-(");
+  
+      return CDInternalErrT::kOK;
+    }
   }
   else {  // Preservation Type is none of kCopy, kRef, kRegen.
 
@@ -2620,8 +2666,9 @@ void HeadCD::set_cd_parent(CDHandle *cd_parent)
 
 
 
+// If it is found locally, cast type to RemoteCDEntry
 
-CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name) 
+RemoteCDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name) 
 {
   CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
   
@@ -3126,12 +3173,12 @@ void HeadCD::Deserialize(void *object)
 
 
 
-CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
+RemoteCDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
 {
   CD_DEBUG("Search Entry : %u (%s) at level #%u \n", tag_to_search, tag2str[tag_to_search].c_str(), level());
 
   CDHandle *parent_cd = CDPath::GetParentCD();
-  CDEntry *entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
+  RemoteCDEntry *entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
 
   CD_DEBUG("Parent name : %s\n", parent_cd->GetName());
 

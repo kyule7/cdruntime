@@ -89,7 +89,7 @@ void HandleEntrySearch::HandleEvent(void)
   ENTRY_TAG_T &source_task_id = recvBuf[1];
   uint32_t found_level = 0;
   
-  CDEntry *target_entry = ptr_cd_->InternalGetEntry(tag_to_search);
+  RemoteCDEntry *target_entry = ptr_cd_->InternalGetEntry(tag_to_search);
   if(target_entry != NULL) { 
     CD_DEBUG("FOUND it at this level #%u\n", ptr_cd_->level());
     found_level = ptr_cd_->level();
@@ -112,9 +112,9 @@ void HandleEntrySearch::HandleEvent(void)
   
     // Found the entry!! 
     // Then, send it to the task that has the entry of actual copy
-    ENTRY_TAG_T tag_to_search = target_entry->id_;
-    // size is now task_in_color
-    int target_task_id = target_entry->size();//dst_data_.node_id().task_in_color();
+    ASSERT(target_entry->id_ == tag_to_search);
+    ASSERT(target_entry->size_.attr_.remote_ == 1);
+    const int target_task_id  = target_entry->task_id_;
     ASSERT(target_entry->size_.attr_.remote_ == 1);
 
     CD_DEBUG("FOUND %s / %s at level #%u, target task id : %u\n", 
@@ -310,7 +310,8 @@ void HandleEntrySend::HandleEvent(void)
   //CDHandle *cdh = CDPath::GetParentCD(ptr_cd_->level());
   CDHandle *cdh = CDPath::GetCDLevel(ptr_cd_->level());
   
-  for(auto it=cdh->ptr_cd()->remote_entry_directory_map_.begin(); it!=cdh->ptr_cd()->remote_entry_directory_map_.end(); ++it) {
+  for(auto it =cdh->ptr_cd()->remote_entry_directory_map_.begin(); 
+           it!=cdh->ptr_cd()->remote_entry_directory_map_.end(); ++it) {
     CD_DEBUG("%u (%s) - %s\n)\n", it->first, tag2str[it->first].c_str(), it->second->GetString().c_str());
     CD_DEBUG("--------------------- level : %u --------------------------------", cdh->level());
   }
@@ -353,19 +354,19 @@ void HandleEntrySend::HandleEvent(void)
 //    ptr_cd_->entry_send_req_[tag_to_search] = CommInfo();
     ptr_cd_->entry_req_.push_back(CommInfo()); //getchar();
       
-    // Should be non-blocking send to avoid deadlock situation. 
-    PMPI_Isend(data_to_send, 
-               target.len(), 
+    // Should be non-blocking buffered send to avoid deadlock situation. 
+    PMPI_Ibsend(data_to_send, 
+               entry.size(), 
                MPI_BYTE, 
                entry_source_task_id, 
                ptr_cd_->GetCDID().GenMsgTag(tag_to_search), 
                MPI_COMM_WORLD, // could be any task in the whole rank group 
                &(ptr_cd_->entry_req_.back().req_));  
 //               &(ptr_cd_->entry_send_req_[tag_to_search].req_));  
-  
-    if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
-      delete data_to_send;
-    }
+
+    // it is safe to delete user-level buffer, because we used buffered send. 
+    delete data_to_send; 
+
     CD_DEBUG("CD Event kEntrySend\t\t\t");
   
 //    if(ptr_cd_->IsHead()) {

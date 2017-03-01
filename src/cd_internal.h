@@ -107,6 +107,23 @@ void Initialize(void);
 
 void Finalize(void);
 
+struct RemoteCDEntry : public CDEntry {
+  int task_id_;
+  RemoteCDEntry(const CDEntry &that) {
+    copy(that);
+  }
+  void copy(const CDEntry &that) {
+    id_      = that.id_;
+    size_    = that.size_;
+    offset_  = that.offset_;
+    src_     = that.src_;
+    task_id_ = myTaskID;
+  }
+  RemoteCDEntry &operator=(const CDEntry &that) {
+    copy(that);
+    return *this;
+  }
+};
 
 /**@class CD 
  * @brief Core data structure of CD runtime. It has all the information and controls of a specific level of CDs.
@@ -119,7 +136,7 @@ class CD : public Serializable {
     friend class cd::CDHandle;  
     friend class cd::RegenObject;   
     friend class cd::RecoverObject;
-    friend class CDEntry;  
+//    friend class CDEntry;  
     friend class HandleAllReexecute;
     friend class HandleErrorOccurred;
     friend class HandleAllResume;
@@ -131,7 +148,7 @@ class CD : public Serializable {
     friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
     friend void cd::CD_Finalize(void);
 #if CD_MPI_ENABLED
-    friend class PFSHandle;
+//    friend class PFSHandle;
     friend class cd::logging::CommLog;
     friend int MPI_Win_fence(int assert, MPI_Win win);
 #endif
@@ -321,7 +338,7 @@ update the preserved data.
     /// This shall be used for re-execution. 
     /// We will restore the value one by one.
     /// Should not be CDEntry*. 
-    std::list<CDEntry>::iterator iterator_entry_;   
+//    std::list<CDEntry>::iterator iterator_entry_;   
   
     CDFileHandle file_handle_;
     // PFS
@@ -561,9 +578,9 @@ public:
     // so serializing entire CDEntry class does not make sense. 
 
     // Search CDEntry with entry_name given. It is needed when its children preserve data via reference and search through its ancestors. If it cannot find in current CD object, it outputs NULL 
-    CDEntry *InternalGetEntry(ENTRY_TAG_T entry_name); 
+    RemoteCDEntry *InternalGetEntry(ENTRY_TAG_T entry_name); 
  
-    CDEntry *SearchEntry(ENTRY_TAG_T entry_tag_to_search, uint32_t &found_level);
+    RemoteCDEntry *SearchEntry(ENTRY_TAG_T entry_tag_to_search, uint32_t &found_level);
     void AddEntryToSend(const ENTRY_TAG_T &entry_tag_to_search);
  
     // This comment is previous one, so may be confusing for current design. 
@@ -728,7 +745,7 @@ class HeadCD : public CD {
     /// we should send Head CDHandle and its CD to its parent CD
     std::list<CDHandle *> cd_children_;
 
-    TableStore<CDEntry> remote_entry_table_;
+    TableStore<RemoteCDEntry> remote_entry_table_;
 
     CDHandle *cd_parent_;
 

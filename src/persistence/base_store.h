@@ -97,6 +97,10 @@ union Attr {
   AttrInternal attr_;
   Attr(void) : code_(0) {}
   Attr(uint64_t size) : code_(size) {}
+  Attr(uint64_t attr, uint64_t size) {
+    code_ = (attr << 48);
+    attr_.size_ = size;
+  }
   uint64_t operator=(uint64_t that) {
     attr_.size_ = that;
     return attr_.size_;
@@ -168,6 +172,8 @@ struct CDEntry {
       : id_(id), size_(size), offset_(0), src_(src) {}
     CDEntry(uint64_t id, uint64_t size, uint64_t offset, char *src=0) 
       : id_(id), size_(size), offset_(offset), src_(src) {}
+    CDEntry(uint64_t id, uint64_t attr, uint64_t size, uint64_t offset, char *src=0) 
+      : id_(id), size_(attr,size), offset_(offset), src_(src) {}
     CDEntry(const CDEntry &that) {
       copy(that);
     }
