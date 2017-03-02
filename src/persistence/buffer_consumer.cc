@@ -1,16 +1,16 @@
 #include "buffer_consumer.h"
 #include "buffer_consumer_interface.h"
 #include "data_store.h"
-using namespace cd;
+using namespace packer;
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 // BufferConsumer
 //
 pthread_t child = -1;
-pthread_cond_t  cd::full  = PTHREAD_COND_INITIALIZER;
-pthread_cond_t  cd::empty = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t cd::mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  packer::full  = PTHREAD_COND_INITIALIZER;
+pthread_cond_t  packer::empty = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t packer::mutex = PTHREAD_MUTEX_INITIALIZER;
 
 BufferConsumer *BufferConsumer::buffer_consumer_ = NULL;
 
@@ -63,7 +63,7 @@ void BufferConsumer::RemoveBuffer(DataStore *ds)
     }
   }
   if( found == false ) {
-    ERROR_MESSAGE("Remove buffer which is not existing in buf_list_\n");
+    ERROR_MESSAGE_PACKER("Remove buffer which is not existing in buf_list_\n");
   }
 }
 
@@ -121,7 +121,7 @@ void *BufferConsumer::ConsumeBuffer(void *bc)
   while(1) 
   {
     MYDBG("BufferConsumer::Write\n");
-    ASSERT(buffer_consumer_ != NULL);
+    PACKER_ASSERT(buffer_consumer_ != NULL);
     /******* Critical section begin: Only update head_ *********/
     pthread_mutex_lock(&mutex);  
     MYDBG("111\n");
@@ -158,7 +158,7 @@ void *BufferConsumer::ConsumeBuffer(void *bc)
       buffer->WriteFile(rest);
       buffer = NULL;
     } else if (rest < 0) { 
-      ERROR_MESSAGE("rest (%ld) < 0\n", rest);
+      ERROR_MESSAGE_PACKER("rest (%ld) < 0\n", rest);
     }
 
 

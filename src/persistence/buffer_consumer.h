@@ -5,7 +5,7 @@
 #include <cstdint>
 #include "buffer_consumer_interface.h"
 
-namespace cd {
+namespace packer {
 
 class DataStore;
 // Singleton
@@ -30,6 +30,6 @@ class BufferConsumer {
 static inline BufferConsumer *GetBufferConsumer(void) { return BufferConsumer::Get(); }
 
 
-} // namespace cd ends
+} // namespace packer ends
 
 #endif

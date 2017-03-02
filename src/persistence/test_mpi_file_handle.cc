@@ -3,16 +3,16 @@
 #include "buffer_consumer_interface.h"
 #include "ckpt_time_hist.h"
 #include <unistd.h>
-using namespace cd;
+using namespace packer;
 
 FILE *dbgfp = NULL;
-#ifdef _DEBUG_ENABLED
-std::map<pthread_t, unsigned int> tid2str;
-int indent_cnt = 0; 
-#endif
-pthread_cond_t  cd::full  = PTHREAD_COND_INITIALIZER;
-pthread_cond_t  cd::empty = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t cd::mutex = PTHREAD_MUTEX_INITIALIZER;
+//#ifdef _DEBUG_ENABLED
+//std::map<pthread_t, unsigned int> tid2str;
+//int indent_cnt = 0; 
+//#endif
+//pthread_cond_t  cd::full  = PTHREAD_COND_INITIALIZER;
+//pthread_cond_t  cd::empty = PTHREAD_COND_INITIALIZER;
+//pthread_mutex_t cd::mutex = PTHREAD_MUTEX_INITIALIZER;
 
 Singleton st;
 uint32_t ckpt_id = 0;

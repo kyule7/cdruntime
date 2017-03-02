@@ -48,21 +48,24 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_common.h"
 #include "cd_def_interface.h"
 #include "cd_global.h"
-#define EntryDirType std::unordered_map<ENTRY_TAG_T,CDEntry*>
+#define EntryDirType std::unordered_map<ENTRY_TAG_T,packer::CDEntry*>
 
+namespace packer {
+  class CDEntry;
+}
 namespace cd {
   namespace internal {
 
     class CD;
     class HeadCD;
     class CDPath;
-    class CDEntry;
+    //class CDEntry;
     class DataHandle;
     class NodeID;
     class CDNameT;
     class CDID;
     class CDEvent;
-    class PFSHandle;
+    //class PFSHandle;
   }
   namespace logging {
     class CommLog;
@@ -176,28 +179,28 @@ namespace cd {
 
 
 
-/** \addtogroup cd_defs 
- *@{
- */
-/** 
- * @brief Type for specifying whether the current CD is executing
- * for the first time or is currently reexecuting as part of recovery.
- *
- * During reexecution, data is restored instead of being
- * preserved. Additionally, for relaxed CDs, some communication and
- * synchronization may not repeated and instead preserved (logged)
- * values are used. 
- * See <http://lph.ece.utexas.edu/public/CDs> for a detailed
- * description. Note that this is not part of the cd_internal
- * namespace because the application programmer may want to manipulate
- * this when specifying specialized recovery routines.
- */
-    enum CDExecMode  {kExecution=0, //!< Execution mode 
-                      kReexecution, //!< Reexecution mode
-                      kSuspension   //!< Suspension mode (not active)
-                     };
-
-/** @} */ // End group cd_defs
+///** \addtogroup cd_defs 
+// *@{
+// */
+///** 
+// * @brief Type for specifying whether the current CD is executing
+// * for the first time or is currently reexecuting as part of recovery.
+// *
+// * During reexecution, data is restored instead of being
+// * preserved. Additionally, for relaxed CDs, some communication and
+// * synchronization may not repeated and instead preserved (logged)
+// * values are used. 
+// * See <http://lph.ece.utexas.edu/public/CDs> for a detailed
+// * description. Note that this is not part of the cd_internal
+// * namespace because the application programmer may want to manipulate
+// * this when specifying specialized recovery routines.
+// */
+//  enum CDExecMode  {kExecution=0, //!< Execution mode 
+//                    kReexecution, //!< Reexecution mode
+//                    kSuspension   //!< Suspension mode (not active)
+//                     };
+//
+///** @} */ // End group cd_defs
 
 
 
@@ -261,7 +264,6 @@ namespace cd {
 
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
 
-  extern CDHandle *null_cd;
 #if CD_MPI_ENABLED
   extern MPI_Group whole_group;
 //  extern int handled_event_count;
@@ -316,8 +318,8 @@ namespace cd {
   extern std::map<ENTRY_TAG_T, std::string> tag2str;
 //  extern std::hash<std::string> str_hash;
 //  extern EntryDirType::hasher str_hash;
-  extern std::unordered_map<std::string,CDEntry*>::hasher str_hash;
-  extern std::unordered_map<std::string,CDEntry*> str_hash_map;
+  extern std::unordered_map<std::string,packer::CDEntry*>::hasher str_hash;
+  extern std::unordered_map<std::string,packer::CDEntry*> str_hash_map;
 
   extern uint64_t gen_object_id;
 

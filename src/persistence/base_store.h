@@ -12,7 +12,7 @@
 #define DATA_GROW_UNIT 4096 // 4KB
 #define TABLE_GROW_UNIT 4096 // 4KB (128 EntryT)
 #define BUFFER_INSUFFICIENT 0xFFFFFFFFFFFFFFFF
-namespace cd {
+namespace packer {
 
 //enum PackerErrT {
 //  kOK = 0,
@@ -168,11 +168,11 @@ struct CDEntry {
     uint64_t offset_;
     char *src_;
     CDEntry(void) : id_(0), size_(0), offset_(0), src_(0) {}
-    CDEntry(uint64_t id, uint64_t size, char *src) 
-      : id_(id), size_(size), offset_(0), src_(src) {}
-    CDEntry(uint64_t id, uint64_t size, uint64_t offset, char *src=0) 
+    CDEntry(uint64_t id, uint64_t size, uint64_t offset) 
+      : id_(id), size_(size), offset_(offset), src_(NULL) {}
+    CDEntry(uint64_t id, uint64_t size, uint64_t offset, char *src) 
       : id_(id), size_(size), offset_(offset), src_(src) {}
-    CDEntry(uint64_t id, uint64_t attr, uint64_t size, uint64_t offset, char *src=0) 
+    CDEntry(uint64_t id, uint64_t attr, uint64_t size, uint64_t offset, char *src) 
       : id_(id), size_(attr,size), offset_(offset), src_(src) {}
     CDEntry(const CDEntry &that) {
       copy(that);
@@ -198,7 +198,7 @@ struct CDEntry {
 
 //extern uint32_t entry_type[ENTRY_TYPE_CNT];
 
-} // namespace cd ends
+} // namespace packer ends
 
 
 #endif

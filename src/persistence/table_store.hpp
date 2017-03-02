@@ -4,7 +4,7 @@
 #include "base_store.h"
 #include <type_traits>
 #define TABLE_ID_OFFSET 0xFFFFFFFF00000000
-namespace cd {
+namespace packer {
 class BaseTable {
   protected:
     uint64_t size_;
@@ -13,7 +13,6 @@ class BaseTable {
     uint64_t advance_point_;
     uint64_t grow_unit_;
     uint32_t allocated_;
-    static uint64_t table_id;
   public:
     BaseTable(void) : advance_point_(0), allocated_(0) {}
     virtual ~BaseTable(void) {}
@@ -52,7 +51,7 @@ class BaseTable {
     virtual char    *GetPtr(void)   const = 0;
 };
 
-uint64_t BaseTable::table_id = TABLE_ID_OFFSET;
+//extern uint64_t BaseTable::table_id; = TABLE_ID_OFFSET;
 //
 // Packer(new TableStore<EntryT>, new DataStore)
 template <typename EntryT>
@@ -62,17 +61,17 @@ class TableStore : public BaseTable {
     EntryT *ptr_;
     EntryT prv_entry_;
   public:
-    TableStore<EntryT>(uint64_t alloc=BASE_ENTRY_CNT) : ptr_(0), prv_entry_(table_id++, 0, INVALID_NUM) { 
+    TableStore<EntryT>(uint64_t alloc=BASE_ENTRY_CNT) : ptr_(0), prv_entry_(table_id++, 0UL, INVALID_NUM) { 
       MYDBG("\n");
 //      if(alloc) AllocateTable();//sizeof(EntryT));
       AllocateTable(alloc);//sizeof(EntryT));
     }
     
-    TableStore<EntryT>(EntryT *ptr_table, uint32_t len_in_byte) : prv_entry_(table_id++, 0, INVALID_NUM) {
+    TableStore<EntryT>(EntryT *ptr_table, uint32_t len_in_byte) : prv_entry_(table_id++, 0UL, INVALID_NUM) {
       MYDBG("\n");
       if(ptr_table != NULL) {
         ptr_ = ptr_table;
-        ASSERT(len_in_byte % sizeof(EntryT) == 0);
+        PACKER_ASSERT(len_in_byte % sizeof(EntryT) == 0);
         size_ = len_in_byte;
 //        tail_ = len_in_byte / sizeof(EntryT);
         head_ = 0;
@@ -277,6 +276,7 @@ class TableStore : public BaseTable {
     virtual int64_t  used(void)     const { return (int64_t)tail_ - (int64_t)head_; }
     virtual int64_t  buf_used(void) const { return ((int64_t)tail_ - (int64_t)head_) * sizeof(EntryT); }
     virtual uint64_t size(void)     const { return size_; }
+    virtual uint64_t tail(void)     const { return tail_ % size_; }
     virtual int64_t  usedsize(void) const { return ((int64_t)tail_ - (int64_t)head_) * sizeof(EntryT); }
     virtual int64_t  tablesize(void) const { return ((int64_t)tail_ - (int64_t)advance_point_) * sizeof(EntryT); }
     virtual char    *GetPtr(void)   const { return (char *)ptr_; }
@@ -363,7 +363,7 @@ class TableStore : public BaseTable {
       if(NeedRealloc(sizeof(EntryT))) {
         Reallocate();
       }
-      EntryT *ret = &(ptr_ + tail_);
+      EntryT *ret = (ptr_ + (tail_ % size_));
       ptr_[tail_] = std::move(newentry);
       tail_++;
       return ret;
@@ -419,31 +419,31 @@ class TableStore : public BaseTable {
       if( ptr_ != NULL && pto != NULL ) {  
         memcpy(pto, ptr_ + i, size);
       } else {
-        ERROR_MESSAGE("Read failed: to:%p <- from:%p (%p)\n", pto, ptr_+pos, ptr_);
+        ERROR_MESSAGE_PACKER("Read failed: to:%p <- from:%p (%p)\n", pto, ptr_+pos, ptr_);
       }
     }
 };
     
 
-BaseTable *GetTable(uint32_t entry_type, char *ptr_entry, uint32_t len_in_byte) 
-{
-  MYDBG("[%s] %u %p %u\n", __func__, entry_type, ptr_entry, len_in_byte);
-  BaseTable *ret = NULL;
-  switch(entry_type) { 
-    case kBaseEntry: {
-      ret = new TableStore<BaseEntry>(reinterpret_cast<BaseEntry *>(ptr_entry), len_in_byte);
-      break;
-    }
-    case kCDEntry: {
-      ret = new TableStore<CDEntry>(reinterpret_cast<CDEntry *>(ptr_entry), len_in_byte);
-      break;
-    }
-    default:
-                   {}
-  }
-  printf("[%s] %u %p %u ret:%p\n", __func__, entry_type, ptr_entry, len_in_byte, ret);
-  return ret;
-}
+//BaseTable *GetTable(uint32_t entry_type, char *ptr_entry, uint32_t len_in_byte) 
+//{
+//  MYDBG("[%s] %u %p %u\n", __func__, entry_type, ptr_entry, len_in_byte);
+//  BaseTable *ret = NULL;
+//  switch(entry_type) { 
+//    case kBaseEntry: {
+//      ret = new TableStore<BaseEntry>(reinterpret_cast<BaseEntry *>(ptr_entry), len_in_byte);
+//      break;
+//    }
+//    case kCDEntry: {
+//      ret = new TableStore<CDEntry>(reinterpret_cast<CDEntry *>(ptr_entry), len_in_byte);
+//      break;
+//    }
+//    default:
+//                   {}
+//  }
+//  printf("[%s] %u %p %u ret:%p\n", __func__, entry_type, ptr_entry, len_in_byte, ret);
+//  return ret;
+//}
 
-} // namespace cd ends
+} // namespace packer ends
 #endif

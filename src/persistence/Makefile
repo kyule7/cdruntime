@@ -1,13 +1,14 @@
 #!/bin/bash
 CC=g++
 MPICC=mpic++
-CFLAGS=-Wall -g -c -std=gnu++0x -I. 
+CFLAGS=-Wall -g -c -std=gnu++0x -I. -fmax-errors=3
 LFLAGS=-Wall -g -std=gnu++0x -I.
 
 all: test_base test_packer test_mpi
 #all:  test_mpi
 
-OBJS=data_store.o buffer_consumer.o cd_file_handle.o
+OBJS=data_store.o buffer_consumer.o cd_file_handle.o table_store.o
+
 MPIOBJS=${OBJS} mpi_file_handle.o  cd_file_handle_interface.o
 test_base: test_base.o ${MPIOBJS}
 	${MPICC} ${LFLAGS} $^ -o $@ -lpthread
@@ -33,6 +34,9 @@ cd_file_handle_interface.o: cd_file_handle_interface.cc
 data_store.o: data_store.cc
 	${CC} ${CFLAGS} $^ -o $@
 
+table_store.o: table_store.cc
+	${CC} ${CFLAGS} $^ -o $@
+
 test_base.o: test_base.cc
 	${CC} ${CFLAGS} $^ -o $@
 
@@ -42,9 +46,13 @@ test_packer.o: test_packer.cc
 test_mpi.o: test_mpi.cc
 	${MPICC} ${CFLAGS} $^ -o $@
 
-test_mpifile: mpi_file_handle.o cd_file_handle.o
+
+# cd_file_handle_interface is only for GetFileHandle, need to fix it soon.
+# data_store.o is only for active_buffer definition
+# buffer_consumer is only for mutex definition
+test_mpifile: mpi_file_handle.o cd_file_handle.o buffer_consumer.o data_store.o cd_file_handle_interface.o
 	${MPICC} ${CFLAGS} -I./utils test_mpi_file_handle.cc -o test_mpi_file_handle.o
-	${MPICC} ${LFLAGS} test_mpi_file_handle.o mpi_file_handle.o cd_file_handle.o -o test_mpi_file_handle
+	${MPICC} ${LFLAGS} test_mpi_file_handle.o $^ -o test_mpi_file_handle -lpthread
 clean:
 	rm *.o; rm test_base; rm test_packer; rm test_mpi; rm test_mpi_file_handle
 

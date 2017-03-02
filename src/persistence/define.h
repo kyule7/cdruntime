@@ -12,16 +12,21 @@
 #define GIGABYTE     1073741824 
 #define TWO_GIGABYTE 2147483648
 #define FOUR_GIGABYTE 4294967296
-#define INVALID_NUM   0xFFFFFFFFFFFFFFFF
+#define INVALID_NUM     0xFFFFFFFFFFFFFFFF
+#define TABLE_ID_OFFSET 0xFFFFFFFF00000000
 #define DEFAULT_BASE_FILEPATH "."
-#define ERROR_MESSAGE(...) \
+
+#define ERROR_MESSAGE_PACKER(...) \
   { fprintf(stderr, __VA_ARGS__); fflush(stderr); assert(0); }
 
-#define ASSERT(...) assert(__VA_ARGS__)
+#define PACKER_ASSERT(...) assert(__VA_ARGS__)
 
-#define MYASSERT(COND, ...) { if((COND) == false) { printf(__VA_ARGS__); } assert(COND); }
+#define PACKER_ASSERT_STR(COND, ...) { if((COND) == false) { printf(__VA_ARGS__); } assert(COND); }
 
-
+namespace packer {
+extern uint64_t table_id; 
+class BaseTable;
+BaseTable *GetTable(uint32_t entry_type, char *ptr_entry, uint32_t len_in_byte);
 enum CDErrType {
   kOK = 0,
   /* Packer Error Types */
@@ -70,8 +75,7 @@ struct MagicStore {
   void Print(void);
 };
 
-
-//#define _DEBUG_ENABLED
+}
 
 #ifdef _DEBUG_ENABLED
 
@@ -82,7 +86,7 @@ extern std::map<pthread_t, unsigned int> tid2str;
 extern int indent_cnt; 
 
 static inline 
-int cd_debug_trace(FILE *stream, 
+int packer_debug_trace(FILE *stream, 
                    const char *indent,
                    const char *function, int line_num,
                    const char *fmt, ...)
@@ -97,8 +101,8 @@ int cd_debug_trace(FILE *stream,
     return bytes;
 }
 
-#define CD_DEBUG_TRACE_INFO(stream, indent, ...) \
-  cd_debug_trace(stream, indent, __FUNCTION__, __LINE__, __VA_ARGS__);
+#define PACKER_DEBUG_TRACE_INFO(stream, indent, ...) \
+  packer_debug_trace(stream, indent, __FUNCTION__, __LINE__, __VA_ARGS__);
 
 #define MYDBG(...) { \
   pthread_t cur_thread = pthread_self(); \
@@ -107,7 +111,7 @@ int cd_debug_trace(FILE *stream,
     indent_cnt += 4; \
   } \
   std::string indent(tid2str[cur_thread], '\t'); \
-  CD_DEBUG_TRACE_INFO(stdout, indent.c_str(), __VA_ARGS__); \
+  PACKER_DEBUG_TRACE_INFO(stdout, indent.c_str(), __VA_ARGS__); \
 }
 
 #else

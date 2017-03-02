@@ -50,6 +50,7 @@ CD_CLOCK_T cd::msg_elapsed_time;
 #ifdef comm_log
 #include "cd_mpiwrapper.h"
 #include "cd_comm_log.h"
+#include "cd_internal.h"
 // -------------------------------------------------------------------------------------------------------
 // blocking p2p communication
 // -------------------------------------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 #include "data_store.h"
 #include "table_store.hpp"
 #include "string.h"
-namespace cd {
+namespace packer {
 
 ///////////////////////////////////////////////////////////////////////////////////
 // 
@@ -81,7 +81,8 @@ class Packer {
     EntryT *AddEntry(char *src, EntryT &&entry)
     {
       uint64_t offset = data_->Write(src, entry.size());
-      EntryT *ret = table_->InsertEntry(entry.SetOffset(offset));
+      entry.SetOffset(offset);
+      EntryT *ret = table_->InsertEntry(std::move(entry));
       return ret;
     }
 
@@ -157,18 +158,18 @@ class Packer {
       cur_pos_ = table_->Advance(data_->used());
 //       table_->Insert(entry.SetOffset(offset));
       uint64_t table_offset_check = data_->Flush(table_->GetPtr(), table_->tablesize());
-      ASSERT(table_offset == table_offset_check);
+      PACKER_ASSERT(table_offset == table_offset_check);
     }
 
     CDErrType Clear(bool reuse)
     {
-      CDErrType err = table_->FreeData(reuse);
+      CDErrType err = table_->Free(reuse);
       if(err != kOK) {
-        ERROR_MESSAGE("Packer::Clear Table : err:%u\n", err);
+        ERROR_MESSAGE_PACKER("Packer::Clear Table : err:%u\n", err);
       }
       err = data_->FreeData(reuse);
       if(err != kOK) {
-        ERROR_MESSAGE("Packer::Clear Data : err:%u\n", err);
+        ERROR_MESSAGE_PACKER("Packer::Clear Data : err:%u\n", err);
       }
       return err;
     }
@@ -304,10 +305,10 @@ class Unpacker {
         CDErrType ret = table_->Find(id, return_size, data_offset);
         ptr_data += data_offset + sizeof(MagicStore);
         if(ret == kNotFound)
-          ERROR_MESSAGE("Could not find entry %lu\n", id);
+          ERROR_MESSAGE_PACKER("Could not find entry %lu\n", id);
       } else {
         ptr_data = NULL;
-        ERROR_MESSAGE("Unpacking from invalid table\n");
+        ERROR_MESSAGE_PACKER("Unpacking from invalid table\n");
       }
       return ptr_data;
     }
@@ -329,7 +330,7 @@ class Unpacker {
       else if(ret == kOutOfTable)
         return NULL;
       else {
-        ERROR_MESSAGE("Undefined return from TableStore::GetAt (%d)\n", ret);
+        ERROR_MESSAGE_PACKER("Undefined return from TableStore::GetAt (%d)\n", ret);
       }
     }
 
@@ -406,7 +407,7 @@ class FileUnpacker : public Unpacker {
 };
 
 
-} // namespace cd ends
+} // namespace packer ends
 
 #if 0
 
@@ -445,7 +446,7 @@ class FileUnpacker : public Unpacker {
 //      } else if(table_type_ == kCDEntry) {
 //
 //      } else {
-//        ERROR_MESSAGE("Undefined entry type: %u\n", table_type_);
+//        ERROR_MESSAGE_PACKER("Undefined entry type: %u\n", table_type_);
 //      }
         
     }

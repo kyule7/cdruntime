@@ -12,7 +12,7 @@
 #include <mpi.h>
 
 // Singleton
-namespace cd {
+namespace packer {
 
 class MPIFileHandle : public FileHandle {
   protected:

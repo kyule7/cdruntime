@@ -6,7 +6,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <sys/time.h>
-using namespace cd;
+using namespace packer;
 struct timeval ttime;
 //uint64_t CompareResult(char *ori, char *prv, uint64_t size) {
 //  for(uint64_t i=0; i<size; i++) {
@@ -29,7 +29,7 @@ char *ArrayTest(int elemsize, int chunksize)
 
   int *dataAtmp = dataA;
   for(int i=0; i<elemsize; i++) {
-    packer.Add((char *)dataAtmp, CDEntry(i+1, chunksize * sizeof(int), (char *)dataAtmp));
+    packer.Add((char *)dataAtmp, CDEntry(i+1, chunksize * sizeof(int), 0, (char *)dataAtmp));
     dataAtmp+=chunksize;
 
 //    if(err == 0) { assert(0); }

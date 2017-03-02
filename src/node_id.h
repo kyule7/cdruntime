@@ -96,13 +96,10 @@ private:
     NODEID_PACKER_SIZE 
   };
 
-  struct TaskInfo {
-    int task_in_color_;
-    int head_;
-    int size_;
-    int color_id_;
-  };
-  TaskInfo task_id_;
+  int task_in_color_;
+  int head_;
+  int size_;
+  int color_id_;
   ColorT color_;
   GroupT task_group_;
 

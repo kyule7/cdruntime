@@ -102,13 +102,13 @@ namespace cd {
     class CD;
     class HeadCD;
     class CDPath;
-    class CDEntry;
-    class DataHandle;
+//    class CDEntry;
+//    class DataHandle;
     class NodeID;
     class CDNameT;
     class CDID;
     class CDEvent;
-    class PFSHandle;
+//    class PFSHandle;
   }
   namespace interface {
     class Profiler;
@@ -164,6 +164,29 @@ namespace cd {
               };
 
 /** @} */ // end of internal_error_types
+
+/** \addtogroup cd_defs 
+ *@{
+ */
+/** 
+ * @brief Type for specifying whether the current CD is executing
+ * for the first time or is currently reexecuting as part of recovery.
+ *
+ * During reexecution, data is restored instead of being
+ * preserved. Additionally, for relaxed CDs, some communication and
+ * synchronization may not repeated and instead preserved (logged)
+ * values are used. 
+ * See <http://lph.ece.utexas.edu/public/CDs> for a detailed
+ * description. Note that this is not part of the cd_internal
+ * namespace because the application programmer may want to manipulate
+ * this when specifying specialized recovery routines.
+ */
+  enum CDExecMode  {kExecution=0, //!< Execution mode 
+                    kReexecution, //!< Reexecution mode
+                    kSuspension   //!< Suspension mode (not active)
+                     };
+
+/** @} */ // End group cd_defs
 
 
 /**@addtogroup error_reporting 
@@ -361,6 +384,7 @@ namespace cd {
   extern CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   extern void CD_Finalize(void);
 
+  extern CDHandle *null_cd;
 }
 
 

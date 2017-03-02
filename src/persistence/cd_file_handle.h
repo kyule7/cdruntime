@@ -11,7 +11,7 @@
 #define DEFAULT_FILEPATH_POSIX "posix_filepath"
 #define DEFAULT_FILEPATH_AIO   "aio_filepath"
 #define DEFAULT_FILEPATH_MPI   "mpi_filepath"
-namespace cd {
+namespace packer {
 
 class DataStore;
 
@@ -106,5 +106,5 @@ FileHandle *GetFileHandle(uint32_t ftype=kPosixFile);
 //static inline BufferConsumer *GetBufferConsumer(void) { return BufferConsumer::Get(); }
 
 
-} // namespace cd ends
+} // namespace packer ends
 #endif

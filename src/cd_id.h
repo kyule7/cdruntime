@@ -100,7 +100,7 @@ class CDID {
   friend class cd::CDHandle;
   friend class CD;
   friend class HeadCD;
-  friend class CDEntry;
+//  friend class CDEntry;
   friend class HandleEntrySearch;
   friend class HandleEntrySend;
 #if CD_TEST_ENABLED

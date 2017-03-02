@@ -33,13 +33,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 #include "serdes.h"
-#include "persistence/packer.hpp"
+#include "persistence/cd_packer.hpp"
 #include <cstring>
 #include <cassert>
 #include <utility>
 
 using namespace std;
 using namespace cd::interface;
+using namespace packer;
 
 void Serdes::Register(uint64_t member_id, void *member, size_t member_size) {
   member_list_[member_id] = make_pair(member, member_size);
@@ -71,19 +72,19 @@ void Serdes::operator()(int flag, void *object) {
 }
 
 char *Serdes::Serialize(void) {
-  Packer packer;
+  CDPacker packer;
   for(auto it=serdes_list_.begin(); it!=serdes_list_.end(); ++it) {
 //uint64_t Packer::Add(uint64_t id, uint64_t length, void *ptr_data)
-    packer.Add(*it, member_list_[*it].second, member_list_[*it].first);
+    packer.Add((char *)(member_list_[*it].first), member_list_[*it].second, *it);
   }
   return packer.GetTotalData(length_);
 }
 
 void Serdes::Deserialize(char *object) { 
   Unpacker unpacker;
-  uint64_t return_size, return_id;
+  uint64_t return_size;
   for(auto it=serdes_list_.begin(); it!=serdes_list_.end(); ++it) {
-    void *data = unpacker.GetAt(object, *it, return_size, return_id);
+    void *data = unpacker.GetAt(object, *it, return_size);
     assert(return_size != member_list_[*it].second);
     memcpy(member_list_[*it].first, data, return_size);
     // Actually, there is additional memcpy (serialized_object->data, data->member)

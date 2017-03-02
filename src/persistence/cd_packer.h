@@ -1,6 +1,6 @@
 #include "packer.hpp"
 
-namespace cd {
+namespace packer {
 
 // data packer
 class CDPacker : public Packer<CDEntry> {

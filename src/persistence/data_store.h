@@ -6,7 +6,7 @@
 // Eliminate file write operation here.
 // It just writes to buffer space.
 // 
-namespace cd {
+namespace packer {
 #define FILE_TYPE_MASK 0x00000F00
 #define BUFF_MODE_MASK 0x000000FF
 #define GET_BUFF_MODE(X)       ((X) & BUFF_MODE_MASK)
@@ -123,11 +123,11 @@ class DataStore {
     virtual CDErrType Copy(void *dst, char *src, int64_t len);
     virtual CDErrType Alloc(void **ptr, uint64_t size);
   public:
-    inline bool IsEmpty(void)  { ASSERT(buf_used() >= 0); return (buf_used() < chunksize_); }
+    inline bool IsEmpty(void)  { PACKER_ASSERT(buf_used() >= 0); return (buf_used() < chunksize_); }
     inline bool IsFull(void) { 
       printf("head:%lu tail:%lu\n", head_, tail_); 
-      ASSERT(buf_used() >= 0);
-      ASSERT(size_ != 0);
+      PACKER_ASSERT(buf_used() >= 0);
+      PACKER_ASSERT(size_ != 0);
       return (buf_used() > (int64_t)(size_ - chunksize_)); 
     }
     inline void SetActiveBuffer(bool high_priority=false);
@@ -216,5 +216,5 @@ class FileDataStore : public DataStore {
 };
 #endif
 
-} // namespace cd ends
+} // namespace packer ends
 #endif

@@ -165,7 +165,7 @@ class CDHandle {
 /**@} */ // End cd_handle
   friend class internal::CD;
   friend class internal::HeadCD;
-  friend class internal::CDEntry;
+//  friend class internal::CDEntry;
   friend class interface::Profiler;
   friend class RegenObject;
   friend CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);

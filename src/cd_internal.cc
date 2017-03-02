@@ -46,23 +46,6 @@ using namespace cd::interface;
 using namespace cd::logging;
 using namespace std;
 
-struct RemoteCDEntry : public CDEntry {
-  int task_id_;
-  RemoteCDEntry(const CDEntry &that) {
-    copy(that);
-  }
-  void copy(const CDEntry &that) {
-    id_      = that.id_;
-    size_    = that.size_;
-    offset_  = that.offset_;
-    src_     = that.src_;
-    task_id_ = myTaskID;
-  }
-  RemoteCDEntry &operator=(const CDEntry &that) {
-    copy(that);
-    return *this;
-  }
-};
 
 //#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 #define BUGFIX_0327 1
@@ -75,8 +58,8 @@ int iterator_entry_count=0;
 uint64_t cd::gen_object_id=0;
 
 //EntryDirType::hasher cd::str_hash;
-std::unordered_map<string,CDEntry*> cd::str_hash_map;
-std::unordered_map<string,CDEntry*>::hasher cd::str_hash;
+std::unordered_map<string,packer::CDEntry*> cd::str_hash_map;
+std::unordered_map<string,packer::CDEntry*>::hasher cd::str_hash;
 map<ENTRY_TAG_T, string> cd::tag2str;
 list<CommInfo> CD::entry_req_;
 map<ENTRY_TAG_T, CommInfo> CD::entry_request_req_;
@@ -377,7 +360,11 @@ void CD::InternalInitialize(CDHandle *cd_parent)
   label_ = string(INITIAL_CDOBJ_LABEL);
   recoverObj_ = new RecoverObject;
 
-  iterator_entry_ = entry_directory_.begin();
+  //iterator_entry_ = entry_directory_.begin();
+  // FIXME
+  restore_count_ = 0;
+  preserve_count_ = 0;
+
   if(cd_parent != NULL) {
     if(cd_parent->ptr_cd_->reexecuted_ == true || cd_parent->ptr_cd_->recreated_ == true) {
       recreated_ = true;
@@ -702,8 +689,8 @@ CD::InternalCreate(CDHandle *parent,
                 task_count, new_cd_id.level(), &(pendingWindow_));
     }
   
-    if( new_cd->GetPlaceToPreserve() == kPFS ) 
-      new_cd->pfs_handle_ = new PFSHandle(new_cd, new_cd->file_handle_.GetFilePath()); 
+//    if( new_cd->GetPlaceToPreserve() == kPFS ) 
+//      new_cd->pfs_handle_ = new PFSHandle(new_cd, new_cd->file_handle_.GetFilePath()); 
   
 #endif
 
@@ -738,11 +725,11 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
     if(prv_medium_ == kSSD || prv_medium_ == kHDD) {
       file_handle_.Close();
     }
-#if CD_MPI_ENABLED
-    else if(prv_medium_ == kPFS) {
-      pfs_handle_->Close();
-    }
-#endif
+//#if CD_MPI_ENABLED
+//    else if(prv_medium_ == kPFS) {
+//      pfs_handle_->Close();
+//    }
+//#endif
 
 #if comm_log
     if (GetParentHandle()!=NULL)
@@ -772,9 +759,9 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
   
   
 
-    if( GetPlaceToPreserve() == kPFS ) {
-      delete pfs_handle_;
-    }
+//    if( GetPlaceToPreserve() == kPFS ) {
+//      delete pfs_handle_;
+//    }
 #endif
 
     delete this;
@@ -1287,7 +1274,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   /// We might modify this in the profiler to support the overlapped data among sequential CDs.
   DeleteEntryDirectory();
 
-  // TODO ASSERT( cd_exec_mode_  != kSuspension );
+  // TODO CD_ASSERT( cd_exec_mode_  != kSuspension );
   // FIXME don't we have to wait for others to be completed?  
   cd_exec_mode_ = kSuspension; 
 
@@ -1738,31 +1725,33 @@ void *CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, v
 void *CD::SerializeRemoteEntryDir(uint64_t &len_in_bytes) 
 {
 //  entry_directory_.GetTable()->FindWithAttr(kremote);
-  len_in_bytes = remote_entry_directory_map_.size();
+  uint64_t remote_entry_cnt = remote_entry_directory_map_.size();
   RemoteCDEntry *serialized = NULL;
-  if(len_in_bytes != 0) {
+  if(remote_entry_cnt != 0) {
     serialized = new RemoteCDEntry[remote_entry_cnt];
-    for(auto it = remote_entry_directory_map_.begin(), uint64_t i=0; 
+    uint64_t i=0;
+    for(auto it = remote_entry_directory_map_.begin(); 
              it!= remote_entry_directory_map_.end(); 
-             ++it, i++) {
-      serialized[i] = it->second;
+             ++it) {
+      serialized[i++] = *(it->second);
     }
-  } 
+  }
+  len_in_bytes = remote_entry_cnt * sizeof(RemoteCDEntry); 
   return serialized;
 }
 
 void HeadCD::DeserializeRemoteEntryDir(void *object, uint64_t totsize)
 {
   totsize /= sizeof(CDEntry);
-  CDEntry *entry = reinterpret_cast<CDEntry *>(object);
+  RemoteCDEntry *entry = reinterpret_cast<RemoteCDEntry *>(object);
 
   uint64_t begin = remote_entry_table_.tail();
   remote_entry_table_.Insert(entry, totsize);
 
   for(uint64_t i=0; i<totsize; i++) {
-    CDEntry remote_entry = remote_entry_table_[begin+i];
+    RemoteCDEntry &remote_entry = remote_entry_table_[begin+i];
     remote_entry_directory_map_[remote_entry.id_] = &remote_entry;
-    ASSERT(remote_entry_table_[begin+i].id_ == entry[i].id_);
+    CD_ASSERT(remote_entry_table_[begin+i].id_ == entry[i].id_);
   }
 }
 
@@ -1918,15 +1907,15 @@ CDErrT CD::Preserve(void *data,
     // Everytime restore is called one entry is restored.
     // ////////////////////////////////////////////////////////////////////////////
     
-    CD_DEBUG("\n\nReexecution!!! entry directory size : %zu\n\n", entry_directory_.size());
+    CD_DEBUG("\n\nReexecution!!! entry directory size : %zu\n\n", entry_directory_.table_->used());
 
-    if( resetore_count_ < preserve_count_ ) { // normal case
+    if( restore_count_ < preserve_count_ ) { // normal case
 
       CD_DEBUG("\n\nNow reexec!!! %d\n\n", iterator_entry_count++);
       // This will fetch from disk to memory
       // Potential benefit from prefetching app data from preserved data in
       // disk, overlapping reexecution of application.
-      ret = cd_packer.Restore(tag);
+      packer::CDErrType pret = entry_directory_.Restore(tag);
 
 
       restore_count_++;
@@ -1968,7 +1957,7 @@ CDErrT CD::Preserve(void *data,
         }
       }
 #endif
-      ret = cd_err;
+//      ret = kOK;
     }
     else {  // abnormal case -> kReexecution mode, but iterator reaches the end.
       CD_DEBUG("The end of reexec!!!\n");
@@ -1990,7 +1979,7 @@ CDErrT CD::Preserve(void *data,
   }
 
   
-  return kError; // we should not encounter this point
+  return ret; // we should not encounter this point
 }
 
 
@@ -2020,7 +2009,7 @@ CD::InternalPreserve(void *data,
                      const RegenObject *regen_object, 
                      PreserveUseT data_usage)
 {
-  MYASSERT(cd_exec_mode_ == kExecution, 
+  CD_ASSERT_STR(cd_exec_mode_ == kExecution, 
       "InternalPreserve call was invoked not in kExecution mode: %u\n", cd_exec_mode_);
   CD_DEBUG("[CD::InternalPreserve] cd_exec_mode : %d (should be normal exec mode)\n", cd_exec_mode_);
   CDInternalErrT err = kOK;
@@ -2031,7 +2020,7 @@ CD::InternalPreserve(void *data,
 
   if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) { // via-copy, so it saves data right now!
 
-    MYASSERT(my_name.empty() == false, 
+    CD_ASSERT_STR(my_name.empty() == false, 
         "Entry name is not specified : %s\n", my_name.c_str());
     CD_DEBUG("Prv Mask : %d, Is it coop? %d, medium : %d, cd type : %d\n", 
              preserve_mask, CHECK_PRV_TYPE(preserve_mask, kCoop), GetPlaceToPreserve(), cd_type_);
@@ -2045,12 +2034,12 @@ CD::InternalPreserve(void *data,
       uint64_t table_offset_in_datachunk = serializer->PreserveObject(&entry_directory_);
       uint64_t packed_size = entry_directory_.data_->used() - orig_datasize;
       int64_t table_size_in_datachunk = entry_directory_.data_->used() - table_offset_in_datachunk;
-      ASSERT(table_size_in_datachunk > 0);
+      CD_ASSERT(table_size_in_datachunk > 0);
       pEntry = entry_directory_.table_->InsertEntry(
           CDEntry(id, attr, table_size_in_datachunk, table_offset_in_datachunk, (char *)packed_size) );
     }
     else { // preserve a single entry
-      pEntry = entry_directory_.AddEntry(data, CDEntry(id, len_in_bytes, 0, data));
+      pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, len_in_bytes, 0, (char *)data));
     }
 
   } // end of preserve via copy
@@ -2060,7 +2049,6 @@ CD::InternalPreserve(void *data,
   
     uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
     uint64_t ref_id = cd_hash(ref_name);
-  
     // CDEntry for reference has different format
     //  8B      8B         8B      8B
     // [ID] [ATTR|SIZE] [OFFSET] [SRC]
@@ -2069,20 +2057,20 @@ CD::InternalPreserve(void *data,
     uint64_t size = 0;
     if(CHECK_PRV_TYPE(preserve_mask, kCoop)){ 
       attr |= (Attr::knested | Attr::ktable);
-      size = static_cast<PackerSerializable *>(data)->GetTableSize();
+      size = static_cast<PackerSerializable *>(data)->GetTableSize(&entry_directory_);
     }
 
-    pEntry = entry_directory_.AddEntry(data, CDEntry(id, attr, size, ref_offset, (void*)ref_id));
+    pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, size, ref_offset, (char *)ref_id));
     // When restore data for reference of serdes object,
     // check ref and nested first.
     // then find ref_id, then read table from ref_id to ref_id+size.
     // Then restore data 
-    ret = CDInternalErrT::kOK;
+    err = CDInternalErrT::kOK;
   }
   else if( CHECK_PRV_TYPE(preserve_mask, kRegen) ) { // via-regeneration
     //TODO
     ERROR_MESSAGE("Preservation via Regeneration is not supported, yet. :-(");
-    ret = CDInternalErrT::kOK;
+    err = CDInternalErrT::kOK;
   }
   else {  // Preservation Type is none of kCopy, kRef, kRegen.
     ERROR_MESSAGE("\nUnsupported preservation type : %d\n", preserve_mask);
@@ -2094,9 +2082,12 @@ CD::InternalPreserve(void *data,
              "but tried to allow itself as reference to other node. "
              "If it allow itself for reference locally, it is fine!");
     remote_entry_directory_map_[id] = pEntry;
+    if(IsHead()) {
+      static_cast<HeadCD *>(this)->remote_entry_table_.Insert(RemoteCDEntry(*pEntry));
+    }
   }
 
-  return ret; 
+  return err; 
 }
 
 
@@ -2121,7 +2112,9 @@ CDErrT CD::Restore()
   // this code section is for restoring all the cd entries at once. 
   // Now this is defunct. 
 
-  iterator_entry_ = entry_directory_.begin();
+  //iterator_entry_ = entry_directory_.begin();
+  //FIXME
+  restore_count_ = 0;
 
   //TODO currently we only have one iterator. This should be maintined to figure out the order. 
   // In case we need to find reference name quickly we will maintain seperate structure such as binary search tree and each item will have CDEntry *.
@@ -2663,28 +2656,58 @@ void HeadCD::set_cd_parent(CDHandle *cd_parent)
 }
 
 
-
 // If it is found locally, cast type to RemoteCDEntry
-
-RemoteCDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name) 
+bool HeadCD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry) 
 {
   CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
   
-  CDEntry *entry = NULL;
+  bool found = false;  
 
   auto jt = remote_entry_directory_map_.find(entry_name);
   if(jt != remote_entry_directory_map_.end()) {
-    entry = jt->second;
-  } else {
-    entry = entry_directory_.table_->Find(entry_name);
+    entry = *(static_cast<RemoteCDEntry *>(jt->second));
+    found = true;
+  } 
+  else {
+    CDEntry *cdentry = static_cast<CDEntry *>(entry_directory_.table_->Find(entry_name));
+    if(cdentry != NULL) {
+      entry = *cdentry;
+      found = true;
+    }
   }
   
-  if(entry == NULL) {
+  if(found == false) {
     CD_DEBUG("[InternalGetEntry Failed] There is no entry for reference of %s at level #%u\n", 
         tag2str[entry_name].c_str(), level());
   }
-  return entry; 
-} 
+  return found; 
+}
+
+
+bool CD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry) 
+{
+  CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
+
+  bool found = false;  
+
+  auto jt = remote_entry_directory_map_.find(entry_name);
+  if(jt != remote_entry_directory_map_.end()) {
+    entry = *(static_cast<CDEntry *>(jt->second));
+    found = true;
+  } else {
+    CDEntry *cdentry = static_cast<CDEntry *>(entry_directory_.table_->Find(entry_name));
+    if(cdentry != NULL) {
+      entry = *cdentry;
+      found = true;
+    }
+  }
+  
+  if(found == false) {
+    CD_DEBUG("[InternalGetEntry Failed] There is no entry for reference of %s at level #%u\n", 
+        tag2str[entry_name].c_str(), level());
+  }
+  return found; 
+}
 
 void CD::DeleteEntryDirectory(void)
 {
@@ -3141,39 +3164,39 @@ void HeadCD::Deserialize(void *object)
 
 
 
-RemoteCDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
+bool CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, RemoteCDEntry &entry)
 {
   CD_DEBUG("Search Entry : %u (%s) at level #%u \n", tag_to_search, tag2str[tag_to_search].c_str(), level());
 
   CDHandle *parent_cd = CDPath::GetParentCD();
-  RemoteCDEntry *entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
-
+//  RemoteCDEntry *entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
+//
   CD_DEBUG("Parent name : %s\n", parent_cd->GetName());
-
-  if(entry_tmp != NULL) { 
-    CD_DEBUG("Parent dst addr : %p \tParent entry name : %s\n", 
-              entry_tmp->dst_data_.address_data(), entry_tmp->dst_data_.ref_name().c_str());
-  } else {
-    CD_DEBUG("There is no reference in parent level\n");
-  }
+//
+//  if(entry_tmp != NULL) { 
+//    CD_DEBUG("Parent dst addr : %p \tParent entry name : %s\n", 
+//              entry_tmp->src_, entry_tmp->offset_);
+//  } else {
+//    CD_DEBUG("There is no reference in parent level\n");
+//  }
 
   //Here, we search Parent's entry and Parent's Parent's entry and so on.
   //if ref_name does not exit, we believe it's original. 
   //Otherwise, there is original copy somewhere else, maybe grand parent has it. 
 
-  CDEntry *entry = NULL;
+  bool found = false;
   while( parent_cd != NULL ) {
     CD_DEBUG("InternalGetEntry at level #%u\n", parent_cd->ptr_cd()->GetCDID().level());
 
-    entry = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
+    found = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search, entry);
 
-    if(entry != NULL) {
+    if(found) {
       found_level = parent_cd->ptr_cd()->level();
 
       CD_DEBUG("\n\nI got my reference here!! found level : %d, Node ID : %s\n", 
                found_level, GetNodeID().GetString().c_str());
-      CD_DEBUG("Current entry name (%s) with ref name (%s) at level #%d\n", 
-               entry->name().c_str(), entry->dst_data_.ref_name().c_str(), found_level);
+//      CD_DEBUG("Current entry name (%s %lu) with ref name (%lu) at level #%d\n", 
+//               tag2str[entry.id_], entry.id_, (uint64_t)entry.src_, found_level);
       break;
     }
     else {
@@ -3183,11 +3206,11 @@ RemoteCDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
             parent_cd->GetName(), parent_cd->ptr_cd()->GetCDID().level());
     }
   } 
-  if(parent_cd == NULL) entry = NULL;
-  CD_DEBUG("\n[CD::SearchEntry] Done. Check entry %p at Node ID %s, CDName %s\n", 
-           entry, GetNodeID().GetString().c_str(), GetCDName().GetString().c_str());
+  if(parent_cd == NULL) found = false;
+  CD_DEBUG("\n[CD::SearchEntry] Done. Check entry %lu at Node ID %s, CDName %s\n", 
+           entry.id_, GetNodeID().GetString().c_str(), GetCDName().GetString().c_str());
 
-  return entry;
+  return found;
 }
 
 
@@ -3214,4 +3237,18 @@ CD::CDInternalErrT CD::SyncFile(void)
   // STUB
   //
   return CDInternalErrT::kOK;
+}
+  
+
+CD *CD::GetCoarseCD(CD* curr_cd)
+{
+  while( curr_cd->task_size() == 1 ) {
+    if(curr_cd == CDPath::GetRootCD()->ptr_cd()) {
+      //CD_DEBUG("There is a single task in the root CD\n");
+//        assert(0);
+      return curr_cd;
+    }
+    curr_cd = CDPath::GetParentCD(curr_cd->level())->ptr_cd();
+  } 
+  return curr_cd;
 }

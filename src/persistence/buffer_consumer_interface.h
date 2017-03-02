@@ -2,7 +2,7 @@
 #define _BUFFER_CONSUMER_INTERFACE_H
 #include <pthread.h>
 
-namespace cd {
+namespace packer {
 
 extern pthread_cond_t  full; 
 extern pthread_cond_t  empty;

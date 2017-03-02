@@ -46,6 +46,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  */
 
 #include "cd_global.h"
+//#include "persistence/packer.hpp"
+//class packer::CDPacker;
+
 namespace cd {
 
 class Serializable {
@@ -54,11 +57,10 @@ class Serializable {
     virtual void Deserialize(void *object)=0;
 };
 
-class Packer;
 class PackerSerializable : public Serializable {
   public:
-    virtual uint64_t PreserveObject(Packer *packer)=0;
-    virtual uint64_t GetTableSize(Packer *packer)=0;
+    virtual uint64_t PreserveObject(void *packer)=0;
+    virtual uint64_t GetTableSize(void *packer)=0;
 };
 
 }

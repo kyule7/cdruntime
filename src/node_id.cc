@@ -154,7 +154,7 @@ GroupT &NodeID::group(void)              { return task_group_; }
 int    NodeID::task_in_color(void) const { return task_in_color_; }
 int    NodeID::head(void)          const { return head_; }
 int    NodeID::size(void)          const { return size_; }
-int    NodeID::color(void)         const { return color_id_; }
+int    NodeID::color_id(void)         const { return color_id_; }
 bool   NodeID::IsHead(void)        const { return head_ == task_in_color_; }
 void   NodeID::set_head(int head)        { head_ = head; } 
 

@@ -89,7 +89,7 @@ class CDFileHandle {
   friend cd::CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   friend class CD;
   friend class HeadCD;
-  friend class CDEntry;
+//  friend class CDEntry;
     int file_desc_;
     FILE *fp_;
     long fpos_generator_;

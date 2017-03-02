@@ -159,7 +159,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 
   for(auto it = ptr_cd()->remote_entry_directory_map_.begin();
            it!= ptr_cd()->remote_entry_directory_map_.end(); ++it) {
-    CD_DEBUG("%s\n", it->second->GetString().c_str());
+    CD_DEBUG("%s\n", tag2str[it->second->id_].c_str());
 
   }
   uint64_t serialized_len_in_bytes=0;
@@ -334,7 +334,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
     CD_DEBUG("\n\n============================ End of deserialization ===========================\n\n");
   }
   for(auto it=ptr_cd()->remote_entry_directory_map_.begin(); it!=ptr_cd()->remote_entry_directory_map_.end(); ++it) {
-    CD_DEBUG("%s\n", it->second->GetString().c_str());
+    CD_DEBUG("%lu\n", tag2str[it->second->id_].c_str());
   }  
 
 }  
@@ -1026,7 +1026,7 @@ CDErrT CD::SetMailBox(const CDEventT &event)
 
   if( !CHECK_NO_EVENT(event) ) {
     // This is the leaf that has just single task in a CD
-    CD *cdp = CDPath::GetCoarseCD(this);
+    CD *cdp = GetCoarseCD(this);
     CD_DEBUG_COND(DEBUG_OFF_MAILBOX, 
         "[current] size is %u at level %u. [check] size is %u at level %u.\n", 
         task_size(), level(), cdp->task_size(), cdp->level());
@@ -1370,7 +1370,7 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
     return rollback_lv;
   }
   else {
-    return CDPath::GetCoarseCD(this)->SetRollbackPoint(rollback_lv, remote);
+    return GetCoarseCD(this)->SetRollbackPoint(rollback_lv, remote);
   }
 }
 
@@ -1422,7 +1422,7 @@ uint32_t CD::CheckRollbackPoint(bool remote)
     return *rollback_point_;
   }
   else {
-    return CDPath::GetCoarseCD(this)->CheckRollbackPoint(remote);
+    return GetCoarseCD(this)->CheckRollbackPoint(remote);
   }
 }
 

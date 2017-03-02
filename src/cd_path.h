@@ -247,17 +247,8 @@ public:
     return curr_cdh;
   }
 
-  static CD *GetCoarseCD(CD* curr_cd) {
-    while( curr_cd->task_size() == 1 ) {
-      if(curr_cd == GetRootCD()->ptr_cd()) {
-        //CD_DEBUG("There is a single task in the root CD\n");
-//        assert(0);
-        return curr_cd;
-      }
-      curr_cd = CDPath::GetParentCD(curr_cd->level())->ptr_cd();
-    } 
-    return curr_cd;
-  }
+//  CD *GetCoarseCD(CD* curr_cd);
+
   static CDHandle *GetNullCD(void) {
     return null_cd;
   }

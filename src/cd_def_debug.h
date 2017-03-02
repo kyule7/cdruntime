@@ -49,6 +49,11 @@ namespace cd {
 #define ERROR_MESSAGE(...) \
   { fprintf(stderr, __VA_ARGS__); fflush(stderr); assert(0); }
 
+#define CD_ASSERT(...) assert(__VA_ARGS__);
+
+#define CD_ASSERT_STR(COND, ...) \
+  { if((COND) == false) { printf(__VA_ARGS__); } assert(COND); }
+
 /* Eric:  Should be using vsnprintf to a buffer with explicit flush, 
  *        Add a comment to this line rather than a pair of fprintf's 
  *        to format the strings.

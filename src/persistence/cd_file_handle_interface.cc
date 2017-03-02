@@ -3,7 +3,7 @@
 #include "cd_file_handle.h"
 #include "mpi_file_handle.h"
 //#include "new_file_handle.h"
-namespace cd {
+namespace packer {
 
 FileHandle *GetFileHandle(uint32_t ftype)
 {

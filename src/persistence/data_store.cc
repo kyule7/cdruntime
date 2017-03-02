@@ -9,16 +9,17 @@
 #include "cd_file_handle.h"
 #include "buffer_consumer.h"
 
-using namespace cd;
+using namespace packer;
 
 #include <pthread.h>
-ActiveBuffer cd::active_buffer;
+ActiveBuffer packer::active_buffer;
 
 #ifdef _DEBUG_ENABLED
 std::map<pthread_t, unsigned int> tid2str;
 int indent_cnt = 0; 
 #endif
 
+uint64_t packer::table_id = TABLE_ID_OFFSET;
 int64_t chunksize_threshold = CHUNKSIZE_THRESHOLD_BASE;
 
 DataStore::DataStore(bool alloc)
@@ -76,8 +77,8 @@ CDErrType DataStore::Alloc(void **ptr, uint64_t size)
 
 CDErrType DataStore::Copy(void *dst, char *src, int64_t len)
 { 
-  MYASSERT(len >= 0, "len:%ld\n", len);
-  MYASSERT(dst != NULL && src != NULL, "Read failed:%p<-%p\n", dst, src); 
+  PACKER_ASSERT_STR(len >= 0, "len:%ld\n", len);
+  PACKER_ASSERT_STR(dst != NULL && src != NULL, "Read failed:%p<-%p\n", dst, src); 
   if(len > 0) {
     memcpy(dst, src, len); 
   } 
@@ -315,14 +316,14 @@ uint64_t DataStore::WriteMem(char *src, int64_t len)
       Copy(ptr_ + tail, src, first);
       Copy(ptr_, src + first, rest);
       tail_ += len;
-      ASSERT((tail_ % size_) == (uint64_t)rest);
+      PACKER_ASSERT((tail_ % size_) == (uint64_t)rest);
     } else {
       MYDBG("Copy %p <- %p, %lu\n", ptr_ + tail, src, len);
       Copy(ptr_ + tail, src, len);
       tail_ += len;
     }
   } else {
-    ERROR_MESSAGE("Write failed: ptr_:%p %p\n", ptr_, src);
+    ERROR_MESSAGE_PACKER("Write failed: ptr_:%p %p\n", ptr_, src);
   }
   return ret;
 }
@@ -349,7 +350,7 @@ uint64_t DataStore::WriteBuffer(char *src, int64_t len)
     // It is safe to overlap writing data to not-yet-filled chunk in any case.
     // If there is no other chunks, it is still empty.
     if(available_in_chunk > 0) {
-      ASSERT(len_to_write < chunksize_);
+      PACKER_ASSERT(len_to_write < chunksize_);
 //      pthread_mutex_lock(&mutex);
       Copy(ptr_ + (tail_ % size_), src, len_to_write);
       tail_ += len_to_write;
@@ -369,14 +370,14 @@ uint64_t DataStore::WriteBuffer(char *src, int64_t len)
     // Phase3: write the rest of length
     if(len > 0) {
       MYDBG("Phase3:");
-      ASSERT(len < chunksize_);
+      PACKER_ASSERT(len < chunksize_);
 
       WriteInternal(src, len, i);
       len = 0;
       //getchar();
     }
   } else {
-    ERROR_MESSAGE("Write failed: ptr_:%p %p\n", ptr_, src);
+    ERROR_MESSAGE_PACKER("Write failed: ptr_:%p %p\n", ptr_, src);
   }
   return ret;
 }
@@ -419,7 +420,7 @@ void DataStore::Read(char *pto, uint64_t len, uint64_t pos)
   int64_t chunk_in_file = 0;
   int64_t chunk_in_memory = 0;
   if(pos < file_offset) { // some portion is written to file
-    ASSERT(buf_used() >= 0);
+    PACKER_ASSERT(buf_used() >= 0);
 
     const uint64_t data_offset = len + pos;
     if(data_offset <= file_offset) { 
@@ -429,8 +430,8 @@ void DataStore::Read(char *pto, uint64_t len, uint64_t pos)
       chunk_in_memory = len - chunk_in_file;
     }
     const int64_t chunk_written_before_len = tail_ - len;
-    ASSERT(chunk_written_before_len >= 0);
-    ASSERT(buf_used() >= 0);
+    PACKER_ASSERT(chunk_written_before_len >= 0);
+    PACKER_ASSERT(buf_used() >= 0);
     
     MYDBG("DataStore: %p, %lu, %lu\n", pto, chunk_in_file, pos);
 
@@ -440,8 +441,8 @@ void DataStore::Read(char *pto, uint64_t len, uint64_t pos)
     const int64_t chunk_in_file = len - buf_used();
     //fh_->ReadTo(pto, chunk_in_file, written_len_ + head_ - chunk_in_file); 
     const int64_t chunk_written_before_len = tail_ - len;
-    ASSERT(chunk_written_before_len <= 0);
-    ASSERT(buf_used() < 0);
+    PACKER_ASSERT(chunk_written_before_len <= 0);
+    PACKER_ASSERT(buf_used() < 0);
     fh_->ReadTo(pto, chunk_in_file, written_len_ + chunk_written_before_len); 
 #endif
   }
@@ -500,19 +501,19 @@ CDErrType DataStore::WriteFile(void)
 CDErrType DataStore::WriteFile(int64_t len)
 {
   CDErrType ret = kOK;
-  ASSERT(len > 0);
+  PACKER_ASSERT(len > 0);
   uint64_t mask_len = ~(chunksize_ - 1);
   MYDBG(" len:%lu\n", len);
   printf("[DataStore::%s] head:%lu written:%lu, used:%ld, len:%ld, inc:%lu\n", 
       __func__, head_, written_len_, buf_used(), len, mask_len & len); //getchar();
   const int64_t first = size_ - (head_ % size_);
-  ASSERT(first >= 0);
+  PACKER_ASSERT(first >= 0);
 
   const uint64_t file_offset = head_ + written_len_;
   if(len > first) {
     CDErrType iret = fh_->Write(file_offset, begin(), first);
 
-    MYASSERT( (((head_ % size_) + first) % size_) == 0, 
+    PACKER_ASSERT_STR( (((head_ % size_) + first) % size_) == 0, 
         "((%lu + %lu) %% %lu) == %lu\n", (head_ % size_), first, size_, (((head_ % size_) + first) % size_));
 
     const int64_t second = len - first;
@@ -548,7 +549,7 @@ CDErrType DataStore::Flush(void)
 uint64_t DataStore::Flush(char *src, int64_t len) 
 {
   CDErrType err = kOK;
-  ASSERT(len < 0);
+  PACKER_ASSERT(len < 0);
 
   // The reason for not reusing Write(src,len) for writing table
   // is that it is likely to just flush data and table to get persistency at
@@ -566,7 +567,7 @@ uint64_t DataStore::Flush(char *src, int64_t len)
 
   // Writing src.
   // Main usage of this is to write tail associated with data
-  ASSERT((uint64_t)(len + buf_used()) < size_);
+  PACKER_ASSERT((uint64_t)(len + buf_used()) < size_);
 
   uint64_t table_offset = WriteMem(src, len);
   err = WriteFile( buf_used() );
@@ -605,3 +606,4 @@ void MagicStore::Print(void)
 {
   printf("[%s] %lu %lu %u\n", __func__, total_size_, table_offset_, entry_type_);
 }
+

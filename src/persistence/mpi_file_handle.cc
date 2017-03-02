@@ -11,7 +11,7 @@
 #include <string.h> // strcpy
 
 
-using namespace cd;
+using namespace packer;
 
 MPIFileHandle *MPIFileHandle::fh_ = NULL;
 char err_str[MPI_MAX_ERR_STR];
@@ -22,7 +22,7 @@ inline void CheckError(int err)
   if(err != MPI_SUCCESS) {
     MPI_Error_class(err, &err_class);
     MPI_Error_string(err, err_str, &err_len);
-    ERROR_MESSAGE("%s\n", err_str);
+    ERROR_MESSAGE_PACKER("%s\n", err_str);
     assert(0);
   }
 }
@@ -187,7 +187,7 @@ uint32_t MPIFileHandle::GetBlkSize(void)
 //  int ret = ioctl(fdesc_,BLKBSZGET/* BLKSSZGET*/, &blockSize);
 //  if( ret != 0 ) { 
 //    perror("ioctl:");
-//    ERROR_MESSAGE("ioctl error: %d, fdesc:%d, blksize:%lu\n", ret, fdesc_, blockSize);
+//    ERROR_MESSAGE_PACKER("ioctl error: %d, fdesc:%d, blksize:%lu\n", ret, fdesc_, blockSize);
 //  }
   return CHUNK_ALIGNMENT;
 }

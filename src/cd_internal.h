@@ -77,6 +77,45 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #endif
 
 using namespace cd::logging;
+using namespace packer;
+namespace packer {
+
+struct RemoteCDEntry : public CDEntry {
+  int task_id_;
+  RemoteCDEntry(void) {}
+  RemoteCDEntry(uint64_t id, uint64_t size, uint64_t offset) 
+    : task_id_(myTaskID), CDEntry(id, size, offset) {}
+  RemoteCDEntry(const RemoteCDEntry &that) 
+    : task_id_(that.task_id_), CDEntry(that.id_, that.size_.code_, that.offset_, that.src_) {}
+  RemoteCDEntry(const CDEntry &that) {
+    copy_cdentry(that);
+  }
+  void copy_cdentry(const CDEntry &that) {
+    id_      = that.id_;
+    size_    = that.size_;
+    offset_  = that.offset_;
+    src_     = that.src_;
+    task_id_ = myTaskID;
+  }
+  void copy_rcdentry(const RemoteCDEntry &that) {
+    id_      = that.id_;
+    size_    = that.size_;
+    offset_  = that.offset_;
+    src_     = that.src_;
+    task_id_ = that.task_id_;
+  }
+  RemoteCDEntry &operator=(const CDEntry &that) {
+    copy_cdentry(that);
+    return *this;
+  }
+  RemoteCDEntry &operator=(const RemoteCDEntry &that) {
+    copy_rcdentry(that);
+    return *this;
+  }
+};
+
+}
+
 
 namespace cd {
 
@@ -106,24 +145,7 @@ namespace cd {
 void Initialize(void);
 
 void Finalize(void);
-
-struct RemoteCDEntry : public CDEntry {
-  int task_id_;
-  RemoteCDEntry(const CDEntry &that) {
-    copy(that);
-  }
-  void copy(const CDEntry &that) {
-    id_      = that.id_;
-    size_    = that.size_;
-    offset_  = that.offset_;
-    src_     = that.src_;
-    task_id_ = myTaskID;
-  }
-  RemoteCDEntry &operator=(const CDEntry &that) {
-    copy(that);
-    return *this;
-  }
-};
+class EventHandler;
 
 /**@class CD 
  * @brief Core data structure of CD runtime. It has all the information and controls of a specific level of CDs.
@@ -309,8 +331,6 @@ class CD : public Serializable {
     // These are entry directory for preservation via reference 
     // in the case that the preserved copy resides in a remote node. 
     EntryDirType remote_entry_directory_map_;   
-
-
     
     static std::list<EventHandler *> cd_event_;
     
@@ -342,7 +362,7 @@ update the preserved data.
   
     CDFileHandle file_handle_;
     // PFS
-    PFSHandle *pfs_handle_;
+//    PFSHandle *pfs_handle_;
 
 #if CD_COMM_LOG_ENABLED
   public:
@@ -567,7 +587,7 @@ public:
                                     uint64_t &len_in_bytes,
                                     uint32_t preserve_mask, 
                                     std::string my_name, 
-                                    const char *ref_name, 
+                                    std::string ref_name, 
                                     uint64_t ref_offset, 
                                     const RegenObject *regen_object, 
                                     PreserveUseT data_usage);
@@ -578,9 +598,9 @@ public:
     // so serializing entire CDEntry class does not make sense. 
 
     // Search CDEntry with entry_name given. It is needed when its children preserve data via reference and search through its ancestors. If it cannot find in current CD object, it outputs NULL 
-    RemoteCDEntry *InternalGetEntry(ENTRY_TAG_T entry_name); 
+    virtual bool InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry);
  
-    RemoteCDEntry *SearchEntry(ENTRY_TAG_T entry_tag_to_search, uint32_t &found_level);
+    bool SearchEntry(ENTRY_TAG_T entry_tag_to_search, uint32_t &found_level, RemoteCDEntry &entry);
     void AddEntryToSend(const ENTRY_TAG_T &entry_tag_to_search);
  
     // This comment is previous one, so may be confusing for current design. 
@@ -699,6 +719,7 @@ public:
 #endif
     void Escalate(CDHandle *leaf, bool need_sync_to_reexec);
 
+    CD *GetCoarseCD(CD* curr_cd);
 }; // class CD ends
 
 
@@ -710,11 +731,11 @@ public:
  */ 
 class HeadCD : public CD {
   friend class Internal;
-  friend class CDHandle;
+  friend class cd::CDHandle;
   friend class HandleEntrySearch;
   friend class HandleErrorOccurred;
   friend class RegenObject;   
-  friend class CDEntry;  
+//  friend class CDEntry;  
   friend class RecoverObject;
   friend class CD;
 //    friend class HandleAllReexecute;
@@ -752,6 +773,7 @@ class HeadCD : public CD {
 //    std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     // event related
 
+    virtual bool InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry);
     bool error_occurred;
 //    bool need_reexec;
 

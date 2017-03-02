@@ -8,7 +8,7 @@
 #include <sys/time.h>
 #include <mpi.h>
 
-using namespace cd;
+using namespace packer;
 struct timeval mytime;
 
 class MyStore : public TableStore<CDEntry> {
@@ -90,25 +90,25 @@ void Obj1Test(int elemsize)
     uint64_t err;
     {
     uint64_t chunksize = sizeof(dataAtmp[i].c);
-    CDEntry entry(i, chunksize, (char *)(dataAtmp[i].c));
+    CDEntry entry(i, chunksize, 0, (char *)(dataAtmp[i].c));
     uint64_t offset = data.Write((char *)(dataAtmp[i].c), chunksize);
     err = table.Insert(entry.SetOffset(offset));
     }
     {
     uint64_t chunksize = sizeof(dataAtmp[i].ii);
-    CDEntry entry(i, chunksize, (char *)(dataAtmp[i].ii));
+    CDEntry entry(i, chunksize, 0, (char *)(dataAtmp[i].ii));
     uint64_t offset = data.Write((char *)(dataAtmp[i].ii), chunksize);
     err = table.Insert(entry.SetOffset(offset));
     }
     {
     uint64_t chunksize = sizeof(dataAtmp[i].d);
-    CDEntry entry(i, chunksize, (char *)(dataAtmp[i].d));
+    CDEntry entry(i, chunksize, 0, (char *)(dataAtmp[i].d));
     uint64_t offset = data.Write((char *)(dataAtmp[i].d), chunksize);
     err = table.Insert(entry.SetOffset(offset));
     }
     {
     uint64_t chunksize = sizeof(dataAtmp[i].f);
-    CDEntry entry(i, chunksize, (char *)(dataAtmp[i].f));
+    CDEntry entry(i, chunksize, 0, (char *)(dataAtmp[i].f));
     uint64_t offset = data.Write((char *)(dataAtmp[i].f), chunksize);
     err = table.Insert(entry.SetOffset(offset));
     }

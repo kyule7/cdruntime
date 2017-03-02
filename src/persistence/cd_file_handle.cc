@@ -9,7 +9,7 @@
 #include "cd_file_handle.h"
 #include "buffer_consumer_interface.h"
 #include "string.h"
-using namespace cd;
+using namespace packer;
 
 PosixFileHandle *PosixFileHandle::fh_ = NULL;
 
@@ -30,7 +30,7 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath)
   //fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT | O_APPEND, S_IRUSR | S_IWUSR);
   fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT | O_APPEND, S_IRUSR | S_IWUSR);
   if(fdesc_ < 0) {
-    ERROR_MESSAGE("ERROR: File open path:%s\n", full_filename);
+    ERROR_MESSAGE_PACKER("ERROR: File open path:%s\n", full_filename);
   }
   MYDBG("Opened file : %s\n", full_filename); //getchar();
   fh_ = this;
@@ -74,7 +74,7 @@ CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64
     if(ret < 0) {
       perror("write:");
       ferr = kErrorFileSeek;
-      ERROR_MESSAGE("Error occurred while seeking file:%ld\n", ret);
+      ERROR_MESSAGE_PACKER("Error occurred while seeking file:%ld\n", ret);
     }
   } else {
     MYDBG("offset:%lu == %lu\n", offset_, offset);
@@ -88,7 +88,7 @@ CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64
   if((uint64_t)written_size != len) {
     perror("write:");
     ferr = kErrorFileWrite;
-    ERROR_MESSAGE("Error occurred while writing buffer contents to file: %d %ld == %lu\n", fdesc_, written_size, len);
+    ERROR_MESSAGE_PACKER("Error occurred while writing buffer contents to file: %d %ld == %lu\n", fdesc_, written_size, len);
   }
 
   return ferr;
@@ -112,7 +112,7 @@ char *PosixFileHandle::ReadTo(void *dst, uint64_t len, uint64_t offset)
     off_t ret = lseek(fdesc_, offset, SEEK_SET);
     if(ret < 0) {
       perror("read:");
-      ERROR_MESSAGE("Error occurred while seeking file:%ld\n", ret);
+      ERROR_MESSAGE_PACKER("Error occurred while seeking file:%ld\n", ret);
     }
   }
 
@@ -120,7 +120,7 @@ char *PosixFileHandle::ReadTo(void *dst, uint64_t len, uint64_t offset)
   ssize_t read_size = read(fdesc_, dst, len);
   if((uint64_t)read_size < 0) {
     perror("read:");
-    ERROR_MESSAGE("Error occurred while reading buffer contents from file: %d %ld != %ld\n", fdesc_, read_size, len);
+    ERROR_MESSAGE_PACKER("Error occurred while reading buffer contents from file: %d %ld != %ld\n", fdesc_, read_size, len);
   }
   BufferUnlock();
   return (char *)dst;
@@ -137,7 +137,7 @@ void PosixFileHandle::Truncate(uint64_t newsize)
   int ret = ftruncate(fdesc_, newsize); 
   if(ret != 0) {
     perror("ftruncate:");
-    ERROR_MESSAGE("Error during truncating file:%lu\n", newsize);
+    ERROR_MESSAGE_PACKER("Error during truncating file:%lu\n", newsize);
   }
 }
 
@@ -147,7 +147,7 @@ int64_t PosixFileHandle::GetFileSize(void)
 //  struct stat buf;
 //  fstat(fdesc_, &buf);
 //  uint64_t fsize = buf.st_size;
-//  ASSERT(fsize == offset_);
+//  PACKER_ASSERT(fsize == offset_);
   return offset_;
 //  return offset_ - sizeof(MagicStore);
   //return fsize - sizeof(MagicStore);
@@ -160,7 +160,7 @@ uint32_t PosixFileHandle::GetBlkSize(void)
 //  int ret = ioctl(fdesc_,BLKBSZGET/* BLKSSZGET*/, &blockSize);
 //  if( ret != 0 ) { 
 //    perror("ioctl:");
-//    ERROR_MESSAGE("ioctl error: %d, fdesc:%d, blksize:%lu\n", ret, fdesc_, blockSize);
+//    ERROR_MESSAGE_PACKER("ioctl error: %d, fdesc:%d, blksize:%lu\n", ret, fdesc_, blockSize);
 //  }
   return CHUNK_ALIGNMENT;
 }

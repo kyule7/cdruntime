@@ -89,18 +89,19 @@ void HandleEntrySearch::HandleEvent(void)
   ENTRY_TAG_T &source_task_id = recvBuf[1];
   uint32_t found_level = 0;
   
-  RemoteCDEntry *target_entry = ptr_cd_->InternalGetEntry(tag_to_search);
-  if(target_entry != NULL) { 
+  RemoteCDEntry target_entry;
+  bool found = ptr_cd_->InternalGetEntry(tag_to_search, target_entry);
+  if(found) { 
     CD_DEBUG("FOUND it at this level #%u\n", ptr_cd_->level());
     found_level = ptr_cd_->level();
   } 
   else {
     CD_DEBUG("NOT FOUND it at this level #%u\n", ptr_cd_->level());
-    target_entry = ptr_cd_->SearchEntry(tag_to_search, found_level);
+    found = ptr_cd_->SearchEntry(tag_to_search, found_level, target_entry);
   }
 
 
-  if(target_entry != NULL) {
+  if(found) {
     CD_DEBUG("It succeed in finding the entry at this level #%u if head task!\n", found_level);
 
     // It needs some effort to avoid the naming alias problem of entry tags.
@@ -112,10 +113,10 @@ void HandleEntrySearch::HandleEvent(void)
   
     // Found the entry!! 
     // Then, send it to the task that has the entry of actual copy
-    ASSERT(target_entry->id_ == tag_to_search);
-    ASSERT(target_entry->size_.attr_.remote_ == 1);
-    const int target_task_id  = target_entry->task_id_;
-    ASSERT(target_entry->size_.attr_.remote_ == 1);
+    CD_ASSERT(target_entry.id_ == tag_to_search);
+    CD_ASSERT(target_entry.size_.attr_.remote_ == 1);
+    const int target_task_id  = target_entry.task_id_;
+    CD_ASSERT(target_entry.size_.attr_.remote_ == 1);
 
     CD_DEBUG("FOUND %s / %s at level #%u, target task id : %u\n", 
              found_cd->GetCDName().GetString().c_str(), 
@@ -151,36 +152,36 @@ void HandleEntrySearch::HandleEvent(void)
     }
     else {
       CD_DEBUG("HandleEntrySearch --> EntrySend (Head): entry was found at %u\n", found_level);
-      CD_DEBUG("sender ID : %lu (%u)\n", target_entry->size(), tag_to_search);
+      CD_DEBUG("sender ID : %lu (%u)\n", target_entry.size(), tag_to_search);
 
 
-      char *data_to_send = NULL;
-      DataHandle &target = target_entry->dst_data_;
-    
-      if(target.handle_type() == kDRAM) {
-        data_to_send = static_cast<char *>(target.address_data());
-      }
-      else if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
-        data_to_send = new char[target_entry->size()dst_data_.len()];
-        FILE *temp_fp = fopen(target.file_name().c_str(), "r");
-        if( temp_fp!= NULL )  {
-          if( target.ref_offset() != 0 ) { 
-            fseek(temp_fp, target.ref_offset(), SEEK_SET); 
-          }
-      
-          fread(data_to_send, 1, target.len(), temp_fp);
-      
-          CD_DEBUG("Read data from OS file system\n");
-      
-          fclose(temp_fp);
-        }
-        else {
-          ERROR_MESSAGE("Error in fopen in HandleEntrySend\n");
-        }
-      }
-      else {
-        ERROR_MESSAGE("Unsupported handle type : %d\n", target.handle_type());
-      }
+      char *data_to_send = ptr_cd_->entry_directory_.GetAt(target_entry);
+//      DataHandle &target = target_entry->dst_data_;
+//    
+//      if(target.handle_type() == kDRAM) {
+//        data_to_send = static_cast<char *>(target.address_data());
+//      }
+//      else if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
+//        data_to_send = new char[target_entry.size()];
+//        FILE *temp_fp = fopen(target.file_name().c_str(), "r");
+//        if( temp_fp!= NULL )  {
+//          if( target.ref_offset() != 0 ) { 
+//            fseek(temp_fp, target.ref_offset(), SEEK_SET); 
+//          }
+//      
+//          fread(data_to_send, 1, target.len(), temp_fp);
+//      
+//          CD_DEBUG("Read data from OS file system\n");
+//      
+//          fclose(temp_fp);
+//        }
+//        else {
+//          ERROR_MESSAGE("Error in fopen in HandleEntrySend\n");
+//        }
+//      }
+//      else {
+//        ERROR_MESSAGE("Unsupported handle type : %d\n", target.handle_type());
+//      }
 
 
 
@@ -188,8 +189,8 @@ void HandleEntrySearch::HandleEvent(void)
       ptr_cd_->entry_req_.push_back(CommInfo()); //getchar();
 
       // Should be non-blocking send to avoid deadlock situation. 
-      PMPI_Isend(data_to_send, 
-                 target.len(), 
+      PMPI_Ibsend(data_to_send, 
+                 target_entry.size(), 
                  MPI_BYTE, 
                  source_task_id, 
                  ptr_cd_->cd_id_.GenMsgTag(tag_to_search), 
@@ -198,9 +199,10 @@ void HandleEntrySearch::HandleEvent(void)
     //             &(ptr_cd_->entry_send_req_[tag_to_search].req_));  
 
 
-      if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
-        delete data_to_send;
-      }
+//      if( CHECK_ANY(target.handle_type(), (kHDD | kSSD | kPFS)) ) {
+//        delete data_to_send;
+//      }
+      delete data_to_send;
 
     }
 
@@ -291,8 +293,10 @@ void HandleEntrySend::HandleEvent(void)
   uint32_t found_level=ptr_cd_->level();
 
 
-  CDEntry *entry = ptr_cd_->InternalGetEntry(tag_to_search);
-  if(entry != NULL) { 
+
+  RemoteCDEntry entry;
+  bool found = ptr_cd_->InternalGetEntry(tag_to_search, entry);
+  if(found) { 
     CD_DEBUG("FOUND it at this level #%u!\n", ptr_cd_->level());
 
     found_level = ptr_cd_->level();
@@ -300,7 +304,7 @@ void HandleEntrySend::HandleEvent(void)
   else {
     CD_DEBUG("NOT FOUND it at this level #%u!\n", ptr_cd_->level());
 
-    entry = ptr_cd_->SearchEntry(tag_to_search, found_level);
+    found = ptr_cd_->SearchEntry(tag_to_search, found_level, entry);
   }
 
 
@@ -312,18 +316,18 @@ void HandleEntrySend::HandleEvent(void)
   
   for(auto it =cdh->ptr_cd()->remote_entry_directory_map_.begin(); 
            it!=cdh->ptr_cd()->remote_entry_directory_map_.end(); ++it) {
-    CD_DEBUG("%u (%s) - %s\n)\n", it->first, tag2str[it->first].c_str(), it->second->GetString().c_str());
+    CD_DEBUG("%u (%s) - %s\n)\n", it->second->id_, tag2str[it->second->id_].c_str(), (uint64_t)(it->second->src_));
     CD_DEBUG("--------------------- level : %u --------------------------------", cdh->level());
   }
 
-  if(entry == NULL) {
-    ERROR_MESSAGE("The received tag [%u] does not work in %s. CD Level %u.\n",
+  if(found == false) {
+    ERROR_MESSAGE("The received tag [%lu] does not work in %s. CD Level %u.\n",
                    tag_to_search, ptr_cd_->GetNodeID().GetString().c_str(), ptr_cd_->level());
   }
   else {
     CD_DEBUG("HandleEntrySend: entry was found at level #%u.\n", found_level);
 
-    char *data_to_send = ptr_cd()->entry_directory_.GetAt(entry);
+    char *data_to_send = ptr_cd_->entry_directory_.GetAt(entry);
 ////    DataHandle &target = entry->dst_data_;
 //
 //    if(target.handle_type() == kDRAM) {
