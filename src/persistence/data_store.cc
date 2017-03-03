@@ -22,32 +22,64 @@ int indent_cnt = 0;
 uint64_t packer::table_id = TABLE_ID_OFFSET;
 int64_t chunksize_threshold = CHUNKSIZE_THRESHOLD_BASE;
 
-DataStore::DataStore(bool alloc)
+//DataStore::DataStore(bool alloc) 
+//{
+//  MYDBG("\n");
+//  assert(0);
+//  // Should be thread-safe
+//  Init(NULL);
+//
+//  printf("BeforeWrite ft:%u fh:%p ptralloc:%p magic:%lu\n",
+//        ftype(), fh_, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
+//  if(fh_->GetFileSize() < (int64_t)sizeof(MagicStore)) {
+//    fh_->Write(0, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
+//    fh_->FileSync();
+//  }
+//
+//  written_len_ = fh_->GetFileSize();
+//  printf("blksize:%u filesize:%lu (%lu)\n", 
+//      chunksize_, written_len_, sizeof(MagicStore)); //getchar();
+//
+//}
+DataStore::DataStore(char *ptr)
 {
-  MYDBG("\n");
+  MYDBG("\nptr:%p", ptr);
+
+  // Should be thread-safe
+  Init(ptr);
+
+  printf("BeforeWrite ft:%u fh:%p ptralloc:%p magic:%lu\n",
+        ftype(), fh_, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
+  if(fh_->GetFileSize() < (int64_t)sizeof(MagicStore)) {
+    fh_->Write(0, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
+    fh_->FileSync();
+  }
+
+  written_len_ = fh_->GetFileSize();
+  printf("blksize:%u filesize:%lu (%lu)\n", 
+      chunksize_, written_len_, sizeof(MagicStore)); //getchar();
+}
+
+void DataStore::Init(char *ptr) 
+{
   pthread_mutex_lock(&mutex);
-  ptr_ = 0;
+  ptr_ = ptr;
   grow_unit_ = DATA_GROW_UNIT;
   size_ = grow_unit_;
   head_ = 0;//size_ - size_ / 4;
   tail_ = head_;//sizeof(MagicStore);
   allocated_ = 0;
   mode_ = kGrowingMode | kPosixFile;
-  ptr_ = NULL;
-  if(alloc) AllocateData();
-  /** Orer matters *************************/
+  if(ptr == NULL) 
+    AllocateData();
+  else 
+    ptr_ = ptr;
+  /** Order matters *************************/
   fh_ = GetFileHandle(ftype()); 
   BufferConsumer::Get()->InsertBuffer(this);
   /*****************************************/
-  printf("BeforeWrite ft:%u fh:%p ptralloc:%p magic:%lu\n",ftype(),  fh_, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
-  if(fh_->GetFileSize() < (int64_t)sizeof(MagicStore)) {
-    fh_->Write(0, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
-    fh_->FileSync();
-  }
-
   chunksize_ = fh_->GetBlkSize();
-  written_len_ = fh_->GetFileSize();
-  printf("blksize:%u filesize:%lu (%lu)\n", chunksize_, written_len_, sizeof(MagicStore)); //getchar();
+
   pthread_mutex_unlock(&mutex);
 }
 
@@ -85,6 +117,7 @@ CDErrType DataStore::Copy(void *dst, char *src, int64_t len)
   return kOK; 
 }
 
+// Initialize ptr_, size_, head_, tail_
 CDErrType DataStore::AllocateData(void)
 {
   CDErrType err = kOK;
@@ -323,7 +356,7 @@ uint64_t DataStore::WriteMem(char *src, int64_t len)
       tail_ += len;
     }
   } else {
-    ERROR_MESSAGE_PACKER("Write failed: ptr_:%p %p\n", ptr_, src);
+    ERROR_MESSAGE_PACKER("Write failed: len: %ld ptr_:%p %p\n", len, ptr_, src);
   }
   return ret;
 }

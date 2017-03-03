@@ -39,7 +39,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <string>
 #include <map>
 #include "cd.h"
-#define CD_MPI_ENABLED 0
+#define CD_MPI_ENABLED 1
 #if CD_MPI_ENABLED
 #include <mpi.h>
 #endif

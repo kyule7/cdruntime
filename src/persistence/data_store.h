@@ -52,8 +52,10 @@ class DataStore {
     char    *ptr_;
     FileHandle *fh_;
   public:
-    DataStore(bool alloc=true);
+//    DataStore(bool alloc);
+    DataStore(char *ptr=NULL);
     virtual ~DataStore(void);
+    void Init(char *ptr=NULL);
     CDErrType AllocateData();
     CDErrType FreeData(bool reuse);
     CDErrType Reallocate(uint64_t len);

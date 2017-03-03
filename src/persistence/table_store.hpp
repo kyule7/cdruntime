@@ -35,6 +35,7 @@ class BaseTable {
     }
 
   public:
+    virtual void Init(void)=0;
     virtual void *Find(uint64_t id)=0;
     virtual uint64_t FindWithAttr(uint16_t attr, BaseTable *that=NULL)=0;
     virtual CDErrType Find(uint64_t id, uint64_t &ret_size, uint64_t &ret_offset)=0;
@@ -82,7 +83,13 @@ class TableStore : public BaseTable {
         AllocateTable(BASE_ENTRY_CNT);
       }
     }
-
+    virtual void Init(void) {
+        prv_entry_.id_++;
+        prv_entry_.offset_ = INVALID_NUM;
+        head_ = 0;
+        tail_ = head_;
+        grow_unit_ = tail_ * 2;
+    }
     virtual ~TableStore<EntryT>(void) {
       MYDBG("\n");
       Free(false); 

@@ -47,13 +47,13 @@ void BufferConsumer::Delete(void)
 
 void BufferConsumer::InsertBuffer(DataStore *ds) 
 {
-  MYDBG("%p (%p)\n", ds, this);
+  MYDBG("%p (%p)\n", ds, this); getchar();
   buf_list_.push_back(ds);
 }
 
 void BufferConsumer::RemoveBuffer(DataStore *ds) 
 {
-  MYDBG("%p\n", ds);
+  MYDBG("%p\n", ds); getchar();
   bool found = false;
   for(auto it=buf_list_.begin(); it!=buf_list_.end(); ++it) {
     if(*it == ds) { 
@@ -63,7 +63,7 @@ void BufferConsumer::RemoveBuffer(DataStore *ds)
     }
   }
   if( found == false ) {
-    ERROR_MESSAGE_PACKER("Remove buffer which is not existing in buf_list_\n");
+    //ERROR_MESSAGE_PACKER("Remove buffer which is not existing in buf_list_\n");
   }
 }
 

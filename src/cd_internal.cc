@@ -317,6 +317,9 @@ void CD::Initialize(CDHandle *cd_parent,
   Init();  
 
   init_timer += CD_CLOCK() - tstart;
+  
+  entry_directory_.Init();
+
   cd_type_ = cd_type; 
   prv_medium_ = prv_medium; 
   if(name != NULL) {
@@ -737,7 +740,9 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
       GetParentHandle()->ptr_cd_->child_seq_id_ = cd_id_.sequential_id();
     }
 #endif
- 
+
+    entry_directory_.Clear(true);
+
 #if _MPI_VER
     FinalizeMailBox();
 #endif 
@@ -1899,7 +1904,7 @@ CDErrT CD::Preserve(void *data,
     // while preservation was done one by one and sometimes there could be some computation in between the preservations.. 
     // (but wait is it true?)
     //
-    // Jinsuk: Because we want to make sure the order is the same as preservation, we go with  Wait...... It does not make sense... 
+    // Jinsuk: Because we want to make sure the order is the same as preservation, we go with Wait... It does not make sense. 
     // Jinsuk: For now let's do nothing and just restore the entire directory at once.
     // Jinsuk: Caveat: if user is going to read or write any memory space that will be eventually preserved, 
     // FIRST user need to preserve that region and use them. Otherwise current way of restoration won't work. 
@@ -2054,8 +2059,8 @@ CD::InternalPreserve(void *data,
     // [ID] [ATTR|SIZE] [OFFSET] [SRC]
     //  ID  [ATTR|0]   REF_OFFSET REF_ID
     attr |= Attr::krefer;
-    uint64_t size = 0;
-    if(CHECK_PRV_TYPE(preserve_mask, kCoop)){ 
+    uint64_t size = len_in_bytes;
+    if(CHECK_PRV_TYPE(preserve_mask, kSerdes)){ 
       attr |= (Attr::knested | Attr::ktable);
       size = static_cast<PackerSerializable *>(data)->GetTableSize(&entry_directory_);
     }
@@ -2714,6 +2719,14 @@ void CD::DeleteEntryDirectory(void)
   CD_DEBUG("Delete entry directory!\n");
   entry_directory_.Clear(true);
   remote_entry_directory_map_.clear();
+}
+
+void HeadCD::DeleteEntryDirectory(void)
+{
+  CD_DEBUG("Delete entry directory!\n");
+  entry_directory_.Clear(true);
+  remote_entry_directory_map_.clear();
+  remote_entry_table_.Free(true);
 }
 
 #if CD_LIBC_LOG_ENABLED

@@ -566,16 +566,16 @@ class CDHandle {
  *
  * \sa Complete()
  */
-    CDErrT Preserve(void *data_ptr=0, //!< [in] pointer to data to be preserved;
+    CDErrT Preserve(void *data_ptr, //!< [in] pointer to data to be preserved;
                                        //!< __currently must be in same address space
                                        //!< as calling task, but will extend to PGAS fat pointers later 
-                    uint64_t len=0,   //!< [in] Length of preserved data (Bytes)
+                    uint64_t len,   //!< [in] Length of preserved data (Bytes)
                     uint32_t preserve_mask=kCopy, //!< [in] Allowed types of preservation 
                                                   //!< (e.g., kCopy|kRef|kRegen), default only via copy
-                    const char *my_name=0,  //!< [in] Optional C-string representing the name of this
+                    const char *my_name="",  //!< [in] Optional C-string representing the name of this
                                             //!< preserved data for later preserve-via-reference
 
-                    const char *ref_name=0, //!< [in] Optional C-string representing
+                    const char *ref_name="", //!< [in] Optional C-string representing
                                             //!< a user-specified name that was set by a previous preserve call at the parent.; 
                                             //!< __Do we also need an offset into parent preservation?__
 
@@ -610,10 +610,10 @@ class CDHandle {
                                           //!< to de/serialize class object
                     uint32_t preserve_mask=kCopy, //!< [in] Allowed types of preservation 
                                                   //!< (e.g., kCopy|kRef|kRegen), default only via copy
-                    const char *my_name=0,  //!< [in] Optional C-string representing the name of this
+                    const char *my_name="",  //!< [in] Optional C-string representing the name of this
                                             //!< preserved data for later preserve-via-reference
 
-                    const char *ref_name=0, //!< [in] Optional C-string representing
+                    const char *ref_name="", //!< [in] Optional C-string representing
                                             //!< a user-specified name that was set by a previous preserve call at the parent.; 
                                             //!< __Do we also need an offset into parent preservation?__
                     uint64_t ref_offset=0,  //!< [in] explicit offset within the named region at the other CD 
@@ -659,15 +659,15 @@ class CDHandle {
  * \sa Complete()
  */
     CDErrT Preserve(CDEvent &cd_event, //!< [in,out] enqueue this call onto the cd_event
-                    void *data_ptr=0, //!< [in] pointer to data to be preserved;
+                    void *data_ptr, //!< [in] pointer to data to be preserved;
                                       //!< __currently must be in same address space as calling task, 
                                       //!< but will extend to PGAS fat pointers later
-                    uint64_t len=0,   //!< [in] Length of preserved data (Bytes)
+                    uint64_t len,   //!< [in] Length of preserved data (Bytes)
                     uint32_t preserve_mask=kCopy, //!< [in] Allowed types of preservation 
                                                   //!< (e.g.,kCopy|kRef|kRegen), default only via copy
-                    const char *my_name=0, //!< [in] Optional C-string representing the name of this
+                    const char *my_name="", //!< [in] Optional C-string representing the name of this
                                            //!< preserved data for later preserve-via-reference
-                    const char *ref_name=0, //!< [in] Optional C-string representing a user-specified name 
+                    const char *ref_name="", //!< [in] Optional C-string representing a user-specified name 
                                             //!< that was set by a previous preserve call at the parent.; 
                                             //!< __Do we also need an offset into parent preservation?__
                     uint64_t ref_offset=0, //!< [in] explicit offset within the named region at the other CD

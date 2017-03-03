@@ -31,7 +31,7 @@ class Packer {
         table_ = table;
       }
       if(data == NULL) {
-        data_ = new DataStore(alloc);
+        data_ = new DataStore;
       } else {
         data_ = data;
       }
@@ -43,7 +43,7 @@ class Packer {
         table_ = table;
       }
       if(data == NULL) {
-        data_ = new DataStore(true);
+        data_ = new DataStore;
       } else {
         data_ = data;
       }
@@ -53,7 +53,12 @@ class Packer {
       delete table_;
       delete data_;
     }
-    
+   
+    virtual void Init(void) {
+      table_->Init();
+      data_->Init();
+    }
+
     BaseTable *GetTable(void) { return table_; }
 
     ///@brief Add data to pack in packer data structure.
@@ -82,6 +87,7 @@ class Packer {
     {
       uint64_t offset = data_->Write(src, entry.size());
       entry.SetOffset(offset);
+      printf("[%s] %p %lu(%lx), offset:%lu\n", src, entry.size(), entry.size_.code_, offset); getchar();
       EntryT *ret = table_->InsertEntry(std::move(entry));
       return ret;
     }

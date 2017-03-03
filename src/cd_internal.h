@@ -617,7 +617,7 @@ public:
     // and then new CDEntry and then return with proper value. 
     
     // Actual malloced data or created file for the preservation is deleted in this routine. 
-    void DeleteEntryDirectory(void);
+    virtual void DeleteEntryDirectory(void);
     
 
     CDInternalErrT InvokeErrorHandler(void);
@@ -803,6 +803,7 @@ class HeadCD : public CD {
     virtual CDErrT RemoveChild(CDHandle *cd_child); 
 
     void DeserializeRemoteEntryDir(void *object, uint64_t totsize);
+    virtual void DeleteEntryDirectory(void);
 
     void *Serialize(uint64_t &len_in_bytes);
     void Deserialize(void *object);
