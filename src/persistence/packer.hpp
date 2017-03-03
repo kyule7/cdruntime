@@ -87,7 +87,8 @@ class Packer {
     {
       uint64_t offset = data_->Write(src, entry.size());
       entry.SetOffset(offset);
-      printf("[%s] %p %lu(%lx), offset:%lu\n", src, entry.size(), entry.size_.code_, offset); getchar();
+//      printf("[%s] %p %lu(%lx), offset:%lu\n", 
+//          __func__, src, entry.size(), entry.size_.code_, offset); //getchar();
       EntryT *ret = table_->InsertEntry(std::move(entry));
       return ret;
     }

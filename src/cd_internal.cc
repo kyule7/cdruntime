@@ -532,7 +532,7 @@ CDHandle *CD::Create(CDHandle *parent,
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err)
 {
-  printf("%s]cd size:%zu\n", __func__, sizeof(*this));
+  //printf("[%s]cd size:%zu\n", __func__, sizeof(*this));
   /// Create CD object with new CDID
   CDHandle *new_cd_handle = NULL;
 
@@ -1856,6 +1856,8 @@ CDErrT CD::Preserve(void *data,
                     const RegenObject *regen_object, 
                     PreserveUseT data_usage)
 {
+//  printf("[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d], # reexec:%d\n", 
+//           data, len_in_bytes, my_name, ref_name, cd_exec_mode_, num_reexecution_); 
   CDErrT ret = CDErrT::kOK;
   uint64_t tag = cd_hash(std::string(my_name));
   CD_DEBUG("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
@@ -1927,7 +1929,9 @@ CDErrT CD::Preserve(void *data,
       if( restore_count_ == preserve_count_ ) { 
         cd_exec_mode_ = kExecution;
         restore_count_ = 0;
-      }
+      } 
+      printf("[%s] prv #: %lu, rst #: %lu, mode:%d\n", __func__,
+                    preserve_count_, restore_count_, cd_exec_mode_);
 #if _MPI_VER
       if( restore_count_ == preserve_count_ ) { 
         CD_DEBUG("Test Asynch messages until start at %s / %s\n", 
@@ -1971,7 +1975,9 @@ CDErrT CD::Preserve(void *data,
       // Since we have reached the last point already now convert current execution mode into kExecution
       
       // For now, let us assume that it is not possible.
-      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called more number of time than original"); 
+      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called " 
+                    "more number of time than original, prv #: %lu, rst #: %lu, mode:%d\n", 
+                    preserve_count_, restore_count_, cd_exec_mode_); 
 
     }
 
@@ -2091,6 +2097,8 @@ CD::InternalPreserve(void *data,
       static_cast<HeadCD *>(this)->remote_entry_table_.Insert(RemoteCDEntry(*pEntry));
     }
   }
+
+  preserve_count_++;
 
   return err; 
 }
@@ -2514,7 +2522,7 @@ CDHandle *HeadCD::Create(CDHandle *parent,
                      uint64_t sys_bit_vector, 
                      CD::CDInternalErrT *cd_internal_err)
 {
-  printf("%s]cd size:%zu\n", __func__,sizeof(*this));
+//  printf("[%s]cd size:%zu\n", __func__,sizeof(*this));
 
   // CD runtime system are not able to be aware of how many children the current HeadCD task will have.
   // So it does not make sense to create mailboxes for children CD's HeadCD tasks at the HeadCD creation time.

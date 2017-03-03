@@ -47,13 +47,13 @@ void BufferConsumer::Delete(void)
 
 void BufferConsumer::InsertBuffer(DataStore *ds) 
 {
-  MYDBG("%p (%p)\n", ds, this); getchar();
+  MYDBG("%p (%p)\n", ds, this); //getchar();
   buf_list_.push_back(ds);
 }
 
 void BufferConsumer::RemoveBuffer(DataStore *ds) 
 {
-  MYDBG("%p\n", ds); getchar();
+  MYDBG("%p\n", ds); //getchar();
   bool found = false;
   for(auto it=buf_list_.begin(); it!=buf_list_.end(); ++it) {
     if(*it == ds) { 
