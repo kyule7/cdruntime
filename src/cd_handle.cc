@@ -34,33 +34,27 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include <sys/stat.h>
+#include <cmath>
 #include "cd_config.h"
 #include "cd_features.h"
 #include "cd_handle.h"
 #include "cd_def_internal.h"
 #include "cd_path.h"
-
-
-#include "cd_features.h"
-//#include "cd_global.h"
 #include "node_id.h"
 #include "sys_err_t.h"
 #include "cd_internal.h"
+#include "cd_def_preserve.h"
 //#include "profiler_interface.h"
-
+//#include "cd_global.h"
+//#include "error_injector.h"
 #if CD_PROFILER_ENABLED
 #include "cd_profiler.h"
 #endif
-
-#include <cmath>
-//#include "error_injector.h"
-
 
 using namespace cd;
 using namespace cd::interface;
 using namespace cd::internal;
 using namespace std;
-
 
 CDHandle *cd::null_cd = NULL;
 
@@ -138,107 +132,74 @@ CDPath *CDPath::uniquePath_ = NULL;
 namespace cd {
 // Global functions -------------------------------------------------------
 
+
+static inline
+void SetDebugFilepath(int myTask) 
+{
+  string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
+#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
+  char *dbg_base_str = getenv( "CD_DBG_BASEPATH" );
+  if(dbg_base_str != NULL) {
+    dbg_basepath = dbg_base_str;
+  }
+
+  if(myTask == 0) {
+    MakeFileDir(dbg_basepath.c_str());
+  }
+
+  char dbg_log_filename[] = CD_DBG_FILENAME;
+  char dbg_filepath[256]={};
+  snprintf(dbg_filepath, 256, "%s/%s_%d", dbg_basepath.c_str(), dbg_log_filename, myTask);
+  cdout = fopen(dbg_filepath, "w");
+#endif
+
+#if CD_DEBUG_ENABLED
+  char app_dbg_log_filename[] = CD_DBGAPP_FILENAME;
+  char app_dbg_filepath[256]={};
+  snprintf(app_dbg_filepath, 256, "%s/%s_%d", dbg_basepath.c_str(), app_dbg_log_filename, myTask);
+  cddbg.open(app_dbg_filepath);
+#endif
+}
+
+static inline
+void InitErrorInjection(int myTask)
+{
+  double random_seed = 0.0;
+  if(myTask == 0) {
+    random_seed = CD_CLOCK();
+    CD_DEBUG("Random seed: %lf\n", random_seed);
+  }
+
+//  random_seed = 137378;
+#if CD_MPI_ENABLED  
+  PMPI_Bcast(&random_seed, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+#endif
+
+  srand48(random_seed * (double)(RANDOM_SEED + myTask));
+}
+
 /// KL
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   CDPrologue();
+
   cd::tot_begin_clk = CD_CLOCK();
-//  printf("here");getchar();
+
+  // Initialize static vars
   myTaskID      = myTask;
   totalTaskSize = numTask;
-
   cd::system_config.LoadSystemConfig();
-//  printf("here");getchar();
 
-  string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
-#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
-  char *filepath = getenv( "CD_DEBUG_OUT" );
-  char dbg_log_filename[] = "cddbg_log_rank_";
-
-  if(filepath != NULL) {
-    // Overwrite filepath with CD_DEBUG_OUT value
-    dbg_basepath = filepath;
-  }
-//  printf("here");getchar();
-
-  if(myTaskID == 0) {
-    struct stat sb;
-    if (stat(dbg_basepath.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
-      printf("Path exists!\n");
-    }
-    else {
-      char debug_dir[256];
-      sprintf(debug_dir, "%s", dbg_basepath.c_str());
-      printf("debug dir path size : %d\n", (int)sizeof(debug_dir));
-      // [Eric]
-      int ret = mkdir(debug_dir, S_IRWXU);
-      if(ret == -1 && errno != EEXIST) {
-        /* The EEXIST should not happen, but we check for it anyway */
-        ERROR_MESSAGE("ERROR: Failed to mkdir %s: %s\n", debug_dir, strerror(errno));
-      }
-    }
-  }
-  
+  SetDebugFilepath(myTask);
+  internal::InitFileHandle(myTask == 0);
+ 
 #if CD_MPI_ENABLED 
   // Synchronization is needed. 
   // Otherwise, some task may execute CD_DEBUG before head creates directory 
   PMPI_Barrier(MPI_COMM_WORLD);
 #endif
-//  printf("here1");getchar();
 
-  char dbg_filepath[256]={};
-//  printf("here2");getchar();
-  snprintf(dbg_filepath, 256, "%s%s%d", dbg_basepath.c_str(), dbg_log_filename, myTaskID);
-//  printf("here3");getchar();
-//  printf("dbg filepath : %s\n", dbg_filepath);
-//  dbg_basepath = dbg_basepath + log_filename + to_string(static_cast<unsigned long long>(myTaskID));
-
-  cdout = fopen(dbg_filepath, "w");
-//  printf("here");getchar();
- 
-#endif
-
-//  printf("here");getchar();
-#if CD_DEBUG_ENABLED
-  char app_dbg_log_filename[] = "cddbg_app_output_";
-  char app_dbg_filepath[256]={};
-  snprintf(app_dbg_filepath, 256, "%s%s%d", dbg_basepath.c_str(), app_dbg_log_filename, myTaskID);
-//  printf("app dbg filepath : %s\n", app_dbg_filepath);
-  cddbg.open(app_dbg_filepath);
-#endif
-//  printf("here check");getchar();
-
-  // Base filepath setup for preservation
-  char *globalpath_env = getenv("CD_PRV_GLOBAL_PATH");
-  if(globalpath_env != NULL) {
-    CDFileHandle::global_prv_path_ = globalpath_env;
-  }
-  char *localpath_env = getenv("CD_PRV_LOCAL_PATH");
-  if(localpath_env != NULL) {
-    CDFileHandle::local_prv_path_ = localpath_env;
-  }
-//  printf("here check 2");getchar();
-
-  if(myTaskID == 0) {
-//  printf("here check 3");getchar();
-    // Therefore, if it is not opened, we need to check if it exists.
-    struct stat sb;
-    const char* basepath = (CDFileHandle::global_prv_path_+string(CD_FILEPATH_PFS)).c_str();
-    if(stat(basepath, &sb) == 0 && S_ISDIR(sb.st_mode)) {
-      CD_DEBUG("Prv Path exists!\n");
-    }
-    else {
-      char filepath[256];
-      sprintf(filepath, "%s", basepath);
-      int ret = mkdir(filepath, S_IRWXU);
-      if(ret == -1 && errno != EEXIST) {
-        /* The EEXIST should not happen, but we check for it anyway */
-        ERROR_MESSAGE("ERROR: Failed to mkdir to preserve %s: %s\n", filepath, strerror(errno));
-      }
-    }
-  }
-//  printf("here check 23");getchar();
-//  getchar();
+  // Create Root CD
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
 #if CD_MPI_ENABLED 
   PMPI_Comm_group(MPI_COMM_WORLD, &whole_group); 
@@ -249,37 +210,26 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
                                               static_cast<CDType>(kStrict | prv_medium), 
                                              /* FilePath::global_prv_path_,*/ 
                                               ROOT_SYS_DETECT_VEC, &internal_err);
-
   CDPath::GetCDPath()->push_back(root_cd_handle);
+
+  // Create windows for pendingFlag and rollback_point 
   cd::internal::Initialize();
 
-//  printf("here check init");getchar();
 #if CD_PROFILER_ENABLED
   // Profiler-related
   root_cd_handle->profiler_->InitViz();
 #endif
 
 #if CD_ERROR_INJECTION_ENABLED
-  double random_seed = 0.0;
-  if(myTaskID == 0) {
-    random_seed = CD_CLOCK();
-    CD_DEBUG("Random seed: %lf\n", random_seed);
-  }
-//  random_seed = 137378;
-#if CD_MPI_ENABLED  
-  PMPI_Bcast(&random_seed, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-#endif
-  srand48(random_seed * (double)(RANDOM_SEED + myTaskID));
+  InitErrorInjection(myTaskID);
   // To be safe
   CDHandle::memory_error_injector_ = NULL;
   CDHandle::system_error_injector_ = new SystemErrorInjector(system_config);
 #endif
 
-//  printf("here check flush");getchar();
 #if CD_DEBUG_ENABLED
   cddbg.flush();
 #endif
-//  printf("end here check flush");getchar();
 
   //GONG
   CDEpilogue();
@@ -729,6 +679,7 @@ void CDHandle::Init(CD *ptr_cd)
 
 int CDHandle::SelectHead(uint32_t task_size)
 {
+  CD_ASSERT(task_size != 0);
   return (level() + 1) % task_size;
 }
 

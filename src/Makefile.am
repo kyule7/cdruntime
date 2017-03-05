@@ -24,7 +24,6 @@ libcd_la_SOURCES = \
   	                cd_event.cc \
   	                cd_handle.cc \
   	                cd_id.cc \
-  	                cd_file_handle.cc \
   	                cd_malloc.cc \
   	                cd_mpiwrapper.cc \
   	                cd_name_t.cc \

@@ -58,6 +58,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <sstream>
 #include <streambuf>
 #include <string>
+#include <errno.h>
+//#include <assert.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <assert.h>
 
 // system specific or machine specific utils resides here.
 using namespace cd;
@@ -211,6 +217,37 @@ static uint64_t GenCDObjID(uint32_t level)
 };
 
 /** @} */ // End group utilities
+
+inline
+int MakeFileDir(const char *filepath_str) 
+{
+  char *filepath = const_cast<char *>(filepath_str); 
+  assert(filepath && *filepath);
+  int ret = 0;
+  struct stat sb;
+  if(stat(filepath, &sb) != 0 || S_ISDIR(sb.st_mode) == 0) {
+    char *ptr;
+    char *next;
+    for (ptr=strchr(filepath+1, '/'); ptr; next=ptr+1, ptr=strchr(next, '/')) {
+      *ptr='\0';
+      printf("%p %s\n", ptr,  filepath);
+      int err = mkdir(filepath, S_IRWXU);
+      if(err == -1 && errno != EEXIST) { 
+        *ptr='/'; 
+        ret = -1;
+      }
+      *ptr='/';
+    }
+    
+    if(*next != '\0') { 
+      int err = mkdir(filepath, S_IRWXU);
+      if(err == -1 && errno != EEXIST) { 
+        ret = -1;
+      }
+    }
+  }
+  return ret;
+}
 
 } // namespace cd ends
 

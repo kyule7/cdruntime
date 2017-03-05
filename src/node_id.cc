@@ -50,6 +50,7 @@ NodeID::NodeID(int head)
 #else
   color_ = -1; 
 #endif
+//  printf("NodeID 1 created\n"); getchar();
 //  if(myTaskID == 0) {
 //    printf("\nnodeid0\n"); 
 //  }
@@ -59,6 +60,7 @@ NodeID::NodeID(int head)
 NodeID::NodeID(const ColorT& color, int task, int head, int size)
   : task_in_color_(task), head_(head), size_(size), color_id_(-1), color_(color)
 {
+//  printf("NodeID 2 created\n"); getchar();
 #if _MPI_VER
 //  int ret = MPI_Comm_dup(color, &color_);
 //  color_ = color;
@@ -75,6 +77,7 @@ NodeID::NodeID(const ColorT& color, int task, int head, int size)
 NodeID::NodeID(const NodeID& that)
   : task_in_color_(that.task_in_color_), head_(that.head_), size_(that.size_), color_id_(that.color_id_), color_(that.color_)
 {
+//  printf("NodeID 3 created %lu\n"); getchar();
 #if _MPI_VER
 //  int ret = MPI_Comm_dup(that.color_, &color_); 
 //  color_ = that.color_;

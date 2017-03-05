@@ -85,6 +85,18 @@ CDMailBoxT CD::pendingWindow_;
 CDMailBoxT CD::rollbackWindow_;
 #endif
 
+void cd::internal::InitFileHandle(bool make_dir)
+{
+  char *prv_base_str = getenv( "CD_PRV_BASEPATH" );
+  if(prv_base_str != NULL) {
+    packer::FileHandle::basepath = prv_base_str;
+  }
+
+  if(make_dir) {
+    MakeFileDir(packer::FileHandle::basepath.c_str());
+  }
+}
+
 void cd::internal::Initialize(void)
 {
 #if _MPI_VER
@@ -179,9 +191,9 @@ void cd::internal::Finalize(void)
 /// inside Create() 
 
 CD::CD(void)
-  : file_handle_()
+//  : file_handle_()
 #if CD_MPI_ENABLED
-    , incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
+    : incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 #endif
 {
   Init();  
@@ -225,10 +237,10 @@ CD::CD(CDHandle *cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
- :  cd_id_(cd_id),
-    file_handle_(prv_medium, 
+ :  cd_id_(cd_id)//,
+//    file_handle_(prv_medium, 
 //                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
-                 cd_id.GetStringID() )
+//                 cd_id.GetStringID() )
 #if CD_MPI_ENABLED
     , incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 #endif
@@ -568,11 +580,11 @@ CDHandle *CD::CreateRootCD(const char *name,
   // It sets filepath for preservation with base filename.
   // If CD_PRV_BASEPATH is set in env, 
   // the file path will be basefilepath/CDID_XXXXXX.
-  if(new_prv_medium != kDRAM) {
-    new_cd_handle->ptr_cd_->file_handle_.SetFilePath(new_prv_medium, 
-                                                     /*basefilepath,*/
-                                                     root_cd_id.GetStringID());
-  }
+//  if(new_prv_medium != kDRAM) {
+//    new_cd_handle->ptr_cd_->file_handle_.SetFilePath(new_prv_medium, 
+//                                                     /*basefilepath,*/
+//                                                     root_cd_id.GetStringID());
+//  }
   assert(new_cd_handle != NULL);
 
   return new_cd_handle;
@@ -725,9 +737,9 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
     CD_DEBUG("clean up CD meta data (%d windows) at %s (%s) level #%u\n", 
              task_size(), name_.c_str(), label_.c_str(), level());
     // delete preservation files
-    if(prv_medium_ == kSSD || prv_medium_ == kHDD) {
-      file_handle_.Close();
-    }
+//    if(prv_medium_ == kSSD || prv_medium_ == kHDD) {
+//      file_handle_.Close();
+//    }
 //#if CD_MPI_ENABLED
 //    else if(prv_medium_ == kPFS) {
 //      pfs_handle_->Close();
@@ -1742,7 +1754,7 @@ void *CD::SerializeRemoteEntryDir(uint64_t &len_in_bytes)
     }
   }
   len_in_bytes = remote_entry_cnt * sizeof(RemoteCDEntry); 
-  return serialized;
+  return (void *)serialized;
 }
 
 void HeadCD::DeserializeRemoteEntryDir(void *object, uint64_t totsize)

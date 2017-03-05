@@ -11,10 +11,18 @@
 #include "string.h"
 using namespace packer;
 
+std::string FileHandle::basepath(DEFAULT_BASEPATH); 
 PosixFileHandle *PosixFileHandle::fh_ = NULL;
+
+FileHandle::FileHandle(const char *filepath) 
+  : filepath_(filepath), offset_(0) 
+{
+//  printf("basepath:%s\n", basepath.c_str()); getchar();
+}
 
 PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath) 
 {
+//  printf("posix basepath:%s\n", basepath.c_str()); getchar();
   struct timeval time;
   gettimeofday(&time, NULL);
   char full_filename[128];

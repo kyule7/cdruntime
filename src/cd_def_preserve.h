@@ -12,6 +12,8 @@
 #define CD_DEFAULT_PRV_FILENAME "prv_files_%s_XXXXXX"
 #define CD_DEFAULT_FILEPATH "./prv_files_XXXXXX"
 #define CD_DEFAULT_DEBUG_OUT "./debug_logs/"
+#define CD_DBG_FILENAME "dbg_log"
+#define CD_DBGAPP_FILENAME "app_log"
 #define CD_SHARING_DEGREE 64
 
 

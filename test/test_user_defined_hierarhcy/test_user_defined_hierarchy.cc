@@ -40,7 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <map>
 
 #include "cd.h"
-
+#include "cd_def_debug.h"
 #if CD_MPI_ENABLED
 #include <mpi.h>
 #endif

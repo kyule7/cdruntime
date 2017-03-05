@@ -160,7 +160,8 @@ namespace cd {
                 kExecutionModeError, //!< Errors during execution
                 kOutOfMemory, //!< Error due to not enough memory
                 kFileOpenError, //!< error during opening file
-                kAppError 
+                kFailedMakeFileDir,
+                kAppError,
               };
 
 /** @} */ // end of internal_error_types
@@ -271,7 +272,7 @@ namespace cd {
 
   extern int myTaskID;
   extern int totalTaskSize;
-
+  extern bool app_side;
 /** \addtogroup cd_accessor_funcs 
  * These methods are globally accessible without a CDHandle object.
  * So, user can get a handle of CD at any point of program with these methods.

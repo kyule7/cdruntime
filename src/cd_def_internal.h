@@ -323,9 +323,6 @@ namespace cd {
 
   extern uint64_t gen_object_id;
 
-  //GONG: global variable to represent the current context for malloc wrapper
-  extern bool app_side;
-
   static inline void nullFunc(void) {}
 
 
@@ -516,84 +513,84 @@ extern CD_CLOCK_T mailbox_elapsed_time;
     };
   } // namespace logging ends
 #endif
-  extern DebugBuf cddbg;
+//  extern DebugBuf cddbg;
 
-/**@class cd::DebugBuf
- * @brief Utility class for debugging.
- *
- *  Like other parallel programming models, it is hard to debug CD runtime. 
- *  So, debugging information are printed out to file using this class.
- *  The global object of this class, dbg, is defined.
- * 
- *  The usage of this class is like below.
- *  \n
- *  \n
- *  DebugBuf dbgApp;
- *  dbgApp.open("./file_path_to_write"); 
- *  dbgApp << "Debug Information" << endl;
- *  dbg.flush(); 
- *  dbg.close();
- */ 
-  class DebugBuf: public std::ostringstream {
-    std::ofstream ofs_;
-  public:
-    ~DebugBuf() {}
-    DebugBuf(void) {}
-    DebugBuf(const char *filename) 
-      : ofs_(filename) {}
-/**
- * @brief Open a file to write debug information.
- *
- */
-    void open(const char *filename)
-    {
-      bool temp = app_side;
-      app_side = false;
-      ofs_.open(filename);
-      app_side = temp;
-    }
-
-/**
- * @brief Close the file where debug information is written.
- *
- */    
-    void close(void)
-    {
-      bool temp = app_side;
-      app_side = false;
-      ofs_.close();
-      app_side = temp;
-    }
-
- 
-/**
- * @brief Flush the buffer that contains debugging information to the file.
- *        After flushing it, it clears the buffer for the next use.
- *
- */
-    void flush(void) 
-    {
-      bool temp = app_side;
-      app_side = false;
-      ofs_ << str();
-      ofs_.flush();
-      str("");
-      clear();
-      app_side = temp;
-    }
-     
-
-    template <typename T>
-    std::ostream &operator<<(T val) 
-    {
-      bool temp = app_side;
-      app_side = false;
-      std::ostream &os = std::ostringstream::operator<<(val);
-      app_side = temp;
-      return os;
-    }
- 
-  };
+///**@class cd::DebugBuf
+// * @brief Utility class for debugging.
+// *
+// *  Like other parallel programming models, it is hard to debug CD runtime. 
+// *  So, debugging information are printed out to file using this class.
+// *  The global object of this class, dbg, is defined.
+// * 
+// *  The usage of this class is like below.
+// *  \n
+// *  \n
+// *  DebugBuf dbgApp;
+// *  dbgApp.open("./file_path_to_write"); 
+// *  dbgApp << "Debug Information" << endl;
+// *  dbg.flush(); 
+// *  dbg.close();
+// */ 
+//  class DebugBuf: public std::ostringstream {
+//    std::ofstream ofs_;
+//  public:
+//    ~DebugBuf() {}
+//    DebugBuf(void) {}
+//    DebugBuf(const char *filename) 
+//      : ofs_(filename) {}
+///**
+// * @brief Open a file to write debug information.
+// *
+// */
+//    void open(const char *filename)
+//    {
+//      bool temp = app_side;
+//      app_side = false;
+//      ofs_.open(filename);
+//      app_side = temp;
+//    }
+//
+///**
+// * @brief Close the file where debug information is written.
+// *
+// */    
+//    void close(void)
+//    {
+//      bool temp = app_side;
+//      app_side = false;
+//      ofs_.close();
+//      app_side = temp;
+//    }
+//
+// 
+///**
+// * @brief Flush the buffer that contains debugging information to the file.
+// *        After flushing it, it clears the buffer for the next use.
+// *
+// */
+//    void flush(void) 
+//    {
+//      bool temp = app_side;
+//      app_side = false;
+//      ofs_ << str();
+//      ofs_.flush();
+//      str("");
+//      clear();
+//      app_side = temp;
+//    }
+//     
+//
+//    template <typename T>
+//    std::ostream &operator<<(T val) 
+//    {
+//      bool temp = app_side;
+//      app_side = false;
+//      std::ostream &os = std::ostringstream::operator<<(val);
+//      app_side = temp;
+//      return os;
+//    }
+// 
+//  };
 } // namespace cd ends
 
 

@@ -78,7 +78,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 using namespace cd::logging;
 using namespace packer;
+
 namespace packer {
+
+//class CDEntry;
+//class CDPacker;
 
 struct RemoteCDEntry : public CDEntry {
   int task_id_;
@@ -138,6 +142,9 @@ namespace cd {
   namespace internal {
 //using namespace cd;
 
+// Initialize basepath for preservation, and 
+// create directory if necessary.
+void InitFileHandle(bool make_dir);
 
 //class Internal 
 //brief This class contains static internal routines 
@@ -289,7 +296,7 @@ class CD : public Serializable {
     /// entry_directory_map_ is for preservation via reference
     /// If ref_name is passed by preservation call, it means it allows this entry to be referred to by children CDs.
     //std::list<CDEntry> entry_directory_;
-    CDPacker entry_directory_;
+    packer::CDPacker entry_directory_;
 
     /// 10.12.2016
     /// shawdow entry directory is newly introduced for two purposes.
@@ -360,7 +367,7 @@ update the preserved data.
     /// Should not be CDEntry*. 
 //    std::list<CDEntry>::iterator iterator_entry_;   
   
-    CDFileHandle file_handle_;
+//    CDFileHandle file_handle_;
     // PFS
 //    PFSHandle *pfs_handle_;
 

@@ -8,6 +8,7 @@
 #define MAX_FILEPATH_SIZE 256
 #define CHUNK_ALIGNMENT 512
 //#define CHUNK_ALIGNMENT 256
+#define DEFAULT_BASEPATH "./"
 #define DEFAULT_FILEPATH_POSIX "posix_filepath"
 #define DEFAULT_FILEPATH_AIO   "aio_filepath"
 #define DEFAULT_FILEPATH_MPI   "mpi_filepath"
@@ -22,10 +23,12 @@ class DataStore;
 //};
 
 class FileHandle {
-  protected: 
+  public:
+    static std::string basepath; 
+  protected:
     std::string filepath_;
     uint64_t offset_;
-    FileHandle(const char *filepath=NULL) : filepath_(filepath), offset_(0) {}
+    FileHandle(const char *filepath=NULL);
     virtual ~FileHandle(void) {}
   public: 
     virtual CDErrType Write(uint64_t offset, char *src, uint64_t chunk, int64_t inc=-1)=0;
