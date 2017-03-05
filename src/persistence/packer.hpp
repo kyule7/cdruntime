@@ -23,35 +23,55 @@ class Packer {
     TableStore<EntryT> *table_;
     DataStore  *data_;
     uint64_t cur_pos_;
+    bool alloc_table;
+    bool alloc_data;
   public:
     Packer(uint64_t alloc=1, TableStore<EntryT> *table=NULL, DataStore *data=NULL) : cur_pos_(0) {
       if(table == NULL) {
+        alloc_table = true; 
         table_ = new TableStore<EntryT>(alloc);
       } else {
+        alloc_table = false; 
         table_ = table;
       }
       if(data == NULL) {
+        alloc_data = true; 
         data_ = new DataStore;
       } else {
+        alloc_data = false; 
         data_ = data;
       }
     }
     Packer(TableStore<EntryT> *table, DataStore *data=NULL) : cur_pos_(0) {
       if(table == NULL) {
+        alloc_table = true; 
         table_ = new TableStore<EntryT>(true);
       } else {
+        alloc_table = false; 
         table_ = table;
       }
       if(data == NULL) {
+        alloc_data = true; 
         data_ = new DataStore;
       } else {
+        alloc_data = false; 
         data_ = data;
       }
     }
     
+    Packer(void *object) {
+      ReadFromMemory(object);
+    }
+
+//    Packer(int fd) {
+//      ReadFromFile(fd);
+//    }
+
     virtual ~Packer() { 
-      delete table_;
-      delete data_;
+      if(alloc_table)
+        delete table_;
+      if(alloc_data)
+        delete data_;
     }
    
     virtual void Init(void) {
@@ -60,6 +80,53 @@ class Packer {
     }
 
     BaseTable *GetTable(void) { return table_; }
+
+    BaseTable *ReadFromMemory(char *chunk, bool alloc=true)
+    {
+      MagicStore magic;
+      memcpy(&magic, chunk, sizeof(MagicStore));
+      const uint32_t table_size = magic.total_size_ - magic.table_offset_;
+      MYDBG("[%s]type:%u, chunk:%p, offset:%lu, tablesize:%u\n", __func__,
+              magic.entry_type_, chunk, magic.table_offset_, table_size);
+
+      uint32_t *test_ptr = (uint32_t *)(chunk + magic.table_offset_);
+      for(uint64_t i=0; i<10; i++, test_ptr+=4) {
+        MYDBG("test_ptr return:%p %u %u %u\n", test_ptr, *test_ptr, *(test_ptr+1), *(test_ptr+2));
+      }
+      
+      //getchar();
+
+      char *ptable = NULL;
+      if(alloc) {
+        ptable = (char *)malloc(table_size);
+        memcpy(ptable, chunk + magic.table_offset_, table_size);
+      } else {
+        ptable = chunk + magic.table_offset_;
+      }
+      return GetTable(magic.entry_type_, ptable, table_size);
+    }
+
+//    BaseTable *ReadFromFile(int fd) 
+//    {
+//      MagicStore magic;
+//      lseek(fd, 0, SEEK_SET);
+//      read(fd, &magic, sizeof(MagicStore));
+//      const uint32_t table_size = magic.total_size_ - magic.table_offset_;
+//      char *ptable = NULL;
+//      void *tmp = (void *)ptable; 
+//      posix_memalign(&tmp, CHUNK_ALIGNMENT, table_size);
+//      lseek(fd, magic.table_offset_, SEEK_SET);
+//
+//      ssize_t read_size = read(fd, ptable, table_size);
+//      if((uint64_t)read_size < 0) {
+//        perror("read:");
+//        ERROR_MESSAGE_PACKER(
+//            "Error occurred while reading buffer contents from file: %d %ld != %ld\n", 
+//            fdesc_, read_size, len);
+//      }
+//
+//      return GetTable(magic.entry_type_, ptable, table_size);
+//    }
 
     ///@brief Add data to pack in packer data structure.
     uint64_t Add(char *app_data, uint64_t len, uint64_t id)
@@ -110,6 +177,20 @@ class Packer {
       return dst;
     }
 
+    // FIXME:Initially buffer should be flushed first.
+    EntryT *GetNext(char *dst, uint64_t id)
+    {
+      if(cur_pos_ < table_.used()) {
+        EntryT &entry = table_[cur_pos_++];
+        assert(id == entry.id_);
+        data_->Read(dst, entry.size(), entry.offset_);
+        return &entry;
+      } else {
+        cur_pos_ = 0;
+        return NULL;
+      }
+    }
+
     ///@brief Get total size required for table (metadata) and data.
     char *GetTotalData(uint64_t &total_data_size)
     {
@@ -156,7 +237,7 @@ class Packer {
     {
       // Update MagicStore
       const uint64_t tablesize = table_->usedsize();
-      const uint64_t table_offset = data_->used() + sizeof(MagicStore);
+      const uint64_t table_offset = data_->used();//FIXME: + sizeof(MagicStore);
       const uint64_t total_size = tablesize + table_offset;
       MagicStore magic(total_size, table_offset, table_->type());
       data_->UpdateMagic(magic);
@@ -164,8 +245,13 @@ class Packer {
       // FIXME: Insert entry for the previous table chunk
       cur_pos_ = table_->Advance(data_->used());
 //       table_->Insert(entry.SetOffset(offset));
-      uint64_t table_offset_check = data_->Flush(table_->GetPtr(), table_->tablesize());
+      uint64_t table_offset_check = data_->Flush(table_->GetCurrPtr(), table_->tablesize());
       PACKER_ASSERT(table_offset == table_offset_check);
+    }
+
+    uint64_t AppendTable(void)
+    {
+      return data_->Write(table_->GetCrrPtr(), table_->tablesize());
     }
 
     CDErrType Clear(bool reuse)
@@ -401,6 +487,8 @@ class FileUnpacker : public Unpacker {
           }
         }
       }
+
+      //
       ReadFile(buffer_, fetchsize, used_);
       char *data_begin = buffer_ + used_;
       used_ += fetchsize;

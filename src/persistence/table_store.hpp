@@ -287,6 +287,7 @@ class TableStore : public BaseTable {
     virtual int64_t  usedsize(void) const { return ((int64_t)tail_ - (int64_t)head_) * sizeof(EntryT); }
     virtual int64_t  tablesize(void) const { return ((int64_t)tail_ - (int64_t)advance_point_) * sizeof(EntryT); }
     virtual char    *GetPtr(void)   const { return (char *)ptr_; }
+    virtual char    *GetCurrPtr(void)   const { return (char *)(ptr_ + (advance_point_ % size_)); }
     virtual char    *GetTailPtr(void)   const { return (char *)(ptr_ + (tail_ % size_)); }
 
 //    uint64_t used(void) { return tail_ * sizeof(EntryT); }

@@ -772,7 +772,8 @@ unsigned vec2id(unsigned long long n) {
     }
     
     // With this interface, user can switch to a different serializer with a method flag.
-    void PreserveObject(Packer *packer) {
+    uint64_t PreserveObject(void *pPacker) {
+      Packer packer(new TableStore<CDEntry>, reinterpret_cast<DataStore *>(pPacker));
       CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
 //      printf("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
       uint64_t vec = serdes_vec;
@@ -787,7 +788,7 @@ unsigned vec2id(unsigned long long n) {
 //            printf("1111\n");
 //            getchar();
             
-            packer->Add(id, serdes_table[id].size, serdes_table[id].src);
+            packer->Add(serdes_table[id].src, BaseEntry(id, serdes_table[id].size));
           } else {
 //            printf("2222\n");
 //            getchar();
@@ -796,11 +797,10 @@ unsigned vec2id(unsigned long long n) {
 //              printf("%lu \t %p\n", 
 //                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size,
 //                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src);
-              packer->Add(j + ID__SERDES_ALL, 
-                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size,
-                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src);
-//                         ((Index_t *)(serdes_table[ID__REGELEMSIZE].src))[j], 
-//                         ((Index_t **)(serdes_table[ID__REGELEMLIST].src))[j]);
+              packer->Add( ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src,
+                            BaseEntry(j + ID__SERDES_ALL, 
+                                      ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size)
+                          );
             }
           }
 //          cnt++;
@@ -808,8 +808,11 @@ unsigned vec2id(unsigned long long n) {
 //        i++;
         vec >>= 1;
       } // while ends
-//      printf("cnt:%d\n", cnt);
+
+      uint64_t table_offset = packer.AppendTable();
+      return table_offset;
     }
+
     void *Serialize(uint64_t &len_in_bytes) {
       // User define whatever they want.
       CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
@@ -818,10 +821,13 @@ unsigned vec2id(unsigned long long n) {
       PreserveObject(&packer);
       return packer.GetTotalData(len_in_bytes);
     }
+
+    // Should be 
     virtual void Deserialize(void *object) {
       // Deserialize object and restore to each member.
       CD_DEBUG("LULESH %s, obj: %p\n", __func__, object);
-      Unpacker unpacker;
+      //
+      Packer packer(object);
       uint64_t vec = serdes_vec;
       uint64_t return_id = 0, return_size = 0;
       uint64_t i=1;
@@ -831,16 +837,13 @@ unsigned vec2id(unsigned long long n) {
         if(vec & 0x1) {
           if(id != ID__REGELEMLIST_INNER) {
             CD_DEBUG("ID : %d\n", i);
-            unpacker.GetNext((char *)object, return_id, return_size, false, serdes_table[id].src, serdes_table[id].size);
+            packer.GetNext(serdes_table[id].src, id);
           } else {
             CD_DEBUG("ID : %d (INNER)\n", i);
             Index_t &numRegSize = dom->numReg();
             for(int j=0; j<numRegSize; ++j) {
-              unpacker.GetNext((char *)object, return_id, return_size, false, 
-                               ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src,
-                               ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size);
-//                               ((Index_t **)(serdes_table[ID__REGELEMLIST].src))[j],
-//                               ((Index_t *)(serdes_table[ID__REGELEMSIZE].src))[j]); 
+              packer.GetNext( ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src, 
+                                j + ID__SERDES_ALL);
             }
           }
         }

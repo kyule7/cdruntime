@@ -130,7 +130,48 @@ CDPath *CDPath::uniquePath_ = NULL;
 //#endif
 
 namespace cd {
-// Global functions -------------------------------------------------------
+
+enum {
+  TOT_AVG=0,
+  TOT_VAR,
+  CD_AVG,
+  CD_VAR,
+  CD_NS_AVG,
+  CD_NS_VAR,
+  CD_RS_AVG,
+  CD_RS_VAR,
+  CD_ES_AVG,
+  CD_ES_VAR,
+  MSG_AVG,
+  MSG_VAR,
+  LOG_AVG,
+  LOG_VAR,
+  PRV_AVG,
+  PRV_VAR,
+  CREAT_AVG,
+  CREAT_VAR,
+  DESTROY_AVG,
+  DESTROY_VAR,
+  BEGIN_AVG,
+  BEGIN_VAR,
+  COMPL_AVG,
+  COMPL_VAR,
+  PROF_STATISTICS_NUM
+};
+
+enum {
+  LV_PRV_AVG=0,
+  LV_PRV_VAR,
+  LV_CREAT_AVG,
+  LV_CREAT_VAR,
+  LV_DESTROY_AVG,
+  LV_DESTROY_VAR,
+  LV_BEGIN_AVG,
+  LV_BEGIN_VAR,
+  LV_COMPL_AVG,
+  LV_COMPL_VAR,
+  PROF_LEVEL_STATISTICS_NUM
+};
 
 
 static inline
@@ -248,48 +289,6 @@ inline void WriteDbgStream(void)
   cddbg.close();
 #endif
 }
-
-enum {
-  TOT_AVG=0,
-  TOT_VAR,
-  CD_AVG,
-  CD_VAR,
-  CD_NS_AVG,
-  CD_NS_VAR,
-  CD_RS_AVG,
-  CD_RS_VAR,
-  CD_ES_AVG,
-  CD_ES_VAR,
-  MSG_AVG,
-  MSG_VAR,
-  LOG_AVG,
-  LOG_VAR,
-  PRV_AVG,
-  PRV_VAR,
-  CREAT_AVG,
-  CREAT_VAR,
-  DESTROY_AVG,
-  DESTROY_VAR,
-  BEGIN_AVG,
-  BEGIN_VAR,
-  COMPL_AVG,
-  COMPL_VAR,
-  PROF_STATISTICS_NUM
-};
-
-enum {
-  LV_PRV_AVG=0,
-  LV_PRV_VAR,
-  LV_CREAT_AVG,
-  LV_CREAT_VAR,
-  LV_DESTROY_AVG,
-  LV_DESTROY_VAR,
-  LV_BEGIN_AVG,
-  LV_BEGIN_VAR,
-  LV_COMPL_AVG,
-  LV_COMPL_VAR,
-  PROF_LEVEL_STATISTICS_NUM
-};
 
 void CD_Finalize(void)
 {

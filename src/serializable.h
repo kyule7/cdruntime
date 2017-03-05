@@ -59,6 +59,8 @@ class Serializable {
 
 class PackerSerializable : public Serializable {
   public:
+    // PreserveObject must append the table for serialized object to data chunk.
+    // It must return the offset of table chunk.
     virtual uint64_t PreserveObject(void *packer)=0;
     virtual uint64_t GetTableSize(void *packer)=0;
 };

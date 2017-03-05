@@ -14,6 +14,7 @@
 #define FOUR_GIGABYTE 4294967296
 #define INVALID_NUM     0xFFFFFFFFFFFFFFFF
 #define TABLE_ID_OFFSET 0xFFFFFFFF00000000
+#define CHUNK_ALIGNMENT 512
 #define DEFAULT_BASE_FILEPATH "."
 
 #define ERROR_MESSAGE_PACKER(...) \
@@ -119,5 +120,11 @@ int packer_debug_trace(FILE *stream,
 #define MYDBG(...) 
 
 #endif
+
+#define CHECK_POSIX_FUNC(STR, X) { \
+    if( (X) < 0 ) { \
+      perror(STR); \
+    }}
+
 
 #endif

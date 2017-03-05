@@ -167,323 +167,44 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
   void *serialized_entry = ptr_cd()->SerializeRemoteEntryDir(serialized_len_in_bytes); 
 
   // if there is no entries to send to head, just return
-  if(serialized_entry == NULL) return;
+  if(serialized_entry != NULL) {
+    int recv_count = task_count*serialized_len_in_bytes;
+    void *entry_to_deserialize = NULL;
   
-////  int entry_count=0;
-//  int recv_counts[task_count];
-//  int displs[task_count];
-////  int stride = 1196;
-//  for(int k=0; k<task_count; k++ ) {
-////    displs[k] = k*stride;
-//    displs[k] = k*serialized_len_in_bytes;
-//    recv_counts[k] = serialized_len_in_bytes;
-//  }
-
-//  dbg << "# of entries to gather : " << entry_count << endl;
-//  CDEntry *entry_to_deserialize = new CDEntry[entry_count*2];
-//  PMPI_Gatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
-//              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
-//              node_id().head(), node_id().color());
-
-  int recv_count = task_count*serialized_len_in_bytes;
-//  int recv_count = task_count*stride;
-  void *entry_to_deserialize = NULL;
-
-  PMPI_Alloc_mem(recv_count, MPI_INFO_NULL, &entry_to_deserialize);
-  MPI_Datatype sType;
-  PMPI_Type_contiguous(serialized_len_in_bytes, MPI_BYTE, &sType);
-  PMPI_Type_commit(&sType);
-
-//  PMPI_Datatype rType;
-//  PMPI_Type_contiguous(recv_count, MPI_BYTE, &rType);
-////  PMPI_Type_create_struct(task_count, serialized_len_in_bytes, 0, MPI_BYTE, &rType);
-////  PMPI_Type_vector(task_count, serialized_len_in_bytes, serialized_len_in_bytes, MPI_BYTE, &rType);
-//  PMPI_Type_commit(&rType);
-
-
-  CD_DEBUG("\n\nNote : %p, %lu, %d, remote entry dir map size : %lu\n\n", 
-           serialized_entry, serialized_len_in_bytes, recv_count, 
-           ptr_cd()->remote_entry_directory_map_.size());
-
-//  for(auto it = ptr_cd()->remote_entry_directory_map_.begin(); it!=ptr_cd()->remote_entry_directory_map_.end(); ++it) {
-//    dbg << *(it->second) << endl;
-//  }
-//  char *rbuf = new char[sizeof(int)*task_count*2];
-
-//  PMPI_Gather(&node_id_.task_in_color_, 1, MPI_INT,
-//             rbuf, 1, MPI_INT,
-//             node_id().head(), node_id().color());
-//
-//  if(node_id_.task_in_color() == 3) {
-//    cout << "entry 3 : " << ptr_cd()->remote_entry_directory_map_.size() << ", head: "<< node_id_.head() << endl;
-//  }
-
-//  ptr_cd()->DeserializeRemoteEntryDir(remote_entry_dir, serialized_entry); 
-//  dbg << "[Before Gather Entry Check Begin] size : "<< serialized_len_in_bytes << endl;
-//  for(auto it = remote_entry_dir.begin(); it!=remote_entry_dir.end(); ++it) {
-//    dbg << *(it->second) << endl;
-//  }
-//  dbg << "[Before Gather Entry Check Ends] size : "<< serialized_len_in_bytes << endl;
-//  remote_entry_dir.clear();
-
-
-
-//  PMPI_Gather(serialized_entry, 1, sType,
-//             entry_to_deserialize, 1, sType,
-//             node_id().head(), node_id().color());
-//  dbg << "Wait!! " << node_id().size() << endl;
-//  for(int i=0; i<task_count; i++) {
-//    dbg << "recv_counts["<<i<<"] : " << recv_counts[i] << endl;
-//    dbg << "displs["<<i<<"] : " << displs[i] << endl;
-//  }
-//  PMPI_Allgatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
-//              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
-//              node_id().color());
-
-
-
-
-//  int test_counts[task_count];
-//  int test_displs[task_count];
-//  for(int k=0; k<task_count; k++ ) {
-//    test_displs[k] = k*4;
-//    test_counts[k] = 4;
-//  }
-//  dbg << "Wait!! " << node_id().size() << endl;
-//  for(int i=0; i<task_count; i++) {
-//    dbg << "test_counts["<<i<<"] : " << test_counts[i] << endl;
-//  }
-//  for(int i=0; i<task_count; i++) {
-//    dbg << "test_displs["<<i<<"] : " << test_displs[i] << endl;
-//  }
-//  int test_a[4];
-//  int test_b[task_count*4];
-////  int test_b[task_count][4];
-//  test_a[0] = node_id().task_in_color();
-//  test_a[1] = test_a[0]+10;
-//  test_a[2] = test_a[0]+100;
-//  test_a[3] = test_a[0]+1000;
-//
-//  PMPI_Gatherv(test_a, 4, MPI_INT,
-//              test_b, test_counts, test_displs, MPI_INT,
-//              node_id().head(), node_id().color());
-
-
-
-
-
-//  PMPI_Gatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
-//              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
-//              node_id().head(), node_id().color());
-//  PMPI_Allgatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
-//              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
-//              node_id().head(), node_id().color());
-
-  PMPI_Gather(serialized_entry, 1, sType,
-             entry_to_deserialize, 1, sType,
-             node_id_.head(), node_id_.color());
-
-  if(IsHead()) {
-    
-//    int * test_des = (int *)entry_to_deserialize;
-//    char * test_des_char = (char *)entry_to_deserialize;
-//    int test_count = serialized_len_in_bytes/4;
-//    int tk=0;
-//    int tj=0;
-//    for(int j=0; j<task_count; j++){
-////      dbg << test_des+tk << "-- " << (void *)(test_des_char + tj)<< ", j: "<< j<< endl;
-////      for(int i=0; i<test_count;i++) {
-////        dbg << *(test_des+i+j*test_count) << " ";
-////        tk = i + j*test_count;
-////        tj = 4*i + j*serialized_len_in_bytes;
-////      }
-//        tk = j*test_count;
-//        tj = j*serialized_len_in_bytes;
-//        dbg << *(test_des+tk) << endl;
-//        dbg << *(test_des_char+tj) << endl;
-//        cout << test_des+tk << "-- " << (void *)(test_des_char + tj)<< ", j: "<< j<< endl;
-//      dbg << endl;
-//    }
-//    dbg << endl;
-////    cout << "1" << endl;
-////    for(int i=0; i<task_count; i++) cout << " --- " << ((int *)rbuf)[i];
-////    cout << endl;
-////    getchar();
-////    ptr_cd()->DeserializeRemoteEntryDir(remote_entry_dir, serialized_entry);
-//
-//    dbg << "===" << serialized_len_in_bytes << endl;
-
-
- 
-    void * temp_ptr = (void *)((char *)entry_to_deserialize+serialized_len_in_bytes-8);
-
-    CD_DEBUG("Check it out : %p -- %p, diff : %p\n", 
-             entry_to_deserialize, temp_ptr, (void *)((char *)temp_ptr - (char *)entry_to_deserialize));
-
-    ((HeadCD *)ptr_cd())->DeserializeRemoteEntryDir(entry_to_deserialize, task_count * serialized_len_in_bytes); 
-//    ptr_cd()->DeserializeRemoteEntryDir(ptr_cd()->remote_entry_directory_map_, entry_to_deserialize, task_count, serialized_len_in_bytes); 
-//    ptr_cd()->DeserializeRemoteEntryDir(remote_entry_dir, (void *)((char *)entry_to_deserialize + 1196), task_count, serialized_len_in_bytes); 
-
-    CD_DEBUG("\n\n[After] Check entries after deserialization, size : %lu, # of tasks : %u, level : %u\n", 
-             ptr_cd()->remote_entry_directory_map_.size(), node_id_.size(), ptr_cd()->GetCDID().level());
-
-//    for(auto it = remote_entry_dir.begin(); it!=remote_entry_dir.end(); ++it) {
-//      dbg << *(it->second) << endl;
-//    }
-
-    CD_DEBUG("\n\n============================ End of deserialization ===========================\n\n");
-  }
-  for(auto it=ptr_cd()->remote_entry_directory_map_.begin(); it!=ptr_cd()->remote_entry_directory_map_.end(); ++it) {
-    CD_DEBUG("%lu\n", tag2str[it->second->id_].c_str());
-  }  
+    PMPI_Alloc_mem(recv_count, MPI_INFO_NULL, &entry_to_deserialize);
+    MPI_Datatype sType;
+    PMPI_Type_contiguous(serialized_len_in_bytes, MPI_BYTE, &sType);
+    PMPI_Type_commit(&sType);
+  
+    CD_DEBUG("\n\nNote : %p, %lu, %d, remote entry dir map size : %lu\n\n", 
+             serialized_entry, serialized_len_in_bytes, recv_count, 
+             ptr_cd()->remote_entry_directory_map_.size());
+  
+  
+    PMPI_Gather(serialized_entry, 1, sType,
+               entry_to_deserialize, 1, sType,
+               node_id_.head(), node_id_.color());
+  
+    if(IsHead()) {
+      
+      void * temp_ptr = (void *)((char *)entry_to_deserialize+serialized_len_in_bytes-8);
+      CD_DEBUG("Check it out : %p -- %p, diff : %p\n", 
+               entry_to_deserialize, temp_ptr, (void *)((char *)temp_ptr - (char *)entry_to_deserialize));
+  
+      ((HeadCD *)ptr_cd())->DeserializeRemoteEntryDir(entry_to_deserialize, task_count * serialized_len_in_bytes); 
+  
+      CD_DEBUG("\n\n[After] Check entries after deserialization, size : %lu, # of tasks : %u, level : %u\n", 
+               ptr_cd()->remote_entry_directory_map_.size(), node_id_.size(), ptr_cd()->GetCDID().level());
+  
+      CD_DEBUG("\n\n============================ End of deserialization ===========================\n\n");
+    }
+    for(auto it=ptr_cd()->remote_entry_directory_map_.begin(); 
+             it!=ptr_cd()->remote_entry_directory_map_.end(); ++it) {
+      CD_DEBUG("%lu\n", tag2str[it->second->id_].c_str());
+    } 
+  } 
 
 }  
-
-
-
-
- 
-//  }
-//  else{
-//
-//    if(new_node_id.IsHead()) {
-//      // Calculate the array of group 
-//      PMPI_Group_incl(node_id_.task_group_, head_rank_count, head_rank, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group())); 
-//
-//    }
-//
-//  }
-
-/*
-
-
-//  // Calculate the array of displacement and entry_count at each task from recv_buf[oddnum].
-//  // Calculate recv count and displacement for entries of each task's remote entries.
-//  int entry_size;
-//  int entry_count[task_count];
-//  int entry_disp[task_count];
-//
-//  char *serialized_entries;
-//  char *entries_to_be_deserialized;
-//
-//  if(!IsHead()) {
-//    // Serialize all the entries in CD.
-//    serialized_entries = ptr_cd_->SerializeEntryDir(uint32_t& entry_count);
-//  }
-//
-//  PMPI_Gatherv(serialized_entries, entry_size, MPI_BYTE, 
-//              entries_to_be_deserialized, entry_count, entry_disp, MPI_BYTE, 
-//              node_id().head(), node_id().color());
-//
-//  if(IsHead()) {  // Current task is head. It receives children CDs' head info and entry info of every task in the CD.
-//    // Deserialize the entries received from the other tasks in current CD's task group.
-//    while(ptr < entry_disp[task_count-1] + entry_count[task_count-1]) { // it is the last position
-//      ptr_cd_->DeserializeEntryDir(entries_to_be_deserialized + entry_disp[i]);
-//    }
-//  }
-//
-//  dbg << "\n\n\nasdfasdfsadf\n\n"<< endl <<endl;
-//  dbgBreak();
-#endif
-#endif
-
-
-
-
-
-
-//  if(!IsHead()) {
-//    // Serialize all the entries in CD.
-//
-////    void *buffer = ptr_cd_->SerializeEntryDir(uint32_t& entry_count);
-//
-//    void *buffer=NULL;
-//    Packer entry_dir_packer;
-//    uint32_t len_in_bytes=0;
-//    uint32_t entry_count=0;
-//    void *packed_entry_p=NULL;
-//    
-//    int task_id=0;
-//    if(new_node_id.IsHead()) {
-//      task_id = new_node_id.task_in_color();
-//    } else {
-//      task_id = -1;
-//    }
-//
-//    packed_entry_p = (void *)&task_id;
-//    entry_dir_packer.Add(entry_count++, sizeof(int), packed_entry_p);
-//  
-//    for(auto it=remote_entry_directory_.begin(); it!=remote_entry_directory_.end(); ++it) {
-//      uint32_t entry_len=0;
-//      packed_entry_p=NULL;
-//      if( !it->name().empty() ){
-//        // entry_len is output of Serialize 
-//        packed_entry_p = it->Serialize(entry_len);
-//        entry_dir_packer.Add(entry_count++, entry_len, packed_entry_p); // Add(id, len, datap)
-//        len_in_bytes += entry_len;
-//      }
-//    }
-//    
-//    buffer = entry_dir_packer.GetTotalData(len_in_bytes);
-//
-//
-//    PMPI_Gather(send_buf, 1, MPI_BYTE, task_id_buffer, 1, MPI_BYTE, node_id().head(), node_id().color());
-//  }
-//  else {  // Current task is head. It receives children CDs' head info and entry info of every task in the CD.
-//    char *recv_buf;
-//    PMPI_Gather(send_buf, 1, MPI_BYTE, recv_buf, 1, MPI_BYTE, node_id().head(), node_id().color());
-//
-//    // Deserialize the entries received from the other tasks in current CD's task group.
-//    ptr_cd_->DeserializeEntryDir(recv_buf);
-//
-//    std::vector<CDEntry> entry_dir;
-//    Unpacker entry_dir_unpacker;
-//    void *unpacked_entry_p=0;
-//    uint32_t dwGetID=0;
-//    uint32_t return_size=0;
-//    int child_heads[num_children];
-//    child_heads[0] = node_id().task_in_color();
-//
-//
-//    while(1) {
-//      unpacked_entry_p = entry_dir_unpacker.GetNext((char *)recv_buf, dwGetID, return_size);
-//      if(unpacked_entry_p == NULL) break;
-//      cd_entry.Deserialize(unpacked_entry_p);
-//      entry_dir.push_back(cd_entry);
-//    }
-//
-////    PMPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
-//
-//  }
-//
-//
-//
-//  int task_id_buffer[node_id().size()];
-//  int task_id = node_id().task_in_color();
-//  int null_id = 0;
-//  if(new_node_id.IsHead()) {
-//    PMPI_Gather(&task_id, 1, MPI_INT, task_id_buffer, 1, MPI_INT, node_id().head(), node_id().color());
-//  }
-//  else {
-//    PMPI_Gather(&null_id, 1, MPI_INT, task_id_buffer, 1, MPI_INT, node_id().head(), node_id().color());
-//  }
-//  if(IsHead()) {
-//    for(int i=0; i<node_id().size(); ++i) {
-//      dbg << "\n\n"<<task_id_buffer[i] <<" ";
-//    }
-//  }
-//  dbg << "\n\n\n\n" << endl; dbgBreak();
-////    if(new_node_id.IsHead()) {
-////      int child_heads[num_children];
-////      // send child_cd_name.rank_in_level_ of heads of children CDs
-////      PMPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
-////    }
-//
-////  ptr_cd_->family_mailbox_
-//
-//
-
-*/
 
 bool CD::TestReqComm(bool is_all_valid)
 {
@@ -1825,5 +1546,367 @@ uint32_t CD::CheckRollbackPoint(bool remote)
 void CD::PrintDebug() {
 
 }
+
+
+
+
+#if 0
+//////////////////////////////////////////////////////////////////////////////
+/////////// The below code need to be reviewed before deprecated /////////////
+//////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id) 
+{
+  // Get the children CD's head information and the total size of entry from each task in the CD.
+  int send_buf[2]={0,0};
+  int task_count = node_id().size();
+  int recv_buf[task_count][2]; 
+  if(new_node_id.IsHead()) {
+    send_buf[0] = node_id().task_in_color();
+  } else {
+    send_buf[0] = -1;
+  }
+  send_buf[1] = ptr_cd()->remote_entry_directory_map_.size();
+
+  PMPI_Allgather(send_buf, 2, MPI_INT, 
+                recv_buf, 2, MPI_INT, 
+                node_id().color());
+
+  CD_DEBUG("\n================== Remote entry check ===================\n");
+  CD_DEBUG("[Before] Check entries in remote entry directory\n");
+
+  for(auto it = ptr_cd()->remote_entry_directory_map_.begin();
+           it!= ptr_cd()->remote_entry_directory_map_.end(); ++it) {
+    CD_DEBUG("%s\n", tag2str[it->second->id_].c_str());
+
+  }
+  uint64_t serialized_len_in_bytes=0;
+
+  void *serialized_entry = ptr_cd()->SerializeRemoteEntryDir(serialized_len_in_bytes); 
+
+  // if there is no entries to send to head, just return
+  if(serialized_entry == NULL) return;
+  
+////  int entry_count=0;
+//  int recv_counts[task_count];
+//  int displs[task_count];
+////  int stride = 1196;
+//  for(int k=0; k<task_count; k++ ) {
+////    displs[k] = k*stride;
+//    displs[k] = k*serialized_len_in_bytes;
+//    recv_counts[k] = serialized_len_in_bytes;
+//  }
+
+//  dbg << "# of entries to gather : " << entry_count << endl;
+//  CDEntry *entry_to_deserialize = new CDEntry[entry_count*2];
+//  PMPI_Gatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
+//              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
+//              node_id().head(), node_id().color());
+
+  int recv_count = task_count*serialized_len_in_bytes;
+//  int recv_count = task_count*stride;
+  void *entry_to_deserialize = NULL;
+
+  PMPI_Alloc_mem(recv_count, MPI_INFO_NULL, &entry_to_deserialize);
+  MPI_Datatype sType;
+  PMPI_Type_contiguous(serialized_len_in_bytes, MPI_BYTE, &sType);
+  PMPI_Type_commit(&sType);
+
+//  PMPI_Datatype rType;
+//  PMPI_Type_contiguous(recv_count, MPI_BYTE, &rType);
+////  PMPI_Type_create_struct(task_count, serialized_len_in_bytes, 0, MPI_BYTE, &rType);
+////  PMPI_Type_vector(task_count, serialized_len_in_bytes, serialized_len_in_bytes, MPI_BYTE, &rType);
+//  PMPI_Type_commit(&rType);
+
+
+  CD_DEBUG("\n\nNote : %p, %lu, %d, remote entry dir map size : %lu\n\n", 
+           serialized_entry, serialized_len_in_bytes, recv_count, 
+           ptr_cd()->remote_entry_directory_map_.size());
+
+//  for(auto it = ptr_cd()->remote_entry_directory_map_.begin(); it!=ptr_cd()->remote_entry_directory_map_.end(); ++it) {
+//    dbg << *(it->second) << endl;
+//  }
+//  char *rbuf = new char[sizeof(int)*task_count*2];
+
+//  PMPI_Gather(&node_id_.task_in_color_, 1, MPI_INT,
+//             rbuf, 1, MPI_INT,
+//             node_id().head(), node_id().color());
+//
+//  if(node_id_.task_in_color() == 3) {
+//    cout << "entry 3 : " << ptr_cd()->remote_entry_directory_map_.size() << ", head: "<< node_id_.head() << endl;
+//  }
+
+//  ptr_cd()->DeserializeRemoteEntryDir(remote_entry_dir, serialized_entry); 
+//  dbg << "[Before Gather Entry Check Begin] size : "<< serialized_len_in_bytes << endl;
+//  for(auto it = remote_entry_dir.begin(); it!=remote_entry_dir.end(); ++it) {
+//    dbg << *(it->second) << endl;
+//  }
+//  dbg << "[Before Gather Entry Check Ends] size : "<< serialized_len_in_bytes << endl;
+//  remote_entry_dir.clear();
+
+
+
+//  PMPI_Gather(serialized_entry, 1, sType,
+//             entry_to_deserialize, 1, sType,
+//             node_id().head(), node_id().color());
+//  dbg << "Wait!! " << node_id().size() << endl;
+//  for(int i=0; i<task_count; i++) {
+//    dbg << "recv_counts["<<i<<"] : " << recv_counts[i] << endl;
+//    dbg << "displs["<<i<<"] : " << displs[i] << endl;
+//  }
+//  PMPI_Allgatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
+//              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
+//              node_id().color());
+
+
+
+
+//  int test_counts[task_count];
+//  int test_displs[task_count];
+//  for(int k=0; k<task_count; k++ ) {
+//    test_displs[k] = k*4;
+//    test_counts[k] = 4;
+//  }
+//  dbg << "Wait!! " << node_id().size() << endl;
+//  for(int i=0; i<task_count; i++) {
+//    dbg << "test_counts["<<i<<"] : " << test_counts[i] << endl;
+//  }
+//  for(int i=0; i<task_count; i++) {
+//    dbg << "test_displs["<<i<<"] : " << test_displs[i] << endl;
+//  }
+//  int test_a[4];
+//  int test_b[task_count*4];
+////  int test_b[task_count][4];
+//  test_a[0] = node_id().task_in_color();
+//  test_a[1] = test_a[0]+10;
+//  test_a[2] = test_a[0]+100;
+//  test_a[3] = test_a[0]+1000;
+//
+//  PMPI_Gatherv(test_a, 4, MPI_INT,
+//              test_b, test_counts, test_displs, MPI_INT,
+//              node_id().head(), node_id().color());
+
+
+
+
+
+//  PMPI_Gatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
+//              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
+//              node_id().head(), node_id().color());
+//  PMPI_Allgatherv(serialized_entry, serialized_len_in_bytes, MPI_BYTE,
+//              entry_to_deserialize, recv_counts, displs, MPI_BYTE,
+//              node_id().head(), node_id().color());
+
+  PMPI_Gather(serialized_entry, 1, sType,
+             entry_to_deserialize, 1, sType,
+             node_id_.head(), node_id_.color());
+
+  if(IsHead()) {
+    
+//    int * test_des = (int *)entry_to_deserialize;
+//    char * test_des_char = (char *)entry_to_deserialize;
+//    int test_count = serialized_len_in_bytes/4;
+//    int tk=0;
+//    int tj=0;
+//    for(int j=0; j<task_count; j++){
+////      dbg << test_des+tk << "-- " << (void *)(test_des_char + tj)<< ", j: "<< j<< endl;
+////      for(int i=0; i<test_count;i++) {
+////        dbg << *(test_des+i+j*test_count) << " ";
+////        tk = i + j*test_count;
+////        tj = 4*i + j*serialized_len_in_bytes;
+////      }
+//        tk = j*test_count;
+//        tj = j*serialized_len_in_bytes;
+//        dbg << *(test_des+tk) << endl;
+//        dbg << *(test_des_char+tj) << endl;
+//        cout << test_des+tk << "-- " << (void *)(test_des_char + tj)<< ", j: "<< j<< endl;
+//      dbg << endl;
+//    }
+//    dbg << endl;
+////    cout << "1" << endl;
+////    for(int i=0; i<task_count; i++) cout << " --- " << ((int *)rbuf)[i];
+////    cout << endl;
+////    getchar();
+////    ptr_cd()->DeserializeRemoteEntryDir(remote_entry_dir, serialized_entry);
+//
+//    dbg << "===" << serialized_len_in_bytes << endl;
+
+
+ 
+    void * temp_ptr = (void *)((char *)entry_to_deserialize+serialized_len_in_bytes-8);
+
+    CD_DEBUG("Check it out : %p -- %p, diff : %p\n", 
+             entry_to_deserialize, temp_ptr, (void *)((char *)temp_ptr - (char *)entry_to_deserialize));
+
+    ((HeadCD *)ptr_cd())->DeserializeRemoteEntryDir(entry_to_deserialize, task_count * serialized_len_in_bytes); 
+//    ptr_cd()->DeserializeRemoteEntryDir(ptr_cd()->remote_entry_directory_map_, entry_to_deserialize, task_count, serialized_len_in_bytes); 
+//    ptr_cd()->DeserializeRemoteEntryDir(remote_entry_dir, (void *)((char *)entry_to_deserialize + 1196), task_count, serialized_len_in_bytes); 
+
+    CD_DEBUG("\n\n[After] Check entries after deserialization, size : %lu, # of tasks : %u, level : %u\n", 
+             ptr_cd()->remote_entry_directory_map_.size(), node_id_.size(), ptr_cd()->GetCDID().level());
+
+//    for(auto it = remote_entry_dir.begin(); it!=remote_entry_dir.end(); ++it) {
+//      dbg << *(it->second) << endl;
+//    }
+
+    CD_DEBUG("\n\n============================ End of deserialization ===========================\n\n");
+  }
+  for(auto it=ptr_cd()->remote_entry_directory_map_.begin(); it!=ptr_cd()->remote_entry_directory_map_.end(); ++it) {
+    CD_DEBUG("%lu\n", tag2str[it->second->id_].c_str());
+  }  
+
+}  
+
+
+ 
+//  }
+//  else{
+//
+//    if(new_node_id.IsHead()) {
+//      // Calculate the array of group 
+//      PMPI_Group_incl(node_id_.task_group_, head_rank_count, head_rank, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group())); 
+//
+//    }
+//
+//  }
+
+/*
+
+
+//  // Calculate the array of displacement and entry_count at each task from recv_buf[oddnum].
+//  // Calculate recv count and displacement for entries of each task's remote entries.
+//  int entry_size;
+//  int entry_count[task_count];
+//  int entry_disp[task_count];
+//
+//  char *serialized_entries;
+//  char *entries_to_be_deserialized;
+//
+//  if(!IsHead()) {
+//    // Serialize all the entries in CD.
+//    serialized_entries = ptr_cd_->SerializeEntryDir(uint32_t& entry_count);
+//  }
+//
+//  PMPI_Gatherv(serialized_entries, entry_size, MPI_BYTE, 
+//              entries_to_be_deserialized, entry_count, entry_disp, MPI_BYTE, 
+//              node_id().head(), node_id().color());
+//
+//  if(IsHead()) {  // Current task is head. It receives children CDs' head info and entry info of every task in the CD.
+//    // Deserialize the entries received from the other tasks in current CD's task group.
+//    while(ptr < entry_disp[task_count-1] + entry_count[task_count-1]) { // it is the last position
+//      ptr_cd_->DeserializeEntryDir(entries_to_be_deserialized + entry_disp[i]);
+//    }
+//  }
+//
+//  dbg << "\n\n\nasdfasdfsadf\n\n"<< endl <<endl;
+//  dbgBreak();
+#endif
+#endif
+
+
+
+
+
+
+//  if(!IsHead()) {
+//    // Serialize all the entries in CD.
+//
+////    void *buffer = ptr_cd_->SerializeEntryDir(uint32_t& entry_count);
+//
+//    void *buffer=NULL;
+//    Packer entry_dir_packer;
+//    uint32_t len_in_bytes=0;
+//    uint32_t entry_count=0;
+//    void *packed_entry_p=NULL;
+//    
+//    int task_id=0;
+//    if(new_node_id.IsHead()) {
+//      task_id = new_node_id.task_in_color();
+//    } else {
+//      task_id = -1;
+//    }
+//
+//    packed_entry_p = (void *)&task_id;
+//    entry_dir_packer.Add(entry_count++, sizeof(int), packed_entry_p);
+//  
+//    for(auto it=remote_entry_directory_.begin(); it!=remote_entry_directory_.end(); ++it) {
+//      uint32_t entry_len=0;
+//      packed_entry_p=NULL;
+//      if( !it->name().empty() ){
+//        // entry_len is output of Serialize 
+//        packed_entry_p = it->Serialize(entry_len);
+//        entry_dir_packer.Add(entry_count++, entry_len, packed_entry_p); // Add(id, len, datap)
+//        len_in_bytes += entry_len;
+//      }
+//    }
+//    
+//    buffer = entry_dir_packer.GetTotalData(len_in_bytes);
+//
+//
+//    PMPI_Gather(send_buf, 1, MPI_BYTE, task_id_buffer, 1, MPI_BYTE, node_id().head(), node_id().color());
+//  }
+//  else {  // Current task is head. It receives children CDs' head info and entry info of every task in the CD.
+//    char *recv_buf;
+//    PMPI_Gather(send_buf, 1, MPI_BYTE, recv_buf, 1, MPI_BYTE, node_id().head(), node_id().color());
+//
+//    // Deserialize the entries received from the other tasks in current CD's task group.
+//    ptr_cd_->DeserializeEntryDir(recv_buf);
+//
+//    std::vector<CDEntry> entry_dir;
+//    Unpacker entry_dir_unpacker;
+//    void *unpacked_entry_p=0;
+//    uint32_t dwGetID=0;
+//    uint32_t return_size=0;
+//    int child_heads[num_children];
+//    child_heads[0] = node_id().task_in_color();
+//
+//
+//    while(1) {
+//      unpacked_entry_p = entry_dir_unpacker.GetNext((char *)recv_buf, dwGetID, return_size);
+//      if(unpacked_entry_p == NULL) break;
+//      cd_entry.Deserialize(unpacked_entry_p);
+//      entry_dir.push_back(cd_entry);
+//    }
+//
+////    PMPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
+//
+//  }
+//
+//
+//
+//  int task_id_buffer[node_id().size()];
+//  int task_id = node_id().task_in_color();
+//  int null_id = 0;
+//  if(new_node_id.IsHead()) {
+//    PMPI_Gather(&task_id, 1, MPI_INT, task_id_buffer, 1, MPI_INT, node_id().head(), node_id().color());
+//  }
+//  else {
+//    PMPI_Gather(&null_id, 1, MPI_INT, task_id_buffer, 1, MPI_INT, node_id().head(), node_id().color());
+//  }
+//  if(IsHead()) {
+//    for(int i=0; i<node_id().size(); ++i) {
+//      dbg << "\n\n"<<task_id_buffer[i] <<" ";
+//    }
+//  }
+//  dbg << "\n\n\n\n" << endl; dbgBreak();
+////    if(new_node_id.IsHead()) {
+////      int child_heads[num_children];
+////      // send child_cd_name.rank_in_level_ of heads of children CDs
+////      PMPI_Group_incl(node_id().color(), num_children, child_heads, &(dynamic_cast<HeadCD*>(ptr_cd)->task_group()));
+////    }
+//
+////  ptr_cd_->family_mailbox_
+//
+//
+
+*/
+
+#endif
+
+
 
 #endif

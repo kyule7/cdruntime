@@ -2041,7 +2041,7 @@ CD::InternalPreserve(void *data,
   uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
   CDEntry *pEntry = NULL;
 
-  if( CHECK_PRV_TYPE(preserve_mask,kCopy) ) { // via-copy, so it saves data right now!
+  if( CHECK_PRV_TYPE(preserve_mask, kCopy) ) { // via-copy, so it saves data right now!
 
     CD_ASSERT_STR(my_name.empty() == false, 
         "Entry name is not specified : %s\n", my_name.c_str());
@@ -2052,7 +2052,7 @@ CD::InternalPreserve(void *data,
       attr |= Attr::knested;
 //      uint64_t orig_tablesize = entry_directory_.table_->used();
       uint64_t orig_datasize  = entry_directory_.data_->used();
-      // FIXME:PreserveObject must append the table for serialized object to data chunk.
+      // FIXME: PreserveObject must append the table for serialized object to data chunk.
       PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
       uint64_t table_offset_in_datachunk = serializer->PreserveObject(&entry_directory_);
       uint64_t packed_size = entry_directory_.data_->used() - orig_datasize;
