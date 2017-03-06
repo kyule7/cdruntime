@@ -70,6 +70,18 @@ class DataStore {
     void FileSync(void);
     CDErrType Flush(void);
     uint64_t Flush(char *src, int64_t len);
+    ///@brief Write data to bounded in-memory buffer. 
+    ///       If buffer is full, wait until buffer is available.
+    inline uint64_t WriteBufferMode(char *pfrom, uint64_t len);
+    ///@brief Write data to unbounded in-memory buffer.
+    ///       If buffer is full, realloc buffer for larger space.
+    inline uint64_t WriteCacheMode(char *pfrom, uint64_t len);
+    ///@brief Write data to bounded in-memory buffer.
+    ///       If buffer is full, flush current data in buffer,
+    ///       then write new data in buffer.
+    ///       If new data is larger then buffer size,
+    ///       iterate this step until completely writing all data.
+    inline uint64_t WriteFlushMode(char *pfrom, uint64_t len);
   private:
     uint64_t WriteBuffer(char *src, int64_t len);
     uint64_t WriteMem(char *src, int64_t len);

@@ -775,6 +775,9 @@ unsigned vec2id(unsigned long long n) {
     uint64_t PreserveObject(void *pPacker) {
       Packer packer(new TableStore<CDEntry>, reinterpret_cast<DataStore *>(pPacker));
       CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
+      MagicStore magic;
+      uint64_t magic_offset = packer->data_->WriteFlushMode(&magic, sizeof(MagicStore));
+      
 //      printf("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
       uint64_t vec = serdes_vec;
 //      uint64_t i=1;

@@ -266,6 +266,28 @@ CDErrType DataStore::FlushMagic(const MagicStore *magic)
 //  return buf_used() >= chunksize_threshold;
 //}
 
+uint64_t DataStore::WriteBufferMode(char *pfrom, uint64_t len)
+{
+  // Reallocate buffer or wait until completing write
+  // If WriteBuffer() is still not sufficient to
+  // reserve space for incoming data size (len),
+  // Do reallocate
+  if( len > size_ ) {
+    Reallocate(len);
+  }
+
+  return WriteBuffer(pfrom, len);
+}
+
+uint64_t DataStore::WriteCacheMode(char *pfrom, uint64_t len)
+{
+  if( len + buf_used() > size_ ) {
+    Reallocate(len);
+  }
+  return WriteMem(pfrom, len);
+}
+
+
 // Bounded buffer mode: write from the ptr
 uint64_t DataStore::Write(char *pfrom, uint64_t len)//, uint64_t pos)
 {
@@ -277,23 +299,12 @@ uint64_t DataStore::Write(char *pfrom, uint64_t len)//, uint64_t pos)
 
   uint64_t ret = INVALID_NUM;
   if( CHECK_FLAG(mode_, kBoundedMode) ) {
-    // Reallocate buffer or wait until completing write
-    // If WriteBuffer() is still not sufficient to
-    // reserve space for incoming data size (len),
-    // Do reallocate
-    if( len > size_ ) {
-      Reallocate(len);
-    }
 
-    ret = WriteBuffer(pfrom, len);
+    ret = WriteBufferMode(pfrom, len);
 
   } else { // Non-buffering mode
-
-    if( len + buf_used() > size_ ) {
-      Reallocate(len);
-    }
 //    bool is_empty = IsEmpty();
-    ret = WriteMem(pfrom, len);
+    ret = WriteCacheMode(pfrom, len);
 
     if( ftype() != kVolatile ) {
       if( CHECK_FLAG(mode_, kConcurrent) ) {
@@ -320,8 +331,8 @@ uint64_t DataStore::Write(char *pfrom, uint64_t len)//, uint64_t pos)
 //    }
   }
   // FIXME
-  //return ret;
-  return (ret + written_len_);
+  return ret;
+//  return (ret + written_len_);
 }
 
 ////////////////////////////////////////////////////////////
@@ -341,7 +352,7 @@ uint64_t DataStore::WriteMem(char *src, int64_t len)
     const uint64_t tail  = tail_ % size_;
     const uint64_t first = size_ - tail;
     const int64_t  rest  = len - first;
-    ret = tail_;
+    ret = used();
     MYDBG("%lu + %lu > %lu (head:%lu)\n", tail, len, size_, head_ % size_);
     if( rest > 0 ) {
       MYDBG("First copy  %p <- %p, %lu\n", ptr_ + (size_ - first), src, first);
@@ -373,7 +384,7 @@ uint64_t DataStore::WriteBuffer(char *src, int64_t len)
   MYDBG("\n");
   uint64_t ret = INVALID_NUM;
   if( len > 0 && ptr_ != NULL && src != NULL ) { 
-    ret = tail_; 
+    ret = used();
     // Phase1: write until the next alignment
     const uint32_t available_in_chunk = chunksize_ - (tail_ % chunksize_);
     uint32_t len_to_write = (len < available_in_chunk)? len : available_in_chunk;
@@ -578,31 +589,69 @@ CDErrType DataStore::Flush(void)
   return ret;
 }
 
+uint64_t DataStore::WriteFlushMode(char *pfrom, uint64_t len)
+{
+  if(len <= 0) {
+    return used();
+  }
+  else {
+  
+    // The reason for not reusing Write(src,len) for writing table
+    // is that it is likely to just flush data and table to get persistency at
+    // some point, not keeping writing some data to data store.
+    // Therefore, it will be good to just make the data sture empty, then copy
+    // table store to buffer, then perform file write.
+    // The reason for not performing file write from table store itself, but
+    // copying to the tail of data store is that table store may be not aligned
+    // for file write, and there may be some remaining data after the alignment in
+    // data store. 
+    if( (uint64_t)(len + buf_used()) > size_ ) {
+      MYDBG("##### [%s] buf:%ld len:%zu #####\n", __func__, buf_used(), len);
+      err = WriteFile(buf_used());
+    }
+
+    const uint64_t size_to_write = (len <= size_)? len : size_;
+    const uint64_t offset = WriteMem(src, size_to_write);
+
+    // Writing src.
+    // Main usage of this is to write tail associated with data
+//    PACKER_ASSERT((uint64_t)(len + buf_used()) < size_);
+  
+    // The return value is only used for the first recursive function.
+    // The return value of following recursions are descarded.
+    if(len - size_to_write > 0) {
+      WriteFlushMode(src, len - size_to_write);
+    } 
+
+    return offset;
+  }
+}
 
 uint64_t DataStore::Flush(char *src, int64_t len) 
 {
   CDErrType err = kOK;
   PACKER_ASSERT(len < 0);
 
-  // The reason for not reusing Write(src,len) for writing table
-  // is that it is likely to just flush data and table to get persistency at
-  // some point, not keeping writing some data to data store.
-  // Therefore, it will be good to just make the data sture empty, then copy
-  // table store to buffer, then perform file write.
-  // The reason for not performing file write from table store itself, but
-  // copying to the tail of data store is that table store may be not aligned
-  // for file write, and there may be some remaining data after the alignment in
-  // data store. 
-  if( (uint64_t)(len + buf_used()) > size_ ) {
-    MYDBG("\n\n##### [%s] %ld %zu ###\n", __func__, buf_used(), sizeof(MagicStore));
-    err = WriteFile(buf_used());
-  }
+//  // The reason for not reusing Write(src,len) for writing table
+//  // is that it is likely to just flush data and table to get persistency at
+//  // some point, not keeping writing some data to data store.
+//  // Therefore, it will be good to just make the data sture empty, then copy
+//  // table store to buffer, then perform file write.
+//  // The reason for not performing file write from table store itself, but
+//  // copying to the tail of data store is that table store may be not aligned
+//  // for file write, and there may be some remaining data after the alignment in
+//  // data store. 
+//  if( (uint64_t)(len + buf_used()) > size_ ) {
+//    MYDBG("\n\n##### [%s] %ld %zu ###\n", __func__, buf_used(), sizeof(MagicStore));
+//    err = WriteFile(buf_used());
+//  }
+//
+//  // Writing src.
+//  // Main usage of this is to write tail associated with data
+////  PACKER_ASSERT((uint64_t)(len + buf_used()) < size_);
 
-  // Writing src.
-  // Main usage of this is to write tail associated with data
-  PACKER_ASSERT((uint64_t)(len + buf_used()) < size_);
+  uint64_t table_offset = WriteFlushMode(src, len);
 
-  uint64_t table_offset = WriteMem(src, len);
   err = WriteFile( buf_used() );
   err = fh_->Write(0, GetPtrAlloc(), sizeof(MagicStore), 0);
   if(err != kOK) {

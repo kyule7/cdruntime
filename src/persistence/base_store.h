@@ -168,6 +168,8 @@ struct CDEntry {
     uint64_t offset_;
     char *src_;
     CDEntry(void) : id_(0), size_(0), offset_(0), src_(0) {}
+    CDEntry(uint64_t id, uint64_t size) 
+      : id_(id), size_(size), offset_(0), src_(NULL) {}
     CDEntry(uint64_t id, uint64_t size, uint64_t offset) 
       : id_(id), size_(size), offset_(offset), src_(NULL) {}
     CDEntry(uint64_t id, uint64_t size, uint64_t offset, char *src) 
