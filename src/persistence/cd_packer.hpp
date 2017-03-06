@@ -15,7 +15,12 @@ class CDPacker : public Packer<CDEntry> {
       // 2. Copy data from data store to src
       CDEntry entry = *reinterpret_cast<CDEntry *>(table_->Find(tag));
       dst = (dst == NULL)? entry.src_ : dst;
-      data_->Read(dst, entry.size(), entry.offset_);
+      PACKER_ASSERT(dst == entry.src_);
+      if(entry.size_.attr_.table_ == 0) {
+        data_->Read(dst, entry.size(), entry.offset_);
+      } else {
+        data_->Read(dst, entry.size(), entry.offset_);
+      }
       return kOK;
     }
 };

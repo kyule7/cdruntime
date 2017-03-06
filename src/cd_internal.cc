@@ -1924,7 +1924,7 @@ CDErrT CD::Preserve(void *data,
     // FIRST user need to preserve that region and use them. Otherwise current way of restoration won't work. 
     // Right now restore happens one by one. 
     // Everytime restore is called one entry is restored.
-    // ////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////
     
     CD_DEBUG("\n\nReexecution!!! entry directory size : %zu\n\n", entry_directory_.table_->used());
 
@@ -1934,8 +1934,14 @@ CDErrT CD::Preserve(void *data,
       // This will fetch from disk to memory
       // Potential benefit from prefetching app data from preserved data in
       // disk, overlapping reexecution of application.
-      packer::CDErrType pret = entry_directory_.Restore(tag);
-
+      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
+        packer::CDErrType pret = entry_directory_.Restore(tag, (char *)data);
+      } else {
+        char *nested_obj = NULL;
+        packer::CDErrType pret = entry_directory_.Restore(tag, (char *)data);
+        PackerSerializable *deserializer = static_cast<PackerSerializable *>(data);
+        deserializer->Deserialize(
+      }
 
       restore_count_++;
       if( restore_count_ == preserve_count_ ) { 

@@ -70,6 +70,8 @@ void DataStore::Init(char *ptr)
   tail_ = head_;//sizeof(MagicStore);
   allocated_ = 0;
   mode_ = kGrowingMode | kPosixFile;
+  r_tail_ = 0;
+  r_head_ = 0;
   if(ptr == NULL) 
     AllocateData();
   else 
@@ -537,6 +539,26 @@ char *DataStore::ReadAll(uint64_t &totsize)
   return (char *)ret_ptr;
 }
 
+void DataStore::ReadOpt(char *pto, uint64_t len, uint64_t pos)
+{
+  if( CHECK_FLAG(mode_, kReadMode) == false) {
+    Flush();
+    CD_SET(mode_, kReadMode); 
+    PACKER_ASSERT(head_ == tail_);
+    r_tail_ = tail_;
+    r_head_ = tail_;
+  }
+  PACKER_ASSERT(CHECK_FLAG(mode_, kReadMode));
+
+  // Perform read from file
+  //
+  Read(ptr_ + r_tail_ % size_, len, pos);
+
+  if(r_tail_ - head_ == head_ - written_len_) {
+    CD_UNSET(mode_, kReadMode); 
+  }
+}
+
 CDErrType DataStore::WriteFile(void) 
 {
   return WriteFile(chunksize_);
@@ -589,29 +611,26 @@ CDErrType DataStore::Flush(void)
   return ret;
 }
 
-uint64_t DataStore::WriteFlushMode(char *pfrom, uint64_t len)
+uint64_t DataStore::WriteFlushMode(char *src, uint64_t len)
 {
+  static uint64_t tot_write_len = 0;
   if(len <= 0) {
     return used();
   }
   else {
   
-    // The reason for not reusing Write(src,len) for writing table
-    // is that it is likely to just flush data and table to get persistency at
-    // some point, not keeping writing some data to data store.
-    // Therefore, it will be good to just make the data sture empty, then copy
-    // table store to buffer, then perform file write.
-    // The reason for not performing file write from table store itself, but
-    // copying to the tail of data store is that table store may be not aligned
-    // for file write, and there may be some remaining data after the alignment in
-    // data store. 
     if( (uint64_t)(len + buf_used()) > size_ ) {
       MYDBG("##### [%s] buf:%ld len:%zu #####\n", __func__, buf_used(), len);
-      err = WriteFile(buf_used());
+      CDErrType err = WriteFile(buf_used());
+      if(err != kOK) {
+        MYDBG("Error while WriteFlushMode(%p, %lu)\n", src, len - size_to_write);
+      }
     }
 
     const uint64_t size_to_write = (len <= size_)? len : size_;
     const uint64_t offset = WriteMem(src, size_to_write);
+
+    tot_write_len += size_to_write;
 
     // Writing src.
     // Main usage of this is to write tail associated with data
@@ -620,7 +639,7 @@ uint64_t DataStore::WriteFlushMode(char *pfrom, uint64_t len)
     // The return value is only used for the first recursive function.
     // The return value of following recursions are descarded.
     if(len - size_to_write > 0) {
-      WriteFlushMode(src, len - size_to_write);
+      tot_write_len += WriteFlushMode(src, len - size_to_write);
     } 
 
     return offset;
@@ -632,27 +651,21 @@ uint64_t DataStore::Flush(char *src, int64_t len)
   CDErrType err = kOK;
   PACKER_ASSERT(len < 0);
 
-//  // The reason for not reusing Write(src,len) for writing table
-//  // is that it is likely to just flush data and table to get persistency at
-//  // some point, not keeping writing some data to data store.
-//  // Therefore, it will be good to just make the data sture empty, then copy
-//  // table store to buffer, then perform file write.
-//  // The reason for not performing file write from table store itself, but
-//  // copying to the tail of data store is that table store may be not aligned
-//  // for file write, and there may be some remaining data after the alignment in
-//  // data store. 
-//  if( (uint64_t)(len + buf_used()) > size_ ) {
-//    MYDBG("\n\n##### [%s] %ld %zu ###\n", __func__, buf_used(), sizeof(MagicStore));
-//    err = WriteFile(buf_used());
-//  }
-//
-//  // Writing src.
-//  // Main usage of this is to write tail associated with data
-////  PACKER_ASSERT((uint64_t)(len + buf_used()) < size_);
-
+  // The reason for not reusing Write(src,len) for writing table
+  // is that it is likely to just flush data and table to get persistency at
+  // some point, not keeping writing some data to data store.
+  // Therefore, it will be good to just make the data sture empty, then copy
+  // table store to buffer, then perform file write.
+  // The reason for not performing file write from table store itself, but
+  // copying to the tail of data store is that table store may be not aligned
+  // for file write, and there may be some remaining data after the alignment in
+  // data store. 
   uint64_t table_offset = WriteFlushMode(src, len);
 
   err = WriteFile( buf_used() );
+  if(err != kOK) {
+    MYDBG("Error while writing something before flush\n");
+  }
   err = fh_->Write(0, GetPtrAlloc(), sizeof(MagicStore), 0);
   if(err != kOK) {
     MYDBG("Error in flush\n");

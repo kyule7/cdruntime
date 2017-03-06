@@ -43,18 +43,22 @@ enum CDErrType {
 };
 
 enum {
-  kGrowingMode=0x00,
-  kConcurrent=0x01,
-  kBoundedMode=0x02,
-  kEagerWriting=0x04,
-  kBufferFreed=0x08
+  kGrowingMode    =0x00,
+  kConcurrent     =0x01,
+  kBoundedMode    =0x02,
+  kEagerWriting   =0x04,
+  kBufferFreed    =0x08,
+  kReadMode       =0x10,
+  kBufferReserved1=0x20,
+  kBufferReserved2=0x40,
+  kBufferReserved3=0x80
 };
 
 enum {
-  kVolatile  = 0x000, // 0x0X00
-  kPosixFile = 0x100,
-  kAIOFile   = 0x200,
-  kMPIFile   = 0x400
+  kVolatile       = 0x000, // 0x0X00
+  kPosixFile      = 0x100,
+  kAIOFile        = 0x200,
+  kMPIFile        = 0x400
 };
 
 //struct MagicStoreEntry {

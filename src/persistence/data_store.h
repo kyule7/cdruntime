@@ -51,6 +51,9 @@ class DataStore {
     uint32_t chunksize_;
     char    *ptr_;
     FileHandle *fh_;
+  private:
+    uint64_t r_tail_;
+    uint64_t r_head_;
   public:
 //    DataStore(bool alloc);
     DataStore(char *ptr=NULL);
