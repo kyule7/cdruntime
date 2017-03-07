@@ -773,11 +773,15 @@ unsigned vec2id(unsigned long long n) {
     
     // With this interface, user can switch to a different serializer with a method flag.
     uint64_t PreserveObject(void *pPacker) {
+      // Use the same DataStore for in-place preservation,
+      // but use the separate table. This table is different from entry_directory_,
+      // and will be just appended in its DataStore, not in its TableStore.
       Packer packer(new TableStore<CDEntry>, reinterpret_cast<DataStore *>(pPacker));
       CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
       MagicStore magic;
-      uint64_t magic_offset = packer->data_->WriteFlushMode(&magic, sizeof(MagicStore));
-      
+      uint64_t orig_size = packer.data_->used();
+      uint64_t magic_offset = packer.data_->WriteFlushMode(&magic, sizeof(MagicStore));
+      MagicStore &magic_in_place = packer.data_->GetMagicStore(magic_offset);
 //      printf("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
       uint64_t vec = serdes_vec;
 //      uint64_t i=1;
@@ -791,7 +795,7 @@ unsigned vec2id(unsigned long long n) {
 //            printf("1111\n");
 //            getchar();
             
-            packer->Add(serdes_table[id].src, BaseEntry(id, serdes_table[id].size));
+            packer.Add(serdes_table[id].src, BaseEntry(id, serdes_table[id].size));
           } else {
 //            printf("2222\n");
 //            getchar();
@@ -800,7 +804,7 @@ unsigned vec2id(unsigned long long n) {
 //              printf("%lu \t %p\n", 
 //                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size,
 //                         ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src);
-              packer->Add( ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src,
+              packer.Add( ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src,
                             BaseEntry(j + ID__SERDES_ALL, 
                                       ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size)
                           );
@@ -811,8 +815,12 @@ unsigned vec2id(unsigned long long n) {
 //        i++;
         vec >>= 1;
       } // while ends
-
       uint64_t table_offset = packer.AppendTable();
+      uint64_t total_size = packer.data_->used() - orig_size;
+      magic_in_place.total_size_   = total_size;
+      magic_in_place.table_offset_ = table_offset - magic_offset;
+      magic_in_place.entry_type_   = kCDEntry;
+
       return table_offset;
     }
 

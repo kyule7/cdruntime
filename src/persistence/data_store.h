@@ -65,9 +65,10 @@ class DataStore {
 //    CDErrType SafeReallocate(uint64_t len);
     uint64_t Write(char *pfrom, uint64_t len, uint64_t pos);
     uint64_t Write(char *pfrom, uint64_t len);
-    void Read (char *pto, uint64_t size, uint64_t pos);
+    void Read(char *pto, uint64_t size, uint64_t pos);
     void ReadAll(char *pto);
     char *ReadAll(uint64_t &totsize);
+    char *ReadOpt(uint64_t len, uint64_t pos);
     CDErrType WriteFile(int64_t len);
     CDErrType WriteFile(void);
     void FileSync(void);
@@ -84,7 +85,7 @@ class DataStore {
     ///       then write new data in buffer.
     ///       If new data is larger then buffer size,
     ///       iterate this step until completely writing all data.
-    inline uint64_t WriteFlushMode(char *pfrom, uint64_t len);
+    uint64_t WriteFlushMode(char *pfrom, uint64_t len);
   private:
     uint64_t WriteBuffer(char *src, int64_t len);
     uint64_t WriteMem(char *src, int64_t len);
@@ -97,6 +98,7 @@ class DataStore {
       grow_unit_ = that.grow_unit_;
       allocated_ = that.allocated_;
     }
+    MagicStore &GetMagicStore(uint64_t offset=INVALID_NUM);
     DataStore &operator=(const DataStore &that) {
       copy(that);
       return *this;

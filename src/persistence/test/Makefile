@@ -21,7 +21,7 @@ test_mpi: test_mpi.o ${MPIOBJS}
 test_base.o: test_base.cc
 	${CC} ${CFLAGS} $^ -o $@
 
-test_packer.o: test_packer.cc 
+test_packer.o: test_packer.cc
 	${CC} ${CFLAGS} $^ -o $@
 
 test_mpi.o: test_mpi.cc

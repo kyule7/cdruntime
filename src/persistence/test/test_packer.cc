@@ -8,13 +8,151 @@
 #include <sys/time.h>
 using namespace packer;
 struct timeval ttime;
-//uint64_t CompareResult(char *ori, char *prv, uint64_t size) {
-//  for(uint64_t i=0; i<size; i++) {
-//    if(ori[i] != prv[i]) return i;
-//  }
-//  return 0;
-//}
 FILE *dbgfp=stdout;
+
+
+uint64_t PreserveObject(DataStore *data, int *datap, int elemsize, int chunksize) {
+  CDPacker nested_packer(NULL, data);
+  MagicStore magic;
+  uint64_t orig_size = nested_packer.data_->used();
+  uint64_t magic_offset = nested_packer.data_->WriteFlushMode((char *)&magic, sizeof(MagicStore));
+  MagicStore &magic_in_place = nested_packer.data_->GetMagicStore(magic_offset);
+  for(int i=0; i<elemsize; i++) {
+    nested_packer.Add((char *)datap, CDEntry(i+1, chunksize * sizeof(int), 0, (char *)datap));
+    datap+=chunksize;
+  }
+  uint64_t table_offset =  nested_packer.AppendTable();
+  uint64_t total_size = nested_packer.data_->used() - orig_size;
+  magic_in_place.total_size_   = total_size;
+  magic_in_place.table_offset_ = table_offset - magic_offset;
+  magic_in_place.entry_type_   = kCDEntry;
+  printf("[offset:%lu] magic: %lu %lu %u, data:%lu, table:%lu\n", magic_offset,
+    magic_in_place.total_size_  ,
+    magic_in_place.table_offset_,
+    magic_in_place.entry_type_,
+    chunksize*elemsize*sizeof(int) + sizeof(MagicStore), elemsize * sizeof(CDEntry) );  
+  getchar();
+  return table_offset;
+}
+
+char *TestNestedPacker(int elemsize, int chunksize) 
+{
+  uint64_t totsize = elemsize * chunksize;
+  int *dataA = new int[totsize];
+  int *testA = new int[totsize];
+  for(uint32_t i=0; i<totsize; i++) {
+    dataA[i] = lrand48() % 100;
+  }
+  memcpy(testA, dataA, totsize * sizeof(int));
+//////////////////////////////////////////////////////
+  int elemsizeB = 8;
+  int chunksizeB = 16;
+  uint64_t totsizeB = elemsizeB * chunksizeB;
+  int *dataB = new int[totsizeB];
+  int *testB = new int[totsizeB];
+  for(uint32_t i=0; i<totsizeB; i++) {
+    dataB[i] = i;//lrand48() % 100;
+  }
+  for(uint32_t i=0; i <totsizeB/16; i++) {
+    for(uint32_t j=0; j<16; j++) {
+      printf("%4d ", dataB[i*16 + j]);
+    }
+    printf("\n");
+  } 
+  memcpy(testB, dataB, totsizeB * sizeof(int));
+//////////////////////////////////////////////////////
+
+  CDPacker packer;
+
+  int *dataAtmp = dataA;
+  int first = elemsize / 2;
+  for(int i=0; i<first; i++) {
+//    if(i == first - 1) { printf("first i:%d\n", i); getchar(); }
+//    if(i == first) { printf("first i:%d\n", i); getchar(); }
+    packer.Add((char *)dataAtmp, CDEntry(i+1, chunksize * sizeof(int), 0, (char *)dataAtmp));
+    dataAtmp+=chunksize;
+
+//    if(err == 0) { assert(0); }
+//    printf("%p + %lu\n", dataAtmp, offset); 
+//    if(i % 32 == 0) //getchar();
+  }
+
+  int second = elemsize - first;
+  printf("================PrintArray====================\n");
+  PrintArray((char *)dataA, first * sizeof(int)); //getchar(); 
+  PrintArray((char *)(dataA + first), second * sizeof(int)); //getchar(); 
+  printf("==============================================\n");
+
+  {
+    uint64_t packed_offset = packer.data_->used();
+    uint64_t table_offset = PreserveObject(packer.data_, dataB, elemsizeB, chunksizeB);
+    uint64_t packed_size = packer.data_->used() - packed_offset;
+//    uint64_t table_offset_in_packed = packer.data_->used() - table_offset;
+    uint64_t attr = Attr::knested | Attr::ktable;
+    uint64_t id = first+1;
+    CDEntry *entry = packer.table_->InsertEntry(CDEntry(id, attr, packed_size, packed_offset, (char *)table_offset));
+    printf("[nested ID:%lu] attr:%lx, size:%lu==%lu, packed offset:%lu\n", id, entry->size_.code_ >> 48, entry->size(), packed_size, packed_offset); getchar();
+  }
+
+//  printf("after pack\n"); getchar();
+  for(int i=first+1; i<elemsize+1; i++) {
+//    if(i == first+1) { printf("second i:%d\n", i); getchar(); }
+    packer.Add((char *)dataAtmp, CDEntry(i+1, chunksize * sizeof(int), 0, (char *)dataAtmp));
+    dataAtmp+=chunksize;
+  }
+
+  memset(dataA, 0, totsize * sizeof(int));
+  memset(dataB, 0, totsizeB * sizeof(int));
+
+  packer.data_->Flush();
+  // +1 is for packer
+  for(int i=0; i<elemsize+1; i++) {
+    packer.Restore(i+1);
+  }
+
+
+
+  if(CompareResult((char *)dataA, (char *)testA, totsize*sizeof(int)) == 0) {
+    printf("Success\n");
+  } else {
+    printf("Failed\n"); assert(0);
+  }
+
+  if(CompareResult((char *)dataB, (char *)testB, totsizeB*sizeof(int)) == 0) {
+    printf("Nested Success\n");
+  } else {
+    printf("Nested Failed\n"); assert(0);
+  }
+  printf("#####################################\n");
+//  packer.table_->Print();
+//  packer.data_->Print();
+//  packer.table_->PrintEntry();
+
+  uint64_t ret_size = 0;
+  char *serialized = packer.GetTotalData(ret_size);
+  
+  printf("%lu != %lu\n", ret_size, packer.data_->tail() + packer.table_->usedsize() + sizeof(MagicStore));
+  if(ret_size != packer.data_->tail() + packer.table_->usedsize() + sizeof(MagicStore)) {
+    printf("%lu != %lu\n", ret_size, packer.data_->used() + packer.table_->usedsize() + sizeof(MagicStore));
+    assert(0);
+  } else {
+
+  }
+
+
+//  char *ret_ptr = (char *)malloc(ret_size);
+//  memcpy(ret_ptr, serialized, ret_size);
+  uint32_t *test_ptr = (uint32_t *)serialized;
+  printf("[%s] ret:%u %u %u\n", __func__, *test_ptr, *(test_ptr+1), *(test_ptr+2)); //getchar();
+  delete dataA;
+  delete testA;
+  return serialized;
+}
+
+
+
+
+
 char *ArrayTest(int elemsize, int chunksize) 
 {
   uint64_t totsize = elemsize * chunksize;
@@ -106,7 +244,7 @@ char *ArrayTest(int elemsize, int chunksize)
   delete testA;
   return serialized;
 }
-
+/*
 void TestUnpacker(char *chunk) 
 {
   printf("#######################################################\n"
@@ -141,13 +279,14 @@ void TestUnpackerFile(FILE *fp)
     printf("%lu %lu %lu\n", ret_id, ret_size, ret_offset);
   }
 }
-
+*/
 int main() {
   gettimeofday(&ttime,NULL);
   srand48(ttime.tv_usec);
   int elemsize = 1030;
   int chunksize = 32;
-  char *chunk = ArrayTest(elemsize, chunksize);
+  //char *chunk = ArrayTest(elemsize, chunksize);
+  TestNestedPacker(elemsize, chunksize);
 //    Packer packer;;
 //  UserObj1 obj1;
 //  Obj1Test(elemsize);

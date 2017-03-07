@@ -59,8 +59,11 @@ class Packer {
       }
     }
     
-    Packer(void *object) {
-      ReadFromMemory(object);
+    Packer(void *object) : cur_pos_(0) {
+      data_ = new DataStore((char *)object);
+      table_ = ReadFromMemory(object, true);
+      alloc_table = true;
+      alloc_data  = true;
     }
 
 //    Packer(int fd) {
@@ -95,15 +98,19 @@ class Packer {
       }
       
       //getchar();
-
-      char *ptable = NULL;
+      // FIXME:Do not need to align the memory space for table?
+      EntryT *ptable = NULL;
+      uint64_t num_entry = table_size/sizeof(EntryT);
       if(alloc) {
-        ptable = (char *)malloc(table_size);
+        PACKER_ASSERT( table_size % sizeof(EntryT) == 0 );
+        ptable = new EntryT[num_entry];//(char *)malloc(table_size);
         memcpy(ptable, chunk + magic.table_offset_, table_size);
       } else {
-        ptable = chunk + magic.table_offset_;
+        ptable = reinterpret_cast<EntryT *>(chunk + magic.table_offset_);
       }
-      return GetTable(magic.entry_type_, ptable, table_size);
+      TableStore<EntryT> *ret = new TableStore<EntryT>(ptable, num_entry);
+      return (BaseTable *)ret;
+//      return GetTable(magic.entry_type_, ptable, table_size);
     }
 
 //    BaseTable *ReadFromFile(int fd) 
@@ -251,7 +258,7 @@ class Packer {
 
     uint64_t AppendTable(void)
     {
-      return data_->Write(table_->GetCrrPtr(), table_->tablesize());
+      return data_->Write(table_->GetCurrPtr(), table_->tablesize());
     }
 
     CDErrType Clear(bool reuse)
@@ -286,6 +293,9 @@ class Packer {
 
 
 
+
+
+#if 0
 
 // The role of Unpacker is to get a proper data from serialized data+metadata by packer.
 // Unpacker takes a pointer for serialized data and ID.
@@ -502,6 +512,11 @@ class FileUnpacker : public Unpacker {
 };
 
 
+#endif
+
+
+
+
 } // namespace packer ends
 
 #if 0
@@ -602,4 +617,7 @@ class FileUnpacker : public Unpacker {
 //      
 //    }
 #endif
+
+
+
 #endif

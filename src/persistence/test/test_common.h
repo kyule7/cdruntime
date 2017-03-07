@@ -15,7 +15,7 @@ void PrintArray(char *ori, uint64_t intsize, FILE *out=stdout)
     }
     fprintf(out, "\n");
   }
-  fprintf(out, "\n");
+//  fprintf(out, "\n");
 }
 uint64_t CompareResult(char *ori, char *prv, uint64_t size) 
 {
@@ -25,7 +25,7 @@ uint64_t CompareResult(char *ori, char *prv, uint64_t size)
   }
   uint64_t intsize = size/sizeof(int);
 
-  fprintf(dbgfp, "\n#####################################\n");
+  fprintf(dbgfp, "#####################################\n");
   if(ret != 0) 
   {
     for(uint64_t i=0; i<intsize/16; i++) {
@@ -36,7 +36,7 @@ uint64_t CompareResult(char *ori, char *prv, uint64_t size)
     }
     fprintf(dbgfp, "\n");
   
-    fprintf(dbgfp, "\n#####################################\n");
+    fprintf(dbgfp, "#####################################\n");
     for(uint64_t i=0; i<intsize/16; i++) {
       for(uint64_t j=0; j<16; j++) {
         fprintf(dbgfp, "%5i ", ((int*)prv)[i*16 + j]);

@@ -1937,10 +1937,11 @@ CDErrT CD::Preserve(void *data,
       if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
         packer::CDErrType pret = entry_directory_.Restore(tag, (char *)data);
       } else {
-        char *nested_obj = NULL;
-        packer::CDErrType pret = entry_directory_.Restore(tag, (char *)data);
+        // this read data chunk to some buffer spacem, which will be the buffer for
+        // packer object in deserializer. it will be deallocated after deserialization.
+        char *nested_obj = entry_directory_.Restore(tag);
         PackerSerializable *deserializer = static_cast<PackerSerializable *>(data);
-        deserializer->Deserialize(
+        deserializer->Deserialize(nested_obj);
       }
 
       restore_count_++;
@@ -2055,17 +2056,26 @@ CD::InternalPreserve(void *data,
              preserve_mask, CHECK_PRV_TYPE(preserve_mask, kCoop), GetPlaceToPreserve(), cd_type_);
 
     if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
+    // CDEntry for reference has different format
+    //  8B      8B            8B       8B
+    // [ID] [ATTR|SIZE]    [OFFSET]   [SRC]
+    //  ID  [ATTR|totsize] totoffset  tableoffset
       attr |= Attr::knested;
 //      uint64_t orig_tablesize = entry_directory_.table_->used();
-      uint64_t orig_datasize  = entry_directory_.data_->used();
+      const uint64_t packed_offset  = entry_directory_.data_->used();
       // FIXME: PreserveObject must append the table for serialized object to data chunk.
+      // Serializer should use the same DataStore for in-place preservation,
+      // but use the separate table. This table is different from entry_directory_,
+      // and will be just appended in its DataStore, not in its TableStore.
       PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
       uint64_t table_offset_in_datachunk = serializer->PreserveObject(&entry_directory_);
-      uint64_t packed_size = entry_directory_.data_->used() - orig_datasize;
+      uint64_t packed_size = entry_directory_.data_->used() - packed_offset;
       int64_t table_size_in_datachunk = entry_directory_.data_->used() - table_offset_in_datachunk;
-      CD_ASSERT(table_size_in_datachunk > 0);
       pEntry = entry_directory_.table_->InsertEntry(
-          CDEntry(id, attr, table_size_in_datachunk, table_offset_in_datachunk, (char *)packed_size) );
+          CDEntry(id, attr, packed_size, packed_offset, (char *)table_offset_in_datachunk));
+      CD_ASSERT(table_size_in_datachunk > 0);
+      CD_ASSERT(reinterpret_cast<MagicStore *>(&(entry_directory_.data_[packed_offset]))->total_size_ == packed_size);
+      CD_ASSERT(reinterpret_cast<MagicStore *>(&(entry_directory_.data_[packed_offset]))->table_offset_ == table_offset_in_datachunk);
     }
     else { // preserve a single entry
       pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, len_in_bytes, 0, (char *)data));
@@ -2079,13 +2089,13 @@ CD::InternalPreserve(void *data,
     uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
     uint64_t ref_id = cd_hash(ref_name);
     // CDEntry for reference has different format
-    //  8B      8B         8B      8B
-    // [ID] [ATTR|SIZE] [OFFSET] [SRC]
-    //  ID  [ATTR|0]   REF_OFFSET REF_ID
+    //  8B      8B            8B       8B
+    // [ID] [ATTR|SIZE]    [OFFSET]   [SRC]
+    //  ID  [ATTR|totsize] totoffset  REF_ID
     attr |= Attr::krefer;
     uint64_t size = len_in_bytes;
     if(CHECK_PRV_TYPE(preserve_mask, kSerdes)){ 
-      attr |= (Attr::knested | Attr::ktable);
+      attr |= Attr::knested;// | Attr::ktable);
       size = static_cast<PackerSerializable *>(data)->GetTableSize(&entry_directory_);
     }
 

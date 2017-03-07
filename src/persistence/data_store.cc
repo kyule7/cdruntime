@@ -63,7 +63,7 @@ DataStore::DataStore(char *ptr)
 void DataStore::Init(char *ptr) 
 {
   pthread_mutex_lock(&mutex);
-  ptr_ = ptr;
+  ptr_ = NULL;
   grow_unit_ = DATA_GROW_UNIT;
   size_ = grow_unit_;
   head_ = 0;//size_ - size_ / 4;
@@ -75,7 +75,7 @@ void DataStore::Init(char *ptr)
   if(ptr == NULL) 
     AllocateData();
   else 
-    ptr_ = ptr;
+    ptr_ = ptr + sizeof(MagicStore);
   /** Order matters *************************/
   fh_ = GetFileHandle(ftype()); 
   BufferConsumer::Get()->InsertBuffer(this);
@@ -253,6 +253,14 @@ void DataStore::UpdateMagic(MagicStore &&magic)
   MagicStore *magic_ = reinterpret_cast<MagicStore *>(ptr_ - sizeof(MagicStore));
   *magic_ = std::move(magic);
   //magic_->Print();
+}
+
+MagicStore &DataStore::GetMagicStore(uint64_t offset)
+{
+  if(offset != INVALID_NUM)
+    return *reinterpret_cast<MagicStore *>(ptr_ + (offset % size_));
+  else 
+    return *reinterpret_cast<MagicStore *>(ptr_ - sizeof(MagicStore));
 }
 
 CDErrType DataStore::FlushMagic(const MagicStore *magic)
@@ -539,8 +547,9 @@ char *DataStore::ReadAll(uint64_t &totsize)
   return (char *)ret_ptr;
 }
 
-void DataStore::ReadOpt(char *pto, uint64_t len, uint64_t pos)
+char *DataStore::ReadOpt(uint64_t len, uint64_t pos)
 {
+  char *ret = NULL;
   if( CHECK_FLAG(mode_, kReadMode) == false) {
     Flush();
     CD_SET(mode_, kReadMode); 
@@ -549,14 +558,26 @@ void DataStore::ReadOpt(char *pto, uint64_t len, uint64_t pos)
     r_head_ = tail_;
   }
   PACKER_ASSERT(CHECK_FLAG(mode_, kReadMode));
-
-  // Perform read from file
-  //
-  Read(ptr_ + r_tail_ % size_, len, pos);
+  const int64_t offset = head_ - written_len_;
+  const uint64_t offset_in_buffer = pos + offset;
+  const int64_t file_len_to_read  = offset_in_buffer + len - r_tail_;
+  int64_t buffer_len_to_read      = len;
+  if(file_len_to_read > 0) { // need to read data from file
+    buffer_len_to_read -= file_len_to_read;
+    MYDBG("DataStore: %p, %lu, %lu\n", 
+        ptr_ + (r_tail_ % size_), file_len_to_read, r_tail_ - offset);
+    fh_->ReadTo(ptr_ + (r_tail_ % size_), file_len_to_read, r_tail_ - offset);
+    PACKER_ASSERT(r_tail_ - offset == pos + buffer_len_to_read); 
+    // r_tail_ - offset - pos - len + offset + pos + len - r_tail_ == 0
+  }
+  
+  ret = ptr_ + ((pos + offset) % size_); 
 
   if(r_tail_ - head_ == head_ - written_len_) {
     CD_UNSET(mode_, kReadMode); 
   }
+
+  return ret;
 }
 
 CDErrType DataStore::WriteFile(void) 
@@ -569,8 +590,7 @@ CDErrType DataStore::WriteFile(int64_t len)
   CDErrType ret = kOK;
   PACKER_ASSERT(len > 0);
   uint64_t mask_len = ~(chunksize_ - 1);
-  MYDBG(" len:%lu\n", len);
-  printf("[DataStore::%s] head:%lu written:%lu, used:%ld, len:%ld, inc:%lu\n", 
+  MYDBG("[DataStore::%s] head:%lu written:%lu, used:%ld, len:%ld, inc:%lu\n", 
       __func__, head_, written_len_, buf_used(), len, mask_len & len); //getchar();
   const int64_t first = size_ - (head_ % size_);
   PACKER_ASSERT(first >= 0);
@@ -623,7 +643,7 @@ uint64_t DataStore::WriteFlushMode(char *src, uint64_t len)
       MYDBG("##### [%s] buf:%ld len:%zu #####\n", __func__, buf_used(), len);
       CDErrType err = WriteFile(buf_used());
       if(err != kOK) {
-        MYDBG("Error while WriteFlushMode(%p, %lu)\n", src, len - size_to_write);
+        MYDBG("Error while WriteFile(%lu)\n", len);
       }
     }
 
@@ -694,9 +714,14 @@ void DataStore::SetActiveBuffer(bool high_priority)
 
 
 
-MagicStore::MagicStore(void) : total_size_(0), table_offset_(0), entry_type_(0) {}
+MagicStore::MagicStore(void) : total_size_(0), table_offset_(0), entry_type_(0) {
+  memset(pad_, 0, sizeof(pad_));
+}
+
 MagicStore::MagicStore(uint64_t total_size, uint64_t table_offset, uint32_t entry_type) 
-  : total_size_(total_size), table_offset_(table_offset), entry_type_(entry_type) {}
+  : total_size_(total_size), table_offset_(table_offset), entry_type_(entry_type) {
+  memset(pad_, 0, sizeof(pad_));
+  }
 void MagicStore::Print(void) 
 {
   printf("[%s] %lu %lu %u\n", __func__, total_size_, table_offset_, entry_type_);
