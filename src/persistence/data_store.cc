@@ -22,6 +22,7 @@ int indent_cnt = 0;
 uint64_t packer::table_id = TABLE_ID_OFFSET;
 int64_t chunksize_threshold = CHUNKSIZE_THRESHOLD_BASE;
 
+static uint64_t chunk_mask = CHUNK_ALIGNMENT - 1;
 //DataStore::DataStore(bool alloc) 
 //{
 //  MYDBG("\n");
@@ -258,7 +259,7 @@ void DataStore::UpdateMagic(MagicStore &&magic)
 MagicStore &DataStore::GetMagicStore(uint64_t offset)
 {
   if(offset != INVALID_NUM)
-    return *reinterpret_cast<MagicStore *>(ptr_ + (offset % size_));
+    return *reinterpret_cast<MagicStore *>(ptr_ + ((offset - written_len_) % size_));
   else 
     return *reinterpret_cast<MagicStore *>(ptr_ - sizeof(MagicStore));
 }
@@ -486,10 +487,34 @@ void DataStore::Read(char *pto, uint64_t len, uint64_t pos)
     const int64_t chunk_written_before_len = tail_ - len;
     PACKER_ASSERT(chunk_written_before_len >= 0);
     PACKER_ASSERT(buf_used() >= 0);
-    
+    const uint64_t pos_aligned_down = pos & ~chunk_mask;
+    const uint64_t redundant_len    = pos & chunk_mask;
+    uint64_t len_to_read = len + redundant_len;
     MYDBG("DataStore: %p, %lu, %lu\n", pto, chunk_in_file, pos);
+#if 0
+    fh_->ReadTo(pto, chunk_in_file, pos);
+#else
+    void *tmp;
+    posix_memalign(&tmp, CHUNK_ALIGNMENT, align_up(len_to_read, CHUNK_ALIGNMENT)); 
+    memset(tmp, 0, align_up(len_to_read, CHUNK_ALIGNMENT)); 
+    fh_->ReadTo((char *)tmp, align_up(len_to_read, CHUNK_ALIGNMENT), pos_aligned_down);
+    memcpy(pto, (char *)tmp + redundant_len, len);
 
-    fh_->ReadTo(pto, chunk_in_file, pos); 
+    if(pos == 66432) {
+      printf("check!!!len:%lu, pos:%lu, %lu %lu %lu\n", 
+          len, pos, pos_aligned_down, redundant_len, len_to_read);
+      printf("\n\n@@@@ READ: check this out!!!!##########33\n\n\n");
+            for(uint32_t i=0; i<len_to_read/(16*4); i++) {
+              for(uint32_t j=0; j<16; j++) {
+                printf("%5u ", *((int *)tmp + i*16 + j));
+              }
+              printf("\n");
+            } 
+    
+      printf("@@@@ READ: check this out!!!!##########33\n\n\n");
+    }
+    free(tmp);
+#endif
 
 #if 0
     const int64_t chunk_in_file = len - buf_used();
@@ -593,21 +618,23 @@ CDErrType DataStore::WriteFile(int64_t len)
   MYDBG("[DataStore::%s] head:%lu written:%lu, used:%ld, len:%ld, inc:%lu\n", 
       __func__, head_, written_len_, buf_used(), len, mask_len & len); //getchar();
   const int64_t first = size_ - (head_ % size_);
-  PACKER_ASSERT(first >= 0);
-
   const uint64_t file_offset = head_ + written_len_;
+  PACKER_ASSERT(first >= 0);
+  PACKER_ASSERT(first % CHUNK_ALIGNMENT == 0);
+  PACKER_ASSERT(file_offset % CHUNK_ALIGNMENT == 0);
   if(len > first) {
-    CDErrType iret = fh_->Write(file_offset, begin(), first);
+    CDErrType iret = fh_->Write(file_offset, begin(), first, mask_len & first);
 
     PACKER_ASSERT_STR( (((head_ % size_) + first) % size_) == 0, 
         "((%lu + %lu) %% %lu) == %lu\n", (head_ % size_), first, size_, (((head_ % size_) + first) % size_));
 
     const int64_t second = len - first;
-    ret = fh_->Write(file_offset + first, ptr_, second, mask_len & second);
+    ret = fh_->Write(file_offset + first, ptr_, align_up(second, CHUNK_ALIGNMENT), mask_len & second);
 
     ret = (CDErrType)((uint32_t)iret | (uint32_t)(ret));
   } else {
-    ret = fh_->Write(file_offset, begin(), len, mask_len & len);
+    //ret = fh_->Write(file_offset, begin(), len, mask_len & len);
+    ret = fh_->Write(file_offset, begin(), align_up(len, CHUNK_ALIGNMENT), mask_len & len);
   }
   head_ += mask_len & len; 
 
@@ -633,6 +660,38 @@ CDErrType DataStore::Flush(void)
 
 uint64_t DataStore::WriteFlushMode(char *src, uint64_t len)
 {
+#if 1
+  if( (uint64_t)(len + buf_used()) > size_ ) {
+    MYDBG("##### [%s] buf:%ld len:%zu #####\n", __func__, buf_used(), len);
+    CDErrType err = WriteFile(buf_used());
+    if(err != kOK) {
+      MYDBG("Error while WriteFile(%lu)\n", len);
+    }
+  }
+  const uint64_t table_offset = WriteMem(src, len);
+  char *ret = ptr_ + ((table_offset - written_len_) % size_);
+  ret -= 4;
+  assert((table_offset % size_) + len < size_);
+  printf("check this out!!!!##########33\n\n\n");
+        for(uint32_t i=0; i<len/(16*4); i++) {
+          for(uint32_t j=0; j<16; j++) {
+            printf("%4u ", *((int *)ret + i*16 + j));
+          }
+          printf("\n");
+        } 
+
+  printf("check this out!!!!##########33\n\n\n");
+        for(uint32_t i=0; i<len/(16*4); i++) {
+          for(uint32_t j=0; j<16; j++) {
+            printf("%4u ", *((int *)src + i*16 + j));
+          }
+          printf("\n");
+        } 
+
+  printf("check this out!!!!##########33\n\n\n");
+        getchar();
+  return table_offset;
+#else
   static uint64_t tot_write_len = 0;
   if(len <= 0) {
     return used();
@@ -664,6 +723,7 @@ uint64_t DataStore::WriteFlushMode(char *src, uint64_t len)
 
     return offset;
   }
+#endif
 }
 
 uint64_t DataStore::Flush(char *src, int64_t len) 
@@ -680,8 +740,31 @@ uint64_t DataStore::Flush(char *src, int64_t len)
   // copying to the tail of data store is that table store may be not aligned
   // for file write, and there may be some remaining data after the alignment in
   // data store. 
+#if 1
   uint64_t table_offset = WriteFlushMode(src, len);
+#else
+  if( (uint64_t)(len + buf_used()) > size_ ) {
+    MYDBG("##### [%s] buf:%ld len:%zu #####\n", __func__, buf_used(), len);
+    CDErrType err = WriteFile(buf_used());
+    if(err != kOK) {
+      MYDBG("Error while WriteFile(%lu)\n", len);
+    }
+  }
+  const uint64_t table_offset = WriteMem(src, len);
+  char *ret = ptr_ + (table_offset % size_);
+  assert((table_offset % size_) + len < size_);
+  printf("check this out!!!!##########33\n\n\n");
+        for(int i=0; i<len/(16*4); i++) {
+          for(int j=0; j<16; j++) {
+            printf("%4lu ", *((uint64_t *)ret + i*16 + j));
+          }
+          printf("\n");
+        } 
 
+  printf("check this out!!!!##########33\n\n\n");
+        getchar();
+  
+#endif
   err = WriteFile( buf_used() );
   if(err != kOK) {
     MYDBG("Error while writing something before flush\n");

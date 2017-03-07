@@ -73,7 +73,9 @@ CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64
 {
   MYDBG("write (%d): %p (%lu) at file offset:%lu\n", 
          fdesc_, src, len, offset);
-  //getchar();
+//  printf("write (%d): %p (%lu) at file offset:%lu\n", 
+//         fdesc_, src, len, offset);
+//  getchar();
 
   CDErrType ferr = kOK;
   if(offset != offset_) {
@@ -130,10 +132,12 @@ char *PosixFileHandle::ReadTo(void *dst, uint64_t len, uint64_t offset)
   }
 
   BufferLock();
-  ssize_t read_size = read(fdesc_, dst, len);
-  if((uint64_t)read_size < 0) {
+  ssize_t ret = read(fdesc_, dst, len);
+  if(ret < 0) {
     perror("read:");
-    ERROR_MESSAGE_PACKER("Error occurred while reading buffer contents from file: %d %ld != %ld\n", fdesc_, read_size, len);
+    ERROR_MESSAGE_PACKER(
+        "Error occurred while reading buffer contents from file: %d %ld != %ld, align:%lu %lu\n",
+        fdesc_, ret, len, offset, offset % CHUNK_ALIGNMENT);
   }
   BufferUnlock();
   return (char *)dst;

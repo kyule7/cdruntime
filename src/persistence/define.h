@@ -24,9 +24,21 @@
 
 #define PACKER_ASSERT_STR(COND, ...) { if((COND) == false) { printf(__VA_ARGS__); } assert(COND); }
 
+//#define ALIGN_UP(X, Y) (((X) & ((Y)-1) > 0)? ((X) & ~((Y)-1)) + (Y) : ((X) & ~((Y)-1)))
+
 namespace packer {
 extern uint64_t table_id; 
 class BaseTable;
+
+inline uint64_t align_up(uint64_t num, uint64_t mask=512) {
+  uint64_t aligned_down = num & ~(mask-1);
+  uint64_t remain = num & (mask-1);
+  if(remain > 0) {
+    aligned_down += mask;
+  }
+  return aligned_down;
+}
+
 BaseTable *GetTable(uint32_t entry_type, char *ptr_entry, uint32_t len_in_byte);
 enum CDErrType {
   kOK = 0,
@@ -71,9 +83,9 @@ enum {
 struct MagicStore {
   uint64_t total_size_;
   uint64_t table_offset_;
-  uint64_t entry_type_;
+  uint32_t entry_type_;
   uint32_t reserved_;
-  uint32_t reserved2_; // 32 B
+  uint64_t reserved2_; // 32 B
   char pad_[480];
   MagicStore(void);
   MagicStore(uint64_t total_size, uint64_t table_offset=0, uint32_t entry_type=0);

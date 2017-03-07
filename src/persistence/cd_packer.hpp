@@ -35,16 +35,19 @@ class CDPacker : public Packer<CDEntry> {
         // [ID] [SIZE]  [OFFSET] [SRC]
         //  ID  totsize  offset  tableoffset
         posix_memalign(&ret, CHUNK_ALIGNMENT, entry.size());
+        printf("Read:%lu, %lu\n", entry.size(), entry.offset_);
         data_->Read((char *)ret, entry.size(), entry.offset_);
         MagicStore *magic = reinterpret_cast<MagicStore *>(ret);
         //uint64_t *packed_data = reinterpret_cast<uint64_t *>((char *)ret + sizeof(MagicStore));
-        uint64_t *packed_data = reinterpret_cast<uint64_t *>(ret);
-        for(int i=0; i<64/16; i++) {
+        int *packed_data = reinterpret_cast<int *>(ret);
+        printf("#### check read magicstore###\n");
+        for(int i=0; i<128/16; i++) {
           for(int j=0; j<16; j++) {
-            printf("%4lu ", *((uint64_t *)ret + i*16 + j));
+            printf("%4d ", *((int *)ret + i*16 + j));
           }
           printf("\n");
         } 
+        printf("#### check read magicstore###\n");
         printf("Read id:%lu, attr:%lx chunk: %lu at %lu, "
                "Read MagicStore: size:%lu, tableoffset:%lu, entry_type:%u\n", 
                 entry.id_, entry.attr(), entry.size(), entry.offset(), 

@@ -132,6 +132,7 @@ class DataStore {
     inline void IncHead(uint64_t len)     { head_ += len; }
     inline void SetGrowUnit(uint32_t grow_unit) { grow_unit_ = grow_unit; }
     inline void SetMode(uint32_t mode) { mode_ = mode; }
+    inline void SetFileType(uint32_t mode) { SET_FILE_TYPE(mode_, mode); }
     inline void Print(void) const
     { MYDBG("%lu/%lu, grow:%lu, alloc:%u\n", buf_used(), size_, grow_unit_, allocated_); }
     void UpdateMagic(const MagicStore &magic);

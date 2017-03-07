@@ -13,26 +13,32 @@ FILE *dbgfp=stdout;
 
 uint64_t PreserveObject(DataStore *data, int *datap, int elemsize, int chunksize) {
   CDPacker nested_packer(NULL, data);
+  nested_packer.data_->SetFileType(kVolatile);
+   
   MagicStore magic;
   uint64_t orig_size = nested_packer.data_->used();
   uint64_t magic_offset = nested_packer.data_->WriteFlushMode((char *)&magic, sizeof(MagicStore));
+  printf("after flush magic\n"); getchar();
   MagicStore &magic_in_place = nested_packer.data_->GetMagicStore(magic_offset);
   for(int i=0; i<elemsize; i++) {
     nested_packer.Add((char *)datap, CDEntry(i+1, chunksize * sizeof(int), 0, (char *)datap));
     datap+=chunksize;
   }
   uint64_t table_offset =  nested_packer.AppendTable();
+  // update magic
   uint64_t total_size = nested_packer.data_->used() - orig_size;
   magic_in_place.total_size_   = total_size;
   magic_in_place.table_offset_ = table_offset - magic_offset;
   magic_in_place.entry_type_   = kCDEntry;
+
+  // test
   printf("[offset:%lu, %zu] magic: %lu %lu %u, data:%lu, table:%lu\n", magic_offset, sizeof(MagicStore),
     magic_in_place.total_size_  ,
     magic_in_place.table_offset_,
     magic_in_place.entry_type_,
     chunksize*elemsize*sizeof(int) + sizeof(MagicStore), elemsize * sizeof(CDEntry) );  
   getchar();
-  MagicStore magictest = *reinterpret_cast<MagicStore *>(nested_packer.data_->GetPtr() + magic_offset % nested_packer.data_->size());
+  MagicStore magictest = *reinterpret_cast<MagicStore *>(nested_packer.data_->GetPtr() + (magic_offset - nested_packer.data_->offset()) % nested_packer.data_->size());
   printf("[offset test :%lu, %zu] magic: %lu %lu %u\n", magic_offset, sizeof(MagicStore),
     magictest.total_size_  ,
     magictest.table_offset_,
@@ -45,6 +51,7 @@ uint64_t PreserveObject(DataStore *data, int *datap, int elemsize, int chunksize
     }
     printf("\n");
   } 
+  nested_packer.data_->SetFileType(kPosixFile);
   getchar();
   return table_offset;
 }
@@ -65,7 +72,7 @@ char *TestNestedPacker(int elemsize, int chunksize)
   int *dataB = new int[totsizeB];
   int *testB = new int[totsizeB];
   for(uint32_t i=0; i<totsizeB; i++) {
-    dataB[i] = i;//lrand48() % 100;
+    dataB[i] = i + 1000;//lrand48() % 100;
   }
   for(uint32_t i=0; i <totsizeB/16; i++) {
     for(uint32_t j=0; j<16; j++) {
@@ -108,6 +115,7 @@ char *TestNestedPacker(int elemsize, int chunksize)
     printf("[nested ID:%lu] attr:%lx, size:%lu==%lu, packed offset:%lu\n", id, entry->size_.code_ >> 48, entry->size(), packed_size, packed_offset); getchar();
   }
 
+  packer.data_->Flush();
 //  printf("after pack\n"); getchar();
   for(int i=first+1; i<elemsize+1; i++) {
 //    if(i == first+1) { printf("second i:%d\n", i); getchar(); }
@@ -297,7 +305,7 @@ void TestUnpackerFile(FILE *fp)
 int main() {
   gettimeofday(&ttime,NULL);
   srand48(ttime.tv_usec);
-  int elemsize = 512;
+  int elemsize = 1030;
   int chunksize = 32;
   //char *chunk = ArrayTest(elemsize, chunksize);
   TestNestedPacker(elemsize, chunksize);
