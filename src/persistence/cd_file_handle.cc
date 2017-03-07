@@ -89,6 +89,11 @@ CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64
   }
 
 
+//  uint64_t mask_len = ~(511);
+//  len &= mask_len;
+//  if((len & 511) > 0) { 
+//    len += 512;
+//  }
   ssize_t written_size = write(fdesc_, src, len);
   offset_ = (inc >= 0)? offset_ + inc : offset_ + len;
   printf("offset:%lu\n", offset_); //getchar();

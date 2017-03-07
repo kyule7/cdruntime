@@ -721,7 +721,13 @@ MagicStore::MagicStore(void) : total_size_(0), table_offset_(0), entry_type_(0) 
 MagicStore::MagicStore(uint64_t total_size, uint64_t table_offset, uint32_t entry_type) 
   : total_size_(total_size), table_offset_(table_offset), entry_type_(entry_type) {
   memset(pad_, 0, sizeof(pad_));
-  }
+}
+
+MagicStore::MagicStore(const MagicStore &that) 
+  : total_size_(that.total_size_), table_offset_(that.table_offset_), entry_type_(that.entry_type_) {
+  memcpy(pad_, that.pad_, sizeof(pad_));
+}
+
 void MagicStore::Print(void) 
 {
   printf("[%s] %lu %lu %u\n", __func__, total_size_, table_offset_, entry_type_);

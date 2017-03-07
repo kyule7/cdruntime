@@ -37,10 +37,11 @@ class CDPacker : public Packer<CDEntry> {
         posix_memalign(&ret, CHUNK_ALIGNMENT, entry.size());
         data_->Read((char *)ret, entry.size(), entry.offset_);
         MagicStore *magic = reinterpret_cast<MagicStore *>(ret);
-        int *packed_data = reinterpret_cast<int *>((char *)ret + sizeof(MagicStore));
-        for(int i=0; i<1024/64; i++) {
+        //uint64_t *packed_data = reinterpret_cast<uint64_t *>((char *)ret + sizeof(MagicStore));
+        uint64_t *packed_data = reinterpret_cast<uint64_t *>(ret);
+        for(int i=0; i<64/16; i++) {
           for(int j=0; j<16; j++) {
-            printf("%4d ", *((int *)ret + i*16 + j));
+            printf("%4lu ", *((uint64_t *)ret + i*16 + j));
           }
           printf("\n");
         } 

@@ -26,11 +26,25 @@ uint64_t PreserveObject(DataStore *data, int *datap, int elemsize, int chunksize
   magic_in_place.total_size_   = total_size;
   magic_in_place.table_offset_ = table_offset - magic_offset;
   magic_in_place.entry_type_   = kCDEntry;
-  printf("[offset:%lu] magic: %lu %lu %u, data:%lu, table:%lu\n", magic_offset,
+  printf("[offset:%lu, %zu] magic: %lu %lu %u, data:%lu, table:%lu\n", magic_offset, sizeof(MagicStore),
     magic_in_place.total_size_  ,
     magic_in_place.table_offset_,
     magic_in_place.entry_type_,
     chunksize*elemsize*sizeof(int) + sizeof(MagicStore), elemsize * sizeof(CDEntry) );  
+  getchar();
+  MagicStore magictest = *reinterpret_cast<MagicStore *>(nested_packer.data_->GetPtr() + magic_offset % nested_packer.data_->size());
+  printf("[offset test :%lu, %zu] magic: %lu %lu %u\n", magic_offset, sizeof(MagicStore),
+    magictest.total_size_  ,
+    magictest.table_offset_,
+    magictest.entry_type_);
+
+  long int *pmagic = (long int *)(nested_packer.data_->GetPtr() + magic_offset % nested_packer.data_->size());
+  for(uint32_t i=0; i <64/16; i++) {
+    for(uint32_t j=0; j<16; j++) {
+      printf("%5lu ", *(pmagic + i*16 + j));
+    }
+    printf("\n");
+  } 
   getchar();
   return table_offset;
 }
@@ -41,7 +55,7 @@ char *TestNestedPacker(int elemsize, int chunksize)
   int *dataA = new int[totsize];
   int *testA = new int[totsize];
   for(uint32_t i=0; i<totsize; i++) {
-    dataA[i] = lrand48() % 100;
+    dataA[i] = i;//lrand48() % 100;
   }
   memcpy(testA, dataA, totsize * sizeof(int));
 //////////////////////////////////////////////////////
@@ -79,8 +93,8 @@ char *TestNestedPacker(int elemsize, int chunksize)
 
   int second = elemsize - first;
   printf("================PrintArray====================\n");
-  PrintArray((char *)dataA, first * sizeof(int)); //getchar(); 
-  PrintArray((char *)(dataA + first), second * sizeof(int)); //getchar(); 
+  PrintArray((char *)dataA, first *chunksize* sizeof(int)); //getchar(); 
+  PrintArray((char *)(dataA + first*chunksize), second *chunksize* sizeof(int)); //getchar(); 
   printf("==============================================\n");
 
   {
@@ -283,7 +297,7 @@ void TestUnpackerFile(FILE *fp)
 int main() {
   gettimeofday(&ttime,NULL);
   srand48(ttime.tv_usec);
-  int elemsize = 1030;
+  int elemsize = 512;
   int chunksize = 32;
   //char *chunk = ArrayTest(elemsize, chunksize);
   TestNestedPacker(elemsize, chunksize);

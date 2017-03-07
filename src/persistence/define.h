@@ -71,12 +71,13 @@ enum {
 struct MagicStore {
   uint64_t total_size_;
   uint64_t table_offset_;
-  uint32_t entry_type_;
+  uint64_t entry_type_;
   uint32_t reserved_;
-  uint64_t reserved2_; // 32 B
+  uint32_t reserved2_; // 32 B
   char pad_[480];
   MagicStore(void);
   MagicStore(uint64_t total_size, uint64_t table_offset=0, uint32_t entry_type=0);
+  MagicStore(const MagicStore &that);
   void Print(void);
 };
 
