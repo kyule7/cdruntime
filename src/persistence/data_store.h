@@ -68,7 +68,7 @@ class DataStore {
     void Read(char *pto, uint64_t size, uint64_t pos);
     void ReadAll(char *pto);
     char *ReadAll(uint64_t &totsize);
-    char *ReadOpt(uint64_t len, uint64_t pos);
+    char *ForwardFetch(uint64_t len, uint64_t pos);
     CDErrType WriteFile(int64_t len);
     CDErrType WriteFile(void);
     void FileSync(void);

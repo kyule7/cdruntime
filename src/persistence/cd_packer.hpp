@@ -28,6 +28,32 @@ class CDPacker : public Packer<CDEntry> {
       CDEntry entry = *pentry;
       dst = (dst == NULL)? entry.src_ : dst;
       PACKER_ASSERT(dst == entry.src_);
+
+#if 1
+      if( entry.size_.Check(Attr::knested) == false) {
+        data_->Read(dst, entry.size(), entry.offset_);
+      } else {
+        
+        data_->ForwardFetch(entry.size(), entry.offset_);
+        uint64_t table_size = entry.offset_ - (uint64_t)entry.src_;
+        CDEntry *pEntry = reinterpret_cast<CDEntry *>(
+            data_->ForwardFetchRead(table_size, (uint64_t)entry.src_) );
+        {
+          printf("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n");
+          uint64_t *pEntry = reinterpret_cast<uint64_t *>(ret);
+          for(uint64_t i=0; i<table_size/sizeof(CDEntry); i++) {
+            printf("%6lu %6lu %6lu %6lu\n", *pEntry, *(pEntry+1), *(pEntry+2), *(pEntry+3));
+            pEntry += 4;
+          }
+          printf("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n\n\n");
+          getchar();
+        }
+        // This will just read from cache (memory)
+        for(uint32_t i=0; i<table_size/sizeof(CDEntry); i++) {
+          data_->Read(pEntry->src_, pEntry->size(), pEntry->offset_);
+        }
+      }
+#else
       if( entry.size_.Check(Attr::knested) == false ) {
         data_->Read(dst, entry.size(), entry.offset_);
       } else {
@@ -59,6 +85,7 @@ class CDPacker : public Packer<CDEntry> {
         MYDBG("Read MagicStore: size:%lu, tableoffset:%lu, entry_type:%u\n", 
               magic->total_size_, magic->table_offset_, magic->entry_type_);
       }
+#endif
       return (char *)ret;
     }
 };

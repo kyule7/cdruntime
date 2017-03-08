@@ -58,6 +58,31 @@ uint64_t PreserveObject(DataStore *data, int *datap, int elemsize, int chunksize
   return table_offset;
 }
 
+//uint64_t Deserialize(int *data, char *serialized)
+//{
+//  MagicStore *magic = reinterpret_cast<MagicStore *>(serialized);
+//  //uint64_t *packed_data = reinterpret_cast<uint64_t *>((char *)ret + sizeof(MagicStore));
+//  char *packed_data = reinterpret_cast<char *>(serialized);
+////  int *packed_data = reinterpret_cast<int *>(ret);
+////  printf("#### check read magicstore###\n");
+////  for(int i=0; i<128/16; i++) {
+////    for(int j=0; j<16; j++) {
+////      printf("%4d ", *(packed_data + i*16 + j));
+////    }
+////    printf("\n");
+////  } 
+//  printf("#### check read magicstore###\n");
+//  printf("Read id:%lu, attr:%lx chunk: %lu at %lu, "
+//         "Read MagicStore: size:%lu, tableoffset:%lu, entry_type:%u\n", 
+//          entry.id_, entry.attr(), entry.size(), entry.offset(), 
+//          magic->total_size_, magic->table_offset_, magic->entry_type_);
+//  CDEntry *pEntry = reinterpret_cast<CDEntry *>(serialized + magic->table_offset_);
+//  for(int i=0; i<(magic->total_size_ - magic->table_offset_)/sizeof(CDEntry); i++) {
+//    memcpy(pEntry->src_, pEntry->size(), pEntry->offset_, 
+//  }
+//  getchar();
+//}
+
 char *TestNestedPacker(int elemsize, int chunksize) 
 {
   uint64_t totsize = elemsize * chunksize;
@@ -114,7 +139,8 @@ char *TestNestedPacker(int elemsize, int chunksize)
     uint64_t attr = Attr::knested | Attr::ktable;
     uint64_t id = first+1;
     CDEntry *entry = packer.table_->InsertEntry(CDEntry(id, attr, packed_size, packed_offset, (char *)table_offset));
-    printf("[nested ID:%lu] attr:%lx, size:%lu==%lu, packed offset:%lx table_offset:%lx\n", 
+    printf("[nested ID:%lu] attr:%lx, size:%lu==%lu, "
+           "packed offset:%lx table_offset:%lx\n", 
         id, entry->size_.code_ >> 48, entry->size(), packed_size, packed_offset, table_offset); getchar();
   }
 
@@ -137,8 +163,16 @@ char *TestNestedPacker(int elemsize, int chunksize)
   // +1 is for packer
   for(int i=0; i<elemsize+1; i++) {
     packer.Restore(i+1);
+//    char *ret = packer.Restore(i+1);
+//    if(ret != NULL) {
+//      Deserialize(dataB, ret);
+//    }
+
   }
 
+  printf("================PrintArrayB====================\n");
+  PrintArray((char *)dataB, totsizeB* sizeof(int)); getchar(); 
+  printf("==============================================\n");
 
 
   if(CompareResult((char *)dataA, (char *)testA, totsize*sizeof(int)) == 0) {

@@ -154,7 +154,7 @@ class Packer {
     {
       uint64_t offset = data_->Write(src, entry.size());
       uint64_t ret = table_->Insert(entry.SetOffset(offset));
-      return offset;
+      return ret;
     }
     
     EntryT *AddEntry(char *src, EntryT &&entry)
