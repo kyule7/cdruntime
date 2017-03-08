@@ -43,7 +43,7 @@ class CDPacker : public Packer<CDEntry> {
         printf("#### check read magicstore###\n");
         for(int i=0; i<128/16; i++) {
           for(int j=0; j<16; j++) {
-            printf("%4d ", *((int *)ret + i*16 + j));
+            printf("%4d ", *(packed_data + i*16 + j));
           }
           printf("\n");
         } 

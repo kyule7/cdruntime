@@ -36,7 +36,7 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath)
   }
   sprintf(full_filename, "%s/%s.%ld.%ld", base_filename, filepath, time.tv_sec, time.tv_usec);
   //fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT | O_APPEND, S_IRUSR | S_IWUSR);
-  fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT | O_APPEND, S_IRUSR | S_IWUSR);
+  fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT, S_IRUSR | S_IWUSR);
   if(fdesc_ < 0) {
     ERROR_MESSAGE_PACKER("ERROR: File open path:%s\n", full_filename);
   }
@@ -72,17 +72,19 @@ void PosixFileHandle::Close(void)
 CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64_t inc)
 {
   MYDBG("write (%d): %p (%lu) at file offset:%lu\n", 
-         fdesc_, src, len, offset);
-//  printf("write (%d): %p (%lu) at file offset:%lu\n", 
+         fdesc_, src, len, offset); 
+//  printf("write (%d): %p (%lu) at file offset:%lx\n", 
 //         fdesc_, src, len, offset);
 //  getchar();
 
   CDErrType ferr = kOK;
-  if(offset != offset_) {
+  //if(offset != offset_) 
+  if(1)
+  {
     off_t ret = lseek(fdesc_, offset, SEEK_SET);
     // Error Check
     if(ret < 0) {
-      perror("write:");
+      perror("lseek:");
       ferr = kErrorFileSeek;
       ERROR_MESSAGE_PACKER("Error occurred while seeking file:%ld\n", ret);
     }

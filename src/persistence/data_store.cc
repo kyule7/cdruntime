@@ -364,6 +364,11 @@ uint64_t DataStore::WriteMem(char *src, int64_t len)
     const uint64_t first = size_ - tail;
     const int64_t  rest  = len - first;
     ret = used();
+    if(used() >= 0x10880 && used() <= 0x10ac0) {
+      printf("(src:%d at %lx, dst:%p), %lu + %lu > %lu (head:%lx, wl:%lu)\n", *(int *)src, used(), ptr_ + tail,
+          tail, len, size_, head_ + written_len_, written_len_);
+      getchar();
+    }
     MYDBG("%lu + %lu > %lu (head:%lu)\n", tail, len, size_, head_ % size_);
     if( rest > 0 ) {
       MYDBG("First copy  %p <- %p, %lu\n", ptr_ + (size_ - first), src, first);
@@ -489,28 +494,28 @@ void DataStore::Read(char *pto, uint64_t len, uint64_t pos)
     PACKER_ASSERT(buf_used() >= 0);
     const uint64_t pos_aligned_down = pos & ~chunk_mask;
     const uint64_t redundant_len    = pos & chunk_mask;
-    uint64_t len_to_read = len + redundant_len;
+    const uint64_t len_to_read = chunk_in_file + redundant_len;
+    const uint64_t len_to_read_aligned = align_up(len_to_read, CHUNK_ALIGNMENT);
     MYDBG("DataStore: %p, %lu, %lu\n", pto, chunk_in_file, pos);
 #if 0
     fh_->ReadTo(pto, chunk_in_file, pos);
 #else
     void *tmp;
-    posix_memalign(&tmp, CHUNK_ALIGNMENT, align_up(len_to_read, CHUNK_ALIGNMENT)); 
-    memset(tmp, 0, align_up(len_to_read, CHUNK_ALIGNMENT)); 
-    fh_->ReadTo((char *)tmp, align_up(len_to_read, CHUNK_ALIGNMENT), pos_aligned_down);
-    memcpy(pto, (char *)tmp + redundant_len, len);
+    posix_memalign(&tmp, CHUNK_ALIGNMENT, len_to_read_aligned); 
+    memset(tmp, 0, len_to_read_aligned); 
+    fh_->ReadTo((char *)tmp, len_to_read_aligned, pos_aligned_down);
+    memcpy(pto, (char *)tmp + redundant_len, chunk_in_file);
 
     if(pos == 66432) {
-      printf("check!!!len:%lu, pos:%lu, %lu %lu %lu\n", 
-          len, pos, pos_aligned_down, redundant_len, len_to_read);
-      printf("\n\n@@@@ READ: check this out!!!!##########33\n\n\n");
-            for(uint32_t i=0; i<len_to_read/(16*4); i++) {
-              for(uint32_t j=0; j<16; j++) {
-                printf("%5u ", *((int *)tmp + i*16 + j));
-              }
-              printf("\n");
-            } 
-    
+      printf("\n\ncheck!!!len:%lu, pos:%lu, %lu %lu %lu\n", 
+              len, pos, pos_aligned_down, redundant_len, len_to_read);
+      printf("@@@@ READ: check this out!!!!##########33\n\n\n");
+      for(uint32_t i=0; i<len_to_read/(16*4); i++) {
+        for(uint32_t j=0; j<16; j++) {
+          printf("%5u ", *((int *)tmp + i*16 + j));
+        }
+        printf("\n");
+      } 
       printf("@@@@ READ: check this out!!!!##########33\n\n\n");
     }
     free(tmp);
@@ -618,21 +623,46 @@ CDErrType DataStore::WriteFile(int64_t len)
   MYDBG("[DataStore::%s] head:%lu written:%lu, used:%ld, len:%ld, inc:%lu\n", 
       __func__, head_, written_len_, buf_used(), len, mask_len & len); //getchar();
   const int64_t first = size_ - (head_ % size_);
+  const uint64_t first_aligndown = mask_len & first;
   const uint64_t file_offset = head_ + written_len_;
   PACKER_ASSERT(first >= 0);
   PACKER_ASSERT(first % CHUNK_ALIGNMENT == 0);
   PACKER_ASSERT(file_offset % CHUNK_ALIGNMENT == 0);
   if(len > first) {
-    CDErrType iret = fh_->Write(file_offset, begin(), first, mask_len & first);
+    char *pbegin = begin();
+    CDErrType iret = fh_->Write(file_offset, pbegin, first);
 
     PACKER_ASSERT_STR( (((head_ % size_) + first) % size_) == 0, 
         "((%lu + %lu) %% %lu) == %lu\n", (head_ % size_), first, size_, (((head_ % size_) + first) % size_));
 
     const int64_t second = len - first;
-    ret = fh_->Write(file_offset + first, ptr_, align_up(second, CHUNK_ALIGNMENT), mask_len & second);
+    const uint64_t second_up   = align_up(second, CHUNK_ALIGNMENT);
+    const uint64_t second_down = second & mask_len;
+    printf("foffset:%lx, total:%lu, %p actual writesize:%lu %lu, %p second:%lu %lu %lu\n", file_offset, len,
+        pbegin, first, first_aligndown, 
+        ptr_, second, second_up, second_down);
+//    if(file_offset == 0x10800) {
+//      for(uint32_t i=0; i<first/(16*4); i++) {
+//        for(uint32_t j=0; j<16; j++) {
+//          printf("%4u ", *((int *)pbegin + i*16 + j));
+//        }
+//        printf("\n");
+//      }
+//     exit(-1); 
+//    }
+    ret = fh_->Write(file_offset + first, ptr_, second_up, second_down);
+//    if(file_offset == 0x10800) {
+//      for(uint32_t i=0; i<second_up/(16*4); i++) {
+//        for(uint32_t j=0; j<16; j++) {
+//          printf("%4u ", *((int *)ptr_ + i*16 + j));
+//        }
+//        printf("\n");
+//      } 
+//    }
 
     ret = (CDErrType)((uint32_t)iret | (uint32_t)(ret));
   } else {
+    printf("foffset:%lx, total:%lu\n", file_offset, len);
     //ret = fh_->Write(file_offset, begin(), len, mask_len & len);
     ret = fh_->Write(file_offset, begin(), align_up(len, CHUNK_ALIGNMENT), mask_len & len);
   }

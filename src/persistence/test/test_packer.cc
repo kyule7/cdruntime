@@ -32,12 +32,14 @@ uint64_t PreserveObject(DataStore *data, int *datap, int elemsize, int chunksize
   magic_in_place.entry_type_   = kCDEntry;
 
   // test
-  printf("[offset:%lu, %zu] magic: %lu %lu %u, data:%lu, table:%lu\n", magic_offset, sizeof(MagicStore),
+  printf("[offset:%lu, %zu, orig:%lx after:%lx] magic: %lu %lu %u, data:%lu, table:%lu\n", magic_offset, sizeof(MagicStore), orig_size, nested_packer.data_->used(),
     magic_in_place.total_size_  ,
     magic_in_place.table_offset_,
     magic_in_place.entry_type_,
     chunksize*elemsize*sizeof(int) + sizeof(MagicStore), elemsize * sizeof(CDEntry) );  
   getchar();
+
+  
   MagicStore magictest = *reinterpret_cast<MagicStore *>(nested_packer.data_->GetPtr() + (magic_offset - nested_packer.data_->offset()) % nested_packer.data_->size());
   printf("[offset test :%lu, %zu] magic: %lu %lu %u\n", magic_offset, sizeof(MagicStore),
     magictest.total_size_  ,
@@ -99,10 +101,10 @@ char *TestNestedPacker(int elemsize, int chunksize)
   }
 
   int second = elemsize - first;
-  printf("================PrintArray====================\n");
-  PrintArray((char *)dataA, first *chunksize* sizeof(int)); //getchar(); 
-  PrintArray((char *)(dataA + first*chunksize), second *chunksize* sizeof(int)); //getchar(); 
-  printf("==============================================\n");
+//  printf("================PrintArray====================\n");
+//  PrintArray((char *)dataA, first *chunksize* sizeof(int)); //getchar(); 
+//  PrintArray((char *)(dataA + first*chunksize), second *chunksize* sizeof(int)); //getchar(); 
+//  printf("==============================================\n");
 
   {
     uint64_t packed_offset = packer.data_->used();
@@ -112,15 +114,20 @@ char *TestNestedPacker(int elemsize, int chunksize)
     uint64_t attr = Attr::knested | Attr::ktable;
     uint64_t id = first+1;
     CDEntry *entry = packer.table_->InsertEntry(CDEntry(id, attr, packed_size, packed_offset, (char *)table_offset));
-    printf("[nested ID:%lu] attr:%lx, size:%lu==%lu, packed offset:%lu\n", id, entry->size_.code_ >> 48, entry->size(), packed_size, packed_offset); getchar();
+    printf("[nested ID:%lu] attr:%lx, size:%lu==%lu, packed offset:%lx table_offset:%lx\n", 
+        id, entry->size_.code_ >> 48, entry->size(), packed_size, packed_offset, table_offset); getchar();
   }
 
   packer.data_->Flush();
-//  printf("after pack\n"); getchar();
+  printf("after pack offset (sync):%lx~%lx\n", 
+      packer.data_->offset() + packer.data_->head(), packer.data_->used()); getchar();
   for(int i=first+1; i<elemsize+1; i++) {
 //    if(i == first+1) { printf("second i:%d\n", i); getchar(); }
-    packer.Add((char *)dataAtmp, CDEntry(i+1, chunksize * sizeof(int), 0, (char *)dataAtmp));
+    uint64_t offset = packer.Add((char *)dataAtmp, CDEntry(i+1, chunksize * sizeof(int), 0, (char *)dataAtmp));
+//    printf("packer offset after nested, [%d]: %d %lu %lx\n", i, *dataAtmp, chunksize*sizeof(int), offset); getchar();
     dataAtmp+=chunksize;
+//    if(i == 700)
+//      packer.data_->Flush();
   }
 
   memset(dataA, 0, totsize * sizeof(int));
