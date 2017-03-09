@@ -30,13 +30,17 @@ namespace packer {
 extern uint64_t table_id; 
 class BaseTable;
 
-inline uint64_t align_up(uint64_t num, uint64_t mask=512) {
+inline uint64_t align_up(uint64_t num, uint64_t mask=CHUNK_ALIGNMENT) {
   uint64_t aligned_down = num & ~(mask-1);
   uint64_t remain = num & (mask-1);
   if(remain > 0) {
     aligned_down += mask;
   }
   return aligned_down;
+}
+
+inline uint64_t align_down(uint64_t num, uint64_t mask=CHUNK_ALIGNMENT) {
+  return (num & ~(mask-1));
 }
 
 BaseTable *GetTable(uint32_t entry_type, char *ptr_entry, uint32_t len_in_byte);

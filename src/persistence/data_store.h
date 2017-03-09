@@ -50,6 +50,8 @@ class DataStore {
     uint32_t mode_; // state
     uint32_t chunksize_;
     char    *ptr_;
+    char    *buf_preserved_;
+    uint64_t tail_preserved_;
     FileHandle *fh_;
   private:
     uint64_t r_tail_;
@@ -63,17 +65,9 @@ class DataStore {
     CDErrType FreeData(bool reuse);
     CDErrType Reallocate(uint64_t len);
 //    CDErrType SafeReallocate(uint64_t len);
+    // Write
     uint64_t Write(char *pfrom, uint64_t len, uint64_t pos);
     uint64_t Write(char *pfrom, uint64_t len);
-    void Read(char *pto, uint64_t size, uint64_t pos);
-    void ReadAll(char *pto);
-    char *ReadAll(uint64_t &totsize);
-    char *ForwardFetch(uint64_t len, uint64_t pos);
-    CDErrType WriteFile(int64_t len);
-    CDErrType WriteFile(void);
-    void FileSync(void);
-    CDErrType Flush(void);
-    uint64_t Flush(char *src, int64_t len);
     ///@brief Write data to bounded in-memory buffer. 
     ///       If buffer is full, wait until buffer is available.
     inline uint64_t WriteBufferMode(char *pfrom, uint64_t len);
@@ -86,7 +80,25 @@ class DataStore {
     ///       If new data is larger then buffer size,
     ///       iterate this step until completely writing all data.
     uint64_t WriteFlushMode(char *pfrom, uint64_t len);
+    CDErrType WriteFile(int64_t len);
+    CDErrType WriteFile(void);
+
+    // Read
+    void Read(char *pto, uint64_t size, uint64_t pos);
+    void ReadAll(char *pto);
+    char *ReadAll(uint64_t &totsize);
+    uint64_t ForwardFetch(char *dst, uint64_t len, uint64_t pos);
+    uint64_t Fetch(uint64_t len, uint64_t pos);
+
+    // Flush buffer
+    void FileSync(void);
+    CDErrType Flush(void);
+    uint64_t Flush(char *src, int64_t len);
+
   private:
+    // Internel
+    void CopyFromBuffer(char *dst, uint64_t len, uint64_t pos=INVALID_NUM);
+    void CopyToBuffer(char *src, uint64_t len);
     uint64_t WriteBuffer(char *src, int64_t len);
     uint64_t WriteMem(char *src, int64_t len);
   public:
