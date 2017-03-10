@@ -360,7 +360,7 @@ uint64_t DataStore::Write(char *pfrom, uint64_t len)//, uint64_t pos)
 uint64_t DataStore::WriteMem(char *src, int64_t len)
 {
   MYDBG("\n");
-  PACKER_ASSERT( len > 0 && ptr_ != NULL && src != NULL,
+  PACKER_ASSERT_STR( len > 0 && ptr_ != NULL && src != NULL,
       "Write failed: len: %ld ptr_:%p %p\n", len, ptr_, src );
   uint64_t  ret = used();
   CopyToBuffer(src, len);
@@ -498,12 +498,12 @@ void DataStore::FileRead(char *pto, uint64_t chunk_in_file, uint64_t pos)
   const uint64_t len_to_read_aligned = align_up(len_to_read, CHUNK_ALIGNMENT);
   MYDBG("DataStore: %p, %lu, %lu\n", pto, chunk_in_file, pos);
 #if 0
-  fh_->ReadTo(pto, chunk_in_file, pos);
+  fh_->Read(pto, chunk_in_file, pos);
 #else
   void *tmp;
   posix_memalign(&tmp, CHUNK_ALIGNMENT, len_to_read_aligned); 
   memset(tmp, 0, len_to_read_aligned); 
-  fh_->ReadTo((char *)tmp, len_to_read_aligned, pos_aligned_down);
+  fh_->Read((char *)tmp, len_to_read_aligned, pos_aligned_down);
   memcpy(pto, (char *)tmp + redundant_len, chunk_in_file);
 
   if(pos == 66432) {
@@ -521,36 +521,36 @@ void DataStore::FileRead(char *pto, uint64_t chunk_in_file, uint64_t pos)
 
 #if 0
   const int64_t chunk_in_file = len - buf_used();
-  //fh_->ReadTo(pto, chunk_in_file, written_len_ + head_ - chunk_in_file); 
+  //fh_->Read(pto, chunk_in_file, written_len_ + head_ - chunk_in_file); 
   const int64_t chunk_written_before_len = tail_ - len;
   PACKER_ASSERT(chunk_written_before_len <= 0);
   PACKER_ASSERT(buf_used() < 0);
-  fh_->ReadTo(pto, chunk_in_file, written_len_ + chunk_written_before_len); 
+  fh_->Read(pto, chunk_in_file, written_len_ + chunk_written_before_len); 
 #endif
 }
 
 // Figure out all the hassel regarding chunk continuation.
 // Assumed pto is contiguous buffer.
-void DataStore::FileRead(char *pto, uint64_t chunk_in_file, uint64_t pos)
-{
-  PACKER_ASSERT(buf_used() >= 0);
-  const uint64_t pos_aligned_down = align_down(pos);
-  const uint64_t pos_aligned_up   = align_up(pos);
-//  const uint64_t redundant_len    = pos & chunk_mask;
-  const uint64_t len_to_read      = pos_aligned_up - pos_aligned_down;
-
-//  const uint64_t len_to_read_aligned = align_up(len_to_read, CHUNK_ALIGNMENT);
-  fh_->ReadTo((char *)tmp, len_to_read_aligned, pos_aligned_down);
-  MYDBG("DataStore: %p, %lu, %lu\n", pto, chunk_in_file, pos);
-}
+//void DataStore::FileRead(char *pto, uint64_t chunk_in_file, uint64_t pos)
+//{
+//  PACKER_ASSERT(buf_used() >= 0);
+//  const uint64_t pos_aligned_down = align_down(pos);
+//  const uint64_t pos_aligned_up   = align_up(pos);
+////  const uint64_t redundant_len    = pos & chunk_mask;
+//  const uint64_t len_to_read      = pos_aligned_up - pos_aligned_down;
+//
+////  const uint64_t len_to_read_aligned = align_up(len_to_read, CHUNK_ALIGNMENT);
+//  fh_->Read((char *)tmp, len_to_read_aligned, pos_aligned_down);
+//  MYDBG("DataStore: %p, %lu, %lu\n", pto, chunk_in_file, pos);
+//}
 
 // In-place read
 void DataStore::ReadAll(char *pto)
 {
   printf("[%s] written:%lu head:%lu tail:%lu\n", __func__, written_len_, head_, tail_);
   if(head_ != 0) { // read from file
-    fh_->ReadTo(pto, head_, written_len_);
-//    fh_->ReadTo(pto, head_ + sizeof(MagicStore), written_len_);
+    fh_->Read(pto, head_, written_len_);
+//    fh_->Read(pto, head_ + sizeof(MagicStore), written_len_);
   }
 
   const int64_t rest = buf_used();
@@ -613,21 +613,26 @@ void DataStore::CopyToBuffer(char *src, uint64_t len)
 
 // This is used to copy buffer contents to a contiguous data,
 // which is the opposite-direction copy operation of WriteMem.
-void DataStore::CopyFileToBuffer(uint64_t buf_pos, uint64_t len, uint64_t pos)
+CDErrType DataStore::CopyFileToBuffer(uint64_t buf_pos, int64_t len, uint64_t pos)
 {
-  const uint64_t r_tail = buf_pos % size_;
-  const uint64_t first  = size_ - r_tail;
-  const int64_t  rest   = len_to_read - first;
-  MYDBG("%lu + %lu > %lu (head:%lu)\n", buf_pos, len_to_read, size_, r_head_ % size_);
+  CDErrType ret = kOK;
+  const uint64_t tail = buf_pos % size_;
+  const uint64_t first = size_ - tail;
+  const int64_t  rest  = len - first;
+  MYDBG("%lu + %lu > %lu (head:%lu)\n", buf_pos, len, size_, r_head_ % size_);
+
   if( rest > 0 ) {
-    MYDBG("First copy  %p <- %p, %lu\n", ptr_ + tail, uncached_fpos,         first);
-    MYDBG("Second copy %p <- %p, %lu\n", ptr_,        uncached_fpos + first, rest);
-    fh_->ReadTo(ptr_ + r_tail, first, uncached_fpos);
-    fh_->ReadTo(ptr_,          rest,  uncached_fpos + first);
+    MYDBG("First copy  %p <- %p, %lu\n", ptr_ + tail, pos,         first);
+    MYDBG("Second copy %p <- %p, %lu\n", ptr_,        pos + first, rest);
+    CDErrType iret = fh_->Read(ptr_ + tail, first, pos);
+    CDErrType jret = fh_->Read(ptr_,          rest,  pos + first);
+    ret = (CDErrType)((uint64_t)iret | (uint64_t)jret);
   } else {
-    MYDBG("Copy %p <- %p, %lu\n", ptr_ + tail, uncached_fpos, len_to_read);
-    fh_->ReadTo(ptr_ + r_tail, len_to_read, uncached_fpos);
+    MYDBG("Copy %p <- %p, %lu\n", ptr_ + tail, pos, len);
+    ret = fh_->Read(ptr_ + tail, len, pos);
   }
+
+  return ret;
 }
 
 // This is used to copy buffer contents to a contiguous data,
@@ -666,100 +671,123 @@ void DataStore::CopyFileToBuffer(uint64_t buf_pos, uint64_t len, uint64_t pos)
     ret = fh_->Write(file_offset, begin(), align_up(len, CHUNK_ALIGNMENT), mask_len & len);
   }
 #endif
-void DataStore::CopyBufferToFile(char *src, uint64_t len)
+// WriteFile(head_, len, head_ + written_len_);
+CDErrType DataStore::CopyBufferToFile(uint64_t buf_pos, int64_t len, uint64_t file_offset)
 {
+  CDErrType ret = kOK;
+  const uint64_t mask_len = ~chunk_mask;
+  const uint64_t pos_in_buf = buf_pos % size_;
+  const int64_t  first = size_ - pos_in_buf;
+//  const uint64_t file_offset = buf_pos + written_len_;
+  PACKER_ASSERT(first >= 0);
+  PACKER_ASSERT(first % CHUNK_ALIGNMENT == 0);
+  PACKER_ASSERT(file_offset % CHUNK_ALIGNMENT == 0);
+  char *pbegin = ptr_ + pos_in_buf;
+  if(len > first) {
+    CDErrType iret = fh_->Write(file_offset, pbegin, first);
+    PACKER_ASSERT_STR( ((pos_in_buf + first) % size_) == 0, 
+        "((%lu + %lu) %% %lu) == %lu\n", pos_in_buf, first, size_, ((pos_in_buf + first) % size_));
+
+    const int64_t second = len - first;
+    const uint64_t second_up   = align_up(second, CHUNK_ALIGNMENT);
+    const uint64_t second_down = second & mask_len;
+    ret = fh_->Write(file_offset + first, ptr_, second_up, second_down);
+    ret = (CDErrType)((uint32_t)iret | (uint32_t)(ret));
+  } else {
+    printf("foffset:%lx, total:%lu\n", file_offset, len);
+    //ret = fh_->Write(file_offset, begin(), len, mask_len & len);
+    ret = fh_->Write(file_offset, pbegin, align_up(len, CHUNK_ALIGNMENT), mask_len & len);
+  }
+  return ret;
+#if 0
   const uint64_t r_tail = r_tail_ % size_;
   const uint64_t first  = size_ - r_tail;
-  const int64_t  rest   = len_to_read - first;
-  MYDBG("%lu + %lu > %lu (head:%lu)\n", r_tail_, len_to_read, size_, r_head_ % size_);
+  const int64_t  rest   = len - first;
+  MYDBG("%lu + %lu > %lu (head:%lu)\n", r_tail_, len, size_, r_head_ % size_);
   if( rest > 0 ) {
-    MYDBG("First copy  %p <- %p, %lu\n", ptr_ + tail, uncached_fpos,         first);
-    MYDBG("Second copy %p <- %p, %lu\n", ptr_,        uncached_fpos + first, rest);
-    fh_->ReadTo(ptr_ + r_tail, first, uncached_fpos);
-    fh_->ReadTo(ptr_,          rest,  uncached_fpos + first);
+    MYDBG("First copy  %p <- %p, %lu\n", ptr_ + tail, pos,         first);
+    MYDBG("Second copy %p <- %p, %lu\n", ptr_,        pos + first, rest);
+    fh_->Read(ptr_ + r_tail, first, pos);
+    fh_->Read(ptr_,          rest,  pos + first);
   } else {
-    MYDBG("Copy %p <- %p, %lu\n", ptr_ + tail, uncached_fpos, len_to_read);
-    fh_->ReadTo(ptr_ + r_tail, len_to_read, uncached_fpos);
+    MYDBG("Copy %p <- %p, %lu\n", ptr_ + tail, pos, len);
+    fh_->Read(ptr_ + r_tail, len, pos);
   }
+#endif
 }
 
-
-///////////////////////////////////////////////////////////////////////////////
-// Assummed that dst is a contiguous memory space at least larger than len.
-uint64_t DataStore::ForwardFetch(char *dst, uint64_t len, uint64_t pos)
+void DataStore::InitReadMode(void) 
 {
-  uint64_t fetch_pos = pos;
-  uint64_t until = pos + len;
-  while(fetch_pos <= until) {
-    uint64_t pos_in_buf = Fetch(len, fetch_pos);
-
-    if(rbuf_size() >= len) {
-      CopyFromBuffer(dst, len, pos_in_buf);
-    } else { 
-      // In the case that buffer is not sufficient,
-      // Fetch() multiple times until completely reading from file.
-      uint64_t next_read_size = rbuf_size();
-      CopyFromBuffer(dst, rbuf_size(), pos_in_buf);
-    }
-    r_head_   += align_down(pos_in_buf + len) - r_head_;
-    fetch_pos += rbuf_size();
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Semantic of Fetch
-///////////////////////////////////////////////////////////////////////////////
-// It fetches from file to buffer space (cache) for len in byte, 
-// and retruns the offset in buffer to let users to read from buffer.
-//
-// If the data that users try to read is already in buffer (cache), 
-// it just returns the offset.
-//
-// If the data is partially cached in buffer, the remaining data in file are
-// appended from file to buffer space, then return offset to be read from
-// buffer.
-//
-// It is designed to keep invoked until reading from written_len_ to head_.
-// It is recommended to use if after flushing the buffer first.
-// The same buffer space is reused for reading from file for current DataStore,
-// assuming that the DataStore is operating in either kWriteMode or kReadMode.
-uint64_t DataStore::Fetch(uint64_t len, uint64_t pos, uint64_t &read_size, uint64_t &direction, bool locality)
-{
-  char *ret = NULL;
   if( CHECK_FLAG(mode_, kReadMode) == false) {
     Flush();
     CD_SET(mode_, kReadMode); 
     PACKER_ASSERT(buf_preserved_ == NULL);
     // Preserve the remaining buffer state
-    tail_preserved_ = buf_size();
-    posix_memalign(&((void *)buf_preserved_), CHUNK_ALIGNMENT, align_up(buf_size()));
+    tail_preserved_ = buf_used();
+    void *palloc = NULL;
+    posix_memalign(&palloc, CHUNK_ALIGNMENT, align_up(buf_used()));
+    buf_preserved_ = (char *)palloc;
     CopyFromBuffer(buf_preserved_, tail_preserved_);
     tail_ = head_;
     // r_tail_ and r_head_ only can increase by CHUNK_ALIGNMENT size
-    r_tail_ = tail_;
-    r_head_ = tail_;
+    r_tail_ = head_ + written_len_;
+    r_head_ = head_ + written_len_;
+  }
+}
+
+void DataStore::FinReadMode(void) 
+{
+  if(r_tail_ - head_ == head_ - written_len_) {
+    // Restore the remaining buffer state
+    CopyToBuffer(buf_preserved_, tail_preserved_);
+    tail_ = head_ + tail_preserved_;
+    
+    free(buf_preserved_);
+    buf_preserved_ = NULL;
+    tail_preserved_ = 0;
+    CD_UNSET(mode_, kReadMode); 
+  }
+}
+///////////////////////////////////////////////////////////////////////////////
+// Assummed that dst is a contiguous memory space at least larger than len.
+void DataStore::GetData(char *dst, uint64_t len, uint64_t pos)
+{
+  InitReadMode();
+  const int64_t  offset_diff = head_ - written_len_;
+  const uint64_t until = pos + len;
+  uint64_t fetch_pos = pos;
+  uint64_t tail_inc = 0; 
+  uint64_t head_inc = 0; 
+
+  while(len > 0) {
+    uint64_t consumed = Fetch(tail_inc, head_inc, len, fetch_pos, false);
+    CopyFromBuffer(dst, consumed, pos + offset_diff);
+    len  -= consumed;
+    r_head_ += head_inc;
+    r_tail_ += tail_inc;
+    fetch_pos += consumed;
   }
 
-  PACKER_ASSERT(CHECK_FLAG(mode_, kReadMode));
+  PACKER_ASSERT(fetch_pos == until);
+  PACKER_ASSERT(len == 0);
+  PACKER_ASSERT(r_tail_ - head_ <= head_ - written_len_);
+  FinReadMode();
+//  while(fetch_pos <= until) {
+//    uint64_t pos_in_buf = Fetch(len, fetch_pos);
+//
+//    if(rbuf_used() >= len) {
+//      CopyFromBuffer(dst, len, pos_in_buf);
+//    } else { 
+//      // In the case that buffer is not sufficient,
+//      // Fetch() multiple times until completely reading from file.
+//      uint64_t next_read_size = rbuf_used();
+//      CopyFromBuffer(dst, rbuf_used(), pos_in_buf);
+//    }
+//    r_head_   += align_down(pos_in_buf + len) - r_head_;
+//    fetch_pos += rbuf_used();
+//  }
 
-  const uint64_t pos_align_down = align_down(pos);
-  const uint64_t pos_align_up   = align_up(pos);
-//  const uint64_t redundant_len  = pos & chunk_mask;
-  const uint64_t total_len      = pos_align_up - pos_align_down;
-
-  const int64_t  offset_diff    = head_ - written_len_; 
-  const int64_t  uncached_fpos  = r_tail_ - offset_diff; // must be aligned.
-  const uint64_t buff_pos_low   = pos_align_down + offset_diff; // must be aligned.
-  const uint64_t buff_pos_high  = pos_align_up   + offset_diff; // must be aligned.
-
-  const int64_t  len_to_read    = pos_align_up + offset_diff - r_tail_; 
-  PACKER_ASSERT(uncached_fpos % CHUNK_ALIGNMENT == 0);
-  PACKER_ASSERT(len_to_read   % CHUNK_ALIGNMENT == 0);
-
-  read_size = (len > buf_size())? buf_size() : len;
-  uint64_t offset_in_buf = buf_pos_low; // return
-
-
+}
 
 /***********************************************************
  * Buffer window and data to cache.
@@ -786,37 +814,42 @@ uint64_t DataStore::Fetch(uint64_t len, uint64_t pos, uint64_t &read_size, uint6
  * Important this is to determine r_tail_next.
  * Depending on r_tail_next, r_head_next may move or not.
  */
+uint64_t DataStore::CalcOffset(uint64_t &len_to_read, uint64_t &buf_offset, 
+                               uint64_t &r_tail_next, uint64_t &r_head_next,
+                               uint64_t buf_pos_low, uint64_t buf_pos_high, bool locality)
+{
+  uint64_t total_len = buf_pos_high - buf_pos_low;
   bool overflow = total_len > size_;
-  uint64_t eff_len = (overflow)? size_ : total_len;
- 
+  uint64_t max_len_to_read = (overflow)? size_ : total_len;
   uint64_t len_in_buff = 0; 
   uint64_t len_in_file = total_len;
-  uint64_t len_to_read = total_len;
-  uint64_t r_tail_next = r_tail_;
-  uint64_t r_head_next = r_head_;
-  uint64_t buf_offset      = 0; // if offset is 0, do not perform file write
-  if(buff_pos_high > r_tail_) {   
-
-    if(buff_pos_low < r_head_) { // case 1 moving backward first
+  len_to_read = 0;
+  r_tail_next = r_tail_;
+  r_head_next = r_head_;
+  buf_offset      = 0; // if offset is 0, do not perform file write
+  if(buf_pos_high > r_tail_) {   
+    if(buf_pos_low < r_head_) { // case 1 moving backward first
                                  // or realloc will be good
+      printf("[Case 1] ");
       assert(0); // implement later
-      //int64_t buf_inc = buff_pos_high - r_tail_;
+      //int64_t buf_inc = buf_pos_high - r_tail_;
 //      int64_t buf_inc = buf_pos_low - r_tail_;
 //      r_tail_ += buf_inc;
 //      r_head_ += buf_inc;
 
 
     } 
-    else if(buff_pos_low < r_tail_) { // case 2 moving forward (common)
+    else if(buf_pos_low < r_tail_) { // case 2 moving forward (common)
       // partially read data from file for upper part
       len_in_buff = r_tail_ - buf_pos_low;
-      len_in_file = eff_len - len_in_buf;
-      uint64_t avail_len_to_read = size_ - len_in_buff; // size_ - r_tail_ + buf_pos_low
-      r_tail_next = (overflow)? r_tail_ + (avail_len_to_read) : buf_pos_high;
+      len_in_file = max_len_to_read - len_in_buff;
+//      uint64_t avail_len_to_read = size_ - len_in_buff; // size_ - r_tail_ + buf_pos_low
+      r_tail_next = (overflow)? size_ + buf_pos_low : buf_pos_high;
       len_to_read = r_tail_next - r_tail_;
       buf_offset = r_tail_;
+      printf("[Case 2] ");
     } 
-    else { // clase 0 moving forward
+    else { // case 0 moving forward
       if(locality) {
         // read whole data from file.
         // Read as much as possible
@@ -837,12 +870,12 @@ uint64_t DataStore::Fetch(uint64_t len, uint64_t pos, uint64_t &read_size, uint6
             // time.
             buf_offset  = buf_pos_low;
             r_head_next = buf_pos_low;
-            len_to_read = eff_len;
+            len_to_read = max_len_to_read;
           }
           else { // still fit
             // read from r_tail_
             buf_offset  = r_tail_;
-            r_head_next = (r_tail_next - r_head_ > size_) r_tail_next - size_ : r_head_;
+            r_head_next = (r_tail_next - r_head_ > size_)? r_tail_next - size_ : r_head_;
             len_to_read = r_tail_next - buf_offset;
           }
 //          buf_offset      = (buf_pos_high - r_tail_ > size_)? buf_pos_high - size_ : r_tail_;
@@ -851,29 +884,35 @@ uint64_t DataStore::Fetch(uint64_t len, uint64_t pos, uint64_t &read_size, uint6
 //          r_tail_ = r_tail_next;
 //          r_head_ = r_head_next;
         }
+        printf("[Case 0 w/opt] ");
       } else { // just read required size
-        len_in_file = eff_len;
-        len_to_read = eff_len;
+        len_in_file = max_len_to_read;
+        len_to_read = max_len_to_read;
         r_tail_next = (overflow)? buf_pos_low + size_ : buf_pos_high;
         r_head_next = buf_pos_low;
         buf_offset  = buf_pos_low;
+        printf("[Case 0 noopt] ");
       }
     }
 
   } // case 0, 1, 2 ends
-  else if(buff_pos_high > r_head_) { // buffer window moving backward
+  else if(buf_pos_high > r_head_) { // buffer window moving backward
 
-    if(buff_pos_low < r_head) { // case 4. moving backward
+    if(buf_pos_low < r_head_) { // case 4. moving backward
       len_in_buff = buf_pos_high - r_head_;
-      len_in_file = eff_len - len_in_buf;
-      uint64_t avail_len_to_read = size_ - len_in_buff; // size_ - r_tail_ + buf_pos_low
-      r_head_next = (overflow)? r_head_ - (avail_len_to_read) : buf_pos_low;
-      len_to_read = r_head - r_head_next;
+      len_in_file = max_len_to_read - len_in_buff;
+      //uint64_t avail_len_to_read = size_ - len_in_buff; // size_ - r_tail_ + buf_pos_low
+      //r_head_next = (overflow)? r_head_ - (avail_len_to_read) : buf_pos_low;
+      r_head_next = (overflow)? buf_pos_high - size_ : buf_pos_low;
+      len_to_read = r_head_ - r_head_next;
       buf_offset = r_head_;
+      printf("[Case 4] ");
     } 
     else { // case 3 (fully cached) do not move.
       // Just read from buffer
       len_in_buff = total_len;
+
+      printf("[Case 3] ");//%lu %lu %lu", r_head_next, r_tail_next, len_to_read);
     }
 
   } 
@@ -881,26 +920,89 @@ uint64_t DataStore::Fetch(uint64_t len, uint64_t pos, uint64_t &read_size, uint6
     if(locality) {
       assert(0);
     } else { // just read required size
-      len_in_file = eff_len;
+      len_in_file = max_len_to_read;
       len_to_read = len_in_file;
       r_head_next = (overflow)? buf_pos_high - size_ : buf_pos_low;
       r_tail_next = buf_pos_high;
       buf_offset  = buf_pos_low;
+      printf("[Case 5] ");
     }
 
   }
+//  printf("len_in_file:%lu, len_to_read:%lu, r_head_next:%lu, r_tail_next:%lu, buf_offset:%lu\n",
+//        len_in_file, len_to_read, r_head_next, r_tail_next, buf_offset);
 
-  if(len_in_buf != total_len) { 
-    CopyFileToBuffer(buf_offset, len_to_read, pos_align_down);
+//  uint64_t offset_in_buf = buf_pos_low; // return
+
+  return max_len_to_read;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Semantic of Fetch
+///////////////////////////////////////////////////////////////////////////////
+// It fetches from file to buffer space (cache) for len in byte, 
+// and retruns the offset in buffer to let users to read from buffer.
+//
+// If the data that users try to read is already in buffer (cache), 
+// it just returns the offset.
+//
+// If the data is partially cached in buffer, the remaining data in file are
+// appended from file to buffer space, then return offset to be read from
+// buffer.
+//
+// It is designed to keep invoked until reading from written_len_ to head_.
+// It is recommended to use if after flushing the buffer first.
+// The same buffer space is reused for reading from file for current DataStore,
+// assuming that the DataStore is operating in either kWriteMode or kReadMode.
+//
+// uint64_t consumed = Fetch(tail_inc, head_inc, len, pos);
+// CopyFromBuffer(dst, consumed, pos + offset_diff);
+// len  -= consumed;
+//
+// head += head_inc;
+// tail += tail_inc;
+uint64_t DataStore::Fetch(uint64_t &tail_inc, uint64_t &head_inc, uint64_t len, uint64_t pos, bool locality)
+{
+  InitReadMode();
+  PACKER_ASSERT(CHECK_FLAG(mode_, kReadMode));
+
+  const uint64_t pos_align_down = align_down(pos);
+  const uint64_t pos_align_up   = align_up(pos);
+  const int64_t  offset_diff    = head_ - written_len_; 
+  const uint64_t buf_pos_low   = pos_align_down + offset_diff; // must be aligned.
+  const uint64_t buf_pos_high  = pos_align_up   + offset_diff; // must be aligned.
+//  const int64_t  uncached_fpos  = r_tail_ - offset_diff; // must be aligned.
+//  const uint64_t redundant_len  = pos & chunk_mask;
+//  const uint64_t total_len      = pos_align_up - pos_align_down;
+  // Outputs
+  uint64_t len_to_read = 0;
+  uint64_t buf_offset  = 0;
+  uint64_t r_tail_next = 0;
+  uint64_t r_head_next = 0;
+  uint64_t len_consumed = CalcOffset(len_to_read, buf_offset, r_tail_next, r_head_next,
+                                     buf_pos_low, buf_pos_high, false);
+  if(len_to_read != 0) { 
+    CopyFileToBuffer(buf_offset, len_to_read, buf_offset - offset_diff);
   }
+  PACKER_ASSERT(len_to_read < len_consumed);
+  PACKER_ASSERT(buf_offset  % CHUNK_ALIGNMENT == 0);
+  PACKER_ASSERT(offset_diff % CHUNK_ALIGNMENT == 0);
+  tail_inc = r_tail_next - r_tail_;
+  head_inc = r_head_next - r_head_;
 
+  FinReadMode();
+  return len_consumed;
+}
+
+#if 0
+/////////////// OLD fetch /////////////////////////////////////
 //  ////////////////////////////////////////////////////////////////
 //    if(len_to_read <= 0) { // every data is in buffer
 //      uint64_t overwritten_len = r_head_ - buff_pos; 
 //      if(overwritten_len > 0) { 
 //        // the lower part was overwritten.
 //  
-//        if(len <= buf_size()) {
+//        if(len <= buf_used()) {
 //          r_head_ -= overwritten_len;
 //          CopyFileToBuffer(ptr_ + (r_head_ % size_), overwritten_len, overwritten_len);
 //        } else { // read the overwritten lower part next time.
@@ -926,11 +1028,11 @@ uint64_t DataStore::Fetch(uint64_t len, uint64_t pos, uint64_t &read_size, uint6
 //  //    if( rest > 0 ) {
 //  //      MYDBG("First copy  %p <- %p, %lu\n", ptr_ + tail, uncached_fpos,         first);
 //  //      MYDBG("Second copy %p <- %p, %lu\n", ptr_,        uncached_fpos + first, rest);
-//  //      fh_->ReadTo(ptr_ + r_tail, first, uncached_fpos);
-//  //      fh_->ReadTo(ptr_,          rest,  uncached_fpos + first);
+//  //      fh_->Read(ptr_ + r_tail, first, uncached_fpos);
+//  //      fh_->Read(ptr_,          rest,  uncached_fpos + first);
 //  //    } else {
 //  //      MYDBG("Copy %p <- %p, %lu\n", ptr_ + tail, uncached_fpos, len_to_read);
-//  //      fh_->ReadTo(ptr_ + r_tail, len_to_read, uncached_fpos);
+//  //      fh_->Read(ptr_ + r_tail, len_to_read, uncached_fpos);
 //  //    }
 //      CopyFileToBuffer(len_to_read, uncached_fpos);
 //      r_tail_ += len_to_read;
@@ -938,15 +1040,7 @@ uint64_t DataStore::Fetch(uint64_t len, uint64_t pos, uint64_t &read_size, uint6
 
 //  const uint64_t offset_in_buf = pos + offset_diff;
 //  PACKER_ASSERT(align_down(offset_in_buf - offset_diff) > pos); // this means need to read lower part overwritten
- 
-
-
-
-
-
 //  const uint64_t len_to_read    = pos_align_up - uncached_fpos;
-
-
 //  const uint64_t offset_in_buf   = pos + offset_diff;
 //  const int64_t file_len_to_read = offset_in_buf + len - r_tail_;
 //  int64_t buffer_len_to_read     = len;
@@ -955,30 +1049,13 @@ uint64_t DataStore::Fetch(uint64_t len, uint64_t pos, uint64_t &read_size, uint6
 //    buffer_len_to_read -= file_len_to_read;
 //    MYDBG("DataStore: %p, %lu, %lu\n", 
 //        ptr_ + (r_tail_ % size_), file_len_to_read, r_tail_ - offset_diff); // r_tail_ - head_ + written_len_
-//    fh_->ReadTo(ptr_ + (r_tail_ % size_), file_len_to_read, r_tail_ - offset_diff);
+//    fh_->Read(ptr_ + (r_tail_ % size_), file_len_to_read, r_tail_ - offset_diff);
 //    PACKER_ASSERT(r_tail_ - offset_diff == pos + buffer_len_to_read); 
 //    // r_tail_ - offset_diff - pos - len + offset_diff + pos + len - r_tail_ == 0
 //
 //  }
-  
 //  ret = ptr_ + ((pos + offset_diff) % size_); 
-
-  PACKER_ASSERT(r_tail_ - head_ <= head_ - written_len_);
-  if(r_tail_ - head_ == head_ - written_len_) {
-    // Restore the remaining buffer state
-    CopyToBuffer(buf_preserved_, tail_preserved_);
-    tail_ = head_ + tail_preserved_;
-    
-    free(buf_preserved_);
-    buf_preserved_ = NULL;
-    tail_preserved_ = 0;
-    CD_UNSET(mode_, kReadMode); 
-  }
-
-  return ret;
-}
-
-#if 0
+/////////////////////////////////////////////////////////////////
 //  const int64_t first = size_ - (head_ % size_);
 //  const uint64_t first_aligndown = mask_len & first;
 //  const uint64_t file_offset = head_ + written_len_;
@@ -1034,8 +1111,11 @@ CDErrType DataStore::WriteFile(void)
 
 CDErrType DataStore::WriteFile(int64_t len)
 {
-  CDErrType ret = kOK;
+
   PACKER_ASSERT(len > 0);
+  CDErrType ret = CopyBufferToFile(head_, len, head_ + written_len_);
+
+#if 0
   uint64_t mask_len = ~(chunksize_ - 1);
   MYDBG("[DataStore::%s] head:%lu written:%lu, used:%ld, len:%ld, inc:%lu\n", 
       __func__, head_, written_len_, buf_used(), len, mask_len & len); //getchar();
@@ -1083,8 +1163,8 @@ CDErrType DataStore::WriteFile(int64_t len)
     //ret = fh_->Write(file_offset, begin(), len, mask_len & len);
     ret = fh_->Write(file_offset, begin(), align_up(len, CHUNK_ALIGNMENT), mask_len & len);
   }
-  head_ += mask_len & len; 
-
+#endif
+  head_ += ~chunk_mask & len; 
   return ret;
 }
 

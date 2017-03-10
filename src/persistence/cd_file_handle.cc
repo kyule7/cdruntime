@@ -117,32 +117,33 @@ char *PosixFileHandle::Read(uint64_t len, uint64_t offset)
   //void *ret_ptr = new char[len];
   void *ret_ptr = NULL;
   posix_memalign(&ret_ptr, CHUNK_ALIGNMENT, len);
-  ReadTo(ret_ptr, len, offset);
+  Read(ret_ptr, len, offset);
   return (char *)ret_ptr;
 }
 
-char *PosixFileHandle::ReadTo(void *dst, uint64_t len, uint64_t offset)
+CDErrType PosixFileHandle::Read(void *dst, uint64_t len, uint64_t offset)
 {
+  CDErrType ret = kOK;
   MYDBG("%lu (file offset:%lu)\n", len, offset);
   //if(offset != 0) 
   {
-    off_t ret = lseek(fdesc_, offset, SEEK_SET);
-    if(ret < 0) {
+    off_t seeked = lseek(fdesc_, offset, SEEK_SET);
+    if(seeked < 0) {
       perror("read:");
-      ERROR_MESSAGE_PACKER("Error occurred while seeking file:%ld\n", ret);
+      ERROR_MESSAGE_PACKER("Error occurred while seeking file:%ld\n", seeked);
     }
   }
 
   BufferLock();
-  ssize_t ret = read(fdesc_, dst, len);
-  if(ret < 0) {
+  ssize_t readsize = read(fdesc_, dst, len);
+  if(readsize < 0) {
     perror("read:");
     ERROR_MESSAGE_PACKER(
         "Error occurred while reading buffer contents from file: %d %ld != %ld, align:%lu %lu\n",
-        fdesc_, ret, len, offset, offset % CHUNK_ALIGNMENT);
+        fdesc_, readsize, len, offset, offset % CHUNK_ALIGNMENT);
   }
   BufferUnlock();
-  return (char *)dst;
+  return ret;
 }
 
 void PosixFileHandle::FileSync(void)

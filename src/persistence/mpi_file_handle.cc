@@ -141,14 +141,15 @@ char *MPIFileHandle::Read(uint64_t len, uint64_t offset)
   //void *ret_ptr = new char[len];
   void *ret_ptr = NULL;
   posix_memalign(&ret_ptr, CHUNK_ALIGNMENT, len);
-  ReadTo(ret_ptr, len, offset);
+  Read(ret_ptr, len, offset);
   return (char *)ret_ptr;
 }
 
-char *MPIFileHandle::ReadTo(void *dst, uint64_t len, uint64_t offset)
+CDErrType MPIFileHandle::Read(void *dst, uint64_t len, uint64_t offset)
 {
   MYDBG("%lu (file offset:%lu)\n", len, offset);
 
+  CDErrType ret = kOK;
   MPI_Status status;
  // int rank;
  // MPI_Comm_rank(comm_, &rank);
@@ -158,7 +159,7 @@ char *MPIFileHandle::ReadTo(void *dst, uint64_t len, uint64_t offset)
 //  CheckError( MPI_File_set_view(fdesc_, view_offset, MPI_BYTE, ftype_, "native", MPI_INFO_NULL) );
   CheckError( MPI_File_read_at(fdesc_, offset, dst, len, MPI_BYTE, &status) );
   BufferUnlock();
-  return (char *)dst;
+  return ret;
 }
 
 void MPIFileHandle::FileSync(void)

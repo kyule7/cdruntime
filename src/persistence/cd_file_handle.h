@@ -33,7 +33,7 @@ class FileHandle {
   public: 
     virtual CDErrType Write(uint64_t offset, char *src, uint64_t chunk, int64_t inc=-1)=0;
     virtual char *Read(uint64_t len, uint64_t offset=0)=0;
-    virtual char *ReadTo(void *dst, uint64_t len, uint64_t offset=0)=0;
+    virtual CDErrType Read(void *dst, uint64_t len, uint64_t offset=0)=0;
     virtual void FileSync(void)=0;
     virtual void Truncate(uint64_t newsize)=0;
     virtual int64_t GetFileSize(void)=0;
@@ -53,7 +53,7 @@ class PosixFileHandle : public FileHandle {
     void Close(void);
     virtual CDErrType Write(uint64_t offset, char *src, uint64_t chunk, int64_t inc=-1);
     virtual char *Read(uint64_t len, uint64_t offset=0);
-    virtual char *ReadTo(void *dst, uint64_t len, uint64_t offset=0);
+    virtual CDErrType Read(void *dst, uint64_t len, uint64_t offset=0);
     virtual void FileSync(void);
     virtual void Truncate(uint64_t newsize);
     virtual int64_t GetFileSize(void);

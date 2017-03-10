@@ -87,8 +87,9 @@ class DataStore {
     void Read(char *pto, uint64_t size, uint64_t pos);
     void ReadAll(char *pto);
     char *ReadAll(uint64_t &totsize);
-    uint64_t ForwardFetch(char *dst, uint64_t len, uint64_t pos);
-    uint64_t Fetch(uint64_t len, uint64_t pos);
+    void FileRead(char *pto, uint64_t chunk_in_file, uint64_t pos);
+    uint64_t Fetch(uint64_t &tail_inc, uint64_t &head_inc, uint64_t len, uint64_t pos, bool locality=false);
+    void GetData(char *dst, uint64_t len, uint64_t pos);
 
     // Flush buffer
     void FileSync(void);
@@ -97,8 +98,16 @@ class DataStore {
 
   private:
     // Internel
+    inline void InitReadMode(void);
+    inline void FinReadMode(void);
+    inline uint64_t CalcOffset(uint64_t &len_to_read, uint64_t &buf_offset, 
+                               uint64_t &r_tail_next, uint64_t &r_head_next,
+                               uint64_t buf_pos_low, uint64_t buf_pos_high, 
+                               bool locality=false);
     void CopyFromBuffer(char *dst, uint64_t len, uint64_t pos=INVALID_NUM);
     void CopyToBuffer(char *src, uint64_t len);
+    CDErrType CopyFileToBuffer(uint64_t buf_pos, int64_t len, uint64_t pos);
+    CDErrType CopyBufferToFile(uint64_t buf_pos, int64_t len, uint64_t file_pos);
     uint64_t WriteBuffer(char *src, int64_t len);
     uint64_t WriteMem(char *src, int64_t len);
   public:
