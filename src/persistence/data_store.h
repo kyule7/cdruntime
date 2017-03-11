@@ -88,8 +88,10 @@ class DataStore {
     void ReadAll(char *pto);
     char *ReadAll(uint64_t &totsize);
     void FileRead(char *pto, uint64_t chunk_in_file, uint64_t pos);
-    uint64_t Fetch(uint64_t &tail_inc, uint64_t &head_inc, uint64_t len, uint64_t pos, bool locality=false);
-    void GetData(char *dst, uint64_t len, uint64_t pos);
+    inline uint64_t Fetch(int64_t &tail_inc, int64_t &head_inc, int64_t len, uint64_t pos, bool locality=false);
+    uint64_t FetchInternal(int64_t &tail_inc, int64_t &head_inc, int64_t len, uint64_t pos, bool locality=false);
+    uint64_t Fetch(int64_t len, uint64_t pos, bool locality=false);
+    void GetData(char *dst, int64_t len, uint64_t pos, bool keep_reading=true);
 
     // Flush buffer
     void FileSync(void);
@@ -124,6 +126,7 @@ class DataStore {
       copy(that);
       return *this;
     }
+    char *GetPtr(const uint64_t idx) const { return (ptr_ + (idx % size_)); }
 //    uint64_t used(void) { return tail_ - head_; }
     ///@brief Total bytes written to file.
     inline uint64_t used(void)      const { return tail_ + written_len_; }

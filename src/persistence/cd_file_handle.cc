@@ -9,7 +9,14 @@
 #include "cd_file_handle.h"
 #include "buffer_consumer_interface.h"
 #include "string.h"
+#include "packer_prof.h"
 using namespace packer;
+
+//Time packer::time_write("time_write"); 
+//Time packer::time_read("time_read"); 
+//packer::Time packer::time_posix_write("posix_write"); 
+//packer::Time packer::time_posix_read("posix_read"); 
+//packer::Time packer::time_posix_seek("posix_seek"); 
 
 std::string FileHandle::basepath(DEFAULT_BASEPATH); 
 PosixFileHandle *PosixFileHandle::fh_ = NULL;
@@ -81,7 +88,9 @@ CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64
   //if(offset != offset_) 
   if(1)
   {
+    time_posix_seek.Begin();
     off_t ret = lseek(fdesc_, offset, SEEK_SET);
+    time_posix_seek.End();
     // Error Check
     if(ret < 0) {
       perror("lseek:");
@@ -98,7 +107,10 @@ CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64
 //  if((len & 511) > 0) { 
 //    len += 512;
 //  }
+  time_posix_write.Begin();
   ssize_t written_size = write(fdesc_, src, len);
+  time_posix_write.End(len);
+
   offset_ = (inc >= 0)? offset_ + inc : offset_ + len;
   printf("offset:%lu\n", offset_); //getchar();
   // Error Check
@@ -134,8 +146,11 @@ CDErrType PosixFileHandle::Read(void *dst, uint64_t len, uint64_t offset)
     }
   }
 
+  
   BufferLock();
+  time_posix_read.Begin();
   ssize_t readsize = read(fdesc_, dst, len);
+  time_posix_read.End(len);
   if(readsize < 0) {
     perror("read:");
     ERROR_MESSAGE_PACKER(

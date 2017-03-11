@@ -1,4 +1,5 @@
 #include "mpi_file_handle.h"
+#include "packer_prof.h"
 #include <sys/time.h>
 //#include <sys/types.h>
 //#include <sys/stat.h>
@@ -10,8 +11,10 @@
 #include "buffer_consumer_interface.h"
 #include <string.h> // strcpy
 
-
 using namespace packer;
+//packer::Time packer::time_mpiio_write("mpiio_write"); 
+//packer::Time packer::time_mpiio_read("mpiio_read"); 
+//packer::Time packer::time_mpiio_seek("mpiio_seek"); 
 
 MPIFileHandle *MPIFileHandle::fh_ = NULL;
 char err_str[MPI_MAX_ERR_STR];

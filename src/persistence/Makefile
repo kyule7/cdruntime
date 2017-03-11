@@ -6,7 +6,7 @@ LFLAGS=-fPIC -Wall -g -std=gnu++0x -I.
 
 #all:  test_mpi
 
-OBJS=data_store.o buffer_consumer.o cd_file_handle.o table_store.o
+OBJS=data_store.o buffer_consumer.o cd_file_handle.o table_store.o packer_prof.o
 
 MPIOBJS=${OBJS} mpi_file_handle.o  cd_file_handle_interface.o
 
@@ -42,6 +42,9 @@ data_store.o: data_store.cc
 	${CC} ${CFLAGS} $^ -o $@
 
 table_store.o: table_store.cc
+	${CC} ${CFLAGS} $^ -o $@
+
+packer_prof.o: packer_prof.cc
 	${CC} ${CFLAGS} $^ -o $@
 
 

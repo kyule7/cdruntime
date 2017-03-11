@@ -31,27 +31,41 @@ class CDPacker : public Packer<CDEntry> {
 
 #if 1
       if( entry.size_.Check(Attr::knested) == false) {
-        data_->Read(dst, entry.size(), entry.offset_);
+        data_->GetData(dst, entry.size(), entry.offset_);
       } else {
         
-        data_->ForwardFetch(entry.size(), entry.offset_);
-        uint64_t table_size = entry.offset_ - (uint64_t)entry.src_;
+//        uint64_t produced = data_->Fetch(entry.size(), entry.offset_);
+        printf("\n\n TEST $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n"); //getchar();
+        uint64_t table_offset = (uint64_t)entry.src_;
+        uint64_t data_size   = table_offset - entry.offset_; //entry.offset_ - table_offset;
+        uint64_t table_size  = entry.size() - data_size;
+        printf("Check entry for packed obj:totsize:%lu offset:%lu tableoffset:%lu tablesize:%lu\n", 
+           entry.size(), entry.offset_, table_offset, table_size); //getchar();
+        data_->Fetch(table_size, table_offset);
         CDEntry *pEntry = reinterpret_cast<CDEntry *>(
-            data_->ForwardFetchRead(table_size, (uint64_t)entry.src_) );
+            data_->GetPtr(table_offset + data_->head()));
+
+        // Test
         {
           printf("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n");
-          uint64_t *pEntry = reinterpret_cast<uint64_t *>(ret);
+          uint64_t *ptest = reinterpret_cast<uint64_t *>(pEntry);
           for(uint64_t i=0; i<table_size/sizeof(CDEntry); i++) {
-            printf("%6lu %6lu %6lu %6lu\n", *pEntry, *(pEntry+1), *(pEntry+2), *(pEntry+3));
-            pEntry += 4;
+            printf("%6lu %6lu %6lu %6lu\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
+            ptest += 4;
           }
           printf("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n\n\n");
-          getchar();
+          //getchar();
         }
         // This will just read from cache (memory)
-        for(uint32_t i=0; i<table_size/sizeof(CDEntry); i++) {
-          data_->Read(pEntry->src_, pEntry->size(), pEntry->offset_);
+        uint64_t num_entries = table_size/sizeof(CDEntry);
+        printf("# of entries:%lu, head:%lu, pos_buf:%lu\n", num_entries, data_->head(), pEntry->offset_); //getchar();
+        for(uint32_t i=0; i<num_entries; i++, pEntry++) {
+          data_->GetData(pEntry->src_, pEntry->size(), pEntry->offset_);
         }
+
+//        PACKER_ASSERT_STR(align_up(table_size) == consumed, 
+//            "tablesize:%lu==%lu(consumed)\n", table_size, consumed);
+
       }
 #else
       if( entry.size_.Check(Attr::knested) == false ) {
