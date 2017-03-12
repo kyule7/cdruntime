@@ -146,7 +146,6 @@ CDErrType PosixFileHandle::Read(void *dst, uint64_t len, uint64_t offset)
     }
   }
 
-  
   BufferLock();
   time_posix_read.Begin();
   ssize_t readsize = read(fdesc_, dst, len);

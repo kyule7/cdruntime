@@ -6,8 +6,6 @@
 #include <string>
 #include "define.h"
 #define MAX_FILEPATH_SIZE 256
-//#define CHUNK_ALIGNMENT 512
-//#define CHUNK_ALIGNMENT 256
 #define DEFAULT_BASEPATH "./"
 #define DEFAULT_FILEPATH_POSIX "posix_filepath"
 #define DEFAULT_FILEPATH_AIO   "aio_filepath"
@@ -39,6 +37,7 @@ class FileHandle {
     virtual int64_t GetFileSize(void)=0;
     virtual uint32_t GetBlkSize(void)=0;
     void SetOffset(uint64_t offset) { offset_ = offset; }
+    void IncOffset(uint64_t offset) { offset_ += offset; }
 };
 
 // Singleton

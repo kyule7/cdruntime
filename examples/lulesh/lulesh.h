@@ -772,6 +772,92 @@ unsigned vec2id(unsigned long long n) {
     }
     
     // With this interface, user can switch to a different serializer with a method flag.
+    uint64_t PreserveObject(DataStore* pPacker) {
+      // Use the same DataStore for in-place preservation,
+      // but use the separate table. This table is different from entry_directory_,
+      // and will be just appended in its DataStore, not in its TableStore.
+      CDPacker packer(NULL, pPacker);
+      CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
+      uint64_t orig_size = packer.data_->used(); // return
+
+      packer.data_->SetFileType(kVolatile);
+      
+      // May be able to skip this
+      MagicStore magic;
+      uint64_t magic_offset = packer.data_->WriteFlushMode(&magic, sizeof(MagicStore));
+      MagicStore &magic_in_place = packer.data_->GetMagicStore(magic_offset);
+
+      uint64_t vec = serdes_vec;
+      while(vec != 0) {
+        uint32_t id = vec2id(vec);
+        if(vec & 0x1) {
+          if(id != ID__REGELEMLIST_INNER) {
+            packer.Add(serdes_table[id].src, BaseEntry(id, serdes_table[id].size));
+          } else {
+            Index_t &numRegSize = dom->numReg();
+            for(int j=0; j<numRegSize; ++j) {
+              packer.Add( ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src,
+                            BaseEntry(j + ID__SERDES_ALL, 
+                                      ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size)
+                          );
+            }
+          }
+        }
+        vec >>= 1;
+      } // while ends
+      uint64_t table_offset = packer.AppendTable();
+      uint64_t total_size = packer.data_->used() - orig_size;
+      magic_in_place.total_size_   = total_size;
+      magic_in_place.table_offset_ = table_offset - magic_offset;
+      magic_in_place.entry_type_   = kCDEntry;
+      
+      packer.data_->SetFileType(kPosixFile);
+
+      return table_offset;
+    }
+
+    void *Serialize(uint64_t &len_in_bytes) {
+      // User define whatever they want.
+      CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
+//      printf("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
+      Packer packer;
+      PreserveObject(&packer);
+      return packer.GetTotalData(len_in_bytes);
+    }
+
+    // Should be 
+    virtual void Deserialize(void *object) {
+      // Deserialize object and restore to each member.
+      CD_DEBUG("LULESH %s, obj: %p\n", __func__, object);
+      //
+      Packer packer(object);
+      uint64_t vec = serdes_vec;
+      uint64_t return_id = 0, return_size = 0;
+      uint64_t i=1;
+      while(vec != 0) {
+        uint32_t id = vec2id(vec);
+//        printf("loop i = %u, vec = %lu\n", i, vec);
+        if(vec & 0x1) {
+          if(id != ID__REGELEMLIST_INNER) {
+            CD_DEBUG("ID : %d\n", i);
+            packer.GetNext(serdes_table[id].src, id);
+          } else {
+            CD_DEBUG("ID : %d (INNER)\n", i);
+            Index_t &numRegSize = dom->numReg();
+            for(int j=0; j<numRegSize; ++j) {
+              packer.GetNext( ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src, 
+                                j + ID__SERDES_ALL);
+            }
+          }
+        }
+        i++;
+        vec >>= 1;
+      }
+
+    }
+
+#if 0
+    // With this interface, user can switch to a different serializer with a method flag.
     uint64_t PreserveObject(void *pPacker) {
       // Use the same DataStore for in-place preservation,
       // but use the separate table. This table is different from entry_directory_,
@@ -863,6 +949,8 @@ unsigned vec2id(unsigned long long n) {
       }
 
     }
+
+#endif
 };
 #endif
 #if SERDES_ENABLED

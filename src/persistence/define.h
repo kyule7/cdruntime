@@ -30,6 +30,10 @@ namespace packer {
 extern uint64_t table_id; 
 class BaseTable;
 
+inline bool align_check(char *ptr, uint64_t mask=CHUNK_ALIGNMENT) {
+  return (((uint64_t)ptr & (mask-1)) == 0);
+}
+
 inline uint64_t align_up(uint64_t num, uint64_t mask=CHUNK_ALIGNMENT) {
   uint64_t aligned_down = num & ~(mask-1);
   uint64_t remain = num & (mask-1);
@@ -92,10 +96,10 @@ struct MagicStore {
   uint64_t reserved2_; // 32 B
   char pad_[480];
   MagicStore(void);
-  MagicStore(uint64_t total_size, uint64_t table_offset=0, uint32_t entry_type=0);
+  MagicStore(uint64_t total_size, uint64_t table_offset=0, uint32_t entry_type=1);
   MagicStore(const MagicStore &that);
   void Print(void);
-};
+} __attribute__((aligned(CHUNK_ALIGNMENT)));
 
 }
 

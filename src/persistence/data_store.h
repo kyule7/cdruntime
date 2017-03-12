@@ -18,7 +18,7 @@ namespace packer {
 #define CD_UNSET(STATE,Y) ((STATE) &= ~(Y))
 #define CD_SET(STATE,Y)   ((STATE) |=  (Y))
 //#define CHUNKSIZE_THRESHOLD_BASE 0x1000 // 4KB
-#define CHUNKSIZE_THRESHOLD_BASE 0x4000 // 16KB
+#define CHUNKSIZE_THRESHOLD_BASE 0x40000 // 16KB
 //#define CHUNKSIZE_THRESHOLD_BASE 0x200 // 16KB
 
 //enum {
@@ -51,7 +51,8 @@ class DataStore {
     uint32_t chunksize_;
     char    *ptr_;
     char    *buf_preserved_;
-    uint64_t tail_preserved_;
+    uint64_t tail_preserved_; // used for kReadMode
+    uint64_t head_preserved_; // used for FakeWrite
     FileHandle *fh_;
   private:
     uint64_t r_tail_;
@@ -66,14 +67,31 @@ class DataStore {
     CDErrType Reallocate(uint64_t len);
 //    CDErrType SafeReallocate(uint64_t len);
     // Write
-    uint64_t Write(char *pfrom, uint64_t len, uint64_t pos);
-    uint64_t Write(char *pfrom, uint64_t len);
+    uint64_t Write(char *pfrom, int64_t len, uint64_t pos);
+    uint64_t Write(char *pfrom, int64_t len);
     ///@brief Write data to bounded in-memory buffer. 
     ///       If buffer is full, wait until buffer is available.
-    inline uint64_t WriteBufferMode(char *pfrom, uint64_t len);
+    inline uint64_t WriteBufferMode(char *pfrom, uint64_t len)
+    {
+      // Reallocate buffer or wait until completing write
+      // If WriteBuffer() is still not sufficient to
+      // reserve space for incoming data size (len),
+      // Do reallocate
+      if( len > size_ ) {
+        Reallocate(len);
+      }
+    
+      return WriteBuffer(pfrom, len);
+    }
     ///@brief Write data to unbounded in-memory buffer.
     ///       If buffer is full, realloc buffer for larger space.
-    inline uint64_t WriteCacheMode(char *pfrom, uint64_t len);
+    inline uint64_t WriteCacheMode(char *pfrom, uint64_t len) 
+    {
+      if( len + buf_used() > size_ ) {
+        Reallocate(len);
+      }
+      return WriteMem(pfrom, len);
+    }
     ///@brief Write data to bounded in-memory buffer.
     ///       If buffer is full, flush current data in buffer,
     ///       then write new data in buffer.
@@ -82,6 +100,7 @@ class DataStore {
     uint64_t WriteFlushMode(char *pfrom, uint64_t len);
     CDErrType WriteFile(int64_t len);
     CDErrType WriteFile(void);
+    uint64_t FakeWrite(uint64_t len);
 
     // Read
     void Read(char *pto, uint64_t size, uint64_t pos);
@@ -107,7 +126,7 @@ class DataStore {
                                uint64_t buf_pos_low, uint64_t buf_pos_high, 
                                bool locality=false);
     void CopyFromBuffer(char *dst, uint64_t len, uint64_t pos=INVALID_NUM);
-    void CopyToBuffer(char *src, uint64_t len);
+    void CopyToBuffer(char *src, uint64_t len, uint64_t pos=INVALID_NUM);
     CDErrType CopyFileToBuffer(uint64_t buf_pos, int64_t len, uint64_t pos);
     CDErrType CopyBufferToFile(uint64_t buf_pos, int64_t len, uint64_t file_pos);
     uint64_t WriteBuffer(char *src, int64_t len);
@@ -154,9 +173,12 @@ class DataStore {
     ///@brief Pointer that will be effectively used.
     inline char *GetPtr(void)       const { return ptr_; }
     inline void IncHead(uint64_t len)     { head_ += len; }
+    inline uint64_t PadZeros(uint64_t len)    { uint64_t offset = align_up(tail_); 
+                                            tail_ = align_up(tail_ + len);  return offset; }
     inline void SetGrowUnit(uint32_t grow_unit) { grow_unit_ = grow_unit; }
-    inline void SetMode(uint32_t mode) { mode_ = mode; }
-    inline void SetFileType(uint32_t mode) { SET_FILE_TYPE(mode_, mode); }
+    inline uint32_t SetMode(uint32_t mode) { uint32_t orig_mode = mode_; mode_ = mode; return orig_mode; }
+    inline uint32_t SetFileType(uint32_t mode) { uint32_t orig_type = GET_FILE_TYPE(mode_); 
+                                                 SET_FILE_TYPE(mode_, mode);  return orig_type; }
     inline void Print(void) const
     { MYDBG("%lu/%lu, grow:%lu, alloc:%u\n", buf_used(), size_, grow_unit_, allocated_); }
     void UpdateMagic(const MagicStore &magic);

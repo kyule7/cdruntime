@@ -282,30 +282,54 @@ CDErrType DataStore::FlushMagic(const MagicStore *magic)
 //  return buf_used() >= chunksize_threshold;
 //}
 
-uint64_t DataStore::WriteBufferMode(char *pfrom, uint64_t len)
+//uint64_t DataStore::WriteBufferMode(char *pfrom, uint64_t len)
+//{
+//  // Reallocate buffer or wait until completing write
+//  // If WriteBuffer() is still not sufficient to
+//  // reserve space for incoming data size (len),
+//  // Do reallocate
+//  if( len > size_ ) {
+//    Reallocate(len);
+//  }
+//
+//  return WriteBuffer(pfrom, len);
+//}
+
+//uint64_t DataStore::WriteCacheMode(char *pfrom, uint64_t len)
+//{
+//  if( len + buf_used() > size_ ) {
+//    Reallocate(len);
+//  }
+//  return WriteMem(pfrom, len);
+//}
+
+uint64_t DataStore::Write(char *pfrom, int64_t len, uint64_t pos)
 {
-  // Reallocate buffer or wait until completing write
-  // If WriteBuffer() is still not sufficient to
-  // reserve space for incoming data size (len),
-  // Do reallocate
-  if( len > size_ ) {
-    Reallocate(len);
+  PACKER_ASSERT(len > 0);
+  CDErrType ret = kOK;
+  if(head_ > pos) { // already data was written to file.
+    PACKER_ASSERT(len % CHUNK_ALIGNMENT == 0);
+    if(align_check(pfrom)) { 
+//      ret = CopyBufferToFile(pfrom, len, pos + written_len_);
+      ret = fh_->Write(pos + written_len_, pfrom, len, 0);
+    } else { // pfrom is misaligned.
+      void *ptr;
+      const uint64_t len_up = align_up(len);
+      posix_memalign(&ptr, CHUNK_ALIGNMENT, len_up);
+      memcpy(ptr, pfrom, len);
+//      ret = CopyBufferToFile(ptr, len, pos + written_len_);
+      ret = fh_->Write(pos + written_len_, (char *)ptr, len, 0);
+      free(ptr);
+    }
+  } else {
+    CopyToBuffer(pfrom, len, pos); 
   }
-
-  return WriteBuffer(pfrom, len);
+  if(ret != kOK) assert(0);
+  return 0;
 }
-
-uint64_t DataStore::WriteCacheMode(char *pfrom, uint64_t len)
-{
-  if( len + buf_used() > size_ ) {
-    Reallocate(len);
-  }
-  return WriteMem(pfrom, len);
-}
-
 
 // Bounded buffer mode: write from the ptr
-uint64_t DataStore::Write(char *pfrom, uint64_t len)//, uint64_t pos)
+uint64_t DataStore::Write(char *pfrom, int64_t len)
 {
   time_write.Begin();
   MYDBG("%lu\n", len);
@@ -599,21 +623,22 @@ void DataStore::CopyFromBuffer(char *dst, uint64_t len, uint64_t pos)
 
 // This is used to copy buffer contents to a contiguous data,
 // which is the opposite-direction copy operation of WriteMem.
-void DataStore::CopyToBuffer(char *src, uint64_t len)
+void DataStore::CopyToBuffer(char *src, uint64_t len, uint64_t pos)
 {
+  const uint64_t offset = (pos == INVALID_NUM)? tail_ % size_ : pos % size_;
   MYDBG("Copy %p -> %lu\n", src, len);
-  const uint64_t tail  = tail_ % size_;
-  const uint64_t first = size_ - tail;
+//  const uint64_t tail  = buf_pos % size_;
+  const uint64_t first = size_ - offset;
   const int64_t  rest  = len - first;
-  MYDBG("%lu + %lu > %lu (head:%lu)\n", tail, len, size_, head_ % size_);
+  MYDBG("%lu + %lu > %lu (head:%lu)\n", offset, len, size_, head_ % size_);
   if( rest > 0 ) {
-    MYDBG("First copy  %p <- %p, %lu\n", ptr_ + tail, src,         first);
-    MYDBG("Second copy %p <- %p, %lu\n", ptr_,        src + first, rest);
-    Copy(ptr_ + tail, src,         first);
-    Copy(ptr_,        src + first, rest);
+    MYDBG("First copy  %p <- %p, %lu\n", ptr_ + offset, src,         first);
+    MYDBG("Second copy %p <- %p, %lu\n", ptr_,          src + first, rest);
+    Copy(ptr_ + offset, src,         first);
+    Copy(ptr_,          src + first, rest);
   } else {
-    MYDBG("Copy %p <- %p, %lu\n", ptr_ + tail, src, len);
-    Copy(ptr_ + tail, src, len);
+    MYDBG("Copy %p <- %p, %lu\n", ptr_ + offset, src, len);
+    Copy(ptr_ + offset, src, len);
   }
 }
 
@@ -800,9 +825,9 @@ void DataStore::GetData(char *dst, int64_t len, uint64_t pos, bool keep_reading)
   //PACKER_ASSERT_STR((r_tail_ >= head_ && r_tail_ < head_ + CHUNK_ALIGNMENT),  
 //  uint64_t last_rtail = r_tail_ - tail_inc;
   PACKER_ASSERT_STR(orig_rtail == r_tail_ 
-      || r_tail_ - orig_rtail >= align_up(pos + orig_len) - align_down(pos),
+      || r_tail_ - orig_rtail >= align_up(pos + orig_len) - align_down(pos) - CHUNK_ALIGNMENT,
       "%lu (%lu - %lu) >= %lu\n",
-      r_tail_ - orig_rtail, r_tail_, orig_rtail, align_up(pos + orig_len) - align_down(pos));
+      r_tail_ - orig_rtail, r_tail_, orig_rtail, align_up(pos + orig_len) - align_down(pos) - CHUNK_ALIGNMENT);
 //  PACKER_ASSERT_STR( head_ + pos <= last_rtail && last_rtail <= head_ + pos + CHUNK_ALIGNMENT,
 //      "%lu <= %lu <= %lu (rtail:%lu, head:%lu)\n", 
 //      head_ + pos, last_rtail, head_ + pos + CHUNK_ALIGNMENT, r_tail_, head_);
@@ -830,6 +855,16 @@ void DataStore::GetData(char *dst, int64_t len, uint64_t pos, bool keep_reading)
 
 }
 
+uint64_t DataStore::FakeWrite(uint64_t len)
+{
+  head_preserved_ = head_; 
+  uint64_t len_to_write = len & ~chunk_mask;
+  if(len_to_write > 0) {
+    head_ += len_to_write;
+    fh_->SetOffset(len_to_write);//offset_ += len_to_write; 
+  }
+  return head_preserved_ + written_len_;
+}
 /***********************************************************
  * Buffer window and data to cache.
  *

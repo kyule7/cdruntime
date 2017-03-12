@@ -13,39 +13,61 @@ FILE *dbgfp=stdout;
 
 uint64_t PreserveObject(DataStore *data, int *datap, int elemsize, int chunksize) {
   CDPacker nested_packer(NULL, data);
-  nested_packer.data_->SetFileType(kVolatile);
-   
-  MagicStore magic;
   uint64_t orig_size = nested_packer.data_->used();
-  uint64_t magic_offset = nested_packer.data_->WriteFlushMode((char *)&magic, sizeof(MagicStore));
-//  printf("after flush magic\n"); getchar();
-  MagicStore &magic_in_place = nested_packer.data_->GetMagicStore(magic_offset);
+  uint64_t magic_offset = 0;
+  bool opt = true;
+  if(opt == true) {
+    //assert(0); // FIXME: need to pad zero, then call FakeWrite
+    
+    magic_offset = nested_packer.data_->PadZeros(sizeof(MagicStore));
+//    magic_offset = nested_packer.data_->FakeWrite(sizeof(MagicStore));
+
+  } else {
+    nested_packer.data_->SetFileType(kVolatile);
+    MagicStore magic;
+    magic_offset = nested_packer.data_->WriteCacheMode((char *)&magic, sizeof(MagicStore));
+//  uint64_t magic_offset = nested_packer.data_->WriteFlushMode((char *)&magic, sizeof(MagicStore));
+  //  printf("after flush magic\n"); getchar();
+  }
+
+
   for(int i=0; i<elemsize; i++) {
     nested_packer.Add((char *)datap, CDEntry(i+1, chunksize * sizeof(int), 0, (char *)datap));
     datap+=chunksize;
   }
   uint64_t table_offset =  nested_packer.AppendTable();
-  // update magic
   uint64_t total_size = nested_packer.data_->used() - orig_size;
-  magic_in_place.total_size_   = total_size;
-  magic_in_place.table_offset_ = table_offset - magic_offset;
-  magic_in_place.entry_type_   = kCDEntry;
 
-  // test
-  printf("[offset:%lu, %zu, orig:%lx after:%lx] magic: %lu %lu %u, data:%lu, table:%lu\n", magic_offset, sizeof(MagicStore), orig_size, nested_packer.data_->used(),
-    magic_in_place.total_size_  ,
-    magic_in_place.table_offset_,
-    magic_in_place.entry_type_,
-    chunksize*elemsize*sizeof(int) + sizeof(MagicStore), elemsize * sizeof(CDEntry) );  
-  getchar();
+  if(opt == true) {
+    MagicStore magic(total_size, 
+                     table_offset - magic_offset - nested_packer.data_->offset(), 
+                     kCDEntry);
+    nested_packer.data_->Write((char *)&magic, sizeof(MagicStore), magic_offset);
+  } else {
+    // update magic
+    MagicStore &magic_in_place = nested_packer.data_->GetMagicStore(magic_offset);
+    magic_in_place.total_size_   = total_size;
+    magic_in_place.table_offset_ = table_offset - magic_offset;
+    magic_in_place.entry_type_   = kCDEntry;
+    nested_packer.data_->SetFileType(kPosixFile);
+
+    // test //////////////////
+    printf("[offset:%lu, %zu, orig:%lx after:%lx] magic: %lu %lu %u, data:%lu, table:%lu\n", 
+              magic_offset, sizeof(MagicStore), orig_size, nested_packer.data_->used(),
+              magic_in_place.total_size_  ,
+              magic_in_place.table_offset_,
+              magic_in_place.entry_type_,
+              chunksize*elemsize*sizeof(int) + sizeof(MagicStore), elemsize * sizeof(CDEntry) );  
+    //getchar();
+  }
 
   
-  MagicStore magictest = *reinterpret_cast<MagicStore *>(nested_packer.data_->GetPtr() + (magic_offset - nested_packer.data_->offset()) % nested_packer.data_->size());
+  MagicStore magictest = *reinterpret_cast<MagicStore *>(
+      nested_packer.data_->GetPtr() + (magic_offset - nested_packer.data_->offset()) % nested_packer.data_->size());
   printf("[offset test :%lu, %zu] magic: %lu %lu %u\n", magic_offset, sizeof(MagicStore),
-    magictest.total_size_  ,
-    magictest.table_offset_,
-    magictest.entry_type_);
-
+            magictest.total_size_  ,
+            magictest.table_offset_,
+            magictest.entry_type_);
 //  long int *pmagic = (long int *)(nested_packer.data_->GetPtr() + magic_offset % nested_packer.data_->size());
 //  for(uint32_t i=0; i <64/16; i++) {
 //    for(uint32_t j=0; j<16; j++) {
@@ -53,7 +75,6 @@ uint64_t PreserveObject(DataStore *data, int *datap, int elemsize, int chunksize
 //    }
 //    printf("\n");
 //  } 
-  nested_packer.data_->SetFileType(kPosixFile);
 //  getchar();
   return table_offset;
 }
@@ -93,8 +114,8 @@ char *TestNestedPacker(int elemsize, int chunksize)
   }
   memcpy(testA, dataA, totsize * sizeof(int));
 //////////////////////////////////////////////////////
-  int elemsizeB = 8;
-  int chunksizeB = 16;
+  int elemsizeB = 24;
+  int chunksizeB = 1280;
   uint64_t totsizeB = elemsizeB * chunksizeB;
   int *dataB = new int[totsizeB];
   int *testB = new int[totsizeB];
@@ -142,7 +163,7 @@ char *TestNestedPacker(int elemsize, int chunksize)
     CDEntry *entry = packer.table_->InsertEntry(CDEntry(id, attr, packed_size, packed_offset, (char *)table_offset));
     printf("[nested ID:%lu] attr:%lx, size:%lu==%lu, "
            "packed offset:%lx table_offset:%lx\n", 
-        id, entry->size_.code_ >> 48, entry->size(), packed_size, packed_offset, table_offset); getchar();
+        id, entry->size_.code_ >> 48, entry->size(), packed_size, packed_offset, table_offset); //getchar();
 
   }
 
@@ -174,7 +195,7 @@ char *TestNestedPacker(int elemsize, int chunksize)
   }
 
   printf("================PrintArrayB====================\n");
-  PrintArray((char *)dataB, totsizeB* sizeof(int)); getchar(); 
+  PrintArray((char *)dataB, totsizeB* sizeof(int)); //getchar(); 
   printf("==============================================\n");
 
 
@@ -349,8 +370,8 @@ void TestUnpackerFile(FILE *fp)
 int main() {
   gettimeofday(&ttime,NULL);
   srand48(ttime.tv_usec);
-  int elemsize = 1030;
-  int chunksize = 32;
+  int elemsize = 10000;
+  int chunksize = 640;
   //char *chunk = ArrayTest(elemsize, chunksize);
   TestNestedPacker(elemsize, chunksize);
 //    Packer packer;;
