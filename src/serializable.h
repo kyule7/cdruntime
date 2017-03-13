@@ -46,9 +46,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  */
 
 #include "cd_global.h"
-//#include "persistence/packer.hpp"
+#include "persistence/data_store.h"
 //class packer::CDPacker;
-
+using namespace packer;
 namespace cd {
 
 class Serializable {
@@ -61,8 +61,11 @@ class PackerSerializable : public Serializable {
   public:
     // PreserveObject must append the table for serialized object to data chunk.
     // It must return the offset of table chunk.
-    virtual uint64_t PreserveObject(void *packer)=0;
-    virtual uint64_t GetTableSize(void *packer)=0;
+    uint64_t total_size_; 
+    uint64_t table_offset_;
+    uint64_t table_type_;
+    virtual uint64_t PreserveObject(DataStore *packer)=0;
+    virtual uint64_t GetTableSize(void)=0;
 };
 
 }

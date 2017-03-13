@@ -186,7 +186,7 @@ uint64_t preserve_vec_all = ( M__X  | M__Y  | M__Z  |
                               M__FX | M__FY | M__FZ |
                               M__QQ | M__QL | M__SS |
                               M__Q  | M__E  | M__VOLO | 
-                              M__V | M__P | M__VNEW |
+                              M__V | M__P | //M__VNEW |
                               M__DELV | M__VDOV | M__AREALG |
                               M__DELX_ZETA  | M__DELX_XI  | M__DELX_ETA |
                               M__SYMMX | M__SYMMY | M__SYMMZ |
@@ -208,7 +208,7 @@ uint64_t preserve_vec_1   = ( M__X  | M__Y  | M__Z  |
                               M__XD | M__YD | M__ZD |
                               M__XDD| M__YDD| M__ZDD);
 // CalcLagrangeElements ~ CalcQForElems
-uint64_t preserve_vec_2   = ( M__VNEW | M__DELV | M__VDOV | M__AREALG |
+uint64_t preserve_vec_2   = ( M__DELV | M__VDOV | M__AREALG |
                               M__DXX| M__DYY| M__DZZ|
                               M__DELV_ZETA  | M__DELV_XI  | M__DELV_ETA |
                               M__DELX_ZETA  | M__DELX_XI  | M__DELX_ETA );
@@ -4150,7 +4150,7 @@ int main(int argc, char *argv[])
                                          CD_MAP_0_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_0_0_0)); 
 #endif
 
-   printf("cdhandle size:%zu\n", sizeof(*cdh_0_0_0));
+//   printf("cdhandle size:%zu\n", sizeof(*cdh_0_0_0));
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
    CDHandle *cdh_1_0_0 = cdh_0_0_0;
 #endif
@@ -4423,6 +4423,9 @@ int main(int argc, char *argv[])
    root_cd->Detect();
    root_cd->Complete();
 #endif
+  
+   printf("Done!"); getchar();
+
    // Write out final viz file */
    if (opts.viz) {
       DumpToVisit(*locDom, opts.numFiles, myRank, numRanks) ;
@@ -4521,7 +4524,7 @@ int main(int argc, char *argv[])
    fclose(histfp);
 }
 #endif
-
+  
 #if _CD
 //   root_cd->Detect();
 //   root_cd->Complete();

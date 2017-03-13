@@ -40,20 +40,35 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdint.h>
 #include <stdio.h>
 #include <dlfcn.h>
-#include "cd_internal.h"
-#include "cd_global.h"
-#include "cd_def_internal.h"
+//#include "cd_internal.h"
+//#include "cd_global.h"
+//#include "cd_def_internal.h"
 
 //bool app_side;
-typedef void*(*Malloc)(size_t size);
+typedef void*(*LibcMallocFt)(size_t size);
+typedef void*(*LibcCallocFt)(size_t num, size_t size);
+typedef void*(*LibcVallocFt)(size_t size);
+typedef void(*LibcFreeFt)(void *p);
+//extern void *__libc_malloc(size_t size);
+//extern void *__libc_calloc(size_t num, size_t size);
+//extern void *__libc_valloc(size_t size);
+//extern void __libc_free(void *p);
 
 namespace cd {
   namespace logging {
 
 struct RuntimeLogger {
-	friend class cd::internal::CD;
-	friend class cd::internal::HeadCD;
-    static CD   *IsLogable(bool *logable_);
+//	friend class cd::internal::CD;
+//	friend class cd::internal::HeadCD;
+    static uint64_t total_alloc_size;
+    static bool active;
+    static LibcMallocFt real_malloc;
+    static LibcCallocFt real_calloc;
+    static LibcVallocFt real_valloc;
+    static LibcFreeFt   real_free;
+    RuntimeLogger(void);
+    ~RuntimeLogger(void);
+    static void Init(void);
     static int   cd_fprintf(FILE *str, const char *format, va_list &args);
     static int   fclose(FILE *fp);
     static FILE *fopen(const char *file, const char *mode);
@@ -61,7 +76,10 @@ struct RuntimeLogger {
     static void *calloc(size_t num, size_t size);
     static void *malloc(size_t size);
     static void  free(void *p);
+#ifdef libc_log
+    static CD   *IsLogable(bool *logable_);
     static IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked, unsigned int level, unsigned long index);
+#endif
 };
 
   }

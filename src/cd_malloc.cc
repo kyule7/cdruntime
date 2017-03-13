@@ -34,24 +34,57 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_config.h"
-#ifdef libc_log
 #include <stdarg.h>
+#include <cstdlib>
+#include <cstring>
 #include "cd_malloc.h"
-#include "cd_global.h"
-#include "cd_def_debug.h"
-
-//bool app_side;
-
+#include <assert.h>
+//#include "cd_global.h"
+//#include "cd_def_debug.h"
+#define CD_DEBUG(...)
+#define ERROR_MESSAGE(...)
+//#include <malloc.h>
 using namespace cd;
 using namespace cd::logging;
-using namespace cd::internal;
+//using namespace cd::internal;
+
+uint64_t RuntimeLogger::total_alloc_size = 0;
+bool RuntimeLogger::active = false;
+LibcMallocFt RuntimeLogger::real_malloc = NULL;
+LibcCallocFt RuntimeLogger::real_calloc = NULL;
+LibcVallocFt RuntimeLogger::real_valloc = NULL;
+LibcFreeFt   RuntimeLogger::real_free   = NULL;
+RuntimeLogger singleton_rl;
+
+RuntimeLogger::~RuntimeLogger(void)
+{
+  printf("\n\n=======================\nTotal Alloc Size:%lu\n", total_alloc_size);
+}
+//IncompleteLogEntry RuntimeLogger::NewLogEntry(void* p, size_t size, bool FreeInvoked, unsigned int level, unsigned long index)
+//{
+//  IncompleteLogEntry tmp_log_entry;
+//  tmp_log_entry.addr_ = (unsigned long) 0;
+//  tmp_log_entry.length_ = (unsigned long)size;
+//  tmp_log_entry.flag_ = (void *)index;
+//  tmp_log_entry.complete_ = false;
+//  tmp_log_entry.isrecv_ = FreeInvoked;
+//  tmp_log_entry.p_ = p;
+//  tmp_log_entry.pushed_ = false;
+//  tmp_log_entry.level_ = level;
+//  return tmp_log_entry;
+//}
+//
+
+#ifdef libc_log
+
+//bool app_side;
 
 IncompleteLogEntry RuntimeLogger::NewLogEntry(void* p, size_t size, bool FreeInvoked, unsigned int level, unsigned long index)
 {
   IncompleteLogEntry tmp_log_entry;
   tmp_log_entry.addr_ = (unsigned long) 0;
-  tmp_log_entry.length_ = (unsigned long) size;
-  tmp_log_entry.flag_ = (unsigned long) index;
+  tmp_log_entry.length_ = (unsigned long)size;
+  tmp_log_entry.flag_ = (void *)index;
   tmp_log_entry.complete_ = false;
   tmp_log_entry.isrecv_ = FreeInvoked;
   tmp_log_entry.p_ = p;
@@ -59,6 +92,8 @@ IncompleteLogEntry RuntimeLogger::NewLogEntry(void* p, size_t size, bool FreeInv
   tmp_log_entry.level_ = level;
   return tmp_log_entry;
 }
+
+
 
 CD *RuntimeLogger::IsLogable(bool *logable_)
 {
@@ -186,13 +221,14 @@ void RuntimeLogger::free(void *p)
 
 void* real_malloc_(size_t size)
 {
-	Malloc real_malloc = (Malloc)dlsym(RTLD_NEXT, "malloc");
+	LibcMallocFt real_malloc = (LibcMallocFt)dlsym(RTLD_NEXT, "malloc");
 	return real_malloc(size);
 }
 
 
 void* malloc(size_t size)
 {
+  RuntimeLogger::total_alloc_size += size;
   return RuntimeLogger::malloc(size);
 }
 
@@ -209,11 +245,12 @@ void* RuntimeLogger::malloc(size_t size)
   //  CDHandle* current = GetCurrentCD();
   //	CD* c_CD = current->ptr_cd();
   	//GONG: Determine whether we call real_malloc w/ logging return value or get return value stored in logs
-      if(c_CD->libc_log_ptr_->GetCommLogMode() == 1 ){
+      if(c_CD->libc_log_ptr_->GetCommLogMode() == kGenerateLog){
         //SZ
   //			c_CD->libc_log_ptr_->ReadData(&p, size);
               CD_DEBUG("here! replay logs for malloc\n");
-        if(c_CD->mem_alloc_log_.size()==0){
+        if(c_CD->mem_alloc_log_.size()==0)
+        {
           CD_DEBUG("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent @ level %u\n", c_CD->level());
           p = c_CD->MemAllocSearch(c_CD, c_CD->level(), c_CD->replay_pos_mem_alloc_log);
           //just increase index only for search purpose
@@ -290,7 +327,7 @@ void *RuntimeLogger::calloc(size_t num, size_t size)
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
 	  //GONG: Determine whether we call real_calloc w/ logging return value or get return value stored in logs
-      if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
+      if(c_CD->libc_log_ptr_->GetCommLogMode() == kGenerateLog){
 			//  c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
         LIBC_DEBUG("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
@@ -360,7 +397,7 @@ void *RuntimeLogger::valloc(size_t size)
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
 	  //GONG: Determine whether we call real_valloc w/ logging return value or get return value stored in logs
-      if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
+      if(c_CD->libc_log_ptr_->GetCommLogMode() == kGenerateLog){
 			//  c_CD->libc_log_ptr_->ReadData(&p, size);
       if(c_CD->mem_alloc_log_.size()==0){
         LIBC_DEBUG("RE-EXECUTION MODE, but no entries in malloc log! => get log from parent\n");
@@ -428,7 +465,7 @@ FILE* RuntimeLogger::fopen(const char *file, const char *mode)
     bool logable  = false;
     CD* c_CD = IsLogable(&logable);
 	  if(logable){
-      if(c_CD->libc_log_ptr_->GetCommLogMode() == 1){
+      if(c_CD->libc_log_ptr_->GetCommLogMode() == kGenerateLog){
         if(c_CD->mem_alloc_log_.size()==0){
           LIBC_DEBUG("RE-EXECUTION MODE (fopen), but no entries in malloc log! => get log from parent\n");
           //replace (close and re-open) FILE pointer
@@ -633,5 +670,126 @@ void *realloc(void* ptr, size_t size)
 ////  printf("malloc(%ld) = %p\n", size, p);
 //  return p;
 //}
+#else
+static void __attribute__((constructor)) init(void)
+{
+  printf("called?");
+  RuntimeLogger::Init();
+}
+
+RuntimeLogger::RuntimeLogger(void)
+{
+//  Init();
+}
+
+void RuntimeLogger::Init(void)
+{
+  printf("%s, %p, %p, %p\n", __func__, real_malloc, real_calloc, real_valloc);
+  getchar();
+  if(active == false) {
+//    void *handle = dlopen("libc.so.6", RTLD_LAZY);
+//    printf("%s, %p\n", __func__, handle); getchar();
+//    if(handle == NULL) { assert(0); }
+    void *handle = RTLD_NEXT; 
+    getchar();
+    real_calloc = (LibcCallocFt)dlsym(handle, "calloc");
+    if(real_calloc == NULL) assert(0);
+    real_malloc = (LibcMallocFt)dlsym(handle, "malloc");
+    if(real_malloc == NULL) assert(0);
+    real_valloc = (LibcVallocFt)dlsym(handle, "valloc");
+    if(real_valloc == NULL) assert(0);
+    real_free   = (LibcFreeFt)dlsym(handle, "free");
+    if(real_free == NULL) assert(0);
+    active = true;
+  }
+  printf("active?%d\n", active);
+  getchar();
+}
+
+//void* real_malloc_(size_t size)
+//{
+//	Malloc real_malloc = (Malloc)dlsym(RTLD_NEXT, "malloc");
+//	return real_malloc(size);
+//}
+
+//static 
+void *malloc(size_t size)
+{
+//  if(RuntimeLogger::active)
+    return RuntimeLogger::malloc(size);
+//  else
+//    return __malloc_hook(size);
+}
+
+void *valloc(size_t size)
+{
+//  if(RuntimeLogger::active)
+    return RuntimeLogger::valloc(size);
+//  else
+//    return __valloc_hook(size);
+}
+
+void *mycalloc(size_t num, size_t size) 
+{
+  printf("%s\n", __func__); getchar();
+  void *ret = NULL;
+  posix_memalign(&ret, 512, size);//malloc(num * size);
+  memset(ret, 0, num*size);
+  return ret;
+}
+
+void *calloc(size_t num, size_t size)
+{
+  static bool calloc_called = false;
+  if(calloc_called == false) {
+    void *ret = mycalloc(num, size);
+    calloc_called = true;
+    return ret;
+  } else {
+//  if(RuntimeLogger::active)
+    return RuntimeLogger::calloc(num, size);
+//  else
+//    return __calloc_hook(num, size);
+  }
+}
+
+void free(void *p)
+{
+//  if(RuntimeLogger::active)
+    return RuntimeLogger::free(p);
+//  else
+//    return __free_hook(p);
+}
+
+void* RuntimeLogger::malloc(size_t size)
+{
+//  printf("%s\n", __func__); getchar();
+  if(active == false) Init();
+  total_alloc_size += size;
+  return real_malloc(size);
+}
+
+void *RuntimeLogger::calloc(size_t num, size_t size)
+{
+//  printf("%s\n", __func__); getchar();
+  if(active == false) Init();
+  total_alloc_size += size;
+  return real_calloc(num, size);
+}
+
+void *RuntimeLogger::valloc(size_t size)
+{
+//  printf("%s\n", __func__); getchar();
+  if(active == false) Init();
+  total_alloc_size += size;
+  return real_valloc(size);
+}
+
+void RuntimeLogger::free(void *p) 
+{
+//  printf("%s\n", __func__); getchar();
+  if(active == false) Init();
+  return real_free(p);
+}
 
 #endif

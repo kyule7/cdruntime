@@ -15,7 +15,7 @@
 #include <vector>
 
 #if _CD
-#include "packer.h"
+#include "cd_packer.hpp"
 #include "cd.h"
 #include "cd_mapping.h"
 //#include "serdes.h"
@@ -667,17 +667,50 @@ class DomainSerdes : public PackerSerializable {
     uint64_t serdes_vec;
     Domain *dom;
     struct SerdesInfo {
-      uint64_t size;
-      void *src;
-      public:
-      SerdesInfo(void) {}
-      SerdesInfo(const uint64_t &_size, const void *_src)
-        : size(_size), src(const_cast<void *>(_src)) {}
-      SerdesInfo &operator=(const SerdesInfo &that) {
-        size = that.size;
-        src = that.src;
-        return *this;
-      }
+        enum { 
+          NoVec=0,
+          Real=1,
+          Index=2
+        };
+        uint64_t size;
+        char *src;
+        void *vector;
+        uint32_t elem_type;
+        public:
+        SerdesInfo(void) {}
+        SerdesInfo(char *_src, uint64_t _size, uint32_t type)
+          : src(_src), size(_size), vector(NULL), elem_type(type) {}
+        SerdesInfo(void *_vector, uint32_t _elem_type)
+          : src(NULL), size(0), vector(_vector), elem_type(_elem_type) {}
+        SerdesInfo &operator=(const SerdesInfo &that) {
+          size = that.size;
+          src = that.src;
+          vector = that.vector;
+          elem_type = that.elem_type;
+          return *this;
+        }
+        uint64_t len(void) {
+          if(elem_type == Real) {
+            return reinterpret_cast<std::vector<Real_t> *>(vector)->size();
+          } else if(elem_type == Index) {
+            return reinterpret_cast<std::vector<Index_t> *>(vector)->size();
+          } else if(elem_type == NoVec) {
+            return size;
+          } else {
+            assert(0); return 0;
+          }
+        }
+        char *ptr(void) {
+          if(elem_type == Real) {
+            return (char *)reinterpret_cast<std::vector<Real_t> *>(vector)->data();
+          } else if(elem_type == Index) {
+            return (char *)reinterpret_cast<std::vector<Index_t> *>(vector)->data();
+          } else if(elem_type == NoVec) {
+            return src;
+          } else {
+            assert(0); return 0;
+          }
+        }
     };
     static SerdesInfo serdes_table[TOTAL_ELEMENT_COUNT];
     static bool serdes_table_init; 
@@ -700,6 +733,67 @@ unsigned vec2id(unsigned long long n) {
 }
 
     void InitSerdesTable(void) {
+      serdes_table[ID__X]           = SerdesInfo((void *)&(dom->m_x),           SerdesInfo::Real );
+      serdes_table[ID__Y]           = SerdesInfo((void *)&(dom->m_y),           SerdesInfo::Real );
+      serdes_table[ID__Z]           = SerdesInfo((void *)&(dom->m_z),           SerdesInfo::Real );
+      serdes_table[ID__XD]          = SerdesInfo((void *)&(dom->m_xd),          SerdesInfo::Real );
+      serdes_table[ID__YD]          = SerdesInfo((void *)&(dom->m_yd),          SerdesInfo::Real );
+      serdes_table[ID__ZD]          = SerdesInfo((void *)&(dom->m_zd),          SerdesInfo::Real );
+      serdes_table[ID__XDD]         = SerdesInfo((void *)&(dom->m_xdd),         SerdesInfo::Real );
+      serdes_table[ID__YDD]         = SerdesInfo((void *)&(dom->m_ydd),         SerdesInfo::Real );
+      serdes_table[ID__ZDD]         = SerdesInfo((void *)&(dom->m_zdd),         SerdesInfo::Real );
+      serdes_table[ID__FX]          = SerdesInfo((void *)&(dom->m_fx),          SerdesInfo::Real );
+      serdes_table[ID__FY]          = SerdesInfo((void *)&(dom->m_fy),          SerdesInfo::Real );
+      serdes_table[ID__FZ]          = SerdesInfo((void *)&(dom->m_fz),          SerdesInfo::Real );
+      serdes_table[ID__NODALMASS]   = SerdesInfo((void *)&(dom->m_nodalMass),   SerdesInfo::Real );
+      serdes_table[ID__SYMMX]       = SerdesInfo((void *)&(dom->m_symmX),       SerdesInfo::Index);
+      serdes_table[ID__SYMMY]       = SerdesInfo((void *)&(dom->m_symmY),       SerdesInfo::Index);
+      serdes_table[ID__SYMMZ]       = SerdesInfo((void *)&(dom->m_symmZ),       SerdesInfo::Index);
+      serdes_table[ID__MATELEMLIST] = SerdesInfo((void *)&(dom->m_matElemlist), SerdesInfo::Index);
+      serdes_table[ID__NODELIST]    = SerdesInfo((void *)&(dom->m_nodelist),    SerdesInfo::Index);
+      serdes_table[ID__LXIM]        = SerdesInfo((void *)&(dom->m_lxim),        SerdesInfo::Index);
+      serdes_table[ID__LXIP]        = SerdesInfo((void *)&(dom->m_lxip),        SerdesInfo::Index);
+      serdes_table[ID__LETAM]       = SerdesInfo((void *)&(dom->m_letam),       SerdesInfo::Index);
+      serdes_table[ID__LETAP]       = SerdesInfo((void *)&(dom->m_letap),       SerdesInfo::Index);
+      serdes_table[ID__LZETAM]      = SerdesInfo((void *)&(dom->m_lzetam),      SerdesInfo::Index);
+      serdes_table[ID__LZETAP]      = SerdesInfo((void *)&(dom->m_lzetap),      SerdesInfo::Index);
+      serdes_table[ID__ELEMBC]      = SerdesInfo((void *)&(dom->m_elemBC),      SerdesInfo::Index);
+      serdes_table[ID__DXX]         = SerdesInfo((void *)&(dom->m_dxx),         SerdesInfo::Real );
+      serdes_table[ID__DYY]         = SerdesInfo((void *)&(dom->m_dyy),         SerdesInfo::Real );
+      serdes_table[ID__DZZ]         = SerdesInfo((void *)&(dom->m_dzz),         SerdesInfo::Real );
+      serdes_table[ID__DELV_XI]     = SerdesInfo((void *)&(dom->m_delv_xi),     SerdesInfo::Real );
+      serdes_table[ID__DELV_ETA]    = SerdesInfo((void *)&(dom->m_delv_eta),    SerdesInfo::Real );
+      serdes_table[ID__DELV_ZETA]   = SerdesInfo((void *)&(dom->m_delv_zeta),   SerdesInfo::Real );
+      serdes_table[ID__DELX_XI]     = SerdesInfo((void *)&(dom->m_delx_xi),     SerdesInfo::Real );
+      serdes_table[ID__DELX_ETA]    = SerdesInfo((void *)&(dom->m_delx_eta),    SerdesInfo::Real );
+      serdes_table[ID__DELX_ZETA]   = SerdesInfo((void *)&(dom->m_delx_zeta),   SerdesInfo::Real );
+      serdes_table[ID__E]           = SerdesInfo((void *)&(dom->m_e),           SerdesInfo::Real );
+      serdes_table[ID__P]           = SerdesInfo((void *)&(dom->m_p),           SerdesInfo::Real );
+      serdes_table[ID__Q]           = SerdesInfo((void *)&(dom->m_q),           SerdesInfo::Real );
+      serdes_table[ID__QL]          = SerdesInfo((void *)&(dom->m_ql),          SerdesInfo::Real );
+      serdes_table[ID__QQ]          = SerdesInfo((void *)&(dom->m_qq),          SerdesInfo::Real );
+      serdes_table[ID__V]           = SerdesInfo((void *)&(dom->m_v),           SerdesInfo::Real );
+      serdes_table[ID__VOLO]        = SerdesInfo((void *)&(dom->m_volo),        SerdesInfo::Real );
+      serdes_table[ID__VNEW]        = SerdesInfo((void *)&(dom->m_vnew),        SerdesInfo::Real );
+      serdes_table[ID__DELV]        = SerdesInfo((void *)&(dom->m_delv),        SerdesInfo::Real );
+      serdes_table[ID__VDOV]        = SerdesInfo((void *)&(dom->m_vdov),        SerdesInfo::Real );
+      serdes_table[ID__AREALG]      = SerdesInfo((void *)&(dom->m_arealg),      SerdesInfo::Real );
+      serdes_table[ID__SS]          = SerdesInfo((void *)&(dom->m_ss),          SerdesInfo::Real );
+      serdes_table[ID__ELEMMASS]    = SerdesInfo((void *)&(dom->m_elemMass),    SerdesInfo::Real );
+
+      Index_t &numRegSize  = dom->numReg();
+      Index_t &numElemSize = dom->numElem();
+      serdes_table[ID__REGELEMSIZE]       = SerdesInfo((char *)(dom->m_regElemSize), sizeof(Index_t) * numRegSize, SerdesInfo::NoVec);
+      serdes_table[ID__REGELEMLIST]       = SerdesInfo((char *)(dom->m_regElemlist), sizeof(Index_t*)* numRegSize, SerdesInfo::NoVec);
+      SerdesInfo *serdesRegElem = new SerdesInfo[numRegSize];
+      serdes_table[ID__REGELEMLIST_INNER] = SerdesInfo((char *)serdesRegElem, sizeof(SerdesInfo) * numRegSize, SerdesInfo::NoVec);
+      for(int i=0; i<numRegSize; ++i) {
+        serdesRegElem[i] = SerdesInfo((char *)((dom->m_regElemlist)[i]), (dom->m_regElemSize)[i], SerdesInfo::NoVec);
+      }
+      serdes_table[ID__REG_NUMLIST]       = SerdesInfo((char *)(dom->m_regNumList), sizeof(Index_t) * numElemSize, SerdesInfo::NoVec);
+
+
+#if 0
       serdes_table[ID__X]           = SerdesInfo(sizeof(Real_t)  * dom->m_x.size(), dom->m_x.data());
       serdes_table[ID__Y]           = SerdesInfo(sizeof(Real_t)  * dom->m_y.size(), dom->m_y.data());
       serdes_table[ID__Z]           = SerdesInfo(sizeof(Real_t)  * dom->m_z.size(), dom->m_z.data());
@@ -742,6 +836,7 @@ unsigned vec2id(unsigned long long n) {
       serdes_table[ID__V]           = SerdesInfo(sizeof(Real_t)  * dom->m_v.size(),    dom->m_v.data());   
       serdes_table[ID__VOLO]        = SerdesInfo(sizeof(Real_t)  * dom->m_volo.size(), dom->m_volo.data());
       serdes_table[ID__VNEW]        = SerdesInfo(sizeof(Real_t)  * dom->m_vnew.size(), dom->m_vnew.data());
+//      printf("VNEW:%p, %lu\n", serdes_table[ID__VNEW].src, serdes_table[ID__VNEW].size);getchar();
       serdes_table[ID__DELV]        = SerdesInfo(sizeof(Real_t)  * dom->m_delv.size(), dom->m_delv.data());
       serdes_table[ID__VDOV]        = SerdesInfo(sizeof(Real_t)  * dom->m_vdov.size(), dom->m_vdov.data());
       serdes_table[ID__AREALG]      = SerdesInfo(sizeof(Real_t)  * dom->m_arealg.size(),   dom->m_arealg.data()); 
@@ -763,6 +858,7 @@ unsigned vec2id(unsigned long long n) {
       // serdes_table[ID__REGELEMLIST_INNER].src[j].size
       //serdesRegElem[i] = SerdesInfo(sizeof(Index_t) * (dom->m_regElemSize)[i], (dom->m_regElemlist)[i]);
       serdes_table[ID__REG_NUMLIST]       = SerdesInfo(sizeof(Index_t) * numElemSize, dom->m_regNumList);
+#endif
     }
 
     DomainSerdes &SetOp (const uint64_t &vec) {
@@ -773,6 +869,11 @@ unsigned vec2id(unsigned long long n) {
     
     // With this interface, user can switch to a different serializer with a method flag.
     uint64_t PreserveObject(DataStore* pPacker) {
+      static bool init = false;
+      if(init == false) {
+        InitSerdesTable();
+        init = true;
+      }
       // Use the same DataStore for in-place preservation,
       // but use the separate table. This table is different from entry_directory_,
       // and will be just appended in its DataStore, not in its TableStore.
@@ -780,81 +881,125 @@ unsigned vec2id(unsigned long long n) {
       CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
       uint64_t orig_size = packer.data_->used(); // return
 
-      packer.data_->SetFileType(kVolatile);
-      
+//      packer.data_->SetFileType(kVolatile);
+      uint64_t magic_offset = packer.data_->PadZeros(sizeof(MagicStore));
+        
       // May be able to skip this
-      MagicStore magic;
-      uint64_t magic_offset = packer.data_->WriteFlushMode(&magic, sizeof(MagicStore));
-      MagicStore &magic_in_place = packer.data_->GetMagicStore(magic_offset);
+//      MagicStore magic;
+//      uint64_t magic_offset = packer.data_->WriteFlushMode(&magic, sizeof(MagicStore));
+//      MagicStore &magic_in_place = packer.data_->GetMagicStore(magic_offset);
 
       uint64_t vec = serdes_vec;
       while(vec != 0) {
         uint32_t id = vec2id(vec);
         if(vec & 0x1) {
+//          printf("preserve id:%u\n", id);
+//          if(id == ID__VNEW || id == ID__DELX_ZETA || id == ID__DELX_ETA || id == ID__DELX_XI) { vec >>=1; continue; }
           if(id != ID__REGELEMLIST_INNER) {
-            packer.Add(serdes_table[id].src, BaseEntry(id, serdes_table[id].size));
+            char *ptr = serdes_table[id].ptr();
+//            printf("check:%u:%p\n", id, ptr);
+            if(ptr != NULL) {
+              packer.Add(ptr, CDEntry(id, serdes_table[id].len(), 0, ptr));
+            }
           } else {
             Index_t &numRegSize = dom->numReg();
             for(int j=0; j<numRegSize; ++j) {
-              packer.Add( ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src,
-                            BaseEntry(j + ID__SERDES_ALL, 
-                                      ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].size)
-                          );
+              char *ptr = ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].ptr();
+//              printf("check:%u:%p\n", id, ptr);
+              if(ptr != NULL) {
+                packer.Add( ptr,
+                              CDEntry(j + ID__SERDES_ALL, 
+                                     ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].len(),
+                                     0,
+                                     ptr)
+                            );
+              }
             }
           }
         }
         vec >>= 1;
       } // while ends
-      uint64_t table_offset = packer.AppendTable();
-      uint64_t total_size = packer.data_->used() - orig_size;
-      magic_in_place.total_size_   = total_size;
-      magic_in_place.table_offset_ = table_offset - magic_offset;
-      magic_in_place.entry_type_   = kCDEntry;
-      
-      packer.data_->SetFileType(kPosixFile);
 
-      return table_offset;
+      uint64_t table_offset = packer.AppendTable();
+      total_size_   = packer.data_->used() - orig_size;
+      table_offset_ = table_offset - magic_offset - packer.data_->offset();
+      table_type_   = kCDEntry;
+      MagicStore magic(total_size_, 
+                       table_offset_,
+                       table_type_);
+
+//      magic_in_place.total_size_   = total_size;
+//      magic_in_place.table_offset_ = table_offset - magic_offset;
+//      magic_in_place.entry_type_   = kCDEntry;
+//      
+//      packer.data_->SetFileType(kPosixFile);
+
+      return table_offset_;
     }
 
+    uint64_t GetTableSize(void) {
+      uint64_t table_size = 0;
+      uint64_t vec = serdes_vec;
+      while(vec != 0) {
+        uint32_t id = vec2id(vec);
+        if(vec & 0x1) {
+          if(id == ID__VNEW || id == ID__DELX_ZETA || id == ID__DELX_ETA) { vec >>=1; continue; }
+          if(id != ID__REGELEMLIST_INNER) {
+            table_size += serdes_table[id].len();
+          } else {
+            Index_t &numRegSize = dom->numReg();
+            for(int j=0; j<numRegSize; ++j) {
+              table_size += ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].len();
+            }
+          }
+        }
+        vec >>= 1;
+      } // while ends
+
+      return table_size;
+    }
     void *Serialize(uint64_t &len_in_bytes) {
       // User define whatever they want.
       CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
 //      printf("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
-      Packer packer;
-      PreserveObject(&packer);
+      CDPacker packer;
+      PreserveObject(packer.data_);
       return packer.GetTotalData(len_in_bytes);
     }
-
-    // Should be 
-    virtual void Deserialize(void *object) {
-      // Deserialize object and restore to each member.
-      CD_DEBUG("LULESH %s, obj: %p\n", __func__, object);
-      //
-      Packer packer(object);
-      uint64_t vec = serdes_vec;
-      uint64_t return_id = 0, return_size = 0;
-      uint64_t i=1;
-      while(vec != 0) {
-        uint32_t id = vec2id(vec);
-//        printf("loop i = %u, vec = %lu\n", i, vec);
-        if(vec & 0x1) {
-          if(id != ID__REGELEMLIST_INNER) {
-            CD_DEBUG("ID : %d\n", i);
-            packer.GetNext(serdes_table[id].src, id);
-          } else {
-            CD_DEBUG("ID : %d (INNER)\n", i);
-            Index_t &numRegSize = dom->numReg();
-            for(int j=0; j<numRegSize; ++j) {
-              packer.GetNext( ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src, 
-                                j + ID__SERDES_ALL);
-            }
-          }
-        }
-        i++;
-        vec >>= 1;
-      }
-
+    
+    void Deserialize(void *object) {
     }
+//
+//    // Should be 
+//    virtual void Deserialize(void *object) {
+//      // Deserialize object and restore to each member.
+//      CD_DEBUG("LULESH %s, obj: %p\n", __func__, object);
+//      //
+//      Packer packer(object);
+//      uint64_t vec = serdes_vec;
+//      uint64_t return_id = 0, return_size = 0;
+//      uint64_t i=1;
+//      while(vec != 0) {
+//        uint32_t id = vec2id(vec);
+////        printf("loop i = %u, vec = %lu\n", i, vec);
+//        if(vec & 0x1) {
+//          if(id != ID__REGELEMLIST_INNER) {
+//            CD_DEBUG("ID : %d\n", i);
+//            packer.GetNext(serdes_table[id].src, id);
+//          } else {
+//            CD_DEBUG("ID : %d (INNER)\n", i);
+//            Index_t &numRegSize = dom->numReg();
+//            for(int j=0; j<numRegSize; ++j) {
+//              packer.GetNext( ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].src, 
+//                                j + ID__SERDES_ALL);
+//            }
+//          }
+//        }
+//        i++;
+//        vec >>= 1;
+//      }
+//
+//    }
 
 #if 0
     // With this interface, user can switch to a different serializer with a method flag.

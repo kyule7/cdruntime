@@ -80,14 +80,16 @@ char *Serdes::Serialize(void) {
   return packer.GetTotalData(length_);
 }
 
-void Serdes::Deserialize(char *object) { 
-  Unpacker unpacker;
-  uint64_t return_size;
-  for(auto it=serdes_list_.begin(); it!=serdes_list_.end(); ++it) {
-    void *data = unpacker.GetAt(object, *it, return_size);
-    assert(return_size != member_list_[*it].second);
-    memcpy(member_list_[*it].first, data, return_size);
-    // Actually, there is additional memcpy (serialized_object->data, data->member)
-    // Later, it can be fixed to memcpy (serialized_object->member)
-  }
+void Serdes::Deserialize(char *object) {
+  // FIXME
+  assert(0); 
+//  CDPacker unpacker;
+//  uint64_t return_size;
+//  for(auto it=serdes_list_.begin(); it!=serdes_list_.end(); ++it) {
+//    void *data = unpacker.GetAt(object, *it, return_size);
+//    assert(return_size != member_list_[*it].second);
+//    memcpy(member_list_[*it].first, data, return_size);
+//    // Actually, there is additional memcpy (serialized_object->data, data->member)
+//    // Later, it can be fixed to memcpy (serialized_object->member)
+//  }
 }

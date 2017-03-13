@@ -1,22 +1,23 @@
 #include ../../Makefile.extern
 SHELL = /bin/sh
 .SUFFIXES: .cc .o
-CD_PATH=/home1/03341/kyushick/Work/CDs/overheadFix
+#CD_PATH=/home1/03341/kyushick/Work/CDs/pfsFix
+CD_PATH=/home/kyushick/Work/CDs/pfsFix
 INTERVAL_VAL=0
 LULESH_EXEC   = lulesh_cd
 EXEC_PROFILED = $(LULESH_EXEC)
 CD_ENABLED = 1
 ifeq (${CD_ENABLED}, 1)
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 
-CD_CFLAGS = -I${CD_PATH}/include 
-CD_LINKFLAGS = -L${CD_PATH}/lib -lcd -Wl,-rpath=${CD_PATH}/lib
+CD_CFLAGS = -I${CD_PATH}/include -I${CD_PATH}/src -I${CD_PATH}/src/persistence
+CD_LINKFLAGS = -L${CD_PATH}/lib -lcd -Wl,-rpath=${CD_PATH}/lib -L${CD_PATH}/src/persistence -lpacker -Wl,-rpath=${CD_PATH}/src/persistence -ldl
 else
 CD_FLAGS := 
 CD_CFLAGS :=
 CD_LINKFLAGS :=
 endif
 
-CD_FLAGS += -D_ANALYZE_PHASE #-D_DEBUG_PRV
+#CD_FLAGS += -D_ANALYZE_PHASE #-D_DEBUG_PRV
 #CD_LINKFLAGS += -D_ANALYZE_PHASE #-D_DEBUG_PRV
 
 SERCXX   = g++ -DUSE_MPI=0 

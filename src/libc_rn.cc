@@ -37,6 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #ifdef libc_log
 
 #include "cd_malloc.h"
+#include "cd_def_debug.h"
 #include <stdarg.h>
 using namespace cd::logging;
 

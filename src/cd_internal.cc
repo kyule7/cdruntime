@@ -1697,7 +1697,7 @@ void *CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, v
           std::vector<IncompleteLogEntry>::iterator it;
           for (it=parent_CD->mem_alloc_log_.begin(); it!=parent_CD->mem_alloc_log_.end(); it++){
             //should be unique!
-            if(it->level_ == level && it->flag_ == index){
+            if(it->level_ == level && it->flag_ == (void *)index){
               CD_DEBUG("level: %u, index: %lu\n", level, index);   
               ret = it->p_;
 //              break;
@@ -1934,15 +1934,16 @@ CDErrT CD::Preserve(void *data,
       // This will fetch from disk to memory
       // Potential benefit from prefetching app data from preserved data in
       // disk, overlapping reexecution of application.
-      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
-        packer::CDErrType pret = entry_directory_.Restore(tag, (char *)data);
-      } else {
-        // this read data chunk to some buffer spacem, which will be the buffer for
-        // packer object in deserializer. it will be deallocated after deserialization.
-        char *nested_obj = entry_directory_.Restore(tag);
-        PackerSerializable *deserializer = static_cast<PackerSerializable *>(data);
-        deserializer->Deserialize(nested_obj);
-      }
+      entry_directory_.Restore(tag);//, (char *)data);
+//      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
+//        packer::CDErrType pret = entry_directory_.Restore(tag);//, (char *)data);
+//      } else {
+//        // this read data chunk to some buffer spacem, which will be the buffer for
+//        // packer object in deserializer. it will be deallocated after deserialization.
+//        char *nested_obj = entry_directory_.Restore(tag);
+//        PackerSerializable *deserializer = static_cast<PackerSerializable *>(data);
+//        deserializer->Deserialize(nested_obj);
+//      }
 
       restore_count_++;
       if( restore_count_ == preserve_count_ ) { 
@@ -2048,6 +2049,7 @@ CD::InternalPreserve(void *data,
   uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
   CDEntry *pEntry = NULL;
 
+  PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
   if( CHECK_PRV_TYPE(preserve_mask, kCopy) ) { // via-copy, so it saves data right now!
 
     CD_ASSERT_STR(my_name.empty() == false, 
@@ -2067,15 +2069,14 @@ CD::InternalPreserve(void *data,
       // Serializer should use the same DataStore for in-place preservation,
       // but use the separate table. This table is different from entry_directory_,
       // and will be just appended in its DataStore, not in its TableStore.
-      PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
-      uint64_t table_offset_in_datachunk = serializer->PreserveObject(&entry_directory_);
+      uint64_t table_offset = serializer->PreserveObject(entry_directory_.data_);
       uint64_t packed_size = entry_directory_.data_->used() - packed_offset;
-      int64_t table_size_in_datachunk = entry_directory_.data_->used() - table_offset_in_datachunk;
+//      int64_t table_size_in_datachunk = entry_directory_.data_->used() - table_offset_in_datachunk;
       pEntry = entry_directory_.table_->InsertEntry(
-          CDEntry(id, attr, packed_size, packed_offset, (char *)table_offset_in_datachunk));
-      CD_ASSERT(table_size_in_datachunk > 0);
-      CD_ASSERT(reinterpret_cast<MagicStore *>(&(entry_directory_.data_[packed_offset]))->total_size_ == packed_size);
-      CD_ASSERT(reinterpret_cast<MagicStore *>(&(entry_directory_.data_[packed_offset]))->table_offset_ == table_offset_in_datachunk);
+          CDEntry(id, attr, packed_size, packed_offset, (char *)table_offset));
+//      CD_ASSERT(table_size_in_datachunk > 0);
+//      CD_ASSERT(reinterpret_cast<MagicStore *>(&(entry_directory_.data_[packed_offset]))->total_size_ == packed_size);
+//      CD_ASSERT(reinterpret_cast<MagicStore *>(&(entry_directory_.data_[packed_offset]))->table_offset_ == table_offset_in_datachunk);
     }
     else { // preserve a single entry
       pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, len_in_bytes, 0, (char *)data));
@@ -2096,7 +2097,7 @@ CD::InternalPreserve(void *data,
     uint64_t size = len_in_bytes;
     if(CHECK_PRV_TYPE(preserve_mask, kSerdes)){ 
       attr |= Attr::knested;// | Attr::ktable);
-      size = static_cast<PackerSerializable *>(data)->GetTableSize(&entry_directory_);
+      size = serializer->GetTableSize();
     }
 
     pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, size, ref_offset, (char *)ref_id));
