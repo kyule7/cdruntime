@@ -43,7 +43,7 @@ using namespace cd::internal;
 #define TO_RegenObject(a) (reinterpret_cast<RegenObject*>(a))
 #define TO_regenobject(a) (reinterpret_cast<regenobject*>(a))
 
-cd_handle_t * cd_init(int num_tasks, int my_task, int prv_medium)
+cd_handle_t *cd_init(int num_tasks, int my_task, int prv_medium)
 {
   return TO_cdhandle(CD_Init(num_tasks, my_task, (PrvMediumT)prv_medium));
 }
@@ -55,21 +55,21 @@ void cd_finalize()
 
 
 cd_handle_t *cd_create(cd_handle_t *c_handle, 
-                      uint32_t  num_children,
-                      const char *name, 
-                      int cd_type,
-                      uint32_t error_name)
+                       uint32_t  num_children,
+                       const char *name, 
+                       int cd_type,
+                       uint32_t error_name)
 {
   return TO_cdhandle(TO_CDHandle(c_handle)->Create(num_children, name, cd_type, error_name));
 }
 
 cd_handle_t *cd_create_customized(cd_handle_t *c_handle,
-                                      uint32_t color,
-                                      uint32_t task_in_color,
-                                      uint32_t  numchildren,
-                                      const char *name,
-                                      int cd_type,
-                                      uint32_t error_name)
+                                  uint32_t color,
+                                  uint32_t task_in_color,
+                                  uint32_t  numchildren,
+                                  const char *name,
+                                  int cd_type,
+                                  uint32_t error_name)
 {
   return TO_cdhandle(TO_CDHandle(c_handle)->Create(color, task_in_color, numchildren, name, cd_type, error_name));
 }
@@ -84,7 +84,7 @@ void cd_destroy(cd_handle_t *c_handle)
 //  CD_Begin(TO_CDHandle(c_handle), (bool)collective, label);
 //}
 
-int ctxt_prv_mode(cd_handle_t*c_handle)
+int ctxt_prv_mode(cd_handle_t *c_handle)
 {
   return TO_CDHandle(c_handle)->ctxt_prv_mode();
 }

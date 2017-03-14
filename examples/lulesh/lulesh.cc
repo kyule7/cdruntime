@@ -4216,7 +4216,9 @@ int main(int argc, char *argv[])
        myRank, myNodeRank, numNodeRanks, myZeroRank, numZeroRanks);
 
 #endif
+   double loop_time = 0.0;
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
+      double begin_tik = MPI_Wtime();
       // Main functions in the loop
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
      if(interval != 0 && ckpt_idx % interval == 0) 
@@ -4388,6 +4390,17 @@ int main(int argc, char *argv[])
        openclose = false; 
      }
 #endif
+
+#if _CD 
+      double single_it = MPI_Wtime() - begin_tik;
+      uint64_t domsize = locDom->serdes.SetOp(M__SERDES_ALL).GetTableSize();
+      loop_time += single_it;
+      printf("single_it:%lf, %lu + %lu\n", single_it, domsize, sizeof(Domain));
+#else
+      double single_it = MPI_Wtime() - begin_tik;
+      loop_time += single_it;
+      printf("single_it:%lf\n", single_it);
+#endif
    }
 
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
@@ -4424,7 +4437,7 @@ int main(int argc, char *argv[])
    root_cd->Complete();
 #endif
   
-   printf("Done!"); getchar();
+//   printf("Done!"); getchar();
 
    // Write out final viz file */
    if (opts.viz) {

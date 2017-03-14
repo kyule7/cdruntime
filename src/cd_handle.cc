@@ -272,7 +272,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   cddbg.flush();
 #endif
 
-  //GONG
+  end_clk = CD_CLOCK();
   CDEpilogue();
 
   return root_cd_handle;
@@ -487,6 +487,7 @@ void CD_Finalize(void)
 #if CD_DEBUG_ENABLED
   WriteDbgStream();
 #endif
+  end_clk = CD_CLOCK();
   CDEpilogue();
 }
 
@@ -585,8 +586,155 @@ int SplitCD_1D(const int& my_task_id,
 
 
 
+#if 0
+// ----------------------- Switch APIs -----------------------------------
+CDHandle *CDHandle::CreateSW(uint32_t onOff,
+                           const char *name, 
+                           int cd_type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask,
+                           CDErrT *error)
+{
+  CDHandle *handle = NULL;
+  if(onOff == kON) {
+    handle = Create(name, cd_type, error_name_mask, error_loc_mask, error);
+  }
+  else if(onOff == kOFF) {
+    handle = CDPath::GetNullCD();
+  }
+  return handle;
+}
+CDHandle *CDHandle::CreateSW(uint32_t onOff,
+                           uint32_t  num_children,
+                           const char *name, 
+                           int cd_type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask, 
+                           CDErrT *error)
+{
+  CDHandle *handle = NULL;
+  if(onOff == kON) {
+    handle = Create(num_children, name, cd_type, error_name_mask, error_loc_mask, error);
+  }
+  else if(onOff == kOFF) {
+    handle = CDPath::GetNullCD();
+  }
+  return handle;
+}
+CDHandle *CDHandle::CreateSW(uint32_t onOff,
+                           uint32_t color, 
+                           uint32_t task_in_color, 
+                           uint32_t num_children, 
+                           const char *name, 
+                           int cd_type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask, 
+                           CDErrT *error )
+{
+  CDHandle *handle = NULL;
+  if(onOff == kON) {
+    handle = Create(color, task_in_color, num_children, name, cd_type, error_name_mask, error_loc_mask, error);
+  }
+  else if(onOff == kOFF) {
+    handle = CDPath::GetNullCD();
+  }
+  return handle;
+}
+CDHandle *CDHandle::CreateAndBeginSW(uint32_t onOff,
+                                   uint32_t num_children, 
+                                   const char *name, 
+                                   int cd_type, 
+                                   uint32_t error_name_mask, 
+                                   uint32_t error_loc_mask,
+                                   CDErrT *error )
+{
+  // TODO
+  return NULL;
+}
+CDErrT CDHandle::DestroySW(uint32_t onOff, bool collective) 
+{
+  CDErrT ret = kOK;
+  if(onOff == kON) {
+    ret = Destroy(collective);
+  }
+  else if(onOff == kOFF) {
+    ret = kOK;
+  }
+  return ret;
+}
+  
+  
+CDErrT CDHandle::BeginSW(uint32_t onOff, bool collective, const char *label, const uint64_t &sys_err_vec)
+{
+  CDErrT ret = kOK;
+  if(onOff == kON) {
+    ret = Begin(collective, label, sys_err_vec);
+  }
+  else if(onOff == kOFF) {
+    ret = kOK;
+  }
+  return ret;
+}
 
+CDErrT CDHandle::CompleteSW(uint32_t onOff, bool collective, bool update_preservation)
+{
+  return kOK;
+}
+CDErrT CDHandle::PreserveSW(uint32_t onOff,
+                          void *data_ptr, 
+                          uint64_t len, 
+                          uint32_t preserve_mask, 
+                          const char *my_name, 
+                          const char *ref_name, 
+                          uint64_t ref_offset, 
+                          const RegenObject *regen_object, 
+                          PreserveUseT data_usage)
+{
+  return kOK;
+}
+CDErrT CDHandle::PreserveSW(uint32_t onOff,
+                          Serializable &serdes,                           
+                          uint32_t preserve_mask, 
+                          const char *my_name, 
+                          const char *ref_name, 
+                          uint64_t ref_offset, 
+                          const RegenObject *regen_object, 
+                          PreserveUseT data_usage)
+{
+  return kOK;
+}
+CDErrT CDHandle::PreserveSW(uint32_t onOff,
+                          CDEvent &cd_event, 
+                          void *data_ptr, 
+                          uint64_t len, 
+                          uint32_t preserve_mask, 
+                          const char *my_name, 
+                          const char *ref_name, 
+                          uint64_t ref_offset, 
+                          const RegenObject *regen_object, 
+                          PreserveUseT data_usage)
+{
+  return kOK;
+}
 
+CDErrT CDHandle::DetectSW(uint32_t onOff, std::vector<SysErrT> *err_vec)
+{
+  return kOK;
+}
+
+CDErrT CDHandle::CDAssertSW(uint32_t onOff, bool test, const SysErrT *error_to_report)
+{
+  return kOK;
+}
+CDErrT CDHandle::CDAssertFailSW(uint32_t onOff, bool test_true, const SysErrT *error_to_report)
+{
+  return kOK;
+}
+CDErrT CDHandle::CDAssertNotifySW(uint32_t onOff, bool test_true, const SysErrT *error_to_report)
+{
+  return kOK;
+}
+#endif
 
 
 
@@ -682,12 +830,40 @@ int CDHandle::SelectHead(uint32_t task_size)
   return (level() + 1) % task_size;
 }
 
+CDErrT CDHandle::RegisterSplitMethod(SplitFuncT split_func)
+{ 
+  SplitCD = split_func; 
+  return kOK;
+}
+
+
+NodeID CDHandle::GenNewNodeID(int new_head, const NodeID &node_id, bool is_reuse)
+{
+  // just set the same as parent.
+  NodeID new_node_id(node_id);
+#if CD_MPI_ENABLED
+  if(is_reuse == false) {
+    PMPI_Comm_dup(node_id.color_, &(new_node_id.color_));
+//    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
+  }
+#endif
+  new_node_id.set_head(new_head);
+  //new_node.init_node_id(node_id_.color(), 0, INVALID_HEAD_ID,1);
+  return new_node_id;
+}
+
+////////////////////////////////////////////////////////////////////
+//
+// Internal Begin
+//
+////////////////////////////////////////////////////////////////////
+
 // Non-collective
-CDHandle *CDHandle::Create(const char *name, 
-                           int cd_type, 
-                           uint32_t error_name_mask, 
-                           uint32_t error_loc_mask, 
-                           CDErrT *error )
+CDHandle *CDHandle::Real_Create(const char *name, 
+                                     int cd_type, 
+                                     uint32_t error_name_mask, 
+                                     uint32_t error_loc_mask, 
+                                     CDErrT *error )
 {
   //GONG
   CDPrologue();
@@ -711,7 +887,7 @@ CDHandle *CDHandle::Create(const char *name,
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
   
-  //GONG
+  end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk;
@@ -720,35 +896,8 @@ CDHandle *CDHandle::Create(const char *name,
   return new_cd_handle;
 }
 
-
-
-CDErrT CDHandle::RegisterSplitMethod(SplitFuncT split_func)
-{ 
-  SplitCD = split_func; 
-  return kOK;
-}
-
-
-NodeID CDHandle::GenNewNodeID(int new_head, const NodeID &node_id, bool is_reuse)
-{
-  // just set the same as parent.
-  NodeID new_node_id(node_id);
-#if CD_MPI_ENABLED
-  if(is_reuse == false) {
-    PMPI_Comm_dup(node_id.color_, &(new_node_id.color_));
-//    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
-  }
-#endif
-  new_node_id.set_head(new_head);
-  //new_node.init_node_id(node_id_.color(), 0, INVALID_HEAD_ID,1);
-  return new_node_id;
-}
-
-
-
-
 // Collective
-CDHandle *CDHandle::Create(uint32_t  num_children,
+CDHandle *CDHandle::Real_Create(uint32_t  num_children,
                            const char *name, 
                            int cd_type, 
                            uint32_t error_name_mask, 
@@ -853,6 +1002,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 
 #endif
 
+  end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk;
@@ -864,7 +1014,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 
 
 // Collective
-CDHandle *CDHandle::Create(uint32_t color, 
+CDHandle *CDHandle::Real_Create(uint32_t color, 
                            uint32_t task_in_color, 
                            uint32_t num_children, 
                            const char *name, 
@@ -911,6 +1061,7 @@ CDHandle *CDHandle::Create(uint32_t color,
   CDHandle *new_cd_handle = Create(name, cd_type, error_name_mask, error_loc_mask, error );
 #endif
 
+  end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk;
@@ -920,7 +1071,7 @@ CDHandle *CDHandle::Create(uint32_t color,
 }
 
 
-CDHandle *CDHandle::CreateAndBegin(uint32_t num_children, 
+CDHandle *CDHandle::Real_CreateAndBegin(uint32_t num_children, 
                                    const char *name, 
                                    int cd_type, 
                                    uint32_t error_name_mask, 
@@ -936,6 +1087,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 #endif
   new_cdh->Begin(false, name);
 
+  end_clk = CD_CLOCK();
   begin_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   Profiler::num_exec_map[level()][GetLabel()].begin_elapsed_time_ += end_clk - begin_clk;
@@ -945,7 +1097,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 }
 
 
-CDErrT CDHandle::Destroy(bool collective) 
+CDErrT CDHandle::Real_Destroy(bool collective) 
 {
   CDPrologue();
   uint32_t cur_level = ptr_cd_->cd_id_.cd_name_.level();
@@ -955,6 +1107,7 @@ CDErrT CDHandle::Destroy(bool collective)
                                                        cur_level, need_reexec(), *CD::rollback_point_);
   CDErrT err = InternalDestroy(collective);
 
+  end_clk = CD_CLOCK();
   destroy_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   Profiler::num_exec_map[cur_level][label].destroy_elapsed_time_ += end_clk - begin_clk;
@@ -1043,6 +1196,7 @@ CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_
   profiler_->StartProfile();
 #endif
 
+  end_clk = CD_CLOCK();
   begin_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   Profiler::num_exec_map[level()][GetLabel()].begin_elapsed_time_ += end_clk - begin_clk;
@@ -1052,7 +1206,7 @@ CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_
   return err;
 }
 
-CDErrT CDHandle::Complete(bool collective, bool update_preservations)
+CDErrT CDHandle::Real_Complete(bool collective, bool update_preservations)
 {
   CDPrologue();
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
@@ -1071,6 +1225,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   profiler_->FinishProfile();
 #endif
 
+  end_clk = CD_CLOCK();
   compl_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   Profiler::num_exec_map[level()][GetLabel()].compl_elapsed_time_ += end_clk - begin_clk;
@@ -1080,12 +1235,13 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   return ret;
 }
 
-CDErrT CDHandle::Advance(bool collective)
+CDErrT CDHandle::Real_Advance(bool collective)
 {
   CDPrologue();
 
   CDErrT ret = ptr_cd_->Advance(collective);
 
+  end_clk = CD_CLOCK();
   advance_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   Profiler::num_exec_map[level()][GetLabel()].advance_elapsed_time_ += end_clk - begin_clk;
@@ -1094,7 +1250,7 @@ CDErrT CDHandle::Advance(bool collective)
   return ret;
 };
 
-CDErrT CDHandle::Preserve(void *data_ptr, 
+CDErrT CDHandle::Real_Preserve(void *data_ptr, 
                           uint64_t len, 
                           uint32_t preserve_mask, 
                           const char *my_name, 
@@ -1134,6 +1290,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   }
 #endif
 
+  end_clk = CD_CLOCK();
   prv_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   Profiler::num_exec_map[level()][GetLabel()].prv_elapsed_time_ += end_clk - begin_clk;
@@ -1142,7 +1299,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   return err;
 }
 
-CDErrT CDHandle::Preserve(Serializable &serdes,                           
+CDErrT CDHandle::Real_Preserve(Serializable &serdes,                           
                           uint32_t preserve_mask, 
                           const char *my_name, 
                           const char *ref_name, 
@@ -1178,6 +1335,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   }
 #endif
   
+  end_clk = CD_CLOCK();
   prv_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   Profiler::num_exec_map[level()][GetLabel()].prv_elapsed_time_ += end_clk - begin_clk;
@@ -1186,7 +1344,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   return err;
 }
 
-CDErrT CDHandle::Preserve(CDEvent &cd_event, 
+CDErrT CDHandle::Real_Preserve(CDEvent &cd_event, 
                           void *data_ptr, 
                           uint64_t len, 
                           uint32_t preserve_mask, 
@@ -1226,6 +1384,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
     }
   }
 #endif
+  end_clk = CD_CLOCK();
   prv_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   Profiler::num_exec_map[level()][GetLabel()].prv_elapsed_time_ += end_clk - begin_clk;
@@ -1234,7 +1393,228 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   return err;
 }
 
+CDErrT CDHandle::Real_CDAssert(bool test, const SysErrT *error_to_report)
+{
+  CDPrologue();
+//  CD_DEBUG("Assert : %d at level %u\n", ptr_cd()->cd_exec_mode_, ptr_cd()->level());
 
+  assert(ptr_cd_ != 0);
+  CDErrT err = kOK;
+
+#if CD_PROFILER_ENABLED
+//    if(!test_true) {
+//      profiler_->Delete();
+//    }
+#endif
+
+
+#if CD_ERROR_INJECTION_ENABLED
+  if(cd_error_injector_ != NULL) {
+    if(cd_error_injector_->Inject()) {
+      test = false;
+      err = kAppError;
+    }
+  }
+#endif
+
+  CD::CDInternalErrT internal_err = ptr_cd_->Assert(test);
+  if(internal_err == CD::CDInternalErrT::kErrorReported)
+    err = kAppError;
+
+  end_clk = CD_CLOCK();
+  CDEpilogue();
+  return err;
+}
+
+CDErrT CDHandle::Real_CDAssertFail (bool test_true, const SysErrT *error_to_report)
+{
+  CDPrologue();
+  if( IsHead() ) {
+
+  }
+  else {
+    // It is at remote node so do something for that.
+  }
+
+  end_clk = CD_CLOCK();
+  CDEpilogue();
+  return kOK;
+}
+
+CDErrT CDHandle::Real_CDAssertNotify(bool test_true, const SysErrT *error_to_report)
+{
+  CDPrologue();
+  if( IsHead() ) {
+    // STUB
+  }
+  else {
+    // It is at remote node so do something for that.
+  }
+
+  end_clk = CD_CLOCK();
+  CDEpilogue();
+  return kOK;
+}
+
+std::vector<SysErrT> CDHandle::Real_Detect(CDErrT *err_ret_val)
+{
+  CDPrologue();
+  CD_DEBUG("[%s] check mode : %d at %s %s level %u (reexecInfo %d (%u))\n", 
+      ptr_cd_->cd_id_.GetString().c_str(), ptr_cd()->cd_exec_mode_, 
+      ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
+      level(), need_reexec(), *CD::rollback_point_);
+
+  std::vector<SysErrT> ret_prepare;
+  CDErrT err = kOK;
+  uint32_t rollback_point = INVALID_ROLLBACK_POINT;
+
+  int err_desc = (int)ptr_cd_->Detect(rollback_point);
+#if CD_ERROR_INJECTION_ENABLED
+  err_desc = CheckErrorOccurred(rollback_point);
+#endif
+
+#if CD_MPI_ENABLED
+
+  CD_DEBUG("[%s] rollback %u -> %u (%d == %d)\n", 
+      ptr_cd_->cd_id_.GetStringID().c_str(), 
+      rollback_point, level(), err_desc, CD::CDInternalErrT::kErrorReported);
+
+  if(err_desc == CD::CDInternalErrT::kErrorReported) {
+    err = kError;
+    // FIXME
+    CD_PRINT("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
+             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+
+    CDHandle *rb_cdh = CDPath::GetCDLevel(rollback_point);
+    assert(rb_cdh != NULL);
+
+#if 0
+    if(rb_cdh->task_size() > 1) {
+      rb_cdh->SetMailBox(kErrorOccurred);
+    } 
+
+    // If there is a single task in a CD, everybody is the head in that level.
+    if(task_size() > 1) {
+      if(IsHead()) {
+        ptr_cd_->SetRollbackPoint(rollback_point, false);
+      }
+    } else {
+
+      if((rb_cdh->task_size() == 1) || rb_cdh->IsHead()) {
+        ptr_cd_->SetRollbackPoint(rollback_point, false);
+      } else {
+        // If the level of rollback_point has more tasks than current task,
+        // let head inform the current task about escalation.
+        ptr_cd_->SetRollbackPoint(level(), false);
+      }
+    }
+#else
+//-------------------------------------------------
+    if(task_size() > 1) {
+      // If current level's task_size is larger than 1,
+      // upper-level task_size is always larger than 1.
+      rb_cdh->SetMailBox(kErrorOccurred);
+      if(IsHead()) {
+        ptr_cd_->SetRollbackPoint(rollback_point, false);
+      } else { // FIXME
+//        ptr_cd_->SetRollbackPoint(rollback_point, false);
+//        ptr_cd_->SetRollbackPoint(level(), false);
+      }
+    } else {
+      // It is possible that upper-level task_size is larger than 1, 
+      // even though current level's task_size is 1.
+      if(rb_cdh->task_size() > 1) {
+        rb_cdh->SetMailBox(kErrorOccurred);
+        if(rb_cdh->IsHead()) {
+          ptr_cd_->SetRollbackPoint(rollback_point, false);
+        } else {
+          // If the level of rollback_point has more tasks than current task,
+          // let head inform the current task about escalation.
+          ptr_cd_->SetRollbackPoint(level(), false);
+        }
+      } else {
+        // task_size at current level is 1, and
+        // task_size at rollback level is also 1.
+        ptr_cd_->SetRollbackPoint(rollback_point, false);
+      }
+    }
+#endif
+    err = kAppError;
+    
+  }
+  else {
+#if CD_ERROR_INJECTION_ENABLED
+/*
+    CD_DEBUG("EIE Before\n");
+    CD_DEBUG("Is it NULL? %p, recreated? %d, reexecuted? %d\n", cd_error_injector_, ptr_cd_->recreated(), ptr_cd_->reexecuted());
+    if(cd_error_injector_ != NULL && ptr_cd_ != NULL) {
+      CD_DEBUG("EIE It is after : reexec # : %d, exec mode : %d at level #%u\n", ptr_cd_->num_reexecution_, GetExecMode(), level());
+      CD_DEBUG("recreated? %d, recreated? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
+      if(cd_error_injector_->Inject() && ptr_cd_->recreated() == false && ptr_cd_->reexecuted() == false) {
+        CD_DEBUG("EIE Reached SetMailBox. recreated? %d, reexecuted? %d\n", ptr_cd_->recreated(), ptr_cd_->reexecuted());
+        SetMailBox(kErrorOccurred);
+        err = kAppError;
+
+        
+        PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+        CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+
+      }
+      else {
+        
+        PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+        CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+        CheckMailBox();
+
+      }
+    }
+    else {
+      
+//      PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+//      CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+//      CheckMailBox();
+    }
+*/    
+
+#endif
+
+//    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
+    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+  }
+
+  CheckMailBox();
+
+
+#else // CD_MPI_ENABLED ends
+  if(err_desc == CD::CDInternalErrT::kErrorReported) {
+    // FIXME
+//    printf("### Error Injected.");
+//    printf(" Rollback Level #%u (%s %s) ###\n", 
+//             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+    ptr_cd_->SetRollbackPoint(rollback_point, false);
+  } else {
+//    printf("err:  %d\n", err_desc);
+  }
+#endif
+
+  if(err_ret_val != NULL)
+    *err_ret_val = err;
+#if CD_DEBUG_DEST == 1
+  fflush(cdout);
+#endif
+  end_clk = CD_CLOCK();
+  CDEpilogue();
+  return ret_prepare;
+
+}
+
+////////////////////////////////////////////////////////////////////
+//
+// Internal Ends
+//
+////////////////////////////////////////////////////////////////////
+
+#if 0
 // ----------------------- Switch APIs -----------------------------------
 CDHandle *CDHandle::CreateSW(uint32_t onOff,
                            const char *name, 
@@ -1383,7 +1763,7 @@ CDErrT CDHandle::CDAssertNotifySW(uint32_t onOff, bool test_true, const SysErrT 
 {
   return kOK;
 }
-
+#endif
 
 
 
@@ -1460,6 +1840,7 @@ CDErrT CDHandle::RemoveChild(CDHandle *cd_child)
   return err;
 }
 
+#if 0
 CDErrT CDHandle::CDAssert (bool test, const SysErrT *error_to_report)
 {
   CDPrologue();
@@ -1670,6 +2051,8 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   return ret_prepare;
 
 }
+#endif
+
 
 CDErrT CDHandle::RegisterRecovery (uint32_t error_name_mask, uint32_t error_loc_mask, RecoverObject *recover_object)
 {
@@ -1680,6 +2063,7 @@ CDErrT CDHandle::RegisterRecovery (uint32_t error_name_mask, uint32_t error_loc_
   else {
     // It is at remote node so do something for that.
   }
+  end_clk = CD_CLOCK();
   CDEpilogue();
   return kOK;
 }
@@ -1694,6 +2078,7 @@ CDErrT CDHandle::RegisterDetection (uint32_t system_name_mask, uint32_t system_l
     // It is at remote node so do something for that.
 
   }
+  end_clk = CD_CLOCK();
   CDEpilogue();
 
   return kOK;
@@ -1703,6 +2088,7 @@ float CDHandle::GetErrorProbability (SysErrT error_type, uint32_t error_num)
 {
 
   CDPrologue();
+  end_clk = CD_CLOCK();
   CDEpilogue();
   return 0;
 }
@@ -1711,6 +2097,7 @@ float CDHandle::RequireErrorProbability (SysErrT error_type, uint32_t error_num,
 {
 
   CDPrologue();
+  end_clk = CD_CLOCK();
   CDEpilogue();
 
   return 0;
@@ -1825,6 +2212,7 @@ void CDHandle::CommitPreserveBuff()
 //    ptr_cd_->ctxt_ = this->ctxt_;
   }
 //  }
+  end_clk = CD_CLOCK();
   CDEpilogue();
 }
 
@@ -1905,3 +2293,6 @@ void CDHandle::PrintCommLog(void) const {
   ptr_cd_->comm_log_ptr_->Print();
 }
 #endif
+
+
+

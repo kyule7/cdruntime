@@ -40,9 +40,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdint.h>
 #include <stdio.h>
 #include <dlfcn.h>
-//#include "cd_internal.h"
-//#include "cd_global.h"
-//#include "cd_def_internal.h"
+#ifdef libc_log
+#include "cd_internal.h"
+#include "cd_global.h"
+#include "cd_def_internal.h"
+#include "cd_def_debug.h"
+#endif
 
 //bool app_side;
 typedef void*(*LibcMallocFt)(size_t size);
@@ -58,8 +61,10 @@ namespace cd {
   namespace logging {
 
 struct RuntimeLogger {
-//	friend class cd::internal::CD;
-//	friend class cd::internal::HeadCD;
+#ifdef libc_log
+	friend class cd::internal::CD;
+	friend class cd::internal::HeadCD;
+#endif
     static uint64_t total_alloc_size;
     static bool active;
     static LibcMallocFt real_malloc;

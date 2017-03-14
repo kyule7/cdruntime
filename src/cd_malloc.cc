@@ -76,6 +76,9 @@ RuntimeLogger::~RuntimeLogger(void)
 //
 
 #ifdef libc_log
+RuntimeLogger::RuntimeLogger(void)
+{}
+void RuntimeLogger::Init(void) {}
 
 //bool app_side;
 
@@ -295,8 +298,11 @@ void* RuntimeLogger::malloc(size_t size)
 } 
 
 
-
-
+void* real_calloc_(size_t num, size_t size)
+{
+	LibcCallocFt real_calloc = (LibcCallocFt)dlsym(RTLD_NEXT, "calloc");
+	return real_calloc(num, size);
+}
 
 static void* temp_calloc(size_t num, size_t size)
 {
@@ -311,6 +317,8 @@ extern "C" void *calloc(size_t num, size_t size)
 
 void *RuntimeLogger::calloc(size_t num, size_t size)
 {
+//getchar();
+#if 0
   static void * (*real_calloc)(size_t,size_t) = 0;
   void *p;    
   if(!real_calloc)
@@ -318,7 +326,9 @@ void *RuntimeLogger::calloc(size_t num, size_t size)
     real_calloc = temp_calloc;
     real_calloc = (void*(*)(size_t, size_t)) dlsym(RTLD_NEXT, "calloc");
   }
-
+#else 
+  void *p;
+#endif
 
 
   if(app_side){
@@ -356,7 +366,7 @@ void *RuntimeLogger::calloc(size_t num, size_t size)
   		}
   		else
   		{
-        p = real_calloc(num,size);
+        p = real_calloc_(num,size);
         IncompleteLogEntry log_entry = NewLogEntry(p, size, true, c_CD->level(), c_CD->mem_alloc_log_.size());
         c_CD->mem_alloc_log_.push_back(log_entry);
 			  LIBC_DEBUG("libc_log_ptr_: %p\tEXECUTE MODE - calloc(%ld) = %p\n", c_CD->libc_log_ptr_, size, p);
@@ -365,7 +375,7 @@ void *RuntimeLogger::calloc(size_t num, size_t size)
 	  }
 	  else
 	  {
-      p = real_calloc(num,size);
+      p = real_calloc_(num,size);
 		  LIBC_DEBUG("NORMAL calloc(%ld) = %p\n", size, p);	
 	  }
     
@@ -373,7 +383,7 @@ void *RuntimeLogger::calloc(size_t num, size_t size)
   }
   else{
     //NEVER invoke functions that internally invoke calloc again (e.g., LIBC_DEBUG()) in order to aviod infinite calloc loop
-    p = real_calloc(num,size);
+    p = real_calloc_(num,size);
   }	        
   return p;
 }
@@ -685,13 +695,13 @@ RuntimeLogger::RuntimeLogger(void)
 void RuntimeLogger::Init(void)
 {
   printf("%s, %p, %p, %p\n", __func__, real_malloc, real_calloc, real_valloc);
-  getchar();
+  //getchar();
   if(active == false) {
 //    void *handle = dlopen("libc.so.6", RTLD_LAZY);
 //    printf("%s, %p\n", __func__, handle); getchar();
 //    if(handle == NULL) { assert(0); }
     void *handle = RTLD_NEXT; 
-    getchar();
+    //getchar();
     real_calloc = (LibcCallocFt)dlsym(handle, "calloc");
     if(real_calloc == NULL) assert(0);
     real_malloc = (LibcMallocFt)dlsym(handle, "malloc");
@@ -703,7 +713,7 @@ void RuntimeLogger::Init(void)
     active = true;
   }
   printf("active?%d\n", active);
-  getchar();
+  //getchar();
 }
 
 //void* real_malloc_(size_t size)
@@ -731,7 +741,7 @@ void *valloc(size_t size)
 
 void *mycalloc(size_t num, size_t size) 
 {
-  printf("%s\n", __func__); getchar();
+  printf("%s\n", __func__); //getchar();
   void *ret = NULL;
   posix_memalign(&ret, 512, size);//malloc(num * size);
   memset(ret, 0, num*size);

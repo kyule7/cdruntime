@@ -424,7 +424,9 @@ extern CD_CLOCK_T mailbox_elapsed_time;
 
 #define CDEpilogue() \
   app_side = true; \
-  end_clk = CD_CLOCK(); \
+  elapsed_time += end_clk - begin_clk; 
+
+//end_clk = CD_CLOCK(); \
   elapsed_time += end_clk - begin_clk; 
 
 
