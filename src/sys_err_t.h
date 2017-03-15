@@ -227,15 +227,28 @@ public:
   char* printSysErrInfo(void) { return NULL; } 
 };
 
-struct SystemConfig {
-  std::map<uint64_t, float> failure_rate_;
-  float &operator[](const uint64_t &idx) {
-    return failure_rate_[idx];
-  }
-  static void LoadSystemConfig(char *configFile=NULL);
+struct ConfigEntry {
+  int64_t interval_;
+  int64_t failure_type_;
+  void Print(int64_t level, int64_t phase);
 };
 
-extern SystemConfig system_config;
+typedef std::map<uint64_t, std::map<uint64_t, ConfigEntry> > MappingConfig;
+
+//extern ConfigType config;
+//extern std::map<int64_t, float> failure_rate;
+
+struct SystemConfig {
+  MappingConfig mapping_;
+  std::map<int64_t, float> failure_rate_;
+  void ParseParam(const char *key);
+  void ParseCDHierarchy(const char *key, int seq_cnt);
+public:
+  void UpdateSwitchParams(char *str);
+  void LoadConfig(const char *config);
+};
+
+extern SystemConfig config;
 
 /** @brief Create a new error/failure type name
  *

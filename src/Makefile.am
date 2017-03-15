@@ -37,9 +37,9 @@ libcd_la_SOURCES = \
 										serdes.cc \
   	                sys_err_t.cc \
 										cd_capi.cc 
-MY_LDFLAGS=-L./persistence -lpacker
+MY_LDFLAGS=-L./persistence -lpacker -L${YAML_PATH}/lib -lyaml
 libcd_la_LDFLAGS = -export-dynamic #-export-symbols-regex
-libcd_la_CPPFLAGS = -I./persistence
+libcd_la_CPPFLAGS = -I./persistence -I${YAML_PATH}/include
 #libcd_la_CPPFLAGS = $(cpp_flags)
 libcd_la_LIBADD = $(MY_LDFLAGS) $(external_libs) 
 

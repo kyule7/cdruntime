@@ -132,6 +132,7 @@ public:
     bool operator==(const CDID& that) const;
    
     uint32_t  level(void)         const;
+    uint32_t  phase(void)         const;
     uint32_t  rank_in_level(void) const;
     uint32_t  sibling_count(void) const;
     ColorT    color(void)         const;

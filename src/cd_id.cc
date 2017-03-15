@@ -82,6 +82,7 @@ CDID::CDID(const CDID &that)
 }
 
 uint32_t  CDID::level(void)         const { return cd_name_.level_; }
+uint32_t  CDID::phase(void)         const { return cd_name_.phase_; }
 uint32_t  CDID::rank_in_level(void) const { return cd_name_.rank_in_level_; }
 uint32_t  CDID::sibling_count(void) const { return cd_name_.size_; }
 ColorT    CDID::color(void)         const { return node_id_.color_; }
@@ -95,7 +96,7 @@ CDNameT   CDID::cd_name(void)       const { return cd_name_; }
 NodeID    CDID::node_id(void)       const { return node_id_; }
 bool      CDID::IsHead(void)        const { return node_id_.IsHead(); }
 
-string CDID::GetPhaseID(void) const { return to_string(cd_name_.level_) + string("_") + to_string(object_id_); }
+string CDID::GetPhaseID(void) const { return to_string(cd_name_.level_) + string("_") + to_string(cd_name_.phase_); }
 void CDID::SetCDID(const NodeID& node_id)   { node_id_ = node_id; }
 void CDID::SetSequentialID(uint32_t seq_id) { sequential_id_ = seq_id; }
 
@@ -118,7 +119,10 @@ bool CDID::operator==(const CDID& that) const
 
 ostream& operator<<(ostream& str, const CDID& cd_id)
 {
-  return str<< "Level: "<< cd_id.level() << ", CDNode" << cd_id.color() << ", Obj# " << cd_id.object_id() << ", Seq# " << cd_id.sequential_id();
+  return str << "Level: " << cd_id.level() << "-" << cd_id.phase() 
+             << ", CDNode" << cd_id.color() 
+             << ", Obj# " << cd_id.object_id() 
+             << ", Seq# " << cd_id.sequential_id();
 }
 
 

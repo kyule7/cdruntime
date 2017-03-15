@@ -39,14 +39,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 
 CDNameT::CDNameT(void)
-  : level_(0), rank_in_level_(0), size_(0) 
+  : level_(0), phase_(0), rank_in_level_(0), size_(0) 
 {}
   
-CDNameT::CDNameT(uint64_t level, uint64_t rank_in_level, uint64_t size)
-  : level_(level), rank_in_level_(rank_in_level), size_(size)
+CDNameT::CDNameT(uint64_t level, uint64_t phase, uint64_t rank_in_level, uint64_t size)
+  : level_(level), phase_(phase), rank_in_level_(rank_in_level), size_(size)
 {}
 
 uint32_t CDNameT::level(void)         const { return level_; }
+uint32_t CDNameT::phase(void)         const { return phase_; }
 uint32_t CDNameT::rank_in_level(void) const { return rank_in_level_; }
 uint32_t CDNameT::size(void)          const { return size_; }
 void     CDNameT::IncLevel(void)            { level_++; }
@@ -63,24 +64,29 @@ CDNameT::CDNameT(const CDNameT &parent_cdname, int num_children, int color)
 //            << ", color : "<< color << endl; 
 }
 
-CDNameT::CDNameT(const CDNameT& that)
+void CDNameT::copy(const CDNameT& that) 
 {
   level_         = that.level();
+  phase_         = that.phase();
   rank_in_level_ = that.rank_in_level();
   size_          = that.size();
 }
 
+CDNameT::CDNameT(const CDNameT& that)
+{
+  copy(that);
+}
+
 CDNameT &CDNameT::operator=(const CDNameT& that) 
 {
-  level_         = that.level();
-  rank_in_level_ = that.rank_in_level();
-  size_          = that.size();
+  copy(that);
   return *this;
 }
 
 bool CDNameT::operator==(const CDNameT& that) const 
 {
-  return (level_ == that.level()) && (rank_in_level_ == that.rank_in_level()) && (size_ == that.size());
+  return ((level_ == that.level()) && (phase_ == that.phase()) &&
+          (rank_in_level_ == that.rank_in_level()) && (size_ == that.size()));
 }
 
 int CDNameT::CDTag(void) const { return ((level_ << 16) | rank_in_level_); }

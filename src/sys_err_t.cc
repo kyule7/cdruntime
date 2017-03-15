@@ -35,9 +35,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "sys_err_t.h"
 #include "system_config.h"
+#include <yaml.h>
+#include <string.h>
 using namespace cd;
+#define INDENT_SIZE "    "
 
-SystemConfig cd::system_config;
+SystemConfig cd::config;
+long int level = -1;
+long int phase = -1;
+long int interval = -1;
+long int failure_type = 0;
+int seq_cnt = 0;
 
 uint64_t SoftMemErrInfo::get_pa_start(void)     { return pa_start_; }
 uint64_t SoftMemErrInfo::get_va_start(void)     { return va_start_; }
@@ -78,43 +86,170 @@ CDErrT UndeclareErrLoc(uint32_t error_name_id)
 }
 
 
-void SystemConfig::LoadSystemConfig(char *configFile)
+void ConfigEntry::Print(int64_t level, int64_t phase) 
+{ 
+  printf("[%ld/%ld] interval:%ld, type:%lX\n", 
+            level, phase, interval_, failure_type_); 
+}
+
+static inline
+void AddIndent(int cnt)
 {
-  if(configFile == NULL) {
-#ifdef ERROR_TYPE_0
-  system_config[ERROR_TYPE_0]  = ERROR_RATE_TYPE_0;
-#endif
-#ifdef ERROR_TYPE_1
-  system_config[ERROR_TYPE_1]  = ERROR_RATE_TYPE_1;
-#endif
-#ifdef ERROR_TYPE_2
-  system_config[ERROR_TYPE_2]  = ERROR_RATE_TYPE_2;
-#endif
-#ifdef ERROR_TYPE_3
-  system_config[ERROR_TYPE_3]  = ERROR_RATE_TYPE_3;
-#endif
-#ifdef ERROR_TYPE_4
-  system_config[ERROR_TYPE_4]  = ERROR_RATE_TYPE_4;
-#endif
-#ifdef ERROR_TYPE_5
-  system_config[ERROR_TYPE_5]  = ERROR_RATE_TYPE_5;
-#endif
-#ifdef ERROR_TYPE_6
-  system_config[ERROR_TYPE_6]  = ERROR_RATE_TYPE_6;
-#endif
-#ifdef ERROR_TYPE_7
-  system_config[ERROR_TYPE_7]  = ERROR_RATE_TYPE_7;
-#endif
-#ifdef ERROR_TYPE_8
-  system_config[ERROR_TYPE_8]  = ERROR_RATE_TYPE_8;
-#endif
-#ifdef ERROR_TYPE_9
-  system_config[ERROR_TYPE_9]  = ERROR_RATE_TYPE_9;
-#endif
-  }
-  else {
-
-    // Read and parse system info, pass it to CD runtime
-
+  for(int i=0; i<cnt; i++) {
+    printf(INDENT_SIZE);
   }
 }
+
+void SystemConfig::UpdateSwitchParams(char *str)
+{
+  char *prv_str = str+1;
+  str = strtok(prv_str, "_");
+  if(str == NULL) { printf("Param format is wrong\n"); assert(0); }
+  level = atol(str);
+  str = strtok(NULL, "_");
+  if(str == NULL) { printf("Param format is wrong\n"); assert(0); }
+  phase = atol(str);
+  printf("Check: %ld, %ld\n", level, phase);  getchar();
+}
+
+
+void SystemConfig::ParseCDHierarchy(const char *key, int seq_cnt) 
+{
+  if(key[0] == 'C' && key[1] == 'D') { 
+    AddIndent(seq_cnt); printf("%s\n", key);
+  } else if(strcmp(key, "loop") == 0) { 
+    AddIndent(seq_cnt); printf("%s: ", key);
+  } else if(strcmp(key, "time") == 0) { 
+    AddIndent(seq_cnt); printf("%s: ", key);
+  } else if(strcmp(key, "failure_rate") == 0) { 
+    AddIndent(seq_cnt); printf("%s: ", key);
+  } else { // value
+    printf("%s\n", key);
+  }
+}
+
+void SystemConfig::ParseParam(const char *key) 
+{
+  static char prv;
+  char *str = const_cast<char *>(key);
+  if(key[0] == 'S') {
+    prv = key[0];
+    UpdateSwitchParams(str);
+  } else if(key[0] == 'F') {
+    prv = key[0];
+    failure_type = atoi(str+1);
+    printf("failure_type:%lx\n", failure_type);
+  } else if(key[0] == 'P') {
+    //printf("key0:%s\n", key);
+  } else { // value
+    if(prv == 'S') {
+      char *prv_str = str;
+      str = strtok(prv_str, ",");
+      if(str != NULL) {
+        interval = atol(str);
+        str = strtok(NULL, ",");
+        if(str == NULL) { printf("Param format is wrong\n"); assert(0); }
+        printf("type:%s\n", str);
+        failure_type = strtol(str, NULL, 16);
+        config.mapping_[level][phase].interval_     = interval;
+        config.mapping_[level][phase].failure_type_ = failure_type;
+        config.mapping_[level][phase].Print(level, phase);
+      }
+    } else if(prv == 'F') {
+      config.failure_rate_[failure_type] = atof(str);
+    } else {
+      assert(0);
+    }
+  }
+}
+
+void SystemConfig::LoadConfig(const char *config)
+{
+  FILE *fh = fopen(config, "r");
+  yaml_parser_t parser;
+  yaml_token_t  token;   
+  yaml_event_t  event;   
+
+  if(!yaml_parser_initialize(&parser)) assert(0);
+  if(fh == NULL) assert(0);
+
+  yaml_parser_set_input_file(&parser, fh);
+
+  do {
+    if (!yaml_parser_parse(&parser, &event)) {
+       printf("Parser error %d\n", parser.error);
+       exit(EXIT_FAILURE);
+    }
+    switch(event.type)
+    { 
+      case YAML_NO_EVENT:             printf("No event!"); break;
+      // Stream start/end
+      case YAML_STREAM_START_EVENT:   printf("STREAM START\n"); break;
+      case YAML_STREAM_END_EVENT:     printf("\nSTREAM END");   break;
+      // Block delimeters
+      case YAML_DOCUMENT_START_EVENT: printf("Start Configuration\n");   break;
+      case YAML_DOCUMENT_END_EVENT:   printf("\nEnd Configuration");     break;
+      case YAML_SEQUENCE_START_EVENT: /*AddIndent(seq_cnt++); printf("{");*/ break;
+      case YAML_SEQUENCE_END_EVENT:   /*AddIndent(--seq_cnt); printf("}");*/ break;
+      case YAML_MAPPING_START_EVENT:  break;
+      case YAML_MAPPING_END_EVENT:    break;
+      // Data
+      case YAML_ALIAS_EVENT:          break; 
+      case YAML_SCALAR_EVENT: 
+      {
+        char key[32];
+        strcpy(key, (char *)event.data.scalar.value);
+        ParseParam(key);
+        break;
+      }
+    }
+    if(event.type != YAML_STREAM_END_EVENT)
+      yaml_event_delete(&event);
+  } while(event.type != YAML_STREAM_END_EVENT);
+
+  yaml_event_delete(&event);
+  yaml_parser_delete(&parser);
+  fclose(fh);
+}
+
+
+//void LoadSystemConfig(char *configFile)
+//{
+//  if(configFile == NULL) {
+//#ifdef ERROR_TYPE_0
+//  system_config[ERROR_TYPE_0]  = ERROR_RATE_TYPE_0;
+//#endif
+//#ifdef ERROR_TYPE_1
+//  system_config[ERROR_TYPE_1]  = ERROR_RATE_TYPE_1;
+//#endif
+//#ifdef ERROR_TYPE_2
+//  system_config[ERROR_TYPE_2]  = ERROR_RATE_TYPE_2;
+//#endif
+//#ifdef ERROR_TYPE_3
+//  system_config[ERROR_TYPE_3]  = ERROR_RATE_TYPE_3;
+//#endif
+//#ifdef ERROR_TYPE_4
+//  system_config[ERROR_TYPE_4]  = ERROR_RATE_TYPE_4;
+//#endif
+//#ifdef ERROR_TYPE_5
+//  system_config[ERROR_TYPE_5]  = ERROR_RATE_TYPE_5;
+//#endif
+//#ifdef ERROR_TYPE_6
+//  system_config[ERROR_TYPE_6]  = ERROR_RATE_TYPE_6;
+//#endif
+//#ifdef ERROR_TYPE_7
+//  system_config[ERROR_TYPE_7]  = ERROR_RATE_TYPE_7;
+//#endif
+//#ifdef ERROR_TYPE_8
+//  system_config[ERROR_TYPE_8]  = ERROR_RATE_TYPE_8;
+//#endif
+//#ifdef ERROR_TYPE_9
+//  system_config[ERROR_TYPE_9]  = ERROR_RATE_TYPE_9;
+//#endif
+//  }
+//  else {
+//
+//    // Read and parse system info, pass it to CD runtime
+//
+//  }
+//}

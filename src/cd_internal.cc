@@ -557,6 +557,7 @@ CDHandle *CD::Create(CDHandle *parent,
 
   this->AddChild(new_cd_handle);
 
+  new_cd_handle->UpdateParam(new_cd_handle->level(), new_cd_handle->phase());
   return new_cd_handle;
 
 }
@@ -570,7 +571,7 @@ CDHandle *CD::CreateRootCD(const char *name,
 {
   /// Create CD object with new CDID
   CDHandle *new_cd_handle = NULL;
-  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
+//  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
 
   *cd_internal_err = InternalCreate(NULL, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
 
@@ -587,6 +588,7 @@ CDHandle *CD::CreateRootCD(const char *name,
 //  }
   assert(new_cd_handle != NULL);
 
+  new_cd_handle->UpdateParam(new_cd_handle->level(), new_cd_handle->phase());
   return new_cd_handle;
 }
 

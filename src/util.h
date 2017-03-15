@@ -227,7 +227,7 @@ int MakeFileDir(const char *filepath_str)
   struct stat sb;
   if(stat(filepath, &sb) != 0 || S_ISDIR(sb.st_mode) == 0) {
     char *ptr;
-    char *next;
+    char *next = NULL;
     for (ptr=strchr(filepath+1, '/'); ptr; next=ptr+1, ptr=strchr(next, '/')) {
       *ptr='\0';
       printf("%p %s\n", ptr,  filepath);

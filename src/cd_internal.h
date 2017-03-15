@@ -88,25 +88,25 @@ struct RemoteCDEntry : public CDEntry {
   int task_id_;
   RemoteCDEntry(void) {}
   RemoteCDEntry(uint64_t id, uint64_t size, uint64_t offset) 
-    : task_id_(myTaskID), CDEntry(id, size, offset) {}
+    : CDEntry(id, size, offset), task_id_(myTaskID) {}
   RemoteCDEntry(const RemoteCDEntry &that) 
-    : task_id_(that.task_id_), CDEntry(that.id_, that.size_.code_, that.offset_, that.src_) {}
+    : CDEntry(that.id_, that.size_.code_, that.offset_, that.src_), task_id_(that.task_id_) {}
   RemoteCDEntry(const CDEntry &that) {
     copy_cdentry(that);
   }
   void copy_cdentry(const CDEntry &that) {
+    task_id_ = myTaskID;
     id_      = that.id_;
     size_    = that.size_;
     offset_  = that.offset_;
     src_     = that.src_;
-    task_id_ = myTaskID;
   }
   void copy_rcdentry(const RemoteCDEntry &that) {
+    task_id_ = that.task_id_;
     id_      = that.id_;
     size_    = that.size_;
     offset_  = that.offset_;
     src_     = that.src_;
-    task_id_ = that.task_id_;
   }
   RemoteCDEntry &operator=(const CDEntry &that) {
     copy_cdentry(that);
@@ -500,6 +500,7 @@ public:
     CDNameT  &GetCDName(void)          { return cd_id_.cd_name_; }
     NodeID   &GetNodeID(void)          { return cd_id_.node_id_; }
     uint32_t level(void)         const { return cd_id_.cd_name_.level_; }
+    uint32_t phase(void)         const { return cd_id_.cd_name_.phase_; }
     uint32_t rank_in_level(void) const { return cd_id_.cd_name_.rank_in_level_; }
     uint32_t sibling_num(void)   const { return cd_id_.cd_name_.size_; }
     ColorT   color(void)         const { return cd_id_.node_id_.color_; }

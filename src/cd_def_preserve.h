@@ -7,6 +7,7 @@
 #define CD_FILEPATH_PFS "PFS/"
 #define CD_FILEPATH_HDD "HDD/"
 #define CD_FILEPATH_SSD "SSD/"
+#define CD_DEFAULT_CONFIG "./config.yaml"
 #define CD_DEFAULT_PRV_GLOBAL_BASEPATH "./"
 #define CD_DEFAULT_PRV_LOCAL_BASEPATH "/tmp/"
 #define CD_DEFAULT_PRV_FILENAME "prv_files_%s_XXXXXX"

@@ -1,18 +1,18 @@
 #ifndef _SYSTEM_CONFIG_H
 #define _SYSTEM_CONFIG_H
 
-#define ERROR_TYPE_0      0x00001 
-#define ERROR_TYPE_1      0x00002 
-//#define ERROR_TYPE_2      0x00004 
-//#define ERROR_TYPE_3      0x00008 
-//#define ERROR_TYPE_4      0x00010 
-//#define ERROR_TYPE_5      0x00020 
-//#define ERROR_TYPE_6      0x00040 
-//#define ERROR_TYPE_7      0x00080 
-//#define ERROR_TYPE_8      0x00100 
-//#define ERROR_TYPE_9      0x00200 
-#define ERROR_RATE_TYPE_0 0.00
-#define ERROR_RATE_TYPE_1 0.00
+//#define ERROR_TYPE_0      0x00001 
+//#define ERROR_TYPE_1      0x00002 
+////#define ERROR_TYPE_2      0x00004 
+////#define ERROR_TYPE_3      0x00008 
+////#define ERROR_TYPE_4      0x00010 
+////#define ERROR_TYPE_5      0x00020 
+////#define ERROR_TYPE_6      0x00040 
+////#define ERROR_TYPE_7      0x00080 
+////#define ERROR_TYPE_8      0x00100 
+////#define ERROR_TYPE_9      0x00200 
+//#define ERROR_RATE_TYPE_0 0.00
+//#define ERROR_RATE_TYPE_1 0.00
 //#define ERROR_RATE_TYPE_2 0.0
 //#define ERROR_RATE_TYPE_3 0.0
 //#define ERROR_RATE_TYPE_4 0.06

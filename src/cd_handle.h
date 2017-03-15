@@ -211,7 +211,8 @@ class CDHandle {
     NodeID node_id_;      //!< NodeID contains the information to access to the task.
     SplitFuncT SplitCD;   //!<function object that will be set to some appropriate split strategy.
     uint64_t count_;
-    uint64_t param_;
+    uint64_t interval_;
+    uint64_t error_mask_;
     bool     active_;
   public:
 #if CD_PROFILER_ENABLED 
@@ -788,6 +789,9 @@ class CDHandle {
                                                //!< no error value returned if error=0.
                      ) 
     { 
+
+      auto it = config.mapping_.find(level());
+      assert(it != config.mapping_.end());
       if(active_) {
         return Real_Create(name, cd_type, err_name_mask, err_loc_mask, error);
       } else {
@@ -943,7 +947,7 @@ class CDHandle {
                  const uint64_t &sys_err_vec=0
                 )
     { 
-      if(count_++ % param_ == 0) { 
+      if(count_++ % interval_ == 0) { 
         active_ = true;
         return Real_Begin(collective, label, sys_err_vec);
       } else {
@@ -977,7 +981,7 @@ class CDHandle {
                                           //!< AdvancePointInTime functionality).
                    )
     { 
-      if(count_++ % param_ == param_ - 1) { 
+      if(count_++ % interval_ == interval_ - 1) { 
         active_ = true;
         return Real_Complete(collective, update_prv);
       } else {
@@ -1587,6 +1591,9 @@ class CDHandle {
     ///@brief Get current CDHandle's level.
     uint32_t level(void)         const;
 
+    ///@brief Get current CDHandle's phase.
+    uint32_t phase(void)         const;
+
     ///@brief Get the rank ID of this CD in current CD level.
     uint32_t rank_in_level(void) const;
 
@@ -1634,6 +1641,15 @@ class CDHandle {
 
     GroupT &group(void);
     int SelectHead(uint32_t task_size);
+
+    inline void UpdateParam(uint32_t level, uint32_t phase) {
+      auto it = config.mapping_.find(level);
+      assert(it == config.mapping_.end());
+      auto jt = it-find(phase);
+      assert(jt == jt->end());
+      interval_   = config.mapping_[level][phase].interval_;
+      error_mask_ = config.mapping_[level][phase].failure_type_;
+    }
 #if CD_TEST_ENABLED
     void PrintCommLog(void) const;
 #endif

@@ -84,11 +84,13 @@ using namespace cd::logging;
 #if CD_MPI_ENABLED 
 
 #include <mpi.h>
+#if 0
 //#define ROOT_COLOR    MPI_COMM_WORLD
 //#define INITIAL_COLOR MPI_COMM_NULL
 //#define ROOT_HEAD_ID  0
 //typedef MPI_Comm      ColorT;
 //typedef MPI_Group     GroupT;
+#endif
 typedef MPI_Request   CommRequestT;
 typedef MPI_Status    CommStatusT;
 typedef uint32_t      CDFlagT;
@@ -99,11 +101,13 @@ typedef MPI_File      COMMLIB_File;
 
 #else
 
+#if 0
 //#define ROOT_COLOR    0 
 //#define INITIAL_COLOR 0
 //#define ROOT_HEAD_ID  0
 //typedef int           ColorT;
 //typedef int           GroupT;
+#endif
 typedef int           CommRequestT;
 typedef int           CommStatusT;
 // FIXME
@@ -426,8 +430,8 @@ extern CD_CLOCK_T mailbox_elapsed_time;
   app_side = true; \
   elapsed_time += end_clk - begin_clk; 
 
-//end_clk = CD_CLOCK(); \
-  elapsed_time += end_clk - begin_clk; 
+//end_clk = CD_CLOCK(); 
+//  elapsed_time += end_clk - begin_clk; 
 
 
 /**@brief Check current context is application side. 

@@ -229,7 +229,13 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   // Initialize static vars
   myTaskID      = myTask;
   totalTaskSize = numTask;
-  cd::system_config.LoadSystemConfig();
+ 
+  char *cd_config_file = getenv("CD_CONFIG_FILE");
+  if(cd_config_file != NULL) {
+    cd::config.LoadConfig(cd_config_file);
+  } else {
+    cd::config.LoadConfig(CD_DEFAULT_CONFIG);
+  }
 
   SetDebugFilepath(myTask);
   internal::InitFileHandle(myTask == 0);
@@ -253,6 +259,9 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
                                               ROOT_SYS_DETECT_VEC, &internal_err);
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
+  // Update root's tuning parameters
+  root_cd_handle->UpdateParam(0, 0);
+
   // Create windows for pendingFlag and rollback_point 
   cd::internal::Initialize();
 
@@ -265,7 +274,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   InitErrorInjection(myTaskID);
   // To be safe
   CDHandle::memory_error_injector_ = NULL;
-  CDHandle::system_error_injector_ = new SystemErrorInjector(system_config);
+  CDHandle::system_error_injector_ = new SystemErrorInjector(config);
 #endif
 
 #if CD_DEBUG_ENABLED
@@ -757,6 +766,10 @@ CDHandle::CDHandle()
 #if CD_ERROR_INJECTION_ENABLED
   cd_error_injector_ = NULL;
 #endif
+  count_ = 0;
+  interval_ = -1;
+  error_mask_ = -1;
+  active_ = false;
 
 
 //  if(node_id().size() > 1)
@@ -787,6 +800,10 @@ CDHandle::CDHandle(CD *ptr_cd)
 #if CD_ERROR_INJECTION_ENABLED
   cd_error_injector_ = NULL;
 #endif
+  count_ = 0;
+  interval_ = -1;
+  error_mask_ = -1;
+  active_ = false;
 
 //  if(node_id_.size() > 1)
 //    PMPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), PMPI_INFO_NULL, PMPI_COMM_WORLD, &pendingWindow_);
@@ -883,7 +900,8 @@ CDHandle *CDHandle::Real_Create(const char *name,
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
-  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
+  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), 
+                                            static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
   
@@ -986,7 +1004,8 @@ CDHandle *CDHandle::Real_Create(uint32_t  num_children,
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
 //  CD::CDInternalErrrT err = kOK;
-  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
+  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), 
+                                            static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
@@ -1048,8 +1067,9 @@ CDHandle *CDHandle::Real_Create(uint32_t color,
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
-  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
-
+  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), 
+                                            static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
+  
   CDPath::GetCDPath()->push_back(new_cd_handle);
 
   if(err<0) {
@@ -1799,6 +1819,7 @@ NodeID   &CDHandle::node_id(void)             { return node_id_; }
 CD       *CDHandle::ptr_cd(void)        const { return ptr_cd_; }
 void      CDHandle::SetCD(CD *ptr_cd)         { ptr_cd_=ptr_cd; }
 uint32_t  CDHandle::level(void)         const { return ptr_cd_->GetCDName().level(); }
+uint32_t  CDHandle::phase(void)         const { return ptr_cd_->GetCDName().phase(); }
 uint32_t  CDHandle::rank_in_level(void) const { return ptr_cd_->GetCDName().rank_in_level(); }
 uint32_t  CDHandle::sibling_num(void)   const { return ptr_cd_->GetCDName().size(); }
 ColorT    CDHandle::color(void)         const { return node_id_.color(); }
