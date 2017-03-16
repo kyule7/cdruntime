@@ -66,7 +66,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <assert.h>
 
 // system specific or machine specific utils resides here.
-using namespace cd;
 using namespace std;
 
 namespace cd {

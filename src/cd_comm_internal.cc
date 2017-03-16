@@ -134,7 +134,7 @@ CDErrT CDHandle::Sync(ColorT color)
   PMPI_Barrier(color);
 #endif
 
-  return kOK;
+  return common::kOK;
 }
 
 void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id) 

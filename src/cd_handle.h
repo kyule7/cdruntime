@@ -61,8 +61,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "serdes.h"
 
 //#define FUNC_ATTR inline __attribute__((always_inline))
-using namespace cd::interface;
-using namespace cd::internal;
+//using namespace cd::interface;
+//using namespace cd::internal;
 
 
 /**@addtogroup cd_init_funcs
@@ -203,14 +203,14 @@ class CDHandle {
 
 #if CD_ERROR_INJECTION_ENABLED
   private:
-    CDErrorInjector *cd_error_injector_;                //!< Error injector interface.
-    static MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.
+    interface::CDErrorInjector *cd_error_injector_;                //!< Error injector interface.
+    static interface::MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.
   public:
-    static SystemErrorInjector *system_error_injector_; //!< Error injector interface.
+    static interface::SystemErrorInjector *system_error_injector_; //!< Error injector interface.
 #endif
   private:
-    CD    *ptr_cd_;       //!< Pointer to CD object which will not exposed to users.
-    NodeID node_id_;      //!< NodeID contains the information to access to the task.
+    internal::CD    *ptr_cd_;       //!< Pointer to CD object which will not exposed to users.
+    internal::NodeID node_id_;      //!< NodeID contains the information to access to the task.
     SplitFuncT SplitCD;   //!<function object that will be set to some appropriate split strategy.
 //    uint64_t count_;
 //    uint64_t interval_;
@@ -218,7 +218,7 @@ class CDHandle {
 //    bool     active_;
   public:
 #if CD_PROFILER_ENABLED 
-    Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
+    interface::Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
                           //!< It will be valid when `CD_PROFILER_ENABLED` compile-time flag is on.
 #endif
     int     jmp_val_;     //!< Temporary flag related to longjmp/setjmp
@@ -226,7 +226,7 @@ class CDHandle {
     ucontext_t &ctxt_;    //!< Temporary buffer related to setcontext/getcontext
   private:
     CDHandle(void);       //!< Default constructor of CDHandle. 
-    CDHandle(CD *ptr_cd); //!< Normally this constructor will be called when CD is created. 
+    CDHandle(internal::CD *ptr_cd); //!< Normally this constructor will be called when CD is created. 
                           //!<CDHandle pointer is returned when `CDHandle::Create()` is called.
    ~CDHandle(void);
   public:
@@ -966,9 +966,9 @@ class CDHandle {
     */
 
 #if CD_ERROR_INJECTION_ENABLED
-    void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector);
+    void RegisterMemoryErrorInjector(interface::MemoryErrorInjector *memory_error_injector);
 #else
-    void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector) {}
+    void RegisterMemoryErrorInjector(interface::MemoryErrorInjector *memory_error_injector) {}
 #endif
 
 /**@brief Register error injection method into CD runtime system.
@@ -987,9 +987,9 @@ class CDHandle {
  * @param [in] newly created error injector object.
  */
 #if CD_ERROR_INJECTION_ENABLED
-    void RegisterErrorInjector(CDErrorInjector *cd_error_injector);
+    void RegisterErrorInjector(interface::CDErrorInjector *cd_error_injector);
 #else
-    void RegisterErrorInjector(CDErrorInjector *cd_error_injector) {}
+    void RegisterErrorInjector(interface::CDErrorInjector *cd_error_injector) {}
 #endif
 
  /** @} */ // Ends cd_split
@@ -1082,7 +1082,7 @@ class CDHandle {
 
   private:  // internal use -------------------------------------------------------------
     /// @brief Initialize for CDHandle object.
-    void Init(CD *ptr_cd);
+    void Init(internal::CD *ptr_cd);
 
     /// @brief Add children CD to my CD.
     CDErrT AddChild(CDHandle *cd_child);
@@ -1101,7 +1101,7 @@ class CDHandle {
                                 uint64_t error_loc_mask=0);
 
     /// @brief Get NodeID with given new_color and new_task
-    static NodeID GenNewNodeID(int new_head, const NodeID &new_node_id, bool is_reuse);
+    static internal::NodeID GenNewNodeID(int new_head, const internal::NodeID &new_node_id, bool is_reuse);
 
     /// @brief Check mail box.
     CDErrT CheckMailBox(void);
@@ -1111,7 +1111,7 @@ class CDHandle {
 
 #if CD_MPI_ENABLED
     /// @brief Get NodeID with given new_color and new_task.
-    NodeID GenNewNodeID(const ColorT &my_color, 
+    internal::NodeID GenNewNodeID(const ColorT &my_color, 
                         const int &new_color, 
                         const int &new_task, 
                         int new_head,
@@ -1119,7 +1119,7 @@ class CDHandle {
                         );
 
     /// @brief Collect child CDs' head information.
-    void CollectHeadInfoAndEntry(const NodeID &new_node_id);
+    void CollectHeadInfoAndEntry(const internal::NodeID &new_node_id);
 
     /// @brief Synchronize every task of this CD.
     CDErrT Sync(ColorT color);
@@ -1158,25 +1158,25 @@ class CDHandle {
     std::string  &label(void);
 
     ///@brief Get CDID of the current CD.
-    CDID    &GetCDID(void);       
+    internal::CDID    &GetCDID(void);       
 
    /**@brief Get the name/location of this CD.
     * The CDName is a (level, rank_in_level) tuple.
     *
     * @return the name/location of the CD
     */
-    CDNameT &GetCDName(void);   
+    internal::CDNameT &GetCDName(void);   
 
 
     ///@brief Get NodeID of the current CD.
-    NodeID  &node_id(void);       
+    internal::NodeID  &node_id(void);       
     
     ///@brief Get CD object pointer that this CDHandle corresponds to.
     ///@return CD object's pointer.
-    CD      *ptr_cd(void)        const;
+    internal::CD *ptr_cd(void)        const;
 
     ///@brief Set CD for this CDHandle. 
-    void     SetCD(CD *ptr_cd);
+    void     SetCD(internal::CD *ptr_cd);
 
     ///@brief Check if the current task int this CD is head task.
     ///@return true if it is head, otherwise false.

@@ -86,7 +86,6 @@ namespace cd {
     class NodeID;
     class CDNameT;
     class CDID;
-    class CDEvent;
     //class PFSHandle;
   }
   namespace logging {
@@ -96,9 +95,10 @@ namespace cd {
   namespace interface {
 
   }
+  class CDEvent;
 }
 
-using namespace cd;
+using namespace common;
 using namespace cd::internal;
 using namespace cd::interface;
 using namespace cd::logging;
@@ -165,7 +165,7 @@ typedef int           COMMLIB_File;
 #define NUM_FLAGS 1024
 
 
-#define INITIAL_ERR_VAL kOK
+#define INITIAL_ERR_VAL common::kOK
 #define DATA_MALLOC malloc
 #define DATA_FREE free
 

@@ -51,7 +51,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 
 namespace cd {
-  namespace internal {
 
 /**@class CDEvent 
  * @brief An object that provides an event identifier to a non-blocking CD runtime call
@@ -109,6 +108,5 @@ public:
 };
 
 
-  } // namespace internal ends
 } // namespace cd ends
 #endif 

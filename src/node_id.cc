@@ -40,6 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "cd_def_internal.h" 
 using namespace cd;
+using std::endl;
 
 
 NodeID::NodeID(int head)

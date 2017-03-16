@@ -42,8 +42,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   #else
     #include "cd_handle.h"
     #include "tuned_cd_handle.h"
-    using namespace cd;
-    using namespace cd::logging;
   #endif
 
 #else // non-cuda program
@@ -51,8 +49,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   #ifdef __cplusplus
     #include "cd_handle.h"
     #include "tuned_cd_handle.h"
-    using namespace cd;
-    using namespace cd::logging;
   #else
     #include "cd_capi.h"
   #endif

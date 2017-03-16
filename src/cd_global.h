@@ -108,7 +108,6 @@ namespace cd {
     class NodeID;
     class CDNameT;
     class CDID;
-    class CDEvent;
 //    class PFSHandle;
   }
   namespace interface {
@@ -133,6 +132,7 @@ namespace cd {
     class Test;
   }
 
+  class CDEvent;
   class SysErrT;
   class RegenObject;
   class RecoverObject;
@@ -140,8 +140,7 @@ namespace cd {
   class DebugBuf;
 }
 
-namespace cd {
-
+namespace common {
 /**@addtogroup internal_error_types  
  * @{
  *
@@ -155,6 +154,7 @@ namespace cd {
  * For now, only returning OK or error, but will get more elaborate
  * in future versions of this API.
  */
+
   enum CDErrT { kOK=0,        //!< Call executed without error       
                 kAlreadyInit, //!< Init called more than once
                 kError,       //!< Call did not execute as expected
@@ -164,8 +164,14 @@ namespace cd {
                 kFailedMakeFileDir,
                 kAppError,
               };
-
 /** @} */ // end of internal_error_types
+}
+
+using namespace common;
+
+namespace cd {
+
+
 
 /** \addtogroup cd_defs 
  *@{
@@ -393,6 +399,7 @@ namespace cd {
 
 namespace tuned {
   class CDHandle;
+  extern CDHandle *CD_Init_tuned(int numTask, int myTask, PrvMediumT prv_medium);
 /** \addtogroup cd_accessor_funcs 
  * These methods are globally accessible without a CDHandle object.
  * So, user can get a handle of CD at any point of program with these methods.

@@ -60,8 +60,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <cstdio>
 #include "cd_def_interface.h"
 
-using namespace std;
-#define LabelT string
+#define LabelT std::string
 
 namespace cd {
   namespace interface {
@@ -269,7 +268,7 @@ private:
   virtual void RecordClockBegin(){}
   virtual void RecordClockEnd(){}
   virtual void Delete(void){}
-  virtual LabelT label(void){ return string();}
+  virtual LabelT label(void){ return std::string();}
 //  virtual void GetProfile(const char *label)=0;
 };
 

@@ -76,7 +76,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_malloc.h"
 #endif
 
-using namespace cd::logging;
 using namespace packer;
 
 namespace packer {
@@ -88,14 +87,14 @@ struct RemoteCDEntry : public CDEntry {
   int task_id_;
   RemoteCDEntry(void) {}
   RemoteCDEntry(uint64_t id, uint64_t size, uint64_t offset) 
-    : CDEntry(id, size, offset), task_id_(myTaskID) {}
+    : CDEntry(id, size, offset), task_id_(cd::myTaskID) {}
   RemoteCDEntry(const RemoteCDEntry &that) 
     : CDEntry(that.id_, that.size_.code_, that.offset_, that.src_), task_id_(that.task_id_) {}
   RemoteCDEntry(const CDEntry &that) {
     copy_cdentry(that);
   }
   void copy_cdentry(const CDEntry &that) {
-    task_id_ = myTaskID;
+    task_id_ = cd::myTaskID;
     id_      = that.id_;
     size_    = that.size_;
     offset_  = that.offset_;

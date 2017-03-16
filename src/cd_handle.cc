@@ -52,6 +52,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #endif
 
 using namespace cd;
+using namespace common;
 using namespace cd::interface;
 using namespace cd::internal;
 using namespace std;
@@ -304,7 +305,8 @@ void CD_Finalize(void)
 
   CD_DEBUG("========================= Finalize [%d] ===============================\n", myTaskID);
 
-  assert(CDPath::GetCDPath()->size()==1); // There should be only on CD which is root CD
+  CD_ASSERT_STR(CDPath::GetCDPath()->size()==1, 
+      "path size:%lu\n", CDPath::GetCDPath()->size()); // There should be only on CD which is root CD
   assert(CDPath::GetCDPath()->back()!=NULL);
 
 
@@ -876,7 +878,7 @@ int CDHandle::SelectHead(uint32_t task_size)
 CDErrT CDHandle::RegisterSplitMethod(SplitFuncT split_func)
 { 
   SplitCD = split_func; 
-  return kOK;
+  return common::kOK;
 }
 
 
@@ -1444,7 +1446,7 @@ CDErrT CDHandle::CDAssert(bool test, const SysErrT *error_to_report)
 //  CD_DEBUG("Assert : %d at level %u\n", ptr_cd()->cd_exec_mode_, ptr_cd()->level());
 
   assert(ptr_cd_ != 0);
-  CDErrT err = kOK;
+  CDErrT err = common::kOK;
 
 #if CD_PROFILER_ENABLED
 //    if(!test_true) {
@@ -1483,7 +1485,7 @@ CDErrT CDHandle::CDAssertFail (bool test_true, const SysErrT *error_to_report)
 
   end_clk = CD_CLOCK();
   CDEpilogue();
-  return kOK;
+  return common::kOK;
 }
 
 CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
@@ -1498,7 +1500,7 @@ CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 
   end_clk = CD_CLOCK();
   CDEpilogue();
-  return kOK;
+  return common::kOK;
 }
 
 std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
@@ -1510,7 +1512,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
       level(), need_reexec(), *CD::rollback_point_);
 
   std::vector<SysErrT> ret_prepare;
-  CDErrT err = kOK;
+  CDErrT err = common::kOK;
   uint32_t rollback_point = INVALID_ROLLBACK_POINT;
 
   int err_desc = (int)ptr_cd_->Detect(rollback_point);
@@ -2113,7 +2115,7 @@ CDErrT CDHandle::RegisterRecovery (uint32_t error_name_mask, uint32_t error_loc_
   }
   end_clk = CD_CLOCK();
   CDEpilogue();
-  return kOK;
+  return common::kOK;
 }
 
 CDErrT CDHandle::RegisterDetection (uint32_t system_name_mask, uint32_t system_loc_mask)
@@ -2129,7 +2131,7 @@ CDErrT CDHandle::RegisterDetection (uint32_t system_name_mask, uint32_t system_l
   end_clk = CD_CLOCK();
   CDEpilogue();
 
-  return kOK;
+  return common::kOK;
 }
 
 float CDHandle::GetErrorProbability (SysErrT error_type, uint32_t error_num)

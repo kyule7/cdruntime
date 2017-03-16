@@ -18,6 +18,7 @@ typedef uint32_t PhaseID;
 void AddHandle(CDHandle *);
 class CDHandle {
   friend class tuned::CDPath;
+  friend CDHandle *CD_Init_tuned(int numTask, int myTask, PrvMediumT prv_medium);
     std::map<uint32_t, ParamEntry> config_;
     cd::CDHandle *handle_;
     uint32_t level_;
@@ -56,7 +57,7 @@ class CDHandle {
                                                //!< should be able to recover from that error type.
                      uint32_t err_loc_mask=0,  //!< [in] each `1` in the mask indicates that this CD
                                                //!< should be able to recover from that error type.
-                     cd::CDErrT *error=0           //!< [in,out] Pointer for error return value 
+                     CDErrT *error=0           //!< [in,out] Pointer for error return value 
                                                //!< (kOK on success and kError on failure) 
                                                //!< no error value returned if error=0.
                      ) 
@@ -97,7 +98,7 @@ class CDHandle {
                                                //!< should be able to recover from that error type.
                      uint32_t err_loc_mask=0,  //!< [in] each `1` in the mask indicates that this CD
                                                //!< should be able to recover from that error type.
-                     cd::CDErrT *error=0           //!< [in,out] Pointer for error return value 
+                     CDErrT *error=0           //!< [in,out] Pointer for error return value 
                                                //!< (kOK on success and kError on failure) 
                                                //!< no error value returned if error=0.
                      )
@@ -140,7 +141,7 @@ class CDHandle {
                                                //!< should be able to recover from that error type.
                      uint32_t err_loc_mask=0,  //!< [in] each `1` in the mask indicates that this CD
                                                //!< should be able to recover from that error type.
-                     cd::CDErrT *error=0           //!< [in,out] Pointer for error return value 
+                     CDErrT *error=0           //!< [in,out] Pointer for error return value 
                                                //!< (kOK on success and kError on failure) 
                                                //!< no error value returned if error=0.
                      )
@@ -179,7 +180,7 @@ class CDHandle {
                                                        //!< should be able to recover from that error type.
                              uint32_t err_loc_mask=0,  //!< [in] each `1` in the mask indicates that this CD
                                                        //!< should be able to recover from that error type.
-                             cd::CDErrT *error=0           //!< [in,out] Pointer for error return value 
+                             CDErrT *error=0           //!< [in,out] Pointer for error return value 
                                                        //!< (kOK on success and kError on failure) 
                                                        //!< no error value returned if error=0.
                              )
@@ -199,7 +200,7 @@ class CDHandle {
     *
     */
     FUNC_ATTR
-    cd::CDErrT Destroy(bool collective=false //!< [in] if `true`, destroy is done as a collective across all tasks that
+    CDErrT Destroy(bool collective=false //!< [in] if `true`, destroy is done as a collective across all tasks that
                                          //!< created the CD; otherwise the behavior is that only one task destroys 
                                          //!< the actual object while the rest just delete the local CDHandle.
                   )
@@ -207,7 +208,7 @@ class CDHandle {
       if(active_) { 
         return handle_->Destroy(collective);
       } else {
-        return cd::kOK;
+        return common::kOK;
       }
     } 
 
@@ -218,7 +219,7 @@ class CDHandle {
     * @sa Complete()
     */
     FUNC_ATTR
-    cd::CDErrT Begin(bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
+    CDErrT Begin(bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                       //!< contained by this CD or whether its to be run by a single task 
                                       //!< only with the programmer responsible for synchronization. 
                  const char *label=NO_LABEL,
@@ -235,7 +236,7 @@ class CDHandle {
         return handle_->Begin(collective, label, sys_err_vec);
       } else {
         active_ = false;
-        return cd::kOK;
+        return common::kOK;
       }
     } 
 
@@ -245,7 +246,7 @@ class CDHandle {
     * @sa Begin()
     */
     FUNC_ATTR
-    cd::CDErrT Complete(bool collective=true, //!< [in] Specifies whether
+    CDErrT Complete(bool collective=true, //!< [in] Specifies whether
                                           //!< this call is a collective
                                           //!< across all tasks contained
                                           //!< by this CD or whether its to
@@ -272,7 +273,7 @@ class CDHandle {
         return handle_->Complete(collective, update_prv);
       } else {
         active_ = false;
-        return cd::kOK;
+        return common::kOK;
       }
     } 
 
@@ -284,7 +285,7 @@ class CDHandle {
     * \sa Complete()
     */
     FUNC_ATTR
-    cd::CDErrT Preserve(void *data_ptr=0,              //!< [in] pointer to data to be preserved;
+    CDErrT Preserve(void *data_ptr=0,              //!< [in] pointer to data to be preserved;
                                                    //!< __currently must be in same address space
                                                    //!< as calling task, but will extend to PGAS fat pointers later 
                     uint64_t len=0,                //!< [in] Length of preserved data (Bytes)
@@ -309,7 +310,7 @@ class CDHandle {
       if(active_) { 
         return handle_->Preserve(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regenObj, dataUsage);
       } else {
-        return cd::kOK;
+        return common::kOK;
       }
     } 
 
@@ -320,7 +321,7 @@ class CDHandle {
     * \sa Serdes, Complete()
     */
     FUNC_ATTR
-    cd::CDErrT Preserve(Serializable &serdes,          //!< [in] Serdes object in user-defined class.
+    CDErrT Preserve(cd::Serializable &serdes,          //!< [in] Serdes object in user-defined class.
                                                    //!< This will be invoked in CD runtime
                                                    //!< to de/serialize class object
                     uint32_t preserve_mask=kCopy,  //!< [in] Allowed types of preservation 
@@ -344,7 +345,7 @@ class CDHandle {
       if(active_) { 
         return handle_->Preserve(serdes, preserve_mask, my_name, ref_name, ref_offset);
       } else {
-        return cd::kOK;
+        return common::kOK;
       }
     } 
 
@@ -356,7 +357,7 @@ class CDHandle {
     *  \sa Complete()
     */
     FUNC_ATTR
-    cd::CDErrT Preserve(CDEvent &cd_event,             //!< [in,out] enqueue this call onto the cd_event
+    CDErrT Preserve(cd::CDEvent &cd_event,             //!< [in,out] enqueue this call onto the cd_event
                     void *data_ptr=0,              //!< [in] pointer to data to be preserved;
                                                    //!< __currently must be in same address space as calling task, 
                                                    //!< but will extend to PGAS fat pointers later
@@ -379,7 +380,7 @@ class CDHandle {
       if(active_) { 
         return handle_->Preserve(cd_event, data_ptr, len, preserve_mask, my_name, ref_name, ref_offset);
       } else {
-        return cd::kOK;
+        return common::kOK;
       }
     } 
 
@@ -389,15 +390,15 @@ class CDHandle {
     *
     */
     FUNC_ATTR
-    cd::CDErrT CDAssert(bool test_true,             //!< [in] Boolean to be asserted as true.
-                    const SysErrT* err_report=0 //!< [in,out] An optional error report that will be
+    CDErrT CDAssert(bool test_true,             //!< [in] Boolean to be asserted as true.
+                    const cd::SysErrT* err_report=0 //!< [in,out] An optional error report that will be
                                                 //!< used during recovery and for system diagnostics. 
                     )
     { 
       if(active_) { 
         return handle_->CDAssert(test_true, err_report);
       } else {
-        return cd::kOK;
+        return common::kOK;
       }
     } 
 
@@ -407,15 +408,15 @@ class CDHandle {
     *  \warning May not be implemented yet.
     */
     FUNC_ATTR
-    cd::CDErrT CDAssertFail(bool test_true,             //!< [in] Boolean to be asserted as true.
-                        const SysErrT* err_report=0 //!< [in,out] An optional error report that will be
+    CDErrT CDAssertFail(bool test_true,             //!< [in] Boolean to be asserted as true.
+                        const cd::SysErrT* err_report=0 //!< [in,out] An optional error report that will be
                                                     //!< used during recovery and for system diagnostics. 
                         )
     { 
       if(active_) { 
         return handle_->CDAssertFail(test_true, err_report);
       } else {
-        return cd::kOK;
+        return common::kOK;
       }
     } 
 
@@ -424,15 +425,15 @@ class CDHandle {
     *  @return kOK when the assertion call completed successfully
     */
     FUNC_ATTR
-    cd::CDErrT CDAssertNotify(bool test_true,             //!< [in] Boolean to be asserted as true.
-                          const SysErrT* err_report=0 //!< [in,out] An optional error report that will be
+    CDErrT CDAssertNotify(bool test_true,             //!< [in] Boolean to be asserted as true.
+                          const cd::SysErrT* err_report=0 //!< [in,out] An optional error report that will be
                                                       //!< used during recovery and for system diagnostics.
                          )
     { 
       if(active_) { 
         return handle_->CDAssertNotify(test_true, err_report);
       } else {
-        return cd::kOK;
+        return common::kOK;
       }
     } 
 
@@ -445,14 +446,14 @@ class CDHandle {
     *
     */
     FUNC_ATTR
-    std::vector<SysErrT> Detect(cd::CDErrT* err_ret_val=0 //!< [in,out] Pointer to a variable 
+    std::vector<cd::SysErrT> Detect(CDErrT* err_ret_val=0 //!< [in,out] Pointer to a variable 
             //!<for optionally returning a CD runtime error code indicating some bug with Detect().
                  )
     { 
       if(active_) { 
         return handle_->Detect(err_ret_val);
       } else {
-        return std::vector<SysErrT>();
+        return std::vector<cd::SysErrT>();
       }
     } 
 
@@ -474,7 +475,7 @@ class CDHandle {
     * @return kOK on success.
     */
     FUNC_ATTR
-    cd::CDErrT RegisterDetection(uint32_t system_name_mask, //!< [in] each `1` in
+    CDErrT RegisterDetection(uint32_t system_name_mask, //!< [in] each `1` in
                                                         //!< the mask indicates that this CD
                                                         //!< should be able to detect any errors
                                                         //!< that are meaningful to the application
@@ -493,18 +494,18 @@ class CDHandle {
     *  It extends the specification of intent to recover provided in
     *  Create(). 
     *  It enables registering a customized recovery routine by
-    *  inheriting from the RecoverObject class.
+    *  inheriting from the cd::RecoverObject class.
     *
     * @return kOK on success.
     *
-    * \sa Create(), RecoverObject
+    * \sa Create(), cd::RecoverObject
     *
     *\todo Does registering recovery also imply turning on detection?
     *Or is that done purely through RequireErrorProbability()? 
     */
 
     FUNC_ATTR
-    cd::CDErrT RegisterRecovery(uint32_t error_name_mask,   //!< [in] each `1` in
+    CDErrT RegisterRecovery(uint32_t error_name_mask,   //!< [in] each `1` in
                                                         //!< the mask indicates that this CD
                                                         //!< should be able to recover from that
                                                         //!< error type.
@@ -512,7 +513,7 @@ class CDHandle {
                                                         //!< the mask indicates that this CD
                                                         //!< should be able to recover from that
                                                         //!< error type.
-                            RecoverObject* recoverObj=0 //!< [in] pointer
+                            cd::RecoverObject* recoverObj=0 //!< [in] pointer
                                                         //!< to an object that contains the customized
                                                         //!< recovery routine; if unspecified,
                                                         //!< default recovery is used.
@@ -520,7 +521,7 @@ class CDHandle {
     { return handle_->RegisterRecovery(error_name_mask, error_loc_mask, recoverObj); }
   
     FUNC_ATTR
-    cd::CDErrT RegisterRecovery(
+    CDErrT RegisterRecovery(
              uint32_t error_name_mask, //!< [in] each `1` in
                                        //!< the mask indicates that this CD
                                        //!< should be able to recover from that
@@ -529,7 +530,7 @@ class CDHandle {
                                        //!< the mask indicates that this CD
                                        //!< should be able to recover from that
                                        //!< error type.
-             RecoveryFuncType recovery_func=0 
+             cd::RecoveryFuncType recovery_func=0 
                                        //!< [in] function pointer for customized
                                        //!< recovery routine; if unspecified, default recovery is used.
              )
@@ -557,7 +558,7 @@ class CDHandle {
     * @param [in] function pointer or object to split CD.
     */
     FUNC_ATTR
-    cd::CDErrT RegisterSplitMethod(cd::SplitFuncT split_func) 
+    CDErrT RegisterSplitMethod(cd::SplitFuncT split_func) 
     { return handle_->RegisterSplitMethod(split_func); }
 /** @} */ // Ends cd_split
 
@@ -584,7 +585,7 @@ class CDHandle {
     * \todo Decide on rate vs. number+probability
     */
     FUNC_ATTR
-    float GetErrorProbability(SysErrT error_type, //!< [in] Type of
+    float GetErrorProbability(cd::SysErrT error_type, //!< [in] Type of
                 //!error/failure
                 //!queried
             uint32_t error_num //!< [in] Number of
@@ -614,7 +615,7 @@ class CDHandle {
     *
     */
     FUNC_ATTR
-    float RequireErrorProbability(SysErrT error_type, //!< [in] Type of
+    float RequireErrorProbability(cd::SysErrT error_type, //!< [in] Type of
           //!< error/failure
           //!< queried.
           uint32_t error_num, //!< [in] Number of
@@ -693,8 +694,8 @@ class CDHandle {
 //      assert(it == config.mapping_.end());
 //      auto jt = it-find(phase);
 //      assert(jt == jt->end());
-      config_[phase].interval_   = config.mapping_[level][phase].interval_;
-      config_[phase].error_mask_ = config.mapping_[level][phase].failure_type_;
+      config_[phase].interval_   = cd::config.mapping_[level][phase].interval_;
+      config_[phase].error_mask_ = cd::config.mapping_[level][phase].failure_type_;
     }
 
     // check prev_phase for this level.
@@ -774,7 +775,7 @@ public:
       //printf("path is not null\n");
       if( !uniquePath_->empty() ) {
         //printf("path is not empty\n");
-        if( uniquePath_->back()->handle_->GetExecMode() == kExecution || kReexecution ) {
+        if( uniquePath_->back()->handle_->GetExecMode() == cd::kExecution || cd::kReexecution ) {
           
           //printf("Active CD is %d\n", uniquePath_->back()->level() );
           return uniquePath_->back();
@@ -1115,7 +1116,7 @@ class NullCDHandle {
  * \sa Serdes, Complete()
  */
     CDErrT PreserveSW(uint32_t onOff,       //!< [in] Tuning can be done with this switch.
-                    Serializable &serdes, //!< [in] Serdes object in user-defined class.
+                    cd::Serializable &serdes, //!< [in] Serdes object in user-defined class.
                                           //!< This will be invoked in CD runtime
                                           //!< to de/serialize class object
                     uint32_t preserve_mask=kCopy, //!< [in] Allowed types of preservation 
@@ -1145,7 +1146,7 @@ class NullCDHandle {
  * \sa Complete()
  */
     CDErrT PreserveSW(uint32_t onOff,   //!< [in] Tuning can be done with this switch.
-                    CDEvent &cd_event, //!< [in,out] enqueue this call onto the cd_event
+                    cd::CDEvent &cd_event, //!< [in,out] enqueue this call onto the cd_event
                     void *data_ptr=0, //!< [in] pointer to data to be preserved;
                                       //!< __currently must be in same address space as calling task, 
                                       //!< but will extend to PGAS fat pointers later
@@ -1174,7 +1175,7 @@ class NullCDHandle {
    */
     CDErrT CDAssertSW(uint32_t onOff,  //!< [in] Tuning can be done with this switch.
                     bool test_true, //!< [in] Boolean to be asserted as true.
-                    const SysErrT* error_to_report=0
+                    const cd::SysErrT* error_to_report=0
                     //!< [in,out] An optional error report that will be
                     //!< used during recovery and for system diagnostics. 
                     );
@@ -1188,7 +1189,7 @@ class NullCDHandle {
     CDErrT CDAssertFailSW(uint32_t onOff, //!< [in] Tuning can be done with this switch.
         bool test_true, //!< [in] Boolean to be asserted
            //!< as true.
-           const SysErrT* error_to_report=0
+           const cd::SysErrT* error_to_report=0
            //!< [in,out] An optional error report that will be
            //!< used during recovery and for system
            //!< diagnostics. 
@@ -1201,7 +1202,7 @@ class NullCDHandle {
     CDErrT CDAssertNotifySW(uint32_t onOff, //!< [in] Tuning can be done with this switch.
         bool test_true, //!< [in] Boolean to be asserted
            //!< as true.
-           const SysErrT* error_to_report=0
+           const cd::SysErrT* error_to_report=0
            //!< [in,out] An optional error report that will be
            //!< used during recovery and for system
            //!< diagnostics.
@@ -1216,7 +1217,7 @@ class NullCDHandle {
    *
    */
     CDErrT DetectSW(uint32_t onOff, //!< [in] Tuning can be done with this switch.
-         std::vector<SysErrT> *err_vec=NULL
+         std::vector<cd::SysErrT> *err_vec=NULL
             //!< [in,out] Pointer to a error vector
             //!<  that is detected during this CDs execution.
                                );

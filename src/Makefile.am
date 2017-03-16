@@ -7,6 +7,7 @@ include_HEADERS = cd.h \
 									cd_def_debug.h \
 									cd_features.h \
 									cd_handle.h \
+									tuned_cd_handle.h \
 									node_id.h \
 									sys_err_t.h \
 									serdes.h \
@@ -38,7 +39,7 @@ libcd_la_SOURCES = \
 										serdes.cc \
   	                sys_err_t.cc \
 										cd_capi.cc 
-MY_LDFLAGS=-L./persistence -lpacker -L${YAML_PATH}/lib -lyaml
+MY_LDFLAGS=-L./persistence -lpacker -L${YAML_PATH}/lib -lyaml -ldl
 libcd_la_LDFLAGS = -export-dynamic #-export-symbols-regex
 libcd_la_CPPFLAGS = -I./persistence -I${YAML_PATH}/include
 #libcd_la_CPPFLAGS = $(cpp_flags)

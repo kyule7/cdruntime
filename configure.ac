@@ -157,6 +157,7 @@ AC_CONFIG_FILES([
  test/test_user_defined_hierarhcy/Makefile
  test/test_prv_ref_remote/Makefile
  test/test_serdes/Makefile
+ test/test_tuning/Makefile
  examples/Makefile
 ])
 AC_OUTPUT
