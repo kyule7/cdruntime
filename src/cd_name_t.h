@@ -80,10 +80,11 @@ private:
 public:
   CDNameT(void);
   CDNameT(uint64_t level, uint64_t phase=0, uint64_t rank_in_level=0, uint64_t size=1);
-  CDNameT(const CDNameT &parent_cdname, int num_children, int color);
+  CDNameT(const CDNameT &parent_cdname, int num_children, int color, const char *label);
   CDNameT(const CDNameT& that);
   ~CDNameT(void) {}
 
+  void copy(const CDNameT& that);
   CDNameT& operator=(const CDNameT& that);
   bool operator==(const CDNameT& that) const;
 
@@ -92,6 +93,7 @@ public:
   uint32_t rank_in_level(void) const;
   uint32_t size(void) const;
   std::string GetString(void) const;
+  void UpdatePhase(const std::string &label);
 private: 
   void IncLevel(void);
   int CDTag(void) const; 

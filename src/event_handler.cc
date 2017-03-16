@@ -396,8 +396,8 @@ void HandleErrorOccurred::HandleEvent(void)
   CD_DEBUG("\n[HandleErrorOccurred::HandleEvent]\n");
 
   CDEventT all_reexecute = kAllReexecute;
-  //if(GetCurrentCD()->level() > ptr_cd_->level()) {
-  if(GetCurrentCD()->level() >= ptr_cd_->level()) {
+  //if(CDPath::GetCurrentCD()->level() > ptr_cd_->level()) {
+  if(CDPath::GetCurrentCD()->level() >= ptr_cd_->level()) {
     for(int i=0; i<ptr_cd_->task_size(); i++) {
       CD_DEBUG("SetMailBox(kAllRexecute) for error occurred of task #%d\n", i);
       ptr_cd_->SetMailBox(all_reexecute, i);
@@ -520,7 +520,7 @@ void HandleAllReexecute::HandleEvent(void)
     assert(0);
 
   uint32_t rollback_lv  = ptr_cd_->level();
-  uint32_t current_lv   = GetCurrentCD()->level();
+  uint32_t current_lv   = CDPath::GetCurrentCD()->level();
   uint32_t rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local
   CD_DEBUG("[%s] kAllReexecute need reexec from %u (orig rollback_point:%u) (cur %u)\n", 
            ptr_cd_->cd_id_.GetStringID().c_str(), 
@@ -554,7 +554,7 @@ void HandleAllReexecute::HandleEvent(void)
 #if 0 
       // Do not set need_reexec = true, yet.
       // This should be set by kAllReexecute from head task in the leaf CD.
-      CD *cur_cd = CDPath::GetCoarseCD(GetCurrentCD()->ptr_cd());
+      CD *cur_cd = CDPath::CDPath::GetCoarseCD(CDPath::GetCurrentCD()->ptr_cd());
 
 // FIXME 0324 Kyushick
 #if 1
@@ -589,7 +589,7 @@ void HandleAllReexecute::HandleEvent(void)
   }
   else {
     ERROR_MESSAGE("Invalid rollback level %u. It cannot be larger than current level %u\n", 
-                  rollback_lv, GetCurrentCD()->level());
+                  rollback_lv, CDPath::GetCurrentCD()->level());
   }
 
 //  CD::need_reexec  = true;
@@ -645,8 +645,8 @@ void HandleAllReexecute::HandleEvent(void)
   // it calls SetMailBox(kAllReexecute).
   // This guarantees that anybody does not proceed to complete being unaware of some error events.
   // Whenever non-head tasks observes kAllReexecute, it "Get" the rollback point from head.
-//  if(ptr_cd_->level() < GetCurrentCD()->level()) {
-//    GetCurrentCD()->SetMailBox(kErrorOccurred);
+//  if(ptr_cd_->level() < CDPath::GetCurrentCD()->level()) {
+//    CDPath::GetCurrentCD()->SetMailBox(kErrorOccurred);
 //
 //
 //    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, head_id, 0, cd->mailbox_info_);

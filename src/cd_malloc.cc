@@ -101,7 +101,7 @@ IncompleteLogEntry RuntimeLogger::NewLogEntry(void* p, size_t size, bool FreeInv
 CD *RuntimeLogger::IsLogable(bool *logable_)
 {
 //  LIBC_DEBUG("logable_execmode\n");      
-  CDHandle* current = GetCurrentCD();
+  CDHandle* current = CDPath::GetCurrentCD();
 //  if(current != NULL) {
 //  std::cout << current->node_id() << " / " << current->GetCDName() <<  std::endl;
 //  } else {
@@ -140,7 +140,7 @@ CD *RuntimeLogger::IsLogable(bool *logable_)
 //CD* RuntimeLogger::IsLogable(bool *logable_)
 //{
 ////  LIBC_DEBUG("logable_execmode\n");      
-//  CDHandle* current = GetCurrentCD();
+//  CDHandle* current = CDPath::GetCurrentCD();
 //	CD* c_CD;
 //	if(current==NULL){
 ////		LIBC_DEBUG("\tbefore root CD\n");
@@ -245,7 +245,7 @@ void* RuntimeLogger::malloc(size_t size)
 	  bool logable  = false;
     CD* c_CD = IsLogable(&logable);
   	if(logable){
-  //  CDHandle* current = GetCurrentCD();
+  //  CDHandle* current = CDPath::GetCurrentCD();
   //	CD* c_CD = current->ptr_cd();
   	//GONG: Determine whether we call real_malloc w/ logging return value or get return value stored in logs
       if(c_CD->libc_log_ptr_->GetCommLogMode() == kGenerateLog){
@@ -585,7 +585,7 @@ int RuntimeLogger::cd_fprintf(FILE *str, const char *format, va_list &args)
 
   if(app_side){
     app_side = false;
-    CD* c_CD = GetCurrentCD()->ptr_cd();
+    CD* c_CD = CDPath::GetCurrentCD()->ptr_cd();
     if(c_CD!=NULL){
   int size = sizeof(int);
 //    bool logable  = false;

@@ -70,7 +70,7 @@ int MPI_Send(const void *buf,
   LOG_DEBUG("here inside MPI_Send\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Send out of CD context...\n");
@@ -127,7 +127,7 @@ int MPI_Ssend(const void *buf,
   LOG_DEBUG("here inside MPI_Ssend\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Ssend out of CD context...\n");
@@ -185,7 +185,7 @@ int MPI_Rsend(const void *buf,
   LOG_DEBUG("here inside MPI_Rsend\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Rsend out of CD context...\n");
@@ -243,7 +243,7 @@ int MPI_Bsend(const void *buf,
   LOG_DEBUG("here inside MPI_Bsend\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Bsend out of CD context...\n");
@@ -304,7 +304,7 @@ int MPI_Recv(void *buf,
   LOG_DEBUG("here inside MPI_Recv\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Recv out of CD context...\n");
@@ -370,7 +370,7 @@ int MPI_Sendrecv(const void *sendbuf,
   LOG_DEBUG("sendbuf=%p, &sendbuf=%p\n", sendbuf, &sendbuf);
   LOG_DEBUG("recvbuf=%p, &recvbuf=%p\n", recvbuf, &recvbuf);
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Sendrecv out of CD context...\n");
@@ -446,7 +446,7 @@ int MPI_Sendrecv_replace(void *buf,
   LOG_DEBUG("here inside MPI_Recv\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Sendrecv_replace out of CD context...\n");
@@ -514,15 +514,15 @@ int MPI_Isend(const void *buf,
               MPI_Request *request)
 {
   MsgPrologue();
-//  if(GetCurrentCD() != NULL)
+//  if(CDPath::GetCurrentCD() != NULL)
 //    CD_DEBUG("[%s] %d -> %d\n", __func__, myTaskID, dest);
-  if(GetCurrentCD() != NULL)
+  if(CDPath::GetCurrentCD() != NULL)
     CD_DEBUG("[%s] %d -> %d ptr:%p\n", __func__, myTaskID, dest, request);
   int mpi_ret=0;
   LOG_DEBUG("here inside MPI_Isend\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh != NULL) {
     CD *cdp = cur_cdh->ptr_cd();
     MPI_Group g;
@@ -535,7 +535,7 @@ int MPI_Isend(const void *buf,
 //        CD_DEBUG("send1 %u\n", (int)(*request));
         mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
 //        CD_DEBUG("send2 %u\n", (int)(*request));
-        GetCurrentCD()->ptr_cd()->PrintDebug();
+        CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
         break;
       }
       case kRelaxedCDGen: {
@@ -598,13 +598,13 @@ int MPI_Irecv(void *buf,
   int mpi_ret=0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
-  if(GetCurrentCD() != NULL)
+  if(CDPath::GetCurrentCD() != NULL)
     CD_DEBUG("[%s] %d <- %d ptr:%p\n", __func__, myTaskID, src, request);
 //    CD_DEBUG("[%s] ptr:%p\n", __func__, request);
   LOG_DEBUG("here inside MPI_Irecv\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle *cur_cdh = GetCurrentCD();
+  CDHandle *cur_cdh = CDPath::GetCurrentCD();
   if(cur_cdh != NULL) {
     CD *cdp = cur_cdh->ptr_cd();
     MPI_Group g;
@@ -614,7 +614,7 @@ int MPI_Irecv(void *buf,
         cdp->incomplete_log_.push_back(
             IncompleteLogEntry(buf, 0, src, tag, comm, (void *)request, false)
             );
-        GetCurrentCD()->ptr_cd()->PrintDebug();
+        CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
 //printf("test recv: strict CD\t"); cdp->CheckIntraCDMsg(src, g);
         mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
         break;
@@ -708,7 +708,7 @@ int MPI_Test(MPI_Request *request,
   MsgPrologue();
   int mpi_ret = 0;
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh != NULL) {
     switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
@@ -788,7 +788,7 @@ int MPI_Testall(int count,
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Testall\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh != NULL) {
     switch (cur_cdh->ptr_cd()->GetCDLoggingMode()) {
       case kStrictCD: {
@@ -884,7 +884,7 @@ int MPI_Testany(int count,
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Testany\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     //LOG_DEBUG("Warning: MPI_Testany out of CD context...\n");
@@ -973,7 +973,7 @@ int MPI_Testsome(int incount,
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Testsome\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     //LOG_DEBUG("Warning: MPI_Testsome out of CD context...\n");
@@ -1075,20 +1075,20 @@ int MPI_Wait(MPI_Request *request,
   MsgPrologue();
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Wait\n");
-  if(GetCurrentCD() != NULL) {
+  if(CDPath::GetCurrentCD() != NULL) {
     CD_DEBUG("[%s] %s %s ptr:%p\n", __func__, 
-      GetCurrentCD()->GetCDID().GetString().c_str(),
-      GetCurrentCD()->GetLabel(), request);
+      CDPath::GetCurrentCD()->GetCDID().GetString().c_str(),
+      CDPath::GetCurrentCD()->GetLabel(), request);
       
-    GetCurrentCD()->ptr_cd()->PrintDebug();
+    CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
   }
 
-  CDHandle *cur_cdh = GetCurrentCD();
+  CDHandle *cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh != NULL) {
     switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
 //printf("test wait : strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
-//        GetCurrentCD()->ptr_cd()->PrintDebug();
+//        CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
 //        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
         mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        mpi_ret = PMPI_Wait(request, status);
@@ -1141,7 +1141,7 @@ int MPI_Wait(MPI_Request *request,
   MsgEpilogue();
   if(mpi_ret == MPI_ERR_NEED_ESCALATE) {
     cur_cdh->ptr_cd()->Escalate(cur_cdh, true); 
-//    GetCurrentCD()->ptr_cd()->GetCDToRecover(GetCurrentCD(), true)->ptr_cd()->Recover();
+//    CDPath::GetCurrentCD()->ptr_cd()->GetCDToRecover(CDPath::GetCurrentCD(), true)->ptr_cd()->Recover();
   }
   return mpi_ret;
 }
@@ -1155,12 +1155,12 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
   int mpi_ret = 0;
   int ii=0;
   LOG_DEBUG("here inside MPI_Waitall\n");
-  if(GetCurrentCD() != NULL) {
+  if(CDPath::GetCurrentCD() != NULL) {
     for (ii=0;ii<count;ii++) {
       CD_DEBUG("[%s] %d ptr:%p\n", __func__, myTaskID, &(array_of_requests[ii]));
     }
   }
-  CDHandle *cur_cdh = GetCurrentCD();
+  CDHandle *cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh != NULL) {
     switch( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
@@ -1181,7 +1181,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
 //
 //        }
 
-        GetCurrentCD()->ptr_cd()->PrintDebug();
+        CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
         // delete incomplete entries...
 //        for (ii=0;ii<count;ii++) {
 //          cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[ii]);
@@ -1259,7 +1259,7 @@ int MPI_Waitany(int count, MPI_Request *array_of_requests,
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Waitany\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Waitany out of CD context...\n");
@@ -1326,7 +1326,7 @@ int MPI_Waitsome(int incount,
   int ii=0;
   LOG_DEBUG("here inside MPI_Waitsome\n");
 
-  CDHandle *cur_cdh = GetCurrentCD();
+  CDHandle *cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Waitsome out of CD context...\n");
@@ -1411,7 +1411,7 @@ int MPI_Barrier (MPI_Comm comm)
   PMPI_Comm_rank(comm, &myrank);
   LOG_DEBUG("(%d)here inside MPI_Barrier.\n", myrank);
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Barrier out of CD context...\n");
@@ -1467,7 +1467,7 @@ int MPI_Bcast (void *buffer,
   PMPI_Type_size(datatype, &type_size);
   LOG_DEBUG("here inside MPI_Bcast\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Bcast out of CD context...\n");
@@ -1526,7 +1526,7 @@ int MPI_Gather(const void *sendbuf,
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Gather\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Gather out of CD context...\n");
@@ -1607,7 +1607,7 @@ int MPI_Gatherv(const void *sendbuf,
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Gatherv\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Gatherv out of CD context...\n");
@@ -1722,7 +1722,7 @@ int MPI_Allgather(const void *sendbuf,
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Allgather\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Allgather out of CD context...\n");
@@ -1792,7 +1792,7 @@ int MPI_Allgatherv(const void *sendbuf,
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Allgatherv\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Allgatherv out of CD context...\n");
@@ -1886,7 +1886,7 @@ int MPI_Reduce(const void *sendbuf,
   PMPI_Type_size(datatype, &type_size);
   LOG_DEBUG("here inside MPI_Reduce\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Reduce out of CD context...\n");
@@ -1973,7 +1973,7 @@ int MPI_Allreduce(const void *sendbuf,
   PMPI_Type_size(datatype, &type_size);
   LOG_DEBUG("here inside MPI_Allreduce\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Allreduce out of CD context...\n");
@@ -2034,7 +2034,7 @@ int MPI_Alltoall(const void *sendbuf,
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Alltoall\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Alltoall out of CD context...\n");
@@ -2105,7 +2105,7 @@ int MPI_Alltoallv(const void *sendbuf,
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Alltoallv\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Alltoallv out of CD context...\n");
@@ -2206,7 +2206,7 @@ int MPI_Scatter(const void *sendbuf,
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Scatter\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Scatter out of CD context...\n");
@@ -2267,7 +2267,7 @@ int MPI_Scatterv(const void *sendbuf,
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Scatterv\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Scatterv out of CD context...\n");
@@ -2329,7 +2329,7 @@ int MPI_Reduce_scatter(const void *sendbuf,
   PMPI_Type_size(datatype, &type_size);
   LOG_DEBUG("here inside MPI_Reduce_scatter\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Reduce_scatter out of CD context...\n");
@@ -2397,7 +2397,7 @@ int MPI_Scan(const void *sendbuf,
   PMPI_Comm_rank(comm, &myrank);
   LOG_DEBUG("here inside MPI_Scan\n");
 
-  CDHandle * cur_cdh = GetCurrentCD();
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
     LOG_DEBUG("Warning: MPI_Scan out of CD context...\n");
@@ -2477,7 +2477,7 @@ int MPI_Finalize(void)
   int mpi_ret = 0;
 
 #if CD_AUTOMATED
-  CD_Complete(GetCurrentCD());
+  CD_Complete(CDPath::GetCurrentCD());
   CD_Finalize();
 #endif
   mpi_ret = PMPI_Finalize();
@@ -2498,9 +2498,9 @@ std::map<uint32_t, uint32_t> epoch_num;
 int MPI_Win_fence(int assert, MPI_Win win)
 {
   CD_DEBUG("[%s %u|%u] called %s at %u (nid %s)(#reexec: %d, (%d)reexec level %u))\n", __func__, 
-    GetCurrentCD()->ptr_cd()->level(), epoch_num[GetCurrentCD()->ptr_cd()->level()]++, 
-    GetCurrentCD()->ptr_cd()->name(), GetCurrentCD()->ptr_cd()->level(), GetCurrentCD()->node_id().GetString().c_str(),
-    GetCurrentCD()->ptr_cd()->num_reexec(), GetCurrentCD()->need_reexec(), GetCurrentCD()->rollback_point());
+    CDPath::GetCurrentCD()->ptr_cd()->level(), epoch_num[CDPath::GetCurrentCD()->ptr_cd()->level()]++, 
+    CDPath::GetCurrentCD()->ptr_cd()->name(), CDPath::GetCurrentCD()->ptr_cd()->level(), CDPath::GetCurrentCD()->node_id().GetString().c_str(),
+    CDPath::GetCurrentCD()->ptr_cd()->num_reexec(), CDPath::GetCurrentCD()->need_reexec(), CDPath::GetCurrentCD()->rollback_point());
 #if CD_DEBUG_DEST == 1
 //  Profiler::Print();
   
@@ -2525,7 +2525,7 @@ int MPI_Win_fence(int assert, MPI_Win win)
 //
 //  LOG_DEBUG("here inside MPI_Send_init\n");
 //
-//  CDHandle * cur_cdh = GetCurrentCD();
+//  CDHandle * cur_cdh = CDPath::GetCurrentCD();
 //  if (cur_cdh == NULL)
 //  {
 //    LOG_DEBUG("Warning: MPI_Send_init out of CD context...\n");

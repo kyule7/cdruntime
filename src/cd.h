@@ -41,6 +41,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
     #include "cd_capi.h"
   #else
     #include "cd_handle.h"
+    #include "tuned_cd_handle.h"
     using namespace cd;
     using namespace cd::logging;
   #endif
@@ -49,6 +50,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
   #ifdef __cplusplus
     #include "cd_handle.h"
+    #include "tuned_cd_handle.h"
     using namespace cd;
     using namespace cd::logging;
   #else

@@ -57,6 +57,7 @@ using namespace cd::internal;
 using namespace std;
 
 CDHandle *cd::null_cd = NULL;
+ParMapType cd::phaseMap;
 
 /// KL
 /// cddbg is a global variable to be used for debugging purpose.
@@ -126,7 +127,7 @@ int cd::totalTaskSize = 1;
 /// uniquePath is a singleton object per process, which is used for CDPath.
 //CDPath *CDPath::uniquePath_ = &cd_path;
 //#else 
-CDPath *CDPath::uniquePath_ = NULL;
+cd::internal::CDPath *cd::internal::CDPath::uniquePath_ = NULL;
 //#endif
 
 namespace cd {
@@ -258,9 +259,6 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
                                              /* FilePath::global_prv_path_,*/ 
                                               ROOT_SYS_DETECT_VEC, &internal_err);
   CDPath::GetCDPath()->push_back(root_cd_handle);
-
-  // Update root's tuning parameters
-  root_cd_handle->UpdateParam(0, 0);
 
   // Create windows for pendingFlag and rollback_point 
   cd::internal::Initialize();
@@ -501,6 +499,10 @@ void CD_Finalize(void)
 }
 
 
+////////////////////////////////////////////////////////
+//
+// CD Accessors
+//
 CDHandle *GetCurrentCD(void) 
 { return CDPath::GetCurrentCD(); }
 
@@ -516,12 +518,36 @@ CDHandle *GetParentCD(void)
 CDHandle *GetParentCD(int current_level)
 { return CDPath::GetParentCD(current_level); }
 
-/// Split the node in three dimension
-/// (x,y,z)
-/// taskID = x + y * nx + z * (nx*ny)
-/// x = taskID % nx
-/// y = ( taskID % ny ) - x 
-/// z = r / (nx*ny)
+////////////////////////////////////////////////////////
+//
+// tuned CD Accessors
+//
+//namespace tuned 
+//{
+//
+//tuned::CDHandle *GetCurrentCD(void) 
+//{ return tuned::CDPath::GetCurrentCD(); }
+//
+//tuned::CDHandle *GetLeafCD(void)
+//{ return tuned::CDPath::GetLeafCD(); }
+//  
+//tuned::CDHandle *GetRootCD(void)    
+//{ return tuned::CDPath::GetRootCD(); }
+//
+//tuned::CDHandle *GetParentCD(void)
+//{ return tuned::CDPath::GetParentCD(); }
+//
+//tuned::CDHandle *GetParentCD(int current_level)
+//{ return tuned::CDPath::GetParentCD(current_level); }
+//}
+////////////////////////////////////////////////////////
+//
+// Split the node in three dimension
+// (x,y,z)
+// taskID = x + y * nx + z * (nx*ny)
+// x = taskID % nx
+// y = ( taskID % ny ) - x 
+// z = r / (nx*ny)
 int SplitCD_3D(const int& my_task_id, 
                const int& my_size, 
                const int& num_children, 
@@ -766,10 +792,10 @@ CDHandle::CDHandle()
 #if CD_ERROR_INJECTION_ENABLED
   cd_error_injector_ = NULL;
 #endif
-  count_ = 0;
-  interval_ = -1;
-  error_mask_ = -1;
-  active_ = false;
+//  count_ = 0;
+//  interval_ = -1;
+//  error_mask_ = -1;
+//  active_ = false;
 
 
 //  if(node_id().size() > 1)
@@ -800,10 +826,10 @@ CDHandle::CDHandle(CD *ptr_cd)
 #if CD_ERROR_INJECTION_ENABLED
   cd_error_injector_ = NULL;
 #endif
-  count_ = 0;
-  interval_ = -1;
-  error_mask_ = -1;
-  active_ = false;
+//  count_ = 0;
+//  interval_ = -1;
+//  error_mask_ = -1;
+//  active_ = false;
 
 //  if(node_id_.size() > 1)
 //    PMPI_Win_create(pendingFlag_, 1, sizeof(CDFlagT), PMPI_INFO_NULL, PMPI_COMM_WORLD, &pendingWindow_);
@@ -876,7 +902,7 @@ NodeID CDHandle::GenNewNodeID(int new_head, const NodeID &node_id, bool is_reuse
 ////////////////////////////////////////////////////////////////////
 
 // Non-collective
-CDHandle *CDHandle::Real_Create(const char *name, 
+CDHandle *CDHandle::Create(const char *name, 
                                      int cd_type, 
                                      uint32_t error_name_mask, 
                                      uint32_t error_loc_mask, 
@@ -895,7 +921,7 @@ CDHandle *CDHandle::Real_Create(const char *name,
 
 
   // Generate CDID
-  CDNameT new_cd_name(ptr_cd_->GetCDName(), 1, 0);
+  CDNameT new_cd_name(ptr_cd_->GetCDName(), 1, 0, name);
   CD_DEBUG("New CD Name : %s\n", new_cd_name.GetString().c_str());
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
@@ -915,7 +941,7 @@ CDHandle *CDHandle::Real_Create(const char *name,
 }
 
 // Collective
-CDHandle *CDHandle::Real_Create(uint32_t  num_children,
+CDHandle *CDHandle::Create(uint32_t  num_children,
                            const char *name, 
                            int cd_type, 
                            uint32_t error_name_mask, 
@@ -983,8 +1009,7 @@ CDHandle *CDHandle::Real_Create(uint32_t  num_children,
 
   // Generate CDID
   CD_DEBUG("new_color : %d in %s\n", new_color, node_id_.GetString().c_str());
-
-  CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color);
+  CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color, name);
   CD_DEBUG("New CD Name : %s\n", new_cd_name.GetString().c_str());
 
   CD_DEBUG("Remote Entry Dir size: %lu", ptr_cd_->remote_entry_directory_map_.size());
@@ -1033,7 +1058,7 @@ CDHandle *CDHandle::Real_Create(uint32_t  num_children,
 
 
 // Collective
-CDHandle *CDHandle::Real_Create(uint32_t color, 
+CDHandle *CDHandle::Create(uint32_t color, 
                            uint32_t task_in_color, 
                            uint32_t num_children, 
                            const char *name, 
@@ -1054,7 +1079,7 @@ CDHandle *CDHandle::Real_Create(uint32_t color,
   NodeID new_node_id = GenNewNodeID(node_id_.color(), color, task_in_color, SelectHead(task_size()/num_children), is_reuse);
 
   // Generate CDID
-  CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, color);
+  CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, color, name);
 
   // Sync buffer with file to prevent important metadata 
   // or preservation file at buffer in parent level from being lost.
@@ -1091,7 +1116,7 @@ CDHandle *CDHandle::Real_Create(uint32_t color,
 }
 
 
-CDHandle *CDHandle::Real_CreateAndBegin(uint32_t num_children, 
+CDHandle *CDHandle::CreateAndBegin(uint32_t num_children, 
                                    const char *name, 
                                    int cd_type, 
                                    uint32_t error_name_mask, 
@@ -1117,7 +1142,7 @@ CDHandle *CDHandle::Real_CreateAndBegin(uint32_t num_children,
 }
 
 
-CDErrT CDHandle::Real_Destroy(bool collective) 
+CDErrT CDHandle::Destroy(bool collective) 
 {
   CDPrologue();
   uint32_t cur_level = ptr_cd_->cd_id_.cd_name_.level();
@@ -1226,7 +1251,7 @@ CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_
   return err;
 }
 
-CDErrT CDHandle::Real_Complete(bool collective, bool update_preservations)
+CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 {
   CDPrologue();
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
@@ -1255,7 +1280,7 @@ CDErrT CDHandle::Real_Complete(bool collective, bool update_preservations)
   return ret;
 }
 
-CDErrT CDHandle::Real_Advance(bool collective)
+CDErrT CDHandle::Advance(bool collective)
 {
   CDPrologue();
 
@@ -1270,7 +1295,7 @@ CDErrT CDHandle::Real_Advance(bool collective)
   return ret;
 };
 
-CDErrT CDHandle::Real_Preserve(void *data_ptr, 
+CDErrT CDHandle::Preserve(void *data_ptr, 
                           uint64_t len, 
                           uint32_t preserve_mask, 
                           const char *my_name, 
@@ -1319,7 +1344,7 @@ CDErrT CDHandle::Real_Preserve(void *data_ptr,
   return err;
 }
 
-CDErrT CDHandle::Real_Preserve(Serializable &serdes,                           
+CDErrT CDHandle::Preserve(Serializable &serdes,                           
                           uint32_t preserve_mask, 
                           const char *my_name, 
                           const char *ref_name, 
@@ -1364,7 +1389,7 @@ CDErrT CDHandle::Real_Preserve(Serializable &serdes,
   return err;
 }
 
-CDErrT CDHandle::Real_Preserve(CDEvent &cd_event, 
+CDErrT CDHandle::Preserve(CDEvent &cd_event, 
                           void *data_ptr, 
                           uint64_t len, 
                           uint32_t preserve_mask, 
@@ -1413,7 +1438,7 @@ CDErrT CDHandle::Real_Preserve(CDEvent &cd_event,
   return err;
 }
 
-CDErrT CDHandle::Real_CDAssert(bool test, const SysErrT *error_to_report)
+CDErrT CDHandle::CDAssert(bool test, const SysErrT *error_to_report)
 {
   CDPrologue();
 //  CD_DEBUG("Assert : %d at level %u\n", ptr_cd()->cd_exec_mode_, ptr_cd()->level());
@@ -1446,7 +1471,7 @@ CDErrT CDHandle::Real_CDAssert(bool test, const SysErrT *error_to_report)
   return err;
 }
 
-CDErrT CDHandle::Real_CDAssertFail (bool test_true, const SysErrT *error_to_report)
+CDErrT CDHandle::CDAssertFail (bool test_true, const SysErrT *error_to_report)
 {
   CDPrologue();
   if( IsHead() ) {
@@ -1461,7 +1486,7 @@ CDErrT CDHandle::Real_CDAssertFail (bool test_true, const SysErrT *error_to_repo
   return kOK;
 }
 
-CDErrT CDHandle::Real_CDAssertNotify(bool test_true, const SysErrT *error_to_report)
+CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 {
   CDPrologue();
   if( IsHead() ) {
@@ -1476,7 +1501,7 @@ CDErrT CDHandle::Real_CDAssertNotify(bool test_true, const SysErrT *error_to_rep
   return kOK;
 }
 
-std::vector<SysErrT> CDHandle::Real_Detect(CDErrT *err_ret_val)
+std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 {
   CDPrologue();
   CD_DEBUG("[%s] check mode : %d at %s %s level %u (reexecInfo %d (%u))\n", 
@@ -1813,6 +1838,8 @@ char *CDHandle::GetLabel(void) const
   }
 }
 
+std::string &CDHandle::name(void)                { return ptr_cd_->name_; }
+std::string &CDHandle::label(void)               { return ptr_cd_->label_; }
 CDID     &CDHandle::GetCDID(void)             { return ptr_cd_->GetCDID(); }
 CDNameT  &CDHandle::GetCDName(void)           { return ptr_cd_->GetCDName(); }
 NodeID   &CDHandle::node_id(void)             { return node_id_; }

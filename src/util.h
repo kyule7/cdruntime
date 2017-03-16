@@ -39,8 +39,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 /**
  * @file util.h
- * @author Jinsuk Chung, Kyushick Lee
- * @date March 2015
+ * @author Kyushick Lee
+ * @date March 2017
  *
  * \brief Utilities for CD runtime
  *
@@ -247,6 +247,36 @@ int MakeFileDir(const char *filepath_str)
     }
   }
   return ret;
+}
+
+inline
+uint32_t GetPhase(uint32_t level, string label, bool update=true)
+{
+  uint32_t phase = 0;
+  auto it = phaseMap[level].find(label);
+#if 1
+  // If there is no label before, it is a new phase!
+  if(it == phaseMap[level].end()) {
+    if(update) {
+      phase = phaseMap[level].phase_gen_++;
+      it->second = phase;
+    } else {
+      phase = phaseMap[level].phase_gen_;
+    }
+  } else {
+    phase = it->second;
+  }
+#else
+  if(it == phaseMap[level].end()) {
+    if(phaseMap[level].prev_phase_ == label) { 
+      phase = it->second;
+    } else {
+      phase = it->second + 1;
+      if(update) it->second = phase;
+    }
+  }
+#endif
+  return phase;
 }
 
 } // namespace cd ends

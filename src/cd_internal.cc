@@ -253,11 +253,7 @@ CD::CD(CDHandle *cd_parent,
 
   cd_type_ = cd_type; 
   prv_medium_ = prv_medium; 
-  if(name != NULL) {
-    name_ = name;
-  } else {
-    name_ = cd_id_.GetStringID();
-  }
+  name_ = (strcmp(name, NO_LABEL) == 0)? cd_id_.cd_name_.GetString() : name; 
   sys_detect_bit_vector_ = sys_bit_vector; 
 
   // FIXME 
@@ -557,7 +553,7 @@ CDHandle *CD::Create(CDHandle *parent,
 
   this->AddChild(new_cd_handle);
 
-  new_cd_handle->UpdateParam(new_cd_handle->level(), new_cd_handle->phase());
+//  new_cd_handle->UpdateParam(new_cd_handle->level(), new_cd_handle->phase());
   return new_cd_handle;
 
 }
@@ -588,7 +584,6 @@ CDHandle *CD::CreateRootCD(const char *name,
 //  }
   assert(new_cd_handle != NULL);
 
-  new_cd_handle->UpdateParam(new_cd_handle->level(), new_cd_handle->phase());
   return new_cd_handle;
 }
 
@@ -809,9 +804,8 @@ CDErrT CD::Begin(bool collective, const char *label)
 
   CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);
   PrintDebug();
-  if(label != NULL)
-    label_ = string(label);
-
+  label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label; 
+  cd_id_.cd_name_.UpdatePhase(label_);
 #if comm_log
   //SZ: if in reexecution, need to unpack logs to childs
   if (GetParentHandle()!=NULL)
@@ -896,8 +890,8 @@ CDErrT CD::Begin(bool collective, const char *label)
   SetRollbackPoint(new_rollback_point, false);
 
   if(new_rollback_point < level()) { 
-    bool need_sync_next_cdh = GetParentCD(level())->task_size() > task_size();
-    GetCDToRecover( GetCurrentCD(), need_sync_next_cdh )->ptr_cd()->Recover();
+    bool need_sync_next_cdh = CDPath::GetParentCD(level())->task_size() > task_size();
+    GetCDToRecover( CDPath::GetCurrentCD(), need_sync_next_cdh )->ptr_cd()->Recover();
   } 
   else {
     need_escalation = false;
@@ -1087,7 +1081,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       target->ptr_cd_->DeleteEntryDirectory();
       target->Destroy();
       CDHandle *next_cdh = CDPath::GetCDLevel(--level);
-//      bool need_sync_next_cdh = GetParentCD(next_cdh->level())->task_size() > next_cdh->task_size();
+//      bool need_sync_next_cdh = CDPath::GetParentCD(next_cdh->level())->task_size() > next_cdh->task_size();
       bool need_sync_next_cdh = next_cdh->task_size() > target->task_size();
       CD_DEBUG("level#%u (next_cdh) need sync? %u\n", next_cdh->level(), need_sync_next_cdh);
       return GetCDToRecover(next_cdh, need_sync_next_cdh);
@@ -1165,7 +1159,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     target->ptr_cd_->DeleteEntryDirectory();
     target->Destroy(false);
     CDHandle *next_cdh = CDPath::GetCDLevel(--level);
-//    bool need_sync_next_cdh = GetParentCD(next_cdh->level())->task_size() > next_cdh->task_size();
+//    bool need_sync_next_cdh = CDPath::GetParentCD(next_cdh->level())->task_size() > next_cdh->task_size();
     bool need_sync_next_cdh = next_cdh->task_size() > target->task_size();
     CD_DEBUG("level#%u (next_cdh) need sync? %u\n", next_cdh->level(), need_sync_next_cdh);
     return GetCDToRecover(next_cdh, need_sync_next_cdh);
@@ -1211,7 +1205,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
   CD_DEBUG("%s %s \t Reexec from %u (After Sync)\n", 
           GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
 
-  if(task_size() > 1 && (GetCurrentCD() != GetRootCD())) {
+  if(task_size() > 1 && (CDPath::GetCurrentCD() != GetRootCD())) {
     new_rollback_point = CheckRollbackPoint(true); // read from head
     CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
     new_rollback_point = SetRollbackPoint(new_rollback_point, false);
@@ -1260,7 +1254,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     //bool need_sync = orig_rollback_point == INVALID_ROLLBACK_POINT
     bool need_sync = false;
 //    bool need_sync = orig_rollback_point != INVALID_ROLLBACK_POINT; //orig_rollback_point <= *rollback_point_ && (CDPath::GetCDLevel(*rollback_point_)->task_size() != task_size());
-//    bool need_sync = GetParentCD(level())->task_size() > task_size();
+//    bool need_sync = CDPath::GetParentCD(level())->task_size() > task_size();
 //    printf("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, *rollback_point_);
 //    CD_DEBUG("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, *rollback_point_);
 //    GetCDToRecover(*rollback_point_ < cd_id_.cd_name_.level() && *rollback_point_ != INVALID_ROLLBACK_POINT)->Recover(false);
@@ -1275,7 +1269,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     compl_elapsed_time += end_clk - begin_clk; // Total Complete overhead
     Profiler::num_exec_map[level()][label_.c_str()].compl_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
 #endif
-    GetCDToRecover( GetCurrentCD(), need_sync )->ptr_cd()->Recover();
+    GetCDToRecover( CDPath::GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }
   else {
     CD_DEBUG("## Complete. No error! ##\n\n");
@@ -1517,7 +1511,7 @@ CDErrT CD::Advance(bool collective)
   CD_DEBUG("%s %s \t Reexec from %u (After Sync)\n", 
           GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
 
-  if(task_size() > 1 && (GetCurrentCD() != GetRootCD())) {
+  if(task_size() > 1 && (CDPath::GetCurrentCD() != GetRootCD())) {
     new_rollback_point = CheckRollbackPoint(true); // read from head
     CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
     new_rollback_point = SetRollbackPoint(new_rollback_point, false);
@@ -1566,7 +1560,7 @@ CDErrT CD::Advance(bool collective)
     //bool need_sync = orig_rollback_point == INVALID_ROLLBACK_POINT
     bool need_sync = false;
 //    bool need_sync = orig_rollback_point != INVALID_ROLLBACK_POINT; //orig_rollback_point <= *rollback_point_ && (CDPath::GetCDLevel(*rollback_point_)->task_size() != task_size());
-//    bool need_sync = GetParentCD(level())->task_size() > task_size();
+//    bool need_sync = CDPath::GetParentCD(level())->task_size() > task_size();
 //    printf("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, *rollback_point_);
 //    CD_DEBUG("need_sync? %d = %u <= %u\n", need_sync, orig_rollback_point, *rollback_point_);
 //    GetCDToRecover(*rollback_point_ < cd_id_.cd_name_.level() && *rollback_point_ != INVALID_ROLLBACK_POINT)->Recover(false);
@@ -1581,7 +1575,7 @@ CDErrT CD::Advance(bool collective)
     compl_elapsed_time += end_clk - begin_clk; // Total Complete overhead
     Profiler::num_exec_map[level()][label_.c_str()].compl_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
 #endif
-    GetCDToRecover( GetCurrentCD(), need_sync )->ptr_cd()->Recover();
+    GetCDToRecover( CDPath::GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }
   else {
     CD_DEBUG("## Complete. No error! ##\n\n");
@@ -2202,7 +2196,7 @@ CD::CDInternalErrT CD::Assert(bool test)
 
 
 #if _MPI_VER
-  CDHandle *cdh = GetCurrentCD();
+  CDHandle *cdh = CDPath::GetCurrentCD();
   if(test==false) {
 
     if(cdh->level() == level()) { // leaf CD
@@ -3134,7 +3128,7 @@ void CD::PrintIncompleteLog()
 
 CD::CDInternalErrT CD::InvokeAllErrorHandler(void) {
   CDInternalErrT err = kOK;
-  CDHandle *cdp = CDPath::GetCoarseCD(GetCurrentCD());
+  CDHandle *cdp = CDPath::GetCoarseCD(CDPath::GetCurrentCD());
   while(cdp != NULL) {
     err = cdp->ptr_cd_->InvokeErrorHandler();
     cdp = CDPath::GetParentCD(cdp->level());

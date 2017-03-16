@@ -52,9 +52,10 @@ uint32_t CDNameT::rank_in_level(void) const { return rank_in_level_; }
 uint32_t CDNameT::size(void)          const { return size_; }
 void     CDNameT::IncLevel(void)            { level_++; }
 
-CDNameT::CDNameT(const CDNameT &parent_cdname, int num_children, int color)
+CDNameT::CDNameT(const CDNameT &parent_cdname, int num_children, int color, const char *label)
 {
   level_         = parent_cdname.level() + 1;
+  phase_         = GetPhase(level_, label);
   rank_in_level_ = num_children*(parent_cdname.rank_in_level()) + color;
   size_          = num_children;
   //cout << "level: " << level_ << " parent level : " << parent_cdname.level()
@@ -62,6 +63,11 @@ CDNameT::CDNameT(const CDNameT &parent_cdname, int num_children, int color)
 //            << ", numchild: " << num_children << ", parent rank : " 
 //            << parent_cdname.rank_in_level() 
 //            << ", color : "<< color << endl; 
+}
+
+void CDNameT::UpdatePhase(const string &label)
+{
+  phase_ = GetPhase(level_, label);
 }
 
 void CDNameT::copy(const CDNameT& that) 

@@ -47,6 +47,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <vector>
 #include "cd_handle.h"
+//#include "null_cd_handle.h"
 #include "cd_def_debug.h"
 /** \addtogroup cd_hierarchy  
  *
@@ -74,19 +75,19 @@ namespace cd {
  * because related methods such as GetCurrentCD, GetRootCD, etc, is encapsulated in this CDPath class.
  * It will be more convenient to use it with "using namespace   CDPath", and the usage for those methods will be the same as before.
  */
-class CDPath : public std::vector<CDHandle*> {
+class CDPath : public std::vector<cd::CDHandle *> {
   friend class cd::CDHandle;
   friend class CD;
   friend class HeadCD;
   friend class HandleAllReexecute;
   friend class HandleEntrySearch;
   friend class HandleEntrySend;
-  friend CDHandle *cd::GetCurrentCD(void);
-  friend CDHandle *cd::GetLeafCD(void);
-  friend CDHandle *cd::GetRootCD(void);
-  friend CDHandle *cd::GetParentCD(void);
-  friend CDHandle *cd::GetParentCD(int current_level);
-  friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+  friend cd::CDHandle *cd::GetCurrentCD(void);
+  friend cd::CDHandle *cd::GetLeafCD(void);
+  friend cd::CDHandle *cd::GetRootCD(void);
+  friend cd::CDHandle *cd::GetParentCD(void);
+  friend cd::CDHandle *cd::GetParentCD(int current_level);
+  friend cd::CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   friend void      cd::CD_Finalize(void);
 
 private:
@@ -258,6 +259,7 @@ public:
 /** @} */ // End cd_hierarchy
 
 
+
 /*
 class CDPath {
 private:
@@ -285,9 +287,9 @@ public:
 
   } // namespace internal ends
 } // namespace cd ends
+//#if CD_MPI_ENABLED == 0 && CD_AUTOMATED == 1
+//extern CDPath cd_path;
+//#endif
 
-#if CD_MPI_ENABLED == 0 && CD_AUTOMATED == 1
-extern CDPath cd_path;
-#endif
 
 #endif

@@ -48,12 +48,34 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_common.h"
 #include "cd_def_interface.h"
 #include "cd_global.h"
-#define EntryDirType std::unordered_map<ENTRY_TAG_T,packer::CDEntry*>
 
 namespace packer {
   class CDEntry;
 }
+
+typedef uint64_t ENTRY_TAG_T;
+typedef uint32_t CD_FLAG_T;
+typedef std::unordered_map<ENTRY_TAG_T, packer::CDEntry*> EntryDirType;
+
+// This is like MappingConfig
+class PhaseMapType : public std::map<std::string, uint32_t> {
+  public:
+    //std::string prev_phase_;
+    uint32_t phase_gen_;
+};
+
+typedef std::map<uint32_t, PhaseMapType> ParMapType;
+
 namespace cd {
+  // phaseMap generates phase ID for CDNameT at each level.
+  // Different label can create different phase,
+  // therefore CD runtime compares the label of current CD being created
+  // with that of preceding sequential CD at the same level. See GetPhase()
+  // 
+  // The scope of phase ID is limited to the corresponding level,
+  // which means that the same label at different levels are different phases.
+  extern ParMapType phaseMap;
+
   namespace internal {
 
     class CD;
@@ -118,9 +140,6 @@ typedef int           COMMLIB_File;
 #define INVALID_COLOR -1
 
 #endif
-
-
-typedef uint64_t ENTRY_TAG_T;
 
 #define CD_FLAG_T uint32_t
 #define MAX_ENTRY_BUFFER_SIZE 1024

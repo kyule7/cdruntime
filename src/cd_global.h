@@ -69,6 +69,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // For MPI, there is a communicator number so it is the group ID,
 // For PGAS, there should be a group ID, or we should generate it. 
 
+#define NO_LABEL ""
+
 #if CD_MPI_ENABLED 
 #include <mpi.h>
 #define ROOT_COLOR    MPI_COMM_WORLD
@@ -272,6 +274,8 @@ namespace cd {
   extern int myTaskID;
   extern int totalTaskSize;
   extern bool app_side;
+
+
 /** \addtogroup cd_accessor_funcs 
  * These methods are globally accessible without a CDHandle object.
  * So, user can get a handle of CD at any point of program with these methods.
@@ -387,5 +391,68 @@ namespace cd {
   extern CDHandle *null_cd;
 }
 
+namespace tuned {
+  class CDHandle;
+/** \addtogroup cd_accessor_funcs 
+ * These methods are globally accessible without a CDHandle object.
+ * So, user can get a handle of CD at any point of program with these methods.
+ * This can be used at convenience to map a CD for a function.
+ * In this case, users do not need to pass CDHandle as a function argument,
+ * but instead, they can get the leaf CD handle by calling GetCurrentCD().
+ *
+ * @{
+ */
+
+/**@brief Accessor function to current active CD.
+ * 
+ *  At any point after the CD runtime is initialized, each task is
+ *  associated with a current CD instance. The current CD is the
+ *  deepest CD in the tree visible from the task that has begun but
+ *  has not yet completed. In other words, whenever a CD begins, it
+ *  becomes the current CD. When a CD completes, its parent becomes
+ *  the current CD.
+ *
+ *  @return returns a pointer to the handle of the current active CD; Returns
+ *  0 if CD runtime is not yet initialized or because of a CD
+ *  implementation bug.
+ */
+  CDHandle *GetCurrentCD(void);
+
+/**@brief Accessor function to current leaf CD.
+ * 
+ * It is the same as GetCurrentCD() except that it returns the leaf CD even though it is not active yet.
+ *
+ *  @return returns a pointer to the handle of the leaf CD; Returns
+ *  0 if CD runtime is not yet initialized or because of a CD
+ *  implementation bug.
+ */
+  CDHandle *GetLeafCD(void);
+
+ /**@brief Accessor function to a CDHandle at a root level in CD hierachy.
+  * @return returns a pointer to the handle of the root CD; Returns
+  * 0 if CD runtime is not yet initialized or because of a CD
+  * implementation bug.
+  */
+  CDHandle *GetRootCD(void);
+
+ /** @brief Accessor function to a CDHandle at parent level of the leaf CD. 
+  *  @return Pointer to CDHandle at a level
+  */
+  CDHandle *GetParentCD(void);
+
+ /** @brief Accessor function to a CDHandle at parent level of a specific CD hierarchy level. 
+  *  @return Pointer to CDHandle at a level
+  */
+  CDHandle *GetParentCD(int current_level);
+
+  struct ParamEntry {    
+    uint64_t count_;
+    uint64_t interval_;
+    uint64_t error_mask_;
+//    bool     active_;
+  };
+  /** @} */ // End cd_accessor_funcs group =====================================================
+
+} // namespace tuned ends
 
 #endif

@@ -120,7 +120,7 @@ void CD::CheckReexecution(void)
     create_elapsed_time += end_clk - begin_clk; // Total Complete overhead
     Profiler::num_exec_map[level()][label_].create_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
 #endif
-    CD::GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
+    CD::GetCDToRecover(CDPath::GetCurrentCD(), false)->ptr_cd()->Recover();
   } else {
     CD_DEBUG("\n\nReexec is false\n");
   }
@@ -328,7 +328,7 @@ CDErrT CD::CheckMailBox(void)
   // Reset handled event counter
   //handled_event_count = 0;
   assert(EventHandler::handled_event_count == 0);
-  CDHandle *curr_cdh = GetCurrentCD();
+  CDHandle *curr_cdh = CDPath::GetCurrentCD();
   uint32_t temp = EventHandler::handled_event_count;
 
 //  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\n\n=================== Check Mail Box Start [Level #%u], # of pending events : %d ========================\n", level(), event_count);
@@ -366,7 +366,7 @@ CDErrT CD::CheckMailBox(void)
                       curr_cdh->ptr_cd()->GetCDID().level());
       }
 
-      // If current CD is Root CD and GetParentCD is called, it returns NULL
+      // If current CD is Root CD and CDPath::GetParentCD is called, it returns NULL
       CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "ReadMailBox %s / %s at level #%u\n", 
                curr_cdh->ptr_cd()->GetCDName().GetString().c_str(), 
                curr_cdh->node_id_.GetString().c_str(), 
@@ -377,7 +377,7 @@ CDErrT CD::CheckMailBox(void)
                GetNodeID().GetString().c_str(), 
                level());
 
-      curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
+      curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
     } 
 
     CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "-------------------------------------------------------------------\n");
@@ -605,7 +605,7 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, int idx)
 #if 0
 //FIXME_KL
       if(entry_searched == false) {
-        CDHandle *parent = GetParentCD();
+        CDHandle *parent = CDPath::GetParentCD();
         CDEventT entry_search = kEntrySearch;
         parent->SetMailBox(entry_search);
         PMPI_Isend(recvBuf, 
@@ -688,7 +688,7 @@ inline
 void CD::ForwardToLowerLevel(CD *cdp, const CDEventT &event) 
 {
   cdp->reported_error_ = true;
-  CDHandle *lower_lv_cd = CDPath::GetCoarseCD(GetCurrentCD());
+  CDHandle *lower_lv_cd = CDPath::GetCoarseCD(CDPath::GetCurrentCD());
   if(cdp->task_size() > lower_lv_cd->task_size()) {
     CD *cur_cd = lower_lv_cd->ptr_cd();
     if(cur_cd->reported_error_ == false) {
@@ -793,8 +793,8 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event)
 //    if(curr_cdh == GetRootCD()) {
 //      ERROR_MESSAGE("[SetMailBox] there is a single task in the root CD\n");
 //    }
-//    // If current CD is Root CD and GetParentCD is called, it returns NULL
-//    curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
+//    // If current CD is Root CD and CDPath::GetParentCD is called, it returns NULL
+//    curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
 //  } 
 ////  if(curr_cdh->IsHead()) assert(0);
 //
@@ -975,8 +975,8 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event)
 //    if(curr_cdh == GetRootCD()) {
 //      ERROR_MESSAGE("[SetMailBox] there is a single task in the root CD\n");
 //    }
-//    // If current CD is Root CD and GetParentCD is called, it returns NULL
-//    curr_cdh = GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
+//    // If current CD is Root CD and CDPath::GetParentCD is called, it returns NULL
+//    curr_cdh = CDPath::GetParentCD(curr_cdh->ptr_cd()->GetCDID().level());
 //  } 
 ////  if(curr_cdh->IsHead()) assert(0);
 //
@@ -1349,7 +1349,7 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
             cd_id_.GetString().c_str(), level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
         
         printed = false;
-//        GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
+//        GetCDToRecover(CDPath::GetCurrentCD(), false)->ptr_cd()->Recover();
         ret = MPI_ERR_NEED_ESCALATE;
         break;
       } else {
@@ -1377,8 +1377,8 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
 
   // Need to sync with the other task assuming current CD does not complete because
   // the blocking MPI call precedes CD::Complete
-//  GetCDToRecover(GetCurrentCD(), true)->ptr_cd()->Recover();
-//  CDHandle *cur_cdh = GetCurrentCD();
+//  GetCDToRecover(CDPath::GetCurrentCD(), true)->ptr_cd()->Recover();
+//  CDHandle *cur_cdh = CDPath::GetCurrentCD();
 //  GetCDToRecover(cur_cdh, cur_cdh->task_size() > target->task_size());
   
   return ret;
@@ -1411,7 +1411,7 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
             __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
         
         printed = false;
-//        GetCDToRecover(GetCurrentCD(), false)->ptr_cd()->Recover();
+//        GetCDToRecover(CDPath::GetCurrentCD(), false)->ptr_cd()->Recover();
         ret = MPI_ERR_NEED_ESCALATE;
         break;
       } else {
@@ -1440,8 +1440,8 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
   }
   // Need to sync with the other task assuming current CD does not complete because
   // the blocking MPI call precedes CD::Complete
-//  GetCDToRecover(GetCurrentCD(), true)->ptr_cd()->Recover();
-//  CDHandle *cur_cdh = GetCurrentCD();
+//  GetCDToRecover(CDPath::GetCurrentCD(), true)->ptr_cd()->Recover();
+//  CDHandle *cur_cdh = CDPath::GetCurrentCD();
 //  GetCDToRecover(cur_cdh, cur_cdh->task_size() > target->task_size());
   
   return ret;

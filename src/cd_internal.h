@@ -123,36 +123,19 @@ struct RemoteCDEntry : public CDEntry {
 
 namespace cd {
 
-
-//// data structure to store incompleted log entries
-//struct IncompleteLogEntry{
-//  //void * addr_;
-//  unsigned long addr_;
-//  unsigned long length_;
-//  unsigned long flag_;
-//  bool complete_;
-//  bool isrecv_;
-//  //GONG
-//  void *p_;
-//  bool pushed_;
-//  unsigned int level_;
-//  //bool valid_;
-//};
-
   namespace internal {
-//using namespace cd;
 
-// Initialize basepath for preservation, and 
-// create directory if necessary.
-void InitFileHandle(bool make_dir);
-
-//class Internal 
-//brief This class contains static internal routines 
-//      regarding initialization and finalization of CD runtime.
-void Initialize(void);
-
-void Finalize(void);
-class EventHandler;
+    // Initialize basepath for preservation, and 
+    // create directory if necessary.
+    void InitFileHandle(bool make_dir);
+    
+    //class Internal 
+    //brief This class contains static internal routines 
+    //      regarding initialization and finalization of CD runtime.
+    void Initialize(void);
+    
+    void Finalize(void);
+    class EventHandler;
 
 /**@class CD 
  * @brief Core data structure of CD runtime. It has all the information and controls of a specific level of CDs.
@@ -165,7 +148,6 @@ class CD : public Serializable {
     friend class cd::CDHandle;  
     friend class cd::RegenObject;   
     friend class cd::RecoverObject;
-//    friend class CDEntry;  
     friend class HandleAllReexecute;
     friend class HandleErrorOccurred;
     friend class HandleAllResume;
@@ -177,7 +159,6 @@ class CD : public Serializable {
     friend CDHandle *cd::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
     friend void cd::CD_Finalize(void);
 #if CD_MPI_ENABLED
-//    friend class PFSHandle;
     friend class cd::logging::CommLog;
     friend int MPI_Win_fence(int assert, MPI_Win win);
 #endif
@@ -243,7 +224,7 @@ class CD : public Serializable {
     // Label for Begin/Complete pair. It is mainly for Loop interation.
     // The Begin/Complete pair that has the same computation will have the same label_
     // and we can optimize CD with this label_ later.
-    std::string label_;
+    std::string     label_;
     
     // Name of this CD
     std::string     name_;
@@ -433,7 +414,7 @@ update the preserved data.
     virtual CDErrT Destroy(bool collective=true, bool need_destroy=false);
 
     CDErrT Begin(bool collective=true, 
-                 const char *label=NULL);
+                 const char *label=NO_LABEL);
 
     CDErrT Complete(bool collective=true, 
                     bool update_preservations=true);
@@ -448,8 +429,8 @@ update the preserved data.
     CDErrT Preserve(void *data,                   // address in the local process 
                     uint64_t &len_in_bytes,        // data size to preserve
                     uint32_t preserve_mask=kCopy, // preservation method
-                    const char *my_name=0,        // data name
-                    const char *ref_name=0,       // reference name
+                    const char *my_name=NO_LABEL,        // data name
+                    const char *ref_name=NO_LABEL,       // reference name
                     uint64_t ref_offset=0,        // reference offset
                     const RegenObject *regen_object=0, // regen object
                     PreserveUseT data_usage=kUnsure);   // for optimization
@@ -463,8 +444,8 @@ update the preserved data.
                     void *data_ptr, 
                     uint64_t &len, 
                     uint32_t preserve_mask=kCopy, 
-                    const char *my_name=0, 
-                    const char *ref_name=0, 
+                    const char *my_name=NO_LABEL, 
+                    const char *ref_name=NO_LABEL, 
                     uint64_t ref_offset=0, 
                     const RegenObject *regen_object=0, 
                     PreserveUseT data_usage=kUnsure);

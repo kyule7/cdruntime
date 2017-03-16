@@ -153,8 +153,8 @@ void CDProfiler::InitProfile(std::string label)
 void CDProfiler::InitViz()
 {
   // Only root should call this (inside CD_Init)
-//  if( GetCurrentCD() != GetRootCD() ) {
-//    cout << GetCurrentCD() << " " << GetRootCD() << endl;
+//  if( CDPath::GetCurrentCD() != GetRootCD() ) {
+//    cout << CDPath::GetCurrentCD() << " " << GetRootCD() << endl;
 //    assert(0);
 //  }
 
@@ -198,7 +198,7 @@ void CDProfiler::FinalizeViz(void)
   cddbg<< "\n---------------- Finalize Visualization --------------\n" <<endl;
 
   // Only root should call this (inside CD_Finalize)
-//  if( GetCurrentCD() != GetRootCD() ) assert(0);
+//  if( CDPath::GetCurrentCD() != GetRootCD() ) assert(0);
 
   // Destroy SightObj
   cddbg << "reached here? becore while in FinalizeViz() " << endl;
@@ -296,7 +296,7 @@ void CDProfiler::FinishProfile(void) // it is called in Destroy()
 
   /// Loop Count (# of seq. CDs) + 1
 //  (this->profile_data_)[current_label_][LOOP_COUNT] += 1;
-//  (profile_data_)[current_label_][LOOP_COUNT] = GetCurrentCD()->ptr_cd()->GetCDID().sequential_id_;
+//  (profile_data_)[current_label_][LOOP_COUNT] = CDPath::GetCurrentCD()->ptr_cd()->GetCDID().sequential_id_;
   (profile_data_)[current_label_][LOOP_COUNT]++;
 
   /// Calcualate the execution time
@@ -397,10 +397,10 @@ Module::Module(CDProfiler *profiler, bool usr_profile_en) : Viz(profiler)
 //  profiler = profiler_p;
   std::map<std::string, array<uint64_t,MAX_PROFILE_DATA> > &profile_data_ = profiler->profile_data_;
   LabelT &current_label_ = profiler->current_label_;
-//  CDHandle *cdh = GetCurrentCD();
-  string label = GetCurrentCD()->profiler_->label();
+//  CDHandle *cdh = CDPath::GetCurrentCD();
+  string label = CDPath::GetCurrentCD()->profiler_->label();
 //  cddbg<<"CreateModule call"<<endl;
-  NodeID node_id = GetCurrentCD()->node_id();
+  NodeID node_id = CDPath::GetCurrentCD()->node_id();
   bool isReference = node_id.task_in_color() == 0;
   usr_profile_enable = usr_profile_en;
 // LOOP_COUNT, 
@@ -413,7 +413,7 @@ Module::Module(CDProfiler *profiler, bool usr_profile_en) : Viz(profiler)
 // LOGGING_OVERHEAD, 
   if(usr_profile_enable==false) {
 //    cddbg<<"\n[[[[Module object created]]]]"<<endl<<endl; //cddbgBreak();
-    m = new compModule( instance(txt()<<label<<"_"<<GetCurrentCD()->ptr_cd()->GetCDName(), 1, 0), 
+    m = new compModule( instance(txt()<<label<<"_"<<CDPath::GetCurrentCD()->ptr_cd()->GetCDName(), 1, 0), 
                     inputs(port(context("Sequential CDs #",(long)profile_data_[current_label_][LOOP_COUNT],
                                         "Exec cycle", (long)profile_data_[current_label_][EXEC_CYCLE],
                                         "Preservation volume", (long)profile_data_[current_label_][PRV_COPY_DATA],
@@ -429,9 +429,9 @@ Module::Module(CDProfiler *profiler, bool usr_profile_en) : Viz(profiler)
   else {
   
 //    cddbg<<22222<<endl<<endl; cddbgBreak();
-//    m = new module( instance(txt()<<label<<"_"<<GetCurrentCD()->ptr_cd()->GetCDName(), 2, 2), 
+//    m = new module( instance(txt()<<label<<"_"<<CDPath::GetCurrentCD()->ptr_cd()->GetCDName(), 2, 2), 
 //                    inputs(port(context("cd_id", txt()<<node_id.task_in_color(), 
-//                                        "sequential_id", (int)(GetCurrentCD()->ptr_cd()->GetCDID().sequential_id()))),
+//                                        "sequential_id", (int)(CDPath::GetCurrentCD()->ptr_cd()->GetCDID().sequential_id()))),
 //                           port(usr_profile_input)),
 //                    namedMeasures("time", new timeMeasure()) );
     //this->mStack.push_back(m);
@@ -443,9 +443,9 @@ Module::Module(CDProfiler *profiler, bool usr_profile_en) : Viz(profiler)
 
 Module::~Module(void)
 {
-  CDProfiler *profiler = (CDProfiler*)(GetCurrentCD()->profiler_);
+  CDProfiler *profiler = (CDProfiler*)(CDPath::GetCurrentCD()->profiler_);
   std::map<std::string, array<uint64_t, MAX_PROFILE_DATA> > profile_data = profiler->profile_data_;
-  string label = GetCurrentCD()->profiler_->label();
+  string label = CDPath::GetCurrentCD()->profiler_->label();
 
 
   assert(m != NULL);
@@ -518,8 +518,8 @@ void Module::AddUsrProfile(std::string key, long val, int mode)
 Comparison::Comparison(CDProfiler *profiler) : Viz(profiler)
 {
 
-//  cout << GetCurrentCD()->GetCDName().GetString().c_str() << " from task#" << myTaskID << endl;
-  compTag = new comparison(txt() << GetCurrentCD()->GetCDName().GetString().c_str());
+//  cout << CDPath::GetCurrentCD()->GetCDName().GetString().c_str() << " from task#" << myTaskID << endl;
+  compTag = new comparison(txt() << CDPath::GetCurrentCD()->GetCDName().GetString().c_str());
 //  comparison* comp = new comparison(node_id().color());
 //  compStack.push_back(comp);
 
@@ -555,16 +555,16 @@ Comparison::~Comparison(void)
 HierGraph::HierGraph(CDProfiler *profiler) : Viz(profiler)
 {
   cddbg<<"CreateHierGraph call"<<endl;
-  NodeID node_id = GetCurrentCD()->node_id();
-  CDID   cd_id = GetCurrentCD()->ptr_cd()->GetCDID();
+  NodeID node_id = CDPath::GetCurrentCD()->node_id();
+  CDID   cd_id = CDPath::GetCurrentCD()->ptr_cd()->GetCDID();
 
-  fg->graphNodeStart(GetCurrentCD()->GetName(), GetCurrentCD()->GetLabel(), cd_id.sequential_id(), cd_id.task_in_color());
+  fg->graphNodeStart(CDPath::GetCurrentCD()->GetName(), CDPath::GetCurrentCD()->GetLabel(), cd_id.sequential_id(), cd_id.task_in_color());
 }
 
 
 HierGraph::~HierGraph(void)
 {
-  fg->graphNodeEnd(GetCurrentCD()->GetName());
+  fg->graphNodeEnd(CDPath::GetCurrentCD()->GetName());
 }
 #endif
 
@@ -572,7 +572,7 @@ HierGraph::~HierGraph(void)
 #if _ENABLE_ATTR
 Attribute::Attribute(CDProfiler *profiler) : Viz(profiler)
 {
-  string label = GetCurrentCD()->profiler_->label();
+  string label = CDPath::GetCurrentCD()->profiler_->label();
 
   attrVal = new attr(label, CDProfiler::onOff_[label]);
   attrKey = new attrAnd(new attrEQ(label, 1));

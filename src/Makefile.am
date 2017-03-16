@@ -23,6 +23,7 @@ libcd_la_SOURCES = \
   	                cd_comm_log.cc \
   	                cd_event.cc \
   	                cd_handle.cc \
+  	                tuned_cd_handle.cc \
   	                cd_id.cc \
   	                cd_malloc.cc \
   	                cd_mpiwrapper.cc \
