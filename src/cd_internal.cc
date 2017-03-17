@@ -800,11 +800,21 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 CDErrT CD::Begin(bool collective, const char *label)
 {
   //printf("[%s] not here? \n", __func__);
+  label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label; 
+  uint32_t phase = GetPhase(level(), label_);
+  cd_name_.phase_ = phase;
+  phaseTree.target_->level_ = level_;
+  phaseTree.target_->phase_ = phase;
+  phaseTree.target_->prev_path_ + string("_") + string(label);
+  auto it = phaseMap[level].find(label);
+  auto it = phasePath.find(label);
+  if(it != phasePath.end()) {
+
+
   begin_ = true;
 
   CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);
   PrintDebug();
-  label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label; 
   cd_id_.cd_name_.UpdatePhase(label_);
 #if comm_log
   //SZ: if in reexecution, need to unpack logs to childs
@@ -1077,6 +1087,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 //      if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
       target->profiler_->FinishProfile();
 #endif
+      target->ptr_cd_->CompletePhase();
       target->ptr_cd_->CompleteLogs();
       target->ptr_cd_->DeleteEntryDirectory();
       target->Destroy();
@@ -1155,6 +1166,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 //    if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
     target->profiler_->FinishProfile();
 #endif
+    target->ptr_cd_->CompletePhase();
     target->ptr_cd_->CompleteLogs();
     target->ptr_cd_->DeleteEntryDirectory();
     target->Destroy(false);
@@ -1267,7 +1279,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     prof_sync_clk = end_clk;
     elapsed_time += end_clk - begin_clk;  // Total CD overhead 
     compl_elapsed_time += end_clk - begin_clk; // Total Complete overhead
-    Profiler::num_exec_map[level()][label_.c_str()].compl_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
+    Profiler::num_exec_map[level()][label_].compl_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
 #endif
     GetCDToRecover( CDPath::GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }
@@ -1276,6 +1288,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     reported_error_ = false;
   }
 
+  CompletePhase();
   CompleteLogs();
 
   reexecuted_ = false;
@@ -1295,7 +1308,11 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
 }
 
 
-
+//void CD::CompletePhase(void) 
+//{
+//  if(phaseTree.target_ != NULL)
+//    phaseTree.target_ = phaseTree.target_->parent_;
+//}
 
 CD::CDInternalErrT CD::CompleteLogs(void) {
 #if comm_log

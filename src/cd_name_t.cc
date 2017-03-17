@@ -55,7 +55,7 @@ void     CDNameT::IncLevel(void)            { level_++; }
 CDNameT::CDNameT(const CDNameT &parent_cdname, int num_children, int color, const char *label)
 {
   level_         = parent_cdname.level() + 1;
-  phase_         = GetPhase(level_, label);
+  phase_         = -1;
   rank_in_level_ = num_children*(parent_cdname.rank_in_level()) + color;
   size_          = num_children;
   //cout << "level: " << level_ << " parent level : " << parent_cdname.level()
@@ -67,6 +67,7 @@ CDNameT::CDNameT(const CDNameT &parent_cdname, int num_children, int color, cons
 
 void CDNameT::UpdatePhase(const string &label)
 {
+  printf("## UpdatePhase ##");
   phase_ = GetPhase(level_, label);
 }
 

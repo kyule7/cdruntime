@@ -58,7 +58,9 @@ using namespace cd::internal;
 using namespace std;
 
 CDHandle *cd::null_cd = NULL;
-ParMapType cd::phaseMap;
+PhaseMapType cd::phaseMap;
+//PhasePathType cd::phasePath;
+uint32_t cd::PhaseNode::phase_gen = 0;
 
 /// KL
 /// cddbg is a global variable to be used for debugging purpose.
@@ -232,7 +234,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   myTaskID      = myTask;
   totalTaskSize = numTask;
  
-  char *cd_config_file = getenv("CD_CONFIG_FILE");
+  char *cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
     cd::config.LoadConfig(cd_config_file);
   } else {
@@ -912,6 +914,7 @@ CDHandle *CDHandle::Create(const char *name,
 {
   //GONG
   CDPrologue();
+  printf("[Real %s %s lv:%u lv:%u\n", __func__, name, level(), phase()); getchar();
   //CheckMailBox();
 
   // Create CDHandle for a local node
@@ -936,7 +939,7 @@ CDHandle *CDHandle::Create(const char *name,
   end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][label()].create_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return new_cd_handle;
@@ -951,6 +954,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
                            CDErrT *error)
 {
   CDPrologue();
+  printf("[Real %s %s lv:%u lv:%u\n", __func__, name, level(), phase()); getchar();
 #if CD_MPI_ENABLED
 
   CD_DEBUG("CDHandle::Create Node ID : %s\n", node_id_.GetString().c_str());
@@ -1051,7 +1055,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][label()].create_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
 
@@ -1070,6 +1074,7 @@ CDHandle *CDHandle::Create(uint32_t color,
                            CDErrT *error )
 {
   CDPrologue();
+  printf("[Real %s %s lv:%u lv:%u\n", __func__, name, level(), phase()); getchar();
 #if CD_MPI_ENABLED
 
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
@@ -1111,7 +1116,7 @@ CDHandle *CDHandle::Create(uint32_t color,
   end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][label()].create_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return new_cd_handle;
@@ -1126,18 +1131,19 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
                                    CDErrT *error )
 {
   CDPrologue();
+  printf("[Real %s %s lv:%u lv:%u\n", __func__, name, level(), phase()); getchar();
   CDHandle *new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
   CD_CLOCK_T clk = CD_CLOCK();
   create_elapsed_time += clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][GetLabel()].create_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][label()].create_elapsed_time_ += end_clk - begin_clk;
 #endif
   new_cdh->Begin(false, name);
 
   end_clk = CD_CLOCK();
   begin_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][GetLabel()].begin_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][label()].begin_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return new_cdh;
@@ -1147,6 +1153,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 CDErrT CDHandle::Destroy(bool collective) 
 {
   CDPrologue();
+  printf("[Real %s] %u %u\n", __func__, level(), phase()); getchar();
   uint32_t cur_level = ptr_cd_->cd_id_.cd_name_.level();
   std::string label(GetLabel());
 
@@ -1246,7 +1253,7 @@ CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_
   end_clk = CD_CLOCK();
   begin_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][GetLabel()].begin_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][label()].begin_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
 
@@ -1256,6 +1263,7 @@ CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_
 CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 {
   CDPrologue();
+  printf("[Real %s lv:%u phase:%u]\n", __func__, level(), phase()); getchar();
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
 
@@ -1275,7 +1283,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   end_clk = CD_CLOCK();
   compl_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][GetLabel()].compl_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][label()].compl_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
 
@@ -1291,7 +1299,7 @@ CDErrT CDHandle::Advance(bool collective)
   end_clk = CD_CLOCK();
   advance_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][GetLabel()].advance_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][label()].advance_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return ret;
@@ -1340,7 +1348,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   end_clk = CD_CLOCK();
   prv_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][GetLabel()].prv_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][label()].prv_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return err;
@@ -1385,7 +1393,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   end_clk = CD_CLOCK();
   prv_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][GetLabel()].prv_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][label()].prv_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return err;
@@ -1434,7 +1442,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   end_clk = CD_CLOCK();
   prv_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][GetLabel()].prv_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][label()].prv_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return err;

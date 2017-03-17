@@ -61,6 +61,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
+#include <list>
 #include "cd_features.h"
 #include "cd_def_common.h"
 // This could be different from MPI program to PGAS program
@@ -390,14 +391,64 @@ namespace cd {
     }
   }; 
 
+  struct PhaseNode {
+    uint32_t level_;
+    uint32_t phase_;
+    int64_t interval_;
+    int64_t errortype_;
+    std::string label_;
+    PhaseNode *parent_;
+    std::list<PhaseNode *> children_;
+    static uint32_t phase_gen;
+    PhaseNode(PhaseNode *newnode=NULL) 
+    {
+      phase_ = phase_gen++;
+  //    printf("created!");
+      if(newnode != NULL) {
+        newnode->AddChild(this);
+      }
+      parent_ = newnode;
+    }
+  
+    void Delete(void) 
+    {
+      // Recursively reach the leaves, then delete from them to root.
+      for(auto it=children_.begin(); it!=children_.end(); ++it) {
+        (*it)->Delete();
+      }
+      delete this;
+    }
+  
+    public:
+    void AddChild(PhaseNode *child) 
+    {
+      children_.push_back(child);
+    }
+    void Print(void); 
+  };
+  
+  struct PhaseTree {
+    PhaseNode *root_;
+    PhaseNode *target_;
+    PhaseTree(void) : root_(NULL), target_(NULL) {}
+    ~PhaseTree() {
+      root_->Delete();
+    }
+    void Print(void) {
+      root_->Print();
+    }
+  };
 
+  extern PhaseTree phaseTree;
+  extern CDHandle *null_cd;
   extern CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   extern void CD_Finalize(void);
-
-  extern CDHandle *null_cd;
 }
 
+
+
 namespace tuned {
+  extern PhaseTree phaseTree;
   class CDHandle;
   extern CDHandle *CD_Init_tuned(int numTask, int myTask, PrvMediumT prv_medium);
 /** \addtogroup cd_accessor_funcs 
@@ -452,13 +503,16 @@ namespace tuned {
   */
   CDHandle *GetParentCD(int current_level);
 
+  /** @} */ // End cd_accessor_funcs group =====================================================
   struct ParamEntry {    
-    uint64_t count_;
-    uint64_t interval_;
-    uint64_t error_mask_;
+    int64_t count_;
+    int64_t error_mask_;
+    int64_t interval_;
+    uint32_t merge_begin_;
+    uint32_t merge_end_;
+    ParamEntry(void) : count_(0), error_mask_(-1), interval_(-1), merge_begin_(0), merge_end_(0){}
 //    bool     active_;
   };
-  /** @} */ // End cd_accessor_funcs group =====================================================
 
 } // namespace tuned ends
 

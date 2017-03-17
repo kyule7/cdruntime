@@ -53,9 +53,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define LV2 1
 #define LV3 1 
 
-#define CD1_ITER 4
-#define CD2_ITER 8
-#define CD3_ITER 12
+#define CD1_ITER 2
+#define CD2_ITER 4
+#define CD3_ITER 6
 
 using namespace tuned;
 using namespace std;
@@ -152,7 +152,7 @@ int TestCDHierarchy(void)
   arrayName[arrayD] = "arrayD";
 
   cout << "\n==== TestCDHierarchy Start ====\n" << endl; 
-  CDHandle *root = CD_Init_tuned(numProcs, myRank, kHDD);
+  CDHandle *root = TunedCD_Init(numProcs, myRank, kHDD);
 
   root->Begin();
 
@@ -184,12 +184,11 @@ int TestCDHierarchy(void)
              << "CD1 Creates Level 2 CD. # of children CDs = " 
              << LV2 << "\n" << endl;
         for(uint32_t jj=0; jj<CD2_ITER; jj++) {
-          child_lv2->Begin();
+          child_lv2->Begin(false, (string("CD2_") + to_string(jj / 2)).c_str());
         
             CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kDRAM|kStrict, 0, 0, &err);
             for(uint32_t kk=0; kk<CD3_ITER; kk++) { 
-              child_lv3->Begin();
-            
+              child_lv3->Begin(false, (string("CD3_") + to_string(kk / 2)).c_str());
             
               child_lv3->Detect();
             
@@ -232,7 +231,7 @@ int TestCDHierarchy(void)
   cout << "\n==== TestCDHierarchy Done ====\n" << endl; 
   cout.flush();
 
-  cd::CD_Finalize();
+  TunedCD_Finalize();
 
 
   return common::kOK; 

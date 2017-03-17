@@ -64,7 +64,8 @@ class PhaseMapType : public std::map<std::string, uint32_t> {
     uint32_t phase_gen_;
 };
 
-typedef std::map<uint32_t, PhaseMapType> ParMapType;
+typedef std::map<uint32_t, PhaseMapType> PhaseMapType;
+typedef std::map<std::string, uint32_t> PhasePathType;
 
 namespace cd {
   // phaseMap generates phase ID for CDNameT at each level.
@@ -74,7 +75,8 @@ namespace cd {
   // 
   // The scope of phase ID is limited to the corresponding level,
   // which means that the same label at different levels are different phases.
-  extern ParMapType phaseMap;
+  extern PhaseMapType phaseMap;
+  extern PhasePathType phasePath;
 
   namespace internal {
 
