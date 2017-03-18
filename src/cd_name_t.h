@@ -93,7 +93,7 @@ public:
   uint32_t rank_in_level(void) const;
   uint32_t size(void) const;
   std::string GetString(void) const;
-  void UpdatePhase(const std::string &label);
+//  void UpdatePhase(const std::string &label);
 private: 
   void IncLevel(void);
   int CDTag(void) const; 

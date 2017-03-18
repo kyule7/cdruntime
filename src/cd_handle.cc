@@ -58,9 +58,6 @@ using namespace cd::internal;
 using namespace std;
 
 CDHandle *cd::null_cd = NULL;
-PhaseMapType cd::phaseMap;
-//PhasePathType cd::phasePath;
-uint32_t cd::PhaseNode::phase_gen = 0;
 
 /// KL
 /// cddbg is a global variable to be used for debugging purpose.
@@ -234,12 +231,12 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   myTaskID      = myTask;
   totalTaskSize = numTask;
  
-  char *cd_config_file = getenv("CD_CONFIG_FILENAME");
-  if(cd_config_file != NULL) {
-    cd::config.LoadConfig(cd_config_file);
-  } else {
-    cd::config.LoadConfig(CD_DEFAULT_CONFIG);
-  }
+//  char *cd_config_file = getenv("CD_CONFIG_FILENAME");
+//  if(cd_config_file != NULL) {
+//    cd::config.LoadConfig(cd_config_file);
+//  } else {
+//    cd::config.LoadConfig(CD_DEFAULT_CONFIG);
+//  }
 
   SetDebugFilepath(myTask);
   internal::InitFileHandle(myTask == 0);
@@ -1253,7 +1250,7 @@ CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_
   end_clk = CD_CLOCK();
   begin_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][label()].begin_elapsed_time_ += end_clk - begin_clk;
+  Profiler::num_exec_map[level()][this->label()].begin_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
 

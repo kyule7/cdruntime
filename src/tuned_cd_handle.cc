@@ -1,16 +1,25 @@
 #include "tuned_cd_handle.h"
+#include "sys_err_t.h"
+#include "cd_def_preserve.h"
+
 #include <assert.h>
 namespace tuned {
 
-CDHandle *TunedCD_Init(int numTask, int myTask, PrvMediumT prv_medium)
+CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
+  char *cd_config_file = getenv("CD_CONFIG_FILENAME");
+  if(cd_config_file != NULL) {
+    cd::config.LoadConfig(cd_config_file);
+  } else {
+    cd::config.LoadConfig(CD_DEFAULT_CONFIG);
+  }
   cd::CDHandle *root_handle = cd::CD_Init(numTask, myTask, prv_medium);
   CDHandle *tuned_root_handle = new CDHandle(root_handle, 0, "Root");
   CDPath::GetCDPath()->push_back(tuned_root_handle);
   return tuned_root_handle;
 }
 
-void TunedCD_Finalize(void)
+void CD_Finalize(void)
 {
   cd::CD_Finalize();
   assert(CDPath::GetCDPath()->size() == 1);

@@ -39,6 +39,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include "packer.h"
 //#include "unpacker.h"
 #include "cd_def_debug.h"
+#include "phase_tree.h"
+
 #include <setjmp.h>
 using namespace cd;
 using namespace cd::internal;
@@ -71,6 +73,8 @@ map<uint32_t, uint32_t> Util::object_id;
 //map<string, uint32_t> CD::exec_count_;
 map<string, CDHandle *> CD::access_store_;
 map<uint32_t, CDHandle *> CD::delete_store_;
+//PhaseTree cd::phaseTree;
+//std::vector<PhaseNode *> phaseNodeCache;
 
 //unordered_map<string,pair<int,int>> CD::num_exec_map_;
 
@@ -787,6 +791,16 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 }
 
 
+//static inline void BeginPhase(const std::string &label)
+//{
+//  cd_name_.phase_ = cd::phaseTree->target_->GetPhaseNode(level(), label_);
+//}
+
+static inline void CompletePhase(void)
+{
+  if(phaseTree.current_ != NULL)
+    phaseTree.current_ = phaseTree.current_->parent_;
+}
 
 /* CD::Begin()
  * (1) Call all the user-defined error checking functions. 
@@ -801,21 +815,27 @@ CDErrT CD::Begin(bool collective, const char *label)
 {
   //printf("[%s] not here? \n", __func__);
   label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label; 
-  uint32_t phase = GetPhase(level(), label_);
-  cd_name_.phase_ = phase;
-  phaseTree.target_->level_ = level_;
-  phaseTree.target_->phase_ = phase;
-  phaseTree.target_->prev_path_ + string("_") + string(label);
-  auto it = phaseMap[level].find(label);
-  auto it = phasePath.find(label);
-  if(it != phasePath.end()) {
+  if(phaseTree.current_ != NULL)
+    cd_id_.cd_name_.phase_ = phaseTree.current_->GetPhaseNode(level(), label_);
+  else 
+    cd_id_.cd_name_.phase_ = phaseTree.Init(level(), label_);
+    
+ // cd_name_.phase_ = GetPhase(level(), label_);
+
+//  cd_name_.phase_ = phase;
+//  phaseTree.target_->level_ = level_;
+//  phaseTree.target_->phase_ = phase;
+//  phaseTree.target_->prev_path_ + string("_") + string(label);
+//  auto it = phaseMap[level].find(label);
+//  auto it = phasePath.find(label);
+//  if(it != phasePath.end()) {
 
 
   begin_ = true;
 
   CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);
   PrintDebug();
-  cd_id_.cd_name_.UpdatePhase(label_);
+//  cd_id_.cd_name_.UpdatePhase(label_);
 #if comm_log
   //SZ: if in reexecution, need to unpack logs to childs
   if (GetParentHandle()!=NULL)
@@ -1087,7 +1107,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 //      if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
       target->profiler_->FinishProfile();
 #endif
-      target->ptr_cd_->CompletePhase();
+      CompletePhase();
       target->ptr_cd_->CompleteLogs();
       target->ptr_cd_->DeleteEntryDirectory();
       target->Destroy();
@@ -1166,7 +1186,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 //    if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
     target->profiler_->FinishProfile();
 #endif
-    target->ptr_cd_->CompletePhase();
+    CompletePhase();
     target->ptr_cd_->CompleteLogs();
     target->ptr_cd_->DeleteEntryDirectory();
     target->Destroy(false);

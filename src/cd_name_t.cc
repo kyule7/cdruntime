@@ -65,11 +65,11 @@ CDNameT::CDNameT(const CDNameT &parent_cdname, int num_children, int color, cons
 //            << ", color : "<< color << endl; 
 }
 
-void CDNameT::UpdatePhase(const string &label)
-{
-  printf("## UpdatePhase ##");
-  phase_ = GetPhase(level_, label);
-}
+//void CDNameT::UpdatePhase(const string &label)
+//{
+//  printf("## UpdatePhase ##");
+////  phase_ = GetPhase(level_, label);
+//}
 
 void CDNameT::copy(const CDNameT& that) 
 {

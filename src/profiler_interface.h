@@ -87,41 +87,34 @@ struct CDOverhead {
       compl_elapsed_time_(0.0),
       advance_elapsed_time_(0.0)
   {}
-  CDOverhead(const CDOverhead &record) {
+  void CopyCDOverhead(const CDOverhead &record) {
     prv_elapsed_time_     = record.prv_elapsed_time_; 
     create_elapsed_time_  = record.create_elapsed_time_;  
     destroy_elapsed_time_ = record.destroy_elapsed_time_; 
     begin_elapsed_time_   = record.begin_elapsed_time_;   
     compl_elapsed_time_   = record.compl_elapsed_time_;   
-    advance_elapsed_time_   = record.advance_elapsed_time_;   
+    advance_elapsed_time_ = record.advance_elapsed_time_;   
   }
-  virtual std::string GetString(void);
-  virtual void Print(void);
-  CDOverhead &operator+=(const CDOverhead &record) {
-    prv_elapsed_time_     += record.prv_elapsed_time_; 
-    create_elapsed_time_  += record.create_elapsed_time_;  
-    destroy_elapsed_time_ += record.destroy_elapsed_time_; 
-    begin_elapsed_time_   += record.begin_elapsed_time_;   
-    compl_elapsed_time_   += record.compl_elapsed_time_;   
-    advance_elapsed_time_   += record.advance_elapsed_time_;   
-    return *this;
-  }
-  CDOverhead &operator=(const CDOverhead &record) {
-    prv_elapsed_time_     = record.prv_elapsed_time_; 
-    create_elapsed_time_  = record.create_elapsed_time_;  
-    destroy_elapsed_time_ = record.destroy_elapsed_time_; 
-    begin_elapsed_time_   = record.begin_elapsed_time_;   
-    compl_elapsed_time_   = record.compl_elapsed_time_;   
-    advance_elapsed_time_   = record.advance_elapsed_time_;   
-    return *this;
-  }
-  void MergeInfoPerLevel(const CDOverhead &info_per_level) {
+  void MergeCDOverhead(const CDOverhead &info_per_level) {
     prv_elapsed_time_     += info_per_level.prv_elapsed_time_; 
     create_elapsed_time_  += info_per_level.create_elapsed_time_;  
     destroy_elapsed_time_ += info_per_level.destroy_elapsed_time_; 
     begin_elapsed_time_   += info_per_level.begin_elapsed_time_;   
     compl_elapsed_time_   += info_per_level.compl_elapsed_time_;   
-    advance_elapsed_time_   += info_per_level.advance_elapsed_time_;   
+    advance_elapsed_time_ += info_per_level.advance_elapsed_time_;   
+  }
+  CDOverhead(const CDOverhead &record) {
+    CopyCDOverhead(record);
+  }
+  virtual std::string GetString(void);
+  virtual void Print(void);
+  CDOverhead &operator+=(const CDOverhead &record) {
+    MergeCDOverhead(record);
+    return *this;
+  }
+  CDOverhead &operator=(const CDOverhead &record) {
+    CopyCDOverhead(record);
+    return *this;
   }
 };
 
@@ -166,7 +159,7 @@ struct RuntimeInfo : public CDOverhead {
       total_exec_(total_exec), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
       total_time_(0.0), reexec_time_(0.0), sync_time_(0.0)
   {}
-  RuntimeInfo(const RuntimeInfo &record) : CDOverhead() {
+  void copy(const RuntimeInfo &record) {
     total_exec_  = record.total_exec_;
     reexec_      = record.reexec_;
     prv_copy_    = record.prv_copy_;
@@ -176,49 +169,25 @@ struct RuntimeInfo : public CDOverhead {
     total_time_  = record.total_time_;
     reexec_time_ = record.reexec_time_;
     sync_time_   = record.sync_time_;
-    prv_elapsed_time_     = record.prv_elapsed_time_; 
-    create_elapsed_time_  = record.create_elapsed_time_;  
-    destroy_elapsed_time_ = record.destroy_elapsed_time_; 
-    begin_elapsed_time_   = record.begin_elapsed_time_;   
-    compl_elapsed_time_   = record.compl_elapsed_time_;   
-    advance_elapsed_time_   = record.advance_elapsed_time_;   
+    CopyCDOverhead(record);
+//    prv_elapsed_time_     = record.prv_elapsed_time_; 
+//    create_elapsed_time_  = record.create_elapsed_time_;  
+//    destroy_elapsed_time_ = record.destroy_elapsed_time_; 
+//    begin_elapsed_time_   = record.begin_elapsed_time_;   
+//    compl_elapsed_time_   = record.compl_elapsed_time_;   
+//    advance_elapsed_time_   = record.advance_elapsed_time_;   
+  }
+  RuntimeInfo(const RuntimeInfo &record) : CDOverhead() {
+    copy(record);
   }
   virtual std::string GetString(void);
   virtual void Print(void);
   RuntimeInfo &operator+=(const RuntimeInfo &record) {
-    total_exec_  += record.total_exec_;
-    reexec_      += record.reexec_;
-    prv_copy_    += record.prv_copy_;
-    prv_ref_     += record.prv_ref_;
-    msg_logging_ += record.msg_logging_;
-    sys_err_vec_ |= record.sys_err_vec_;
-    total_time_  += record.total_time_;
-    reexec_time_ += record.reexec_time_;
-    sync_time_   += record.sync_time_;
-    prv_elapsed_time_     += record.prv_elapsed_time_; 
-    create_elapsed_time_  += record.create_elapsed_time_;  
-    destroy_elapsed_time_ += record.destroy_elapsed_time_; 
-    begin_elapsed_time_   += record.begin_elapsed_time_;   
-    compl_elapsed_time_   += record.compl_elapsed_time_;   
-    advance_elapsed_time_   += record.advance_elapsed_time_;   
+    MergeInfoPerLevel(record);
     return *this;
   }
   RuntimeInfo &operator=(const RuntimeInfo &record) {
-    total_exec_  = record.total_exec_;
-    reexec_      = record.reexec_;
-    prv_copy_    = record.prv_copy_;
-    prv_ref_     = record.prv_ref_;
-    msg_logging_ = record.msg_logging_;
-    sys_err_vec_ = record.sys_err_vec_;
-    total_time_  = record.total_time_;
-    reexec_time_ = record.reexec_time_;
-    sync_time_   = record.sync_time_;
-    prv_elapsed_time_     = record.prv_elapsed_time_; 
-    create_elapsed_time_  = record.create_elapsed_time_;  
-    destroy_elapsed_time_ = record.destroy_elapsed_time_; 
-    begin_elapsed_time_   = record.begin_elapsed_time_;   
-    compl_elapsed_time_   = record.compl_elapsed_time_;   
-    advance_elapsed_time_   = record.advance_elapsed_time_;   
+    copy(record);
     return *this;
   }
   void MergeInfoPerLevel(const RuntimeInfo &info_per_level) {
@@ -228,12 +197,13 @@ struct RuntimeInfo : public CDOverhead {
     prv_ref_     += info_per_level.prv_ref_;
     msg_logging_ += info_per_level.msg_logging_;
     sys_err_vec_ |= info_per_level.sys_err_vec_;
-    prv_elapsed_time_     += info_per_level.prv_elapsed_time_; 
-    create_elapsed_time_  += info_per_level.create_elapsed_time_;  
-    destroy_elapsed_time_ += info_per_level.destroy_elapsed_time_; 
-    begin_elapsed_time_   += info_per_level.begin_elapsed_time_;   
-    compl_elapsed_time_   += info_per_level.compl_elapsed_time_;   
-    advance_elapsed_time_   += info_per_level.advance_elapsed_time_;   
+    MergeCDOverhead(info_per_level);
+//    prv_elapsed_time_     += info_per_level.prv_elapsed_time_; 
+//    create_elapsed_time_  += info_per_level.create_elapsed_time_;  
+//    destroy_elapsed_time_ += info_per_level.destroy_elapsed_time_; 
+//    begin_elapsed_time_   += info_per_level.begin_elapsed_time_;   
+//    compl_elapsed_time_   += info_per_level.compl_elapsed_time_;   
+//    advance_elapsed_time_   += info_per_level.advance_elapsed_time_;   
   }
 };
 

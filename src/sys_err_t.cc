@@ -36,12 +36,18 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "sys_err_t.h"
 #include "system_config.h"
 #include "cd_global.h"
+#include "phase_tree.h"
 #include <yaml.h>
 #include <string.h>
 using namespace cd;
 #define INDENT_SIZE "    "
 SystemConfig cd::config;
-PhaseTree tuned::phaseTree;
+//PhaseTree tuned::phaseTree;
+//PhaseMapType cd::phaseMap;
+//PhasePathType cd::phasePath;
+//PhasePathType tuned::phasePath;
+//uint32_t cd::PhaseNode::phase_gen = 0;
+
 int64_t errortype = -1;
 int64_t interval = -1;
 int64_t level = -1;
@@ -139,13 +145,13 @@ void SystemConfig::ParseParam(char *key)
     prv = key[0]; 
     AddIndent(seq_cnt); printf("%s\n", key);
 
-    tuned::phaseTree.target_ = new PhaseNode(tuned::phaseTree.target_);
+    tuned::phaseTree.current_ = new PhaseNode(tuned::phaseTree.current_);
     if(tuned::phaseTree.root_ == NULL) 
-      tuned::phaseTree.root_ = tuned::phaseTree.target_;
+      tuned::phaseTree.root_ = tuned::phaseTree.current_;
 
     UpdateSwitchParams(key);
-    tuned::phaseTree.target_->level_ = level;
-    tuned::phaseTree.target_->phase_ = phase;
+    tuned::phaseTree.current_->level_ = level;
+    tuned::phaseTree.current_->phase_ = phase;
   } else if(strcmp(key, "label") == 0) {
     prv = key[0]; 
     AddIndent(seq_cnt); printf("%s: ", key);
@@ -164,15 +170,15 @@ void SystemConfig::ParseParam(char *key)
       config.failure_rate_[errortype] = atof(key);
     } else if(prv == 'l') {
       label = key;
-      tuned::phaseTree.target_->label_ = label;
+      tuned::phaseTree.current_->label_ = label;
       printf("%s ", label.c_str());
     } else if(prv == 'i') {
       interval = atol(key);
-      tuned::phaseTree.target_->interval_ = interval;
-      printf("[%p,%p] %ld ", tuned::phaseTree.root_, tuned::phaseTree.target_, interval); 
+      tuned::phaseTree.current_->interval_ = interval;
+      printf("[%p,%p] %ld ", tuned::phaseTree.root_, tuned::phaseTree.current_, interval); 
     } else if(prv == 'e') {
       errortype = strtol(key, NULL, 16);
-      tuned::phaseTree.target_->errortype_ = errortype;
+      tuned::phaseTree.current_->errortype_ = errortype;
       config.mapping_[level][phase].failure_type_ = errortype;
       printf("0x%lX ", errortype); 
     }
@@ -180,6 +186,7 @@ void SystemConfig::ParseParam(char *key)
   }
 } 
 
+/*
 void PhaseNode::Print(void) 
 {
   AddIndent(level_);
@@ -196,6 +203,38 @@ void PhaseNode::Print(void)
   printf("}\n");
 }
 
+std::string PhaseNode::GetPhasePath(void)
+{
+  return (parent_->GetPhasePath() + std::string("_") + label_);
+}
+
+// Create or Get phase depending on label
+// Update phaseTree.current_, and returns phase ID number.
+// If there is no phase for the unique label, create a new PhaseNode
+// cd_name_.phase_ = cd::phaseTree->target_->GetPhaseNode();
+uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
+{
+  printf("## %s ## lv:%u, label:%s\n", __func__, level, label.c_str());
+  uint32_t phase = INVALID_NUM;
+  std::string phase_path = GetPhasePath();
+  auto it = cd::phasePath.find(phase_path);
+
+  // If there is no label before, it is a new phase!
+  if(it == phaseMap.end()) {
+    cd::phaseTree.current_ = new PhaseNode(cd::phaseTree.current_, level, label);
+    uint32_t phase        = cd::phaseTree.current_->phase_;
+    phaseMap[phase_path]  = phase;
+    phaseNodeCache[phase] = cd::phaseTree.current_;
+    //phaseMap[level][label] = cd::phaseTree.current_->phase_;
+    printf("New Phase! %u %s\n", phase, label.c_str());
+  } else {
+    cd::phaseTree.current_ = phaseNodeCache[it->second];
+    phase = it->second;
+    printf("Old Phase! %u %s\n", phase, label.c_str()); //getchar();
+  }
+  return phase;
+}
+*/
 
 void SystemConfig::LoadConfig(const char *config)
 {
@@ -223,16 +262,16 @@ void SystemConfig::LoadConfig(const char *config)
       /* Block delimeters */
       case YAML_DOCUMENT_START_EVENT: {
 
-//                                      tuned::phaseTree.target_ = new PhaseNode(tuned::phaseTree.target_);
-//                                      tuned::phaseTree.root_ = tuned::phaseTree.target_;
+//                                      tuned::phaseTree.current_ = new PhaseNode(tuned::phaseTree.current_);
+//                                      tuned::phaseTree.root_ = tuned::phaseTree.current_;
                                       puts("[[[[[[[[[[[[[[[[[[["); 
                                       break;
                                       }
       case YAML_DOCUMENT_END_EVENT:   puts("]]]]]]]]]]]]]]]]]]]");   break;
       case YAML_SEQUENCE_START_EVENT: {
-//                                        tuned::phaseTree.target_ = new PhaseNode(tuned::phaseTree.target_);
+//                                        tuned::phaseTree.current_ = new PhaseNode(tuned::phaseTree.current_);
 //                                        if(tuned::phaseTree.root_ == NULL) 
-//                                          tuned::phaseTree.root_ = tuned::phaseTree.target_;
+//                                          tuned::phaseTree.root_ = tuned::phaseTree.current_;
 //                                        else 
 //                                        if(tuned::phaseTree.root_ != NULL) 
                                           AddIndent(seq_cnt++); puts("{"); 
@@ -240,11 +279,11 @@ void SystemConfig::LoadConfig(const char *config)
                                         break;
                                       }
       case YAML_SEQUENCE_END_EVENT:   {
-                                        if(tuned::phaseTree.target_ != NULL)
-                                          tuned::phaseTree.target_ = tuned::phaseTree.target_->parent_;
+                                        if(tuned::phaseTree.current_ != NULL)
+                                          tuned::phaseTree.current_ = tuned::phaseTree.current_->parent_;
                                         
 //                                        seq_cnt--;
-//                                      if(tuned::phaseTree.target_ != tuned::phaseTree.root_){
+//                                      if(tuned::phaseTree.current_ != tuned::phaseTree.root_){
                                         AddIndent(--seq_cnt); puts("}"); 
 //                                      }
                                         break;

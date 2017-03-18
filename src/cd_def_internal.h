@@ -57,15 +57,14 @@ typedef uint64_t ENTRY_TAG_T;
 typedef uint32_t CD_FLAG_T;
 typedef std::unordered_map<ENTRY_TAG_T, packer::CDEntry*> EntryDirType;
 
-// This is like MappingConfig
-class PhaseMapType : public std::map<std::string, uint32_t> {
-  public:
-    //std::string prev_phase_;
-    uint32_t phase_gen_;
-};
-
-typedef std::map<uint32_t, PhaseMapType> PhaseMapType;
-typedef std::map<std::string, uint32_t> PhasePathType;
+//// This is like MappingConfig
+//class PhaseMap : public std::map<std::string, uint32_t> {
+//  public:
+//    //std::string prev_phase_;
+//    uint32_t phase_gen_;
+//};
+//
+//typedef std::map<uint32_t, PhaseMap> PhaseMapType;
 
 namespace cd {
   // phaseMap generates phase ID for CDNameT at each level.
@@ -75,8 +74,9 @@ namespace cd {
   // 
   // The scope of phase ID is limited to the corresponding level,
   // which means that the same label at different levels are different phases.
-  extern PhaseMapType phaseMap;
-  extern PhasePathType phasePath;
+//  extern PhaseMapType phaseMap;
+//  extern PhasePathType phasePath;
+//  extern std::vector<PhaseNode *> phaseNodeCache;
 
   namespace internal {
 

@@ -57,7 +57,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define CD2_ITER 4
 #define CD3_ITER 6
 
-using namespace tuned;
+using namespace cd;
 using namespace std;
 using namespace chrono;
 
@@ -152,7 +152,7 @@ int TestCDHierarchy(void)
   arrayName[arrayD] = "arrayD";
 
   cout << "\n==== TestCDHierarchy Start ====\n" << endl; 
-  CDHandle *root = TunedCD_Init(numProcs, myRank, kHDD);
+  CDHandle *root = CD_Init(numProcs, myRank, kHDD);
 
   root->Begin();
 
@@ -231,7 +231,7 @@ int TestCDHierarchy(void)
   cout << "\n==== TestCDHierarchy Done ====\n" << endl; 
   cout.flush();
 
-  TunedCD_Finalize();
+  CD_Finalize();
 
 
   return common::kOK; 

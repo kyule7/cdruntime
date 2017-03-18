@@ -247,6 +247,53 @@ int MakeFileDir(const char *filepath_str)
   }
   return ret;
 }
+#if 1
+
+//inline
+//uint32_t PhaseNode::GetPhase(uint32_t level, string label, bool update=true)
+//{
+//  printf("## %s ## lv:%u, label:%s, %d\n", __func__, level, label.c_str(), update);
+//  uint32_t phase = 0;
+////  printf("======================\n");
+////  for(auto jt = phaseMap[level].begin(); jt!=phaseMap[level].end(); ++jt) {
+////    printf("[%s %u]\t", jt->first.c_str(), jt->second);
+////  }
+////  printf("\n======================\n");
+//  auto it = phasePath.find(label);
+////  phaseMap[level][label] = 0;
+////  for(auto jt = phaseMap[level].begin(); jt!=phaseMap[level].end(); ++jt) {
+////    printf("[%s %u]\t", jt->first.c_str(), jt->second);
+////  }
+////  printf("\n======================\n");
+//#if 1
+//  // If there is no label before, it is a new phase!
+//  if(it == phaseMap[level].end()) {
+//    cd::phaseTree.current_ = new PhaseNode(cd::phaseTree.current_, level);
+////    if(update) {
+//      phase = phaseMap[level].phase_gen_++;
+//      phaseMap[level][label] = cd::phaseTree.current_->phase_;
+////    } else {
+////      phase = phaseMap[level].phase_gen_;
+////    }
+//    printf("New Phase! %u %s\n", phase, label.c_str());
+//  } else {
+//    phase = it->second;
+//    printf("Old Phase! %u %s\n", phase, label.c_str()); //getchar();
+//  }
+//#else
+//  if(it == phaseMap[level].end()) {
+//    if(phaseMap[level].prev_phase_ == label) { 
+//      phase = it->second;
+//    } else {
+//      phase = it->second + 1;
+//      if(update) it->second = phase;
+//    }
+//  }
+//#endif
+//  return phase;
+//}
+#else
+
 
 inline
 uint32_t GetPhase(uint32_t level, string label, bool update=true)
@@ -267,10 +314,10 @@ uint32_t GetPhase(uint32_t level, string label, bool update=true)
 #if 1
   // If there is no label before, it is a new phase!
   if(it == phaseMap[level].end()) {
-    phaseTree.target_ = new PhaseNode(phaseTree.target_);
+    cd::phaseTree.current_ = new PhaseNode(cd::phaseTree.current_, level);
 //    if(update) {
       phase = phaseMap[level].phase_gen_++;
-      phaseMap[level][label] = phase;
+      phaseMap[level][label] = cd::phaseTree.current_->phase_;
 //    } else {
 //      phase = phaseMap[level].phase_gen_;
 //    }
@@ -291,6 +338,9 @@ uint32_t GetPhase(uint32_t level, string label, bool update=true)
 #endif
   return phase;
 }
+
+#endif
+
 
 } // namespace cd ends
 

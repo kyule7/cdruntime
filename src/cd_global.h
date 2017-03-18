@@ -391,6 +391,7 @@ namespace cd {
     }
   }; 
 
+/*
   struct PhaseNode {
     uint32_t level_;
     uint32_t phase_;
@@ -400,14 +401,14 @@ namespace cd {
     PhaseNode *parent_;
     std::list<PhaseNode *> children_;
     static uint32_t phase_gen;
-    PhaseNode(PhaseNode *newnode=NULL) 
+    PhaseNode(PhaseNode *parent, uint32_t level, const std::string &label) 
     {
+      level_ = level;
       phase_ = phase_gen++;
-  //    printf("created!");
-      if(newnode != NULL) {
-        newnode->AddChild(this);
+      if(parent != NULL) {
+        parent->AddChild(this);
       }
-      parent_ = newnode;
+      parent_ = parent;
     }
   
     void Delete(void) 
@@ -420,17 +421,19 @@ namespace cd {
     }
   
     public:
+    uint32_t GetPhaseNode(uint32_t level, const std::string &label);
     void AddChild(PhaseNode *child) 
     {
       children_.push_back(child);
     }
     void Print(void); 
+    std::string GetPhasePath(void);
   };
   
   struct PhaseTree {
     PhaseNode *root_;
-    PhaseNode *target_;
-    PhaseTree(void) : root_(NULL), target_(NULL) {}
+    PhaseNode *current_;
+    PhaseTree(void) : root_(NULL), current_(NULL) {}
     ~PhaseTree() {
       root_->Delete();
     }
@@ -439,18 +442,21 @@ namespace cd {
     }
   };
 
+  typedef std::map<std::string, uint32_t> PhasePathType;
   extern PhaseTree phaseTree;
+*/
   extern CDHandle *null_cd;
   extern CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   extern void CD_Finalize(void);
 }
 
 
-
 namespace tuned {
-  extern PhaseTree phaseTree;
+//  extern cd::PhaseTree phaseTree;
+//  extern cd::PhasePathType phasePath;
   class CDHandle;
-  extern CDHandle *CD_Init_tuned(int numTask, int myTask, PrvMediumT prv_medium);
+  extern CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+  extern void CD_Finalize(void);
 /** \addtogroup cd_accessor_funcs 
  * These methods are globally accessible without a CDHandle object.
  * So, user can get a handle of CD at any point of program with these methods.

@@ -9,6 +9,7 @@ include_HEADERS = cd.h \
 									cd_handle.h \
 									tuned_cd_handle.h \
 									node_id.h \
+									phase_tree.h \
 									sys_err_t.h \
 									serdes.h \
 									serializable.h \
@@ -26,6 +27,7 @@ libcd_la_SOURCES = \
   	                cd_handle.cc \
   	                tuned_cd_handle.cc \
   	                cd_id.cc \
+										phase_tree.cc \
   	                cd_malloc.cc \
   	                cd_mpiwrapper.cc \
   	                cd_name_t.cc \

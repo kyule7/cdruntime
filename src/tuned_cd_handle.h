@@ -17,13 +17,11 @@ typedef uint32_t PhaseID;
 
 void AddHandle(CDHandle *);
 void DeleteHandle(void);
-CDHandle *TunedCD_Init(int numTask, int myTask, PrvMediumT prv_medium);
-void TunedCD_Finalize(void);
 
 class CDHandle {
   friend class tuned::CDPath;
-  friend CDHandle *TunedCD_Init(int numTask, int myTask, PrvMediumT prv_medium);
-  friend void TunedCD_Finalize(void);
+  friend CDHandle *tuned::CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
+  friend void tuned::CD_Finalize(void);
   friend void DeleteHandle(void);
     std::map<uint32_t, ParamEntry> config_;
     cd::CDHandle *handle_;
@@ -250,9 +248,11 @@ class CDHandle {
     {
       // Update phase 
       printf("## Tuned Begin ##");
+/*
       phase_ = cd::GetPhase(level_, 
                         (strcmp(label, NO_LABEL) == 0)? handle_->name() : label,
                         false);
+*/
       ParamEntry &param = config_[phase_];
       printf("[Tune %s lv:%u phase:%u] count:%lu <= interval:%ld\n", 
           __func__, level_, phase_, param.count_, param.interval_); getchar();
