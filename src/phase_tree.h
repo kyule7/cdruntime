@@ -5,6 +5,7 @@
 #include <list>
 #include <map>
 #include <cstdint>
+#include "runtime_info.h"
 
 //class PhaseMap : public std::map<std::string, uint32_t> {
 //  public:
@@ -18,7 +19,8 @@ namespace common {
 //struct MeasuredProf {
 //
 //};
-
+// PhaseNode is crated when Begin() is invoked.
+//
 struct PhaseNode {
     uint32_t level_;
     uint32_t phase_;
@@ -27,6 +29,7 @@ struct PhaseNode {
     PhaseNode *parent_;
     std::list<PhaseNode *> children_;
     std::string label_;
+    RuntimeInfo profile_;
     static uint32_t phase_gen;
   public:
     PhaseNode(PhaseNode *parent=NULL)  // only for tuned::PhaseTree

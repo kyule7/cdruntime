@@ -54,7 +54,7 @@ using namespace std;
 CD_CLOCK_T cd::prof_begin_clk;
 CD_CLOCK_T cd::prof_end_clk;
 CD_CLOCK_T cd::prof_sync_clk;
-std::map<uint32_t,std::map<std::string,RuntimeInfo>> Profiler::num_exec_map;
+//std::map<uint32_t,std::map<std::string,RuntimeInfo>> Profiler::profMap;
 uint32_t Profiler::current_level_ = 0; // It is used to detect escalation
 
 Profiler *Profiler::CreateProfiler(int prof_type, void *arg)
@@ -71,18 +71,19 @@ Profiler *Profiler::CreateProfiler(int prof_type, void *arg)
 
 }
 
-void Profiler::CreateRuntimeInfo(uint32_t level, const std::string &name) 
+void Profiler::CreateRuntimeInfo(uint32_t phase) 
 {
-  auto rit = num_exec_map[level].find(name);
-  if(rit == num_exec_map[level].end()) { 
-    num_exec_map[level][name] = RuntimeInfo(0);
+  auto rit = profMap.find(phase);
+  if(rit == profMap.end()) { 
+    profMap[phase] = RuntimeInfo(0);
   }
 }
 
 void Profiler::BeginRecord(void)
 {
   const uint32_t level = cdh_->level();
-  string name = cdh_->GetLabel();
+  const uint32_t phase = cdh_->phase();
+  //string name = cdh_->GetLabel();
   bool is_escalated = false;
   bool is_reexecuted = (cdh_->GetExecMode() == kReexecution);
   if(current_level_ == level) { 
@@ -97,18 +98,18 @@ void Profiler::BeginRecord(void)
     is_escalated = true;
   }
   current_level_ = level;
-  auto rit = num_exec_map[level].find(name);
+  auto rit = profMap.find(phase);
 
-  if(rit == num_exec_map[level].end()) { 
-    num_exec_map[level][name] = RuntimeInfo(1);
+  if(rit == profMap.end()) { 
+    profMap[phase] = RuntimeInfo(1);
   } else {
 //    printf("Exec %s %s\n", cdh_->GetName(), name.c_str());
-    num_exec_map[level][name].total_exec_ += 1;
+    profMap[phase]->total_exec_ += 1;
   }
 
 //  if(cdh_->recreated() || is_reexecuted) {
 //    printf("RecreatedReexec %s %s\n", GetName().c_str(), name.c_str());
-//    num_exec_map[level][name].reexec_ += 1;
+//    profMap[phase]->reexec_ += 1;
 //  }
 
   if( is_reexecuted || ((cdh_->recreated() == true)) ) {
@@ -126,10 +127,10 @@ void Profiler::BeginRecord(void)
     }
 #endif
 //    sync_clk_ = CD_CLOCK();
-//    num_exec_map[level][name].reexec_ += 1;
-//    num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
+//    profMap[phase]->reexec_ += 1;
+//    profMap[phase]->total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
     if(is_reexecuted)
-      num_exec_map[level][name].sync_time_  += CD_CLK_MEA(CD_CLOCK() - prof_sync_clk);
+      profMap[phase]->sync_time_  += CD_CLK_MEA(CD_CLOCK() - prof_sync_clk);
     reexecuted_ = true;
   }
   else {
@@ -148,7 +149,7 @@ void Profiler::BeginRecord(void)
 //  else if(cdh_->recreated()) {
 //
 //    printf("RecreatedReexec %s %s\n", cdh_->GetName(), name.c_str());
-//    num_exec_map[level][name].reexec_ += 1;
+//    profMap[phase]->reexec_ += 1;
 //
 //    reexecuted_ = true;
 //  }
@@ -158,13 +159,14 @@ void Profiler::BeginRecord(void)
 void Profiler::EndRecord(void)
 {
   const uint32_t level = cdh_->level();
-  const string name = cdh_->GetLabel();
+  const uint32_t phase = cdh_->phase();
+  //const string name = cdh_->GetLabel();
 //  if(current_level_ != level)
 //    printf("\n\nSomething is wrong : %s\n\n", name.c_str());
 
   end_clk_ = CD_CLOCK();
   //sync_clk_ = end_clk_;
-  num_exec_map[level][name].total_time_ += CD_CLK_MEA(end_clk_ - begin_clk_);
+  profMap[phase]->total_time_ += CD_CLK_MEA(end_clk_ - begin_clk_);
 
   if(reexecuted_ || cdh_->recreated()) {
 #if 0
@@ -180,9 +182,9 @@ void Profiler::EndRecord(void)
 //                name.c_str());
     }
 #endif
-    num_exec_map[level][name].total_time_ += CD_CLK_MEA(end_clk_ - begin_clk_);
-    num_exec_map[level][name].reexec_time_ += CD_CLK_MEA(end_clk_ - begin_clk_);
-    num_exec_map[level][name].reexec_ += 1;
+    profMap[phase]->total_time_ += CD_CLK_MEA(end_clk_ - begin_clk_);
+    profMap[phase]->reexec_time_ += CD_CLK_MEA(end_clk_ - begin_clk_);
+    profMap[phase]->reexec_ += 1;
     reexecuted_ = false;
   }
   else {
@@ -202,7 +204,7 @@ void Profiler::EndRecord(void)
 #endif
   } 
 //  else if(cdh_->recreated()) {
-//    num_exec_map[level][name].total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
+//    profMap[phase]->total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
 //    reexecuted_ = false;
 //  }
 }
@@ -213,15 +215,15 @@ void Profiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
   string name = cdh_->GetLabel();
   switch(profile_type) {
     case PRV_COPY_DATA: {
-      num_exec_map[level][name].prv_copy_ = profile_data;
+      profMap[phase]->prv_copy_ = profile_data;
       break;
     }
     case PRV_REF_DATA : {
-      num_exec_map[level][name].prv_ref_ = profile_data;
+      profMap[phase]->prv_ref_ = profile_data;
       break;
     }
     case MSG_LOGGING : {
-      num_exec_map[level][name].msg_logging_ = profile_data;
+      profMap[phase]->msg_logging_ = profile_data;
       break;
     }
     default:
@@ -229,80 +231,10 @@ void Profiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
   }
 }
 
-string RuntimeInfo::GetString(void)
-{
-  char stringout[512];
-  snprintf(stringout, 512, 
-    "# Execution:\t%lu\n# Reexecution:\t%lu\nTotal Execution Time:\t%lf[s]\nReexecution Time:\t%lf[s]\nSync Time (CDs):\t%lf[s]\nPreservation(Total):\t%lu[B]\nPreservation(Ref):\t%lu[B]\nComm Logging:\t%lu[B]\nError Vector:\t%lx\n-- CD Overhead -----------\nPreservation:\t%lf[s]\nCreate CD:\t%lf[s]\nDestroy CD:\t%lf[s]\nBegin CD:\t%lf[s]\nComplete CD:\t%lf[s]\n", 
-                         total_exec_,
-                         reexec_,
-                         total_time_,
-                         reexec_time_,
-                         sync_time_,
-                         prv_copy_,
-                         prv_ref_,
-                         msg_logging_,
-                         sys_err_vec_,
-                         prv_elapsed_time_, 
-                         create_elapsed_time_,
-                         destroy_elapsed_time_,
-                         begin_elapsed_time_,
-                         compl_elapsed_time_ 
-                        );
-  return string(stringout);
-}
-
-void RuntimeInfo::Print(void)
-{
-  printf("%s", GetString().c_str());
-}
-
-string CDOverhead::GetString(void)
-{
-  char stringout[512];
-  snprintf(stringout, 512, 
-    "Preservation:%lf[s]\nCreate CD   :%lf[s]\nDestroy CD  :%lf[s]\nBegin CD    :%lf[s]\nComplete CD :%lf[s]\n", 
-                         prv_elapsed_time_, 
-                         create_elapsed_time_,
-                         destroy_elapsed_time_,
-                         begin_elapsed_time_,
-                         compl_elapsed_time_ 
-                        );
-  return string(stringout);
-}
-
-void CDOverhead::Print(void)
-{
-  printf("%s", GetString().c_str());
-}
-
-string CDOverheadVar::GetStringInfo(void)
-{
-  char stringout[512];
-  snprintf(stringout, 512, 
-    "Preservation:%lf[s] (var:%lf)\nCreate CD   :%lf[s] (var:%lf)\nDestroy CD  :%lf[s] (var:%lf)\nBegin CD    :%lf[s] (var:%lf)\nComplete CD :%lf[s] (var:%lf)\n", 
-                         prv_elapsed_time_, 
-                         prv_elapsed_time_var_, 
-                         create_elapsed_time_,
-                         create_elapsed_time_var_,
-                         destroy_elapsed_time_,
-                         destroy_elapsed_time_var_,
-                         begin_elapsed_time_,
-                         begin_elapsed_time_var_,
-                         compl_elapsed_time_,
-                         compl_elapsed_time_var_ 
-                        );
-  return string(stringout);
-}
-
-void CDOverheadVar::PrintInfo(void)
-{
-  printf("%s", GetString().c_str());
-}
 
 void Profiler::Print(void) 
 {
-  for(auto it=num_exec_map.begin(); it!=num_exec_map.end(); ++it) {
+  for(auto it=profMap.begin(); it!=profMap.end(); ++it) {
     CD_DEBUG("Level %u --------------------------------\n", it->first);
     for(auto jt=it->second.begin(); jt!=it->second.end(); ++jt) {
       CD_DEBUG("\n[%s]\n%s\n", jt->first.c_str(), jt->second.GetString().c_str());
@@ -316,7 +248,7 @@ void Profiler::Print(void)
 RuntimeInfo Profiler::GetTotalInfo(std::map<uint32_t, RuntimeInfo> &runtime_info) 
 {
   RuntimeInfo info_total;
-  for(auto it=num_exec_map.begin(); it!=num_exec_map.end(); ++it) {
+  for(auto it=profMap.begin(); it!=profMap.end(); ++it) {
     RuntimeInfo info_per_level;
     CD_DEBUG("\n-- Level %u --------------------------------\n", it->first);
     //if(myTaskID == 0)

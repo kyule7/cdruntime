@@ -934,9 +934,11 @@ CDHandle *CDHandle::Create(const char *name,
   CDPath::GetCDPath()->push_back(new_cd_handle);
   
   end_clk = CD_CLOCK();
-  create_elapsed_time += end_clk - begin_clk;
+  const double elapsed = end_clk - begin_clk;
+  create_elapsed_time += elapsed;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][label()].create_elapsed_time_ += end_clk - begin_clk;
+  cd::profMap[phase()]->create_elapsed_time_ += elapsed;
+//  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return new_cd_handle;
@@ -1052,7 +1054,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][label()].create_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
 
@@ -1113,7 +1115,7 @@ CDHandle *CDHandle::Create(uint32_t color,
   end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][label()].create_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return new_cd_handle;
@@ -1133,14 +1135,14 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
   CD_CLOCK_T clk = CD_CLOCK();
   create_elapsed_time += clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][label()].create_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
   new_cdh->Begin(false, name);
 
   end_clk = CD_CLOCK();
   begin_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][label()].begin_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return new_cdh;
@@ -1151,17 +1153,17 @@ CDErrT CDHandle::Destroy(bool collective)
 {
   CDPrologue();
   printf("[Real %s] %u %u\n", __func__, level(), phase()); getchar();
-  uint32_t cur_level = ptr_cd_->cd_id_.cd_name_.level();
+  uint32_t phase = ptr_cd_->phase();//phase();
   std::string label(GetLabel());
 
   CD_DEBUG("%s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
-                                                       cur_level, need_reexec(), *CD::rollback_point_);
+                                                       level(), need_reexec(), *CD::rollback_point_);
   CDErrT err = InternalDestroy(collective);
 
   end_clk = CD_CLOCK();
   destroy_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[cur_level][label].destroy_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase].destroy_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
 
@@ -1250,7 +1252,7 @@ CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_
   end_clk = CD_CLOCK();
   begin_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][this->label()].begin_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
 
@@ -1280,7 +1282,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   end_clk = CD_CLOCK();
   compl_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][label()].compl_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase()]->compl_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
 
@@ -1296,7 +1298,7 @@ CDErrT CDHandle::Advance(bool collective)
   end_clk = CD_CLOCK();
   advance_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][label()].advance_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase()]->advance_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return ret;
@@ -1345,7 +1347,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   end_clk = CD_CLOCK();
   prv_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][label()].prv_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase()]->prv_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return err;
@@ -1390,7 +1392,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   end_clk = CD_CLOCK();
   prv_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][label()].prv_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase()]->prv_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return err;
@@ -1439,7 +1441,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   end_clk = CD_CLOCK();
   prv_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  Profiler::num_exec_map[level()][label()].prv_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase()]->prv_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
   return err;

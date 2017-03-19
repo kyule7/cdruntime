@@ -40,6 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 //#include "unpacker.h"
 #include "cd_def_debug.h"
 #include "phase_tree.h"
+#include "runtime_info.h"
 
 #include <setjmp.h>
 using namespace cd;
@@ -48,6 +49,7 @@ using namespace cd::interface;
 using namespace cd::logging;
 using namespace std;
 
+ProfMapType   common::profMap;
 
 //#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 #define BUGFIX_0327 1
@@ -76,7 +78,7 @@ map<uint32_t, CDHandle *> CD::delete_store_;
 //PhaseTree cd::phaseTree;
 //std::vector<PhaseNode *> phaseNodeCache;
 
-//unordered_map<string,pair<int,int>> CD::num_exec_map_;
+//unordered_map<string,pair<int,int>> CD::profMap_;
 
 //bool CD::need_reexec = false;
 bool CD::need_escalation = false;
@@ -1055,7 +1057,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     prof_sync_clk = CD_CLOCK();
     end_clk = CD_CLOCK();
     elapsed_time += end_clk - begin_clk; 
-    Profiler::num_exec_map[level()][GetLabel()].compl_elapsed_time_ += end_clk - begin_clk;
+    Profiler::profMap[level()][GetLabel()].compl_elapsed_time_ += end_clk - begin_clk;
     check_sync_clk = true;
   }
 #endif
@@ -1299,7 +1301,7 @@ CDErrT CD::Complete(bool collective, bool update_preservations)
     prof_sync_clk = end_clk;
     elapsed_time += end_clk - begin_clk;  // Total CD overhead 
     compl_elapsed_time += end_clk - begin_clk; // Total Complete overhead
-    Profiler::num_exec_map[level()][label_].compl_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
+    profMap[phase()]->compl_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
 #endif
     GetCDToRecover( CDPath::GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }
@@ -1610,7 +1612,7 @@ CDErrT CD::Advance(bool collective)
     prof_sync_clk = end_clk;
     elapsed_time += end_clk - begin_clk;  // Total CD overhead 
     compl_elapsed_time += end_clk - begin_clk; // Total Complete overhead
-    Profiler::num_exec_map[level()][label_.c_str()].compl_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
+    Profiler::profMap[level()][label_.c_str()].compl_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
 #endif
     GetCDToRecover( CDPath::GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }

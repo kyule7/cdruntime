@@ -8,6 +8,7 @@ include_HEADERS = cd.h \
 									cd_features.h \
 									cd_handle.h \
 									tuned_cd_handle.h \
+									runtime_info.h \
 									node_id.h \
 									phase_tree.h \
 									sys_err_t.h \

@@ -79,5 +79,7 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     phase = it->second;
     printf("Old Phase! %u %s\n", phase, phase_path.c_str()); //getchar();
   }
+
+  profMap[phase] = &cd::phaseTree.current_->profile_;
   return phase;
 }

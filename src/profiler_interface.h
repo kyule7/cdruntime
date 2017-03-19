@@ -59,8 +59,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <map>
 #include <cstdio>
 #include "cd_def_interface.h"
+#include "runtime_info.h"
 
 #define LabelT std::string
+using namespace common;
 
 namespace cd {
   namespace interface {
@@ -69,142 +71,6 @@ namespace cd {
 enum PROFILER_TYPE {
   NULLPROFILER=0,
   CDPROFILER=1
-};
-
-
-struct CDOverhead {
-  double prv_elapsed_time_;
-  double create_elapsed_time_;
-  double destroy_elapsed_time_;
-  double begin_elapsed_time_;
-  double compl_elapsed_time_;
-  double advance_elapsed_time_;
-  CDOverhead(void) 
-    : prv_elapsed_time_(0.0),
-      create_elapsed_time_(0.0),
-      destroy_elapsed_time_(0.0),
-      begin_elapsed_time_(0.0),
-      compl_elapsed_time_(0.0),
-      advance_elapsed_time_(0.0)
-  {}
-  void CopyCDOverhead(const CDOverhead &record) {
-    prv_elapsed_time_     = record.prv_elapsed_time_; 
-    create_elapsed_time_  = record.create_elapsed_time_;  
-    destroy_elapsed_time_ = record.destroy_elapsed_time_; 
-    begin_elapsed_time_   = record.begin_elapsed_time_;   
-    compl_elapsed_time_   = record.compl_elapsed_time_;   
-    advance_elapsed_time_ = record.advance_elapsed_time_;   
-  }
-  void MergeCDOverhead(const CDOverhead &info_per_level) {
-    prv_elapsed_time_     += info_per_level.prv_elapsed_time_; 
-    create_elapsed_time_  += info_per_level.create_elapsed_time_;  
-    destroy_elapsed_time_ += info_per_level.destroy_elapsed_time_; 
-    begin_elapsed_time_   += info_per_level.begin_elapsed_time_;   
-    compl_elapsed_time_   += info_per_level.compl_elapsed_time_;   
-    advance_elapsed_time_ += info_per_level.advance_elapsed_time_;   
-  }
-  CDOverhead(const CDOverhead &record) {
-    CopyCDOverhead(record);
-  }
-  virtual std::string GetString(void);
-  virtual void Print(void);
-  CDOverhead &operator+=(const CDOverhead &record) {
-    MergeCDOverhead(record);
-    return *this;
-  }
-  CDOverhead &operator=(const CDOverhead &record) {
-    CopyCDOverhead(record);
-    return *this;
-  }
-};
-
-struct CDOverheadVar : public CDOverhead {
-  double prv_elapsed_time_var_;
-  double create_elapsed_time_var_;
-  double destroy_elapsed_time_var_;
-  double begin_elapsed_time_var_;
-  double compl_elapsed_time_var_;
-  double advance_elapsed_time_var_;
-  CDOverheadVar(void) 
-    : CDOverhead(),
-      prv_elapsed_time_var_(0.0),
-      create_elapsed_time_var_(0.0),
-      destroy_elapsed_time_var_(0.0),
-      begin_elapsed_time_var_(0.0),
-      compl_elapsed_time_var_(0.0),
-      advance_elapsed_time_var_(0.0)
-  {}
-  std::string GetStringInfo(void);
-  void PrintInfo(void);
-};
-
-struct RuntimeInfo : public CDOverhead {
-  uint64_t total_exec_;
-  uint64_t reexec_;
-  uint64_t prv_copy_;
-  uint64_t prv_ref_;
-  uint64_t msg_logging_;
-  uint64_t sys_err_vec_;
-  double total_time_;
-  double reexec_time_;
-  double sync_time_;
-
-  RuntimeInfo(void) 
-    : CDOverhead(),
-      total_exec_(0), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
-      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0)
-  {}
-  RuntimeInfo(const uint64_t &total_exec) 
-    : CDOverhead(),
-      total_exec_(total_exec), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
-      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0)
-  {}
-  void copy(const RuntimeInfo &record) {
-    total_exec_  = record.total_exec_;
-    reexec_      = record.reexec_;
-    prv_copy_    = record.prv_copy_;
-    prv_ref_     = record.prv_ref_;
-    msg_logging_ = record.msg_logging_;
-    sys_err_vec_ = record.sys_err_vec_;
-    total_time_  = record.total_time_;
-    reexec_time_ = record.reexec_time_;
-    sync_time_   = record.sync_time_;
-    CopyCDOverhead(record);
-//    prv_elapsed_time_     = record.prv_elapsed_time_; 
-//    create_elapsed_time_  = record.create_elapsed_time_;  
-//    destroy_elapsed_time_ = record.destroy_elapsed_time_; 
-//    begin_elapsed_time_   = record.begin_elapsed_time_;   
-//    compl_elapsed_time_   = record.compl_elapsed_time_;   
-//    advance_elapsed_time_   = record.advance_elapsed_time_;   
-  }
-  RuntimeInfo(const RuntimeInfo &record) : CDOverhead() {
-    copy(record);
-  }
-  virtual std::string GetString(void);
-  virtual void Print(void);
-  RuntimeInfo &operator+=(const RuntimeInfo &record) {
-    MergeInfoPerLevel(record);
-    return *this;
-  }
-  RuntimeInfo &operator=(const RuntimeInfo &record) {
-    copy(record);
-    return *this;
-  }
-  void MergeInfoPerLevel(const RuntimeInfo &info_per_level) {
-    total_exec_  += info_per_level.total_exec_;
-    reexec_      += info_per_level.reexec_;
-    prv_copy_    += info_per_level.prv_copy_;
-    prv_ref_     += info_per_level.prv_ref_;
-    msg_logging_ += info_per_level.msg_logging_;
-    sys_err_vec_ |= info_per_level.sys_err_vec_;
-    MergeCDOverhead(info_per_level);
-//    prv_elapsed_time_     += info_per_level.prv_elapsed_time_; 
-//    create_elapsed_time_  += info_per_level.create_elapsed_time_;  
-//    destroy_elapsed_time_ += info_per_level.destroy_elapsed_time_; 
-//    begin_elapsed_time_   += info_per_level.begin_elapsed_time_;   
-//    compl_elapsed_time_   += info_per_level.compl_elapsed_time_;   
-//    advance_elapsed_time_   += info_per_level.advance_elapsed_time_;   
-  }
 };
 
 class Profiler {
@@ -216,7 +82,8 @@ class Profiler {
   CD_CLOCK_T begin_clk_;
   CD_CLOCK_T end_clk_;
   CD_CLOCK_T sync_clk_;
-  static std::map<uint32_t,std::map<std::string,RuntimeInfo> > num_exec_map;
+  //static std::map<uint32_t,std::map<std::string,RuntimeInfo> > profMap;
+//  static ProfMapType profMap;
   static uint32_t current_level_; // It is used to detect escalation
 public:
   Profiler(void) : cdh_(NULL), reexecuted_(false) {}
@@ -228,7 +95,6 @@ public:
   static RuntimeInfo GetTotalInfo(std::map<uint32_t, RuntimeInfo> &runtime_info);
   virtual void InitViz(void){}
   virtual void FinalizeViz(void){}
-  std::map<uint32_t,std::map<std::string,RuntimeInfo> > &GetProfInfo(void) { return Profiler::num_exec_map; }
   virtual void StartProfile() { BeginRecord(); }
   virtual void FinishProfile(void) { EndRecord(); }
 private:

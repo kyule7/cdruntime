@@ -118,7 +118,7 @@ void CD::CheckReexecution(void)
     prof_sync_clk = end_clk;
     elapsed_time += end_clk - begin_clk;  // Total CD overhead 
     create_elapsed_time += end_clk - begin_clk; // Total Complete overhead
-    Profiler::num_exec_map[level()][label_].create_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
+    profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
 #endif
     CD::GetCDToRecover(CDPath::GetCurrentCD(), false)->ptr_cd()->Recover();
   } else {
