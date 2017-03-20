@@ -57,7 +57,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define CD2_ITER 4
 #define CD3_ITER 6
 
-using namespace cd;
+using namespace tuned;
+//using namespace cd;
 using namespace std;
 using namespace chrono;
 

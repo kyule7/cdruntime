@@ -90,7 +90,8 @@ public:
   Profiler(CDHandle *cdh) : cdh_(cdh), reexecuted_(false) {}
   virtual ~Profiler(void) {}
   static Profiler *CreateProfiler(int prof_type=0, void *arg=NULL);
-  static void CreateRuntimeInfo(uint32_t level, const std::string &name);
+//  static void CreateRuntimeInfo(uint32_t level, const std::string &name);
+  static void CreateRuntimeInfo(uint32_t phase);
   static void Print(void);
   static RuntimeInfo GetTotalInfo(std::map<uint32_t, RuntimeInfo> &runtime_info);
   virtual void InitViz(void){}

@@ -172,7 +172,7 @@ Additional BSD Notice
 #endif
 
 #if _CD
-using namespace cd;
+using namespace tuned;
 //class DomainSerdes;
 int counter=0;
 Domain::DomainSerdes::SerdesInfo Domain::DomainSerdes::serdes_table[TOTAL_ELEMENT_COUNT];
@@ -946,7 +946,7 @@ void IntegrateStressForElems( Domain &domain,
 
 #if _CD && (SWITCH_5_1_1  > SEQUENTIAL_CD)
    CDHandle *cdh_5_1_1 = GetCurrentCD()->Create(CD_MAP_5_1_1 >> CDFLAG_SIZE, 
-                            (string("Loop_IntegrateStressForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
+                            (string("Loop_IntegrateStressForElems")+GetCurrentCD()->label()).c_str(), 
                             CD_MAP_5_1_1 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_5_1_1)); 
 #elif _CD && (SWITCH_5_1_1 == SEQUENTIAL_CD)
    CDHandle *cdh_5_1_1 = GetCurrentCD();
@@ -958,7 +958,7 @@ void IntegrateStressForElems( Domain &domain,
   for( Index_t k=0 ; k<numElem ; ++k )
   {
 #if _CD && (SWITCH_5_1_1  > SEQUENTIAL_CD || SWITCH_5_1_1 == SEQUENTIAL_CD)
-      CD_Begin(cdh_5_1_1, true, "Loop_IntegrateStressForElems"); 
+      cdh_5_1_1->Begin(true, "Loop_IntegrateStressForElems"); 
       cdh_5_1_1->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_IntegrateStressForElems"); 
       cdh_5_1_1->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_IntegrateStressForElems"); 
 #endif
@@ -1064,7 +1064,7 @@ void IntegrateStressForElems( Domain &domain,
 #if _CD && (SWITCH_5_1_1  > SEQUENTIAL_CD)
    cdh_5_1_1->Destroy();
 #elif _CD && (SWITCH_5_1_1 == SEQUENTIAL_CD)
-   CD_Begin(cdh_5_1_1, false, "After_Loop_IntegrateStressForElems");
+   cdh_5_1_1->Begin(false, "After_Loop_IntegrateStressForElems");
 #endif
 
 
@@ -1299,7 +1299,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
 
 #if _CD && (SWITCH_7_0_0  > SEQUENTIAL_CD)
    CDHandle *cdh_7_0_0 = GetCurrentCD()->Create(CD_MAP_7_0_0 >> CDFLAG_SIZE, 
-                            (string("Loop_CalcFBHourglassForceForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
+                            (string("Loop_CalcFBHourglassForceForElems")+GetCurrentCD()->label()).c_str(), 
                             CD_MAP_7_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_7_0_0)); 
 #elif _CD && (SWITCH_7_0_0 == SEQUENTIAL_CD)
    CDHandle *cdh_7_0_0 = GetCurrentCD();
@@ -1310,7 +1310,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
    for(Index_t i2=0;i2<numElem;++i2) {
 
 #if _CD && (SWITCH_7_0_0  > SEQUENTIAL_CD || SWITCH_7_0_0 == SEQUENTIAL_CD)
-     CD_Begin(cdh_7_0_0, true, "Loop_CalcFBHourglassForceForElems"); 
+     cdh_7_0_0->Begin(true, "Loop_CalcFBHourglassForceForElems"); 
      cdh_7_0_0->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_CalcFBHourglassForceForElems"); 
      cdh_7_0_0->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_CalcFBHourglassForceForElems"); 
 #endif
@@ -1527,7 +1527,7 @@ void CalcFBHourglassForceForElems( Domain &domain,
 #if _CD && (SWITCH_7_0_0  > SEQUENTIAL_CD)
    cdh_7_0_0->Destroy();
 #elif _CD && (SWITCH_7_0_0 == SEQUENTIAL_CD)
-   CD_Begin(cdh_7_0_0, false, "After_Loop_CalcFBHourglassForceForElems");
+   cdh_7_0_0->Begin(false, "After_Loop_CalcFBHourglassForceForElems");
 #endif
 
    if (numthreads > 1) {
@@ -1577,7 +1577,7 @@ void CalcHourglassControlForElems(Domain& domain,
 
 #if _CD && (SWITCH_6_4_0  > SEQUENTIAL_CD)
    CDHandle *cdh_6_4_0 = GetCurrentCD()->Create(CD_MAP_6_4_0 >> CDFLAG_SIZE, 
-                            (string("Loop_CalcHourglassControlForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
+                            (string("Loop_CalcHourglassControlForElems")+GetCurrentCD()->label()).c_str(), 
                             CD_MAP_6_4_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_6_4_0)); 
 #elif _CD && (SWITCH_6_4_0 == SEQUENTIAL_CD)
    CDHandle *cdh_6_4_0 = GetCurrentCD();
@@ -1589,7 +1589,7 @@ void CalcHourglassControlForElems(Domain& domain,
    for (Index_t i=0 ; i<numElem ; ++i){
 
 #if _CD && (SWITCH_6_4_0  > SEQUENTIAL_CD || SWITCH_6_4_0 == SEQUENTIAL_CD)
-      CD_Begin(cdh_6_4_0, true, "Loop_CalcHourglassControlForElems"); 
+      CD_BEGIN(cdh_6_4_0, true, "Loop_CalcHourglassControlForElems"); 
       cdh_6_4_0->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_CalcHourglassControlForElems"); 
       cdh_6_4_0->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_CalcHourglassControlForElems"); 
 #endif
@@ -1667,7 +1667,7 @@ void CalcHourglassControlForElems(Domain& domain,
 #if _CD && (SWITCH_6_4_0  > SEQUENTIAL_CD)
    cdh_6_4_0->Destroy();
 #elif _CD && (SWITCH_6_4_0 == SEQUENTIAL_CD) 
-   CD_Begin(cdh_6_4_0, false, "After_Loop_CalcHourglassControlForElems");
+   CD_BEGIN(cdh_6_4_0, false, "After_Loop_CalcHourglassControlForElems");
 #endif
 
 #if _CD && (SWITCH_6_7_0  > SEQUENTIAL_CD)
@@ -1806,9 +1806,9 @@ static inline void CalcForceForNodes(Domain& domain)
 #if _CD && (SWITCH_3_0_0  > SEQUENTIAL_CD)
    CDHandle *cdh_3_0_0 = 0;
    cdh_3_0_0 = GetLeafCD()->Create(CD_MAP_3_0_0 >> CDFLAG_SIZE, 
-                                  (string("CalcForceForNodes")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
+                                  (string("CalcForceForNodes")+GetCurrentCD()->label()).c_str(), 
                                    CD_MAP_3_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_3_0_0)); 
-   CD_Begin(cdh_3_0_0, true, "CalcForceForNodes"); 
+   CD_BEGIN(cdh_3_0_0, true, "CalcForceForNodes"); 
    cdh_3_0_0->Preserve(domain.serdes.SetOp(
                               (M__FX | M__FY | M__FZ |
                                M__X  | M__Y  | M__Z  |
@@ -1817,7 +1817,7 @@ static inline void CalcForceForNodes(Domain& domain)
                               ), kCopy | kSerdes, "SWITCH_3_0_0_CalcForceForNodes"); 
 //#elif _CD && (SWITCH_3_0_0 == SEQUENTIAL_CD)
 //   CDHandle *cdh_3_0_0 = GetLeafCD();
-//   CD_Begin(cdh_3_0_0, true, "CalcForceForNodes"); 
+//   CD_BEGIN(cdh_3_0_0, true, "CalcForceForNodes"); 
 //   cdh_3_0_0->Preserve(domain.serdes.SetOp(
 //                              (M__FX | M__FY | M__FZ |
 //                               M__X  | M__Y  | M__Z  |
@@ -1995,9 +1995,9 @@ void LagrangeNodal(Domain& domain)
 //   CDHandle *cdh_3_0_0 = 0;
 //    assert(0);
 //   cdh_3_0_0 = GetLeafCD()->Create(CD_MAP_3_0_0 >> CDFLAG_SIZE, 
-//                                  (string("CalcForceForNodes")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
+//                                  (string("CalcForceForNodes")+GetCurrentCD()->label()).c_str(), 
 //                                   CD_MAP_3_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_3_0_0)); 
-//   CD_Begin(cdh_3_0_0, true, "CalcForceForNodes"); 
+//   CD_BEGIN(cdh_3_0_0, true, "CalcForceForNodes"); 
 //   cdh_3_0_0->Preserve(domain.serdes.SetOp(
 //                              (M__FX | M__FY | M__FZ |
 //                               M__X  | M__Y  | M__Z  |
@@ -2006,7 +2006,7 @@ void LagrangeNodal(Domain& domain)
 //                              ), kCopy | kSerdes, "SWITCH_3_0_0_CalcForceForNodes"); 
 //#elif _CD && (SWITCH_3_0_0 == SEQUENTIAL_CD)
 //   CDHandle *cdh_3_0_0 = GetLeafCD();
-//   CD_Begin(cdh_3_0_0, true, "CalcForceForNodes"); 
+//   CD_BEGIN(cdh_3_0_0, true, "CalcForceForNodes"); 
 //   cdh_3_0_0->Preserve(domain.serdes.SetOp(
 //                              (M__FX | M__FY | M__FZ |
 //                               M__X  | M__Y  | M__Z  |
@@ -3479,7 +3479,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 
 #if _CD && (SWITCH_4_5_0  > SEQUENTIAL_CD)
     CDHandle *cdh_4_5_0 = GetCurrentCD()->Create(CD_MAP_4_5_0 >> CDFLAG_SIZE, 
-                            (string("Loop_EvalEOSForElems")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
+                            (string("Loop_EvalEOSForElems")+GetCurrentCD()->label()).c_str(), 
                             CD_MAP_4_5_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_4_5_0)); 
 #elif _CD && (SWITCH_4_5_0 == SEQUENTIAL_CD)
     CDHandle *cdh_4_5_0 = GetCurrentCD();
@@ -3487,7 +3487,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 #endif
     for (Int_t r=0 ; r<domain.numReg() ; r++) {
 #if _CD && (SWITCH_4_5_0  > SEQUENTIAL_CD || SWITCH_4_5_0 == SEQUENTIAL_CD)
-       CD_Begin(cdh_4_5_0, true, "Loop_EvalEOSForElems"); 
+       CD_BEGIN(cdh_4_5_0, true, "Loop_EvalEOSForElems"); 
        cdh_4_5_0->Preserve(&domain, sizeof(domain), kCopy, "locDom_Loop_EvalEOSForElems"); 
        cdh_4_5_0->Preserve(domain.serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Loop_EvalEOSForElems"); 
 #endif
@@ -3520,7 +3520,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
 #if _CD && (SWITCH_4_5_0  > SEQUENTIAL_CD)
    cdh_4_5_0->Destroy();
 #elif _CD && (SWITCH_4_5_0 == SEQUENTIAL_CD)
-   CD_Begin(cdh_4_5_0, false, "After_Loop_EvalEOSForElems");
+   CD_BEGIN(cdh_4_5_0, false, "After_Loop_EvalEOSForElems");
 #endif
   }   // if-statement ends
 
@@ -3904,9 +3904,9 @@ void CalcTimeConstraintsForElems(Domain& domain) {
 ////#if _CD && (SWITCH_2_0_0  > SEQUENTIAL_CD)
 ////   CDHandle *cdh_2_0_0 = 0;
 ////   cdh_2_0_0 = GetLeafCD()->Create(CD_MAP_2_0_0 >> CDFLAG_SIZE, 
-////                                  (string("LagrangeNodal")+GetCurrentCD()->node_id().GetStringID()).c_str(), 
+////                                  (string("LagrangeNodal")+GetCurrentCD()->label()).c_str(), 
 ////                                   CD_MAP_2_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_2_0_0)); 
-////   CD_Begin(cdh_2_0_0, true, "LagrangeNodal"); 
+////   CD_BEGIN(cdh_2_0_0, true, "LagrangeNodal"); 
 ////   cdh_2_0_0->Preserve(domain.serdes.SetOp(
 ////                              (M__FX | M__FY | M__FZ |
 ////                               M__X  | M__Y  | M__Z  |
@@ -3916,7 +3916,7 @@ void CalcTimeConstraintsForElems(Domain& domain) {
 ////   cdh_2_0_0->Preserve(&(domain.deltatime()), sizeof(Real_t), kCopy, "deltatime"); 
 ////#elif _CD && (SWITCH_2_0_0 == SEQUENTIAL_CD)
 ////   CDHandle *cdh_2_0_0 = GetLeafCD();
-////   CD_Begin(cdh_2_0_0, true, "LagrangeNodal"); 
+////   CD_BEGIN(cdh_2_0_0, true, "LagrangeNodal"); 
 ////   cdh_2_0_0->Preserve(domain.serdes.SetOp(
 ////                              (M__FX | M__FY | M__FZ |
 ////                               M__X  | M__Y  | M__Z  |
@@ -4135,7 +4135,7 @@ int main(int argc, char *argv[])
 #if _CD
    locDom->serdes.InitSerdesTable();
    CDHandle* root_cd = CD_Init(numRanks, myRank);
-   CD_Begin(root_cd, false, "Root");
+   CD_BEGIN(root_cd, false, "Root");
 #endif
 
 #if _CD && SWITCH_PRESERVE_INIT
@@ -4146,7 +4146,7 @@ int main(int argc, char *argv[])
 
 #if _CD && (SWITCH_0_0_0  > SEQUENTIAL_CD)
    CDHandle *cdh_0_0_0 = root_cd->Create(CD_MAP_0_0_0 >> CDFLAG_SIZE, 
-                                         (string("MainLoop")+root_cd->node_id().GetStringID()).c_str(), 
+                                         (string("MainLoop")+root_cd->label()).c_str(), 
                                          CD_MAP_0_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_0_0_0)); 
 #endif
 
@@ -4223,7 +4223,7 @@ int main(int argc, char *argv[])
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
      if(interval != 0 && ckpt_idx % interval == 0) 
      {
-        CD_Begin(cdh_1_0_0, true, "TimeIncrement"); 
+        CD_BEGIN(cdh_1_0_0, true, "TimeIncrement"); 
         st.BeginTimer();
         cdh_1_0_0->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime");
 #if OPTIMIZE == 0
@@ -4243,7 +4243,7 @@ int main(int argc, char *argv[])
 //#if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
 //      cdh_1_0_0->Detect();
 //      CD_Complete(cdh_1_0_0);
-//      CD_Begin(cdh_1_0_0, true, "LagrangeNodal"); 
+//      CD_BEGIN(cdh_1_0_0, true, "LagrangeNodal"); 
 //#endif
 
 
@@ -4256,9 +4256,9 @@ int main(int argc, char *argv[])
 #if _CD && (SWITCH_2_0_0  >= SEQUENTIAL_CD)
       //CDHandle *cdh_2_0_0 = cdh_1_0_0;
       CDHandle *cdh_2_0_0 = cdh_1_0_0->Create(CD_MAP_2_0_0 >> CDFLAG_SIZE, 
-                                  (string("LagrangeNodal")+cdh_1_0_0->node_id().GetStringID()).c_str(),
+                                  (string("LagrangeNodal")+cdh_1_0_0->label()).c_str(),
                                    CD_MAP_2_0_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_2_0_0));
-      CD_Begin(cdh_2_0_0, true, "LagrangeNodal"); 
+      CD_BEGIN(cdh_2_0_0, true, "LagrangeNodal"); 
       cdh_2_0_0->Preserve(domain.serdes.SetOp(
                                 (M__FX | M__FY | M__FZ |
                                  M__X  | M__Y  | M__Z  |
@@ -4283,9 +4283,9 @@ int main(int argc, char *argv[])
 #if _CD && (SWITCH_2_1_0  > SEQUENTIAL_CD)
   
   CDHandle *cdh_2_1_0 = GetCurrentCD()->Create(CD_MAP_2_1_0 >> CDFLAG_SIZE, 
-                                  (string("LagrangeElements")+GetCurrentCD()->node_id().GetStringID()).c_str(),
+                                  (string("LagrangeElements")+GetCurrentCD()->label()).c_str(),
                                    CD_MAP_2_1_0 & CDFLAG_MASK, ERROR_FLAG_SHIFT(CD_MAP_2_1_0));
-        CD_Begin(cdh_2_1_0, true, "LagrangeElements"); 
+        cdh_2_1_0->Begin(true, "LagrangeElements"); 
         cdh_2_1_0->Preserve(locDom->serdes.SetOp(
                  (M__VOLO | M__V | M__X  | M__Y  | M__Z  | 
                                    M__XD | M__YD | M__ZD |

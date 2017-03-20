@@ -56,7 +56,7 @@ using namespace common;
 using namespace cd::interface;
 using namespace cd::internal;
 using namespace std;
-
+#define STOPHANDLE 
 CDHandle *cd::null_cd = NULL;
 
 /// KL
@@ -254,7 +254,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   new_node_id = CDHandle::GenNewNodeID(ROOT_HEAD_ID, new_node_id, false);
 #endif
   CD::CDInternalErrT internal_err;
-  CDHandle *root_cd_handle = CD::CreateRootCD("Root", CDID(CDNameT(0), new_node_id), 
+  CDHandle *root_cd_handle = CD::CreateRootCD(DEFAULT_ROOT_LABEL, CDID(CDNameT(0), new_node_id), 
                                               static_cast<CDType>(kStrict | prv_medium), 
                                              /* FilePath::global_prv_path_,*/ 
                                               ROOT_SYS_DETECT_VEC, &internal_err);
@@ -326,13 +326,12 @@ void CD_Finalize(void)
 //
 //  cd::internal::Finalize();
   cd::tot_end_clk = CD_CLOCK();
-
+/*
 #if CD_PROFILER_ENABLED 
   std::map<uint32_t, RuntimeInfo> runtime_info;
   RuntimeInfo summary = Profiler::GetTotalInfo(runtime_info);
   runtime_info[100] = summary;
 #endif
-
 #if CD_PROFILER_ENABLED
   double cd_elapsed            = CD_CLK_MEA(cd::elapsed_time);
   double normal_sync_elapsed   = CD_CLK_MEA(cd::normal_sync_time);
@@ -470,6 +469,8 @@ void CD_Finalize(void)
   }
 #endif // CD_PROFILER_ENABLED_ENDS
 
+
+  */
 #if CD_ERROR_INJECTION_ENABLED
   if(CDHandle::memory_error_injector_ != NULL)
     delete CDHandle::memory_error_injector_;
@@ -911,7 +912,7 @@ CDHandle *CDHandle::Create(const char *name,
 {
   //GONG
   CDPrologue();
-  printf("[Real %s %s lv:%u lv:%u\n", __func__, name, level(), phase()); getchar();
+  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
   //CheckMailBox();
 
   // Create CDHandle for a local node
@@ -937,7 +938,7 @@ CDHandle *CDHandle::Create(const char *name,
   const double elapsed = end_clk - begin_clk;
   create_elapsed_time += elapsed;
 #if CD_PROFILER_ENABLED
-  cd::profMap[phase()]->create_elapsed_time_ += elapsed;
+  profMap[phase()]->create_elapsed_time_ += elapsed;
 //  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
@@ -953,7 +954,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
                            CDErrT *error)
 {
   CDPrologue();
-  printf("[Real %s %s lv:%u lv:%u\n", __func__, name, level(), phase()); getchar();
+  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
 #if CD_MPI_ENABLED
 
   CD_DEBUG("CDHandle::Create Node ID : %s\n", node_id_.GetString().c_str());
@@ -1073,7 +1074,7 @@ CDHandle *CDHandle::Create(uint32_t color,
                            CDErrT *error )
 {
   CDPrologue();
-  printf("[Real %s %s lv:%u lv:%u\n", __func__, name, level(), phase()); getchar();
+  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
 #if CD_MPI_ENABLED
 
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
@@ -1130,7 +1131,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
                                    CDErrT *error )
 {
   CDPrologue();
-  printf("[Real %s %s lv:%u lv:%u\n", __func__, name, level(), phase()); getchar();
+  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
   CDHandle *new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
   CD_CLOCK_T clk = CD_CLOCK();
   create_elapsed_time += clk - begin_clk;
@@ -1152,7 +1153,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 CDErrT CDHandle::Destroy(bool collective) 
 {
   CDPrologue();
-  printf("[Real %s] %u %u\n", __func__, level(), phase()); getchar();
+  printf("[Real %s] %u %d\n", __func__, level(), phase()); STOPHANDLE;
   uint32_t phase = ptr_cd_->phase();//phase();
   std::string label(GetLabel());
 
@@ -1163,7 +1164,7 @@ CDErrT CDHandle::Destroy(bool collective)
   end_clk = CD_CLOCK();
   destroy_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  profMap[phase].destroy_elapsed_time_ += end_clk - begin_clk;
+  profMap[phase]->destroy_elapsed_time_ += end_clk - begin_clk;
 #endif
   CDEpilogue();
 
@@ -1262,7 +1263,7 @@ CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_
 CDErrT CDHandle::Complete(bool collective, bool update_preservations)
 {
   CDPrologue();
-  printf("[Real %s lv:%u phase:%u]\n", __func__, level(), phase()); getchar();
+  printf("[Real %s lv:%u phase:%d]\n", __func__, level(), phase()); STOPHANDLE;
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
 

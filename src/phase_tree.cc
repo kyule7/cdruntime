@@ -9,13 +9,41 @@ std::map<uint32_t, PhaseNode *> cd::phaseNodeCache;
 //PhaseMapType  tuned::phaseMap;
 PhaseTree     tuned::phaseTree; // Populated from config file
 PhasePathType tuned::phasePath; // Populated from config file
+std::map<uint32_t, PhaseNode *> tuned::phaseNodeCache;
 uint32_t common::PhaseNode::phase_gen = 0;
+uint32_t common::PhaseNode::max_phase = 0;
 
 static inline
 void AddIndent(int cnt)
 {
   for(int i=0; i<cnt; i++) {
-    printf("    ");
+    printf("  ");
+  }
+}
+
+void PhaseNode::PrintInputYAML(void) 
+{
+  AddIndent(level_);
+  printf("- CD_%u_%u :\n", level_, phase_);
+  AddIndent(level_+1);
+  printf("- "); printf("label : %s\n", label_.c_str());
+  printf("%s", profile_.GetRTInfoStr(level_+2).c_str());
+  for(auto it=children_.begin(); it!=children_.end(); ++it) {
+    (*it)->PrintInputYAML();
+  }
+}
+
+void PhaseNode::PrintOutputYAML(void) 
+{
+  AddIndent(level_);
+  printf("- CD_%u_%u :\n", level_, phase_);
+  AddIndent(level_+1);
+  printf("- "); printf("label : %s\n", label_.c_str());
+  AddIndent(level_+2); printf("interval : %ld\n", interval_);
+  AddIndent(level_+2); printf("errortype : 0x%lX\n", errortype_);
+//  printf("children size:%zu\n", children_.size()); getchar();
+  for(auto it=children_.begin(); it!=children_.end(); ++it) {
+    (*it)->PrintOutputYAML();
   }
 }
 
@@ -23,8 +51,8 @@ void PhaseNode::Print(void)
 {
   AddIndent(level_);
   printf("CD_%u_%u\n", level_, phase_);
-  AddIndent(level_);
-  printf("{\n");
+//  AddIndent(level_);
+//  printf("{\n");
   AddIndent(level_+1); printf("label:%s\n", label_.c_str());
   AddIndent(level_+1); printf("interval:%ld\n", interval_);
   AddIndent(level_+1); printf("errortype:0x%lX\n", errortype_);
@@ -35,6 +63,18 @@ void PhaseNode::Print(void)
   AddIndent(level_);
   printf("}\n");
 }
+
+void PhaseNode::PrintProfile(void) 
+{
+  profile_.Print();
+////  printf("children size:%zu\n", children_.size()); getchar();
+  for(auto it=children_.begin(); it!=children_.end(); ++it) {
+    (*it)->PrintProfile();
+  }
+//  AddIndent(level_);
+//  printf("}\n");
+}
+
 
 std::string PhaseNode::GetPhasePath(const std::string &label)
 {
@@ -58,7 +98,7 @@ std::string PhaseNode::GetPhasePath(void)
 // cd_name_.phase_ = cd::phaseTree->target_->GetPhaseNode();
 uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 {
-  printf("## %s ## lv:%u, label:%s\n", __func__, level, label.c_str());
+  printf("## %s ## lv:%u, label:%s\n", __func__, level, label.c_str()); //getchar();
   uint32_t phase = -1;
   std::string phase_path = GetPhasePath(label);
   auto it = cd::phasePath.find(phase_path);
@@ -80,6 +120,19 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     printf("Old Phase! %u %s\n", phase, phase_path.c_str()); //getchar();
   }
 
-  profMap[phase] = &cd::phaseTree.current_->profile_;
+//  profMap[phase] = &cd::phaseTree.current_->profile_;getchar();
   return phase;
 }
+
+// for tuned::CDHandle
+// returns phase ID from label, 
+// and update phaseNodeCache
+//uint32_t PhaseNode::GetPhase(const string &label)
+//{
+//  printf("## %s ## label:%s\n", __func__, label.c_str());
+//  std::string phase_path = GetPhasePath(label);
+//  auto it = tuned::phasePath.find(phase_path);
+//  assert(it != tuned::phasePath.end());
+//  assert(tuned::phaseNodeCache.find(it->second) != tuned::phaseNodeCache.end());
+//  return tuned::phaseNodeCache[it->second];
+//}

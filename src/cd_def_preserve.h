@@ -16,8 +16,7 @@
 #define CD_DBG_FILENAME "dbg_log"
 #define CD_DBGAPP_FILENAME "app_log"
 #define CD_SHARING_DEGREE 64
-
-
+#define DEFAULT_ROOT_LABEL "CD_0_0"
 
 
 #endif

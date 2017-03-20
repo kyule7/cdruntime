@@ -57,7 +57,7 @@ struct LogTableElement {
   uint64_t reexec_counter_;
   bool isrepeated_;
   uint32_t taskID_; // src-task for read op and dst-task for write op
-#if _PGAS_VER
+#if CD_PGAS_ENABLED 
   bool iswriteop_;
   uint32_t sync_counter_; // target-side SC
   uint32_t incoming_write_counter_; // target-side IWC
@@ -67,7 +67,7 @@ struct LogTableElement {
     counter_=0;
     reexec_counter_=0;
     isrepeated_=false;
-#if _PGAS_VER
+#if CD_PGAS_ENABLED 
     iswriteop_=false;
 #endif
   }

@@ -21,6 +21,7 @@
 //#include "serdes.h"
 //#include "cd_handle.h"
 using namespace std;
+//using namespace cd::interface;
 #endif
 
 //**************************************************
@@ -31,7 +32,7 @@ using namespace std;
 
 // CD
 #if _CD
-
+#define CD_BEGIN(X,Y,Z) X->Begin(Y,Z)
 #define SERDES_ENABLED 1
 
 #define CDFLAG_SIZE 16
@@ -40,15 +41,15 @@ using namespace std;
 
 #define CDMAPPING_BEGIN_NESTED(SWITCH, CDH, FUNC_NAME, SERDES_OPS, CD_TYPE) \
   CDH = GetCurrentCD()->Create(SWITCH >> CDFLAG_SIZE, \
-                                  (string(FUNC_NAME)+GetCurrentCD()->node_id().GetStringID()).c_str(), \
+                                  (string(FUNC_NAME)+GetCurrentCD()->label()).c_str(), \
                                    SWITCH & CDFLAG_MASK, ERROR_FLAG_SHIFT(SWITCH)); \
-  CD_Begin(CDH, true, FUNC_NAME); \
+  CDH->Begin(true, FUNC_NAME); \
   CDH->Preserve(domain.serdes.SetOp(SERDES_OPS), \
                 CD_TYPE | kSerdes, (string("AllMembers_")+string(FUNC_NAME)).c_str()); 
 
 #define CDMAPPING_BEGIN_SEQUENTIAL(SWITCH, CDH, FUNC_NAME, SERDES_OPS, CD_TYPE) \
   CD_Complete(CDH); \
-  CD_Begin(CDH, true, FUNC_NAME); \
+  CDH->Begin(true, FUNC_NAME); \
   CDH->Preserve(domain.serdes.SetOp(SERDES_OPS), \
                 CD_TYPE | kSerdes, (string("AllMembers_")+string(FUNC_NAME)).c_str()); 
 
@@ -59,13 +60,13 @@ using namespace std;
 
 #define CDMAPPING_BEGIN_NESTED_ONLY(SWITCH, CDH, FUNC_NAME) \
   CDH = GetCurrentCD()->Create(SWITCH >> CDFLAG_SIZE, \
-                                  (string(FUNC_NAME)+GetCurrentCD()->node_id().GetStringID()).c_str(), \
+                                  (string(FUNC_NAME)+GetCurrentCD()->label()).c_str(), \
                                    SWITCH & CDFLAG_MASK, ERROR_FLAG_SHIFT(SWITCH)); \
-  CD_Begin(CDH, true, FUNC_NAME); 
+  CDH->Begin(true, FUNC_NAME); 
 
 #define CDMAPPING_BEGIN_SEQUENTIAL_ONLY(SWITCH, CDH, FUNC_NAME) \
   CD_Complete(CDH); \
-  CD_Begin(CDH, true, FUNC_NAME); 
+  CDH->Begin(true, FUNC_NAME); 
 
 
 //Nested?
@@ -663,7 +664,7 @@ class Domain {
    // IMPLEMENTATION
    //
 #if SERDES_ENABLED
-class DomainSerdes : public PackerSerializable {
+class DomainSerdes : public cd::PackerSerializable {
     uint64_t serdes_vec;
     Domain *dom;
     struct SerdesInfo {

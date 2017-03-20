@@ -44,12 +44,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <setjmp.h>
 using namespace cd;
+using namespace common;
 using namespace cd::internal;
 using namespace cd::interface;
 using namespace cd::logging;
 using namespace std;
 
 ProfMapType   common::profMap;
+bool tuned::tuning_enabled = false;
+uint32_t cd::new_phase = 0;
 
 //#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 #define BUGFIX_0327 1
@@ -797,11 +800,22 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 //{
 //  cd_name_.phase_ = cd::phaseTree->target_->GetPhaseNode(level(), label_);
 //}
-
+static inline uint32_t BeginPhase(uint32_t level, const string &label) {
+  uint32_t phase = -1;
+  if(phaseTree.current_ != NULL) {
+    phase = phaseTree.current_->GetPhaseNode(level, label);
+  } else {
+    phase = phaseTree.Init(level, label);
+  }
+  return phase; 
+}
 static inline void CompletePhase(void)
 {
-  if(phaseTree.current_ != NULL)
-    phaseTree.current_ = phaseTree.current_->parent_;
+  if(tuned::tuning_enabled == false) {
+    if(phaseTree.current_ != NULL) {
+      phaseTree.current_ = phaseTree.current_->parent_;
+    }
+  }
 }
 
 /* CD::Begin()
@@ -817,11 +831,14 @@ CDErrT CD::Begin(bool collective, const char *label)
 {
   //printf("[%s] not here? \n", __func__);
   label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label; 
-  if(phaseTree.current_ != NULL)
-    cd_id_.cd_name_.phase_ = phaseTree.current_->GetPhaseNode(level(), label_);
-  else 
-    cd_id_.cd_name_.phase_ = phaseTree.Init(level(), label_);
-    
+
+  if(tuned::tuning_enabled == false) {
+    cd_id_.cd_name_.phase_ = BeginPhase(level(), label_);
+  } else { // phaseTree.current_ was updated at tuned::CDHandle before this
+    cd_id_.cd_name_.phase_ = phaseTree.current_->phase_;
+    assert(new_phase == phaseTree.current_->phase_);
+  }
+  profMap[cd_id_.cd_name_.phase_] = &cd::phaseTree.current_->profile_; //getchar();
  // cd_name_.phase_ = GetPhase(level(), label_);
 
 //  cd_name_.phase_ = phase;

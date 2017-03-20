@@ -26,6 +26,7 @@ libcd_la_SOURCES = \
   	                cd_comm_log.cc \
   	                cd_event.cc \
   	                cd_handle.cc \
+										runtime_info.cc \
   	                tuned_cd_handle.cc \
   	                cd_id.cc \
 										phase_tree.cc \

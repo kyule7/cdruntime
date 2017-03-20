@@ -6,7 +6,7 @@ CD_PATH=/home/kyushick/Work/CDs/pfsFix
 INTERVAL_VAL=0
 LULESH_EXEC   = lulesh_cd
 EXEC_PROFILED = $(LULESH_EXEC)
-CD_ENABLED = 1
+CD_ENABLED = 0
 ifeq (${CD_ENABLED}, 1)
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 
 CD_CFLAGS = -I${CD_PATH}/include -I${CD_PATH}/src -I${CD_PATH}/src/persistence

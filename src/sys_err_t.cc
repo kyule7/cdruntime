@@ -40,6 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <yaml.h>
 #include <string.h>
 using namespace cd;
+using namespace common;
 #define INDENT_SIZE "    "
 SystemConfig cd::config;
 //PhaseTree tuned::phaseTree;
@@ -145,13 +146,14 @@ void SystemConfig::ParseParam(char *key)
     prv = key[0]; 
     AddIndent(seq_cnt); printf("%s\n", key);
 
-    tuned::phaseTree.current_ = new PhaseNode(tuned::phaseTree.current_);
+    UpdateSwitchParams(key);
+    tuned::phaseTree.current_ = new PhaseNode(tuned::phaseTree.current_, level, phase);
     if(tuned::phaseTree.root_ == NULL) 
       tuned::phaseTree.root_ = tuned::phaseTree.current_;
 
-    UpdateSwitchParams(key);
-    tuned::phaseTree.current_->level_ = level;
-    tuned::phaseTree.current_->phase_ = phase;
+//    tuned::phaseTree.current_->level_ = level;
+//    tuned::phaseTree.current_->phase_ = phase;
+    tuned::phaseNodeCache[phase]  = tuned::phaseTree.current_;
   } else if(strcmp(key, "label") == 0) {
     prv = key[0]; 
     AddIndent(seq_cnt); printf("%s: ", key);
@@ -311,7 +313,13 @@ void SystemConfig::LoadConfig(const char *config)
   yaml_parser_delete(&parser);
   fclose(fh);
   tuned::phaseTree.Print();
-  
+
+  // Initialize phase_gen for cd::phaseTree
+  PhaseNode::max_phase = PhaseNode::phase_gen; 
+//  tuned::phaseNodeCache = new (PhaseNode*)[tuned::PhaseNode::max_phase](NULL);
+  PhaseNode::phase_gen = 0;  
+  tuned::phaseTree.current_ = tuned::phaseTree.root_;
+  printf("Finish reading config. :%p %p\n", tuned::phaseTree.current_, tuned::phaseTree.root_);
 }
 
 

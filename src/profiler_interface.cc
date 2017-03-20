@@ -43,7 +43,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "profiler_interface.h"
 #include "cd_def_internal.h" 
 #include "cd_def_debug.h"
-
+#include "phase_tree.h"
 //#include "cd_internal.h"
 #include "cd_global.h"
 //#include "cd_handle.h"
@@ -73,10 +73,11 @@ Profiler *Profiler::CreateProfiler(int prof_type, void *arg)
 
 void Profiler::CreateRuntimeInfo(uint32_t phase) 
 {
-  auto rit = profMap.find(phase);
-  if(rit == profMap.end()) { 
-    profMap[phase] = RuntimeInfo(0);
-  }
+  assert(0);
+//  auto rit = profMap.find(phase);
+//  if(rit == profMap.end()) { 
+//    profMap[phase] = RuntimeInfo(0);
+//  }
 }
 
 void Profiler::BeginRecord(void)
@@ -100,12 +101,13 @@ void Profiler::BeginRecord(void)
   current_level_ = level;
   auto rit = profMap.find(phase);
 
-  if(rit == profMap.end()) { 
-    profMap[phase] = RuntimeInfo(1);
-  } else {
+//  if(rit == profMap.end()) { 
+//    profMap[phase] = RuntimeInfo(1);
+//  } else {
 //    printf("Exec %s %s\n", cdh_->GetName(), name.c_str());
-    profMap[phase]->total_exec_ += 1;
-  }
+  printf("profMap[%u]=%p\n", phase, profMap[phase]);
+  profMap[phase]->total_exec_ += 1;
+//  }
 
 //  if(cdh_->recreated() || is_reexecuted) {
 //    printf("RecreatedReexec %s %s\n", GetName().c_str(), name.c_str());
@@ -212,7 +214,8 @@ void Profiler::EndRecord(void)
 void Profiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
 {
   const uint32_t level = cdh_->level();
-  string name = cdh_->GetLabel();
+  const uint32_t phase = cdh_->phase();
+//string name = cdh_->GetLabel();
   switch(profile_type) {
     case PRV_COPY_DATA: {
       profMap[phase]->prv_copy_ = profile_data;
@@ -234,41 +237,44 @@ void Profiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
 
 void Profiler::Print(void) 
 {
-  for(auto it=profMap.begin(); it!=profMap.end(); ++it) {
-    CD_DEBUG("Level %u --------------------------------\n", it->first);
-    for(auto jt=it->second.begin(); jt!=it->second.end(); ++jt) {
-      CD_DEBUG("\n[%s]\n%s\n", jt->first.c_str(), jt->second.GetString().c_str());
-    }
-    CD_DEBUG("\n");
-  }
-  CD_DEBUG("-----------------------------------------\n");
+  cd::phaseTree.PrintProfile();
+//  for(auto it=profMap.begin(); it!=profMap.end(); ++it) {
+//    CD_DEBUG("Level %u --------------------------------\n", it->first);
+//    for(auto jt=it->second.begin(); jt!=it->second.end(); ++jt) {
+//      CD_DEBUG("\n[%s]\n%s\n", jt->first.c_str(), jt->second.GetString().c_str());
+//    }
+//    CD_DEBUG("\n");
+//  }
+//  CD_DEBUG("-----------------------------------------\n");
 }
 
 
 RuntimeInfo Profiler::GetTotalInfo(std::map<uint32_t, RuntimeInfo> &runtime_info) 
 {
+  cd::phaseTree.PrintProfile();
   RuntimeInfo info_total;
-  for(auto it=profMap.begin(); it!=profMap.end(); ++it) {
-    RuntimeInfo info_per_level;
-    CD_DEBUG("\n-- Level %u --------------------------------\n", it->first);
-    //if(myTaskID == 0)
-//      printf("-- Level %u --------------------------------\n", it->first);
-    for(auto jt=it->second.begin(); jt!=it->second.end(); ++jt) { //map<string,RuntimeInfo>>
-      CD_DEBUG("\n%s : %s\n", jt->first.c_str(), jt->second.GetString().c_str());
-      info_per_level += jt->second;
-    }
-    CD_DEBUG("-- Summary --\n");
-    CD_DEBUG("%s\n", info_per_level.GetString().c_str());
-//    printf("%s\n", info_per_level.GetString().c_str());
-    
-//    printf("%s", info_per_level.GetString().c_str());
-    info_total.MergeInfoPerLevel(info_per_level);
-    runtime_info[it->first] = info_per_level;
-  }
-  CD_DEBUG("-----------------------------------------\n");
-  CD_DEBUG("Total Summary ---------------------------\n");
-  CD_DEBUG("%s", info_total.GetString().c_str());
-  CD_DEBUG("-----------------------------------------\n");
+//
+//  for(auto it=profMap.begin(); it!=profMap.end(); ++it) {
+//    RuntimeInfo info_per_level;
+//    CD_DEBUG("\n-- Level %u --------------------------------\n", it->first);
+//    //if(myTaskID == 0)
+////      printf("-- Level %u --------------------------------\n", it->first);
+//    for(auto jt=it->second.begin(); jt!=it->second.end(); ++jt) { //map<string,RuntimeInfo>>
+//      CD_DEBUG("\n%s : %s\n", jt->first.c_str(), jt->second.GetString().c_str());
+//      info_per_level += jt->second;
+//    }
+//    CD_DEBUG("-- Summary --\n");
+//    CD_DEBUG("%s\n", info_per_level.GetString().c_str());
+////    printf("%s\n", info_per_level.GetString().c_str());
+//    
+////    printf("%s", info_per_level.GetString().c_str());
+//    info_total.MergeInfoPerLevel(info_per_level);
+//    runtime_info[it->first] = info_per_level;
+//  }
+//  CD_DEBUG("-----------------------------------------\n");
+//  CD_DEBUG("Total Summary ---------------------------\n");
+//  CD_DEBUG("%s", info_total.GetString().c_str());
+//  CD_DEBUG("-----------------------------------------\n");
   return info_total;
 }
 

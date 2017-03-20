@@ -457,6 +457,7 @@ namespace tuned {
   class CDHandle;
   extern CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   extern void CD_Finalize(void);
+  extern bool tuning_enabled;
 /** \addtogroup cd_accessor_funcs 
  * These methods are globally accessible without a CDHandle object.
  * So, user can get a handle of CD at any point of program with these methods.
@@ -510,15 +511,15 @@ namespace tuned {
   CDHandle *GetParentCD(int current_level);
 
   /** @} */ // End cd_accessor_funcs group =====================================================
-  struct ParamEntry {    
-    int64_t count_;
-    int64_t error_mask_;
-    int64_t interval_;
-    uint32_t merge_begin_;
-    uint32_t merge_end_;
-    ParamEntry(void) : count_(0), error_mask_(-1), interval_(-1), merge_begin_(0), merge_end_(0){}
-//    bool     active_;
-  };
+//  struct ParamEntry {    
+//    int64_t count_;
+//    int64_t error_mask_;
+//    int64_t interval_;
+//    uint32_t merge_begin_;
+//    uint32_t merge_end_;
+//    ParamEntry(void) : count_(0), error_mask_(-1), interval_(-1), merge_begin_(0), merge_end_(0){}
+////    bool     active_;
+//  };
 
 } // namespace tuned ends
 

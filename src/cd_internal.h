@@ -798,18 +798,6 @@ class HeadCD : public CD {
 #if CD_MPI_ENABLED
 //    virtual CDFlagT *event_flag();
     inline CDFlagT *GetEventFlag(void);
-//    void BeginPhase(std::string label); 
-//    {
-//      if(phaseTree.current_ != NULL)
-//        phaseTree.current_ = phaseTree.current_->parent_;
-//    }
-//
-//    inline void CompletePhase(void);
-//    {
-//      if(phaseTree.current_ != NULL)
-//        phaseTree.current_ = phaseTree.current_->parent_;
-//    }
-
     CDErrT SetMailBox(const CDEventT &event, int task_id);
     CDInternalErrT LocalSetMailBox(const CDEventT &event);
 //    virtual CDErrT SetMailBox(const CDEventT &event);

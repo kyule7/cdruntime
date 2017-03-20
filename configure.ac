@@ -20,6 +20,21 @@ AC_DEFINE_UNQUOTED(_CD_DEBUG, $WANT_DEBUG,
 AC_SUBST(cd_debug_enabled, $WANT_DEBUG)
 AC_SUBST(cd_debug_dest, $WANT_DEBUG)
 
+# tuning support
+AC_ARG_ENABLE([tuning], 
+    [AS_HELP_STRING([--enable-tuning],[Turn on tuning capability])])
+AS_IF([test x"$enable_tuning" = x"yes"], [WANT_TUNING=1], [WANT_TUNING=0])
+AC_DEFINE_UNQUOTED(_TUNING, $WANT_TUNING, [Define to 1 to enable tuning])
+AC_SUBST(cd_tuning_enabled, $WANT_TUNING)
+
+# runtime on/off switch used with tuning
+AC_ARG_ENABLE([runtime], 
+    [AS_HELP_STRING([--enable-runtime],[Turn on runtime with tuning])])
+AS_IF([test x"$enable_runtime" = x"yes"], [WANT_RUNTIME=1], [WANT_RUNTIME=0])
+AC_DEFINE_UNQUOTED(_CD_RUNTIME, $WANT_RUNTIME, [Define to 1 to enable runtime with
+                                           tuning])
+AC_SUBST(cd_runtime_enabled, $WANT_RUNTIME)
+
 # profiling support
 AC_ARG_ENABLE([profiler], 
     [AS_HELP_STRING([--enable-profiler],[Turn on profiler support])])

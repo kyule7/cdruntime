@@ -445,7 +445,7 @@ class CDHandle {
        
          CommitPreserveBuff();
          common::CDErrT ret = InternalBegin(collective, label, sys_err_vec);
-         printf("[Real %s %s lv:%u phase:%u]\n", __func__, label, level(), phase()); getchar();
+         printf("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
          return ret;
        }
   

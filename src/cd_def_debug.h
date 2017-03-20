@@ -43,7 +43,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <sstream>
 #include <fstream>
 
-namespace cd {
 
 // DEBUG related
 #define ERROR_MESSAGE(...) \
@@ -54,6 +53,7 @@ namespace cd {
 #define CD_ASSERT_STR(COND, ...) \
   { if((COND) == false) { printf(__VA_ARGS__); } assert(COND); }
 
+namespace cd {
 /* Eric:  Should be using vsnprintf to a buffer with explicit flush, 
  *        Add a comment to this line rather than a pair of fprintf's 
  *        to format the strings.

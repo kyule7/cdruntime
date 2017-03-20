@@ -1,16 +1,48 @@
-PARAM:
-  - S0_0 : 1, 0x3F # 1 <= x <= N
-  - S1_0 : 2, 0x1F
-  - S2_0 : 2, 0x0F
-  - S2_1 : -1, 0x0F
-  - S3_0 : 2, 0x03
-  - S3_1 : 0, 0x03
-  - S3_2 : 2, 0x03
+- CD_0_0 :
+  - label : CD_0_0
+    interval : 1
+    errortype : 0xFF
+  - CD_1_1 :
+    - label : CD1
+      interval : 2
+      errortype : 0x7F
+    - CD_2_2 :
+      - label : CD2_0
+        interval : 2
+        errortype : 0xF
+      - CD_3_3 :
+        - label : CD3_0
+          interval : 2
+          errortype : 0x7
+      - CD_3_4 :
+        - label : CD3_1
+          interval : 0
+          errortype : 0x3
+      - CD_3_5 :
+        - label : CD3_2
+          interval : 2
+          errortype : 0x3
+    - CD_2_6 :
+      - label : CD2_1
+        interval : -1
+        errortype : 0xF
+      - CD_3_7 :
+        - label : CD3_0
+          interval : 2
+          errortype : 0x3
+      - CD_3_8 :
+        - label : CD3_1
+          interval : 0
+          errortype : 0x1
+      - CD_3_9 :
+        - label : CD3_2
+          interval : 0
+          errortype : 0x1
 
-FAILURE:
-  - F1 : 0.00
-  - F2 : 0.00
-  - F4 : 0.00
-  - F8 : 0.00
-  - F16 : 0.0
-  - F32 : 0.0
+- FAILURE:
+  - F1 : 0.001
+  - F2 : 0.002
+  - F4 : 0.003
+  - F8 : 0.004
+  - F16 : 0.05
+  - F32 : 0.06
