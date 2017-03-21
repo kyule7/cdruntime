@@ -55,6 +55,7 @@ class Serializable {
   public:
     virtual void *Serialize(uint64_t &len_in_bytes)=0;
     virtual void Deserialize(void *object)=0;
+    virtual uint64_t GetTotalSize(void){ return 0; }
 };
 
 class PackerSerializable : public Serializable {
@@ -65,7 +66,6 @@ class PackerSerializable : public Serializable {
     uint64_t table_offset_;
     uint64_t table_type_;
     virtual uint64_t PreserveObject(DataStore *packer)=0;
-    virtual uint64_t GetTableSize(void)=0;
 };
 
 }

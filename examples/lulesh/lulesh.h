@@ -43,13 +43,13 @@ using namespace std;
   CDH = GetCurrentCD()->Create(SWITCH >> CDFLAG_SIZE, \
                                   (string(FUNC_NAME)+GetCurrentCD()->label()).c_str(), \
                                    SWITCH & CDFLAG_MASK, ERROR_FLAG_SHIFT(SWITCH)); \
-  CDH->Begin(true, FUNC_NAME); \
+  CDH->Begin(true, FUNC_NAME); //\
   CDH->Preserve(domain.serdes.SetOp(SERDES_OPS), \
                 CD_TYPE | kSerdes, (string("AllMembers_")+string(FUNC_NAME)).c_str()); 
 
 #define CDMAPPING_BEGIN_SEQUENTIAL(SWITCH, CDH, FUNC_NAME, SERDES_OPS, CD_TYPE) \
   CD_Complete(CDH); \
-  CDH->Begin(true, FUNC_NAME); \
+  CDH->Begin(true, FUNC_NAME); //\
   CDH->Preserve(domain.serdes.SetOp(SERDES_OPS), \
                 CD_TYPE | kSerdes, (string("AllMembers_")+string(FUNC_NAME)).c_str()); 
 
@@ -733,21 +733,24 @@ unsigned vec2id(unsigned long long n) {
   return cnt;
 }
 
+    static SerdesInfo *serdesRegElem;
     void InitDynElem(void) {
-
+      serdesRegElem = NULL;
       Index_t &numRegSize  = dom->numReg();
       Index_t &numElemSize = dom->numElem();
       serdes_table[ID__REGELEMSIZE]       = SerdesInfo((char *)(dom->m_regElemSize), sizeof(Index_t) * numRegSize, SerdesInfo::NoVec);
       serdes_table[ID__REGELEMLIST]       = SerdesInfo((char *)(dom->m_regElemlist), sizeof(Index_t*)* numRegSize, SerdesInfo::NoVec);
-      SerdesInfo *serdesRegElem = NULL;
-      if(serdes_table[ID__REGELEMLIST_INNER].ptr() == NULL) {
+//      SerdesInfo *serdesRegElem = NULL;
+      //if(serdes_table[ID__REGELEMLIST_INNER].ptr() == NULL) {
+      if(serdesRegElem == NULL) {
         serdesRegElem = new SerdesInfo[numRegSize];
         serdes_table[ID__REGELEMLIST_INNER] = SerdesInfo((char *)serdesRegElem, sizeof(SerdesInfo) * numRegSize, SerdesInfo::NoVec);
         for(int i=0; i<numRegSize; ++i) {
           serdesRegElem[i] = SerdesInfo((char *)((dom->m_regElemlist)[i]), (dom->m_regElemSize)[i], SerdesInfo::NoVec);
         }
       } else if(serdes_table[ID__REGELEMLIST_INNER].len() != numRegSize) {
-        delete serdes_table[ID__REGELEMLIST_INNER].ptr();
+        delete []  serdesRegElem;
+        //delete serdes_table[ID__REGELEMLIST_INNER].ptr();
         serdesRegElem = new SerdesInfo[numRegSize];
         serdes_table[ID__REGELEMLIST_INNER] = SerdesInfo((char *)serdesRegElem, sizeof(SerdesInfo) * numRegSize, SerdesInfo::NoVec);
         for(int i=0; i<numRegSize; ++i) {
@@ -755,6 +758,10 @@ unsigned vec2id(unsigned long long n) {
         }
       }
       serdes_table[ID__REG_NUMLIST]       = SerdesInfo((char *)(dom->m_regNumList), sizeof(Index_t) * numElemSize, SerdesInfo::NoVec);
+    }
+    ~DomainSerdes(void) {
+
+      if(serdesRegElem != NULL) delete [] serdesRegElem;
     }
     void InitSerdesTable(void) {
       serdes_table[ID__X]           = SerdesInfo((void *)&(dom->m_x),           SerdesInfo::Real );
@@ -962,7 +969,7 @@ unsigned vec2id(unsigned long long n) {
       return table_offset_;
     }
 
-    uint64_t GetTableSize(void) {
+    uint64_t GetTotalSize(void) {
       uint64_t table_size = 0;
       uint64_t vec = serdes_vec;
       while(vec != 0) {

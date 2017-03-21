@@ -1,6 +1,6 @@
 #ifndef _TUNED_CD_HANDLE_H 
 #define _TNUED_CD_HANDLE_H
-
+#include "cd_features.h"
 #include <stdint.h>
 #include "util.h"
 #include "cd_handle.h"
@@ -8,6 +8,7 @@
 #include "phase_tree.h"
 #define FUNC_ATTR inline __attribute__((always_inline))
 
+#define CHECK_TYPE(X,Y)     (((X) & (Y)) == (Y))
 #define STOPHANDLE 
 //using namespace cd;
 
@@ -19,6 +20,29 @@ typedef uint32_t PhaseID;
 
 void AddHandle(CDHandle *);
 void DeleteHandle(void);
+static inline
+void RecordPreservation(RuntimeInfo &profile, uint32_t preserve_mask, uint64_t len)
+{
+  if(CHECK_TYPE(preserve_mask, kCopy)) {
+    profile.prv_copy_ += len;
+  } else if(CHECK_TYPE(preserve_mask, kRef)) {
+    profile.prv_ref_  += len;
+  }
+}
+
+static inline
+void RecordBegin(RuntimeInfo &profile)
+{
+  profile.total_exec_ += 1;
+  profile.begin_ = CD_CLOCK();  
+}
+
+static inline
+void RecordComplete(RuntimeInfo &profile)
+{
+  CD_CLOCK_T end_time = CD_CLOCK();
+  profile.total_time_ += CD_CLK_MEA(end_time - profile.begin_);
+}
 
 CDHandle *CD_Init(int numTask=1, int myTask=0, PrvMediumT prv_medium=DEFAULT_MEDIUM);
 class CDHandle {
@@ -79,16 +103,11 @@ class CDHandle {
       // otherwise, check ConfigEntry for this phase of the level currently
       // being created.
       CDHandle *new_handle = new CDHandle(handle_, level_ + 1, name);
-      printf("[Tune %s lv:%u phase:%u] -> lv:%u phase:%u, interval:%ld\n", 
-              __func__, level_, phase_, 
-              new_handle->level_, new_handle->phase_, tuned::phaseTree.current_->interval_); 
-      STOPHANDLE;
+      printf("[Tune %s lv:%u]\n", __func__, level_); STOPHANDLE;
 #     if CD_TUNING_ENABLED
-        if(new_handle->IsNewCD()) {
-          new_handle->handle_ = handle_->Create(name, cd_type, err_name_mask, err_loc_mask, error);
-        }
-#     elif CD_RUNTIME_ENABLED
+      if(new_handle->IsNewCD()) {
         new_handle->handle_ = handle_->Create(name, cd_type, err_name_mask, err_loc_mask, error);
+      }
 #     endif
       AddHandle(new_handle);
       return new_handle;
@@ -124,17 +143,11 @@ class CDHandle {
                      )
     { 
       CDHandle *new_handle = new CDHandle(handle_, level_ + 1, name);
+      printf("[Tune %s lv:%u] # children:%u\n", __func__, level_, numchildren); STOPHANDLE;
 #     if CD_TUNING_ENABLED
-      printf("[Tune %s lv:%u phase:%u] -> lv:%u phase:%u, interval:%ld\n", 
-             __func__, level_, phase_, 
-             new_handle->level_, new_handle->phase_, tuned::phaseTree.current_->interval_); 
-      STOPHANDLE;
-//#     if CD_TUNING_ENABLED
-        if(new_handle->IsNewCD()) {
-          new_handle->handle_ = handle_->Create(numchildren, name, cd_type, err_name_mask, err_loc_mask, error);
-        }
-#     elif CD_RUNTIME_ENABLED
-          new_handle->handle_ = handle_->Create(numchildren, name, cd_type, err_name_mask, err_loc_mask, error);
+      if(new_handle->IsNewCD()) {
+        new_handle->handle_ = handle_->Create(numchildren, name, cd_type, err_name_mask, err_loc_mask, error);
+      }
 #     endif
       AddHandle(new_handle);
       return new_handle;
@@ -176,16 +189,13 @@ class CDHandle {
                      )
     { 
       CDHandle *new_handle = new CDHandle(handle_, level_ + 1, name);
-      printf("[Tune %s lv:%u phase:%u] -> lv:%u phase:%u, interval:%ld\n", 
-          __func__, level_, phase_, new_handle->level_, new_handle->phase_, tuned::phaseTree.current_->interval_); STOPHANDLE;
+      printf("[Tune %s lv:%u] # children:%u, %u/%u\n", __func__, 
+          level_, numchildren, color, task_in_color); STOPHANDLE;
 #     if CD_TUNING_ENABLED
-        if(new_handle->IsNewCD()) {
-          new_handle->handle_ = handle_->Create(color, task_in_color, numchildren, 
-                                                name, cd_type, err_name_mask, err_loc_mask, error);
-        }
-#     elif CD_RUNTIME_ENABLED
-          new_handle->handle_ = handle_->Create(color, task_in_color, numchildren, 
-                                                name, cd_type, err_name_mask, err_loc_mask, error);
+      if(new_handle->IsNewCD()) {
+        new_handle->handle_ = handle_->Create(color, task_in_color, numchildren, 
+                                              name, cd_type, err_name_mask, err_loc_mask, error);
+      }
 #     endif
       AddHandle(new_handle);
       return new_handle;
@@ -222,16 +232,11 @@ class CDHandle {
                              )
     { 
       CDHandle *new_handle = new CDHandle(handle_, level_ + 1, name);
-      printf("[Tune %s lv:%u phase:%u] -> lv:%u phase:%u, interval:%ld\n", 
-          __func__, level_, phase_, 
-          new_handle->level_, new_handle->phase_, tuned::phaseTree.current_->interval_); 
-      STOPHANDLE;
+      printf("[Tune %s lv:%u] # children:%u\n", __func__, level_, numchildren); STOPHANDLE;
 #     if CD_TUNING_ENABLED
-        if(new_handle->IsNewCD()) {
-          new_handle->handle_ = handle_->CreateAndBegin(numchildren, name, cd_type, err_name_mask, err_loc_mask, error);
-        }
-#     elif CD_RUNTIME_ENABLED
-          new_handle->handle_ = handle_->CreateAndBegin(numchildren, name, cd_type, err_name_mask, err_loc_mask, error);
+      if(new_handle->IsNewCD()) {
+        new_handle->handle_ = handle_->CreateAndBegin(numchildren, name, cd_type, err_name_mask, err_loc_mask, error);
+      }
 #     endif
       AddHandle(new_handle);
       return new_handle;
@@ -253,11 +258,9 @@ class CDHandle {
       common::CDErrT ret = common::kOK;
 
 #     if CD_TUNING_ENABLED
-        if(level_created_) { 
-          ret = handle_->Destroy(collective);
-        }
-#     elif CD_RUNTIME_ENABLED
+      if(level_created_) { 
         ret = handle_->Destroy(collective);
+      }
 #     endif
       DeleteHandle();
 
@@ -278,49 +281,64 @@ class CDHandle {
                  const uint64_t &sys_err_vec=0
                 )
     {
+      // After Complete(), there can be three potential cases.
+      // 1. Begin the same phase (for example of loop)
+      // 2. Begin different phase in the same level.
+      // 3. Remain in the parent-level phase.
+      // In the case 1 and 2, the same label will be searched.
+      // In the case 3, 
       // Update phase 
       CDErrT ret = common::kOK;
       label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label;
-#     if CD_TUNING_ENABLED
-      printf("## Tuned Begin %u ## %s %s %s\n", level_, label_.c_str(), label, name_.c_str());
-//      if(tuned::phaseTree.current_ != tuned::phaseTree.root_) 
-      tuned::phaseTree.current_ = phaseTree.current_->GetNextNode(label_);
+#   if CD_TUNING_ENABLED
+      //if(tuned::phaseTree.current_ != tuned::phaseTree.root_) 
+        tuned::phaseTree.current_ = phaseTree.current_->GetNextNode(label_);
 
       // tuned::phaseTree was already populated before! 
 
       //phase_ = tuned::phaseTree.current_->GetPhase
-      printf("lv:%u==%u, %p\n", tuned::phaseTree.current_->level_, level_, tuned::phaseTree.current_);
-      int cmp = strcmp(label_.c_str(), tuned::phaseTree.current_->label_.c_str());
-      printf("%p : %d\n", tuned::phaseTree.current_, cmp);
+      //printf("lv:%u==%u, %p\n", tuned::phaseTree.current_->level_, level_, tuned::phaseTree.current_);
+      //int cmp = strcmp(label_.c_str(), tuned::phaseTree.current_->label_.c_str());
+      //printf("%p : %d\n", tuned::phaseTree.current_, cmp);
       CD_ASSERT_STR(strcmp(label_.c_str(), tuned::phaseTree.current_->label_.c_str()) == 0,
           "Begin: %s == %s\n", label_.c_str(), tuned::phaseTree.current_->label_.c_str());
+
 //      UpdateParamFromConfig(phase_);
       int64_t &count    = tuned::phaseTree.current_->count_;
       int64_t &interval = tuned::phaseTree.current_->interval_;
-      if(interval > 0) 
-        phase_ = tuned::phaseTree.current_->phase_;
-      else
-        phase_ = tuned::phaseTree.current_->GetLeftMostNode()->phase_;
-
-//      phase_ = tuned::phaseTree.current_->phase_;
       printf("[Tune %s lv:%u phase:%u] count:%lu <= interval:%ld\n", 
-             __func__, level_, phase_, count, interval); STOPHANDLE;
+             __func__, level_, tuned::phaseTree.current_->phase_, count, interval); STOPHANDLE;
       
-//#     if CD_TUNING_ENABLED
-        if(interval > 0 && count % interval == 0) { 
+      active_ = false;
+      if(interval > 0 ) {
+        phase_ = tuned::phaseTree.current_->phase_;
+        if(count % interval == 0) { 
           active_ = true;
           if(cd::phaseTree.current_ != NULL)
             cd::new_phase = cd::phaseTree.current_->GetPhaseNode(level_, label_);
           else 
             cd::new_phase = cd::phaseTree.Init(level_, label_);
-
+  
           ret = handle_->Begin(collective, label, sys_err_vec);
-        } else { // if this phase is merged, interval_ == 0
-          active_ = false;
-        }
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->Begin(collective, label, sys_err_vec);
-#     endif
+        } 
+      } else if(interval == 0) { // 
+        phase_ = tuned::phaseTree.current_->GetLeftMostNode()->phase_;
+      } else {
+        phase_ = -1;
+      }
+
+      RecordBegin(tuned::phaseTree.current_->profile_);
+#   else
+      if(cd::phaseTree.current_ != NULL) {
+        phase_ = cd::phaseTree.current_->GetPhaseNode(level_, label_);
+      } else {
+        phase_ = cd::phaseTree.Init(level_, label_);
+      }
+      RecordBegin(cd::phaseTree.current_->profile_);
+#   endif
+      printf("[Tune %s lv:%u phase:%u]  %s %s name:%s\n", 
+             __func__, level_, phase_,
+             label_.c_str(), label, name_.c_str()); STOPHANDLE;
       return ret;
     } 
 
@@ -351,31 +369,30 @@ class CDHandle {
                    )
     { 
       CDErrT ret = common::kOK;
+      printf("[Tune %s lv:%u phase:%u] \n", 
+             __func__, level_, phase_); STOPHANDLE;
 #     if CD_TUNING_ENABLED
+      RecordComplete(tuned::phaseTree.current_->profile_);
       PhaseNode *merging_node = tuned::phaseTree.current_->GetLeftMostNode();
       int64_t &count    = merging_node->count_;
       int64_t &interval = merging_node->GetLeftMostNode()->interval_;
       printf("[Tune %s lv:%u phase:%u]] count:%lu <= interval:%ld\n", 
              __func__, level_, phase_, count, interval - 1); STOPHANDLE;
-//#     if CD_TUNING_ENABLED
-        PhaseNode *last_merged_node = tuned::phaseTree.current_->GetRightMostNode();
-        
-        if(tuned::phaseTree.current_ == last_merged_node) {
-          if(terminate || (count % interval == interval - 1)) {
-            count++; 
-            ret = handle_->Complete(collective, update_prv);
-          }
+      PhaseNode *last_merged_node = tuned::phaseTree.current_->GetRightMostNode();
+      
+      if(tuned::phaseTree.current_ == last_merged_node) {
+        if(terminate || (count % interval == interval - 1)) {
+          count++; 
+          ret = handle_->Complete(collective, update_prv);
         }
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->Complete(collective, update_prv);
+      }
+
+      tuned::phaseTree.current_ = tuned::phaseTree.current_->parent_;
+#     else
+      RecordComplete(cd::phaseTree.current_->profile_);
+      cd::phaseTree.current_ = cd::phaseTree.current_->parent_;
 #     endif
 
-
-#     if CD_TUNING_ENABLED
-      if(tuned::phaseTree.current_ != NULL) {
-        tuned::phaseTree.current_ = tuned::phaseTree.current_->parent_;
-      }
-#endif
       return ret;
     } 
 
@@ -416,11 +433,11 @@ class CDHandle {
           tuned::phaseTree.current_->count_,
           tuned::phaseTree.current_->interval_ - 1);
           STOPHANDLE;
-//#     if CD_TUNING_ENABLED
-        if(IsActive()) 
-        { ret = handle_->Preserve(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regenObj, dataUsage); }
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->Preserve(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regenObj, dataUsage);
+      if(IsActive()) 
+      { ret = handle_->Preserve(data_ptr, len, preserve_mask, my_name, ref_name, ref_offset, regenObj, dataUsage); }
+      RecordPreservation(tuned::phaseTree.current_->profile_, preserve_mask, len);
+#     else
+      RecordPreservation(cd::phaseTree.current_->profile_, preserve_mask, len);
 #     endif
       return ret;
     } 
@@ -460,10 +477,10 @@ class CDHandle {
           tuned::phaseTree.current_->count_,
           tuned::phaseTree.current_->interval_ - 1);
           STOPHANDLE;
-//#     if CD_TUNING_ENABLED
-        if(IsActive()) { ret = handle_->Preserve(serdes, preserve_mask, my_name, ref_name, ref_offset); }
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->Preserve(serdes, preserve_mask, my_name, ref_name, ref_offset);
+      if(IsActive()) { ret = handle_->Preserve(serdes, preserve_mask, my_name, ref_name, ref_offset); }
+      RecordPreservation(tuned::phaseTree.current_->profile_, preserve_mask, serdes.GetTotalSize());
+#     else
+      RecordPreservation(cd::phaseTree.current_->profile_, preserve_mask, serdes.GetTotalSize());
 #     endif
       return ret;
     } 
@@ -497,15 +514,16 @@ class CDHandle {
                     )
     { 
       CDErrT ret = common::kOK;
+#     if CD_TUNING_ENABLED
       printf("[Tune %s lv:%u phase:%u] name:%s count:%lu <= interval:%ld\n", 
           __func__, level_, phase_, my_name, 
           tuned::phaseTree.current_->count_,
           tuned::phaseTree.current_->interval_ - 1);
           STOPHANDLE;
-#     if CD_TUNING_ENABLED
-        if(IsActive()) { ret = handle_->Preserve(cd_event, data_ptr, len, preserve_mask, my_name, ref_name, ref_offset); }
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->Preserve(cd_event, data_ptr, len, preserve_mask, my_name, ref_name, ref_offset);
+      if(IsActive()) { ret = handle_->Preserve(cd_event, data_ptr, len, preserve_mask, my_name, ref_name, ref_offset); }
+      RecordPreservation(tuned::phaseTree.current_->profile_, preserve_mask, len);
+#     else
+      RecordPreservation(cd::phaseTree.current_->profile_, preserve_mask, len);
 #     endif
       return ret;
     } 
@@ -525,9 +543,7 @@ class CDHandle {
           __func__, level_, phase_, test_true); STOPHANDLE;
       CDErrT ret = common::kOK;
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { ret = handle_->CDAssert(test_true, err_report); }
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->CDAssert(test_true, err_report); 
+      if(IsActive()) { ret = handle_->CDAssert(test_true, err_report); }
 #     endif
       return ret;
     } 
@@ -545,9 +561,7 @@ class CDHandle {
     { 
       CDErrT ret = common::kOK;
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { ret = handle_->CDAssertFail(test_true, err_report); }
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->CDAssertFail(test_true, err_report); 
+      if(IsActive()) { ret = handle_->CDAssertFail(test_true, err_report); }
 #     endif
       return ret;
     } 
@@ -564,9 +578,7 @@ class CDHandle {
     { 
       CDErrT ret = common::kOK;
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { ret = handle_->CDAssertNotify(test_true, err_report); }
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->CDAssertNotify(test_true, err_report);
+      if(IsActive()) { ret = handle_->CDAssertNotify(test_true, err_report); }
 #     endif
       return ret;
     } 
@@ -587,9 +599,7 @@ class CDHandle {
       printf("[Tune %s lv:%u phase:%u] \n", __func__, level_, phase_); STOPHANDLE;
       std::vector<cd::SysErrT> detected_errors;
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { detected_errors = handle_->Detect(err_ret_val); }
-#     elif CD_RUNTIME_ENABLED
-        detected_errors = handle_->Detect(err_ret_val);
+      if(IsActive()) { detected_errors = handle_->Detect(err_ret_val); }
 #     endif
       return detected_errors;
     } 
@@ -626,9 +636,7 @@ class CDHandle {
     { 
       CDErrT ret = common::kOK;
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { ret = handle_->RegisterDetection(system_name_mask, system_loc_mask); }
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->RegisterDetection(system_name_mask, system_loc_mask); 
+      if(IsActive()) { ret = handle_->RegisterDetection(system_name_mask, system_loc_mask); }
 #     endif
       return ret;
     }
@@ -666,9 +674,7 @@ class CDHandle {
     { 
       CDErrT ret = common::kOK;
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { ret = handle_->RegisterRecovery(error_name_mask, error_loc_mask, recoverObj); } 
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->RegisterRecovery(error_name_mask, error_loc_mask, recoverObj); 
+      if(IsActive()) { ret = handle_->RegisterRecovery(error_name_mask, error_loc_mask, recoverObj); } 
 #     endif
       return ret;
     }
@@ -691,9 +697,7 @@ class CDHandle {
     { 
       CDErrT ret = common::kOK;
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { ret = handle_->RegisterRecovery(error_name_mask, error_loc_mask, recovery_func); }
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->RegisterRecovery(error_name_mask, error_loc_mask, recovery_func); 
+      if(IsActive()) { ret = handle_->RegisterRecovery(error_name_mask, error_loc_mask, recovery_func); }
 #     endif
       return ret;
     }
@@ -724,9 +728,7 @@ class CDHandle {
     { 
       CDErrT ret = common::kOK;
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { ret = handle_->RegisterSplitMethod(split_func); } 
-#     elif CD_RUNTIME_ENABLED
-        ret = handle_->RegisterSplitMethod(split_func); 
+      if(IsActive()) { ret = handle_->RegisterSplitMethod(split_func); } 
 #     endif
       return ret;
     }
@@ -764,9 +766,7 @@ class CDHandle {
     { 
       float prob = 0.0;
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { prob = handle_->GetErrorProbability(error_type, error_num); }
-#     elif CD_RUNTIME_ENABLED
-        prob = handle_->GetErrorProbability(error_type, error_num); 
+      if(IsActive()) { prob = handle_->GetErrorProbability(error_type, error_num); }
 #     endif
       return prob;
     }
@@ -811,9 +811,7 @@ class CDHandle {
     { 
       float prob = 0.0;
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { prob = handle_->RequireErrorProbability(error_type, error_num, probability, fail_over); }
-#     elif CD_RUNTIME_ENABLED
-        prob = handle_->RequireErrorProbability(error_type, error_num, probability, fail_over); 
+      if(IsActive()) { prob = handle_->RequireErrorProbability(error_type, error_num, probability, fail_over); }
 #     endif
       return prob;
     }
@@ -845,9 +843,7 @@ class CDHandle {
     void RegisterMemoryErrorInjector(MemoryErrorInjector *memory_error_injector)
     {
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { handle_->RegisterMemoryErrorInjector(memory_error_injector); }
-#     elif CD_RUNTIME_ENABLED
-        handle_->RegisterMemoryErrorInjector(memory_error_injector); 
+      if(IsActive()) { handle_->RegisterMemoryErrorInjector(memory_error_injector); }
 #     endif
     }
 
@@ -870,9 +866,7 @@ class CDHandle {
     void RegisterErrorInjector(CDErrorInjector *cd_error_injector) 
     { 
 #     if CD_TUNING_ENABLED
-        if(IsActive()) { handle_->RegisterErrorInjector(cd_error_injector); }
-#     elif CD_RUNTIME_ENABLED
-        handle_->RegisterErrorInjector(cd_error_injector); 
+      if(IsActive()) { handle_->RegisterErrorInjector(cd_error_injector); }
 #     endif
     }
 
@@ -1003,30 +997,6 @@ public:
     return uniquePath_;
   }
 
- /** @brief Get CDHandle of current (leaf) CD level. 
-  *
-  * \return Pointer to the CDHandle at the leaf CD level.
-  */
-  static CDHandle *GetCurrentCD(void) 
-  {
-    //printf("GetCurrentCD is called\n");
-    if(uniquePath_ != NULL) {
-      //printf("path is not null\n");
-      if( !uniquePath_->empty() ) {
-        //printf("path is not empty\n");
-        if( uniquePath_->back()->handle_->GetExecMode() == cd::kExecution || cd::kReexecution ) {
-          
-          //printf("Active CD is %d\n", uniquePath_->back()->level() );
-          return uniquePath_->back();
-        }
-        else {
-          //printf("parent called is %d\n", uniquePath_->back()->level() );
-          return GetParentCD(uniquePath_->back()->handle_->level());
-        }
-      }
-    }
-    return NULL;
-  }
   
  /** @brief Get CDHandle of leaf CD level. 
   *
@@ -1109,6 +1079,27 @@ public:
 //          uint32_t s = uniquePath_->size();
           //CD_DEBUG("level %u >= %u #cdobj\n", level, s);
         }
+      }
+    }
+    return NULL;
+  }
+
+/** @brief Get CDHandle of current (leaf) CD level. 
+  *
+  * \return Pointer to the CDHandle at the leaf CD level.
+  */
+  static CDHandle *GetCurrentCD(void) 
+  {
+    //printf("GetCurrentCD is called\n");
+    if(uniquePath_ != NULL) {
+      //printf("path is not null\n");
+      if( !uniquePath_->empty() ) {
+        //printf("path is not empty\n");
+#if CD_TUNING_ENABLED        
+        return GetCDLevel(phaseTree.current_->level_);
+#else
+        return GetCDLevel(cd::phaseTree.current_->level_);
+#endif
       }
     }
     return NULL;

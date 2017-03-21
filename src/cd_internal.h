@@ -582,6 +582,7 @@ public:
   
     CDErrT InternalReexecute(void);
 
+    void FreeCommResource(void);
     // copy should happen for the part that is needed.. 
     // so serializing entire CDEntry class does not make sense. 
 

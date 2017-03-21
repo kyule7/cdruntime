@@ -603,6 +603,7 @@ CDErrT CD::Destroy(bool collective, bool need_destroy)
   CDErrT err=CDErrT::kOK;
   InternalDestroy(collective, need_destroy);
 
+  FreeCommResource();
 
   return err;
 }
@@ -766,7 +767,8 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 #endif 
   }
   else {
-
+    entry_directory_.Clear(false);
+    if(recoverObj_ != NULL) { delete recoverObj_; recoverObj_ = NULL; }
 #if _MPI_VER
     if(task_size() > 1 && (is_window_reused_==false)) {  
 //      PMPI_Win_free(&pendingWindow_);
@@ -2149,7 +2151,7 @@ CD::InternalPreserve(void *data,
     uint64_t size = len_in_bytes;
     if(CHECK_PRV_TYPE(preserve_mask, kSerdes)){ 
       attr |= Attr::knested;// | Attr::ktable);
-      size = serializer->GetTableSize();
+      size = serializer->GetTotalSize();
     }
 
     pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, size, ref_offset, (char *)ref_id));
@@ -2315,6 +2317,7 @@ CD::CDInternalErrT CD::RegisterRecovery(uint32_t error_name_mask,
                                     uint32_t error_loc_mask, 
                                     RecoverObject *recover_object)
 {
+  if(recoverObj_ != NULL) delete recoverObj_;
   recoverObj_ = recover_object;
   return CDInternalErrT::kOK;
 }
@@ -2637,6 +2640,7 @@ CDErrT HeadCD::Destroy(bool collective, bool need_destroy)
   CDErrT err=CDErrT::kOK;
 
   InternalDestroy(collective, need_destroy);
+  FreeCommResource();
 
   return err;
 }

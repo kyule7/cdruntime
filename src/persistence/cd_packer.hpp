@@ -12,6 +12,7 @@ class CDPacker : public Packer<CDEntry> {
       : Packer<CDEntry>(table, data) {}
     CDPacker(bool alloc, TableStore<CDEntry> *table, DataStore *data=NULL) 
       : Packer<CDEntry>(alloc, table, data) {}
+    virtual ~CDPacker() {}
     char *Restore(uint64_t tag, char *dst=NULL) 
     {
       void *ret = dst;

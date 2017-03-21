@@ -723,22 +723,22 @@ void RuntimeLogger::Init(void)
 //}
 
 //static 
-void *malloc(size_t size)
-{
-//  if(RuntimeLogger::active)
-    return RuntimeLogger::malloc(size);
-//  else
-//    return __malloc_hook(size);
-}
-
-void *valloc(size_t size)
-{
-//  if(RuntimeLogger::active)
-    return RuntimeLogger::valloc(size);
-//  else
-//    return __valloc_hook(size);
-}
-
+//void *malloc(size_t size)
+//{
+////  if(RuntimeLogger::active)
+//    return RuntimeLogger::malloc(size);
+////  else
+////    return __malloc_hook(size);
+//}
+//
+//void *valloc(size_t size)
+//{
+////  if(RuntimeLogger::active)
+//    return RuntimeLogger::valloc(size);
+////  else
+////    return __valloc_hook(size);
+//}
+//
 void *mycalloc(size_t num, size_t size) 
 {
   printf("%s\n", __func__); //getchar();
@@ -747,29 +747,29 @@ void *mycalloc(size_t num, size_t size)
   memset(ret, 0, num*size);
   return ret;
 }
-
-void *calloc(size_t num, size_t size)
-{
-  static bool calloc_called = false;
-  if(calloc_called == false) {
-    void *ret = mycalloc(num, size);
-    calloc_called = true;
-    return ret;
-  } else {
-//  if(RuntimeLogger::active)
-    return RuntimeLogger::calloc(num, size);
-//  else
-//    return __calloc_hook(num, size);
-  }
-}
-
-void free(void *p)
-{
-//  if(RuntimeLogger::active)
-    return RuntimeLogger::free(p);
-//  else
-//    return __free_hook(p);
-}
+//
+//void *calloc(size_t num, size_t size)
+//{
+//  static bool calloc_called = false;
+//  if(calloc_called == false) {
+//    void *ret = mycalloc(num, size);
+//    calloc_called = true;
+//    return ret;
+//  } else {
+////  if(RuntimeLogger::active)
+//    return RuntimeLogger::calloc(num, size);
+////  else
+////    return __calloc_hook(num, size);
+//  }
+//}
+//
+//void free(void *p)
+//{
+////  if(RuntimeLogger::active)
+//    return RuntimeLogger::free(p);
+////  else
+////    return __free_hook(p);
+//}
 
 void* RuntimeLogger::malloc(size_t size)
 {

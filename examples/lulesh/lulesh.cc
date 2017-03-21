@@ -175,6 +175,7 @@ Additional BSD Notice
 using namespace tuned;
 //class DomainSerdes;
 int counter=0;
+Domain::DomainSerdes::SerdesInfo *Domain::DomainSerdes::serdesRegElem = NULL;
 Domain::DomainSerdes::SerdesInfo Domain::DomainSerdes::serdes_table[TOTAL_ELEMENT_COUNT];
 bool Domain::DomainSerdes::serdes_table_init = false; 
 std::map<std::string,int> func_cnt;
@@ -4393,7 +4394,7 @@ int main(int argc, char *argv[])
 
 #if _CD 
       double single_it = MPI_Wtime() - begin_tik;
-      uint64_t domsize = locDom->serdes.SetOp(M__SERDES_ALL).GetTableSize();
+      uint64_t domsize = locDom->serdes.SetOp(M__SERDES_ALL).GetTotalSize();
       loop_time += single_it;
       printf("single_it:%lf, %lu + %lu\n", single_it, domsize, sizeof(Domain));
 #else

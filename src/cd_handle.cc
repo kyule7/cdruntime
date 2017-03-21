@@ -857,8 +857,7 @@ CDHandle::~CDHandle()
 #endif
 
 #if CD_PROFILER_ENABLED
-  if(profiler_ != NULL)
-    delete profiler_;
+  delete profiler_;
 #endif
 
 }

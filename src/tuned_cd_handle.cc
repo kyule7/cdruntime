@@ -16,18 +16,20 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   } else {
     cd::config.LoadConfig(CD_DEFAULT_CONFIG);
   }
-#endif
   cd::CDHandle *root_handle = cd::CD_Init(numTask, myTask, prv_medium);
+#else 
+  cd::CDHandle *root_handle = NULL;
+#endif
   CDHandle *tuned_root_handle = new CDHandle(root_handle, 0, DEFAULT_ROOT_LABEL);
-
-  //tuned_root_handle->UpdateParam(0, 0);
   CDPath::GetCDPath()->push_back(tuned_root_handle);
   return tuned_root_handle;
 }
 
 void CD_Finalize(void)
 {
+#if CD_TUNING_ENABLED
   cd::CD_Finalize();
+#endif
   assert(CDPath::GetCDPath()->size() == 1);
   delete CDPath::GetCDPath()->back(); // delete root
   CDPath::GetCDPath()->pop_back();
@@ -50,15 +52,17 @@ CDHandle *GetParentCD(void)
 CDHandle *GetParentCD(int current_level)
 { return tuned::CDPath::GetParentCD(current_level); }
 
-}
 
-void tuned::AddHandle(CDHandle *handle)
+void AddHandle(CDHandle *handle)
 {
   CDPath::GetCDPath()->push_back(handle);
 }
 
-void tuned::DeleteHandle() 
+void DeleteHandle(void) 
 {
   delete CDPath::GetCDPath()->back();
   CDPath::GetCDPath()->pop_back();
 }
+
+
+} // namespace tuned ends
