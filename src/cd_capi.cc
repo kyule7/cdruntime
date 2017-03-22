@@ -87,9 +87,13 @@ void cd_destroy(cd_handle_t *c_handle)
 }
 
 #if CD_TUNING_ENABLED
-void cd_begin(cd_handle_t *c_handle, const char *label, int collective, uint64_t sys_err_vec)
+//void cd_begin(cd_handle_t *c_handle, const char *label, int collective, uint64_t sys_err_vec)
+//{
+//  TO_CDHandle(c_handle)->Begin(label, (bool)collective, sys_err_vec);
+//}
+void internal_begin(cd_handle_t *c_handle, const char *label, int collective, uint64_t sys_err_vec)
 {
-  TO_CDHandle(c_handle)->Begin(label, (bool)collective, sys_err_vec);
+  TO_CDHandle(c_handle)->Begin(label, collective, sys_err_vec);
 }
 #else
 void internal_begin(cd_handle_t *c_handle, const char *label, int collective, uint64_t sys_err_vec)

@@ -15,28 +15,24 @@ struct regenobject;
 
 #if CD_TUNING_ENABLED
 
+# define cd_begin(...) FOUR_ARGS_MACRO(__VA_ARGS__, cd_begin3, cd_begin2, cd_begin1, cd_begin0)(__VA_ARGS__)
   
-void cd_begin(cd_handle_t *c_handle, const char *label, int collective, uint64_t sys_err_vec);
+//void internal_begin(cd_handle_t *c_handle, const char *label, int collective, uint64_t sys_err_vec);
 
 # define cd_begin0(X) \
     internal_begin((X), NO_LABEL, 0, 0);
 
 # define cd_begin1(X,Y) \
-    if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
-    else getcontext(ctxt((X))); \
-    commit_preserve_buff((X)); internal_begin((X),(Y), 0, 0);
+    internal_begin((X),(Y), 0, 0);
 
 # define cd_begin2(X,Y,Z) \
-    if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
-    else getcontext(ctxt((X))); \
-    commit_preserve_buff((X)); internal_begin((X),(Y),(Z), 0);
+    internal_begin((X),(Y),(Z), 0);
 
 # define cd_begin3(X,Y,Z,W) \
-    if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
-    else getcontext(ctxt((X))); \
-    commit_preserve_buff((X)); internal_begin((X),(Y),(Z),(W));
+    internal_begin((X),(Y),(Z),(W));
 
 #else
+
 # define cd_begin(...) FOUR_ARGS_MACRO(__VA_ARGS__, cd_begin3, cd_begin2, cd_begin1, cd_begin0)(__VA_ARGS__)
 // Macros for setjump / getcontext
 // So users should call this in their application, not call cd_handle->Begin().
