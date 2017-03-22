@@ -412,11 +412,11 @@ update the preserved data.
 
     virtual CDErrT Destroy(bool collective=true, bool need_destroy=false);
 
-    CDErrT Begin(bool collective=true, 
-                 const char *label=NO_LABEL);
+    CDErrT Begin(const char *label=NO_LABEL,
+                 bool collective=true);
 
-    CDErrT Complete(bool collective=true, 
-                    bool update_preservations=true);
+    CDErrT Complete(bool update_preservations=false,
+                    bool collective=false);
 
     CDErrT Advance(bool collective=true);
 

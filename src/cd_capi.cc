@@ -33,11 +33,18 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "cd_handle.h"
 #include "cd_global.h"
+#include "cd_features.h"
 #include "cd_capi.h"
-using namespace cd;
-using namespace cd::internal;
+#if CD_TUNING_ENABLED
+  #include"tuned_cd_handle.h"
+  using namespace tuned;
+#else 
+  #include "cd_handle.h"
+  using namespace cd;
+#endif
+
+//using namespace cd::internal;
 #define TO_CDHandle(a) (reinterpret_cast<CDHandle*>(a))
 #define TO_cdhandle(a) (reinterpret_cast<cd_handle_t*>(a))
 #define TO_RegenObject(a) (reinterpret_cast<RegenObject*>(a))
@@ -79,10 +86,17 @@ void cd_destroy(cd_handle_t *c_handle)
   TO_CDHandle(c_handle)->Destroy();
 }
 
-//void cd_begin(cd_handle_t *c_handle, int collective, const char *label)
-//{
-//  CD_Begin(TO_CDHandle(c_handle), (bool)collective, label);
-//}
+#if CD_TUNING_ENABLED
+void cd_begin(cd_handle_t *c_handle, const char *label, int collective, uint64_t sys_err_vec)
+{
+  TO_CDHandle(c_handle)->Begin(label, (bool)collective, sys_err_vec);
+}
+#else
+void internal_begin(cd_handle_t *c_handle, const char *label, int collective, uint64_t sys_err_vec)
+{
+  TO_CDHandle(c_handle)->InternalBegin(label, collective, sys_err_vec);
+}
+#endif
 
 int ctxt_prv_mode(cd_handle_t *c_handle)
 {
@@ -103,12 +117,6 @@ void commit_preserve_buff(cd_handle_t *c_handle)
 {
   TO_CDHandle(c_handle)->CommitPreserveBuff();
 }
-
-void internal_begin(cd_handle_t *c_handle, int collective, const char *label)
-{
-  TO_CDHandle(c_handle)->InternalBegin(collective, label);
-}
-
 
 void cd_complete(cd_handle_t *c_handle)
 {
@@ -133,7 +141,7 @@ int cd_preserve_serdes(cd_handle_t *c_handle,
                    const char *my_name, 
                    const char *ref_name)
 {
-  return (int)(TO_CDHandle(c_handle)->Preserve(*(reinterpret_cast<Serializable *>(data_ptr)), preserve_mask, my_name, ref_name));
+  return (int)(TO_CDHandle(c_handle)->Preserve(*(reinterpret_cast<cd::Serializable *>(data_ptr)), preserve_mask, my_name, ref_name));
 }
 
 cd_handle_t *getcurrentcd(void)

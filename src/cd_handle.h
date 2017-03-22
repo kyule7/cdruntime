@@ -430,10 +430,10 @@ class CDHandle {
        * @return Returns kOK when successful and kError otherwise.
        * @sa Complete()
        */
-       CDErrT Begin(bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
+       CDErrT Begin(const char *label=NO_LABEL,
+                    bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                          //!< contained by this CD or whether its to be run by a single task 
                                          //!< only with the programmer responsible for synchronization. 
-                    const char *label=NO_LABEL,
                     const uint64_t &sys_err_vec=0
                    )
        {
@@ -444,7 +444,7 @@ class CDHandle {
            getcontext(ctxt());
        
          CommitPreserveBuff();
-         common::CDErrT ret = InternalBegin(collective, label, sys_err_vec);
+         common::CDErrT ret = InternalBegin(label, collective, sys_err_vec);
          printf("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
          return ret;
        }
@@ -471,7 +471,16 @@ class CDHandle {
        * @return Returns kOK when successful and kError otherwise.
        * @sa Begin()
        */
-       CDErrT Complete(bool collective=true, //!< [in] Specifies whether
+       CDErrT Complete(bool update_prv=false, //!< [in] Flag that
+                                              //!< indicates whether preservation should be
+                                              //!< updated on Complete rather than discarding all 
+                                              //!< preserved state. If `true` then Complete
+                                              //!< followed by Begin can be much more efficient
+                                              //!< if the majority of preserved data overlaps
+                                              //!< between these two consecutive uses of the CD
+                                              //!< object (this enables the Cray CD
+                                              //!< AdvancePointInTime functionality).
+                      bool collective=false //!< [in] Specifies whether
                                             //!< this call is a collective
                                             //!< across all tasks contained
                                             //!< by this CD or whether its to
@@ -479,15 +488,6 @@ class CDHandle {
                                             //!< with the programmer
                                             //!< responsible for
                                             //!< synchronization
-                       bool update_preservations=false //!< [in] Flag that
-                                                   //!< indicates whether preservation should be
-                                                   //!< updated on Complete rather than discarding all 
-                                                   //!< preserved state. If `true` then Complete
-                                                   //!< followed by Begin can be much more efficient
-                                                   //!< if the majority of preserved data overlaps
-                                                   //!< between these two consecutive uses of the CD
-                                                   //!< object (this enables the Cray CD
-                                                   //!< AdvancePointInTime functionality).
                         );
     
       /** @brief Advances a CD 
@@ -759,10 +759,10 @@ class CDHandle {
 
 
   public:
-   CDErrT InternalBegin(bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
+   CDErrT InternalBegin(const char *label=NO_LABEL,
+                        bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                              //!< contained by this CD or whether its to be run by a single task 
                                              //!< only with the programmer responsible for synchronization. 
-                        const char *label=NO_LABEL,
                         const uint64_t &sys_err_vec=0
                        );
 

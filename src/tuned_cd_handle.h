@@ -274,10 +274,10 @@ class CDHandle {
     * @sa Complete()
     */
     FUNC_ATTR
-    CDErrT Begin(bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
+    CDErrT Begin(const char *label=NO_LABEL,
+                 bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                       //!< contained by this CD or whether its to be run by a single task 
                                       //!< only with the programmer responsible for synchronization. 
-                 const char *label=NO_LABEL,
                  const uint64_t &sys_err_vec=0
                 )
     {
@@ -319,7 +319,7 @@ class CDHandle {
           else 
             cd::new_phase = cd::phaseTree.Init(level_, label_);
   
-          ret = handle_->Begin(collective, label, sys_err_vec);
+          ret = handle_->Begin(label, collective, sys_err_vec);
         } 
       } else if(interval == 0) { // 
         phase_ = tuned::phaseTree.current_->GetLeftMostNode()->phase_;
@@ -349,15 +349,7 @@ class CDHandle {
     */
     FUNC_ATTR
     CDErrT Complete(bool terminate=false,
-                    bool collective=true, //!< [in] Specifies whether
-                                          //!< this call is a collective
-                                          //!< across all tasks contained
-                                          //!< by this CD or whether its to
-                                          //!< be run by a single task only
-                                          //!< with the programmer
-                                          //!< responsible for
-                                          //!< synchronization
-                    bool update_prv=false //!< [in] Flag that
+                    bool update_prv=false,//!< [in] Flag that
                                           //!< indicates whether preservation should be
                                           //!< updated on Complete rather than discarding all 
                                           //!< preserved state. If `true` then Complete
@@ -366,6 +358,14 @@ class CDHandle {
                                           //!< between these two consecutive uses of the CD
                                           //!< object (this enables the Cray CD
                                           //!< AdvancePointInTime functionality).
+                    bool collective=true  //!< [in] Specifies whether
+                                          //!< this call is a collective
+                                          //!< across all tasks contained
+                                          //!< by this CD or whether its to
+                                          //!< be run by a single task only
+                                          //!< with the programmer
+                                          //!< responsible for
+                                          //!< synchronization
                    )
     { 
       CDErrT ret = common::kOK;
@@ -383,7 +383,7 @@ class CDHandle {
       if(tuned::phaseTree.current_ == last_merged_node) {
         if(terminate || (count % interval == interval - 1)) {
           count++; 
-          ret = handle_->Complete(collective, update_prv);
+          ret = handle_->Complete(update_prv, collective);
         }
       }
 
@@ -934,10 +934,21 @@ class CDHandle {
     inline bool IsActive() {
       return active_;
     }
+    FUNC_ATTR 
     std::string GetName() { return (std::string("CD_") + std::to_string(level_) 
                                   + std::string("_")   + std::to_string(phase_)); }
+    FUNC_ATTR 
     std::string  &label(void) { return label_; }
+    FUNC_ATTR 
     std::string  &name(void) { return name_; }
+    FUNC_ATTR 
+    int      ctxt_prv_mode(void)  const { return handle_->ctxt_prv_mode(); }
+    FUNC_ATTR 
+    jmp_buf *jmp_buffer(void)     const { return handle_->jmp_buffer(); }
+    FUNC_ATTR 
+    ucontext_t *ctxt(void)        const { return handle_->ctxt(); }
+    FUNC_ATTR 
+    void CommitPreserveBuff(void) const { return handle_->CommitPreserveBuff(); }
 //    inline bool NeedCreateLevel(string label) 
 //    {
 //      const uint32_t next_level = level_ + 1;

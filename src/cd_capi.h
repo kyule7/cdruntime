@@ -8,35 +8,60 @@ extern "C" {
 #include <ucontext.h>
 #include <setjmp.h>
 #include <cd_def_common.h>
-#define cd_begin(...) FOUR_ARGS_MACRO(__VA_ARGS__, cd_begin3, cd_begin2, cd_begin1, cd_begin0)(__VA_ARGS__)
-
-// Macros for setjump / getcontext
-// So users should call this in their application, not call cd_handle->Begin().
-#define cd_begin0(X) \
-  cd_handle_t h\
-  if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
-  else getcontext(ctxt((X))); \
-  commit_preserve_buff((X)); \
-  internal_begin((X));
-
-#define cd_begin1(X,Y) \
-  if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
-  else getcontext(ctxt((X))); \
-  commit_preserve_buff((X)); internal_begin((X),(Y));
-
-#define cd_begin2(X,Y,Z) \
-  if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
-  else getcontext(ctxt((X))); \
-  commit_preserve_buff((X)); internal_begin((X),(Y),(Z));
-
-#define cd_begin3(X,Y,Z,W) \
-  if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
-  else getcontext(ctxt((X))); \
-  commit_preserve_buff((X)); internal_begin((X),(Y),(Z),(W));
 
 struct cd_handle;
 typedef struct cd_handle cd_handle_t;
 struct regenobject;
+
+#if CD_TUNING_ENABLED
+
+  
+void cd_begin(cd_handle_t *c_handle, const char *label, int collective, uint64_t sys_err_vec);
+
+# define cd_begin0(X) \
+    internal_begin((X), NO_LABEL, 0, 0);
+
+# define cd_begin1(X,Y) \
+    if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
+    else getcontext(ctxt((X))); \
+    commit_preserve_buff((X)); internal_begin((X),(Y), 0, 0);
+
+# define cd_begin2(X,Y,Z) \
+    if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
+    else getcontext(ctxt((X))); \
+    commit_preserve_buff((X)); internal_begin((X),(Y),(Z), 0);
+
+# define cd_begin3(X,Y,Z,W) \
+    if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
+    else getcontext(ctxt((X))); \
+    commit_preserve_buff((X)); internal_begin((X),(Y),(Z),(W));
+
+#else
+# define cd_begin(...) FOUR_ARGS_MACRO(__VA_ARGS__, cd_begin3, cd_begin2, cd_begin1, cd_begin0)(__VA_ARGS__)
+// Macros for setjump / getcontext
+// So users should call this in their application, not call cd_handle->Begin().
+# define cd_begin0(X) \
+    if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
+    else getcontext(ctxt((X))); \
+    commit_preserve_buff((X)); \
+    internal_begin((X), NO_LABEL, 0, 0);
+
+# define cd_begin1(X,Y) \
+    if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
+    else getcontext(ctxt((X))); \
+    commit_preserve_buff((X)); internal_begin((X),(Y), 0, 0);
+
+# define cd_begin2(X,Y,Z) \
+    if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
+    else getcontext(ctxt((X))); \
+    commit_preserve_buff((X)); internal_begin((X),(Y),(Z), 0);
+
+# define cd_begin3(X,Y,Z,W) \
+    if(ctxt_prv_mode((X)) == kExcludeStack) setjmp(*jmp_buffer((X))); \
+    else getcontext(ctxt((X))); \
+    commit_preserve_buff((X)); internal_begin((X),(Y),(Z),(W));
+
+#endif
 
 cd_handle_t *cd_init(int num_tasks, 
                      int my_task, 
@@ -64,7 +89,7 @@ int ctxt_prv_mode(cd_handle_t*);
 jmp_buf *jmp_buffer(cd_handle_t *);
 ucontext_t *ctxt(cd_handle_t *);
 void commit_preserve_buff(cd_handle_t *);
-void internal_begin(cd_handle_t *, int collective, const char *label);
+void internal_begin(cd_handle_t *, const char *label, int collective, uint64_t sys_err_vec);
 
 void cd_complete(cd_handle_t*);
 
@@ -85,6 +110,10 @@ int cd_preserve_serdes(cd_handle_t *c_handle,
 cd_handle_t *getcurrentcd(void);
 cd_handle_t *getleafcd(void);
 void cd_detect(cd_handle_t *);
+
+
+
+
 
 
 #ifdef __cplusplus

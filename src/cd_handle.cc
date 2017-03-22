@@ -1137,7 +1137,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 #if CD_PROFILER_ENABLED
   profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
-  new_cdh->Begin(false, name);
+  new_cdh->Begin(name, false);
 
   end_clk = CD_CLOCK();
   begin_elapsed_time += end_clk - begin_clk;
@@ -1232,7 +1232,7 @@ CDErrT CDHandle::InternalDestroy(bool collective, bool need_destroy)
 //  return InternalBegin(collective, label, sys_error_vec);
 //}
 
-CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_t &sys_error_vec)
+CDErrT CDHandle::InternalBegin(const char *label, bool collective, const uint64_t &sys_error_vec)
 {
   CDPrologue();
 
@@ -1242,7 +1242,7 @@ CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_
   if(sys_error_vec != 0) 
     ptr_cd_->sys_detect_bit_vector_ = sys_error_vec;
 
-  CDErrT err = ptr_cd_->Begin(collective, label);
+  CDErrT err = ptr_cd_->Begin(label, collective);
 
 #if CD_PROFILER_ENABLED
   // Profile-related
@@ -1259,7 +1259,7 @@ CDErrT CDHandle::InternalBegin(bool collective, const char *label, const uint64_
   return err;
 }
 
-CDErrT CDHandle::Complete(bool collective, bool update_preservations)
+CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 {
   CDPrologue();
   printf("[Real %s lv:%u phase:%d]\n", __func__, level(), phase()); STOPHANDLE;
@@ -1272,7 +1272,7 @@ CDErrT CDHandle::Complete(bool collective, bool update_preservations)
   assert(ptr_cd_ != 0);
 
   // Profile will be acquired inside CD::Complete()
-  CDErrT ret = ptr_cd_->Complete(collective);
+  CDErrT ret = ptr_cd_->Complete(update_preservations, collective);
 
 #if CD_PROFILER_ENABLED
   // Profile-related

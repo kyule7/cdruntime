@@ -829,7 +829,7 @@ static inline void CompletePhase(void)
 
 // Here we don't need to follow the exact CD API this is more like internal thing. 
 // CDHandle will follow the standard interface. 
-CDErrT CD::Begin(bool collective, const char *label)
+CDErrT CD::Begin(const char *label, bool collective)
 {
   //printf("[%s] not here? \n", __func__);
   label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label; 
@@ -1227,7 +1227,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
  *     Each error checking function should call its error handling function.(mostly restore() and reexec())  
  *
  */
-CDErrT CD::Complete(bool collective, bool update_preservations)
+CDErrT CD::Complete(bool update_preservations, bool collective)
 {
   begin_ = false;
   uint32_t orig_rollback_point = CheckRollbackPoint(false);
