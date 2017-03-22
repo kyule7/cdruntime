@@ -32,7 +32,7 @@ using namespace std;
 
 // CD
 #if _CD
-#define CD_BEGIN(X,Y,Z) X->Begin(Y,Z)
+#define CD_BEGIN(X,Y) X->Begin(Y)
 #define SERDES_ENABLED 1
 
 #define CDFLAG_SIZE 16
@@ -43,13 +43,13 @@ using namespace std;
   CDH = GetCurrentCD()->Create(SWITCH >> CDFLAG_SIZE, \
                                   (string(FUNC_NAME)+GetCurrentCD()->label()).c_str(), \
                                    SWITCH & CDFLAG_MASK, ERROR_FLAG_SHIFT(SWITCH)); \
-  CDH->Begin(true, FUNC_NAME); //\
+  CDH->Begin(FUNC_NAME, true); //\
   CDH->Preserve(domain.serdes.SetOp(SERDES_OPS), \
                 CD_TYPE | kSerdes, (string("AllMembers_")+string(FUNC_NAME)).c_str()); 
 
 #define CDMAPPING_BEGIN_SEQUENTIAL(SWITCH, CDH, FUNC_NAME, SERDES_OPS, CD_TYPE) \
   CD_Complete(CDH); \
-  CDH->Begin(true, FUNC_NAME); //\
+  CDH->Begin(FUNC_NAME, true); //\
   CDH->Preserve(domain.serdes.SetOp(SERDES_OPS), \
                 CD_TYPE | kSerdes, (string("AllMembers_")+string(FUNC_NAME)).c_str()); 
 
@@ -62,11 +62,11 @@ using namespace std;
   CDH = GetCurrentCD()->Create(SWITCH >> CDFLAG_SIZE, \
                                   (string(FUNC_NAME)+GetCurrentCD()->label()).c_str(), \
                                    SWITCH & CDFLAG_MASK, ERROR_FLAG_SHIFT(SWITCH)); \
-  CDH->Begin(true, FUNC_NAME); 
+  CDH->Begin(FUNC_NAME, true); 
 
 #define CDMAPPING_BEGIN_SEQUENTIAL_ONLY(SWITCH, CDH, FUNC_NAME) \
   CD_Complete(CDH); \
-  CDH->Begin(true, FUNC_NAME); 
+  CDH->Begin(FUNC_NAME, true);
 
 
 //Nested?

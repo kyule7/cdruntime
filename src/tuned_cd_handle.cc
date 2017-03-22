@@ -9,7 +9,7 @@ namespace tuned {
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   tuning_enabled = true;
-#if CD_TUNING_ENABLED
+#if CD_RUNTIME_ENABLED
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
     cd::config.LoadConfig(cd_config_file);
@@ -27,7 +27,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 
 void CD_Finalize(void)
 {
-#if CD_TUNING_ENABLED
+#if CD_RUNTIME_ENABLED
   cd::CD_Finalize();
 #endif
   assert(CDPath::GetCDPath()->size() == 1);
