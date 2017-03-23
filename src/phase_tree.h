@@ -149,14 +149,17 @@ struct PhaseTree {
     ~PhaseTree() {
       // If root_ == NULL,
       // phaseTree is not created.
-      if(root_ != NULL) {
-//        Print();
-        root_->PrintInputYAML();
-        root_->PrintOutputYAML();
-        PrintProfile();
-        printf("%s %p\n", __func__, root_);
-        root_->Delete();
-      } 
+      if(myTaskID == 0) {
+        if(root_ != NULL) {
+          if(myTaskID == 0) {
+  //        Print();
+          root_->PrintInputYAML();
+          root_->PrintOutputYAML();
+          PrintProfile();
+          printf("%s %p\n", __func__, root_);
+          root_->Delete();
+        }
+      }
     }
   
     uint32_t Init(uint64_t level,  const std::string &label)
