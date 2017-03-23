@@ -1,5 +1,5 @@
 #include "phase_tree.h"
-
+#include "cd_global.h"
 using namespace common;
 using namespace std;
 
@@ -136,3 +136,17 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 //  assert(tuned::phaseNodeCache.find(it->second) != tuned::phaseNodeCache.end());
 //  return tuned::phaseNodeCache[it->second];
 //}
+PhaseTree::~PhaseTree() {
+  // If root_ == NULL,
+  // phaseTree is not created.
+  if(cd::myTaskID == 0) {
+    if(root_ != NULL) {
+//        Print();
+      root_->PrintInputYAML();
+      root_->PrintOutputYAML();
+      PrintProfile();
+      printf("%s %p\n", __func__, root_);
+      root_->Delete();
+    }
+  }
+}

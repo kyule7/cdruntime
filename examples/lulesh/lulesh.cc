@@ -538,6 +538,27 @@ struct Singleton {
 #endif
     }
 #endif
+
+    if(myRank == 0) {
+      delete [] latency_history_global;
+      delete [] histogram_global;
+#ifdef _ANALYZE_PHASE
+      if(num_phase != -1) {
+        delete [] histogram_phase_global;
+      }
+#endif
+    }
+    if(myNodeRank == 0) {
+      // numZeroRanks = 4
+      // numRanks/numZeroRanks = 16
+      delete [] latency_history_semiglobal;
+      delete [] histogram_semiglobal;
+#ifdef _ANALYZE_PHASE
+      if(num_phase != -1) {
+        delete [] histogram_phase_semiglobal;
+      }
+#endif
+    }
   } // Finalize ends
 }; // class Singleton ends
 

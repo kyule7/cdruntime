@@ -146,21 +146,7 @@ struct PhaseTree {
     PhaseNode *current_;
   public:
     PhaseTree(void) : root_(NULL), current_(NULL) {}
-    ~PhaseTree() {
-      // If root_ == NULL,
-      // phaseTree is not created.
-      if(myTaskID == 0) {
-        if(root_ != NULL) {
-          if(myTaskID == 0) {
-  //        Print();
-          root_->PrintInputYAML();
-          root_->PrintOutputYAML();
-          PrintProfile();
-          printf("%s %p\n", __func__, root_);
-          root_->Delete();
-        }
-      }
-    }
+    ~PhaseTree();
   
     uint32_t Init(uint64_t level,  const std::string &label)
     { 
