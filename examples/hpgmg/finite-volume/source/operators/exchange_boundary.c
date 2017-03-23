@@ -15,7 +15,7 @@
 //#endif
 void exchange_boundary(level_type * level, int id, int shape){
   //#if CD
-  //cdhandle_t * eb_cd = cd_create(1, "eb_cd", kStrict | kDRAM);
+  //cdhandle_t * eb_cd = cd_create(getcurrentcd(), 1, "eb_cd", kStrict | kDRAM);
   //cd_begin(eb_cd);
   ////SZ:FIXME: how many elements are in level?? this just preserves the first element!!!!
   //cd_preserve(eb_cd, level, sizeof(level_type), kCopy, "eb_level", NULL);

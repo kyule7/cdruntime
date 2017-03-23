@@ -70,7 +70,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // For MPI, there is a communicator number so it is the group ID,
 // For PGAS, there should be a group ID, or we should generate it. 
 
-#define NO_LABEL ""
+//#define NO_LABEL ""
 
 #if CD_MPI_ENABLED 
 #include <mpi.h>

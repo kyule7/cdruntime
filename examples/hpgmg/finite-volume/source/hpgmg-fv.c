@@ -53,16 +53,16 @@
 //------------------------------------------------------------------------------------------------------------------------------
 void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dtol, double rtol){
   #if CD
-  cdhandle_t * bench_cd = getleafcd();
-  cd_begin(bench_cd);
-  cd_preserve(bench_cd, all_grids, sizeof(mg_type), kCopy, "bench_all_grids", NULL);
+  cd_handle_t * cd_bench = getleafcd();
+  cd_begin(cd_bench, "bench");
+  cd_preserve(cd_bench, all_grids, sizeof(mg_type), kCopy, "bench_all_grids", NULL);
 
   //SZ: FIXME: should verify following preservations can use kRef
-  cd_preserve(bench_cd, &a, sizeof(a), kRef, "a", "a");
-  cd_preserve(bench_cd, &b, sizeof(b), kRef, "b", "a");
-  cd_preserve(bench_cd, &dtol, sizeof(dtol), kRef, "dtol", "dtol");
-  cd_preserve(bench_cd, &rtol, sizeof(rtol), kRef, "rtol", "rtol");
-  cd_preserve(bench_cd, &onLevel, sizeof(onLevel), kCopy, "onLevel", NULL);
+  cd_preserve(cd_bench, &a, sizeof(a), kRef, "a", "a");
+  cd_preserve(cd_bench, &b, sizeof(b), kRef, "b", "a");
+  cd_preserve(cd_bench, &dtol, sizeof(dtol), kRef, "dtol", "dtol");
+  cd_preserve(cd_bench, &rtol, sizeof(rtol), kRef, "rtol", "rtol");
+  cd_preserve(cd_bench, &onLevel, sizeof(onLevel), kCopy, "onLevel", NULL);
   #endif
      int     doTiming;
      int    minSolves = 10; // do at least minSolves MGSolves
@@ -90,7 +90,16 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
 
     int numSolves =  0; // solves completed
     MGResetTimers(all_grids);
+  #if CD
+    int num_tasks;
+    MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
+    cd_handle_t * cd_mgsolve = cd_create(cd_bench, num_tasks, "cd_mgsolve", kRelaxed | kDRAM, 0x0000FFFF);
+  #endif
     while( (numSolves<minSolves) ){
+      #if CD
+      cd_begin(cd_mgsolve, "cd_mgsolve");
+      #endif
+
       zero_vector(all_grids->levels[onLevel],VECTOR_U);
       #ifdef USE_FCYCLES
       FMGSolve(all_grids,onLevel,VECTOR_U,VECTOR_F,a,b,dtol,rtol);
@@ -98,7 +107,14 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
        MGSolve(all_grids,onLevel,VECTOR_U,VECTOR_F,a,b,dtol,rtol);
       #endif
       numSolves++;
+
+      #if CD
+      cd_complete(cd_mgsolve);
+      #endif
     }
+  #if CD
+    cd_destroy(cd_mgsolve);
+  #endif
 
     #ifdef USE_MPI
     if(doTiming==0){
@@ -113,7 +129,7 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
     #endif
   }
   #if CD
-  cd_complete(bench_cd);
+  cd_complete(cd_bench);
   #endif
 }
 
@@ -264,8 +280,8 @@ int main(int argc, char **argv){
 
 
 #if CD
-  cdhandle_t* root_cd = cd_init(num_tasks, my_rank, kHDD);
-  cd_begin(root_cd);
+  cd_handle_t* root_cd = cd_init(num_tasks, my_rank, kHDD);
+  cd_begin(root_cd, "root");
 #endif
 
 
@@ -345,16 +361,16 @@ int main(int argc, char **argv){
   int l;
   #ifndef TEST_ERROR
   #if CD
-  cdhandle_t * cd_l1 = cd_create(1, "cd_l1", kStrict | kHDD);
-  cd_begin(cd_l1);
+  cd_handle_t * cd_l1 = cd_create(getcurrentcd(), 1, "cd_l1", kStrict | kHDD, 0xFFFFFFFF);
+  cd_begin(cd_l1, "cd_l1");
   cd_preserve(cd_l1, &dtol, sizeof(dtol), kCopy, "dtol", NULL);
   cd_preserve(cd_l1, &rtol, sizeof(rtol), kCopy, "rtol", NULL);
   cd_preserve(cd_l1, &a, sizeof(a), kCopy, "a", NULL);
   cd_preserve(cd_l1, &b, sizeof(b), kCopy, "b", NULL);
 
   // SZ: FIXME: a relaxed CD here, but should explore communication pattern to change to strict...
-  //cdhandle_t *cd_l2 = cd_create(num_tasks, "cd_l2", kRelaxed | kDRAM);
-  cdhandle_t *cd_l2 = cd_create(1, "cd_l2", kStrict | kDRAM);
+  //cd_handle_t *cd_l2 = cd_create(cd_l1, num_tasks, "cd_l2", kRelaxed | kDRAM, 0x0000FFFF);
+  cd_handle_t *cd_l2 = cd_create(cd_l1, 1, "cd_l2", kStrict | kDRAM, 0x0000FFFF);
   #endif
 
   double AverageSolveTime[3];
