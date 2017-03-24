@@ -45,6 +45,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 
 // DEBUG related
+#if CD_DEBUG_DEST == CD_DEBUG_SILENT  // No printouts 
+#   define TUNE_DEBUG(...) 
+#else
+#   define TUNE_DEBUG(...) printf(__VA_ARGS__)
+#endif
+
 #define ERROR_MESSAGE(...) \
   { fprintf(stderr, __VA_ARGS__); fflush(stderr); assert(0); }
 
