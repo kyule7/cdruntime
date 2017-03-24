@@ -938,6 +938,11 @@ CDErrT CD::Begin(const char *label, bool collective)
 //    SyncCDs(this);
   }
 
+  if(cd_exec_mode_ == kSuspension) {
+    cd_exec_mode_ = kExecution;
+//FIXME 0324 Kyushick    
+//    SyncCDs(this);
+  }
   uint32_t new_rollback_point = SyncCDs(this, true);
   SetRollbackPoint(new_rollback_point, false);
 
@@ -1930,7 +1935,7 @@ CDErrT CD::Preserve(void *data,
   CDErrT ret = CDErrT::kOK;
   uint64_t tag = cd_hash(my_name);
   CD_DEBUG("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
-           data, len_in_bytes, my_name.c_str(), ref_name, cd_exec_mode_); 
+           data, len_in_bytes, my_name.c_str(), ref_name.c_str(), cd_exec_mode_); 
 //  printf("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
 //           data, len_in_bytes, my_name, ref_name, cd_exec_mode_); 
 

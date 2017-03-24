@@ -62,7 +62,7 @@ bool CD::head_in_levels = false;
 
 void CD::FreeCommResource(void)
 {
-  PMPI_Comm_free(&cd_id_.node_id_.color_);
+  //PMPI_Comm_free(&cd_id_.node_id_.color_);
 }
 NodeID CDHandle::GenNewNodeID(const ColorT &my_color, 
                               const int &new_color, 
