@@ -246,7 +246,8 @@ CD::CD(CDHandle *cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
- :  cd_id_(cd_id)//,
+ :  cd_id_(cd_id), entry_directory_(1, NULL, NULL)
+    //,
 //    file_handle_(prv_medium, 
 //                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
 //                 cd_id.GetStringID() )
@@ -1916,8 +1917,10 @@ PrvMediumT CD::GetPlaceToPreserve()
 CDErrT CD::Preserve(void *data, 
                     uint64_t &len_in_bytes, 
                     uint32_t preserve_mask, 
-                    const char *my_name, 
-                    const char *ref_name, 
+                    std::string my_name,          // data name      
+                    std::string ref_name,         // reference name
+//                    const char *my_name, 
+//                    const char *ref_name, 
                     uint64_t ref_offset, 
                     const RegenObject *regen_object, 
                     PreserveUseT data_usage)
@@ -1925,9 +1928,9 @@ CDErrT CD::Preserve(void *data,
 //  printf("[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d], # reexec:%d\n", 
 //           data, len_in_bytes, my_name, ref_name, cd_exec_mode_, num_reexecution_); 
   CDErrT ret = CDErrT::kOK;
-  uint64_t tag = cd_hash(std::string(my_name));
+  uint64_t tag = cd_hash(my_name);
   CD_DEBUG("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
-           data, len_in_bytes, my_name, ref_name, cd_exec_mode_); 
+           data, len_in_bytes, my_name.c_str(), ref_name, cd_exec_mode_); 
 //  printf("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
 //           data, len_in_bytes, my_name, ref_name, cd_exec_mode_); 
 
@@ -1937,7 +1940,7 @@ CDErrT CD::Preserve(void *data,
            CHECK_PRV_TYPE(preserve_mask, kRef),
            CHECK_PRV_TYPE(preserve_mask, kRegen),
            CHECK_PRV_TYPE(preserve_mask, kCoop));
-
+  printf("%s %s\n", my_name.c_str(), ref_name.c_str());
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
 //    cddbg<<"my_name "<< my_name<<endl;
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
@@ -2074,8 +2077,10 @@ CDErrT CD::Preserve(CDEvent &cd_event,
                     void *data_ptr, 
                     uint64_t &len, 
                     uint32_t preserve_mask, 
-                    const char *my_name, 
-                    const char *ref_name, 
+                    std::string my_name,          // data name      
+                    std::string ref_name,         // reference name
+//                    const char *my_name, 
+//                    const char *ref_name, 
                     uint64_t ref_offset, 
                     const RegenObject *regen_object, 
                     PreserveUseT data_usage)
@@ -2088,8 +2093,8 @@ CD::CDInternalErrT
 CD::InternalPreserve(void *data, 
                      uint64_t &len_in_bytes, 
                      uint32_t preserve_mask, 
-                     std::string my_name, 
-                     std::string ref_name, 
+                     const std::string &my_name, 
+                     const std::string &ref_name, 
                      uint64_t ref_offset, 
                      const RegenObject *regen_object, 
                      PreserveUseT data_usage)

@@ -172,7 +172,8 @@ Additional BSD Notice
 #endif
 
 #if _CD
-using namespace tuned;
+using namespace cd;
+//using namespace tuned;
 //class DomainSerdes;
 int counter=0;
 Domain::DomainSerdes::SerdesInfo *Domain::DomainSerdes::serdesRegElem = NULL;

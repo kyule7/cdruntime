@@ -681,11 +681,11 @@ void *realloc(void* ptr, size_t size)
 //  return p;
 //}
 #else
-static void __attribute__((constructor)) init(void)
-{
-  printf("called?");
-  RuntimeLogger::Init();
-}
+//static void __attribute__((constructor)) init(void)
+//{
+//  printf("called?");
+//  RuntimeLogger::Init();
+//}
 
 RuntimeLogger::RuntimeLogger(void)
 {

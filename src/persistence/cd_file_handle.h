@@ -45,6 +45,7 @@ class PosixFileHandle : public FileHandle {
     static PosixFileHandle *fh_;
     int fdesc_;
   protected:
+    static void Destructor(void) __attribute__ ((destructor));
     PosixFileHandle(const char *filepath=DEFAULT_FILEPATH_POSIX);
     virtual ~PosixFileHandle(void);
   public:

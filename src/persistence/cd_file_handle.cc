@@ -21,6 +21,12 @@ using namespace packer;
 std::string FileHandle::basepath(DEFAULT_BASEPATH); 
 PosixFileHandle *PosixFileHandle::fh_ = NULL;
 
+void PosixFileHandle::Destructor(void)
+{
+  fh_->Close();
+}
+
+
 FileHandle::FileHandle(const char *filepath) 
   : filepath_(filepath), offset_(0) 
 {
@@ -53,9 +59,7 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath)
 
 PosixFileHandle::~PosixFileHandle(void) 
 {
-  close(fdesc_);
-  fdesc_ = 0;
-  fh_ = NULL;
+  Close();
 }
 
 FileHandle *PosixFileHandle::Get(const char *filepath) 
@@ -72,8 +76,12 @@ FileHandle *PosixFileHandle::Get(const char *filepath)
 
 void PosixFileHandle::Close(void) 
 {
-  delete fh_;
-  fh_ = NULL;
+  if(fdesc_ > 0) {
+    close(fdesc_);
+    fdesc_ = -1;
+    delete fh_;
+    fh_ = NULL;
+  }
 }
 
 CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64_t inc)

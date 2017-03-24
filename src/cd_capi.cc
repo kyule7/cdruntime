@@ -136,7 +136,9 @@ int cd_preserve(cd_handle_t *c_handle,
                    const char *my_name, 
                    const char *ref_name)
 {
-  return (int)(TO_CDHandle(c_handle)->Preserve(data_ptr, len, preserve_mask, my_name, ref_name));
+  return (int)( TO_CDHandle(c_handle)->Preserve(data_ptr, len, preserve_mask, 
+                                               (my_name == 0)? NO_LABEL : my_name, 
+                                               (ref_name == 0)? NO_LABEL: ref_name) );
 }
 
 int cd_preserve_serdes(cd_handle_t *c_handle, 

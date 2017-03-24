@@ -109,6 +109,7 @@ class TableStore : public BaseTable {
               grow_unit_, ptr_, tail_*sizeof(EntryT));
         if(ptr_ == NULL) {
           ptr_ = new EntryT[grow_unit_];
+//          printf("alloc : %p\n", ptr_); getchar();
           if(ptr_ != NULL) {
             size_ = grow_unit_ * sizeof(EntryT);
             allocated_++;
@@ -383,11 +384,13 @@ class TableStore : public BaseTable {
       CDErrType err = kOK;
       if(ptr_ != NULL) {
         EntryT *newptr = new EntryT[grow_unit_];
+//        printf("realloc : %p\n", newptr); getchar();
         MYDBG("[%s Table 2] Alloc large [%p - %p] data_size:%lu\n", __func__, 
                newptr, newptr+size_, size_);
         if(newptr != NULL) {
           memcpy(newptr, ptr_, tail_*sizeof(EntryT));
-          delete ptr_;
+//          printf("Free : %p\n", ptr_); getchar();
+          delete [] ptr_;
           ptr_ = newptr;
           allocated_++;
         } else {
@@ -411,7 +414,8 @@ class TableStore : public BaseTable {
         grow_unit_ = BASE_ENTRY_CNT;//initial_grow_unit;
         if(ptr_ != NULL) {
 //          MYDBG("%p\n", ptr_);
-          delete ptr_;
+//          printf("Free : %p\n", ptr_); getchar();
+          delete [] ptr_;
           ptr_ = NULL;
         } else {
           err = kAlreadyFree;

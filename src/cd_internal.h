@@ -420,16 +420,13 @@ update the preserved data.
 
     CDErrT Advance(bool collective=true);
 
-  /// Jinsuk: Really simple preservation function. 
-  /// This will use default storage. 
-  /// It can be set when creating this instance, 
-  /// or later by calling set_ something function. 
-  
     CDErrT Preserve(void *data,                   // address in the local process 
                     uint64_t &len_in_bytes,        // data size to preserve
-                    uint32_t preserve_mask=kCopy, // preservation method
-                    const char *my_name=NO_LABEL,        // data name
-                    const char *ref_name=NO_LABEL,       // reference name
+                    uint32_t preserve_mask, // preservation method
+                    std::string my_name,          // data name      
+                    std::string ref_name,         // reference name
+//                    const char *my_name=NO_LABEL,        // data name
+//                    const char *ref_name=NO_LABEL,       // reference name
                     uint64_t ref_offset=0,        // reference offset
                     const RegenObject *regen_object=0, // regen object
                     PreserveUseT data_usage=kUnsure);   // for optimization
@@ -442,9 +439,9 @@ update the preserved data.
     CDErrT Preserve(CDEvent &cd_event,            // Event object to synch
                     void *data_ptr, 
                     uint64_t &len, 
-                    uint32_t preserve_mask=kCopy, 
-                    const char *my_name=NO_LABEL, 
-                    const char *ref_name=NO_LABEL, 
+                    uint32_t preserve_mask, 
+                    std::string my_name, 
+                    std::string ref_name, 
                     uint64_t ref_offset=0, 
                     const RegenObject *regen_object=0, 
                     PreserveUseT data_usage=kUnsure);
@@ -574,8 +571,8 @@ public:
     CDInternalErrT InternalPreserve(void *data, 
                                     uint64_t &len_in_bytes,
                                     uint32_t preserve_mask, 
-                                    std::string my_name, 
-                                    std::string ref_name, 
+                                    const std::string &my_name, 
+                                    const std::string &ref_name, 
                                     uint64_t ref_offset, 
                                     const RegenObject *regen_object, 
                                     PreserveUseT data_usage);

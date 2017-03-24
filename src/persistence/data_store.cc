@@ -54,12 +54,17 @@ DataStore::DataStore(char *ptr)
 
   printf("BeforeWrite ft:%u fh:%p ptralloc:%p magic:%lu\n",
         ftype(), fh_, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
-  if(fh_->GetFileSize() < (int64_t)sizeof(MagicStore)) {
-    fh_->Write(0, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
-    fh_->FileSync();
+  
+  if(fh_ != NULL) {
+    if(fh_->GetFileSize() < (int64_t)sizeof(MagicStore)) {
+      fh_->Write(0, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
+      fh_->FileSync();
+    }
+  
+    written_len_ = fh_->GetFileSize();
+  } else {
+    written_len_ = CHUNK_ALIGNMENT;
   }
-
-  written_len_ = fh_->GetFileSize();
   printf("blksize:%u filesize:%lu (%lu)\n", 
       chunksize_, written_len_, sizeof(MagicStore)); //getchar();
 }
@@ -86,7 +91,10 @@ void DataStore::Init(char *ptr)
   fh_ = GetFileHandle(ftype()); 
   BufferConsumer::Get()->InsertBuffer(this);
   /*****************************************/
-  chunksize_ = fh_->GetBlkSize();
+  if(fh_ != NULL)
+    chunksize_ = fh_->GetBlkSize();
+  else
+    chunksize_ = CHUNK_ALIGNMENT;
 
   pthread_mutex_unlock(&mutex);
 }
@@ -222,7 +230,8 @@ CDErrType DataStore::FreeData(bool reuse)
   tail_ = 0;//sizeof(MagicStore);
   head_ = 0;
   allocated_ = 0;
-  fh_->SetOffset(written_len_);
+  if(fh_ != NULL)
+    fh_->SetOffset(written_len_);
 
   if(reuse == false) {
     size_ = 0;
@@ -236,7 +245,8 @@ CDErrType DataStore::FreeData(bool reuse)
       err = kAlreadyFree;
     }
     // free file
-    fh_->Truncate(written_len_);
+    if(fh_ != NULL)
+      fh_->Truncate(written_len_);
   }
 
   BufferConsumer::Get()->RemoveBuffer(this); 

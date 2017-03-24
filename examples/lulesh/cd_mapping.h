@@ -145,14 +145,14 @@
 #define CD_MAP_1_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD | ERROR_VEC_0) //
 #define SWITCH_1_2_0  3                                                   // LagrangeLeapFrog
 #define CD_MAP_1_2_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //
-#define SWITCH_2_0_0  3                                                   //       LagrangeNodal
+#define SWITCH_2_0_0  0                                                   //       LagrangeNodal
 #define CD_MAP_2_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) //   
 //                    *************************************************** CommRecvSBN ***************************************************** 
-#define SWITCH_3_0_0  3                                                   //           CalcForceForNodes 
+#define SWITCH_3_0_0  0                                                   //           CalcForceForNodes 
 #define CD_MAP_3_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_1) //
-#define SWITCH_4_0_0  3                                                   //               CalcVolumeForceForElems ** MAP FINEGRAINED
+#define SWITCH_4_0_0  0                                                   //               CalcVolumeForceForElems ** MAP FINEGRAINED
 #define CD_MAP_4_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_2) //                 # O{fx,fy,xz}, I{nodelist,x,y,z}  
-#define SWITCH_5_0_0  3                                                   //                   InitStressTermsForElems
+#define SWITCH_5_0_0  0                                                   //                   InitStressTermsForElems
 #define CD_MAP_5_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                     # O{sigxx,yy,zz}, I{nodelist,x,y,z}
 #define SWITCH_5_1_0  0                                                   //                   IntegrateStressForElems
 #define CD_MAP_5_1_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                     # O{fx,fy,fz}, I{sigxx,yy,zz,nodelist}
@@ -181,7 +181,7 @@
 #define SWITCH_7_1_0  0                                                   //                           CalcElemFBHourglassForce
 #define CD_MAP_7_1_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                             # O{fx,fy,fz}, I{hourgram} 
 //                    *************************************************** CommSendSBN && CommSBN && CommRecvSYNC **************************  
-#define SWITCH_3_1_0  3                                                   //           CalcAccelerationForNodes ** MAP FINEGRAINED 
+#define SWITCH_3_1_0  0                                                   //           CalcAccelerationForNodes ** MAP FINEGRAINED 
 #define CD_MAP_3_1_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_1) //             # O{xdd,ydd,zdd}, I{fx,fy,fz}
 #define SWITCH_3_2_0  0                                                   //           ApplyAccelerationBoundaryConditionsForNodes 
 #define CD_MAP_3_2_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //             # O{xdd,ydd,zdd}, I{symmX,symmY,symmZ}
@@ -190,7 +190,7 @@
 #define SWITCH_3_4_0  0                                                   //           CalcPositionForNodes 
 #define CD_MAP_3_4_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //             # O{x,y,z}, I{xd,yd,zd,deltaT}
 //                    *************************************************** CommSendSYNC && CommSyncPosVel **********************************
-#define SWITCH_2_1_0  3                                                   //       LagrangeElements ** MAP FINEGRAINED
+#define SWITCH_2_1_0  0                                                   //       LagrangeElements ** MAP FINEGRAINED
 #define CD_MAP_2_1_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) //# O{vnew,delv,arealg,vdov,dxx,...},I{deltaT,volo,v,x,y,z,xd,dxx,.} 
 #define SWITCH_3_5_0  0                                                   //           CalcLagrangeElements
 #define CD_MAP_3_5_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_2) //# O{vnew,delv,arealg,vdov,dxx,...},I{deltaT,volo,v,x,y,z,xd,dxx,.}
@@ -213,10 +213,10 @@
 #define SWITCH_3_6_0  0                                                   //           CalcQForElems 
 #define CD_MAP_3_6_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_1) //             # O{delx_zeta,delv_xi,delx_eta,delv_eta}, I{vnew}
 //                    *************************************************** CommRecvMONOQ ************************************************* 
-#define SWITCH_4_3_0  3                                                   //               CalcMonotonicQGradientsForElems
+#define SWITCH_4_3_0  0                                                   //               CalcMonotonicQGradientsForElems
 #define CD_MAP_4_3_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                 # O{delx_zeta,delv_xi,delx_eta,delv_eta}, I{nodelist,x,xd,volo}
 //                    *************************************************** CommSendMONOQ && CommMonoQ ************************************
-#define SWITCH_4_4_0  3                                                   //               CalcMonotonicQForElems (loop in it)
+#define SWITCH_4_4_0  0                                                   //               CalcMonotonicQForElems (loop in it)
 #define CD_MAP_4_4_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                 # O{qq,ql}, I{numReg,dom,zeta,xi,x_eta,v_eta...}} 
 #define SWITCH_5_10_0 0                                                   //                   CalcMonotonicQRegionForElems (loop in it)
 #define CD_MAP_5_10_0 ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                     # O{qq,ql}, I{dom,zeta,xi,x_eta,v_eta,elemMass,volo,vdov,letam,letap,regElemlist,elemBC,regElemsize,vnew}
@@ -234,12 +234,12 @@
 #define CD_MAP_6_10_0 ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                         # O{}, I{}   
 #define SWITCH_5_12_0 0                                                   //                   CalcSoundSpeedForElems
 #define CD_MAP_5_12_0 ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //                     # O{ss}, I{p_new,e_new,bvc,pbvc} 
-#define SWITCH_3_8_0  3                                                   //           UpdateVolumesForElems
+#define SWITCH_3_8_0  0                                                   //           UpdateVolumesForElems
 #define CD_MAP_3_8_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //             # O{v}, I{vnew,v_cut}
 //                    *************************************************** CommRecvSYNC && CommSendSYNC ***********************
-#define SWITCH_2_2_0  3                                                   //       CalcTimeConstraintsForElems ** MAP FINEGRAINED
+#define SWITCH_2_2_0  0                                                   //       CalcTimeConstraintsForElems ** MAP FINEGRAINED
 #define CD_MAP_2_2_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) // # O{dtcourant,dthydro}, I{regElemSize,regElemlist,qqc,ss,vdov,arealg,dvovmax}
-#define SWITCH_3_9_0  3                                                   //           CalcCourantConstraintForElems (dtcourant)
+#define SWITCH_3_9_0  0                                                   //           CalcCourantConstraintForElems (dtcourant)
 #define CD_MAP_3_9_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //              # O{dtcourant}, I{qqc,ss,vdov,arealg}
 #define SWITCH_3_10_0 0                                                   //           CalcHydroConstraintForElems (dthydro)
 #define CD_MAP_3_10_0 ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //              # O{dthydro}, I{dvovmax,vdov}

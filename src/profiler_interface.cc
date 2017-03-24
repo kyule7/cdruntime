@@ -105,7 +105,7 @@ void Profiler::BeginRecord(void)
 //    profMap[phase] = RuntimeInfo(1);
 //  } else {
 //    printf("Exec %s %s\n", cdh_->GetName(), name.c_str());
-  printf("profMap[%u]=%p\n", phase, profMap[phase]);
+//  printf("profMap[%u]=%p\n", phase, profMap[phase]);
   profMap[phase]->total_exec_ += 1;
 //  }
 
