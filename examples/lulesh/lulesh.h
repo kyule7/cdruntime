@@ -745,17 +745,17 @@ class DomainSerdes : public cd::PackerSerializable {
       //if(serdes_table[ID__REGELEMLIST_INNER].ptr() == NULL) {
       if(serdesRegElem == NULL) {
         serdesRegElem = new SerdesInfo[numRegSize];
-        printf("%s alloc %p\n", __func__, serdesRegElem);
+        //printf("%s alloc %p\n", __func__, serdesRegElem);
         serdes_table[ID__REGELEMLIST_INNER] = SerdesInfo((char *)serdesRegElem, sizeof(SerdesInfo) * numRegSize, SerdesInfo::NoVec);
         for(int i=0; i<numRegSize; ++i) {
           serdesRegElem[i] = SerdesInfo((char *)((dom->m_regElemlist)[i]), (dom->m_regElemSize)[i], SerdesInfo::NoVec);
         }
       } else if(serdes_table[ID__REGELEMLIST_INNER].len() != numRegSize) {
-        printf("%s delete  %p\n", __func__, serdesRegElem);
+        //printf("%s delete  %p\n", __func__, serdesRegElem);
         delete [] serdesRegElem;
         //delete serdes_table[ID__REGELEMLIST_INNER].ptr();
         serdesRegElem = new SerdesInfo[numRegSize];
-        printf("%s realloc %p\n", __func__, serdesRegElem);
+        //printf("%s realloc %p\n", __func__, serdesRegElem);
         serdes_table[ID__REGELEMLIST_INNER] = SerdesInfo((char *)serdesRegElem, sizeof(SerdesInfo) * numRegSize, SerdesInfo::NoVec);
         for(int i=0; i<numRegSize; ++i) {
           serdesRegElem[i] = SerdesInfo((char *)((dom->m_regElemlist)[i]), (dom->m_regElemSize)[i], SerdesInfo::NoVec);
@@ -764,7 +764,7 @@ class DomainSerdes : public cd::PackerSerializable {
       serdes_table[ID__REG_NUMLIST]       = SerdesInfo((char *)(dom->m_regNumList), sizeof(Index_t) * numElemSize, SerdesInfo::NoVec);
     }
     ~DomainSerdes(void) {
-      printf("%s delete %p\n", __func__, serdesRegElem);
+      //printf("%s delete %p\n", __func__, serdesRegElem);
       if(serdesRegElem != NULL) delete [] serdesRegElem;
     }
     void InitSerdesTable(void) {

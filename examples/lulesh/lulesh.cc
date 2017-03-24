@@ -165,15 +165,15 @@ Additional BSD Notice
 #include <cassert>
 
 //#define SERDES_ENABLED 1
-#define ENABLE_HISTOGRAM 1
+#define ENABLE_HISTOGRAM 0
 #define OPTIMIZE 1
 #if OPTIMIZE == 0
 #undef _ANALYZE_PHASE
 #endif
 
 #if _CD
-using namespace cd;
-//using namespace tuned;
+//using namespace cd;
+using namespace tuned;
 //class DomainSerdes;
 int counter=0;
 Domain::DomainSerdes::SerdesInfo *Domain::DomainSerdes::serdesRegElem = NULL;
@@ -4246,7 +4246,7 @@ int main(int argc, char *argv[])
 #if _CD && (SWITCH_1_0_0  >= SEQUENTIAL_CD)
      if(interval != 0 && ckpt_idx % interval == 0) 
      {
-        CD_BEGIN(cdh_1_0_0, "TimeIncrement"); 
+        CD_BEGIN(cdh_1_0_0, "MainLoop"); 
         st.BeginTimer();
         cdh_1_0_0->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime");
 #if OPTIMIZE == 0

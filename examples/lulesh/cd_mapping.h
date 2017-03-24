@@ -141,14 +141,14 @@
 //#define SWITCH_0_0_0   (1<<CDFLAG_SIZE) | kStrict  | kDRAM              // Main Loop
 #define SWITCH_0_0_0  3                                                   // Main Loop
 #define CD_MAP_0_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) // 
-#define SWITCH_1_0_0  3                                                   // TimeIncrement
+#define SWITCH_1_0_0  3                                                   // MainLoop
 #define CD_MAP_1_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD | ERROR_VEC_0) //
-#define SWITCH_1_2_0  3                                                   // LagrangeLeapFrog
+#define SWITCH_1_2_0  0                                                   // LagrangeLeapFrog
 #define CD_MAP_1_2_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_0) //
 #define SWITCH_2_0_0  0                                                   //       LagrangeNodal
 #define CD_MAP_2_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kHDD  | ERROR_VEC_0) //   
 //                    *************************************************** CommRecvSBN ***************************************************** 
-#define SWITCH_3_0_0  0                                                   //           CalcForceForNodes 
+#define SWITCH_3_0_0  3                                                   //           CalcForceForNodes 
 #define CD_MAP_3_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_1) //
 #define SWITCH_4_0_0  0                                                   //               CalcVolumeForceForElems ** MAP FINEGRAINED
 #define CD_MAP_4_0_0  ((1<<CDFLAG_SIZE) | kStrict  | kDRAM | ERROR_VEC_2) //                 # O{fx,fy,xz}, I{nodelist,x,y,z}  

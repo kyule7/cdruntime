@@ -23,7 +23,8 @@ PosixFileHandle *PosixFileHandle::fh_ = NULL;
 
 void PosixFileHandle::Destructor(void)
 {
-  fh_->Close();
+  if(fh_ != NULL)
+    fh_->Close();
 }
 
 

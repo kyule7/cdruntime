@@ -911,7 +911,7 @@ CDHandle *CDHandle::Create(const char *name,
 {
   //GONG
   CDPrologue();
-  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
+  TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
   //CheckMailBox();
 
   // Create CDHandle for a local node
@@ -953,7 +953,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
                            CDErrT *error)
 {
   CDPrologue();
-  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
+  TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
 #if CD_MPI_ENABLED
 
   CD_DEBUG("CDHandle::Create Node ID : %s\n", node_id_.GetString().c_str());
@@ -1073,7 +1073,7 @@ CDHandle *CDHandle::Create(uint32_t color,
                            CDErrT *error )
 {
   CDPrologue();
-  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
+  TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
 #if CD_MPI_ENABLED
 
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
@@ -1130,7 +1130,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
                                    CDErrT *error )
 {
   CDPrologue();
-  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
+  TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
   CDHandle *new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
   CD_CLOCK_T clk = CD_CLOCK();
   create_elapsed_time += clk - begin_clk;
@@ -1152,7 +1152,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 CDErrT CDHandle::Destroy(bool collective) 
 {
   CDPrologue();
-  printf("[Real %s] %u %d\n", __func__, level(), phase()); STOPHANDLE;
+  TUNE_DEBUG("[Real %s] %u %d\n", __func__, level(), phase()); STOPHANDLE;
   uint32_t phase = ptr_cd_->phase();//phase();
   std::string label(GetLabel());
 
@@ -1262,7 +1262,7 @@ CDErrT CDHandle::InternalBegin(const char *label, bool collective, const uint64_
 CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 {
   CDPrologue();
-  printf("[Real %s lv:%u phase:%d]\n", __func__, level(), phase()); STOPHANDLE;
+  TUNE_DEBUG("[Real %s lv:%u phase:%d]\n", __func__, level(), phase()); STOPHANDLE;
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
 
@@ -2223,7 +2223,12 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
     // If sys_err_vec > 
     while(cdh != NULL) {
 
-      CD_DEBUG("CHECK %lx %lx = %d\n", sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_));
+      printf("CHECK %lx %lx = %d, lv:%u, %s\n", 
+          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+          CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
+          cdh->level(), cdh->GetLabel());
+      CD_DEBUG("CHECK %lx %lx = %d\n", sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+          CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_));
 //      printf("CHECK %lx %lx = %d\n", sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_));
       if(CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_)) {
         rollback_point = cdh->level();

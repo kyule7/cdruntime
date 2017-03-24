@@ -40,7 +40,7 @@ struct PhaseNode {
     PhaseNode(PhaseNode *parent, uint32_t level, const std::string &label) 
       : level_(level), phase_(phase_gen++), count_(0), interval_(-1), errortype_(-1), label_(label)
     {
-      printf("PhaseNode %s\n", label.c_str());
+      TUNE_DEBUG("PhaseNode %s\n", label.c_str());
       Init(parent, level);
     }
     // for tuned::phaseTree
@@ -86,12 +86,12 @@ struct PhaseNode {
     PhaseNode *GetNextNode(const std::string &label) 
     {
       PhaseNode *next = NULL;
-      printf("%s %s == %s\n", __func__, label.c_str(), label_.c_str());
+      TUNE_DEBUG("%s %s == %s\n", __func__, label.c_str(), label_.c_str());
       if(label_ == label) {
         next = this;
       } else {
         for(auto it=children_.rbegin(); it!=children_.rend(); ++it) {
-          printf("%s == %s\n", label.c_str(), (*it)->label_.c_str());
+          TUNE_DEBUG("%s == %s\n", label.c_str(), (*it)->label_.c_str());
           if((*it)->label_ == label) { next = *it; break; }
         }
       }
@@ -105,11 +105,11 @@ struct PhaseNode {
       PhaseNode *leftmost = NULL;
       if(left_ != NULL && left_->interval_ == 0) {
         assert(left_ != this);
-        printf("%u ", phase_);
+        TUNE_DEBUG("%u ", phase_);
         leftmost = left_->GetLeftMostNode();
-        printf(" -> %u", phase_);
+        TUNE_DEBUG(" -> %u", phase_);
       } else {
-        printf("Left %u", phase_);
+        TUNE_DEBUG("Left %u", phase_);
         leftmost = this;
       }
       return leftmost;
@@ -119,10 +119,10 @@ struct PhaseNode {
     {
       PhaseNode *rightmost = NULL;
       if(right_ != NULL && right_->interval_ == 0) {
-        printf("%u -> ", phase_);
+        TUNE_DEBUG("%u -> ", phase_);
         rightmost = right_->GetRightMostNode();
       } else {
-        printf("%u Right", phase_);
+        TUNE_DEBUG("%u Right", phase_);
         rightmost = this;
       }
       return rightmost;
@@ -130,7 +130,7 @@ struct PhaseNode {
 
     void AddChild(PhaseNode *child) 
     {
-//      printf("%s %p (%s, %u)\n", __func__, child, child->label_.c_str(), child->phase_);
+//      TUNE_DEBUG("%s %p (%s, %u)\n", __func__, child, child->label_.c_str(), child->phase_);
       children_.push_back(child);
     }
     void Print(void); 

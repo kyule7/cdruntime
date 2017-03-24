@@ -292,8 +292,7 @@ class CDHandle {
       label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label;
 #   if CD_RUNTIME_ENABLED
       //if(tuned::phaseTree.current_ != tuned::phaseTree.root_) 
-        tuned::phaseTree.current_ = phaseTree.current_->GetNextNode(label_);
-
+      tuned::phaseTree.current_ = phaseTree.current_->GetNextNode(label_);
       // tuned::phaseTree was already populated before! 
 
       //phase_ = tuned::phaseTree.current_->GetPhase
@@ -318,8 +317,9 @@ class CDHandle {
             cd::new_phase = cd::phaseTree.current_->GetPhaseNode(level_, label_);
           else 
             cd::new_phase = cd::phaseTree.Init(level_, label_);
-  
-          ret = handle_->Begin(label, collective, sys_err_vec);
+          printf("new phase:%u\n", cd::new_phase); 
+          // if tuning is on, enter tuned::phaseTree's errortype not application's.
+          ret = handle_->Begin(label, collective, tuned::phaseTree.current_->errortype_);
         } 
       } else if(interval == 0) { // 
         phase_ = tuned::phaseTree.current_->GetLeftMostNode()->phase_;

@@ -1,9 +1,12 @@
 #include "packer_prof.h"
+#include "packer.h"
+#include "base_store.h"
 #include <stdio.h>
 #include <string.h>
 
 using namespace packer;
 
+bool packer::isHead = true;
 Time packer::time_write("time_write"); 
 Time packer::time_read("time_read"); 
 Time packer::time_posix_write("posix_write"); 
@@ -33,8 +36,13 @@ void Time::Init(const char *str)
 
 void Time::Print(void)
 {
-  if(count > 0) { 
+  if(isHead && count > 0) { 
     printf("[%s]\telapsed:%8.3lf, BW:%8.3lf, size:%12lu, count:%6lu\n", 
       name, elapsed, GetBW(), size, count); 
   }
+}
+
+void packer::SetHead(bool head)
+{
+  isHead = head;
 }

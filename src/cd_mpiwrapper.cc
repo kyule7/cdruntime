@@ -40,6 +40,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_path.h"
 #include "cd_global.h"
 #include "cd_def_internal.h"
+#include "phase_tree.h"
 using namespace cd;
 CD_CLOCK_T cd::msg_begin_clk;
 CD_CLOCK_T cd::msg_end_clk;
@@ -51,6 +52,18 @@ CD_CLOCK_T cd::msg_elapsed_time;
 #include "cd_mpiwrapper.h"
 #include "cd_comm_log.h"
 #include "cd_internal.h"
+
+static inline
+void RecordLog(uint64_t len)
+{
+#if CD_TUNING_ENABLED
+  if((tuned::phaseTree.current_ != NULL) && (tuned::tuning_enabled == true))
+    tuned::phaseTree.current_->profile_.msg_logging_ += len;
+#endif
+  if(cd::phaseTree.current_ != NULL) 
+    cd::phaseTree.current_->profile_.msg_logging_ += len;
+}
+
 // -------------------------------------------------------------------------------------------------------
 // blocking p2p communication
 // -------------------------------------------------------------------------------------------------------
@@ -69,6 +82,11 @@ int MPI_Send(const void *buf,
   int mpi_ret=0;
   LOG_DEBUG("here inside MPI_Send\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
+#if CD_TUNING_ENABLED
+
+#else
+
+#endif
 
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
@@ -300,6 +318,7 @@ int MPI_Recv(void *buf,
   int mpi_ret=0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
+  RecordLog(count * type_size);
 
   LOG_DEBUG("here inside MPI_Recv\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
@@ -366,6 +385,7 @@ int MPI_Sendrecv(const void *sendbuf,
   int mpi_ret=0;
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
+  RecordLog(recvcount * type_size);
   LOG_DEBUG("here inside MPI_Sendrecv\n");
   LOG_DEBUG("sendbuf=%p, &sendbuf=%p\n", sendbuf, &sendbuf);
   LOG_DEBUG("recvbuf=%p, &recvbuf=%p\n", recvbuf, &recvbuf);
@@ -443,6 +463,7 @@ int MPI_Sendrecv_replace(void *buf,
   int mpi_ret=0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
+  RecordLog(count * type_size);
   LOG_DEBUG("here inside MPI_Recv\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
@@ -598,6 +619,7 @@ int MPI_Irecv(void *buf,
   int mpi_ret=0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
+  RecordLog(count * type_size);
   if(CDPath::GetCurrentCD() != NULL)
     CD_DEBUG("[%s] %d <- %d ptr:%p\n", __func__, myTaskID, src, request);
 //    CD_DEBUG("[%s] ptr:%p\n", __func__, request);
@@ -1465,6 +1487,7 @@ int MPI_Bcast (void *buffer,
   int mpi_ret=0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
+  RecordLog(count * type_size);
   LOG_DEBUG("here inside MPI_Bcast\n");
 
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
@@ -1538,6 +1561,7 @@ int MPI_Gather(const void *sendbuf,
   int myrank, size;
   PMPI_Comm_rank(comm, &myrank);
   MPI_Comm_size(comm, &size);
+  RecordLog(size * recvcnt * type_size);
   LOG_DEBUG("myrank=%d, size=%d\n", myrank, size);
   switch (cur_cdh->ptr_cd()->GetCDLoggingMode())
   {
@@ -1606,7 +1630,21 @@ int MPI_Gatherv(const void *sendbuf,
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Gatherv\n");
-
+  {
+    long totalcnts=0;
+    int i, size;
+    MPI_Comm_size(comm, &size);
+    for (i=0;i<size;i++)
+    {
+      totalcnts += recvcnts[i];
+    }
+    for (i=0;i<size;i++)
+    {
+      if (totalcnts < displs[i]+recvcnts[i])
+        totalcnts = displs[i]+recvcnts[i];
+    }
+    RecordLog(totalcnts * type_size);
+  }
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
@@ -1720,6 +1758,11 @@ int MPI_Allgather(const void *sendbuf,
   PMPI_Comm_rank(comm, &myrank);
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
+  {
+    int size;
+    MPI_Comm_size(comm, &size);
+    RecordLog(size * recvcnt * type_size);
+  }
   LOG_DEBUG("here inside MPI_Allgather\n");
 
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
@@ -1791,7 +1834,22 @@ int MPI_Allgatherv(const void *sendbuf,
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Allgatherv\n");
+  {
+    long totalcnts=0;
+    int i, size;
+    MPI_Comm_size(comm, &size);
+    for (i=0;i<size;i++)
+    {
+      totalcnts += recvcnts[i];
+    }
+    for (i=0;i<size;i++)
+    {
+      if (totalcnts < displs[i]+recvcnts[i])
+        totalcnts = displs[i]+recvcnts[i];
+    }
+    RecordLog(totalcnts * type_size);
 
+  }
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
   {
@@ -1884,6 +1942,8 @@ int MPI_Reduce(const void *sendbuf,
   int mpi_ret = 0;
   int type_size;
   PMPI_Type_size(datatype, &type_size);
+
+  RecordLog(count * type_size);
   LOG_DEBUG("here inside MPI_Reduce\n");
 
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
@@ -1971,6 +2031,7 @@ int MPI_Allreduce(const void *sendbuf,
   PMPI_Comm_rank(comm, &myrank);
   int type_size;
   PMPI_Type_size(datatype, &type_size);
+  RecordLog(count * type_size);
   LOG_DEBUG("here inside MPI_Allreduce\n");
 
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
@@ -2032,6 +2093,11 @@ int MPI_Alltoall(const void *sendbuf,
   PMPI_Comm_rank(comm, &myrank);
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
+  {
+        int size;
+        MPI_Comm_size(comm, &size);
+  RecordLog(size * recvcnt * type_size);
+  }
   LOG_DEBUG("here inside MPI_Alltoall\n");
 
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
@@ -2103,6 +2169,22 @@ int MPI_Alltoallv(const void *sendbuf,
   PMPI_Comm_rank(comm, &myrank);
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
+  {
+    long totalcnts=0;
+    int i, size;
+    MPI_Comm_size(comm, &size);
+    for (i=0;i<size;i++)
+    {
+      totalcnts += recvcnts[i];
+    }
+    LOG_DEBUG("totalcnts = %ld\n", totalcnts);
+    for (i=0;i<size;i++)
+    {
+      if (totalcnts < rdispls[i]+recvcnts[i])
+        totalcnts = rdispls[i]+recvcnts[i];
+    }
+    RecordLog(totalcnts * type_size);
+  }
   LOG_DEBUG("here inside MPI_Alltoallv\n");
 
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
@@ -2205,6 +2287,7 @@ int MPI_Scatter(const void *sendbuf,
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Scatter\n");
+  RecordLog(recvcnt * type_size);
 
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
@@ -2266,6 +2349,7 @@ int MPI_Scatterv(const void *sendbuf,
   int type_size;
   PMPI_Type_size(recvtype, &type_size);
   LOG_DEBUG("here inside MPI_Scatterv\n");
+  RecordLog(recvcnt * type_size);
 
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
@@ -2328,6 +2412,11 @@ int MPI_Reduce_scatter(const void *sendbuf,
   int type_size;
   PMPI_Type_size(datatype, &type_size);
   LOG_DEBUG("here inside MPI_Reduce_scatter\n");
+  {
+    int myrank;
+    PMPI_Comm_rank(comm, &myrank);
+    RecordLog(recvcnts[myrank] * type_size);
+  }
 
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)
@@ -2396,6 +2485,8 @@ int MPI_Scan(const void *sendbuf,
   int myrank;
   PMPI_Comm_rank(comm, &myrank);
   LOG_DEBUG("here inside MPI_Scan\n");
+
+  RecordLog(count * type_size);
 
   CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh == NULL)

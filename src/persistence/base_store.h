@@ -14,6 +14,7 @@
 #define BUFFER_INSUFFICIENT 0xFFFFFFFFFFFFFFFF
 namespace packer {
 
+extern void SetHead(bool head);
 //enum PackerErrT {
 //  kOK = 0,
 //  kAlreadyAllocated,

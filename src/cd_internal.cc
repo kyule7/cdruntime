@@ -41,7 +41,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_debug.h"
 #include "phase_tree.h"
 #include "runtime_info.h"
-
+#include "packer.h"
 #include <setjmp.h>
 using namespace cd;
 using namespace common;
@@ -575,6 +575,8 @@ CDHandle *CD::CreateRootCD(const char *name,
                            uint64_t sys_bit_vector, 
                            CD::CDInternalErrT *cd_internal_err)
 {
+  packer::SetHead(myTaskID == 0);
+
   /// Create CD object with new CDID
   CDHandle *new_cd_handle = NULL;
 //  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
@@ -834,12 +836,15 @@ CDErrT CD::Begin(const char *label, bool collective)
 {
   //printf("[%s] not here? \n", __func__);
   label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label; 
-
+  
   if(tuned::tuning_enabled == false) {
     cd_id_.cd_name_.phase_ = BeginPhase(level(), label_);
   } else { // phaseTree.current_ was updated at tuned::CDHandle before this
     cd_id_.cd_name_.phase_ = phaseTree.current_->phase_;
-    assert(new_phase == phaseTree.current_->phase_);
+    //sys_detect_bit_vector_ = phaseTree.current_->errortype_;
+    printf("bitvec:%lx\n", sys_detect_bit_vector_);
+    CD_ASSERT_STR(new_phase == phaseTree.current_->phase_,
+                  "phase : %u != %u\n", new_phase,  phaseTree.current_->phase_);
   }
   profMap[cd_id_.cd_name_.phase_] = &cd::phaseTree.current_->profile_; //getchar();
  // cd_name_.phase_ = GetPhase(level(), label_);
@@ -1945,7 +1950,7 @@ CDErrT CD::Preserve(void *data,
            CHECK_PRV_TYPE(preserve_mask, kRef),
            CHECK_PRV_TYPE(preserve_mask, kRegen),
            CHECK_PRV_TYPE(preserve_mask, kCoop));
-  printf("%s %s\n", my_name.c_str(), ref_name.c_str());
+//  printf("%s %s\n", my_name.c_str(), ref_name.c_str());
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
 //    cddbg<<"my_name "<< my_name<<endl;
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {

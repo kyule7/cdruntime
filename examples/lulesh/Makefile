@@ -2,7 +2,7 @@
 SHELL = /bin/sh
 .SUFFIXES: .cc .o
 #CD_PATH=/home1/03341/kyushick/Work/CDs/pfsFix
-CD_PATH=/home/kyushick/Work/CDs/pfsFix
+#CD_PATH=/home/kyushick/Work/CDs/pfsFix
 INTERVAL_VAL=0
 LULESH_EXEC   = lulesh_cd
 EXEC_PROFILED = $(LULESH_EXEC)

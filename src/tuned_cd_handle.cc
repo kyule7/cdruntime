@@ -2,6 +2,7 @@
 #include "sys_err_t.h"
 #include "cd_def_preserve.h"
 #include "cd_global.h"
+#include "packer.h"
 
 #include <assert.h>
 namespace tuned {
@@ -18,6 +19,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   }
   cd::CDHandle *root_handle = cd::CD_Init(numTask, myTask, prv_medium);
 #else 
+  packer::SetHead(myTask == 0);
   cd::CDHandle *root_handle = NULL;
 #endif
   CDHandle *tuned_root_handle = new CDHandle(root_handle, 0, DEFAULT_ROOT_LABEL);

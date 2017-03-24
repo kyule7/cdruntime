@@ -58,7 +58,7 @@ RuntimeLogger singleton_rl;
 
 RuntimeLogger::~RuntimeLogger(void)
 {
-  printf("\n\n=======================\nTotal Alloc Size:%lu\n", total_alloc_size);
+//  printf("\n\n=======================\nTotal Alloc Size:%lu\n", total_alloc_size);
 }
 //IncompleteLogEntry RuntimeLogger::NewLogEntry(void* p, size_t size, bool FreeInvoked, unsigned int level, unsigned long index)
 //{

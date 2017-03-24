@@ -59,6 +59,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "error_injector.h"
 #include "sys_err_t.h"
 #include "serdes.h"
+#include "cd_def_debug.h"
 //#define FUNC_ATTR inline __attribute__((always_inline))
 //using namespace cd::interface;
 //using namespace cd::internal;
@@ -445,7 +446,7 @@ class CDHandle {
        
          CommitPreserveBuff();
          common::CDErrT ret = InternalBegin(label, collective, sys_err_vec);
-         printf("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
+         TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
          return ret;
        }
   

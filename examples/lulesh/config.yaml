@@ -1,0 +1,17 @@
+- CD_0_0 :
+  - label : Root
+    interval : 1
+    errortype : 0x7
+  - CD_1_1 :
+    - label : MainLoop
+      interval : 1
+      errortype : 0x7 
+    - CD_2_2 :
+      - label : CalcForceForNodes
+        interval : 1
+        errortype : 0x1
+
+- FAILURE :
+  - F1 : 0.01
+  - F2 : 0.01
+  - F4 : 0.01

@@ -29,6 +29,7 @@ struct Time {
   void Print(void);
 };
 
+
 extern Time time_write; 
 extern Time time_read; 
 extern Time time_posix_write; 
