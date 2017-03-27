@@ -19,8 +19,9 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   }
   cd::CDHandle *root_handle = cd::CD_Init(numTask, myTask, prv_medium);
 #else 
-  cd::myTaskID = myTask;
-  cd::totalTaskSize = numTask;
+//  cd::myTaskID = myTask;
+//  cd::totalTaskSize = numTask;
+  cd::InitDir(myTask, numTask);
   packer::SetHead(myTask == 0);
   cd::CDHandle *root_handle = NULL;
 #endif

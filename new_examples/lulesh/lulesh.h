@@ -595,9 +595,9 @@ class DomainSerdes : public cd::PackerSerializable {
         public:
         SerdesInfo(void) {}
         SerdesInfo(char *_src, uint64_t _size, uint32_t type)
-          : src(_src), size(_size), vector(NULL), elem_type(type) {}
+          : size(_size), src(_src), vector(NULL), elem_type(type) {}
         SerdesInfo(void *_vector, uint32_t _elem_type)
-          : src(NULL), size(0), vector(_vector), elem_type(_elem_type) {}
+          : size(0), src(NULL), vector(_vector), elem_type(_elem_type) {}
         SerdesInfo &operator=(const SerdesInfo &that) {
           size = that.size;
           src = that.src;
@@ -665,7 +665,7 @@ class DomainSerdes : public cd::PackerSerializable {
         for(int i=0; i<numRegSize; ++i) {
           serdesRegElem[i] = SerdesInfo((char *)((dom->m_regElemlist)[i]), (dom->m_regElemSize)[i], SerdesInfo::NoVec);
         }
-      } else if(serdes_table[ID__REGELEMLIST_INNER].len() != numRegSize) {
+      } else if((Index_t)serdes_table[ID__REGELEMLIST_INNER].len() != numRegSize) {
         //printf("%s delete  %p\n", __func__, serdesRegElem);
         delete [] serdesRegElem;
         //delete serdes_table[ID__REGELEMLIST_INNER].ptr();

@@ -2538,7 +2538,8 @@ static inline
 void LagrangeElements(Domain& domain, Index_t numElem)
 {
 #if _CD
-  CDHandle *cdh = GetCurrentCD()->Create("LagrangeElements", kStrict);
+  //CDHandle *cdh = GetCurrentCD()->Create("LagrangeElements", kStrict);
+  CDHandle *cdh = GetCurrentCD();
   cdh->Begin("CalcLagrangeElements");
   printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
 #endif 
@@ -2575,7 +2576,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 #if _CD
   cdh->Detect();
   cdh->Complete();
-  cdh->Destroy();
+  //cdh->Destroy();
 #endif 
 }
 
@@ -2770,6 +2771,9 @@ void LagrangeLeapFrog(Domain& domain)
 #ifdef SEDOV_SYNC_POS_VEL_LATE
 #endif
 
+#if _CD
+   CDHandle *cdh = GetCurrentCD()->Create("LagrangeElements", kStrict);
+#endif
    /* calculate element quantities (i.e. velocity gradient & q), and update
     * material states */
    LagrangeElements(domain, domain.numElem());
@@ -2794,6 +2798,10 @@ void LagrangeLeapFrog(Domain& domain)
 #endif   
 
    CalcTimeConstraintsForElems(domain);
+
+#if _CD
+   cdh->Destroy();
+#endif
 
 #if USE_MPI   
 #ifdef SEDOV_SYNC_POS_VEL_LATE

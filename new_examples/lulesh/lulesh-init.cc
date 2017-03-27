@@ -17,6 +17,9 @@ Domain::Domain(Int_t numRanks, Index_t colLoc,
                Index_t rowLoc, Index_t planeLoc,
                Index_t nx, int tp, int nr, int balance, Int_t cost)
    :
+#ifdef SERDES_ENABLED
+   serdes(this),
+#endif
    m_e_cut(Real_t(1.0e-7)),
    m_p_cut(Real_t(1.0e-7)),
    m_q_cut(Real_t(1.0e-7)),
@@ -35,9 +38,6 @@ Domain::Domain(Int_t numRanks, Index_t colLoc,
    m_pmin(Real_t(0.)),
    m_emin(Real_t(-1.0e+15)),
    m_dvovmax(Real_t(0.1)),
-#ifdef SERDES_ENABLED
-   serdes(this),
-#endif
    m_refdens(Real_t(1.0))
 {
 
