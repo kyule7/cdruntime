@@ -762,7 +762,7 @@ class DomainSerdes : public cd::PackerSerializable {
         if(vec & 0x1) {
 //          printf("preserve id:%u\n", id);
 //          if(id == ID__VNEW || id == ID__DELX_ZETA || id == ID__DELX_ETA || id == ID__DELX_XI) { vec >>=1; continue; }
-          if(id == ID__MATELEMLIST) continue;
+          if(id == ID__MATELEMLIST) { vec >>= 1; continue; }
           if(id != ID__REGELEMLIST_INNER) {
             char *ptr = serdes_table[id].ptr();
 //            printf("check:%u:%p\n", id, ptr);

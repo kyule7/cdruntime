@@ -26,6 +26,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #endif
   CDHandle *tuned_root_handle = new CDHandle(root_handle, 0, DEFAULT_ROOT_LABEL);
   CDPath::GetCDPath()->push_back(tuned_root_handle);
+  printf("tuned root:%p\n", root_handle);
   return tuned_root_handle;
 }
 

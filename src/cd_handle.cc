@@ -174,10 +174,9 @@ enum {
 
 
 static inline
-void SetDebugFilepath(int myTask) 
+void SetDebugFilepath(int myTask, string &dbg_basepath) 
 {
-  string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
-#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
+#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE || CD_DEBUG_ENABLED
   char *dbg_base_str = getenv( "CD_DBG_BASEPATH" );
   if(dbg_base_str != NULL) {
     dbg_basepath = dbg_base_str;
@@ -186,11 +185,18 @@ void SetDebugFilepath(int myTask)
   if(myTask == 0) {
     MakeFileDir(dbg_basepath.c_str());
   }
+#endif
+}
 
+static inline
+void OpenDebugFilepath(int myTask, const string &dbg_basepath)
+{
+#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
   char dbg_log_filename[] = CD_DBG_FILENAME;
   char dbg_filepath[256]={};
   snprintf(dbg_filepath, 256, "%s/%s_%d", dbg_basepath.c_str(), dbg_log_filename, myTask);
   cdout = fopen(dbg_filepath, "w");
+  printf("cdout:%p\n", cdout);
 #endif
 
 #if CD_DEBUG_ENABLED
@@ -236,7 +242,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //    cd::config.LoadConfig(CD_DEFAULT_CONFIG);
 //  }
 
-  SetDebugFilepath(myTask);
+  string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
+  SetDebugFilepath(myTask, dbg_basepath);
 
   printf("cdout:%p\n", cdout);
   internal::InitFileHandle(myTask == 0);
@@ -246,6 +253,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   // Otherwise, some task may execute CD_DEBUG before head creates directory 
   PMPI_Barrier(MPI_COMM_WORLD);
 #endif
+
+  OpenDebugFilepath(myTask, dbg_basepath);
 
   // Create Root CD
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
@@ -1537,6 +1546,8 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     err = kError;
     // FIXME
     CD_PRINT("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
+             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+    printf("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
 
     CDHandle *rb_cdh = CDPath::GetCDLevel(rollback_point);

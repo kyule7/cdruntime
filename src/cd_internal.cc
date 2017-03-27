@@ -858,7 +858,9 @@ CDErrT CD::Begin(const char *label, bool collective)
 //  auto it = phasePath.find(label);
 //  if(it != phasePath.end()) {
 
-  assert(begin_ == false);
+  printf("## Before chage %d %p ## [%s %u] %s %s\n", begin_, this, cd_id_.GetStringID().c_str(), myTaskID, name_.c_str(), label);
+  CD_ASSERT_STR(begin_ == false, "%s %s at %u-%u-%u\n", 
+      __func__, label, level(), cd_id_.cd_name_.phase_, cd_id_.sequential_id_);
   begin_ = true;
 
   CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);

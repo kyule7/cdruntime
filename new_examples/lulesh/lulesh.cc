@@ -1195,7 +1195,8 @@ static inline void CalcForceForNodes(Domain& domain)
 #if _CD
   CDHandle *cdh = GetCurrentCD();
   cdh->Begin("CalcForeForNodes");
-  if(myRank == 0) printf("Check Begin %s %u %p\n", __func__, cdh->level(), cdh);
+  //if(myRank == 0) printf("Check Begin %s %u %p\n", __func__, cdh->level(), cdh);
+  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
 #   ifndef OPTIMIZE_PRV
   cdh->Preserve(&domain, sizeof(domain), kCopy, "locDomAtCalcForceForNodes");
   cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
@@ -2539,6 +2540,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 #if _CD
   CDHandle *cdh = GetCurrentCD()->Create("LagrangeElements", kStrict);
   cdh->Begin("CalcLagrangeElements");
+  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
 #endif 
 
   Real_t *vnew = Allocate<Real_t>(numElem) ;  /* new relative vol -- temp */
@@ -2834,6 +2836,7 @@ int main(int argc, char *argv[])
 
    ParseCommandLineOptions(argc, argv, myRank, &opts);
 
+   opts.nx  = 30;
    if ((myRank == 0) && (opts.quiet == 0)) {
       printf("Running problem size %d^3 per domain until completion\n", opts.nx);
       printf("Num processors: %d\n", numRanks);
@@ -2912,10 +2915,11 @@ int main(int argc, char *argv[])
       LagrangeLeapFrog(*locDom) ;
 #if _CD
       cd_main_loop->Detect();
-      cd_main_loop->Complete( (locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its) );
+      cd_main_loop->Complete( ((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false );
 #endif
 
-      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) {
+      if (myRank == 0) {
+//      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) {
          printf("cycle = %d, time = %e, dt=%e\n",
                 locDom->cycle(), double(locDom->time()), double(locDom->deltatime()) ) ;
       }

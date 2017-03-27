@@ -107,6 +107,7 @@ class CDHandle {
 #     if CD_RUNTIME_ENABLED
       if(new_handle->IsNewCD()) {
         new_handle->handle_ = handle_->Create(name, cd_type, err_name_mask, err_loc_mask, error);
+        printf("tuned %s:%p\n", name, new_handle->handle_);
       }
 #     endif
       AddHandle(new_handle);
@@ -317,7 +318,7 @@ class CDHandle {
             cd::new_phase = cd::phaseTree.current_->GetPhaseNode(level_, label_);
           else 
             cd::new_phase = cd::phaseTree.Init(level_, label_);
-          //printf("new phase:%u\n", cd::new_phase); 
+//          printf("new phase:%u\n", cd::new_phase); 
           // if tuning is on, enter tuned::phaseTree's errortype not application's.
           ret = handle_->Begin(label, collective, tuned::phaseTree.current_->errortype_);
         } 
@@ -375,7 +376,7 @@ class CDHandle {
       RecordComplete(tuned::phaseTree.current_->profile_);
       PhaseNode *merging_node = tuned::phaseTree.current_->GetLeftMostNode();
       int64_t &count    = merging_node->count_;
-      int64_t &interval = merging_node->GetLeftMostNode()->interval_;
+      int64_t &interval = merging_node->interval_;
       TUNE_DEBUG("[Tune %s lv:%u phase:%u]] count:%lu <= interval:%ld\n", 
              __func__, level_, phase_, count, interval - 1); STOPHANDLE;
       PhaseNode *last_merged_node = tuned::phaseTree.current_->GetRightMostNode();
@@ -929,7 +930,7 @@ class CDHandle {
       }
       level_created_ = all_zero;
 //      level_created_ = (config_[phase_].interval_ > 0);
-      return all_zero;
+      return all_zero == false;
     }
     inline bool IsActive() {
       return active_;
@@ -1116,7 +1117,8 @@ public:
 //        //if(cd::myTaskID == 0) printf("GetCurrentCD::path size:%lu\n", uniquePath_->size());
 //        printf("[%u/%u]GetCurrentCD::path size:%lu\n", cd::myTaskID, cd::totalTaskSize, uniquePath_->size());
 #if CD_RUNTIME_ENABLED        
-        return GetCDLevel(phaseTree.current_->level_);
+        return uniquePath_->back();
+        //return GetCDLevel(phaseTree.current_->level_);
 #else
         return uniquePath_->back();
 #endif
