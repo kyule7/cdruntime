@@ -489,7 +489,7 @@ void CD::Init()
   begin_ = false;
 //  child_seq_id_ = 0;
   //ctxt_prv_mode_ = kExcludeStack; 
-  ctxt_prv_mode_ = kExcludeStack; 
+  ctxt_prv_mode_ = kIncludeStack; 
   cd_exec_mode_  = kSuspension;
   option_save_context_ = 0;
 
@@ -555,7 +555,7 @@ CDHandle *CD::Create(CDHandle *parent,
   CDHandle *new_cd_handle = NULL;
 
   CD_DEBUG("CD::Create %s\n", name);
-
+  CD_ASSERT(begin_ == true);
   *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
 
@@ -842,7 +842,8 @@ CDErrT CD::Begin(const char *label, bool collective)
   } else { // phaseTree.current_ was updated at tuned::CDHandle before this
     cd_id_.cd_name_.phase_ = phaseTree.current_->phase_;
     //sys_detect_bit_vector_ = phaseTree.current_->errortype_;
-    printf("bitvec:%lx\n", sys_detect_bit_vector_);
+    CD_DEBUG("lv:%u, %s, %s, bitvec:%lx\n", level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
+//    printf("lv:%u, %s, %s, bitvec:%lx\n", level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
     CD_ASSERT_STR(new_phase == phaseTree.current_->phase_,
                   "phase : %u != %u\n", new_phase,  phaseTree.current_->phase_);
   }
@@ -857,7 +858,7 @@ CDErrT CD::Begin(const char *label, bool collective)
 //  auto it = phasePath.find(label);
 //  if(it != phasePath.end()) {
 
-
+  assert(begin_ == false);
   begin_ = true;
 
   CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);

@@ -68,10 +68,8 @@ CDHandle *cd::null_cd = NULL;
 cd::DebugBuf cd::cddbg;
 //#endif
 
-#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE  // Print to fileout -----
 FILE *cd::cdout=NULL;
 FILE *cd::cdoutApp=NULL;
-#endif
 
 #if CD_ERROR_INJECTION_ENABLED
 #define RANDOM_SEED 17
@@ -239,6 +237,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //  }
 
   SetDebugFilepath(myTask);
+
+  printf("cdout:%p\n", cdout);
   internal::InitFileHandle(myTask == 0);
  
 #if CD_MPI_ENABLED 

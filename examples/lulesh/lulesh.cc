@@ -4158,7 +4158,7 @@ int main(int argc, char *argv[])
 #if _CD
    locDom->serdes.InitSerdesTable();
    CDHandle* root_cd = CD_Init(numRanks, myRank);
-   CD_BEGIN(root_cd, "Root");
+   root_cd->Begin(root_cd, "Root");
 #endif
 
 #if _CD && SWITCH_PRESERVE_INIT

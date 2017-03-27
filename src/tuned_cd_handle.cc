@@ -19,6 +19,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   }
   cd::CDHandle *root_handle = cd::CD_Init(numTask, myTask, prv_medium);
 #else 
+  cd::myTaskID = myTask;
+  cd::totalTaskSize = numTask;
   packer::SetHead(myTask == 0);
   cd::CDHandle *root_handle = NULL;
 #endif
@@ -32,7 +34,8 @@ void CD_Finalize(void)
 #if CD_RUNTIME_ENABLED
   cd::CD_Finalize();
 #endif
-  assert(CDPath::GetCDPath()->size() == 1);
+  CD_ASSERT_STR(CDPath::GetCDPath()->size() == 1, 
+      "path size:%lu\n", CDPath::GetCDPath()->size());
   delete CDPath::GetCDPath()->back(); // delete root
   CDPath::GetCDPath()->pop_back();
 }

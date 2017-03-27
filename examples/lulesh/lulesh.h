@@ -243,7 +243,7 @@ using namespace std;
 #define  ID__SERDES_ALL        52
 /////////////////////////////////////////////////////////////////////
 
-#define CD_DEBUG(...)
+//#define CD_DEBUG(...)
 #else // if _CD ends
 
 #define SERDES_ENABLED 0
@@ -256,7 +256,7 @@ using namespace std;
 #define CDMAPPING_BEGIN_SEQUENTIAL(...) 
 #define CDMAPPING_END_NESTED(...) 
 #define DEBUG_PRINT(...)
-#define CD_DEBUG(...)
+//#define CD_DEBUG(...)
 
 
 #endif

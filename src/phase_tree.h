@@ -156,10 +156,12 @@ struct PhaseTree {
     }
   
     void Print(int format=0) 
-    { 
+    {
+      if(cd::myTaskID == 0) { 
       switch(0) {
         case 0: root_->PrintInputYAML(); break;
         case 1: root_->Print(); break;
+      }
       }
     }
     

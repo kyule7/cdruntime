@@ -317,7 +317,7 @@ class CDHandle {
             cd::new_phase = cd::phaseTree.current_->GetPhaseNode(level_, label_);
           else 
             cd::new_phase = cd::phaseTree.Init(level_, label_);
-          printf("new phase:%u\n", cd::new_phase); 
+          //printf("new phase:%u\n", cd::new_phase); 
           // if tuning is on, enter tuned::phaseTree's errortype not application's.
           ret = handle_->Begin(label, collective, tuned::phaseTree.current_->errortype_);
         } 
@@ -957,6 +957,11 @@ class CDHandle {
 //      uint32_t phase = GetPhase(next_level, label, false);
 //      return (config.mapping_[next_level][phase].interval_ > 0);
 //    }
+  public:
+    uint32_t level(void) const { return level_; }
+    uint32_t phase(void) const { return phase_; }
+    char    *name(void)  const { return const_cast<char *>(name_.c_str()); }
+    char    *label(void) const { return const_cast<char *>(label_.c_str()); }
 };
 
 
@@ -1108,10 +1113,12 @@ public:
       //TUNE_DEBUG("path is not null\n");
       if( !uniquePath_->empty() ) {
         //TUNE_DEBUG("path is not empty\n");
+//        //if(cd::myTaskID == 0) printf("GetCurrentCD::path size:%lu\n", uniquePath_->size());
+//        printf("[%u/%u]GetCurrentCD::path size:%lu\n", cd::myTaskID, cd::totalTaskSize, uniquePath_->size());
 #if CD_RUNTIME_ENABLED        
         return GetCDLevel(phaseTree.current_->level_);
 #else
-        return GetCDLevel(cd::phaseTree.current_->level_);
+        return uniquePath_->back();
 #endif
       }
     }

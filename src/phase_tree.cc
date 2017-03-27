@@ -99,7 +99,7 @@ std::string PhaseNode::GetPhasePath(void)
 uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 {
   TUNE_DEBUG("@@ %s ## lv:%u, label:%s\n", __func__, level, label.c_str()); //getchar();
-  printf("@@ %s ## lv:%u, label:%s\n", __func__, level, label.c_str()); //getchar();
+//  if(cd::myTaskID == 0) printf("@@ %s ## lv:%u, label:%s\n", __func__, level, label.c_str()); //getchar();
   uint32_t phase = -1;
   std::string phase_path = GetPhasePath(label);
   auto it = cd::phasePath.find(phase_path);
@@ -115,12 +115,12 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 
     //phaseMap[level][label] = cd::phaseTree.current_->phase_;
     TUNE_DEBUG("New Phase! %u %s\n", phase, phase_path.c_str());
-    printf("New Phase! %u %s\n", phase, phase_path.c_str());
+//    if(cd::myTaskID == 0) printf("New Phase! %u at lv#%u %s\n", phase, level, phase_path.c_str());
   } else {
     cd::phaseTree.current_ = cd::phaseNodeCache[it->second];
     phase = it->second;
     TUNE_DEBUG("Old Phase! %u %s\n", phase, phase_path.c_str()); //getchar();
-    printf("Old Phase! %u %s\n", phase, phase_path.c_str()); //getchar();
+//    if(cd::myTaskID == 0) printf("Old Phase! %u at lv#%u%s\n", phase, level, phase_path.c_str()); //getchar();
   }
 
 //  profMap[phase] = &cd::phaseTree.current_->profile_;getchar();
