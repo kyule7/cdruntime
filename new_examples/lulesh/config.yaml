@@ -1,0 +1,55 @@
+- CD_0_0 :
+  - label : Root
+    interval : 1
+    errortype : 0xF
+  - CD_1_1 :
+    - label : MainLoop
+      interval : 1
+      errortype : 0xF
+    - CD_2_2 :
+      - label : CalcForeForNodes
+        interval : 1
+        errortype : 0x1
+    - CD_2_3 :
+      - label : CalcAccelerationForNodes
+        interval : 1
+        errortype : 0x1
+    - CD_2_4 :
+      - label : ApplyAccelerationBoundaryConditionsForNodes
+        interval : 1
+        errortype : 0x1
+    - CD_2_5 :
+      - label : CalcVelocityForNodes
+        interval : 1
+        errortype : 0x1
+    - CD_2_6 :
+      - label : CalcPositionForNodes
+        interval : 1
+        errortype : 0x1
+    - CD_2_7 :
+      - label : CalcLagrangeElements
+        interval : 1
+        errortype : 0x1
+    - CD_2_8 :
+      - label : CalcQForElems
+        interval : 1
+        errortype : 0x1
+    - CD_2_9 :
+      - label : ApplyMaterialPropertiesForElems
+        interval : 1
+        errortype : 0x1
+    - CD_2_10 :
+      - label : UpdateVolumesForElems
+        interval : 1
+        errortype : 0x1
+    - CD_2_11 :
+      - label : CalcTimeConstraintsForElems
+        interval : 1
+        errortype : 0x3
+
+- FAILURE :
+  - F1 : 0.01
+  - F2 : 0.001
+  - F4 : 0.001
+  - F8 : 0.001
+
