@@ -44,6 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "sys_err_t.h"
 #include "cd_internal.h"
 #include "cd_def_preserve.h"
+#include "machine_specific.h"
 //#include "profiler_interface.h"
 //#include "cd_global.h"
 //#include "error_injector.h"
@@ -245,6 +246,12 @@ void InitDir(int myTask, int numTask)
   OpenDebugFilepath(myTask, dbg_basepath);
 
 
+}
+void *sp_init = NULL;
+static void __attribute__((constructor)) get_init_stack_ptr(void)
+{
+  GetStackPtr(&sp_init);
+  printf("init stack:%p\n", sp_init);
 }
 
 /// KL
@@ -664,7 +671,7 @@ int SplitCD_1D(const int& my_task_id,
 // CDHandle Member Methods ------------------------------------------------------------
 
 CDHandle::CDHandle()
-  : ptr_cd_(0), node_id_(-1), ctxt_(CDPath::GetRootCD()->ctxt_)
+  : ptr_cd_(0), node_id_(-1)/*, ctxt_(CDPath::GetRootCD()->ctxt_)*/
 {
   // FIXME
   assert(0);
@@ -700,7 +707,7 @@ CDHandle::CDHandle()
 /// clear children list
 /// request to add me as a children to parent (to Head CD object)
 CDHandle::CDHandle(CD *ptr_cd) 
-  : ptr_cd_(ptr_cd), node_id_(ptr_cd->cd_id_.node_id_), ctxt_(ptr_cd->ctxt_)
+  : ptr_cd_(ptr_cd), node_id_(ptr_cd->cd_id_.node_id_)/*, ctxt_(ptr_cd->ctxt_)*/
 {
   SplitCD = &SplitCD_1D;
 
@@ -795,7 +802,7 @@ CDHandle *CDHandle::Create(const char *name,
   //GONG
   CDPrologue();
   TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
-  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
+//  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
   //CheckMailBox();
 
   // Create CDHandle for a local node
@@ -1037,7 +1044,7 @@ CDErrT CDHandle::Destroy(bool collective)
 {
   CDPrologue();
   TUNE_DEBUG("[Real %s] %u %d\n", __func__, level(), phase());
-  printf("[Real %s] %u %d\n", __func__, level(), phase()); STOPHANDLE;
+//  printf("[Real %s] %u %d\n", __func__, level(), phase()); STOPHANDLE;
   uint32_t phase = ptr_cd_->phase();//phase();
   std::string label(GetLabel());
 
@@ -1103,6 +1110,63 @@ CDErrT CDHandle::InternalDestroy(bool collective, bool need_destroy)
 
    
   return err;
+}
+
+StackEntry *new_stack_entry;
+void PreserveStack(StackEntry *stack) 
+{
+  printf("### after rollback\n");
+  memcpy(stack->sp_, stack->preserved_stack_, stack->stack_size_);
+}
+
+CDErrT CDHandle::Begin(const char *label,
+             bool collective,//!< [in] Specifies whether this call is a collective across all tasks 
+                                  //!< contained by this CD or whether its to be run by a single task 
+                                  //!< only with the programmer responsible for synchronization. 
+             const uint64_t &sys_err_vec
+            )
+{
+  CD_ASSERT(ptr_cd_);
+  if(ctxt_prv_mode() == kExcludeStack) 
+    setjmp(*jmp_buffer());
+  else { 
+    new_stack_entry = new StackEntry;
+//    getcontext(ctxt());
+    GetStackPtr(&new_stack_entry->sp_);
+    printf("now stack:%p - %p\n", new_stack_entry->sp_, sp_init);
+    int32_t new_stack_size = (char *)sp_init - (char *)new_stack_entry->sp_;
+    printf("stacksize:%d\n", new_stack_size);
+    if(new_stack_entry->stack_size_ < new_stack_size) {
+      new_stack_entry->stack_size_ = new_stack_size;
+      
+      if(new_stack_entry->preserved_stack_ != NULL) 
+        free(new_stack_entry->preserved_stack_);
+      new_stack_entry->preserved_stack_ = malloc(new_stack_entry->stack_size_);
+    } else {
+      new_stack_entry->stack_size_ = new_stack_size;
+      if(new_stack_entry->preserved_stack_ == NULL)
+        new_stack_entry->preserved_stack_ = malloc(new_stack_entry->stack_size_);
+    }
+    printf("stack cpy:%p %p %u\n", new_stack_entry->preserved_stack_, new_stack_entry->sp_, new_stack_entry->stack_size_);
+    memcpy(new_stack_entry->preserved_stack_, new_stack_entry->sp_, new_stack_entry->stack_size_);
+    ptr_cd_->stack_entry_ = new_stack_entry;
+    getcontext(ctxt());
+
+    ctxt()->uc_stack.ss_sp = new_stack_entry->shadow_stack_;
+    ctxt()->uc_stack.ss_size = STACK_SIZE;
+    ctxt()->uc_stack.ss_flags = 0;
+    makecontext(ctxt(), (void (*) (void))PreserveStack, 1, ptr_cd_->stack_entry_);
+  }
+
+  if(ptr_cd()->cd_exec_mode_ == kReexecution) {
+    TUNE_DEBUG("Reexecution %s at %u\n", label, ptr_cd()->level());
+    printf("Reexecution %s at %u\n", label, ptr_cd()->level());
+  }
+  TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
+//         CommitPreserveBuff();
+  common::CDErrT ret = InternalBegin(label, collective, sys_err_vec);
+  TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
+  return ret;
 }
 
 //inline
@@ -1422,7 +1486,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     err = kError;
     // FIXME
-    CD_PRINT("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
+    CD_DEBUG("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
     printf("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
@@ -1991,9 +2055,11 @@ int CDHandle::ctxt_prv_mode()
 
 void CDHandle::CommitPreserveBuff()
 {
+  /*
   CDPrologue();
+  CD_ASSERT(ptr_cd_ != NULL);
 //  if(ptr_cd_->cd_exec_mode_ ==CD::kExecution){
-  if( ptr_cd_->ctxt_prv_mode_ == kExcludeStack) {
+  if(ptr_cd_->ctxt_prv_mode_ == kExcludeStack) {
 //  cddbg << "Commit jmp buffer!" << endl; cddbgBreak();
 //  cddbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << ", size: "<< sizeof(jmp_buf) << endl; cddbgBreak();
     memcpy(ptr_cd_->jmp_buffer_, jmp_buffer_, sizeof(jmp_buf));
@@ -2006,6 +2072,7 @@ void CDHandle::CommitPreserveBuff()
 //  }
   end_clk = CD_CLOCK();
   CDEpilogue();
+  */
 }
 
 

@@ -13,9 +13,9 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #if CD_RUNTIME_ENABLED
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
-    cd::config.LoadConfig(cd_config_file);
+    cd::config.LoadConfig(cd_config_file, myTask);
   } else {
-    cd::config.LoadConfig(CD_DEFAULT_CONFIG);
+    cd::config.LoadConfig(CD_DEFAULT_CONFIG, myTask);
   }
   cd::CDHandle *root_handle = cd::CD_Init(numTask, myTask, prv_medium);
 #else 

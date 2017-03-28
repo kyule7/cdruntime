@@ -109,7 +109,7 @@ class CDHandle {
 #     if CD_RUNTIME_ENABLED
       if(new_handle->IsNewCD()) {
         new_handle->handle_ = handle_->Create(name, cd_type, err_name_mask, err_loc_mask, error);
-        printf("tuned %s:%p\n", name, new_handle->handle_);
+//        printf("tuned %s:%p\n", name, new_handle->handle_);
       }
 #     endif
       AddHandle(new_handle);

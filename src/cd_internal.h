@@ -65,7 +65,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <cstring>
 #include <ucontext.h>
 #include <functional>
-
+#include "machine_specific.h"
 
 #if CD_COMM_LOG_ENABLED
 //SZ
@@ -195,7 +195,6 @@ class CD : public Serializable {
                           kEntryError,     //!< Internal error in CD entries
                           kErrorReported   //!< Error reported from hardware or application.
                         };  
-
   protected: 
     CDID cd_id_;
     RecoverObject *recoverObj_;
@@ -240,12 +239,13 @@ class CD : public Serializable {
     jmp_buf         jmp_buffer_;
     int             jmp_val_;
     uint64_t        option_save_context_; 
-
+    StackEntry     *stack_entry_;
     /// Flag for normal execution or reexecution.
     CDExecMode      cd_exec_mode_;
     uint64_t        preserve_count_;
     uint64_t        restore_count_;
     int             num_reexecution_;
+    
 #if 1
   public:
 //    static bool need_reexec;

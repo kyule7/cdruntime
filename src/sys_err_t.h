@@ -246,7 +246,7 @@ struct SystemConfig {
 //  void ParseCDHierarchy(const char *key, int seq_cnt);
 public:
   void UpdateSwitchParams(char *str);
-  void LoadConfig(const char *config);
+  void LoadConfig(const char *config, int myTask);
 };
 
 extern SystemConfig config;

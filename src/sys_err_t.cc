@@ -56,6 +56,7 @@ int64_t phase = -1;
 int seq_cnt = 0;
 char prv;
 std::string label;
+static FILE *tstream = NULL;
 
 uint64_t SoftMemErrInfo::get_pa_start(void)     { return pa_start_; }
 uint64_t SoftMemErrInfo::get_va_start(void)     { return va_start_; }
@@ -98,7 +99,7 @@ CDErrT UndeclareErrLoc(uint32_t error_name_id)
 
 void ConfigEntry::Print(int64_t level, int64_t phase) 
 { 
-  printf("[%ld/%ld] interval:%ld, type:%lX\n", 
+  fprintf(tstream, "[%ld/%ld] interval:%ld, type:%lX\n", 
             level, phase, interval_, failure_type_); 
 }
 
@@ -106,7 +107,7 @@ static inline
 void AddIndent(int cnt)
 {
   for(int i=0; i<cnt; i++) {
-    printf(INDENT_SIZE);
+    fprintf(tstream, INDENT_SIZE);
   }
 }
 
@@ -114,17 +115,17 @@ void AddIndent(int cnt)
 void SystemConfig::UpdateSwitchParams(char *str)
 {
   char *prv_str = str;
-//  printf("1:%s\n", str);
+//  fprintf(tstream, "1:%s\n", str);
   str = strtok(prv_str, "_");
-  if(str == NULL) { printf("Param format is wrong\n"); /*assert(0);*/ }
+  if(str == NULL) { fprintf(tstream, "Param format is wrong\n"); /*assert(0);*/ }
   str = strtok(NULL, "_");
-//  printf("1:%s\n", str);
+//  fprintf(tstream, "1:%s\n", str);
   level = atol(str);
   str = strtok(NULL, "_");
-//  printf("2:%s\n", str);
-  if(str == NULL) { printf("Param format is wrong\n"); /*assert(0);*/ }
+//  fprintf(tstream, "2:%s\n", str);
+  if(str == NULL) { fprintf(tstream, "Param format is wrong\n"); /*assert(0);*/ }
   phase = atol(str);
-//  printf("Check: %ld, %ld\n", level, phase);  getchar();
+//  fprintf(tstream, "Check: %ld, %ld\n", level, phase);  getchar();
 }
 
 std::string trim(const std::string& str,
@@ -144,7 +145,7 @@ void SystemConfig::ParseParam(char *key)
 {
   if(key[0] == 'C' && key[1] == 'D' && prv != 'l') {
     prv = key[0]; 
-    AddIndent(seq_cnt); printf("%s\n", key);
+    AddIndent(seq_cnt); fprintf(tstream, "%s\n", key);
 
     UpdateSwitchParams(key);
     tuned::phaseTree.current_ = new PhaseNode(tuned::phaseTree.current_, level, phase);
@@ -156,35 +157,35 @@ void SystemConfig::ParseParam(char *key)
     tuned::phaseNodeCache[phase]  = tuned::phaseTree.current_;
   } else if(strcmp(key, "label") == 0) {
     prv = key[0]; 
-    AddIndent(seq_cnt); printf("%s: ", key);
+    AddIndent(seq_cnt); fprintf(tstream, "%s: ", key);
   } else if(strcmp(key, "interval") == 0) {
     prv = key[0]; 
-    AddIndent(seq_cnt); printf("%s: ", key);
+    AddIndent(seq_cnt); fprintf(tstream, "%s: ", key);
   } else if(strcmp(key, "errortype") == 0) { 
     prv = key[0]; 
-    AddIndent(seq_cnt); printf("%s: ", key);
+    AddIndent(seq_cnt); fprintf(tstream, "%s: ", key);
   } else if(key[0] == 'F') { 
     prv = key[0]; 
     errortype = atol(key+1);
-    AddIndent(seq_cnt); printf("%s: ", key);
+    AddIndent(seq_cnt); fprintf(tstream, "%s: ", key);
   } else { // value
     if(prv == 'F') {
       config.failure_rate_[errortype] = atof(key);
     } else if(prv == 'l') {
       label = key;
       tuned::phaseTree.current_->label_ = label;
-      printf("%s ", label.c_str());
+      fprintf(tstream, "%s ", label.c_str());
     } else if(prv == 'i') {
       interval = atol(key);
       tuned::phaseTree.current_->interval_ = interval;
-      printf("[%p,%p] %ld ", tuned::phaseTree.root_, tuned::phaseTree.current_, interval); 
+      fprintf(tstream, "[%p,%p] %ld ", tuned::phaseTree.root_, tuned::phaseTree.current_, interval); 
     } else if(prv == 'e') {
       errortype = strtol(key, NULL, 16);
       tuned::phaseTree.current_->errortype_ = errortype;
       config.mapping_[level][phase].failure_type_ = errortype;
-      printf("0x%lX ", errortype); 
+      fprintf(tstream, "0x%lX ", errortype); 
     }
-    printf("%s\n", key);
+    fprintf(tstream, "%s\n", key);
   }
 } 
 
@@ -192,17 +193,17 @@ void SystemConfig::ParseParam(char *key)
 void PhaseNode::Print(void) 
 {
   AddIndent(level_);
-  printf("CD_%u_%u\n", level_, phase_);
+  fprintf(tstream, "CD_%u_%u\n", level_, phase_);
   AddIndent(level_);
-  printf("{\n");
-  AddIndent(level_+1); printf("label:%s\n", label_.c_str());
-  AddIndent(level_+1); printf("interval:%ld\n", interval_);
-  AddIndent(level_+1); printf("errortype:0x%lX\n", errortype_);
+  fprintf(tstream, "{\n");
+  AddIndent(level_+1); fprintf(tstream, "label:%s\n", label_.c_str());
+  AddIndent(level_+1); fprintf(tstream, "interval:%ld\n", interval_);
+  AddIndent(level_+1); fprintf(tstream, "errortype:0x%lX\n", errortype_);
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->Print();
   }
   AddIndent(level_);
-  printf("}\n");
+  fprintf(tstream, "}\n");
 }
 
 std::string PhaseNode::GetPhasePath(void)
@@ -216,7 +217,7 @@ std::string PhaseNode::GetPhasePath(void)
 // cd_name_.phase_ = cd::phaseTree->target_->GetPhaseNode();
 uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 {
-  printf("## %s ## lv:%u, label:%s\n", __func__, level, label.c_str());
+  fprintf(tstream, "## %s ## lv:%u, label:%s\n", __func__, level, label.c_str());
   uint32_t phase = INVALID_NUM;
   std::string phase_path = GetPhasePath();
   auto it = cd::phasePath.find(phase_path);
@@ -228,19 +229,22 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     phaseMap[phase_path]  = phase;
     phaseNodeCache[phase] = cd::phaseTree.current_;
     //phaseMap[level][label] = cd::phaseTree.current_->phase_;
-    printf("New Phase! %u %s\n", phase, label.c_str());
+    fprintf(tstream, "New Phase! %u %s\n", phase, label.c_str());
   } else {
     cd::phaseTree.current_ = phaseNodeCache[it->second];
     phase = it->second;
-    printf("Old Phase! %u %s\n", phase, label.c_str()); //getchar();
+    fprintf(tstream, "Old Phase! %u %s\n", phase, label.c_str()); //getchar();
   }
   return phase;
 }
 */
 
-void SystemConfig::LoadConfig(const char *config)
+void SystemConfig::LoadConfig(const char *config, int myTask)
 {
   FILE *fh = fopen(config, "r");
+  char tname[256];
+  sprintf(tname, "%s.out.%d", config, myTask);
+  tstream = fopen(tname, "w");
   yaml_parser_t parser;
   yaml_token_t  token;   /* new variable */
   yaml_event_t  event;   /* New variable */
@@ -252,31 +256,32 @@ void SystemConfig::LoadConfig(const char *config)
 //  PhaseTree tuned::phaseTree;
   do {
     if (!yaml_parser_parse(&parser, &event)) {
-       printf("Parser error %d\n", parser.error);
+       fprintf(tstream, "Parser error %d\n", parser.error);
        exit(EXIT_FAILURE);
     }
     switch(event.type)
     { 
-      case YAML_NO_EVENT: puts("No event!"); break;
+      case YAML_NO_EVENT: fprintf(tstream, "No event!"); break;
       /* Stream start/end */
-      case YAML_STREAM_START_EVENT: puts("STREAM START"); break;
-      case YAML_STREAM_END_EVENT:   puts("STREAM END");   break;
+      case YAML_STREAM_START_EVENT: fprintf(tstream, "STREAM START"); break;
+      case YAML_STREAM_END_EVENT:   fprintf(tstream, "STREAM END");   break;
       /* Block delimeters */
       case YAML_DOCUMENT_START_EVENT: {
 
 //                                      tuned::phaseTree.current_ = new PhaseNode(tuned::phaseTree.current_);
 //                                      tuned::phaseTree.root_ = tuned::phaseTree.current_;
-                                      puts("[[[[[[[[[[[[[[[[[[["); 
+//                                      fprintf(tstream, "[[[[[[[[[[[[[[[[[[["); 
                                       break;
                                       }
-      case YAML_DOCUMENT_END_EVENT:   puts("]]]]]]]]]]]]]]]]]]]");   break;
+      case YAML_DOCUMENT_END_EVENT:   //fprintf(tstream, "]]]]]]]]]]]]]]]]]]]");   
+                                      break;
       case YAML_SEQUENCE_START_EVENT: {
 //                                        tuned::phaseTree.current_ = new PhaseNode(tuned::phaseTree.current_);
 //                                        if(tuned::phaseTree.root_ == NULL) 
 //                                          tuned::phaseTree.root_ = tuned::phaseTree.current_;
 //                                        else 
 //                                        if(tuned::phaseTree.root_ != NULL) 
-                                          AddIndent(seq_cnt++); puts("{"); 
+                                          AddIndent(seq_cnt++); fprintf(tstream, "{"); 
 //                                        seq_cnt++;
                                         break;
                                       }
@@ -286,20 +291,20 @@ void SystemConfig::LoadConfig(const char *config)
                                         
 //                                        seq_cnt--;
 //                                      if(tuned::phaseTree.current_ != tuned::phaseTree.root_){
-                                        AddIndent(--seq_cnt); puts("}"); 
+                                        AddIndent(--seq_cnt); fprintf(tstream, "}"); 
 //                                      }
                                         break;
                                       }
       case YAML_MAPPING_START_EVENT:  {
-                                        //printf("map begin\n"); 
+                                        //fprintf(tstream, "map begin\n"); 
                                         break;
                                       }
       case YAML_MAPPING_END_EVENT:    {
-                                        //printf("map end\n"); 
+                                        //fprintf(tstream, "map end\n"); 
                                         break;
                                       }
       /* Data */
-      case YAML_ALIAS_EVENT:  printf("Got alias (anchor %s)\n", event.data.alias.anchor); break;
+      case YAML_ALIAS_EVENT:  fprintf(tstream, "Got alias (anchor %s)\n", event.data.alias.anchor); break;
       case YAML_SCALAR_EVENT: {
         char *key = (char *)event.data.scalar.value;
         ParseParam(key);
@@ -312,6 +317,7 @@ void SystemConfig::LoadConfig(const char *config)
   yaml_event_delete(&event);
   yaml_parser_delete(&parser);
   fclose(fh);
+  fclose(tstream);
   tuned::phaseTree.Print();
 
   // Initialize phase_gen for cd::phaseTree
@@ -319,7 +325,7 @@ void SystemConfig::LoadConfig(const char *config)
 //  tuned::phaseNodeCache = new (PhaseNode*)[tuned::PhaseNode::max_phase](NULL);
   PhaseNode::phase_gen = 0;  
   tuned::phaseTree.current_ = tuned::phaseTree.root_;
-  printf("Finish reading config. :%p %p\n", tuned::phaseTree.current_, tuned::phaseTree.root_);
+  fprintf(tstream, "Finish reading config. :%p %p\n", tuned::phaseTree.current_, tuned::phaseTree.root_);
 }
 
 
@@ -339,27 +345,27 @@ void SystemConfig::LoadConfig(const char *config)
 //{
 //  char *prv_str = str+1;
 //  str = strtok(prv_str, "_");
-//  if(str == NULL) { printf("Param format is wrong\n"); /*assert(0);*/ }
+//  if(str == NULL) { fprintf(tstream, "Param format is wrong\n"); /*assert(0);*/ }
 //  level = atol(str);
 //  str = strtok(NULL, "_");
-//  if(str == NULL) { printf("Param format is wrong\n"); /*assert(0);*/ }
+//  if(str == NULL) { fprintf(tstream, "Param format is wrong\n"); /*assert(0);*/ }
 //  phase = atol(str);
-//  printf("Check: %ld, %ld\n", level, phase);  getchar();
+//  fprintf(tstream, "Check: %ld, %ld\n", level, phase);  getchar();
 //}
 //
 //
 //void SystemConfig::ParseCDHierarchy(const char *key, int seq_cnt) 
 //{
 //  if(key[0] == 'C' && key[1] == 'D') { 
-//    AddIndent(seq_cnt); printf("%s\n", key);
+//    AddIndent(seq_cnt); fprintf(tstream, "%s\n", key);
 //  } else if(strcmp(key, "loop") == 0) { 
-//    AddIndent(seq_cnt); printf("%s: ", key);
+//    AddIndent(seq_cnt); fprintf(tstream, "%s: ", key);
 //  } else if(strcmp(key, "time") == 0) { 
-//    AddIndent(seq_cnt); printf("%s: ", key);
+//    AddIndent(seq_cnt); fprintf(tstream, "%s: ", key);
 //  } else if(strcmp(key, "failure_rate") == 0) { 
-//    AddIndent(seq_cnt); printf("%s: ", key);
+//    AddIndent(seq_cnt); fprintf(tstream, "%s: ", key);
 //  } else { // value
-//    printf("%s\n", key);
+//    fprintf(tstream, "%s\n", key);
 //  }
 //}
 //
@@ -373,9 +379,9 @@ void SystemConfig::LoadConfig(const char *config)
 //  } else if(key[0] == 'F') {
 //    prv = key[0];
 //    failure_type = atoi(str+1);
-//    printf("failure_type:%lx\n", failure_type);
+//    fprintf(tstream, "failure_type:%lx\n", failure_type);
 //  } else if(key[0] == 'P') {
-//    printf("key0:%s\n", key);
+//    fprintf(tstream, "key0:%s\n", key);
 //  } else { // value
 //    if(prv == 'S') {
 //      char *prv_str = str;
@@ -383,8 +389,8 @@ void SystemConfig::LoadConfig(const char *config)
 //      if(str != NULL) {
 //        interval = atol(str);
 //        str = strtok(NULL, ",");
-//        if(str == NULL) { printf("Param format is wrong\n"); assert(0); }
-//        printf("type:%s\n", str);
+//        if(str == NULL) { fprintf(tstream, "Param format is wrong\n"); assert(0); }
+//        fprintf(tstream, "type:%s\n", str);
 //        failure_type = strtol(str, NULL, 16);
 //        config.mapping_[level][phase].interval_     = interval;
 //        config.mapping_[level][phase].failure_type_ = failure_type;
@@ -393,7 +399,7 @@ void SystemConfig::LoadConfig(const char *config)
 //    } else if(prv == 'F') {
 //      config.failure_rate_[failure_type] = atof(str);
 //    } else {
-//      printf("key:%s\n", key);
+//      fprintf(tstream, "key:%s\n", key);
 //      assert(0);
 //    }
 //  }
@@ -413,29 +419,29 @@ void SystemConfig::LoadConfig(const char *config)
 //
 //  do {
 //    if (!yaml_parser_parse(&parser, &event)) {
-//       printf("Parser error %d\n", parser.error);
+//       fprintf(tstream, "Parser error %d\n", parser.error);
 //       exit(EXIT_FAILURE);
 //    }
 //    switch(event.type)
 //    { 
-//      case YAML_NO_EVENT:             printf("No event!"); break;
+//      case YAML_NO_EVENT:             fprintf(tstream, "No event!"); break;
 //      // Stream start/end
-//      case YAML_STREAM_START_EVENT:   printf("STREAM START\n"); break;
-//      case YAML_STREAM_END_EVENT:     printf("\nSTREAM END");   break;
+//      case YAML_STREAM_START_EVENT:   fprintf(tstream, "STREAM START\n"); break;
+//      case YAML_STREAM_END_EVENT:     fprintf(tstream, "\nSTREAM END");   break;
 //      // Block delimeters
-//      case YAML_DOCUMENT_START_EVENT: printf("Start Configuration\n");   break;
-//      case YAML_DOCUMENT_END_EVENT:   printf("\nEnd Configuration");     break;
+//      case YAML_DOCUMENT_START_EVENT: fprintf(tstream, "Start Configuration\n");   break;
+//      case YAML_DOCUMENT_END_EVENT:   fprintf(tstream, "\nEnd Configuration");     break;
 //      case YAML_SEQUENCE_START_EVENT: {
-//                                        //printf("seq start\n");/*AddIndent(seq_cnt++); printf("{");*/ 
+//                                        //fprintf(tstream, "seq start\n");/*AddIndent(seq_cnt++); fprintf(tstream, "{");*/ 
 //                                        break;
 //                                      }
 //      case YAML_SEQUENCE_END_EVENT:   {
-//                                        //printf("seq end\n");/*AddIndent(--seq_cnt); printf("}");*/ 
+//                                        //fprintf(tstream, "seq end\n");/*AddIndent(--seq_cnt); fprintf(tstream, "}");*/ 
 //                                        break;
 //                                      }
-//      case YAML_MAPPING_START_EVENT:  {/*printf("map start\n");  */    break;
+//      case YAML_MAPPING_START_EVENT:  {/*fprintf(tstream, "map start\n");  */    break;
 //                                      }
-//      case YAML_MAPPING_END_EVENT:    {/*printf("map end\n");    */    break;
+//      case YAML_MAPPING_END_EVENT:    {/*fprintf(tstream, "map end\n");    */    break;
 //                                      }
 //      // Data
 //      case YAML_ALIAS_EVENT:          break; 

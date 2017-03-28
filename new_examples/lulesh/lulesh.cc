@@ -1193,10 +1193,10 @@ static inline void CalcForceForNodes(Domain& domain)
      domain.fz(i) = Real_t(0.0) ;
   }
 #if _CD
-  CDHandle *cdh = GetCurrentCD();
+  CDHandle *cdh = GetLeafCD();
   cdh->Begin("CalcForeForNodes");
   //if(myRank == 0) printf("Check Begin %s %u %p\n", __func__, cdh->level(), cdh);
-  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
+//  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
 #   ifndef OPTIMIZE_PRV
   cdh->Preserve(&domain, sizeof(domain), kCopy, "locDomAtCalcForceForNodes");
   cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
@@ -1230,15 +1230,15 @@ static inline void CalcForceForNodes(Domain& domain)
 static inline
 void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
 {
-   GetCurrentCD()->Begin("CalcAccelerationForNodes"); 
+   GetLeafCD()->Begin("CalcAccelerationForNodes"); 
 #pragma omp parallel for firstprivate(numNode)
    for (Index_t i = 0; i < numNode; ++i) {
       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
       domain.zdd(i) = domain.fz(i) / domain.nodalMass(i);
    }
-   GetCurrentCD()->Detect();
-   GetCurrentCD()->Complete();
+   GetLeafCD()->Detect();
+   GetLeafCD()->Complete();
 }
 
 /******************************************/
@@ -1246,7 +1246,7 @@ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
 static inline
 void ApplyAccelerationBoundaryConditionsForNodes(Domain& domain)
 {
-   GetCurrentCD()->Begin("ApplyAccelerationBoundaryConditionsForNodes"); 
+   GetLeafCD()->Begin("ApplyAccelerationBoundaryConditionsForNodes"); 
    Index_t size = domain.sizeX();
    Index_t numNodeBC = (size+1)*(size+1) ;
 
@@ -1270,8 +1270,8 @@ void ApplyAccelerationBoundaryConditionsForNodes(Domain& domain)
             domain.zdd(domain.symmZ(i)) = Real_t(0.0) ;
       }
    }
-   GetCurrentCD()->Detect();
-   GetCurrentCD()->Complete();
+   GetLeafCD()->Detect();
+   GetLeafCD()->Complete();
 }
 
 /******************************************/
@@ -1280,7 +1280,7 @@ static inline
 void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
                           Index_t numNode)
 {
-   GetCurrentCD()->Begin(__func__); 
+   GetLeafCD()->Begin(__func__); 
 
 #pragma omp parallel for firstprivate(numNode)
    for ( Index_t i = 0 ; i < numNode ; ++i )
@@ -1299,8 +1299,8 @@ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
      if( FABS(zdtmp) < u_cut ) zdtmp = Real_t(0.0);
      domain.zd(i) = zdtmp ;
    }
-   GetCurrentCD()->Detect();
-   GetCurrentCD()->Complete();
+   GetLeafCD()->Detect();
+   GetLeafCD()->Complete();
 }
 
 /******************************************/
@@ -1308,7 +1308,7 @@ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
 static inline
 void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
 {
-   GetCurrentCD()->Begin(__func__); 
+   GetLeafCD()->Begin(__func__); 
 #pragma omp parallel for firstprivate(numNode)
    for ( Index_t i = 0 ; i < numNode ; ++i )
    {
@@ -1316,8 +1316,8 @@ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
      domain.y(i) += domain.yd(i) * dt ;
      domain.z(i) += domain.zd(i) * dt ;
    }
-   GetCurrentCD()->Detect();
-   GetCurrentCD()->Complete();
+   GetLeafCD()->Detect();
+   GetLeafCD()->Complete();
 }
 
 /******************************************/
@@ -1326,7 +1326,7 @@ static inline
 void LagrangeNodal(Domain& domain)
 {
 #if _CD
-   CDHandle *parent = GetCurrentCD();
+   CDHandle *parent = GetLeafCD();
    CDHandle *cdh = parent->Create("LagrangeNodal", kStrict);
    if(myRank == 0) printf("Check Create %s %u %p %p\n", __func__, cdh->level(), cdh, parent);
 #endif 
@@ -2538,10 +2538,10 @@ static inline
 void LagrangeElements(Domain& domain, Index_t numElem)
 {
 #if _CD
-  //CDHandle *cdh = GetCurrentCD()->Create("LagrangeElements", kStrict);
-  CDHandle *cdh = GetCurrentCD();
+  //CDHandle *cdh = GetLeafCD()->Create("LagrangeElements", kStrict);
+  CDHandle *cdh = GetLeafCD();
   cdh->Begin("CalcLagrangeElements");
-  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
+//  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
 #endif 
 
   Real_t *vnew = Allocate<Real_t>(numElem) ;  /* new relative vol -- temp */
@@ -2728,7 +2728,7 @@ static inline
 void CalcTimeConstraintsForElems(Domain& domain) {
 
 #if _CD
-  CDHandle *cdh = GetCurrentCD();
+  CDHandle *cdh = GetLeafCD();
   cdh->Begin(__func__);
 #endif 
    // Initialize conditions to a very large value
@@ -2772,7 +2772,7 @@ void LagrangeLeapFrog(Domain& domain)
 #endif
 
 #if _CD
-   CDHandle *cdh = GetCurrentCD()->Create("LagrangeElements", kStrict);
+   CDHandle *cdh = GetLeafCD()->Create("LagrangeElements", kStrict);
 #endif
    /* calculate element quantities (i.e. velocity gradient & q), and update
     * material states */
@@ -2844,7 +2844,8 @@ int main(int argc, char *argv[])
 
    ParseCommandLineOptions(argc, argv, myRank, &opts);
 
-   opts.nx  = 30;
+   opts.nx  = 50;
+   opts.its  = 20;
    if ((myRank == 0) && (opts.quiet == 0)) {
       printf("Running problem size %d^3 per domain until completion\n", opts.nx);
       printf("Num processors: %d\n", numRanks);
