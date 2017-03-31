@@ -29,9 +29,9 @@ class MPIFileHandle : public FileHandle {
   public:
     static FileHandle *Get(MPI_Comm comm, const char *filepath=NULL);
     void Close(void);
-    virtual CDErrType Write(uint64_t offset, char *src, uint64_t chunk, int64_t inc=-1);
-    virtual char *Read(uint64_t len, uint64_t offset=0);
-    virtual CDErrType Read(void *dst, uint64_t len, uint64_t offset=0);
+    virtual CDErrType Write(int64_t offset, char *src, int64_t len, int64_t inc=-1);
+    virtual char *Read(int64_t len, int64_t offset=0);
+    virtual CDErrType Read(void *dst, int64_t len, int64_t offset=0);
     virtual void FileSync(void);
     virtual void Truncate(uint64_t newsize);
     virtual int64_t GetFileSize(void);

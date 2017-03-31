@@ -44,7 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "sys_err_t.h"
 #include "cd_internal.h"
 #include "cd_def_preserve.h"
-#include "machine_specific.h"
+//#include "machine_specific.h"
 //#include "profiler_interface.h"
 //#include "cd_global.h"
 //#include "error_injector.h"
@@ -197,7 +197,7 @@ void OpenDebugFilepath(int myTask, const string &dbg_basepath)
   char dbg_filepath[256]={};
   snprintf(dbg_filepath, 256, "%s/%s_%d", dbg_basepath.c_str(), dbg_log_filename, myTask);
   cdout = fopen(dbg_filepath, "w");
-  printf("cdout:%p\n", cdout);
+  //printf("cdout:%p\n", cdout);
 #endif
 
 #if CD_DEBUG_ENABLED
@@ -234,7 +234,7 @@ void InitDir(int myTask, int numTask)
   string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
   SetDebugFilepath(myTask, dbg_basepath);
 
-  printf("cdout:%p\n", cdout);
+  //printf("cdout:%p\n", cdout);
   internal::InitFileHandle(myTask == 0);
  
 #if CD_MPI_ENABLED 
@@ -260,7 +260,14 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   CDPrologue();
 
   cd::tot_begin_clk = CD_CLOCK();
-
+#if CD_TUNING_ENABLED == 0
+  char *cd_config_file = getenv("CD_CONFIG_FILENAME");
+  if(cd_config_file != NULL) {
+    cd::config.LoadConfig(cd_config_file, myTask);
+  } else {
+    cd::config.LoadConfig(CD_DEFAULT_CONFIG, myTask);
+  }
+#endif
 /*
   // Initialize static vars
   myTaskID      = myTask;
@@ -1521,7 +1528,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
       if(IsHead()) {
         ptr_cd_->SetRollbackPoint(rollback_point, false);
       } else { // FIXME
-//        ptr_cd_->SetRollbackPoint(rollback_point, false);
+        ptr_cd_->SetRollbackPoint(rollback_point, true);
 //        ptr_cd_->SetRollbackPoint(level(), false);
       }
     } else {

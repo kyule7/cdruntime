@@ -42,7 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "phase_tree.h"
 #include "runtime_info.h"
 #include "packer.h"
-#include "machine_specific.h"
+//#include "machine_specific.h"
 #include <setjmp.h>
 using namespace cd;
 using namespace common;
@@ -205,7 +205,7 @@ CD::CD(void)
     : incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 #endif
 {
-  stack_entry_ = NULL;
+  //stack_entry_ = NULL;
   Init();  
   is_window_reused_ = false;
   recreated_ = false;
@@ -256,7 +256,7 @@ CD::CD(CDHandle *cd_parent,
     , incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 #endif
 {
-  stack_entry_ = NULL;
+  //stack_entry_ = NULL;
   Init(); 
 #if CD_MPI_ENABLED
   PMPI_Comm_group(cd_id_.node_id_.color_, &(cd_id_.node_id_.task_group_));
@@ -1118,7 +1118,13 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       
     uint32_t new_rollback_point = (collective)? SyncCDs(target->ptr_cd(), true) : 
                                   target->ptr_cd()->CheckRollbackPoint(true); // read from head
-    target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+    if(new_rollback_point > rollback_lv) {
+      CD_DEBUG("head did not notice error yet.....\n");
+      new_rollback_point = rollback_lv;
+      target->ptr_cd()->SetRollbackPoint(new_rollback_point, true);
+    } else {
+      target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
+    }
     // FIXME
 //    if(collective) {
 //      uint32_t new_rollback_point = SyncCDs(target->ptr_cd(), true);
@@ -1137,6 +1143,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
     }
 #endif
+    CD_DEBUG("new rb:%u, rollback_lv:%u, curr:%u\n", new_rollback_point, rollback_lv, level);
     // It is possible for other task set to rollback_point lower than original.
     // It handles that case.
     // FIXME (11.02.2016) : should check with new_rollback_point
@@ -1153,7 +1160,8 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       CDHandle *next_cdh = CDPath::GetCDLevel(--level);
 //      bool need_sync_next_cdh = CDPath::GetParentCD(next_cdh->level())->task_size() > next_cdh->task_size();
       bool need_sync_next_cdh = next_cdh->task_size() > target->task_size();
-      CD_DEBUG("level#%u (next_cdh) need sync? %u\n", next_cdh->level(), need_sync_next_cdh);
+      CD_DEBUG("next level#%u (curlv:%u!= %u(next_cdh) need sync? %u\n", 
+         next_cdh->level(), level, new_rollback_point, need_sync_next_cdh);
       return GetCDToRecover(next_cdh, need_sync_next_cdh);
     }
     else {

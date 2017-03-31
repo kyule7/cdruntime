@@ -14,14 +14,14 @@ string RuntimeInfo::GetRTInfoStr(int cnt)
   char stringout[512];
   string indent(cnt<<1, ' ');
   snprintf(stringout, 512, 
-                    "%sexec_cnt :%8lu\n"
-                    "%sreex_cnt :%8lu\n"
-                    "%stot_time :%8.3lf # [s]\n"
-                    "%sreex_time:%8.3lf # [s]\n"
-                    "%swait_time:%8.3lf # [s]\n"
-                    "%svol_copy :%8lu # [B]\n"
-                    "%svol_refer:%8lu # [B]\n"
-                    "%scomm_log :%8lu # [B]\n"
+                    "%sexec_cnt :%11lu\n"
+                    "%sreex_cnt :%11lu\n"
+                    "%stot_time :%11.6lf # [s]\n"
+                    "%sreex_time:%11.6lf # [s]\n"
+                    "%swait_time:%11.6lf # [s]\n"
+                    "%svol_copy :%11lu # [B]\n"
+                    "%svol_refer:%11lu # [B]\n"
+                    "%scomm_log :%11lu # [B]\n"
                     "%serror_vec:0x%lx\n",
                     indent.c_str(), total_exec_,
                     indent.c_str(), reexec_,
@@ -44,11 +44,11 @@ string CDOverhead::GetOverheadStr(void)
 {
   char stringout[512];
   snprintf(stringout, 512, 
-                    "preserve :%8.3lf # [s]\n"
-                    "create   :%8.3lf # [s]\n"
-                    "destroy  :%8.3lf # [s]\n"
-                    "begin    :%8.3lf # [s]\n"
-                    "complete :%8.3lf # [s]\n", 
+                    "preserve :%11.6lf # [s]\n"
+                    "create   :%11.6lf # [s]\n"
+                    "destroy  :%11.6lf # [s]\n"
+                    "begin    :%11.6lf # [s]\n"
+                    "complete :%11.6lf # [s]\n", 
                     prv_elapsed_time_, 
                     create_elapsed_time_,
                     destroy_elapsed_time_,
@@ -67,11 +67,11 @@ string CDOverheadVar::GetOverheadVarStr(void)
 {
   char stringout[512];
   snprintf(stringout, 512, 
-                    "preserve:%8.3lf # [s] (var:%8.3lf)\n"
-                    "create  :%8.3lf # [s] (var:%8.3lf)\n"
-                    "destroy :%8.3lf # [s] (var:%8.3lf)\n"
-                    "begin   :%8.3lf # [s] (var:%8.3lf)\n"
-                    "complete:%8.3lf # [s] (var:%8.3lf)\n", 
+                    "preserve:%11.6lf # [s] (var:%11.6lf)\n"
+                    "create  :%11.6lf # [s] (var:%11.6lf)\n"
+                    "destroy :%11.6lf # [s] (var:%11.6lf)\n"
+                    "begin   :%11.6lf # [s] (var:%11.6lf)\n"
+                    "complete:%11.6lf # [s] (var:%11.6lf)\n", 
                     prv_elapsed_time_,     prv_elapsed_time_var_, 
                     create_elapsed_time_,  create_elapsed_time_var_,
                     destroy_elapsed_time_, destroy_elapsed_time_var_,

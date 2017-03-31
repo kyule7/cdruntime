@@ -239,7 +239,7 @@ class CD : public Serializable {
     jmp_buf         jmp_buffer_;
     int             jmp_val_;
     uint64_t        option_save_context_; 
-    StackEntry     *stack_entry_;
+//    StackEntry     *stack_entry_;
     /// Flag for normal execution or reexecution.
     CDExecMode      cd_exec_mode_;
     uint64_t        preserve_count_;
@@ -416,7 +416,7 @@ update the preserved data.
                  bool collective=true);
 
     CDErrT Complete(bool update_preservations=false,
-                    bool collective=false);
+                    bool collective=true);
 
     CDErrT Advance(bool collective=true);
 

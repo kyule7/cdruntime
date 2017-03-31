@@ -165,8 +165,8 @@ Additional BSD Notice
    Int_t numRanks ;
 
 #if _CD
-//using namespace cd;
-using namespace tuned;
+using namespace cd;
+//using namespace tuned;
 Domain::DomainSerdes::SerdesInfo *Domain::DomainSerdes::serdesRegElem = NULL;
 Domain::DomainSerdes::SerdesInfo Domain::DomainSerdes::serdes_table[TOTAL_ELEMENT_COUNT];
 bool Domain::DomainSerdes::serdes_table_init = false; 
@@ -1194,7 +1194,7 @@ static inline void CalcForceForNodes(Domain& domain)
   }
 #if _CD
   CDHandle *cdh = GetLeafCD();
-  cdh->Begin("CalcForeForNodes");
+  CD_Begin(cdh, "CalcForeForNodes");
   //if(myRank == 0) printf("Check Begin %s %u %p\n", __func__, cdh->level(), cdh);
 //  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
 #   ifndef OPTIMIZE_PRV
@@ -1315,8 +1315,8 @@ void LagrangeNodal(Domain& domain)
 {
 #if _CD
    CDHandle *parent = GetLeafCD();
-   CDHandle *cdh = parent->Create("LagrangeNodal", kStrict);
-   if(myRank == 0) printf("Check Create %s %u %p %p\n", __func__, cdh->level(), cdh, parent);
+   CDHandle *cdh = parent->Create("LagrangeNodal", kStrict, 0x4);
+//   if(myRank == 0) printf("Check Create %s %u %p %p\n", __func__, cdh->level(), cdh, parent);
 #endif 
 
 #ifdef SEDOV_SYNC_POS_VEL_EARLY
@@ -1339,28 +1339,29 @@ void LagrangeNodal(Domain& domain)
 #endif
 
 #if _CD
-   GetLeafCD()->Begin("CalcAccelerationForNodes"); 
+   CDHandle *lcdh = GetLeafCD();
+   CD_Begin(lcdh, "CalcAccelerationForNodes"); 
 #endif
    CalcAccelerationForNodes(domain, domain.numNode());
 #if _CD
    GetLeafCD()->Detect();
    GetLeafCD()->Complete();
    
-   GetLeafCD()->Begin("ApplyAccelerationBoundaryConditionsForNodes"); 
+   CD_Begin(lcdh, "ApplyAccelerationBoundaryConditionsForNodes"); 
 #endif
    ApplyAccelerationBoundaryConditionsForNodes(domain);
 #if _CD
    GetLeafCD()->Detect();
    GetLeafCD()->Complete();
 
-   GetLeafCD()->Begin("CalcVelocityForNodes"); 
+   CD_Begin(lcdh, "CalcVelocityForNodes"); 
 #endif
    CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
 #if _CD
    GetLeafCD()->Detect();
    GetLeafCD()->Complete();
 
-   GetLeafCD()->Begin("CalcPositionForNodes"); 
+   CD_Begin(lcdh, "CalcPositionForNodes"); 
 #endif
 
    CalcPositionForNodes( domain, delt, domain.numNode() );
@@ -2550,7 +2551,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 #if _CD
   //CDHandle *cdh = GetLeafCD()->Create("LagrangeElements", kStrict);
   CDHandle *cdh = GetLeafCD();
-  cdh->Begin("CalcLagrangeElements");
+  CD_Begin(cdh, "CalcLagrangeElements");
 //  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
 #endif 
 
@@ -2561,21 +2562,21 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 #if _CD
   cdh->Detect();
   cdh->Complete();
-  cdh->Begin("CalcQForElems");
+  CD_Begin(cdh, "CalcQForElems");
 #endif
   /* Calculate Q.  (Monotonic q option requires communication) */
   CalcQForElems(domain, vnew) ;
 #if _CD
   cdh->Detect();
   cdh->Complete();
-  cdh->Begin("ApplyMaterialPropertiesForElems");
+  CD_Begin(cdh, "ApplyMaterialPropertiesForElems");
 #endif
 
   ApplyMaterialPropertiesForElems(domain, vnew) ;
 #if _CD
   cdh->Detect();
   cdh->Complete();
-  cdh->Begin("UpdateVolumesForElems");
+  CD_Begin(cdh, "UpdateVolumesForElems");
 #endif
 
   UpdateVolumesForElems(domain, vnew,
@@ -2739,7 +2740,7 @@ void CalcTimeConstraintsForElems(Domain& domain) {
 
 #if _CD
   CDHandle *cdh = GetLeafCD();
-  cdh->Begin(__func__);
+  CD_Begin(cdh, __func__);
 #endif 
    // Initialize conditions to a very large value
    domain.dtcourant() = 1.0e+20;
@@ -2782,7 +2783,7 @@ void LagrangeLeapFrog(Domain& domain)
 #endif
 
 #if _CD
-   CDHandle *cdh = GetLeafCD()->Create("LagrangeElements", kStrict);
+   CDHandle *cdh = GetLeafCD()->Create("LagrangeElements", kStrict, 0x4);
 #endif
    /* calculate element quantities (i.e. velocity gradient & q), and update
     * material states */
@@ -2900,7 +2901,7 @@ int main(int argc, char *argv[])
 #if _CD
    locDom->serdes.InitSerdesTable();
    CDHandle* root_cd = CD_Init(numRanks, myRank);
-   root_cd->Begin("Root");
+   CD_Begin(root_cd, "Root");
    root_cd->Preserve(locDom, sizeof(Domain), kCopy, "locDom_Root");
    root_cd->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Root");
 #endif
@@ -2914,14 +2915,15 @@ int main(int argc, char *argv[])
 #endif
 
 #if _CD
-  CDHandle *cd_main_loop = root_cd->Create("Parent", kStrict);
+  CDHandle *cd_main_loop = root_cd->Create("Parent", kStrict, 0xFF);
 #endif
 //debug to see region sizes
 //   for(Int_t i = 0; i < locDom->numReg(); i++)
 //      std::cout << "region" << i + 1<< "size" << locDom->regElemSize(i) <<std::endl;
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
+      TimeIncrement(*locDom) ; // global synchronization
 #if _CD
-      cd_main_loop->Begin("MainLoop");
+      CD_Begin(cd_main_loop, "MainLoop");
       root_cd->Preserve(locDom, sizeof(Domain), kCopy, "locDom_Root");
 #   ifndef OPTIMIZE_PRV
       cd_main_loop->Preserve(locDom->serdes.SetOp(preserve_vec_all), kCopy, "MainLoop");
@@ -2930,7 +2932,6 @@ int main(int argc, char *argv[])
 #   endif
 #endif
 
-      TimeIncrement(*locDom) ; // global synchronization
       LagrangeLeapFrog(*locDom) ;
 #if _CD
       cd_main_loop->Detect();

@@ -126,21 +126,24 @@ void MPIFileHandle::Close(void)
   fh_ = NULL;
 }
 
-CDErrType MPIFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64_t inc)
+CDErrType MPIFileHandle::Write(int64_t offset, char *src, int64_t len, int64_t inc)
 {
   CDErrType ferr = kOK;
-
+  PACKER_ASSERT(offset >= 0);
+  PACKER_ASSERT(len > 0);
   MPI_Status status;
 //  CheckError( MPI_File_write(fdesc_, src, len, MPI_BYTE, &status) );
+  time_mpiio_write.Begin();
   CheckError( MPI_File_write_at(fdesc_, offset, src, len, MPI_BYTE, &status) );
+  time_mpiio_write.End(len);
   offset_ = (inc >= 0)? offset_ + inc : offset_ + len;
-  MYDBG("[%d] MPI Write offset:%lu,%lu, src:%p, len:%lu\n", fdesc_, offset, offset_, src, len);
+  MYDBG("[%d] MPI Write offset:%ld, %ld, src:%p, len:%ld\n", fdesc_, offset, offset_, src, len);
   return ferr;
 }
 
-char *MPIFileHandle::Read(uint64_t len, uint64_t offset)
+char *MPIFileHandle::Read(int64_t len, int64_t offset)
 {
-  MYDBG("%lu (file offset:%lu)\n", len, offset);
+  MYDBG("%ld (file offset:%ld)\n", len, offset);
   //void *ret_ptr = new char[len];
   void *ret_ptr = NULL;
   posix_memalign(&ret_ptr, CHUNK_ALIGNMENT, len);
@@ -148,10 +151,11 @@ char *MPIFileHandle::Read(uint64_t len, uint64_t offset)
   return (char *)ret_ptr;
 }
 
-CDErrType MPIFileHandle::Read(void *dst, uint64_t len, uint64_t offset)
+CDErrType MPIFileHandle::Read(void *dst, int64_t len, int64_t offset)
 {
-  MYDBG("%lu (file offset:%lu)\n", len, offset);
-
+  MYDBG("%ld (file offset:%ld)\n", len, offset);
+  PACKER_ASSERT(offset >= 0);
+  PACKER_ASSERT(len >= 0);
   CDErrType ret = kOK;
   MPI_Status status;
  // int rank;
@@ -160,7 +164,9 @@ CDErrType MPIFileHandle::Read(void *dst, uint64_t len, uint64_t offset)
   BufferLock();
 //  MPI_Info info;
 //  CheckError( MPI_File_set_view(fdesc_, view_offset, MPI_BYTE, ftype_, "native", MPI_INFO_NULL) );
+  time_mpiio_read.Begin();
   CheckError( MPI_File_read_at(fdesc_, offset, dst, len, MPI_BYTE, &status) );
+  time_mpiio_read.End(len);
   BufferUnlock();
   return ret;
 }

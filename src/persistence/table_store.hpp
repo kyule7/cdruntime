@@ -182,7 +182,7 @@ class TableStore : public BaseTable {
       MYDBG("[%s] idx:%lu\n", __func__, idx);
       // bound check
       CDErrType ret = kOK;
-      if(idx < used()) {
+      if((int64_t)idx < used()) {
         uint64_t i = (head_ + idx) % size_;
         ret_id = ptr_[i].id_;
         ret_size = ptr_[i].size();
@@ -197,7 +197,7 @@ class TableStore : public BaseTable {
     EntryT *GetAt(uint64_t idx)
     {
       // bound check
-      if(idx < used()) {
+      if((int64_t)idx < used()) {
         uint64_t i = (head_ + idx) % size_;
         return ptr_ + i;
       } else {
@@ -240,7 +240,7 @@ class TableStore : public BaseTable {
     {
       uint64_t datasize = 0;
       uint64_t ret = idx;
-      while(idx < used()) {
+      while((int64_t)idx < used()) {
         const uint64_t chunksize = ptr_[idx].size();
         if(chunksize + datasize < fetchsize) { 
           datasize += chunksize;

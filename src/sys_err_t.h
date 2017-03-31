@@ -243,6 +243,7 @@ struct SystemConfig {
   MappingConfig mapping_;
   std::map<int64_t, float> failure_rate_;
   void ParseParam(char *key);
+  void ParseFailureParam(char *key);
 //  void ParseCDHierarchy(const char *key, int seq_cnt);
 public:
   void UpdateSwitchParams(char *str);

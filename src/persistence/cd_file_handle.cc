@@ -85,9 +85,11 @@ void PosixFileHandle::Close(void)
   }
 }
 
-CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64_t inc)
+CDErrType PosixFileHandle::Write(int64_t offset, char *src, int64_t len, int64_t inc)
 {
-  MYDBG("write (%d): %p (%lu) at file offset:%lu\n", 
+  printf("write (%d): %p (%ld) at file offset:%ld\n", 
+         fdesc_, src, len, offset); 
+  MYDBG("write (%d): %p (%ld) at file offset:%ld\n", 
          fdesc_, src, len, offset); 
 //  printf("write (%d): %p (%lu) at file offset:%lx\n", 
 //         fdesc_, src, len, offset);
@@ -107,7 +109,7 @@ CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64
       ERROR_MESSAGE_PACKER("Error occurred while seeking file:%ld\n", ret);
     }
   } else {
-    MYDBG("offset:%lu == %lu\n", offset_, offset);
+    MYDBG("offset:%ld == %ld\n", offset_, offset);
   }
 
 
@@ -126,15 +128,15 @@ CDErrType PosixFileHandle::Write(uint64_t offset, char *src, uint64_t len, int64
   if((uint64_t)written_size != len) {
     perror("write:");
     ferr = kErrorFileWrite;
-    ERROR_MESSAGE_PACKER("Error occurred while writing buffer contents to file: %d %ld == %lu\n", fdesc_, written_size, len);
+    ERROR_MESSAGE_PACKER("Error occurred while writing buffer contents to file: %d %ld == %ld\n", fdesc_, written_size, len);
   }
 
   return ferr;
 }
 
-char *PosixFileHandle::Read(uint64_t len, uint64_t offset)
+char *PosixFileHandle::Read(int64_t len, int64_t offset)
 {
-  MYDBG("%lu (file offset:%lu)\n", len, offset);
+  MYDBG("%ld (file offset:%ld)\n", len, offset);
   //void *ret_ptr = new char[len];
   void *ret_ptr = NULL;
   posix_memalign(&ret_ptr, CHUNK_ALIGNMENT, len);
@@ -142,10 +144,11 @@ char *PosixFileHandle::Read(uint64_t len, uint64_t offset)
   return (char *)ret_ptr;
 }
 
-CDErrType PosixFileHandle::Read(void *dst, uint64_t len, uint64_t offset)
+CDErrType PosixFileHandle::Read(void *dst, int64_t len, int64_t offset)
 {
   CDErrType ret = kOK;
-  MYDBG("%lu (file offset:%lu)\n", len, offset);
+  assert(len > 0);
+  MYDBG("%ld (file offset:%ld)\n", len, offset);
   //if(offset != 0) 
   {
     off_t seeked = lseek(fdesc_, offset, SEEK_SET);

@@ -80,7 +80,7 @@ void DataStore::Init(char *ptr)
   head_ = 0;//size_ - size_ / 4;
   tail_ = head_;//sizeof(MagicStore);
   allocated_ = 0;
-  mode_ = kGrowingMode | kVolatile; //kPosixFile;
+  mode_ = kGrowingMode | kMPIFile;//kPosixFile;
   r_tail_ = 0;
   r_head_ = 0;
   if(ptr == NULL) 
@@ -1074,6 +1074,7 @@ uint64_t DataStore::Fetch(int64_t &tail_inc, int64_t &head_inc, int64_t len, uin
   time_read.End();
   return consumed;
 }
+
 uint64_t DataStore::FetchInternal(int64_t &tail_inc, int64_t &head_inc, int64_t len, uint64_t pos, bool locality)
 {
   MYDBG("len:%lu, pos:%lu, rhead:%lu,rtail:%lu\n", len, pos, r_head_, r_tail_);

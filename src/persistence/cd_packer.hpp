@@ -36,17 +36,18 @@ class CDPacker : public Packer<CDEntry> {
       } else {
         
 //        uint64_t produced = data_->Fetch(entry.size(), entry.offset_);
-        printf("\n\n TEST $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n"); //getchar();
+//        printf("\n\n TEST $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n"); //getchar();
         uint64_t table_offset = (uint64_t)entry.src_;
         uint64_t data_size   = table_offset - entry.offset_; //entry.offset_ - table_offset;
         uint64_t table_size  = entry.size() - data_size;
-        printf("Check entry for packed obj:totsize:%lu offset:%lu tableoffset:%lu tablesize:%lu\n", 
-           entry.size(), entry.offset_, table_offset, table_size); //getchar();
+//        printf("Check entry for packed obj:totsize:%lu offset:%lu tableoffset:%lu tablesize:%lu\n", 
+//           entry.size(), entry.offset_, table_offset, table_size); //getchar();
         data_->Fetch(table_size, table_offset);
         CDEntry *pEntry = reinterpret_cast<CDEntry *>(
             data_->GetPtr(table_offset + data_->head()));
 
         // Test
+//        if(0)
         {
           printf("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n");
           uint64_t *ptest = reinterpret_cast<uint64_t *>(pEntry);
@@ -59,7 +60,7 @@ class CDPacker : public Packer<CDEntry> {
         }
         // This will just read from cache (memory)
         uint64_t num_entries = table_size/sizeof(CDEntry);
-        printf("# of entries:%lu, head:%lu, pos_buf:%lu\n", num_entries, data_->head(), pEntry->offset_); //getchar();
+//        printf("# of entries:%lu, head:%lu, pos_buf:%lu\n", num_entries, data_->head(), pEntry->offset_); //getchar();
         for(uint32_t i=0; i<num_entries; i++, pEntry++) {
           data_->GetData(pEntry->src_, pEntry->size(), pEntry->offset_);
         }
