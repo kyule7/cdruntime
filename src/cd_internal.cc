@@ -42,6 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "phase_tree.h"
 #include "runtime_info.h"
 #include "packer.h"
+#include "machine_specific.h"
 #include <setjmp.h>
 using namespace cd;
 using namespace common;
@@ -198,13 +199,13 @@ void cd::internal::Finalize(void)
 /// ex. cd object can be created by something else I guess..
 /// So I think it would be more desirable to increase level
 /// inside Create() 
-
 CD::CD(void)
 //  : file_handle_()
 #if CD_MPI_ENABLED
     : incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 #endif
 {
+  stack_entry_ = NULL;
   Init();  
   is_window_reused_ = false;
   recreated_ = false;
@@ -255,6 +256,7 @@ CD::CD(CDHandle *cd_parent,
     , incomplete_log_(DEFAULT_INCOMPL_LOG_SIZE)
 #endif
 {
+  stack_entry_ = NULL;
   Init(); 
 #if CD_MPI_ENABLED
   PMPI_Comm_group(cd_id_.node_id_.color_, &(cd_id_.node_id_.task_group_));
@@ -858,12 +860,16 @@ CDErrT CD::Begin(const char *label, bool collective)
 //  auto it = phasePath.find(label);
 //  if(it != phasePath.end()) {
 
-  assert(begin_ == false);
+//  printf("## Before chage %d %p ## [%s %u] %s %s\n", 
+//      begin_, this, cd_id_.GetStringID().c_str(), myTaskID, name_.c_str(), label);
+  CD_ASSERT_STR(begin_ == false, "%s %s at %u-%u-%u\n", 
+      __func__, label, level(), cd_id_.cd_name_.phase_, cd_id_.sequential_id_);
   begin_ = true;
 
   CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);
   PrintDebug();
 //  cd_id_.cd_name_.UpdatePhase(label_);
+
 #if comm_log
   //SZ: if in reexecution, need to unpack logs to childs
   if (GetParentHandle()!=NULL)

@@ -13,19 +13,21 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #if CD_RUNTIME_ENABLED
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
-    cd::config.LoadConfig(cd_config_file);
+    cd::config.LoadConfig(cd_config_file, myTask);
   } else {
-    cd::config.LoadConfig(CD_DEFAULT_CONFIG);
+    cd::config.LoadConfig(CD_DEFAULT_CONFIG, myTask);
   }
   cd::CDHandle *root_handle = cd::CD_Init(numTask, myTask, prv_medium);
 #else 
-  cd::myTaskID = myTask;
-  cd::totalTaskSize = numTask;
+//  cd::myTaskID = myTask;
+//  cd::totalTaskSize = numTask;
+  cd::InitDir(myTask, numTask);
   packer::SetHead(myTask == 0);
   cd::CDHandle *root_handle = NULL;
 #endif
   CDHandle *tuned_root_handle = new CDHandle(root_handle, 0, DEFAULT_ROOT_LABEL);
   CDPath::GetCDPath()->push_back(tuned_root_handle);
+  printf("tuned root:%p\n", root_handle);
   return tuned_root_handle;
 }
 

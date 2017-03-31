@@ -44,6 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "sys_err_t.h"
 #include "cd_internal.h"
 #include "cd_def_preserve.h"
+#include "machine_specific.h"
 //#include "profiler_interface.h"
 //#include "cd_global.h"
 //#include "error_injector.h"
@@ -174,10 +175,9 @@ enum {
 
 
 static inline
-void SetDebugFilepath(int myTask) 
+void SetDebugFilepath(int myTask, string &dbg_basepath) 
 {
-  string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
-#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
+#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE || CD_DEBUG_ENABLED
   char *dbg_base_str = getenv( "CD_DBG_BASEPATH" );
   if(dbg_base_str != NULL) {
     dbg_basepath = dbg_base_str;
@@ -186,11 +186,18 @@ void SetDebugFilepath(int myTask)
   if(myTask == 0) {
     MakeFileDir(dbg_basepath.c_str());
   }
+#endif
+}
 
+static inline
+void OpenDebugFilepath(int myTask, const string &dbg_basepath)
+{
+#if CD_DEBUG_DEST == CD_DEBUG_TO_FILE
   char dbg_log_filename[] = CD_DBG_FILENAME;
   char dbg_filepath[256]={};
   snprintf(dbg_filepath, 256, "%s/%s_%d", dbg_basepath.c_str(), dbg_log_filename, myTask);
   cdout = fopen(dbg_filepath, "w");
+  printf("cdout:%p\n", cdout);
 #endif
 
 #if CD_DEBUG_ENABLED
@@ -218,6 +225,35 @@ void InitErrorInjection(int myTask)
   srand48(random_seed * (double)(RANDOM_SEED + myTask));
 }
 
+void InitDir(int myTask, int numTask)
+{
+  // Initialize static vars
+  myTaskID      = myTask;
+  totalTaskSize = numTask;
+
+  string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
+  SetDebugFilepath(myTask, dbg_basepath);
+
+  printf("cdout:%p\n", cdout);
+  internal::InitFileHandle(myTask == 0);
+ 
+#if CD_MPI_ENABLED 
+  // Synchronization is needed. 
+  // Otherwise, some task may execute CD_DEBUG before head creates directory 
+  PMPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+  OpenDebugFilepath(myTask, dbg_basepath);
+
+
+}
+void *sp_init = NULL;
+static void __attribute__((constructor)) get_init_stack_ptr(void)
+{
+  GetStackPtr(&sp_init);
+  printf("init stack:%p\n", sp_init);
+}
+
 /// KL
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
@@ -225,6 +261,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 
   cd::tot_begin_clk = CD_CLOCK();
 
+/*
   // Initialize static vars
   myTaskID      = myTask;
   totalTaskSize = numTask;
@@ -236,7 +273,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //    cd::config.LoadConfig(CD_DEFAULT_CONFIG);
 //  }
 
-  SetDebugFilepath(myTask);
+  string dbg_basepath(CD_DEFAULT_DEBUG_OUT);
+  SetDebugFilepath(myTask, dbg_basepath);
 
   printf("cdout:%p\n", cdout);
   internal::InitFileHandle(myTask == 0);
@@ -246,6 +284,10 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   // Otherwise, some task may execute CD_DEBUG before head creates directory 
   PMPI_Barrier(MPI_COMM_WORLD);
 #endif
+
+  OpenDebugFilepath(myTask, dbg_basepath);
+*/
+  InitDir(myTask, numTask);
 
   // Create Root CD
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
@@ -623,165 +665,13 @@ int SplitCD_1D(const int& my_task_id,
 
 
 
-#if 0
-// ----------------------- Switch APIs -----------------------------------
-CDHandle *CDHandle::CreateSW(uint32_t onOff,
-                           const char *name, 
-                           int cd_type, 
-                           uint32_t error_name_mask, 
-                           uint32_t error_loc_mask,
-                           CDErrT *error)
-{
-  CDHandle *handle = NULL;
-  if(onOff == kON) {
-    handle = Create(name, cd_type, error_name_mask, error_loc_mask, error);
-  }
-  else if(onOff == kOFF) {
-    handle = CDPath::GetNullCD();
-  }
-  return handle;
-}
-CDHandle *CDHandle::CreateSW(uint32_t onOff,
-                           uint32_t  num_children,
-                           const char *name, 
-                           int cd_type, 
-                           uint32_t error_name_mask, 
-                           uint32_t error_loc_mask, 
-                           CDErrT *error)
-{
-  CDHandle *handle = NULL;
-  if(onOff == kON) {
-    handle = Create(num_children, name, cd_type, error_name_mask, error_loc_mask, error);
-  }
-  else if(onOff == kOFF) {
-    handle = CDPath::GetNullCD();
-  }
-  return handle;
-}
-CDHandle *CDHandle::CreateSW(uint32_t onOff,
-                           uint32_t color, 
-                           uint32_t task_in_color, 
-                           uint32_t num_children, 
-                           const char *name, 
-                           int cd_type, 
-                           uint32_t error_name_mask, 
-                           uint32_t error_loc_mask, 
-                           CDErrT *error )
-{
-  CDHandle *handle = NULL;
-  if(onOff == kON) {
-    handle = Create(color, task_in_color, num_children, name, cd_type, error_name_mask, error_loc_mask, error);
-  }
-  else if(onOff == kOFF) {
-    handle = CDPath::GetNullCD();
-  }
-  return handle;
-}
-CDHandle *CDHandle::CreateAndBeginSW(uint32_t onOff,
-                                   uint32_t num_children, 
-                                   const char *name, 
-                                   int cd_type, 
-                                   uint32_t error_name_mask, 
-                                   uint32_t error_loc_mask,
-                                   CDErrT *error )
-{
-  // TODO
-  return NULL;
-}
-CDErrT CDHandle::DestroySW(uint32_t onOff, bool collective) 
-{
-  CDErrT ret = kOK;
-  if(onOff == kON) {
-    ret = Destroy(collective);
-  }
-  else if(onOff == kOFF) {
-    ret = kOK;
-  }
-  return ret;
-}
-  
-  
-CDErrT CDHandle::BeginSW(uint32_t onOff, bool collective, const char *label, const uint64_t &sys_err_vec)
-{
-  CDErrT ret = kOK;
-  if(onOff == kON) {
-    ret = Begin(collective, label, sys_err_vec);
-  }
-  else if(onOff == kOFF) {
-    ret = kOK;
-  }
-  return ret;
-}
-
-CDErrT CDHandle::CompleteSW(uint32_t onOff, bool collective, bool update_preservation)
-{
-  return kOK;
-}
-CDErrT CDHandle::PreserveSW(uint32_t onOff,
-                          void *data_ptr, 
-                          uint64_t len, 
-                          uint32_t preserve_mask, 
-                          const char *my_name, 
-                          const char *ref_name, 
-                          uint64_t ref_offset, 
-                          const RegenObject *regen_object, 
-                          PreserveUseT data_usage)
-{
-  return kOK;
-}
-CDErrT CDHandle::PreserveSW(uint32_t onOff,
-                          Serializable &serdes,                           
-                          uint32_t preserve_mask, 
-                          const char *my_name, 
-                          const char *ref_name, 
-                          uint64_t ref_offset, 
-                          const RegenObject *regen_object, 
-                          PreserveUseT data_usage)
-{
-  return kOK;
-}
-CDErrT CDHandle::PreserveSW(uint32_t onOff,
-                          CDEvent &cd_event, 
-                          void *data_ptr, 
-                          uint64_t len, 
-                          uint32_t preserve_mask, 
-                          const char *my_name, 
-                          const char *ref_name, 
-                          uint64_t ref_offset, 
-                          const RegenObject *regen_object, 
-                          PreserveUseT data_usage)
-{
-  return kOK;
-}
-
-CDErrT CDHandle::DetectSW(uint32_t onOff, std::vector<SysErrT> *err_vec)
-{
-  return kOK;
-}
-
-CDErrT CDHandle::CDAssertSW(uint32_t onOff, bool test, const SysErrT *error_to_report)
-{
-  return kOK;
-}
-CDErrT CDHandle::CDAssertFailSW(uint32_t onOff, bool test_true, const SysErrT *error_to_report)
-{
-  return kOK;
-}
-CDErrT CDHandle::CDAssertNotifySW(uint32_t onOff, bool test_true, const SysErrT *error_to_report)
-{
-  return kOK;
-}
-#endif
-
-
-
 
 
 
 // CDHandle Member Methods ------------------------------------------------------------
 
 CDHandle::CDHandle()
-  : ptr_cd_(0), node_id_(-1), ctxt_(CDPath::GetRootCD()->ctxt_)
+  : ptr_cd_(0), node_id_(-1)/*, ctxt_(CDPath::GetRootCD()->ctxt_)*/
 {
   // FIXME
   assert(0);
@@ -817,7 +707,7 @@ CDHandle::CDHandle()
 /// clear children list
 /// request to add me as a children to parent (to Head CD object)
 CDHandle::CDHandle(CD *ptr_cd) 
-  : ptr_cd_(ptr_cd), node_id_(ptr_cd->cd_id_.node_id_), ctxt_(ptr_cd->ctxt_)
+  : ptr_cd_(ptr_cd), node_id_(ptr_cd->cd_id_.node_id_)/*, ctxt_(ptr_cd->ctxt_)*/
 {
   SplitCD = &SplitCD_1D;
 
@@ -912,6 +802,7 @@ CDHandle *CDHandle::Create(const char *name,
   //GONG
   CDPrologue();
   TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
+//  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
   //CheckMailBox();
 
   // Create CDHandle for a local node
@@ -932,7 +823,7 @@ CDHandle *CDHandle::Create(const char *name,
                                             static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
-  
+//  getchar();
   end_clk = CD_CLOCK();
   const double elapsed = end_clk - begin_clk;
   create_elapsed_time += elapsed;
@@ -1152,7 +1043,8 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 CDErrT CDHandle::Destroy(bool collective) 
 {
   CDPrologue();
-  TUNE_DEBUG("[Real %s] %u %d\n", __func__, level(), phase()); STOPHANDLE;
+  TUNE_DEBUG("[Real %s] %u %d\n", __func__, level(), phase());
+//  printf("[Real %s] %u %d\n", __func__, level(), phase()); STOPHANDLE;
   uint32_t phase = ptr_cd_->phase();//phase();
   std::string label(GetLabel());
 
@@ -1213,10 +1105,68 @@ CDErrT CDHandle::InternalDestroy(bool collective, bool need_destroy)
   if(need_destroy) {
     delete CDPath::GetCDPath()->back();
   }
+//  getchar();
   CDPath::GetCDPath()->pop_back();
 
    
   return err;
+}
+
+StackEntry *new_stack_entry;
+void PreserveStack(StackEntry *stack) 
+{
+  printf("### after rollback\n");
+  memcpy(stack->sp_, stack->preserved_stack_, stack->stack_size_);
+}
+
+CDErrT CDHandle::Begin(const char *label,
+             bool collective,//!< [in] Specifies whether this call is a collective across all tasks 
+                                  //!< contained by this CD or whether its to be run by a single task 
+                                  //!< only with the programmer responsible for synchronization. 
+             const uint64_t &sys_err_vec
+            )
+{
+  CD_ASSERT(ptr_cd_);
+  if(ctxt_prv_mode() == kExcludeStack) 
+    setjmp(*jmp_buffer());
+  else { 
+    new_stack_entry = new StackEntry;
+//    getcontext(ctxt());
+    GetStackPtr(&new_stack_entry->sp_);
+    printf("now stack:%p - %p\n", new_stack_entry->sp_, sp_init);
+    int32_t new_stack_size = (char *)sp_init - (char *)new_stack_entry->sp_;
+    printf("stacksize:%d\n", new_stack_size);
+    if(new_stack_entry->stack_size_ < new_stack_size) {
+      new_stack_entry->stack_size_ = new_stack_size;
+      
+      if(new_stack_entry->preserved_stack_ != NULL) 
+        free(new_stack_entry->preserved_stack_);
+      new_stack_entry->preserved_stack_ = malloc(new_stack_entry->stack_size_);
+    } else {
+      new_stack_entry->stack_size_ = new_stack_size;
+      if(new_stack_entry->preserved_stack_ == NULL)
+        new_stack_entry->preserved_stack_ = malloc(new_stack_entry->stack_size_);
+    }
+    printf("stack cpy:%p %p %u\n", new_stack_entry->preserved_stack_, new_stack_entry->sp_, new_stack_entry->stack_size_);
+    memcpy(new_stack_entry->preserved_stack_, new_stack_entry->sp_, new_stack_entry->stack_size_);
+    ptr_cd_->stack_entry_ = new_stack_entry;
+    getcontext(ctxt());
+
+    ctxt()->uc_stack.ss_sp = new_stack_entry->shadow_stack_;
+    ctxt()->uc_stack.ss_size = STACK_SIZE;
+    ctxt()->uc_stack.ss_flags = 0;
+    makecontext(ctxt(), (void (*) (void))PreserveStack, 1, ptr_cd_->stack_entry_);
+  }
+
+  if(ptr_cd()->cd_exec_mode_ == kReexecution) {
+    TUNE_DEBUG("Reexecution %s at %u\n", label, ptr_cd()->level());
+    printf("Reexecution %s at %u\n", label, ptr_cd()->level());
+  }
+  TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
+//         CommitPreserveBuff();
+  common::CDErrT ret = InternalBegin(label, collective, sys_err_vec);
+  TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
+  return ret;
 }
 
 //inline
@@ -1536,7 +1486,9 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     err = kError;
     // FIXME
-    CD_PRINT("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
+    CD_DEBUG("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
+             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+    printf("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
 
     CDHandle *rb_cdh = CDPath::GetCDLevel(rollback_point);
@@ -1667,164 +1619,6 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 // Internal Ends
 //
 ////////////////////////////////////////////////////////////////////
-
-#if 0
-// ----------------------- Switch APIs -----------------------------------
-CDHandle *CDHandle::CreateSW(uint32_t onOff,
-                           const char *name, 
-                           int cd_type, 
-                           uint32_t error_name_mask, 
-                           uint32_t error_loc_mask,
-                           bool collective, 
-                           CDErrT *error )
-{
-  CDHandle *handle = NULL;
-  if(onOff == kON) {
-    handle = Create(name, cd_type, error_name_mask, error_loc_mask, error);
-  }
-  else if(onOff == kOFF) {
-    handle = CDPath::GetNullCD();
-  }
-  return handle;
-}
-CDHandle *CDHandle::CreateSW(uint32_t onOff,
-                           uint32_t  num_children,
-                           const char *name, 
-                           int cd_type, 
-                           uint32_t error_name_mask, 
-                           uint32_t error_loc_mask, 
-                           CDErrT *error)
-{
-  CDHandle *handle = NULL;
-  if(onOff == kON) {
-    handle = Create(num_children, name, cd_type, error_name_mask, error_loc_mask, error);
-  }
-  else if(onOff == kOFF) {
-    handle = CDPath::GetNullCD();
-  }
-  return handle;
-}
-CDHandle *CDHandle::CreateSW(uint32_t onOff,
-                           uint32_t color, 
-                           uint32_t task_in_color, 
-                           uint32_t num_children, 
-                           const char *name, 
-                           int cd_type, 
-                           uint32_t error_name_mask, 
-                           uint32_t error_loc_mask, 
-                           CDErrT *error )
-{
-  CDHandle *handle = NULL;
-  if(onOff == kON) {
-    handle = Create(color, task_in_color, num_children, name, cd_type, error_name_mask, error_loc_mask, error);
-  }
-  else if(onOff == kOFF) {
-    handle = CDPath::GetNullCD();
-  }
-  return handle;
-}
-CDHandle *CDHandle::CreateAndBeginSW(uint32_t onOff,
-                                   uint32_t num_children, 
-                                   const char *name, 
-                                   int cd_type, 
-                                   uint32_t error_name_mask, 
-                                   uint32_t error_loc_mask,
-                                   CDErrT *error )
-{
-  // TODO
-  return NULL;
-}
-CDErrT CDHandle::DestroySW(uint32_t onOff, bool collective) 
-{
-  CDErrT ret = kOK;
-  if(onOff == kON) {
-    ret = Destroy(collective);
-  }
-  else if(onOff == kOFF) {
-    ret = kOK;
-  }
-  return ret;
-}
-  
-  
-CDErrT CDHandle::BeginSW(uint32_t onOff, bool collective, const char *label, const uint64_t &sys_err_vec)
-{
-  CDErrT ret = kOK;
-  if(onOff == kON) {
-    ret = Begin(collective, label, sys_err_vec);
-  }
-  else if(onOff == kOFF) {
-    ret = kOK;
-  }
-  return ret;
-}
-
-CDErrT CDHandle::CompleteSW(uint32_t onOff, bool collective, bool update_preservation)
-{
-  return kOK;
-}
-CDErrT CDHandle::PreserveSW(uint32_t onOff,
-                          void *data_ptr, 
-                          uint64_t len, 
-                          uint32_t preserve_mask, 
-                          const char *my_name, 
-                          const char *ref_name, 
-                          uint64_t ref_offset, 
-                          const RegenObject *regen_object, 
-                          PreserveUseT data_usage)
-{
-  return kOK;
-}
-CDErrT CDHandle::PreserveSW(uint32_t onOff,
-                          Serializable &serdes,                           
-                          uint32_t preserve_mask, 
-                          const char *my_name, 
-                          const char *ref_name, 
-                          uint64_t ref_offset, 
-                          const RegenObject *regen_object, 
-                          PreserveUseT data_usage)
-{
-  return kOK;
-}
-CDErrT CDHandle::PreserveSW(uint32_t onOff,
-                          CDEvent &cd_event, 
-                          void *data_ptr, 
-                          uint64_t len, 
-                          uint32_t preserve_mask, 
-                          const char *my_name, 
-                          const char *ref_name, 
-                          uint64_t ref_offset, 
-                          const RegenObject *regen_object, 
-                          PreserveUseT data_usage)
-{
-  return kOK;
-}
-
-CDErrT CDHandle::DetectSW(uint32_t onOff, std::vector<SysErrT> *err_vec)
-{
-  return kOK;
-}
-
-CDErrT CDHandle::CDAssertSW(uint32_t onOff, bool test, const SysErrT *error_to_report)
-{
-  return kOK;
-}
-CDErrT CDHandle::CDAssertFailSW(uint32_t onOff, bool test_true, const SysErrT *error_to_report)
-{
-  return kOK;
-}
-CDErrT CDHandle::CDAssertNotifySW(uint32_t onOff, bool test_true, const SysErrT *error_to_report)
-{
-  return kOK;
-}
-#endif
-
-
-
-
-
-
-
 
 
 char *CDHandle::GetName(void) const
@@ -2261,9 +2055,11 @@ int CDHandle::ctxt_prv_mode()
 
 void CDHandle::CommitPreserveBuff()
 {
+  /*
   CDPrologue();
+  CD_ASSERT(ptr_cd_ != NULL);
 //  if(ptr_cd_->cd_exec_mode_ ==CD::kExecution){
-  if( ptr_cd_->ctxt_prv_mode_ == kExcludeStack) {
+  if(ptr_cd_->ctxt_prv_mode_ == kExcludeStack) {
 //  cddbg << "Commit jmp buffer!" << endl; cddbgBreak();
 //  cddbg << "cdh: " << jmp_buffer_ << ", cd: " << ptr_cd_->jmp_buffer_ << ", size: "<< sizeof(jmp_buf) << endl; cddbgBreak();
     memcpy(ptr_cd_->jmp_buffer_, jmp_buffer_, sizeof(jmp_buf));
@@ -2276,6 +2072,7 @@ void CDHandle::CommitPreserveBuff()
 //  }
   end_clk = CD_CLOCK();
   CDEpilogue();
+  */
 }
 
 

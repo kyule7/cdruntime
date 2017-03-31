@@ -282,6 +282,7 @@ namespace cd {
   extern int totalTaskSize;
   extern bool app_side;
 
+  void InitDir(int myTask, int numTask);
 
 /** \addtogroup cd_accessor_funcs 
  * These methods are globally accessible without a CDHandle object.

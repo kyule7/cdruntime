@@ -221,9 +221,9 @@ class CDHandle {
     interface::Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
                           //!< It will be valid when `CD_PROFILER_ENABLED` compile-time flag is on.
 #endif
-    int     jmp_val_;     //!< Temporary flag related to longjmp/setjmp
-    jmp_buf jmp_buffer_;  //!< Temporary buffer related to longjmp/setjmp
-    ucontext_t &ctxt_;    //!< Temporary buffer related to setcontext/getcontext
+//    int     jmp_val_;     //!< Temporary flag related to longjmp/setjmp
+//    jmp_buf jmp_buffer_;  //!< Temporary buffer related to longjmp/setjmp
+//    ucontext_t &ctxt_;    //!< Temporary buffer related to setcontext/getcontext
   private:
     CDHandle(void);       //!< Default constructor of CDHandle. 
     CDHandle(internal::CD *ptr_cd); //!< Normally this constructor will be called when CD is created. 
@@ -436,19 +436,22 @@ class CDHandle {
                                          //!< contained by this CD or whether its to be run by a single task 
                                          //!< only with the programmer responsible for synchronization. 
                     const uint64_t &sys_err_vec=0
-                   )
-       {
-         assert(ptr_cd_);
-         if(ctxt_prv_mode() == kExcludeStack) 
-           setjmp(*jmp_buffer());
-         else 
-           getcontext(ctxt());
-       
-         CommitPreserveBuff();
-         common::CDErrT ret = InternalBegin(label, collective, sys_err_vec);
-         TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
-         return ret;
-       }
+                   );
+//        {
+//          CD_ASSERT(ptr_cd_);
+//          if(ctxt_prv_mode() == kExcludeStack) 
+//            setjmp(*jmp_buffer());
+//          else 
+//            getcontext(ctxt());
+//          if(ptr_cd()->cd_exec_mode_ == kReexecution) {
+// //           TUNE_DEBUG("Reexecution %s at %u\n", lable, ptr_cd()->level());
+//          }
+//          TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
+// //         CommitPreserveBuff();
+//          common::CDErrT ret = InternalBegin(label, collective, sys_err_vec);
+//          TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
+//          return ret;
+//        }
   
     
       /** @brief Completes a CD 
