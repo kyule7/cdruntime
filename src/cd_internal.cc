@@ -490,8 +490,8 @@ void CD::Init()
   //GONG
   begin_ = false;
 //  child_seq_id_ = 0;
-  //ctxt_prv_mode_ = kExcludeStack; 
-  ctxt_prv_mode_ = kIncludeStack; 
+  ctxt_prv_mode_ = kExcludeStack; 
+  //ctxt_prv_mode_ = kIncludeStack; 
   cd_exec_mode_  = kSuspension;
   option_save_context_ = 0;
 
@@ -2238,6 +2238,7 @@ CDErrT CD::Restore()
   // In case we need to find reference name quickly we will maintain seperate structure such as binary search tree and each item will have CDEntry *.
 
 
+  printf("[%d %s at lv#%u] Reset to false at begin!\n", myTaskID, label_.c_str(), level());
   //GONG
   begin_ = false;
 

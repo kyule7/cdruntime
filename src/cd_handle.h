@@ -153,6 +153,51 @@ void CD_Finalize(void);
  */
 namespace cd {
 
+#define CD_Begin(...) (FOUR_ARGS_MACRO(__VA_ARGS__, CD_BEGIN3, CD_BEGIN2, CD_BEGIN1, CD_BEGIN0)(__VA_ARGS__))
+
+// Macros for setjump / getcontext
+// So users should call this in their application, not call cd_handle->Begin().
+
+#define CD_BEGIN3(CDH, LABEL, COLLECTIVE, SYS_ERR_VEC) ({ \
+  if((CDH)->ctxt_prv_mode() == kExcludeStack) { \
+    setjmp(*((CDH)->jmp_buffer())); \
+  } else { \
+    getcontext((CDH)->ctxt()); \
+  } \
+  (CDH)->InternalBegin((LABEL), (COLLECTIVE), (SYS_ERR_VEC)); \
+  CD_DEBUG("[%s %u ] Begin\n", (LABEL), CDH->level()); \
+  })
+
+#define CD_BEGIN2(CDH, LABEL, COLLECTIVE) ({ \
+  if((CDH)->ctxt_prv_mode() == kExcludeStack) { \
+    setjmp(*((CDH)->jmp_buffer())); \
+  } else { \
+    getcontext((CDH)->ctxt()); \
+  } \
+  (CDH)->InternalBegin((LABEL), (COLLECTIVE)); \
+  CD_DEBUG("[%s %u ] Begin\n", (LABEL), CDH->level()); \
+  })
+
+#define CD_BEGIN1(CDH, LABEL) ({ \
+  if((CDH)->ctxt_prv_mode() == kExcludeStack) { \
+    setjmp(*((CDH)->jmp_buffer())); \
+  } else { \
+    getcontext((CDH)->ctxt()); \
+  } \
+  (CDH)->InternalBegin((LABEL)); \
+  CD_DEBUG("[%s %u ] Begin\n", (LABEL), CDH->level()); \
+  })
+
+#define CD_BEGIN0(CDH) ({ \
+  if((CDH)->ctxt_prv_mode() == kExcludeStack) { \
+    setjmp(*((CDH)->jmp_buffer())); \
+  } else { \
+    getcontext((CDH)->ctxt()); \
+  } \
+  (CDH)->InternalBegin(); })
+
+#define CD_Complete(X) (X)->Complete()   
+
 /**@defgroup cd_split CD split interface
  * @brief Method to split CDs to children CDs.
  * @ingroup user_interfaces
@@ -431,12 +476,22 @@ class CDHandle {
        * @return Returns kOK when successful and kError otherwise.
        * @sa Complete()
        */
+       
+       inline __attribute__((always_inline))
        CDErrT Begin(const char *label=NO_LABEL,
                     bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                          //!< contained by this CD or whether its to be run by a single task 
                                          //!< only with the programmer responsible for synchronization. 
                     const uint64_t &sys_err_vec=0
-                   );
+                   )
+        {
+          if(ctxt_prv_mode() == kExcludeStack)  
+            setjmp(*jmp_buffer());
+           else  
+            getcontext(ctxt()); 
+           
+          return (CDErrT)InternalBegin(label, collective, sys_err_vec); 
+        }
 //        {
 //          CD_ASSERT(ptr_cd_);
 //          if(ctxt_prv_mode() == kExcludeStack) 
@@ -1246,16 +1301,6 @@ class CDHandle {
 #endif
 };
 
-#define CD_Begin(...) FOUR_ARGS_MACRO(__VA_ARGS__, CD_BEGIN3, CD_BEGIN2, CD_BEGIN1, CD_BEGIN0)(__VA_ARGS__)
-
-// Macros for setjump / getcontext
-// So users should call this in their application, not call cd_handle->Begin().
-#define CD_BEGIN0(X) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin();
-#define CD_BEGIN1(X,Y) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y);
-#define CD_BEGIN2(X,Y,Z) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y,Z);
-#define CD_BEGIN3(X,Y,Z,W) if((X)->ctxt_prv_mode() == kExcludeStack) setjmp((X)->jmp_buffer_);  else getcontext(&(X)->ctxt_) ; (X)->CommitPreserveBuff(); (X)->Begin(Y,Z,W);
-
-#define CD_Complete(X) (X)->Complete()   
 
 
 } // namespace cd ends

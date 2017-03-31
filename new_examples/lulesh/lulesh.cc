@@ -1230,15 +1230,12 @@ static inline void CalcForceForNodes(Domain& domain)
 static inline
 void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
 {
-   GetLeafCD()->Begin("CalcAccelerationForNodes"); 
 #pragma omp parallel for firstprivate(numNode)
    for (Index_t i = 0; i < numNode; ++i) {
       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
       domain.ydd(i) = domain.fy(i) / domain.nodalMass(i);
       domain.zdd(i) = domain.fz(i) / domain.nodalMass(i);
    }
-   GetLeafCD()->Detect();
-   GetLeafCD()->Complete();
 }
 
 /******************************************/
@@ -1246,7 +1243,6 @@ void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
 static inline
 void ApplyAccelerationBoundaryConditionsForNodes(Domain& domain)
 {
-   GetLeafCD()->Begin("ApplyAccelerationBoundaryConditionsForNodes"); 
    Index_t size = domain.sizeX();
    Index_t numNodeBC = (size+1)*(size+1) ;
 
@@ -1270,8 +1266,6 @@ void ApplyAccelerationBoundaryConditionsForNodes(Domain& domain)
             domain.zdd(domain.symmZ(i)) = Real_t(0.0) ;
       }
    }
-   GetLeafCD()->Detect();
-   GetLeafCD()->Complete();
 }
 
 /******************************************/
@@ -1280,7 +1274,6 @@ static inline
 void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
                           Index_t numNode)
 {
-   GetLeafCD()->Begin(__func__); 
 
 #pragma omp parallel for firstprivate(numNode)
    for ( Index_t i = 0 ; i < numNode ; ++i )
@@ -1299,8 +1292,6 @@ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
      if( FABS(zdtmp) < u_cut ) zdtmp = Real_t(0.0);
      domain.zd(i) = zdtmp ;
    }
-   GetLeafCD()->Detect();
-   GetLeafCD()->Complete();
 }
 
 /******************************************/
@@ -1308,7 +1299,6 @@ void CalcVelocityForNodes(Domain &domain, const Real_t dt, const Real_t u_cut,
 static inline
 void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
 {
-   GetLeafCD()->Begin(__func__); 
 #pragma omp parallel for firstprivate(numNode)
    for ( Index_t i = 0 ; i < numNode ; ++i )
    {
@@ -1316,8 +1306,6 @@ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
      domain.y(i) += domain.yd(i) * dt ;
      domain.z(i) += domain.zd(i) * dt ;
    }
-   GetLeafCD()->Detect();
-   GetLeafCD()->Complete();
 }
 
 /******************************************/
@@ -1350,14 +1338,36 @@ void LagrangeNodal(Domain& domain)
 #endif
 #endif
 
+#if _CD
+   GetLeafCD()->Begin("CalcAccelerationForNodes"); 
+#endif
    CalcAccelerationForNodes(domain, domain.numNode());
+#if _CD
+   GetLeafCD()->Detect();
+   GetLeafCD()->Complete();
    
+   GetLeafCD()->Begin("ApplyAccelerationBoundaryConditionsForNodes"); 
+#endif
    ApplyAccelerationBoundaryConditionsForNodes(domain);
+#if _CD
+   GetLeafCD()->Detect();
+   GetLeafCD()->Complete();
 
+   GetLeafCD()->Begin("CalcVelocityForNodes"); 
+#endif
    CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
+#if _CD
+   GetLeafCD()->Detect();
+   GetLeafCD()->Complete();
+
+   GetLeafCD()->Begin("CalcPositionForNodes"); 
+#endif
 
    CalcPositionForNodes( domain, delt, domain.numNode() );
+
 #if _CD
+   GetLeafCD()->Detect();
+   GetLeafCD()->Complete();
    cdh->Destroy();
 #endif
 

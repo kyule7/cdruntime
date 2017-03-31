@@ -247,12 +247,12 @@ void InitDir(int myTask, int numTask)
 
 
 }
-void *sp_init = NULL;
-static void __attribute__((constructor)) get_init_stack_ptr(void)
-{
-  GetStackPtr(&sp_init);
-  printf("init stack:%p\n", sp_init);
-}
+//void *sp_init = NULL;
+//static void __attribute__((constructor)) get_init_stack_ptr(void)
+//{
+//  GetStackPtr(&sp_init);
+//  printf("init stack:%p\n", sp_init);
+//}
 
 /// KL
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
@@ -1112,62 +1112,60 @@ CDErrT CDHandle::InternalDestroy(bool collective, bool need_destroy)
   return err;
 }
 
-StackEntry *new_stack_entry;
-void PreserveStack(StackEntry *stack) 
-{
-  printf("### after rollback\n");
-  memcpy(stack->sp_, stack->preserved_stack_, stack->stack_size_);
-}
+//StackEntry *new_stack_entry;
+//void PreserveStack(StackEntry *stack) 
+//{
+//  printf("### after rollback\n");
+//  memcpy(stack->sp_, stack->preserved_stack_, stack->stack_size_);
+//}
 
-CDErrT CDHandle::Begin(const char *label,
-             bool collective,//!< [in] Specifies whether this call is a collective across all tasks 
-                                  //!< contained by this CD or whether its to be run by a single task 
-                                  //!< only with the programmer responsible for synchronization. 
-             const uint64_t &sys_err_vec
-            )
-{
-  CD_ASSERT(ptr_cd_);
-  if(ctxt_prv_mode() == kExcludeStack) 
-    setjmp(*jmp_buffer());
-  else { 
-    new_stack_entry = new StackEntry;
+//CDErrT CDHandle::Begin(const char *label,
+//                       bool collective,
+//                       const uint64_t &sys_err_vec
+//                      )
+//{
+//  CD_ASSERT(ptr_cd_);
+//  if(ctxt_prv_mode() == kExcludeStack) 
+//    setjmp(*jmp_buffer());
+//  else { 
+//    new_stack_entry = new StackEntry;
+////    getcontext(ctxt());
+//    GetStackPtr(&new_stack_entry->sp_);
+//    printf("now stack:%p - %p\n", new_stack_entry->sp_, sp_init);
+//    int32_t new_stack_size = (char *)sp_init - (char *)new_stack_entry->sp_;
+//    printf("stacksize:%d\n", new_stack_size);
+//    if(new_stack_entry->stack_size_ < new_stack_size) {
+//      new_stack_entry->stack_size_ = new_stack_size;
+//      
+//      if(new_stack_entry->preserved_stack_ != NULL) 
+//        free(new_stack_entry->preserved_stack_);
+//      new_stack_entry->preserved_stack_ = malloc(new_stack_entry->stack_size_);
+//    } else {
+//      new_stack_entry->stack_size_ = new_stack_size;
+//      if(new_stack_entry->preserved_stack_ == NULL)
+//        new_stack_entry->preserved_stack_ = malloc(new_stack_entry->stack_size_);
+//    }
+//    printf("stack cpy:%p %p %u\n", new_stack_entry->preserved_stack_, new_stack_entry->sp_, new_stack_entry->stack_size_);
+//    memcpy(new_stack_entry->preserved_stack_, new_stack_entry->sp_, new_stack_entry->stack_size_);
+//    ptr_cd_->stack_entry_ = new_stack_entry;
 //    getcontext(ctxt());
-    GetStackPtr(&new_stack_entry->sp_);
-    printf("now stack:%p - %p\n", new_stack_entry->sp_, sp_init);
-    int32_t new_stack_size = (char *)sp_init - (char *)new_stack_entry->sp_;
-    printf("stacksize:%d\n", new_stack_size);
-    if(new_stack_entry->stack_size_ < new_stack_size) {
-      new_stack_entry->stack_size_ = new_stack_size;
-      
-      if(new_stack_entry->preserved_stack_ != NULL) 
-        free(new_stack_entry->preserved_stack_);
-      new_stack_entry->preserved_stack_ = malloc(new_stack_entry->stack_size_);
-    } else {
-      new_stack_entry->stack_size_ = new_stack_size;
-      if(new_stack_entry->preserved_stack_ == NULL)
-        new_stack_entry->preserved_stack_ = malloc(new_stack_entry->stack_size_);
-    }
-    printf("stack cpy:%p %p %u\n", new_stack_entry->preserved_stack_, new_stack_entry->sp_, new_stack_entry->stack_size_);
-    memcpy(new_stack_entry->preserved_stack_, new_stack_entry->sp_, new_stack_entry->stack_size_);
-    ptr_cd_->stack_entry_ = new_stack_entry;
-    getcontext(ctxt());
-
-    ctxt()->uc_stack.ss_sp = new_stack_entry->shadow_stack_;
-    ctxt()->uc_stack.ss_size = STACK_SIZE;
-    ctxt()->uc_stack.ss_flags = 0;
-    makecontext(ctxt(), (void (*) (void))PreserveStack, 1, ptr_cd_->stack_entry_);
-  }
-
-  if(ptr_cd()->cd_exec_mode_ == kReexecution) {
-    TUNE_DEBUG("Reexecution %s at %u\n", label, ptr_cd()->level());
-    printf("Reexecution %s at %u\n", label, ptr_cd()->level());
-  }
-  TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
-//         CommitPreserveBuff();
-  common::CDErrT ret = InternalBegin(label, collective, sys_err_vec);
-  TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
-  return ret;
-}
+//
+//    ctxt()->uc_stack.ss_sp = new_stack_entry->shadow_stack_;
+//    ctxt()->uc_stack.ss_size = STACK_SIZE;
+//    ctxt()->uc_stack.ss_flags = 0;
+//    makecontext(ctxt(), (void (*) (void))PreserveStack, 1, ptr_cd_->stack_entry_);
+//  }
+//
+//  if(ptr_cd()->cd_exec_mode_ == kReexecution) {
+//    TUNE_DEBUG("Reexecution %s at %u\n", label, ptr_cd()->level());
+//    printf("Reexecution %s at %u\n", label, ptr_cd()->level());
+//  }
+//  TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
+////         CommitPreserveBuff();
+//  common::CDErrT ret = InternalBegin(label, collective, sys_err_vec);
+//  TUNE_DEBUG("[Real %s %s lv:%u phase:%d]\n", __func__, label, level(), phase());  
+//  return ret;
+//}
 
 //inline
 //CDErrT CDHandle::Begin(bool collective, const char *label, const uint64_t &sys_error_vec)
@@ -1186,7 +1184,7 @@ CDErrT CDHandle::InternalBegin(const char *label, bool collective, const uint64_
 {
   CDPrologue();
 
-  assert(ptr_cd_ != 0);
+  CD_ASSERT_STR(ptr_cd_ != 0, "[%d at lv %u] label %s of %p\n", myTaskID, level(), label, ptr_cd_);
 
   // sys_error_vec is zero, then do not update it in Begin.
   if(sys_error_vec != 0) 
