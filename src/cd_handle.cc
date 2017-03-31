@@ -2223,7 +2223,7 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
     // If sys_err_vec > 
     while(cdh != NULL) {
 
-      printf("CHECK %lx %lx = %d, lv:%u, %s\n", 
+      CD_DEBUG("CHECK %lx %lx = %d, lv:%u, %s\n", 
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());

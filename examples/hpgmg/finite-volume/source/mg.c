@@ -23,6 +23,12 @@
 #include "operators.h"
 #include "solvers.h"
 #include "mg.h"
+
+#if CD
+#include "cd.h"
+#elif SCR
+#include "scr.h"
+#endif
 //------------------------------------------------------------------------------------------------------------------------------
 // structs/routines used to construct the restriction and prolognation lists and ensure a convention on how data is ordered within an MPI buffer
 typedef struct {
@@ -1173,6 +1179,9 @@ void MGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, doub
 
 //------------------------------------------------------------------------------------------------------------------------------
 void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, double b, double dtol, double rtol){
+  #if CD
+  cd_handle_t * cd_fmgsolve = cd_create(getcurrentcd(), 1, "cd_fmgsolve", kStrict | kDRAM, 0x0000FFFF);
+  #endif
   // This FMGSolve will perform one F-Cycle, then iterate on V-cycles.  
   // Unless compiled with -DUNLIMIT_FMG_ITERATIONS, no V-cycles will be performed
   all_grids->MGSolves_performed++;
@@ -1214,25 +1223,40 @@ void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, dou
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // restrict RHS to bottom (coarsest grids)
+  #if CD
+  cd_begin(cd_fmgsolve, "restriction");
+  #endif
   for(level=onLevel;level<(all_grids->num_levels-1);level++){
     double _LevelStart = getTime();
     restriction(all_grids->levels[level+1],R_id,all_grids->levels[level],R_id,RESTRICT_CELL);
     all_grids->levels[level]->timers.Total += (double)(getTime()-_LevelStart);
   }
+  #if CD
+  cd_complete(cd_fmgsolve);
+  #endif
 
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // solve coarsest grid...
+  #if CD
+  cd_begin(cd_fmgsolve, "coarsest_grid");
+  #endif
     double _timeBottomStart = getTime();
     level = all_grids->num_levels-1;
     if(level>onLevel)zero_vector(all_grids->levels[level],e_id);//else use whatever was the initial guess
     //SZNOTE: lots of MPI_Allreduce, some to exchange boundaries, some just collect max information
     IterativeSolver(all_grids->levels[level],e_id,R_id,a,b,MG_DEFAULT_BOTTOM_NORM);  // -1 == exact solution
     all_grids->levels[level]->timers.Total += (double)(getTime()-_timeBottomStart);
+  #if CD
+  cd_complete(cd_fmgsolve);
+  #endif
 
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // now do the F-cycle proper...
+  #if CD
+  cd_begin(cd_fmgsolve, "mgvcycle");
+  #endif
   for(level=all_grids->num_levels-2;level>=onLevel;level--){
     // high-order interpolation
     _LevelStart = getTime();
@@ -1244,10 +1268,16 @@ void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, dou
     //SZNOTE: following is a recursion function with MPI non-blocking operations
     MGVCycle(all_grids,e_id,R_id,a,b,level);
   }
+  #if CD
+  cd_complete(cd_fmgsolve);
+  #endif
 
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // now do the post-F V-cycles
+  #if CD
+  cd_begin(cd_fmgsolve, "postf_vcycle");
+  #endif
   for(v=-1;v<maxVCycles;v++){
     int level = onLevel;
 
@@ -1278,6 +1308,9 @@ void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, dou
     if(norm_of_residual/norm_of_F < rtol)break;
     if(norm_of_residual           < dtol)break;
   }
+  #if CD
+  cd_complete(cd_fmgsolve);
+  #endif
 
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -1289,6 +1322,10 @@ void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, dou
   if(all_grids->levels[onLevel]->my_rank==0){fprintf(stdout,"done (%f seconds)\n",MPI_Wtime()-FMG_Start_Time);} // used to monitor variability in individual solve times
   #else
   if(all_grids->levels[onLevel]->my_rank==0){fprintf(stdout,"done\n");}
+  #endif
+
+  #if CD
+  cd_destroy(cd_fmgsolve);
   #endif
 }
 

@@ -52,7 +52,7 @@ DataStore::DataStore(char *ptr)
   // Should be thread-safe
   Init(ptr);
 
-  printf("BeforeWrite ft:%u fh:%p ptralloc:%p magic:%lu\n",
+  MYDBG("BeforeWrite ft:%u fh:%p ptralloc:%p magic:%lu\n",
         ftype(), fh_, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
   
   if(fh_ != NULL) {
@@ -65,7 +65,7 @@ DataStore::DataStore(char *ptr)
   } else {
     written_len_ = CHUNK_ALIGNMENT;
   }
-  printf("blksize:%u filesize:%lu (%lu)\n", 
+  MYDBG("blksize:%u filesize:%lu (%lu)\n", 
       chunksize_, written_len_, sizeof(MagicStore)); //getchar();
 }
 
@@ -586,7 +586,7 @@ void DataStore::FileRead(char *pto, uint64_t chunk_in_file, uint64_t pos)
 // In-place read
 void DataStore::ReadAll(char *pto)
 {
-  printf("[%s] written:%lu head:%lu tail:%lu\n", __func__, written_len_, head_, tail_);
+  MYDBG("[%s] written:%lu head:%lu tail:%lu\n", __func__, written_len_, head_, tail_);
   if(head_ != 0) { // read from file
     fh_->Read(pto, head_, written_len_);
 //    fh_->Read(pto, head_ + sizeof(MagicStore), written_len_);
