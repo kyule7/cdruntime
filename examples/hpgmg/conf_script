@@ -1,3 +1,7 @@
-./configure --CC=mpicc --CFLAGS="-g -D_GNU_SOURCE -fmax-errors=1 -I$WORK/cdresilience/include -DCD=1" --LDFLAGS="-L$WORK/cdresilience/lib -L$WORK/cdresilience/src/persistence" --LDLIBS="-lcd -Wl,-rpath $WORK/cdresilience/lib -lpacker -Wl,-rpath $WORK/cdresilience/src/persistence"
+./configure --arch=build_cd --CC=mpicc --CFLAGS="-g -D_GNU_SOURCE -fmax-errors=1 -I$WORK/cdresilience/include -DCD=1" --LDFLAGS="-L$WORK/cdresilience/lib -L$WORK/cdresilience/src/persistence" --LDLIBS="-lcd -Wl,-rpath $WORK/cdresilience/lib -lpacker -Wl,-rpath $WORK/cdresilience/src/persistence"
+
+./configure --arch=build_scr --CC=mpicc --CFLAGS="-g -D_GNU_SOURCE -fmax-errors=1 -I$WORK/scr/include -DCD=0 -DSCR=1" --LDFLAGS="-L$WORK/scr/lib" --LDLIBS="-lscr -Wl,-rpath $WORK/scr/lib"
+
+./configure --arch=build_org --CC=mpicc --CFLAGS="-g -fmax-errors=1 -DCD=0 -DSCR=0" 
 
 ## with openmp

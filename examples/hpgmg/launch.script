@@ -1,22 +1,30 @@
 #!/bin/bash
-#SBATCH -J hpgmg          # job name
-#SBATCH -o hpgmg.o%j      # output and error file name (%j expands to jobID)
-#SBATCH -n 32             # total number of mpi tasks requested
-#SBATCH -N 2              # total number of nodes requested
-#SBATCH -p development    # queue (partition) -- normal, development, etc.
-#SBATCH -t 01:00:00       # run time (hh:mm:ss) - 1.5 hours
-#SBATCH --mail-user=song.zhang@utexas.edu
+#SBATCH -J hpgmg_p2           # job name
+#SBATCH -o hpgmg_p2.o%j       # output and error file name (%j expands to jobID)
+#SBATCH -n 16              # total number of mpi tasks requested
+#SBATCH -N 1               # total number of nodes requested
+#SBATCH -p development
+#SBATCH -t 02:00:00        # run time (hh:mm:ss) - 1.5 hours
+#SBATCH --mail-user=szhang0119@gmail.com
 #SBATCH --mail-type=begin  # email me when the job starts
 #SBATCH --mail-type=end    # email me when the job finishes
-#SBATCH -A lph_mem        # allocation name
+#SBATCH -A lph_mem         # allocation name
 
 source ~/runenv
-cd build
 
 set -x
 
-time ibrun -n 16 -o 8 hpcrun ./bin/hpgmg-fv-org 7 8
-time ibrun -n 16 -o 8 hpcrun ./bin/hpgmg-fv 7 8
+cd build_org
+time ibrun -np 16 hpcrun ./bin/hpgmg-fv 6 8 
+time ibrun -np 16 hpcrun ./bin/hpgmg-fv 7 7 
+
+cd ../build_cd
+time ibrun -np 16 hpcrun ./bin/hpgmg-fv 6 8 
+time ibrun -np 16 hpcrun ./bin/hpgmg-fv 7 7 
+
+cd ../build_scr
+time ibrun -np 16 hpcrun ./bin/hpgmg-fv 6 8 
+time ibrun -np 16 hpcrun ./bin/hpgmg-fv 7 7 
 
 set +x
 

@@ -52,7 +52,7 @@ using namespace cd::internal;
 
 CommLog::CommLog(CD* my_cd, 
                  CommLogMode comm_log_mode)
-  :queue_size_unit_(1024), table_size_unit_(100), child_log_size_unit_(1024)
+  :queue_size_unit_(1024*1024), table_size_unit_(1024), child_log_size_unit_(1024*1024)
 {
   my_cd_ = my_cd;
   comm_log_mode_ = comm_log_mode;
@@ -73,7 +73,7 @@ CommLog::CommLog(CD* my_cd,
                  CommLogMode comm_log_mode, 
                  uint64_t queue_size_unit, 
                  uint64_t table_size_unit)
-  :child_log_size_unit_(1024)
+  :child_log_size_unit_(1024*1024)
 {
   my_cd_ = my_cd;
   comm_log_mode_ = comm_log_mode;
@@ -477,7 +477,8 @@ CommLogErrT CommLog::WriteLogQueue (const void *data_ptr, uint64_t data_length, 
 CommLogErrT CommLog::IncreaseLogTableSize()
 {
   struct LogTableElement *tmp_ptr 
-    = new struct LogTableElement [log_table_.table_size_ + table_size_unit_];
+    = new struct LogTableElement [log_table_.table_size_*2];
+    //= new struct LogTableElement [log_table_.table_size_ + table_size_unit_];
   if (tmp_ptr == NULL) return kCommLogAllocFailed;
 
   // copy old data in
@@ -490,7 +491,8 @@ CommLogErrT CommLog::IncreaseLogTableSize()
   log_table_.base_ptr_ = tmp_ptr;
 
   // increase table_size_
-  log_table_.table_size_ += table_size_unit_;
+  log_table_.table_size_ *= 2;
+  //log_table_.table_size_ += table_size_unit_;
 
   return kCommLogOK;
 }
@@ -499,7 +501,8 @@ CommLogErrT CommLog::IncreaseLogTableSize()
 // increase log queue size to hold data of size of "length"
 CommLogErrT CommLog::IncreaseLogQueueSize(uint64_t length)
 {
-  uint64_t required_length = ((log_queue_.cur_pos_+length)/queue_size_unit_+1)*queue_size_unit_;
+  //uint64_t required_length = ((log_queue_.cur_pos_+length)/queue_size_unit_+1)*queue_size_unit_;
+  uint64_t required_length = (log_queue_.cur_pos_+length)*2;
   if (required_length <= log_queue_.queue_size_)
   {
     ERROR_MESSAGE("Inside IncreaseLogQueueSize, required_length (%ld) is smaller than log_queue_.queue_size_ (%ld)!!\n",

@@ -49,6 +49,8 @@
 //------------------------------------------------------------------------------------------------------------------------------
 #if CD
 #include "cd.h"
+#elif SCR
+#include "scr.h"
 #endif
 //------------------------------------------------------------------------------------------------------------------------------
 void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dtol, double rtol){
@@ -93,11 +95,51 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
   #if CD
     int num_tasks;
     MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
-    cd_handle_t * cd_mgsolve = cd_create(cd_bench, num_tasks, "cd_mgsolve", kRelaxed | kDRAM, 0x0000FFFF);
+    //cd_handle_t * cd_mgsolve = cd_create(cd_bench, num_tasks, "cd_mgsolve", kRelaxed | kDRAM, 0x0000FFFF);
+    cd_handle_t * cd_mgsolve = cd_create(cd_bench, 1, "cd_mgsolve", kStrict | kDRAM, 0x0000FFFF);
   #endif
     while( (numSolves<minSolves) ){
       #if CD
       cd_begin(cd_mgsolve, "cd_mgsolve");
+      #elif SCR
+      int need_checkpoint;
+      SCR_Need_checkpoint(&need_checkpoint);
+      if (need_checkpoint){
+        SCR_Start_checkpoint();
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+        char checkpoint_file[256];
+        sprintf(checkpoint_file, "scr_ckpt_files/rank_%d.ckpt", rank);
+
+        char scr_file[SCR_MAX_FILENAME];
+        SCR_Route_file(checkpoint_file, scr_file);
+        //printf("%d: scr_file:%s\n", rank, scr_file);
+
+        /*each process opens scr_file, takes checkpoints, and closes the file*/
+        FILE *fs = fopen(scr_file, "w");
+        int valid=0;
+        if (fs != NULL){
+          valid = 1;
+
+          // take checkpoints
+          size_t nwrites=0;
+          nwrites+=fwrite(all_grids, sizeof(mg_type), 1, fs);
+          nwrites+=fwrite(&a, sizeof(a), 1, fs);
+          nwrites+=fwrite(&b, sizeof(b), 1, fs);
+          nwrites+=fwrite(&dtol, sizeof(dtol), 1, fs);
+          nwrites+=fwrite(&rtol, sizeof(rtol), 1, fs);
+          nwrites+=fwrite(&onLevel, sizeof(onLevel), 1, fs);
+
+          //if (nwrites != (sizeof(mg_type)+sizeof(a)+sizeof(b)+sizeof(dtol)+sizeof(rtol)+sizeof(onLevel)))
+          if (nwrites != 6)
+            valid = 0;
+
+          if (fclose(fs)!=0) valid=0;
+        }
+
+        SCR_Complete_checkpoint(valid);
+      }
       #endif
 
       zero_vector(all_grids->levels[onLevel],VECTOR_U);
@@ -282,6 +324,8 @@ int main(int argc, char **argv){
 #if CD
   cd_handle_t* root_cd = cd_init(num_tasks, my_rank, kHDD);
   cd_begin(root_cd, "root");
+#elif SCR
+  SCR_Init();
 #endif
 
 
@@ -309,6 +353,10 @@ int main(int argc, char **argv){
   fprintf(stdout,"\n\n===== Benchmark setup ==========================================================\n");
   }
 
+  #if CD
+  cd_handle_t * cd_l1 = cd_create(getcurrentcd(), 1, "cd_l1", kStrict | kHDD, 0xFFFFFFFF);
+  cd_begin(cd_l1, "cd_l1_mgbuild");
+  #endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // create the fine level...
@@ -351,6 +399,9 @@ int main(int argc, char **argv){
   //SZNOTE: MPI_Comm_split inside and MPI_Allreduce on splitted communicators
   MGBuild(&MG_h,&level_h,a,b,minCoarseDim);             // build the Multigrid Hierarchy 
 
+  #if CD
+  cd_complete(cd_l1);
+  #endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // HPGMG-500 benchmark proper
@@ -361,8 +412,7 @@ int main(int argc, char **argv){
   int l;
   #ifndef TEST_ERROR
   #if CD
-  cd_handle_t * cd_l1 = cd_create(getcurrentcd(), 1, "cd_l1", kStrict | kHDD, 0xFFFFFFFF);
-  cd_begin(cd_l1, "cd_l1");
+  cd_begin(cd_l1, "cd_l1_mgsolve");
   cd_preserve(cd_l1, &dtol, sizeof(dtol), kCopy, "dtol", NULL);
   cd_preserve(cd_l1, &rtol, sizeof(rtol), kCopy, "rtol", NULL);
   cd_preserve(cd_l1, &a, sizeof(a), kCopy, "a", NULL);
@@ -402,8 +452,11 @@ int main(int argc, char **argv){
   #if CD
   cd_destroy(cd_l2);
   cd_complete(cd_l1);
-  cd_destroy(cd_l1);
   #endif
+  #endif
+
+  #if CD
+  cd_destroy(cd_l1);
   #endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -437,6 +490,8 @@ int main(int argc, char **argv){
 #if CD
   cd_complete(root_cd);
   cd_finalize();
+#elif SCR
+  SCR_Finalize();
 #endif
 
 
