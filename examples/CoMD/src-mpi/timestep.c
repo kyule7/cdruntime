@@ -39,7 +39,7 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
    for (int ii=0; ii<nSteps; ++ii)
    {
 #if _CD2
-      cd_begin(cd_lv1, 1, "level1"); 
+      cd_begin(cd_lv1, "level1"); 
 #endif
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
@@ -58,7 +58,7 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
 
 #if _CD2
       cd_handle_t *cd_lv2 = cd_create(cd_lv1, getNRanks(), "timestep (after communication)", kStrict, 0xE);
-      cd_begin(cd_lv2, 1, "level2"); 
+      cd_begin(cd_lv2, "level2"); 
 #endif
       startTimer(computeForceTimer);
       //---------------

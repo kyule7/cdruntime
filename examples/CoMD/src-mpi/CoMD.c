@@ -120,7 +120,7 @@ int main(int argc, char** argv)
 
 #if _CD
    cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
-   cd_begin(root_cd, 0, "Root");
+   cd_begin(root_cd, "Root");
    cd_preserve(root_cd, sim, sizeof(*sim), kCopy, "sim", NULL);
 #endif   
 

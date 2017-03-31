@@ -53,23 +53,20 @@ void MPIFileHandle::Init(const MPI_Comm &comm, const char *filepath)
 
   //viewsize_ = DEFAULT_VIEWSIZE;
   viewsize_ = 0;
-  if(viewsize_ != 0) {
+  if(viewsize_ != 0) { // N-to-1 file write
     if(rank == 0) {
       sprintf(full_filename, "%s/%s.%ld.%ld", base_filename, filepath, time.tv_sec % 100, time.tv_usec % 100);
       PMPI_Bcast(&full_filename, 128, MPI_CHAR, 0, comm_);
     } else {
       PMPI_Bcast(&full_filename, 128, MPI_CHAR, 0, comm_);
     }
+    CheckError( MPI_File_open(comm_, full_filename, MPI_MODE_CREATE|MPI_MODE_RDWR, MPI_INFO_NULL, &fdesc_) );
   } else { // N-to-N file write
-    //sprintf(full_filename, "%s.%d.%ld.%ld", filepath, rank, time.tv_sec % 100, time.tv_usec % 100);
-//    sprintf(full_filename, "%s.%d", filepath, rank);//, time.tv_sec % 100, time.tv_usec % 100);
     sprintf(full_filename, "%s/%s.%d", base_filename, filepath, rank);//time.tv_sec % 100, time.tv_usec % 100);
-  }
-
+    CheckError( MPI_File_open(comm_, full_filename, MPI_MODE_CREATE|MPI_MODE_RDWR, MPI_INFO_NULL, &fdesc_) );
 //  fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT, S_IRUSR | S_IWUSR);
 //  MPI_Aint lb = 0, extent = (commsize)*viewsize_;
-
-  CheckError( MPI_File_open(comm_, full_filename, MPI_MODE_CREATE|MPI_MODE_RDWR, MPI_INFO_NULL, &fdesc_) );
+  }
 
   if(viewsize_ != 0) {
     // Set up datatype for file view

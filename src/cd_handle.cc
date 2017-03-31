@@ -44,6 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "sys_err_t.h"
 #include "cd_internal.h"
 #include "cd_def_preserve.h"
+//#include "persistence/define.h"
 //#include "machine_specific.h"
 //#include "profiler_interface.h"
 //#include "cd_global.h"
@@ -59,7 +60,6 @@ using namespace cd::internal;
 using namespace std;
 #define STOPHANDLE 
 CDHandle *cd::null_cd = NULL;
-
 /// KL
 /// cddbg is a global variable to be used for debugging purpose.
 /// General usage is that it stores any strings, numbers as a string internally,
@@ -197,6 +197,7 @@ void OpenDebugFilepath(int myTask, const string &dbg_basepath)
   char dbg_filepath[256]={};
   snprintf(dbg_filepath, 256, "%s/%s_%d", dbg_basepath.c_str(), dbg_log_filename, myTask);
   cdout = fopen(dbg_filepath, "w");
+  packer_stream = cdout;
   //printf("cdout:%p\n", cdout);
 #endif
 

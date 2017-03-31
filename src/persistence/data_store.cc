@@ -22,6 +22,8 @@ std::map<pthread_t, unsigned int> tid2str;
 int indent_cnt = 0; 
 #endif
 
+FILE *packer_stream = NULL;
+
 uint64_t packer::table_id = TABLE_ID_OFFSET;
 int64_t chunksize_threshold = CHUNKSIZE_THRESHOLD_BASE;
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-CC=g++
+CC=mpic++
 MPICC=mpic++
 CFLAGS=-fPIC -Wall -g -c -std=gnu++0x -I. -I.. -fmax-errors=3
 LFLAGS=-fPIC -Wall -g -std=gnu++0x

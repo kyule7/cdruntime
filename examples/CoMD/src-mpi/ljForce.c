@@ -184,7 +184,7 @@ int ljForce(SimFlat* s)
 #if _CD3
      if(is_first) {
        if(iBox % 16 == 0) {
-         cd_begin(cd_lv3, 1, "level3");
+         cd_begin(cd_lv3, "level3");
        }
        //cd_lv3->cd_preserve(....);
      }
@@ -206,7 +206,7 @@ int ljForce(SimFlat* s)
       {
 #if _CD4
    if(is_first) {
-         cd_begin(cd_lv4, 1, "level4");
+         cd_begin(cd_lv4, "level4");
          //cd_lv4->cd_preserve(....);
     }
 #endif

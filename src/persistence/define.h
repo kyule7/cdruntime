@@ -101,10 +101,11 @@ struct MagicStore {
   void Print(void);
 } __attribute__((aligned(CHUNK_ALIGNMENT)));
 
-}
+} // namespace packer ends
 
+
+extern FILE *packer_stream;
 #ifdef _DEBUG_ENABLED
-
 #include <map>
 #include <string>
 #include <cstdarg>
@@ -137,7 +138,7 @@ int packer_debug_trace(FILE *stream,
     indent_cnt += 4; \
   } \
   std::string indent(tid2str[cur_thread], '\t'); \
-  PACKER_DEBUG_TRACE_INFO(stdout, indent.c_str(), __VA_ARGS__); \
+  PACKER_DEBUG_TRACE_INFO(packer_stream, indent.c_str(), __VA_ARGS__); \
 }
 
 #else

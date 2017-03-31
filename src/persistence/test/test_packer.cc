@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <sys/time.h>
+#include <mpi.h>
 using namespace packer;
 struct timeval ttime;
 FILE *dbgfp=stdout;
@@ -367,7 +368,8 @@ void TestUnpackerFile(FILE *fp)
   }
 }
 */
-int main() {
+int main(int argc, char *argv[]) {
+  MPI_Init(&argc, &argv);
   gettimeofday(&ttime,NULL);
   srand48(ttime.tv_usec);
   int elemsize = 10000;
@@ -393,5 +395,6 @@ int main() {
 //  
 //    TestUnpackerFile(fp);
 
+  MPI_Finalize();
   return 0;
 }
