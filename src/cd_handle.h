@@ -485,10 +485,10 @@ class CDHandle {
                     const uint64_t &sys_err_vec=0
                    )
         {
-          if(ctxt_prv_mode() == kExcludeStack)  
-            setjmp(*jmp_buffer());
-           else  
-            getcontext(ctxt()); 
+//          if(ctxt_prv_mode() == kExcludeStack)  
+//            setjmp(*jmp_buffer());
+//           else  
+//            getcontext(ctxt()); 
            
           return (CDErrT)InternalBegin(label, collective, sys_err_vec); 
         }
@@ -539,7 +539,7 @@ class CDHandle {
                                               //!< between these two consecutive uses of the CD
                                               //!< object (this enables the Cray CD
                                               //!< AdvancePointInTime functionality).
-                      bool collective=false //!< [in] Specifies whether
+                      bool collective=true  //!< [in] Specifies whether
                                             //!< this call is a collective
                                             //!< across all tasks contained
                                             //!< by this CD or whether its to
