@@ -15,7 +15,10 @@ BIN_DIR	Makefile	/^BIN_DIR=..\/bin$/;"	m
 BasePotential	CoMDTypes.h	/^} BasePotential;$/;"	t	typeref:struct:BasePotentialSt
 BasePotentialSt	CoMDTypes.h	/^typedef struct BasePotentialSt $/;"	s
 CC	Makefile	/^CC = mpicc$/;"	m
-CFLAGS	Makefile	/^CFLAGS = -std=c99$/;"	m
+CD_CFLAGS	Makefile	/^CD_CFLAGS = -I$(CD_ROOT)\/include $/;"	m
+CD_LINKFLAGS	Makefile	/^CD_LINKFLAGS = -L$(CD_ROOT)\/lib -lcd -Wl,-rpath=..\/..\/..\/lib -L$(CD_ROOT)\/src\/persistence -lpacker$/;"	m
+CD_ROOT	Makefile	/^CD_ROOT=${CD_PATH}$/;"	m
+CFLAGS	Makefile	/^CFLAGS = -std=gnu11$/;"	m
 CMDLINEPARSER_H_	cmdLineParser.h	8;"	d
 C_LIB	Makefile	/^C_LIB = -lm$/;"	m
 CoMDVariant	yamlOutput.c	/^static const char* CoMDVariant = CoMD_VARIANT;$/;"	v	file:
@@ -75,7 +78,7 @@ MAX	eam.c	103;"	d	file:
 MAX	haloExchange.c	43;"	d	file:
 MAX	linkCells.c	76;"	d	file:
 MAXATOMS	linkCells.h	10;"	d
-MIN	CoMD.c	64;"	d	file:
+MIN	CoMD.c	68;"	d	file:
 MIN	linkCells.c	75;"	d	file:
 MPI_INCLUDE	Makefile	/^MPI_INCLUDE =$/;"	m
 MPI_LIB	Makefile	/^MPI_LIB =$/;"	m
@@ -87,9 +90,9 @@ OPTFLAGS	Makefile	/^OPTFLAGS = -g -O5$/;"	m
 OTHER_INCLUDE	Makefile	/^OTHER_INCLUDE =$/;"	m
 OTHER_LIB	Makefile	/^OTHER_LIB =$/;"	m
 POT_SHIFT	ljForce.c	75;"	d	file:
-REAL_MPI_TYPE	parallel.c	24;"	d	file:
-REAL_MPI_TYPE	parallel.c	26;"	d	file:
-REDIRECT_OUTPUT	CoMD.c	63;"	d	file:
+REAL_MPI_TYPE	parallel.c	28;"	d	file:
+REAL_MPI_TYPE	parallel.c	30;"	d	file:
+REDIRECT_OUTPUT	CoMD.c	67;"	d	file:
 RankReduceData	parallel.h	/^} RankReduceData;$/;"	t	typeref:struct:RankReduceDataSt
 RankReduceDataSt	parallel.h	/^typedef struct RankReduceDataSt$/;"	s
 SHELL	Makefile	/^SHELL = \/bin\/bash$/;"	m
@@ -120,6 +123,7 @@ __LINK_CELLS_H_	linkCells.h	5;"	d
 __MYTYPE_H_	mytype.h	5;"	d
 __PERFORMANCE_TIMERS_H_	performanceTimers.h	4;"	d
 __RANDOM_H	random.h	6;"	d
+__STDC_FORMAT_MACROS	performanceTimers.h	5;"	d
 __YAML_OUTPUT_H	yamlOutput.h	5;"	d
 addArg	cmdLineParser.c	/^int addArg(const char* longOption, const char shortOption,$/;"	f
 addDoubleParallel	parallel.c	/^void addDoubleParallel(double* sendBuf, double* recvBuf, int count)$/;"	f
@@ -254,6 +258,7 @@ initialDelta	mycommand.h	/^   double initialDelta; \/\/!< magnitude of initial d
 interpolate	eam.c	/^void interpolate(InterpolationObject* table, real_t r, real_t* f, real_t* df)$/;"	f
 invBoxSize	linkCells.h	/^   real3 invBoxSize;    \/\/!< inverse size of box in each dimension$/;"	m	struct:LinkCellSt
 invDx	eam.c	/^   real_t invDx;   \/\/!< the inverse of the table spacing$/;"	m	struct:InterpolationObjectSt	file:
+is_first	ljForce.c	/^int is_first = 0;$/;"	v
 kB_eV	constants.h	/^static const double kB_eV = 8.6173324e-5;  \/\/ eV\/K$/;"	v
 kineticEnergy	timestep.c	/^void kineticEnergy(SimFlat* s)$/;"	f
 lastOption	cmdLineParser.c	/^static MyOption* lastOption(MyOption* o)$/;"	f	file:
@@ -265,9 +270,9 @@ latticeType	CoMDTypes.h	/^   char latticeType[8];    \/\/!< lattice type, e.g. F
 latticeType	eam.c	/^   char latticeType[8];    \/\/!< lattice type, e.g. FCC, BCC, etc.$/;"	m	struct:EamPotentialSt	file:
 latticeType	ljForce.c	/^   char latticeType[8];    \/\/!< lattice type, e.g. FCC, BCC, etc.$/;"	m	struct:LjPotentialSt	file:
 lcg61	random.c	/^double lcg61(uint64_t* seed)$/;"	f
-ljDestroy	ljForce.c	/^void ljDestroy(BasePotential** inppot)$/;"	f
 ljForce	ljForce.c	/^int ljForce(SimFlat* s)$/;"	f
 ljPrint	ljForce.c	/^void ljPrint(FILE* file, BasePotential* pot)$/;"	f
+ljcd_destroy	ljForce.c	/^void ljcd_destroy(BasePotential** inppot)$/;"	f
 loadAtomsBuffer	haloExchange.c	/^int loadAtomsBuffer(void* vparms, void* data, int face, char* charBuf)$/;"	f
 loadBuffer	haloExchange.h	/^   int  (*loadBuffer)(void* parms, void* data, int face, char* buf);$/;"	m	struct:HaloExchangeSt
 loadForceBuffer	haloExchange.c	/^int loadForceBuffer(void* vparms, void* vdata, int face, char* charBuf)$/;"	f
@@ -299,7 +304,7 @@ mkSeed	random.c	/^uint64_t mkSeed(uint32_t id, uint32_t callSite)$/;"	f
 moveAtom	linkCells.c	/^void moveAtom(LinkCell* boxes, Atoms* atoms, int iId, int iBox, int jBox)$/;"	f
 myOptionAlloc	cmdLineParser.c	/^static MyOption* myOptionAlloc($/;"	f	file:
 myOptionFree	cmdLineParser.c	/^static MyOption* myOptionFree(MyOption* o)$/;"	f	file:
-myRank	parallel.c	/^static int myRank = 0;$/;"	v	file:
+myRank	parallel.c	/^int myRank = 0;$/;"	v
 myargs	cmdLineParser.c	/^static MyOption* myargs=NULL;$/;"	v	file:
 n	eam.c	/^   int n;          \/\/!< the number of values in the table$/;"	m	struct:InterpolationObjectSt	file:
 nAtoms	linkCells.h	/^   int* nAtoms;         \/\/!< total number of atoms in each box$/;"	m	struct:LinkCellSt
@@ -310,7 +315,7 @@ nGlobal	initAtoms.h	/^   int nGlobal;   \/\/!< total number of atoms in simulati
 nHaloBoxes	linkCells.h	/^   int nHaloBoxes;      \/\/!< total number of remote halo\/ghost boxes on processor$/;"	m	struct:LinkCellSt
 nLocal	initAtoms.h	/^   int nLocal;    \/\/!< total number of atoms on this processor$/;"	m	struct:AtomsSt
 nLocalBoxes	linkCells.h	/^   int nLocalBoxes;     \/\/!< total number of local boxes on processor$/;"	m	struct:LinkCellSt
-nRanks	parallel.c	/^static int nRanks = 1;$/;"	v	file:
+nRanks	parallel.c	/^int nRanks = 1;$/;"	v
 nSteps	CoMDTypes.h	/^   int nSteps;            \/\/<! number of time steps to run$/;"	m	struct:SimFlatSt
 nSteps	mycommand.h	/^   int nSteps;         \/\/!< number of time steps to run$/;"	m	struct:CommandSt
 nTotalBoxes	linkCells.h	/^   int nTotalBoxes;     \/\/!< total number of boxes on processor$/;"	m	struct:LinkCellSt
@@ -389,11 +394,11 @@ sortAtomsById	haloExchange.c	/^int sortAtomsById(const void* a, const void* b)$/
 sortAtomsInCell	haloExchange.c	/^void sortAtomsInCell(Atoms* atoms, LinkCell* boxes, int iBox)$/;"	f
 species	CoMDTypes.h	/^   SpeciesData* species;  \/\/<! species data (per species, not per atom)$/;"	m	struct:SimFlatSt
 start	performanceTimers.c	/^   uint64_t start;     \/\/!< call start time$/;"	m	struct:TimersSt	file:
-startTimer	performanceTimers.h	38;"	d
-startTimer	performanceTimers.h	49;"	d
+startTimer	performanceTimers.h	39;"	d
+startTimer	performanceTimers.h	50;"	d
 stdev	performanceTimers.c	/^   double stdev;       \/\/!< stdev across ranks$/;"	m	struct:TimersSt	file:
-stopTimer	performanceTimers.h	43;"	d
-stopTimer	performanceTimers.h	50;"	d
+stopTimer	performanceTimers.h	44;"	d
+stopTimer	performanceTimers.h	51;"	d
 sumAtoms	CoMD.c	/^void sumAtoms(SimFlat* s)$/;"	f
 sz	cmdLineParser.c	/^   int sz;$/;"	m	struct:MyOptionSt	file:
 temperature	mycommand.h	/^   double temperature; \/\/!< simulation initial temperature (in Kelvin)$/;"	m	struct:CommandSt

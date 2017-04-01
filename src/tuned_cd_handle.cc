@@ -9,6 +9,7 @@ namespace tuned {
 
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
+  printf("tuned?\n");
   tuning_enabled = true;
 #if CD_RUNTIME_ENABLED
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");

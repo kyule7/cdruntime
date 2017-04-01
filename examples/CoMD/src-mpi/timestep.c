@@ -33,21 +33,33 @@ static void advancePosition(SimFlat* s, int nBoxes, real_t dt);
 /// After nSteps the kinetic energy is computed for diagnostic output.
 double timestep(SimFlat* s, int nSteps, real_t dt)
 {
-#if _CD2
-    cd_handle_t *cd_lv1 = cd_create(getcurrentcd(), 1, "timestep (before communication)", kStrict, 0xF);
+#if _CD1
+    cd_handle_t *cd_lv1 = cd_create(getleafcd(), 1, "timestep (before communication)", kStrict, 0xF);
 #endif
    for (int ii=0; ii<nSteps; ++ii)
    {
-#if _CD2
-      cd_begin(cd_lv1, "level1"); 
+#if _CD1
+      cd_begin(cd_lv1, "timestep_advanceVelocity"); 
 #endif
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
 
+#if _CD1
+      cd_detect(cd_lv1);
+      cd_complete(cd_lv1);
+      cd_begin(cd_lv1, "timestep_advancePosition"); 
+#endif
+
       startTimer(positionTimer);
       advancePosition(s, s->boxes->nLocalBoxes, dt);
       stopTimer(positionTimer);
+
+#if _CD1
+      cd_detect(cd_lv1);
+      cd_complete(cd_lv1);
+      cd_begin(cd_lv1, "timestep_redistributeAtoms"); 
+#endif
 
       startTimer(redistributeTimer);
       //---------------
@@ -56,9 +68,9 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //---------------
       stopTimer(redistributeTimer);
 
-#if _CD2
+#if   _CD2
       cd_handle_t *cd_lv2 = cd_create(cd_lv1, getNRanks(), "timestep (after communication)", kStrict, 0xE);
-      cd_begin(cd_lv2, "level2"); 
+      cd_begin(cd_lv2, "computeForce"); 
 #endif
       startTimer(computeForceTimer);
       //---------------
@@ -68,20 +80,34 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //---------------
       stopTimer(computeForceTimer);
 
+#if   _CD2
+      cd_detect(cd_lv2);
+      cd_complete(cd_lv2);
+
+      // FIXME 
+      // cd_destroy(cd_lv2);
+      // cd_lv2 = cd_create(cd_lv1, 1, "timestep after computeForce", kStrict, 0x3);
+      cd_begin(cd_lv2, "advanceVelocityLv1"); 
+#endif
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
-#if _CD2
+#if   _CD2
       cd_detect(cd_lv2);
       cd_complete(cd_lv2);
+#endif
+#if   _CD2
       cd_destroy(cd_lv2);
-//      cd_detect(cd_lv1);
+#endif
+
+#if   _CD1   
+      cd_detect(cd_lv1);
       cd_complete(cd_lv1);
 #endif
    }
 
    kineticEnergy(s);
-#if _CD2
+#if   _CD1
    cd_destroy(cd_lv1);
 #endif
    return s->ePotential;

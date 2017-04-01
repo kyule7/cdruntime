@@ -116,6 +116,7 @@ public:
   {
     if(uniquePath_ == NULL) 
       uniquePath_ = new CDPath();
+    printf("GetCDPath:%p\n", uniquePath_);
     return uniquePath_;
   }
 
@@ -152,9 +153,9 @@ public:
   */
   static CDHandle *GetLeafCD(void) 
   {
-    //printf("GetCurrentCD is called\n");
+    printf("GetLeafCD is called\n");
     if(uniquePath_ != NULL ) {
-      //printf("path is not null\n");
+      printf("path is not null\n");
       if( !uniquePath_->empty() ) {
         return uniquePath_->back();
       }

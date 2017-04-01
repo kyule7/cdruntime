@@ -82,4 +82,16 @@ typedef struct SimFlatSt
    
 } SimFlat;
 
+
+// FIXME
+//void serializeSimFlat(void) 
+//{
+//  serializeDomain();
+//  int maxTotalBoxes = serializeBoxes(); // return MAXATOMS*boxes->nTotalBoxes
+//  serializeAtoms(maxTotalBoxes);
+//  serializeSpeciesData();
+
+
+//}
+
 #endif

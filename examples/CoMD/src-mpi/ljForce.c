@@ -151,7 +151,7 @@ int ljForce(SimFlat* s)
    cd_handle_t *cd_lv3 = NULL; 
 #if _CD3
    if(is_first) {
-     cd_lv3 = cd_create(getcurrentcd(), 1, "ljForce: 1st loop", kStrict, 0xC);
+     cd_lv3 = cd_create(getleafcd(), 1, "ljForce: 1st loop", kStrict, 0xC);
    }
 #endif
 
@@ -183,18 +183,18 @@ int ljForce(SimFlat* s)
    {
 #if _CD3
      if(is_first) {
-       if(iBox % 16 == 0) {
-         cd_begin(cd_lv3, "level3");
-       }
+      // if(iBox % 16 == 0) {
+         cd_begin(cd_lv3, "ljForceLoop");
+       //}
        //cd_lv3->cd_preserve(....);
      }
 #endif
      cd_handle_t *cd_lv4 = NULL;
 #if _CD4
      if(is_first) {
-       if(iBox % 10 == 0) {
+       //if(iBox % 10 == 0) {
        cd_lv4 = cd_create(cd_lv3, 1, "ljForce: 2nd Loop", kStrict, 0x8);
-       }
+       //}
      }
 #endif
       int nIBox = s->boxes->nAtoms[iBox];
@@ -202,11 +202,14 @@ int ljForce(SimFlat* s)
       int nNbrBoxes = getNeighborBoxes(s->boxes, iBox, nbrBoxes);
       /////////////////////////////////////////////////////////////////////
       // loop over neighbors of iBox
+      //
+      // O{atoms->f, atoms->U, ePot} <- I{atoms->gid, epsilon, rCut6, nIBox, ii, iOff}
+      //
       for (int jTmp=0; jTmp<nNbrBoxes; jTmp++)
       {
 #if _CD4
    if(is_first) {
-         cd_begin(cd_lv4, "level4");
+         cd_begin(cd_lv4, "ljForceNestedLoop");
          //cd_lv4->cd_preserve(....);
     }
 #endif
@@ -224,6 +227,10 @@ int ljForce(SimFlat* s)
             int iId = s->atoms->gid[iOff];
             /////////////////////////////////////////////////////////////////////
             // loop over atoms in jBox
+            //
+            // FIXME
+            // O{atoms->f, atoms->U, ePot} <- I{atoms->gid, epsilon, rCut6, nIBox, ii, iOff, nJBox, ij, jOff}
+            //
             for (int jOff=MAXATOMS*jBox,ij=0; ij<nJBox; ij++,jOff++)
             {
                real_t dr[3];
@@ -232,6 +239,7 @@ int ljForce(SimFlat* s)
                   continue; // don't double count local-local pairs.
                real_t r2 = 0.0;
                /////////////////////////////////////////////////////////////////////
+               //
                for (int m=0; m<3; m++)
                {
                   dr[m] = s->atoms->r[iOff][m]-s->atoms->r[jOff][m];
@@ -278,10 +286,10 @@ int ljForce(SimFlat* s)
 #endif
 #if _CD3
       if(is_first) {
-        if((iBox+1) % 16 == 0) {
+     //   if((iBox+1) % 16 == 0) {
           cd_detect(cd_lv3);
           cd_complete(cd_lv3);
-        }
+      //  }
       }
 #endif
    } // loop over local boxes in system

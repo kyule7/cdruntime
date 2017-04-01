@@ -153,6 +153,7 @@ int getNeighborBoxes(LinkCell* boxes, int iBox, int* nbrBoxes)
 /// \param [in] px    The x-component of the atom's momentum.
 /// \param [in] py    The y-component of the atom's momentum.
 /// \param [in] pz    The z-component of the atom's momentum.
+// FIXME : haloExchange
 void putAtomInBox(LinkCell* boxes, Atoms* atoms,
                   const int gid, const int iType,
                   const real_t x,  const real_t y,  const real_t z,

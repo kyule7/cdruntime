@@ -188,7 +188,7 @@ int main(int argc, char** argv)
 SimFlat* initSimulation(Command cmd)
 {
 //#if _CD
-//  cd_handle_t *cdh = getcurrentcd()->Create("initSimulation", kStrict, 0x1);
+//  cd_handle_t *cdh = getleafcd()->Create("initSimulation", kStrict, 0x1);
 //  cd_begin(cdh, "true", "initSim");
 //  cdh->cd_preserve(&cmd, sizeof(cmd), kCopy, "cmd");
 //#endif
