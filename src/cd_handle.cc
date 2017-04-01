@@ -72,8 +72,8 @@ cd::DebugBuf cd::cddbg;
 FILE *cd::cdout=NULL;
 FILE *cd::cdoutApp=NULL;
 
-#if CD_ERROR_INJECTION_ENABLED
 #define RANDOM_SEED 17
+#if CD_ERROR_INJECTION_ENABLED
 MemoryErrorInjector *CDHandle::memory_error_injector_ = NULL;
 SystemErrorInjector *CDHandle::system_error_injector_ = NULL;
 #define CHECK_SYS_ERR_VEC(X,Y) \
