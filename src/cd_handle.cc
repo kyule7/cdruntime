@@ -308,7 +308,6 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
                                               static_cast<CDType>(kStrict | prv_medium), 
                                              /* FilePath::global_prv_path_,*/ 
                                               ROOT_SYS_DETECT_VEC, &internal_err);
-  printf("check\n");
   CDPath::GetCDPath()->push_back(root_cd_handle);
 
   // Create windows for pendingFlag and rollback_point 

@@ -34,7 +34,7 @@ static void advancePosition(SimFlat* s, int nBoxes, real_t dt);
 double timestep(SimFlat* s, int nSteps, real_t dt)
 {
 #if _CD1
-    cd_handle_t *cd_lv1 = cd_create(getleafcd(), 1, "timestep (before communication)", kStrict, 0xF);
+   cd_handle_t *cd_lv1 = getleafcd();
 #endif
    for (int ii=0; ii<nSteps; ++ii)
    {
@@ -105,11 +105,15 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       cd_complete(cd_lv1);
 #endif
    }
-
-   kineticEnergy(s);
-#if   _CD1
-   cd_destroy(cd_lv1);
+#if   _CD1   
+   cd_begin(cd_lv1, "kineticEnergy"); 
 #endif
+   kineticEnergy(s);
+#if   _CD1   
+   cd_detect(cd_lv1);
+   cd_complete(cd_lv1);
+#endif
+
    return s->ePotential;
 }
 

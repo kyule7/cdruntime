@@ -2,24 +2,41 @@
 
 cmdLineParser.o: cmdLineParser.h mytype.h memUtils.h
 CoMD.o: CoMDTypes.h mytype.h haloExchange.h linkCells.h decomposition.h
-CoMD.o: initAtoms.h eam.h ljForce.h memUtils.h yamlOutput.h parallel.h
-CoMD.o: performanceTimers.h mycommand.h timestep.h constants.h
-CoMD.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd.h
+CoMD.o: initAtoms.h /home1/03341/kyushick/Work/CDs/pfsFix/include/cd.h
 CoMD.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_features.h
 CoMD.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_def_common.h
-CoMD.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_capi.h
+CoMD.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_capi.h eam.h
+CoMD.o: ljForce.h memUtils.h yamlOutput.h parallel.h performanceTimers.h
+CoMD.o: mycommand.h timestep.h constants.h
 decomposition.o: decomposition.h mytype.h memUtils.h parallel.h
 eam.o: eam.h mytype.h constants.h memUtils.h parallel.h linkCells.h
 eam.o: CoMDTypes.h haloExchange.h decomposition.h initAtoms.h
+eam.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd.h
+eam.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_features.h
+eam.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_def_common.h
+eam.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_capi.h
 eam.o: performanceTimers.h
 haloExchange.o: haloExchange.h mytype.h CoMDTypes.h linkCells.h
-haloExchange.o: decomposition.h initAtoms.h parallel.h eam.h memUtils.h
-haloExchange.o: performanceTimers.h
-initAtoms.o: initAtoms.h mytype.h constants.h decomposition.h parallel.h
-initAtoms.o: random.h linkCells.h timestep.h CoMDTypes.h haloExchange.h
-initAtoms.o: memUtils.h performanceTimers.h
+haloExchange.o: decomposition.h initAtoms.h
+haloExchange.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd.h
+haloExchange.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_features.h
+haloExchange.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_def_common.h
+haloExchange.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_capi.h
+haloExchange.o: parallel.h eam.h memUtils.h performanceTimers.h
+initAtoms.o: initAtoms.h mytype.h
+initAtoms.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd.h
+initAtoms.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_features.h
+initAtoms.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_def_common.h
+initAtoms.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_capi.h
+initAtoms.o: constants.h decomposition.h parallel.h random.h linkCells.h
+initAtoms.o: timestep.h CoMDTypes.h haloExchange.h memUtils.h
+initAtoms.o: performanceTimers.h
 linkCells.o: linkCells.h mytype.h parallel.h memUtils.h decomposition.h
 linkCells.o: performanceTimers.h CoMDTypes.h haloExchange.h initAtoms.h
+linkCells.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd.h
+linkCells.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_features.h
+linkCells.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_def_common.h
+linkCells.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_capi.h
 ljForce.o: ljForce.h constants.h mytype.h parallel.h linkCells.h memUtils.h
 ljForce.o: CoMDTypes.h haloExchange.h decomposition.h initAtoms.h
 ljForce.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd.h
@@ -35,9 +52,10 @@ parallel.o: parallel.h mytype.h
 performanceTimers.o: performanceTimers.h mytype.h parallel.h yamlOutput.h
 random.o: random.h mytype.h
 timestep.o: timestep.h CoMDTypes.h mytype.h haloExchange.h linkCells.h
-timestep.o: decomposition.h initAtoms.h parallel.h performanceTimers.h
+timestep.o: decomposition.h initAtoms.h
 timestep.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd.h
 timestep.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_features.h
 timestep.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_def_common.h
 timestep.o: /home1/03341/kyushick/Work/CDs/pfsFix/include/cd_capi.h
+timestep.o: parallel.h performanceTimers.h
 yamlOutput.o: yamlOutput.h CoMD_info.h mytype.h parallel.h

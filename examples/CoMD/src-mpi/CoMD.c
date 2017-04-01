@@ -137,12 +137,19 @@ int main(int argc, char** argv)
 
       printThings(sim, iStep, getElapsedTime(timestepTimer));
 
+#if _CD1
+      cd_handle_t *cd_lv1 = cd_create(getcurrentcd(), 1, "timestep (before communication)", kStrict, 0xF);
+#endif
       startTimer(timestepTimer);
       //------------------
       //Main computation
       timestep(sim, printRate, sim->dt);
+
       //-------------------
       stopTimer(timestepTimer);
+#if _CD1
+      cd_destroy(cd_lv1);
+#endif
 
       iStep += printRate;
    }
