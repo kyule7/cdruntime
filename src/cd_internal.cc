@@ -2032,8 +2032,10 @@ CDErrT CD::Preserve(void *data,
         cd_exec_mode_ = kExecution;
         restore_count_ = 0;
       } 
-      printf("[%s] prv #: %lu, rst #: %lu, mode:%d\n", __func__,
-                    preserve_count_, restore_count_, cd_exec_mode_);
+      if(myTaskID == 0) {
+        printf("[Restore] prv #: %lu, rst #: %lu, mode:%d\n", 
+                      preserve_count_, restore_count_, cd_exec_mode_);
+      }
 #if _MPI_VER
       if( restore_count_ == preserve_count_ ) { 
         CD_DEBUG("Test Asynch messages until start at %s / %s\n", 
@@ -2158,12 +2160,17 @@ CD::InternalPreserve(void *data,
 //      int64_t table_size_in_datachunk = entry_directory_.data_->used() - table_offset_in_datachunk;
       pEntry = entry_directory_.table_->InsertEntry(
           CDEntry(id, attr, packed_size, packed_offset, (char *)table_offset));
+      entry_directory_.data_->PadZeros(0);
 //      CD_ASSERT(table_size_in_datachunk > 0);
 //      CD_ASSERT(reinterpret_cast<MagicStore *>(&(entry_directory_.data_[packed_offset]))->total_size_ == packed_size);
 //      CD_ASSERT(reinterpret_cast<MagicStore *>(&(entry_directory_.data_[packed_offset]))->table_offset_ == table_offset_in_datachunk);
     }
     else { // preserve a single entry
       pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, len_in_bytes, 0, (char *)data));
+    }
+    if(myTaskID == 0) {
+      printf("Preserve Complete [%s->%s at lv #%u %u] cnt:%lu, tag id:%lu\n=====================================\n", 
+        label_.c_str(), my_name.c_str(), level(), GetCurrentCD()->level(), preserve_count_, id);
     }
 
   } // end of preserve via copy
@@ -2841,6 +2848,8 @@ bool CD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry)
 void CD::DeleteEntryDirectory(void)
 {
   CD_DEBUG("Delete entry directory!\n");
+  preserve_count_ = 0;
+  restore_count_ = 0;
   entry_directory_.Clear(true);
   remote_entry_directory_map_.clear();
 }
@@ -2848,6 +2857,8 @@ void CD::DeleteEntryDirectory(void)
 void HeadCD::DeleteEntryDirectory(void)
 {
   CD_DEBUG("Delete entry directory!\n");
+  preserve_count_ = 0;
+  restore_count_ = 0;
   entry_directory_.Clear(true);
   remote_entry_directory_map_.clear();
   remote_entry_table_.Free(true);

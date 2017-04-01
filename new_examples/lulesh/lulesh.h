@@ -273,7 +273,9 @@ inline real10 FABS(real10 arg) { return fabsl(arg) ; }
  *  "Real_t &y(Index_t idx) { return m_coord[idx].y ; }"
  *  "Real_t &z(Index_t idx) { return m_coord[idx].z ; }"
  */
-
+extern   Int_t myRank ;
+extern   Int_t numRanks ;
+extern MagicStore magic __attribute__((aligned(0x1000)));
 class Domain {
 #ifdef SERDES_ENABLED
  friend class DomainSerdes;
@@ -752,51 +754,77 @@ class DomainSerdes : public cd::PackerSerializable {
       // and will be just appended in its DataStore, not in its TableStore.
       CDPacker packer(NULL, pPacker);
       CD_DEBUG("LULESH %s, serdes vec: %lx\n", __func__, serdes_vec);
-      uint64_t orig_size = packer.data_->used(); // return
+//      uint64_t orig_size = packer.data_->used(); // return
 
 //      packer.data_->SetFileType(kVolatile);
       uint64_t magic_offset = packer.data_->PadZeros(sizeof(MagicStore));
+      uint64_t orig_size = magic_offset + packer.data_->offset();//packer.data_->used(); // return
+
       uint64_t vec = serdes_vec;
-      while(vec != 0) {
-        uint32_t id = vec2id(vec);
+      uint64_t target_vec = 1;
+      int count = 0;
+      while(vec  != 0) {
+        uint64_t id = vec2id(target_vec);
         if(vec & 0x1) {
 //          printf("preserve id:%u\n", id);
 //          if(id == ID__VNEW || id == ID__DELX_ZETA || id == ID__DELX_ETA || id == ID__DELX_XI) { vec >>=1; continue; }
-          if(id == ID__MATELEMLIST) { vec >>= 1; continue; }
+          if(id == ID__MATELEMLIST) { vec >>= 1; target_vec <<= 1; continue; }
           if(id != ID__REGELEMLIST_INNER) {
             char *ptr = serdes_table[id].ptr();
 //            printf("check:%u:%p\n", id, ptr);
+            if(myRank == 0 && id == ID__DXX) {
+              printf("SERDES: ID_DXX: %p, %lu\n", ptr, serdes_table[id].len() );
+            }
             if(ptr != NULL) {
+              if(myRank == 0) 
+                printf("%lx  %p %lx\n", id, ptr, serdes_table[id].len());
               packer.Add(ptr, CDEntry(id, serdes_table[id].len(), 0, ptr));
+              count++;
             }
           } else {
             Index_t &numRegSize = dom->numReg();
-            for(int j=0; j<numRegSize; ++j) {
+            for(uint64_t j=0; j<numRegSize; ++j) {
               char *ptr = ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].ptr();
 //              printf("check:%u:%p\n", id, ptr);
               if(ptr != NULL) {
+                if(myRank == 0) { 
+                  printf("%lx  %p %lx\n", 
+                        j + ID__SERDES_ALL, ptr, ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].len());
+                }
                 packer.Add( ptr,
                               CDEntry(j + ID__SERDES_ALL, 
                                      ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].len(),
                                      0,
                                      ptr)
                             );
+                count++;
               }
             }
           }
         }
+        target_vec <<= 1;
         vec >>= 1;
       } // while ends
 
+      packer.data_->PadZeros(0); 
       uint64_t table_offset = packer.AppendTable();
+//      packer.data_->PadZeros(0); 
       total_size_   = packer.data_->used() - orig_size;
-      table_offset_ = table_offset - magic_offset - packer.data_->offset();
+      table_offset_ = table_offset - (magic_offset + packer.data_->offset());
       table_type_   = kCDEntry;
-      MagicStore magic(total_size_, 
-                       table_offset_,
-                       table_type_);
+      magic.total_size_   = total_size_, 
+      magic.table_offset_ = table_offset_;
+      magic.entry_type_   = table_type_;
+      magic.reserved2_    = 0x12345678;
+      magic.reserved_     = 0x01234567;
+      packer.data_->Write((char *)&magic, sizeof(MagicStore), magic_offset);
+      packer.data_->Flush();
 
-      return table_offset_;
+      if(myRank == 0) { 
+        printf("## total:%lx, table_pos:%lx, entry_cnt:%d, table_size:%lx (==%lx), type:%lu, offset:%lx\n", 
+          total_size_, table_offset_, count, total_size_ - table_offset_, packer.table_->usedsize(), table_type_, table_offset);
+      }
+      return table_offset;
     }
 
     uint64_t GetTotalSize(void) {

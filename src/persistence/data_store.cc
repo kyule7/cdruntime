@@ -764,6 +764,7 @@ void DataStore::InitReadMode(void)
   if(CHECK_FLAG(mode_, kReadMode) == false) {
     CD_SET(mode_, kReadMode); 
     if(buf_used() > 0) {
+      PadZeros(0);
       Flush();
       CD_SET(mode_, kReadMode); 
       PACKER_ASSERT(buf_preserved_ == NULL);
@@ -775,7 +776,7 @@ void DataStore::InitReadMode(void)
       buf_preserved_ = (char *)palloc;
       CopyFromBuffer(buf_preserved_, tail_preserved_);
       tail_ = head_;
-      printf("\n>>>>>> [%s]:%ld, tail:%lu, head:%lu\n", __func__, buf_used(), tail_, head_); //getchar();
+//      printf("\n>>>>>> [%s]:%ld, tail:%lu, head:%lu\n", __func__, buf_used(), tail_, head_); //getchar();
       // r_tail_ and r_head_ only can increase by CHUNK_ALIGNMENT size
       r_tail_ = head_ + written_len_;
       r_head_ = head_ + written_len_;
@@ -789,8 +790,8 @@ void DataStore::FinReadMode(void)
 //  if(r_tail_ >= head_ + used() && (r_tail_ <= head_ + used() + CHUNK_ALIGNMENT)
     && CHECK_FLAG(mode_, kReadMode)) {
 //  if(r_tail_ == (head_<<1) && CHECK_FLAG(mode_, kReadMode)) {
-    printf("\n<<<<<<< [%s] final!! %lu <= %ld, %d\n----------------", __func__,
-   head_ + written_len_, r_tail_ - head_, CHECK_FLAG(mode_, kReadMode));
+//    printf("\n<<<<<<< [%s] final!! %lu <= %ld, %d\n----------------", __func__,
+//   head_ + written_len_, r_tail_ - head_, CHECK_FLAG(mode_, kReadMode));
     //getchar();
 //  if(r_tail_ - (head_ + written_len_) == head_ + written_len_) {// - written_len_) {
     // Restore the remaining buffer state
@@ -800,7 +801,7 @@ void DataStore::FinReadMode(void)
     buf_preserved_ = NULL;
     tail_preserved_ = 0;
     CD_UNSET(mode_, kReadMode); 
-    printf("Checkthis:%d at %p\n", CHECK_FLAG(mode_, kReadMode), this);
+//    printf("Checkthis:%d at %p\n", CHECK_FLAG(mode_, kReadMode), this);
   }
 }
 ///////////////////////////////////////////////////////////////////////////////
@@ -1100,6 +1101,11 @@ uint64_t DataStore::FetchInternal(int64_t &tail_inc, int64_t &head_inc, int64_t 
   // aligned up - aligned down
   uint64_t aligned_len_to_read = CalcOffset(len_to_read, buf_offset, r_tail_next, r_head_next,
                                      buf_pos_low, buf_pos_high, false);
+  if(packerTaskID == 0) {
+    printf("len_to_read:%lx, buf_offset:%lx, r_tail_next:%lx, r_head_next:%lx, buf_pos_low:%lx, buf_pos_high:%lx\n",
+          len_to_read, buf_offset, r_tail_next, r_head_next, buf_pos_low, buf_pos_high);
+  }
+
   // actual len_to_read may less than aligned_len_to_read because
   // some portion may be cached to buffer.
   if(len_to_read != 0) { 

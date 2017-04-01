@@ -164,6 +164,7 @@ Additional BSD Notice
    Int_t myRank ;
    Int_t numRanks ;
 
+MagicStore magic __attribute__((aligned(0x1000)));
 #if _CD
 using namespace cd;
 //using namespace tuned;
@@ -2924,7 +2925,7 @@ int main(int argc, char *argv[])
       TimeIncrement(*locDom) ; // global synchronization
 #if _CD
       CD_Begin(cd_main_loop, "MainLoop");
-      root_cd->Preserve(locDom, sizeof(Domain), kCopy, "locDom_Root");
+      cd_main_loop->Preserve(locDom, sizeof(Domain), kCopy, "locDom_Root");
 #   ifndef OPTIMIZE_PRV
       cd_main_loop->Preserve(locDom->serdes.SetOp(preserve_vec_all), kCopy, "MainLoop");
 #   else

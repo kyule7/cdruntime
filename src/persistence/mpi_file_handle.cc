@@ -19,6 +19,8 @@ using namespace packer;
 MPIFileHandle *MPIFileHandle::fh_ = NULL;
 char err_str[MPI_MAX_ERR_STR];
 int err_len = 0, err_class = 0;
+int packer::packerTaskID = 0;
+int packer::packerTaskSize = 0;
 
 inline void CheckError(int err) 
 {
@@ -39,6 +41,8 @@ void MPIFileHandle::Init(const MPI_Comm &comm, const char *filepath)
   MPI_Comm_dup(comm, &comm_);
   MPI_Comm_rank(comm_, &rank);
   MPI_Comm_size(comm_, &commsize);
+  packerTaskID = rank;
+  packerTaskSize = commsize;
   // For error handling,
   MPI_Errhandler_set(comm_, MPI_ERRORS_RETURN);
 
@@ -151,8 +155,7 @@ char *MPIFileHandle::Read(int64_t len, int64_t offset)
 CDErrType MPIFileHandle::Read(void *dst, int64_t len, int64_t offset)
 {
   MYDBG("%ld (file offset:%ld)\n", len, offset);
-  PACKER_ASSERT(offset >= 0);
-  PACKER_ASSERT(len >= 0);
+  PACKER_ASSERT_STR(offset >= 0 && len >= 0, "MPIFileHandle::Read Error: %ld (file offset:%ld)\n", len, offset);
   CDErrType ret = kOK;
   MPI_Status status;
  // int rank;

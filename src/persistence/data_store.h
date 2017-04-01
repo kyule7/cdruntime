@@ -173,8 +173,22 @@ class DataStore {
     ///@brief Pointer that will be effectively used.
     inline char *GetPtr(void)       const { return ptr_; }
     inline void IncHead(uint64_t len)     { head_ += len; }
-    inline uint64_t PadZeros(uint64_t len)    { uint64_t offset = align_up(tail_); 
-                                            tail_ = align_up(tail_ + len);  return offset; }
+    inline uint64_t PadZeros(uint64_t len) {
+                                             uint64_t orig_tail = tail_; 
+                                             uint64_t offset = align_up(tail_); 
+                                             tail_ = align_up(tail_ + len);  
+                                             uint64_t padded_size = tail_ - orig_tail;
+                                             if(padded_size + orig_tail % size_ > size_) {
+                                               uint64_t first = size_ - orig_tail % size_;
+                                               memset(ptr_ + orig_tail % size_, 0, first);
+                                               memset(ptr_, 0, padded_size - first);
+
+                                             } else {
+                                               memset(ptr_ + orig_tail % size_, 0, padded_size);
+                                             }
+                                             PACKER_ASSERT_STR(padded_size <= 1024, "padd error:%lu %lx/%lx\n", padded_size, offset, size_);
+                                             return offset; 
+                                           }
     inline void SetGrowUnit(uint32_t grow_unit) { grow_unit_ = grow_unit; }
     inline uint32_t SetMode(uint32_t mode) { uint32_t orig_mode = mode_; mode_ = mode; return orig_mode; }
     inline uint32_t SetFileType(uint32_t mode) { uint32_t orig_type = GET_FILE_TYPE(mode_); 

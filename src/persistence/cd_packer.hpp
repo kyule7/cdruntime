@@ -40,19 +40,32 @@ class CDPacker : public Packer<CDEntry> {
         uint64_t table_offset = (uint64_t)entry.src_;
         uint64_t data_size   = table_offset - entry.offset_; //entry.offset_ - table_offset;
         uint64_t table_size  = entry.size() - data_size;
-//        printf("Check entry for packed obj:totsize:%lu offset:%lu tableoffset:%lu tablesize:%lu\n", 
-//           entry.size(), entry.offset_, table_offset, table_size); //getchar();
+        if(packerTaskID == 0) {
+          printf("#######################################################\n"
+                 "Check entry for packed obj:totsize:%lx offsetFromMagic:%lx, tablesize:%lx, tableoffset:%lx \n"
+                 "#######################################################\n", 
+            entry.size(), entry.offset_, table_size, table_offset); //getchar();
+        }
         data_->Fetch(table_size, table_offset);
-        CDEntry *pEntry = reinterpret_cast<CDEntry *>(
+        CDEntry *pEntry_check = reinterpret_cast<CDEntry *>(
             data_->GetPtr(table_offset + data_->head()));
-
+        void *tmp_ptr = NULL;
+        posix_memalign(&tmp_ptr, CHUNK_ALIGNMENT, table_size);
+        CDEntry *pEntry = (CDEntry  *)tmp_ptr;
+        memcpy(pEntry, data_->GetPtr(table_offset + data_->head()), table_size);
         // Test
-//        if(0)
+        if(packerTaskID == 0)
         {
           printf("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n");
-          uint64_t *ptest = reinterpret_cast<uint64_t *>(pEntry);
+          uint64_t *ptest = reinterpret_cast<uint64_t *>(pEntry_check);
           for(uint64_t i=0; i<table_size/sizeof(CDEntry); i++) {
-            printf("%6lu %6lu %6lu %6lu\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
+            printf("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
+            ptest += 4;
+          }
+          printf("\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n");
+          ptest = reinterpret_cast<uint64_t *>(pEntry);
+          for(uint64_t i=0; i<table_size/sizeof(CDEntry); i++) {
+            printf("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
             ptest += 4;
           }
           printf("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n\n\n");
@@ -61,10 +74,16 @@ class CDPacker : public Packer<CDEntry> {
         // This will just read from cache (memory)
         uint64_t num_entries = table_size/sizeof(CDEntry);
 //        printf("# of entries:%lu, head:%lu, pos_buf:%lu\n", num_entries, data_->head(), pEntry->offset_); //getchar();
-        for(uint32_t i=0; i<num_entries; i++, pEntry++) {
+        for(uint32_t i=0; i<num_entries; i++, pEntry += 1) {
+          if(packerTaskID == 0) {
+            printf("[%u/%lu] id:%lx Restore: %p size:%lx, offset:%lx\n", 
+                i, num_entries, pEntry->id_,  pEntry->src_, pEntry->size(), pEntry->offset_);
+            uint64_t *ptest = (uint64_t *)pEntry;
+            printf("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
+          }
           data_->GetData(pEntry->src_, pEntry->size(), pEntry->offset_);
         }
-
+        free(tmp_ptr);
 //        PACKER_ASSERT_STR(align_up(table_size) == consumed, 
 //            "tablesize:%lu==%lu(consumed)\n", table_size, consumed);
 

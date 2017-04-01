@@ -123,12 +123,12 @@ char *TestNestedPacker(int elemsize, int chunksize)
   for(uint32_t i=0; i<totsizeB; i++) {
     dataB[i] = i + 1000;//lrand48() % 100;
   }
-  for(uint32_t i=0; i <totsizeB/16; i++) {
-    for(uint32_t j=0; j<16; j++) {
-      printf("%4d ", dataB[i*16 + j]);
-    }
-    printf("\n");
-  } 
+//  for(uint32_t i=0; i <totsizeB/16; i++) {
+//    for(uint32_t j=0; j<16; j++) {
+//      printf("%4d ", dataB[i*16 + j]);
+//    }
+//    printf("\n");
+//  } 
   memcpy(testB, dataB, totsizeB * sizeof(int));
 //////////////////////////////////////////////////////
   printf("totsize:%lu, %lu\n", totsize * sizeof(int), totsizeB * sizeof(int));
@@ -195,9 +195,9 @@ char *TestNestedPacker(int elemsize, int chunksize)
 
   }
 
-  printf("================PrintArrayB====================\n");
-  PrintArray((char *)dataB, totsizeB* sizeof(int)); //getchar(); 
-  printf("==============================================\n");
+//  printf("================PrintArrayB====================\n");
+//  PrintArray((char *)dataB, totsizeB* sizeof(int)); //getchar(); 
+//  printf("==============================================\n");
 
 
   if(CompareResult((char *)dataA, (char *)testA, totsize*sizeof(int)) == 0) {
@@ -217,24 +217,24 @@ char *TestNestedPacker(int elemsize, int chunksize)
 //  packer.table_->PrintEntry();
 
   uint64_t ret_size = 0;
-  char *serialized = packer.GetTotalData(ret_size);
-  
-  printf("%lu != %lu\n", ret_size, packer.data_->tail() + packer.table_->usedsize() + sizeof(MagicStore));
-  if(ret_size != packer.data_->tail() + packer.table_->usedsize() + sizeof(MagicStore)) {
-    printf("%lu != %lu\n", ret_size, packer.data_->used() + packer.table_->usedsize() + sizeof(MagicStore));
-    assert(0);
-  } else {
-
-  }
-
-
-//  char *ret_ptr = (char *)malloc(ret_size);
-//  memcpy(ret_ptr, serialized, ret_size);
-  uint32_t *test_ptr = (uint32_t *)serialized;
-  printf("[%s] ret:%u %u %u\n", __func__, *test_ptr, *(test_ptr+1), *(test_ptr+2)); //getchar();
+//  char *serialized = packer.GetTotalData(ret_size);
+//  
+//  printf("%lu != %lu\n", ret_size, packer.data_->tail() + packer.table_->usedsize() + sizeof(MagicStore));
+//  if(ret_size != packer.data_->tail() + packer.table_->usedsize() + sizeof(MagicStore)) {
+//    printf("%lu != %lu\n", ret_size, packer.data_->used() + packer.table_->usedsize() + sizeof(MagicStore));
+//    assert(0);
+//  } else {
+//
+////  }
+//
+//
+////  char *ret_ptr = (char *)malloc(ret_size);
+////  memcpy(ret_ptr, serialized, ret_size);
+//  uint32_t *test_ptr = (uint32_t *)serialized;
+//  printf("[%s] ret:%u %u %u\n", __func__, *test_ptr, *(test_ptr+1), *(test_ptr+2)); //getchar();
   delete dataA;
   delete testA;
-  return serialized;
+//  return serialized;
 }
 
 
@@ -372,8 +372,8 @@ int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   gettimeofday(&ttime,NULL);
   srand48(ttime.tv_usec);
-  int elemsize = 10000;
-  int chunksize = 640;
+  int elemsize = 100000;
+  int chunksize = 6400;
   //char *chunk = ArrayTest(elemsize, chunksize);
   TestNestedPacker(elemsize, chunksize);
 //    Packer packer;;

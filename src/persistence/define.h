@@ -28,6 +28,8 @@
 
 namespace packer {
 extern uint64_t table_id; 
+extern int packerTaskID;
+extern int packerTaskSize;
 class BaseTable;
 
 inline bool align_check(char *ptr, uint64_t mask=CHUNK_ALIGNMENT) {
