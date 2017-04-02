@@ -615,7 +615,7 @@ CDErrT CD::Destroy(bool collective, bool need_destroy)
 
 bool CD::CheckToReuseCD(const std::string &cd_obj_key) 
 {
-  return (access_store_.find(cd_obj_key) != access_store_.end());
+  return (access_store_.find(phaseTree.current_->GetPhasePath(cd_obj_key)) != access_store_.end());
 }
 
 CD::CDInternalErrT 
@@ -634,7 +634,13 @@ CD::InternalCreate(CDHandle *parent,
                                                                    MASK_MEDIUM(cd_type)
                                 );
   }
-  string cd_obj_key(name);
+  string cd_obj_key;
+  if(parent == NULL) {
+    cd_obj_key = name;
+  } else {
+    cd_obj_key = phaseTree.current_->GetPhasePath(name);
+  }
+
   auto cdh_it = access_store_.find(cd_obj_key);
   if(cdh_it != access_store_.end()) {
     *new_cd_handle = cdh_it->second;
@@ -723,7 +729,7 @@ CD::InternalCreate(CDHandle *parent,
 
     *new_cd_handle = new CDHandle(new_cd);
   
-    access_store_[string(name)] = *new_cd_handle;
+    access_store_[cd_obj_key] = *new_cd_handle;
     delete_store_[new_cd->cd_id_.object_id_] = *new_cd_handle;
   
 //    AttachChildCD(new_cd);
@@ -1088,6 +1094,7 @@ void CD::Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
 // static
 CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 {
+  printf("#########%s level : %d (rollback_point: %d) (%s)\n", __func__, target->level(), *rollback_point_, target->label().c_str());
 #if 0//CD_PROFILER_ENABLED
   static bool check_sync_clk = false;
   if(check_sync_clk == false) {
@@ -2850,7 +2857,7 @@ void CD::DeleteEntryDirectory(void)
   CD_DEBUG("Delete entry directory!\n");
   preserve_count_ = 0;
   restore_count_ = 0;
-  entry_directory_.Clear(true);
+  entry_directory_.Clear(true); // reuse true
   remote_entry_directory_map_.clear();
 }
 

@@ -81,6 +81,7 @@ class CDPacker : public Packer<CDEntry> {
             uint64_t *ptest = (uint64_t *)pEntry;
             printf("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
           }
+          if(pEntry->id_ > 100) continue;
           data_->GetData(pEntry->src_, pEntry->size(), pEntry->offset_);
         }
         free(tmp_ptr);
