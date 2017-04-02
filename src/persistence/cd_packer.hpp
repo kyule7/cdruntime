@@ -40,12 +40,14 @@ class CDPacker : public Packer<CDEntry> {
         uint64_t table_offset = (uint64_t)entry.src_;
         uint64_t data_size   = table_offset - entry.offset_; //entry.offset_ - table_offset;
         uint64_t table_size  = entry.size() - data_size;
+#ifdef _DEBUG_0402        
         if(packerTaskID == 0) {
           printf("#######################################################\n"
                  "Check entry for packed obj:totsize:%lx offsetFromMagic:%lx, tablesize:%lx, tableoffset:%lx \n"
                  "#######################################################\n", 
             entry.size(), entry.offset_, table_size, table_offset); //getchar();
         }
+#endif
         data_->Fetch(table_size, table_offset);
         CDEntry *pEntry_check = reinterpret_cast<CDEntry *>(
             data_->GetPtr(table_offset + data_->head()));
@@ -54,6 +56,7 @@ class CDPacker : public Packer<CDEntry> {
         CDEntry *pEntry = (CDEntry  *)tmp_ptr;
         memcpy(pEntry, data_->GetPtr(table_offset + data_->head()), table_size);
         // Test
+#ifdef _DEBUG_0402        
         if(packerTaskID == 0)
         {
           printf("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n");
@@ -71,17 +74,19 @@ class CDPacker : public Packer<CDEntry> {
           printf("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n\n\n");
           //getchar();
         }
+#endif
         // This will just read from cache (memory)
         uint64_t num_entries = table_size/sizeof(CDEntry);
 //        printf("# of entries:%lu, head:%lu, pos_buf:%lu\n", num_entries, data_->head(), pEntry->offset_); //getchar();
         for(uint32_t i=0; i<num_entries; i++, pEntry += 1) {
+#ifdef _DEBUG_0402        
           if(packerTaskID == 0) {
             printf("[%u/%lu] id:%lx Restore: %p size:%lx, offset:%lx\n", 
                 i, num_entries, pEntry->id_,  pEntry->src_, pEntry->size(), pEntry->offset_);
             uint64_t *ptest = (uint64_t *)pEntry;
             printf("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
           }
-          if(pEntry->id_ > 100) continue;
+#endif
           data_->GetData(pEntry->src_, pEntry->size(), pEntry->offset_);
         }
         free(tmp_ptr);

@@ -136,6 +136,7 @@ CDErrType MPIFileHandle::Write(int64_t offset, char *src, int64_t len, int64_t i
 //  CheckError( MPI_File_write(fdesc_, src, len, MPI_BYTE, &status) );
   time_mpiio_write.Begin();
   CheckError( MPI_File_write_at(fdesc_, offset, src, len, MPI_BYTE, &status) );
+//  CheckError( MPI_File_sync(fdesc_) );
   time_mpiio_write.End(len);
   offset_ = (inc >= 0)? offset_ + inc : offset_ + len;
   MYDBG("[%d] MPI Write offset:%ld, %ld, src:%p, len:%ld\n", fdesc_, offset, offset_, src, len);

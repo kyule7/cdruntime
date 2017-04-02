@@ -201,7 +201,7 @@ uint64_t preserve_vec_1   = ( M__X  | M__Y  | M__Z  |
                               M__XD | M__YD | M__ZD |
                               M__XDD| M__YDD| M__ZDD);
 // CalcLagrangeElements ~ CalcQForElems
-uint64_t preserve_vec_2   = ( M__DELV | M__VDOV | M__AREALG |
+uint64_t preserve_vec_2   = ( M__DELV | M__VDOV | M__AREALG | M__ELEMBC |
                               M__DXX| M__DYY| M__DZZ|
                               M__DELV_ZETA  | M__DELV_XI  | M__DELV_ETA |
                               M__DELX_ZETA  | M__DELX_XI  | M__DELX_ETA );
@@ -1340,36 +1340,36 @@ void LagrangeNodal(Domain& domain)
 #endif
 
 #if _CD
-   CDHandle *lcdh = GetLeafCD();
-   CD_Begin(lcdh, "CalcAccelerationForNodes"); 
+//   CDHandle *lcdh = GetLeafCD();
+//   CD_Begin(lcdh, "CalcAccelerationForNodes"); 
 #endif
    CalcAccelerationForNodes(domain, domain.numNode());
 #if _CD
-   GetLeafCD()->Detect();
-   GetLeafCD()->Complete();
-   
-   CD_Begin(lcdh, "ApplyAccelerationBoundaryConditionsForNodes"); 
+//   GetLeafCD()->Detect();
+//   GetLeafCD()->Complete();
+//   
+//   CD_Begin(lcdh, "ApplyAccelerationBoundaryConditionsForNodes"); 
 #endif
    ApplyAccelerationBoundaryConditionsForNodes(domain);
 #if _CD
-   GetLeafCD()->Detect();
-   GetLeafCD()->Complete();
-
-   CD_Begin(lcdh, "CalcVelocityForNodes"); 
+//   GetLeafCD()->Detect();
+//   GetLeafCD()->Complete();
+//
+//   CD_Begin(lcdh, "CalcVelocityForNodes"); 
 #endif
    CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
 #if _CD
-   GetLeafCD()->Detect();
-   GetLeafCD()->Complete();
-
-   CD_Begin(lcdh, "CalcPositionForNodes"); 
+//   GetLeafCD()->Detect();
+//   GetLeafCD()->Complete();
+//
+//   CD_Begin(lcdh, "CalcPositionForNodes"); 
 #endif
 
    CalcPositionForNodes( domain, delt, domain.numNode() );
 
 #if _CD
-   GetLeafCD()->Detect();
-   GetLeafCD()->Complete();
+//   GetLeafCD()->Detect();
+//   GetLeafCD()->Complete();
    cdh->Destroy();
 #endif
 
@@ -2554,6 +2554,13 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   CDHandle *cdh = GetLeafCD();
   CD_Begin(cdh, "CalcLagrangeElements");
 //  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
+  cdh->Preserve(domain.serdes.SetOp(preserve_vec_2
+//                        M__X  | M__Y  | M__Z  |
+//                        M__XD | M__YD | M__ZD |
+//                        M__XDD| M__YDD| M__ZDD|
+//                        M__DXX| M__DYY| M__DZZ
+                ), 
+                kCopy, "InputCalcQForElems");
 #endif 
 
   Real_t *vnew = Allocate<Real_t>(numElem) ;  /* new relative vol -- temp */
@@ -2561,23 +2568,50 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   CalcLagrangeElements(domain, vnew) ;
 
 #if _CD
-  cdh->Detect();
-  cdh->Complete();
-  CD_Begin(cdh, "CalcQForElems");
+//  cdh->Preserve(domain.serdes.SetOp(
+//                        M__DELV | M__VDOV | M__AREALG |
+//                        M__DXX| M__DYY| M__DZZ
+//                ), 
+//                kCopy, "OutputCalcQForElems");
+//  cdh->Detect();
+//  cdh->Complete();
+//  CD_Begin(cdh, "CalcQForElems");
+//  cdh->Preserve(&domain, sizeof(domain), kCopy, "domain_CalcQ");
+//  cdh->Preserve(vnew, numElem * sizeof(Real_t), kCopy, "vnewAfterCalcLagrangeElements");
+//  cdh->Preserve(domain.serdes.SetOp(
+//                              M__ELEMBC
+//                ), 
+//                kCopy, "InputCalcQForElems");
 #endif
   /* Calculate Q.  (Monotonic q option requires communication) */
   CalcQForElems(domain, vnew) ;
 #if _CD
-  cdh->Detect();
-  cdh->Complete();
-  CD_Begin(cdh, "ApplyMaterialPropertiesForElems");
+//  cdh->Preserve(domain.serdes.SetOp(
+//                              M__DELV_ZETA  | M__DELV_XI  | M__DELV_ETA |
+//                              M__DELX_ZETA  | M__DELX_XI  | M__DELX_ETA |
+//                              M__QQ | M__QL 
+//                ), 
+//                kCopy, "OutputCalcQForElems");
+//  cdh->Detect();
+//  cdh->Complete();
+//  CD_Begin(cdh, "ApplyMaterialPropertiesForElems");
+//  cdh->Preserve(&domain, sizeof(domain), kCopy, "locDomAtApply");
+//  cdh->Preserve(domain.serdes.SetOp(
+//                              M__QQ | M__QL | M__DELV |
+//                              M__Q  | M__E  | M__P | M__V
+//                ), kCopy, "InputApplyMaterialPropertiesForElems");
 #endif
 
   ApplyMaterialPropertiesForElems(domain, vnew) ;
 #if _CD
-  cdh->Detect();
-  cdh->Complete();
-  CD_Begin(cdh, "UpdateVolumesForElems");
+//  cdh->Preserve(domain.serdes.SetOp(
+//                              M__SS | M__VNEW |
+//                              M__Q  | M__E  | M__P 
+//                ), kCopy, "OuputApplyMaterialPropertiesForElems");
+//  cdh->Detect();
+//  cdh->Complete();
+//  CD_Begin(cdh, "UpdateVolumesForElems");
+//  cdh->Preserve(vnew, numElem * sizeof(Real_t), kCopy, "vnewBeforeUpdateVolume");
 #endif
 
   UpdateVolumesForElems(domain, vnew,
@@ -2586,6 +2620,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   Release(&vnew);
 
 #if _CD
+  cdh->Preserve(domain.serdes.SetOp(M__V), kCopy, "UpdatedVolume");
   cdh->Detect();
   cdh->Complete();
   //cdh->Destroy();
@@ -2936,7 +2971,7 @@ int main(int argc, char *argv[])
       LagrangeLeapFrog(*locDom) ;
 #if _CD
       cd_main_loop->Detect();
-      cd_main_loop->Complete( ((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false );
+      cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
 #endif
 
       if (myRank == 0) {

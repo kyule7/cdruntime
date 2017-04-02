@@ -9,7 +9,7 @@
 #define ENTRY_TYPE_CNT 8
 #define BASE_ENTRY_CNT 128
 //#define DATA_GROW_UNIT 65536 // 64KB
-#define DATA_GROW_UNIT 4096 // 4KB
+//#define DATA_GROW_UNIT 4096 // 4KB
 #define TABLE_GROW_UNIT 4096 // 4KB (128 EntryT)
 #define BUFFER_INSUFFICIENT 0xFFFFFFFFFFFFFFFF
 namespace packer {

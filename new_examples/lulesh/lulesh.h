@@ -758,7 +758,7 @@ class DomainSerdes : public cd::PackerSerializable {
 
 //      packer.data_->SetFileType(kVolatile);
       uint64_t magic_offset = packer.data_->PadZeros(sizeof(MagicStore));
-      uint64_t orig_size = magic_offset + packer.data_->offset();//packer.data_->used(); // return
+      uint64_t orig_size = magic_offset;// + packer.data_->offset();//packer.data_->used(); // return
 
       uint64_t vec = serdes_vec;
       uint64_t target_vec = 1;
@@ -772,12 +772,17 @@ class DomainSerdes : public cd::PackerSerializable {
           if(id != ID__REGELEMLIST_INNER) {
             char *ptr = serdes_table[id].ptr();
 //            printf("check:%u:%p\n", id, ptr);
+#ifdef _DEBUG_LULESH_0402
             if(myRank == 0 && id == ID__DXX) {
               printf("SERDES: ID_DXX: %p, %lu\n", ptr, serdes_table[id].len() );
             }
+#endif
             if(ptr != NULL) {
-              if(myRank == 0) 
+#ifdef _DEBUG_LULESH_0402
+              if(myRank == 0) { 
                 printf("%lx  %p %lx\n", id, ptr, serdes_table[id].len());
+              }
+#endif
               packer.Add(ptr, CDEntry(id, serdes_table[id].len(), 0, ptr));
               count++;
             }
@@ -787,10 +792,12 @@ class DomainSerdes : public cd::PackerSerializable {
               char *ptr = ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].ptr();
 //              printf("check:%u:%p\n", id, ptr);
               if(ptr != NULL) {
+#ifdef _DEBUG_LULESH_0402
                 if(myRank == 0) { 
                   printf("%lx  %p %lx\n", 
                         j + ID__SERDES_ALL, ptr, ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].len());
                 }
+#endif
                 packer.Add( ptr,
                               CDEntry(j + ID__SERDES_ALL, 
                                      ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].len(),
@@ -810,20 +817,28 @@ class DomainSerdes : public cd::PackerSerializable {
       uint64_t table_offset = packer.AppendTable();
 //      packer.data_->PadZeros(0); 
       total_size_   = packer.data_->used() - orig_size;
-      table_offset_ = table_offset - (magic_offset + packer.data_->offset());
+      table_offset_ = table_offset - (magic_offset);// + packer.data_->offset());
       table_type_   = kCDEntry;
       magic.total_size_   = total_size_, 
       magic.table_offset_ = table_offset_;
       magic.entry_type_   = table_type_;
       magic.reserved2_    = 0x12345678;
       magic.reserved_     = 0x01234567;
-      packer.data_->Write((char *)&magic, sizeof(MagicStore), magic_offset);
-      packer.data_->Flush();
+      uint64_t magic_offset_in_buf = magic_offset - packer.data_->offset();
+      packer.data_->Write((char *)&magic, sizeof(MagicStore), magic_offset_in_buf);
+//      packer.data_->Flush();
 
+#ifdef _DEBUG_LULESH_0402
       if(myRank == 0) { 
         printf("## total:%lx, table_pos:%lx, entry_cnt:%d, table_size:%lx (==%lx), type:%lu, offset:%lx\n", 
-          total_size_, table_offset_, count, total_size_ - table_offset_, packer.table_->usedsize(), table_type_, table_offset);
+          total_size_, table_offset_, count, 
+          total_size_ - table_offset_, 
+          packer.table_->usedsize(), table_type_, table_offset);
       }
+#endif
+      
+
+
       return table_offset;
     }
 

@@ -264,10 +264,12 @@ CD::CD(CDHandle *cd_parent,
   is_window_reused_ = false;
 
   cd_type_ = cd_type; 
-  prv_medium_ = prv_medium; 
+  prv_medium_ = static_cast<PrvMediumT>(MASK_MEDIUM(prv_medium)); 
   name_ = (strcmp(name, NO_LABEL) == 0)? cd_id_.cd_name_.GetString() : name; 
   sys_detect_bit_vector_ = sys_bit_vector; 
-
+  if(prv_medium == kDRAM) {
+    entry_directory_.data_->SetMode(kVolatile);
+  }
   // FIXME 
   // cd_id_ = 0; 
   // We need to call which returns unique id for this cd. 
@@ -341,7 +343,7 @@ void CD::Initialize(CDHandle *cd_parent,
   entry_directory_.Init();
 
   cd_type_ = cd_type; 
-  prv_medium_ = prv_medium; 
+  prv_medium_ = static_cast<PrvMediumT>(MASK_MEDIUM(prv_medium)); 
   if(name != NULL) {
     name_ = name;
   } else {
@@ -581,7 +583,7 @@ CDHandle *CD::CreateRootCD(const char *name,
 
   /// Create CD object with new CDID
   CDHandle *new_cd_handle = NULL;
-//  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
+  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
 
   *cd_internal_err = InternalCreate(NULL, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
 
@@ -2157,6 +2159,8 @@ CD::InternalPreserve(void *data,
     //  ID  [ATTR|totsize] totoffset  tableoffset
       attr |= Attr::knested;
 //      uint64_t orig_tablesize = entry_directory_.table_->used();
+      
+      entry_directory_.data_->PadZeros(0);
       const uint64_t packed_offset  = entry_directory_.data_->used();
       // FIXME: PreserveObject must append the table for serialized object to data chunk.
       // Serializer should use the same DataStore for in-place preservation,
@@ -2167,7 +2171,10 @@ CD::InternalPreserve(void *data,
 //      int64_t table_size_in_datachunk = entry_directory_.data_->used() - table_offset_in_datachunk;
       pEntry = entry_directory_.table_->InsertEntry(
           CDEntry(id, attr, packed_size, packed_offset, (char *)table_offset));
-      entry_directory_.data_->PadZeros(0);
+      entry_directory_.data_->Flush();
+//      entry_directory_.data_->PadZeros(0);
+
+      
 //      CD_ASSERT(table_size_in_datachunk > 0);
 //      CD_ASSERT(reinterpret_cast<MagicStore *>(&(entry_directory_.data_[packed_offset]))->total_size_ == packed_size);
 //      CD_ASSERT(reinterpret_cast<MagicStore *>(&(entry_directory_.data_[packed_offset]))->table_offset_ == table_offset_in_datachunk);
@@ -2175,10 +2182,12 @@ CD::InternalPreserve(void *data,
     else { // preserve a single entry
       pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, len_in_bytes, 0, (char *)data));
     }
+#ifdef _DEBUG_0402        
     if(myTaskID == 0) {
       printf("Preserve Complete [%s->%s at lv #%u %u] cnt:%lu, tag id:%lu\n=====================================\n", 
         label_.c_str(), my_name.c_str(), level(), GetCurrentCD()->level(), preserve_count_, id);
     }
+#endif
 
   } // end of preserve via copy
   else if( CHECK_PRV_TYPE(preserve_mask, kRef) ) { // via-reference

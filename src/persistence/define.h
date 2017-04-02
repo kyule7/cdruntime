@@ -16,6 +16,7 @@
 #define TABLE_ID_OFFSET 0xFFFFFFFF00000000
 #define CHUNK_ALIGNMENT 512
 #define DEFAULT_BASE_FILEPATH "."
+//#ifdef _DEBUG_0402        
 
 #define ERROR_MESSAGE_PACKER(...) \
   { fprintf(stderr, __VA_ARGS__); fflush(stderr); assert(0); }

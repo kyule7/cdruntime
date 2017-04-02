@@ -737,7 +737,9 @@ CDErrType DataStore::CopyBufferToFile(uint64_t buf_pos, int64_t len, uint64_t fi
     ret = fh_->Write(file_offset + first, ptr_, second_up, second_down);
     ret = (CDErrType)((uint64_t)iret | (uint64_t)(ret));
   } else {
-    //printf("foffset:%lx, total:%lu\n", file_offset, len);
+#ifdef _DEBUG_0402        
+    if(packerTaskID == 0) printf("foffset:%lx, total:%lu\n", file_offset, len);
+#endif
     //ret = fh_->Write(file_offset, begin(), len, mask_len & len);
     ret = fh_->Write(file_offset, pbegin, align_up(len, CHUNK_ALIGNMENT), mask_len & len);
   }
@@ -1101,11 +1103,12 @@ uint64_t DataStore::FetchInternal(int64_t &tail_inc, int64_t &head_inc, int64_t 
   // aligned up - aligned down
   uint64_t aligned_len_to_read = CalcOffset(len_to_read, buf_offset, r_tail_next, r_head_next,
                                      buf_pos_low, buf_pos_high, false);
+#ifdef _DEBUG_0402        
   if(packerTaskID == 0) {
     printf("len_to_read:%lx, buf_offset:%lx, r_tail_next:%lx, r_head_next:%lx, buf_pos_low:%lx, buf_pos_high:%lx\n",
           len_to_read, buf_offset, r_tail_next, r_head_next, buf_pos_low, buf_pos_high);
   }
-
+#endif
   // actual len_to_read may less than aligned_len_to_read because
   // some portion may be cached to buffer.
   if(len_to_read != 0) { 
@@ -1453,6 +1456,7 @@ void DataStore::SetActiveBuffer(bool high_priority)
 }
 
 
+void DataStore::SetFileOffset(uint64_t offset) { fh_->SetOffset(offset); }
 
 
 MagicStore::MagicStore(void) : total_size_(0), table_offset_(0), entry_type_(0) {

@@ -317,6 +317,8 @@ Domain::SetupThreadSupportStructures()
 
 
 ////////////////////////////////////////////////////////////////////////////////
+//FIXME
+Index_t myBufSize = 0;
 void
 Domain::SetupCommBuffers(Int_t edgeNodes)
 {
@@ -358,6 +360,7 @@ Domain::SetupCommBuffers(Int_t edgeNodes)
 		 (m_rowMax & m_colMax & m_planeMin) +
 		 (m_rowMax & m_colMax & m_planeMax)) * CACHE_COHERENCE_PAD_REAL ;
 
+//  myBufSize = comBufSize * sizeof(Real_t);
   this->commDataSend = new Real_t[comBufSize] ;
   this->commDataRecv = new Real_t[comBufSize] ;
   // prevent floating point exceptions 

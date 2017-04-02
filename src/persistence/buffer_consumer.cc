@@ -48,6 +48,12 @@ void BufferConsumer::Delete(void)
 void BufferConsumer::InsertBuffer(DataStore *ds) 
 {
   MYDBG("%p (%p)\n", ds, this); //getchar();
+  // PadZero is necessary!
+  // Otherwise the data written by previous data_store obj
+  // may be overwritten by new object's.
+  if(buf_list_.empty() == false) {
+    buf_list_.back()->SetFileOffset(buf_list_.back()->PadZeros(0));
+  }
   buf_list_.push_back(ds);
 }
 
