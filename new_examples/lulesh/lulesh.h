@@ -780,7 +780,7 @@ class DomainSerdes : public cd::PackerSerializable {
         InitSerdesTable();                                                                       
         init = true;                                                                             
       }
-
+//
       uint64_t target_vec = 1;
       uint64_t tot_len = 0;
       int count = 0;
