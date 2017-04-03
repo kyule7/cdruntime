@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -J hpgmg_16nodes           # job name
 #SBATCH -o hpgmg_16nodes.o%j       # output and error file name (%j expands to jobID)
-#SBATCH -n 256              # total number of mpi tasks requested
+#SBATCH -n 192              # total number of mpi tasks requested
 #SBATCH -N 16               # total number of nodes requested
 #SBATCH -p development
 #SBATCH -t 01:59:00        # run time (hh:mm:ss) - 1.5 hours
@@ -15,16 +15,16 @@ source ~/runenv
 set -x
 
 cd build_org
-time ibrun -np 256 hpcrun ./bin/hpgmg-fv 6 8 
-time ibrun -np 256 hpcrun ./bin/hpgmg-fv 7 7 
+time ibrun -np 12  ./bin/hpgmg-fv 6 8 
+time ibrun -np 48  ./bin/hpgmg-fv 6 8 
+time ibrun -np 96  ./bin/hpgmg-fv 6 8 
+time ibrun -np 192 ./bin/hpgmg-fv 6 8 
 
 cd ../build_cd
-time ibrun -np 256 hpcrun ./bin/hpgmg-fv 6 8 
-time ibrun -np 256 hpcrun ./bin/hpgmg-fv 7 7 
-
-#cd ../build_scr
-#time ibrun -np 256 hpcrun ./bin/hpgmg-fv 6 8 
-#time ibrun -np 256 hpcrun ./bin/hpgmg-fv 7 7 
+time ibrun -np 12  ./bin/hpgmg-fv 6 8 
+time ibrun -np 48  ./bin/hpgmg-fv 6 8 
+time ibrun -np 96  ./bin/hpgmg-fv 6 8 
+time ibrun -np 192 ./bin/hpgmg-fv 6 8 
 
 set +x
 

@@ -15,16 +15,12 @@ source ~/runenv
 set -x
 
 cd build_org
-time ibrun -np 16 hpcrun ./bin/hpgmg-fv 6 8 
-time ibrun -np 8 hpcrun ./bin/hpgmg-fv 7 7 
+time ibrun -np 12 ./bin/hpgmg-fv 6 8 
+time ibrun -np 8 ./bin/hpgmg-fv 7 7 
 
 cd ../build_cd
-time ibrun -np 16 hpcrun ./bin/hpgmg-fv 6 8 
-time ibrun -np 8 hpcrun ./bin/hpgmg-fv 7 7 
-
-#cd ../build_scr
-#time ibrun -np 16 hpcrun ./bin/hpgmg-fv 6 8 
-#time ibrun -np 16 hpcrun ./bin/hpgmg-fv 7 7 
+time ibrun -np 12 ./bin/hpgmg-fv 6 8 
+time ibrun -np 8 ./bin/hpgmg-fv 7 7 
 
 set +x
 
