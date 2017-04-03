@@ -1343,7 +1343,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   if(is_execution) {
 //    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
 //    if(len==0) {printf("len:0\n"); getchar(); }
-    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
+    if(CHECK_PRV_TYPE(preserve_mask,kCopy) && (CHECK_PRV_TYPE(preserve_mask, kOutput) == false)) {
       profiler_->RecordProfile(PRV_COPY_DATA, len);
     }
     else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
