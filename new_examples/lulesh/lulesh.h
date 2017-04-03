@@ -673,6 +673,8 @@ class DomainSerdes : public cd::PackerSerializable {
       if(numRegSize == prv_numRegSize && numElemSize == prv_numElemSize) 
         return;
       else {
+        prv_numRegSize == numRegSize;
+        prv_numElemSize == numElemSize;
         serdes_table[ID__REGELEMSIZE] = 
           SerdesInfo((char *)(dom->m_regElemSize), sizeof(Index_t) * numRegSize, SerdesInfo::NoVec, "regElemSize");
         serdes_table[ID__REGELEMLIST] = 
@@ -770,9 +772,88 @@ class DomainSerdes : public cd::PackerSerializable {
 //      printf("serdes vec : %lx\n", serdes_vec);                                                
       return *this;                                                                              
     }                                                                                            
+
+    uint64_t Preserve(cd::CDHandle *cdh, uint64_t vec, uint32_t prvType, const char *entry_str) {                          
+                                                                                                 
+      static bool init = false;                                                                  
+      if(init == false) {                                                                        
+        InitSerdesTable();                                                                       
+        init = true;                                                                             
+      }
+
+      uint64_t target_vec = 1;
+      uint64_t tot_len = 0;
+      int count = 0;
+      char tmp_name_buf[256];
+      while(vec  != 0) {
+        uint64_t id = vec2id(target_vec);
+        if(vec & 0x1) {
+          if(id == ID__MATELEMLIST) { vec >>= 1; target_vec <<= 1; continue; }
+          if(id != ID__REGELEMLIST_INNER) {
+            char *ptr = serdes_table[id].ptr();
+#ifdef _DEBUG_LULESH_0402
+            if(myRank == 0 && id == ID__DXX) {
+              printf("SERDES: ID_DXX: %p, %lu\n", ptr, serdes_table[id].len() );
+            }
+#endif
+            if(ptr != NULL) {
+              sprintf(tmp_name_buf, "%s_%s", entry_str, serdes_table[id].name);
+//              printf("id:%s name:%s\n", tmp_name_buf, serdes_table[id].name);
+              uint64_t entry_id = GetCDEntryID(tmp_name_buf);
+#ifdef _DEBUG_LULESH_0402
+              if(myRank == 0) { 
+                printf("%lx  %p %lx (%s %lx)\n", id, ptr, serdes_table[id].len(), tmp_name_buf, entry_id);
+              }
+#endif
+              cdh->Preserve(ptr, serdes_table[id].len(), prvType, tmp_name_buf);
+              tot_len += serdes_table[id].len();
+              count++;
+            }
+          } else {
+            Index_t &numRegSize = dom->numReg();
+            for(uint64_t j=0; j<numRegSize; ++j) {
+              char *ptr = ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].ptr();
+//              printf("check:%u:%p\n", id, ptr);
+              if(ptr != NULL) {
+                sprintf(tmp_name_buf, "%s_%s", entry_str, serdes_table[id].name);
+                uint64_t entry_id = GetCDEntryID(tmp_name_buf);
+#ifdef _DEBUG_LULESH_0402
+                if(myRank == 0) { 
+                  printf("%lx  %p %lx (%s %lx)\n", 
+                        j + ID__SERDES_ALL, 
+                        ptr, 
+                        ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].len(),
+                        tmp_name_buf, entry_id);
+                }
+#endif
+                cdh->Preserve(ptr, 
+                              ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].len(),
+                              prvType, tmp_name_buf);
+                tot_len += serdes_table[id].len();
+                count++;
+              }
+            }
+          }
+        }
+        target_vec <<= 1;
+        vec >>= 1;
+      } // while ends
+
+#ifdef _DEBUG_LULESH_0402
+      if(myRank == 0) { 
+        printf("## %s total:%lx\n", entry_str, tot_len); 
+      }
+#endif
+      
+
+
+      return tot_len;
+
+
+    }
                                                                                                  
     // With this interface, user can switch to a different serializer with a method flag.        
-    uint64_t PreserveObject(CDPacker &packer, const char *entry_name) {                          
+    uint64_t PreserveObject(CDPacker &packer, const std::string &entry_name) {                          
                                                                                                  
       InitDynElem();                                                                             
       static bool init = false;                                                                  
@@ -799,7 +880,7 @@ class DomainSerdes : public cd::PackerSerializable {
             }
 #endif
             if(ptr != NULL) {
-              sprintf(tmp_name_buf, "%s_%s", entry_name, serdes_table[id].name);
+              sprintf(tmp_name_buf, "%s_%s", entry_name.c_str(), serdes_table[id].name);
 //              printf("id:%s name:%s\n", tmp_name_buf, serdes_table[id].name);
               uint64_t entry_id = GetCDEntryID(tmp_name_buf);
 #ifdef _DEBUG_LULESH_0402
@@ -817,7 +898,7 @@ class DomainSerdes : public cd::PackerSerializable {
               char *ptr = ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].ptr();
 //              printf("check:%u:%p\n", id, ptr);
               if(ptr != NULL) {
-                sprintf(tmp_name_buf, "%s_%s", entry_name, serdes_table[id].name);
+                sprintf(tmp_name_buf, "%s_%s", entry_name.c_str(), serdes_table[id].name);
                 uint64_t entry_id = GetCDEntryID(tmp_name_buf);
 #ifdef _DEBUG_LULESH_0402
                 if(myRank == 0) { 
@@ -999,7 +1080,7 @@ class DomainSerdes : public cd::PackerSerializable {
     }
     
     void Deserialize(void *obj){}
-    uint64_t Deserialize(CDPacker &packer, const char *entry_name) {
+    uint64_t Deserialize(CDPacker &packer, const std::string &entry_name) {
       uint64_t vec = serdes_vec;
       uint64_t target_vec = 1;
       uint64_t tot_len = 0;
@@ -1013,7 +1094,7 @@ class DomainSerdes : public cd::PackerSerializable {
           if(id == ID__MATELEMLIST) { vec >>= 1; target_vec <<= 1; continue; }
           if(id != ID__REGELEMLIST_INNER) {
             if(ptr != NULL) {
-              sprintf(tmp_name_buf, "%s_%s", entry_name, serdes_table[id].name);
+              sprintf(tmp_name_buf, "%s_%s", entry_name.c_str(), serdes_table[id].name);
               uint64_t entry_id = GetCDEntryID(tmp_name_buf);
 #ifdef _DEBUG_LULESH_0402
               if(myRank == 0) { 
@@ -1031,7 +1112,7 @@ class DomainSerdes : public cd::PackerSerializable {
               char *ptr = ((SerdesInfo *)(serdes_table[ID__REGELEMLIST_INNER].src))[j].ptr();
 //              printf("check:%u:%p\n", id, ptr);
               if(ptr != NULL) {
-                sprintf(tmp_name_buf, "%s_%s", entry_name, serdes_table[id].name);
+                sprintf(tmp_name_buf, "%s_%s", entry_name.c_str(), serdes_table[id].name);
                 uint64_t entry_id = GetCDEntryID(tmp_name_buf);
 #ifdef _DEBUG_LULESH_0402
                 if(myRank == 0) { 

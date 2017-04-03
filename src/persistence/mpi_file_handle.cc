@@ -37,7 +37,12 @@ void MPIFileHandle::Init(const MPI_Comm &comm, const char *filepath)
   int rank=0, commsize=0;
   struct timeval time;
   gettimeofday(&time, NULL);
-
+  viewsize_ = 0;
+  if(viewsize_ != 0) {
+    MPI_Comm_dup(comm, &comm_);
+  } else {
+    MPI_Comm_dup(MPI_COMM_SELF, &comm_);
+  }
   MPI_Comm_dup(comm, &comm_);
   MPI_Comm_rank(comm_, &rank);
   MPI_Comm_size(comm_, &commsize);
@@ -67,7 +72,7 @@ void MPIFileHandle::Init(const MPI_Comm &comm, const char *filepath)
     CheckError( MPI_File_open(comm_, full_filename, MPI_MODE_CREATE|MPI_MODE_RDWR, MPI_INFO_NULL, &fdesc_) );
   } else { // N-to-N file write
     sprintf(full_filename, "%s/%s.%d", base_filename, filepath, rank);//time.tv_sec % 100, time.tv_usec % 100);
-    CheckError( MPI_File_open(comm_, full_filename, MPI_MODE_CREATE|MPI_MODE_RDWR, MPI_INFO_NULL, &fdesc_) );
+    CheckError( MPI_File_open(MPI_COMM_SELF, full_filename, MPI_MODE_CREATE|MPI_MODE_RDWR, MPI_INFO_NULL, &fdesc_) );
 //  fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT, S_IRUSR | S_IWUSR);
 //  MPI_Aint lb = 0, extent = (commsize)*viewsize_;
   }

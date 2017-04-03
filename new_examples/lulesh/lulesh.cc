@@ -1202,10 +1202,12 @@ static inline void CalcForceForNodes(Domain& domain)
 //  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
 #   ifndef OPTIMIZE_PRV
   cdh->Preserve(&domain, sizeof(domain), kCopy, "locDomAtCalcForceForNodes");
-  cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
+  domain.serdes.Preserve(cdh, preserve_vec_1, kCopy, "prv_vec_1");
+  //cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
 #   else
   cdh->Preserve(&domain, sizeof(domain), kCopy, "locDomAtCalcForceForNodes");
-  cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
+  domain.serdes.Preserve(cdh, preserve_vec_1, kCopy, "prv_vec_1");
+  //cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
 #   endif
 #endif
   /* Calcforce calls partial, force, hourq */
@@ -2938,7 +2940,8 @@ int main(int argc, char *argv[])
    CDHandle* root_cd = CD_Init(numRanks, myRank, kHDD);
    CD_Begin(root_cd, "Root");
    root_cd->Preserve(locDom, sizeof(Domain), kCopy, "locDom_Root");
-   root_cd->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Root");
+   locDom->serdes.Preserve(root_cd, M__SERDES_ALL, kCopy, "AllMembers_Root");
+//   root_cd->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Root");
 #endif
 
    // BEGIN timestep to solution */
@@ -2961,7 +2964,8 @@ int main(int argc, char *argv[])
       CD_Begin(cd_main_loop, "MainLoop");
       cd_main_loop->Preserve(locDom, sizeof(Domain), kCopy, "locDom_Root");
 #   ifndef OPTIMIZE_PRV
-      cd_main_loop->Preserve(locDom->serdes.SetOp(preserve_vec_all), kCopy, "MainLoop");
+      locDom->serdes.Preserve(cd_main_loop, preserve_vec_all, kCopy, "MainLoop");
+      //cd_main_loop->Preserve(locDom->serdes.SetOp(preserve_vec_all), kCopy, "MainLoop");
 #   else
       cd_main_loop->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime");
 #   endif

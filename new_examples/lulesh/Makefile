@@ -35,8 +35,8 @@ OBJECTS2.0 = $(SOURCES2.0:.cc=.o)
 #Default build suggestions with OpenMP for g++
 CXXFLAGS = -g -std=gnu++0x  -Wall -Wno-pragmas -fmax-errors=1 ${CD_CFLAGS} ${CD_FLAGS} 
 LDFLAGS = -g -O3  ${CD_LINKFLAGS}
-#CXXFLAGS = -fopenmp
-#LDFLAGS = -fopenmp
+CXXFLAGS += -fopenmp
+LDFLAGS += -fopenmp
 #Below are reasonable default flags for a serial build
 #CXXFLAGS = -g -O3 -I. -Wall
 #LDFLAGS = -g -O3 

@@ -1975,6 +1975,9 @@ CDErrT CD::Preserve(void *data,
 //  printf("%s %s\n", my_name.c_str(), ref_name.c_str());
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
 //    cddbg<<"my_name "<< my_name<<endl;
+    if(strcmp(my_name.c_str(), "MainLoop_symmX") == 0 || strcmp(my_name.c_str(), "locDom_Root") == 0 ) {
+      printf("[%d] #################### %s ############:%lu\n", myTaskID, my_name.c_str(), tag);
+    }
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : {
               ret = CDErrT::kOK;
@@ -2022,7 +2025,8 @@ CDErrT CD::Preserve(void *data,
       CD_DEBUG("\n\nNow reexec!!! %d\n\n", iterator_entry_count++);
       if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
         PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
-        uint64_t restored_len = serializer->Deserialize(entry_directory_, my_name.c_str());
+//        printf("%p, %s\n", data, my_name.c_str());
+        uint64_t restored_len = serializer->Deserialize(entry_directory_, my_name);
 //        printf("restored_len:%lu\n", restored_len);
         if(prv_medium_ != kDRAM)
           entry_directory_.data_->Flush();
@@ -2030,7 +2034,11 @@ CDErrT CD::Preserve(void *data,
         // This will fetch from disk to memory
         // Potential benefit from prefetching app data from preserved data in
         // disk, overlapping reexecution of application.
-        entry_directory_.Restore(tag);//, (char *)data);i
+        char *ret = entry_directory_.Restore(tag);//, (char *)data);i
+        if(ret == NULL) {
+          printf("[%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+          assert(0);
+        }
 
 //      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
 //        packer::CDErrType pret = entry_directory_.Restore(tag);//, (char *)data);
@@ -2168,7 +2176,7 @@ CD::InternalPreserve(void *data,
       attr |= Attr::knested;
 //      uint64_t orig_tablesize = entry_directory_.table_->used();
 #if 1
-      len_in_bytes = serializer->PreserveObject(entry_directory_, my_name.c_str());
+      len_in_bytes = serializer->PreserveObject(entry_directory_, my_name);
       //len_in_bytes = serializer->PreserveObject(entry_directory_, my_name);
 #else
       entry_directory_.data_->PadZeros(0);
@@ -2877,6 +2885,7 @@ bool CD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry)
 
 void CD::DeleteEntryDirectory(void)
 {
+  if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
   CD_DEBUG("Delete entry directory!\n");
   preserve_count_ = 0;
   restore_count_ = 0;
@@ -2886,6 +2895,7 @@ void CD::DeleteEntryDirectory(void)
 
 void HeadCD::DeleteEntryDirectory(void)
 {
+  if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
   CD_DEBUG("Delete entry directory!\n");
   preserve_count_ = 0;
   restore_count_ = 0;

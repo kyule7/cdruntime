@@ -26,10 +26,10 @@ class Packer {
     bool alloc_table;
     bool alloc_data;
   public:
-    Packer(uint64_t alloc=1, TableStore<EntryT> *table=NULL, DataStore *data=NULL) : cur_pos_(0) {
+    Packer(uint64_t alloc=BASE_ENTRY_CNT, TableStore<EntryT> *table=NULL, DataStore *data=NULL) : cur_pos_(0) {
       if(table == NULL) {
         alloc_table = true; 
-        table_ = new TableStore<EntryT>(alloc);
+        table_ = new TableStore<EntryT>(BASE_ENTRY_CNT);
       } else {
         alloc_table = false; 
         table_ = table;

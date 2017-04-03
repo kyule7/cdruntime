@@ -851,10 +851,12 @@ void DataStore::GetData(char *dst, int64_t len, uint64_t pos, bool keep_reading)
   //PACKER_ASSERT(r_tail_ - head_ <= head_ - written_len_);
   //PACKER_ASSERT_STR((r_tail_ >= head_ && r_tail_ < head_ + CHUNK_ALIGNMENT),  
 //  uint64_t last_rtail = r_tail_ - tail_inc;
+#if 0
   PACKER_ASSERT_STR(orig_rtail == r_tail_ 
       || r_tail_ - orig_rtail >= align_up(pos + orig_len) - align_down(pos) - CHUNK_ALIGNMENT,
       "%lu (%lu - %lu) >= %lu\n",
       r_tail_ - orig_rtail, r_tail_, orig_rtail, align_up(pos + orig_len) - align_down(pos) - CHUNK_ALIGNMENT);
+#endif
 //  PACKER_ASSERT_STR( head_ + pos <= last_rtail && last_rtail <= head_ + pos + CHUNK_ALIGNMENT,
 //      "%lu <= %lu <= %lu (rtail:%lu, head:%lu)\n", 
 //      head_ + pos, last_rtail, head_ + pos + CHUNK_ALIGNMENT, r_tail_, head_);

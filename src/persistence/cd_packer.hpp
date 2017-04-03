@@ -15,16 +15,20 @@ class CDPacker : public Packer<CDEntry> {
     virtual ~CDPacker() {}
     char *Restore(uint64_t tag, char *dst=NULL) 
     {
-      void *ret = dst;
+//      void *ret = dst;
       MYDBG("tag:%lu\n", tag);
       // 1. Find entry in table store
       // 2. Copy data from data store to src
       CDEntry *pentry = reinterpret_cast<CDEntry *>(table_->Find(tag));
+      void *ret = pentry;
       if(pentry == NULL) {
-        for(int i=0; i<table_->used(); i++) {
-          printf("table:%lu\n", (*table_)[i].id_);
-        }
+        return NULL;
       }
+//      if(pentry == NULL) {
+//        for(int i=0; i<table_->used(); i++) {
+//          printf("table:%lu\n", (*table_)[i].id_);
+//        }
+//      }
       PACKER_ASSERT(pentry != NULL);
       CDEntry entry = *pentry;
       dst = (dst == NULL)? entry.src_ : dst;
