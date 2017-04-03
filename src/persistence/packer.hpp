@@ -161,9 +161,13 @@ class Packer {
     }
     
     EntryT *AddEntry(char *src, EntryT &&entry)
-    {
-      uint64_t offset = data_->Write(src, entry.size());
-      entry.SetOffset(offset);
+    { 
+      if(src != NULL && entry.size()) {
+        uint64_t offset = data_->Write(src, entry.size());
+        entry.SetOffset(offset);
+      } else {
+        entry.SetOffset(INVALID_NUM);
+      }
 //      printf("[%s] %p %lu(%lx), offset:%lu\n", 
 //          __func__, src, entry.size(), entry.size_.code_, offset); //getchar();
       EntryT *ret = table_->InsertEntry(std::move(entry));

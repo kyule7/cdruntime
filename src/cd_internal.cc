@@ -1961,17 +1961,17 @@ CDErrT CD::Preserve(void *data,
 //           data, len_in_bytes, my_name, ref_name, cd_exec_mode_, num_reexecution_); 
   CDErrT ret = CDErrT::kOK;
   uint64_t tag = cd_hash(my_name);
-  CD_DEBUG("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
-           data, len_in_bytes, my_name.c_str(), ref_name.c_str(), cd_exec_mode_); 
+  CD_DEBUG("[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, ref_offset:%lu, [cd_exec_mode : %d]\n", 
+           data, len_in_bytes, my_name.c_str(), ref_name.c_str(), ref_offset, cd_exec_mode_); 
 //  printf("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
 //           data, len_in_bytes, my_name, ref_name, cd_exec_mode_); 
 
-  CD_DEBUG("prv mask (%d) : %d(kCopy) %d(kRef) %d(kRegen) , kCoop : %d]\n\n",
-           preserve_mask,
-           CHECK_PRV_TYPE(preserve_mask, kCopy),
-           CHECK_PRV_TYPE(preserve_mask, kRef),
-           CHECK_PRV_TYPE(preserve_mask, kRegen),
-           CHECK_PRV_TYPE(preserve_mask, kCoop));
+//  CD_DEBUG("prv mask (%d) : %d(kCopy) %d(kRef) %d(kRegen) , kCoop : %d]\n\n",
+//           preserve_mask,
+//           CHECK_PRV_TYPE(preserve_mask, kCopy),
+//           CHECK_PRV_TYPE(preserve_mask, kRef),
+//           CHECK_PRV_TYPE(preserve_mask, kRegen),
+//           CHECK_PRV_TYPE(preserve_mask, kCoop));
 //  printf("%s %s\n", my_name.c_str(), ref_name.c_str());
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
 //    cddbg<<"my_name "<< my_name<<endl;
@@ -2034,7 +2034,7 @@ CDErrT CD::Preserve(void *data,
         // This will fetch from disk to memory
         // Potential benefit from prefetching app data from preserved data in
         // disk, overlapping reexecution of application.
-        char *ret = entry_directory_.Restore(tag);//, (char *)data);i
+        char *ret = entry_directory_.Restore(tag, (char *)data);//, (char *)data);i
         if(ret == NULL) {
           printf("[%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
           assert(0);
@@ -2153,7 +2153,7 @@ CD::InternalPreserve(void *data,
 {
   CD_ASSERT_STR(cd_exec_mode_ == kExecution, 
       "InternalPreserve call was invoked not in kExecution mode: %u\n", cd_exec_mode_);
-  CD_DEBUG("[CD::InternalPreserve] cd_exec_mode : %d (should be normal exec mode)\n", cd_exec_mode_);
+//  CD_DEBUG("[CD::InternalPreserve] cd_exec_mode : %d (should be normal exec mode)\n", cd_exec_mode_);
   CDInternalErrT err = kOK;
 
   uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
@@ -2165,8 +2165,8 @@ CD::InternalPreserve(void *data,
 
     CD_ASSERT_STR(my_name.empty() == false, 
         "Entry name is not specified : %s\n", my_name.c_str());
-    CD_DEBUG("Prv Mask : %d, Is it coop? %d, medium : %d, cd type : %d\n", 
-             preserve_mask, CHECK_PRV_TYPE(preserve_mask, kCoop), GetPlaceToPreserve(), cd_type_);
+//    CD_DEBUG("Prv Mask : %d, Is it coop? %d, medium : %d, cd type : %d\n", 
+//             preserve_mask, CHECK_PRV_TYPE(preserve_mask, kCoop), GetPlaceToPreserve(), cd_type_);
 
     if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
     // CDEntry for reference has different format

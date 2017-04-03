@@ -22,7 +22,12 @@ class CDPacker : public Packer<CDEntry> {
       CDEntry *pentry = reinterpret_cast<CDEntry *>(table_->Find(tag));
       void *ret = pentry;
       if(pentry == NULL) {
+        printf("\n\n [%d] not found %lu\n", packerTaskID, tag);
         return NULL;
+      } else if(pentry->src_ == NULL || pentry->size() == 0) {
+        printf("\n\n [%d] previously null %lu offset:%lx\n", packerTaskID, tag, pentry->offset_);
+        // when preserved, data was null.
+        return (char *)pentry;
       }
 //      if(pentry == NULL) {
 //        for(int i=0; i<table_->used(); i++) {
@@ -32,7 +37,7 @@ class CDPacker : public Packer<CDEntry> {
       PACKER_ASSERT(pentry != NULL);
       CDEntry entry = *pentry;
       dst = (dst == NULL)? entry.src_ : dst;
-      PACKER_ASSERT(dst == entry.src_);
+//      PACKER_ASSERT(dst == entry.src_);
 
 #if 1
       if( entry.size_.Check(Attr::knested) == false) {

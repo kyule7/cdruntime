@@ -1294,12 +1294,12 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 #if CD_PROFILER_ENABLED
   if(is_execution) {
     if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
-      profiler_->RecordProfile(PRV_COPY_DATA, len, my_name);
+      profiler_->RecordProfile(PRV_COPY_DATA, len);
     }
     else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
-      profiler_->RecordProfile(PRV_REF_DATA, len, my_name);
+      profiler_->RecordProfile(PRV_REF_DATA, len);
     }
-    profMap[phase]->prv_copy_ += profile_data;
+//    profMap[phase]->prv_copy_ += profile_data;
   }
 #endif
 
