@@ -48,7 +48,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_global.h"
 #include "persistence/data_store.h"
 //class packer::CDPacker;
-using namespace packer;
+//using namespace packer;
+
 namespace cd {
 
 class Serializable {
@@ -65,7 +66,9 @@ class PackerSerializable : public Serializable {
     uint64_t total_size_; 
     uint64_t table_offset_;
     uint64_t table_type_;
-    virtual uint64_t PreserveObject(DataStore *packer)=0;
+    virtual uint64_t PreserveObject(packer::DataStore *packer)=0;
+    virtual uint64_t PreserveObject(packer::CDPacker &packer, const char *entry_name)=0;
+    virtual uint64_t Deserialize(packer::CDPacker &packer, const char *entry_name)=0;
 };
 
 }

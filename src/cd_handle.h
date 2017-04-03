@@ -153,6 +153,7 @@ void CD_Finalize(void);
  */
 namespace cd {
 
+
 #define CD_Begin(...) (FOUR_ARGS_MACRO(__VA_ARGS__, CD_BEGIN3, CD_BEGIN2, CD_BEGIN1, CD_BEGIN0)(__VA_ARGS__))
 
 // Macros for setjump / getcontext

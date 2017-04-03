@@ -29,6 +29,7 @@ namespace packer {
 //  kBufferFreed=0x04,
 //  kBufferEmpty=0x08
 //};
+class CDPacker;
 class FileHandle;
 class DataStore;
 const uint32_t inv_state = (kBufferFreed);
@@ -63,6 +64,7 @@ class DataStore {
     DataStore(char *ptr=NULL);
     virtual ~DataStore(void);
     void Init(char *ptr=NULL);
+    void ReInit(void);
     CDErrType AllocateData();
     CDErrType FreeData(bool reuse);
     CDErrType Reallocate(uint64_t len);
