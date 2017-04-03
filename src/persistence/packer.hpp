@@ -77,9 +77,12 @@ class Packer {
         delete data_;
     }
    
-    virtual void Init(void) {
+    virtual void Init(bool reuse=false) {
       table_->Init();
-      data_->Init();
+      if(reuse)
+        data_->ReInit();
+      else
+        data_->Init();
     }
 
     BaseTable *GetTable(void) { return table_; }

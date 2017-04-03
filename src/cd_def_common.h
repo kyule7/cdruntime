@@ -195,7 +195,7 @@
                       kModify=CD_BIT_14, //!< This indicates the modified data.
                                          //!< kModify is used for advance() call to
                                          //!< update preservation entries which are marked with it.
-                      kReservedPrvT0=CD_BIT_15
+                      kOutput=CD_BIT_15
                     };
 
 
@@ -254,4 +254,5 @@
   };
   /** @} */ // End tunable_api group 
 
+extern uint64_t GetCDEntryID(const char *str);
 #endif

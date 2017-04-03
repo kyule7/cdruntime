@@ -267,9 +267,7 @@ CD::CD(CDHandle *cd_parent,
   prv_medium_ = static_cast<PrvMediumT>(MASK_MEDIUM(prv_medium)); 
   name_ = (strcmp(name, NO_LABEL) == 0)? cd_id_.cd_name_.GetString() : name; 
   sys_detect_bit_vector_ = sys_bit_vector; 
-  if(prv_medium == kDRAM) {
-    entry_directory_.data_->SetMode(kVolatile);
-  }
+  entry_directory_.data_->SetMode(kVolatile);
   // FIXME 
   // cd_id_ = 0; 
   // We need to call which returns unique id for this cd. 
@@ -340,7 +338,7 @@ void CD::Initialize(CDHandle *cd_parent,
 
   init_timer += CD_CLOCK() - tstart;
   
-  entry_directory_.Init();
+  entry_directory_.Init(true);
 
   cd_type_ = cd_type; 
   prv_medium_ = static_cast<PrvMediumT>(MASK_MEDIUM(prv_medium)); 
@@ -2017,15 +2015,23 @@ CDErrT CD::Preserve(void *data,
     // Everytime restore is called one entry is restored.
     ///////////////////////////////////////////////////////////////////////////////
     
-    CD_DEBUG("\n\nReexecution!!! entry directory size : %zu\n\n", entry_directory_.table_->used());
+    CD_DEBUG("\n\nReexecution!!! entry directory size : %zu (medium:%d)\n\n", entry_directory_.table_->used(), prv_medium_);
 
     if( restore_count_ < preserve_count_ ) { // normal case
 
       CD_DEBUG("\n\nNow reexec!!! %d\n\n", iterator_entry_count++);
-      // This will fetch from disk to memory
-      // Potential benefit from prefetching app data from preserved data in
-      // disk, overlapping reexecution of application.
-      entry_directory_.Restore(tag);//, (char *)data);
+      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
+        PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
+        uint64_t restored_len = serializer->Deserialize(entry_directory_, my_name.c_str());
+//        printf("restored_len:%lu\n", restored_len);
+        if(prv_medium_ != kDRAM)
+          entry_directory_.data_->Flush();
+      } else {
+        // This will fetch from disk to memory
+        // Potential benefit from prefetching app data from preserved data in
+        // disk, overlapping reexecution of application.
+        entry_directory_.Restore(tag);//, (char *)data);i
+
 //      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
 //        packer::CDErrType pret = entry_directory_.Restore(tag);//, (char *)data);
 //      } else {
@@ -2035,6 +2041,8 @@ CDErrT CD::Preserve(void *data,
 //        PackerSerializable *deserializer = static_cast<PackerSerializable *>(data);
 //        deserializer->Deserialize(nested_obj);
 //      }
+      }
+
 
       restore_count_++;
       if( restore_count_ == preserve_count_ ) { 
@@ -2159,7 +2167,10 @@ CD::InternalPreserve(void *data,
     //  ID  [ATTR|totsize] totoffset  tableoffset
       attr |= Attr::knested;
 //      uint64_t orig_tablesize = entry_directory_.table_->used();
-      
+#if 1
+      len_in_bytes = serializer->PreserveObject(entry_directory_, my_name.c_str());
+      //len_in_bytes = serializer->PreserveObject(entry_directory_, my_name);
+#else
       entry_directory_.data_->PadZeros(0);
       const uint64_t packed_offset  = entry_directory_.data_->used();
       // FIXME: PreserveObject must append the table for serialized object to data chunk.
@@ -2173,7 +2184,7 @@ CD::InternalPreserve(void *data,
           CDEntry(id, attr, packed_size, packed_offset, (char *)table_offset));
       entry_directory_.data_->Flush();
 //      entry_directory_.data_->PadZeros(0);
-
+#endif
       
 //      CD_ASSERT(table_size_in_datachunk > 0);
 //      CD_ASSERT(reinterpret_cast<MagicStore *>(&(entry_directory_.data_[packed_offset]))->total_size_ == packed_size);
@@ -2188,6 +2199,9 @@ CD::InternalPreserve(void *data,
         label_.c_str(), my_name.c_str(), level(), GetCurrentCD()->level(), preserve_count_, id);
     }
 #endif
+    
+    if(prv_medium_ != kDRAM)
+      entry_directory_.data_->Flush();
 
   } // end of preserve via copy
   else if( CHECK_PRV_TYPE(preserve_mask, kRef) ) { // via-reference

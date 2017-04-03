@@ -1,6 +1,8 @@
 #include "runtime_info.h"
 using namespace std;
 using namespace common;
+
+//std::map<std::string, std::string, uint64_t> RuntimeInfo::per_entry_vol;
 string RuntimeInfo::GetString(void)
 {
 

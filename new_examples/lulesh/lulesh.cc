@@ -164,8 +164,8 @@ Additional BSD Notice
    Int_t myRank ;
    Int_t numRanks ;
 
-MagicStore magic __attribute__((aligned(0x1000)));
 #if _CD
+MagicStore magic __attribute__((aligned(0x1000)));
 using namespace cd;
 //using namespace tuned;
 Domain::DomainSerdes::SerdesInfo *Domain::DomainSerdes::serdesRegElem = NULL;
@@ -186,14 +186,16 @@ uint64_t preserve_vec_all = ( M__X  | M__Y  | M__Z  |
                               M__NODALMASS | M__NODELIST | 
                               M__LXIM | M__LXIP | M__LETAM | 
                               M__LETAP | M__LZETAM | M__LZETAP | 
-                              M__ELEMBC | M__ELEMMASS | M__REGELEMSIZE |
-                              M__REGELEMLIST | M__REGELEMLIST_INNER | M__REG_NUMLIST );
+                              M__ELEMBC | M__ELEMMASS | M__REGELEMSIZE 
+//                              | M__REGELEMLIST | M__REGELEMLIST_INNER | M__REG_NUMLIST 
+                              );
 uint64_t preserve_vec_ref = ( M__SYMMX | M__SYMMY | M__SYMMZ |
                               M__NODALMASS | M__NODELIST | 
                               M__LXIM | M__LXIP | M__LETAM | 
                               M__LETAP | M__LZETAM | M__LZETAP | 
-                              M__ELEMBC | M__ELEMMASS | M__REGELEMSIZE |
-                              M__REGELEMLIST | M__REGELEMLIST_INNER | M__REG_NUMLIST );
+                              M__ELEMBC | M__ELEMMASS | M__REGELEMSIZE 
+//                              | M__REGELEMLIST | M__REGELEMLIST_INNER | M__REG_NUMLIST 
+                              );
 // CalcForceForNodes
 uint64_t preserve_vec_0   = ( M__FX | M__FY | M__FZ );
 // CalcAccelerationForNodes ~ CalcPositionForNodes
@@ -1109,7 +1111,7 @@ void CalcHourglassControlForElems(Domain& domain,
       /* Do a check for negative volumes */
       if ( domain.v(i) <= Real_t(0.0) ) {
 #if USE_MPI         
-         MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+         //MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
 #else
          exit(VolumeError);
 #endif
@@ -1159,7 +1161,7 @@ void CalcVolumeForceForElems(Domain& domain)
       for ( Index_t k=0 ; k<numElem ; ++k ) {
          if (determ[k] <= Real_t(0.0)) {
 #if USE_MPI            
-            MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+            //MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
 #else
             exit(VolumeError);
 #endif
@@ -1316,7 +1318,7 @@ void LagrangeNodal(Domain& domain)
 {
 #if _CD
    CDHandle *parent = GetLeafCD();
-   CDHandle *cdh = parent->Create("LagrangeNodal", kStrict, 0x4);
+   CDHandle *cdh = parent->Create("LagrangeNodal", kStrict | kDRAM, 0x4);
 //   if(myRank == 0) printf("Check Create %s %u %p %p\n", __func__, cdh->level(), cdh, parent);
 #endif 
 
@@ -1719,10 +1721,11 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
          domain.dzz(k) -= vdovthird ;
 
         // See if any volumes are negative, and take appropriate action.
-         if (vnew[k] <= Real_t(0.0))
+         if (vnew[k] < Real_t(-0.000001))
         {
-#if USE_MPI           
-           MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+#if USE_MPI
+           printf("vnew[%d]: %f\n", k,  vnew[k]);          
+           //MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
 #else
            exit(VolumeError);
 #endif
@@ -2126,7 +2129,7 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
 
       if(idx >= 0) {
 #if USE_MPI         
-         MPI_Abort(MPI_COMM_WORLD, QStopError) ;
+         //MPI_Abort(MPI_COMM_WORLD, QStopError) ;
 #else
          exit(QStopError);
 #endif
@@ -2495,7 +2498,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
           }
           if (vc <= 0.) {
 #if USE_MPI             
-             MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+             //MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
 #else
              exit(VolumeError);
 #endif
@@ -2554,13 +2557,9 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   CDHandle *cdh = GetLeafCD();
   CD_Begin(cdh, "CalcLagrangeElements");
 //  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
-  cdh->Preserve(domain.serdes.SetOp(preserve_vec_2
-//                        M__X  | M__Y  | M__Z  |
-//                        M__XD | M__YD | M__ZD |
-//                        M__XDD| M__YDD| M__ZDD|
-//                        M__DXX| M__DYY| M__DZZ
-                ), 
-                kCopy, "InputCalcQForElems");
+//  cdh->Preserve(domain.serdes.SetOp(preserve_vec_2
+//                ), 
+//                kCopy, "InputCalcQForElems");
 #endif 
 
   Real_t *vnew = Allocate<Real_t>(numElem) ;  /* new relative vol -- temp */
@@ -2620,7 +2619,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   Release(&vnew);
 
 #if _CD
-  cdh->Preserve(domain.serdes.SetOp(M__V), kCopy, "UpdatedVolume");
+//  cdh->Preserve(domain.serdes.SetOp(M__V), kCopy, "UpdatedVolume");
   cdh->Detect();
   cdh->Complete();
   //cdh->Destroy();
@@ -2819,7 +2818,7 @@ void LagrangeLeapFrog(Domain& domain)
 #endif
 
 #if _CD
-   CDHandle *cdh = GetLeafCD()->Create("LagrangeElements", kStrict, 0x4);
+   CDHandle *cdh = GetLeafCD()->Create("LagrangeElements", kStrict|kDRAM, 0x4);
 #endif
    /* calculate element quantities (i.e. velocity gradient & q), and update
     * material states */
@@ -2936,7 +2935,7 @@ int main(int argc, char *argv[])
    
 #if _CD
    locDom->serdes.InitSerdesTable();
-   CDHandle* root_cd = CD_Init(numRanks, myRank);
+   CDHandle* root_cd = CD_Init(numRanks, myRank, kHDD);
    CD_Begin(root_cd, "Root");
    root_cd->Preserve(locDom, sizeof(Domain), kCopy, "locDom_Root");
    root_cd->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Root");
@@ -2951,7 +2950,7 @@ int main(int argc, char *argv[])
 #endif
 
 #if _CD
-  CDHandle *cd_main_loop = root_cd->Create("Parent", kStrict, 0xFF);
+  CDHandle *cd_main_loop = root_cd->Create("Parent", kStrict|kHDD, 0xFF);
 #endif
 //debug to see region sizes
 //   for(Int_t i = 0; i < locDom->numReg(); i++)

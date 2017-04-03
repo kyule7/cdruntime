@@ -265,8 +265,10 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
     cd::config.LoadConfig(cd_config_file, myTask);
+    printf("loadthis??\n");
   } else {
     cd::config.LoadConfig(CD_DEFAULT_CONFIG, myTask);
+    printf("load??\n");
   }
 #endif
 /*
@@ -2161,3 +2163,7 @@ void CDHandle::PrintCommLog(void) const {
 
 
 
+uint64_t GetCDEntryID(const char *str)
+{
+  return cd_hash(std::string(str));
+}

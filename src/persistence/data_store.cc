@@ -101,6 +101,18 @@ void DataStore::Init(char *ptr)
   pthread_mutex_unlock(&mutex);
 }
 
+void DataStore::ReInit(void)
+{
+  buf_preserved_ = NULL;
+  tail_preserved_ = 0;
+  tail_ = 0;
+  head_ = 0;
+  allocated_ = 0;
+  r_tail_ = 0;
+  r_head_ = 0;
+  BufferConsumer::Get()->InsertBuffer(this);
+}
+
 DataStore::~DataStore(void)
 { 
   MYDBG("\n");
@@ -1246,7 +1258,7 @@ CDErrType DataStore::WriteFile(int64_t len)
 
   PACKER_ASSERT(len > 0);
   CDErrType ret = CopyBufferToFile(head_, len, head_ + written_len_);
-
+  head_ += ~chunk_mask & len; 
 #if 0
   uint64_t mask_len = ~(chunksize_ - 1);
   MYDBG("[DataStore::%s] head:%lu written:%lu, used:%ld, len:%ld, inc:%lu\n", 
@@ -1295,8 +1307,8 @@ CDErrType DataStore::WriteFile(int64_t len)
     //ret = fh_->Write(file_offset, begin(), len, mask_len & len);
     ret = fh_->Write(file_offset, begin(), align_up(len, CHUNK_ALIGNMENT), mask_len & len);
   }
-#endif
   head_ += ~chunk_mask & len; 
+#endif
   return ret;
 }
 
@@ -1311,6 +1323,7 @@ CDErrType DataStore::Flush(void)
   CDErrType ret = kOK;
   if(buf_used() > 0) {
     MYDBG("\n\n##### [%s] %ld %zu ###\n", __func__, buf_used(), sizeof(MagicStore));
+//    printf("\n\n##### [%s] %ld %zu ###\n", __func__, buf_used(), sizeof(MagicStore));
     ret = WriteFile(buf_used());
     FileSync();
   }

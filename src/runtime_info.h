@@ -78,6 +78,7 @@ struct RuntimeInfo : public CDOverhead {
   uint64_t total_exec_;
   uint64_t reexec_;
   uint64_t prv_copy_;
+//  static std::map<std::string, std::string, uint64_t> per_entry_vol;
   uint64_t prv_ref_;
   uint64_t msg_logging_;
   uint64_t sys_err_vec_;
