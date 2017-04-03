@@ -286,7 +286,7 @@ class CDHandle {
     * @return Returns kOK when successful and kError otherwise.
     * @sa Complete()
     */
-    FUNC_ATTR
+    //FUNC_ATTR
     CDErrT Begin(const char *label=NO_LABEL,
                  bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                       //!< contained by this CD or whether its to be run by a single task 

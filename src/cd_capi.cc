@@ -136,6 +136,7 @@ int cd_preserve(cd_handle_t *c_handle,
                    const char *my_name, 
                    const char *ref_name)
 {
+  if (data_ptr==NULL || len==0) return -1;
   return (int)( TO_CDHandle(c_handle)->Preserve(data_ptr, len, preserve_mask, 
                                                (my_name == 0)? NO_LABEL : my_name, 
                                                (ref_name == 0)? NO_LABEL: ref_name) );

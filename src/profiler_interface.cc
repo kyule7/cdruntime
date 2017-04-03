@@ -218,10 +218,12 @@ void Profiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
 //string name = cdh_->GetLabel();
   switch(profile_type) {
     case PRV_COPY_DATA: {
+      //printf("logging %lu length copied data\n", profile_data);
       profMap[phase]->prv_copy_ += profile_data;
       break;
     }
     case PRV_REF_DATA : {
+      //printf("logging %lu length refed data\n", profile_data);
       profMap[phase]->prv_ref_  += profile_data;
       break;
     }
