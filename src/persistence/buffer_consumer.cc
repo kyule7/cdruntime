@@ -20,8 +20,8 @@ BufferConsumer *BufferConsumer::Get(void)
     MYDBG("\n");
     /********* Order matters ***********/
     BufferConsumer *bc = new BufferConsumer;
-    bc->Init();
     buffer_consumer_ = bc;
+    bc->Init();
     /***********************************/
   }
   return buffer_consumer_;

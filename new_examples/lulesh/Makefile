@@ -2,7 +2,7 @@
 
 SHELL = /bin/sh
 .SUFFIXES: .cc .o
-
+CD_PATH=../..
 CD_ENABLED = 1
 ifeq (${CD_ENABLED}, 1)
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 

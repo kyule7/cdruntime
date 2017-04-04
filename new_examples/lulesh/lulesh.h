@@ -277,9 +277,50 @@ inline real10 FABS(real10 arg) { return fabsl(arg) ; }
 extern   Int_t myRank ;
 extern   Int_t numRanks ;
 #if _CD
+extern unsigned vec2id(unsigned long long n);
 extern MagicStore magic __attribute__((aligned(0x1000)));
 #endif
-class Domain {
+ struct Internal {
+   // Region information
+   Int_t    m_numReg ;
+   Int_t    m_cost; //imbalance cost
+   // Variables to keep track of timestep, simulation time, and cycle
+   Real_t  m_dtcourant ;         // courant constraint 
+   Real_t  m_dthydro ;           // volume change constraint 
+   Int_t   m_cycle ;             // iteration count for simulation 
+   Real_t  m_dtfixed ;           // fixed time increment 
+   Real_t  m_time ;              // current time 
+   Real_t  m_deltatime ;         // variable time increment 
+   Real_t  m_deltatimemultlb ;
+   Real_t  m_deltatimemultub ;
+   Real_t  m_dtmax ;             // maximum allowable time increment 
+   Real_t  m_stoptime ;          // end time for simulation 
+
+
+   Int_t   m_numRanks ;
+
+   Index_t m_colLoc ;
+   Index_t m_rowLoc ;
+   Index_t m_planeLoc ;
+   Index_t m_tp ;
+
+   Index_t m_sizeX ;
+   Index_t m_sizeY ;
+   Index_t m_sizeZ ;
+   Index_t m_numElem ;
+   Index_t m_numNode ;
+
+   Index_t m_maxPlaneSize ;
+   Index_t m_maxEdgeSize ;
+
+   // Used in setup
+   Index_t m_rowMin, m_rowMax;
+   Index_t m_colMin, m_colMax;
+   Index_t m_planeMin, m_planeMax ;
+
+};
+
+class Domain  : public Internal {
 #ifdef SERDES_ENABLED
  friend class DomainSerdes;
 #endif
@@ -595,15 +636,17 @@ class DomainSerdes : public cd::PackerSerializable {
         };
         char *src;
         uint64_t size;
-//        void *vector;
         uint32_t elem_type;
+        bool fixedsize;
         char name[256];
+        char *chunk;
+       
         public:
         SerdesInfo(void) {}
-        SerdesInfo(char *_src, uint64_t _size, uint32_t type, const char *str)
-          : src(_src), size(_size), elem_type(type) { strcpy(name, str);  }
-        SerdesInfo(char *_src, uint32_t type, const char *str)
-          : src(_src), size(0), elem_type(type) { strcpy(name, str);  }
+        SerdesInfo(char *_src, uint64_t _size, uint32_t type, const char *str, bool fixed=false)
+          : src(_src), size(_size), elem_type(type) { strcpy(name, str); chunk = NULL; fixedsize = fixed;}
+        SerdesInfo(char *_src, uint32_t type, const char *str, bool fixed=false)
+          : src(_src), size(0), elem_type(type) { strcpy(name, str); chunk = NULL; fixedsize = fixed;}
         SerdesInfo(char *_src, uint64_t _size, uint32_t type)
           : src(_src), size(_size), elem_type(type) {}
 //        SerdesInfo(void *_vector, uint32_t _elem_type)
@@ -617,10 +660,30 @@ class DomainSerdes : public cd::PackerSerializable {
           return *this;
         }
         uint64_t len(void) {
+          uint64_t ret = reinterpret_cast<std::vector<Real_t> *>(src)->size();
           if(elem_type == Real) {
-            return reinterpret_cast<std::vector<Real_t> *>(src)->size();
+            if(fixedsize) {
+              if(size != 0) { 
+                return size;
+              } else {
+                size = ret;
+                return ret;
+              }
+            } else {
+              return ret;
+            }
           } else if(elem_type == Index) {
-            return reinterpret_cast<std::vector<Index_t> *>(src)->size();
+            uint64_t ret = reinterpret_cast<std::vector<Index_t> *>(src)->size();
+            if(fixedsize) {
+              if(size != 0) { 
+                return size;
+              } else {
+                size = ret;
+                return ret;
+              }
+            } else {
+              return ret;
+            }
           } else if(elem_type == NoVec) {
             return size;
           } else {
@@ -629,9 +692,29 @@ class DomainSerdes : public cd::PackerSerializable {
         }
         char *ptr(void) {
           if(elem_type == Real) {
-            return (char *)reinterpret_cast<std::vector<Real_t> *>(src)->data();
+            char *ret = (char *)reinterpret_cast<std::vector<Real_t> *>(src)->data();
+            if(fixedsize) {
+              if(chunk != NULL) { 
+                return chunk;
+              } else {
+                chunk = ret;
+                return ret;
+              }
+            } else {
+              return ret;
+            }
           } else if(elem_type == Index) {
-            return (char *)reinterpret_cast<std::vector<Index_t> *>(src)->data();
+            char *ret = (char *)reinterpret_cast<std::vector<Index_t> *>(src)->data();
+            if(fixedsize) {
+              if(chunk != NULL) { 
+                return chunk;
+              } else {
+                chunk = ret;
+                return ret;
+              }
+            } else {
+              return ret;
+            }
           } else if(elem_type == NoVec) {
             return src;
           } else {
@@ -655,14 +738,14 @@ class DomainSerdes : public cd::PackerSerializable {
       prv_numElemSize=0;
     }
 
-    unsigned vec2id(unsigned long long n) {
-      unsigned cnt=0;
-      while(n != 0) {
-        n >>= 1;
-        cnt++;
-      }
-      return cnt;
-    }
+//    unsigned vec2id(unsigned long long n) {
+//      unsigned cnt=0;
+//      while(n != 0) {
+//        n >>= 1;
+//        cnt++;
+//      }
+//      return cnt;
+//    }
 
     static SerdesInfo *serdesRegElem;
 
@@ -717,18 +800,18 @@ class DomainSerdes : public cd::PackerSerializable {
       if(serdesRegElem != NULL) delete [] serdesRegElem;
     }
     void InitSerdesTable(void) {
-      serdes_table[ID__X]           = SerdesInfo((char *)&(dom->m_x),           SerdesInfo::Real , "x");
-      serdes_table[ID__Y]           = SerdesInfo((char *)&(dom->m_y),           SerdesInfo::Real , "y");
-      serdes_table[ID__Z]           = SerdesInfo((char *)&(dom->m_z),           SerdesInfo::Real , "z");
-      serdes_table[ID__XD]          = SerdesInfo((char *)&(dom->m_xd),          SerdesInfo::Real , "xd");
-      serdes_table[ID__YD]          = SerdesInfo((char *)&(dom->m_yd),          SerdesInfo::Real , "yd");
-      serdes_table[ID__ZD]          = SerdesInfo((char *)&(dom->m_zd),          SerdesInfo::Real , "zd");
-      serdes_table[ID__XDD]         = SerdesInfo((char *)&(dom->m_xdd),         SerdesInfo::Real , "xdd");
-      serdes_table[ID__YDD]         = SerdesInfo((char *)&(dom->m_ydd),         SerdesInfo::Real , "ydd");
-      serdes_table[ID__ZDD]         = SerdesInfo((char *)&(dom->m_zdd),         SerdesInfo::Real , "zdd");
-      serdes_table[ID__FX]          = SerdesInfo((char *)&(dom->m_fx),          SerdesInfo::Real , "fx");
-      serdes_table[ID__FY]          = SerdesInfo((char *)&(dom->m_fy),          SerdesInfo::Real , "fy");
-      serdes_table[ID__FZ]          = SerdesInfo((char *)&(dom->m_fz),          SerdesInfo::Real , "fz");
+      serdes_table[ID__X]           = SerdesInfo((char *)&(dom->m_x),           SerdesInfo::Real , "x", true);
+      serdes_table[ID__Y]           = SerdesInfo((char *)&(dom->m_y),           SerdesInfo::Real , "y", true);
+      serdes_table[ID__Z]           = SerdesInfo((char *)&(dom->m_z),           SerdesInfo::Real , "z", true);
+      serdes_table[ID__XD]          = SerdesInfo((char *)&(dom->m_xd),          SerdesInfo::Real , "xd", true);
+      serdes_table[ID__YD]          = SerdesInfo((char *)&(dom->m_yd),          SerdesInfo::Real , "yd", true);
+      serdes_table[ID__ZD]          = SerdesInfo((char *)&(dom->m_zd),          SerdesInfo::Real , "zd", true);
+      serdes_table[ID__XDD]         = SerdesInfo((char *)&(dom->m_xdd),         SerdesInfo::Real , "xdd", true);
+      serdes_table[ID__YDD]         = SerdesInfo((char *)&(dom->m_ydd),         SerdesInfo::Real , "ydd", true);
+      serdes_table[ID__ZDD]         = SerdesInfo((char *)&(dom->m_zdd),         SerdesInfo::Real , "zdd", true);
+      serdes_table[ID__FX]          = SerdesInfo((char *)&(dom->m_fx),          SerdesInfo::Real , "fx", true);
+      serdes_table[ID__FY]          = SerdesInfo((char *)&(dom->m_fy),          SerdesInfo::Real , "fy", true);
+      serdes_table[ID__FZ]          = SerdesInfo((char *)&(dom->m_fz),          SerdesInfo::Real , "fz", true);
       serdes_table[ID__NODALMASS]   = SerdesInfo((char *)&(dom->m_nodalMass),   SerdesInfo::Real , "nodalMass");
       serdes_table[ID__SYMMX]       = SerdesInfo((char *)&(dom->m_symmX),       SerdesInfo::Index, "symmX");
       serdes_table[ID__SYMMY]       = SerdesInfo((char *)&(dom->m_symmY),       SerdesInfo::Index, "symmY");
@@ -771,8 +854,86 @@ class DomainSerdes : public cd::PackerSerializable {
       serdes_vec = vec;                                                                          
 //      printf("serdes vec : %lx\n", serdes_vec);                                                
       return *this;                                                                              
-    }                                                                                            
+    }        
+#if 0
+static inline
+uint64_t Preserve(cd::CDHandle *cdh, int id, const char *entry_str) {
+  uint64_t len = 0;
+  char tmpbuf[256];
+  switch(id) {
+    case ID__X         : sprintf(tmpbuf, "%s_%s", entry_str, "x"        ); cdh->Preserve(dom.m_x.data(),         dom.m_x.size(),          prvType, tmpbuf ); len = dom.m_x.size()       ; break;
+    case ID__Y         : sprintf(tmpbuf, "%s_%s", entry_str, "y"        ); cdh->Preserve(dom.m_y.data(),         dom.m_y.size(),          prvType, tmpbuf ); len = dom.m_y.size()       ; break;
+    case ID__Z         : sprintf(tmpbuf, "%s_%s", entry_str, "z"        ); cdh->Preserve(dom.m_z.data(),         dom.m_z.size(),          prvType, tmpbuf ); len = dom.m_z.size()       ; break;
+    case ID__XD        : sprintf(tmpbuf, "%s_%s", entry_str, "xd"       ); cdh->Preserve(dom.m_xd.data(),        dom.m_xd.size(),         prvType, tmpbuf ); len = dom.m_xd.size()      ; break;
+    case ID__YD        : sprintf(tmpbuf, "%s_%s", entry_str, "yd"       ); cdh->Preserve(dom.m_yd.data(),        dom.m_yd.size(),         prvType, tmpbuf ); len = dom.m_yd.size()      ; break;
+    case ID__ZD        : sprintf(tmpbuf, "%s_%s", entry_str, "zd"       ); cdh->Preserve(dom.m_zd.data(),        dom.m_zd.size(),         prvType, tmpbuf ); len = dom.m_zd.size()      ; break;
+    case ID__XDD       : sprintf(tmpbuf, "%s_%s", entry_str, "xdd"      ); cdh->Preserve(dom.m_xdd.data(),       dom.m_xdd.size(),        prvType, tmpbuf ); len = dom.m_xdd.size()     ; break;
+    case ID__YDD       : sprintf(tmpbuf, "%s_%s", entry_str, "ydd"      ); cdh->Preserve(dom.m_ydd.data(),       dom.m_ydd.size(),        prvType, tmpbuf ); len = dom.m_ydd.size()     ; break;
+    case ID__ZDD       : sprintf(tmpbuf, "%s_%s", entry_str, "zdd"      ); cdh->Preserve(dom.m_zdd.data(),       dom.m_zdd.size(),        prvType, tmpbuf ); len = dom.m_zdd.size()     ; break;
+    case ID__FX        : sprintf(tmpbuf, "%s_%s", entry_str, "fx"       ); cdh->Preserve(dom.m_fx.data(),        dom.m_fx.size(),         prvType, tmpbuf ); len = dom.m_fx.size()      ; break;
+    case ID__FY        : sprintf(tmpbuf, "%s_%s", entry_str, "fy"       ); cdh->Preserve(dom.m_fy.data(),        dom.m_fy.size(),         prvType, tmpbuf ); len = dom.m_fy.size()      ; break;
+    case ID__FZ        : sprintf(tmpbuf, "%s_%s", entry_str, "fz"       ); cdh->Preserve(dom.m_fz.data(),        dom.m_fz.size(),         prvType, tmpbuf ); len = dom.m_fz.size()      ; break;
+    case ID__NODALMASS : sprintf(tmpbuf, "%s_%s", entry_str, "nodalMass"); cdh->Preserve(dom.m_nodalMass.data(), dom.m_nodalMass.size(),  prvType, tmpbuf ); len = dom.m_nodalMass.size(); break;
+    case ID__SYMMX     : sprintf(tmpbuf, "%s_%s", entry_str, "symmX"    ); cdh->Preserve(dom.m_symmX.data(),     dom.m_symmX.size(),      prvType, tmpbuf ); len = dom.m_symmX.size()   ; break;
+    case ID__SYMMY     : sprintf(tmpbuf, "%s_%s", entry_str, "symmY"    ); cdh->Preserve(dom.m_symmY.data(),     dom.m_symmY.size(),      prvType, tmpbuf ); len = dom.m_symmY.size()   ; break;
+    case ID__SYMMZ     : sprintf(tmpbuf, "%s_%s", entry_str, "symmZ"    ); cdh->Preserve(dom.m_symmZ.data(),     dom.m_symmZ.size(),      prvType, tmpbuf ); len = dom.m_symmZ.size()   ; break;  
+    case ID__NODELIST  : sprintf(tmpbuf, "%s_%s", entry_str, "nodelist" ); cdh->Preserve(dom.m_nodelist.data(),  dom.m_nodelist.size(),   prvType, tmpbuf ); len = dom.m_nodelist.size(); break;
+    case ID__LXIM      : sprintf(tmpbuf, "%s_%s", entry_str, "lxim"     ); cdh->Preserve(dom.m_lxim.data(),      dom.m_lxim.size(),       prvType, tmpbuf ); len = dom.m_lxim.size()    ; break;
+    case ID__LXIP      : sprintf(tmpbuf, "%s_%s", entry_str, "lxip"     ); cdh->Preserve(dom.m_lxip.data(),      dom.m_lxip.size(),       prvType, tmpbuf ); len = dom.m_lxip.size()    ; break;
+    case ID__LETAM     : sprintf(tmpbuf, "%s_%s", entry_str, "letam"    ); cdh->Preserve(dom.m_letam.data(),     dom.m_letam.size(),      prvType, tmpbuf ); len = dom.m_letam.size()   ; break;
+    case ID__LETAP     : sprintf(tmpbuf, "%s_%s", entry_str, "letap"    ); cdh->Preserve(dom.m_letap.data(),     dom.m_letap.size(),      prvType, tmpbuf ); len = dom.m_letap.size()   ; break;
+    case ID__LZETAM    : sprintf(tmpbuf, "%s_%s", entry_str, "lzetam"   ); cdh->Preserve(dom.m_lzetam.data(),    dom.m_lzetam.size(),     prvType, tmpbuf ); len = dom.m_lzetam.size()  ; break;
+    case ID__LZETAP    : sprintf(tmpbuf, "%s_%s", entry_str, "lzetap"   ); cdh->Preserve(dom.m_lzetap.data(),    dom.m_lzetap.size(),     prvType, tmpbuf ); len = dom.m_lzetap.size()  ; break;
+    case ID__ELEMBC    : sprintf(tmpbuf, "%s_%s", entry_str, "elemBC"   ); cdh->Preserve(dom.m_elemBC.data(),    dom.m_elemBC.size(),     prvType, tmpbuf ); len = dom.m_elemBC.size()  ; break;
+    case ID__DXX       : sprintf(tmpbuf, "%s_%s", entry_str, "dxx"      ); cdh->Preserve(dom.m_dxx.data(),       dom.m_dxx.size(),        prvType, tmpbuf ); len = dom.m_dxx.size()     ; break;
+    case ID__DYY       : sprintf(tmpbuf, "%s_%s", entry_str, "dyy"      ); cdh->Preserve(dom.m_dyy.data(),       dom.m_dyy.size(),        prvType, tmpbuf ); len = dom.m_dyy.size()     ; break;
+    case ID__DZZ       : sprintf(tmpbuf, "%s_%s", entry_str, "dzz"      ); cdh->Preserve(dom.m_dzz.data(),       dom.m_dzz.size(),        prvType, tmpbuf ); len = dom.m_dzz.size()     ; break;
+    case ID__DELV_XI   : sprintf(tmpbuf, "%s_%s", entry_str, "delv_xi"  ); cdh->Preserve(dom.m_delv_xi.data(),   dom.m_delv_xi.size(),    prvType, tmpbuf ); len = dom.m_delv_xi.size() ; break;
+    case ID__DELV_ETA  : sprintf(tmpbuf, "%s_%s", entry_str, "delv_eta" ); cdh->Preserve(dom.m_delv_eta.data(),  dom.m_delv_eta(),        prvType, tmpbuf ); len = dom.m_delv_eta()     ; break;
+    case ID__DELV_ZETA : sprintf(tmpbuf, "%s_%s", entry_str, "delv_zeta"); cdh->Preserve(dom.m_delv_zeta.data(), dom.m_delv_zeta(),       prvType, tmpbuf ); len = dom.m_delv_zeta()    ; break;
+    case ID__DELX_XI   : sprintf(tmpbuf, "%s_%s", entry_str, "delx_xi"  ); cdh->Preserve(dom.m_delx_xi.data(),   dom.m_delx_xi.size(),    prvType, tmpbuf ); len = dom.m_delx_xi.size() ; break;
+    case ID__DELX_ETA  : sprintf(tmpbuf, "%s_%s", entry_str, "delta_eta"); cdh->Preserve(dom.m_delx_eta.data(),  dom.m_delx_eta.size(),   prvType, tmpbuf ); len = dom.m_delx_eta.size(); break;
+    case ID__DELX_ZETA : sprintf(tmpbuf, "%s_%s", entry_str, "delx_zeta"); cdh->Preserve(dom.m_delx_zeta.data(), dom.m_delx_zeta.size(),  prvType, tmpbuf ); len = dom.m_delx_zeta.size(); break;
+    case ID__E         : sprintf(tmpbuf, "%s_%s", entry_str, "e"        ); cdh->Preserve(dom.m_e.data(),         dom.m_e.size(),          prvType, tmpbuf ); len = dom.m_e.size()       ; break;
+    case ID__P         : sprintf(tmpbuf, "%s_%s", entry_str, "p"        ); cdh->Preserve(dom.m_p.data(),         dom.m_p.size(),          prvType, tmpbuf ); len = dom.m_p.size()       ; break;
+    case ID__Q         : sprintf(tmpbuf, "%s_%s", entry_str, "q"        ); cdh->Preserve(dom.m_q.data(),         dom.m_q.size(),          prvType, tmpbuf ); len = dom.m_q.size()       ; break;
+    case ID__QL        : sprintf(tmpbuf, "%s_%s", entry_str, "ql"       ); cdh->Preserve(dom.m_ql.data(),        dom.m_ql.size(),         prvType, tmpbuf ); len = dom.m_ql.size()      ; break;
+    case ID__QQ        : sprintf(tmpbuf, "%s_%s", entry_str, "qq"       ); cdh->Preserve(dom.m_qq.data(),        dom.m_qq.size(),         prvType, tmpbuf ); len = dom.m_qq.size()      ; break;
+    case ID__V         : sprintf(tmpbuf, "%s_%s", entry_str, "v"        ); cdh->Preserve(dom.m_v.data(),         dom.m_v.size(),          prvType, tmpbuf ); len = dom.m_v.size()       ; break;
+    case ID__VOLO      : sprintf(tmpbuf, "%s_%s", entry_str, "volo"     ); cdh->Preserve(dom.m_volo.data(),      dom.m_volo.size(),       prvType, tmpbuf ); len = dom.m_volo.size()    ; break;
+    case ID__VNEW      : sprintf(tmpbuf, "%s_%s", entry_str, "vnew"     ); cdh->Preserve(dom.m_vnew.data(),      dom.m_vnew.size(),       prvType, tmpbuf ); len = dom.m_vnew.size()    ; break;
+    case ID__DELV      : sprintf(tmpbuf, "%s_%s", entry_str, "delv"     ); cdh->Preserve(dom.m_delv.data(),      dom.m_delv.size(),       prvType, tmpbuf ); len = dom.m_delv.size()    ; break;
+    case ID__VDOV      : sprintf(tmpbuf, "%s_%s", entry_str, "vdov"     ); cdh->Preserve(dom.m_vdov.data(),      dom.m_vdov.size(),       prvType, tmpbuf ); len = dom.m_vdov.size()    ; break;
+    case ID__AREALG    : sprintf(tmpbuf, "%s_%s", entry_str, "arealg"   ); cdh->Preserve(dom.m_arealg.data(),    dom.m_arealg.size(),     prvType, tmpbuf ); len = dom.m_arealg.size()  ; break;
+    case ID__SS        : sprintf(tmpbuf, "%s_%s", entry_str, "ss"       ); cdh->Preserve(dom.m_ss.data(),        dom.m_ss.size(),         prvType, tmpbuf ); len = dom.m_ss.size()      ; break;
+    case ID__ELEMMASS  : sprintf(tmpbuf, "%s_%s", entry_str, "elemmass" ); cdh->Preserve(dom.m_elemMass.data(),  dom.m_elemMasss.size(),  prvType, tmpbuf ); len = dom.m_elemMasss.size(); break;
+    default:
+  }
+  return len;
+}
 
+    uint64_t Preserve(cd::CDHandle *cdh, Domain &dom, uint64_t vec, uint32_t prvType, const char *entry_str) {                          
+      uint64_t target_vec = 1;
+      uint64_t tot_len = 0;
+      int count = 0;
+      while(vec  != 0) {
+        uint64_t id = vec2id(target_vec);
+        if(vec & 0x1) {
+          if(id == ID__MATELEMLIST) { vec >>= 1; target_vec <<= 1; continue; }
+          tot_len += Preserve(cdh, id, entry_str);
+          count++;
+        }
+        target_vec <<= 1;
+        vec >>= 1;
+      } // while ends
+#ifdef _DEBUG_LULESH_0402
+      if(myRank == 0) { 
+        printf("## %s total:%lx\n", entry_str, tot_len); 
+      }
+#endif
+
+    }
+#endif
     uint64_t Preserve(cd::CDHandle *cdh, uint64_t vec, uint32_t prvType, const char *entry_str) {                          
                                                                                                  
       static bool init = false;                                                                  
@@ -1171,8 +1332,6 @@ public:
    // Element-centered
 
    // Region information
-   Int_t    m_numReg ;
-   Int_t    m_cost; //imbalance cost
    Index_t *m_regElemSize ;   // Size of region sets
    Index_t *m_regNumList ;    // Region number per domain element
    Index_t **m_regElemlist ;  // region indexset 
@@ -1243,44 +1402,50 @@ public:
    const Real_t  m_dvovmax ;           // maximum allowable volume change 
    const Real_t  m_refdens ;           // reference density 
 
-   // Variables to keep track of timestep, simulation time, and cycle
-   Real_t  m_dtcourant ;         // courant constraint 
-   Real_t  m_dthydro ;           // volume change constraint 
-   Int_t   m_cycle ;             // iteration count for simulation 
-   Real_t  m_dtfixed ;           // fixed time increment 
-   Real_t  m_time ;              // current time 
-   Real_t  m_deltatime ;         // variable time increment 
-   Real_t  m_deltatimemultlb ;
-   Real_t  m_deltatimemultub ;
-   Real_t  m_dtmax ;             // maximum allowable time increment 
-   Real_t  m_stoptime ;          // end time for simulation 
-
-
-   Int_t   m_numRanks ;
-
-   Index_t m_colLoc ;
-   Index_t m_rowLoc ;
-   Index_t m_planeLoc ;
-   Index_t m_tp ;
-
-   Index_t m_sizeX ;
-   Index_t m_sizeY ;
-   Index_t m_sizeZ ;
-   Index_t m_numElem ;
-   Index_t m_numNode ;
-
-   Index_t m_maxPlaneSize ;
-   Index_t m_maxEdgeSize ;
-
+//   struct Internal {
+//   // Region information
+//   Int_t    m_numReg ;
+//   Int_t    m_cost; //imbalance cost
+//   // Variables to keep track of timestep, simulation time, and cycle
+//   Real_t  m_dtcourant ;         // courant constraint 
+//   Real_t  m_dthydro ;           // volume change constraint 
+//   Int_t   m_cycle ;             // iteration count for simulation 
+//   Real_t  m_dtfixed ;           // fixed time increment 
+//   Real_t  m_time ;              // current time 
+//   Real_t  m_deltatime ;         // variable time increment 
+//   Real_t  m_deltatimemultlb ;
+//   Real_t  m_deltatimemultub ;
+//   Real_t  m_dtmax ;             // maximum allowable time increment 
+//   Real_t  m_stoptime ;          // end time for simulation 
+//
+//
+//   Int_t   m_numRanks ;
+//
+//   Index_t m_colLoc ;
+//   Index_t m_rowLoc ;
+//   Index_t m_planeLoc ;
+//   Index_t m_tp ;
+//
+//   Index_t m_sizeX ;
+//   Index_t m_sizeY ;
+//   Index_t m_sizeZ ;
+//   Index_t m_numElem ;
+//   Index_t m_numNode ;
+//
+//   Index_t m_maxPlaneSize ;
+//   Index_t m_maxEdgeSize ;
+//
    // OMP hack 
    Index_t *m_nodeElemStart ;
    Index_t *m_nodeElemCornerList ;
-
-   // Used in setup
-   Index_t m_rowMin, m_rowMax;
-   Index_t m_colMin, m_colMax;
-   Index_t m_planeMin, m_planeMax ;
-
+//
+//   // Used in setup
+//   Index_t m_rowMin, m_rowMax;
+//   Index_t m_colMin, m_colMax;
+//   Index_t m_planeMin, m_planeMax ;
+//
+//   };
+//  Internal internal;
 } ;
 
 typedef Real_t &(Domain::* Domain_member )(Index_t) ;
@@ -1332,3 +1497,64 @@ void CommMonoQ(Domain& domain);
 // lulesh-init
 void InitMeshDecomp(Int_t numRanks, Int_t myRank,
                     Int_t *col, Int_t *row, Int_t *plane, Int_t *side);
+
+#if _CD
+static inline
+uint64_t SelectPreserve(cd::CDHandle *cdh, Domain &dom, int id, uint32_t prvType, const char *entry_str) 
+{
+  uint64_t len = 0;
+  char tmpbuf[256];
+  switch(id) {
+    case ID__X         : sprintf(tmpbuf, "%s_%s", entry_str, "x"        ); cdh->Preserve(dom.m_x.data(),         dom.m_x.size(),          prvType, tmpbuf ); len = dom.m_x.size()       ; break;
+    case ID__Y         : sprintf(tmpbuf, "%s_%s", entry_str, "y"        ); cdh->Preserve(dom.m_y.data(),         dom.m_y.size(),          prvType, tmpbuf ); len = dom.m_y.size()       ; break;
+    case ID__Z         : sprintf(tmpbuf, "%s_%s", entry_str, "z"        ); cdh->Preserve(dom.m_z.data(),         dom.m_z.size(),          prvType, tmpbuf ); len = dom.m_z.size()       ; break;
+    case ID__XD        : sprintf(tmpbuf, "%s_%s", entry_str, "xd"       ); cdh->Preserve(dom.m_xd.data(),        dom.m_xd.size(),         prvType, tmpbuf ); len = dom.m_xd.size()      ; break;
+    case ID__YD        : sprintf(tmpbuf, "%s_%s", entry_str, "yd"       ); cdh->Preserve(dom.m_yd.data(),        dom.m_yd.size(),         prvType, tmpbuf ); len = dom.m_yd.size()      ; break;
+    case ID__ZD        : sprintf(tmpbuf, "%s_%s", entry_str, "zd"       ); cdh->Preserve(dom.m_zd.data(),        dom.m_zd.size(),         prvType, tmpbuf ); len = dom.m_zd.size()      ; break;
+    case ID__XDD       : sprintf(tmpbuf, "%s_%s", entry_str, "xdd"      ); cdh->Preserve(dom.m_xdd.data(),       dom.m_xdd.size(),        prvType, tmpbuf ); len = dom.m_xdd.size()     ; break;
+    case ID__YDD       : sprintf(tmpbuf, "%s_%s", entry_str, "ydd"      ); cdh->Preserve(dom.m_ydd.data(),       dom.m_ydd.size(),        prvType, tmpbuf ); len = dom.m_ydd.size()     ; break;
+    case ID__ZDD       : sprintf(tmpbuf, "%s_%s", entry_str, "zdd"      ); cdh->Preserve(dom.m_zdd.data(),       dom.m_zdd.size(),        prvType, tmpbuf ); len = dom.m_zdd.size()     ; break;
+    case ID__FX        : sprintf(tmpbuf, "%s_%s", entry_str, "fx"       ); cdh->Preserve(dom.m_fx.data(),        dom.m_fx.size(),         prvType, tmpbuf ); len = dom.m_fx.size()      ; break;
+    case ID__FY        : sprintf(tmpbuf, "%s_%s", entry_str, "fy"       ); cdh->Preserve(dom.m_fy.data(),        dom.m_fy.size(),         prvType, tmpbuf ); len = dom.m_fy.size()      ; break;
+    case ID__FZ        : sprintf(tmpbuf, "%s_%s", entry_str, "fz"       ); cdh->Preserve(dom.m_fz.data(),        dom.m_fz.size(),         prvType, tmpbuf ); len = dom.m_fz.size()      ; break;
+    case ID__NODALMASS : sprintf(tmpbuf, "%s_%s", entry_str, "nodalMass"); cdh->Preserve(dom.m_nodalMass.data(), dom.m_nodalMass.size(),  prvType, tmpbuf ); len = dom.m_nodalMass.size(); break;
+    case ID__SYMMX     : sprintf(tmpbuf, "%s_%s", entry_str, "symmX"    ); cdh->Preserve(dom.m_symmX.data(),     dom.m_symmX.size(),      prvType, tmpbuf ); len = dom.m_symmX.size()   ; break;
+    case ID__SYMMY     : sprintf(tmpbuf, "%s_%s", entry_str, "symmY"    ); cdh->Preserve(dom.m_symmY.data(),     dom.m_symmY.size(),      prvType, tmpbuf ); len = dom.m_symmY.size()   ; break;
+    case ID__SYMMZ     : sprintf(tmpbuf, "%s_%s", entry_str, "symmZ"    ); cdh->Preserve(dom.m_symmZ.data(),     dom.m_symmZ.size(),      prvType, tmpbuf ); len = dom.m_symmZ.size()   ; break;  
+    case ID__NODELIST  : sprintf(tmpbuf, "%s_%s", entry_str, "nodelist" ); cdh->Preserve(dom.m_nodelist.data(),  dom.m_nodelist.size(),   prvType, tmpbuf ); len = dom.m_nodelist.size(); break;
+    case ID__LXIM      : sprintf(tmpbuf, "%s_%s", entry_str, "lxim"     ); cdh->Preserve(dom.m_lxim.data(),      dom.m_lxim.size(),       prvType, tmpbuf ); len = dom.m_lxim.size()    ; break;
+    case ID__LXIP      : sprintf(tmpbuf, "%s_%s", entry_str, "lxip"     ); cdh->Preserve(dom.m_lxip.data(),      dom.m_lxip.size(),       prvType, tmpbuf ); len = dom.m_lxip.size()    ; break;
+    case ID__LETAM     : sprintf(tmpbuf, "%s_%s", entry_str, "letam"    ); cdh->Preserve(dom.m_letam.data(),     dom.m_letam.size(),      prvType, tmpbuf ); len = dom.m_letam.size()   ; break;
+    case ID__LETAP     : sprintf(tmpbuf, "%s_%s", entry_str, "letap"    ); cdh->Preserve(dom.m_letap.data(),     dom.m_letap.size(),      prvType, tmpbuf ); len = dom.m_letap.size()   ; break;
+    case ID__LZETAM    : sprintf(tmpbuf, "%s_%s", entry_str, "lzetam"   ); cdh->Preserve(dom.m_lzetam.data(),    dom.m_lzetam.size(),     prvType, tmpbuf ); len = dom.m_lzetam.size()  ; break;
+    case ID__LZETAP    : sprintf(tmpbuf, "%s_%s", entry_str, "lzetap"   ); cdh->Preserve(dom.m_lzetap.data(),    dom.m_lzetap.size(),     prvType, tmpbuf ); len = dom.m_lzetap.size()  ; break;
+    case ID__ELEMBC    : sprintf(tmpbuf, "%s_%s", entry_str, "elemBC"   ); cdh->Preserve(dom.m_elemBC.data(),    dom.m_elemBC.size(),     prvType, tmpbuf ); len = dom.m_elemBC.size()  ; break;
+    case ID__DXX       : sprintf(tmpbuf, "%s_%s", entry_str, "dxx"      ); cdh->Preserve(dom.m_dxx.data(),       dom.m_dxx.size(),        prvType, tmpbuf ); len = dom.m_dxx.size()     ; break;
+    case ID__DYY       : sprintf(tmpbuf, "%s_%s", entry_str, "dyy"      ); cdh->Preserve(dom.m_dyy.data(),       dom.m_dyy.size(),        prvType, tmpbuf ); len = dom.m_dyy.size()     ; break;
+    case ID__DZZ       : sprintf(tmpbuf, "%s_%s", entry_str, "dzz"      ); cdh->Preserve(dom.m_dzz.data(),       dom.m_dzz.size(),        prvType, tmpbuf ); len = dom.m_dzz.size()     ; break;
+    case ID__DELV_XI   : sprintf(tmpbuf, "%s_%s", entry_str, "delv_xi"  ); cdh->Preserve(dom.m_delv_xi.data(),   dom.m_delv_xi.size(),    prvType, tmpbuf ); len = dom.m_delv_xi.size() ; break;
+    case ID__DELV_ETA  : sprintf(tmpbuf, "%s_%s", entry_str, "delv_eta" ); cdh->Preserve(dom.m_delv_eta.data(),  dom.m_delv_eta.size(),   prvType, tmpbuf ); len = dom.m_delv_eta.size(); break;
+    case ID__DELV_ZETA : sprintf(tmpbuf, "%s_%s", entry_str, "delv_zeta"); cdh->Preserve(dom.m_delv_zeta.data(), dom.m_delv_zeta.size(),  prvType, tmpbuf ); len = dom.m_delv_zeta.size(); break;
+    case ID__DELX_XI   : sprintf(tmpbuf, "%s_%s", entry_str, "delx_xi"  ); cdh->Preserve(dom.m_delx_xi.data(),   dom.m_delx_xi.size(),    prvType, tmpbuf ); len = dom.m_delx_xi.size() ; break;
+    case ID__DELX_ETA  : sprintf(tmpbuf, "%s_%s", entry_str, "delta_eta"); cdh->Preserve(dom.m_delx_eta.data(),  dom.m_delx_eta.size(),   prvType, tmpbuf ); len = dom.m_delx_eta.size(); break;
+    case ID__DELX_ZETA : sprintf(tmpbuf, "%s_%s", entry_str, "delx_zeta"); cdh->Preserve(dom.m_delx_zeta.data(), dom.m_delx_zeta.size(),  prvType, tmpbuf ); len = dom.m_delx_zeta.size(); break;
+    case ID__E         : sprintf(tmpbuf, "%s_%s", entry_str, "e"        ); cdh->Preserve(dom.m_e.data(),         dom.m_e.size(),          prvType, tmpbuf ); len = dom.m_e.size()       ; break;
+    case ID__P         : sprintf(tmpbuf, "%s_%s", entry_str, "p"        ); cdh->Preserve(dom.m_p.data(),         dom.m_p.size(),          prvType, tmpbuf ); len = dom.m_p.size()       ; break;
+    case ID__Q         : sprintf(tmpbuf, "%s_%s", entry_str, "q"        ); cdh->Preserve(dom.m_q.data(),         dom.m_q.size(),          prvType, tmpbuf ); len = dom.m_q.size()       ; break;
+    case ID__QL        : sprintf(tmpbuf, "%s_%s", entry_str, "ql"       ); cdh->Preserve(dom.m_ql.data(),        dom.m_ql.size(),         prvType, tmpbuf ); len = dom.m_ql.size()      ; break;
+    case ID__QQ        : sprintf(tmpbuf, "%s_%s", entry_str, "qq"       ); cdh->Preserve(dom.m_qq.data(),        dom.m_qq.size(),         prvType, tmpbuf ); len = dom.m_qq.size()      ; break;
+    case ID__V         : sprintf(tmpbuf, "%s_%s", entry_str, "v"        ); cdh->Preserve(dom.m_v.data(),         dom.m_v.size(),          prvType, tmpbuf ); len = dom.m_v.size()       ; break;
+    case ID__VOLO      : sprintf(tmpbuf, "%s_%s", entry_str, "volo"     ); cdh->Preserve(dom.m_volo.data(),      dom.m_volo.size(),       prvType, tmpbuf ); len = dom.m_volo.size()    ; break;
+    case ID__VNEW      : sprintf(tmpbuf, "%s_%s", entry_str, "vnew"     ); cdh->Preserve(dom.m_vnew.data(),      dom.m_vnew.size(),       prvType, tmpbuf ); len = dom.m_vnew.size()    ; break;
+    case ID__DELV      : sprintf(tmpbuf, "%s_%s", entry_str, "delv"     ); cdh->Preserve(dom.m_delv.data(),      dom.m_delv.size(),       prvType, tmpbuf ); len = dom.m_delv.size()    ; break;
+    case ID__VDOV      : sprintf(tmpbuf, "%s_%s", entry_str, "vdov"     ); cdh->Preserve(dom.m_vdov.data(),      dom.m_vdov.size(),       prvType, tmpbuf ); len = dom.m_vdov.size()    ; break;
+    case ID__AREALG    : sprintf(tmpbuf, "%s_%s", entry_str, "arealg"   ); cdh->Preserve(dom.m_arealg.data(),    dom.m_arealg.size(),     prvType, tmpbuf ); len = dom.m_arealg.size()  ; break;
+    case ID__SS        : sprintf(tmpbuf, "%s_%s", entry_str, "ss"       ); cdh->Preserve(dom.m_ss.data(),        dom.m_ss.size(),         prvType, tmpbuf ); len = dom.m_ss.size()      ; break;
+    case ID__ELEMMASS  : sprintf(tmpbuf, "%s_%s", entry_str, "elemmass" ); cdh->Preserve(dom.m_elemMass.data(),  dom.m_elemMass.size(),  prvType, tmpbuf ); len = dom.m_elemMass.size(); break;
+    default: break;
+  }
+  return len;
+}
+
+extern uint64_t Preserve(cd::CDHandle *cdh, Domain &dom, uint64_t vec, uint32_t prvType, const char *entry_str); 
+#endif

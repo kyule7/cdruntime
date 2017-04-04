@@ -2034,7 +2034,7 @@ CDErrT CD::Preserve(void *data,
         // This will fetch from disk to memory
         // Potential benefit from prefetching app data from preserved data in
         // disk, overlapping reexecution of application.
-        char *ret = entry_directory_.Restore(tag, (char *)data);//, (char *)data);i
+        char *ret = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
         if(ret == NULL) {
           printf("[%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
           assert(0);
