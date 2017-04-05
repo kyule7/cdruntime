@@ -174,6 +174,20 @@ class TableStore : public BaseTable {
           break;
         }
       }
+      if(ret == NULL) {
+        if(packerTaskID == 0) {
+          printf("tail:%lu\n", tail_);
+          for(uint32_t i=0; i<tail_; i++) {
+            // The rule for entry is that the first element in object layout is always ID.
+            if( ptr_[i].id_ == id ) {
+              printf("TEST %lu == %lu\n", ptr_[i].id_, id);
+            }
+          }
+        } else {
+          printf("my task id:%d\n", packerTaskID);
+        }
+        //assert(0);
+      }
       return (void *)ret;
     }
 

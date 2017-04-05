@@ -9,6 +9,7 @@ namespace common {
 
 struct CDOverhead {
   double prv_elapsed_time_;
+  double rst_elapsed_time_;
   double create_elapsed_time_;
   double destroy_elapsed_time_;
   double begin_elapsed_time_;
@@ -16,6 +17,7 @@ struct CDOverhead {
   double advance_elapsed_time_;
   CDOverhead(void) 
     : prv_elapsed_time_(0.0),
+      rst_elapsed_time_(0.0),
       create_elapsed_time_(0.0),
       destroy_elapsed_time_(0.0),
       begin_elapsed_time_(0.0),
@@ -24,6 +26,7 @@ struct CDOverhead {
   {}
   void CopyCDOverhead(const CDOverhead &record) {
     prv_elapsed_time_     = record.prv_elapsed_time_; 
+    rst_elapsed_time_     = record.rst_elapsed_time_; 
     create_elapsed_time_  = record.create_elapsed_time_;  
     destroy_elapsed_time_ = record.destroy_elapsed_time_; 
     begin_elapsed_time_   = record.begin_elapsed_time_;   
@@ -32,6 +35,7 @@ struct CDOverhead {
   }
   void MergeCDOverhead(const CDOverhead &info_per_level) {
     prv_elapsed_time_     += info_per_level.prv_elapsed_time_; 
+    rst_elapsed_time_     += info_per_level.rst_elapsed_time_; 
     create_elapsed_time_  += info_per_level.create_elapsed_time_;  
     destroy_elapsed_time_ += info_per_level.destroy_elapsed_time_; 
     begin_elapsed_time_   += info_per_level.begin_elapsed_time_;   
@@ -56,6 +60,7 @@ struct CDOverhead {
 
 struct CDOverheadVar : public CDOverhead {
   double prv_elapsed_time_var_;
+  double rst_elapsed_time_var_;
   double create_elapsed_time_var_;
   double destroy_elapsed_time_var_;
   double begin_elapsed_time_var_;
@@ -64,6 +69,7 @@ struct CDOverheadVar : public CDOverhead {
   CDOverheadVar(void) 
     : CDOverhead(),
       prv_elapsed_time_var_(0.0),
+      rst_elapsed_time_var_(0.0),
       create_elapsed_time_var_(0.0),
       destroy_elapsed_time_var_(0.0),
       begin_elapsed_time_var_(0.0),
@@ -80,6 +86,7 @@ struct RuntimeInfo : public CDOverhead {
   uint64_t prv_copy_;
 //  static std::map<std::string, std::string, uint64_t> per_entry_vol;
   uint64_t prv_ref_;
+  uint64_t restore_;
   uint64_t msg_logging_;
   uint64_t sys_err_vec_;
   double total_time_;

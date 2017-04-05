@@ -1200,12 +1200,17 @@ static inline void CalcForceForNodes(Domain& domain)
   CD_Begin(cdh, "CalcForeForNodes");
   //if(myRank == 0) printf("Check Begin %s %u %p\n", __func__, cdh->level(), cdh);
 //  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
+  printf("x:%d y:%d z:%d\n", domain.sizeX(), domain.sizeY(), domain.sizeZ());
+  if(domain.sizeX() > 10000) {
+    assert(0);
+  }
 #   ifndef OPTIMIZE_PRV
-  cdh->Preserve(&domain, sizeof(domain), kCopy, "locDomAtCalcForceForNodes");
-  cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
+  Preserve(cdh, domain, preserve_vec_1, kCopy, "prv_vec_1");
+  //cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
 #   else
-  cdh->Preserve(&domain, sizeof(domain), kCopy, "locDomAtCalcForceForNodes");
-  cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
+//  cdh->Preserve(&domain, sizeof(domain), kCopy, "locDomAtCalcForceForNodes");
+  Preserve(cdh, domain, preserve_vec_1, kCopy, "prv_vec_1");
+  //cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
 #   endif
 #endif
   /* Calcforce calls partial, force, hourq */
@@ -2937,8 +2942,9 @@ int main(int argc, char *argv[])
    locDom->serdes.InitSerdesTable();
    CDHandle* root_cd = CD_Init(numRanks, myRank, kHDD);
    CD_Begin(root_cd, "Root");
-   root_cd->Preserve(locDom, sizeof(Domain), kCopy, "locDom_Root");
-   root_cd->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Root");
+   root_cd->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "locDom_Root");
+   Preserve(root_cd, *locDom, M__SERDES_ALL, kCopy, "AllMembers_Root");
+//   root_cd->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Root");
 #endif
 
    // BEGIN timestep to solution */
@@ -2959,9 +2965,15 @@ int main(int argc, char *argv[])
       TimeIncrement(*locDom) ; // global synchronization
 #if _CD
       CD_Begin(cd_main_loop, "MainLoop");
-      cd_main_loop->Preserve(locDom, sizeof(Domain), kCopy, "locDom_Root");
+      printf("x:%d y:%d z:%d\n", locDom->sizeX(), locDom->sizeY(), locDom->sizeZ());
+      cd_main_loop->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "locDom_Root");
+      if(locDom->sizeX() > 10000) {
+        assert(0);
+      }
+
 #   ifndef OPTIMIZE_PRV
-      cd_main_loop->Preserve(locDom->serdes.SetOp(preserve_vec_all), kCopy, "MainLoop");
+      Preserve(cd_main_loop, *locDom, preserve_vec_all, kCopy, "MainLoop");
+      //cd_main_loop->Preserve(locDom->serdes.SetOp(preserve_vec_all), kCopy, "MainLoop");
 #   else
       cd_main_loop->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime");
 #   endif
@@ -3020,3 +3032,40 @@ int main(int argc, char *argv[])
 
    return 0 ;
 }
+
+
+unsigned vec2id(unsigned long long n) {
+  unsigned cnt=0;
+  while(n != 0) {
+    n >>= 1;
+    cnt++;
+  }
+  return cnt;
+}
+
+#if _CD
+uint64_t Preserve(cd::CDHandle *cdh, Domain &dom, uint64_t vec, uint32_t prvType, const char *entry_str) 
+{                          
+  uint64_t target_vec = 1;
+  uint64_t tot_len = 0;
+  int count = 0;
+  while(vec  != 0) {
+    uint64_t id = vec2id(target_vec);
+    if(vec & 0x1) {
+      if(id == ID__MATELEMLIST) { vec >>= 1; target_vec <<= 1; continue; }
+      tot_len += SelectPreserve(cdh, dom, id, prvType, entry_str);
+      count++;
+    }
+    target_vec <<= 1;
+    vec >>= 1;
+  } // while ends
+#ifdef _DEBUG_LULESH_0402
+  if(myRank == 0) { 
+    printf("## %s total:%lx\n", entry_str, tot_len); 
+  }
+#endif
+  return tot_len;
+}
+
+
+#endif

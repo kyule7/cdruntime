@@ -37,7 +37,12 @@ void MPIFileHandle::Init(const MPI_Comm &comm, const char *filepath)
   int rank=0, commsize=0;
   struct timeval time;
   gettimeofday(&time, NULL);
-
+  viewsize_ = 0;
+  if(viewsize_ != 0) {
+    MPI_Comm_dup(comm, &comm_);
+  } else {
+    MPI_Comm_dup(MPI_COMM_SELF, &comm_);
+  }
   MPI_Comm_dup(comm, &comm_);
   MPI_Comm_rank(comm_, &rank);
   MPI_Comm_size(comm_, &commsize);

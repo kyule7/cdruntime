@@ -1299,13 +1299,19 @@ CDErrT CDHandle::Preserve(void *data_ptr,
     else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
       profiler_->RecordProfile(PRV_REF_DATA, len);
     }
+//    profMap[phase]->prv_copy_ += profile_data;
   }
 #endif
 
   end_clk = CD_CLOCK();
-  prv_elapsed_time += end_clk - begin_clk;
+  double elapsed = end_clk - begin_clk;
+  prv_elapsed_time += elapsed;
 #if CD_PROFILER_ENABLED
-  profMap[phase()]->prv_elapsed_time_ += end_clk - begin_clk;
+  if(is_execution) {
+    profMap[phase()]->prv_elapsed_time_ += elapsed;
+  } else {
+    profMap[phase()]->rst_elapsed_time_ += elapsed;
+  }
 #endif
   CDEpilogue();
   return err;
@@ -1337,7 +1343,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   if(is_execution) {
 //    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
 //    if(len==0) {printf("len:0\n"); getchar(); }
-    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
+    if(CHECK_PRV_TYPE(preserve_mask,kCopy) && (CHECK_PRV_TYPE(preserve_mask, kOutput) == false)) {
       profiler_->RecordProfile(PRV_COPY_DATA, len);
     }
     else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
@@ -1348,9 +1354,14 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
 #endif
   
   end_clk = CD_CLOCK();
-  prv_elapsed_time += end_clk - begin_clk;
+  double elapsed = end_clk - begin_clk;
+  prv_elapsed_time += elapsed;
 #if CD_PROFILER_ENABLED
-  profMap[phase()]->prv_elapsed_time_ += end_clk - begin_clk;
+  if(is_execution) {
+    profMap[phase()]->prv_elapsed_time_ += elapsed;
+  } else {
+    profMap[phase()]->rst_elapsed_time_ += elapsed;
+  }
 #endif
   CDEpilogue();
   return err;
@@ -1396,10 +1407,16 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
     }
   }
 #endif
+
   end_clk = CD_CLOCK();
-  prv_elapsed_time += end_clk - begin_clk;
+  double elapsed = end_clk - begin_clk;
+  prv_elapsed_time += elapsed;
 #if CD_PROFILER_ENABLED
-  profMap[phase()]->prv_elapsed_time_ += end_clk - begin_clk;
+  if(is_execution) {
+    profMap[phase()]->prv_elapsed_time_ += elapsed;
+  } else {
+    profMap[phase()]->rst_elapsed_time_ += elapsed;
+  }
 #endif
   CDEpilogue();
   return err;

@@ -13,22 +13,31 @@ class CDPacker : public Packer<CDEntry> {
     CDPacker(bool alloc, TableStore<CDEntry> *table, DataStore *data=NULL) 
       : Packer<CDEntry>(alloc, table, data) {}
     virtual ~CDPacker() {}
-    char *Restore(uint64_t tag, char *dst=NULL) 
+    char *Restore(uint64_t tag, char *dst=NULL, uint64_t len=0) 
     {
-      void *ret = dst;
+//      void *ret = dst;
       MYDBG("tag:%lu\n", tag);
       // 1. Find entry in table store
       // 2. Copy data from data store to src
       CDEntry *pentry = reinterpret_cast<CDEntry *>(table_->Find(tag));
+      void *ret = pentry;
       if(pentry == NULL) {
-        for(int i=0; i<table_->used(); i++) {
-          printf("table:%lu\n", (*table_)[i].id_);
-        }
+        printf("\n\n [%d] not found %lu\n", packerTaskID, tag);
+        return NULL;
+      } else if(pentry->src_ == NULL || pentry->size() == 0 || len < pentry->size()) {
+        printf("\n\n [%d] previously null %lu offset:%lx\n", packerTaskID, tag, pentry->offset_);
+        // when preserved, data was null.
+        return (char *)pentry;
       }
+//      if(pentry == NULL) {
+//        for(int i=0; i<table_->used(); i++) {
+//          printf("table:%lu\n", (*table_)[i].id_);
+//        }
+//      }
       PACKER_ASSERT(pentry != NULL);
       CDEntry entry = *pentry;
       dst = (dst == NULL)? entry.src_ : dst;
-      PACKER_ASSERT(dst == entry.src_);
+//      PACKER_ASSERT(dst == entry.src_);
 
 #if 1
       if( entry.size_.Check(Attr::knested) == false) {

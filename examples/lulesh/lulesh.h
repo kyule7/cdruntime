@@ -903,7 +903,7 @@ class DomainSerdes : public cd::PackerSerializable {
     }
     
     // With this interface, user can switch to a different serializer with a method flag.
-    uint64_t PreserveObject(DataStore* pPacker) {
+    uint64_t PreserveObject(packer::DataStore* pPacker) {
       InitDynElem();
       static bool init = false;
       if(init == false) {

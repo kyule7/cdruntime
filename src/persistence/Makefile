@@ -1,6 +1,6 @@
 #!/bin/bash
 CC=g++
-MPICC=mpic++
+MPICC=mpicxx
 CFLAGS=-fPIC -Wall -g -c -std=gnu++0x -I. -fmax-errors=3
 LFLAGS=-fPIC -Wall -g -std=gnu++0x -I.
 

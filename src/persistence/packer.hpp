@@ -26,10 +26,10 @@ class Packer {
     bool alloc_table;
     bool alloc_data;
   public:
-    Packer(uint64_t alloc=1, TableStore<EntryT> *table=NULL, DataStore *data=NULL) : cur_pos_(0) {
+    Packer(uint64_t alloc=BASE_ENTRY_CNT, TableStore<EntryT> *table=NULL, DataStore *data=NULL) : cur_pos_(0) {
       if(table == NULL) {
         alloc_table = true; 
-        table_ = new TableStore<EntryT>(alloc);
+        table_ = new TableStore<EntryT>(BASE_ENTRY_CNT);
       } else {
         alloc_table = false; 
         table_ = table;
@@ -161,9 +161,13 @@ class Packer {
     }
     
     EntryT *AddEntry(char *src, EntryT &&entry)
-    {
-      uint64_t offset = data_->Write(src, entry.size());
-      entry.SetOffset(offset);
+    { 
+      if(src != NULL && entry.size()) {
+        uint64_t offset = data_->Write(src, entry.size());
+        entry.SetOffset(offset);
+      } else {
+        entry.SetOffset(INVALID_NUM);
+      }
 //      printf("[%s] %p %lu(%lx), offset:%lu\n", 
 //          __func__, src, entry.size(), entry.size_.code_, offset); //getchar();
       EntryT *ret = table_->InsertEntry(std::move(entry));
