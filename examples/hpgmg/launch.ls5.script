@@ -1,0 +1,36 @@
+#!/bin/bash
+#SBATCH -J hpgmg_comp           # job name
+#SBATCH -o hpgmg_comp.o%j       # output and error file name (%j expands to jobID)
+#SBATCH -n 64              # total number of mpi tasks requested
+#SBATCH -N 8               # total number of nodes requested
+#SBATCH -p normal
+#SBATCH -t 04:00:00        # run time (hh:mm:ss) - 1.5 hours
+#SBATCH --mail-user=szhang0119@gmail.com
+#SBATCH --mail-type=begin  # email me when the job starts
+#SBATCH --mail-type=end    # email me when the job finishes
+#SBATCH -A lph_mem         # allocation name
+
+source ~/runenv
+
+set -x
+
+cd build_org
+time ibrun -np 8  ./bin/hpgmg-fv 8 2 
+time ibrun -np 16 ./bin/hpgmg-fv 8 2 
+time ibrun -np 32 ./bin/hpgmg-fv 8 2 
+time ibrun -np 64 ./bin/hpgmg-fv 8 2 
+
+cd ../build_hmcd
+time ibrun -np 8  ./bin/hpgmg-fv 8 2 
+time ibrun -np 16 ./bin/hpgmg-fv 8 2 
+time ibrun -np 32 ./bin/hpgmg-fv 8 2 
+time ibrun -np 64 ./bin/hpgmg-fv 8 2 
+
+cd ../build_htcd
+time ibrun -np 8  ./bin/hpgmg-fv 8 2 
+time ibrun -np 16 ./bin/hpgmg-fv 8 2 
+time ibrun -np 32 ./bin/hpgmg-fv 8 2 
+time ibrun -np 64 ./bin/hpgmg-fv 8 2 
+
+set +x
+

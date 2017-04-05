@@ -298,21 +298,17 @@ void cd_preserve_mgtype(cd_handle_t* cd_h, mg_type *all_grids){
 #endif
 //------------------------------------------------------------------------------------------------------------------------------
 void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dtol, double rtol){
-  //#if CD
-  //cd_handle_t * cd_bench = getleafcd();
-  //cd_begin(cd_bench, "bench");
 
-  //cd_preserve_mgtype(cd_bench, all_grids);
-  //cd_preserve(cd_bench, &a, sizeof(a), kCopy, "a", "a");
-  //cd_preserve(cd_bench, &b, sizeof(b), kCopy, "b", "a");
-  //cd_preserve(cd_bench, &dtol, sizeof(dtol), kCopy, "dtol", "dtol");
-  //cd_preserve(cd_bench, &rtol, sizeof(rtol), kCopy, "rtol", "rtol");
-  //cd_preserve(cd_bench, &onLevel, sizeof(onLevel), kCopy, "onLevel", NULL);
-  //#endif
      int     doTiming;
      int    minSolves = 10; // do at least minSolves MGSolves
   double timePerSolve = 0;
 
+#if CD
+  //int num_tasks;
+  //MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
+  //cd_handle_t * cd_mgsolve = cd_create(cd_bench, num_tasks, "cd_mgsolve", kRelaxed | kDRAM, 0x0000FFFF);
+  cd_handle_t * cd_mgsolve = cd_create(getcurrentcd(), 1, "cd_mgsolve", kStrict | kDRAM, 0x0000FFFF);
+#endif
   for(doTiming=0;doTiming<=1;doTiming++){ // first pass warms up, second pass times
 
     #ifdef USE_HPM // IBM performance counters for BGQ...
@@ -335,12 +331,6 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
 
     int numSolves =  0; // solves completed
     MGResetTimers(all_grids);
-  //#if CD
-  //  int num_tasks;
-  //  MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
-  //  //cd_handle_t * cd_mgsolve = cd_create(cd_bench, num_tasks, "cd_mgsolve", kRelaxed | kDRAM, 0x0000FFFF);
-  //  cd_handle_t * cd_mgsolve = cd_create(cd_bench, 1, "cd_mgsolve", kStrict | kDRAM, 0x0000FFFF);
-  //#endif
     while( (numSolves<minSolves) ){
       //#if CD
       //cd_begin(cd_mgsolve, "cd_mgsolve");
@@ -397,9 +387,6 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
       //cd_complete(cd_mgsolve);
       //#endif
     }
-  //#if CD
-  //  cd_destroy(cd_mgsolve);
-  //#endif
 
     #ifdef USE_MPI
     if(doTiming==0){
@@ -413,9 +400,9 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
     if( (doTiming==1) && (onLevel==0) )HPM_Stop("FMGSolve()");
     #endif
   }
-  //#if CD
-  //cd_complete(cd_bench);
-  //#endif
+#if CD
+  cd_destroy(cd_mgsolve);
+#endif
 }
 
 
@@ -698,10 +685,6 @@ int main(int argc, char **argv){
   #endif
   #endif
 
-  #if CD
-  cd_destroy(cd_l1);
-  #endif
-
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   if(my_rank==0){fprintf(stdout,"\n\n===== Richardson error analysis ================================================\n");}
   // solve A^h u^h = f^h
@@ -720,6 +703,9 @@ int main(int argc, char **argv){
   }
   richardson_error(&MG_h,0,VECTOR_U);
 
+  #if CD
+  cd_destroy(cd_l1);
+  #endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   if(my_rank==0){fprintf(stdout,"\n\n===== Deallocating memory ======================================================\n");}
