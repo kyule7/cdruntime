@@ -1180,9 +1180,13 @@ void MGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, doub
 
 //------------------------------------------------------------------------------------------------------------------------------
 void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, double b, double dtol, double rtol){
-  //#if CD
+  #if CD
   //cd_handle_t * cd_fmgsolve = cd_create(getcurrentcd(), 1, "cd_fmgsolve", kStrict | kDRAM, 0x0000FFFF);
-  //#endif
+  cd_handle_t * cd_fmgsolve = getleafcd();
+  cd_begin(cd_fmgsolve, "cd_fmgsolve");
+  cd_preserve_mgtype(cd_fmgsolve, all_grids);
+  #endif
+
   // This FMGSolve will perform one F-Cycle, then iterate on V-cycles.  
   // Unless compiled with -DUNLIMIT_FMG_ITERATIONS, no V-cycles will be performed
   all_grids->MGSolves_performed++;
@@ -1224,11 +1228,6 @@ void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, dou
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // restrict RHS to bottom (coarsest grids)
-  #if CD
-  cd_handle_t * cd_fmgsolve = cd_create(getcurrentcd(), 1, "cd_fmgsolve", kStrict | kDRAM, 0x0000FFFF);
-  cd_begin(cd_fmgsolve, "restriction");
-  cd_preserve_mgtype(cd_fmgsolve, all_grids);
-  #endif
   for(level=onLevel;level<(all_grids->num_levels-1);level++){
     double _LevelStart = getTime();
     restriction(all_grids->levels[level+1],R_id,all_grids->levels[level],R_id,RESTRICT_CELL);
@@ -1314,7 +1313,6 @@ void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, dou
   }
   #if CD
   cd_complete(cd_fmgsolve);
-  cd_destroy(cd_fmgsolve);
   #endif
 
 
