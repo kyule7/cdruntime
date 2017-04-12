@@ -28,7 +28,8 @@
 #endif
 ///////////////////////////////////////////////////////////////////////////
 
-static 
+#if 0
+static inline
 void GetStackPtr(void **sp)
 {
 #if defined(__i386__) || defined(__x86_64__)
@@ -43,6 +44,7 @@ void GetStackPtr(void **sp)
 # error "Error: No Definition"
 #endif
 }
+#endif
 
 struct StackEntry {
   unsigned int    stack_size_;

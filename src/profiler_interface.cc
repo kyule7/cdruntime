@@ -82,6 +82,11 @@ void Profiler::CreateRuntimeInfo(uint32_t phase)
 
 void Profiler::BeginRecord(void)
 {
+#if 0
+
+
+
+
   const uint32_t level = cdh_->level();
   const uint32_t phase = cdh_->phase();
   //string name = cdh_->GetLabel();
@@ -156,10 +161,16 @@ void Profiler::BeginRecord(void)
 //    reexecuted_ = true;
 //  }
   begin_clk_ = CD_CLOCK();
+
+
+#endif
 }
 
 void Profiler::EndRecord(void)
 {
+
+
+#if 0
   const uint32_t level = cdh_->level();
   const uint32_t phase = cdh_->phase();
   //const string name = cdh_->GetLabel();
@@ -209,10 +220,14 @@ void Profiler::EndRecord(void)
 //    profMap[phase]->total_time_ += (double)(end_clk_ - begin_clk_) / CLK_NORMALIZER;
 //    reexecuted_ = false;
 //  }
+//
+//
+#endif
 }
 
 void Profiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
 {
+#if 0
   const uint32_t level = cdh_->level();
   const uint32_t phase = cdh_->phase();
 //string name = cdh_->GetLabel();
@@ -232,6 +247,7 @@ void Profiler::RecordProfile(ProfileType profile_type, uint64_t profile_data)
     default:
       ERROR_MESSAGE("Invalid profile type to record : %d\n", profile_type);
   }
+#endif
 }
 
 

@@ -61,7 +61,9 @@ class CDPacker : public Packer<CDEntry> {
         CDEntry *pEntry_check = reinterpret_cast<CDEntry *>(
             data_->GetPtr(table_offset + data_->head()));
         void *tmp_ptr = NULL;
-        posix_memalign(&tmp_ptr, CHUNK_ALIGNMENT, table_size);
+        if(posix_memalign(&tmp_ptr, CHUNK_ALIGNMENT, table_size) != 0) {
+          assert(0);
+        }
         CDEntry *pEntry = (CDEntry  *)tmp_ptr;
         memcpy(pEntry, pEntry_check, table_size);
         // Test

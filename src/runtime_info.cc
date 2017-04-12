@@ -16,8 +16,8 @@ string RuntimeInfo::GetRTInfoStr(int cnt)
   char stringout[512];
   string indent(cnt<<1, ' ');
   snprintf(stringout, 512, 
-                    "%sexec_cnt :%11lu\n"
-                    "%sreex_cnt :%11lu\n"
+                    "%sexec_cnt :%11u\n"
+                    "%sreex_cnt :%11u\n"
                     "%stot_time :%11.6lf # [s]\n"
                     "%sreex_time:%11.6lf # [s]\n"
                     "%swait_time:%11.6lf # [s]\n"

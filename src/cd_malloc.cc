@@ -739,14 +739,14 @@ void RuntimeLogger::Init(void)
 ////    return __valloc_hook(size);
 //}
 //
-void *mycalloc(size_t num, size_t size) 
-{
-  printf("%s\n", __func__); //getchar();
-  void *ret = NULL;
-  posix_memalign(&ret, 512, size);//malloc(num * size);
-  memset(ret, 0, num*size);
-  return ret;
-}
+// void *mycalloc(size_t num, size_t size) 
+// {
+//   printf("%s\n", __func__); //getchar();
+//   void *ret = NULL;
+//   posix_memalign(&ret, 512, size);//malloc(num * size);
+//   memset(ret, 0, num*size);
+//   return ret;
+// }
 //
 //void *calloc(size_t num, size_t size)
 //{
