@@ -286,7 +286,6 @@ namespace cd {
                         kEventResolved,
                         kEventPending };
 
-
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
 
 #if CD_MPI_ENABLED
@@ -395,24 +394,29 @@ extern CD_CLOCK_T log_begin_clk;
 extern CD_CLOCK_T log_end_clk;
 extern CD_CLOCK_T log_elapsed_time;
 
-extern CD_CLOCK_T prof_begin_clk;
-extern CD_CLOCK_T prof_end_clk;
-extern CD_CLOCK_T prof_sync_clk;
-
-extern CD_CLOCK_T begin_clk;
-extern CD_CLOCK_T end_clk;
-extern CD_CLOCK_T elapsed_time;
-extern CD_CLOCK_T normal_sync_time;
-extern CD_CLOCK_T reexec_sync_time;
-extern CD_CLOCK_T recovery_sync_time;
-extern CD_CLOCK_T prv_elapsed_time;
-extern CD_CLOCK_T create_elapsed_time;
-extern CD_CLOCK_T destroy_elapsed_time;
-extern CD_CLOCK_T begin_elapsed_time;
-extern CD_CLOCK_T compl_elapsed_time;
-extern CD_CLOCK_T advance_elapsed_time;
-
-extern CD_CLOCK_T mailbox_elapsed_time;
+//extern CD_CLOCK_T prof_begin_clk;
+//extern CD_CLOCK_T prof_end_clk;
+//extern CD_CLOCK_T prof_sync_clk;
+//
+//extern CD_CLOCK_T begin_clk;
+//extern CD_CLOCK_T end_clk;
+//extern CD_CLOCK_T elapsed_time;
+//extern CD_CLOCK_T normal_sync_time;
+//extern CD_CLOCK_T reexec_sync_time;
+//extern CD_CLOCK_T recovery_sync_time;
+//extern CD_CLOCK_T prv_elapsed_time;
+//extern CD_CLOCK_T rst_elapsed_time;
+//extern CD_CLOCK_T create_elapsed_time;
+//extern CD_CLOCK_T destroy_elapsed_time;
+//extern CD_CLOCK_T begin_elapsed_time;
+//extern CD_CLOCK_T compl_elapsed_time;
+//extern CD_CLOCK_T advance_elapsed_time;
+//
+//extern CD_CLOCK_T mailbox_elapsed_time;
+//
+extern uint64_t state;
+extern int64_t failed_phase;
+extern bool just_reexecuted;
 /**@addtogroup runtime_logging 
  * @{
  */
@@ -448,8 +452,9 @@ extern CD_CLOCK_T mailbox_elapsed_time;
  */
 
 #define CDEpilogue() \
+  end_clk = CD_CLOCK(); \
+  elapsed_time += end_clk - begin_clk; \
   app_side = true; \
-  elapsed_time += end_clk - begin_clk; 
 
 //end_clk = CD_CLOCK(); 
 //  elapsed_time += end_clk - begin_clk; 

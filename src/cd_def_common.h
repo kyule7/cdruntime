@@ -102,6 +102,9 @@
 
 #define DEFAULT_MEDIUM kHDD
 
+#define INVALID_NUM64BIT -1UL
+#define INVALID_NUM32BIT -1U
+#define HEALTHY -1
 #define NO_LABEL ""
 
 #define TWO_ARGS_MACRO(_IN0,_IN1,FUNC,...) FUNC
@@ -163,40 +166,40 @@
  *
  * \sa RegenObject, CDHandle::Preserve()
  */
-  enum CDPreserveT  { kCopy=CD_BIT_8, //!< Prevervation via copy copies
-                                   //!< the data to be preserved into
-                                   //!< another storage/mem location
-                                   //!< Preservation via reference
-                      kRef=CD_BIT_9, //!< Preservation via reference     
-                                  //!< indicates that restoration can
-                                  //!< occur by restoring data that is
-                                  //!< already preserved in another
-                                  //!< CD. __Restriction:__ in the
-                                  //!< current version of the API only
-                                  //!< the parent can be used as a
-                                  //!< reference. 
-                      kRegen=CD_BIT_10, //!< Preservation via regenaration
-                                    //!< is done by calling a
-                                    //!< user-provided function to
-                                    //!< regenerate the data during
-                                    //!< restoration instead of copying
-                                    //!< it from preserved storage.
-                      kCoop=CD_BIT_11,  //!< This flag is used for preservation-via-reference 
-                                    //!< in the case that the referred copy is in remote task.
-                                    //!< This flag can be used with kCopy
-                                    //!< such as kCopy | kCoop.
-                                    //!< Then, this entry can be referred by lower level.
-                      kSerdes=CD_BIT_12, //!< This flag indicates the preservation is done by
-                                      //!< serialization, which mean it does not need to 
-                                      //!< duplicate the data because serialized data is
-                                      //!< already another form of preservation.
-                                      //!< This can be used such as kCopy | kSerdes
-                      kSource=CD_BIT_13, //!< Indicates application data
-                      kModify=CD_BIT_14, //!< This indicates the modified data.
-                                         //!< kModify is used for advance() call to
-                                         //!< update preservation entries which are marked with it.
-                      kOutput=CD_BIT_15
-                    };
+  enum CDPrvType  { kCopy=CD_BIT_8, //!< Prevervation via copy copies
+                                 //!< the data to be preserved into
+                                 //!< another storage/mem location
+                                 //!< Preservation via reference
+                    kRef=CD_BIT_9, //!< Preservation via reference     
+                                //!< indicates that restoration can
+                                //!< occur by restoring data that is
+                                //!< already preserved in another
+                                //!< CD. __Restriction:__ in the
+                                //!< current version of the API only
+                                //!< the parent can be used as a
+                                //!< reference. 
+                    kRegen=CD_BIT_10, //!< Preservation via regenaration
+                                  //!< is done by calling a
+                                  //!< user-provided function to
+                                  //!< regenerate the data during
+                                  //!< restoration instead of copying
+                                  //!< it from preserved storage.
+                    kCoop=CD_BIT_11,  //!< This flag is used for preservation-via-reference 
+                                  //!< in the case that the referred copy is in remote task.
+                                  //!< This flag can be used with kCopy
+                                  //!< such as kCopy | kCoop.
+                                  //!< Then, this entry can be referred by lower level.
+                    kSerdes=CD_BIT_12, //!< This flag indicates the preservation is done by
+                                    //!< serialization, which mean it does not need to 
+                                    //!< duplicate the data because serialized data is
+                                    //!< already another form of preservation.
+                                    //!< This can be used such as kCopy | kSerdes
+                    kSource=CD_BIT_13, //!< Indicates application data
+                    kModify=CD_BIT_14, //!< This indicates the modified data.
+                                       //!< kModify is used for advance() call to
+                                       //!< update preservation entries which are marked with it.
+                    kOutput=CD_BIT_15
+                  };
 
 
 /** @brief Type to indicate whether preserved data is from read-only

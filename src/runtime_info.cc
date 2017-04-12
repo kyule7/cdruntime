@@ -25,7 +25,7 @@ string RuntimeInfo::GetRTInfoStr(int cnt)
                     "%svol_refer:%11lu # [B]\n"
                     "%scomm_log :%11lu # [B]\n"
                     "%serror_vec:0x%lx\n",
-                    indent.c_str(), total_exec_,
+                    indent.c_str(), exec_,
                     indent.c_str(), reexec_,
                     indent.c_str(), total_time_,
                     indent.c_str(), reexec_time_,

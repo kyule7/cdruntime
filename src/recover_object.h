@@ -91,7 +91,8 @@ public:
                                //!< so that the internal methods can be called.
                        uint64_t error_name_mask=0,    //!< [in] Mask of all error/fail types that require recovery
                        uint64_t error_location_mask=0 //!< [in] Mask of all error/fail locations that require recovery
-                      ); 
+                      );
+ virtual ~RecoverObject() {} 
 };
 
 /** @} */ // End detection_recovery group, but more methods later in CDHandle::CDAssert, etc..

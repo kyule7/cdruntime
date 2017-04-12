@@ -10,6 +10,7 @@
 
 using namespace packer;
 struct timeval mytime;
+int myrank;
 
 class MyStore : public TableStore<CDEntry> {
   public:
@@ -175,7 +176,8 @@ void BoundedBufferTest(int elemsize, int chunksize) {
 
   {
     char filename[64];
-    sprintf(filename, "/scratch/03341/kyushick/test.ref.%d.%d", elemsize, chunksize);
+    sprintf(filename, "./test.ref.%d.%d.%d", elemsize, chunksize, myrank);
+    printf("filename:%s\n", filename);
     FILE *fp = fopen(filename, "w");
     uint32_t rowsize = totsize/16; 
     for(uint64_t i=0; i<rowsize; i++) {
@@ -245,6 +247,7 @@ void BoundedBufferTest(int elemsize, int chunksize) {
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
   gettimeofday(&mytime,NULL);
   srand48(mytime.tv_usec);
   int elemsize = 16;

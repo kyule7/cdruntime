@@ -41,6 +41,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_internal.h"
 #include "cd_def_internal.h"
 #include "cd_def_debug.h"
+#include "phase_tree.h"
 using namespace cd;
 using namespace cd::internal;
 using namespace std;
@@ -117,13 +118,9 @@ void CD::CheckReexecution(void)
 //  if(new_rollback_point != INVALID_ROLLBACK_POINT) {
   if(new_rollback_point <= level()) {//!= INVALID_ROLLBACK_POINT) {
     CD_DEBUG("\n\nReexec (Before calling GetCDToRecover()->Recover(false);\n\n");
-#if CD_PROFILER_ENABLED
-    end_clk = CD_CLOCK();
-    prof_sync_clk = end_clk;
-    elapsed_time += end_clk - begin_clk;  // Total CD overhead 
-    create_elapsed_time += end_clk - begin_clk; // Total Complete overhead
-    profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
-#endif
+
+    cd::phaseTree.current_->profile_.RecordRollback(true, kCreate); // measure timer and calculate sync time.
+
     CD::GetCDToRecover(CDPath::GetCurrentCD(), false)->ptr_cd()->Recover();
   } else {
     CD_DEBUG("\n\nReexec is false\n");

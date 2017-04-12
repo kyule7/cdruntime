@@ -44,6 +44,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "sys_err_t.h"
 #include "cd_internal.h"
 #include "cd_def_preserve.h"
+#include "phase_tree.h"
 //#include "persistence/define.h"
 //#include "machine_specific.h"
 //#include "profiler_interface.h"
@@ -78,6 +79,7 @@ MemoryErrorInjector *CDHandle::memory_error_injector_ = NULL;
 SystemErrorInjector *CDHandle::system_error_injector_ = NULL;
 #define CHECK_SYS_ERR_VEC(X,Y) \
   (((X) & (Y)) == (X))
+
 #endif
 
 CD_CLOCK_T cd::tot_begin_clk=0;
@@ -89,6 +91,7 @@ CD_CLOCK_T cd::normal_sync_time=0;
 CD_CLOCK_T cd::reexec_sync_time=0;
 CD_CLOCK_T cd::recovery_sync_time=0;
 CD_CLOCK_T cd::prv_elapsed_time=0;
+CD_CLOCK_T cd::rst_elapsed_time=0;
 CD_CLOCK_T cd::create_elapsed_time=0;
 CD_CLOCK_T cd::destroy_elapsed_time=0;
 CD_CLOCK_T cd::begin_elapsed_time=0;
@@ -148,6 +151,8 @@ enum {
   LOG_VAR,
   PRV_AVG,
   PRV_VAR,
+  RST_AVG,
+  RST_VAR,
   CREAT_AVG,
   CREAT_VAR,
   DESTROY_AVG,
@@ -162,6 +167,8 @@ enum {
 enum {
   LV_PRV_AVG=0,
   LV_PRV_VAR,
+  LV_RST_AVG,
+  LV_RST_VAR,
   LV_CREAT_AVG,
   LV_CREAT_VAR,
   LV_DESTROY_AVG,
@@ -173,6 +180,57 @@ enum {
   PROF_LEVEL_STATISTICS_NUM
 };
 
+enum {
+  kProfDomain=1,
+  kProfData=2,
+};
+
+//static inline
+//void RecordProfDomain(uint32_t phase, uint32_t type, bool _reexec, double elapsed, uint64_t len=0)
+//{
+//  if(is_reexec == false) { // normal execution
+//    if(type == kProfDomain) { // begin/complete
+//      begin_elapsed_time += elapsed;
+//      profMap[phase]->begin_elapsed_time_ += elapsed;
+//    } else if(type == kProfData) { // Preserve
+//      prv_elapsed_time += elapsed; 
+//      profMap[phase]->prv_elapsed_time_ += elapsed; 
+//      
+//    }
+//
+//    if(type == kProfData) { 
+//      prv_elapsed_time += elapsed; 
+//      profMap[phase]->prv_elapsed_time_ += elapsed; 
+//    } else { 
+//      rst_elapsed_time += elapsed; 
+//      profMap[phase]->rst_elapsed_time_ += elapsed; 
+//    } 
+//  } else { // reexecution 
+//    
+//  } 
+//}
+//
+//void RecordProfData(uint32_t phase, const std::string &entry_str, uint32_t type, bool is_reexec, double elapsed, uint64_t len=0)
+//{
+//  if(is_reexec == false) { // normal execution
+//    RuntimeInfo *ri = profMap[phase];
+//    prv_elapsed_time += elapsed; 
+//    ri->prv_elapsed_time_ += elapsed; 
+//    ri->prv_copy_ += len;
+//    if( CHECK_TYPE(type, kOutput) ) {
+//      ri->per_entry_[entry_str].size_ += len;
+//      ri->per_entry_[entry_str].type_ = ;
+//      profMap[phase]->per_entry_[id].type_ = type;
+//    } else {
+//      profMap[phase]->per_entry_[id].size_ += len;
+//      profMap[phase]->per_entry_[id].type_ = type;
+//    }
+//
+//  } else { // reexecution 
+//    rst_elapsed_time += elapsed; 
+//    profMap[phase]->rst_elapsed_time_ += elapsed; 
+//  } 
+//}
 
 static inline
 void SetDebugFilepath(int myTask, string &dbg_basepath) 
@@ -390,6 +448,7 @@ void CD_Finalize(void)
   double reexec_sync_elapsed   = CD_CLK_MEA(cd::reexec_sync_time);
   double recovery_sync_elapsed = CD_CLK_MEA(cd::recovery_sync_time);
   double prv_elapsed           = CD_CLK_MEA(cd::prv_elapsed_time);
+  double rst_elapsed           = CD_CLK_MEA(cd::rst_elapsed_time);
   double create_elapsed        = CD_CLK_MEA(cd::create_elapsed_time);
   double destroy_elapsed       = CD_CLK_MEA(cd::destroy_elapsed_time);
   double begin_elapsed         = CD_CLK_MEA(cd::begin_elapsed_time);
@@ -414,6 +473,8 @@ void CD_Finalize(void)
                          log_elapsed * log_elapsed,
                          prv_elapsed,
                          prv_elapsed * prv_elapsed,
+                         rst_elapsed,
+                         rst_elapsed * rst_elapsed,
                          create_elapsed,
                          create_elapsed * create_elapsed,
                          destroy_elapsed,
@@ -446,6 +507,8 @@ void CD_Finalize(void)
   double log_elapsed_var = (recvbuf[LOG_VAR] - recvbuf[LOG_AVG]*recvbuf[LOG_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
   double prv_elapsed_avg = recvbuf[PRV_AVG]/cd::totalTaskSize;
   double prv_elapsed_var = (recvbuf[PRV_VAR] - recvbuf[PRV_AVG]*recvbuf[PRV_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
+  double rst_elapsed_avg = recvbuf[RST_AVG]/cd::totalTaskSize;
+  double rst_elapsed_var = (recvbuf[RST_VAR] - recvbuf[RST_AVG]*recvbuf[RST_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
   double create_elapsed_avg = recvbuf[CREAT_AVG]/cd::totalTaskSize;
   double create_elapsed_var = (recvbuf[CREAT_VAR] - recvbuf[CREAT_AVG]*recvbuf[CREAT_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
   double destroy_elapsed_avg = recvbuf[DESTROY_AVG]/cd::totalTaskSize;
@@ -460,6 +523,8 @@ void CD_Finalize(void)
     double sendbuf_lv[PROF_LEVEL_STATISTICS_NUM]  = {
                            it->second.prv_elapsed_time_, 
                            it->second.prv_elapsed_time_ *     it->second.prv_elapsed_time_,
+                           it->second.rst_elapsed_time_, 
+                           it->second.rst_elapsed_time_ *     it->second.rst_elapsed_time_,
                            it->second.create_elapsed_time_,
                            it->second.create_elapsed_time_ *  it->second.create_elapsed_time_,
                            it->second.destroy_elapsed_time_,
@@ -475,6 +540,8 @@ void CD_Finalize(void)
 #endif
     lv_runtime_info[it->first].prv_elapsed_time_ = recvbuf_lv[LV_PRV_AVG]/cd::totalTaskSize;
     lv_runtime_info[it->first].prv_elapsed_time_var_ = (recvbuf_lv[LV_PRV_VAR] - recvbuf_lv[LV_PRV_AVG]*recvbuf_lv[LV_PRV_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
+    lv_runtime_info[it->first].rst_elapsed_time_ = recvbuf_lv[LV_RST_AVG]/cd::totalTaskSize;
+    lv_runtime_info[it->first].rst_elapsed_time_var_ = (recvbuf_lv[LV_RST_VAR] - recvbuf_lv[LV_RST_AVG]*recvbuf_lv[LV_RST_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
     lv_runtime_info[it->first].create_elapsed_time_ = recvbuf_lv[LV_CREAT_AVG]/cd::totalTaskSize;
     lv_runtime_info[it->first].create_elapsed_time_var_ = (recvbuf_lv[LV_CREAT_VAR] - recvbuf_lv[LV_CREAT_AVG]*recvbuf_lv[LV_CREAT_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
     lv_runtime_info[it->first].destroy_elapsed_time_ = recvbuf_lv[LV_DESTROY_AVG]/cd::totalTaskSize;
@@ -495,6 +562,7 @@ void CD_Finalize(void)
     printf("Reexec Sync time  : %lf (%lf) (var: %lf)\n", cd_rs_elapsed_avg, reexec_sync_elapsed, cd_rs_elapsed_var); 
     printf("Recovery Sync time: %lf (%lf) (var: %lf)\n", cd_es_elapsed_avg, recovery_sync_elapsed, cd_es_elapsed_var); 
     printf("Preservation      : %lf (%lf) (var: %lf)\n", prv_elapsed_avg, prv_elapsed, prv_elapsed_var); 
+    printf("Restoration       : %lf (%lf) (var: %lf)\n", rst_elapsed_avg, rst_elapsed, rst_elapsed_var); 
     printf("Create            : %lf (%lf) (var: %lf)\n", create_elapsed_avg, create_elapsed, create_elapsed_var); 
     printf("Destroy           : %lf (%lf) (var: %lf)\n", destroy_elapsed_avg, destroy_elapsed, destroy_elapsed_var); 
     printf("Begin             : %lf (%lf) (var: %lf)\n", begin_elapsed_avg, begin_elapsed, begin_elapsed_var); 
@@ -1200,18 +1268,22 @@ CDErrT CDHandle::InternalBegin(const char *label, bool collective, const uint64_
   if(sys_error_vec != 0) 
     ptr_cd_->sys_detect_bit_vector_ = sys_error_vec;
 
+  bool need_sync = just_reexecuted;
+
   CDErrT err = ptr_cd_->Begin(label, collective);
 
-#if CD_PROFILER_ENABLED
-  // Profile-related
-  profiler_->StartProfile();
-#endif
-
-  end_clk = CD_CLOCK();
-  begin_elapsed_time += end_clk - begin_clk;
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
-#endif
+//#if CD_PROFILER_ENABLED
+//  // Profile-related
+//  profiler_->StartProfile();
+//#endif
+//
+//  end_clk = CD_CLOCK();
+//  begin_elapsed_time += end_clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
+//#endif
+  //CDEpilogue(phaseTree.current_->profile_.RecordBegin());
+  cd::phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, need_sync);
   CDEpilogue();
 
   return err;
@@ -1224,25 +1296,31 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
 
+
 //  printf("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
 //                                                                      level(), need_reexec(), *CD::rollback_point_);
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
 
+  // After Complete(), phaseTree.current_ changes to its parent
+  PhaseNode *current = cd::phaseTree.current_;
+
   // Profile will be acquired inside CD::Complete()
   CDErrT ret = ptr_cd_->Complete(update_preservations, collective);
 
-#if CD_PROFILER_ENABLED
-  // Profile-related
-  profiler_->FinishProfile();
-#endif
-
-  end_clk = CD_CLOCK();
-  compl_elapsed_time += end_clk - begin_clk;
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->compl_elapsed_time_ += end_clk - begin_clk;
-#endif
+//#if CD_PROFILER_ENABLED
+//  // Profile-related
+//  profiler_->FinishProfile();
+//#endif
+//
+//  end_clk = CD_CLOCK();
+//  compl_elapsed_time += end_clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->compl_elapsed_time_ += end_clk - begin_clk;
+//#endif
+  current->profile_.RecordComplete(failed_phase != HEALTHY);
   CDEpilogue();
+  //CDEpilogue();
 
   return ret;
 }
@@ -1273,15 +1351,14 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 {
   CDPrologue();
 
-#if CD_PROFILER_ENABLED
-  bool is_execution = (GetExecMode() == kExecution);
-#endif
   /// Preserve meta-data
   /// Accumulated volume of data to be preserved for Sequential CDs. 
   /// It will be averaged out with the number of seq. CDs.
   assert(ptr_cd_ != 0);
+  bool is_reexec = (GetExecMode() == kReexecution);
+  std::string entry_name(my_name);
   CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
-                                 my_name, ref_name, ref_offset, 
+                                 entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
 
 #if CD_ERROR_INJECTION_ENABLED
@@ -1291,28 +1368,36 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   }
 #endif
 
-#if CD_PROFILER_ENABLED
-  if(is_execution) {
-    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
-      profiler_->RecordProfile(PRV_COPY_DATA, len);
-    }
-    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
-      profiler_->RecordProfile(PRV_REF_DATA, len);
-    }
-//    profMap[phase]->prv_copy_ += profile_data;
-  }
-#endif
+//#if CD_PROFILER_ENABLED
+//  if(is_reexecution) {
+//    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
+//      profiler_->RecordProfile(PRV_COPY_DATA, len);
+//    }
+//    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
+//      profiler_->RecordProfile(PRV_REF_DATA, len);
+//    }
+////    profMap[phase]->prv_copy_ += profile_data;
+//  }
+//#endif
 
-  end_clk = CD_CLOCK();
-  double elapsed = end_clk - begin_clk;
-  prv_elapsed_time += elapsed;
-#if CD_PROFILER_ENABLED
-  if(is_execution) {
-    profMap[phase()]->prv_elapsed_time_ += elapsed;
-  } else {
-    profMap[phase()]->rst_elapsed_time_ += elapsed;
-  }
-#endif
+//  end_clk = CD_CLOCK();
+//  double elapsed = end_clk - begin_clk;
+//  uint32_t phase = this->phase();
+//  phaseTree.current->RecordData(len, elapsed, GetExecMode() == kReexecution); 
+//
+//
+//
+//
+//
+//  prv_elapsed_time += elapsed;
+//#if CD_PROFILER_ENABLED
+//  if(is_reexecution) {
+//    profMap[phase]->prv_elapsed_time_ += elapsed;
+//  } else {
+//    profMap[phase]->rst_elapsed_time_ += elapsed;
+//  }
+//#endif
+  cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   CDEpilogue();
   return err;
 }
@@ -1332,37 +1417,48 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   /// It will be averaged out with the number of seq. CDs.
   assert(ptr_cd_ != 0); 
   uint64_t len = 0;
-#if CD_PROFILER_ENABLED
-  bool is_execution = (GetExecMode() == kExecution);
-#endif
+  bool is_reexec = (GetExecMode() == kReexecution);
+  std::string entry_name(my_name);
   CDErrT err = ptr_cd_->Preserve((void *)&serdes, len, kSerdes | preserve_mask, 
-                                 my_name, ref_name, ref_offset, 
+                                 entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
 
-#if CD_PROFILER_ENABLED
-  if(is_execution) {
-//    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
-//    if(len==0) {printf("len:0\n"); getchar(); }
-    if(CHECK_PRV_TYPE(preserve_mask,kCopy) && (CHECK_PRV_TYPE(preserve_mask, kOutput) == false)) {
-      profiler_->RecordProfile(PRV_COPY_DATA, len);
-    }
-    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
-      profiler_->RecordProfile(PRV_REF_DATA, len);
-    }
-//    assert(len);
-  }
-#endif
-  
-  end_clk = CD_CLOCK();
-  double elapsed = end_clk - begin_clk;
-  prv_elapsed_time += elapsed;
-#if CD_PROFILER_ENABLED
-  if(is_execution) {
-    profMap[phase()]->prv_elapsed_time_ += elapsed;
-  } else {
-    profMap[phase()]->rst_elapsed_time_ += elapsed;
-  }
-#endif
+//#if CD_PROFILER_ENABLED
+//  if(is_reexecution) {
+////    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
+////    if(len==0) {printf("len:0\n"); getchar(); }
+//    if(CHECK_PRV_TYPE(preserve_mask,kCopy) && (CHECK_PRV_TYPE(preserve_mask, kOutput) == false)) {
+//      profiler_->RecordProfile(PRV_COPY_DATA, len);
+//    }
+//    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
+//      profiler_->RecordProfile(PRV_REF_DATA, len);
+//    }
+////    profPrvCache[phase]
+//
+////    assert(len);
+//  }
+//#endif
+//  
+//  end_clk = CD_CLOCK();
+//  double elapsed = end_clk - begin_clk;
+//  uint32_t phase = this->phase();
+//
+//
+//  RecordProfile(phase, kProfData, len, elapsed, is_reexecution); 
+//
+//
+//  prv_elapsed_time += elapsed;
+//#if CD_PROFILER_ENABLED
+//  if(is_reexecution) {
+////    profPrvCache[phase][my_name] += len;
+//    profMap[phase]->prv_elapsed_time_ += elapsed;
+//  } else {
+//    profMap[phase]->rst_elapsed_time_ += elapsed;
+//  }
+//#endif
+
+
+  cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   CDEpilogue();
   return err;
 }
@@ -1380,14 +1476,15 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   CDPrologue();
 
   assert(ptr_cd_ != 0);
-#if CD_PROFILER_ENABLED
-  bool is_execution = (GetExecMode() == kExecution);
-#endif
-
+//#if CD_PROFILER_ENABLED
+//  bool is_reexec = (GetExecMode() == kReexecution);
+//#endif
+  bool is_reexec = (GetExecMode() == kReexecution);
+  std::string entry_name(my_name);
   // TODO CDEvent object need to be handled separately, 
   // this is essentially shared object among multiple nodes.
   CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
-                              my_name, ref_name, ref_offset,  
+                              entry_name, ref_name, ref_offset,  
                               regen_object, data_usage);
 
 #if CD_ERROR_INJECTION_ENABLED
@@ -1397,27 +1494,31 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   }
 #endif
 
-#if CD_PROFILER_ENABLED
-  if(is_execution) {
-    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
-      profiler_->RecordProfile(PRV_COPY_DATA, len);
-    }
-    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
-      profiler_->RecordProfile(PRV_REF_DATA, len);
-    }
-  }
-#endif
-
-  end_clk = CD_CLOCK();
-  double elapsed = end_clk - begin_clk;
-  prv_elapsed_time += elapsed;
-#if CD_PROFILER_ENABLED
-  if(is_execution) {
-    profMap[phase()]->prv_elapsed_time_ += elapsed;
-  } else {
-    profMap[phase()]->rst_elapsed_time_ += elapsed;
-  }
-#endif
+//#if CD_PROFILER_ENABLED
+//  if(is_reexecution) {
+//    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
+//      profiler_->RecordProfile(PRV_COPY_DATA, len);
+//    }
+//    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
+//      profiler_->RecordProfile(PRV_REF_DATA, len);
+//    }
+//  }
+//#endif
+//
+//  end_clk = CD_CLOCK();
+//  double elapsed = end_clk - begin_clk;
+//  uint32_t phase = this->phase();
+//  prv_elapsed_time += elapsed;
+//#if CD_PROFILER_ENABLED
+//  if(is_reexecution) {
+//    profMap[phase]->prv_elapsed_time_ += elapsed;
+//  } else {
+//    profMap[phase]->rst_elapsed_time_ += elapsed;
+//  }
+//#endif
+  //CDEpilogue();
+  
+  cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   CDEpilogue();
   return err;
 }

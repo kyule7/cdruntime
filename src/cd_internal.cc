@@ -54,6 +54,7 @@ using namespace std;
 ProfMapType   common::profMap;
 bool tuned::tuning_enabled = false;
 uint32_t cd::new_phase = 0;
+bool cd::just_reexecuted;
 
 //#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 #define BUGFIX_0327 1
@@ -62,17 +63,20 @@ CD_CLOCK_T cd::log_begin_clk;
 CD_CLOCK_T cd::log_end_clk;
 CD_CLOCK_T cd::log_elapsed_time;
 
-int iterator_entry_count=0;
 uint64_t cd::gen_object_id=0;
-
+uint64_t cd::state = 0;
+int64_t cd::failed_phase = HEALTHY;
+//int32_t cd::failed_level = HEALTHY;
+int iterator_entry_count=0;
 //EntryDirType::hasher cd::str_hash;
 std::unordered_map<string,packer::CDEntry*> cd::str_hash_map;
 std::unordered_map<string,packer::CDEntry*>::hasher cd::str_hash;
-map<ENTRY_TAG_T, string> cd::tag2str;
-list<CommInfo> CD::entry_req_;
-map<ENTRY_TAG_T, CommInfo> CD::entry_request_req_;
-map<ENTRY_TAG_T, CommInfo> CD::entry_recv_req_;
-list<EventHandler *> CD::cd_event_;
+std::map<ENTRY_TAG_T, string> cd::tag2str;
+//std::map<uint64_t, string> cd::phase2str;
+std::list<CommInfo> CD::entry_req_;
+std::map<ENTRY_TAG_T, CommInfo> CD::entry_request_req_;
+std::map<ENTRY_TAG_T, CommInfo> CD::entry_recv_req_;
+std::list<EventHandler *> CD::cd_event_;
 
 map<uint32_t, uint32_t> Util::object_id;
 
@@ -581,7 +585,7 @@ CDHandle *CD::CreateRootCD(const char *name,
 
   /// Create CD object with new CDID
   CDHandle *new_cd_handle = NULL;
-  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
+//  PrvMediumT new_prv_medium = static_cast<PrvMediumT>(MASK_MEDIUM(cd_type));
 
   *cd_internal_err = InternalCreate(NULL, name, root_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
 
@@ -813,18 +817,33 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 //{
 //  cd_name_.phase_ = cd::phaseTree->target_->GetPhaseNode(level(), label_);
 //}
-static inline uint32_t BeginPhase(uint32_t level, const string &label) {
+static inline 
+uint32_t BeginPhase(uint32_t level, const string &label) {
   uint32_t phase = -1;
-  if(phaseTree.current_ != NULL) {
-    phase = phaseTree.current_->GetPhaseNode(level, label);
-  } else {
-    phase = phaseTree.Init(level, label);
+  if(tuned::tuning_enabled == false) {
+    if(phaseTree.current_ != NULL) {
+      phase = phaseTree.current_->GetPhaseNode(level, label);
+    } else {
+      phase = phaseTree.Init(level, label);
+    }
+//    phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, just_reexecuted, );
   }
   return phase; 
 }
-static inline void CompletePhase(void)
+
+static inline 
+void CompletePhase(uint32_t phase)//, bool is_reexec=false)
 {
+  CD_ASSERT(phaseTree.current_);
   if(tuned::tuning_enabled == false) {
+    if(phase <= failed_phase) { // reexecution
+      CD_ASSERT(failed_phase >= 0);
+      // Set failed state in phaseTree
+      phaseTree.current_->state_ = kReexecution;
+      // Just failed case is different from already failed case
+//      phaseTree.current_->profile_.RecordRollback(ph);
+
+    }
     if(phaseTree.current_ != NULL) {
       phaseTree.current_ = phaseTree.current_->parent_;
     }
@@ -832,10 +851,6 @@ static inline void CompletePhase(void)
 }
 
 /* CD::Begin()
- * (1) Call all the user-defined error checking functions. 
- *     Jinsuk: Why should we call error checking function at the beginning?
- *     Kyushick: It doesn't have to. I wrote it long time ago, so explanation here might be quite old.
- *   Each error checking function should call its error handling function.(mostly restore() and reexec())  
  */ 
 
 // Here we don't need to follow the exact CD API this is more like internal thing. 
@@ -961,11 +976,14 @@ CDErrT CD::Begin(const char *label, bool collective)
 //FIXME 0324 Kyushick    
 //    SyncCDs(this);
   }
+
+  // NOTE: This point reset rollback_point_
   uint32_t new_rollback_point = SyncCDs(this, true);
   SetRollbackPoint(new_rollback_point, false);
 
   if(new_rollback_point < level()) { 
     bool need_sync_next_cdh = CDPath::GetParentCD(level())->task_size() > task_size();
+    phaseTree.current_->profile_.RecordRollback(true, kBegin); // measure timer and calculate sync time.
     GetCDToRecover( CDPath::GetCurrentCD(), need_sync_next_cdh )->ptr_cd()->Recover();
   } 
   else {
@@ -987,6 +1005,9 @@ CDErrT CD::Begin(const char *label, bool collective)
 //    cout << "Begin again! " << endl; //getchar();
 //    num_reexecution_++ ;
 //  }
+
+  just_reexecuted = false;
+
 
 //  if(MASK_CDTYPE(cd_type_) == kRelaxed) {printf("cdtype is relaxed\n");assert(0);}
 //  if(GetCDLoggingMode() == kRelaxedCDGen) {printf("CDLoggingmode is relaxed cd gen\n");assert(0);}
@@ -1094,7 +1115,8 @@ void CD::Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
 // static
 CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 {
-  printf("#########%s level : %d (rollback_point: %d) (%s)\n", __func__, target->level(), *rollback_point_, target->label().c_str());
+  printf("#########%s level : %d (rollback_point: %d) (%s)\n", __func__, 
+      target->level(), *rollback_point_, target->label().c_str());
 #if 0//CD_PROFILER_ENABLED
   static bool check_sync_clk = false;
   if(check_sync_clk == false) {
@@ -1155,12 +1177,14 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     // It handles that case.
     // FIXME (11.02.2016) : should check with new_rollback_point
 //    if(level != rollback_lv) { 
-    if(level != new_rollback_point) { 
+    if(level != new_rollback_point) {  // Detected escalation from sibling CDs.
 #if CD_PROFILER_ENABLED
 //      if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
       target->profiler_->FinishProfile();
 #endif
-      CompletePhase();
+
+      phaseTree.current_->profile_.RecordRollback(false); // measure timer and calculate sync time.
+      CompletePhase(target->phase());
       target->ptr_cd_->CompleteLogs();
       target->ptr_cd_->DeleteEntryDirectory();
       target->Destroy();
@@ -1171,7 +1195,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
          next_cdh->level(), level, new_rollback_point, need_sync_next_cdh);
       return GetCDToRecover(next_cdh, need_sync_next_cdh);
     }
-    else {
+    else { // Otherwise, now it is the time to reexecute!
 #if CD_MPI_ENABLED
       if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kRelaxed) {
         target->ptr_cd_->ProbeIncompleteLogs();
@@ -1240,7 +1264,9 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 //    if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
     target->profiler_->FinishProfile();
 #endif
-    CompletePhase();
+
+    phaseTree.current_->profile_.RecordRollback(false); // measure timer and calculate sync time.
+    CompletePhase(target->phase());
     target->ptr_cd_->CompleteLogs();
     target->ptr_cd_->DeleteEntryDirectory();
     target->Destroy(false);
@@ -1253,7 +1279,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     ERROR_MESSAGE("Invalid eslcation point %u (current %u)\n", rollback_lv, level);
     return NULL;
   } 
-}
+} // GetCDToRecover ends
 
 /* CD::Complete()
  * (1) Call all the user-defined error checking functions.
@@ -1262,6 +1288,8 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
  */
 CDErrT CD::Complete(bool update_preservations, bool collective)
 {
+  CDErrT ret = common::kCompleteError;
+
   begin_ = false;
   uint32_t orig_rollback_point = CheckRollbackPoint(false);
 //  bool my_need_reexec = need_reexec;
@@ -1348,37 +1376,46 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
 //    bool collective = MPI_Group_compare(group());
     CD_DEBUG("## need_sync? %d = %u <= %u ##\n", need_sync, orig_rollback_point, new_rollback_point);
 //    printf("## need_sync? %d = %u <= %u ##\n", need_sync, orig_rollback_point, new_rollback_point);
-#if CD_PROFILER_ENABLED
-    end_clk = CD_CLOCK();
-    prof_sync_clk = end_clk;
-    elapsed_time += end_clk - begin_clk;  // Total CD overhead 
-    compl_elapsed_time += end_clk - begin_clk; // Total Complete overhead
-    profMap[phase()]->compl_elapsed_time_ += end_clk - begin_clk; // Per-level Complete overhead
-#endif
+    
+    phaseTree.current_->profile_.RecordRollback(true, kComplete);
+    const uint32_t phase = this->phase();
+    /// [IMPORTNANT NOTE]
+    /// phase ID preserves the execution order,
+    /// therefore, failed_phase will be never updated 
+    /// before reaching original failed phase
+    /// in reexecution with this assumption.
+    /// When it reaches the original failed phase in reexecution,
+    /// failed_phase must be reset to HEALTHY (-1) state 
+    failed_phase = (failed_phase < (int64_t)phase)? phase : failed_phase;
     GetCDToRecover( CDPath::GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }
-  else {
+  else { // No error occurred
+
     CD_DEBUG("## Complete. No error! ##\n\n");
+    if(failed_phase == this->phase()) {
+      failed_phase = HEALTHY;
+      // At this point, take the timer (update RuntimeInfo::clk_)
+      // to measure the rest of execution time.
+      CD_CLOCK_T now = CD_CLOCK();
+      phaseTree.current_->FinishRecovery(now);
+    } 
     reported_error_ = false;
+    reexecuted_     = false;
+    CompleteLogs();
+  
+    // Increase sequential ID by one
+    cd_id_.sequential_id_++;
+    
+    /// It deletes entry directory in the CD (for every Complete() call). 
+    /// We might modify this in the profiler to support the overlapped data among sequential CDs.
+    DeleteEntryDirectory();
+    ret = common::kOK;
+
+    CompletePhase(this->phase());
   }
 
-  CompletePhase();
-  CompleteLogs();
-
-  reexecuted_ = false;
-
-  // Increase sequential ID by one
-  cd_id_.sequential_id_++;
-  
-  /// It deletes entry directory in the CD (for every Complete() call). 
-  /// We might modify this in the profiler to support the overlapped data among sequential CDs.
-  DeleteEntryDirectory();
-
-  // TODO CD_ASSERT( cd_exec_mode_  != kSuspension );
-  // FIXME don't we have to wait for others to be completed?  
-  cd_exec_mode_ = kSuspension; 
-
-  return CDErrT::kOK;
+  CD_ASSERT(ret == common::kOK);
+  return ret;
 }
 
 
@@ -1961,6 +1998,7 @@ CDErrT CD::Preserve(void *data,
 //           data, len_in_bytes, my_name, ref_name, cd_exec_mode_, num_reexecution_); 
   CDErrT ret = CDErrT::kOK;
   uint64_t tag = cd_hash(my_name);
+  tag2str[tag] = my_name;
   CD_DEBUG("[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, ref_offset:%lu, [cd_exec_mode : %d]\n", 
            data, len_in_bytes, my_name.c_str(), ref_name.c_str(), ref_offset, cd_exec_mode_); 
 //  printf("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
@@ -2026,7 +2064,7 @@ CDErrT CD::Preserve(void *data,
       if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
         PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
 //        printf("%p, %s\n", data, my_name.c_str());
-        uint64_t restored_len = serializer->Deserialize(entry_directory_, my_name);
+        len_in_bytes = serializer->Deserialize(entry_directory_, my_name);
 //        printf("restored_len:%lu\n", restored_len);
         if(prv_medium_ != kDRAM)
           entry_directory_.data_->Flush();
@@ -2157,6 +2195,7 @@ CD::InternalPreserve(void *data,
   CDInternalErrT err = kOK;
 
   uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
+  tag2str[id] = my_name;
   uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
   CDEntry *pEntry = NULL;
 
@@ -2457,6 +2496,13 @@ CDErrT CD::InternalReexecute(void)
 
   cd_exec_mode_ = kReexecution; 
   reexecuted_ = true;
+
+  // This is a flag to differentiate the case 
+  // beween recreated begin and escalated begin.
+  // The very initial "Begin" (rollback point) due to escalation 
+  // may be considered specially.
+  // (ex. calculating sync time)
+  just_reexecuted = true;
   num_reexecution_++;
 
 #if comm_log

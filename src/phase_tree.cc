@@ -64,6 +64,29 @@ void PhaseNode::Print(void)
   printf("}\n");
 }
 
+void PhaseNode::PrintAll(void) 
+{
+  AddIndent(level_);
+  printf("CD_%u_%u\n", level_, phase_);
+  AddIndent(level_);   printf("{\n");
+  AddIndent(level_+1); printf("label:%s\n", label_.c_str());
+  AddIndent(level_+1); printf("state    :%8u\n", state_);
+  AddIndent(level_+1); printf("interval :%8ld\n", interval_);
+  AddIndent(level_+1); printf("errtype:0x%8lX\n", errortype_);
+  AddIndent(level_+1); printf("siblingID:%8u\n", sibling_id_);
+  AddIndent(level_+1); printf("sibling #:%8u\n", sibling_size_);
+  AddIndent(level_+1); printf("task ID  :%8u\n", task_id_);
+  AddIndent(level_+1); printf("task #   :%8u\n", task_size_);
+  AddIndent(level_+1); printf("count    :%8ld\n", count_);
+  printf("%s", profile_.GetRTInfoStr(level_+2).c_str());
+//  printf("children size:%zu\n", children_.size()); getchar();
+  for(auto it=children_.begin(); it!=children_.end(); ++it) {
+    (*it)->PrintAll();
+  }
+  AddIndent(level_);   printf("}\n");
+
+}
+
 void PhaseNode::PrintProfile(void) 
 {
   profile_.Print();
@@ -106,7 +129,13 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 
   // If there is no label before, it is a new phase!
   if(it == cd::phasePath.end()) {
-    cd::phaseTree.current_ = new PhaseNode(cd::phaseTree.current_, level, label);
+    // Parent's state is inherited to its child
+    // If parent begins a child for the first time, 
+    // it must be kExecution. 
+    // Before reaching a new phase node, it tries to reach it with reexecution
+    // mode, resetting execution mode may be missed!!
+    CD_ASSERT(state_ == kExecution);
+    cd::phaseTree.current_ = new PhaseNode(cd::phaseTree.current_, level, label, state_);
     phase        = cd::phaseTree.current_->phase_;
 //    tuned::phaseMap[level][label] = phase;
     cd::phasePath[phase_path]  = phase;
@@ -118,6 +147,8 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 //    if(cd::myTaskID == 0) printf("New Phase! %u at lv#%u %s\n", phase, level, phase_path.c_str());
   } else {
     cd::phaseTree.current_ = cd::phaseNodeCache[it->second];
+    // Parent's state is inherited to its child
+    cd::phaseTree.current_->state_ = state_;
     phase = it->second;
     TUNE_DEBUG("Old Phase! %u %s\n", phase, phase_path.c_str()); //getchar();
 //    if(cd::myTaskID == 0) printf("Old Phase! %u at lv#%u%s\n", phase, level, phase_path.c_str()); //getchar();

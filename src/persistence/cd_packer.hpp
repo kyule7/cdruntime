@@ -63,7 +63,7 @@ class CDPacker : public Packer<CDEntry> {
         void *tmp_ptr = NULL;
         posix_memalign(&tmp_ptr, CHUNK_ALIGNMENT, table_size);
         CDEntry *pEntry = (CDEntry  *)tmp_ptr;
-        memcpy(pEntry, data_->GetPtr(table_offset + data_->head()), table_size);
+        memcpy(pEntry, pEntry_check, table_size);
         // Test
 #ifdef _DEBUG_0402        
         if(packerTaskID == 0)

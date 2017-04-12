@@ -106,7 +106,7 @@ void Profiler::BeginRecord(void)
 //  } else {
 //    printf("Exec %s %s\n", cdh_->GetName(), name.c_str());
 //  printf("profMap[%u]=%p\n", phase, profMap[phase]);
-  profMap[phase]->total_exec_ += 1;
+  profMap[phase]->exec_ += 1;
 //  }
 
 //  if(cdh_->recreated() || is_reexecuted) {
@@ -252,7 +252,7 @@ void Profiler::Print(void)
 RuntimeInfo Profiler::GetTotalInfo(std::map<uint32_t, RuntimeInfo> &runtime_info) 
 {
   cd::phaseTree.PrintProfile();
-  RuntimeInfo info_total;
+  RuntimeInfo info_total(0);
 //
 //  for(auto it=profMap.begin(); it!=profMap.end(); ++it) {
 //    RuntimeInfo info_per_level;
