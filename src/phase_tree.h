@@ -164,11 +164,13 @@ struct PhaseNode {
 //      TUNE_DEBUG("%s %p (%s, %u)\n", __func__, child, child->label_.c_str(), child->phase_);
       children_.push_back(child);
     }
-    void Print(void); 
-    void PrintAll(void); 
-    void PrintInputYAML(void); 
-    void PrintOutputYAML(void); 
-    void PrintProfile(void); 
+    void Print(bool print_details, bool first);
+//    void PrintAll(bool print_details, bool first); 
+    void PrintProfile(void);
+    void PrintInputYAML(bool first); 
+    void PrintOutputYAML(bool first); 
+    void PrintOutputJson(void);
+    void PrintOutputJsonInternal(void);
     std::string GetPhasePath(void);
     std::string GetPhasePath(const std::string &label);
 
@@ -215,8 +217,8 @@ struct PhaseTree {
     {
       if(cd::myTaskID == 0) { 
       switch(0) {
-        case 0: root_->PrintInputYAML(); break;
-        case 1: root_->Print(); break;
+        case 0: root_->PrintInputYAML(true); break;
+        case 1: root_->Print(true, true); break;
       }
       }
     }

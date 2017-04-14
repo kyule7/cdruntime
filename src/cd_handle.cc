@@ -72,6 +72,7 @@ cd::DebugBuf cd::cddbg;
 
 FILE *cd::cdout=NULL;
 FILE *cd::cdoutApp=NULL;
+std::string cd::output_basepath;
 
 #define RANDOM_SEED 17
 #if CD_ERROR_INJECTION_ENABLED
@@ -256,7 +257,7 @@ void OpenDebugFilepath(int myTask, const string &dbg_basepath)
   snprintf(dbg_filepath, 256, "%s/%s_%d", dbg_basepath.c_str(), dbg_log_filename, myTask);
   cdout = fopen(dbg_filepath, "w");
   packer_stream = cdout;
-  //printf("cdout:%p\n", cdout);
+  printf("cdout:%p\n", cdout);
 #endif
 
 #if CD_DEBUG_ENABLED
@@ -319,8 +320,15 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   CDPrologue();
 
   cd::tot_begin_clk = CD_CLOCK();
+  char *cd_config_file = getenv("CD_OUTPUT_BASE");
+  if(cd_config_file != NULL) {
+    cd::output_basepath = cd_config_file;
+  }
+  else {
+    cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
+  }
 #if CD_TUNING_ENABLED == 0
-  char *cd_config_file = getenv("CD_CONFIG_FILENAME");
+  cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
     cd::config.LoadConfig(cd_config_file, myTask);
     //printf("loadthis??\n");

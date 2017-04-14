@@ -25,7 +25,7 @@ class CDPacker : public Packer<CDEntry> {
         printf("\n\n [%d] not found %lu\n", packerTaskID, tag);
         return NULL;
       } else if(pentry->src_ == NULL || pentry->size() == 0 || len < pentry->size()) {
-        printf("\n\n [%d] previously null %lu offset:%lx\n", packerTaskID, tag, pentry->offset_);
+//        printf("\n\n [%d] previously null %lu offset:%lx\n", packerTaskID, tag, pentry->offset_);
         // when preserved, data was null.
         return (char *)pentry;
       }

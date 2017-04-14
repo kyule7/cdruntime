@@ -567,6 +567,10 @@ CDHandle *CD::Create(CDHandle *parent,
 
   CD_DEBUG("CD::Create done\n");
 
+  // FIXME: flush before child execution
+  if(prv_medium_ != kDRAM) {
+    entry_directory_.AppendTable();
+  }
   this->AddChild(new_cd_handle);
 
 //  new_cd_handle->UpdateParam(new_cd_handle->level(), new_cd_handle->phase());
@@ -741,6 +745,8 @@ CD::InternalCreate(CDHandle *parent,
              new_cd_id.node_id().GetString().c_str(), 
              (*new_cd_handle)->node_id().GetString().c_str());
   }
+
+
   return CD::CDInternalErrT::kOK;
 }
 
@@ -1468,31 +1474,37 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
         LOG_DEBUG("Should not come to here...\n");
       }
 
-      // push incomplete_log_ to parent
-      if (IsParentLocal() && incomplete_log_.size()!=0) {
-        //vector<struct IncompleteLogEntry> *pincomplog 
-        //                                    = &(GetParentHandle()->ptr_cd_->incomplete_log_);
-        CD *ptmp = GetParentHandle()->ptr_cd_;
-  
-        // push incomplete logs to parent
-        ptmp->incomplete_log_.insert(ptmp->incomplete_log_.end(),
-                                     incomplete_log_.begin(),
-                                     incomplete_log_.end());
-  
-        // clear incomplete_log_ of current CD 
-        incomplete_log_.clear();
+      // FIXME: 04132017
+      // This part needs to be reviewed later!!
+      if(cd_exec_mode_ == kExecution) {
+        // push incomplete_log_ to parent
+        if (IsParentLocal() && incomplete_log_.size()!=0) {
+          //vector<struct IncompleteLogEntry> *pincomplog 
+          //                                    = &(GetParentHandle()->ptr_cd_->incomplete_log_);
+          CD *ptmp = GetParentHandle()->ptr_cd_;
+    
+          // push incomplete logs to parent
+          ptmp->incomplete_log_.insert(ptmp->incomplete_log_.end(),
+                                       incomplete_log_.begin(),
+                                       incomplete_log_.end());
+    
+          // clear incomplete_log_ of current CD 
+          incomplete_log_.clear();
+        }
+        else if (!IsParentLocal()) {
+          //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
+          LOG_DEBUG("Should not come to here...\n");
+        }
+      } else {
+        ProbeIncompleteLogs();
       }
-      else if (!IsParentLocal()) {
-        //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
-        LOG_DEBUG("Should not come to here...\n");
-      }
-
-      ProbeIncompleteLogs();
     }
     else { // kStrict CDs
 //      ProbeIncompleteLogs();
       CD_DEBUG("[%s]\n", __func__);
-      InvalidateIncompleteLogs();
+      if(cd_exec_mode_ == kReexecution) {
+        InvalidateIncompleteLogs();
+      }
       //printf("%s %s %lu\n", GetCDID().GetString().c_str(), label_.c_str(), incomplete_log_.size());
     }
 
@@ -2240,10 +2252,12 @@ CD::InternalPreserve(void *data,
     else { // preserve a single entry
       pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, len_in_bytes, 0, (char *)data));
     }
-#ifdef _DEBUG_0402        
+//#ifdef _DEBUG_0402        
+#if 1
     if(myTaskID == 0) {
-      printf("Preserve Complete [%s->%s at lv #%u %u] cnt:%lu, tag id:%lu\n=====================================\n", 
-        label_.c_str(), my_name.c_str(), level(), GetCurrentCD()->level(), preserve_count_, id);
+      printf("== Preserve Complete [%s->%s at lv #%u %u] cnt:%lu, tag:%u size:%lu, %p ==\n", 
+        label_.c_str(), my_name.c_str(), level(), GetCurrentCD()->level(), 
+        preserve_count_, (uint32_t)id, len_in_bytes, data);
     }
 #endif
     
@@ -2749,6 +2763,10 @@ CDHandle *HeadCD::Create(CDHandle *parent,
   *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
 
+  // FIXME: flush before child execution
+  if(prv_medium_ != kDRAM) {
+    entry_directory_.AppendTable();
+  }
 
   this->AddChild(new_cd_handle);
 
@@ -3008,7 +3026,7 @@ CDHandle *CD::GetParentHandle()
 // When task has matching MPI calls such as the pair of MPI_Irecv and MPI_Wait,
 // it is possible to call MPI_Irecv twice and MPI_Wait once.
 // Possible situation is like below.
-// Task 1 called MPI_Irecv and got escalation event before reacing MPI_Wait. 
+// Task 1 called MPI_Irecv and got escalation event before reaching MPI_Wait. 
 // It escalates to beginning of CD and invokes MPI_Irecv again. 
 // Then it calls MPI_Wait. 
 // The problem is that strict CD does not log MPI calls 
@@ -3035,11 +3053,16 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
 //  }
   while(incomplete_log_.size() != 0) {
     auto incompl_log = incomplete_log_.back();
-    incomplete_log_.pop_back();
     flag = incompl_log.flag_;
-//    printf("Trying to cancel ptr:%p\n", flag);
-    CD_DEBUG("Trying to cancel ptr:%p\n", flag); 
-    PMPI_Cancel((MPI_Request *)(incompl_log.flag_));
+    incomplete_log_.pop_back();
+    printf("[%d] Trying to cancel ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
+    CD_DEBUG("[%d] Trying to cancel ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
+    int done = 0;
+    MPI_Status status;
+    PMPI_Test((MPI_Request *)flag, &done, &status);
+    if(done == 0) {
+      PMPI_Cancel((MPI_Request *)(flag));
+    }
   }
 #endif
   LogEpilogue();

@@ -201,7 +201,8 @@ uint64_t preserve_vec_0   = ( M__FX | M__FY | M__FZ );
 // CalcAccelerationForNodes ~ CalcPositionForNodes
 uint64_t preserve_vec_1   = ( M__X  | M__Y  | M__Z  | 
                               M__XD | M__YD | M__ZD |
-                              M__XDD| M__YDD| M__ZDD);
+                              M__XDD| M__YDD| M__ZDD|
+                              M__NODELIST);
 // CalcLagrangeElements ~ CalcQForElems
 uint64_t preserve_vec_2   = ( M__DELV | M__VDOV | M__AREALG | M__ELEMBC |
                               M__DXX| M__DYY| M__DZZ|
@@ -596,7 +597,7 @@ void IntegrateStressForElems( Domain &domain,
   }
   // loop over all elements
 
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
   for( Index_t k=0 ; k<numElem ; ++k )
   {
     const Index_t* const elemToNode = domain.nodelist(k);
@@ -605,6 +606,15 @@ void IntegrateStressForElems( Domain &domain,
     Real_t y_local[8] ;
     Real_t z_local[8] ;
 
+    if(myRank == 0 && elemToNode[3] > 1000000) {
+      for(int i=0; i<8; i++) {
+        printf("[%d+%d] elem:%d\n", k*8, i, elemToNode[i]);
+      }
+      printf("---- size:%zu %lu---- \n", domain.m_nodelist.size(), domain.m_nodelist.size() * sizeof(Index_t)); 
+      for(int i=(k-2)*8; i<(k+2)*8; i++) {
+        printf("[%d]: elem:%d\n", i, *(&domain.m_nodelist[i]));
+      }
+    }
     // get nodal coordinates from global arrays and copy into local arrays.
     CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
 
@@ -1212,6 +1222,13 @@ static inline void CalcForceForNodes(Domain& domain)
   Preserve(cdh, domain, preserve_vec_1, kCopy, "prv_vec_1");
   //cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
 #   endif
+  if(myRank == 0) {
+    int target = 430680;
+    printf("%s ---- %p size:%zu %lu---- \n", __func__, domain.m_nodelist.data(), domain.m_nodelist.size(), domain.m_nodelist.size() * sizeof(Index_t)); 
+    for(int i=target; i<target+64; i++) {
+      printf("[%d]: elem:%d\n", i, *(&domain.m_nodelist[i]));
+    }
+  }
 #endif
   /* Calcforce calls partial, force, hourq */
   CalcVolumeForceForElems(domain) ;
@@ -2559,8 +2576,8 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 {
 #if _CD
   //CDHandle *cdh = GetLeafCD()->Create("LagrangeElements", kStrict);
-  CDHandle *cdh = GetLeafCD();
-  CD_Begin(cdh, "CalcLagrangeElements");
+//  CDHandle *cdh = GetLeafCD();
+//  CD_Begin(cdh, "CalcLagrangeElements");
 //  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
 //  cdh->Preserve(domain.serdes.SetOp(preserve_vec_2
 //                ), 
@@ -2625,8 +2642,8 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 
 #if _CD
 //  cdh->Preserve(domain.serdes.SetOp(M__V), kCopy, "UpdatedVolume");
-  cdh->Detect();
-  cdh->Complete();
+//  cdh->Detect();
+//  cdh->Complete();
   //cdh->Destroy();
 #endif 
 }
@@ -2778,10 +2795,6 @@ void CalcHydroConstraintForElems(Domain &domain, Index_t length,
 static inline
 void CalcTimeConstraintsForElems(Domain& domain) {
 
-#if _CD
-  CDHandle *cdh = GetLeafCD();
-  CD_Begin(cdh, __func__);
-#endif 
    // Initialize conditions to a very large value
    domain.dtcourant() = 1.0e+20;
    domain.dthydro() = 1.0e+20;
@@ -2799,10 +2812,6 @@ void CalcTimeConstraintsForElems(Domain& domain) {
                                   domain.dvovmax(),
                                   domain.dthydro()) ;
    }
-#if _CD
-  cdh->Detect();
-  cdh->Complete();
-#endif
 }
 
 /******************************************/
@@ -2824,10 +2833,15 @@ void LagrangeLeapFrog(Domain& domain)
 
 #if _CD
    CDHandle *cdh = GetLeafCD()->Create("LagrangeElements", kStrict|kDRAM, 0x4);
+   CD_Begin(cdh, "CalcLagrangeElements");
 #endif
    /* calculate element quantities (i.e. velocity gradient & q), and update
     * material states */
    LagrangeElements(domain, domain.numElem());
+
+//#if _CD
+//   CD_Begin(cdh, __func__);
+//#endif 
 
 #if USE_MPI   
 #ifdef SEDOV_SYNC_POS_VEL_LATE
@@ -2850,15 +2864,23 @@ void LagrangeLeapFrog(Domain& domain)
 
    CalcTimeConstraintsForElems(domain);
 
-#if _CD
-   cdh->Destroy();
-#endif
+//#if _CD
+//   cdh->Detect();
+//   cdh->Complete();
+//   cdh->Destroy();
+//#endif
 
 #if USE_MPI   
 #ifdef SEDOV_SYNC_POS_VEL_LATE
    CommSyncPosVel(domain) ;
 #endif
 #endif   
+
+#if _CD
+   cdh->Detect();
+   cdh->Complete();
+   cdh->Destroy();
+#endif
 }
 
 
@@ -2896,7 +2918,7 @@ int main(int argc, char *argv[])
    ParseCommandLineOptions(argc, argv, myRank, &opts);
 
    opts.nx  = 50;
-   opts.its  = 20;
+   opts.its  = 10;
    if ((myRank == 0) && (opts.quiet == 0)) {
       printf("Running problem size %d^3 per domain until completion\n", opts.nx);
       printf("Num processors: %d\n", numRanks);
@@ -2942,7 +2964,7 @@ int main(int argc, char *argv[])
    locDom->serdes.InitSerdesTable();
    CDHandle* root_cd = CD_Init(numRanks, myRank, kHDD);
    CD_Begin(root_cd, "Root");
-   root_cd->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "locDom_Root");
+//   root_cd->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "locDom_Root");
    Preserve(root_cd, *locDom, M__SERDES_ALL, kCopy, "AllMembers_Root");
 //   root_cd->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Root");
 #endif
@@ -2965,9 +2987,10 @@ int main(int argc, char *argv[])
       TimeIncrement(*locDom) ; // global synchronization
 #if _CD
       CD_Begin(cd_main_loop, "MainLoop");
-      printf("x:%d y:%d z:%d\n", locDom->sizeX(), locDom->sizeY(), locDom->sizeZ());
-      cd_main_loop->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "locDom_Root");
+      //printf("x:%d y:%d z:%d\n", locDom->sizeX(), locDom->sizeY(), locDom->sizeZ());
+//      cd_main_loop->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "locDom_Root");
       if(locDom->sizeX() > 10000) {
+        printf("x:%d y:%d z:%d\n", locDom->sizeX(), locDom->sizeY(), locDom->sizeZ());
         assert(0);
       }
 
@@ -2977,6 +3000,14 @@ int main(int argc, char *argv[])
 #   else
       cd_main_loop->Preserve(&(locDom->deltatime()), sizeof(Real_t), kCopy, "deltatime");
 #   endif
+
+    if(myRank == 0) {
+      printf("%s ---- %p size:%zu %lu---- \n", "MainLoop",  locDom->m_nodelist.data(), locDom->m_nodelist.size(), locDom->m_nodelist.size() * sizeof(Index_t)); 
+      int target = 430680;
+      for(int i=target; i<target+64; i++) {
+        printf("[%d]: elem:%d\n", i, *(&locDom->m_nodelist[i]));
+      }
+    }
 #endif
 
       LagrangeLeapFrog(*locDom) ;

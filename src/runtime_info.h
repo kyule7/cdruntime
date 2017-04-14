@@ -23,6 +23,7 @@ struct PrvProfEntry : public std::string {
 
   void Update(uint64_t len, uint32_t type) { 
     size_ += len;
+    count_++;
     type_ = type;
   }
 //  PerPrvProfEntryType type_;

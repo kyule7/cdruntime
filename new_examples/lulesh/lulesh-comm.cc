@@ -125,7 +125,7 @@ void CommRecv(Domain& domain, int msgType, Index_t xferFields,
       /* semi-contiguous memory */
       int fromRank = myRank - domain.tp() ;
       int recvCount = dx * dz * xferFields ;
-      printf("comm: %p, %d, %u, %u, %u\n", 
+      printf("comm: %p, size:%d, type:%u, rank:%u, mtype%u\n", 
       &domain.commDataRecv[pmsg * maxPlaneComm],
                 recvCount, baseType, fromRank, msgType);
       MPI_Irecv(&domain.commDataRecv[pmsg * maxPlaneComm],
@@ -146,7 +146,7 @@ void CommRecv(Domain& domain, int msgType, Index_t xferFields,
       /* scattered memory */
       int fromRank = myRank - 1 ;
       int recvCount = dy * dz * xferFields ;
-      printf("comm: %p, %d, %u, %u, %u\n", 
+      printf("comm: %p, size:%d, type:%u, rank:%u, mtype%u\n", 
       &domain.commDataRecv[pmsg * maxPlaneComm],
                 recvCount, baseType, fromRank, msgType
           );
