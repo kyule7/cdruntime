@@ -41,9 +41,12 @@ void PhaseNode::PrintInputYAML(bool first)
 
   std::string indent(level_<<1, ' ');
   std::string one_more_indent((level_+1)<<1, ' ');
+  std::string two_more_indent((level_+2)<<1, ' ');
   fprintf(inYAML, "%s- CD_%u_%u :\n",          indent.c_str(), level_, phase_);
   fprintf(inYAML, "%s- label : %s\n", one_more_indent.c_str(), label_.c_str());
-  fprintf(inYAML, "%s", profile_.GetRTInfoStr(level_+1).c_str());
+  fprintf(inYAML, "%sinterval : %ld\n",    two_more_indent.c_str(), interval_);
+  fprintf(inYAML, "%serrortype : 0x%lX\n", two_more_indent.c_str(), errortype_);
+  //  fprintf(inYAML, "%s", profile_.GetRTInfoStr(level_+1).c_str());
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->PrintInputYAML(false);
   }

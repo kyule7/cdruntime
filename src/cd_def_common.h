@@ -1,5 +1,6 @@
 #ifndef _CD_DEF_COMMON_H 
 #define _CD_DEF_COMMON_H
+#include <stdint.h>
 
 #define BIT_0     0x0000000000000001  
 #define BIT_1     0x0000000000000002                       

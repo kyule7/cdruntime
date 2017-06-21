@@ -1,0 +1,1572 @@
+- CD_0_0 :
+  - label : Root
+    exec_cnt :          1
+    reex_cnt :          0
+    tot_time :   9.991496 # [s]
+    reex_time:   0.000000 # [s]
+    wait_time:   0.000000 # [s]
+    vol_copy :    5107426 # [B]
+    vol_refer:          0 # [B]
+    comm_log :         40 # [B]
+    error_vec:0x0
+
+    "cons" : {
+      AllMembers_Root_arealg:125000,1
+      AllMembers_Root_delta_eta:0,1
+      AllMembers_Root_delv:125000,1
+      AllMembers_Root_delv_eta:0,1
+      AllMembers_Root_delv_xi:0,1
+      AllMembers_Root_delv_zeta:0,1
+      AllMembers_Root_delx_xi:0,1
+      AllMembers_Root_delx_zeta:0,1
+      AllMembers_Root_dxx:0,1
+      AllMembers_Root_dyy:0,1
+      AllMembers_Root_dzz:0,1
+      AllMembers_Root_e:125000,1
+      AllMembers_Root_elemBC:125000,1
+      AllMembers_Root_elemmass:125000,1
+      AllMembers_Root_fx:132651,1
+      AllMembers_Root_fy:132651,1
+      AllMembers_Root_fz:132651,1
+      AllMembers_Root_letam:125000,1
+      AllMembers_Root_letap:125000,1
+      AllMembers_Root_lxim:125000,1
+      AllMembers_Root_lxip:125000,1
+      AllMembers_Root_lzetam:125000,1
+      AllMembers_Root_lzetap:125000,1
+      AllMembers_Root_nodalMass:132651,1
+      AllMembers_Root_nodelist:1000000,1
+      AllMembers_Root_p:125000,1
+      AllMembers_Root_q:125000,1
+      AllMembers_Root_ql:125000,1
+      AllMembers_Root_qq:125000,1
+      AllMembers_Root_ss:125000,1
+      AllMembers_Root_symmX:2601,1
+      AllMembers_Root_symmY:2601,1
+      AllMembers_Root_symmZ:2601,1
+      AllMembers_Root_v:125000,1
+      AllMembers_Root_vdov:125000,1
+      AllMembers_Root_vnew:0,1
+      AllMembers_Root_volo:125000,1
+      AllMembers_Root_x:132651,1
+      AllMembers_Root_xd:132651,1
+      AllMembers_Root_xdd:132651,1
+      AllMembers_Root_y:132651,1
+      AllMembers_Root_yd:132651,1
+      AllMembers_Root_ydd:132651,1
+      AllMembers_Root_z:132651,1
+      AllMembers_Root_zd:132651,1
+      AllMembers_Root_zdd:132651,1
+      locDom_Root:160,1
+    }
+    "prod" : {
+    }
+  - CD_1_1 :
+    - label : MainLoop
+      exec_cnt :          5
+      reex_cnt :          0
+      tot_time :   8.868489 # [s]
+      reex_time:   0.000000 # [s]
+      wait_time:   0.000000 # [s]
+      vol_copy :   25537130 # [B]
+      vol_refer:          0 # [B]
+      comm_log :    2864520 # [B]
+      error_vec:0x0
+
+      "cons" : {
+        MainLoop_arealg:625000,5
+        MainLoop_delta_eta:0,5
+        MainLoop_delv:625000,5
+        MainLoop_delx_xi:0,5
+        MainLoop_delx_zeta:0,5
+        MainLoop_dxx:0,5
+        MainLoop_dyy:0,5
+        MainLoop_dzz:0,5
+        MainLoop_e:625000,5
+        MainLoop_elemBC:625000,5
+        MainLoop_elemmass:625000,5
+        MainLoop_fx:663255,5
+        MainLoop_fy:663255,5
+        MainLoop_fz:663255,5
+        MainLoop_letam:625000,5
+        MainLoop_letap:625000,5
+        MainLoop_lxim:625000,5
+        MainLoop_lxip:625000,5
+        MainLoop_lzetam:625000,5
+        MainLoop_lzetap:625000,5
+        MainLoop_nodalMass:663255,5
+        MainLoop_nodelist:5000000,5
+        MainLoop_p:625000,5
+        MainLoop_q:625000,5
+        MainLoop_ql:625000,5
+        MainLoop_qq:625000,5
+        MainLoop_ss:625000,5
+        MainLoop_symmX:13005,5
+        MainLoop_symmY:13005,5
+        MainLoop_symmZ:13005,5
+        MainLoop_v:625000,5
+        MainLoop_vdov:625000,5
+        MainLoop_volo:625000,5
+        MainLoop_x:663255,5
+        MainLoop_xd:663255,5
+        MainLoop_xdd:663255,5
+        MainLoop_y:663255,5
+        MainLoop_yd:663255,5
+        MainLoop_ydd:663255,5
+        MainLoop_z:663255,5
+        MainLoop_zd:663255,5
+        MainLoop_zdd:663255,5
+        locDom_Root:800,5
+      }
+      "prod" : {
+      }
+    - CD_2_2 :
+      - label : CalcForeForNodes
+        exec_cnt :          5
+        reex_cnt :          0
+        tot_time :   1.763778 # [s]
+        reex_time:   0.000000 # [s]
+        wait_time:   0.000000 # [s]
+        vol_copy :    5969295 # [B]
+        vol_refer:          0 # [B]
+        comm_log :          0 # [B]
+        error_vec:0x0
+
+        "cons" : {
+          prv_vec_1_x:663255,5
+          prv_vec_1_xd:663255,5
+          prv_vec_1_xdd:663255,5
+          prv_vec_1_y:663255,5
+          prv_vec_1_yd:663255,5
+          prv_vec_1_ydd:663255,5
+          prv_vec_1_z:663255,5
+          prv_vec_1_zd:663255,5
+          prv_vec_1_zdd:663255,5
+        }
+        "prod" : {
+        }
+    - CD_2_3 :
+      - label : CalcLagrangeElements
+        exec_cnt :          5
+        reex_cnt :          0
+        tot_time :   1.999528 # [s]
+        reex_time:   0.000000 # [s]
+        wait_time:   0.000000 # [s]
+        vol_copy :          0 # [B]
+        vol_refer:          0 # [B]
+        comm_log :     900000 # [B]
+        error_vec:0x0
+
+        "cons" : {
+        }
+        "prod" : {
+        }
+    - CD_2_4 :
+      - label : LagrangeLeapFrog
+        exec_cnt :          5
+        reex_cnt :          0
+        tot_time :   0.040570 # [s]
+        reex_time:   0.000000 # [s]
+        wait_time:   0.000000 # [s]
+        vol_copy :          0 # [B]
+        vol_refer:          0 # [B]
+        comm_log :          0 # [B]
+        error_vec:0x0
+
+        "cons" : {
+        }
+        "prod" : {
+        }
+- CD_0_0 :
+  - label : Root
+    exec_cnt :          1
+    reex_cnt :          0
+    tot_time :   8.765285 # [s]
+    reex_time:   0.000000 # [s]
+    wait_time:   0.000000 # [s]
+    vol_copy :    5107426 # [B]
+    vol_refer:          0 # [B]
+    comm_log :         40 # [B]
+    error_vec:0x0
+
+    "cons" : {
+      AllMembers_Root_arealg:125000,1
+      AllMembers_Root_delta_eta:0,1
+      AllMembers_Root_delv:125000,1
+      AllMembers_Root_delv_eta:0,1
+      AllMembers_Root_delv_xi:0,1
+      AllMembers_Root_delv_zeta:0,1
+      AllMembers_Root_delx_xi:0,1
+      AllMembers_Root_delx_zeta:0,1
+      AllMembers_Root_dxx:0,1
+      AllMembers_Root_dyy:0,1
+      AllMembers_Root_dzz:0,1
+      AllMembers_Root_e:125000,1
+      AllMembers_Root_elemBC:125000,1
+      AllMembers_Root_elemmass:125000,1
+      AllMembers_Root_fx:132651,1
+      AllMembers_Root_fy:132651,1
+      AllMembers_Root_fz:132651,1
+      AllMembers_Root_letam:125000,1
+      AllMembers_Root_letap:125000,1
+      AllMembers_Root_lxim:125000,1
+      AllMembers_Root_lxip:125000,1
+      AllMembers_Root_lzetam:125000,1
+      AllMembers_Root_lzetap:125000,1
+      AllMembers_Root_nodalMass:132651,1
+      AllMembers_Root_nodelist:1000000,1
+      AllMembers_Root_p:125000,1
+      AllMembers_Root_q:125000,1
+      AllMembers_Root_ql:125000,1
+      AllMembers_Root_qq:125000,1
+      AllMembers_Root_ss:125000,1
+      AllMembers_Root_symmX:2601,1
+      AllMembers_Root_symmY:2601,1
+      AllMembers_Root_symmZ:2601,1
+      AllMembers_Root_v:125000,1
+      AllMembers_Root_vdov:125000,1
+      AllMembers_Root_vnew:0,1
+      AllMembers_Root_volo:125000,1
+      AllMembers_Root_x:132651,1
+      AllMembers_Root_xd:132651,1
+      AllMembers_Root_xdd:132651,1
+      AllMembers_Root_y:132651,1
+      AllMembers_Root_yd:132651,1
+      AllMembers_Root_ydd:132651,1
+      AllMembers_Root_z:132651,1
+      AllMembers_Root_zd:132651,1
+      AllMembers_Root_zdd:132651,1
+      locDom_Root:160,1
+    }
+    "prod" : {
+    }
+  - CD_1_1 :
+    - label : MainLoop
+      exec_cnt :          5
+      reex_cnt :          0
+      tot_time :   7.998132 # [s]
+      reex_time:   0.000000 # [s]
+      wait_time:   0.000000 # [s]
+      vol_copy :   25537130 # [B]
+      vol_refer:          0 # [B]
+      comm_log :    2864520 # [B]
+      error_vec:0x0
+
+      "cons" : {
+        MainLoop_arealg:625000,5
+        MainLoop_delta_eta:0,5
+        MainLoop_delv:625000,5
+        MainLoop_delx_xi:0,5
+        MainLoop_delx_zeta:0,5
+        MainLoop_dxx:0,5
+        MainLoop_dyy:0,5
+        MainLoop_dzz:0,5
+        MainLoop_e:625000,5
+        MainLoop_elemBC:625000,5
+        MainLoop_elemmass:625000,5
+        MainLoop_fx:663255,5
+        MainLoop_fy:663255,5
+        MainLoop_fz:663255,5
+        MainLoop_letam:625000,5
+        MainLoop_letap:625000,5
+        MainLoop_lxim:625000,5
+        MainLoop_lxip:625000,5
+        MainLoop_lzetam:625000,5
+        MainLoop_lzetap:625000,5
+        MainLoop_nodalMass:663255,5
+        MainLoop_nodelist:5000000,5
+        MainLoop_p:625000,5
+        MainLoop_q:625000,5
+        MainLoop_ql:625000,5
+        MainLoop_qq:625000,5
+        MainLoop_ss:625000,5
+        MainLoop_symmX:13005,5
+        MainLoop_symmY:13005,5
+        MainLoop_symmZ:13005,5
+        MainLoop_v:625000,5
+        MainLoop_vdov:625000,5
+        MainLoop_volo:625000,5
+        MainLoop_x:663255,5
+        MainLoop_xd:663255,5
+        MainLoop_xdd:663255,5
+        MainLoop_y:663255,5
+        MainLoop_yd:663255,5
+        MainLoop_ydd:663255,5
+        MainLoop_z:663255,5
+        MainLoop_zd:663255,5
+        MainLoop_zdd:663255,5
+        locDom_Root:800,5
+      }
+      "prod" : {
+      }
+    - CD_2_2 :
+      - label : CalcForeForNodes
+        exec_cnt :          5
+        reex_cnt :          0
+        tot_time :   1.765589 # [s]
+        reex_time:   0.000000 # [s]
+        wait_time:   0.000000 # [s]
+        vol_copy :    5969295 # [B]
+        vol_refer:          0 # [B]
+        comm_log :          0 # [B]
+        error_vec:0x0
+
+        "cons" : {
+          prv_vec_1_x:663255,5
+          prv_vec_1_xd:663255,5
+          prv_vec_1_xdd:663255,5
+          prv_vec_1_y:663255,5
+          prv_vec_1_yd:663255,5
+          prv_vec_1_ydd:663255,5
+          prv_vec_1_z:663255,5
+          prv_vec_1_zd:663255,5
+          prv_vec_1_zdd:663255,5
+        }
+        "prod" : {
+        }
+    - CD_2_3 :
+      - label : CalcLagrangeElements
+        exec_cnt :          5
+        reex_cnt :          0
+        tot_time :   2.000311 # [s]
+        reex_time:   0.000000 # [s]
+        wait_time:   0.000000 # [s]
+        vol_copy :          0 # [B]
+        vol_refer:          0 # [B]
+        comm_log :     900000 # [B]
+        error_vec:0x0
+
+        "cons" : {
+        }
+        "prod" : {
+        }
+    - CD_2_4 :
+      - label : LagrangeLeapFrog
+        exec_cnt :          5
+        reex_cnt :          0
+        tot_time :   0.040591 # [s]
+        reex_time:   0.000000 # [s]
+        wait_time:   0.000000 # [s]
+        vol_copy :          0 # [B]
+        vol_refer:          0 # [B]
+        comm_log :          0 # [B]
+        error_vec:0x0
+
+        "cons" : {
+        }
+        "prod" : {
+        }
+- CD_0_0 :
+  - label : Root
+    exec_cnt :          0
+    reex_cnt :          0
+    tot_time :   0.000000 # [s]
+    reex_time:   0.000000 # [s]
+    wait_time:   0.000000 # [s]
+    vol_copy :    5107426 # [B]
+    vol_refer:          0 # [B]
+    comm_log :         16 # [B]
+    error_vec:0x0
+
+    "cons" : {
+      AllMembers_Root_arealg:125000,1
+      AllMembers_Root_delta_eta:0,1
+      AllMembers_Root_delv:125000,1
+      AllMembers_Root_delv_eta:0,1
+      AllMembers_Root_delv_xi:0,1
+      AllMembers_Root_delv_zeta:0,1
+      AllMembers_Root_delx_xi:0,1
+      AllMembers_Root_delx_zeta:0,1
+      AllMembers_Root_dxx:0,1
+      AllMembers_Root_dyy:0,1
+      AllMembers_Root_dzz:0,1
+      AllMembers_Root_e:125000,1
+      AllMembers_Root_elemBC:125000,1
+      AllMembers_Root_elemmass:125000,1
+      AllMembers_Root_fx:132651,1
+      AllMembers_Root_fy:132651,1
+      AllMembers_Root_fz:132651,1
+      AllMembers_Root_letam:125000,1
+      AllMembers_Root_letap:125000,1
+      AllMembers_Root_lxim:125000,1
+      AllMembers_Root_lxip:125000,1
+      AllMembers_Root_lzetam:125000,1
+      AllMembers_Root_lzetap:125000,1
+      AllMembers_Root_nodalMass:132651,1
+      AllMembers_Root_nodelist:1000000,1
+      AllMembers_Root_p:125000,1
+      AllMembers_Root_q:125000,1
+      AllMembers_Root_ql:125000,1
+      AllMembers_Root_qq:125000,1
+      AllMembers_Root_ss:125000,1
+      AllMembers_Root_symmX:2601,1
+      AllMembers_Root_symmY:2601,1
+      AllMembers_Root_symmZ:2601,1
+      AllMembers_Root_v:125000,1
+      AllMembers_Root_vdov:125000,1
+      AllMembers_Root_vnew:0,1
+      AllMembers_Root_volo:125000,1
+      AllMembers_Root_x:132651,1
+      AllMembers_Root_xd:132651,1
+      AllMembers_Root_xdd:132651,1
+      AllMembers_Root_y:132651,1
+      AllMembers_Root_yd:132651,1
+      AllMembers_Root_ydd:132651,1
+      AllMembers_Root_z:132651,1
+      AllMembers_Root_zd:132651,1
+      AllMembers_Root_zdd:132651,1
+      locDom_Root:160,1
+    }
+    "prod" : {
+    }
+  - CD_1_1 :
+    - label : MainLoop
+      exec_cnt :          2
+      reex_cnt :          0
+      tot_time :   3.076972 # [s]
+      reex_time:   0.000000 # [s]
+      wait_time:   0.000000 # [s]
+      vol_copy :   15322278 # [B]
+      vol_refer:          0 # [B]
+      comm_log :    1336784 # [B]
+      error_vec:0x0
+
+      "cons" : {
+        MainLoop_arealg:375000,3
+        MainLoop_delta_eta:0,3
+        MainLoop_delv:375000,3
+        MainLoop_delx_xi:0,3
+        MainLoop_delx_zeta:0,3
+        MainLoop_dxx:0,3
+        MainLoop_dyy:0,3
+        MainLoop_dzz:0,3
+        MainLoop_e:375000,3
+        MainLoop_elemBC:375000,3
+        MainLoop_elemmass:375000,3
+        MainLoop_fx:397953,3
+        MainLoop_fy:397953,3
+        MainLoop_fz:397953,3
+        MainLoop_letam:375000,3
+        MainLoop_letap:375000,3
+        MainLoop_lxim:375000,3
+        MainLoop_lxip:375000,3
+        MainLoop_lzetam:375000,3
+        MainLoop_lzetap:375000,3
+        MainLoop_nodalMass:397953,3
+        MainLoop_nodelist:3000000,3
+        MainLoop_p:375000,3
+        MainLoop_q:375000,3
+        MainLoop_ql:375000,3
+        MainLoop_qq:375000,3
+        MainLoop_ss:375000,3
+        MainLoop_symmX:7803,3
+        MainLoop_symmY:7803,3
+        MainLoop_symmZ:7803,3
+        MainLoop_v:375000,3
+        MainLoop_vdov:375000,3
+        MainLoop_volo:375000,3
+        MainLoop_x:397953,3
+        MainLoop_xd:397953,3
+        MainLoop_xdd:397953,3
+        MainLoop_y:397953,3
+        MainLoop_yd:397953,3
+        MainLoop_ydd:397953,3
+        MainLoop_z:397953,3
+        MainLoop_zd:397953,3
+        MainLoop_zdd:397953,3
+        locDom_Root:480,3
+      }
+      "prod" : {
+      }
+    - CD_2_2 :
+      - label : CalcForeForNodes
+        exec_cnt :          2
+        reex_cnt :          0
+        tot_time :   0.704714 # [s]
+        reex_time:   0.000000 # [s]
+        wait_time:   0.000181 # [s]
+        vol_copy :    3581577 # [B]
+        vol_refer:          0 # [B]
+        comm_log :          0 # [B]
+        error_vec:0x0
+
+        "cons" : {
+          prv_vec_1_x:397953,3
+          prv_vec_1_xd:397953,3
+          prv_vec_1_xdd:397953,3
+          prv_vec_1_y:397953,3
+          prv_vec_1_yd:397953,3
+          prv_vec_1_ydd:397953,3
+          prv_vec_1_z:397953,3
+          prv_vec_1_zd:397953,3
+          prv_vec_1_zdd:397953,3
+        }
+        "prod" : {
+        }
+    - CD_2_3 :
+      - label : CalcLagrangeElements
+        exec_cnt :          2
+        reex_cnt :          0
+        tot_time :   0.817713 # [s]
+        reex_time:   0.000000 # [s]
+        wait_time:   0.000000 # [s]
+        vol_copy :          0 # [B]
+        vol_refer:          0 # [B]
+        comm_log :     360000 # [B]
+        error_vec:0x0
+
+        "cons" : {
+        }
+        "prod" : {
+        }
+  - CD_1_4 :
+    - label : MainLoop
+      exec_cnt :          0
+      reex_cnt :          1
+      tot_time :   0.000000 # [s]
+      reex_time:   0.843343 # [s]
+      wait_time:   0.001918 # [s]
+      vol_copy :    5107426 # [B]
+      vol_refer:          0 # [B]
+      comm_log :     763872 # [B]
+      error_vec:0x0
+
+      "cons" : {
+        MainLoop_arealg:125000,1
+        MainLoop_delta_eta:0,1
+        MainLoop_delv:125000,1
+        MainLoop_delx_xi:0,1
+        MainLoop_delx_zeta:0,1
+        MainLoop_dxx:0,1
+        MainLoop_dyy:0,1
+        MainLoop_dzz:0,1
+        MainLoop_e:125000,1
+        MainLoop_elemBC:125000,1
+        MainLoop_elemmass:125000,1
+        MainLoop_fx:132651,1
+        MainLoop_fy:132651,1
+        MainLoop_fz:132651,1
+        MainLoop_letam:125000,1
+        MainLoop_letap:125000,1
+        MainLoop_lxim:125000,1
+        MainLoop_lxip:125000,1
+        MainLoop_lzetam:125000,1
+        MainLoop_lzetap:125000,1
+        MainLoop_nodalMass:132651,1
+        MainLoop_nodelist:1000000,1
+        MainLoop_p:125000,1
+        MainLoop_q:125000,1
+        MainLoop_ql:125000,1
+        MainLoop_qq:125000,1
+        MainLoop_ss:125000,1
+        MainLoop_symmX:2601,1
+        MainLoop_symmY:2601,1
+        MainLoop_symmZ:2601,1
+        MainLoop_v:125000,1
+        MainLoop_vdov:125000,1
+        MainLoop_volo:125000,1
+        MainLoop_x:132651,1
+        MainLoop_xd:132651,1
+        MainLoop_xdd:132651,1
+        MainLoop_y:132651,1
+        MainLoop_yd:132651,1
+        MainLoop_ydd:132651,1
+        MainLoop_z:132651,1
+        MainLoop_zd:132651,1
+        MainLoop_zdd:132651,1
+        locDom_Root:160,1
+      }
+      "prod" : {
+      }
+    - CD_2_5 :
+      - label : CalcForeForNodes
+        exec_cnt :          0
+        reex_cnt :          1
+        tot_time :   0.000000 # [s]
+        reex_time:   0.351510 # [s]
+        wait_time:   0.000149 # [s]
+        vol_copy :    2387718 # [B]
+        vol_refer:          0 # [B]
+        comm_log :          0 # [B]
+        error_vec:0x0
+
+        "cons" : {
+          prv_vec_1_x:265302,2
+          prv_vec_1_xd:265302,2
+          prv_vec_1_xdd:265302,2
+          prv_vec_1_y:265302,2
+          prv_vec_1_yd:265302,2
+          prv_vec_1_ydd:265302,2
+          prv_vec_1_z:265302,2
+          prv_vec_1_zd:265302,2
+          prv_vec_1_zdd:265302,2
+        }
+        "prod" : {
+        }
+    - CD_2_6 :
+      - label : CalcLagrangeElements
+        exec_cnt :          0
+        reex_cnt :          1
+        tot_time :   0.000000 # [s]
+        reex_time:   0.407129 # [s]
+        wait_time:   0.000000 # [s]
+        vol_copy :          0 # [B]
+        vol_refer:          0 # [B]
+        comm_log :     180000 # [B]
+        error_vec:0x0
+
+        "cons" : {
+        }
+        "prod" : {
+        }
+  - CD_1_7 :
+    - label : MainLoop
+      exec_cnt :          0
+      reex_cnt :          1
+      tot_time :   0.000000 # [s]
+      reex_time:   2.918100 # [s]
+      wait_time:   0.001868 # [s]
+      vol_copy :          0 # [B]
+      vol_refer:          0 # [B]
+      comm_log :     190984 # [B]
+      error_vec:0x0
+
+      "cons" : {
+      }
+      "prod" : {
+      }
+    - CD_2_8 :
+      - label : CalcForeForNodes
+        exec_cnt :          0
+        reex_cnt :          0
+        tot_time :   0.000000 # [s]
+        reex_time:   0.000000 # [s]
+        wait_time:   0.000158 # [s]
+        vol_copy :    1193859 # [B]
+        vol_refer:          0 # [B]
+        comm_log :          0 # [B]
+        error_vec:0x0
+
+        "cons" : {
+          prv_vec_1_x:132651,1
+          prv_vec_1_xd:132651,1
+          prv_vec_1_xdd:132651,1
+          prv_vec_1_y:132651,1
+          prv_vec_1_yd:132651,1
+          prv_vec_1_ydd:132651,1
+          prv_vec_1_z:132651,1
+          prv_vec_1_zd:132651,1
+          prv_vec_1_zdd:132651,1
+        }
+        "prod" : {
+        }
+  - CD_1_9 :
+    - label : MainLoop
+      exec_cnt :          0
+      reex_cnt :          2
+      tot_time :   0.000000 # [s]
+      reex_time:   2.540867 # [s]
+      wait_time:   0.001664 # [s]
+      vol_copy :    5107426 # [B]
+      vol_refer:          0 # [B]
+      comm_log :    1145808 # [B]
+      error_vec:0x0
+
+      "cons" : {
+        MainLoop_arealg:125000,1
+        MainLoop_delta_eta:0,1
+        MainLoop_delv:125000,1
+        MainLoop_delx_xi:0,1
+        MainLoop_delx_zeta:0,1
+        MainLoop_dxx:0,1
+        MainLoop_dyy:0,1
+        MainLoop_dzz:0,1
+        MainLoop_e:125000,1
+        MainLoop_elemBC:125000,1
+        MainLoop_elemmass:125000,1
+        MainLoop_fx:132651,1
+        MainLoop_fy:132651,1
+        MainLoop_fz:132651,1
+        MainLoop_letam:125000,1
+        MainLoop_letap:125000,1
+        MainLoop_lxim:125000,1
+        MainLoop_lxip:125000,1
+        MainLoop_lzetam:125000,1
+        MainLoop_lzetap:125000,1
+        MainLoop_nodalMass:132651,1
+        MainLoop_nodelist:1000000,1
+        MainLoop_p:125000,1
+        MainLoop_q:125000,1
+        MainLoop_ql:125000,1
+        MainLoop_qq:125000,1
+        MainLoop_ss:125000,1
+        MainLoop_symmX:2601,1
+        MainLoop_symmY:2601,1
+        MainLoop_symmZ:2601,1
+        MainLoop_v:125000,1
+        MainLoop_vdov:125000,1
+        MainLoop_volo:125000,1
+        MainLoop_x:132651,1
+        MainLoop_xd:132651,1
+        MainLoop_xdd:132651,1
+        MainLoop_y:132651,1
+        MainLoop_yd:132651,1
+        MainLoop_ydd:132651,1
+        MainLoop_z:132651,1
+        MainLoop_zd:132651,1
+        MainLoop_zdd:132651,1
+        locDom_Root:160,1
+      }
+      "prod" : {
+      }
+    - CD_2_10 :
+      - label : CalcForeForNodes
+        exec_cnt :          0
+        reex_cnt :          2
+        tot_time :   0.000000 # [s]
+        reex_time:   0.703369 # [s]
+        wait_time:   0.000000 # [s]
+        vol_copy :    2387718 # [B]
+        vol_refer:          0 # [B]
+        comm_log :          0 # [B]
+        error_vec:0x0
+
+        "cons" : {
+          prv_vec_1_x:265302,2
+          prv_vec_1_xd:265302,2
+          prv_vec_1_xdd:265302,2
+          prv_vec_1_y:265302,2
+          prv_vec_1_yd:265302,2
+          prv_vec_1_ydd:265302,2
+          prv_vec_1_z:265302,2
+          prv_vec_1_zd:265302,2
+          prv_vec_1_zdd:265302,2
+        }
+        "prod" : {
+        }
+    - CD_2_11 :
+      - label : CalcLagrangeElements
+        exec_cnt :          0
+        reex_cnt :          2
+        tot_time :   0.000000 # [s]
+        reex_time:   0.814755 # [s]
+        wait_time:   0.000000 # [s]
+        vol_copy :          0 # [B]
+        vol_refer:          0 # [B]
+        comm_log :     360000 # [B]
+        error_vec:0x0
+
+        "cons" : {
+        }
+        "prod" : {
+        }
+- CD_0_0 :
+  - label : Root
+  exec_cnt :          1
+  reex_cnt :          0
+  tot_time :  49.295038 # [s]
+  reex_time:   0.000000 # [s]
+  wait_time:   0.000000 # [s]
+  vol_copy :   33326916 # [B]
+  vol_refer:          0 # [B]
+  comm_log :        240 # [B]
+  error_vec:0x0
+
+  "cons" : {
+    AllMembers_Root_arealg:1000000,1
+    AllMembers_Root_delta_eta:0,1
+    AllMembers_Root_delv:1000000,1
+    AllMembers_Root_delv_eta:0,1
+    AllMembers_Root_delv_xi:0,1
+    AllMembers_Root_delv_zeta:0,1
+    AllMembers_Root_delx_xi:0,1
+    AllMembers_Root_delx_zeta:0,1
+    AllMembers_Root_dxx:0,1
+    AllMembers_Root_dyy:0,1
+    AllMembers_Root_dzz:0,1
+    AllMembers_Root_e:1000000,1
+    AllMembers_Root_elemBC:500000,1
+    AllMembers_Root_elemmass:1000000,1
+    AllMembers_Root_fx:1061208,1
+    AllMembers_Root_fy:1061208,1
+    AllMembers_Root_fz:1061208,1
+    AllMembers_Root_letam:500000,1
+    AllMembers_Root_letap:500000,1
+    AllMembers_Root_lxim:500000,1
+    AllMembers_Root_lxip:500000,1
+    AllMembers_Root_lzetam:500000,1
+    AllMembers_Root_lzetap:500000,1
+    AllMembers_Root_nodalMass:1061208,1
+    AllMembers_Root_nodelist:4000000,1
+    AllMembers_Root_p:1000000,1
+    AllMembers_Root_q:1000000,1
+    AllMembers_Root_ql:1000000,1
+    AllMembers_Root_qq:1000000,1
+    AllMembers_Root_ss:1000000,1
+    AllMembers_Root_symmX:10404,1
+    AllMembers_Root_symmY:10404,1
+    AllMembers_Root_symmZ:10404,1
+    AllMembers_Root_v:1000000,1
+    AllMembers_Root_vdov:1000000,1
+    AllMembers_Root_vnew:0,1
+    AllMembers_Root_volo:1000000,1
+    AllMembers_Root_x:1061208,1
+    AllMembers_Root_xd:1061208,1
+    AllMembers_Root_xdd:1061208,1
+    AllMembers_Root_y:1061208,1
+    AllMembers_Root_yd:1061208,1
+    AllMembers_Root_ydd:1061208,1
+    AllMembers_Root_z:1061208,1
+    AllMembers_Root_zd:1061208,1
+    AllMembers_Root_zdd:1061208,1
+  },
+  "prod" : {
+  },
+  - CD_1_1 :
+    - label : MainLoop
+    exec_cnt :         30
+    reex_cnt :          0
+    tot_time :  48.198038 # [s]
+    reex_time:   0.000000 # [s]
+    wait_time:   0.000000 # [s]
+    vol_copy :  999807480 # [B]
+    vol_refer:          0 # [B]
+    comm_log :   17187120 # [B]
+    error_vec:0x0
+
+    "cons" : {
+      MainLoop_arealg:30000000,30
+      MainLoop_delta_eta:0,30
+      MainLoop_delv:30000000,30
+      MainLoop_delx_xi:0,30
+      MainLoop_delx_zeta:0,30
+      MainLoop_dxx:0,30
+      MainLoop_dyy:0,30
+      MainLoop_dzz:0,30
+      MainLoop_e:30000000,30
+      MainLoop_elemBC:15000000,30
+      MainLoop_elemmass:30000000,30
+      MainLoop_fx:31836240,30
+      MainLoop_fy:31836240,30
+      MainLoop_fz:31836240,30
+      MainLoop_letam:15000000,30
+      MainLoop_letap:15000000,30
+      MainLoop_lxim:15000000,30
+      MainLoop_lxip:15000000,30
+      MainLoop_lzetam:15000000,30
+      MainLoop_lzetap:15000000,30
+      MainLoop_nodalMass:31836240,30
+      MainLoop_nodelist:120000000,30
+      MainLoop_p:30000000,30
+      MainLoop_q:30000000,30
+      MainLoop_ql:30000000,30
+      MainLoop_qq:30000000,30
+      MainLoop_ss:30000000,30
+      MainLoop_symmX:312120,30
+      MainLoop_symmY:312120,30
+      MainLoop_symmZ:312120,30
+      MainLoop_v:30000000,30
+      MainLoop_vdov:30000000,30
+      MainLoop_volo:30000000,30
+      MainLoop_x:31836240,30
+      MainLoop_xd:31836240,30
+      MainLoop_xdd:31836240,30
+      MainLoop_y:31836240,30
+      MainLoop_yd:31836240,30
+      MainLoop_ydd:31836240,30
+      MainLoop_z:31836240,30
+      MainLoop_zd:31836240,30
+      MainLoop_zdd:31836240,30
+    },
+    "prod" : {
+    },
+    - CD_2_2 :
+      - label : CalcForeForNodes
+      exec_cnt :         30
+      reex_cnt :          0
+      tot_time :  10.602289 # [s]
+      reex_time:   0.000000 # [s]
+      wait_time:   0.000000 # [s]
+      vol_copy :  406526160 # [B]
+      vol_refer:          0 # [B]
+      comm_log :          0 # [B]
+      error_vec:0x0
+
+      "cons" : {
+        prv_vec_1_nodelist:120000000,30
+        prv_vec_1_x:31836240,30
+        prv_vec_1_xd:31836240,30
+        prv_vec_1_xdd:31836240,30
+        prv_vec_1_y:31836240,30
+        prv_vec_1_yd:31836240,30
+        prv_vec_1_ydd:31836240,30
+        prv_vec_1_z:31836240,30
+        prv_vec_1_zd:31836240,30
+        prv_vec_1_zdd:31836240,30
+      },
+      "prod" : {
+      },
+    - CD_2_3 :
+      - label : CalcLagrangeElements
+      exec_cnt :         30
+      reex_cnt :          0
+      tot_time :  12.223073 # [s]
+      reex_time:   0.000000 # [s]
+      wait_time:   0.000000 # [s]
+      vol_copy :          0 # [B]
+      vol_refer:          0 # [B]
+      comm_log :    5400000 # [B]
+      error_vec:0x0
+
+      "cons" : {
+      },
+      "prod" : {
+      },
+- CD_0_0 :
+  - label : Root
+  "exec_cnt" :          1,
+  "reex_cnt" :          0,
+  "tot_time" :  17.542515, // [s]
+  "reex_time":   0.000000, // [s]
+  "wait_time":   0.000000, // [s]
+  "vol_copy" :   33326916, // [B]
+  "vol_refer":          0, // [B]
+  "comm_log" :         80, // [B]
+  "error_vec":0x0,
+
+  "cons" : {
+    AllMembers_Root_arealg:1000000,1
+    AllMembers_Root_delta_eta:0,1
+    AllMembers_Root_delv:1000000,1
+    AllMembers_Root_delv_eta:0,1
+    AllMembers_Root_delv_xi:0,1
+    AllMembers_Root_delv_zeta:0,1
+    AllMembers_Root_delx_xi:0,1
+    AllMembers_Root_delx_zeta:0,1
+    AllMembers_Root_dxx:0,1
+    AllMembers_Root_dyy:0,1
+    AllMembers_Root_dzz:0,1
+    AllMembers_Root_e:1000000,1
+    AllMembers_Root_elemBC:500000,1
+    AllMembers_Root_elemmass:1000000,1
+    AllMembers_Root_fx:1061208,1
+    AllMembers_Root_fy:1061208,1
+    AllMembers_Root_fz:1061208,1
+    AllMembers_Root_letam:500000,1
+    AllMembers_Root_letap:500000,1
+    AllMembers_Root_lxim:500000,1
+    AllMembers_Root_lxip:500000,1
+    AllMembers_Root_lzetam:500000,1
+    AllMembers_Root_lzetap:500000,1
+    AllMembers_Root_nodalMass:1061208,1
+    AllMembers_Root_nodelist:4000000,1
+    AllMembers_Root_p:1000000,1
+    AllMembers_Root_q:1000000,1
+    AllMembers_Root_ql:1000000,1
+    AllMembers_Root_qq:1000000,1
+    AllMembers_Root_ss:1000000,1
+    AllMembers_Root_symmX:10404,1
+    AllMembers_Root_symmY:10404,1
+    AllMembers_Root_symmZ:10404,1
+    AllMembers_Root_v:1000000,1
+    AllMembers_Root_vdov:1000000,1
+    AllMembers_Root_vnew:0,1
+    AllMembers_Root_volo:1000000,1
+    AllMembers_Root_x:1061208,1
+    AllMembers_Root_xd:1061208,1
+    AllMembers_Root_xdd:1061208,1
+    AllMembers_Root_y:1061208,1
+    AllMembers_Root_yd:1061208,1
+    AllMembers_Root_ydd:1061208,1
+    AllMembers_Root_z:1061208,1
+    AllMembers_Root_zd:1061208,1
+    AllMembers_Root_zdd:1061208,1
+  },
+  "prod" : {
+  },
+  - CD_1_1 :
+    - label : MainLoop
+    "exec_cnt" :         10,
+    "reex_cnt" :          0,
+    "tot_time" :  16.506586, // [s]
+    "reex_time":   0.000000, // [s]
+    "wait_time":   0.000000, // [s]
+    "vol_copy" :  333269160, // [B]
+    "vol_refer":          0, // [B]
+    "comm_log" :    5729040, // [B]
+    "error_vec":0x0,
+
+    "cons" : {
+      MainLoop_arealg:10000000,10
+      MainLoop_delta_eta:0,10
+      MainLoop_delv:10000000,10
+      MainLoop_delx_xi:0,10
+      MainLoop_delx_zeta:0,10
+      MainLoop_dxx:0,10
+      MainLoop_dyy:0,10
+      MainLoop_dzz:0,10
+      MainLoop_e:10000000,10
+      MainLoop_elemBC:5000000,10
+      MainLoop_elemmass:10000000,10
+      MainLoop_fx:10612080,10
+      MainLoop_fy:10612080,10
+      MainLoop_fz:10612080,10
+      MainLoop_letam:5000000,10
+      MainLoop_letap:5000000,10
+      MainLoop_lxim:5000000,10
+      MainLoop_lxip:5000000,10
+      MainLoop_lzetam:5000000,10
+      MainLoop_lzetap:5000000,10
+      MainLoop_nodalMass:10612080,10
+      MainLoop_nodelist:40000000,10
+      MainLoop_p:10000000,10
+      MainLoop_q:10000000,10
+      MainLoop_ql:10000000,10
+      MainLoop_qq:10000000,10
+      MainLoop_ss:10000000,10
+      MainLoop_symmX:104040,10
+      MainLoop_symmY:104040,10
+      MainLoop_symmZ:104040,10
+      MainLoop_v:10000000,10
+      MainLoop_vdov:10000000,10
+      MainLoop_volo:10000000,10
+      MainLoop_x:10612080,10
+      MainLoop_xd:10612080,10
+      MainLoop_xdd:10612080,10
+      MainLoop_y:10612080,10
+      MainLoop_yd:10612080,10
+      MainLoop_ydd:10612080,10
+      MainLoop_z:10612080,10
+      MainLoop_zd:10612080,10
+      MainLoop_zdd:10612080,10
+    },
+    "prod" : {
+    },
+    - CD_2_2 :
+      - label : CalcForeForNodes
+      "exec_cnt" :         10,
+      "reex_cnt" :          0,
+      "tot_time" :   3.543112, // [s]
+      "reex_time":   0.000000, // [s]
+      "wait_time":   0.000000, // [s]
+      "vol_copy" :  135508720, // [B]
+      "vol_refer":          0, // [B]
+      "comm_log" :          0, // [B]
+      "error_vec":0x0,
+
+      "cons" : {
+        prv_vec_1_nodelist:40000000,10
+        prv_vec_1_x:10612080,10
+        prv_vec_1_xd:10612080,10
+        prv_vec_1_xdd:10612080,10
+        prv_vec_1_y:10612080,10
+        prv_vec_1_yd:10612080,10
+        prv_vec_1_ydd:10612080,10
+        prv_vec_1_z:10612080,10
+        prv_vec_1_zd:10612080,10
+        prv_vec_1_zdd:10612080,10
+      },
+      "prod" : {
+      },
+    - CD_2_3 :
+      - label : CalcLagrangeElements
+      "exec_cnt" :         10,
+      "reex_cnt" :          0,
+      "tot_time" :   4.078847, // [s]
+      "reex_time":   0.000000, // [s]
+      "wait_time":   0.000000, // [s]
+      "vol_copy" :          0, // [B]
+      "vol_refer":          0, // [B]
+      "comm_log" :    1800000, // [B]
+      "error_vec":0x0,
+
+      "cons" : {
+      },
+      "prod" : {
+      },
+- CD_0_0 :
+  - label : Root
+  "exec_cnt" :          1,
+  "reex_cnt" :          0,
+  "tot_time" :  17.370469, // [s]
+  "reex_time":   0.000000, // [s]
+  "wait_time":   0.000000, // [s]
+  "vol_copy" :   33326916, // [B]
+  "vol_refer":          0, // [B]
+  "comm_log" :         80, // [B]
+  "error_vec":0x0,
+
+  "cons" : {
+    AllMembers_Root_arealg:1000000,1
+    AllMembers_Root_delta_eta:0,1
+    AllMembers_Root_delv:1000000,1
+    AllMembers_Root_delv_eta:0,1
+    AllMembers_Root_delv_xi:0,1
+    AllMembers_Root_delv_zeta:0,1
+    AllMembers_Root_delx_xi:0,1
+    AllMembers_Root_delx_zeta:0,1
+    AllMembers_Root_dxx:0,1
+    AllMembers_Root_dyy:0,1
+    AllMembers_Root_dzz:0,1
+    AllMembers_Root_e:1000000,1
+    AllMembers_Root_elemBC:500000,1
+    AllMembers_Root_elemmass:1000000,1
+    AllMembers_Root_fx:1061208,1
+    AllMembers_Root_fy:1061208,1
+    AllMembers_Root_fz:1061208,1
+    AllMembers_Root_letam:500000,1
+    AllMembers_Root_letap:500000,1
+    AllMembers_Root_lxim:500000,1
+    AllMembers_Root_lxip:500000,1
+    AllMembers_Root_lzetam:500000,1
+    AllMembers_Root_lzetap:500000,1
+    AllMembers_Root_nodalMass:1061208,1
+    AllMembers_Root_nodelist:4000000,1
+    AllMembers_Root_p:1000000,1
+    AllMembers_Root_q:1000000,1
+    AllMembers_Root_ql:1000000,1
+    AllMembers_Root_qq:1000000,1
+    AllMembers_Root_ss:1000000,1
+    AllMembers_Root_symmX:10404,1
+    AllMembers_Root_symmY:10404,1
+    AllMembers_Root_symmZ:10404,1
+    AllMembers_Root_v:1000000,1
+    AllMembers_Root_vdov:1000000,1
+    AllMembers_Root_vnew:0,1
+    AllMembers_Root_volo:1000000,1
+    AllMembers_Root_x:1061208,1
+    AllMembers_Root_xd:1061208,1
+    AllMembers_Root_xdd:1061208,1
+    AllMembers_Root_y:1061208,1
+    AllMembers_Root_yd:1061208,1
+    AllMembers_Root_ydd:1061208,1
+    AllMembers_Root_z:1061208,1
+    AllMembers_Root_zd:1061208,1
+    AllMembers_Root_zdd:1061208,1
+  },
+  "prod" : {
+  },
+  - CD_1_1 :
+    - label : MainLoop
+    "exec_cnt" :         10,
+    "reex_cnt" :          0,
+    "tot_time" :  16.265108, // [s]
+    "reex_time":   0.000000, // [s]
+    "wait_time":   0.000000, // [s]
+    "vol_copy" :  333269160, // [B]
+    "vol_refer":          0, // [B]
+    "comm_log" :    5729040, // [B]
+    "error_vec":0x0,
+
+    "cons" : {
+      MainLoop_arealg:10000000,10
+      MainLoop_delta_eta:0,10
+      MainLoop_delv:10000000,10
+      MainLoop_delx_xi:0,10
+      MainLoop_delx_zeta:0,10
+      MainLoop_dxx:0,10
+      MainLoop_dyy:0,10
+      MainLoop_dzz:0,10
+      MainLoop_e:10000000,10
+      MainLoop_elemBC:5000000,10
+      MainLoop_elemmass:10000000,10
+      MainLoop_fx:10612080,10
+      MainLoop_fy:10612080,10
+      MainLoop_fz:10612080,10
+      MainLoop_letam:5000000,10
+      MainLoop_letap:5000000,10
+      MainLoop_lxim:5000000,10
+      MainLoop_lxip:5000000,10
+      MainLoop_lzetam:5000000,10
+      MainLoop_lzetap:5000000,10
+      MainLoop_nodalMass:10612080,10
+      MainLoop_nodelist:40000000,10
+      MainLoop_p:10000000,10
+      MainLoop_q:10000000,10
+      MainLoop_ql:10000000,10
+      MainLoop_qq:10000000,10
+      MainLoop_ss:10000000,10
+      MainLoop_symmX:104040,10
+      MainLoop_symmY:104040,10
+      MainLoop_symmZ:104040,10
+      MainLoop_v:10000000,10
+      MainLoop_vdov:10000000,10
+      MainLoop_volo:10000000,10
+      MainLoop_x:10612080,10
+      MainLoop_xd:10612080,10
+      MainLoop_xdd:10612080,10
+      MainLoop_y:10612080,10
+      MainLoop_yd:10612080,10
+      MainLoop_ydd:10612080,10
+      MainLoop_z:10612080,10
+      MainLoop_zd:10612080,10
+      MainLoop_zdd:10612080,10
+    },
+    "prod" : {
+    },
+    - CD_2_2 :
+      - label : CalcForeForNodes
+      "exec_cnt" :         10,
+      "reex_cnt" :          0,
+      "tot_time" :   3.541939, // [s]
+      "reex_time":   0.000000, // [s]
+      "wait_time":   0.000000, // [s]
+      "vol_copy" :  135508720, // [B]
+      "vol_refer":          0, // [B]
+      "comm_log" :          0, // [B]
+      "error_vec":0x0,
+
+      "cons" : {
+        prv_vec_1_nodelist:40000000,10
+        prv_vec_1_x:10612080,10
+        prv_vec_1_xd:10612080,10
+        prv_vec_1_xdd:10612080,10
+        prv_vec_1_y:10612080,10
+        prv_vec_1_yd:10612080,10
+        prv_vec_1_ydd:10612080,10
+        prv_vec_1_z:10612080,10
+        prv_vec_1_zd:10612080,10
+        prv_vec_1_zdd:10612080,10
+      },
+      "prod" : {
+      },
+    - CD_2_3 :
+      - label : CalcLagrangeElements
+      "exec_cnt" :         10,
+      "reex_cnt" :          0,
+      "tot_time" :   4.075946, // [s]
+      "reex_time":   0.000000, // [s]
+      "wait_time":   0.000000, // [s]
+      "vol_copy" :          0, // [B]
+      "vol_refer":          0, // [B]
+      "comm_log" :    1800000, // [B]
+      "error_vec":0x0,
+
+      "cons" : {
+      },
+      "prod" : {
+      },
+- CD_0_0 :
+  - label : Root
+  "exec_cnt" :          1,
+  "reex_cnt" :          0,
+  "tot_time" :  17.868439, // [s]
+  "reex_time":   0.000000, // [s]
+  "wait_time":   0.000000, // [s]
+  "vol_copy" :   33326916, // [B]
+  "vol_refer":          0, // [B]
+  "comm_log" :         80, // [B]
+  "error_vec":0x0,
+
+  "cons" : {
+    AllMembers_Root_arealg:1000000,1
+    AllMembers_Root_delta_eta:0,1
+    AllMembers_Root_delv:1000000,1
+    AllMembers_Root_delv_eta:0,1
+    AllMembers_Root_delv_xi:0,1
+    AllMembers_Root_delv_zeta:0,1
+    AllMembers_Root_delx_xi:0,1
+    AllMembers_Root_delx_zeta:0,1
+    AllMembers_Root_dxx:0,1
+    AllMembers_Root_dyy:0,1
+    AllMembers_Root_dzz:0,1
+    AllMembers_Root_e:1000000,1
+    AllMembers_Root_elemBC:500000,1
+    AllMembers_Root_elemmass:1000000,1
+    AllMembers_Root_fx:1061208,1
+    AllMembers_Root_fy:1061208,1
+    AllMembers_Root_fz:1061208,1
+    AllMembers_Root_letam:500000,1
+    AllMembers_Root_letap:500000,1
+    AllMembers_Root_lxim:500000,1
+    AllMembers_Root_lxip:500000,1
+    AllMembers_Root_lzetam:500000,1
+    AllMembers_Root_lzetap:500000,1
+    AllMembers_Root_nodalMass:1061208,1
+    AllMembers_Root_nodelist:4000000,1
+    AllMembers_Root_p:1000000,1
+    AllMembers_Root_q:1000000,1
+    AllMembers_Root_ql:1000000,1
+    AllMembers_Root_qq:1000000,1
+    AllMembers_Root_ss:1000000,1
+    AllMembers_Root_symmX:10404,1
+    AllMembers_Root_symmY:10404,1
+    AllMembers_Root_symmZ:10404,1
+    AllMembers_Root_v:1000000,1
+    AllMembers_Root_vdov:1000000,1
+    AllMembers_Root_vnew:0,1
+    AllMembers_Root_volo:1000000,1
+    AllMembers_Root_x:1061208,1
+    AllMembers_Root_xd:1061208,1
+    AllMembers_Root_xdd:1061208,1
+    AllMembers_Root_y:1061208,1
+    AllMembers_Root_yd:1061208,1
+    AllMembers_Root_ydd:1061208,1
+    AllMembers_Root_z:1061208,1
+    AllMembers_Root_zd:1061208,1
+    AllMembers_Root_zdd:1061208,1
+  },
+  "prod" : {
+  },
+  - CD_1_1 :
+    - label : MainLoop
+    "exec_cnt" :         10,
+    "reex_cnt" :          0,
+    "tot_time" :  17.075244, // [s]
+    "reex_time":   0.000000, // [s]
+    "wait_time":   0.000000, // [s]
+    "vol_copy" :  333269160, // [B]
+    "vol_refer":          0, // [B]
+    "comm_log" :    5729040, // [B]
+    "error_vec":0x0,
+
+    "cons" : {
+      MainLoop_arealg:10000000,10
+      MainLoop_delta_eta:0,10
+      MainLoop_delv:10000000,10
+      MainLoop_delx_xi:0,10
+      MainLoop_delx_zeta:0,10
+      MainLoop_dxx:0,10
+      MainLoop_dyy:0,10
+      MainLoop_dzz:0,10
+      MainLoop_e:10000000,10
+      MainLoop_elemBC:5000000,10
+      MainLoop_elemmass:10000000,10
+      MainLoop_fx:10612080,10
+      MainLoop_fy:10612080,10
+      MainLoop_fz:10612080,10
+      MainLoop_letam:5000000,10
+      MainLoop_letap:5000000,10
+      MainLoop_lxim:5000000,10
+      MainLoop_lxip:5000000,10
+      MainLoop_lzetam:5000000,10
+      MainLoop_lzetap:5000000,10
+      MainLoop_nodalMass:10612080,10
+      MainLoop_nodelist:40000000,10
+      MainLoop_p:10000000,10
+      MainLoop_q:10000000,10
+      MainLoop_ql:10000000,10
+      MainLoop_qq:10000000,10
+      MainLoop_ss:10000000,10
+      MainLoop_symmX:104040,10
+      MainLoop_symmY:104040,10
+      MainLoop_symmZ:104040,10
+      MainLoop_v:10000000,10
+      MainLoop_vdov:10000000,10
+      MainLoop_volo:10000000,10
+      MainLoop_x:10612080,10
+      MainLoop_xd:10612080,10
+      MainLoop_xdd:10612080,10
+      MainLoop_y:10612080,10
+      MainLoop_yd:10612080,10
+      MainLoop_ydd:10612080,10
+      MainLoop_z:10612080,10
+      MainLoop_zd:10612080,10
+      MainLoop_zdd:10612080,10
+    },
+    "prod" : {
+    },
+    - CD_2_2 :
+      - label : CalcForeForNodes
+      "exec_cnt" :         10,
+      "reex_cnt" :          0,
+      "tot_time" :   3.540910, // [s]
+      "reex_time":   0.000000, // [s]
+      "wait_time":   0.000000, // [s]
+      "vol_copy" :  135508720, // [B]
+      "vol_refer":          0, // [B]
+      "comm_log" :          0, // [B]
+      "error_vec":0x0,
+
+      "cons" : {
+        prv_vec_1_nodelist:40000000,10
+        prv_vec_1_x:10612080,10
+        prv_vec_1_xd:10612080,10
+        prv_vec_1_xdd:10612080,10
+        prv_vec_1_y:10612080,10
+        prv_vec_1_yd:10612080,10
+        prv_vec_1_ydd:10612080,10
+        prv_vec_1_z:10612080,10
+        prv_vec_1_zd:10612080,10
+        prv_vec_1_zdd:10612080,10
+      },
+      "prod" : {
+      },
+    - CD_2_3 :
+      - label : CalcLagrangeElements
+      "exec_cnt" :         10,
+      "reex_cnt" :          0,
+      "tot_time" :   4.073980, // [s]
+      "reex_time":   0.000000, // [s]
+      "wait_time":   0.000000, // [s]
+      "vol_copy" :          0, // [B]
+      "vol_refer":          0, // [B]
+      "comm_log" :    1800000, // [B]
+      "error_vec":0x0,
+
+      "cons" : {
+      },
+      "prod" : {
+      },
+- CD_0_0 :
+  - label : Root
+  "exec_cnt" :          1,
+  "reex_cnt" :          0,
+  "tot_time" :  16.750454, // [s]
+  "reex_time":   0.000000, // [s]
+  "wait_time":   0.000000, // [s]
+  "vol_copy" :   33326916, // [B]
+  "vol_refer":          0, // [B]
+  "comm_log" :         80, // [B]
+  "error_vec":0x0,
+
+  "cons" : {
+    AllMembers_Root_arealg:1000000,1
+    AllMembers_Root_delta_eta:0,1
+    AllMembers_Root_delv:1000000,1
+    AllMembers_Root_delv_eta:0,1
+    AllMembers_Root_delv_xi:0,1
+    AllMembers_Root_delv_zeta:0,1
+    AllMembers_Root_delx_xi:0,1
+    AllMembers_Root_delx_zeta:0,1
+    AllMembers_Root_dxx:0,1
+    AllMembers_Root_dyy:0,1
+    AllMembers_Root_dzz:0,1
+    AllMembers_Root_e:1000000,1
+    AllMembers_Root_elemBC:500000,1
+    AllMembers_Root_elemmass:1000000,1
+    AllMembers_Root_fx:1061208,1
+    AllMembers_Root_fy:1061208,1
+    AllMembers_Root_fz:1061208,1
+    AllMembers_Root_letam:500000,1
+    AllMembers_Root_letap:500000,1
+    AllMembers_Root_lxim:500000,1
+    AllMembers_Root_lxip:500000,1
+    AllMembers_Root_lzetam:500000,1
+    AllMembers_Root_lzetap:500000,1
+    AllMembers_Root_nodalMass:1061208,1
+    AllMembers_Root_nodelist:4000000,1
+    AllMembers_Root_p:1000000,1
+    AllMembers_Root_q:1000000,1
+    AllMembers_Root_ql:1000000,1
+    AllMembers_Root_qq:1000000,1
+    AllMembers_Root_ss:1000000,1
+    AllMembers_Root_symmX:10404,1
+    AllMembers_Root_symmY:10404,1
+    AllMembers_Root_symmZ:10404,1
+    AllMembers_Root_v:1000000,1
+    AllMembers_Root_vdov:1000000,1
+    AllMembers_Root_vnew:0,1
+    AllMembers_Root_volo:1000000,1
+    AllMembers_Root_x:1061208,1
+    AllMembers_Root_xd:1061208,1
+    AllMembers_Root_xdd:1061208,1
+    AllMembers_Root_y:1061208,1
+    AllMembers_Root_yd:1061208,1
+    AllMembers_Root_ydd:1061208,1
+    AllMembers_Root_z:1061208,1
+    AllMembers_Root_zd:1061208,1
+    AllMembers_Root_zdd:1061208,1
+  },
+  "prod" : {
+  },
+  - CD_1_1 :
+    - label : MainLoop
+    "exec_cnt" :         10,
+    "reex_cnt" :          0,
+    "tot_time" :  15.926216, // [s]
+    "reex_time":   0.000000, // [s]
+    "wait_time":   0.000000, // [s]
+    "vol_copy" :  333269160, // [B]
+    "vol_refer":          0, // [B]
+    "comm_log" :    5729040, // [B]
+    "error_vec":0x0,
+
+    "cons" : {
+      MainLoop_arealg:10000000,10
+      MainLoop_delta_eta:0,10
+      MainLoop_delv:10000000,10
+      MainLoop_delx_xi:0,10
+      MainLoop_delx_zeta:0,10
+      MainLoop_dxx:0,10
+      MainLoop_dyy:0,10
+      MainLoop_dzz:0,10
+      MainLoop_e:10000000,10
+      MainLoop_elemBC:5000000,10
+      MainLoop_elemmass:10000000,10
+      MainLoop_fx:10612080,10
+      MainLoop_fy:10612080,10
+      MainLoop_fz:10612080,10
+      MainLoop_letam:5000000,10
+      MainLoop_letap:5000000,10
+      MainLoop_lxim:5000000,10
+      MainLoop_lxip:5000000,10
+      MainLoop_lzetam:5000000,10
+      MainLoop_lzetap:5000000,10
+      MainLoop_nodalMass:10612080,10
+      MainLoop_nodelist:40000000,10
+      MainLoop_p:10000000,10
+      MainLoop_q:10000000,10
+      MainLoop_ql:10000000,10
+      MainLoop_qq:10000000,10
+      MainLoop_ss:10000000,10
+      MainLoop_symmX:104040,10
+      MainLoop_symmY:104040,10
+      MainLoop_symmZ:104040,10
+      MainLoop_v:10000000,10
+      MainLoop_vdov:10000000,10
+      MainLoop_volo:10000000,10
+      MainLoop_x:10612080,10
+      MainLoop_xd:10612080,10
+      MainLoop_xdd:10612080,10
+      MainLoop_y:10612080,10
+      MainLoop_yd:10612080,10
+      MainLoop_ydd:10612080,10
+      MainLoop_z:10612080,10
+      MainLoop_zd:10612080,10
+      MainLoop_zdd:10612080,10
+    },
+    "prod" : {
+    },
+    - CD_2_2 :
+      - label : CalcForeForNodes
+      "exec_cnt" :         10,
+      "reex_cnt" :          0,
+      "tot_time" :   3.540861, // [s]
+      "reex_time":   0.000000, // [s]
+      "wait_time":   0.000000, // [s]
+      "vol_copy" :  135508720, // [B]
+      "vol_refer":          0, // [B]
+      "comm_log" :          0, // [B]
+      "error_vec":0x0,
+
+      "cons" : {
+        prv_vec_1_nodelist:40000000,10
+        prv_vec_1_x:10612080,10
+        prv_vec_1_xd:10612080,10
+        prv_vec_1_xdd:10612080,10
+        prv_vec_1_y:10612080,10
+        prv_vec_1_yd:10612080,10
+        prv_vec_1_ydd:10612080,10
+        prv_vec_1_z:10612080,10
+        prv_vec_1_zd:10612080,10
+        prv_vec_1_zdd:10612080,10
+      },
+      "prod" : {
+      },
+    - CD_2_3 :
+      - label : CalcLagrangeElements
+      "exec_cnt" :         10,
+      "reex_cnt" :          0,
+      "tot_time" :   4.077672, // [s]
+      "reex_time":   0.000000, // [s]
+      "wait_time":   0.000000, // [s]
+      "vol_copy" :          0, // [B]
+      "vol_refer":          0, // [B]
+      "comm_log" :    1800000, // [B]
+      "error_vec":0x0,
+
+      "cons" : {
+      },
+      "prod" : {
+      },
