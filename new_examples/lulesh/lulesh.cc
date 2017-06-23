@@ -606,13 +606,13 @@ void IntegrateStressForElems( Domain &domain,
     Real_t y_local[8] ;
     Real_t z_local[8] ;
 
-    if(myRank == 0 && elemToNode[3] > 1000000) {
+    if(0) {//(myRank == 0 && elemToNode[3] > 1000000) {
       for(int i=0; i<8; i++) {
-        printf("[%d+%d] elem:%d\n", k*8, i, elemToNode[i]);
+//        printf("[%d+%d] elem:%d\n", k*8, i, elemToNode[i]);
       }
       printf("---- size:%zu %lu---- \n", domain.m_nodelist.size(), domain.m_nodelist.size() * sizeof(Index_t)); 
       for(int i=(k-2)*8; i<(k+2)*8; i++) {
-        printf("[%d]: elem:%d\n", i, *(&domain.m_nodelist[i]));
+//        printf("[%d]: elem:%d\n", i, *(&domain.m_nodelist[i]));
       }
     }
     // get nodal coordinates from global arrays and copy into local arrays.
@@ -1226,7 +1226,7 @@ static inline void CalcForceForNodes(Domain& domain)
     int target = 430680;
     printf("%s ---- %p size:%zu %lu---- \n", __func__, domain.m_nodelist.data(), domain.m_nodelist.size(), domain.m_nodelist.size() * sizeof(Index_t)); 
     for(int i=target; i<target+64; i++) {
-      printf("[%d]: elem:%d\n", i, *(&domain.m_nodelist[i]));
+//      printf("[%d]: elem:%d\n", i, *(&domain.m_nodelist[i]));
     }
   }
 #endif
@@ -3005,7 +3005,7 @@ int main(int argc, char *argv[])
       printf("%s ---- %p size:%zu %lu---- \n", "MainLoop",  locDom->m_nodelist.data(), locDom->m_nodelist.size(), locDom->m_nodelist.size() * sizeof(Index_t)); 
       int target = 430680;
       for(int i=target; i<target+64; i++) {
-        printf("[%d]: elem:%d\n", i, *(&locDom->m_nodelist[i]));
+//        printf("[%d]: elem:%d\n", i, *(&locDom->m_nodelist[i]));
       }
     }
 #endif
