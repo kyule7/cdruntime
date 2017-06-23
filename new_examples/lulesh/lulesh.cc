@@ -2917,8 +2917,8 @@ int main(int argc, char *argv[])
 
    ParseCommandLineOptions(argc, argv, myRank, &opts);
 
-   opts.nx  = 50;
-   opts.its  = 10;
+   opts.nx  = 70;
+   opts.its  = 20;
    if ((myRank == 0) && (opts.quiet == 0)) {
       printf("Running problem size %d^3 per domain until completion\n", opts.nx);
       printf("Num processors: %d\n", numRanks);

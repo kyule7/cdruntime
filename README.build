@@ -11,11 +11,11 @@ Configure Examples
 
 Production build for MPI::
  
-     configure --enable-parallel=mpi --enable-logging CXX=mpic++ CXXFLAGS="-std=c++11 -Wall -g -O"
+     configure --enable-parallel=mpi --enable-logging CXX=mpicxx CXXFLAGS="-std=c++11 -Wall -g -O"
       
 Development build for MPI (adapted from test/test_prv_ref_remote)::
 
-    configure CXX=mpic++ CXXFLAGS="-std=c++0x -Wall -g -O -Wundef -Wextra" --enable-parallel=mpi --enable-logging --enable-tuning --enable-runtime --enable-error-injection 
+    configure CXX=mpicxx CXXFLAGS="-std=c++0x -Wall -g -O -Wundef -Wextra" --enable-parallel=mpi --enable-logging --enable-tuning --enable-runtime --enable-error-injection 
 
 
 
@@ -25,7 +25,7 @@ Single-threaded build::
 
 Defaults from original git checkout::
 <For Stampede in TACC>
-    configure --enable-parallel=mpi --enable-logging CXX=mpic++ CXXFLAGS="-std=gnu++0x -Wall -g -O -fPIC" --enable-tuning --enable-runtime --enable-error-injection --enable-profiler --enable-keep-preservation-files --enable-cd-test 
+    configure --enable-parallel=mpi --enable-logging CXX=mpicxx CXXFLAGS="-std=gnu++0x -Wall -g -O -fPIC" --enable-tuning --enable-runtime --enable-error-injection --enable-profiler --enable-keep-preservation-files --enable-cd-test 
 
 <For NERSC machiens>
     configure --enable-parallel=mpi --enable-logging CXX=CC CXXFLAGS="-std=gnu++0x -Wall -g -O -fPIC" --enable-tuning --enable-runtime --enable-error-injection --enable-profiler --enable-keep-preservation-files --enable-cd-test 
@@ -64,7 +64,7 @@ Issues
 
 * Fix warning::
 
-    mpic++ -DHAVE_CONFIG_H -I. -I../../src -I..     -std=c++11 -Wall -MT cd.o -MD -MP -MF .deps/cd.Tpo -c -o cd.o ../../src/cd.cc
+    mpicxx -DHAVE_CONFIG_H -I. -I../../src -I..     -std=c++11 -Wall -MT cd.o -MD -MP -MF .deps/cd.Tpo -c -o cd.o ../../src/cd.cc
 ../../src/cd.cc: In member function ‘cd::internal::CD::CDInternalErrT cd::internal::CD::InternalDestroy()’:
 ../../src/cd.cc:628:7: warning: unused variable ‘task_count’ [-Wunused-variable]
    int task_count = cd_id_.task_count();

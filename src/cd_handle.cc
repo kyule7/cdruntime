@@ -2142,7 +2142,7 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
   uint64_t sys_err_vec = system_error_injector_->Inject();
   bool found = false;
   CD_DEBUG("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
-  //printf("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
+  printf("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
   if(sys_err_vec == NO_ERROR_INJECTED) {
     return (int)CD::CDInternalErrT::kOK;
   } else {

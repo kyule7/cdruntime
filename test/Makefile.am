@@ -2,7 +2,8 @@ SUBDIRS = \
     test_simple_hierarchy \
     test_user_defined_hierarhcy \
     test_serdes \
-		test_tuning
+		test_tuning \
+		test_vector
 
 if HAVE_MPI
     SUBDIRS += test_prv_ref_remote
@@ -13,3 +14,4 @@ clean-tests:
 	cd test_prv_ref_remote; make clean;
 	cd test_serdes; make clean;
 	cd test_tuning; make clean;
+	cd test_vector; make clean;

@@ -1,7 +1,7 @@
 AC_INIT([cdruntime], [1.0], [cds@lph.ece.utexas.edu])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 #AC_PROG_LIBTOOL
-AM_PROG_AR
+#AM_PROG_AR
 LT_INIT
 AC_PROG_CC
 AC_PROG_CXX
@@ -173,6 +173,7 @@ AC_CONFIG_FILES([
  test/test_prv_ref_remote/Makefile
  test/test_serdes/Makefile
  test/test_tuning/Makefile
+ test/test_vector/Makefile
  examples/Makefile
 ])
 AC_OUTPUT
