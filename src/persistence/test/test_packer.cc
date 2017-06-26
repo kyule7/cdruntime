@@ -187,7 +187,7 @@ char *TestNestedPacker(int elemsize, int chunksize)
   packer.data_->Flush();
   // +1 is for packer
   for(int i=0; i<elemsize+1; i++) {
-    packer.Restore(i+1);
+    packer.Restore(i+1, NULL, chunksize * sizeof(int));
 //    char *ret = packer.Restore(i+1);
 //    if(ret != NULL) {
 //      Deserialize(dataB, ret);
@@ -267,7 +267,7 @@ char *ArrayTest(int elemsize, int chunksize)
 
   memset(dataA, 0, totsize * sizeof(int));
   for(int i=0; i<elemsize; i++) {
-    packer.Restore(i+1);
+    packer.Restore(i+1, NULL, totsize * sizeof(int));
   }
 
 
@@ -372,8 +372,8 @@ int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   gettimeofday(&ttime,NULL);
   srand48(ttime.tv_usec);
-  int elemsize = 100000;
-  int chunksize = 6400;
+  int elemsize = 8;
+  int chunksize = 64;
   //char *chunk = ArrayTest(elemsize, chunksize);
   TestNestedPacker(elemsize, chunksize);
 //    Packer packer;;

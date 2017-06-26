@@ -17,6 +17,7 @@ class CDPacker : public Packer<CDEntry> {
     {
 //      void *ret = dst;
       MYDBG("tag:%lu\n", tag);
+      printf("tag:%lu\n", tag); //getchar();
       // 1. Find entry in table store
       // 2. Copy data from data store to src
       CDEntry *pentry = reinterpret_cast<CDEntry *>(table_->Find(tag));
@@ -25,10 +26,11 @@ class CDPacker : public Packer<CDEntry> {
         printf("\n\n [%d] not found %lu\n", packerTaskID, tag);
         return NULL;
       } else if(pentry->src_ == NULL || pentry->size() == 0 || len < pentry->size()) {
-//        printf("\n\n [%d] previously null %lu offset:%lx\n", packerTaskID, tag, pentry->offset_);
+        printf("\n\n [%d] previously null %lu utr:%p, size:%u, len:%u, offset:%lx\n", packerTaskID, tag, pentry->src_, pentry->size(), len, pentry->offset_);
         // when preserved, data was null.
         return (char *)pentry;
       }
+      printf("next tag:%lu\n", tag); //getchar();
 //      if(pentry == NULL) {
 //        for(int i=0; i<table_->used(); i++) {
 //          printf("table:%lu\n", (*table_)[i].id_);
@@ -41,9 +43,12 @@ class CDPacker : public Packer<CDEntry> {
 
 #if 1
       if( entry.size_.Check(Attr::knested) == false) {
+        printf("no nested\n");
         data_->GetData(dst, entry.size(), entry.offset_);
+        //getchar();
       } else {
-        
+        printf("nested\n");
+        //getchar();
 //        uint64_t produced = data_->Fetch(entry.size(), entry.offset_);
 //        printf("\n\n TEST $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n"); //getchar();
         uint64_t table_offset = (uint64_t)entry.src_;
