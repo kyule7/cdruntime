@@ -263,9 +263,11 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 }
 */
 
+// If TUNING_ENABLED is off, CD runtime requires config file 
 void SystemConfig::LoadConfig(const char *config, int myTask)
 {
   FILE *fh = fopen(config, "r");
+  if(fh == NULL) ERROR_MESSAGE("No configuration file: %s\n", config);
 #if CD_TUNING_ENABLED
   char tname[256];
   sprintf(tname, "%s.out.%d", config, myTask);
@@ -275,7 +277,6 @@ void SystemConfig::LoadConfig(const char *config, int myTask)
   yaml_token_t  token;   /* new variable */
   yaml_event_t  event;   /* New variable */
   if(!yaml_parser_initialize(&parser)) assert(0);
-  if(fh == NULL) assert(0);
 
   yaml_parser_set_input_file(&parser, fh);
 

@@ -1121,8 +1121,10 @@ void CD::Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
 // static
 CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 {
-  printf("#########%s level : %d (rollback_point: %d) (%s)\n", __func__, 
+  if(myTaskID == 0) {
+    printf("#########%s level : %d (rollback_point: %d) (%s)\n", __func__, 
       target->level(), *rollback_point_, target->label().c_str());
+  }
 #if 0//CD_PROFILER_ENABLED
   static bool check_sync_clk = false;
   if(check_sync_clk == false) {

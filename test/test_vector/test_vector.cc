@@ -43,7 +43,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #if CD_MPI_ENABLED
 #include <mpi.h>
 #endif
-
+//#include <stdarg.h>
+#include <initializer_list>
 
 #define KILO 1024
 #define MEGA 1048576
@@ -57,8 +58,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define CD2_ITER 4
 #define CD3_ITER 6
 
-using namespace tuned;
-//using namespace cd;
+#define PRINT(...) { if(myRank == 0) { printf(__VA_ARGS__); } }
+
+//using namespace tuned;
+using namespace cd;
 using namespace std;
 using namespace chrono;
 
@@ -66,7 +69,7 @@ using namespace chrono;
 CDErrT err;
 int  numProcs = 0;
 int  myRank = 0;
-std::map<uint32_t*, string> arrayName;
+std::map<uint32_t*, string> vectorName;
 #define NUM_TEST_BLOCKS 10
 #define SIZE_BLOCK (25*1024)  //100,000kByte
 #define ARRAY_A_SIZE 32
@@ -76,38 +79,147 @@ std::map<uint32_t*, string> arrayName;
 #define ARRAY_E_SIZE 16
 #define ARRAY_F_SIZE 32
 #define ARRAY_G_SIZE 16
+#if 0
+template< vector<uint32_t>, typename... ArgTypes >
+static inline void MutateVector(T, ArgTypes... args) {
+  MutateVector(args...);
+  
+  for (auto &vec: il) {
+    int i = 0;
+    for(; i<vec.size(); i++) {
+      vec[i] = i + count;
+    }
+    printf("Before vec size:%zu %zu\n", vec.size(), vec.capacity());
+    vec.push_back(i + count);
+    printf("After  vec size:%zu %zu\n", vec.size(), vec.capacity());
+  }
+  count++;
+}
+
+template<typename... ArgTypes>
+static inline void DoCompute(int level, ArgTypes... args) 
+{ 
+  switch(level) {
+    case 0:
+      MutateVector(args...); 
+
+      break;
+    case 1:
+      MutateVector(args...); 
+
+      break;
+    case 2:
+
+      MutateVector(args...); 
+
+      break;
+
+    case 3:
+      MutateVector(args...); 
+      break;
+
+
+    default:
+      printf("Invalid level: %d\n", level); assert(0);
+      break;
+  }
+
+
+  return;  
+//  sleep(1); 
+
+}
+#endif
+static int count = 0;
 
 static __inline__ long long getCounter(void)
 {
-  unsigned arrayA, arrayD; 
-  asm volatile("rdtsc" : "=arrayA" (arrayA), "=arrayD" (arrayD)); 
-  return ((long long)arrayA) | (((long long)arrayD) << 32); 
+  unsigned vectorA, vectorD; 
+  asm volatile("rdtsc" : "=vectorA" (vectorA), "=vectorD" (vectorD)); 
+  return ((long long)vectorA) | (((long long)vectorD) << 32); 
 }
 
-
-
-void PrintData(uint32_t *array, int length)
-{
-  if(arrayName.find(array) != arrayName.end())
-    cout <<"Print Data "<< arrayName[array] << ", Size: " << length << endl;
-
-  for(int i=0; i<length; i++) {
-    cout << array[i] << " ";
+static inline void MutateVector(vector<uint32_t> &vec) {
+  int i = 0;
+  int last = vec.size();
+  for(; i<last; i++) {
+    vec[i] = i + count;
   }
-  cout <<"\n=========================="<<endl;
+  PRINT("Before vec (%p) size:%zu %zu\n", vec.data(), vec.size(), vec.capacity());
+  last *= 2;
+  for(; i<last; i++) {
+    vec.push_back(i + count); // this will realloc vector
+  }
+  PRINT("Bfter  vec (%p) size:%zu %zu\n", vec.data(), vec.size(), vec.capacity());
+  count++;
+  sleep(1);
 }
 
-void CorruptData(uint32_t *array, int length)
+//static inline void DoCompute(int level, initializer_list<vector<uint32_t>> il) 
+//{ 
+//  switch(level) {
+//    case 0:
+//      //MutateVector(il); 
+//      for (auto &vec: il) {
+//        int i = 0;
+//        for(; i<vec.size(); i++) {
+//       //   vec[i] = i + count;
+//        }
+//        printf("before vec size:%zu %zu\n", vec.size(), vec.capacity());
+//       // vec.push_back(i + count);
+//        printf("after  vec size:%zu %zu\n", vec.size(), vec.capacity());
+//      }
+//      count++;
+//
+//      break;
+//    case 1:
+////      MutateVector(il); 
+//
+//      break;
+//    case 2:
+//
+////      MutateVector(il); 
+//
+//      break;
+//
+//    case 3:
+////      MutateVector(il); 
+//      break;
+//
+//
+//    default:
+//      printf("Invalid level: %d\n", level); assert(0);
+//      break;
+//  }
+//
+//
+//  return;  
+////  sleep(1); 
+//
+//}
+
+void PrintData(uint32_t *vector, int length)
+{
+  if(vectorName.find(vector) != vectorName.end())
+    PRINT("Print Data %s, Size: %d\n", vectorName[vector].c_str(), length);
+
+  for(int i=0; i<length; i++) {
+    PRINT("%d ", vector[i]);
+  }
+  PRINT("\n==========================\n");
+}
+
+void CorruptData(uint32_t *vector, int length)
 {
   for(int i=0; i<length; i++) {
-    array[i] = (-20 + i);
+    vector[i] = (-20 + i);
   }
 }
 
-bool CheckArray(uint32_t *array, int length)
+bool CheckArray(uint32_t *vector, int length)
 {
   for(int i=0; i<length; i++) {
-    if(array[i] < 0) {
+    if(vector[i] < 0) {
       return false;
     }
   }
@@ -141,83 +253,93 @@ class UserObject1 {
 int num_reexecution = 0;
 
 // Test basic preservation scheme.
-int TestCDHierarchy(void)
+int TestVector(void)
 {
-  uint32_t arrayA[ARRAY_A_SIZE] = {0xABCDEFCD,0xCE53AE3B,0xABF31FD0,0xFA34FDA4};
-  uint32_t arrayB[ARRAY_B_SIZE] = {1,2,3,4,5,6,7,8};
-  uint32_t arrayC[ARRAY_C_SIZE] = {5,};
-  uint32_t arrayD[ARRAY_D_SIZE] = {9,8,7,6,5,4,3,2,1,};
-  arrayName[arrayA] = "arrayA";
-  arrayName[arrayB] = "arrayB";
-  arrayName[arrayC] = "arrayC";
-  arrayName[arrayD] = "arrayD";
+  vector<uint32_t> vectorA(8, 1);
+  vector<uint32_t> vectorB(16, 1);
+  vector<uint32_t> vectorC(32, 1);
+  vector<uint32_t> vectorD(64, 1);
 
-  cout << "\n==== TestCDHierarchy Start ====\n" << endl; 
+  PRINT("\n==== TestVector Start ====\n"); 
   CDHandle *root = CD_Init(numProcs, myRank, kHDD);
 
-  root->Begin();
+  CD_Begin(root);
 
-  cout << "Root CD Begin...\n" << endl;
+  PRINT("Root CD Begin...\n");
 
-  cout << "CD Preserving..\n" << endl;
-
+  PRINT("CD Preserving..\n");
+  root->Preserve(vectorA.data(), sizeof(uint32_t) * vectorA.size(), kCopy, "vectorA");
+  root->Preserve(vectorB.data(), sizeof(uint32_t) * vectorB.size(), kCopy, "vectorB");
+  root->Preserve(vectorC.data(), sizeof(uint32_t) * vectorC.size(), kCopy, "vectorC");
+  root->Preserve(vectorD.data(), sizeof(uint32_t) * vectorD.size(), kCopy, "vectorD");
     CDHandle* child_lv1=root->Create(LV1, "CD1", kStrict, 0, 0, &err);
-    cout << "Root Creates Level 1 CD. # of children CDs = " << LV1 << "\n" << endl;
+    PRINT("Root Creates Level 1 CD. # of children CDs = %d\n", LV1);
     for(uint32_t ii = 0; ii<CD1_ITER; ii++) {
-      child_lv1->Begin();
-      cout << "\t\tLevel 1 CD Begin...\n" << endl;
-    
-      uint32_t arrayE[ARRAY_E_SIZE] = {1,2,3,4,5,6,7,8};
-      arrayName[arrayE] = "arrayE";
-    
-      cout << "\t\tPreserve via copy: arrayA, arrayB, arrayE\n\n" << endl;
+      CD_Begin(child_lv1, "Level 1"); /* Level 1 Begin ************************************************/
+      PRINT("%sBegin at Level 1 (%d)\n", string(1<<1, '\t').c_str(), ii);
+      PRINT("%sPreserve via copy: vectorB, vectorC, vectorD\n\n", string(1<<1, '\t').c_str());
+      child_lv1->Preserve(vectorB.data(), sizeof(uint32_t) * vectorB.size(), kCopy, "vectorB");
+      child_lv1->Preserve(vectorC.data(), sizeof(uint32_t) * vectorC.size(), kCopy, "vectorC");
+      child_lv1->Preserve(vectorD.data(), sizeof(uint32_t) * vectorD.size(), kCopy, "vectorD");
     
       // Level 1 Body
-      cout << string(1<<1, '\t').c_str() << "Here is computation body of CD level 1...\n" << endl;
+      PRINT("%sHere is computation body of CD level 1...\n", string(1<<1, '\t').c_str());
     
-      uint32_t arrayF[ARRAY_F_SIZE] = {0,};
-      uint32_t arrayG[ARRAY_G_SIZE] = {0,};
-      arrayName[arrayF] = "arrayF";
-      arrayName[arrayG] = "arrayG";
-         
         CDHandle* child_lv2=child_lv1->Create(LV2, "CD2", kStrict, 0, 0, &err);
-        cout << string(1<<1, '\t').c_str() 
-             << "CD1 Creates Level 2 CD. # of children CDs = " 
-             << LV2 << "\n" << endl;
+        PRINT("%sCD1 Creates Level 2 CD. # of children CDs = %d\n", string(1<<1, '\t').c_str(), LV2);
         for(uint32_t jj=0; jj<CD2_ITER; jj++) {
-          child_lv2->Begin(false, (string("CD2_") + to_string((long long)jj / 2)).c_str());
+          /* Level 2 Begin **********************/
+          CD_Begin(child_lv2, (string("CD2_") + to_string((long long)jj / 2)).c_str());
+          PRINT("%sBegin at Level 2 (%d)\n", string(2<<1, '\t').c_str(), jj);
+          child_lv2->Preserve(vectorC.data(), sizeof(uint32_t) * vectorC.size(), kCopy, "vectorC");
+          child_lv2->Preserve(vectorD.data(), sizeof(uint32_t) * vectorD.size(), kCopy, "vectorD");
         
             CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kDRAM|kStrict, 0, 0, &err);
             for(uint32_t kk=0; kk<CD3_ITER; kk++) { 
-              child_lv3->Begin(false, (string("CD3_") + to_string((long long)kk / 2)).c_str());
-            
+              CD_Begin(child_lv3, (string("CD3_") + to_string((long long)kk / 2)).c_str());
+              PRINT("%sBegin at Level 3 (%d)\n", string(3<<1, '\t').c_str(), kk);
+              child_lv3->Preserve(vectorD.data(), sizeof(uint32_t) * vectorD.size(), kCopy, "vectorD");
+              
+              // Update vector vectorD
+
+              MutateVector(vectorD);
               child_lv3->Detect();
             
               child_lv3->Complete();
-              cout << string(3<<1, '\t').c_str() << "Level 3 CD Complete..." << kk << endl <<endl;
+              PRINT("%sComplete at Level 3 (%d)\n", string(3<<1, '\t').c_str(), kk);
             }
             child_lv3->Destroy();
-            cout << string(3<<1, '\t').c_str() << "Level 3 CD Destroyed...\n" << endl;
+            PRINT("%sDestroyed at Level 3 (%d)\n", string(3<<1, '\t').c_str(), jj);
         
+          MutateVector(vectorC);
+          MutateVector(vectorD);
           // Detect Error here
           child_lv2->Detect();
         
-          child_lv2->Complete();
-          cout << string(2<<1, '\t').c_str() << "Level 2 CD Complete...\n" << jj << endl << endl;
+          child_lv2->Complete(); /* Level 2 End *****************************************/
+          PRINT("%sComplete at Level 2 (%d)\n", string(2<<1, '\t').c_str(), jj);
         }
-        child_lv2->Destroy();
-        cout << string(2<<1, '\t').c_str() << "Level 2 CD Destroyed...\n" << endl;
+        child_lv2->Destroy(); 
+        PRINT("%sDestroyed at Level 2 (%d)\n", string(2<<1, '\t').c_str(), ii);
     
+      MutateVector(vectorB);
+      MutateVector(vectorC);
+      MutateVector(vectorD);
       // Detect Error here
       child_lv1->Detect();
     
-      child_lv1->Complete();
-      cout << string(1<<1, '\t').c_str() << "Level 1 CD Complete...\n" << ii << endl << endl;
+      child_lv1->Complete(); /* Level 1 End *******************************************/
+      PRINT("%sComplete at Level 1 (%d)\n", string(1<<1, '\t').c_str(), ii);
     }
     child_lv1->Destroy();
-    cout << string(1<<1, '\t').c_str() << "Level 1 CD Destroyed...\n" << endl;
+    PRINT("%sDestroyed at Level 1 (Root)\n", string(1<<1, '\t').c_str());
 
-  printf("num execution : %d at #%d\n", num_reexecution, myRank);
+  PRINT("num execution : %d at #%d\n", num_reexecution, myRank);
+
+  MutateVector(vectorA);
+  MutateVector(vectorB);
+  MutateVector(vectorC);
+  MutateVector(vectorD);
   // Detect Error here
   root->Detect();
 
@@ -227,9 +349,9 @@ int TestCDHierarchy(void)
 //  }
 
   root->Complete();
-  cout << "Root CD Complete...\n" << endl;
-  cout << "Root CD Destroyed (Finalized) ...\n" << endl;
-  cout << "\n==== TestCDHierarchy Done ====\n" << endl; 
+  PRINT("Root CD Complete...\n");
+  PRINT("Root CD Destroyed (Finalized) ...\n");
+  PRINT("\n==== TestVector Done ====\n"); 
   cout.flush();
 
   CD_Finalize();
@@ -256,15 +378,15 @@ int main(int argc, char* argv[])
   int ret=0;
 
 //  cout.open((string("./output/output_app_")+to_string((unsigned long long)myRank)).c_str());
-  cout << "\n==== TestSimpleHierarchy ====\n" << endl;
+  PRINT("\n==== TestVector ====\n");
 
-  ret = TestCDHierarchy();
+  ret = TestVector();
   
-  if( ret == kError ) 
-    cout << "Test CD Hierarchy FAILED\n" << endl;
-  else 
-    cout << "Test CD Hierarchy PASSED\n" << endl;
-
+  if( ret == kError ) { 
+    PRINT("Test CD Hierarchy FAILED\n");
+  } else {
+    PRINT("Test CD Hierarchy PASSED\n");
+  }
 //  cout.close();
 
 #if CD_MPI_ENABLED

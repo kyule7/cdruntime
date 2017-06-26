@@ -1620,9 +1620,9 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     err = kError;
     // FIXME
-    CD_DEBUG("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
+    CD_DEBUG("[%d] ### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
-    printf("### Error Injected. Rollback Level #%u (%s %s) ###\n", 
+    printf("[%d] ### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
 
     CDHandle *rb_cdh = CDPath::GetCDLevel(rollback_point);
@@ -2142,7 +2142,7 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
   uint64_t sys_err_vec = system_error_injector_->Inject();
   bool found = false;
   CD_DEBUG("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
-  printf("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
+//  printf("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
   if(sys_err_vec == NO_ERROR_INJECTED) {
     return (int)CD::CDInternalErrT::kOK;
   } else {

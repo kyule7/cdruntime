@@ -65,6 +65,7 @@ void PhaseNode::PrintOutputYAML(bool first)
 //    filepath += std::string(CD_DEFAULT_OUTPUT_CONFIG_OUT);
 //    outYAML = fopen(filepath.c_str(), "a");
     sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_OUT);
+    printf("Output File:%s\n", output_filepath);
     outYAML = fopen(output_filepath, "a");
   }
   std::string indent(level_<<1, ' ');
@@ -89,6 +90,7 @@ void PhaseNode::PrintOutputJson(void)
   assert(outYAML == NULL);
   assert(parent_ == NULL);
   sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_OUT);
+  printf("Output File:%s\n", output_filepath);
   outYAML = fopen(output_filepath, "a");
   
   fprintf(outYAML, "{\n"
@@ -155,6 +157,7 @@ void PhaseNode::Print(bool print_details, bool first)
 //    printf("profile out filepath:%s , %s\n", cd::output_basepath.c_str(), std::string(CD_DEFAULT_OUTPUT_PROFILE).c_str());
 //    outAll = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_PROFILE)).c_str(), "a");
     sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_PROFILE);
+    printf("[%s] %s\n", __func__, output_filepath);
     outAll = fopen(output_filepath, "a");
   }
   std::string indent((level_)<<1, ' ');

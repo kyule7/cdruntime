@@ -265,7 +265,10 @@ class Packer {
 
     uint64_t AppendTable(void)
     {
-      return data_->Write(table_->GetCurrPtr(), table_->tablesize());
+      if(table_->used() != 0)
+        return data_->Write(table_->GetCurrPtr(), table_->tablesize());
+      else
+        return INVALID_NUM;
     }
 
     CDErrType Clear(bool reuse)
