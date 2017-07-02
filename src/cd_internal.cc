@@ -42,6 +42,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "phase_tree.h"
 #include "runtime_info.h"
 #include "packer.h"
+#include "serializable.h"
 //#include "machine_specific.h"
 #include <setjmp.h>
 using namespace cd;
@@ -55,6 +56,9 @@ ProfMapType   common::profMap;
 bool tuned::tuning_enabled = false;
 uint32_t cd::new_phase = 0;
 bool cd::just_reexecuted;
+
+// serializable
+//uint64_t cd::PackerSerializable::gen_id = 0;
 
 //#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 #define BUGFIX_0327 1

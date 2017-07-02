@@ -37,7 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define _SERIALIZABLE_H
 /**
  * @file serializable.h
- * @author Jinsuk Chung, Kyushick Lee
+ * @author Kyushick Lee
  * @date March 2015
  *
  * \brief Abstract base class for serialization.
@@ -67,6 +67,9 @@ class PackerSerializable : public Serializable {
     uint64_t total_size_; 
     uint64_t table_offset_;
     uint64_t table_type_;
+    uint64_t id_;
+    PackerSerializable(void) : total_size_(0), table_offset_(0), table_type_(0), id_(-1) {}
+    void SetID(uint64_t id) { id_ = id; }
     virtual uint64_t PreserveObject(packer::DataStore *packer)=0;
     virtual uint64_t PreserveObject(packer::CDPacker &packer, const std::string &entry_name)=0;
     virtual uint64_t Deserialize(packer::CDPacker &packer, const std::string &entry_name)=0;

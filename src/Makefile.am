@@ -14,6 +14,7 @@ include_HEADERS = cd.h \
 									sys_err_t.h \
 									serdes.h \
 									serializable.h \
+									cd_containers.hpp \
 									profiler_interface.h \
 									error_injector.h 
 
