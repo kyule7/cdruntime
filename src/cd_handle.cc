@@ -2288,8 +2288,3 @@ void CDHandle::PrintCommLog(void) const {
 #endif
 
 
-
-uint64_t GetCDEntryID(const char *str)
-{
-  return cd_hash(std::string(str));
-}

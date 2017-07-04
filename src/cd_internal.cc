@@ -2016,7 +2016,7 @@ CDErrT CD::Preserve(void *data,
 //           data, len_in_bytes, my_name, ref_name, cd_exec_mode_, num_reexecution_); 
   CDErrT ret = CDErrT::kOK;
   uint64_t tag = cd_hash(my_name);
-  tag2str[tag] = my_name;
+//  tag2str[tag] = my_name;
   CD_DEBUG("[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, ref_offset:%lu, [cd_exec_mode : %d]\n", 
            data, len_in_bytes, my_name.c_str(), ref_name.c_str(), ref_offset, cd_exec_mode_); 
 //  printf("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
@@ -3514,4 +3514,22 @@ CD *CD::GetCoarseCD(CD* curr_cd)
     curr_cd = CDPath::GetParentCD(curr_cd->level())->ptr_cd();
   } 
   return curr_cd;
+}
+
+
+uint64_t GetCDEntryID(const char *str)
+{
+  std::string entry_str(str);
+  uint64_t id = cd_hash(entry_str);
+//  std::unordered_map<uint64_t, string>::const_iterator it = tag2str.find(id);
+//  if(it == tag2str.end()) {
+//    tag2str[id] = entry_str;
+//  }
+  tag2str[id] = entry_str;
+  return id;
+}
+
+const char *GetCDEntryStr(uint64_t id)
+{
+  return tag2str[id].c_str();
 }

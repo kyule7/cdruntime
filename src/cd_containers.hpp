@@ -47,7 +47,7 @@ template <typename T>
 class CDVector : public std::vector<T>, public PackerSerializable {
 //  int orig_size;
   public:
-  void *Serialize(uint64_t &len_in_bytes) {}
+  void *Serialize(uint64_t &len_in_bytes) { return NULL; }
   void Deserialize(void *object) {}
   uint64_t PreserveObject(packer::DataStore *packer) {
 //    printf("CDVector Preserve elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
