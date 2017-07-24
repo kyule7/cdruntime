@@ -161,17 +161,13 @@ Additional BSD Notice
 #endif
 
 #include "lulesh.h"
-   Int_t myRank ;
-   Int_t numRanks ;
+Int_t myRank ;
+Int_t numRanks ;
+
 
 #if _CD
 packer::MagicStore magic __attribute__((aligned(0x1000)));
 using namespace cd;
-//using namespace tuned;
-//Domain::DomainSerdes::SerdesInfo *Domain::DomainSerdes::serdesRegElem = NULL;
-//Domain::DomainSerdes::SerdesInfo Domain::DomainSerdes::serdes_table[TOTAL_ELEMENT_COUNT];
-//bool Domain::DomainSerdes::serdes_table_init = false; 
-
 uint64_t preserve_vec_all = ( M__X  | M__Y  | M__Z  | 
                               M__XD | M__YD | M__ZD |
                               M__XDD| M__YDD| M__ZDD|
@@ -183,7 +179,7 @@ uint64_t preserve_vec_all = ( M__X  | M__Y  | M__Z  |
                               M__DELV | M__VDOV | M__AREALG |
                               M__DELX_ZETA  | M__DELX_XI  | M__DELX_ETA |
                               M__SYMMX | M__SYMMY | M__SYMMZ |
-                              M__NODALMASS | M__NODELIST | 
+                              M__NODALMASS |// M__NODELIST | 
                               M__LXIM | M__LXIP | M__LETAM | 
                               M__LETAP | M__LZETAM | M__LZETAP | 
                               M__ELEMBC | M__ELEMMASS | M__REGELEMSIZE 
@@ -213,7 +209,7 @@ uint64_t preserve_vec_2   = ( M__DELV | M__VDOV | M__AREALG | M__ELEMBC |
 uint64_t preserve_vec_3   = ( M__QQ | M__QL | M__SS |
                               M__Q  | M__E  | M__VOLO | M__V | M__P );
 #endif
-
+Domain *pDomain = NULL;
 /*********************************/
 /* Data structure implementation */
 /*********************************/
@@ -317,6 +313,28 @@ void CollectDomainNodesToElemNodes(Domain &domain,
    Index_t nd5i = elemToNode[5] ;
    Index_t nd6i = elemToNode[6] ;
    Index_t nd7i = elemToNode[7] ;
+   if(nd0i < 0 || nd0i > 1000000000 ||
+      nd1i < 0 || nd1i > 1000000000 ||
+      nd2i < 0 || nd2i > 1000000000 ||
+      nd3i < 0 || nd3i > 1000000000 ||
+      nd4i < 0 || nd4i > 1000000000 ||
+      nd5i < 0 || nd5i > 1000000000 ||
+      nd6i < 0 || nd6i > 1000000000 ||
+      nd7i < 0 || nd7i > 1000000000 //||
+      //      Domain::restarted 
+      ) {
+     const Index_t base = Index_t(8)*domain.prv_idx; 
+     printf("[%d] CHECK nodelist size:%zu/%zu (%d), %d %d %d %d %d %d %d %d\n", myRank, domain.m_nodelist.size(), domain.m_nodelist.capacity(), domain.numElem(),
+                                                            domain.m_nodelist[base],
+                                                            domain.m_nodelist[base+1],
+                                                            domain.m_nodelist[base+2],
+                                                            domain.m_nodelist[base+3],
+                                                            domain.m_nodelist[base+4],
+                                                            domain.m_nodelist[base+5],
+                                                            domain.m_nodelist[base+6],
+                                                            domain.m_nodelist[base+7]
+                                                            ); 
+   }
 
    elemX[0] = domain.x(nd0i);
    elemX[1] = domain.x(nd1i);
@@ -387,7 +405,24 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
   const Real_t z2 = z[2] ;   const Real_t z3 = z[3] ;
   const Real_t z4 = z[4] ;   const Real_t z5 = z[5] ;
   const Real_t z6 = z[6] ;   const Real_t z7 = z[7] ;
-
+  static unsigned long counter = 0;
+  if(myRank == 0 && 0) {
+    bool print_detail = false;
+    if(Domain::restarted) { 
+       print_detail = counter++ % 4096 == 1;
+    } else {
+       print_detail = counter++ % 4096 == 1;
+    }
+    if(print_detail) {
+      if(Domain::restarted) {
+        printf("\n[%d]..before..restared......\n", myRank);
+      }
+      printf("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
+      printf("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
+      printf("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
+    }
+    
+  }
   Real_t fjxxi, fjxet, fjxze;
   Real_t fjyxi, fjyet, fjyze;
   Real_t fjzxi, fjzet, fjzze;
@@ -453,6 +488,29 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
 
   /* calculate jacobian determinant (volume) */
   *volume = Real_t(8.) * ( fjxet * cjxet + fjyet * cjyet + fjzet * cjzet);
+  if(*volume < 0) {
+    if(Domain::restarted && myRank == 0) {
+        printf("\n[%d]....restared......\n", myRank);
+        printf("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
+        printf("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
+        printf("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
+        const Index_t base = Index_t(8)*pDomain->prv_idx; 
+        printf("[%d] CHECK nodelist size:%zu/%zu (%d), %d %d %d %d %d %d %d %d\n", 
+                myRank, pDomain->m_nodelist.size(), pDomain->m_nodelist.capacity(), pDomain->numElem(),
+                pDomain->m_nodelist[base],
+                pDomain->m_nodelist[base+1],
+                pDomain->m_nodelist[base+2],
+                pDomain->m_nodelist[base+3],
+                pDomain->m_nodelist[base+4],
+                pDomain->m_nodelist[base+5],
+                pDomain->m_nodelist[base+6],
+                pDomain->m_nodelist[base+7]
+                ); 
+        printf("volume:%le\n", *volume);
+    }
+     counter = 0;
+     *volume = 0.0;
+  }
 }
 
 /******************************************/
@@ -597,7 +655,7 @@ void IntegrateStressForElems( Domain &domain,
   }
   // loop over all elements
 
-//#pragma omp parallel for firstprivate(numElem)
+#pragma omp parallel for firstprivate(numElem)
   for( Index_t k=0 ; k<numElem ; ++k )
   {
     const Index_t* const elemToNode = domain.nodelist(k);
@@ -606,15 +664,6 @@ void IntegrateStressForElems( Domain &domain,
     Real_t y_local[8] ;
     Real_t z_local[8] ;
 
-    if(0) {//(myRank == 0 && elemToNode[3] > 1000000) {
-      for(int i=0; i<8; i++) {
-//        printf("[%d+%d] elem:%d\n", k*8, i, elemToNode[i]);
-      }
-      printf("---- size:%zu %lu---- \n", domain.m_nodelist.size(), domain.m_nodelist.size() * sizeof(Index_t)); 
-      for(int i=(k-2)*8; i<(k+2)*8; i++) {
-//        printf("[%d]: elem:%d\n", i, *(&domain.m_nodelist[i]));
-      }
-    }
     // get nodal coordinates from global arrays and copy into local arrays.
     CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
 
@@ -1121,7 +1170,7 @@ void CalcHourglassControlForElems(Domain& domain,
       /* Do a check for negative volumes */
       if ( domain.v(i) <= Real_t(0.0) ) {
 #if USE_MPI         
-         //MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+         MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
 #else
          exit(VolumeError);
 #endif
@@ -1171,7 +1220,7 @@ void CalcVolumeForceForElems(Domain& domain)
       for ( Index_t k=0 ; k<numElem ; ++k ) {
          if (determ[k] <= Real_t(0.0)) {
 #if USE_MPI            
-            //MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+            MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
 #else
             exit(VolumeError);
 #endif
@@ -1205,37 +1254,9 @@ static inline void CalcForceForNodes(Domain& domain)
      domain.fy(i) = Real_t(0.0) ;
      domain.fz(i) = Real_t(0.0) ;
   }
-#if _CD
-  CDHandle *cdh = GetLeafCD();
-  CD_Begin(cdh, "CalcForeForNodes");
-  //if(myRank == 0) printf("Check Begin %s %u %p\n", __func__, cdh->level(), cdh);
-//  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
-  printf("x:%d y:%d z:%d\n", domain.sizeX(), domain.sizeY(), domain.sizeZ());
-  if(domain.sizeX() > 10000) {
-    assert(0);
-  }
-#   ifndef OPTIMIZE_PRV
-  cdh->Preserve(domain.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
-  //cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
-#   else
-//  cdh->Preserve(&domain, sizeof(domain), kCopy, "locDomAtCalcForceForNodes");
-  cdh->Preserve(domain.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
-  //cdh->Preserve(domain.serdes.SetOp(preserve_vec_1), kCopy, "prv_vec_1");
-#   endif
-  if(myRank == 0) {
-    int target = 430680;
-    printf("%s ---- %p size:%zu %lu---- \n", __func__, domain.m_nodelist.data(), domain.m_nodelist.size(), domain.m_nodelist.size() * sizeof(Index_t)); 
-    for(int i=target; i<target+64; i++) {
-//      printf("[%d]: elem:%d\n", i, *(&domain.m_nodelist[i]));
-    }
-  }
-#endif
+
   /* Calcforce calls partial, force, hourq */
   CalcVolumeForceForElems(domain) ;
-#if _CD
-  cdh->Detect();
-  cdh->Complete();
-#endif
 
 #if USE_MPI  
   Domain_member fieldData[3] ;
@@ -1255,6 +1276,7 @@ static inline void CalcForceForNodes(Domain& domain)
 static inline
 void CalcAccelerationForNodes(Domain &domain, Index_t numNode)
 {
+   
 #pragma omp parallel for firstprivate(numNode)
    for (Index_t i = 0; i < numNode; ++i) {
       domain.xdd(i) = domain.fx(i) / domain.nodalMass(i);
@@ -1338,12 +1360,6 @@ void CalcPositionForNodes(Domain &domain, const Real_t dt, Index_t numNode)
 static inline
 void LagrangeNodal(Domain& domain)
 {
-#if _CD
-   CDHandle *parent = GetLeafCD();
-   CDHandle *cdh = parent->Create("LagrangeNodal", kStrict | kDRAM, 0x4);
-//   if(myRank == 0) printf("Check Create %s %u %p %p\n", __func__, cdh->level(), cdh, parent);
-#endif 
-
 #ifdef SEDOV_SYNC_POS_VEL_EARLY
    Domain_member fieldData[6] ;
 #endif
@@ -1362,41 +1378,14 @@ void LagrangeNodal(Domain& domain)
             false, false) ;
 #endif
 #endif
-
-#if _CD
-//   CDHandle *lcdh = GetLeafCD();
-//   CD_Begin(lcdh, "CalcAccelerationForNodes"); 
-#endif
+   
    CalcAccelerationForNodes(domain, domain.numNode());
-#if _CD
-//   GetLeafCD()->Detect();
-//   GetLeafCD()->Complete();
-//   
-//   CD_Begin(lcdh, "ApplyAccelerationBoundaryConditionsForNodes"); 
-#endif
+   
    ApplyAccelerationBoundaryConditionsForNodes(domain);
-#if _CD
-//   GetLeafCD()->Detect();
-//   GetLeafCD()->Complete();
-//
-//   CD_Begin(lcdh, "CalcVelocityForNodes"); 
-#endif
+
    CalcVelocityForNodes( domain, delt, u_cut, domain.numNode()) ;
-#if _CD
-//   GetLeafCD()->Detect();
-//   GetLeafCD()->Complete();
-//
-//   CD_Begin(lcdh, "CalcPositionForNodes"); 
-#endif
 
    CalcPositionForNodes( domain, delt, domain.numNode() );
-
-#if _CD
-//   GetLeafCD()->Detect();
-//   GetLeafCD()->Complete();
-   cdh->Destroy();
-#endif
-
 #if USE_MPI
 #ifdef SEDOV_SYNC_POS_VEL_EARLY
   fieldData[0] = &Domain::x ;
@@ -1743,11 +1732,10 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
          domain.dzz(k) -= vdovthird ;
 
         // See if any volumes are negative, and take appropriate action.
-         if (vnew[k] < Real_t(-0.000001))
+         if (vnew[k] <= Real_t(0.0))
         {
-#if USE_MPI
-           printf("vnew[%d]: %f\n", k,  vnew[k]);          
-           //MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+#if USE_MPI           
+           MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
 #else
            exit(VolumeError);
 #endif
@@ -2151,7 +2139,7 @@ void CalcQForElems(Domain& domain, Real_t vnew[])
 
       if(idx >= 0) {
 #if USE_MPI         
-         //MPI_Abort(MPI_COMM_WORLD, QStopError) ;
+         MPI_Abort(MPI_COMM_WORLD, QStopError) ;
 #else
          exit(QStopError);
 #endif
@@ -2520,7 +2508,7 @@ void ApplyMaterialPropertiesForElems(Domain& domain, Real_t vnew[])
           }
           if (vc <= 0.) {
 #if USE_MPI             
-             //MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
+             MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
 #else
              exit(VolumeError);
 #endif
@@ -2574,78 +2562,19 @@ void UpdateVolumesForElems(Domain &domain, Real_t *vnew,
 static inline
 void LagrangeElements(Domain& domain, Index_t numElem)
 {
-#if _CD
-  //CDHandle *cdh = GetLeafCD()->Create("LagrangeElements", kStrict);
-//  CDHandle *cdh = GetLeafCD();
-//  CD_Begin(cdh, "CalcLagrangeElements");
-//  printf("[%u] Check Begin %s %u %p\n", myRank, __func__, cdh->level(), cdh);
-//  cdh->Preserve(domain.serdes.SetOp(preserve_vec_2
-//                ), 
-//                kCopy, "InputCalcQForElems");
-#endif 
-
   Real_t *vnew = Allocate<Real_t>(numElem) ;  /* new relative vol -- temp */
 
   CalcLagrangeElements(domain, vnew) ;
 
-#if _CD
-//  cdh->Preserve(domain.serdes.SetOp(
-//                        M__DELV | M__VDOV | M__AREALG |
-//                        M__DXX| M__DYY| M__DZZ
-//                ), 
-//                kCopy, "OutputCalcQForElems");
-//  cdh->Detect();
-//  cdh->Complete();
-//  CD_Begin(cdh, "CalcQForElems");
-//  cdh->Preserve(&domain, sizeof(domain), kCopy, "domain_CalcQ");
-//  cdh->Preserve(vnew, numElem * sizeof(Real_t), kCopy, "vnewAfterCalcLagrangeElements");
-//  cdh->Preserve(domain.serdes.SetOp(
-//                              M__ELEMBC
-//                ), 
-//                kCopy, "InputCalcQForElems");
-#endif
   /* Calculate Q.  (Monotonic q option requires communication) */
   CalcQForElems(domain, vnew) ;
-#if _CD
-//  cdh->Preserve(domain.serdes.SetOp(
-//                              M__DELV_ZETA  | M__DELV_XI  | M__DELV_ETA |
-//                              M__DELX_ZETA  | M__DELX_XI  | M__DELX_ETA |
-//                              M__QQ | M__QL 
-//                ), 
-//                kCopy, "OutputCalcQForElems");
-//  cdh->Detect();
-//  cdh->Complete();
-//  CD_Begin(cdh, "ApplyMaterialPropertiesForElems");
-//  cdh->Preserve(&domain, sizeof(domain), kCopy, "locDomAtApply");
-//  cdh->Preserve(domain.serdes.SetOp(
-//                              M__QQ | M__QL | M__DELV |
-//                              M__Q  | M__E  | M__P | M__V
-//                ), kCopy, "InputApplyMaterialPropertiesForElems");
-#endif
 
   ApplyMaterialPropertiesForElems(domain, vnew) ;
-#if _CD
-//  cdh->Preserve(domain.serdes.SetOp(
-//                              M__SS | M__VNEW |
-//                              M__Q  | M__E  | M__P 
-//                ), kCopy, "OuputApplyMaterialPropertiesForElems");
-//  cdh->Detect();
-//  cdh->Complete();
-//  CD_Begin(cdh, "UpdateVolumesForElems");
-//  cdh->Preserve(vnew, numElem * sizeof(Real_t), kCopy, "vnewBeforeUpdateVolume");
-#endif
 
   UpdateVolumesForElems(domain, vnew,
                         domain.v_cut(), numElem) ;
 
   Release(&vnew);
-
-#if _CD
-//  cdh->Preserve(domain.serdes.SetOp(M__V), kCopy, "UpdatedVolume");
-//  cdh->Detect();
-//  cdh->Complete();
-  //cdh->Destroy();
-#endif 
 }
 
 /******************************************/
@@ -2831,17 +2760,9 @@ void LagrangeLeapFrog(Domain& domain)
 #ifdef SEDOV_SYNC_POS_VEL_LATE
 #endif
 
-#if _CD
-   CDHandle *cdh = GetLeafCD()->Create("LagrangeElements", kStrict|kDRAM, 0x4);
-   CD_Begin(cdh, "CalcLagrangeElements");
-#endif
    /* calculate element quantities (i.e. velocity gradient & q), and update
     * material states */
    LagrangeElements(domain, domain.numElem());
-
-//#if _CD
-//   CD_Begin(cdh, __func__);
-//#endif 
 
 #if USE_MPI   
 #ifdef SEDOV_SYNC_POS_VEL_LATE
@@ -2864,23 +2785,11 @@ void LagrangeLeapFrog(Domain& domain)
 
    CalcTimeConstraintsForElems(domain);
 
-//#if _CD
-//   cdh->Detect();
-//   cdh->Complete();
-//   cdh->Destroy();
-//#endif
-
 #if USE_MPI   
 #ifdef SEDOV_SYNC_POS_VEL_LATE
    CommSyncPosVel(domain) ;
 #endif
 #endif   
-
-#if _CD
-   cdh->Detect();
-   cdh->Complete();
-   cdh->Destroy();
-#endif
 }
 
 
@@ -2915,10 +2824,10 @@ int main(int argc, char *argv[])
    opts.balance = 1;
    opts.cost = 1;
 
+   opts.nx=4;
+
    ParseCommandLineOptions(argc, argv, myRank, &opts);
 
-   opts.nx  = 70;
-   opts.its  = 20;
    if ((myRank == 0) && (opts.quiet == 0)) {
       printf("Running problem size %d^3 per domain until completion\n", opts.nx);
       printf("Num processors: %d\n", numRanks);
@@ -2944,6 +2853,7 @@ int main(int argc, char *argv[])
                        side, opts.numReg, opts.balance, opts.cost) ;
 
 
+   pDomain = locDom;
 #if USE_MPI   
    fieldData = &Domain::nodalMass ;
 
@@ -2961,13 +2871,11 @@ int main(int argc, char *argv[])
 #endif   
    
 #if _CD
-//   locDom->serdes.InitSerdesTable();
    CDHandle* root_cd = CD_Init(numRanks, myRank, kHDD);
    CD_Begin(root_cd, "Root");
-//   root_cd->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "locDom_Root");
-   root_cd->Preserve(locDom->SetOp(M__SERDES_ALL), kCopy, "Root_All");
-//   root_cd->Preserve(locDom->serdes.SetOp(M__SERDES_ALL), kCopy, "AllMembers_Root");
+//   root_cd->Preserve(locDom->SetOp(M__SERDES_ALL), kCopy, "Root_All");
 #endif
+
 
    // BEGIN timestep to solution */
 #if USE_MPI   
@@ -2977,40 +2885,28 @@ int main(int argc, char *argv[])
    gettimeofday(&start, NULL) ;
 #endif
 
+
 #if _CD
-  CDHandle *cd_main_loop = root_cd->Create("Parent", kStrict|kHDD, 0xFF);
+  CDHandle *cd_main_loop = root_cd->Create("Parent", kStrict|kHDD, 0xF);
 #endif
+
+
 //debug to see region sizes
 //   for(Int_t i = 0; i < locDom->numReg(); i++)
 //      std::cout << "region" << i + 1<< "size" << locDom->regElemSize(i) <<std::endl;
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
-      TimeIncrement(*locDom) ; // global synchronization
+
+      TimeIncrement(*locDom) ;
+
 #if _CD
       CD_Begin(cd_main_loop, "MainLoop");
-      //printf("x:%d y:%d z:%d\n", locDom->sizeX(), locDom->sizeY(), locDom->sizeZ());
-//      cd_main_loop->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "locDom_Root");
-      if(locDom->sizeX() > 10000) {
-        printf("x:%d y:%d z:%d\n", locDom->sizeX(), locDom->sizeY(), locDom->sizeZ());
-        assert(0);
-      }
-
-#   ifndef OPTIMIZE_PRV
-      cd_main_loop->Preserve(locDom->SetOp(preserve_vec_all), kCopy, "MainLoop");
-      //cd_main_loop->Preserve(locDom->serdes.SetOp(preserve_vec_all), kCopy, "MainLoop");
-#   else
-      cd_main_loop->Preserve(locDom->SetOp(preserve_vec_all), kCopy, "MainLoop");
-#   endif
-
-    if(myRank == 0) {
-      printf("%s ---- %p size:%zu %lu---- \n", "MainLoop",  locDom->m_nodelist.data(), locDom->m_nodelist.size(), locDom->m_nodelist.size() * sizeof(Index_t)); 
-      int target = 430680;
-      for(int i=target; i<target+64; i++) {
-//        printf("[%d]: elem:%d\n", i, *(&locDom->m_nodelist[i]));
-      }
-    }
+      cd_main_loop->Preserve(locDom->SetOp(preserve_vec_all/*M__SERDES_ALL*/), kCopy, "MainLoop");
 #endif
 
+
       LagrangeLeapFrog(*locDom) ;
+
+
 #if _CD
       cd_main_loop->Detect();
       cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
@@ -3022,8 +2918,10 @@ int main(int argc, char *argv[])
                 locDom->cycle(), double(locDom->time()), double(locDom->deltatime()) ) ;
       }
    }
+
+
 #if _CD
-  cd_main_loop->Destroy();
+   cd_main_loop->Destroy();
 #endif
 
    // Use reduced max elapsed time
@@ -3035,6 +2933,7 @@ int main(int argc, char *argv[])
    gettimeofday(&end, NULL) ;
    elapsed_time = (double)(end.tv_sec - start.tv_sec) + ((double)(end.tv_usec - start.tv_usec))/1000000 ;
 #endif
+
    double elapsed_timeG;
 #if USE_MPI   
    MPI_Reduce(&elapsed_time, &elapsed_timeG, 1, MPI_DOUBLE,
@@ -3057,12 +2956,15 @@ int main(int argc, char *argv[])
   CD_Finalize();
 #endif
 
+
 #if USE_MPI
    MPI_Finalize() ;
 #endif
 
    return 0 ;
 }
+
+
 
 char id2str[TOTAL_IDS][MAX_ID_STR_LEN] = {
       "ID__INVALID" 
@@ -3116,40 +3018,8 @@ char id2str[TOTAL_IDS][MAX_ID_STR_LEN] = {
     , "ID__REGELEMSIZE"
     , "ID__REGNUMLIST"
     , "ID__REGELEMLIST"
+    , "ID__COMMBUFSEND"
+    , "ID__COMMBUFRECV"
 };
-
-//unsigned vec2id(unsigned long long n) {
-//  unsigned cnt=0;
-//  while(n != 0) {
-//    n >>= 1;
-//    cnt++;
-//  }
-//  return cnt;
-//}
-
-//#if _CD
-//uint64_t Preserve(cd::CDHandle *cdh, Domain &dom, uint64_t vec, uint32_t prvType, const char *entry_str) 
-//{                          
-//  uint64_t target_vec = 1;
-//  uint64_t tot_len = 0;
-//  int count = 0;
-//  while(vec  != 0) {
-//    uint64_t id = vec2id(target_vec);
-//    if(vec & 0x1) {
-//      if(id == ID__MATELEMLIST) { vec >>= 1; target_vec <<= 1; continue; }
-//      tot_len += SelectPreserve(cdh, dom, id, prvType, entry_str);
-//      count++;
-//    }
-//    target_vec <<= 1;
-//    vec >>= 1;
-//  } // while ends
-//#ifdef _DEBUG_LULESH_0402
-//  if(myRank == 0) { 
-//    printf("## %s total:%lx\n", entry_str, tot_len); 
-//  }
-//#endif
-//  return tot_len;
-//}
-
-
-//#endif
+ 
+bool Domain::restarted = false;

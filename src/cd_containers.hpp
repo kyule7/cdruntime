@@ -38,10 +38,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "serializable.h"
 #include "cd_packer.hpp"
 #include <vector>
+#include <map>
 #include <initializer_list>
 #include <iostream>
+#define CD_VECTOR_PRINT(...)
+
+
 
 namespace cd {
+
+
+static std::map<std::string, uint64_t> str2id;
 
 template <typename T>
 class CDVector : public std::vector<T>, public PackerSerializable {
@@ -50,7 +57,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
   void *Serialize(uint64_t &len_in_bytes) { return NULL; }
   void Deserialize(void *object) {}
   uint64_t PreserveObject(packer::DataStore *packer) {
-//    printf("CDVector Preserve elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
+//    CD_VECTOR_PRINT("CDVector Preserve elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
 //    char *ptr = reinterpret_cast<char *>(this->data());
 //    packer.Add(ptr, packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
     
@@ -58,19 +65,33 @@ class CDVector : public std::vector<T>, public PackerSerializable {
   
   }
   uint64_t PreserveObject(packer::CDPacker &packer, const std::string &entry_name) {
-    printf("CDVector Preserve elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
-    id_ = GetCDEntryID(entry_name.c_str());
+    CD_VECTOR_PRINT("CDVector Preserve elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
+    if(myTaskID == 0) {
+    printf("CDVector [%s] Preserve elemsize:%zu, %zu %zu\n", entry_name.c_str(), sizeof(T), this->size(), this->capacity()); 
+    }
+    id_ = GetCDEntryID(entry_name);
+    //CheckID(entry_name); id_ = str2id[entry_name];
+//    printf("id:%lx\n", id_);
     char *ptr = reinterpret_cast<char *>(this->data());
-    packer.Add(ptr, packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
-    return 0; 
+    uint64_t prv_size = this->size() * sizeof(T);
+    packer::CDEntry entry(id_, prv_size, 0, ptr);
+    packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
+    return prv_size; 
   
   }
   uint64_t Deserialize(packer::CDPacker &packer, const std::string &entry_name) {
-    printf("CDVector Restore elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
-    id_ = GetCDEntryID(entry_name.c_str());
+    CD_VECTOR_PRINT("CDVector Restore elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
+    id_ = GetCDEntryID(entry_name);
+    //id_ = cd_hash(entry_name);
+    //GetCDEntryID(entry_name.c_str());
+    //CheckID(entry_name); id_ = str2id[entry_name];
     char *ptr = reinterpret_cast<char *>(this->data());
     packer::CDEntry *pentry = reinterpret_cast<packer::CDEntry *>(packer.Restore(id_, ptr, this->size() * sizeof(T)));
-    this->resize(pentry->size() / sizeof(T));
+    if(pentry->size() == 0) {
+      this->clear();
+    } else {
+      this->resize(pentry->size() / sizeof(T));
+    }
     return 0; 
   
   }
@@ -98,11 +119,81 @@ class CDVector : public std::vector<T>, public PackerSerializable {
 
     std::cout << std::endl;
   }
-//  virtual int Preserv(packer::CDPacker &packer) { printf("CDVector Preserv \n"); return 0; }
-//  virtual int Restore(packer::CDPacker &packer) { printf("CDVector Restore \n"); return 0; }
-  CDVector<T>(void) {}
-  CDVector<T>(int len) : std::vector<T>(len) {}
-  CDVector<T>(const std::initializer_list<T> &il) : std::vector<T>(il) {}
+//  virtual int Preserv(packer::CDPacker &packer) { CD_VECTOR_PRINT("CDVector Preserv \n"); return 0; }
+//  virtual int Restore(packer::CDPacker &packer) { CD_VECTOR_PRINT("CDVector Restore \n"); return 0; }
+  CDVector<T>(void) { Init(); }
+  CDVector<T>(int len) : std::vector<T>(len) { Init(); }
+  CDVector<T>(const std::initializer_list<T> &il) : std::vector<T>(il) { Init(); }
+
+  void Init(void) {
+    static bool init_str2id = false;
+    if(init_str2id == false) {
+      str2id["X"        ]   = 0xffef00;
+      str2id["Y"        ]   = 0xffef01;
+      str2id["Z"        ]   = 0xffef02;
+      str2id["XD"       ]   = 0xffef03;
+      str2id["YD"       ]   = 0xffef04;
+      str2id["ZD"       ]   = 0xffef05;
+      str2id["XDD"      ]   = 0xffef06;
+      str2id["YDD"      ]   = 0xffef07;
+      str2id["ZDD"      ]   = 0xffef08;
+      str2id["FX"       ]   = 0xffef09;
+      str2id["FY"       ]   = 0xffef10;
+      str2id["FZ"       ]   = 0xffef11;
+      str2id["NODALMASS"]   = 0xffef12;
+      str2id["SYMMX"    ]   = 0xffef13;
+      str2id["SYMMY"    ]   = 0xffef14;
+      str2id["SYMMZ"    ]   = 0xffef15;
+      str2id["NODELIST" ]   = 0xffef16;
+      str2id["LXIM"     ]   = 0xffef17;
+      str2id["LXIP"     ]   = 0xffef18;
+      str2id["LETAM"    ]   = 0xffef19;
+      str2id["LETAP"    ]   = 0xffef20;
+      str2id["LZETAM"   ]   = 0xffef21;
+      str2id["LZETAP"   ]   = 0xffef22;
+      str2id["ELEMBC"   ]   = 0xffef23;
+      str2id["DXX"      ]   = 0xffef24;
+      str2id["DYY"      ]   = 0xffef25;
+      str2id["DZZ"      ]   = 0xffef26;
+      str2id["DELV_XI"  ]   = 0xffef27;
+      str2id["DELV_ETA" ]   = 0xffef28;
+      str2id["DELV_ZETA"]   = 0xffef29;
+      str2id["DELX_XI"  ]   = 0xffef30;
+      str2id["DELX_ETA" ]   = 0xffef31;
+      str2id["DELX_ZETA"]   = 0xffef32;
+      str2id["E"        ]   = 0xffef33;
+      str2id["P"        ]   = 0xffef34;
+      str2id["Q"        ]   = 0xffef35;
+      str2id["QL"       ]   = 0xffef36;
+      str2id["QQ"       ]   = 0xffef37;
+      str2id["V"        ]   = 0xffef38;
+      str2id["VOLO"     ]   = 0xffef39;
+      str2id["VNEW"     ]   = 0xffef40;
+      str2id["DELV"     ]   = 0xffef41;
+      str2id["VDOV"     ]   = 0xffef42;
+      str2id["AREALG"   ]   = 0xffef43;
+      str2id["SS"       ]   = 0xffef44;
+      str2id["ELEMMASS" ]   = 0xffef45;
+      str2id["REGELEMSIZE"] = 0xffef46;
+      str2id["REGNUMLIST" ] = 0xffef47;
+      str2id["REGELEMLIST"] = 0xffef48;
+      str2id["COMMBUFSEND"] = 0xffef49;
+      str2id["COMMBUFRECV"] = 0xffef50;
+      init_str2id = true;
+    }
+  }
+  void CheckID(const std::string &str) {
+    auto it = str2id.find(str);
+    static int cnt = 0;
+    if(it == str2id.end()) {
+      str2id[str] = 0xffef50 + cnt++;
+    }
+    if(myTaskID == 0) {
+    
+      printf("%s id:%s, %lu\n", __func__, str.c_str(), str2id[str]);
+    }
+  }
+
 };
 
 

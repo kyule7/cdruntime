@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include "lulesh.h"
 
+Index_t comBufSize = 0;
 /////////////////////////////////////////////////////////////////////
 Domain::Domain(Int_t numRanks, Index_t colLoc,
                Index_t rowLoc, Index_t planeLoc,
@@ -332,7 +333,7 @@ Domain::SetupCommBuffers(Int_t edgeNodes)
 
 #if USE_MPI   
   // account for face communication 
-  Index_t comBufSize =
+  comBufSize =
     (m_rowMin + m_rowMax + m_colMin + m_colMax + m_planeMin + m_planeMax) *
     m_maxPlaneSize * MAX_FIELDS_PER_MPI_COMM ;
 
@@ -360,6 +361,10 @@ Domain::SetupCommBuffers(Int_t edgeNodes)
   // prevent floating point exceptions 
   memset(this->commDataSend, 0, comBufSize*sizeof(Real_t)) ;
   memset(this->commDataRecv, 0, comBufSize*sizeof(Real_t)) ;
+  
+  // kyushick
+  printf("Buffer size:%d\n", comBufSize);
+
 #endif   
 
   // Boundary nodesets

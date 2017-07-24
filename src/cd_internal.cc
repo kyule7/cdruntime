@@ -2090,10 +2090,12 @@ CDErrT CD::Preserve(void *data,
         // This will fetch from disk to memory
         // Potential benefit from prefetching app data from preserved data in
         // disk, overlapping reexecution of application.
-        char *ret = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
+        CDEntry *ret = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
         if(ret == NULL) {
           printf("[%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
           assert(0);
+        } else {
+          printf("[%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
         }
 
 //      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
@@ -3517,15 +3519,21 @@ CD *CD::GetCoarseCD(CD* curr_cd)
 }
 
 
-uint64_t GetCDEntryID(const char *str)
+//uint64_t GetCDEntryID(const char *str)
+uint64_t cd::GetCDEntryID(const std::string &str)
 {
-  std::string entry_str(str);
-  uint64_t id = cd_hash(entry_str);
+//  printf("%s : str: %s\n", __func__, str);
+//  if(str == NULL) {
+//    printf("null?\n");
+//  }
+  //std::string entry_str(str);
+  uint64_t id = cd_hash(str);
+  //uint64_t id = cd_hash(std::string(str));
 //  std::unordered_map<uint64_t, string>::const_iterator it = tag2str.find(id);
 //  if(it == tag2str.end()) {
 //    tag2str[id] = entry_str;
 //  }
-  tag2str[id] = entry_str;
+//  tag2str[id] = str;
   return id;
 }
 

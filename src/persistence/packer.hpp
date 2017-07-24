@@ -141,21 +141,45 @@ class Packer {
     ///@brief Add data to pack in packer data structure.
     uint64_t Add(char *app_data, uint64_t len, uint64_t id)
     {
-      uint64_t offset = data_->Write(app_data, len);
+      // if size is 0, insert entry to table only
+      uint64_t offset = 0;
+      if(len != 0) {
+        offset = data_->Write(app_data, len);
+      }
       uint64_t ret = table_->Insert(EntryT(id, len, offset).SetSrc(app_data));
       return ret;
     }
 
     uint64_t Add(char *src, EntryT *entry)
     {
-      uint64_t offset = data_->Write(src, entry->size());
+      // if size is 0, insert entry to table only
+      uint64_t offset = 0;
+      if(entry->size() != 0) {
+        offset = data_->Write(src, entry->size());
+      }
       uint64_t ret = table_->Insert(entry->SetOffset(offset));
       return ret;
     }
 
     uint64_t Add(char *src, EntryT &&entry)
     {
-      uint64_t offset = data_->Write(src, entry.size());
+      // if size is 0, insert entry to table only
+      uint64_t offset = 0;
+      if(entry.size() != 0) {
+        offset = data_->Write(src, entry.size());
+      }
+      uint64_t ret = table_->Insert(entry.SetOffset(offset));
+      return ret;
+    }
+
+    uint64_t Add(char *src, EntryT &entry)
+    {
+//      printf("this?\n");
+      // if size is 0, insert entry to table only
+      uint64_t offset = 0;
+      if(entry.size() != 0) {
+        offset = data_->Write(src, entry.size());
+      }
       uint64_t ret = table_->Insert(entry.SetOffset(offset));
       return ret;
     }
@@ -265,6 +289,7 @@ class Packer {
 
     uint64_t AppendTable(void)
     {
+//      printf("%s ] %p, %lu\n", __func__, table_->GetCurrPtr(), table_->tablesize());
       if(table_->used() != 0)
         return data_->Write(table_->GetCurrPtr(), table_->tablesize());
       else

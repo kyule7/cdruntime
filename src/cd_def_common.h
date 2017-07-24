@@ -258,6 +258,6 @@
   };
   /** @} */ // End tunable_api group 
 
-extern uint64_t GetCDEntryID(const char *str);
+//extern uint64_t GetCDEntryID(const char *str);
 extern const char *GetCDEntryStr(uint64_t id);
 #endif

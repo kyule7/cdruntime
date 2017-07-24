@@ -257,7 +257,7 @@ void OpenDebugFilepath(int myTask, const string &dbg_basepath)
   snprintf(dbg_filepath, 256, "%s/%s_%d", dbg_basepath.c_str(), dbg_log_filename, myTask);
   cdout = fopen(dbg_filepath, "w");
   packer_stream = cdout;
-  printf("cdout:%p\n", cdout);
+//  printf("cdout:%p\n", cdout);
 #endif
 
 #if CD_DEBUG_ENABLED
@@ -2151,6 +2151,10 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
     // If sys_err_vec > 
     while(cdh != NULL) {
 
+      printf("CHECK %lx %lx = %d, lv:%u, %s\n", 
+          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+          CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
+          cdh->level(), cdh->GetLabel());
       CD_DEBUG("CHECK %lx %lx = %d, lv:%u, %s\n", 
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),

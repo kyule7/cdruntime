@@ -451,7 +451,8 @@ namespace cd {
   extern CDHandle *null_cd;
   extern CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   extern void CD_Finalize(void);
-}
+  extern uint64_t GetCDEntryID(const std::string &str);
+} // namespace cd ends
 
 
 namespace tuned {

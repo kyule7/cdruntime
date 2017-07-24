@@ -1,4 +1,5 @@
 #include "packer.hpp"
+#define CD_PACKER_PRINT(...)
 
 namespace packer {
 //  Preservation
@@ -13,27 +14,40 @@ class CDPacker : public Packer<CDEntry> {
     CDPacker(bool alloc, TableStore<CDEntry> *table, DataStore *data=NULL) 
       : Packer<CDEntry>(alloc, table, data) {}
     virtual ~CDPacker() {}
-    char *Restore(uint64_t tag, char *dst=NULL, uint64_t len=0) 
+    CDEntry *Restore(uint64_t tag, char *dst=NULL, uint64_t len=0) 
     {
 //      void *ret = dst;
       MYDBG("tag:%lu\n", tag);
-      printf("tag:%lu\n", tag); //getchar();
+      CD_PACKER_PRINT("tag:%lu\n", tag); //getchar();
       // 1. Find entry in table store
       // 2. Copy data from data store to src
       CDEntry *pentry = reinterpret_cast<CDEntry *>(table_->Find(tag));
-      void *ret = pentry;
+//      CDEntry *ret = pentry;
       if(pentry == NULL) {
-        printf("\n\n [%d] not found %lu\n", packerTaskID, tag);
+        CD_PACKER_PRINT("\n\n [%d] not found %lu\n", packerTaskID, tag);
         return NULL;
-      } else if(pentry->src_ == NULL || pentry->size() == 0 || len < pentry->size()) {
-        printf("\n\n [%d] previously null %lu utr:%p, size:%lu, len:%lu, offset:%lx\n", packerTaskID, tag, pentry->src_, pentry->size(), len, pentry->offset_);
+      } else if(pentry->src_ == NULL) {
+        CD_PACKER_PRINT("\n\n [%d] previously null %lu utr:%p, size:%lu, len:%lu, offset:%lx\n", 
+            packerTaskID, tag, pentry->src_, pentry->size(), len, pentry->offset_);
         // when preserved, data was null.
-        return (char *)pentry;
+        return pentry;
+      } else if(pentry->size() == 0) {
+        CD_PACKER_PRINT("\n[%d] %lu dst:%p previously size:%lu, requested len:%lu\n", 
+            packerTaskID, tag, pentry->src_, pentry->size(), len);
+        printf("\n[%d] %lu dst:%p previously size:%lu, requested len:%lu\n", 
+            packerTaskID, tag, pentry->src_, pentry->size(), len);
+        return pentry;
+      } else if(len > pentry->size()) {
+        CD_PACKER_PRINT("\n[%d] %lu dst:%p reallocated from size:%lu to %lu (requested len)\n", 
+            packerTaskID, tag, pentry->src_, pentry->size(), len);
+      } else {
+        CD_PACKER_PRINT("\n[%d] Preserved %lu ptr:%p, size:%lu, len:%lu, offset:%lx\n", 
+            packerTaskID, tag, pentry->src_, pentry->size(), len, pentry->offset_);
       }
-      printf("next tag:%lu\n", tag); //getchar();
+      CD_PACKER_PRINT("next tag:%lu\n", tag); //getchar();
 //      if(pentry == NULL) {
 //        for(int i=0; i<table_->used(); i++) {
-//          printf("table:%lu\n", (*table_)[i].id_);
+//          CD_PACKER_PRINT("table:%lu\n", (*table_)[i].id_);
 //        }
 //      }
       PACKER_ASSERT(pentry != NULL);
@@ -43,20 +57,20 @@ class CDPacker : public Packer<CDEntry> {
 
 #if 1
       if( entry.size_.Check(Attr::knested) == false) {
-        printf("no nested\n");
+        CD_PACKER_PRINT("no nested\n");
         data_->GetData(dst, entry.size(), entry.offset_);
         //getchar();
       } else {
-        printf("nested\n");
+        CD_PACKER_PRINT("nested\n");
         //getchar();
 //        uint64_t produced = data_->Fetch(entry.size(), entry.offset_);
-//        printf("\n\n TEST $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n"); //getchar();
+//        CD_PACKER_PRINT("\n\n TEST $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n"); //getchar();
         uint64_t table_offset = (uint64_t)entry.src_;
         uint64_t data_size   = table_offset - entry.offset_; //entry.offset_ - table_offset;
         uint64_t table_size  = entry.size() - data_size;
 #ifdef _DEBUG_0402        
         if(packerTaskID == 0) {
-          printf("#######################################################\n"
+          CD_PACKER_PRINT("#######################################################\n"
                  "Check entry for packed obj:totsize:%lx offsetFromMagic:%lx, tablesize:%lx, tableoffset:%lx \n"
                  "#######################################################\n", 
             entry.size(), entry.offset_, table_size, table_offset); //getchar();
@@ -75,32 +89,32 @@ class CDPacker : public Packer<CDEntry> {
 #ifdef _DEBUG_0402        
         if(packerTaskID == 0)
         {
-          printf("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n");
+          CD_PACKER_PRINT("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n");
           uint64_t *ptest = reinterpret_cast<uint64_t *>(pEntry_check);
           for(uint64_t i=0; i<table_size/sizeof(CDEntry); i++) {
-            printf("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
+            CD_PACKER_PRINT("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
             ptest += 4;
           }
-          printf("\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n");
+          CD_PACKER_PRINT("\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n");
           ptest = reinterpret_cast<uint64_t *>(pEntry);
           for(uint64_t i=0; i<table_size/sizeof(CDEntry); i++) {
-            printf("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
+            CD_PACKER_PRINT("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
             ptest += 4;
           }
-          printf("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n\n\n");
+          CD_PACKER_PRINT("\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$4\n\n\n");
           //getchar();
         }
 #endif
         // This will just read from cache (memory)
         uint64_t num_entries = table_size/sizeof(CDEntry);
-//        printf("# of entries:%lu, head:%lu, pos_buf:%lu\n", num_entries, data_->head(), pEntry->offset_); //getchar();
+//        CD_PACKER_PRINT("# of entries:%lu, head:%lu, pos_buf:%lu\n", num_entries, data_->head(), pEntry->offset_); //getchar();
         for(uint32_t i=0; i<num_entries; i++, pEntry += 1) {
 #ifdef _DEBUG_0402        
           if(packerTaskID == 0) {
-            printf("[%u/%lu] id:%lx Restore: %p size:%lx, offset:%lx\n", 
+            CD_PACKER_PRINT("[%u/%lu] id:%lx Restore: %p size:%lx, offset:%lx\n", 
                 i, num_entries, pEntry->id_,  pEntry->src_, pEntry->size(), pEntry->offset_);
             uint64_t *ptest = (uint64_t *)pEntry;
-            printf("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
+            CD_PACKER_PRINT("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
           }
 #endif
           data_->GetData(pEntry->src_, pEntry->size(), pEntry->offset_);
@@ -118,20 +132,20 @@ class CDPacker : public Packer<CDEntry> {
         // [ID] [SIZE]  [OFFSET] [SRC]
         //  ID  totsize  offset  tableoffset
         posix_memalign(&ret, CHUNK_ALIGNMENT, entry.size());
-        printf("Read:%lu, %lu\n", entry.size(), entry.offset_);
+        CD_PACKER_PRINT("Read:%lu, %lu\n", entry.size(), entry.offset_);
         data_->Read((char *)ret, entry.size(), entry.offset_);
         MagicStore *magic = reinterpret_cast<MagicStore *>(ret);
         //uint64_t *packed_data = reinterpret_cast<uint64_t *>((char *)ret + sizeof(MagicStore));
         int *packed_data = reinterpret_cast<int *>(ret);
-        printf("#### check read magicstore###\n");
+        CD_PACKER_PRINT("#### check read magicstore###\n");
         for(int i=0; i<128/16; i++) {
           for(int j=0; j<16; j++) {
-            printf("%4d ", *(packed_data + i*16 + j));
+            CD_PACKER_PRINT("%4d ", *(packed_data + i*16 + j));
           }
-          printf("\n");
+          CD_PACKER_PRINT("\n");
         } 
-        printf("#### check read magicstore###\n");
-        printf("Read id:%lu, attr:%lx chunk: %lu at %lu, "
+        CD_PACKER_PRINT("#### check read magicstore###\n");
+        CD_PACKER_PRINT("Read id:%lu, attr:%lx chunk: %lu at %lu, "
                "Read MagicStore: size:%lu, tableoffset:%lu, entry_type:%u\n", 
                 entry.id_, entry.attr(), entry.size(), entry.offset(), 
                 magic->total_size_, magic->table_offset_, magic->entry_type_);
@@ -143,7 +157,7 @@ class CDPacker : public Packer<CDEntry> {
               magic->total_size_, magic->table_offset_, magic->entry_type_);
       }
 #endif
-      return (char *)ret;
+      return pentry;
     }
 };
 

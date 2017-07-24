@@ -33,8 +33,8 @@ SOURCES2.0 = \
 OBJECTS2.0 = $(SOURCES2.0:.cc=.o)
 
 #Default build suggestions with OpenMP for g++
-CXXFLAGS = -g -O3 -I. -Wall
-LDFLAGS = -g -O3 
+CXXFLAGS = -g -O0 -I. -Wall
+LDFLAGS = -g -O0 
 CXXFLAGS += ${CD_CFLAGS} ${CD_FLAGS} 
 LDFLAGS  += ${CD_LINKFLAGS}
 CXXFLAGS += -fopenmp
