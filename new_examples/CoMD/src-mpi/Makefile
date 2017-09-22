@@ -21,6 +21,7 @@ CC = mpicc
 CFLAGS = -std=gnu11
 
 ifeq (${CD_ENABLED}, 1)
+CD_ROOT := /home1/03341/kyushick/Work/CDs/pfsFix
 CD_FLAGS := 
 CD_CFLAGS = -I$(CD_ROOT)/include 
 CD_LINKFLAGS = -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker

@@ -12,7 +12,7 @@
 #include "initAtoms.h"
 
 struct SimFlatSt;
-
+struct ForceExchangeDataSt;
 /// The base struct from which all potentials derive.  Think of this as an
 /// abstract base class.
 ///
@@ -37,6 +37,95 @@ typedef struct BasePotentialSt
    void (*print)(FILE* file, struct BasePotentialSt* pot);
    void (*destroy)(struct BasePotentialSt** pot); //!< destruction of the potential
 } BasePotential;
+
+/*************************************************************************
+ *
+ * These constructs are moved from original place of definition
+ *
+ *************************************************************************/
+// kyushick: moved from ljforce.c
+/// Derived struct for a Lennard Jones potential.
+/// Polymorphic with BasePotential.
+/// \see BasePotential
+typedef struct LjPotentialSt
+{
+   real_t cutoff;          //!< potential cutoff distance in Angstroms
+   real_t mass;            //!< mass of atoms in intenal units
+   real_t lat;             //!< lattice spacing (angs) of unit cell
+   char latticeType[8];    //!< lattice type, e.g. FCC, BCC, etc.
+   char  name[3];	   //!< element name
+   int	 atomicNo;	   //!< atomic number  
+   int  (*force)(struct SimFlatSt* s); //!< function pointer to force routine
+   void (*print)(FILE* file, BasePotential* pot);
+   void (*destroy)(BasePotential** pot); //!< destruction of the potential
+   real_t sigma;
+   real_t epsilon;
+} LjPotential;
+
+// kyushick: moved from eam.c
+/// Handles interpolation of tabular data.
+///
+/// \see initInterpolationObject
+/// \see interpolate
+typedef struct InterpolationObjectSt 
+{
+   int n;          //!< the number of values in the table
+   real_t x0;      //!< the starting ordinate range
+   real_t invDx;   //!< the inverse of the table spacing
+   real_t* values; //!< the abscissa values
+} InterpolationObject;
+
+// kyushick: moved from eam.c
+/// Derived struct for an EAM potential.
+/// Uses table lookups for function evaluation.
+/// Polymorphic with BasePotential.
+/// \see BasePotential
+typedef struct EamPotentialSt 
+{
+   real_t cutoff;          //!< potential cutoff distance in Angstroms
+   real_t mass;            //!< mass of atoms in intenal units
+   real_t lat;             //!< lattice spacing (angs) of unit cell
+   char latticeType[8];    //!< lattice type, e.g. FCC, BCC, etc.
+   char  name[3];	   //!< element name
+   int	 atomicNo;	   //!< atomic number  
+   int  (*force)(struct SimFlatSt* s); //!< function pointer to force routine
+   void (*print)(FILE* file, BasePotential* pot);
+   void (*destroy)(BasePotential** pot); //!< destruction of the potential
+   InterpolationObject* phi;  //!< Pair energy
+   InterpolationObject* rho;  //!< Electron Density
+   InterpolationObject* f;    //!< Embedding Energy
+
+   real_t* rhobar;        //!< per atom storage for rhobar
+   real_t* dfEmbed;       //!< per atom storage for derivative of Embedding
+   HaloExchange* forceExchange;
+   struct ForceExchangeDataSt* forceExchangeData;
+} EamPotential;
+
+// kyushick: moved from halo_exchange.c
+/// Extra data members that are needed for the exchange of atom data.
+/// For an atom exchange, the HaloExchangeSt::parms will point to a
+/// structure of this type.
+typedef struct AtomExchangeParmsSt
+{
+   int nCells[6];        //!< Number of cells in cellList for each face.
+   int* cellList[6];     //!< List of link cells from which to load data for each face.
+   real_t* pbcFactor[6]; //!< Whether this face is a periodic boundary.
+}
+AtomExchangeParms;
+
+// kyushick: moved from halo_exchange.c
+/// Extra data members that are needed for the exchange of force data.
+/// For an force exchange, the HaloExchangeSt::parms will point to a
+/// structure of this type.
+typedef struct ForceExchangeParmsSt
+{
+   int nCells[6];     //!< Number of cells to send/recv for each face.
+   int* sendCells[6]; //!< List of link cells to send for each face.
+   int* recvCells[6]; //!< List of link cells to recv for each face.
+}
+ForceExchangeParms;
+/**************************************************************************/
+
 
 
 /// species data: chosen to match the data found in the setfl/funcfl files
@@ -81,5 +170,21 @@ typedef struct SimFlatSt
    HaloExchange* atomExchange;
    
 } SimFlat;
+
+#if 1//_CD
+extern int is_eam;
+extern unsigned int preserveSimFlat(SimFlat *sim);
+extern unsigned int preserveDomain(Domain *domain);
+extern unsigned int preserveLinkCell(LinkCell *linkcell);
+extern unsigned int preserveAtoms (Atoms *atoms, int nTotalBoxes);
+extern unsigned int preserveSpeciesData(SpeciesData *species);
+extern unsigned int preserveLjPot(LjPotential *pot);
+extern unsigned int preserveInterpolationObject(InterpolationObject *obj);
+extern unsigned int preserveEamPot(EamPotential *pot, int nTotalBoxes);
+extern unsigned int preserveHaloExchange(HaloExchange *xchange, int is_force);
+extern unsigned int preserveHaloAtom(AtomExchangeParms *xchange);
+extern unsigned int preserveHaloForce(ForceExchangeParms *xchange);
+extern unsigned int preserveForceData(struct ForceExchangeDataSt *forceData);
+#endif
 
 #endif

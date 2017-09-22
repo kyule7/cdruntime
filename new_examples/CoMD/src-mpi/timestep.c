@@ -30,30 +30,81 @@ static void advancePosition(SimFlat* s, int nBoxes, real_t dt);
 /// After nSteps the kinetic energy is computed for diagnostic output.
 double timestep(SimFlat* s, int nSteps, real_t dt)
 {
+#if _CD1
+   cd_handle_t *cd_lv1 = getleafcd();
+#endif
    for (int ii=0; ii<nSteps; ++ii)
    {
+#if   _CD_loop
+      cd_begin(cd_lv1, "timestep");
+//      cdh->cd_preserve(&data, size, kCopy, "timestep_total");
+#endif
+      unsigned prv_size = preserveSimFlat(s);
+      printf("Total Size:%u\n", prv_size);
+
+
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
+
+#if   _CD_advancePosition
+      cd_detect(cd_lv1);
+      cd_complete(cd_lv1);
+      cd_begin(cd_lv1, "advancePosition");
+//      cdh->cd_preserve(&data, size, kCopy, "timestep_total");
+#endif 
 
       startTimer(positionTimer);
       advancePosition(s, s->boxes->nLocalBoxes, dt);
       stopTimer(positionTimer);
 
+#if   _CD_redistributeAtoms
+      cd_detect(cd_lv1);
+      cd_complete(cd_lv1);
+      cd_begin(cd_lv1, "redistributeAtoms");
+//      cdh->cd_preserve(&data, size, kCopy, "timestep_total");
+#endif 
+
       startTimer(redistributeTimer);
       redistributeAtoms(s);
       stopTimer(redistributeTimer);
+
+#if   _CD_computeForce
+      cd_detect(cd_lv1);
+      cd_complete(cd_lv1);
+      cd_begin(cd_lv1, "computeForce");
+//      cdh->cd_preserve(&data, size, kCopy, "timestep_total");
+#endif 
 
       startTimer(computeForceTimer);
       computeForce(s);
       stopTimer(computeForceTimer);
 
+#if   _CD_advanceVelocity
+      cd_detect(cd_lv1);
+      cd_complete(cd_lv1);
+      cd_begin(cd_lv1, "advanceVelocity");
+//      cdh->cd_preserve(&data, size, kCopy, "timestep_total");
+#endif 
+
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
+#if   _CD_loop
+      cd_complete(cd_lv1);
+#endif // _CD_loop
    }
-
+#if   _CD_kineticEnergy 
+   cd_detect(cd_lv1);
+   cd_complete(cd_lv1);
+   cd_begin(cd_lv1, "kineticEnergy"); 
+#endif
    kineticEnergy(s);
+
+#if   _CD1   
+   cd_detect(cd_lv1);
+   cd_complete(cd_lv1);
+#endif
 
    return s->ePotential;
 }
@@ -63,7 +114,8 @@ void computeForce(SimFlat* s)
    s->pot->force(s);
 }
 
-
+// kyushick
+// advanceVelocity : {atoms->p} <- {f,atoms->f,boxes->nLocalBoxes}
 void advanceVelocity(SimFlat* s, int nBoxes, real_t dt)
 {
    for (int iBox=0; iBox<nBoxes; iBox++)
