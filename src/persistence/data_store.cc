@@ -82,7 +82,7 @@ void DataStore::Init(char *ptr)
   head_ = 0;//size_ - size_ / 4;
   tail_ = head_;//sizeof(MagicStore);
   allocated_ = 0;
-  mode_ = kBoundedMode | kMPIFile;//kPosixFile;
+  mode_ = kBoundedMode | kPosixFile;
   r_tail_ = 0;
   r_head_ = 0;
   if(ptr == NULL) 
@@ -832,8 +832,8 @@ void DataStore::GetData(char *dst, int64_t len, uint64_t pos, bool keep_reading)
   uint64_t fetch_pos = pos;
   int64_t tail_inc = 0; 
   int64_t head_inc = 0;
-  int64_t orig_len = len; 
-  uint64_t orig_rtail = r_tail_;
+//  int64_t orig_len = len; 
+//  uint64_t orig_rtail = r_tail_;
   while(len > 0) {
     int64_t consumed = FetchInternal(tail_inc, head_inc, len, fetch_pos, false);
     int64_t readsize = (len < consumed)? len : consumed;

@@ -19,8 +19,8 @@ using namespace packer;
 MPIFileHandle *MPIFileHandle::fh_ = NULL;
 char err_str[MPI_MAX_ERR_STR];
 int err_len = 0, err_class = 0;
-int packer::packerTaskID = 0;
-int packer::packerTaskSize = 0;
+//int packer::packerTaskID = 0;
+//int packer::packerTaskSize = 0;
 
 inline void CheckError(int err) 
 {

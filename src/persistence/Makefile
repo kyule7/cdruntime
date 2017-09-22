@@ -14,8 +14,8 @@ TARGET=libpacker.so
 
 all: ${TARGET}
 #all: test_base test_packer test_mpi
-${TARGET}: ${MPIOBJS}
-	$(MPICC) -shared -Wl,-soname,libpacker.so $^ -o libpacker.so -lpthread
+${TARGET}: ${OBJS}
+	$(CC) -shared -Wl,-soname,libpacker.so $^ -o libpacker.so -lpthread
 
 #test_base: test_base.o ${MPIOBJS}
 #	${MPICC} ${LFLAGS} $^ -o $@ -lpthread

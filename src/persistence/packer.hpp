@@ -150,6 +150,12 @@ class Packer {
       return ret;
     }
 
+    /// Inserts table entry only
+    uint64_t Add(EntryT &&entry)
+    {
+      return table_->Insert(entry);
+    }
+
     uint64_t Add(char *src, EntryT *entry)
     {
       // if size is 0, insert entry to table only
@@ -218,11 +224,22 @@ class Packer {
     // FIXME:Initially buffer should be flushed first.
     EntryT *GetNext(char *dst, uint64_t id)
     {
-      if(cur_pos_ < table_.used()) {
+      if(cur_pos_ < table_->used()) {
         EntryT &entry = table_[cur_pos_++];
         assert(id == entry.id_);
         data_->Read(dst, entry.size(), entry.offset_);
         return &entry;
+      } else {
+        cur_pos_ = 0;
+        return NULL;
+      }
+    }
+
+    // FIXME:Initially buffer should be flushed first.
+    EntryT *GetNext(void)
+    {
+      if(cur_pos_ < table_->used()) {
+        return table_->At(cur_pos_++);
       } else {
         cur_pos_ = 0;
         return NULL;

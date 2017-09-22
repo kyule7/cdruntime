@@ -97,9 +97,12 @@ class TableStore : public BaseTable {
 
     EntryT &operator[](uint64_t idx) { return ptr_[idx % size_]; }
 
+    EntryT *At(uint64_t idx) { return (ptr_ + (idx % size_)); }
+
     CDErrType AllocateTable(uint64_t entry_cnt=BASE_ENTRY_CNT)
     {
       MYDBG("\n");
+      printf("\n");
       CDErrType err = kOK;
       head_ = 0;
       tail_ = head_;
@@ -135,7 +138,7 @@ class TableStore : public BaseTable {
         if( ptr_[i].id_ == id ) {
           MYDBG("%lu == %lu\n", ptr_[i].id_, id);
           ret_size = ptr_[i].size();
-          ret_size = ptr_[i].offset_;
+          ret_offset = ptr_[i].offset_;
           ret = kOK;
           break;
         }
@@ -189,6 +192,41 @@ class TableStore : public BaseTable {
         //assert(0);
       }
       return (void *)ret;
+    }
+
+    // Find with offset. It sounds wierd, but it is used for matching malloc/free.
+    // malloc creates an entry with [TYPE|COUNTER] as id, and has a pointer in [OFFSET]
+    // free call should search for the pointer in the table
+    EntryT *FindWithOffset(uint64_t offset, uint32_t &table_offset)
+    {
+      EntryT *ret = NULL;
+      uint32_t found_idx = -1U;
+      for(uint32_t i=table_offset; i<tail_; i++) {
+        // The rule for entry is that the first element in object layout is always ID.
+        if( ptr_[i].offset() == offset ) {
+          MYDBG("%lu == %lu\n", ptr_[i].offset(), offset);
+          ret = &(ptr_[i]);
+          found_idx = i;
+          break;
+        }
+      }
+      // checking
+      if(ret == NULL) {
+        if(packerTaskID == 0) {
+          printf("tail:%lu\n", tail_);
+          for(uint32_t i=table_offset; i<tail_; i++) {
+            // The rule for entry is that the first element in object layout is always ID.
+            if( ptr_[i].offset() == offset ) {
+              printf("TEST %lu == %lu\n", ptr_[i].offset(), offset);
+            }
+          }
+        } else {
+          printf("my task id:%d\n", packerTaskID);
+        }
+        //assert(0);
+      }
+      table_offset = found_idx;
+      return ret;
     }
 
     virtual CDErrType GetAt(uint64_t idx, uint64_t &ret_id, uint64_t &ret_size, uint64_t &ret_offset) 

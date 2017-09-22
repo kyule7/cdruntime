@@ -22,7 +22,7 @@ class DataStore;
 
 class FileHandle {
   public:
-    static std::string basepath; 
+    static char basepath[256]; 
   protected:
     std::string filepath_;
     uint64_t offset_;
