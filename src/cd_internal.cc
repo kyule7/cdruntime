@@ -107,11 +107,11 @@ void cd::internal::InitFileHandle(bool make_dir)
 {
   char *prv_base_str = getenv( "CD_PRV_BASEPATH" );
   if(prv_base_str != NULL) {
-    packer::FileHandle::basepath = prv_base_str;
+    strcpy(packer::FileHandle::basepath, prv_base_str);
   }
 
   if(make_dir) {
-    MakeFileDir(packer::FileHandle::basepath.c_str());
+    MakeFileDir(packer::FileHandle::basepath);
   }
 }
 

@@ -102,7 +102,6 @@ class TableStore : public BaseTable {
     CDErrType AllocateTable(uint64_t entry_cnt=BASE_ENTRY_CNT)
     {
       MYDBG("\n");
-      printf("\n");
       CDErrType err = kOK;
       head_ = 0;
       tail_ = head_;
