@@ -52,6 +52,7 @@ inline uint64_t CheckType(uint64_t id) {
 #define DEFINE_FUNCPTR(func) \
   FType_##func FT_##func = NULL
 */
+
 #define INIT_FUNCPTR(func) \
   FT_##func = (__typeof__(&func))dlsym(RTLD_NEXT, #func)
 
@@ -79,40 +80,5 @@ inline uint64_t CheckType(uint64_t id) {
     printf("Logging End   %d %s\n", (FTID_##func), ft2str[(FTID_##func)]); \
     log::disabled = 0; \
   }
-/*
-#define LOGGING_PROLOG(FTID) \
-  if(log::disabled == 1) { \
-    printf("Logging Disabled %s\n", ft2str[(FTID)]); \
-    goto END_LIBC; \
-  } else { \
-    log::disabled = 1; \
-    printf("Logging Begin %d %s\n", (FTID), ft2str[(FTID)]); \
-  }
-
-#define LOGGING_EPILOG(FTID) \
-  printf("Logging End   %d %s\n", (FTID), ft2str[(FTID)]); \
-  log::disabled = 0; \
-END_LIBC: 
-#define LOGGING_PROLOG(ret_type, func, ...) \
-  if(log::disabled == 1) { \
-    printf("Logging Disabled %s\n", ft2str[(FTID_##func)]); \
-    ret = FT_##func(__VA_ARGS__); \
-  } else { \
-    log::disabled = 1; \
-    printf("Logging Begin %d %s\n", (FTID_##func), ft2str[(FTID_##func)]); 
-
-#define LOGGING_PROLOG2(func, ...) \
-  if(log::disabled == 1) { \
-    printf("Logging Disabled %s\n", ft2str[(FTID_##func)]); \
-    FT_##func(__VA_ARGS__); \
-  } else { \
-    log::disabled = 1; \
-    printf("Logging Begin %d %s\n", (FTID_##func), ft2str[(FTID_##func)]); 
-
-#define LOGGING_EPILOG(func) \
-    printf("Logging End   %d %s\n", (FTID_##func), ft2str[(FTID_##func)]); \
-    log::disabled = 0; \
-  }
-*/
 
 #define LOGGER_PRINT(...) fprintf(stdout, __VA_ARGS__)
