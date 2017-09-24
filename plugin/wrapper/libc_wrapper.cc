@@ -76,7 +76,7 @@ void log::InitMallocPtr(void)
  * 
  * int LibCFunc(args) {
  *    int ret = 0;
- *    if(enabled) {
+ *    if(disabled) {
  *      ret = func(args);
  *    } else {
  *      entry = packer.GetNext();
