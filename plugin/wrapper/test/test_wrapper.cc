@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <string.h>
-#include "define.h"
+#include "logging.h"
 using namespace log;
 
 int main() {

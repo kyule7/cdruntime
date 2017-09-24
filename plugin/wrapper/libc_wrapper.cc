@@ -1,4 +1,4 @@
-#include "define.h"
+#include "logging.h"
 #include "libc_wrapper.h"
 #include "packer.hpp"
 #include "singleton.h"
@@ -7,8 +7,8 @@
 log::Singleton log::singleton;
 packer::Packer<packer::BaseEntry> serdes;
 uint64_t log::gen_ftid = 0;
-int log::replaying = 0;
-int log::disabled = 1;
+bool log::replaying = false;
+bool log::disabled  = true;
 
 using namespace log;
 
@@ -20,13 +20,13 @@ static uint32_t local_buf_offset = 0;
 
 void log::Init(void)
 {
-  log::disabled = 0;
+  log::disabled = false;
 }
 
 void log::Fini(void)
 {
-  log::replaying = 0;
-  log::disabled = 1;
+  log::replaying = false;
+  log::disabled = true;
 }
 
 /**************************************************/
@@ -93,7 +93,7 @@ void *calloc(size_t numElem, size_t size)
   //LOGGING_PROLOG(calloc, numElem, size);
   LOGGER_PRINT("calloc(%zu,%zu) wrapped\n", numElem, size);
   
-  if(log::disabled == 1) { 
+  if(log::disabled) { 
     if(log::init_calloc == true) {
       LOGGER_PRINT("Logging Disabled %s\n", ft2str[(FTID_calloc)]); 
       ret = FT_calloc(numElem, size); 
@@ -105,7 +105,7 @@ void *calloc(size_t numElem, size_t size)
     }
   } 
   else { 
-    log::disabled = 1; 
+    log::disabled = true; 
     LOGGER_PRINT("Logging Begin %d %s\n", (FTID_calloc), ft2str[(FTID_calloc)]); 
     if(log::replaying == 0) { 
       ret = FT_calloc(numElem, size);
@@ -117,7 +117,7 @@ void *calloc(size_t numElem, size_t size)
       assert(CheckType(entry->id_) == FTID_calloc);
     }
     LOGGER_PRINT("Logging End   %d %s\n", (FTID_calloc), ft2str[(FTID_calloc)]); 
-    log::disabled = 0; 
+    log::disabled = false; 
   }
   LOGGER_PRINT("%p = calloc(%zu,%zu) wrapped\n", ret, numElem, size);
   //LOGGING_EPILOG(calloc);

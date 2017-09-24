@@ -1,5 +1,5 @@
 #include <sys/time.h>
-#include "define.h"
+#include "logging.h"
 
 namespace log {
 

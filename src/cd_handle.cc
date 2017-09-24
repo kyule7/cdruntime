@@ -398,7 +398,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #endif
 
   end_clk = CD_CLOCK();
-  CDEpilogue();
+  CDEpilogue(); // It enables logging.
 
   return root_cd_handle;
 }

@@ -14,10 +14,10 @@ all: ${TARGET}
 ${TARGET}: ${OBJS}
 	$(CC) -shared -Wl,-soname,libwrapLibc.so $^ -o ${TARGET} ${LFLAGS}
 
-singleton.o: singleton.cc define.h
+singleton.o: singleton.cc logging.h
 	$(CC) ${CFLAGS} singleton.cc -o $@
 
-libc_wrapper.o: libc_wrapper.cc define.h
+libc_wrapper.o: libc_wrapper.cc logging.h
 	$(CC) ${CFLAGS} libc_wrapper.cc -o $@
 
 

@@ -27,8 +27,8 @@ void Init(void);
 void Fini(void);
 
 extern char ft2str[FTIDNums][64];
-extern int disabled;
-extern int replaying;
+extern bool disabled;
+extern bool replaying;
 extern uint64_t gen_ftid;
 extern bool initialized;
 extern bool init_calloc;
@@ -69,16 +69,16 @@ inline uint64_t CheckType(uint64_t id) {
 
 #define LOGGING_PROLOG(func, ...) \
   CHECK_INIT(func) \
-  if(log::disabled == 1) { \
+  if(log::disabled) { \
     printf("Logging Disabled %s\n", ft2str[(FTID_##func)]); \
     return FT_##func(__VA_ARGS__); \
   } else { \
-    log::disabled = 1; \
+    log::disabled = true; \
     printf("Logging Begin %d %s\n", (FTID_##func), ft2str[(FTID_##func)]); 
 
 #define LOGGING_EPILOG(func) \
     printf("Logging End   %d %s\n", (FTID_##func), ft2str[(FTID_##func)]); \
-    log::disabled = 0; \
+    log::disabled = false; \
   }
 
 #define LOGGER_PRINT(...) fprintf(stdout, __VA_ARGS__)
