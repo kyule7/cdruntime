@@ -60,6 +60,11 @@
 #include "timestep.h"
 #include "constants.h"
 
+#if _CD
+#include "cd.h"
+#include "cd_comd.h"
+#endif
+
 #define REDIRECT_OUTPUT 0
 #define   MIN(A,B) ((A) < (B) ? (A) : (B))
 
@@ -105,6 +110,13 @@ int main(int argc, char** argv)
 
    timestampBarrier("Starting simulation\n");
 
+#if _CD
+   cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
+   cd_begin(root_cd, "Root");
+   preserveSimFlat(root_cd, sim);
+
+   cd_handle_t *cdh = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF);
+#endif
    // This is the CoMD main loop
    const int nSteps = sim->nSteps;
    const int printRate = sim->printRate;
@@ -129,6 +141,13 @@ int main(int argc, char** argv)
    sumAtoms(sim);
    printThings(sim, iStep, getElapsedTime(timestepTimer));
    timestampBarrier("Ending simulation\n");
+
+#if _CD
+   cd_destroy(cdh);
+   cd_detect(root_cd);
+   cd_complete(root_cd);
+   cd_finalize();
+#endif
 
    // Epilog
    validateResult(validate, sim);

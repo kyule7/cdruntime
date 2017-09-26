@@ -3,7 +3,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
-
+#include "cd.h"
+#include "cd_comd.h"
 /*
  * nTotalBoxes is constant
 advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
@@ -26,26 +27,26 @@ int is_eam = 0;
 
 unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim)
 {
-    cd_preserve(cdh, sim, sizeof(SimFlat), kCopy, "SimFlat");
+    //cd_preserve(cdh, sim, sizeof(SimFlat), kCopy, "SimFlat", "");
     printf("Preserve SimFlat: %zu\n", sizeof(SimFlat));
     uint32_t size = sizeof(SimFlat);    
-    size += preserveDomain(sim->domain);       // flat 
+    size += preserveDomain(cdh, sim->domain);       // flat 
     size += preserveLinkCell(sim->boxes);      // nAtoms = nTotalBoxes*sizeof(int)
     size += preserveAtoms(sim->atoms, sim->boxes->nTotalBoxes);         // 
     size += preserveSpeciesData(sim->species);   // flat
     if(is_eam) {
-        size += preserveEamPot(sim->pot, sim->boxes->nTotalBoxes);	  
+        size += preserveEamPot((EamPotential *)sim->pot, sim->boxes->nTotalBoxes);	  
     } else {
-        size += preserveLjPot(sim->pot);	// flat 
+        size += preserveLjPot((LjPotential *)sim->pot);	// flat 
     }
     size += preserveHaloExchange(sim->atomExchange, 0);
     return size;
 }
 
-unsigned int preserveDomain(Domain *domain)
+unsigned int preserveDomain(cd_handle_t *cdh, Domain *domain)
 {
     uint32_t size = sizeof(Domain);
-    cd_preserve(cdh, sim, sizeof(Domain), kCopy, "Domain");
+    //cd_preserve(cdh, domain, sizeof(Domain), kCopy, "Domain", "");
 
     printf("Preserve Domain: %zu\n", sizeof(Domain));
     return size;

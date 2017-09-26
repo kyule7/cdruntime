@@ -16,8 +16,11 @@
 #include <string.h>
 #include <assert.h>
 
-static int myRank = 0;
-static int nRanks = 1;
+// kyu
+#include "CoMDTypes.h"
+
+int myRank = 0;
+int nRanks = 1;
 
 #ifdef DO_MPI
 #ifdef SINGLE

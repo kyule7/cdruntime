@@ -1,6 +1,19 @@
 #include "CoMDTypes.h"
 extern int is_eam;
-int preserveSimFlat(SimFlat *sim);
+//int preserveSimFlat(SimFlat *sim);
+unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim);
+unsigned int preserveDomain(cd_handle_t *cdh, Domain *domain);
+unsigned int preserveLinkCell(LinkCell *linkcell);
+unsigned int preserveAtoms (Atoms *atoms, int nTotalBoxes);
+unsigned int preserveSpeciesData(SpeciesData *species);
+unsigned int preserveLjPot(LjPotential *pot);
+unsigned int preserveInterpolationObject(InterpolationObject *obj);
+unsigned int preserveEamPot(EamPotential *pot, int nTotalBoxes);
+unsigned int preserveHaloExchange(HaloExchange *xchange, int is_force);
+unsigned int preserveHaloAtom(AtomExchangeParms *xchange);
+unsigned int preserveHaloForce(ForceExchangeParms *xchange);
+unsigned int preserveForceData(ForceExchangeData *forceData);
+
 /// Domain decomposition information.
 //typedef struct DomainSt
 //{

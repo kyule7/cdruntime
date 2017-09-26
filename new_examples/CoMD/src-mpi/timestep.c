@@ -8,6 +8,10 @@
 #include "parallel.h"
 #include "performanceTimers.h"
 
+#if _CD
+#include "cd.h"
+#endif
+
 static void advanceVelocity(SimFlat* s, int nBoxes, real_t dt);
 static void advancePosition(SimFlat* s, int nBoxes, real_t dt);
 
@@ -30,27 +34,50 @@ static void advancePosition(SimFlat* s, int nBoxes, real_t dt);
 /// After nSteps the kinetic energy is computed for diagnostic output.
 double timestep(SimFlat* s, int nSteps, real_t dt)
 {
+
+   cd_handle_t *cdh = getleafcd();
    for (int ii=0; ii<nSteps; ++ii)
    {
+      cd_begin(cdh, "advanceVelocity"); 
+
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
+
+      cd_detect(cdh);
+      cd_complete(cdh); 
+      cd_begin(cdh, "advancePosition"); 
 
       startTimer(positionTimer);
       advancePosition(s, s->boxes->nLocalBoxes, dt);
       stopTimer(positionTimer);
 
+      cd_detect(cdh);
+      cd_complete(cdh); 
+      cd_begin(cdh, "redistributeAtoms"); 
+
       startTimer(redistributeTimer);
       redistributeAtoms(s);
       stopTimer(redistributeTimer);
+
+      cd_detect(cdh);
+      cd_complete(cdh); 
+      cd_begin(cdh, "computeForce"); 
 
       startTimer(computeForceTimer);
       computeForce(s);
       stopTimer(computeForceTimer);
 
+      cd_detect(cdh);
+      cd_complete(cdh); 
+      cd_begin(cdh, "advanceVelocity_end"); 
+
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
+
+      cd_detect(cdh);
+      cd_complete(cdh); 
    }
 
    kineticEnergy(s);

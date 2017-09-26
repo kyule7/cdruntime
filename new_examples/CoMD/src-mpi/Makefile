@@ -19,11 +19,11 @@ DO_MPI = ON
 ### (such as -lm for the math library) put them in C_LIB.
 CC = mpicc
 CFLAGS = -std=gnu11
-
+CD_ROOT=/home1/03341/kyushick/Work/CDs/pfsFix
 ifeq (${CD_ENABLED}, 1)
 CD_FLAGS := 
-CD_CFLAGS = -I$(CD_ROOT)/include 
-CD_LINKFLAGS = -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker
+CD_CFLAGS := -I$(CD_ROOT)/include -D_CD=1
+CD_LINKFLAGS := -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
 else
 CD_FLAGS := 
 CD_CFLAGS :=
@@ -33,7 +33,7 @@ endif
 CFLAGS += ${CD_CFLAGS} ${CD_FLAGS}
 OPTFLAGS = -g -O5
 INCLUDES = 
-C_LIB = -lm
+C_LIB = -lm ${CD_LINKFLAGS}
 
 
 ### If you need to specify include paths, library paths, or link flags
