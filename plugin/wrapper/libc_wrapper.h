@@ -1,7 +1,7 @@
-#include <stdlib.h>
-#include <malloc.h>
-#include <string.h>
+#pragma once
 
+#include "packer.hpp"
+#include "logging.h"
 /**
  *  Our approach to log libc library is using dlsym(RTLD_NEXT, symbol)
  *  FT_symbol is our format of function pointer for the real symbol, 
@@ -44,11 +44,145 @@
 
 
 
-namespace log {
-
-enum {
-  kFreed = 0x1,
+namespace logger {
+struct LogEntry : public packer::BaseEntry {
+    static uint64_t gen_ftid;
+    FTID ftype_;
+    LogEntry(void) : ftype_(FTID_invalid) {}
+    LogEntry(FTID ftype) 
+      : packer::BaseEntry(gen_ftid, 0), ftype_(ftype) {}
+    LogEntry(uint64_t id, uint64_t size, uint64_t offset) 
+      : packer::BaseEntry(id, size, offset), ftype_(FTID_invalid) {}
+    LogEntry(uint64_t id, FTID ftype, uint64_t attr, uint64_t offset) 
+      : packer::BaseEntry(id, attr, 0, offset), ftype_(ftype) {}
+    LogEntry(uint64_t id, FTID ftype, uint16_t attr, uint64_t size, uint64_t offset) 
+      : packer::BaseEntry(id, attr, size, offset), ftype_(ftype) {}
+//    LogEntry(FTID ftype, uint64_t id, uint64_t size, uint64_t offset) 
+//      : packer::BaseEntry(id, size, offset), ftype_(ftype) {}
+    LogEntry(const LogEntry &that) {
+      ftype_ = that.ftype_;
+      copy(that);
+    }
+    void Print(void) const
+    { printf("Entry [%12s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_); }
 };
+#if 0
+  static CDPath *uniquePath_;
+public:
+  CDPath(void) {
+  
+#if CD_MPI_ENABLED == 0 && CD_AUTOMATED == 1
+//    CDHandle *root = CD_Init(1, 0);
+//    CD_Begin(root);
+#endif
+  }
+  ~CDPath(void) {
+#if CD_MPI_ENABLED == 0 && CD_AUTOMATED == 1
+//    CD_Complete(back());
+//    CD_Finalize();
+#endif
+  }
+
+public:
+ /** @brief Get CDHandle of Root CD 
+  *
+  * \return Pointer to CDHandle of root
+  */
+  static CDPath* GetCDPath(void) 
+  {
+    if(uniquePath_ == NULL) 
+      uniquePath_ = new CDPath();
+    return uniquePath_;
+  }
+#endif
+class LogPacker;
+extern bool disabled;
+extern LogPacker *GetLogger(void);
+class LogPacker : public packer::Packer<LogEntry> {
+  friend LogPacker *GetLogger(void);
+    static LogPacker *libc_logger;
+  public:
+    inline uint64_t GetNextID(void) { return LogEntry::gen_ftid; }
+    inline void SetNextID(uint64_t orig_ftid) { LogEntry::gen_ftid = orig_ftid; }
+    inline uint64_t Set(uint64_t &offset) {
+      logger::replaying = false;
+      offset = table_->tail();
+      return LogEntry::gen_ftid;
+    }
+
+    inline void Reset(uint64_t orig_ftid) {
+      logger::replaying = true;
+      LogEntry::gen_ftid = orig_ftid;
+    }
+
+    bool IsLogFound(void) {
+      uint64_t current_log_id = LogEntry::gen_ftid;
+      LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
+//      GetLogger()->table_->head_ - 1;
+//      Entry *upto  = GetLogger()->GetAt(offset_from);
+//      Entry *entry = GetLogger()->table_->GetLast();
+//      for(; entry != upto; entry--) {
+//        entry->size_.Check(kPushed);
+//      }
+//      LogEntry *entry = GetLogger()->table_->Find(id);
+      printf("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); getchar();
+      return entry != NULL;
+    }
+
+    // Find an entry with kNeedPushed from the offset, 
+    // and copy the entry at the dst offset to the offset.
+    // return the dst offset for the next search.
+    uint64_t PushLogs(uint64_t offset_from) {
+      uint64_t pushed_cnt = table_->FindWithAttr(kNeedPushed, offset_from);
+      printf("Pushed %lu entries\n", pushed_cnt);
+      return pushed_cnt;
+    }
+
+    uint64_t FreeMemory(uint64_t offset_from) {
+      //packer::Packer<LogEntry> free_list;
+      LogPacker free_list;
+      uint64_t pushed_cnt = table_->FindWithAttr(kNeedFreed, offset_from, free_list.table_);
+      printf("Free %ld == %lu entries\n", free_list.table_->used(), pushed_cnt);
+      return pushed_cnt;
+    }
+    
+};
+
+
+//extern packer::Packer<LogEntry> *GetLogger(void);
+
+
+//inline uint64_t GetNextID(void) { return LogEntry::gen_ftid; }
+//inline void SetNextID(uint64_t orig_ftid) { LogEntry::gen_ftid = orig_ftid; }
+//bool IsLogFound(void);
+//void PushLogs(uint64_t offset_from);
+
+}
+
+#define CHECK_INIT(func) \
+  if(FT_##func == NULL) { \
+    INIT_FUNCPTR(func); \
+    if(logger::initialized == false) logger::InitMallocPtr(); \
+    assert(FT_##func); \
+    assert(logger::initialized); \
+  }
+
+#define LOGGING_PROLOG(func, ...) \
+  CHECK_INIT(func) \
+  if(logger::disabled) { \
+    printf("XXX Logging Disabled %s XXX\n", ft2str[(FTID_##func)]); \
+    return FT_##func(__VA_ARGS__); \
+  } else { \
+    logger::disabled = true; \
+    printf("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_##func)]); 
+
+#define LOGGING_EPILOG(func) \
+    printf("<<< Logging End   %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_##func)]); \
+    logger::LogEntry::gen_ftid++; \
+    logger::disabled = false; \
+  }
+
+
 
 //typedef void*(*FType_malloc)(size_t size);
 //typedef void*(*FType_calloc)(size_t numElem, size_t size);
@@ -57,5 +191,3 @@ enum {
 //typedef void*(*FType_memalign)(size_t boundary, size_t size);
 //typedef int(*FType_posix_memalign)(void **memptr, size_t alignment, size_t size);
 //typedef void(*FType_free)(void *ptr);
-
-}

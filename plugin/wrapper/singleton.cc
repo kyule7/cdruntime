@@ -1,7 +1,7 @@
 #include <cstdio>
 #include "singleton.h"
 
-using namespace log;
+using namespace logger;
 
 Singleton::Singleton(void) 
 {

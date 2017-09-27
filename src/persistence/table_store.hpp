@@ -36,8 +36,8 @@ class BaseTable {
 
   public:
     virtual void Init(void)=0;
-    virtual void *Find(uint64_t id)=0;
-    virtual uint64_t FindWithAttr(uint16_t attr, BaseTable *that=NULL)=0;
+//    virtual void *Find(uint64_t id)=0;
+//    virtual uint64_t FindWithAttr(uint16_t attr, uint64_t begin, BaseTable *that=NULL)=0;
     virtual CDErrType Find(uint64_t id, uint64_t &ret_size, uint64_t &ret_offset)=0;
     virtual CDErrType GetAt(uint64_t idx, uint64_t &ret_id, uint64_t &ret_size, uint64_t &ret_offset)=0;
     virtual CDErrType Reallocate(void)=0;
@@ -50,6 +50,7 @@ class BaseTable {
     virtual int64_t  usedsize(void) const = 0;
     virtual int64_t  tablesize(void) const = 0;
     virtual char    *GetPtr(void)   const = 0;
+    uint64_t tail(void) const { return tail_; }
 };
 
 //extern uint64_t BaseTable::table_id; = TABLE_ID_OFFSET;
@@ -78,7 +79,7 @@ class TableStore : public BaseTable {
         head_ = 0;
         tail_ = head_;//0;//len_in_byte / sizeof(EntryT);
         grow_unit_ = tail_ * 2;
-        printf("Created!!!!!!\n"); //getchar();
+//        printf("Created!!!!!!\n"); //getchar();
       } else {
         AllocateTable(BASE_ENTRY_CNT);
       }
@@ -144,29 +145,106 @@ class TableStore : public BaseTable {
       }
       return ret;
     }
+//    virtual uint64_t Insert(EntryT &newentry)
+//    {
+////      MYDBG("[%s] ptr:%p, (%p) used:%lu (entrysize:%zu)\n", __func__, ptr_+tail_, ptr_, tail_, sizeof(EntryT));
+//      if(NeedRealloc(sizeof(EntryT))) {
+//        Reallocate();
+//      }
+//      ptr_[tail_] = newentry;
+//      tail_++;
+////      MYDBG("[%s done] ptr:%p, (%p) used:%lu (entrysize:%zu)\n", __func__, ptr_+tail_, ptr_, tail_, sizeof(EntryT));
+//      return tail_*sizeof(EntryT);
+//    }
+//    virtual uint64_t FindWithAttr(uint16_t attr, BaseTable *that=NULL)
+//    {
+//      uint64_t num_entry = 0;
+//      TableStore<EntryT> *table = NULL;
+//      if(that == NULL) {
+//        table = this;
+//      } else {
+//        table = static_cast<TableStore<EntryT> *>(that);
+//      }
+//
+//      uint64_t orig_tail = tail_;
+//      for(uint32_t i=0; i<tail_; i++) {
+//        if(ptr_[i].size_.CheckAny(attr)) {
+//          table->Insert(ptr_[i]);
+//        }
+//      }
+//      num_entry = tail_ - orig_tail;
+//      return num_entry;
+//    }
     
-    virtual uint64_t FindWithAttr(uint16_t attr, BaseTable *that=NULL)
+    // Find an entry with kNeedPushed from the offset, 
+    // and copy the entry at the dst offset to the offset.
+    // return the dst offset for the next search.
+    virtual uint64_t FindWithAttr(uint16_t attr, uint64_t begin, TableStore<EntryT> *table=NULL)
     {
       uint64_t num_entry = 0;
-      TableStore<EntryT> *table = NULL;
-      if(that == NULL) {
-        table = this;
-      } else {
-        table = static_cast<TableStore<EntryT> *>(that);
+      if(table == NULL) { // Insert entries with the attr to this table from begin offset
+//        uint64_t orig_tail = tail_;
+        uint64_t orig_begin = begin;
+        for(uint32_t i=begin; i<tail_; i++) {
+          if(ptr_[i].size_.CheckAny(attr)) {
+            ptr_[begin++] = ptr_[i];
+          }
+        }
+        tail_ = begin;
+        num_entry = begin - orig_begin;
+      } else { // Search entries with the attr from the begin offset of this table
+               // Insert those entries with the attr to target table. 
+        uint64_t orig_tail = table->tail_;
+        for(uint32_t i=begin; i<tail_; i++) {
+          if(ptr_[i].size_.CheckAny(attr)) {
+            table->Insert(ptr_[i]);
+          }
+        }
+        num_entry = table->tail_ - orig_tail;
       }
 
-      uint64_t orig_tail = tail_;
-      for(uint32_t i=0; i<tail_; i++) {
-        if(ptr_[i].size_.CheckAny(attr)) {
-          table->Insert(ptr_[i]);
-        }
-      }
-      num_entry = tail_ - orig_tail;
       return num_entry;
     }
 
-    void *Find(uint64_t id)
+    EntryT *FindReverse(uint64_t id, int64_t begin)
     {
+      assert(head_ == 0);
+      EntryT *ret = NULL;
+      begin = (begin > tail_)? tail_-1 : begin;
+      if(begin >= 0) {
+        for(int64_t i=begin; i>=0; i--) {
+          // The rule for entry is that the first element in object layout is always ID.
+          if( ptr_[i].id_ == id ) {
+            MYDBG("%lu == %lu\n", ptr_[i].id_, id);
+            ret = &(ptr_[i]);
+            break;
+          }
+        }
+  
+        // check
+        if(ret == NULL) {
+          if(packerTaskID == 0) {
+            printf("Find %lu, tail:%lu\n", id, tail_); getchar();
+            for(uint32_t i=0; i<tail_; i++) {
+  //          for(int64_t i=begin; i>=0; i--) {
+              // The rule for entry is that the first element in object layout is always ID.
+              printf("TEST %lu == %lu\n", ptr_[i].id_, id);
+              if( ptr_[i].id_ == id ) {
+                printf("TEST %lu == %lu\n", ptr_[i].id_, id);
+              }
+            }
+          } else {
+            printf("my task id:%d\n", packerTaskID);
+          }
+//          assert(0);
+        }
+      }
+      return ret;
+    }
+
+    EntryT *Find(uint64_t id)
+    {
+      assert(head_ == 0);
       EntryT *ret = NULL;
       for(uint32_t i=0; i<tail_; i++) {
         // The rule for entry is that the first element in object layout is always ID.
@@ -176,6 +254,8 @@ class TableStore : public BaseTable {
           break;
         }
       }
+
+      // check
       if(ret == NULL) {
         if(packerTaskID == 0) {
           printf("tail:%lu\n", tail_);
@@ -190,7 +270,8 @@ class TableStore : public BaseTable {
         }
         //assert(0);
       }
-      return (void *)ret;
+      //return (void *)ret;
+      return ret;
     }
 
     // Find with offset. It sounds wierd, but it is used for matching malloc/free.
@@ -245,15 +326,31 @@ class TableStore : public BaseTable {
       return ret;
     }
 
+//    EntryT *GetAt(uint64_t idx)
+//    {
+//      // bound check
+//      if((int64_t)idx < used()) {
+//        uint64_t i = (head_ + idx) % size_;
+//        return ptr_ + i;
+//      } else {
+//        return NULL;
+//      }
+//    }
+    
+    // idx should be an index in buffer space
+    // It is used in IsPushedLog
     EntryT *GetAt(uint64_t idx)
     {
-      // bound check
-      if((int64_t)idx < used()) {
-        uint64_t i = (head_ + idx) % size_;
-        return ptr_ + i;
-      } else {
-        return NULL;
-      }
+      assert(idx <= tail_);
+      assert(idx > head_);
+      assert(head_ == 0);
+      uint64_t i = (head_ + idx) % size_;
+      return ptr_ + i;
+    }
+
+    EntryT *GetLast(void)
+    {
+      return ptr_ + ((tail_ - 1) % size_);
     }
 
     virtual uint64_t Advance(uint64_t offset)
@@ -485,6 +582,36 @@ class TableStore : public BaseTable {
         ERROR_MESSAGE_PACKER("Read failed: to:%p <- from:%p (%p)\n", pto, ptr_+pos, ptr_);
       }
     }
+
+//    // Find an entry with kNeedPushed from the offset, 
+//    // and copy the entry at the dst offset to the offset.
+//    // return the dst offset for the next search.
+//    virtual uint64_t FindWithAttr(uint16_t attr, uint64_t begin, TableStore<EntryT> *table=NULL)
+//    {
+//      uint64_t num_entry = 0;
+//      if(table == NULL) { // Insert entries with the attr to this table from begin offset
+////        uint64_t orig_tail = tail_;
+//        uint64_t orig_begin = begin;
+//        for(uint32_t i=begin; i<tail_; i++) {
+//          if(ptr_[i].size_.CheckAny(attr)) {
+//            ptr_[begin++] = ptr_[i];
+//          }
+//        }
+//        tail_ = begin;
+//        num_entry = begin - orig_begin;
+//      } else { // Search entries with the attr from the begin offset of this table
+//               // Insert those entries with the attr to target table. 
+//        uint64_t orig_tail = table->tail();
+//        for(uint32_t i=begin; i<tail_; i++) {
+//          if(ptr_[i].size_.CheckAny(attr)) {
+//            table->Insert(ptr_[i]);
+//          }
+//        }
+//        num_entry = table->tail() - orig_tail;
+//      }
+//
+//      return num_entry;
+//    }
 };
     
 

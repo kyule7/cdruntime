@@ -71,69 +71,70 @@ enum EntryType {
 #if 1 
 
 struct AttrInternal {
-  uint64_t size_:48;
-  uint64_t reserved_:8;
-  uint64_t table_:1;     // the entry actually points to table chunk
-  uint64_t nested_:1;    // the entry points to data+table nested in data chunk
-  uint64_t tmpshared_:1; // the etnry is temporarily shared
-  uint64_t share_:1;  // the entry is shared
-  uint64_t remote_:1; // the entry is remote
-  uint64_t refer_:1;  // the entry is refering to another entry. offset is the ID for that.
-  uint64_t dirty_:1;  // the entry is dirty. The data chunk that it points to is modified.
-  uint64_t invalid_:1;  // the entry is valid
+    uint64_t size_:48;
+    uint64_t reserved_:8;
+    uint64_t table_:1;     // the entry actually points to table chunk
+    uint64_t nested_:1;    // the entry points to data+table nested in data chunk
+    uint64_t tmpshared_:1; // the etnry is temporarily shared
+    uint64_t share_:1;  // the entry is shared
+    uint64_t remote_:1; // the entry is remote
+    uint64_t refer_:1;  // the entry is refering to another entry. offset is the ID for that.
+    uint64_t dirty_:1;  // the entry is dirty. The data chunk that it points to is modified.
+    uint64_t invalid_:1;  // the entry is valid
 };
 
 union Attr {
-  enum {
-    ktable     = 0x80,
-    knested    = 0x40,  
-    ktmpshared = 0x20,
-    kshare     = 0x10,
-    kremote    = 0x08,
-    krefer     = 0x04, 
-    kdirty     = 0x02,  
-    kinvalid   = 0x01
-  };
-  uint64_t code_;
-  AttrInternal attr_;
-  Attr(void) : code_(0) {}
-  Attr(uint64_t size) : code_(size) {}
-  Attr(uint64_t attr, uint64_t size) {
-    code_ = (attr << 48);
-    attr_.size_ = size;
-  }
-  uint64_t operator=(uint64_t that) {
-    attr_.size_ = that;
-    return attr_.size_;
-  } 
-  Attr &operator=(const Attr &that) {
-    code_ = that.code_;
-    return *this;
-  } 
-
-  void SetAll(uint64_t attr) {
-    code_ = (attr << 48);
-  }
-
-  void Set(uint64_t attr) {
-    code_ |= (attr << 48);
-  }
+    enum {
+      ktable     = 0x80,
+      knested    = 0x40,  
+      ktmpshared = 0x20,
+      kshare     = 0x10,
+      kremote    = 0x08,
+      krefer     = 0x04, 
+      kdirty     = 0x02,  
+      kinvalid   = 0x01
+    };
+    uint64_t code_;
+    AttrInternal attr_;
+    
+    Attr(void) : code_(0) {}
+    Attr(uint64_t size) : code_(size) {}
+    Attr(uint64_t attr, uint64_t size) {
+      code_ = (attr << 48);
+      attr_.size_ = size;
+    }
+    uint64_t operator=(uint64_t that) {
+      attr_.size_ = that;
+      return attr_.size_;
+    } 
+    Attr &operator=(const Attr &that) {
+      code_ = that.code_;
+      return *this;
+    } 
   
-  void Unset(uint64_t attr) {
-    code_ &= ~(attr << 48);
-  }
+    void SetAll(uint64_t attr) {
+      code_ = (attr << 48);
+    }
   
-  // Every attr is the same, then true. Otherwise false.
-  bool CheckAll(uint16_t attr) const 
-  { return (static_cast<uint16_t>(code_ >> 48) ^ attr) == 0; }
-
-  // If one of checking attr is set, then true. 
-  bool CheckAny(uint16_t attr) const
-  { return (static_cast<uint16_t>(code_ >> 48) & attr) != 0; }
+    void Set(uint64_t attr) {
+      code_ |= (attr << 48);
+    }
+    
+    void Unset(uint64_t attr) {
+      code_ &= ~(attr << 48);
+    }
+    
+    // Every attr is the same, then true. Otherwise false.
+    bool CheckAll(uint16_t attr) const 
+    { return (static_cast<uint16_t>(code_ >> 48) ^ attr) == 0; }
   
-  // If one of checking attr is set, then true. 
-  bool Check(uint16_t attr) const
-  { return (static_cast<uint16_t>(code_ >> 48) & attr) == attr; }
+    // If one of checking attr is set, then true. 
+    bool CheckAny(uint16_t attr) const
+    { return (static_cast<uint16_t>(code_ >> 48) & attr) != 0; }
+    
+    // If one of checking attr is set, then true. 
+    bool Check(uint16_t attr) const
+    { return (static_cast<uint16_t>(code_ >> 48) & attr) == attr; }
 
 };
 
@@ -148,6 +149,8 @@ struct BaseEntry {
       : id_(id), size_(size), offset_(0) {}
     BaseEntry(uint64_t id, uint64_t size, uint64_t offset) 
       : id_(id), size_(size), offset_(offset) {}
+    BaseEntry(uint64_t id, uint16_t attr, uint64_t size, uint64_t offset) 
+      : id_(id), size_(attr, size), offset_(offset) {}
     BaseEntry(const BaseEntry &that) {
       copy(that);
     }

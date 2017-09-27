@@ -1,5 +1,5 @@
 #!/bin/bash
-CDPATH=/home/kyushick/Work/CDs/pfsFix2/pfsFix
+CDPATH=../..
 PACKER_PATH=${CDPATH}/src/persistence
 CC=g++
 CFLAGS=-std=gnu++0x -fPIC -Wall -g -c -I. -I${PACKER_PATH} -fmax-errors=3

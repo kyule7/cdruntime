@@ -1,7 +1,7 @@
 #include <sys/time.h>
 #include "logging.h"
 
-namespace log {
+namespace logger {
 
 struct Singleton { 
     struct timeval start_, 

@@ -48,7 +48,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_common.h"
 #include "cd_def_interface.h"
 #include "cd_global.h"
-#include "logging.h"
+#include "libc_wrapper.h"
 
 namespace packer {
   class CDEntry;
@@ -424,14 +424,14 @@ extern bool just_reexecuted;
 
 #define MsgPrologue() \
   app_side = false; \
-  log::disabled = true; \
+  logger::disabled = true; \
   msg_begin_clk = CD_CLOCK(); 
 
 #define MsgEpilogue() \
   msg_end_clk = CD_CLOCK(); \
   msg_elapsed_time += msg_end_clk - msg_begin_clk; \
   app_side = true; \
-  log::disabled = false; 
+  logger::disabled = false; 
 
 #define LogPrologue() \
   log_begin_clk = CD_CLOCK(); 
@@ -447,7 +447,7 @@ extern bool just_reexecuted;
 
 #define CDPrologue() \
   app_side = false; \
-  log::disabled = true; \
+  logger::disabled = true; \
   begin_clk = CD_CLOCK(); 
 
 
@@ -459,7 +459,7 @@ extern bool just_reexecuted;
   end_clk = CD_CLOCK(); \
   elapsed_time += end_clk - begin_clk; \
   app_side = true; \
-  log::disabled = false; 
+  logger::disabled = false; 
 
 //end_clk = CD_CLOCK(); 
 //  elapsed_time += end_clk - begin_clk; 

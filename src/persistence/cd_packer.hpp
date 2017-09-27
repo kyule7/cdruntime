@@ -21,7 +21,8 @@ class CDPacker : public Packer<CDEntry> {
       CD_PACKER_PRINT("tag:%lu\n", tag); //getchar();
       // 1. Find entry in table store
       // 2. Copy data from data store to src
-      CDEntry *pentry = reinterpret_cast<CDEntry *>(table_->Find(tag));
+      //CDEntry *pentry = reinterpret_cast<CDEntry *>(table_->Find(tag));
+      CDEntry *pentry = table_->Find(tag);
 //      CDEntry *ret = pentry;
       if(pentry == NULL) {
         CD_PACKER_PRINT("\n\n [%d] not found %lu\n", packerTaskID, tag);

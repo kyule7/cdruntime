@@ -973,6 +973,18 @@ CDErrT CD::Begin(const char *label, bool collective)
   }
 #endif
 
+#if CD_LIBC_LOGGING
+  if(cd_exec_mode_ == kExecution) {
+    libc_log_id_ = logger::GetLogger()->Set(libc_log_begin_);
+    libc_log_end_ = libc_log_end_;
+  } else if(cd_exec_mode_ == kReexecution) {
+    logger::GetLogger()->Reset(libc_log_id_);
+  } else {
+    ERROR_MESSAGE("CD Begin with kSuspension (%d) is undefined state.\n", cd_exec_mode_);
+  }
+#endif
+
+
 #endif // comm_log ends
 
   CD_DEBUG("Sync \n");
@@ -1438,6 +1450,13 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
 //}
 
 CD::CDInternalErrT CD::CompleteLogs(void) {
+
+#if CD_LIBC_LOGGING
+  CD *parent = CDPath::GetParentCD(level())->ptr_cd();
+  logger::GetLogger()->FreeMemory(libc_log_begin_);
+  parent->libc_log_end_ = logger::GetLogger()->PushLogs(libc_log_begin_) + parent->libc_log_end_;
+#endif
+
 #if comm_log
   // SZ: pack logs and push to parent
   if (GetParentHandle()!=NULL) {

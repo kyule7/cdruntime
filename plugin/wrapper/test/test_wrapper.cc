@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <string.h>
-#include "logging.h"
-using namespace log;
+#include "libc_wrapper.h"
+using namespace logger;
 
 int main() {
   Init();
@@ -28,7 +28,7 @@ int main() {
   free(valloc_p);
   printf("[After] free valloc   : %p\n",  valloc_p);
 
-  replaying = 1;
+  GetLogger()->Reset(0);
 
   printf("\n--- Reply Begin ---\n\n");
   int *malloc_q = (int *)malloc(128);
@@ -45,11 +45,11 @@ int main() {
   int ret2 = posix_memalign(&ptr2, 512, 64); 
   printf("[After] posix_memalign: %p\n",  ptr2);
   printf("[Before] free          : %p\n",  realloc_q);
-  free(realloc_p);
+  free(realloc_q);
   printf("[After] free realloc  : %p\n",  realloc_q);
-  free(calloc_p);
+  free(calloc_q);
   printf("[After] free calloc   : %p\n",  calloc_q);
-  free(valloc_p);
+  free(valloc_q);
   printf("[After] free valloc   : %p\n",  valloc_q);
   printf("\n ----- End -----\n\n");
 

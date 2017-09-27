@@ -44,10 +44,11 @@ libcd_la_SOURCES = \
 										serdes.cc \
   	                sys_err_t.cc \
 										cd_capi.cc 
-MY_LDFLAGS=-L${abs_top_builddir}/src/persistence -lpacker -L${YAML_PATH}/lib -lyaml -ldl
-#libcd_la_LDFLAGS = -Wl,-rpath=${abs_top_builddir}/src/persistence -export-dynamic #-export-symbols-regex
+CD_ABS_PATH=${abs_top_builddir}
+MY_LDFLAGS=-L${CD_ABS_PATH}/src/persistence -lpacker -L${YAML_PATH}/lib -lyaml -ldl
+#libcd_la_LDFLAGS = -Wl,-rpath=${CD_ABS_PATH}/src/persistence -export-dynamic #-export-symbols-regex
 libcd_la_LDFLAGS = -export-dynamic #-export-symbols-regex
-libcd_la_CPPFLAGS = -I${abs_top_builddir}/src/persistence -I${YAML_PATH}/include
+libcd_la_CPPFLAGS = -I${CD_ABS_PATH}/src/persistence -I${CD_ABS_PATH}/plugin/include -I${YAML_PATH}/include
 #libcd_la_CPPFLAGS = $(cpp_flags)
 libcd_la_LIBADD = $(MY_LDFLAGS) $(external_libs) 
 
