@@ -235,9 +235,12 @@ unsigned int preserveForceData(cd_handle_t *cdh, ForceExchangeData *forceData)
     uint32_t size = sizeof(ForceExchangeData);
     cd_preserve(cdh, forceData, size, kCopy, "ForceExchangeData", "");
     printf("Preserve ForceExchangeData: %zu\n", sizeof(ForceExchangeData));
-    size += sizeof(forceData->dfEmbed) + sizeof(forceData->boxes);
-    //TODO: preserve dfEmbed and boxes
+    //preserve dfEmbed and boxes
+    uint32_t dfEmbed_size = sizeof(forceData->dfEmbed);
+    cd_preserve(cdh, forceData->dfEmbed, dfEmbed_size, kCopy, "ForceExchangeData_dfEmbed", "");
+    uint32_t boxes_size = sizeof(forceData->boxes);
+    cd_preserve(cdh, forceData->boxes, boxes_size, kCopy, "ForceExchangeData_boxes", "");
+    size += dfEmbed_size + boxes_size;
     return size;
-
 }
 
