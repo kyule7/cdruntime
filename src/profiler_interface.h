@@ -64,7 +64,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define LabelT std::string
 using namespace common;
 
-namespace cd {
   namespace interface {
 
     
@@ -77,7 +76,7 @@ class Profiler {
   friend class cd::CDHandle;
   friend class cd::internal::CD;
   friend class cd::internal::HeadCD;
-  CDHandle *cdh_;
+  cd::CDHandle *cdh_;
   bool reexecuted_;
   CD_CLOCK_T begin_clk_;
   CD_CLOCK_T end_clk_;
@@ -87,7 +86,7 @@ class Profiler {
   static uint32_t current_level_; // It is used to detect escalation
 public:
   Profiler(void) : cdh_(NULL), reexecuted_(false) {}
-  Profiler(CDHandle *cdh) : cdh_(cdh), reexecuted_(false) {}
+  Profiler(cd::CDHandle *cdh) : cdh_(cdh), reexecuted_(false) {}
   virtual ~Profiler(void) {}
   static Profiler *CreateProfiler(int prof_type=0, void *arg=NULL);
 //  static void CreateRuntimeInfo(uint32_t level, const std::string &name);
@@ -101,7 +100,7 @@ public:
 private:
   void BeginRecord(void);
   void EndRecord(void);
-  virtual void RecordProfile(ProfileType profile_type, uint64_t profile_data);
+  virtual void RecordProfile(cd::ProfileType profile_type, uint64_t profile_data);
   virtual void RecordClockBegin(){}
   virtual void RecordClockEnd(){}
   virtual void Delete(void){}
@@ -110,7 +109,6 @@ private:
 };
 
   } // interface ends
-} // cd ends
 #endif // profiler enabled
 
 #endif

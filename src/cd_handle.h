@@ -61,10 +61,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "serdes.h"
 #include "cd_def_debug.h"
 //#define FUNC_ATTR inline __attribute__((always_inline))
-//using namespace cd::interface;
-//using namespace cd::internal;
-
-
+//using namespace interface;
+//using namespace internal;
+namespace interface {
+class CDErrorInjector;
+class MemoryErrorInjector;
+}
 /**@addtogroup cd_init_funcs
  * User must exeplicitly initialize and finalize CD runtime 
  * by calling CD_Init() and CD_Finalize().
@@ -238,7 +240,7 @@ class CDHandle {
 /**@} */ // End cd_handle
   friend class internal::CD;
   friend class internal::HeadCD;
-  friend class interface::Profiler;
+  friend class ::interface::Profiler;
   friend class RegenObject;
   friend CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   friend void CD_Finalize(void);
@@ -249,10 +251,10 @@ class CDHandle {
 
 #if CD_ERROR_INJECTION_ENABLED
   private:
-    interface::CDErrorInjector *cd_error_injector_;                //!< Error injector interface.
-    static interface::MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.
+    ::interface::CDErrorInjector *cd_error_injector_;                //!< Error injector interface.
+    static ::interface::MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.
   public:
-    static interface::SystemErrorInjector *system_error_injector_; //!< Error injector interface.
+    static ::interface::SystemErrorInjector *system_error_injector_; //!< Error injector interface.
 #endif
   private:
     internal::CD    *ptr_cd_;       //!< Pointer to CD object which will not exposed to users.
@@ -264,7 +266,7 @@ class CDHandle {
 //    bool     active_;
   public:
 #if CD_PROFILER_ENABLED 
-    interface::Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
+    ::interface::Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
                           //!< It will be valid when `CD_PROFILER_ENABLED` compile-time flag is on.
 #endif
 //    int     jmp_val_;     //!< Temporary flag related to longjmp/setjmp
@@ -1027,9 +1029,9 @@ class CDHandle {
     */
 
 #if CD_ERROR_INJECTION_ENABLED
-    void RegisterMemoryErrorInjector(interface::MemoryErrorInjector *memory_error_injector);
+    void RegisterMemoryErrorInjector(::interface::MemoryErrorInjector *memory_error_injector);
 #else
-    void RegisterMemoryErrorInjector(interface::MemoryErrorInjector *memory_error_injector) {}
+    void RegisterMemoryErrorInjector(::interface::MemoryErrorInjector *memory_error_injector) {}
 #endif
 
 /**@brief Register error injection method into CD runtime system.
@@ -1048,9 +1050,9 @@ class CDHandle {
  * @param [in] newly created error injector object.
  */
 #if CD_ERROR_INJECTION_ENABLED
-    void RegisterErrorInjector(interface::CDErrorInjector *cd_error_injector);
+    void RegisterErrorInjector(::interface::CDErrorInjector *cd_error_injector);
 #else
-    void RegisterErrorInjector(interface::CDErrorInjector *cd_error_injector) {}
+    void RegisterErrorInjector(::interface::CDErrorInjector *cd_error_injector) {}
 #endif
 
  /** @} */ // Ends cd_split

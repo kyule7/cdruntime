@@ -64,7 +64,7 @@ struct LogEntry : public packer::BaseEntry {
       copy(that);
     }
     void Print(void) const
-    { printf("Entry [%12s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_); }
+    { printf("Entry [%16s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_); getchar(); }
 };
 #if 0
   static CDPath *uniquePath_;
@@ -98,7 +98,7 @@ public:
 class LogPacker;
 extern bool disabled;
 extern LogPacker *GetLogger(void);
-class LogPacker : public packer::Packer<LogEntry> {
+class LogPacker : public packer::Packer< LogEntry > {
   friend LogPacker *GetLogger(void);
     static LogPacker *libc_logger;
   public:
@@ -115,37 +115,39 @@ class LogPacker : public packer::Packer<LogEntry> {
       LogEntry::gen_ftid = orig_ftid;
     }
 
-    bool IsLogFound(void) {
-      uint64_t current_log_id = LogEntry::gen_ftid;
-      LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
-//      GetLogger()->table_->head_ - 1;
-//      Entry *upto  = GetLogger()->GetAt(offset_from);
-//      Entry *entry = GetLogger()->table_->GetLast();
-//      for(; entry != upto; entry--) {
-//        entry->size_.Check(kPushed);
-//      }
-//      LogEntry *entry = GetLogger()->table_->Find(id);
-      printf("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); getchar();
-      return entry != NULL;
-    }
+    bool IsLogFound(void);
+//     {
+//       uint64_t current_log_id = LogEntry::gen_ftid;
+//       LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
+// //      GetLogger()->table_->head_ - 1;
+// //      Entry *upto  = GetLogger()->GetAt(offset_from);
+// //      Entry *entry = GetLogger()->table_->GetLast();
+// //      for(; entry != upto; entry--) {
+// //        entry->size_.Check(kPushed);
+// //      }
+// //      LogEntry *entry = GetLogger()->table_->Find(id);
+//       printf("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); getchar();
+//       return entry != NULL;
+//     }
 
     // Find an entry with kNeedPushed from the offset, 
     // and copy the entry at the dst offset to the offset.
     // return the dst offset for the next search.
-    uint64_t PushLogs(uint64_t offset_from) {
-      uint64_t pushed_cnt = table_->FindWithAttr(kNeedPushed, offset_from);
-      printf("Pushed %lu entries\n", pushed_cnt);
-      return pushed_cnt;
-    }
+    uint64_t PushLogs(uint64_t offset_from); 
+//    {
+//      uint64_t orig_tail = table_->tail();
+//      uint64_t new_tail = table_->FindWithAttr(kNeedPushed, offset_from);
+//      printf("Pushed %lu entries (orig: %lu entries)\n", new_tail - offset_from, orig_tail);
+//      return new_tail;
+//    }
 
-    uint64_t FreeMemory(uint64_t offset_from) {
-      //packer::Packer<LogEntry> free_list;
-      LogPacker free_list;
-      uint64_t pushed_cnt = table_->FindWithAttr(kNeedFreed, offset_from, free_list.table_);
-      printf("Free %ld == %lu entries\n", free_list.table_->used(), pushed_cnt);
-      return pushed_cnt;
+    uint64_t FreeMemory(uint64_t offset_from);
+    void Print(void) {
+      LogEntry *ptr = table_->GetAt(0);
+      for(uint32_t i=0; i<table_->used(); i++) {
+        (ptr + i)->Print();
+      }
     }
-    
 };
 
 
@@ -191,3 +193,6 @@ class LogPacker : public packer::Packer<LogEntry> {
 //typedef void*(*FType_memalign)(size_t boundary, size_t size);
 //typedef int(*FType_posix_memalign)(void **memptr, size_t alignment, size_t size);
 //typedef void(*FType_free)(void *ptr);
+
+void *calloc2(size_t numElem, size_t size);
+void *calloc(size_t numElem, size_t size) __THROW __attribute_malloc__ __wur;

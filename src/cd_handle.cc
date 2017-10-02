@@ -56,7 +56,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 using namespace cd;
 using namespace common;
-using namespace cd::interface;
+using namespace ::interface;
 using namespace cd::internal;
 using namespace std;
 #define STOPHANDLE 
@@ -427,6 +427,7 @@ void CD_Finalize(void)
   assert(CDPath::GetCDPath()->back()!=NULL);
 
 
+
 #if CD_PROFILER_ENABLED
   // Profiler-related  
   CDPath::GetRootCD()->profiler_->FinalizeViz();
@@ -626,6 +627,9 @@ void CD_Finalize(void)
 #endif
   end_clk = CD_CLOCK();
   CDEpilogue();
+#if CD_LIBC_LOGGING
+  logger::Fini();
+#endif
 }
 
 
@@ -1129,20 +1133,23 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 CDErrT CDHandle::Destroy(bool collective) 
 {
   CDPrologue();
+  CDErrT err;
   TUNE_DEBUG("[Real %s] %u %d\n", __func__, level(), phase());
 //  printf("[Real %s] %u %d\n", __func__, level(), phase()); STOPHANDLE;
   uint32_t phase = ptr_cd_->phase();//phase();
+  {
   std::string label(GetLabel());
 
   CD_DEBUG("%s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
                                                        level(), need_reexec(), *CD::rollback_point_);
-  CDErrT err = InternalDestroy(collective);
+  err = InternalDestroy(collective);
 
   end_clk = CD_CLOCK();
   destroy_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   profMap[phase]->destroy_elapsed_time_ += end_clk - begin_clk;
 #endif
+  }
   CDEpilogue();
 
   return err;

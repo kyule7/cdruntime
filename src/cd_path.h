@@ -224,8 +224,9 @@ public:
         if(level < (uint32_t)uniquePath_->size()) {
           return uniquePath_->at(level); 
         } else {
-          uint32_t s = uniquePath_->size();
-          CD_DEBUG("level %u >= %u #cdobj\n", level, s);
+          assert(0);
+//          uint32_t s = uniquePath_->size();
+//          CD_DEBUG("level %u >= %u #cdobj\n", level, s);
         }
       }
     }

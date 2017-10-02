@@ -54,12 +54,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <stdlib.h>
-#include <stdio.h>
 #include <string>
 #include <list>
 #include "cd_features.h"
@@ -97,6 +96,20 @@ typedef int           ColorT;
 typedef int           GroupT;
 #endif
 
+namespace interface {
+  class Profiler;
+  class ErrorInjector; 
+  class ErrorProb;
+  class UniformRandom;
+  class LogNormal;
+  class Exponential;
+  class Normal;
+  class Poisson;
+  class ErrorInjector;
+  class CDErrorInjector;
+  class MemoryErrorInjector;
+  class NodeFailureInjector;
+}
 
 namespace cd {
   namespace internal {
@@ -110,20 +123,6 @@ namespace cd {
     class CDNameT;
     class CDID;
 //    class PFSHandle;
-  }
-  namespace interface {
-    class Profiler;
-    class ErrorInjector; 
-    class ErrorProb;
-    class UniformRandom;
-    class LogNormal;
-    class Exponential;
-    class Normal;
-    class Poisson;
-    class ErrorInjector;
-    class CDErrorInjector;
-    class MemoryErrorInjector;
-    class NodeFailureInjector;
   }
   namespace logging {
     class CommLog;

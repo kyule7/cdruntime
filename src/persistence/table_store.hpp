@@ -181,29 +181,28 @@ class TableStore : public BaseTable {
     // return the dst offset for the next search.
     virtual uint64_t FindWithAttr(uint16_t attr, uint64_t begin, TableStore<EntryT> *table=NULL)
     {
-      uint64_t num_entry = 0;
       if(table == NULL) { // Insert entries with the attr to this table from begin offset
 //        uint64_t orig_tail = tail_;
-        uint64_t orig_begin = begin;
+//        uint64_t orig_begin = begin;
         for(uint32_t i=begin; i<tail_; i++) {
           if(ptr_[i].size_.CheckAny(attr)) {
             ptr_[begin++] = ptr_[i];
           }
         }
         tail_ = begin;
-        num_entry = begin - orig_begin;
+        return tail_;
+//        num_entry = begin - orig_begin;
       } else { // Search entries with the attr from the begin offset of this table
                // Insert those entries with the attr to target table. 
-        uint64_t orig_tail = table->tail_;
+//        uint64_t orig_tail = table->tail_;
         for(uint32_t i=begin; i<tail_; i++) {
           if(ptr_[i].size_.CheckAny(attr)) {
             table->Insert(ptr_[i]);
           }
         }
-        num_entry = table->tail_ - orig_tail;
+        return table->tail_;
+//        num_entry = table->tail_ - orig_tail;
       }
-
-      return num_entry;
     }
 
     EntryT *FindReverse(uint64_t id, int64_t begin)
@@ -258,7 +257,7 @@ class TableStore : public BaseTable {
       // check
       if(ret == NULL) {
         if(packerTaskID == 0) {
-          printf("tail:%lu\n", tail_);
+          printf("tail:%lu\n", tail_); assert(0);
           for(uint32_t i=0; i<tail_; i++) {
             // The rule for entry is that the first element in object layout is always ID.
             if( ptr_[i].id_ == id ) {
@@ -341,8 +340,8 @@ class TableStore : public BaseTable {
     // It is used in IsPushedLog
     EntryT *GetAt(uint64_t idx)
     {
-      assert(idx <= tail_);
-      assert(idx > head_);
+      assert(idx < tail_);
+      assert(idx >= head_);
       assert(head_ == 0);
       uint64_t i = (head_ + idx) % size_;
       return ptr_ + i;

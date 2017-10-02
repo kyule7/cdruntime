@@ -3,6 +3,7 @@
 #include "cd_def_preserve.h"
 #include "cd_global.h"
 #include "packer.h"
+#include "util.h"
 
 #include <assert.h>
 namespace tuned {

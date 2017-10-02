@@ -95,15 +95,15 @@ namespace cd {
     class CommLog;
     class RuntimeLogger;
   }
-  namespace interface {
-
-  }
+//  namespace interface {
+//
+//  }
   class CDEvent;
 }
 
 using namespace common;
 using namespace cd::internal;
-using namespace cd::interface;
+using namespace interface;
 using namespace cd::logging;
 
 #if CD_MPI_ENABLED 
@@ -422,6 +422,7 @@ extern bool just_reexecuted;
  * @{
  */
 
+#define CD_LIBC_LOGGING 1
 #define MsgPrologue() \
   app_side = false; \
   logger::disabled = true; \

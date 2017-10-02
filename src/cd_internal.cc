@@ -48,7 +48,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 using namespace common;
 using namespace cd::internal;
-using namespace cd::interface;
+using namespace ::interface;
 using namespace cd::logging;
 using namespace std;
 
@@ -976,11 +976,11 @@ CDErrT CD::Begin(const char *label, bool collective)
 #if CD_LIBC_LOGGING
   if(cd_exec_mode_ == kExecution) {
     libc_log_id_ = logger::GetLogger()->Set(libc_log_begin_);
-    libc_log_end_ = libc_log_end_;
+    libc_log_end_ = libc_log_begin_;
   } else if(cd_exec_mode_ == kReexecution) {
     logger::GetLogger()->Reset(libc_log_id_);
   } else {
-    ERROR_MESSAGE("CD Begin with kSuspension (%d) is undefined state.\n", cd_exec_mode_);
+//    ERROR_MESSAGE("CD Begin with kSuspension (%d) is undefined state.\n", cd_exec_mode_);
   }
 #endif
 
@@ -1452,9 +1452,12 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
 CD::CDInternalErrT CD::CompleteLogs(void) {
 
 #if CD_LIBC_LOGGING
-  CD *parent = CDPath::GetParentCD(level())->ptr_cd();
-  logger::GetLogger()->FreeMemory(libc_log_begin_);
-  parent->libc_log_end_ = logger::GetLogger()->PushLogs(libc_log_begin_) + parent->libc_log_end_;
+  CDHandle *cdh_parent = CDPath::GetParentCD(level());
+  if(cdh_parent != NULL) {
+    CD *parent = cdh_parent->ptr_cd();
+    logger::GetLogger()->FreeMemory(libc_log_begin_);
+    parent->libc_log_end_ = logger::GetLogger()->PushLogs(libc_log_begin_) + parent->libc_log_end_;
+  }
 #endif
 
 #if comm_log

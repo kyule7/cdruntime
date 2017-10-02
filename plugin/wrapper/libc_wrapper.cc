@@ -51,6 +51,56 @@ char logger::ft2str[FTIDNums][64] = {
                             , "posix_memalign"
                             , "free"
                             };
+bool LogPacker::IsLogFound(void) 
+{
+  bool orig_disabled = logger::disabled;
+  logger::disabled = true;
+  uint64_t current_log_id = LogEntry::gen_ftid;
+  LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
+  printf("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); getchar();
+  logger::disabled = orig_disabled;;
+  return entry != NULL;
+}
+
+// Find an entry with kNeedPushed from the offset, 
+// and copy the entry at the dst offset to the offset.
+// return the dst offset for the next search.
+uint64_t LogPacker::PushLogs(uint64_t offset_from) 
+{
+  bool orig_disabled = logger::disabled;
+  logger::disabled = true;
+  uint64_t orig_tail = table_->tail();
+  uint64_t new_tail = table_->FindWithAttr(kNeedPushed, offset_from);
+  printf("Pushed %lu entries (orig: %lu entries)\n", new_tail - offset_from, orig_tail);
+  logger::disabled = orig_disabled;;
+  return new_tail;
+}
+
+uint64_t LogPacker::FreeMemory(uint64_t offset_from) 
+{
+  bool orig_disabled = logger::disabled;
+  logger::disabled = true;
+  uint64_t freed_cnt = 0;
+  {
+  //packer::Packer<LogEntry> free_list;
+  LogPacker free_list;
+  freed_cnt = table_->FindWithAttr(kNeedFreed, offset_from, free_list.table_);
+  Print();
+  printf("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
+  free_list.Print();
+  getchar();
+  for(uint32_t i=0; i<freed_cnt; i++) {
+    printf("i:%u\n", i);
+    LogEntry *entry = free_list.table_->GetAt(i);
+    entry->Print();
+    FT_free((void *)(entry->offset()));
+    entry->size_.Unset(kNeedFreed);
+  }
+
+  }
+  logger::disabled = orig_disabled;;
+  return freed_cnt;
+}
 
 //packer::Packer<LogEntry> *GetLogger(void) { return &serdes; }
 LogPacker *logger::GetLogger(void)
@@ -100,11 +150,12 @@ void logger::InitMallocPtr(void)
  *
  *
  *************************************************/
-void *calloc(size_t numElem, size_t size)
+EXTERNC void *calloc2(size_t numElem, size_t size){ return NULL; }
+EXTERNC void *calloc(size_t numElem, size_t size)
 { 
   void *ret = NULL;
   //LOGGING_PROLOG(calloc, numElem, size);
-  LOGGER_PRINT("calloc(%zu,%zu) wrapped\n", numElem, size);
+  LOGGER_PRINT("calloc(%zu,%zu) wrapped\n", numElem, size); getchar();
   
   if(logger::disabled) { 
     if(logger::init_calloc == true) {
@@ -148,7 +199,7 @@ void *calloc(size_t numElem, size_t size)
  *      need_replay = true;
  *
  */
-void *malloc(size_t size)
+EXTERNC void *malloc(size_t size)
 {
   void *ret = NULL;
   LOGGING_PROLOG(malloc, size);
@@ -174,7 +225,7 @@ void *malloc(size_t size)
   
 }
 
-void *valloc(size_t size)
+EXTERNC void *valloc(size_t size)
 {
   void *ret = NULL;
   LOGGING_PROLOG(valloc, size);
@@ -211,13 +262,16 @@ void *valloc(size_t size)
 }
 
 
-void *realloc(void *ptr, size_t size)
+EXTERNC void *realloc(void *ptr, size_t size)
 {
   void *ret = NULL;
   LOGGING_PROLOG(realloc, ptr, size);
   //if(logger::replaying == 0) { 
-  if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
-    ret = FT_realloc(ptr, size);
+  if(logger::replaying == false || GetLogger()->IsLogFound() == false) {
+    // it is difficult to hook some internal free() call inside realloc. 
+    // FT_realloc() is never called, but malloc is called instead for
+    // reallocation. free() is deferred to FreeMemory().
+    ret = FT_malloc(size);
     GetLogger()->Add(LogEntry(logger::LogEntry::gen_ftid, FTID_realloc, kNeedPushed, (uint64_t)ret));
     GetLogger()->table_->GetLast()->Print();
     uint32_t idx = 0;
@@ -243,7 +297,7 @@ void *realloc(void *ptr, size_t size)
 }
 
 
-void *memalign(size_t boundary, size_t size)
+EXTERNC void *memalign(size_t boundary, size_t size)
 {
   void *ret = NULL;
   LOGGING_PROLOG(memalign, boundary, size);
@@ -263,7 +317,7 @@ void *memalign(size_t boundary, size_t size)
 }
 
 
-int posix_memalign(void **memptr, size_t alignment, size_t size)
+EXTERNC int posix_memalign(void **memptr, size_t alignment, size_t size)
 {
   int ret = -1;
   LOGGING_PROLOG(posix_memalign, memptr, alignment, size);
@@ -285,17 +339,17 @@ int posix_memalign(void **memptr, size_t alignment, size_t size)
 }
 
 
-void free(void *ptr)
+EXTERNC void free(void *ptr)
 {
   LOGGING_PROLOG(free, ptr);
   if(((uint64_t)ptr >> 12) == ((uint64_t)local_buf >> 12)) {LOGGER_PRINT("skip this free\n"); getchar(); }
   if(logger::replaying == 0) {
-    LOGGER_PRINT("Executing %s(%p)\n", __func__, ptr); 
+    LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
     uint32_t idx = 0;
     LogEntry *entry = NULL;
     while(entry == NULL) {
       entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
-      if(idx == -1U) { assert(0); }
+//      if(idx == -1U) { assert(0); }
     }
     entry->size_.Unset(kNeedPushed);
     entry->size_.Set(kNeedFreed);

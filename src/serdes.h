@@ -65,10 +65,10 @@ class UsrObj {
  */
 
 namespace cd {
-
   class CDHandle;
+}
 
-  namespace interface {
+namespace interface {
 
 
 class Serdes {
@@ -88,7 +88,6 @@ class Serdes {
     void Deserialize(char *object);
 };
 
-  }
 }
 
 

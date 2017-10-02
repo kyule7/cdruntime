@@ -2,16 +2,20 @@
 #define _TNUED_CD_HANDLE_H
 #include "cd_features.h"
 #include <stdint.h>
+#include <string>
 #include "util.h"
 #include "cd_handle.h"
 #include "regen_object.h"
 #include "phase_tree.h"
+#include "error_injector.h"
 #define FUNC_ATTR static inline __attribute__((always_inline))
 
 #define CHECK_TYPE(X,Y)     (((X) & (Y)) == (Y))
 #define STOPHANDLE 
 //using namespace cd;
-
+//using namespace cd::interface;
+//class cd::interface::MemoryErrorInjector;
+//class cd::interface::CDErrorInjector;
 //class cd::RegenObject;
 namespace tuned {
 class CDPath;
@@ -61,7 +65,7 @@ class CDHandle {
     bool level_created_;
 //    uint32_t next_merging_phase_;
   private:
-    CDHandle(cd::CDHandle *handle, uint32_t level, string name) 
+    CDHandle(cd::CDHandle *handle, uint32_t level, std::string name) 
       : handle_(handle), level_(level), phase_(-1), name_(name), 
         begin_(false), active_(false), level_created_(false) 
     {

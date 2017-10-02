@@ -39,7 +39,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <utility>
 
 using namespace std;
-using namespace cd::interface;
+using namespace interface;
 using namespace packer;
 
 void Serdes::Register(uint64_t member_id, void *member, size_t member_size) {

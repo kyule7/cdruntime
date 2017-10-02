@@ -13,7 +13,7 @@
   free
 */
 #include <stdint.h>
-
+#define EXTERNC extern 
 namespace logger {
 
 enum FTID {
@@ -34,8 +34,8 @@ enum {
 };
 
 void InitMallocPtr(void);
-void Init(void);
-void Fini(void);
+extern void Init(void);
+extern void Fini(void);
 
 extern char ft2str[FTIDNums][64];
 //extern bool disabled;

@@ -1,9 +1,9 @@
 #ifndef _BASE_STORE_H
 #define _BASE_STORE_H
 
-#include <cstdint>
-#include <cstdlib>
-#include <cstring>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <utility>
 #include "define.h"
 #define ENTRY_TYPE_CNT 8

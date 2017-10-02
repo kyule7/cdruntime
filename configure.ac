@@ -174,6 +174,7 @@ AC_CONFIG_FILES([
  test/test_serdes/Makefile
  test/test_tuning/Makefile
  test/test_vector/Makefile
+ test/libc_logging/Makefile
  examples/Makefile
 ])
 AC_OUTPUT

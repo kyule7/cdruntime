@@ -1,6 +1,6 @@
 //#define _GNU_SOURCE
-#include <cstdlib>
-#include <cstdio>
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 //#include <utility>
 #include "define.h"

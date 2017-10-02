@@ -33,62 +33,63 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _CD_MALLOC_H 
-#define _CD_MALLOC_H
-
-
-#include <stdint.h>
-#include <stdio.h>
-#include <dlfcn.h>
-#ifdef libc_log
-#include "cd_internal.h"
-#include "cd_global.h"
-#include "cd_def_internal.h"
-#include "cd_def_debug.h"
-#endif
-
-//bool app_side;
-typedef void*(*LibcMallocFt)(size_t size);
-typedef void*(*LibcCallocFt)(size_t num, size_t size);
-typedef void*(*LibcVallocFt)(size_t size);
-typedef void(*LibcFreeFt)(void *p);
-//extern void *__libc_malloc(size_t size);
-//extern void *__libc_calloc(size_t num, size_t size);
-//extern void *__libc_valloc(size_t size);
-//extern void __libc_free(void *p);
-
-namespace cd {
-  namespace logging {
-
-struct RuntimeLogger {
-#ifdef libc_log
-	friend class cd::internal::CD;
-	friend class cd::internal::HeadCD;
-#endif
-    static uint64_t total_alloc_size;
-    static bool active;
-    static LibcMallocFt real_malloc;
-    static LibcCallocFt real_calloc;
-    static LibcVallocFt real_valloc;
-    static LibcFreeFt   real_free;
-    RuntimeLogger(void);
-    ~RuntimeLogger(void);
-    static void Init(void);
-    static int   cd_fprintf(FILE *str, const char *format, va_list &args);
-    static int   fclose(FILE *fp);
-    static FILE *fopen(const char *file, const char *mode);
-    static void *valloc(size_t size);
-    static void *calloc(size_t num, size_t size);
-    static void *malloc(size_t size);
-    static void  free(void *p);
-#ifdef libc_log
-    static CD   *IsLogable(bool *logable_);
-    static IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked, unsigned int level, unsigned long index);
-#endif
-};
-
-  }
-}
-
-#endif
-
+//#ifndef _CD_MALLOC_H 
+//#define _CD_MALLOC_H
+//
+//#include <stdint.h>
+//#include <stdio.h>
+//#include <dlfcn.h>
+//#ifdef libc_log
+//#include "cd_internal.h"
+//#include "cd_global.h"
+//#include "cd_def_internal.h"
+//#include "cd_def_debug.h"
+//#endif
+//#undef libc_log
+//#ifdef libc_log
+//
+////bool app_side;
+//typedef void*(*LibcMallocFt)(size_t size);
+//typedef void*(*LibcCallocFt)(size_t num, size_t size);
+//typedef void*(*LibcVallocFt)(size_t size);
+//typedef void(*LibcFreeFt)(void *p);
+////extern void *__libc_malloc(size_t size);
+////extern void *__libc_calloc(size_t num, size_t size);
+////extern void *__libc_valloc(size_t size);
+////extern void __libc_free(void *p);
+//
+//namespace cd {
+//  namespace logging {
+//
+//struct RuntimeLogger {
+//#ifdef libc_log
+//	friend class cd::internal::CD;
+//	friend class cd::internal::HeadCD;
+//#endif
+//    static uint64_t total_alloc_size;
+//    static bool active;
+//    static LibcMallocFt real_malloc;
+//    static LibcCallocFt real_calloc;
+//    static LibcVallocFt real_valloc;
+//    static LibcFreeFt   real_free;
+//    RuntimeLogger(void);
+//    ~RuntimeLogger(void);
+//    static void Init(void);
+//    static int   cd_fprintf(FILE *str, const char *format, va_list &args);
+//    static int   fclose(FILE *fp);
+//    static FILE *fopen(const char *file, const char *mode);
+//    static void *valloc(size_t size);
+//    static void *calloc(size_t num, size_t size);
+//    static void *malloc(size_t size);
+//    static void  free(void *p);
+//#ifdef libc_log
+//    static CD   *IsLogable(bool *logable_);
+//    static IncompleteLogEntry NewLogEntry(void* p, size_t size, bool FreeInvoked, unsigned int level, unsigned long index);
+//#endif
+//};
+//
+//  }
+//}
+//#endif
+//#endif
+//
