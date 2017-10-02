@@ -69,8 +69,15 @@ int TestCDHierarchy(void)
   printf("---start \n"); getchar();
   int *malloc_p = (int *)malloc(128);
   int *calloc_p = (int *)calloc(16, 32);
-  calloc(16, 64);
-  calloc(16, 128);
+  printf("calloc:%p\n", calloc_p);
+  int *tmp1 = (int*)calloc(16, 64);
+  int * tmp2 = (int*)calloc(16, 128); getchar();
+  printf("calloc %p, tmp1:%p, tmp2:%p\n", &calloc, tmp1, tmp2);
+  unsigned long long *cval = (unsigned long long *)(&calloc);
+  printf("##################-------------------\n");
+  logger::GetLogger()->Print();
+  printf("%lx %lx %lx %lx ", *cval, *(cval+1), *(cval+2), *(cval+3));
+  printf("%lx %lx %lx %lx\n", *(cval+4), *(cval+5), *(cval+6), *(cval+7));
   printf("---\n"); getchar();
   //cout << "Root CD Begin...\n" << endl;
   //cout << "CD Preserving..\n" << endl;

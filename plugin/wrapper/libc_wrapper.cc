@@ -167,6 +167,12 @@ EXTERNC void *calloc(size_t numElem, size_t size)
       local_buf_offset += numElem * size;
       logger::init_calloc = true; 
     }
+    uint64_t *cval = (uint64_t *)(&calloc);
+    printf("####################33, %p == %p\n", FT_calloc, &calloc);
+    if(cval != NULL) {
+      printf("%lx %lx %lx %lx %lx %lx %lx %lx\n", *cval, *(cval+1), *(cval+2), *(cval+3), *(cval+4), *(cval+5), *(cval+6), *(cval+7) );
+    }
+    getchar();
   } 
   else { 
     logger::disabled = true; 
@@ -342,6 +348,7 @@ EXTERNC int posix_memalign(void **memptr, size_t alignment, size_t size)
 EXTERNC void free(void *ptr)
 {
   LOGGING_PROLOG(free, ptr);
+  GetLogger()->Print();
   if(((uint64_t)ptr >> 12) == ((uint64_t)local_buf >> 12)) {LOGGER_PRINT("skip this free\n"); getchar(); }
   if(logger::replaying == 0) {
     LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
