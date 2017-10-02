@@ -113,7 +113,7 @@ int main(int argc, char** argv)
 #if _CD
    cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
    cd_begin(root_cd, "Root");
-   preserveSimFlat(root_cd, sim);
+   preserveSimFlat(root_cd, sim, cmd.doeam);
 
    cd_handle_t *cdh = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF);
 #endif
