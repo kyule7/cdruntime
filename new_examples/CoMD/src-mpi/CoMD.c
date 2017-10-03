@@ -112,7 +112,7 @@ int main(int argc, char** argv)
 
 #if _CD
    cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
-   cd_begin(root_cd, "Root");
+   cd_begin(root_cd, "0_Root");
    preserveSimFlat(root_cd, sim, cmd.doeam);
 
    cd_handle_t *cdh = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF);
@@ -131,7 +131,10 @@ int main(int argc, char** argv)
       printThings(sim, iStep, getElapsedTime(timestepTimer));
 
       startTimer(timestepTimer);
+      //--------------------------------
+      //  [CD] Most of computation
       timestep(sim, printRate, sim->dt);
+      //--------------------------------
       stopTimer(timestepTimer);
 
       iStep += printRate;
