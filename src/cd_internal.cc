@@ -874,7 +874,7 @@ CDErrT CD::Begin(const char *label, bool collective)
     cd_id_.cd_name_.phase_ = BeginPhase(level(), label_);
   } else { // phaseTree.current_ was updated at tuned::CDHandle before this
     cd_id_.cd_name_.phase_ = phaseTree.current_->phase_;
-    //sys_detect_bit_vector_ = phaseTree.current_->errortype_;
+    sys_detect_bit_vector_ = phaseTree.current_->errortype_;
     CD_DEBUG("lv:%u, %s, %s, bitvec:%lx\n", level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
 //    printf("lv:%u, %s, %s, bitvec:%lx\n", level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
     CD_ASSERT_STR(new_phase == phaseTree.current_->phase_,

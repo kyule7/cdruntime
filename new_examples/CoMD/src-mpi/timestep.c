@@ -42,7 +42,8 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //            cd boundary: velocity (0.08%)
       //************************************
       cd_begin(cdh, "advanceVelocity_start"); 
-
+      int pre_size = preserveSimFlat(cdh, s);
+      printf("\n preservation size for advanceVelocity %d\n", pre_size);
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
