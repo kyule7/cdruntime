@@ -1,11 +1,9 @@
-# Makefile for src-parallel
+# Makefile for src-openmp
 
 SHELL = /bin/bash
 
 ### CoMD can be built in either double or single precision and with or
 ### without MPI.  Select desired precision and MPI here.
-
-CD_ENABLED = 1
 
 # double precision (ON/OFF)
 DOUBLE_PRECISION = ON
@@ -18,23 +16,10 @@ DO_MPI = ON
 ### own.  If you need any -L or -l switches to get C standard libraries
 ### (such as -lm for the math library) put them in C_LIB.
 CC = mpicc
-CFLAGS = -std=gnu11
-#CD_ROOT=/home1/03341/kyushick/Work/CDs/pfsFix
-CD_ROOT=../../../
-ifeq (${CD_ENABLED}, 1)
-CD_FLAGS := 
-CD_CFLAGS := -I$(CD_ROOT)/include -D_CD=1
-CD_LINKFLAGS := -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
-else
-CD_FLAGS := 
-CD_CFLAGS :=
-CD_LINKFLAGS :=
-endif
-
-CFLAGS += ${CD_CFLAGS} ${CD_FLAGS}
+CFLAGS = -std=c99 -fopenmp
 OPTFLAGS = -g -O5
 INCLUDES = 
-C_LIB = -lm ${CD_LINKFLAGS}
+C_LIB = -lm
 
 
 ### If you need to specify include paths, library paths, or link flags
@@ -72,9 +57,9 @@ CFLAGS += -DSINGLE
 endif
 
 # Set executable name and add includes & libraries for MPI if needed.
-CoMD_VARIANT = CoMD-serial
+CoMD_VARIANT = CoMD-openmp
 ifeq ($(DO_MPI), ON)
-CoMD_VARIANT = CoMD-mpi
+CoMD_VARIANT = CoMD-openmp-mpi
 INCLUDES += ${MPI_INCLUDE}
 CFLAGS += -DDO_MPI
 LDFLAGS += ${MPI_LIB}

@@ -86,7 +86,7 @@ typedef struct EamPotentialSt
    real_t* rhobar;        //!< per atom storage for rhobar
    real_t* dfEmbed;       //!< per atom storage for derivative of Embedding
    HaloExchange* forceExchange;
-   struct ForceExchangeDataSt* forceExchangeData;
+   struct ForceExchangeDataSt* forceExchangeData; 
 } EamPotential;
 
 /// species data: chosen to match the data found in the setfl/funcfl files

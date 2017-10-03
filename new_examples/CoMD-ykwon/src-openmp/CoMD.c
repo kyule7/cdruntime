@@ -21,6 +21,8 @@
 ///
 /// Click on the links below to browse the CoMD documentation.
 ///
+/// \subpage pg_openmp_specifics
+///
 /// \subpage pg_md_basics
 ///
 /// \subpage pg_building_comd
@@ -59,11 +61,6 @@
 #include "mycommand.h"
 #include "timestep.h"
 #include "constants.h"
-
-#if _CD
-#include "cd.h"
-#include "cd_comd.h"
-#endif
 
 #define REDIRECT_OUTPUT 0
 #define   MIN(A,B) ((A) < (B) ? (A) : (B))
@@ -110,13 +107,6 @@ int main(int argc, char** argv)
 
    timestampBarrier("Starting simulation\n");
 
-#if _CD
-   cd_handle_t* root_cd = cd_init(nRanks, myRank, kHDD); 
-   cd_begin(root_cd, "Root");
-   preserveSimFlat(root_cd, sim, cmd.doeam);
-
-   cd_handle_t *cdh = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF);
-#endif
    // This is the CoMD main loop
    const int nSteps = sim->nSteps;
    const int printRate = sim->printRate;
@@ -141,13 +131,6 @@ int main(int argc, char** argv)
    sumAtoms(sim);
    printThings(sim, iStep, getElapsedTime(timestepTimer));
    timestampBarrier("Ending simulation\n");
-
-#if _CD
-   cd_destroy(cdh);
-   cd_detect(root_cd);
-   cd_complete(root_cd);
-   cd_finalize();
-#endif
 
    // Epilog
    validateResult(validate, sim);
@@ -430,24 +413,6 @@ void printSimulationDataYaml(FILE* file, SimFlat* s)
    fprintf(file,"Potential data: \n");
    s->pot->print(file, s->pot);
    
-   // Memory footprint diagnostics
-   int perAtomSize = 10*sizeof(real_t)+2*sizeof(int);
-   float mbPerAtom = perAtomSize/1024/1024;
-   float totalMemLocal = (float)(perAtomSize*s->atoms->nLocal)/1024/1024;
-   float totalMemGlobal = (float)(perAtomSize*s->atoms->nGlobal)/1024/1024;
-
-   int nLocalBoxes = s->boxes->gridSize[0]*s->boxes->gridSize[1]*s->boxes->gridSize[2];
-   int nTotalBoxes = (s->boxes->gridSize[0]+2)*(s->boxes->gridSize[1]+2)*(s->boxes->gridSize[2]+2);
-   float paddedMemLocal = (float) nLocalBoxes*(perAtomSize*MAXATOMS)/1024/1024;
-   float paddedMemTotal = (float) nTotalBoxes*(perAtomSize*MAXATOMS)/1024/1024;
-
-   printSeparator(file);
-   fprintf(file,"Memory data: \n");
-   fprintf(file, "  Intrinsic atom footprint = %4d B/atom \n", perAtomSize);
-   fprintf(file, "  Total atom footprint     = %7.3f MB (%6.2f MB/node)\n", totalMemGlobal, totalMemLocal);
-   fprintf(file, "  Link cell atom footprint = %7.3f MB/node\n", paddedMemLocal);
-   fprintf(file, "  Link cell atom footprint = %7.3f MB/node (including halo cell data\n", paddedMemTotal);
-
    fflush(file);      
 }
 
