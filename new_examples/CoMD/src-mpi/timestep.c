@@ -38,7 +38,10 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
    cd_handle_t *cdh = getleafcd();
    for (int ii=0; ii<nSteps; ++ii)
    {
-      cd_begin(cdh, "advanceVelocity"); 
+      //************************************
+      //            cd boundary: velocity (0.08%)
+      //************************************
+      cd_begin(cdh, "advanceVelocity_start"); 
 
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
@@ -46,6 +49,10 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
 
       cd_detect(cdh);
       cd_complete(cdh); 
+
+      //************************************
+      //            cd boundary: position (0.09%)
+      //************************************
       cd_begin(cdh, "advancePosition"); 
 
       startTimer(positionTimer);
@@ -54,6 +61,10 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
 
       cd_detect(cdh);
       cd_complete(cdh); 
+
+      //************************************
+      //            cd boundary: redistribution (6.88%)
+      //************************************
       cd_begin(cdh, "redistributeAtoms"); 
 
       startTimer(redistributeTimer);
@@ -62,6 +73,10 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
 
       cd_detect(cdh);
       cd_complete(cdh); 
+
+      //************************************
+      //            cd boundary: force (92.96%)
+      //************************************
       cd_begin(cdh, "computeForce"); 
 
       startTimer(computeForceTimer);
@@ -70,6 +85,10 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
 
       cd_detect(cdh);
       cd_complete(cdh); 
+
+      //************************************
+      //            cd boundary 
+      //************************************
       cd_begin(cdh, "advanceVelocity_end"); 
 
       startTimer(velocityTimer);

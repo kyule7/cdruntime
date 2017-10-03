@@ -72,6 +72,10 @@
 #include "memUtils.h"
 #include "CoMDTypes.h"
 
+#if _CD
+#include "cd.h"
+#endif
+
 #define POT_SHIFT 1.0
 
 // /// Derived struct for a Lennard Jones potential.
@@ -141,8 +145,11 @@ void ljPrint(FILE* file, BasePotential* pot)
    fprintf(file, "  Sigma            : "FMT1" Angstroms\n", ljPot->sigma);
 }
 
+// to prevent CD for ljForce from being called during initialization  
+int is_first = 0; 
 int ljForce(SimFlat* s)
 {
+   //TODO: not creat sequential CD here since all the below are easy to get 
    LjPotential* pot = (LjPotential *) s->pot;
    real_t sigma = pot->sigma;
    real_t epsilon = pot->epsilon;
@@ -165,7 +172,21 @@ int ljForce(SimFlat* s)
    real_t eShift = POT_SHIFT * rCut6 * (rCut6 - 1.0);
 
    int nbrBoxes[27];
+   // CD handler for level2 CD 
+   // FIXME: 0xF need to change
+   // FIXME: where/how I get cd_handle_t
+   //cd_handle_t *cdh = cd_create(getcurrentcd(), 1, "ljForce", kStrict, 0xF);
+   //*****************************************************
+   // beginning of main computation (hot spot)
+   //*****************************************************
+   // loop over local boxes (link cells) [#: nLocalBoxes]
+   // |-loop over neighbors of iBox k  [#: nNbrBoxes]
+   //   |- loop over atoms in iBox [#: nIBox]
+   //      |- loop over atoms in jBox [#: nJBox]
+   //         |- ljForce computation
+   //*****************************************************
    // loop over local boxes
+   //*****************************************************
    for (int iBox=0; iBox<s->boxes->nLocalBoxes; iBox++)
    {
       int nIBox = s->boxes->nAtoms[iBox];
@@ -180,12 +201,16 @@ int ljForce(SimFlat* s)
          
          int nJBox = s->boxes->nAtoms[jBox];
          if ( nJBox == 0 ) continue;
-         
+
+         //*****************************************************
          // loop over atoms in iBox
+         //*****************************************************
          for (int iOff=iBox*MAXATOMS,ii=0; ii<nIBox; ii++,iOff++)
          {
             int iId = s->atoms->gid[iOff];
+            //*****************************************************
             // loop over atoms in jBox
+            //*****************************************************
             for (int jOff=MAXATOMS*jBox,ij=0; ij<nJBox; ij++,jOff++)
             {
                real_t dr[3];
@@ -227,6 +252,10 @@ int ljForce(SimFlat* s)
          } // loop over atoms in iBox
       } // loop over neighbor boxes
    } // loop over local boxes in system
+   //*****************************************************
+   // end of main computation (hot spot)
+   //*****************************************************
+ 
 
    ePot = ePot*4.0*epsilon;
    s->ePotential = ePot;
