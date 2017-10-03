@@ -15,6 +15,14 @@
 static void advanceVelocity(SimFlat* s, int nBoxes, real_t dt);
 static void advancePosition(SimFlat* s, int nBoxes, real_t dt);
 
+#if _CD
+unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam);
+unsigned int preserveAtoms (cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes, 
+                            unsigned int p, unsigned int r, unsigned int species);
+#endif
+
+
+
 
 /// Advance the simulation time to t+dt using a leap frog method
 /// (equivalent to velocity verlet).
@@ -41,8 +49,15 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //************************************
       //            cd boundary: velocity (0.08%)
       //************************************
-      cd_begin(cdh, "advanceVelocity_start"); 
-      int pre_size = preserveSimFlat(cdh, s);
+      cd_begin(cdh, "advanceVelocity_start");
+      //FIXME: need to pass cmd.doeam
+      //int pre_size = preserveSimFlat(cdh, s);
+      //FIXME: no need to preserve all
+      //int pre_size = preserveSimFlat(cdh, s, 0); 
+      int pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
+                                   1,  // is_p
+                                   0,  // is_r
+                                   0); // is_iSpecies
       printf("\n preservation size for advanceVelocity %d\n", pre_size);
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 

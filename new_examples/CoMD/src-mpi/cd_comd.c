@@ -38,9 +38,10 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam)
     //further preserve by chasing pointers
     size += preserveDomain(cdh, sim->domain);       // flat 
     size += preserveLinkCell(cdh, sim->boxes);      // nAtoms = nTotalBoxes*sizeof(int)
-    size += preserveAtoms(cdh, sim->atoms, sim->boxes->nTotalBoxes);         // 
+    size += preserveAtoms(cdh, sim->atoms, sim->boxes->nTotalBoxes, 1, 1, 1);         // 
     size += preserveSpeciesData(cdh, sim->species);   // flat
     if(doeam) {
+        printf("I am calling preserveEampot since doeam is %d\n", doeam);
         size += preserveEamPot(cdh, (EamPotential *)sim->pot, sim->boxes->nTotalBoxes);	  
     } else {
         size += preserveLjPot(cdh, (LjPotential *)sim->pot);	// flat 
@@ -73,7 +74,13 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell)
 
 //TODO: add switch to pick what to preserve 
 //TODO: minimize the number of cd_preserve
-unsigned int preserveAtoms (cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes)
+unsigned int preserveAtoms (cd_handle_t *cdh, 
+                            Atoms *atoms, 
+                            int nTotalBoxes, 
+                            unsigned int is_p, //TODO: bool is better?
+                            unsigned int is_r,
+                            unsigned int is_iSpecies
+                            )
 {
     uint32_t size = sizeof(Atoms);
     cd_preserve(cdh, atoms, size, kCopy, "Atoms", "");
@@ -81,16 +88,23 @@ unsigned int preserveAtoms (cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes)
     uint32_t gid_size      = maxTotalAtoms*sizeof(int);
     cd_preserve(cdh, atoms->gid, gid_size, kCopy, "Atoms_gid", "");
     uint32_t iSpecies_size = maxTotalAtoms*sizeof(int);
-    cd_preserve(cdh, atoms->iSpecies, iSpecies_size, kCopy, "Atoms_iSpecies", "");
+    if(is_iSpecies == 1)
+      cd_preserve(cdh, atoms->iSpecies, iSpecies_size, kCopy, "Atoms_iSpecies", "");
     uint32_t r_size        = maxTotalAtoms*sizeof(real3);
-    cd_preserve(cdh, atoms->r, r_size, kCopy, "Atoms_r", "");
+    if(is_r == 1)
+      cd_preserve(cdh, atoms->r, r_size, kCopy, "Atoms_r", "");
     uint32_t p_size        = maxTotalAtoms*sizeof(real3);
-    cd_preserve(cdh, atoms->p, p_size, kCopy, "Atoms_p", "");
+    if(is_p == 1)
+      cd_preserve(cdh, atoms->p, p_size, kCopy, "Atoms_p", "");
     uint32_t f_size        = maxTotalAtoms*sizeof(real3);
     cd_preserve(cdh, atoms->f, f_size, kCopy, "Atoms_f", "");
     uint32_t U_size        = maxTotalAtoms*sizeof(real_t);
     cd_preserve(cdh, atoms->U, U_size, kCopy, "Atoms_u", "");
-    size += gid_size + iSpecies_size + r_size + p_size + f_size + U_size;
+    //size += gid_size + iSpecies_size + r_size + p_size + f_size + U_size;
+    size += gid_size + f_size + U_size;
+    if(is_iSpecies == 1) size += iSpecies_size;
+    if(is_r == 1) size += r_size;
+    if(is_p == 1) size += p_size;
 
     printf("Preserve Atoms: %zu, totAtoms:%u, gid:%u, species:%u, r:%u, p:%u, f:%u, U:%u\n"
          , sizeof(Atoms)

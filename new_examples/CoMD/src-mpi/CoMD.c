@@ -115,6 +115,7 @@ int main(int argc, char** argv)
 //   cd_begin(root_cd, "0_Root");
    cd_handle_t* root_cd = cd_init(nRanks, myRank, kHDD); 
    cd_begin(root_cd, "Root");
+   printf("doeam is %d\n", cmd.doeam);
    preserveSimFlat(root_cd, sim, cmd.doeam);
 
    cd_handle_t *cdh = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF);

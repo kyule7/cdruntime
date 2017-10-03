@@ -4,7 +4,7 @@ extern int is_eam;
 unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam);
 unsigned int preserveDomain(cd_handle_t *cdh, Domain *domain);
 unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell);
-unsigned int preserveAtoms (cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes);
+unsigned int preserveAtoms (cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes, unsigned int p, unsigned int r, unsigned int species);
 unsigned int preserveSpeciesData(cd_handle_t *cdh, SpeciesData *species);
 unsigned int preserveLjPot(cd_handle_t *cdh, LjPotential *pot);
 unsigned int preserveInterpolationObject(cd_handle_t *cdh, InterpolationObject *obj);
