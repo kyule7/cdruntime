@@ -111,7 +111,7 @@ int main(int argc, char** argv)
    timestampBarrier("Starting simulation\n");
 
 #if _CD
-   cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
+   cd_handle_t* root_cd = cd_init(nRanks, myRank, kHDD); 
    cd_begin(root_cd, "Root");
    preserveSimFlat(root_cd, sim);
 

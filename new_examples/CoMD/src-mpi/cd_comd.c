@@ -27,7 +27,7 @@ int is_eam = 0;
 
 unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim)
 {
-    //cd_preserve(cdh, sim, sizeof(SimFlat), kCopy, "SimFlat", "");
+    cd_preserve(cdh, sim, sizeof(SimFlat), kCopy, "SimFlat", "");
     printf("Preserve SimFlat: %zu\n", sizeof(SimFlat));
     uint32_t size = sizeof(SimFlat);    
     size += preserveDomain(cdh, sim->domain);       // flat 
@@ -46,7 +46,7 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim)
 unsigned int preserveDomain(cd_handle_t *cdh, Domain *domain)
 {
     uint32_t size = sizeof(Domain);
-    //cd_preserve(cdh, domain, sizeof(Domain), kCopy, "Domain", "");
+    cd_preserve(cdh, domain, sizeof(Domain), kCopy, "Domain", "");
 
     printf("Preserve Domain: %zu\n", sizeof(Domain));
     return size;

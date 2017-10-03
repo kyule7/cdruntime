@@ -39,7 +39,9 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
    for (int ii=0; ii<nSteps; ++ii)
    {
       cd_begin(cdh, "advanceVelocity"); 
-
+      
+      int pre_size = preserveSimFlat(cdh, s);
+      printf("\n preservation size for advanceVelocity %d\n", pre_size);
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
