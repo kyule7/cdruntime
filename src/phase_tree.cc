@@ -158,7 +158,7 @@ void PhaseNode::Print(bool print_details, bool first)
 //    outAll = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_PROFILE)).c_str(), "a");
     sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_PROFILE);
     printf("[%s] %s\n", __func__, output_filepath);
-    outAll = fopen(output_filepath, "a");
+    outAll = fopen(output_filepath, "w+");
   }
   std::string indent((level_)<<1, ' ');
   std::string one_more_indent((level_+1)<<1, ' ');
