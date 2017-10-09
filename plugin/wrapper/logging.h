@@ -38,7 +38,7 @@ void InitMallocPtr(void);
 //extern void Init(void);
 //extern void Fini(void);
 
-extern char ft2str[FTIDNums][64];
+//extern char ft2str[FTIDNums][64];
 //extern bool disabled;
 //extern bool replaying;
 //extern uint64_t gen_ftid;

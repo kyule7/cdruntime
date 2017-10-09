@@ -1,6 +1,6 @@
 #include <sys/time.h>
 #include "logging.h"
-
+#include "libc_wrapper.h"
 namespace logger {
 
 struct Singleton { 

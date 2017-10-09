@@ -63,6 +63,7 @@ extern bool replaying;
 extern uint64_t gen_ftid;
 extern void Init(void);
 extern void Fini(void);
+extern char ft2str[FTIDNums][64];
 
 struct LogEntry : public packer::BaseEntry {
     static uint64_t gen_ftid;
