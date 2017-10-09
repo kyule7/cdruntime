@@ -43,22 +43,22 @@ unsigned int preserveAtoms (cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes,
 double timestep(SimFlat* s, int nSteps, real_t dt)
 {
 
-   cd_handle_t *cdh = getleafcd();
+   cd_handle_t *cdh = getleafcd(); //TODO: still root_cd since hasn't begin yet
    for (int ii=0; ii<nSteps; ++ii)
    {
       //************************************
       //            cd boundary: velocity (0.08%)
       //************************************
-      cd_begin(cdh, "advanceVelocity_start");
+      cd_begin(cdh, "advanceVelocity_start"); // cd_lv1 starts
       //FIXME: need to pass cmd.doeam
       //int pre_size = preserveSimFlat(cdh, s);
       //FIXME: no need to preserve all
       //int pre_size = preserveSimFlat(cdh, s, 0); 
-      int pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
+      int velocity_pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
                                    1,  // is_p
                                    0,  // is_r
                                    0); // is_iSpecies
-      printf("\n preservation size for advanceVelocity %d\n", pre_size);
+      printf("\n preservation size for advanceVelocity(@beggining) %d\n", velocity_pre_size);
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
@@ -70,7 +70,11 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //            cd boundary: position (0.09%)
       //************************************
       cd_begin(cdh, "advancePosition"); 
-
+      int position_pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
+                                   0,  // is_p
+                                   1,  // is_r
+                                   0); // is_iSpecies
+      printf("\n preservation size for advancePosition %d\n", position_pre_size);
       startTimer(positionTimer);
       advancePosition(s, s->boxes->nLocalBoxes, dt);
       stopTimer(positionTimer);
@@ -78,43 +82,87 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       cd_detect(cdh);
       cd_complete(cdh); 
 
+
+      //-----------------------------------------------------------------------
+      //            Communication
+      //-----------------------------------------------------------------------
       //************************************
       //            cd boundary: redistribution (6.88%)
       //************************************
       cd_begin(cdh, "redistributeAtoms"); 
+      //TODO: what to preserve here?
+      //      //---------------
+      // |- O{boxes->nAtoms, atoms->[iSpecies, gid, r, p, f, U], }
+      //     <- I{boxes->nAtoms, atoms->[iSpecies, gid, r, p, f, U]}
+      //     <- I{parms->pbcFactor}
+      //1. updateLinkCells(sim->boxes, sim->atoms);
+      //   |+ moveAtom(boxes, atoms, ii, iBox, jBox);
+      //   |    |- O{boxes->nAtoms } <- I{boxes->nAtoms}
+      //   |+ copyAtom(boxes, atoms, iId, iBox, nj, jBox);
+      //        |- O{ atoms->iSpecies, atoms->gid, r, p, f, U} 
+      //        |-         <- I{ atoms->iSpecies, atoms->gid, r, p, f, U}
+      //2. haloExchange(sim->atomExchange, sim);
+      //   |+ exchangeData(haloExchange, data, iAxis[0,1,2]);
+      //      |+loadBuffer(haloExchange->parms, data, faceM, sendBufM)
+      //        |- O{remote data} <- I{s->atoms->[gid, iSpecies, r, p], parms->pbcFactor}
+      //      |+unloadBuffer(haloExchange->parms, data, faceM, nRecvM, recvBufM);
+      //        |+putAtomInBox
+      //           |- O{boxes->nAtoms, atoms->[gid, iSpecies, r, p]} <- I{remote data}
+      //3. sortAtomsInCell(sim->atoms, sim->boxes, ii);
+      //   |- O{ atoms->ISpecies, atoms->gid, r,p} 
+      //   |-         <- I{ atoms->ISpecies, atoms->gid, r, p}
+      //---------------
+
 
       startTimer(redistributeTimer);
       redistributeAtoms(s);
       stopTimer(redistributeTimer);
 
-      cd_detect(cdh);
-      cd_complete(cdh); 
+      //cd_detect(cdh);
+      //cd_complete(cdh); 
+      //-----------------------------------------------------------------------
+      //            Communication
+      //-----------------------------------------------------------------------
+
 
       //************************************
       //            cd boundary: force (92.96%)
       //************************************
-      cd_begin(cdh, "computeForce"); 
+      cd_handle_t *cd_lv2 = cd_create(cdh, getNRanks(), "timestep_after_comm", kStrict, 0xE);
+      cd_begin(cd_lv2, "computeForce"); 
 
       startTimer(computeForceTimer);
       computeForce(s);
       stopTimer(computeForceTimer);
 
-      cd_detect(cdh);
-      cd_complete(cdh); 
+      cd_detect(cd_lv2);
+      cd_complete(cd_lv2); 
 
       //************************************
       //            cd boundary 
       //************************************
-      cd_begin(cdh, "advanceVelocity_end"); 
-
+      cd_begin(cd_lv2, "advanceVelocity_end"); 
+      int velocity_end_pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
+                                   1,  // is_p
+                                   0,  // is_r
+                                   0); // is_iSpecies
+      printf("\n preservation size for advanceVelocity(@end) %d\n", velocity_end_pre_size);
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
 
+      cd_detect(cd_lv2);
+      cd_complete(cd_lv2); 
+
+      cd_destroy(cd_lv2);
+
+      //---
       cd_detect(cdh);
       cd_complete(cdh); 
+
    }
 
+   //TODO: which CD to put this?
    kineticEnergy(s);
 
    return s->ePotential;

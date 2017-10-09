@@ -2957,7 +2957,7 @@ bool CD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry)
 
 void CD::DeleteEntryDirectory(void)
 {
-  if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
+  //if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
   CD_DEBUG("Delete entry directory!\n");
   preserve_count_ = 0;
   restore_count_ = 0;
@@ -2967,7 +2967,7 @@ void CD::DeleteEntryDirectory(void)
 
 void HeadCD::DeleteEntryDirectory(void)
 {
-  if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
+  //if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
   CD_DEBUG("Delete entry directory!\n");
   preserve_count_ = 0;
   restore_count_ = 0;
