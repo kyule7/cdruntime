@@ -14,33 +14,34 @@
 */
 #include <stdint.h>
 #define EXTERNC extern 
+#define STOPHERE getchar()
 namespace logger {
 
-enum FTID {
-  FTID_invalid = 0,
-  FTID_malloc = 1,
-  FTID_calloc = 2,
-  FTID_valloc = 3,
-  FTID_realloc = 4,
-  FTID_memalign = 5,
-  FTID_posix_memalign = 6,
-  FTID_free = 7, 
-  FTIDNums
-};
-
+//enum FTID {
+//  FTID_invalid = 0,
+//  FTID_malloc = 1,
+//  FTID_calloc = 2,
+//  FTID_valloc = 3,
+//  FTID_realloc = 4,
+//  FTID_memalign = 5,
+//  FTID_posix_memalign = 6,
+//  FTID_free = 7, 
+//  FTIDNums
+//};
+//
 enum {
   kNeedFreed = 0x100,
   kNeedPushed = 0x200,
 };
 
 void InitMallocPtr(void);
-extern void Init(void);
-extern void Fini(void);
+//extern void Init(void);
+//extern void Fini(void);
 
 extern char ft2str[FTIDNums][64];
 //extern bool disabled;
-extern bool replaying;
-extern uint64_t gen_ftid;
+//extern bool replaying;
+//extern uint64_t gen_ftid;
 extern bool initialized;
 extern bool init_calloc;
 

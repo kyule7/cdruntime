@@ -3,13 +3,14 @@
 #include "cd_def_preserve.h"
 #include "cd_global.h"
 #include "packer.h"
-#include "util.h"
+//#include "util.h"
 
 #include <assert.h>
 namespace tuned {
 
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
+  TunedPrologue();
   tuning_enabled = true;
 #if CD_RUNTIME_ENABLED
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
@@ -28,12 +29,14 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #endif
   CDHandle *tuned_root_handle = new CDHandle(root_handle, 0, DEFAULT_ROOT_LABEL);
   CDPath::GetCDPath()->push_back(tuned_root_handle);
-  printf("tuned root:%p\n", root_handle);
+  TunedEpilogue();
+  printf("tuned root:%p %d\n", root_handle, logger::disabled);
   return tuned_root_handle;
 }
 
 void CD_Finalize(void)
 {
+  TunedPrologue();
 #if CD_RUNTIME_ENABLED
   cd::CD_Finalize();
 #endif
@@ -41,6 +44,7 @@ void CD_Finalize(void)
       "path size:%lu\n", CDPath::GetCDPath()->size());
   delete CDPath::GetCDPath()->back(); // delete root
   CDPath::GetCDPath()->pop_back();
+  TunedEpilogue();
 }
 
 CDPath *CDPath::uniquePath_ = NULL;

@@ -63,6 +63,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <list>
 #include "cd_features.h"
 #include "cd_def_common.h"
+#include "libc_wrapper.h" // defined here due to tuned
 // This could be different from MPI program to PGAS program
 // key is the unique ID from 0 for each CD node.
 // value is the unique ID for mpi communication group or thread group.
@@ -524,6 +525,16 @@ namespace tuned {
 ////    bool     active_;
 //  };
 
+#define TunedPrologue() \
+  cd::app_side = false; \
+  logger::disabled = true; \
+  tuned::begin_clk = CD_CLOCK(); 
+
+#define TunedEpilogue() \
+  tuned::end_clk = CD_CLOCK(); \
+  tuned::elapsed_time += tuned::end_clk - tuned::begin_clk; \
+  cd::app_side = true; \
+  logger::disabled = false; 
 } // namespace tuned ends
 
 #endif

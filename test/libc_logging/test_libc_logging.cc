@@ -40,6 +40,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <string>
 //#include <map>
 #include "cd.h"
+#include "libc_wrapper.h"
+#include "cd_features.h"
 #define CD_MPI_ENABLED 1
 #define _CD 0
 #if CD_MPI_ENABLED
@@ -48,8 +50,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define LV1 1
 #define LV2 1
 #define LV3 1 
-
-using namespace cd;
+using namespace tuned;
 using namespace std;
 
 int num_reexecution = 0;
@@ -64,21 +65,21 @@ int TestCDHierarchy(void)
   //cout << "\n==== TestCDHierarchy Start ====\n" << endl; 
 	CDHandle *root = CD_Init(numProcs, myRank, kHDD);
 #if _CD
-  CD_Begin(root); 
+  CD_Begin(root, "Root"); 
 #endif
-  printf("---start \n"); getchar();
+  printf("---start \n"); //getchar();
   int *malloc_p = (int *)malloc(128);
   int *calloc_p = (int *)calloc(16, 32);
   printf("calloc:%p\n", calloc_p);
   int *tmp1 = (int*)calloc(16, 64);
-  int * tmp2 = (int*)calloc(16, 128); getchar();
+  int * tmp2 = (int*)calloc(16, 128); //getchar();
   printf("calloc %p, tmp1:%p, tmp2:%p\n", &calloc, tmp1, tmp2);
   unsigned long long *cval = (unsigned long long *)(&calloc);
   printf("##################-------------------\n");
   logger::GetLogger()->Print();
   printf("%lx %lx %lx %lx ", *cval, *(cval+1), *(cval+2), *(cval+3));
   printf("%lx %lx %lx %lx\n", *(cval+4), *(cval+5), *(cval+6), *(cval+7));
-  printf("---\n"); getchar();
+  printf("---\n"); //getchar();
   //cout << "Root CD Begin...\n" << endl;
   //cout << "CD Preserving..\n" << endl;
 #if _CD
@@ -87,7 +88,7 @@ int TestCDHierarchy(void)
   //cout << "Root Creates Level 1 CD. # of children CDs = " << LV1 << "\n" << endl;
 
 #if _CD
-  CD_Begin(child_lv1);
+  CD_Begin(child_lv1, "child Lv1");
 #endif
   //cout << "\t\tLevel 1 CD Begin...\n" << endl;
 
@@ -100,7 +101,7 @@ int TestCDHierarchy(void)
 #if _CD
   CDHandle* child_lv2=child_lv1->Create(LV2, "CD2", kStrict, 0, 0, &err);
   //cout << string(1<<1, '\t').c_str() << "CD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
-  CD_Begin(child_lv2);
+  CD_Begin(child_lv2, "Child Lv2");
 #endif
   //cout << string(2<<1, '\t').c_str() <<"Level 2 CD Begin...\n" << endl;
     int *memalign_p = NULL;
@@ -118,7 +119,7 @@ int TestCDHierarchy(void)
 #if _CD
   CDHandle* child_lv3=child_lv2->Create(LV3, "CD3", kDRAM|kStrict, 0, 0, &err);
   //cout << string(2<<1, '\t').c_str() << "CD2 Creates Level 3 CD. # of children CDs = " << LV3 << "\n" << endl;
-  CD_Begin(child_lv3);
+  CD_Begin(child_lv3, "Child Lv3");
 #endif
   //cout << string(3<<1, '\t').c_str() << "Level 3 CD Begin...\n" << endl;
       // Body Level 3

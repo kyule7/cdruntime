@@ -51,13 +51,18 @@ char logger::ft2str[FTIDNums][64] = {
                             , "posix_memalign"
                             , "free"
                             };
+    
+
+void LogEntry::Print(void) const
+{ printf("Entry [%16s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_); STOPHERE; }
+
 bool LogPacker::IsLogFound(void) 
 {
   bool orig_disabled = logger::disabled;
   logger::disabled = true;
   uint64_t current_log_id = LogEntry::gen_ftid;
   LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
-  printf("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); getchar();
+  printf("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); //STOPHERE;
   logger::disabled = orig_disabled;;
   return entry != NULL;
 }
@@ -88,7 +93,7 @@ uint64_t LogPacker::FreeMemory(uint64_t offset_from)
   Print();
   printf("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
   free_list.Print();
-  getchar();
+  //STOPHERE;
   for(uint32_t i=0; i<freed_cnt; i++) {
     printf("i:%u\n", i);
     LogEntry *entry = free_list.table_->GetAt(i);
@@ -155,7 +160,7 @@ EXTERNC void *calloc(size_t numElem, size_t size)
 { 
   void *ret = NULL;
   //LOGGING_PROLOG(calloc, numElem, size);
-  LOGGER_PRINT("calloc(%zu,%zu) wrapped\n", numElem, size); getchar();
+  LOGGER_PRINT("calloc(%zu,%zu) wrapped\n", numElem, size); //STOPHERE;
   
   if(logger::disabled) { 
     if(logger::init_calloc == true) {
@@ -172,7 +177,7 @@ EXTERNC void *calloc(size_t numElem, size_t size)
     if(cval != NULL) {
       printf("%lx %lx %lx %lx %lx %lx %lx %lx\n", *cval, *(cval+1), *(cval+2), *(cval+3), *(cval+4), *(cval+5), *(cval+6), *(cval+7) );
     }
-    getchar();
+    //STOPHERE;
   } 
   else { 
     logger::disabled = true; 
@@ -349,7 +354,7 @@ EXTERNC void free(void *ptr)
 {
   LOGGING_PROLOG(free, ptr);
   GetLogger()->Print();
-  if(((uint64_t)ptr >> 12) == ((uint64_t)local_buf >> 12)) {LOGGER_PRINT("skip this free\n"); getchar(); }
+  if(((uint64_t)ptr >> 12) == ((uint64_t)local_buf >> 12)) {LOGGER_PRINT("skip this free\n"); }//STOPHERE; }
   if(logger::replaying == 0) {
     LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
     uint32_t idx = 0;
@@ -372,7 +377,7 @@ EXTERNC void free(void *ptr)
     if(entry != NULL) 
     { LOGGER_PRINT("Replaying %s(%p), freed? %lx\n", __func__, ptr, entry->attr()); }
     entry->Print();
-    //getchar();
+    //STOPHERE;
   }
   LOGGING_EPILOG(free);
 }

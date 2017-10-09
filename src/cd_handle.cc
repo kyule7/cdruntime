@@ -87,6 +87,9 @@ CD_CLOCK_T cd::tot_begin_clk=0;
 CD_CLOCK_T cd::tot_end_clk=0;
 CD_CLOCK_T cd::begin_clk=0;
 CD_CLOCK_T cd::end_clk=0;
+CD_CLOCK_T tuned::begin_clk=0;
+CD_CLOCK_T tuned::end_clk=0;
+CD_CLOCK_T tuned::elapsed_time;
 CD_CLOCK_T cd::elapsed_time=0;
 CD_CLOCK_T cd::normal_sync_time=0;
 CD_CLOCK_T cd::reexec_sync_time=0;
@@ -327,6 +330,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   else {
     cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
   }
+  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
 #if CD_TUNING_ENABLED == 0
   cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {

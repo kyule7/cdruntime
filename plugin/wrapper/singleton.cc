@@ -6,12 +6,12 @@ using namespace logger;
 Singleton::Singleton(void) 
 {
   Initialize();
-//  printf("Init\n"); getchar();
+//  printf("Init\n"); STOPHERE;
 }
 
 Singleton::~Singleton(void)
 {
-  printf("Singleton destroyed, disabled:%s, replaying %s\n", (logger::disabled)? "True":"False", (logger::replaying)? "True":"False"); getchar();
+  printf("Singleton destroyed, disabled:%s, replaying %s\n", (logger::disabled)? "True":"False", (logger::replaying)? "True":"False"); //STOPHERE;
 }
 
 void Singleton::Initialize(void)

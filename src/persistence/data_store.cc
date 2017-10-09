@@ -82,7 +82,7 @@ void DataStore::Init(char *ptr)
   head_ = 0;//size_ - size_ / 4;
   tail_ = head_;//sizeof(MagicStore);
   allocated_ = 0;
-  mode_ = kBoundedMode | kPosixFile;
+  mode_ = kBoundedMode | kMPIFile;
   r_tail_ = 0;
   r_head_ = 0;
   if(ptr == NULL) 

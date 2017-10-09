@@ -48,7 +48,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_common.h"
 #include "cd_def_interface.h"
 #include "cd_global.h"
-#include "libc_wrapper.h"
+//#include "libc_wrapper.h"
 
 namespace packer {
   class CDEntry;
@@ -461,7 +461,18 @@ extern bool just_reexecuted;
   elapsed_time += end_clk - begin_clk; \
   app_side = true; \
   logger::disabled = false; 
+/*
+#define TunedPrologue() \
+  cd::app_side = false; \
+  logger::disabled = true; \
+  tuned::begin_clk = CD_CLOCK(); 
 
+#define TunedEpilogue() \
+  tuned::end_clk = CD_CLOCK(); \
+  tuned::elapsed_time += tuned::end_clk - tuned::begin_clk; \
+  cd::app_side = true; \
+  logger::disabled = false; 
+*/
 //end_clk = CD_CLOCK(); 
 //  elapsed_time += end_clk - begin_clk; 
 

@@ -1,7 +1,8 @@
-#pragma once
+#ifndef _LIBC_WRAPPER_H 
+#define _LIBC_WRAPPER_H 
 
 #include "packer.hpp"
-#include "logging.h"
+//#include "logging.h"
 /**
  *  Our approach to log libc library is using dlsym(RTLD_NEXT, symbol)
  *  FT_symbol is our format of function pointer for the real symbol, 
@@ -45,6 +46,24 @@
 
 
 namespace logger {
+
+enum FTID {
+  FTID_invalid = 0,
+  FTID_malloc = 1,
+  FTID_calloc = 2,
+  FTID_valloc = 3,
+  FTID_realloc = 4,
+  FTID_memalign = 5,
+  FTID_posix_memalign = 6,
+  FTID_free = 7, 
+  FTIDNums
+};
+
+extern bool replaying;
+extern uint64_t gen_ftid;
+extern void Init(void);
+extern void Fini(void);
+
 struct LogEntry : public packer::BaseEntry {
     static uint64_t gen_ftid;
     FTID ftype_;
@@ -63,8 +82,7 @@ struct LogEntry : public packer::BaseEntry {
       ftype_ = that.ftype_;
       copy(that);
     }
-    void Print(void) const
-    { printf("Entry [%16s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_); getchar(); }
+    void Print(void) const;
 };
 #if 0
   static CDPath *uniquePath_;
@@ -98,7 +116,7 @@ public:
 class LogPacker;
 extern bool disabled;
 extern LogPacker *GetLogger(void);
-class LogPacker : public packer::Packer< LogEntry > {
+class LogPacker : public packer::Packer< logger::LogEntry > {
   friend LogPacker *GetLogger(void);
     static LogPacker *libc_logger;
   public:
@@ -126,7 +144,7 @@ class LogPacker : public packer::Packer< LogEntry > {
 // //        entry->size_.Check(kPushed);
 // //      }
 // //      LogEntry *entry = GetLogger()->table_->Find(id);
-//       printf("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); getchar();
+//       printf("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); STOPHERE;
 //       return entry != NULL;
 //     }
 
@@ -196,3 +214,5 @@ class LogPacker : public packer::Packer< LogEntry > {
 
 void *calloc2(size_t numElem, size_t size);
 void *calloc(size_t numElem, size_t size) __THROW __attribute_malloc__ __wur;
+
+#endif
