@@ -192,12 +192,14 @@ int ljForce(SimFlat* s)
   //*****************************************************
   // loop over local boxes
   //*****************************************************
+  // O{nNbrBoxes, nIBox} <- I{s->boxes, s->boxes->[nLocalBoxes, nAtoms[iBox]], nbrBoxes}
   for (int iBox=0; iBox<s->boxes->nLocalBoxes; iBox++)
   {
     int nIBox = s->boxes->nAtoms[iBox];
     if ( nIBox == 0 ) continue;
     int nNbrBoxes = getNeighborBoxes(s->boxes, iBox, nbrBoxes);
     // loop over neighbors of iBox
+    // O{atoms->f, atoms->U, ePot} <- I{atoms->gid, epsilon, rCut6, nIBox, ii, iOff}
     for (int jTmp=0; jTmp<nNbrBoxes; jTmp++)
     {
       int jBox = nbrBoxes[jTmp];
@@ -210,6 +212,7 @@ int ljForce(SimFlat* s)
       //*****************************************************
       // loop over atoms in iBox
       //*****************************************************
+      // O{iOff, iID} <- I{iOff, iBox, ii, atoms->gid}
       for (int iOff=iBox*MAXATOMS,ii=0; ii<nIBox; ii++,iOff++)
       {
         int iId = s->atoms->gid[iOff];
@@ -217,9 +220,15 @@ int ljForce(SimFlat* s)
           //cd_handle_t *cdh_lv2_inner = getleafcd();
           cd_begin(cdh_lv3, "ljForce_innermost"); 
         }
+
         //*****************************************************
         // loop over atoms in jBox
         //*****************************************************
+        // O{atoms->f, atoms->U, ePot} <- I{atoms->{gid, r[][]}, boxes->nLocalBoxes} 
+        //                                I{eShift, epsilon, rCut6} 
+        //                                I{iOff} ,// array index for s->atoms->r and U
+        //                                I{jOff, jBox, nJBox, ij}  //loop param
+
         for (int jOff=MAXATOMS*jBox,ij=0; ij<nJBox; ij++,jOff++)
         {
          real_t dr[3];

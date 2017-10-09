@@ -3,16 +3,37 @@ extern int is_eam;
 //int preserveSimFlat(SimFlat *sim);
 unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam);
 unsigned int preserveDomain(cd_handle_t *cdh, Domain *domain);
-unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell);
-unsigned int preserveAtoms (cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes, unsigned int p, unsigned int r, unsigned int species);
+unsigned int preserveLinkCell(cd_handle_t *cdh, 
+                              LinkCell *linkcell, 
+                              unsigned int all);
+unsigned int preserveAtoms(cd_handle_t *cdh, 
+                           Atoms *atoms, 
+                           int nTotalBoxes,
+                           unsigned int is_gid,
+                           unsigned int is_r,
+                           unsigned int is_p,
+                           unsigned int is_f,
+                           unsigned int is_U,
+                           unsigned int is_iSpecies
+                          );
 unsigned int preserveSpeciesData(cd_handle_t *cdh, SpeciesData *species);
 unsigned int preserveLjPot(cd_handle_t *cdh, LjPotential *pot);
-unsigned int preserveInterpolationObject(cd_handle_t *cdh, InterpolationObject *obj);
-unsigned int preserveEamPot(cd_handle_t *cdh, EamPotential *pot, int nTotalBoxes);
-unsigned int preserveHaloExchange(cd_handle_t *cdh, HaloExchange *xchange, int is_force);
-unsigned int preserveHaloAtom(cd_handle_t *chd, AtomExchangeParms *xchange);
-unsigned int preserveHaloForce(cd_handle_t *chd, ForceExchangeParms *xchange);
-unsigned int preserveForceData(cd_handle_t *chd, ForceExchangeData *forceData);
+unsigned int preserveInterpolationObject(cd_handle_t *cdh, 
+                                         InterpolationObject *obj);
+unsigned int preserveEamPot(cd_handle_t *cdh, 
+                            EamPotential *pot, 
+                            int nTotalBoxes);
+unsigned int preserveHaloExchange(cd_handle_t *cdh, 
+                                  HaloExchange *xchange, 
+                                  int is_force);
+unsigned int preserveHaloAtom(cd_handle_t *cdh, 
+                              AtomExchangeParms *xchange_parms,
+                              unsigned int is_cellList,
+                              unsigned int is_pbcFactor);
+unsigned int preserveHaloForce(cd_handle_t *chd, 
+                               ForceExchangeParms *xchange);
+unsigned int preserveForceData(cd_handle_t *chd, 
+                               ForceExchangeData *forceData);
 
 /// Domain decomposition information.
 //typedef struct DomainSt

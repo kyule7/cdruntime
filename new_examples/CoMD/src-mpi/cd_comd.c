@@ -37,8 +37,14 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam)
 
     //further preserve by chasing pointers
     size += preserveDomain(cdh, sim->domain);       // flat 
-    size += preserveLinkCell(cdh, sim->boxes);      // nAtoms = nTotalBoxes*sizeof(int)
-    size += preserveAtoms(cdh, sim->atoms, sim->boxes->nTotalBoxes, 1, 1, 1);         // 
+    size += preserveLinkCell(cdh, sim->boxes, 1/*1:all, 0:nAtoms*/);      // nAtoms = nTotalBoxes*sizeof(int)
+    size += preserveAtoms(cdh, sim->atoms, sim->boxes->nTotalBoxes, 
+                          1,  // is_gid
+                          1,  // is_r
+                          1,  // is_p
+                          1,  // is_f
+                          1,  // is_U
+                          1); // is_iSpecies
     size += preserveSpeciesData(cdh, sim->species);   // flat
     if(doeam) {
         printf("I am calling preserveEampot since doeam is %d\n", doeam);
@@ -53,58 +59,93 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam)
 
 unsigned int preserveDomain(cd_handle_t *cdh, Domain *domain)
 {
-    uint32_t size = sizeof(Domain);
-    //there is no pointer in Domain object
-    cd_preserve(cdh, domain, sizeof(Domain), kCopy, "Domain", "");
-    printf("Preserve Domain: %zu\n", sizeof(Domain));
-    return size;
+  uint32_t size = sizeof(Domain);
+  //there is no pointer in Domain object
+  cd_preserve(cdh, domain, sizeof(Domain), kCopy, "Domain", "");
+  printf("Preserve Domain: %zu\n", sizeof(Domain));
+  return size;
 }
 
-unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell)
+unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell, 
+                              unsigned int all) // all=0 for only nAtoms
 {
-    uint32_t size = sizeof(LinkCell);
+  uint32_t size = 0;
+  uint32_t nAtoms_size = linkcell->nTotalBoxes*sizeof(int);
+  if(all=1) {
+    size += sizeof(LinkCell);
     cd_preserve(cdh, linkcell, size, kCopy, "LinkCell", "");
-    uint32_t nAtoms_size = linkcell->nTotalBoxes*sizeof(int);
-    //prerserving data being  pointed by linkcell->nAtoms
-    cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, kCopy, "LinkCell_nAtoms", "");
     size += nAtoms_size;
+    cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, kCopy, "LinkCell_nAtoms", "");
     printf("Preserven LinkCell %zu, nAtoms: %u\n", sizeof(LinkCell), nAtoms_size);
-    return size;
+  }
+  //prerserving data being pointed by linkcell->nAtoms
+  if(all=0) {
+    size += nAtoms_size;
+    cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, kCopy, "LinkCell_nAtoms", "");
+    printf("Preserven LinkCell %zu, nAtoms: %u\n", 0, nAtoms_size);
+  }
+  return size;
 }
+
+
 
 //TODO: add switch to pick what to preserve 
 //TODO: minimize the number of cd_preserve
 unsigned int preserveAtoms (cd_handle_t *cdh, 
                             Atoms *atoms, 
-                            int nTotalBoxes, 
-                            unsigned int is_p, //TODO: bool is better?
+                            int nTotalBoxes,
+                            unsigned int is_gid,
                             unsigned int is_r,
+                            unsigned int is_p, //TODO: bool is better?
+                            unsigned int is_f,
+                            unsigned int is_U,
                             unsigned int is_iSpecies
                             )
 {
     uint32_t size = sizeof(Atoms);
-    cd_preserve(cdh, atoms, size, kCopy, "Atoms", "");
-    uint32_t maxTotalAtoms = MAXATOMS * nTotalBoxes;
-    uint32_t gid_size      = maxTotalAtoms*sizeof(int);
-    cd_preserve(cdh, atoms->gid, gid_size, kCopy, "Atoms_gid", "");
-    uint32_t iSpecies_size = maxTotalAtoms*sizeof(int);
-    if(is_iSpecies == 1)
+    //TODO: this is really not efficient nor readable
+    //when want to preserve entire data 
+    if( is_gid && is_iSpecies && is_r && is_p && is_f && is_U) {
+      cd_preserve(cdh, atoms, size, kCopy, "Atoms", "");
+    }
+    const uint32_t maxTotalAtoms = MAXATOMS * nTotalBoxes;
+    uint32_t gid_size=0; 
+    uint32_t iSpecies_size=0; 
+    uint32_t r_size=0; 
+    uint32_t p_size=0; 
+    uint32_t f_size=0; 
+    uint32_t U_size=0; 
+    if(is_gid == 1) {
+      gid_size = maxTotalAtoms*sizeof(int);
+      cd_preserve(cdh, atoms->gid, gid_size, kCopy, "Atoms_gid", "");
+    }
+    if(is_iSpecies == 1) {
+      iSpecies_size = maxTotalAtoms*sizeof(int);
       cd_preserve(cdh, atoms->iSpecies, iSpecies_size, kCopy, "Atoms_iSpecies", "");
-    uint32_t r_size        = maxTotalAtoms*sizeof(real3);
-    if(is_r == 1)
+    }
+    if(is_r == 1) {
+      r_size = maxTotalAtoms*sizeof(real3);
       cd_preserve(cdh, atoms->r, r_size, kCopy, "Atoms_r", "");
-    uint32_t p_size        = maxTotalAtoms*sizeof(real3);
-    if(is_p == 1)
+    }
+    if(is_p == 1) {
+      p_size = maxTotalAtoms*sizeof(real3);
       cd_preserve(cdh, atoms->p, p_size, kCopy, "Atoms_p", "");
-    uint32_t f_size        = maxTotalAtoms*sizeof(real3);
-    cd_preserve(cdh, atoms->f, f_size, kCopy, "Atoms_f", "");
-    uint32_t U_size        = maxTotalAtoms*sizeof(real_t);
-    cd_preserve(cdh, atoms->U, U_size, kCopy, "Atoms_u", "");
-    //size += gid_size + iSpecies_size + r_size + p_size + f_size + U_size;
-    size += gid_size + f_size + U_size;
-    if(is_iSpecies == 1) size += iSpecies_size;
-    if(is_r == 1) size += r_size;
-    if(is_p == 1) size += p_size;
+    }
+    if(is_f == 1) {
+      f_size = maxTotalAtoms*sizeof(real3);
+      cd_preserve(cdh, atoms->f, f_size, kCopy, "Atoms_f", "");
+    }
+    if(is_U == 1) {
+      U_size = maxTotalAtoms*sizeof(real_t);
+      cd_preserve(cdh, atoms->U, U_size, kCopy, "Atoms_u", "");
+    }
+    size += gid_size + iSpecies_size + r_size + p_size + f_size + U_size;
+    //if(is_gid == 1) size += gid_size;
+    //if(is_iSpecies == 1) size += iSpecies_size;
+    //if(is_r == 1) size += r_size;
+    //if(is_p == 1) size += p_size;
+    //if(is_f == 1) size += f_size;
+    //if(is_U == 1) size += U_size;
 
     printf("Preserve Atoms: %zu, totAtoms:%u, gid:%u, species:%u, r:%u, p:%u, f:%u, U:%u\n"
          , sizeof(Atoms)
@@ -192,31 +233,40 @@ unsigned int preserveHaloExchange(cd_handle_t *cdh, HaloExchange *xchange, int i
     } else {
         //TODO: This name is confusing.
         //      This is preserveing AtomExchangeParms
-        size += preserveHaloAtom(cdh, xchange->parms);
+        size += preserveHaloAtom(cdh, xchange->parms, 1, 1);
     }
     return size;
 }
 
-unsigned int preserveHaloAtom(cd_handle_t *cdh, AtomExchangeParms *xchange_parms)
+unsigned int preserveHaloAtom(cd_handle_t *cdh, 
+                              AtomExchangeParms *xchange_parms,
+                              unsigned int is_cellList,
+                              unsigned int is_pbcFactor)
 {
-    uint32_t size = sizeof(AtomExchangeParms);
-    cd_preserve(cdh, xchange_parms, size, kCopy, "AtomExchangeParms", "");
-    printf("Preserve Halo Atom:%zu\n", sizeof(AtomExchangeParms));
-    //printf("Preserve AtomExchangeParms:%zu\n", sizeof(AtomExchangeParms));
-    uint32_t cellList_size;
-    for(int i=0; i<6; i++) {
+    uint32_t size = 0;
+    if( is_cellList && is_pbcFactor) {
+      size += sizeof(AtomExchangeParms);
+      cd_preserve(cdh, xchange_parms, size, kCopy, "AtomExchangeParms", "");
+      printf("Preserve Halo Atom:%zu\n", sizeof(AtomExchangeParms));
+    }
+    uint32_t cellList_size=0;
+    if( is_cellList == 1) {
+      for(int i=0; i<6; i++) {
         printf("Preserve cellList[%d]:%u\n", i, xchange_parms->nCells[i] * sizeof(int));
         cellList_size += xchange_parms->nCells[i] * sizeof(int);
+      }
+      cd_preserve(cdh, xchange_parms->cellList, cellList_size, kCopy, 
+          "AtomExchangeParms_cellList", "");
     }
-    cd_preserve(cdh, xchange_parms->cellList, cellList_size, kCopy, 
-                "AtomExchangeParms_cellList", "");
-    uint32_t pbcFactor_size;
-    for(int i=0; i<6; i++) {
+    uint32_t pbcFactor_size=0;
+    if( is_pbcFactor == 1) {
+      for(int i=0; i<6; i++) {
         printf("Preserve pbfFactor[%d]:%u\n", i, sizeof(real_t) * 3);
         pbcFactor_size += 3 * sizeof(real_t);
+      }
+      cd_preserve(cdh, xchange_parms->pbcFactor, pbcFactor_size, kCopy, 
+          "AtomExchangeParms_pbcFactor", "");
     }
-    cd_preserve(cdh, xchange_parms->pbcFactor, pbcFactor_size, kCopy, 
-                "AtomExchangeParms_pbcFactor", "");
     size += cellList_size;
     size += pbcFactor_size;
     return size;
