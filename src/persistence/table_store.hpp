@@ -205,11 +205,12 @@ class TableStore : public BaseTable {
       }
     }
 
-    EntryT *FindReverse(uint64_t id, int64_t begin)
+    EntryT *FindReverse(uint64_t id, uint64_t start)
     {
       assert(head_ == 0);
       EntryT *ret = NULL;
-      begin = (begin > tail_)? tail_-1 : begin;
+      
+      int64_t begin = (start > tail_)? tail_-1 : start;
       if(begin >= 0) {
         for(int64_t i=begin; i>=0; i--) {
           // The rule for entry is that the first element in object layout is always ID.

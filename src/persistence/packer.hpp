@@ -224,7 +224,8 @@ class Packer {
     // FIXME:Initially buffer should be flushed first.
     EntryT *GetNext(char *dst, uint64_t id)
     {
-      if(cur_pos_ < table_->used()) {
+      uint64_t used_entries = table_->used();
+      if(cur_pos_ < used_entries) {
         EntryT &entry = table_[cur_pos_++];
         assert(id == entry.id_);
         data_->Read(dst, entry.size(), entry.offset_);
@@ -238,7 +239,8 @@ class Packer {
     // FIXME:Initially buffer should be flushed first.
     EntryT *GetNext(void)
     {
-      if(cur_pos_ < table_->used()) {
+      uint64_t used_entries = table_->used();
+      if(cur_pos_ < used_entries) {
         return table_->At(cur_pos_++);
       } else {
         cur_pos_ = 0;
