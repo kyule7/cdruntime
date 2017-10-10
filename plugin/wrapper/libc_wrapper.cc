@@ -6,6 +6,7 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <assert.h>
+#include <pthread.h>
 
 using namespace logger;
 LogPacker *LogPacker::libc_logger = NULL;
@@ -17,9 +18,28 @@ bool logger::init_calloc = false;
 
 logger::Singleton logger::singleton;
 //packer::Packer<LogEntry> serdes;
+namespace logger {
+struct LocalAllocator {
+  static char local_buf[66536] __attribute__ ((aligned (4096)));
+  static uint32_t local_buf_offset;
+  static pthread_mutex_t mutex;
+  void *Alloc(size_t size) {
+      void *ret = NULL;
+      pthread_mutex_lock(&mutex);
+      ret = local_buf + local_buf_offset;
+      local_buf_offset += size;
+      pthread_mutex_unlock(&mutex);
+      getchar();
+      return ret;
+  }
+};
+}
 
-static char local_buf[4096] __attribute__ ((aligned (4096)));
-static uint32_t local_buf_offset = 0;
+char logger::LocalAllocator::local_buf[66536] __attribute__ ((aligned (4096)));
+uint32_t logger::LocalAllocator::local_buf_offset = 0;
+pthread_mutex_t logger::LocalAllocator::mutex = PTHREAD_MUTEX_INITIALIZER;
+
+LocalAllocator local_allocator;
 
 void logger::Init(void)
 {
@@ -160,16 +180,19 @@ EXTERNC void *calloc(size_t numElem, size_t size)
 { 
   void *ret = NULL;
   //LOGGING_PROLOG(calloc, numElem, size);
-  LOGGER_PRINT("calloc(%zu,%zu) wrapped\n", numElem, size); //STOPHERE;
-  
+  LOGGER_PRINT("calloc(%zu,%zu) %s, %s\n", numElem, size, 
+      (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init"); //STOPHERE;
+  getchar(); 
   if(logger::disabled) { 
+    LOGGER_PRINT("calloc(%zu,%zu) wrapped 2\n", numElem, size); //STOPHERE;
     if(logger::init_calloc == true) {
       LOGGER_PRINT("XXX Logging Disabled %s\n", ft2str[(FTID_calloc)]); 
       ret = FT_calloc(numElem, size); 
     } else {
       LOGGER_PRINT("XXX Not yet initialize calloc(%zu) %s\n", numElem * size, ft2str[(FTID_calloc)]); 
-      ret = local_buf + local_buf_offset;
-      local_buf_offset += numElem * size;
+//      ret = local_buf + local_buf_offset;
+//      local_buf_offset += numElem * size;
+      ret = local_allocator.Alloc(numElem*size);
       logger::init_calloc = true; 
     }
     uint64_t *cval = (uint64_t *)(&calloc);
@@ -352,9 +375,11 @@ EXTERNC int posix_memalign(void **memptr, size_t alignment, size_t size)
 
 EXTERNC void free(void *ptr)
 {
+  printf("free called %s %s\n",
+      (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init"); getchar(); //STOPHERE;
   LOGGING_PROLOG(free, ptr);
   GetLogger()->Print();
-  if(((uint64_t)ptr >> 12) == ((uint64_t)local_buf >> 12)) {LOGGER_PRINT("skip this free\n"); }//STOPHERE; }
+  if(((uint64_t)ptr >> 12) == ((uint64_t)logger::LocalAllocator::local_buf >> 12)) {LOGGER_PRINT("skip this free\n"); }//STOPHERE; }
   if(logger::replaying == 0) {
     LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
     uint32_t idx = 0;

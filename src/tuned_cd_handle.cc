@@ -45,6 +45,9 @@ void CD_Finalize(void)
   delete CDPath::GetCDPath()->back(); // delete root
   CDPath::GetCDPath()->pop_back();
   TunedEpilogue();
+#if CD_LIBC_LOGGING
+  logger::Fini();
+#endif
 }
 
 CDPath *CDPath::uniquePath_ = NULL;

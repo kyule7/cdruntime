@@ -213,7 +213,7 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
 //typedef int(*FType_posix_memalign)(void **memptr, size_t alignment, size_t size);
 //typedef void(*FType_free)(void *ptr);
 
-void *calloc2(size_t numElem, size_t size);
-void *calloc(size_t numElem, size_t size) __THROW __attribute_malloc__ __wur;
+//void *calloc2(size_t numElem, size_t size);
+//void *calloc(size_t numElem, size_t size) __THROW __attribute_malloc__ __wur;
 
 #endif
