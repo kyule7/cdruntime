@@ -1,6 +1,6 @@
 #include <cstdio>
 #include "singleton.h"
-#include "libc_wrapper.h"
+//#include "libc_wrapper.h"
 using namespace logger;
 
 Singleton::Singleton(void) 
@@ -11,7 +11,7 @@ Singleton::Singleton(void)
 
 Singleton::~Singleton(void)
 {
-  printf("Singleton destroyed, disabled:%s, replaying %s\n", (logger::disabled)? "True":"False", (logger::replaying)? "True":"False"); //STOPHERE;
+//  printf("Singleton destroyed, disabled:%s, replaying %s\n", (logger::disabled)? "True":"False", (logger::replaying)? "True":"False"); //STOPHERE;
 }
 
 void Singleton::Initialize(void)
@@ -19,12 +19,12 @@ void Singleton::Initialize(void)
   InitMallocPtr();
 }
 
-void Singleton::BeginClk(enum FTID ftid)
+void Singleton::BeginClk(int ftid)
 {
 
 }
 
-void Singleton::EndClk(enum FTID ftid)
+void Singleton::EndClk(int ftid)
 {
 
 }

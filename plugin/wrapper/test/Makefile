@@ -1,9 +1,11 @@
 CC=g++
-CDROOT=/home/kyushick/Work/CDs/libc
+MPICC=mpicxx
+CDROOT=/home1/03341/kyushick/Work/CDs/libc
 CFLAGS=-std=gnu++0x -g -I.. -I${CDROOT}/src/persistence
 LFLAGS=-L.. -lwrapLibc -Wl,-rpath=.. -L${CDROOT}/src/persistence -lpacker -Wl,-rpath=${CDROOT}/src/persistence
+NEW_LFLAGS=-L${CDROOT}/src/persistence -lpacker -Wl,-rpath=${CDROOT}/src/persistence
 
-EXE=test_wrapper.exe test_genid.exe test_ul.exe test_push.exe
+EXE=test_wrapper.exe test_genid.exe test_ul.exe test_push.exe test_mpi.exe
 all: ${EXE}
 
 test_wrapper.exe: test_wrapper.cc
@@ -17,6 +19,9 @@ test_ul.exe: test_ul.cc
 
 test_push.exe: test_push.cc
 	${CC} ${CFLAGS} test_push.cc -o test_push.exe ${LFLAGS}
+
+test_mpi.exe: test_mpi.cc
+	${MPICC} ${CFLAGS} test_mpi.cc -o test_mpi.exe ${NEW_LFLAGS}
 
 clean:
 	rm *.exe

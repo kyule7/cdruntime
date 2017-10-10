@@ -1,6 +1,8 @@
+#ifndef _SINGLETON_H
+#define _SINGLETON_H
 #include <sys/time.h>
 #include "logging.h"
-#include "libc_wrapper.h"
+//#include "libc_wrapper.h"
 namespace logger {
 
 struct Singleton { 
@@ -11,10 +13,12 @@ struct Singleton {
     Singleton(void); 
     ~Singleton(void);
     void Initialize(void);
-    void BeginClk(enum FTID ftid);
-    void EndClk(enum FTID ftid);
+    void BeginClk(int ftid);
+    void EndClk(int ftid);
 };
 
 extern Singleton singleton;
 
 }
+
+#endif

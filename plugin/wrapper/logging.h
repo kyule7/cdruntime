@@ -33,10 +33,10 @@ namespace logger {
 //  FTIDNums
 //};
 //
-enum {
-  kNeedFreed = 0x100,
-  kNeedPushed = 0x200,
-};
+//enum {
+//  kNeedFreed = 0x100,
+//  kNeedPushed = 0x200,
+//};
 
 void InitMallocPtr(void);
 //extern void Init(void);
@@ -99,4 +99,4 @@ extern bool init_calloc;
     logger::disabled = false; \
   }
 */
-#define LOGGER_PRINT(...) fprintf(stdout, __VA_ARGS__)
+#define LOGGER_PRINT(...) printf(__VA_ARGS__)
