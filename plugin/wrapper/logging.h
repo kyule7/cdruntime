@@ -14,7 +14,11 @@
 */
 #include <stdint.h>
 #define EXTERNC extern 
-#define STOPHERE getchar()
+#ifdef _DEBUG
+# define STOPHERE getchar()
+#else
+# define STOPHERE
+#endif
 namespace logger {
 
 //enum FTID {
