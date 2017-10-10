@@ -5,8 +5,8 @@ using namespace logger;
 
 Singleton::Singleton(void) 
 {
-  //Initialize();
-//  printf("Init\n"); STOPHERE;
+  Initialize();
+  printf("\n\n###Init\n"); STOPHERE;
 }
 
 Singleton::~Singleton(void)

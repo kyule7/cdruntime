@@ -40,7 +40,7 @@ void Test1(bool replay) {
     int *realloc_p = (int *)realloc(malloc_p, 512);
   
     if(replay == false) {
-      GetLogger()->Print();
+//      GetLogger()->Print();
       end1 = GetLogger()->PushLogs(begin1);
       printf("begin1 : %lu ~ %lu\n", begin1, end1);
       upto2 = GetLogger()->Set(begin2);
@@ -55,7 +55,7 @@ void Test1(bool replay) {
       free(calloc_p2);
       free(valloc_p2);
       if(replay == false) {
-        GetLogger()->Print();
+//        GetLogger()->Print();
         end2 = GetLogger()->PushLogs(begin2);
         printf("begin2 : %lu ~ %lu\n", begin2, end2);
         upto3 = GetLogger()->Set(begin3);
@@ -68,7 +68,7 @@ void Test1(bool replay) {
       free(realloc_p2);
 
       if(replay == false) {
-        GetLogger()->Print();
+//        GetLogger()->Print();
         end3 = GetLogger()->PushLogs(begin3); // delete the entry for realloc
         printf("begin3 : %lu ~ %lu\n", begin3, end3);
       }
@@ -84,7 +84,7 @@ void Test1(bool replay) {
     free(memalign_p);
     free(ptr);
     if(replay == false) {
-      GetLogger()->FreeMemory(begin2); // should free realloc_p2, realloc_p, calloc_p, valloc_p
+//      GetLogger()->FreeMemory(begin2); // should free realloc_p2, realloc_p, calloc_p, valloc_p
     }
   
   }
@@ -93,8 +93,8 @@ void Test1(bool replay) {
 
 
 int main(int argc, char *argv[]) {
-  Init();
   MPI_Init(&argc, &argv);
+  Init();
   printf("--- Test Begin ---\n\n");
   printf("starting ftid: %lu\n", GetLogger()->GetNextID());
   Test1(false);
@@ -103,8 +103,8 @@ int main(int argc, char *argv[]) {
   Test1(true);
   printf("\n ----- End -----\n\n");
 
-  MPI_Finalize();
   Fini();
+  MPI_Finalize();
 //  GetLogger()->FreeMemory(begin2);
   return 0;
 }

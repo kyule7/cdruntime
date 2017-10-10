@@ -184,9 +184,9 @@ EXTERNC void *calloc(size_t numElem, size_t size)
 { 
   void *ret = NULL;
   //LOGGING_PROLOG(calloc, numElem, size);
-//  LOGGER_PRINT("calloc(%zu,%zu) %s, %s\n", numElem, size, 
-//      (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init"); //STOPHERE;
-//  getchar(); 
+  LOGGER_PRINT("calloc%p(%zu,%zu) %s, %s\n", FT_calloc, numElem, size, 
+      (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init"); //STOPHERE;
+  getchar(); 
   if(logger::disabled) { 
 //    LOGGER_PRINT("calloc(%zu,%zu) wrapped 2\n", numElem, size); //STOPHERE;
     if(logger::init_calloc == true) {

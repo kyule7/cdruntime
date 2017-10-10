@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _LOGGING_H
+#define _LOGGING_H
 /**********************
  *
  * logging.h file is for declaration for internal libc logging.
@@ -13,6 +14,7 @@
   free
 */
 #include <stdint.h>
+//#include "libc_wrapper.h"
 #define EXTERNC extern 
 #ifdef _DEBUG
 # define STOPHERE getchar()
@@ -70,14 +72,17 @@ extern bool init_calloc;
   FType_##func FT_##func = NULL
 */
 
+//extern void *libc_handle;
 #define INIT_FUNCPTR(func) \
-  FT_##func = (__typeof__(&func))dlsym(RTLD_NEXT, #func)
+  FT_##func = (__typeof__(&func))dlsym(RTLD_NEXT, #func); \
+  assert(FT_##func);
 
 #define DEFINE_FUNCPTR(func) \
   __typeof__(&func) FT_##func = NULL
 
 #define CHECK_INIT(func) \
   if(FT_##func == NULL) { \
+    printf("logging: %d\n", logger::disabled); \
     INIT_FUNCPTR(func); \
     if(logger::initialized == false) logger::InitMallocPtr(); \
     assert(FT_##func); \
@@ -100,3 +105,6 @@ extern bool init_calloc;
   }
 */
 #define LOGGER_PRINT(...) printf(__VA_ARGS__)
+
+
+#endif

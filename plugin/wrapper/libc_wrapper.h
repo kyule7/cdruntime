@@ -67,14 +67,11 @@ enum FTID {
 
 bool replaying;
 //uint64_t gen_ftid;
-bool disabled;
+bool disabled = true;
 //extern void Init(void);
 //extern void Fini(void);
-void *libc_handle = NULL;
 void Init(void)
 {
-  libc_handle = dlopen("/home1/03341/kyushick/Work/CDs/libc/plugin/wrapper/libwrapLibc.so", RTLD_LAZY);
-  assert(libc_handle);
   disabled = false;
 }
 
@@ -264,15 +261,16 @@ LogPacker *GetLogger(void)
 //void PushLogs(uint64_t offset_from);
 
 }
-
+/*
 #define CHECK_INIT(func) \
   if(FT_##func == NULL) { \
+    printf("logging: %d\n", logger::disabled); \
     INIT_FUNCPTR(func); \
     if(logger::initialized == false) logger::InitMallocPtr(); \
     assert(FT_##func); \
     assert(logger::initialized); \
   }
-
+*/
 #define LOGGING_PROLOG(func, ...) \
   CHECK_INIT(func) \
   if(logger::disabled) { \
