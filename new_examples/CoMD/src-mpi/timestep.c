@@ -92,7 +92,7 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //            cd boundary: position (0.09%)
       //************************************
       cd_begin(cdh, "advancePosition"); 
-      //TODO: preserve dt and nAtoms by kRef
+      //TODO: preserve dt and nAtoms by *kRef*
       int position_pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
                                    0,  // is_gid
                                    0,  // is_r
@@ -167,11 +167,14 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //************************************
       //            cd boundary: force (92.96%)
       //************************************
-      cd_handle_t *cd_lv2 = cd_create(cdh, getNRanks(), "timestep_after_comm", kStrict, 0xE);
+      cd_handle_t *cd_lv2 = cd_create(cdh, 
+                                      getNRanks(), 
+                                      "timestep_after_comm", 
+                                      kStrict, 0xE);
       cd_begin(cd_lv2, "computeForce"); 
 
       startTimer(computeForceTimer);
-      computeForce(s);
+      computeForce(s); // s->pot->force(s)
       stopTimer(computeForceTimer);
 
       cd_detect(cd_lv2);
@@ -182,14 +185,16 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //************************************
       cd_begin(cd_lv2, "advanceVelocity_end"); 
       //TODO: preserve dt and nAtoms by kRef
-      int velocity_end_pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
-                                   0,  // is_gid
-                                   0,  // is_r
-                                   0,  // is_p
-                                   1,  // is_f
-                                   0,  // is_U
-                                   0); // is_iSpecies
-      printf("\n preservation size for advanceVelocity(@end) %d\n", velocity_end_pre_size);
+      int velocity_end_pre_size = preserveAtoms(cdh, 
+                                    s->atoms, s->boxes->nTotalBoxes, 
+                                    0,  // is_gid
+                                    0,  // is_r
+                                    0,  // is_p
+                                    1,  // is_f
+                                    0,  // is_U
+                                    0); // is_iSpecies
+      printf("\n preservation size for advanceVelocity(@end) %d\n", 
+            velocity_end_pre_size);
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);

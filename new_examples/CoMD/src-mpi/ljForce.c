@@ -173,11 +173,10 @@ int ljForce(SimFlat* s)
 
   int nbrBoxes[27];
   // CD handler for level2 CD 
-  // FIXME: 0xF need to change
-  // FIXME: where/how I get cd_handle_t
+  // TODO: 0xF gets ignored when config.yaml specifies error mask
   cd_handle_t *cdh_lv3 = NULL;
   if(is_first) {
-    //cd_handle_t *cdh_lv3 = cd_create(getcurrentcd(), 1, "ljForce", kStrict, 0xF);
+   //cd_handle_t *cdh_lv3 = cd_create(getcurrentcd(), 1, "ljForce", kStrict, 0xF);
    //cdh_lv3 = cd_create(getleafcd(), 1, "ljForce", kStrict, 0xC);
    cdh_lv3 = cd_create(getcurrentcd(), 1, "ljForce", kStrict, 0xC);
   }
@@ -218,7 +217,21 @@ int ljForce(SimFlat* s)
         int iId = s->atoms->gid[iOff];
         if(is_first) {
           //cd_handle_t *cdh_lv2_inner = getleafcd();
+          //This CD has a length of nJBox 
+          if(getMyRank() == 0)
+            printf("[rank0] lv3 cd begins[iOff:iId:iBox:nIBox:jBox:nJBox]:[%d:%d:%d:%d:%d:%d]\n",
+                                      iOff, iId, iBox, nIBox, jBox, nJBox);
+          //Note that cd_complete might fail if there if "continue" between
+          //cd_begin and cd_complete, which is the case for innermost loop, 
+          //shown below.
+          //Also, it is worth mentioning that the number of loop iterations for
+          //the innermost loop below changes over time, depending on runtime
+          //behavior due to moving atoms.
           cd_begin(cdh_lv3, "ljForce_innermost"); 
+          //TODO: cd_preserve
+          //1. loop index for current loop
+          //  - iOff, iBox, MAXATOMS, ii, nIBox
+          //2. data to be read in the innermost loop below
         }
 
         //*****************************************************
@@ -228,7 +241,6 @@ int ljForce(SimFlat* s)
         //                                I{eShift, epsilon, rCut6} 
         //                                I{iOff} ,// array index for s->atoms->r and U
         //                                I{jOff, jBox, nJBox, ij}  //loop param
-
         for (int jOff=MAXATOMS*jBox,ij=0; ij<nJBox; ij++,jOff++)
         {
          real_t dr[3];
