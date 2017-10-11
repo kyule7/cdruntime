@@ -68,6 +68,10 @@ enum FTID {
 bool replaying;
 //uint64_t gen_ftid;
 bool disabled = true;
+extern void *libc_handle;
+#define INIT_FUNCPTR(func) \
+  FT_##func = (__typeof__(&func))dlsym(RTLD_NEXT, #func); \
+  assert(FT_##func); printf("Init %s:%p\n", ft2str[(FTID_##func)], FT_##func);
 //extern void Init(void);
 //extern void Fini(void);
 void Init(void)
@@ -232,7 +236,7 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
   }
 
   }
-  logger::disabled = orig_disabled;;
+  logger::disabled = orig_disabled;
   return freed_cnt;
 }
     void Print(void) {
@@ -274,16 +278,17 @@ LogPacker *GetLogger(void)
 #define LOGGING_PROLOG(func, ...) \
   CHECK_INIT(func) \
   if(logger::disabled) { \
-    printf("XXX Logging Disabled %s XXX\n", ft2str[(FTID_##func)]); \
+    printf("XXX Logging Disabled %s XXX %p %p\n", ft2str[(FTID_##func)], FT_##func, func); \
     return FT_##func(__VA_ARGS__); \
   } else { \
+    bool orig_disabled = logger::disabled; \
     logger::disabled = true; \
     printf("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_##func)]); 
 
 #define LOGGING_EPILOG(func) \
     printf("<<< Logging End   %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_##func)]); \
     logger::LogEntry::gen_ftid++; \
-    logger::disabled = false; \
+    logger::disabled = orig_disabled; \
   }
 
 

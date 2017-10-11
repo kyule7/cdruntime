@@ -15,7 +15,7 @@ using namespace logger;
 //bool logger::disabled  = true;
 bool logger::initialized = false;
 bool logger::init_calloc = false;
-
+void *logger::libc_handle = NULL;
 //logger::Singleton logger::singleton;
 //packer::Packer<LogEntry> serdes;
 namespace logger {
@@ -23,13 +23,15 @@ struct LocalAllocator {
   static char local_buf[66536] __attribute__ ((aligned (4096)));
   static uint32_t local_buf_offset;
   static pthread_mutex_t mutex;
+  LocalAllocator(void) { memset(local_buf, 0, 66536); }
   void *Alloc(size_t size) {
+      printf("Alloc my memory\n");
       void *ret = NULL;
       pthread_mutex_lock(&mutex);
       ret = local_buf + local_buf_offset;
       local_buf_offset += size;
       pthread_mutex_unlock(&mutex);
-      getchar();
+//      getchar();
       return ret;
   }
 };
@@ -144,14 +146,16 @@ void logger::InitMallocPtr(void)
 {
   if(logger::initialized == false) {
     LOGGER_PRINT("%s\n", __func__);
-    INIT_FUNCPTR(calloc);
+  getchar();
+//    INIT_FUNCPTR(calloc);
     INIT_FUNCPTR(malloc);
     INIT_FUNCPTR(valloc);
     INIT_FUNCPTR(realloc);
     INIT_FUNCPTR(memalign);
     INIT_FUNCPTR(posix_memalign);
-    INIT_FUNCPTR(free);
-    LOGGER_PRINT("Initialized\n");
+    LOGGER_PRINT("Initialized1  %p %p %p %p\n", FT_calloc, FT_malloc, FT_valloc, FT_free); getchar();
+//    INIT_FUNCPTR(free);
+//    LOGGER_PRINT("Initialized %p %p %p %p\n", FT_calloc, FT_malloc, FT_valloc, FT_free); getchar();
     GetLogger();
     logger::initialized = true;
   }
@@ -182,24 +186,48 @@ void logger::InitMallocPtr(void)
 EXTERNC void *calloc2(size_t numElem, size_t size){ return NULL; }
 EXTERNC void *calloc(size_t numElem, size_t size)
 { 
+  static bool first_calloc = true;
+  static bool need_mymalloc = true;
   void *ret = NULL;
   //LOGGING_PROLOG(calloc, numElem, size);
   LOGGER_PRINT("calloc%p(%zu,%zu) %s, %s\n", FT_calloc, numElem, size, 
       (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init"); //STOPHERE;
-  getchar(); 
+  //getchar(); 
   if(logger::disabled) { 
 //    LOGGER_PRINT("calloc(%zu,%zu) wrapped 2\n", numElem, size); //STOPHERE;
     if(logger::init_calloc == true) {
+      assert(FT_calloc);
       LOGGER_PRINT("XXX Logging Disabled %s(%zu, %zu) (%p)\n", ft2str[(FTID_calloc)], numElem, size, FT_calloc); 
       ret = FT_calloc(numElem, size); 
     } else {
+      // first make sure it is called by dlsym for calloc
+      if(first_calloc) {
+        first_calloc = false;
+        printf("\nfirst calloc\n");
+//        libc_handle = dlopen("libc.so", RTLD_NOW);
+//        assert(libc_handle);
+        printf("\nafter dlopen\n");
+        INIT_FUNCPTR(calloc);
+//        INIT_FUNCPTR(free);
+        printf("after first calloc %p\n\n", FT_calloc);
+        logger::init_calloc = true;
+      }
 //      logger::init_calloc = true; 
-      LOGGER_PRINT("XXX Not yet initialize calloc(%zu) %s\n", numElem * size, ft2str[(FTID_calloc)]); 
-      printf("XXXXXXXXXXXXXXXXx\n");
+//      LOGGER_PRINT("XXX Not yet initialize calloc(%zu) %s\n", numElem * size, ft2str[(FTID_calloc)]); 
+//      printf("XXXXXXXXXXXXXXXXx first:%d\n", first_calloc);
 //      ret = local_buf + local_buf_offset;
 //      local_buf_offset += numElem * size;
+      if(logger::init_calloc == false) {
       ret = local_allocator.Alloc(numElem*size);
-      logger::init_calloc = true; 
+//      logger::init_calloc = true; 
+//      need_mymalloc = false;
+      } else {
+        printf("we got calloc fptr: %p\n", FT_calloc);
+      ret = FT_calloc(numElem, size); 
+        
+      }
+      //logger::init_calloc = true; 
+      printf("XXXX AFTER x\n");
     }
 //    uint64_t *cval = (uint64_t *)(&calloc);
 //    printf("####################33, %p == %p\n", FT_calloc, &calloc);
@@ -209,7 +237,9 @@ EXTERNC void *calloc(size_t numElem, size_t size)
     //STOPHERE;
   } 
   else { 
+    bool orig_disabled = logger::disabled; 
     logger::disabled = true; 
+    assert(FT_calloc);
     LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_calloc)]); 
     //if(logger::replaying == 0) { 
     if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
@@ -224,9 +254,9 @@ EXTERNC void *calloc(size_t numElem, size_t size)
     }
     LOGGER_PRINT("<<< Logging End  %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_calloc)]); 
     logger::LogEntry::gen_ftid++;
-    logger::disabled = false; 
+    logger::disabled = orig_disabled; 
   }
-  LOGGER_PRINT("%p = calloc(%zu,%zu) wrapped\n", ret, numElem, size);
+  LOGGER_PRINT("%p = calloc(%zu,%zu) wrapped, %s %s\n", ret, numElem, size, (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init");
   //LOGGING_EPILOG(calloc);
   return ret;
 
@@ -381,35 +411,60 @@ EXTERNC int posix_memalign(void **memptr, size_t alignment, size_t size)
 
 EXTERNC void free(void *ptr)
 {
+//  assert(0);
 //  printf("free called %s %s\n",
 //      (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init"); getchar(); //STOPHERE;
-  LOGGING_PROLOG(free, ptr);
-  GetLogger()->Print();
-  if(((uint64_t)ptr >> 12) == ((uint64_t)logger::LocalAllocator::local_buf >> 12)) {LOGGER_PRINT("skip this free\n"); }//STOPHERE; }
-  if(logger::replaying == 0) {
-    LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
-    uint32_t idx = 0;
-    LogEntry *entry = NULL;
-    while(entry == NULL) {
-      entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
-//      if(idx == -1U) { assert(0); }
-    }
-    entry->size_.Unset(kNeedPushed);
-    entry->size_.Set(kNeedFreed);
-    entry->Print();
+  if(FT_calloc == NULL) {
+    //printf(" 1 calloc:%p, free:%p\n", FT_calloc, FT_free); getchar();
+    return;
+  } else if(FT_free == NULL) {
+    return;
+    printf(" 2 calloc:%p, free:%p\n", FT_calloc, FT_free); getchar();
+    INIT_FUNCPTR(free);
+//    printf(" 2 calloc:%p, free:%p\n", FT_calloc, FT_free); getchar();
+    return;
   } else {
-//    LOGGER_PRINT("Replaying %s(%p)\n", __func__, ptr); 
-    uint32_t idx = 0;
-    LogEntry *entry = NULL;
-    while(entry == NULL) {
-      entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
-      if(idx == -1U) { LOGGER_PRINT("free %p is not founded in malloc list\n", ptr); break; }
-    }
-    if(entry != NULL) 
-    { LOGGER_PRINT("Replaying %s(%p), freed? %lx\n", __func__, ptr, entry->attr()); }
-    entry->Print();
-    //STOPHERE;
+ //   printf("calloc:%p, free:%p\n", FT_calloc, FT_free); getchar();
   }
-  LOGGING_EPILOG(free);
+//  LOGGING_PROLOG(free, ptr);
+//  GetLogger()->Print();
+//  if(((uint64_t)ptr >> 12) == ((uint64_t)logger::LocalAllocator::local_buf >> 12)) {LOGGER_PRINT("skip this free\n"); }//STOPHERE; }
+  //CHECK_INIT(func) 
+  if(logger::disabled) { 
+    printf("XXX Logging Disabled %s XXX %p %p\n", ft2str[FTID_free], FT_free, free); 
+    return FT_free(ptr); 
+  } else { 
+    bool orig_disabled = logger::disabled; 
+    logger::disabled = true; 
+    printf("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[FTID_free]); 
+    if(logger::replaying == 0) {
+      LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
+      uint32_t idx = 0;
+      LogEntry *entry = NULL;
+      while(entry == NULL) {
+        entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
+  //      if(idx == -1U) { assert(0); }
+      }
+      entry->size_.Unset(kNeedPushed);
+      entry->size_.Set(kNeedFreed);
+      entry->Print();
+    } else {
+  //    LOGGER_PRINT("Replaying %s(%p)\n", __func__, ptr); 
+      uint32_t idx = 0;
+      LogEntry *entry = NULL;
+      while(entry == NULL) {
+        entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
+        if(idx == -1U) { LOGGER_PRINT("free %p is not founded in malloc list\n", ptr); break; }
+      }
+      if(entry != NULL) 
+      { LOGGER_PRINT("Replaying %s(%p), freed? %lx\n", __func__, ptr, entry->attr()); }
+      entry->Print();
+      //STOPHERE;
+    }
+    printf("<<< Logging End   %lu %s\n", logger::LogEntry::gen_ftid, ft2str[FTID_free]); 
+    logger::LogEntry::gen_ftid++; 
+    logger::disabled = orig_disabled; 
+  }
+//  LOGGING_EPILOG(free);
 }
 

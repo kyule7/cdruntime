@@ -72,17 +72,12 @@ extern bool init_calloc;
   FType_##func FT_##func = NULL
 */
 
-//extern void *libc_handle;
-#define INIT_FUNCPTR(func) \
-  FT_##func = (__typeof__(&func))dlsym(RTLD_NEXT, #func); \
-  assert(FT_##func);
 
 #define DEFINE_FUNCPTR(func) \
   __typeof__(&func) FT_##func = NULL
 
 #define CHECK_INIT(func) \
   if(FT_##func == NULL) { \
-    printf("logging: %d\n", logger::disabled); \
     INIT_FUNCPTR(func); \
     if(logger::initialized == false) logger::InitMallocPtr(); \
     assert(FT_##func); \
