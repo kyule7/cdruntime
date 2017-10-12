@@ -224,7 +224,7 @@ class TableStore : public BaseTable {
         // check
         if(ret == NULL) {
           if(packerTaskID == 0) {
-            printf("Find %lu, tail:%lu\n", id, tail_); getchar();
+            printf("[FindReverse] Find %lu, tail:%lu\n", id, tail_); //getchar();
             for(uint32_t i=0; i<tail_; i++) {
   //          for(int64_t i=begin; i>=0; i--) {
               // The rule for entry is that the first element in object layout is always ID.
@@ -258,7 +258,7 @@ class TableStore : public BaseTable {
       // check
       if(ret == NULL) {
         if(packerTaskID == 0) {
-          printf("tail:%lu\n", tail_); assert(0);
+          printf("[Find] tail:%lu\n", tail_); //assert(0);
           for(uint32_t i=0; i<tail_; i++) {
             // The rule for entry is that the first element in object layout is always ID.
             if( ptr_[i].id_ == id ) {
@@ -282,6 +282,7 @@ class TableStore : public BaseTable {
       EntryT *ret = NULL;
       uint32_t found_idx = -1U;
       for(uint32_t i=table_offset; i<tail_; i++) {
+        MYDBG("Find %lu at %u, (target: %lu)\n", offset, i, ptr_[i].offset());
         // The rule for entry is that the first element in object layout is always ID.
         if( ptr_[i].offset() == offset ) {
           MYDBG("%lu == %lu\n", ptr_[i].offset(), offset);
@@ -293,7 +294,7 @@ class TableStore : public BaseTable {
       // checking
       if(ret == NULL) {
         if(packerTaskID == 0) {
-          printf("tail:%lu\n", tail_);
+          printf("[FindWithOffset] tail:%lu\n", tail_); assert(0);
           for(uint32_t i=table_offset; i<tail_; i++) {
             // The rule for entry is that the first element in object layout is always ID.
             if( ptr_[i].offset() == offset ) {

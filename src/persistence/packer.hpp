@@ -27,6 +27,7 @@ class Packer {
     bool alloc_data;
   public:
     Packer(uint64_t alloc=BASE_ENTRY_CNT, TableStore<EntryT> *table=NULL, DataStore *data=NULL) : cur_pos_(0) {
+       printf("Packer created\n"); 
       if(table == NULL) {
         alloc_table = true; 
         table_ = new TableStore<EntryT>(BASE_ENTRY_CNT);

@@ -1,4 +1,5 @@
-CC=g++
+#CC=g++
+CC=mpicxx
 MPICC=mpicxx
 CDROOT=/home1/03341/kyushick/Work/CDs/libc
 CFLAGS=-std=gnu++0x -g -O0 -I.. -I${CDROOT}/src/persistence

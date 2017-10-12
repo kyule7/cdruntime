@@ -215,15 +215,17 @@ uint32_t PosixFileHandle::GetBlkSize(void)
   return CHUNK_ALIGNMENT;
 }
 
-FileHandle *packer::GetFileHandle(uint32_t ftype)
-{
-//  printf("GetFileHandle %u\n", ftype);
-  switch(ftype) {
-    case kPosixFile:
-      return PosixFileHandle::Get();
-//    case kAIOFile:
-//      return AIOFileHandle::Get();
-    default:
-      return NULL;
-  }
-}
+//FileHandle *packer::GetFileHandle(uint32_t ftype)
+//{
+////  printf("GetFileHandle %u\n", ftype);
+//  switch(ftype) {
+//    case kPosixFile:
+//      return PosixFileHandle::Get();
+//    case kMPIFile:
+//      return MPIFileHandle::Get();
+////    case kAIOFile:
+////      return AIOFileHandle::Get();
+//    default:
+//      return NULL;
+//  }
+//}

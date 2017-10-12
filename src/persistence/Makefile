@@ -14,7 +14,7 @@ TARGET=libpacker.so
 
 all: ${TARGET}
 #all: test_base test_packer test_mpi
-${TARGET}: ${OBJS}
+${TARGET}: ${MPIOBJS}
 	$(CC) -shared -Wl,-soname,libpacker.so $^ -o libpacker.so -lpthread
 
 #test_base: test_base.o ${MPIOBJS}
