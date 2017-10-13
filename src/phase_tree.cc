@@ -1,3 +1,4 @@
+//#include <time.h>
 #include "phase_tree.h"
 #include "cd_global.h"
 #include "cd_def_preserve.h"
@@ -156,7 +157,15 @@ void PhaseNode::Print(bool print_details, bool first)
 //    outAll = fopen(filepath.c_str(), "a");
 //    printf("profile out filepath:%s , %s\n", cd::output_basepath.c_str(), std::string(CD_DEFAULT_OUTPUT_PROFILE).c_str());
 //    outAll = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_PROFILE)).c_str(), "a");
-    sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_PROFILE);
+    //sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_PROFILE);
+    time_t rawtime;
+    time (&rawtime);
+    struct tm* ptm = localtime(&rawtime);
+    char sdate[25];
+    sprintf (sdate,"%04d:%02d:%02d-%02d:%02d:%02d",
+        ptm->tm_year + 1900, ptm->tm_mon+1,
+        ptm->tm_mday, ptm->tm_hour, ptm->tm_min,ptm->tm_sec);
+    sprintf(output_filepath, "%s%s.%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_PROFILE, sdate);
     printf("[%s] %s\n", __func__, output_filepath);
     outAll = fopen(output_filepath, "a");
   }
