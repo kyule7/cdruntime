@@ -27,6 +27,7 @@ unsigned int preserveAtoms(cd_handle_t *cdh,
                            unsigned int is_U,
                            unsigned int is_iSpecies
                           );
+unsigned int preserveSpeciesData(cd_handle_t *cdh, SpeciesData *species);
 unsigned int preserveLinkCell(cd_handle_t *cdh, 
                               LinkCell *linkcell, 
                               unsigned int all);
@@ -66,9 +67,6 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //************************************
       cd_begin(cdh, "advanceVelocity_start"); // cd_lv1 starts
       //FIXME: need to pass cmd.doeam
-      //int pre_size = preserveSimFlat(cdh, s);
-      //FIXME: no need to preserve all
-      //int pre_size = preserveSimFlat(cdh, s, 0); 
       //FIXME: should this be kRef?
       int velocity_pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
                                    0,  // is_gid
@@ -77,14 +75,27 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
                                    1,  // is_f
                                    0,  // is_U
                                    0); // is_iSpecies
-      cd_preserve(cdh, &dt, sizeof(real_t), kRef, NULL, "advanceVelocity_dt");
+      //TODO: Do I need to preserve dt and nTotalBoxes? 
+      //      Aren't they already preserved at the  begging at the root CD?
+      //int cd_preserve(cd_handle_t *c_handle, 
+      //             void *data_ptr,
+      //             uint64_t len,
+      //             uint32_t preserve_mask,
+      //             const char *my_name, 
+      //             const char *ref_name)
+      cd_preserve(cdh, &dt, sizeof(real_t), kCopy, "advanceVelocity_dt", "advanceVelocity_dt");
+      cd_preserve(cdh, &ii, sizeof(int), kCopy, "advanceVelocity_ii", "advanceVelocity_ii");
       velocity_pre_size += sizeof(real_t);  // add the size of dt
+      velocity_pre_size += sizeof(int);  // add the size of ii (loop index)
       velocity_pre_size += preserveLinkCell(cdh, s->boxes, 0/*only nAtoms*/);      
       printf("\n preservation size for advanceVelocity(@beggining) %d\n", velocity_pre_size);
       startTimer(velocityTimer);
+      //------------------------------------------------
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
+      //------------------------------------------------
       stopTimer(velocityTimer);
       //TODO: cd_preserve for output with kOutput(?)
+      //      output: s->atoms->p
       cd_detect(cdh);
       cd_complete(cdh); 
 
@@ -92,17 +103,22 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //            cd boundary: position (0.09%)
       //************************************
       cd_begin(cdh, "advancePosition"); 
-      //TODO: preserve dt and nAtoms by *kRef*
+      //TODO: preserve dt and nAtoms by *kRef* or KCopy?
+      cd_preserve(cdh, &dt, sizeof(real_t), kRef, "advancePosition_dt", "advancePosition_dt");
       int position_pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
                                    0,  // is_gid
                                    0,  // is_r
                                    1,  // is_p
                                    0,  // is_f
                                    0,  // is_U
-                                   0); // is_iSpecies
+                                   1); // is_iSpecies
+      //TODO: no need to preserve entier SpeciesData but only mass
+      position_pre_size += preserveSpeciesData(cdh, s->species);
       printf("\n preservation size for advancePosition %d\n", position_pre_size);
       startTimer(positionTimer);
+      //------------------------------------------------
       advancePosition(s, s->boxes->nLocalBoxes, dt);
+      //------------------------------------------------
       stopTimer(positionTimer);
 
       cd_detect(cdh);
@@ -224,6 +240,8 @@ void computeForce(SimFlat* s)
 
 void advanceVelocity(SimFlat* s, int nBoxes, real_t dt)
 {
+   printf("[DEBUG] task[%d] is calling advanceVelocity with %d nBoxes at time %f\n", 
+            getMyRank(), nBoxes, dt);
    for (int iBox=0; iBox<nBoxes; iBox++)
    {
       for (int iOff=MAXATOMS*iBox,ii=0; ii<s->boxes->nAtoms[iBox]; ii++,iOff++)

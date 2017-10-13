@@ -194,6 +194,7 @@ int ljForce(SimFlat* s)
   // O{nNbrBoxes, nIBox} <- I{s->boxes, s->boxes->[nLocalBoxes, nAtoms[iBox]], nbrBoxes}
   for (int iBox=0; iBox<s->boxes->nLocalBoxes; iBox++)
   {
+    //printf("Rank[%d] is processing iBox[%d]\n", getMyRank(), iBox);
     int nIBox = s->boxes->nAtoms[iBox];
     if ( nIBox == 0 ) continue;
     int nNbrBoxes = getNeighborBoxes(s->boxes, iBox, nbrBoxes);
@@ -218,9 +219,9 @@ int ljForce(SimFlat* s)
         if(is_first) {
           //cd_handle_t *cdh_lv2_inner = getleafcd();
           //This CD has a length of nJBox 
-          if(getMyRank() == 0)
-            printf("[rank0] lv3 cd begins[iOff:iId:iBox:nIBox:jBox:nJBox]:[%d:%d:%d:%d:%d:%d]\n",
-                                      iOff, iId, iBox, nIBox, jBox, nJBox);
+          //if(getMyRank() == 0)
+          //  printf("[rank0] lv3 cd begins[iOff:iId:iBox:nIBox:jBox:nJBox]:[%d:%d:%d:%d:%d:%d]\n",
+          //                            iOff, iId, iBox, nIBox, jBox, nJBox);
           //Note that cd_complete might fail if there if "continue" between
           //cd_begin and cd_complete, which is the case for innermost loop, 
           //shown below.
