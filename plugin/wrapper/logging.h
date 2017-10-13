@@ -99,7 +99,8 @@ extern bool init_calloc;
     logger::disabled = false; \
   }
 */
-#define LOGGER_PRINT(...) printf(__VA_ARGS__)
+//#define LOGGER_PRINT(...) printf(__VA_ARGS__)
+//#define LOGGER_PRINT(...)
 
 
 #endif

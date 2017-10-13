@@ -65,37 +65,40 @@ enum FTID {
   FTIDNums
 };
 
-bool replaying;
-//uint64_t gen_ftid;
-bool disabled = true;
+//bool replaying;
+//bool disabled = true;
+extern bool disabled;
+extern bool replaying;
 extern void *libc_handle;
+//#define LOGGER_PRINT(...) printf(__VA_ARGS__)
+#define LOGGER_PRINT(...)
 #define INIT_FUNCPTR(func) \
   FT_##func = (__typeof__(&func))dlsym(RTLD_NEXT, #func); \
-  assert(FT_##func); printf("Init %s:%p\n", ft2str[(FTID_##func)], FT_##func);
+  assert(FT_##func); LOGGER_PRINT("Init %s:%p\n", ft2str[(FTID_##func)], FT_##func);
 //extern void Init(void);
 //extern void Fini(void);
-void Init(void)
-{
-  disabled = false;
-}
+void Init(void);
+//{
+//  disabled = false;
+//}
 
-void Fini(void)
-{
-  replaying = false;
-  disabled = true;
-}
-//char ft2str[FTIDNums][64];
-char ft2str[FTIDNums][64] = { 
-                              "invalid"
-                            , "malloc"
-                            , "calloc"
-                            , "valloc"
-                            , "realloc"
-                            , "memalign"
-                            , "posix_memalign"
-                            , "free"
-                            };
-    
+void Fini(void);
+//{
+//  replaying = false;
+//  disabled = true;
+//}
+extern char ft2str[FTIDNums][64];
+//char ft2str[FTIDNums][64] = { 
+//                              "invalid"
+//                            , "malloc"
+//                            , "calloc"
+//                            , "valloc"
+//                            , "realloc"
+//                            , "memalign"
+//                            , "posix_memalign"
+//                            , "free"
+//                            };
+//    
 
 struct LogEntry : public packer::BaseEntry {
     static uint64_t gen_ftid;
@@ -116,7 +119,7 @@ struct LogEntry : public packer::BaseEntry {
       copy(that);
     }
     void Print(void) const
-{ printf("Entry [%16s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_);  }
+    { LOGGER_PRINT("Entry [%16s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_); }
 };
 #if 0
   static CDPath *uniquePath_;
@@ -148,7 +151,7 @@ public:
   }
 #endif
 //extern void (*FT_free)(void);
-__typeof__(&free) FT_free;
+//__typeof__(&free) FT_free;
 
 class LogPacker;
 extern LogPacker *GetLogger(void);
@@ -157,7 +160,7 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
   friend LogPacker *GetLogger(void);
     static LogPacker *libc_logger;
   public:
-    LogPacker() { printf("LogPacker created\n"); }
+    LogPacker() { LOGGER_PRINT("LogPacker created\n"); }
     inline uint64_t GetNextID(void) { return LogEntry::gen_ftid; }
     inline void SetNextID(uint64_t orig_ftid) { LogEntry::gen_ftid = orig_ftid; }
     inline uint64_t Set(uint64_t &offset) {
@@ -171,16 +174,16 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
       LogEntry::gen_ftid = orig_ftid;
     }
 
-    bool IsLogFound(void)
-    {
-      bool orig_disabled = logger::disabled;
-      logger::disabled = true;
-      uint64_t current_log_id = LogEntry::gen_ftid;
-      LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
-      printf("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); //STOPHERE;
-      logger::disabled = orig_disabled;;
-      return entry != NULL;
-    }
+    bool IsLogFound(void);
+//    {
+//      bool orig_disabled = logger::disabled;
+//      logger::disabled = true;
+//      uint64_t current_log_id = LogEntry::gen_ftid;
+//      LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
+//      LOGGER_PRINT("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); //STOPHERE;
+//      logger::disabled = orig_disabled;;
+//      return entry != NULL;
+//    }
 //     {
 //       uint64_t current_log_id = LogEntry::gen_ftid;
 //       LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
@@ -191,49 +194,49 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
 // //        entry->size_.Check(kPushed);
 // //      }
 // //      LogEntry *entry = GetLogger()->table_->Find(id);
-//       printf("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); STOPHERE;
+//       LOGGER_PRINT("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); STOPHERE;
 //       return entry != NULL;
 //     }
 
     // Find an entry with kNeedPushed from the offset, 
     // and copy the entry at the dst offset to the offset.
     // return the dst offset for the next search.
-    uint64_t PushLogs(uint64_t offset_from)
-    {
-      bool orig_disabled = logger::disabled;
-      logger::disabled = true;
-      uint64_t orig_tail = table_->tail();
-      uint64_t new_tail = table_->FindWithAttr(kNeedPushed, offset_from);
-      printf("Pushed %lu entries (orig: %lu entries)\n", new_tail - offset_from, orig_tail);
-      logger::disabled = orig_disabled;;
-      return new_tail;
-    }
+    uint64_t PushLogs(uint64_t offset_from);
+//    {
+//      bool orig_disabled = logger::disabled;
+//      logger::disabled = true;
+//      uint64_t orig_tail = table_->tail();
+//      uint64_t new_tail = table_->FindWithAttr(kNeedPushed, offset_from);
+//      LOGGER_PRINT("Pushed %lu entries (orig: %lu entries)\n", new_tail - offset_from, orig_tail);
+//      logger::disabled = orig_disabled;;
+//      return new_tail;
+//    }
 //    {
 //      uint64_t orig_tail = table_->tail();
 //      uint64_t new_tail = table_->FindWithAttr(kNeedPushed, offset_from);
-//      printf("Pushed %lu entries (orig: %lu entries)\n", new_tail - offset_from, orig_tail);
+//      LOGGER_PRINT("Pushed %lu entries (orig: %lu entries)\n", new_tail - offset_from, orig_tail);
 //      return new_tail;
 //    }
 
     uint64_t FreeMemory(uint64_t offset_from);
 //    {
-//      printf("%s\n", __func__);
+//      LOGGER_PRINT("%s\n", __func__);
 //      bool orig_disabled = logger::disabled;
 //      logger::disabled = true;
 //      uint64_t freed_cnt = 0;
 //      {
-//      printf("%s reach1\n", __func__);
+//      LOGGER_PRINT("%s reach1\n", __func__);
 //      //packer::Packer<LogEntry> free_list;
 //      LogPacker free_list;
-//      printf("%s reach2\n", __func__);
+//      LOGGER_PRINT("%s reach2\n", __func__);
 //      Print();
 //      freed_cnt = table_->FindWithAttr(kNeedFreed, offset_from, free_list.table_);
 //      Print();
-//      printf("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
+//      LOGGER_PRINT("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
 //      free_list.Print();
 //      //STOPHERE;
 //      for(uint32_t i=0; i<freed_cnt; i++) {
-//        printf("i:%u\n", i);
+//        LOGGER_PRINT("i:%u\n", i);
 //        LogEntry *entry = free_list.table_->GetAt(i);
 //        entry->Print();
 //        FT_free((void *)(entry->offset()));
@@ -253,20 +256,20 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
     }
 };
 
-LogPacker *LogPacker::libc_logger;
-uint64_t LogEntry::gen_ftid;
-LogPacker *GetLogger(void)
-{
-  if(LogPacker::libc_logger == NULL) {
-    bool orig_disabled = logger::disabled; 
-    logger::disabled = true; 
-    printf("before logger\n");
-    LogPacker::libc_logger = new LogPacker;
-    printf("after logger\n");
-    logger::disabled = orig_disabled;
-  }
-  return LogPacker::libc_logger;
-}
+//LogPacker *LogPacker::libc_logger;
+//uint64_t LogEntry::gen_ftid;
+//LogPacker *GetLogger(void)
+//{
+//  if(LogPacker::libc_logger == NULL) {
+//    bool orig_disabled = logger::disabled; 
+//    logger::disabled = true; 
+//    LOGGER_PRINT("before logger\n");
+//    LogPacker::libc_logger = new LogPacker;
+//    LOGGER_PRINT("after logger\n");
+//    logger::disabled = orig_disabled;
+//  }
+//  return LogPacker::libc_logger;
+//}
 
 
 //extern packer::Packer<LogEntry> *GetLogger(void);
@@ -281,7 +284,7 @@ LogPacker *GetLogger(void)
 /*
 #define CHECK_INIT(func) \
   if(FT_##func == NULL) { \
-    printf("logging: %d\n", logger::disabled); \
+    LOGGER_PRINT("logging: %d\n", logger::disabled); \
     INIT_FUNCPTR(func); \
     if(logger::initialized == false) logger::InitMallocPtr(); \
     assert(FT_##func); \
@@ -291,15 +294,14 @@ LogPacker *GetLogger(void)
 #define LOGGING_PROLOG(func, ...) \
   CHECK_INIT(func) \
   if(logger::disabled) { \
-    printf("XXX Logging Disabled %s XXX %p %p\n", ft2str[(FTID_##func)], FT_##func, func); \
     return FT_##func(__VA_ARGS__); \
   } else { \
     bool orig_disabled = logger::disabled; \
     logger::disabled = true; \
-    printf("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_##func)]); 
+    LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_##func)]); 
 
 #define LOGGING_EPILOG(func) \
-    printf("<<< Logging End   %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_##func)]); \
+    LOGGER_PRINT("<<< Logging End   %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_##func)]); \
     logger::LogEntry::gen_ftid++; \
     logger::disabled = orig_disabled; \
   }

@@ -77,9 +77,9 @@ int TestCDHierarchy(void)
   unsigned long long *cval = (unsigned long long *)(&calloc);
   printf("##################-------------------\n");
   logger::GetLogger()->Print();
-  printf("%lx %lx %lx %lx ", *cval, *(cval+1), *(cval+2), *(cval+3));
-  printf("%lx %lx %lx %lx\n", *(cval+4), *(cval+5), *(cval+6), *(cval+7));
-  printf("---\n"); //getchar();
+  //printf("%lx %lx %lx %lx ", *cval, *(cval+1), *(cval+2), *(cval+3));
+  //printf("%lx %lx %lx %lx\n", *(cval+4), *(cval+5), *(cval+6), *(cval+7));
+  //printf("---\n"); //getchar();
   //cout << "Root CD Begin...\n" << endl;
   //cout << "CD Preserving..\n" << endl;
 #if _CD

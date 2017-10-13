@@ -10,10 +10,33 @@
 //#include <unistd.h>
 
 using namespace logger;
-//LogPacker *LogPacker::libc_logger = NULL;
-//uint64_t LogEntry::gen_ftid = 0;
-//bool logger::replaying = false;
-//bool logger::disabled  = true;
+LogPacker *LogPacker::libc_logger = NULL;
+uint64_t LogEntry::gen_ftid = 0;
+bool logger::replaying = false;
+bool logger::disabled  = true;
+LogPacker *logger::GetLogger(void)
+{
+  if(LogPacker::libc_logger == NULL) {
+    bool orig_disabled = logger::disabled; 
+    logger::disabled = true; 
+//    LOGGER_PRINT("before logger\n");
+    LogPacker::libc_logger = new LogPacker;
+//    LOGGER_PRINT("after logger\n");
+    logger::disabled = orig_disabled;
+  }
+  return LogPacker::libc_logger;
+}
+
+void logger::Init(void)
+{
+  disabled = false;
+}
+
+void logger::Fini(void)
+{
+  replaying = false;
+  disabled = true;
+}
 bool logger::initialized = false;
 bool logger::init_calloc = false;
 void *logger::libc_handle = NULL;
@@ -26,13 +49,12 @@ struct LocalAllocator {
   static pthread_mutex_t mutex;
   LocalAllocator(void) { memset(local_buf, 0, 66536); }
   void *Alloc(size_t size) {
-      printf("Alloc my memory\n");
+//      LOGGER_PRINT("Alloc my memory\n");
       void *ret = NULL;
       pthread_mutex_lock(&mutex);
       ret = local_buf + local_buf_offset;
       local_buf_offset += size;
       pthread_mutex_unlock(&mutex);
-//      getchar();
       return ret;
   }
 };
@@ -62,44 +84,63 @@ DEFINE_FUNCPTR(valloc);
 DEFINE_FUNCPTR(realloc);
 DEFINE_FUNCPTR(memalign);
 DEFINE_FUNCPTR(posix_memalign);
-//DEFINE_FUNCPTR(free);
+DEFINE_FUNCPTR(free);
 
-//char logger::ft2str[FTIDNums][64] = { 
-//                              "invalid"
-//                            , "malloc"
-//                            , "calloc"
-//                            , "valloc"
-//                            , "realloc"
-//                            , "memalign"
-//                            , "posix_memalign"
-//                            , "free"
-//                            };
+char logger::ft2str[FTIDNums][64] = { 
+                              "invalid"
+                            , "malloc"
+                            , "calloc"
+                            , "valloc"
+                            , "realloc"
+                            , "memalign"
+                            , "posix_memalign"
+                            , "free"
+                            };
     
 
 //void LogEntry::Print(void) const
-//{ printf("Entry [%16s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_); STOPHERE; }
+//{ LOGGER_PRINT("Entry [%16s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_); STOPHERE; }
 //
-//bool LogPacker::IsLogFound(void) 
+bool LogPacker::IsLogFound(void) 
+{
+  bool orig_disabled = logger::disabled;
+  logger::disabled = true;
+  uint64_t current_log_id = LogEntry::gen_ftid;
+  LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
+  LOGGER_PRINT("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); //STOPHERE;
+  logger::disabled = orig_disabled;;
+  return entry != NULL;
+}
 //{
 //  bool orig_disabled = logger::disabled;
 //  logger::disabled = true;
 //  uint64_t current_log_id = LogEntry::gen_ftid;
 //  LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
-//  printf("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); //STOPHERE;
+//  LOGGER_PRINT("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); //STOPHERE;
 //  logger::disabled = orig_disabled;;
 //  return entry != NULL;
 //}
 //
-//// Find an entry with kNeedPushed from the offset, 
-//// and copy the entry at the dst offset to the offset.
-//// return the dst offset for the next search.
+// Find an entry with kNeedPushed from the offset, 
+// and copy the entry at the dst offset to the offset.
+// return the dst offset for the next search.
+uint64_t LogPacker::PushLogs(uint64_t offset_from)
+{
+  bool orig_disabled = logger::disabled;
+  logger::disabled = true;
+  uint64_t orig_tail = table_->tail();
+  uint64_t new_tail = table_->FindWithAttr(kNeedPushed, offset_from);
+  LOGGER_PRINT("Pushed %lu entries (orig: %lu entries)\n", new_tail - offset_from, orig_tail);
+  logger::disabled = orig_disabled;;
+  return new_tail;
+}
 //uint64_t LogPacker::PushLogs(uint64_t offset_from) 
 //{
 //  bool orig_disabled = logger::disabled;
 //  logger::disabled = true;
 //  uint64_t orig_tail = table_->tail();
 //  uint64_t new_tail = table_->FindWithAttr(kNeedPushed, offset_from);
-//  printf("Pushed %lu entries (orig: %lu entries)\n", new_tail - offset_from, orig_tail);
+//  LOGGER_PRINT("Pushed %lu entries (orig: %lu entries)\n", new_tail - offset_from, orig_tail);
 //  logger::disabled = orig_disabled;;
 //  return new_tail;
 //}
@@ -114,11 +155,11 @@ DEFINE_FUNCPTR(posix_memalign);
 //  LogPacker free_list;
 //  freed_cnt = table_->FindWithAttr(kNeedFreed, offset_from, free_list.table_);
 //  Print();
-//  printf("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
+//  LOGGER_PRINT("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
 //  free_list.Print();
 //  //STOPHERE;
 //  for(uint32_t i=0; i<freed_cnt; i++) {
-//    printf("i:%u\n", i);
+//    LOGGER_PRINT("i:%u\n", i);
 //    LogEntry *entry = free_list.table_->GetAt(i);
 //    entry->Print();
 //    FT_free((void *)(entry->offset()));
@@ -131,23 +172,23 @@ DEFINE_FUNCPTR(posix_memalign);
 //}
 uint64_t LogPacker::FreeMemory(uint64_t offset_from) 
 {
-  printf("%s\n", __func__);
+  LOGGER_PRINT("%s\n", __func__);
   bool orig_disabled = logger::disabled;
   logger::disabled = true;
   uint64_t freed_cnt = 0;
   {
-    printf("%s reach1\n", __func__);
+    LOGGER_PRINT("%s reach1\n", __func__);
     //packer::Packer<LogEntry> free_list;
     LogPacker free_list;
-    printf("%s reach2\n", __func__);
+    LOGGER_PRINT("%s reach2\n", __func__);
     Print();
     freed_cnt = table_->FindWithAttr(kNeedFreed, offset_from, free_list.table_);
     Print();
-    printf("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
+    LOGGER_PRINT("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
     free_list.Print();
     //STOPHERE;
     for(uint32_t i=0; i<freed_cnt; i++) {
-      printf("i:%u\n", i);
+      LOGGER_PRINT("i:%u\n", i);
       LogEntry *entry = free_list.table_->GetAt(i);
       entry->Print();
       FT_free((void *)(entry->offset()));
@@ -176,16 +217,15 @@ void logger::InitMallocPtr(void)
 {
   if(logger::initialized == false) {
     LOGGER_PRINT("%s\n", __func__);
-  //getchar();
 //    INIT_FUNCPTR(calloc);
     INIT_FUNCPTR(malloc);
     INIT_FUNCPTR(valloc);
     INIT_FUNCPTR(realloc);
     INIT_FUNCPTR(memalign);
     INIT_FUNCPTR(posix_memalign);
-    LOGGER_PRINT("Initialized1  %p %p %p %p\n", FT_calloc, FT_malloc, FT_valloc, FT_free); //getchar();
-    INIT_FUNCPTR(free);
-    LOGGER_PRINT("Initialized %p %p %p %p\n", FT_calloc, FT_malloc, FT_valloc, FT_free); //getchar();
+//    LOGGER_PRINT("Initialized1  %p %p %p %p\n", FT_calloc, FT_malloc, FT_valloc, FT_free); 
+//    INIT_FUNCPTR(free);
+//    LOGGER_PRINT("Initialized %p %p %p %p\n", FT_calloc, FT_malloc, FT_valloc, FT_free); 
     //GetLogger();
     logger::initialized = true;
   }
@@ -193,7 +233,7 @@ void logger::InitMallocPtr(void)
 
 
 //void *dlsym(void *handle, const char *symbol){
-//  printf("dlsym %p, %s\n", handle, symbol); getchar();
+//  LOGGER_PRINT("dlsym %p, %s\n", handle, symbol);
 //}
 
 
@@ -213,16 +253,67 @@ void logger::InitMallocPtr(void)
  *
  *
  *************************************************/
-EXTERNC void *calloc2(size_t numElem, size_t size){ return NULL; }
+EXTERNC void free(void *ptr)
+{
+//  LOGGER_PRINT("free called %s %s\n",
+//      (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init");  //STOPHERE;
+
+  if(ptr == NULL) {  return; }
+  if(logger::disabled) {
+    if(FT_calloc == NULL) {
+    //    LOGGER_PRINT(" 1 calloc:%p, free:%p\n", FT_calloc, FT_free);
+        return;
+    } else if(FT_free == NULL) {
+    //    LOGGER_PRINT(" 2 calloc:%p, free:%p\n", FT_calloc, FT_free); 
+        return;
+    } else {
+//      LOGGER_PRINT("XXX Logging Disabled %s(%p) XXX %p %p\n", ft2str[FTID_free], ptr, FT_free, free); 
+      return FT_free(ptr); 
+    }
+
+  } else {
+    LOGGER_PRINT("free(ptr : %p) %p\n", ptr, FT_free);
+    bool orig_disabled = logger::disabled; 
+    logger::disabled = true; 
+    LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[FTID_free]); 
+    if(logger::replaying == 0) {
+      LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
+      uint32_t idx = 0;
+      LogEntry *entry = NULL;
+      LOGGER_PRINT("[free noerror] find(%p) with %p\n", FT_free, ptr); 
+      while(entry == NULL) {
+        entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
+  //      if(idx == -1U) { assert(0); }
+      }
+      entry->size_.Unset(kNeedPushed);
+      entry->size_.Set(kNeedFreed);
+      entry->Print();
+    } else {
+  //    LOGGER_PRINT("Replaying %s(%p)\n", __func__, ptr); 
+      uint32_t idx = 0;
+      LogEntry *entry = NULL;
+      LOGGER_PRINT("[free replay] find(%p) with %p\n", FT_free, ptr); 
+      while(entry == NULL) {
+        entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
+        if(idx == -1U) { LOGGER_PRINT("free %p is not founded in malloc list\n", ptr); break; }
+      }
+      if(entry != NULL) 
+      { LOGGER_PRINT("Replaying %s(%p), freed? %lx\n", __func__, ptr, entry->attr()); }
+      entry->Print();
+      //STOPHERE;
+    }
+    LOGGER_PRINT("<<< Logging End   %lu %s\n", logger::LogEntry::gen_ftid, ft2str[FTID_free]); 
+    logger::LogEntry::gen_ftid++; 
+    logger::disabled = orig_disabled; 
+  }
+//  LOGGING_EPILOG(free);
+}
 EXTERNC void *calloc(size_t numElem, size_t size)
 { 
   static bool first_calloc = true;
-  static bool need_mymalloc = true;
   void *ret = NULL;
-  //LOGGING_PROLOG(calloc, numElem, size);
 //  LOGGER_PRINT("calloc%p(%zu,%zu) %s, %s\n", FT_calloc, numElem, size, 
 //      (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init"); //STOPHERE;
-  //getchar(); 
   if(logger::disabled) { 
 //    LOGGER_PRINT("calloc(%zu,%zu) wrapped 2\n", numElem, size); //STOPHERE;
     if(logger::init_calloc == true) {
@@ -233,37 +324,29 @@ EXTERNC void *calloc(size_t numElem, size_t size)
       // first make sure it is called by dlsym for calloc
       if(first_calloc) {
         first_calloc = false;
-        printf("\nfirst calloc\n");
+        LOGGER_PRINT("\nfirst calloc\n");
 //        libc_handle = dlopen("libc.so", RTLD_NOW);
 //        assert(libc_handle);
-        printf("\nafter dlopen\n");
+        LOGGER_PRINT("\nafter dlopen\n");
         INIT_FUNCPTR(calloc);
-        printf("before first calloc:%p, free %p\n\n", FT_calloc, FT_free);
-//        INIT_FUNCPTR(free);
-        printf("after first calloc %p, free: %p\n\n", FT_calloc, FT_free); //getchar();
+        LOGGER_PRINT("before first calloc:%p, free %p\n\n", FT_calloc, FT_free);
+        INIT_FUNCPTR(free);
+        LOGGER_PRINT("after first calloc %p, free: %p\n\n", FT_calloc, FT_free); 
         logger::init_calloc = true;
       }
-//      logger::init_calloc = true; 
-//      LOGGER_PRINT("XXX Not yet initialize calloc(%zu) %s\n", numElem * size, ft2str[(FTID_calloc)]); 
-//      printf("XXXXXXXXXXXXXXXXx first:%d\n", first_calloc);
-//      ret = local_buf + local_buf_offset;
-//      local_buf_offset += numElem * size;
       if(logger::init_calloc == false) {
       ret = local_allocator.Alloc(numElem*size);
 //      logger::init_calloc = true; 
-//      need_mymalloc = false;
       } else {
-        printf("we got calloc fptr: %p\n", FT_calloc);
+//        LOGGER_PRINT("we got calloc fptr: %p\n", FT_calloc);
       ret = FT_calloc(numElem, size); 
         
       }
-      //logger::init_calloc = true; 
-      printf("XXXX AFTER x\n");
     }
 //    uint64_t *cval = (uint64_t *)(&calloc);
-//    printf("####################33, %p == %p\n", FT_calloc, &calloc);
+//    LOGGER_PRINT("####################33, %p == %p\n", FT_calloc, &calloc);
 //    if(cval != NULL) {
-//      printf("%lx %lx %lx %lx %lx %lx %lx %lx\n", *cval, *(cval+1), *(cval+2), *(cval+3), *(cval+4), *(cval+5), *(cval+6), *(cval+7) );
+//      LOGGER_PRINT("%lx %lx %lx %lx %lx %lx %lx %lx\n", *cval, *(cval+1), *(cval+2), *(cval+3), *(cval+4), *(cval+5), *(cval+6), *(cval+7) );
 //    }
     //STOPHERE;
   } 
@@ -272,10 +355,9 @@ EXTERNC void *calloc(size_t numElem, size_t size)
     logger::disabled = true; 
     assert(FT_calloc);
     LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_calloc)]); 
-    //if(logger::replaying == 0) { 
     if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
       ret = FT_calloc(numElem, size);
-      printf("record calloc\n");
+      LOGGER_PRINT("record calloc\n");
       GetLogger()->Add(LogEntry(logger::LogEntry::gen_ftid, FTID_calloc, kNeedPushed, (uint64_t)ret));
     } else {
       LOGGER_PRINT("Replaying %s\n", __func__); 
@@ -300,26 +382,25 @@ EXTERNC void *calloc(size_t numElem, size_t size)
  *    else
  *      need_replay = true;
  *
+ * if it is not pushed, it should be regenerated by calling real func
+ * if it is pushed, just replay it.
+ * If it is not recreated (in the scope of begin/complete),
+ * it should be always replayed.
+ * No escalation always return true, because it finds the log entry.
  */
 EXTERNC void *malloc(size_t size)
 {
   void *ret = NULL;
   LOGGING_PROLOG(malloc, size);
-  //if(logger::replaying == 0) { 
   if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
     ret = FT_malloc(size);
     GetLogger()->Add(LogEntry(logger::LogEntry::gen_ftid, FTID_malloc, kNeedPushed, (uint64_t)ret));
   } else {
     LOGGER_PRINT("Replaying %s\n", __func__); 
-//    if(logger::recreated) {
-//            
-//    } else {
-//
-//    }
-      LogEntry *entry = GetLogger()->GetNext();
-      ret = (void *)entry->offset_;
-      assert(entry->ftype_ == FTID_malloc);
-      entry->Print();
+    LogEntry *entry = GetLogger()->GetNext();
+    ret = (void *)entry->offset_;
+    assert(entry->ftype_ == FTID_malloc);
+    entry->Print();
   }
   LOGGING_EPILOG(malloc);
   LOGGER_PRINT("%p = malloc(%zu)\n", ret, size);
@@ -331,25 +412,7 @@ EXTERNC void *valloc(size_t size)
 {
   void *ret = NULL;
   LOGGING_PROLOG(valloc, size);
-  printf("free :%p\n", FT_free);
-//  bool need_replay = false;
-//  if(logger::replaying) {
-//    // if it is not pushed, it should be regenerated by calling real func
-//    // if it is pushed, just replay it.
-//    // If it is not recreated (in the scope of begin/complete),
-//    // it should be always replayed.
-//    // No escalation always return true, because it finds the log entry.
-//    need_replay = GetLogger()->IsLogFound();
-////    if(logger::recreated = false) {
-////      need_replay = true;
-////    } else {
-////      need_replay = IsLogFound();
-////    }
-////    printf("### need_replay = %d, replaying: %d\n", need_replay, replaying);
-//  }
-//  //printf("### need_replay = %d, replaying: %d\n", need_replay, replaying);
   if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
-  //if(logger::replaying == 0) { 
     ret = FT_valloc(size);
     GetLogger()->Add(LogEntry(logger::LogEntry::gen_ftid, FTID_valloc, kNeedPushed, (uint64_t)ret));
   } else {
@@ -369,7 +432,6 @@ EXTERNC void *realloc(void *ptr, size_t size)
 {
   void *ret = NULL;
   LOGGING_PROLOG(realloc, ptr, size);
-  //if(logger::replaying == 0) { 
   if(logger::replaying == false || GetLogger()->IsLogFound() == false) {
     // it is difficult to hook some internal free() call inside realloc. 
     // FT_realloc() is never called, but malloc is called instead for
@@ -390,7 +452,7 @@ EXTERNC void *realloc(void *ptr, size_t size)
     LOGGER_PRINT("Replaying %s\n", __func__); 
     LogEntry *entry = GetLogger()->GetNext();
     ret = (void *)entry->offset_;
-    printf("[%lu, %lu, %lu, %lx] %d == %d\n", entry->id_, entry->attr(), entry->size(), entry->offset(), entry->ftype_ , FTID_realloc);
+    LOGGER_PRINT("[%lu, %lu, %lu, %lx] %d == %d\n", entry->id_, entry->attr(), entry->size(), entry->offset(), entry->ftype_ , FTID_realloc);
     assert(entry->ftype_ == FTID_realloc);
     entry->Print();
   }
@@ -423,7 +485,6 @@ EXTERNC void *memalign(size_t boundary, size_t size)
 EXTERNC int posix_memalign(void **memptr, size_t alignment, size_t size)
 {
   int ret = -1;
-  printf("%s sleep\n", __func__);
   LOGGING_PROLOG(posix_memalign, memptr, alignment, size);
 
   if(logger::replaying == 0) { 
@@ -441,78 +502,3 @@ EXTERNC int posix_memalign(void **memptr, size_t alignment, size_t size)
   LOGGING_EPILOG(posix_memalign);
   return ret;
 }
-
-
-EXTERNC void free(void *ptr)
-{
-//  static bool is_first = false;
-//  assert(0);
-//  printf("free called %s %s\n",
-//      (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init"); //getchar(); //STOPHERE;
-  if(logger::disabled) {      
-  if(FT_calloc == NULL) {
-//    assert(0);
-//    printf(" 1 calloc:%p, free:%p\n", FT_calloc, FT_free);
-    return;
-  } else if(FT_free == NULL) {
-    return;
-    printf(" 2 calloc:%p, free:%p\n", FT_calloc, FT_free); //getchar();
-//    INIT_FUNCPTR(free);
-    printf(" 3 calloc:%p, free:%p\n", FT_calloc, FT_free); //getchar();
-    return;
-  } 
-//  else {
-//    printf("[free] calloc:%p, free:%p, (%s, %s)\n", FT_calloc, FT_free,
-//      (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init"); //getchar(); //STOPHERE;
-//         
-//  }
-  }
-
-//  printf("free called %s %s\n",
-//      (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init"); //getchar(); //STOPHERE;
-//  LOGGING_PROLOG(free, ptr);
-//  GetLogger()->Print();
-//  if(((uint64_t)ptr >> 12) == ((uint64_t)logger::LocalAllocator::local_buf >> 12)) {LOGGER_PRINT("skip this free\n"); }//STOPHERE; }
-  //CHECK_INIT(func) 
-  if(ptr == NULL) return;
-  if(logger::disabled) { 
-    printf("XXX Logging Disabled %s(%p) XXX %p %p\n", ft2str[FTID_free], ptr, FT_free, free); 
-    return FT_free(ptr); 
-  } else {
-    printf("free(ptr : %p) %p\n", ptr, FT_free);
-    bool orig_disabled = logger::disabled; 
-    logger::disabled = true; 
-    printf("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[FTID_free]); 
-    if(logger::replaying == 0) {
-      LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
-      uint32_t idx = 0;
-      LogEntry *entry = NULL;
-      printf("[free noerror] find(%p) with %p\n", FT_free, ptr); //getchar();
-      while(entry == NULL) {
-        entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
-  //      if(idx == -1U) { assert(0); }
-      }
-      entry->size_.Unset(kNeedPushed);
-      entry->size_.Set(kNeedFreed);
-      entry->Print();
-    } else {
-  //    LOGGER_PRINT("Replaying %s(%p)\n", __func__, ptr); 
-      uint32_t idx = 0;
-      LogEntry *entry = NULL;
-      printf("[free replay] find(%p) with %p\n", FT_free, ptr); //getchar();
-      while(entry == NULL) {
-        entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
-        if(idx == -1U) { LOGGER_PRINT("free %p is not founded in malloc list\n", ptr); break; }
-      }
-      if(entry != NULL) 
-      { LOGGER_PRINT("Replaying %s(%p), freed? %lx\n", __func__, ptr, entry->attr()); }
-      entry->Print();
-      //STOPHERE;
-    }
-    printf("<<< Logging End   %lu %s\n", logger::LogEntry::gen_ftid, ft2str[FTID_free]); 
-    logger::LogEntry::gen_ftid++; 
-    logger::disabled = orig_disabled; 
-  }
-//  LOGGING_EPILOG(free);
-}
-

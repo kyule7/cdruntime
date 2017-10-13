@@ -48,6 +48,9 @@ void CD_Finalize(void)
 #if CD_LIBC_LOGGING
   logger::Fini();
 #endif
+
+
+  logger::disabled = true;
 }
 
 CDPath *CDPath::uniquePath_ = NULL;

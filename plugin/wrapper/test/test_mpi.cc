@@ -75,7 +75,7 @@ void Test1(bool replay) {
       }
     }
 
-    printf("before free %p\n", FT_free); 
+//    printf("before free %p\n", FT_free); 
     free(realloc_p);
     free(calloc_p);
     free(valloc_p);
@@ -85,10 +85,10 @@ void Test1(bool replay) {
 //    }
     free(memalign_p);
     free(ptr);
-//    if(replay == false) {
-//      printf("Now FreeMemory %p\n", GetLogger());
-//      GetLogger()->FreeMemory(begin2); // should free realloc_p2, realloc_p, calloc_p, valloc_p
-//    }
+    if(replay == false) {
+      printf("Now FreeMemory %p\n", GetLogger());
+      GetLogger()->FreeMemory(begin3); // should free realloc_p2, realloc_p, calloc_p, valloc_p
+    }
   
   }
 }
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
   Test1(true);
   printf("\n ----- End -----\n\n");
 //  logger::replaying = false;
-  GetLogger()->FreeMemory(begin3);
+//  GetLogger()->FreeMemory(begin3);
   Fini();
   MPI_Finalize();
   //GetLogger()->FreeMemory(begin2);

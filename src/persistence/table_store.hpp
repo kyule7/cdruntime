@@ -79,7 +79,6 @@ class TableStore : public BaseTable {
         head_ = 0;
         tail_ = head_;//0;//len_in_byte / sizeof(EntryT);
         grow_unit_ = tail_ * 2;
-//        printf("Created!!!!!!\n"); //getchar();
       } else {
         AllocateTable(BASE_ENTRY_CNT);
       }
@@ -112,7 +111,6 @@ class TableStore : public BaseTable {
               grow_unit_, ptr_, tail_*sizeof(EntryT));
         if(ptr_ == NULL) {
           ptr_ = new EntryT[grow_unit_];
-//          printf("alloc : %p\n", ptr_); getchar();
           if(ptr_ != NULL) {
             size_ = grow_unit_ * sizeof(EntryT);
             allocated_++;
@@ -224,18 +222,19 @@ class TableStore : public BaseTable {
         // check
         if(ret == NULL) {
           if(packerTaskID == 0) {
-            printf("[FindReverse] Find %lu, tail:%lu\n", id, tail_); //getchar();
+            MYDBG("[FindReverse] Find %lu, tail:%lu\n", id, tail_); //getchar();
             for(uint32_t i=0; i<tail_; i++) {
   //          for(int64_t i=begin; i>=0; i--) {
               // The rule for entry is that the first element in object layout is always ID.
-              printf("TEST %lu == %lu\n", ptr_[i].id_, id);
+              MYDBG("TEST %lu == %lu\n", ptr_[i].id_, id);
               if( ptr_[i].id_ == id ) {
-                printf("TEST %lu == %lu\n", ptr_[i].id_, id);
+                MYDBG("TEST %lu == %lu\n", ptr_[i].id_, id);
               }
             }
-          } else {
-            printf("my task id:%d\n", packerTaskID);
-          }
+          } 
+//          else {
+//            MYDBG("my task id:%d\n", packerTaskID);
+//          }
 //          assert(0);
         }
       }
@@ -258,16 +257,17 @@ class TableStore : public BaseTable {
       // check
       if(ret == NULL) {
         if(packerTaskID == 0) {
-          printf("[Find] tail:%lu\n", tail_); //assert(0);
+          MYDBG("[Find] tail:%lu\n", tail_); //assert(0);
           for(uint32_t i=0; i<tail_; i++) {
             // The rule for entry is that the first element in object layout is always ID.
             if( ptr_[i].id_ == id ) {
-              printf("TEST %lu == %lu\n", ptr_[i].id_, id);
+              MYDBG("TEST %lu == %lu\n", ptr_[i].id_, id);
             }
           }
-        } else {
-          printf("my task id:%d\n", packerTaskID);
-        }
+        } 
+//        else {
+//          MYDBG("my task id:%d\n", packerTaskID);
+//        }
         //assert(0);
       }
       //return (void *)ret;
@@ -294,16 +294,17 @@ class TableStore : public BaseTable {
       // checking
       if(ret == NULL) {
         if(packerTaskID == 0) {
-          printf("[FindWithOffset] tail:%lu\n", tail_); assert(0);
+          MYDBG("[FindWithOffset] tail:%lu\n", tail_); assert(0);
           for(uint32_t i=table_offset; i<tail_; i++) {
             // The rule for entry is that the first element in object layout is always ID.
             if( ptr_[i].offset() == offset ) {
-              printf("TEST %lu == %lu\n", ptr_[i].offset(), offset);
+              MYDBG("TEST %lu == %lu\n", ptr_[i].offset(), offset);
             }
           }
-        } else {
-          printf("my task id:%d\n", packerTaskID);
-        }
+        } 
+//        else {
+//          MYDBG("my task id:%d\n", packerTaskID);
+//        }
         //assert(0);
       }
       table_offset = found_idx;
@@ -533,12 +534,10 @@ class TableStore : public BaseTable {
       CDErrType err = kOK;
       if(ptr_ != NULL) {
         EntryT *newptr = new EntryT[grow_unit_];
-//        printf("realloc : %p\n", newptr); getchar();
         MYDBG("[%s Table 2] Alloc large [%p - %p] data_size:%lu\n", __func__, 
                newptr, newptr+size_, size_);
         if(newptr != NULL) {
           memcpy(newptr, ptr_, tail_*sizeof(EntryT));
-//          printf("Free : %p\n", ptr_); getchar();
           delete [] ptr_;
           ptr_ = newptr;
           allocated_++;
@@ -563,7 +562,6 @@ class TableStore : public BaseTable {
         grow_unit_ = BASE_ENTRY_CNT;//initial_grow_unit;
         if(ptr_ != NULL) {
 //          MYDBG("%p\n", ptr_);
-//          printf("Free : %p\n", ptr_); getchar();
           delete [] ptr_;
           ptr_ = NULL;
         } else {
@@ -632,7 +630,7 @@ class TableStore : public BaseTable {
 //    default:
 //                   {}
 //  }
-//  printf("[%s] %u %p %u ret:%p\n", __func__, entry_type, ptr_entry, len_in_byte, ret);
+//  MYDBG("[%s] %u %p %u ret:%p\n", __func__, entry_type, ptr_entry, len_in_byte, ret);
 //  return ret;
 //}
 
