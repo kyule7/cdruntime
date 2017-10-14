@@ -119,7 +119,9 @@ struct LogEntry : public packer::BaseEntry {
       copy(that);
     }
     void Print(void) const
-    { LOGGER_PRINT("Entry [%16s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_); }
+    { 
+      printf("Entry [%16s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_); 
+    }
 };
 #if 0
   static CDPath *uniquePath_;
@@ -169,9 +171,10 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
       return LogEntry::gen_ftid;
     }
 
-    inline void Reset(uint64_t orig_ftid) {
+    inline void Reset(uint64_t orig_ftid, uint64_t orig_pos) {
       logger::replaying = true;
       LogEntry::gen_ftid = orig_ftid;
+      cur_pos_ = orig_pos;
     }
 
     bool IsLogFound(void);
@@ -249,10 +252,13 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
 //    }
 
     void Print(void) {
+      printf("---- Log Entries -----------------\n");
       LogEntry *ptr = table_->GetAt(0);
       for(uint32_t i=0; i<table_->used(); i++) {
+        printf("%d ", i);
         (ptr + i)->Print();
       }
+      printf("----------------------------------\n");
     }
 };
 

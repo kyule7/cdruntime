@@ -43,17 +43,18 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "libc_wrapper.h"
 #include "cd_features.h"
 #define CD_MPI_ENABLED 1
-#define _CD 0
+#define _CD 1
 #if CD_MPI_ENABLED
 #include <mpi.h>
 #endif
 #define LV1 1
 #define LV2 1
 #define LV3 1 
-using namespace tuned;
+using namespace cd;
 using namespace std;
 
 int num_reexecution = 0;
+int num_exec = 0;
 int  numProcs = 0;
 int  myRank = 0;
 CDErrT err;
@@ -61,22 +62,24 @@ CDErrT err;
 // Test basic preservation scheme.
 int TestCDHierarchy(void)
 {
-
+  MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   //cout << "\n==== TestCDHierarchy Start ====\n" << endl; 
 	CDHandle *root = CD_Init(numProcs, myRank, kHDD);
 #if _CD
   CD_Begin(root, "Root"); 
 #endif
-  printf("---start \n"); //getchar();
   int *malloc_p = (int *)malloc(128);
   int *calloc_p = (int *)calloc(16, 32);
-  printf("calloc:%p\n", calloc_p);
   int *tmp1 = (int*)calloc(16, 64);
   int * tmp2 = (int*)calloc(16, 128); //getchar();
-  printf("calloc %p, tmp1:%p, tmp2:%p\n", &calloc, tmp1, tmp2);
   unsigned long long *cval = (unsigned long long *)(&calloc);
-  printf("##################-------------------\n");
-  logger::GetLogger()->Print();
+  if(myRank == 0) {
+    printf("---start \n"); //getchar();
+    printf("calloc:%p\n", calloc_p);
+    printf("calloc %p, tmp1:%p, tmp2:%p\n", &calloc, tmp1, tmp2);
+    printf("##################-------------------\n");
+    logger::GetLogger()->Print();
+  }
   //printf("%lx %lx %lx %lx ", *cval, *(cval+1), *(cval+2), *(cval+3));
   //printf("%lx %lx %lx %lx\n", *(cval+4), *(cval+5), *(cval+6), *(cval+7));
   //printf("---\n"); //getchar();
@@ -94,6 +97,8 @@ int TestCDHierarchy(void)
 
     int *valloc_p = (int *)valloc(256);
     int *realloc_p = (int *)realloc(malloc_p, 512);
+    if(myRank == 0)
+      printf("[%s] malloc:%p, calloc:%p, valloc:%p, realloc:%p\n", (logger::replaying)? "Replay":"Exec", malloc_p, calloc_p, valloc_p, realloc_p);
 
   // Level 1 Body
   //cout << string(1<<1, '\t').c_str() << "Here is computation body of CD level 1...\n" << endl;
@@ -106,12 +111,14 @@ int TestCDHierarchy(void)
   //cout << string(2<<1, '\t').c_str() <<"Level 2 CD Begin...\n" << endl;
     int *memalign_p = NULL;
     void *ptr = NULL;
-      int *malloc_p2 = (int *)malloc(128);
-      int *calloc_p2 = (int *)calloc(16, 32);
-      int *valloc_p2 = (int *)valloc(256);
-      int *realloc_p2 = (int *)realloc(malloc_p2, 512);
-      free(calloc_p2);
-      free(valloc_p2);
+    int *malloc_p2 = (int *)malloc(128);
+    int *calloc_p2 = (int *)calloc(16, 32);
+    int *valloc_p2 = (int *)valloc(256);
+    int *realloc_p2 = (int *)realloc(malloc_p2, 512);
+    if(myRank == 0)
+      printf("[%s] malloc:%p, calloc:%p, valloc:%p, realloc:%p\n", (logger::replaying)? "Replay":"Exec", malloc_p2, calloc_p2, valloc_p2, realloc_p2);
+    free(calloc_p2);
+    free(valloc_p2);
 
   // Level 2 Body
   //cout << string(2<<1, '\t').c_str() << "Here is computation body of CD level 2...\n" << endl;
@@ -132,6 +139,11 @@ int TestCDHierarchy(void)
   //cout << string(3<<1, '\t').c_str() << "Here is computation body of CD level 3...\n" << endl;
 
 #if _CD
+  if(num_exec == 0) {
+    num_exec++;
+    child_lv3->CDAssert(false);
+    printf("\n\n############ ERROR ##############\n\n");
+  }
   child_lv3->Detect();
   //cout << string(3<<1, '\t').c_str() << "Level 3 CD Complete...\n" << endl;
   CD_Complete(child_lv3);
@@ -159,7 +171,7 @@ int TestCDHierarchy(void)
   //cout << string(1<<1, '\t').c_str() << "Level 1 CD Complete...\n" << endl;
   child_lv1->Destroy();
   //cout << string(1<<1, '\t').c_str() << "Level 1 CD Destroyed...\n" << endl;
-  printf("num execution : %d at #%d\n", num_reexecution, myRank);
+  if(myRank == 0) printf("num execution : %d at #%d\n", num_reexecution, myRank);
   // Detect Error here
   root->Detect();
 

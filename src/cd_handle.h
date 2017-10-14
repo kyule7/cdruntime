@@ -153,10 +153,31 @@ void CD_Finalize(void);
  * @brief Interfaces that user need to know.
  * @{
  */
-namespace cd {
-
 
 #define CD_Begin(...) (FOUR_ARGS_MACRO(__VA_ARGS__, CD_BEGIN3, CD_BEGIN2, CD_BEGIN1, CD_BEGIN0)(__VA_ARGS__))
+#define CD_Complete(X) (X)->Complete()   
+
+#if CD_TUNING_ENABLED == 1
+
+// Macros for setjump / getcontext
+// So users should call this in their application, not call cd_handle->Begin().
+
+#define CD_BEGIN3(CDH, LABEL, COLLECTIVE, SYS_ERR_VEC) ({ \
+  (CDH)->Begin((LABEL), (COLLECTIVE), (SYS_ERR_VEC)); \
+  })
+
+#define CD_BEGIN2(CDH, LABEL, COLLECTIVE) ({ \
+  (CDH)->Begin((LABEL), (COLLECTIVE)); \
+  })
+
+#define CD_BEGIN1(CDH, LABEL) ({ \
+  (CDH)->Begin((LABEL)); \
+  })
+
+#define CD_BEGIN0(CDH) ({ \
+  (CDH)->Begin(); })
+
+#else 
 
 // Macros for setjump / getcontext
 // So users should call this in their application, not call cd_handle->Begin().
@@ -167,8 +188,8 @@ namespace cd {
   } else { \
     getcontext((CDH)->ctxt()); \
   } \
-  (CDH)->InternalBegin((LABEL), (COLLECTIVE), (SYS_ERR_VEC)); \
   CD_DEBUG("[%s %u ] Begin\n", (LABEL), CDH->level()); \
+  (CDH)->Begin((LABEL), (COLLECTIVE), (SYS_ERR_VEC)); \
   })
 
 #define CD_BEGIN2(CDH, LABEL, COLLECTIVE) ({ \
@@ -177,8 +198,8 @@ namespace cd {
   } else { \
     getcontext((CDH)->ctxt()); \
   } \
-  (CDH)->InternalBegin((LABEL), (COLLECTIVE)); \
   CD_DEBUG("[%s %u ] Begin\n", (LABEL), CDH->level()); \
+  (CDH)->Begin((LABEL), (COLLECTIVE)); \
   })
 
 #define CD_BEGIN1(CDH, LABEL) ({ \
@@ -187,8 +208,8 @@ namespace cd {
   } else { \
     getcontext((CDH)->ctxt()); \
   } \
-  (CDH)->InternalBegin((LABEL)); \
   CD_DEBUG("[%s %u ] Begin\n", (LABEL), CDH->level()); \
+  (CDH)->Begin((LABEL)); \
   })
 
 #define CD_BEGIN0(CDH) ({ \
@@ -197,10 +218,11 @@ namespace cd {
   } else { \
     getcontext((CDH)->ctxt()); \
   } \
-  (CDH)->InternalBegin(); })
+  (CDH)->Begin(); })
 
-#define CD_Complete(X) (X)->Complete()   
 
+#endif
+namespace cd {
 /**@defgroup cd_split CD split interface
  * @brief Method to split CDs to children CDs.
  * @ingroup user_interfaces
@@ -479,22 +501,31 @@ class CDHandle {
        * @return Returns kOK when successful and kError otherwise.
        * @sa Complete()
        */
-       
-       inline __attribute__((always_inline))
        CDErrT Begin(const char *label=NO_LABEL,
                     bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                          //!< contained by this CD or whether its to be run by a single task 
                                          //!< only with the programmer responsible for synchronization. 
                     const uint64_t &sys_err_vec=0
-                   )
-        {
-//          if(ctxt_prv_mode() == kExcludeStack)  
-//            setjmp(*jmp_buffer());
-//           else  
-//            getcontext(ctxt()); 
-           
-          return (CDErrT)InternalBegin(label, collective, sys_err_vec); 
-        }
+                   );
+       
+//       inline __attribute__((always_inline))
+//       CDErrT Begin(const char *label=NO_LABEL,
+//                    bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
+//                                         //!< contained by this CD or whether its to be run by a single task 
+//                                         //!< only with the programmer responsible for synchronization. 
+//                    const uint64_t &sys_err_vec=0
+//                   )
+//        {
+////          if(ctxt_prv_mode() == kExcludeStack)  
+////            setjmp(*jmp_buffer());
+////           else  
+////            getcontext(ctxt()); 
+//           
+//          return (CDErrT)InternalBegin(label, collective, sys_err_vec); 
+//        }
+
+
+
 //        {
 //          CD_ASSERT(ptr_cd_);
 //          if(ctxt_prv_mode() == kExcludeStack) 
@@ -821,12 +852,12 @@ class CDHandle {
 
 
   public:
-   CDErrT InternalBegin(const char *label=NO_LABEL,
-                        bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
-                                             //!< contained by this CD or whether its to be run by a single task 
-                                             //!< only with the programmer responsible for synchronization. 
-                        const uint64_t &sys_err_vec=0
-                       );
+//   CDErrT InternalBegin(const char *label=NO_LABEL,
+//                        bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
+//                                             //!< contained by this CD or whether its to be run by a single task 
+//                                             //!< only with the programmer responsible for synchronization. 
+//                        const uint64_t &sys_err_vec=0
+//                       );
 
    /** @ingroup cd_detection */
    /** @ingroup register_detection_recovery */

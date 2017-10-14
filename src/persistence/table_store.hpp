@@ -343,7 +343,7 @@ class TableStore : public BaseTable {
     // It is used in IsPushedLog
     EntryT *GetAt(uint64_t idx)
     {
-      assert(idx < tail_);
+      assert(idx == 0 || idx < tail_);
       assert(idx >= head_);
       assert(head_ == 0);
       uint64_t i = (head_ + idx) % size_;

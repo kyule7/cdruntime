@@ -1278,7 +1278,7 @@ CDErrT CDHandle::InternalDestroy(bool collective, bool need_destroy)
 //  return InternalBegin(collective, label, sys_error_vec);
 //}
 
-CDErrT CDHandle::InternalBegin(const char *label, bool collective, const uint64_t &sys_error_vec)
+CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_error_vec)
 {
   CDPrologue();
 

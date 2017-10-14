@@ -181,16 +181,16 @@ uint64_t LogPacker::FreeMemory(uint64_t offset_from)
     //packer::Packer<LogEntry> free_list;
     LogPacker free_list;
     LOGGER_PRINT("%s reach2\n", __func__);
-    Print();
+    //Print();
     freed_cnt = table_->FindWithAttr(kNeedFreed, offset_from, free_list.table_);
-    Print();
+    //Print();
     LOGGER_PRINT("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
     free_list.Print();
     //STOPHERE;
     for(uint32_t i=0; i<freed_cnt; i++) {
       LOGGER_PRINT("i:%u\n", i);
       LogEntry *entry = free_list.table_->GetAt(i);
-      entry->Print();
+//      entry->Print();
       FT_free((void *)(entry->offset()));
       entry->size_.Unset(kNeedFreed);
     }
@@ -287,7 +287,7 @@ EXTERNC void free(void *ptr)
       }
       entry->size_.Unset(kNeedPushed);
       entry->size_.Set(kNeedFreed);
-      entry->Print();
+//      entry->Print();
     } else {
   //    LOGGER_PRINT("Replaying %s(%p)\n", __func__, ptr); 
       uint32_t idx = 0;
@@ -299,7 +299,7 @@ EXTERNC void free(void *ptr)
       }
       if(entry != NULL) 
       { LOGGER_PRINT("Replaying %s(%p), freed? %lx\n", __func__, ptr, entry->attr()); }
-      entry->Print();
+//      entry->Print();
       //STOPHERE;
     }
     LOGGER_PRINT("<<< Logging End   %lu %s\n", logger::LogEntry::gen_ftid, ft2str[FTID_free]); 
@@ -364,7 +364,7 @@ EXTERNC void *calloc(size_t numElem, size_t size)
       LogEntry *entry = GetLogger()->GetNext();
       ret = (void *)entry->offset_;
       assert(entry->ftype_ == FTID_calloc);
-      entry->Print();
+//      entry->Print();
     }
     LOGGER_PRINT("<<< Logging End  %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_calloc)]); 
     logger::LogEntry::gen_ftid++;
@@ -400,7 +400,7 @@ EXTERNC void *malloc(size_t size)
     LogEntry *entry = GetLogger()->GetNext();
     ret = (void *)entry->offset_;
     assert(entry->ftype_ == FTID_malloc);
-    entry->Print();
+//    entry->Print();
   }
   LOGGING_EPILOG(malloc);
   LOGGER_PRINT("%p = malloc(%zu)\n", ret, size);
@@ -420,7 +420,7 @@ EXTERNC void *valloc(size_t size)
     LogEntry *entry = GetLogger()->GetNext();
     ret = (void *)entry->offset_;
     assert(entry->ftype_ == FTID_valloc);
-    entry->Print();
+//    entry->Print();
   }
   LOGGING_EPILOG(valloc);
   LOGGER_PRINT("%p = valloc(%zu)\n", ret, size);
@@ -438,7 +438,7 @@ EXTERNC void *realloc(void *ptr, size_t size)
     // reallocation. free() is deferred to FreeMemory().
     ret = FT_malloc(size);
     GetLogger()->Add(LogEntry(logger::LogEntry::gen_ftid, FTID_realloc, kNeedPushed, (uint64_t)ret));
-    GetLogger()->table_->GetLast()->Print();
+//    GetLogger()->table_->GetLast()->Print();
     uint32_t idx = 0;
     LogEntry *entry = NULL;
     while(entry == NULL) {
@@ -447,14 +447,14 @@ EXTERNC void *realloc(void *ptr, size_t size)
     }
     entry->size_.Unset(kNeedPushed);
     entry->size_.Set(kNeedFreed);
-    entry->Print();
+//    entry->Print();
   } else {
     LOGGER_PRINT("Replaying %s\n", __func__); 
     LogEntry *entry = GetLogger()->GetNext();
     ret = (void *)entry->offset_;
     LOGGER_PRINT("[%lu, %lu, %lu, %lx] %d == %d\n", entry->id_, entry->attr(), entry->size(), entry->offset(), entry->ftype_ , FTID_realloc);
     assert(entry->ftype_ == FTID_realloc);
-    entry->Print();
+//    entry->Print();
   }
   LOGGING_EPILOG(realloc);
   LOGGER_PRINT("%p = realloc(%p, %zu)\n", ret, ptr, size);
@@ -475,7 +475,7 @@ EXTERNC void *memalign(size_t boundary, size_t size)
     LogEntry *entry = GetLogger()->GetNext();
     ret = (void *)entry->offset_;
     assert(entry->ftype_ == FTID_memalign);
-    entry->Print();
+//    entry->Print();
   }
   LOGGING_EPILOG(memalign);
   return ret;
@@ -496,7 +496,7 @@ EXTERNC int posix_memalign(void **memptr, size_t alignment, size_t size)
     *memptr = (void *)entry->offset_;
     ret = entry->size();
     assert(entry->ftype_ == FTID_posix_memalign);
-    entry->Print();
+//    entry->Print();
   }
 
   LOGGING_EPILOG(posix_memalign);

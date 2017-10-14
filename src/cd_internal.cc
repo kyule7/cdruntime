@@ -973,17 +973,6 @@ CDErrT CD::Begin(const char *label, bool collective)
   }
 #endif
 
-#if CD_LIBC_LOGGING
-  if(cd_exec_mode_ == kExecution) {
-    libc_log_id_ = logger::GetLogger()->Set(libc_log_begin_);
-    libc_log_end_ = libc_log_begin_;
-  } else if(cd_exec_mode_ == kReexecution) {
-    logger::GetLogger()->Reset(libc_log_id_);
-  } else {
-//    ERROR_MESSAGE("CD Begin with kSuspension (%d) is undefined state.\n", cd_exec_mode_);
-  }
-#endif
-
 
 #endif // comm_log ends
 
@@ -998,6 +987,28 @@ CDErrT CD::Begin(const char *label, bool collective)
 //FIXME 0324 Kyushick    
 //    SyncCDs(this);
   }
+#if CD_LIBC_LOGGING
+  if(cd_exec_mode_ == kExecution) {
+    libc_log_id_ = logger::GetLogger()->Set(libc_log_begin_);
+    libc_log_end_ = libc_log_begin_;
+    if(myTaskID == 0) {
+      printf("log ft:%lu, log id:%lu\n", logger::GetLogger()->GetNextID(), libc_log_id_);
+//      logger::GetLogger()->Print();
+    }
+  } else if(cd_exec_mode_ == kReexecution) {
+    if(myTaskID == 0) {
+      printf("before log ft:%lu, log id:%lu\n", logger::GetLogger()->GetNextID(), libc_log_id_);
+    }
+    logger::GetLogger()->Reset(libc_log_id_, libc_log_begin_);
+    if(myTaskID == 0) {
+      printf("after log ft:%lu, log id:%lu\n", logger::GetLogger()->GetNextID(), libc_log_id_);
+      printf("log ID:%lu, log end:%lu\n", libc_log_id_, libc_log_begin_);
+//      logger::GetLogger()->Print();
+    }
+  } else {
+//    ERROR_MESSAGE("CD Begin with kSuspension (%d) is undefined state.\n", cd_exec_mode_);
+  }
+#endif
 
   // NOTE: This point reset rollback_point_
   uint32_t new_rollback_point = SyncCDs(this, true);
@@ -2979,7 +2990,7 @@ bool CD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry)
 
 void CD::DeleteEntryDirectory(void)
 {
-  if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
+//  if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
   CD_DEBUG("Delete entry directory!\n");
   preserve_count_ = 0;
   restore_count_ = 0;
@@ -2989,7 +3000,7 @@ void CD::DeleteEntryDirectory(void)
 
 void HeadCD::DeleteEntryDirectory(void)
 {
-  if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
+//  if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
   CD_DEBUG("Delete entry directory!\n");
   preserve_count_ = 0;
   restore_count_ = 0;
