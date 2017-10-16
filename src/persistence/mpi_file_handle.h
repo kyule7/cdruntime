@@ -38,6 +38,19 @@ class MPIFileHandle : public FileHandle {
     virtual uint32_t GetBlkSize(void);
 };
 
+class LibcFileHandle : public MPIFileHandle {
+  protected:
+    static LibcFileHandle *fh_;
+    LibcFileHandle(void) : MPIFileHandle(MPI_COMM_WORLD, DEFAULT_FILEPATH_LIBC) {
+      printf("LibcFileHandle Created\n");
+    }
+    LibcFileHandle(const MPI_Comm &comm, const char *filepath) : MPIFileHandle(comm, filepath) {
+      printf("LibcFileHandle Created\n");
+    }
+  public:
+    static FileHandle *Get(MPI_Comm comm, const char *filepath=NULL);
+};
+
 }
 #endif
 #endif

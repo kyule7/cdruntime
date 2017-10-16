@@ -1381,11 +1381,12 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   /// It will be averaged out with the number of seq. CDs.
   assert(ptr_cd_ != 0);
   bool is_reexec = (GetExecMode() == kReexecution);
+  CDErrT err;
+  {
   std::string entry_name(my_name);
-  CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+  err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
                                  entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
-
 #if CD_ERROR_INJECTION_ENABLED
   if(memory_error_injector_ != NULL) {
     memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
@@ -1423,6 +1424,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 //  }
 //#endif
   cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  }
   CDEpilogue();
   return err;
 }
@@ -1443,11 +1445,12 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   assert(ptr_cd_ != 0); 
   uint64_t len = 0;
   bool is_reexec = (GetExecMode() == kReexecution);
+  CDErrT err;
+  {
   std::string entry_name(my_name);
-  CDErrT err = ptr_cd_->Preserve((void *)&serdes, len, kSerdes | preserve_mask, 
+  err = ptr_cd_->Preserve((void *)&serdes, len, kSerdes | preserve_mask, 
                                  entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
-
 //#if CD_PROFILER_ENABLED
 //  if(is_reexecution) {
 ////    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
@@ -1484,6 +1487,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
 
 
   cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  }
   CDEpilogue();
   return err;
 }
@@ -1505,10 +1509,12 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
 //  bool is_reexec = (GetExecMode() == kReexecution);
 //#endif
   bool is_reexec = (GetExecMode() == kReexecution);
+  CDErrT err;
+  {
   std::string entry_name(my_name);
   // TODO CDEvent object need to be handled separately, 
   // this is essentially shared object among multiple nodes.
-  CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+  err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
                               entry_name, ref_name, ref_offset,  
                               regen_object, data_usage);
 
@@ -1544,6 +1550,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   //CDEpilogue();
   
   cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  }
   CDEpilogue();
   return err;
 }

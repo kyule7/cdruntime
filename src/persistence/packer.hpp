@@ -2,6 +2,7 @@
 #define _PACKER_H
 
 #include "data_store.h"
+#include "packer_common.h"
 #include "table_store.hpp"
 #include "string.h"
 namespace packer {
@@ -26,39 +27,31 @@ class Packer {
     bool alloc_table;
     bool alloc_data;
   public:
-    Packer(uint64_t alloc=BASE_ENTRY_CNT, TableStore<EntryT> *table=NULL, DataStore *data=NULL) : cur_pos_(0) {
+    void InternalInit(uint64_t alloc, TableStore<EntryT> *table, DataStore *data, int filemode) {
       if(table == NULL) {
         alloc_table = true; 
-        table_ = new TableStore<EntryT>(BASE_ENTRY_CNT);
+        table_ = new TableStore<EntryT>(alloc);
       } else {
         alloc_table = false; 
         table_ = table;
       }
       if(data == NULL) {
         alloc_data = true; 
-        data_ = new DataStore;
+        data_ = new DataStore(NULL, filemode);
       } else {
         alloc_data = false; 
         data_ = data;
       }
+    }
+    Packer(uint64_t alloc=BASE_ENTRY_CNT, TableStore<EntryT> *table=NULL, DataStore *data=NULL) : cur_pos_(0) {
+      InternalInit(alloc, table, data, DEFAULT_FILEMODE);
     }
     Packer(TableStore<EntryT> *table, DataStore *data=NULL) : cur_pos_(0) {
-      if(table == NULL) {
-        alloc_table = true; 
-        table_ = new TableStore<EntryT>(true);
-      } else {
-        alloc_table = false; 
-        table_ = table;
-      }
-      if(data == NULL) {
-        alloc_data = true; 
-        data_ = new DataStore;
-      } else {
-        alloc_data = false; 
-        data_ = data;
-      }
+      InternalInit(BASE_ENTRY_CNT, table, data, DEFAULT_FILEMODE);
     }
-    
+    Packer(TableStore<EntryT> *table, DataStore *data, int filemode) : cur_pos_(0) {
+      InternalInit(BASE_ENTRY_CNT, table, data, filemode);
+    }
     Packer(void *object) : cur_pos_(0) {
       data_ = new DataStore((char *)object);
       table_ = ReadFromMemory(object, true);
@@ -82,7 +75,7 @@ class Packer {
       if(reuse)
         data_->ReInit();
       else
-        data_->Init();
+        data_->Init(NULL, DEFAULT_FILEMODE);
     }
 
     BaseTable *GetTable(void) { return table_; }

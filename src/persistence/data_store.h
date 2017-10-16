@@ -61,9 +61,9 @@ class DataStore {
     uint64_t r_head_;
   public:
 //    DataStore(bool alloc);
-    DataStore(char *ptr=NULL);
+    DataStore(char *ptr=NULL, int filemode=DEFAULT_FILEMODE);
     virtual ~DataStore(void);
-    void Init(char *ptr=NULL);
+    void Init(char *ptr, int filemode);
     void ReInit(void);
     CDErrType AllocateData();
     CDErrType FreeData(bool reuse);

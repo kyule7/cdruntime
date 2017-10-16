@@ -163,7 +163,7 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
   friend LogPacker *GetLogger(void);
     static LogPacker *libc_logger;
   public:
-    LogPacker() { LOGGER_PRINT("LogPacker created\n"); }
+    LogPacker(void) : packer::Packer< logger::LogEntry >(NULL, NULL, kLibcFile) { LOGGER_PRINT("LogPacker created\n"); }
     inline uint64_t GetNextID(void) { return logger::libc_id; }
     inline void SetNextID(uint64_t orig_libc_id) { logger::libc_id = orig_libc_id; }
     inline uint64_t Set(uint64_t &offset) {

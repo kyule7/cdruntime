@@ -17,6 +17,7 @@ using namespace packer;
 //packer::Time packer::time_mpiio_seek("mpiio_seek"); 
 
 MPIFileHandle *MPIFileHandle::fh_ = NULL;
+LibcFileHandle *LibcFileHandle::fh_ = NULL;
 char err_str[MPI_MAX_ERR_STR];
 int err_len = 0, err_class = 0;
 //int packer::packerTaskID = 0;
@@ -207,5 +208,17 @@ uint32_t MPIFileHandle::GetBlkSize(void)
 //    ERROR_MESSAGE_PACKER("ioctl error: %d, fdesc:%d, blksize:%lu\n", ret, fdesc_, blockSize);
 //  }
   return CHUNK_ALIGNMENT;
+}
+
+FileHandle *LibcFileHandle::Get(MPI_Comm comm, const char *filepath)
+{
+  if(fh_ == NULL) {
+    if(filepath == NULL) {
+      fh_ = new LibcFileHandle; 
+    } else {
+      fh_ = new LibcFileHandle(comm, filepath); 
+    }
+  }
+  return dynamic_cast<FileHandle *>(fh_);
 }
 

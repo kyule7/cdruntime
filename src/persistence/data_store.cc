@@ -47,12 +47,12 @@ static uint64_t chunk_mask = CHUNK_ALIGNMENT - 1;
 //      chunksize_, written_len_, sizeof(MagicStore)); //getchar();
 //
 //}
-DataStore::DataStore(char *ptr)
+DataStore::DataStore(char *ptr, int filemode)
 {
   MYDBG("\nptr:%p", ptr);
 
   // Should be thread-safe
-  Init(ptr);
+  Init(ptr, filemode);
 
   MYDBG("BeforeWrite ft:%u fh:%p ptralloc:%p magic:%lu\n",
         ftype(), fh_, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
@@ -71,7 +71,7 @@ DataStore::DataStore(char *ptr)
       chunksize_, written_len_, sizeof(MagicStore)); //getchar();
 }
 
-void DataStore::Init(char *ptr) 
+void DataStore::Init(char *ptr, int filemode) 
 {
   pthread_mutex_lock(&mutex);
   ptr_ = NULL;
@@ -82,7 +82,7 @@ void DataStore::Init(char *ptr)
   head_ = 0;//size_ - size_ / 4;
   tail_ = head_;//sizeof(MagicStore);
   allocated_ = 0;
-  mode_ = kBoundedMode | kMPIFile;
+  mode_ = kBoundedMode | filemode;
   r_tail_ = 0;
   r_head_ = 0;
   if(ptr == NULL) 

@@ -4,7 +4,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdint>
-
+#include "packer_common.h"
 //#define _DEBUG_ENABLED
 
 
@@ -75,13 +75,6 @@ enum {
   kBufferReserved1=0x20,
   kBufferReserved2=0x40,
   kBufferReserved3=0x80
-};
-
-enum {
-  kVolatile       = 0x000, // 0x0X00
-  kPosixFile      = 0x100,
-  kAIOFile        = 0x200,
-  kMPIFile        = 0x400
 };
 
 //struct MagicStoreEntry {

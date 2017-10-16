@@ -7,9 +7,10 @@
 #include "define.h"
 #define MAX_FILEPATH_SIZE 256
 #define DEFAULT_BASEPATH "./"
-#define DEFAULT_FILEPATH_POSIX "posix_filepath"
-#define DEFAULT_FILEPATH_AIO   "aio_filepath"
-#define DEFAULT_FILEPATH_MPI   "mpi_filepath"
+#define DEFAULT_FILEPATH_POSIX "prv_posix"
+#define DEFAULT_FILEPATH_AIO   "prv_aio"
+#define DEFAULT_FILEPATH_MPI   "prv_mpi"
+#define DEFAULT_FILEPATH_LIBC  "libc_log"
 namespace packer {
 
 class DataStore;

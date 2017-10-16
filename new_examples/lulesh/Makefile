@@ -2,12 +2,12 @@
 
 SHELL = /bin/sh
 .SUFFIXES: .cc .o
-CD_PATH=/home1/03341/kyushick/Work/CDs/pfsFix
+CD_PATH=/home1/03341/kyushick/Work/CDs/libc
 CD_ENABLED = 1
 ifeq (${CD_ENABLED}, 1)
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 
-CD_CFLAGS = -I${CD_PATH}/include -I${CD_PATH}/src -I${CD_PATH}/src/persistence
-CD_LINKFLAGS = -L${CD_PATH}/lib -lcd -Wl,-rpath=${CD_PATH}/lib -L${CD_PATH}/src/persistence -lpacker -Wl,-rpath=${CD_PATH}/src/persistence -ldl
+CD_CFLAGS = -I${CD_PATH}/include -I${CD_PATH}/src -I${CD_PATH}/src/persistence -I${CD_PATH}/plugin/wrapper
+CD_LINKFLAGS = -lwrapLibc -L${CD_PATH}/plugin/wrapper -Wl,-rpath=${CD_PATH}/plugin/wrapper -lc -L${CD_PATH}/lib -lcd -Wl,-rpath=${CD_PATH}/lib -L${CD_PATH}/src/persistence -lpacker -Wl,-rpath=${CD_PATH}/src/persistence -ldl
 else
 CD_FLAGS := 
 CD_CFLAGS :=
