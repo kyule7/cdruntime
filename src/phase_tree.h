@@ -32,6 +32,10 @@ struct PhaseNode {
     uint32_t task_id_;
     uint32_t task_size_;
 
+    // sequenial ID
+    uint64_t seq_begin_; // records at the first begin
+    uint64_t seq_end_;   // increments at every begin
+
     CDExecMode state_;
 
     // from execution profile. required for tuning 
@@ -57,12 +61,13 @@ struct PhaseNode {
     RuntimeInfo profile_;
     static uint32_t phase_gen;
     static uint32_t max_phase;
+    static int64_t last_completed_phase;
   public:
     // for cd::phaseTree
     PhaseNode(PhaseNode *parent, uint32_t level, const std::string &label, CDExecMode state) 
       : level_(level), phase_(phase_gen), 
-        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), state_(state),
-        count_(0), interval_(-1), errortype_(-1), label_(label), profile_(phase_gen)
+        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), seq_begin_(0), seq_end_(0), 
+        state_(state), count_(0), interval_(-1), errortype_(-1), label_(label), profile_(phase_gen)
     {
       TUNE_DEBUG("PhaseNode %s\n", label.c_str());
       Init(parent, level);
@@ -74,8 +79,8 @@ struct PhaseNode {
     // executing application. 
     PhaseNode(PhaseNode *parent, uint32_t level, uint32_t phase)
       : level_(level), phase_(phase_gen), 
-        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), state_(kExecution),
-        count_(0), interval_(-1), errortype_(-1), profile_(phase_gen)
+        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), seq_begin_(0), seq_end_(0), 
+        state_(kExecution), count_(0), interval_(-1), errortype_(-1), profile_(phase_gen)
     {
       CD_ASSERT_STR(phase == phase_, "PhaseNode(%u == %u)\n", phase_, phase);
       Init(parent, level);
@@ -197,6 +202,9 @@ struct PhaseNode {
         (*it)->ResetToExec();
       }
     }
+
+    inline
+    void MarkSeqID(void) { seq_begin_ = seq_end_; }
 };
 
 struct PhaseTree {
@@ -211,6 +219,13 @@ struct PhaseTree {
       root_ = new PhaseNode(NULL, level, label, kExecution); 
       current_ = root_;
       return current_->phase_; 
+    }
+
+    inline
+    uint32_t ReInit(void)
+    { 
+      current_ = root_;
+      return root_->phase_; 
     }
   
     void Print(int format=0) 

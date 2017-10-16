@@ -69,6 +69,7 @@ enum FTID {
 //bool disabled = true;
 extern bool disabled;
 extern bool replaying;
+extern uint64_t libc_id;
 extern void *libc_handle;
 //#define LOGGER_PRINT(...) printf(__VA_ARGS__)
 #define LOGGER_PRINT(...)
@@ -101,11 +102,11 @@ extern char ft2str[FTIDNums][64];
 //    
 
 struct LogEntry : public packer::BaseEntry {
-    static uint64_t gen_ftid;
+//    static uint64_t gen_ftid;
     FTID ftype_;
     LogEntry(void) : ftype_(FTID_invalid) {}
     LogEntry(FTID ftype) 
-      : packer::BaseEntry(gen_ftid, 0), ftype_(ftype) {}
+      : packer::BaseEntry(logger::libc_id, 0), ftype_(ftype) {}
     LogEntry(uint64_t id, uint64_t size, uint64_t offset) 
       : packer::BaseEntry(id, size, offset), ftype_(FTID_invalid) {}
     LogEntry(uint64_t id, FTID ftype, uint64_t attr, uint64_t offset) 
@@ -163,32 +164,33 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
     static LogPacker *libc_logger;
   public:
     LogPacker() { LOGGER_PRINT("LogPacker created\n"); }
-    inline uint64_t GetNextID(void) { return LogEntry::gen_ftid; }
-    inline void SetNextID(uint64_t orig_ftid) { LogEntry::gen_ftid = orig_ftid; }
+    inline uint64_t GetNextID(void) { return logger::libc_id; }
+    inline void SetNextID(uint64_t orig_libc_id) { logger::libc_id = orig_libc_id; }
     inline uint64_t Set(uint64_t &offset) {
       logger::replaying = false;
       offset = table_->tail();
-      return LogEntry::gen_ftid;
+      return logger::libc_id;
     }
 
-    inline void Reset(uint64_t orig_ftid, uint64_t orig_pos) {
+    inline void Reset(uint64_t orig_libc_id, uint64_t orig_pos) {
       logger::replaying = true;
-      LogEntry::gen_ftid = orig_ftid;
+      logger::libc_id = orig_libc_id;
       cur_pos_ = orig_pos;
+//      table_->Reset(orig_pos);
     }
 
     bool IsLogFound(void);
 //    {
 //      bool orig_disabled = logger::disabled;
 //      logger::disabled = true;
-//      uint64_t current_log_id = LogEntry::gen_ftid;
+//      uint64_t current_log_id = logger::libc_id;
 //      LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
 //      LOGGER_PRINT("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); //STOPHERE;
 //      logger::disabled = orig_disabled;;
 //      return entry != NULL;
 //    }
 //     {
-//       uint64_t current_log_id = LogEntry::gen_ftid;
+//       uint64_t current_log_id = logger::libc_id;
 //       LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
 // //      GetLogger()->table_->head_ - 1;
 // //      Entry *upto  = GetLogger()->GetAt(offset_from);
@@ -263,7 +265,7 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
 };
 
 //LogPacker *LogPacker::libc_logger;
-//uint64_t LogEntry::gen_ftid;
+//uint64_t logger::libc_id;
 //LogPacker *GetLogger(void)
 //{
 //  if(LogPacker::libc_logger == NULL) {
@@ -281,8 +283,8 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
 //extern packer::Packer<LogEntry> *GetLogger(void);
 
 
-//inline uint64_t GetNextID(void) { return LogEntry::gen_ftid; }
-//inline void SetNextID(uint64_t orig_ftid) { LogEntry::gen_ftid = orig_ftid; }
+//inline uint64_t GetNextID(void) { return logger::libc_id; }
+//inline void SetNextID(uint64_t orig_libc_id) { logger::libc_id = orig_libc_id; }
 //bool IsLogFound(void);
 //void PushLogs(uint64_t offset_from);
 
@@ -304,11 +306,11 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
   } else { \
     bool orig_disabled = logger::disabled; \
     logger::disabled = true; \
-    LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_##func)]); 
+    LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::libc_id, ft2str[(FTID_##func)]); 
 
 #define LOGGING_EPILOG(func) \
-    LOGGER_PRINT("<<< Logging End   %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_##func)]); \
-    logger::LogEntry::gen_ftid++; \
+    LOGGER_PRINT("<<< Logging End   %lu %s\n", logger::libc_id, ft2str[(FTID_##func)]); \
+    logger::libc_id++; \
     logger::disabled = orig_disabled; \
   }
 

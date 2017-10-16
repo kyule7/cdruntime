@@ -83,6 +83,10 @@ SystemErrorInjector *CDHandle::system_error_injector_ = NULL;
 
 #endif
 
+bool cd::orig_app_side = true;
+bool cd::orig_disabled = false;
+bool cd::orig_msg_app_side = true;
+bool cd::orig_msg_disabled = false;
 CD_CLOCK_T cd::tot_begin_clk=0;
 CD_CLOCK_T cd::tot_end_clk=0;
 CD_CLOCK_T cd::begin_clk=0;
@@ -330,7 +334,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   else {
     cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
   }
-  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
+//  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
 #if CD_TUNING_ENABLED == 0
   cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
@@ -1305,7 +1309,8 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
   //CDEpilogue(phaseTree.current_->profile_.RecordBegin());
   cd::phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, need_sync);
   CDEpilogue();
-
+  app_side = true;
+  logger::disabled = false;
   return err;
 }
 
@@ -1693,7 +1698,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 #endif
     err = kAppError;
     
-  }
+  } // kErrorReported ends
   else {
 #if CD_ERROR_INJECTION_ENABLED
 /*

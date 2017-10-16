@@ -1,9 +1,9 @@
 #include <cstdio>
 #include <cstdint>
 
-uint64_t gen_ftid = 0;
+uint64_t libc_id = 0;
 inline uint64_t GenID(uint32_t FTID) {
-  return ((gen_ftid++ << 16) | FTID);
+  return ((libc_id++ << 16) | FTID);
 }
 
 inline uint64_t CheckID(uint64_t id) {

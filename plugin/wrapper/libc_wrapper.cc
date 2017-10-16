@@ -11,7 +11,7 @@
 
 using namespace logger;
 LogPacker *LogPacker::libc_logger = NULL;
-uint64_t LogEntry::gen_ftid = 0;
+uint64_t logger::libc_id = 0;
 bool logger::replaying = false;
 bool logger::disabled  = true;
 LogPacker *logger::GetLogger(void)
@@ -105,16 +105,16 @@ bool LogPacker::IsLogFound(void)
 {
   bool orig_disabled = logger::disabled;
   logger::disabled = true;
-  uint64_t current_log_id = LogEntry::gen_ftid;
-  LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
-  LOGGER_PRINT("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); //STOPHERE;
+  uint64_t current_log_id = logger::libc_id;
+  LogEntry *entry = table_->FindReverse(current_log_id, logger::libc_id);
+  LOGGER_PRINT("###[logID:%lu, %lu] Is Pushed Log? %s\n", logger::libc_id, current_log_id, (entry != NULL)? "True" : "False"); //STOPHERE;
   logger::disabled = orig_disabled;;
   return entry != NULL;
 }
 //{
 //  bool orig_disabled = logger::disabled;
 //  logger::disabled = true;
-//  uint64_t current_log_id = LogEntry::gen_ftid;
+//  uint64_t current_log_id = logger::libc_id;
 //  LogEntry *entry = table_->FindReverse(current_log_id, current_log_id);
 //  LOGGER_PRINT("### Is Pushed Log? %s\n", (entry != NULL)? "True" : "False"); //STOPHERE;
 //  logger::disabled = orig_disabled;;
@@ -185,7 +185,8 @@ uint64_t LogPacker::FreeMemory(uint64_t offset_from)
     freed_cnt = table_->FindWithAttr(kNeedFreed, offset_from, free_list.table_);
     //Print();
     LOGGER_PRINT("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
-    free_list.Print();
+    //printf("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
+    //free_list.Print();
     //STOPHERE;
     for(uint32_t i=0; i<freed_cnt; i++) {
       LOGGER_PRINT("i:%u\n", i);
@@ -275,7 +276,7 @@ EXTERNC void free(void *ptr)
     LOGGER_PRINT("free(ptr : %p) %p\n", ptr, FT_free);
     bool orig_disabled = logger::disabled; 
     logger::disabled = true; 
-    LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[FTID_free]); 
+    LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::libc_id, ft2str[FTID_free]); 
     if(logger::replaying == 0) {
       LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
       uint32_t idx = 0;
@@ -297,13 +298,19 @@ EXTERNC void free(void *ptr)
         entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
         if(idx == -1U) { LOGGER_PRINT("free %p is not founded in malloc list\n", ptr); break; }
       }
+
+      // FIXME /////////////////////////
+      entry->size_.Unset(kNeedPushed);
+      entry->size_.Set(kNeedFreed);
+      //////////////////////////////////
+
       if(entry != NULL) 
       { LOGGER_PRINT("Replaying %s(%p), freed? %lx\n", __func__, ptr, entry->attr()); }
 //      entry->Print();
       //STOPHERE;
     }
-    LOGGER_PRINT("<<< Logging End   %lu %s\n", logger::LogEntry::gen_ftid, ft2str[FTID_free]); 
-    logger::LogEntry::gen_ftid++; 
+    LOGGER_PRINT("<<< Logging End   %lu %s\n", logger::libc_id, ft2str[FTID_free]); 
+    logger::libc_id++; 
     logger::disabled = orig_disabled; 
   }
 //  LOGGING_EPILOG(free);
@@ -354,20 +361,26 @@ EXTERNC void *calloc(size_t numElem, size_t size)
     bool orig_disabled = logger::disabled; 
     logger::disabled = true; 
     assert(FT_calloc);
-    LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_calloc)]); 
+    LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::libc_id, ft2str[(FTID_calloc)]); 
     if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
       ret = FT_calloc(numElem, size);
       LOGGER_PRINT("record calloc\n");
-      GetLogger()->Add(LogEntry(logger::LogEntry::gen_ftid, FTID_calloc, kNeedPushed, (uint64_t)ret));
+      GetLogger()->Add(LogEntry(logger::libc_id, FTID_calloc, kNeedPushed, (uint64_t)ret));
     } else {
       LOGGER_PRINT("Replaying %s\n", __func__); 
       LogEntry *entry = GetLogger()->GetNext();
-      ret = (void *)entry->offset_;
-      assert(entry->ftype_ == FTID_calloc);
+      //assert(entry->ftype_ == FTID_calloc);
+      if(entry->ftype_ == FTID_calloc) {
+        ret = (void *)entry->offset_;
+      } else {
+        ret = FT_calloc(numElem, size);
+        LOGGER_PRINT("regen calloc\n");
+        GetLogger()->Add(LogEntry(logger::libc_id, FTID_calloc, kNeedPushed, (uint64_t)ret));
+      }
 //      entry->Print();
     }
-    LOGGER_PRINT("<<< Logging End  %lu %s\n", logger::LogEntry::gen_ftid, ft2str[(FTID_calloc)]); 
-    logger::LogEntry::gen_ftid++;
+    LOGGER_PRINT("<<< Logging End  %lu %s\n", logger::libc_id, ft2str[(FTID_calloc)]); 
+    logger::libc_id++;
     logger::disabled = orig_disabled; 
   }
   LOGGER_PRINT("%p = calloc(%zu,%zu) wrapped, %s %s\n", ret, numElem, size, (logger::disabled)? "Disabled":"Enabled", (logger::init_calloc)? "Initialized":"Not Init");
@@ -394,12 +407,17 @@ EXTERNC void *malloc(size_t size)
   LOGGING_PROLOG(malloc, size);
   if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
     ret = FT_malloc(size);
-    GetLogger()->Add(LogEntry(logger::LogEntry::gen_ftid, FTID_malloc, kNeedPushed, (uint64_t)ret));
+    GetLogger()->Add(LogEntry(logger::libc_id, FTID_malloc, kNeedPushed, (uint64_t)ret));
   } else {
     LOGGER_PRINT("Replaying %s\n", __func__); 
     LogEntry *entry = GetLogger()->GetNext();
-    ret = (void *)entry->offset_;
-    assert(entry->ftype_ == FTID_malloc);
+    //assert(entry->ftype_ == FTID_malloc);
+    if(entry->ftype_ == FTID_malloc) {
+      ret = (void *)entry->offset_;
+    } else {
+      ret = FT_malloc(size);
+      GetLogger()->Add(LogEntry(logger::libc_id, FTID_malloc, kNeedPushed, (uint64_t)ret));
+    }
 //    entry->Print();
   }
   LOGGING_EPILOG(malloc);
@@ -414,12 +432,17 @@ EXTERNC void *valloc(size_t size)
   LOGGING_PROLOG(valloc, size);
   if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
     ret = FT_valloc(size);
-    GetLogger()->Add(LogEntry(logger::LogEntry::gen_ftid, FTID_valloc, kNeedPushed, (uint64_t)ret));
+    GetLogger()->Add(LogEntry(logger::libc_id, FTID_valloc, kNeedPushed, (uint64_t)ret));
   } else {
     LOGGER_PRINT("Replaying %s\n", __func__); 
     LogEntry *entry = GetLogger()->GetNext();
-    ret = (void *)entry->offset_;
-    assert(entry->ftype_ == FTID_valloc);
+    //assert(entry->ftype_ == FTID_valloc);
+    if(entry->ftype_ == FTID_valloc) {
+      ret = (void *)entry->offset_;
+    } else {
+      ret = FT_valloc(size);
+      GetLogger()->Add(LogEntry(logger::libc_id, FTID_valloc, kNeedPushed, (uint64_t)ret));
+    }
 //    entry->Print();
   }
   LOGGING_EPILOG(valloc);
@@ -437,7 +460,7 @@ EXTERNC void *realloc(void *ptr, size_t size)
     // FT_realloc() is never called, but malloc is called instead for
     // reallocation. free() is deferred to FreeMemory().
     ret = FT_malloc(size);
-    GetLogger()->Add(LogEntry(logger::LogEntry::gen_ftid, FTID_realloc, kNeedPushed, (uint64_t)ret));
+    GetLogger()->Add(LogEntry(logger::libc_id, FTID_realloc, kNeedPushed, (uint64_t)ret));
 //    GetLogger()->table_->GetLast()->Print();
     uint32_t idx = 0;
     LogEntry *entry = NULL;
@@ -451,9 +474,23 @@ EXTERNC void *realloc(void *ptr, size_t size)
   } else {
     LOGGER_PRINT("Replaying %s\n", __func__); 
     LogEntry *entry = GetLogger()->GetNext();
-    ret = (void *)entry->offset_;
+    //assert(entry->ftype_ == FTID_realloc);
+    if(entry->ftype_ == FTID_realloc) {
+      ret = (void *)entry->offset_;
+    } else {
+      ret = FT_malloc(size);
+      GetLogger()->Add(LogEntry(logger::libc_id, FTID_realloc, kNeedPushed, (uint64_t)ret));
+      uint32_t idx = 0;
+      LogEntry *malloc_entry = NULL;
+      while(malloc_entry == NULL) {
+        malloc_entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
+        if(idx == -1U) { assert(0); }
+      }
+      malloc_entry->size_.Unset(kNeedPushed);
+      malloc_entry->size_.Set(kNeedFreed);
+
+    }
     LOGGER_PRINT("[%lu, %lu, %lu, %lx] %d == %d\n", entry->id_, entry->attr(), entry->size(), entry->offset(), entry->ftype_ , FTID_realloc);
-    assert(entry->ftype_ == FTID_realloc);
 //    entry->Print();
   }
   LOGGING_EPILOG(realloc);
@@ -469,12 +506,17 @@ EXTERNC void *memalign(size_t boundary, size_t size)
   ret = FT_memalign(boundary, size);
   if(logger::replaying == 0) { 
     ret = FT_memalign(boundary, size);
-    GetLogger()->Add(LogEntry(logger::LogEntry::gen_ftid, FTID_memalign, kNeedPushed, (uint64_t)ret));
+    GetLogger()->Add(LogEntry(logger::libc_id, FTID_memalign, kNeedPushed, (uint64_t)ret));
   } else {
     LOGGER_PRINT("Replaying %s\n", __func__); 
     LogEntry *entry = GetLogger()->GetNext();
-    ret = (void *)entry->offset_;
-    assert(entry->ftype_ == FTID_memalign);
+    //assert(entry->ftype_ == FTID_memalign);
+    if(entry->ftype_ == FTID_memalign) {
+      ret = (void *)entry->offset_;
+    } else {
+      ret = FT_memalign(boundary, size);
+      GetLogger()->Add(LogEntry(logger::libc_id, FTID_memalign, kNeedPushed, (uint64_t)ret));
+    }
 //    entry->Print();
   }
   LOGGING_EPILOG(memalign);
@@ -489,13 +531,18 @@ EXTERNC int posix_memalign(void **memptr, size_t alignment, size_t size)
 
   if(logger::replaying == 0) { 
     ret = FT_posix_memalign(memptr, alignment, size);
-    GetLogger()->Add(LogEntry(logger::LogEntry::gen_ftid, FTID_posix_memalign, kNeedPushed, ret, (uint64_t)(*memptr)));
+    GetLogger()->Add(LogEntry(logger::libc_id, FTID_posix_memalign, kNeedPushed, ret, (uint64_t)(*memptr)));
   } else {
     LOGGER_PRINT("Replaying %s\n", __func__); 
     LogEntry *entry = GetLogger()->GetNext();
-    *memptr = (void *)entry->offset_;
-    ret = entry->size();
-    assert(entry->ftype_ == FTID_posix_memalign);
+    //assert(entry->ftype_ == FTID_posix_memalign);
+    if(entry->ftype_ == FTID_posix_memalign) {
+      ret = entry->size();
+      *memptr = (void *)entry->offset_;
+    } else {
+      ret = FT_posix_memalign(memptr, alignment, size);
+      GetLogger()->Add(LogEntry(logger::libc_id, FTID_posix_memalign, kNeedPushed, ret, (uint64_t)(*memptr)));
+    }
 //    entry->Print();
   }
 

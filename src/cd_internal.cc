@@ -69,7 +69,9 @@ CD_CLOCK_T cd::log_elapsed_time;
 
 uint64_t cd::gen_object_id=0;
 uint64_t cd::state = 0;
+// the very first failed phase
 int64_t cd::failed_phase = HEALTHY;
+int64_t cd::failed_seqID = HEALTHY;
 //int32_t cd::failed_level = HEALTHY;
 int iterator_entry_count=0;
 //EntryDirType::hasher cd::str_hash;
@@ -450,9 +452,14 @@ void CD::InternalInitialize(CDHandle *cd_parent)
     LOG_DEBUG("Set child's child_seq_id_ to 0\n");
     child_seq_id_ = 0;
 
+    // FIXME: 10142017
+#if 0
     uint32_t tmp_seq_id = cd_parent->ptr_cd()->child_seq_id_;
     LOG_DEBUG("With cd_parent = %p, set child's seq_id_ to parent's child_seq_id_(%d)\n", cd_parent, tmp_seq_id);
     cd_id_.SetSequentialID(tmp_seq_id);
+#else
+    cd_id_.SetSequentialID(0);
+#endif
 
 #if CD_LIBC_LOG_ENABLED
     //GONG
@@ -834,7 +841,10 @@ uint32_t BeginPhase(uint32_t level, const string &label) {
     if(phaseTree.current_ != NULL) {
       phase = phaseTree.current_->GetPhaseNode(level, label);
     } else {
-      phase = phaseTree.Init(level, label);
+      if(phaseTree.root_ == NULL)
+        phase = phaseTree.Init(level, label);
+      else 
+        phase = phaseTree.ReInit();
     }
 //    phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, just_reexecuted, );
   }
@@ -846,7 +856,7 @@ void CompletePhase(uint32_t phase)//, bool is_reexec=false)
 {
   CD_ASSERT(phaseTree.current_);
   if(tuned::tuning_enabled == false) {
-    if(phase <= failed_phase) { // reexecution
+    if(failed_phase != HEALTHY) { // reexecution
       CD_ASSERT(failed_phase >= 0);
       // Set failed state in phaseTree
       phaseTree.current_->state_ = kReexecution;
@@ -855,7 +865,10 @@ void CompletePhase(uint32_t phase)//, bool is_reexec=false)
 
     }
     if(phaseTree.current_ != NULL) {
+      phaseTree.current_->last_completed_phase = phaseTree.current_->phase_;
       phaseTree.current_ = phaseTree.current_->parent_;
+    } else {
+      ERROR_MESSAGE("NULL phase is completed.\n");
     }
   }
 }
@@ -880,7 +893,14 @@ CDErrT CD::Begin(const char *label, bool collective)
     CD_ASSERT_STR(new_phase == phaseTree.current_->phase_,
                   "phase : %u != %u\n", new_phase,  phaseTree.current_->phase_);
   }
-  profMap[cd_id_.cd_name_.phase_] = &cd::phaseTree.current_->profile_; //getchar();
+  const int64_t current_phase = cd_id_.cd_name_.phase_;
+  profMap[current_phase] = &cd::phaseTree.current_->profile_; //getchar();
+
+  // it is the first begin after Create()
+  // (sequential ID is initialized at Create())
+  if(cd_id_.sequential_id() == 0) {
+    phaseTree.current_->MarkSeqID();
+  }
  // cd_name_.phase_ = GetPhase(level(), label_);
 
 //  cd_name_.phase_ = phase;
@@ -893,8 +913,8 @@ CDErrT CD::Begin(const char *label, bool collective)
 
 //  printf("## Before chage %d %p ## [%s %u] %s %s\n", 
 //      begin_, this, cd_id_.GetStringID().c_str(), myTaskID, name_.c_str(), label);
-  CD_ASSERT_STR(begin_ == false, "%s %s at %u-%u-%u\n", 
-      __func__, label, level(), cd_id_.cd_name_.phase_, cd_id_.sequential_id_);
+  CD_ASSERT_STR(begin_ == false, "%s %s at %u-%ld-%u\n", 
+      __func__, label, level(), current_phase, cd_id_.sequential_id_);
   begin_ = true;
 
   CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);
@@ -988,26 +1008,31 @@ CDErrT CD::Begin(const char *label, bool collective)
 //    SyncCDs(this);
   }
 #if CD_LIBC_LOGGING
-  if(cd_exec_mode_ == kExecution) {
+  if(failed_phase == HEALTHY) {
+    assert(cd_exec_mode_ == kExecution);
     libc_log_id_ = logger::GetLogger()->Set(libc_log_begin_);
     libc_log_end_ = libc_log_begin_;
     if(myTaskID == 0) {
-      printf("log ft:%lu, log id:%lu\n", logger::GetLogger()->GetNextID(), libc_log_id_);
+      MYDBG("log ft:%lu, log id:%lu, log begin:%lu\n", logger::GetLogger()->GetNextID(), libc_log_id_, libc_log_begin_);
 //      logger::GetLogger()->Print();
     }
-  } else if(cd_exec_mode_ == kReexecution) {
+  }
+  else {
+  //else if(current_phase <= failed_phase) {
+  //} else if(cd_exec_mode_ == kReexecution) {
     if(myTaskID == 0) {
-      printf("before log ft:%lu, log id:%lu\n", logger::GetLogger()->GetNextID(), libc_log_id_);
+      MYDBG("before log ft:%lu, log id:%lu, log begin:%lu\n", logger::GetLogger()->GetNextID(), libc_log_id_, libc_log_begin_);
     }
     logger::GetLogger()->Reset(libc_log_id_, libc_log_begin_);
     if(myTaskID == 0) {
-      printf("after log ft:%lu, log id:%lu\n", logger::GetLogger()->GetNextID(), libc_log_id_);
-      printf("log ID:%lu, log end:%lu\n", libc_log_id_, libc_log_begin_);
-//      logger::GetLogger()->Print();
+      MYDBG("[Mode=%d] after log ft:%lu, log id:%lu, log begin:%lu\n", phaseTree.current_->state_, 
+          logger::GetLogger()->GetNextID(), libc_log_id_, libc_log_begin_);
+      logger::GetLogger()->Print();
     }
-  } else {
-//    ERROR_MESSAGE("CD Begin with kSuspension (%d) is undefined state.\n", cd_exec_mode_);
-  }
+  } 
+//  else {
+//    ERROR_MESSAGE("CD Begin with mode (%d) and state (curr:%ld > %ld failed).\n", cd_exec_mode_, current_phase, failed_phase);
+//  }
 #endif
 
   // NOTE: This point reset rollback_point_
@@ -1149,7 +1174,7 @@ void CD::Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
 CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 {
   if(myTaskID == 0) {
-    printf("#########%s level : %d (rollback_point: %d) (%s)\n", __func__, 
+    MYDBG("#########%s level : %d (rollback_point: %d) (%s)\n", __func__, 
       target->level(), *rollback_point_, target->label().c_str());
   }
 #if 0//CD_PROFILER_ENABLED
@@ -1271,6 +1296,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       recovery_sync_time += CD_CLOCK() - prof_sync_clk;
 //      check_sync_clk = false;
 #endif
+      CompletePhase(target->phase());
       return target;
     }
   }
@@ -1421,13 +1447,23 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     /// in reexecution with this assumption.
     /// When it reaches the original failed phase in reexecution,
     /// failed_phase must be reset to HEALTHY (-1) state 
-    failed_phase = (failed_phase < (int64_t)phase)? phase : failed_phase;
+
+//    failed_phase = (failed_phase < (int64_t)phase)? phase : failed_phase;
+    if(failed_phase == HEALTHY) {
+      failed_phase = phase;
+      failed_seqID = phaseTree.current_->seq_end_;
+    }
+    phaseTree.current_->seq_end_ = phaseTree.current_->seq_begin_;
+//    // [CHECK 10142017] Should be true
+//    if(failed_phase != HEALTHY) {
+//      assert(failed_phase >= (int64_t)phase);
+//    }
     GetCDToRecover( CDPath::GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }
   else { // No error occurred
 
     CD_DEBUG("## Complete. No error! ##\n\n");
-    if(failed_phase == this->phase()) {
+    if(failed_phase == this->phase() && failed_seqID == phaseTree.current_->seq_end_) {
       failed_phase = HEALTHY;
       // At this point, take the timer (update RuntimeInfo::clk_)
       // to measure the rest of execution time.
@@ -1446,6 +1482,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     DeleteEntryDirectory();
     ret = common::kOK;
 
+    phaseTree.current_->seq_end_++;
     CompletePhase(this->phase());
   }
 
@@ -2587,8 +2624,10 @@ CDErrT CD::InternalReexecute(void)
   Stop();
 
   //printf("[%s]Rollback!\n", __func__);
-  // GPU
   printf("######### level : %d (rollback_point: %d) (%s)\n", level(), *rollback_point_, name_.c_str());
+
+  // CDPrologue(); in CDHandle::Complete() should be paired with CDEpilouge() here.
+  CDEpilogue();
   //TODO We need to consider collective re-start. 
   if(ctxt_prv_mode_ == kExcludeStack) {
 

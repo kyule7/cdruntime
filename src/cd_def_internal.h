@@ -417,13 +417,20 @@ extern CD_CLOCK_T log_elapsed_time;
 //
 extern uint64_t state;
 extern int64_t failed_phase;
+extern int64_t failed_seqID;
 extern bool just_reexecuted;
+extern bool orig_app_side;
+extern bool orig_disabled;
+extern bool orig_msg_app_side;
+extern bool orig_msg_disabled;
 /**@addtogroup runtime_logging 
  * @{
  */
 
 #define CD_LIBC_LOGGING 1
 #define MsgPrologue() \
+  orig_msg_app_side = app_side; \
+  orig_msg_disabled = logger::disabled; \
   app_side = false; \
   logger::disabled = true; \
   msg_begin_clk = CD_CLOCK(); 
@@ -431,8 +438,8 @@ extern bool just_reexecuted;
 #define MsgEpilogue() \
   msg_end_clk = CD_CLOCK(); \
   msg_elapsed_time += msg_end_clk - msg_begin_clk; \
-  app_side = true; \
-  logger::disabled = false; 
+  app_side = orig_msg_app_side; \
+  logger::disabled = orig_msg_disabled; 
 
 #define LogPrologue() \
   log_begin_clk = CD_CLOCK(); 
@@ -447,6 +454,8 @@ extern bool just_reexecuted;
  */
 
 #define CDPrologue() \
+  orig_app_side = app_side; \
+  orig_disabled = logger::disabled; \
   app_side = false; \
   logger::disabled = true; \
   begin_clk = CD_CLOCK(); 
@@ -459,8 +468,9 @@ extern bool just_reexecuted;
 #define CDEpilogue() \
   end_clk = CD_CLOCK(); \
   elapsed_time += end_clk - begin_clk; \
-  app_side = true; \
-  logger::disabled = false; 
+  app_side = orig_app_side; \
+  logger::disabled = orig_disabled; 
+
 /*
 #define TunedPrologue() \
   cd::app_side = false; \

@@ -965,7 +965,7 @@ uint64_t Preserve(cd::CDHandle *cdh, int id, const char *entry_str) {
             {
               sprintf(tmp_name_buf, "%s_%s", entry_str, serdes_table[id].name);
 //              printf("id:%s name:%s\n", tmp_name_buf, serdes_table[id].name);
-              uint64_t entry_id = GetCDEntryID(tmp_name_buf);
+              uint64_t entry_id = cd::GetCDEntryID(tmp_name_buf);
 #ifdef _DEBUG_LULESH_0402
               if(myRank == 0) { 
                 printf("%lx  %p %lx (%s %lx)\n", id, ptr, serdes_table[id].len(), tmp_name_buf, entry_id);
@@ -983,7 +983,7 @@ uint64_t Preserve(cd::CDHandle *cdh, int id, const char *entry_str) {
               //if(ptr != NULL) 
               {
                 sprintf(tmp_name_buf, "%s_%s", entry_str, serdes_table[id].name);
-                uint64_t entry_id = GetCDEntryID(tmp_name_buf);
+                uint64_t entry_id = cd::GetCDEntryID(tmp_name_buf);
 #ifdef _DEBUG_LULESH_0402
                 if(myRank == 0) { 
                   printf("%lx  %p %lx (%s %lx)\n", 
@@ -1049,7 +1049,7 @@ uint64_t Preserve(cd::CDHandle *cdh, int id, const char *entry_str) {
             if(ptr != NULL) {
               sprintf(tmp_name_buf, "%s_%s", entry_name.c_str(), serdes_table[id].name);
 //              printf("id:%s name:%s\n", tmp_name_buf, serdes_table[id].name);
-              uint64_t entry_id = GetCDEntryID(tmp_name_buf);
+              uint64_t entry_id = cd::GetCDEntryID(tmp_name_buf);
 #ifdef _DEBUG_LULESH_0402
               if(myRank == 0) { 
                 printf("%lx  %p %lx (%s %lx)\n", id, ptr, serdes_table[id].len(), tmp_name_buf, entry_id);
@@ -1066,7 +1066,7 @@ uint64_t Preserve(cd::CDHandle *cdh, int id, const char *entry_str) {
 //              printf("check:%u:%p\n", id, ptr);
               if(ptr != NULL) {
                 sprintf(tmp_name_buf, "%s_%s", entry_name.c_str(), serdes_table[id].name);
-                uint64_t entry_id = GetCDEntryID(tmp_name_buf);
+                uint64_t entry_id = cd::GetCDEntryID(tmp_name_buf);
 #ifdef _DEBUG_LULESH_0402
                 if(myRank == 0) { 
                   printf("%lx  %p %lx (%s %lx)\n", 
@@ -1262,7 +1262,7 @@ uint64_t Preserve(cd::CDHandle *cdh, int id, const char *entry_str) {
           if(id != ID__REGELEMLIST_INNER) {
             if(ptr != NULL) {
               sprintf(tmp_name_buf, "%s_%s", entry_name.c_str(), serdes_table[id].name);
-              uint64_t entry_id = GetCDEntryID(tmp_name_buf);
+              uint64_t entry_id = cd::GetCDEntryID(tmp_name_buf);
 #ifdef _DEBUG_LULESH_0402
               if(myRank == 0) { 
                 printf("id:%s name:%s\n", tmp_name_buf, serdes_table[id].name);
@@ -1280,7 +1280,7 @@ uint64_t Preserve(cd::CDHandle *cdh, int id, const char *entry_str) {
 //              printf("check:%u:%p\n", id, ptr);
               if(ptr != NULL) {
                 sprintf(tmp_name_buf, "%s_%s", entry_name.c_str(), serdes_table[id].name);
-                uint64_t entry_id = GetCDEntryID(tmp_name_buf);
+                uint64_t entry_id = cd::GetCDEntryID(tmp_name_buf);
 #ifdef _DEBUG_LULESH_0402
                 if(myRank == 0) { 
                   printf("id:%s name:%s\n", tmp_name_buf, serdes_table[id].name);

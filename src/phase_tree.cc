@@ -13,6 +13,7 @@ PhasePathType tuned::phasePath; // Populated from config file
 std::map<uint32_t, PhaseNode *> tuned::phaseNodeCache;
 uint32_t common::PhaseNode::phase_gen = 0;
 uint32_t common::PhaseNode::max_phase = 0;
+int64_t common::PhaseNode::last_completed_phase = HEALTHY;
 
 static FILE *inYAML = NULL;
 static FILE *outYAML = NULL;
@@ -246,11 +247,18 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
   } else {
     cd::phaseTree.current_ = cd::phaseNodeCache[it->second];
     // Parent's state is inherited to its child
-    cd::phaseTree.current_->state_ = state_;
+    if(state_ == kReexecution) {
+      cd::phaseTree.current_->state_ = kReexecution;
+    }
     phase = it->second;
     TUNE_DEBUG("Old Phase! %u %s\n", phase, phase_path.c_str()); //getchar();
 //    if(cd::myTaskID == 0) fprintf(outAll, "Old Phase! %u at lv#%u%s\n", phase, level, phase_path.c_str()); //getchar();
   }
+
+//  // First visit
+//  if(last_completed_phase != phase) {
+//    seq_begin_ = seq_end_;
+//  }
 
 //  profMap[phase] = &cd::phaseTree.current_->profile_;getchar();
   return phase;

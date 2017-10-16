@@ -47,13 +47,13 @@ void InitMallocPtr(void);
 //extern char ft2str[FTIDNums][64];
 //extern bool disabled;
 //extern bool replaying;
-//extern uint64_t gen_ftid;
+//extern uint64_t libc_id;
 extern bool initialized;
 extern bool init_calloc;
 
 //inline uint64_t GenID(enum FTID ftid) {
-////  return ((ftid << 48) | (gen_ftid++));
-//  return (gen_ftid++);
+////  return ((ftid << 48) | (libc_id++));
+//  return (libc_id++);
 //}
 
 //inline uint64_t CheckID(uint64_t id) {
@@ -95,7 +95,7 @@ extern bool init_calloc;
 
 #define LOGGING_EPILOG(func) \
     printf("Logging End   %d %s\n", (FTID_##func), ft2str[(FTID_##func)]); \
-    logger::gen_ftid++; \
+    logger::libc_id++; \
     logger::disabled = false; \
   }
 */

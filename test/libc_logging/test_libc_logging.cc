@@ -114,9 +114,6 @@ int TestCDHierarchy(void)
     int *malloc_p2 = (int *)malloc(128);
     int *calloc_p2 = (int *)calloc(16, 32);
     int *valloc_p2 = (int *)valloc(256);
-    int *realloc_p2 = (int *)realloc(malloc_p2, 512);
-    if(myRank == 0)
-      printf("[%s] malloc:%p, calloc:%p, valloc:%p, realloc:%p\n", (logger::replaying)? "Replay":"Exec", malloc_p2, calloc_p2, valloc_p2, realloc_p2);
     free(calloc_p2);
     free(valloc_p2);
 
@@ -130,16 +127,20 @@ int TestCDHierarchy(void)
 #endif
   //cout << string(3<<1, '\t').c_str() << "Level 3 CD Begin...\n" << endl;
       // Body Level 3
-      memalign_p = (int *)memalign(512, 32);
-      int ret = posix_memalign(&ptr, 512, 64); 
+    int *realloc_p2 = (int *)realloc(malloc_p2, 512);
+    if(myRank == 0) {
+      printf("[%s] malloc:%p, calloc:%p, valloc:%p, realloc:%p\n", (logger::replaying)? "Replay":"Exec", malloc_p2, calloc_p2, valloc_p2, realloc_p2);
+    }
+    memalign_p = (int *)memalign(512, 32);
+    int ret = posix_memalign(&ptr, 512, 64); 
   
-      free(realloc_p2);
+    free(realloc_p2);
 
   // Level 3 Body
   //cout << string(3<<1, '\t').c_str() << "Here is computation body of CD level 3...\n" << endl;
 
 #if _CD
-  if(num_exec == 0) {
+  if(num_exec == 0 && myRank == 0) {
     num_exec++;
     child_lv3->CDAssert(false);
     printf("\n\n############ ERROR ##############\n\n");

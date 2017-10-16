@@ -83,6 +83,7 @@ class TableStore : public BaseTable {
         AllocateTable(BASE_ENTRY_CNT);
       }
     }
+    void Reset(uint64_t tail) { tail_ = tail; }
     virtual void Init(void) {
         prv_entry_.id_++;
         prv_entry_.offset_ = INVALID_NUM;
@@ -203,11 +204,11 @@ class TableStore : public BaseTable {
       }
     }
 
-    EntryT *FindReverse(uint64_t id, uint64_t start)
+    EntryT *FindReverse(uint64_t &id, uint64_t start)
     {
       assert(head_ == 0);
       EntryT *ret = NULL;
-      
+      if(start >= tail_) return NULL;
       int64_t begin = (start > tail_)? tail_-1 : start;
       if(begin >= 0) {
         for(int64_t i=begin; i>=0; i--) {
@@ -215,6 +216,7 @@ class TableStore : public BaseTable {
           if( ptr_[i].id_ == id ) {
             MYDBG("%lu == %lu\n", ptr_[i].id_, id);
             ret = &(ptr_[i]);
+            id = i;
             break;
           }
         }
