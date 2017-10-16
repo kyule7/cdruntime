@@ -70,6 +70,7 @@ enum FTID {
 extern bool disabled;
 extern bool replaying;
 extern uint64_t libc_id;
+extern uint32_t taskID;
 extern void *libc_handle;
 //#define LOGGER_PRINT(...) printf(__VA_ARGS__)
 #define LOGGER_PRINT(...)

@@ -795,7 +795,7 @@ class Domain : public Internal, public PackerSerializable {
    void PrintDebugDetail(bool do_prv=false) {
      static int counter = 0;
      if(myRank == 0) {
-       printf("======== Check %d ===================\n", counter++);
+       printf("======== [%s] Check %d %d ===================\n", (do_prv)? "Preserve":"Restore", m_cycle, counter++);
        if(do_prv) {
          prv_prv_idx = prv_idx;
          PrintDebugDetailInternal(prv_idx);
@@ -817,7 +817,7 @@ class Domain : public Internal, public PackerSerializable {
    void Deserialize(void *object) {}
    uint64_t PreserveObject(packer::DataStore *packer) { return 0; }
    uint64_t PreserveObject(packer::CDPacker &packer, const std::string &entry_name) {
-      //PrintDebugDetail(true);
+      PrintDebugDetail(true);
 
       Internal *base = dynamic_cast<Internal *>(this);
       preserved = *base;
@@ -872,7 +872,7 @@ class Domain : public Internal, public PackerSerializable {
          serdes_vec >>= 1;
       } // while ends
 //      printf("------------ Done -----------\n");
-      PrintDebugDetail();
+      PrintDebugDetail(false);
       return 0;
    }
 

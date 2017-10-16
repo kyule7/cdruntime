@@ -67,7 +67,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
   uint64_t PreserveObject(packer::CDPacker &packer, const std::string &entry_name) {
     CD_VECTOR_PRINT("CDVector Preserve elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
     if(myTaskID == 0) {
-    printf("CDVector [%s] Preserve elemsize:%zu, %zu %zu\n", entry_name.c_str(), sizeof(T), this->size(), this->capacity()); 
+    printf("CDVector [%s] Preserve elemsize:%zu, size:%zu cap:%zu\n", entry_name.c_str(), sizeof(T), this->size(), this->capacity()); 
     }
     id_ = GetCDEntryID(entry_name);
     //CheckID(entry_name); id_ = str2id[entry_name];
@@ -75,7 +75,21 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     char *ptr = reinterpret_cast<char *>(this->data());
     uint64_t prv_size = this->size() * sizeof(T);
     packer::CDEntry entry(id_, prv_size, 0, ptr);
-    packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
+    uint64_t table_offset = packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
+    if(myTaskID == 0 && (entry_name == "X" || entry_name == "Y"|| entry_name == "Z")) {
+      printf("Preserve %s at table:%lu, data:%lu, size:%lu\n", entry_name.c_str(), table_offset, entry.offset(), entry.size());
+      char *tmp = new char[entry.size()];
+
+      packer.data_->GetData(tmp, entry.size(), entry.offset());
+      uint32_t *check1 = (uint32_t *)ptr;
+      uint32_t *check2 = (uint32_t *)tmp;
+
+      printf("ori %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
+          , *(check1), *(check1+1), *(check1+2), *(check1+3), *(check1+4), *(check1+5), *(check1+6), *(check1+7));
+      printf("prv %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
+          , *(check2), *(check2+1), *(check2+2), *(check2+3), *(check2+4), *(check2+5), *(check2+6), *(check2+7));
+      delete [] tmp;
+    }
     return prv_size; 
   
   }
@@ -91,6 +105,10 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       this->clear();
     } else {
       this->resize(pentry->size() / sizeof(T));
+    }
+
+    if(myTaskID == 0 && (entry_name == "X" || entry_name == "Y"|| entry_name == "Z")) {
+      printf("Restore %s at data:%lu, size:%lu\n", entry_name.c_str(), pentry->offset(), pentry->size());
     }
     return 0; 
   

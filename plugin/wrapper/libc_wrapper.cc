@@ -12,6 +12,7 @@
 using namespace logger;
 LogPacker *LogPacker::libc_logger = NULL;
 uint64_t logger::libc_id = 0;
+uint32_t logger::taskID = 0;
 bool logger::replaying = false;
 bool logger::disabled  = true;
 LogPacker *logger::GetLogger(void)
@@ -278,6 +279,7 @@ EXTERNC void free(void *ptr)
     logger::disabled = true; 
     LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::libc_id, ft2str[FTID_free]); 
     if(logger::replaying == 0) {
+    //if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
       LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
       uint32_t idx = 0;
       LogEntry *entry = NULL;
@@ -294,12 +296,17 @@ EXTERNC void free(void *ptr)
       uint32_t idx = 0;
       LogEntry *entry = NULL;
       LOGGER_PRINT("[free replay] find(%p) with %p\n", FT_free, ptr); 
+      if(logger::taskID == 0) {
+        printf("[free replay] find(%p) with %p\n", FT_free, ptr); 
+        GetLogger()->Print();
+      }
       while(entry == NULL) {
         entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
         if(idx == -1U) { LOGGER_PRINT("free %p is not founded in malloc list\n", ptr); break; }
       }
 
       // FIXME /////////////////////////
+      assert(entry);
       entry->size_.Unset(kNeedPushed);
       entry->size_.Set(kNeedFreed);
       //////////////////////////////////
@@ -405,7 +412,8 @@ EXTERNC void *malloc(size_t size)
 {
   void *ret = NULL;
   LOGGING_PROLOG(malloc, size);
-  if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
+  bool is_log_found = GetLogger()->IsLogFound();
+  if(logger::replaying == false || is_log_found == false) { 
     ret = FT_malloc(size);
     GetLogger()->Add(LogEntry(logger::libc_id, FTID_malloc, kNeedPushed, (uint64_t)ret));
   } else {

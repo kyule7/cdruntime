@@ -427,7 +427,8 @@ extern bool orig_msg_disabled;
  * @{
  */
 
-#define CD_LIBC_LOGGING 1
+//#define CD_LIBC_LOGGING 1
+#define CD_LIBC_LOGGING 0
 #define MsgPrologue() \
   orig_msg_app_side = app_side; \
   orig_msg_disabled = logger::disabled; \

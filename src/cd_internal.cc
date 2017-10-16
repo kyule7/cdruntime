@@ -257,7 +257,7 @@ CD::CD(CDHandle *cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
- :  cd_id_(cd_id), entry_directory_(1, NULL, NULL)
+ :  cd_id_(cd_id), entry_directory_(32, NULL, NULL)
     //,
 //    file_handle_(prv_medium, 
 //                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
@@ -2154,20 +2154,21 @@ CDErrT CD::Preserve(void *data,
 //        printf("%p, %s\n", data, my_name.c_str());
         len_in_bytes = serializer->Deserialize(entry_directory_, my_name);
 //        printf("restored_len:%lu\n", restored_len);
-        if(prv_medium_ != kDRAM)
-          entry_directory_.data_->Flush();
+//        if(prv_medium_ != kDRAM)
+//          entry_directory_.data_->Flush();
       } else {
         // This will fetch from disk to memory
         // Potential benefit from prefetching app data from preserved data in
         // disk, overlapping reexecution of application.
         CDEntry *ret = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
+        if(myTaskID == 0) {
         if(ret == NULL) {
-          printf("[%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+          printf("Not Found [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
           assert(0);
         } else {
-          printf("[%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+          printf("Restore [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
         }
-
+        }
 //      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
 //        packer::CDErrType pret = entry_directory_.Restore(tag);//, (char *)data);
 //      } else {
@@ -2339,8 +2340,8 @@ CD::InternalPreserve(void *data,
     }
 #endif
     
-    if(prv_medium_ != kDRAM)
-      entry_directory_.data_->Flush();
+//    if(prv_medium_ != kDRAM)
+//      entry_directory_.data_->Flush();
 
   } // end of preserve via copy
   else if( CHECK_PRV_TYPE(preserve_mask, kRef) ) { // via-reference

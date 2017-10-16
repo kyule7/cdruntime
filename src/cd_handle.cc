@@ -325,7 +325,7 @@ void InitDir(int myTask, int numTask)
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   CDPrologue();
-
+  logger::taskID = myTask;
   cd::tot_begin_clk = CD_CLOCK();
   char *cd_config_file = getenv("CD_OUTPUT_BASE");
   if(cd_config_file != NULL) {
@@ -637,8 +637,8 @@ void CD_Finalize(void)
   CDEpilogue();
 #if CD_LIBC_LOGGING
   logger::Fini();
-#endif
   logger::disabled = true;
+#endif
 }
 
 
@@ -1309,8 +1309,10 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
   //CDEpilogue(phaseTree.current_->profile_.RecordBegin());
   cd::phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, need_sync);
   CDEpilogue();
+#if CD_LIBC_LOGGING
   app_side = true;
   logger::disabled = false;
+#endif
   return err;
 }
 

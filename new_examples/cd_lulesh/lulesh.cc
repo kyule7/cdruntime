@@ -487,10 +487,11 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
   b[2][7] = -b[2][1];
 
   /* calculate jacobian determinant (volume) */
-  *volume = Real_t(8.) * ( fjxet * cjxet + fjyet * cjyet + fjzet * cjzet);
-  if(*volume < 0) {
+  Real_t vol = Real_t(8.) * ( fjxet * cjxet + fjyet * cjyet + fjzet * cjzet);
+  *volume = vol;
+  if(vol < 0) {
     if(Domain::restarted && myRank == 0) {
-        printf("\n[%d]....restared......\n", myRank);
+        printf("\n[%d]....restarted......\n", myRank);
         printf("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
         printf("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
         printf("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
@@ -506,7 +507,8 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
                 pDomain->m_nodelist[base+6],
                 pDomain->m_nodelist[base+7]
                 ); 
-        printf("volume:%le\n", *volume);
+        printf("volume:%le\n", vol);
+        assert(0);
     }
      counter = 0;
      *volume = 0.0;
@@ -655,7 +657,7 @@ void IntegrateStressForElems( Domain &domain,
   }
   // loop over all elements
 
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
   for( Index_t k=0 ; k<numElem ; ++k )
   {
     const Index_t* const elemToNode = domain.nodelist(k);
@@ -699,7 +701,7 @@ void IntegrateStressForElems( Domain &domain,
   if (numthreads > 1) {
      // If threaded, then we need to copy the data out of the temporary
      // arrays used above into the final forces field
-#pragma omp parallel for firstprivate(numNode)
+//#pragma omp parallel for firstprivate(numNode)
      for( Index_t gnode=0 ; gnode<numNode ; ++gnode )
      {
         Index_t count = domain.nodeElemCount(gnode) ;
@@ -1211,12 +1213,13 @@ void CalcVolumeForceForElems(Domain& domain)
 
       // call elemlib stress integration loop to produce nodal forces from
       // material stresses.
+      // [CDs] determ got changed here, and need to examine prev/rstr
       IntegrateStressForElems( domain,
                                sigxx, sigyy, sigzz, determ, numElem,
                                domain.numNode()) ;
 
       // check for negative element volume
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
       for ( Index_t k=0 ; k<numElem ; ++k ) {
          if (determ[k] <= Real_t(0.0)) {
 #if USE_MPI            

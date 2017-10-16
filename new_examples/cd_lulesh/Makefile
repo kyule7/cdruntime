@@ -7,15 +7,17 @@ CD_PATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../..
 CD_ENABLED = 1
 ifeq (${CD_ENABLED}, 1)
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 
-CD_CFLAGS = -std=gnu++0x -fmax-errors=1 -I${CD_PATH}/include -I${CD_PATH}/src -I${CD_PATH}/src/persistence
+CD_CFLAGS = -std=gnu++0x -fmax-errors=1 -I${CD_PATH}/include -I${CD_PATH}/src -I${CD_PATH}/src/persistence -I${CD_PATH}/plugin/wrapper
+WRAPPER_LINKFLAGS = -lwrapLibc -L${CD_PATH}/plugin/wrapper -Wl,-rpath=${CD_PATH}/plugin/wrapper -lc 
 CD_LINKFLAGS = -L${CD_PATH}/lib -lcd -Wl,-rpath=${CD_PATH}/lib -L${CD_PATH}/src/persistence -lpacker -Wl,-rpath=${CD_PATH}/src/persistence -ldl
+#CD_LINKFLAGS = ${WRAPPER_LINKFLAGS} ${CD_LINKFLAGS}
 else
 CD_FLAGS := 
 CD_CFLAGS :=
 CD_LINKFLAGS :=
 endif
 
-LULESH_EXEC = lulesh2.0
+LULESH_EXEC = lulesh_cd
 
 MPI_INC = /opt/local/include/openmpi
 MPI_LIB = /opt/local/lib
@@ -63,7 +65,7 @@ LDFLAGS  += -fopenmp
 
 all: $(LULESH_EXEC)
 
-lulesh2.0: $(OBJECTS2.0)
+lulesh_cd: $(OBJECTS2.0)
 	@echo "Linking"
 	$(CXX) $(OBJECTS2.0) $(LDFLAGS) -lm -o $@
 

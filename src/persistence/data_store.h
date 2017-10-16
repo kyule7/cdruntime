@@ -18,8 +18,8 @@ namespace packer {
 #define CD_UNSET(STATE,Y) ((STATE) &= ~(Y))
 #define CD_SET(STATE,Y)   ((STATE) |=  (Y))
 //#define CHUNKSIZE_THRESHOLD_BASE 0x1000 // 4KB
-#define CHUNKSIZE_THRESHOLD_BASE 0x800000 // 16KB
-#define DATA_GROW_UNIT           0x800000
+#define CHUNKSIZE_THRESHOLD_BASE 0x800000000 // 16KB
+#define DATA_GROW_UNIT           0x800000000
 //#define CHUNKSIZE_THRESHOLD_BASE 0x200 // 16KB
 
 //enum {
