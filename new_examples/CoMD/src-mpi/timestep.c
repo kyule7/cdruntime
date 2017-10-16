@@ -30,7 +30,9 @@ unsigned int preserveAtoms(cd_handle_t *cdh,
 unsigned int preserveSpeciesData(cd_handle_t *cdh, SpeciesData *species);
 unsigned int preserveLinkCell(cd_handle_t *cdh, 
                               LinkCell *linkcell, 
-                              unsigned int all);
+                              unsigned int is_all,
+                              unsigned int is_nAtoms,
+                              unsigned int is_nTotalBoxes);
 unsigned int preserveHaloAtom(cd_handle_t *cdh, 
                               AtomExchangeParms *xchange_parms,
                               unsigned int is_cellList,
@@ -61,7 +63,9 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
 
    cd_handle_t *cdh = getleafcd(); //still cdh points at root_cd since hasn't begin yet
    for (int ii=0; ii<nSteps; ++ii)
-   {
+   {  
+      //TODO
+      //who preserve nStpes? Do current CDs need to preserve it as well?
       //************************************
       //            cd boundary: velocity (0.08%) (for both)
       //************************************
@@ -87,7 +91,10 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       cd_preserve(cdh, &ii, sizeof(int), kCopy, "advanceVelocity_ii", "advanceVelocity_ii");
       velocity_pre_size += sizeof(real_t);  // add the size of dt
       velocity_pre_size += sizeof(int);  // add the size of ii (loop index)
-      velocity_pre_size += preserveLinkCell(cdh, s->boxes, 0/*only nAtoms*/);      
+      velocity_pre_size += preserveLinkCell(cdh, s->boxes, 
+                                            0/*all*/, 
+                                            1/*only nAtoms*/,
+                                            0/*nLocalBoxes*/);      
       printf("\n preservation size for advanceVelocity(@beggining) %d\n", velocity_pre_size);
       startTimer(velocityTimer);
       //------------------------------------------------
@@ -103,8 +110,9 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //            cd boundary: position (0.09%)
       //************************************
       cd_begin(cdh, "advancePosition"); 
-      //TODO: preserve dt and nAtoms by *kRef* or KCopy?
-      cd_preserve(cdh, &dt, sizeof(real_t), kRef, "advancePosition_dt", "advancePosition_dt");
+      //TODO: preserve dt and nAtoms by *kRef* or KCopy? 
+      //TODO: for now, no way to refer only dt in SimFlat preserved at the root
+      //cd_preserve(cdh, &dt, sizeof(real_t), kRef, "advancePosition_dt", "advancePosition_dt");
       int position_pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
                                    0,  // is_gid
                                    0,  // is_r
@@ -240,8 +248,8 @@ void computeForce(SimFlat* s)
 
 void advanceVelocity(SimFlat* s, int nBoxes, real_t dt)
 {
-   printf("[DEBUG] task[%d] is calling advanceVelocity with %d nBoxes at time %f\n", 
-            getMyRank(), nBoxes, dt);
+   //printf("[DEBUG] task[%d] is calling advanceVelocity with %d nBoxes at time %f\n", 
+   //         getMyRank(), nBoxes, dt);
    for (int iBox=0; iBox<nBoxes; iBox++)
    {
       for (int iOff=MAXATOMS*iBox,ii=0; ii<s->boxes->nAtoms[iBox]; ii++,iOff++)

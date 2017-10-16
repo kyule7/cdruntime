@@ -99,6 +99,24 @@
 static int ljForce(SimFlat* s);
 static void ljPrint(FILE* file, BasePotential* pot);
 
+#if _CD
+unsigned int preserveAtoms(cd_handle_t *cdh, 
+                           Atoms *atoms, 
+                           int nTotalBoxes,
+                           unsigned int is_gid,
+                           unsigned int is_r,
+                           unsigned int is_p,
+                           unsigned int is_f,
+                           unsigned int is_U,
+                           unsigned int is_iSpecies
+                          );
+unsigned int preserveLinkCell(cd_handle_t *cdh, 
+                              LinkCell *linkcell, 
+                              unsigned int is_all,
+                              unsigned int is_nAtoms,
+                              unsigned int is_nTotalBoxes);
+#endif
+
 void ljDestroy(BasePotential** inppot)
 {
   if ( ! inppot ) return;
@@ -186,13 +204,15 @@ int ljForce(SimFlat* s)
   // loop over local boxes (link cells) [#: nLocalBoxes]
   // |-loop over neighbors of iBox k  [#: nNbrBoxes]
   //   |- loop over atoms in iBox [#: nIBox]
+  //      ---------------Level 3 CD----------------
   //      |- loop over atoms in jBox [#: nJBox]
   //         |- ljForce computation
+  //      ---------------Level 3 CD----------------
   //*****************************************************
   // loop over local boxes
   //*****************************************************
   // O{nNbrBoxes, nIBox} <- I{s->boxes, s->boxes->[nLocalBoxes, nAtoms[iBox]], nbrBoxes}
-  for (int iBox=0; iBox<s->boxes->nLocalBoxes; iBox++)
+  for (int iBox=0; iBox < s->boxes->nLocalBoxes; iBox++)
   {
     //printf("Rank[%d] is processing iBox[%d]\n", getMyRank(), iBox);
     int nIBox = s->boxes->nAtoms[iBox];
@@ -233,6 +253,37 @@ int ljForce(SimFlat* s)
           //1. loop index for current loop
           //  - iOff, iBox, MAXATOMS, ii, nIBox
           //2. data to be read in the innermost loop below
+          //preserve all loop index parameters 
+          //From the iBox loop (outmost)
+          cd_preserve(cdh_lv3, &iBox, sizeof(int), kCopy, 
+                      "ljForce_innermost_iBox", "ljForce_innermost_iBox");
+          //From the neighbors of iBox loop (2nd loop)
+          cd_preserve(cdh_lv3, &jTmp, sizeof(int), kCopy, 
+                      "ljForce_innermost_jTmp", "ljForce_innermost_jTmp");
+          //From the atoms of iBox loop (3rd loop, the current loop)
+          cd_preserve(cdh_lv3, &iOff, sizeof(int), kCopy, 
+                      "ljForce_innermost_iOff", "ljForce_innermost_iOff");
+          cd_preserve(cdh_lv3, &ii, sizeof(int), kCopy, 
+                      "ljForce_innermost_ii", "ljForce_innermost_ii");
+          //For the nested loop below
+          cd_preserve(cdh_lv3, &iId, sizeof(int), kCopy, 
+                      "ljForce_innermost_iId", "ljForce_innermost_iId");
+           int ljForce_pre_size = preserveAtoms(cdh_lv3, s->atoms, 
+                                                s->boxes->nTotalBoxes, 
+                                                1,  // is_gid
+                                                1,  // is_r
+                                                0,  // is_p
+                                                0,  // is_f
+                                                0,  // is_U
+                                                0); // is_iSpecies
+          ljForce_pre_size += preserveLinkCell(cdh_lv3, s->boxes, 
+                                               0/*all*/, 
+                                               0/*only nAtoms*/,
+                                               1/*nLocalBoxes*/);      
+          //TODO: atoms->gid
+
+
+
         }
 
         //*****************************************************
@@ -244,7 +295,7 @@ int ljForce(SimFlat* s)
         //                                I{jOff, jBox, nJBox, ij}  //loop param
         for (int jOff=MAXATOMS*jBox,ij=0; ij<nJBox; ij++,jOff++)
         {
-         real_t dr[3];
+          real_t dr[3];
           int jId = s->atoms->gid[jOff];  
           if (jBox < s->boxes->nLocalBoxes && jId <= iId )
             continue; // don't double count local-local pairs.

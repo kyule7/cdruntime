@@ -37,7 +37,8 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam)
 
     //further preserve by chasing pointers
     size += preserveDomain(cdh, sim->domain);       // flat 
-    size += preserveLinkCell(cdh, sim->boxes, 1/*1:all, 0:nAtoms*/);      // nAtoms = nTotalBoxes*sizeof(int)
+    size += preserveLinkCell(cdh, sim->boxes, 
+                              1/*all*/, 0/*nAtoms*/, 0/*nLocalBoxes*/);      // nAtoms = nTotalBoxes*sizeof(int)
     size += preserveAtoms(cdh, sim->atoms, sim->boxes->nTotalBoxes, 
                           1,  // is_gid
                           1,  // is_r
@@ -68,12 +69,30 @@ unsigned int preserveDomain(cd_handle_t *cdh, Domain *domain)
   return size;
 }
 
+
+   int gridSize[3];     //!< number of boxes in each dimension on processor
+   int nLocalBoxes;     //!< total number of local boxes on processor
+   int nHaloBoxes;      //!< total number of remote halo/ghost boxes on processor
+   int nTotalBoxes;     //!< total number of boxes on processor
+                        //!< nLocalBoxes + nHaloBoxes
+   real3 localMin;      //!< minimum local bounds on processor
+   real3 localMax;      //!< maximum local bounds on processor
+   real3 boxSize;       //!< size of box in each dimension
+   real3 invBoxSize;    //!< inverse size of box in each dimension
+
+   int* nAtoms;         //!< total number of atoms in each box
+
 unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell, 
-                              unsigned int all) // all=0 for only nAtoms
+                              unsigned int is_all,
+                              unsigned int is_nAtoms,
+                              unsigned int is_nTotalBoxes)
 {
   uint32_t size = 0;
   uint32_t nAtoms_size = linkcell->nTotalBoxes*sizeof(int);
-  if(all=1) {
+  if(is_all) {
+    //FIXME: when is_all is set to 1, all others should be set to 0.
+    assert( is_nAtoms == 0);
+    assert( is_nTotalBoxes == 0);
     size += sizeof(LinkCell);
     cd_preserve(cdh, linkcell, size, kCopy, "LinkCell", "LinkCell");
     size += nAtoms_size;
@@ -82,11 +101,20 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell,
     printf("Preserven LinkCell %zu, nAtoms: %u\n", sizeof(LinkCell), nAtoms_size);
   }
   //prerserving data being pointed by linkcell->nAtoms
-  if(all=0) {
+  if(is_nAtoms) {
+    assert( is_all == 0);
     size += nAtoms_size;
     cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, kCopy, 
                 "LinkCell_nAtoms", "LinkCell_nAtoms");
-    printf("Preserven LinkCell %zu, nAtoms: %u\n", 0, nAtoms_size);
+    printf("Preserven LinkCell_nAtoms: %u\n", 0, nAtoms_size);
+  }
+  //prerserving only nTotalBoxes 
+  if(is_nTotalBoxes) {
+    assert( is_all == 0);
+    size += sizeof(unsigned int);
+    cd_preserve(cdh, &(linkcell->nLocalBoxes), sizeof(unsigned int), kCopy, 
+                "LinkCell_nLocalBoxes", "LinkCell_nLocalBoxes");
+    printf("Preserven LinkCell_nLocalBoxes: %u\n", sizeof(unsigned int));
   }
   return size;
 }

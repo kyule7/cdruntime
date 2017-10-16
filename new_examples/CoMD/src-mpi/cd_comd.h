@@ -5,7 +5,9 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam);
 unsigned int preserveDomain(cd_handle_t *cdh, Domain *domain);
 unsigned int preserveLinkCell(cd_handle_t *cdh, 
                               LinkCell *linkcell, 
-                              unsigned int all);
+                              unsigned int is_all,
+                              unsigned int is_nAtoms,
+                              unsigned int is_nTotalBoxes);
 unsigned int preserveAtoms(cd_handle_t *cdh, 
                            Atoms *atoms, 
                            int nTotalBoxes,
