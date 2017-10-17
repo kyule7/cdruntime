@@ -45,7 +45,9 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam)
                           1,  // is_p
                           1,  // is_f
                           1,  // is_U
-                          1); // is_iSpecies
+                          1,  // is_iSpecies
+                          0, // from
+                         -1);// to
     size += preserveSpeciesData(cdh, sim->species);   // flat
     if(doeam) {
         printf("I am calling preserveEampot since doeam is %d\n", doeam);
@@ -126,12 +128,14 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell,
 unsigned int preserveAtoms (cd_handle_t *cdh, 
                             Atoms *atoms, 
                             int nTotalBoxes,
-                            unsigned int is_gid,
-                            unsigned int is_r,
-                            unsigned int is_p, //TODO: bool is better?
-                            unsigned int is_f,
-                            unsigned int is_U,
-                            unsigned int is_iSpecies
+                            unsigned int is_gid,//globally unique id for each atom
+                            unsigned int is_r,  //positions
+                            unsigned int is_p,  //momenta of atoms
+                            unsigned int is_f,  //forces
+                            unsigned int is_U,  //potenial energy per atom
+                            unsigned int is_iSpecies, //the species index of the atom
+                            unsigned int from,
+                            int to 
                             )
 {
     uint32_t size = sizeof(Atoms);
@@ -140,7 +144,18 @@ unsigned int preserveAtoms (cd_handle_t *cdh,
     if( is_gid && is_iSpecies && is_r && is_p && is_f && is_U) {
       cd_preserve(cdh, atoms, size, kCopy, "Atoms", "Atoms");
     }
-    const uint32_t maxTotalAtoms = MAXATOMS * nTotalBoxes;
+    //const uint32_t maxTotalAtoms = MAXATOMS * nTotalBoxes;
+    uint32_t maxTotalAtoms = 0;
+    if( to == -1) {
+      //TODO: is this the right safe guard?
+      maxTotalAtoms = MAXATOMS * nTotalBoxes;
+    }
+    else if( to >= 1 ) { //at least 1 element
+      maxTotalAtoms = to - from + 1;
+    }
+    else {
+      assert(1); //shoudn't fall down here.
+    }
     uint32_t gid_size=0; 
     uint32_t iSpecies_size=0; 
     uint32_t r_size=0; 
@@ -153,24 +168,30 @@ unsigned int preserveAtoms (cd_handle_t *cdh,
     }
     if(is_iSpecies == 1) {
       iSpecies_size = maxTotalAtoms*sizeof(int);
-      cd_preserve(cdh, atoms->iSpecies, iSpecies_size, kCopy, 
+      cd_preserve(cdh, atoms->iSpecies+to*sizeof(int), iSpecies_size, kCopy, 
                   "Atoms_iSpecies", "Atoms_iSpecies");
     }
+    //TODO: implement from and to
     if(is_r == 1) {
       r_size = maxTotalAtoms*sizeof(real3);
-      cd_preserve(cdh, atoms->r, r_size, kCopy, "Atoms_r", "Atoms_r");
+      //TODO: need to check pointer address
+      cd_preserve(cdh, atoms->r+from*sizeof(real3*), r_size, kCopy, 
+                  "Atoms_r", "Atoms_r");
     }
     if(is_p == 1) {
       p_size = maxTotalAtoms*sizeof(real3);
-      cd_preserve(cdh, atoms->p, p_size, kCopy, "Atoms_p", "Atoms_p");
+      cd_preserve(cdh, atoms->p+from*sizeof(real3*), p_size, kCopy, 
+                  "Atoms_p", "Atoms_p");
     }
     if(is_f == 1) {
       f_size = maxTotalAtoms*sizeof(real3);
-      cd_preserve(cdh, atoms->f, f_size, kCopy, "Atoms_f", "Atoms_f");
+      cd_preserve(cdh, atoms->f+from*sizeof(real3*), f_size, kCopy, 
+                  "Atoms_f", "Atoms_f");
     }
     if(is_U == 1) {
       U_size = maxTotalAtoms*sizeof(real_t);
-      cd_preserve(cdh, atoms->U, U_size, kCopy, "Atoms_u", "Atoms_u");
+      cd_preserve(cdh, atoms->U+from*sizeof(real3*), U_size, kCopy, 
+                  "Atoms_u", "Atoms_u");
     }
     size += gid_size + iSpecies_size + r_size + p_size + f_size + U_size;
     //if(is_gid == 1) size += gid_size;

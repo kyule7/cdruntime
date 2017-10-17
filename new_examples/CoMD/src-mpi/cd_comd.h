@@ -16,7 +16,9 @@ unsigned int preserveAtoms(cd_handle_t *cdh,
                            unsigned int is_p,
                            unsigned int is_f,
                            unsigned int is_U,
-                           unsigned int is_iSpecies
+                           unsigned int is_iSpecies,
+                           unsigned int from,
+                           int to
                           );
 unsigned int preserveSpeciesData(cd_handle_t *cdh, SpeciesData *species);
 unsigned int preserveLjPot(cd_handle_t *cdh, LjPotential *pot);

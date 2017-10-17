@@ -108,7 +108,9 @@ unsigned int preserveAtoms(cd_handle_t *cdh,
                            unsigned int is_p,
                            unsigned int is_f,
                            unsigned int is_U,
-                           unsigned int is_iSpecies
+                           unsigned int is_iSpecies,
+                           unsigned int from,
+                           int to
                           );
 unsigned int preserveLinkCell(cd_handle_t *cdh, 
                               LinkCell *linkcell, 
@@ -215,8 +217,9 @@ int ljForce(SimFlat* s)
   for (int iBox=0; iBox < s->boxes->nLocalBoxes; iBox++)
   {
     //printf("Rank[%d] is processing iBox[%d]\n", getMyRank(), iBox);
-    int nIBox = s->boxes->nAtoms[iBox];
+    int nIBox = s->boxes->nAtoms[iBox]; // #of atoms in ith box
     if ( nIBox == 0 ) continue;
+    //Note that neighbors of iBox also include the box itself as 13th element
     int nNbrBoxes = getNeighborBoxes(s->boxes, iBox, nbrBoxes);
     // loop over neighbors of iBox
     // O{atoms->f, atoms->U, ePot} <- I{atoms->gid, epsilon, rCut6, nIBox, ii, iOff}
@@ -226,6 +229,7 @@ int ljForce(SimFlat* s)
 
       assert(jBox>=0);
 
+      //#of atoms in jth box
       int nJBox = s->boxes->nAtoms[jBox];
       if ( nJBox == 0 ) continue;
 
@@ -268,14 +272,20 @@ int ljForce(SimFlat* s)
           //For the nested loop below
           cd_preserve(cdh_lv3, &iId, sizeof(int), kCopy, 
                       "ljForce_innermost_iId", "ljForce_innermost_iId");
-           int ljForce_pre_size = preserveAtoms(cdh_lv3, s->atoms, 
-                                                s->boxes->nTotalBoxes, 
-                                                1,  // is_gid
-                                                1,  // is_r
-                                                0,  // is_p
-                                                0,  // is_f
-                                                0,  // is_U
-                                                0); // is_iSpecies
+          //TODO: the below preserve poistion(r) of all atoms every iteration, 
+          //      which is not the optimal case.
+          //      The otptimal preservation preserves poistons of atoms in the
+          //      current jBox [#: nJBox = s->atoms->nAtoms[jBox]
+          int ljForce_pre_size = preserveAtoms(cdh_lv3, s->atoms, 
+                                               s->boxes->nTotalBoxes, 
+                                               1,  // is_gid
+                                               1,  // is_r
+                                               0,  // is_p
+                                               0,  // is_f
+                                               0,  // is_U
+                                               0,  // is_iSpecies
+                                               0,  // from (entire atoms)
+                                              -1);  // to (entire atoms)
           ljForce_pre_size += preserveLinkCell(cdh_lv3, s->boxes, 
                                                0/*all*/, 
                                                0/*only nAtoms*/,
@@ -302,10 +312,13 @@ int ljForce(SimFlat* s)
           real_t r2 = 0.0;
           for (int m=0; m<3; m++)
           {
+            //TODO: important pattern
+            //with fixed iOff, get the distacne between iOff and all jOff
             dr[m] = s->atoms->r[iOff][m]-s->atoms->r[jOff][m];
             r2+=dr[m]*dr[m];
           }
-
+        
+          //If the atom is farther than cutoff, then do not process further.
           if ( r2 > rCut2) continue;
 
           // Important note:
