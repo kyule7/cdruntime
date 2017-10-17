@@ -2152,7 +2152,7 @@ CDErrT CD::Preserve(void *data,
       if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
         PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
 //        printf("%p, %s\n", data, my_name.c_str());
-        len_in_bytes = serializer->Deserialize(entry_directory_, my_name);
+        len_in_bytes = serializer->Deserialize(entry_directory_, my_name.c_str());
 //        printf("restored_len:%lu\n", restored_len);
         if(prv_medium_ != kDRAM)
           entry_directory_.data_->Flush();
@@ -2306,7 +2306,7 @@ CD::InternalPreserve(void *data,
       attr |= Attr::knested;
 //      uint64_t orig_tablesize = entry_directory_.table_->used();
 #if 1
-      len_in_bytes = serializer->PreserveObject(entry_directory_, my_name);
+      len_in_bytes = serializer->PreserveObject(entry_directory_, my_name.c_str());
       //len_in_bytes = serializer->PreserveObject(entry_directory_, my_name);
 #else
       entry_directory_.data_->PadZeros(0);

@@ -535,6 +535,13 @@ namespace tuned {
   tuned::elapsed_time += tuned::end_clk - tuned::begin_clk; \
   cd::app_side = true; \
   logger::disabled = false; 
+#define PackerPrologue() \
+  cd::app_side = false; \
+  logger::disabled = true; \
+
+#define PackerEpilogue() \
+  cd::app_side = true; \
+  logger::disabled = false; 
 } // namespace tuned ends
 
 #endif

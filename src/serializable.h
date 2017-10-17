@@ -71,8 +71,10 @@ class PackerSerializable : public Serializable {
     PackerSerializable(void) : total_size_(0), table_offset_(0), table_type_(0), id_(-1) {}
     void SetID(uint64_t id) { id_ = id; }
     virtual uint64_t PreserveObject(packer::DataStore *packer)=0;
-    virtual uint64_t PreserveObject(packer::CDPacker &packer, const std::string &entry_name)=0;
-    virtual uint64_t Deserialize(packer::CDPacker &packer, const std::string &entry_name)=0;
+//    virtual uint64_t PreserveObject(packer::CDPacker &packer, const std::string &entry_name)=0;
+//    virtual uint64_t Deserialize(packer::CDPacker &packer, const std::string &entry_name)=0;
+    virtual uint64_t PreserveObject(packer::CDPacker &packer, const char *entry_str)=0;
+    virtual uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str)=0;
 };
 
 }
