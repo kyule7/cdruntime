@@ -816,7 +816,8 @@ class Domain : public Internal, public PackerSerializable {
    void *Serialize(uint64_t &len_in_bytes) { return NULL; }
    void Deserialize(void *object) {}
    uint64_t PreserveObject(packer::DataStore *packer) { return 0; }
-   uint64_t PreserveObject(packer::CDPacker &packer, const std::string &entry_name) {
+   uint64_t PreserveObject(packer::CDPacker &packer, const char *entry_str) {
+      std::string entry_name(entry_str);
       PrintDebugDetail(true);
 
       Internal *base = dynamic_cast<Internal *>(this);
@@ -858,7 +859,8 @@ class Domain : public Internal, public PackerSerializable {
 
       return 0; 
    }
-   uint64_t Deserialize(packer::CDPacker &packer, const std::string &entry_name) { 
+   uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str) { 
+     std::string entry_name(entry_str);
 //      packer.Restore(GetCDEntryID("BaseObj"));
       copy(preserved);
       uint64_t target_vec = 1;

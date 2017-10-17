@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
   int arrA[8] = {0, 1, 2, 3, 4, 5, 6, 7}; // reference
   CDVector<int> vecA({0, 1, 2, 3, 4, 5, 6, 7});
   CDVector<float> vecB({0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7});
-  for(int i=0; i<32; i++) {
+  for(int i=0; i<8; i++) {
     vecB[i] = 1.1*i;
   }
 
