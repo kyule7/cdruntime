@@ -2154,8 +2154,8 @@ CDErrT CD::Preserve(void *data,
 //        printf("%p, %s\n", data, my_name.c_str());
         len_in_bytes = serializer->Deserialize(entry_directory_, my_name);
 //        printf("restored_len:%lu\n", restored_len);
-//        if(prv_medium_ != kDRAM)
-//          entry_directory_.data_->Flush();
+        if(prv_medium_ != kDRAM)
+          entry_directory_.data_->Flush();
       } else {
         // This will fetch from disk to memory
         // Potential benefit from prefetching app data from preserved data in
@@ -2340,8 +2340,8 @@ CD::InternalPreserve(void *data,
     }
 #endif
     
-//    if(prv_medium_ != kDRAM)
-//      entry_directory_.data_->Flush();
+    if(prv_medium_ != kDRAM)
+      entry_directory_.data_->Flush();
 
   } // end of preserve via copy
   else if( CHECK_PRV_TYPE(preserve_mask, kRef) ) { // via-reference

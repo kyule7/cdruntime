@@ -47,18 +47,33 @@ static uint64_t chunk_mask = CHUNK_ALIGNMENT - 1;
 //      chunksize_, written_len_, sizeof(MagicStore)); //getchar();
 //
 //}
-DataStore::DataStore(char *ptr, int filemode)
+DataStore::DataStore(void)
+{
+
+  // Should be thread-safe
+  Init(NULL, DATA_GROW_UNIT, DEFAULT_FILEMODE);
+
+  InitFile();
+}
+
+DataStore::DataStore(char *ptr, uint64_t init_size, int filemode)
 {
   MYDBG("\nptr:%p", ptr);
 
   // Should be thread-safe
-  Init(ptr, filemode);
+  Init(ptr, init_size, filemode);
 
+  InitFile();
+}
+
+void DataStore::InitFile(void)
+{
   MYDBG("BeforeWrite ft:%u fh:%p ptralloc:%p magic:%lu\n",
         ftype(), fh_, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
   
   if(fh_ != NULL) {
     if(fh_->GetFileSize() < (int64_t)sizeof(MagicStore)) {
+      printf("fh_:%p, fsize:%lu, Write(0, %p, %zu)\n", fh_, fh_->GetFileSize(), ptr_ - sizeof(MagicStore), sizeof(MagicStore));
       fh_->Write(0, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
       fh_->FileSync();
     }
@@ -71,18 +86,19 @@ DataStore::DataStore(char *ptr, int filemode)
       chunksize_, written_len_, sizeof(MagicStore)); //getchar();
 }
 
-void DataStore::Init(char *ptr, int filemode) 
+void DataStore::Init(char *ptr, uint64_t init_size, int filemode) 
 {
   pthread_mutex_lock(&mutex);
   ptr_ = NULL;
   buf_preserved_ = NULL;
   tail_preserved_ = 0;
-  grow_unit_ = DATA_GROW_UNIT;
-  size_ = grow_unit_;
+  grow_unit_ = init_size;
+  size_ = init_size;
   head_ = 0;//size_ - size_ / 4;
   tail_ = head_;//sizeof(MagicStore);
   allocated_ = 0;
-  mode_ = kBoundedMode | filemode;
+  //mode_ = kBoundedMode | filemode;
+  mode_ = kGrowingMode | filemode;
   r_tail_ = 0;
   r_head_ = 0;
   if(ptr == NULL) 
@@ -130,7 +146,11 @@ CDErrType DataStore::Free(char *ptr)
 CDErrType DataStore::Alloc(void **ptr, uint64_t size)
 { 
   MYDBG("%lu\n", size);
-  posix_memalign(ptr, CHUNK_ALIGNMENT, size + sizeof(MagicStore)); 
+  int ret = posix_memalign(ptr, CHUNK_ALIGNMENT, size + sizeof(MagicStore)); 
+  if( ret != 0 ) { 
+    perror("posix_memalign:");
+    ERROR_MESSAGE_PACKER("%d = posix_memalign(%p, %lu)\n", ret, *ptr, size);
+  }
   MYDBG("done %d %p\n", size, *ptr); //getchar();
   *(char **)ptr = (char *)(*ptr) + sizeof(MagicStore);
   return kOK; 
@@ -366,6 +386,9 @@ uint64_t DataStore::Write(char *pfrom, int64_t len)
   if( CHECK_FLAG(mode_, kBoundedMode) ) {
 
     ret = WriteBufferMode(pfrom, len);
+    if( buf_used() >= chunksize_threshold ) {
+      SetActiveBuffer();
+    }
 
   } else { // Non-buffering mode
 //    bool is_empty = IsEmpty();
@@ -443,7 +466,7 @@ uint64_t DataStore::WriteBuffer(char *src, int64_t len)
     // It is safe to overlap writing data to not-yet-filled chunk in any case.
     // If there is no other chunks, it is still empty.
     if(available_in_chunk > 0) {
-      PACKER_ASSERT(len_to_write < chunksize_);
+      PACKER_ASSERT(len_to_write <= chunksize_);
 //      pthread_mutex_lock(&mutex);
       Copy(ptr_ + (tail_ % size_), src, len_to_write);
       tail_ += len_to_write;
@@ -479,10 +502,13 @@ void DataStore::WriteInternal(char *src, uint32_t len_to_write, int64_t &i)
 {
   MYDBG("%p %u %ld: %p <- %p (%u) \n", src, len_to_write, i, ptr_ + (tail_ % size_), src + i, len_to_write);
   pthread_mutex_lock(&mutex);
-  while( IsFull() ) {
-    pthread_cond_wait(&full, &mutex);
-  }
-
+  bool is_full = IsFull();
+  if(is_full) { 
+    pthread_cond_signal(&empty); 
+    while( IsFull() ) {
+      pthread_cond_wait(&full, &mutex);
+    }
+  } 
   Copy(ptr_ + (tail_ % size_), src + i, len_to_write);
   tail_ += len_to_write;
 

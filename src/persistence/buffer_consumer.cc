@@ -143,11 +143,12 @@ void *BufferConsumer::ConsumeBuffer(void *bc)
     
     //if(active_buffer_.state_ != kWaiting) 
     {
-
-      while( consumer->GetBuffer() == NULL ) {
+      DataStore *tbuff = NULL;
+      while( tbuff == NULL ) {
         MYDBG("Before going to sleep\n");
         pthread_cond_wait(&empty, &mutex);
         MYDBG("After wake up\n");
+        tbuff = consumer->GetBuffer();
       }
     }
 

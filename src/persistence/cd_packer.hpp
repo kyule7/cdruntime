@@ -11,6 +11,8 @@ class CDPacker : public Packer<CDEntry> {
   public:
     CDPacker(TableStore<CDEntry> *table=NULL, DataStore *data=NULL) 
       : Packer<CDEntry>(table, data) {}
+    CDPacker(TableStore<CDEntry> *table, uint64_t table_size, DataStore *data, uint64_t data_size=DATA_GROW_UNIT) 
+      : Packer<CDEntry>(table_size, table, data, data_size, DEFAULT_FILEMODE) {}
     CDPacker(bool alloc, TableStore<CDEntry> *table, DataStore *data=NULL) 
       : Packer<CDEntry>(alloc, table, data) {}
     virtual ~CDPacker() {}

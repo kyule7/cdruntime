@@ -78,16 +78,28 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     uint64_t table_offset = packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
     if(myTaskID == 0 && (entry_name == "X" || entry_name == "Y"|| entry_name == "Z")) {
       printf("Preserve %s at table:%lu, data:%lu, size:%lu\n", entry_name.c_str(), table_offset, entry.offset(), entry.size());
-      char *tmp = new char[entry.size()];
+      char *tmp = new char[entry.size()]();
+      uint32_t *check4 = (uint32_t *)tmp;
+      printf("chk %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
+          , *(check4), *(check4+1), *(check4+2), *(check4+3), *(check4+4), *(check4+5), *(check4+6), *(check4+7));
 
       packer.data_->GetData(tmp, entry.size(), entry.offset());
-      uint32_t *check1 = (uint32_t *)ptr;
+//      uint32_t *check1 = (uint32_t *)ptr;
+      float *check0 = reinterpret_cast<float *>(this->data());
+      uint32_t *check1 = reinterpret_cast<uint32_t *>(this->data());
       uint32_t *check2 = (uint32_t *)tmp;
+      float *check3 = (float *)tmp;
 
+      
+
+      printf("ori %s: %f %f %f %f %f %f %f %f\n", entry_name.c_str()
+          , *(check0), *(check0+1), *(check0+2), *(check0+3), *(check0+4), *(check0+5), *(check0+6), *(check0+7));
       printf("ori %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
           , *(check1), *(check1+1), *(check1+2), *(check1+3), *(check1+4), *(check1+5), *(check1+6), *(check1+7));
       printf("prv %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
           , *(check2), *(check2+1), *(check2+2), *(check2+3), *(check2+4), *(check2+5), *(check2+6), *(check2+7));
+      printf("prv %s: %f %f %f %f %f %f %f %f\n", entry_name.c_str()
+          , *(check3), *(check3+1), *(check3+2), *(check3+3), *(check3+4), *(check3+5), *(check3+6), *(check3+7));
       delete [] tmp;
     }
     return prv_size; 
