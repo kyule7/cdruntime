@@ -406,6 +406,7 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
   const Real_t z4 = z[4] ;   const Real_t z5 = z[5] ;
   const Real_t z6 = z[6] ;   const Real_t z7 = z[7] ;
   static unsigned long counter = 0;
+#if _CD
   if(myRank == 0 && 0) {
     bool print_detail = false;
     if(Domain::restarted) { 
@@ -415,14 +416,15 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
     }
     if(print_detail) {
       if(Domain::restarted) {
-        printf("\n[%d]..before..restared......\n", myRank);
+        LULESH_PRINT("\n[%d]..before..restared......\n", myRank);
       }
-      printf("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
-      printf("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
-      printf("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
+      LULESH_PRINT("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
+      LULESH_PRINT("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
+      LULESH_PRINT("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
     }
     
   }
+#endif
   Real_t fjxxi, fjxet, fjxze;
   Real_t fjyxi, fjyet, fjyze;
   Real_t fjzxi, fjzet, fjzze;
@@ -489,14 +491,15 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
   /* calculate jacobian determinant (volume) */
   Real_t vol = Real_t(8.) * ( fjxet * cjxet + fjyet * cjyet + fjzet * cjzet);
   *volume = vol;
+#if _CD
   if(vol < 0) {
     if(Domain::restarted && myRank == 0) {
-        printf("\n[%d]....restarted......\n", myRank);
-        printf("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
-        printf("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
-        printf("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
+        LULESH_PRINT("\n[%d]....restarted......\n", myRank);
+        LULESH_PRINT("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
+        LULESH_PRINT("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
+        LULESH_PRINT("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
         const Index_t base = Index_t(8)*pDomain->prv_idx; 
-        printf("[%d] CHECK nodelist size:%zu/%zu (%d), %d %d %d %d %d %d %d %d\n", 
+        LULESH_PRINT("[%d] CHECK nodelist size:%zu/%zu (%d), %d %d %d %d %d %d %d %d\n", 
                 myRank, pDomain->m_nodelist.size(), pDomain->m_nodelist.capacity(), pDomain->numElem(),
                 pDomain->m_nodelist[base],
                 pDomain->m_nodelist[base+1],
@@ -507,12 +510,13 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
                 pDomain->m_nodelist[base+6],
                 pDomain->m_nodelist[base+7]
                 ); 
-        printf("volume:%le\n", vol);
+        LULESH_PRINT("volume:%le\n", vol);
         assert(0);
     }
      counter = 0;
      *volume = 0.0;
   }
+#endif
 }
 
 /******************************************/
@@ -3024,5 +3028,6 @@ char id2str[TOTAL_IDS][MAX_ID_STR_LEN] = {
     , "ID__COMMBUFSEND"
     , "ID__COMMBUFRECV"
 };
- 
+#if _CD 
 bool Domain::restarted = false;
+#endif

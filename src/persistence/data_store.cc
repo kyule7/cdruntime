@@ -585,16 +585,16 @@ void DataStore::FileRead(char *pto, uint64_t chunk_in_file, uint64_t pos)
   fh_->Read((char *)tmp, len_to_read_aligned, pos_aligned_down);
   memcpy(pto, (char *)tmp + redundant_len, chunk_in_file);
 
-  if(pos == 66432) {
-    printf("@@@@ READ: check this out!!!!##########33\n\n\n");
-    for(uint32_t i=0; i<len_to_read/(16*4); i++) {
-      for(uint32_t j=0; j<16; j++) {
-        printf("%5u ", *((int *)tmp + i*16 + j));
-      }
-      printf("\n");
-    } 
-    printf("@@@@ READ: check this out!!!!##########33\n\n\n");
-  }
+//  if(pos == 66432) {
+//    printf("@@@@ READ: check this out!!!!##########33\n\n\n");
+//    for(uint32_t i=0; i<len_to_read/(16*4); i++) {
+//      for(uint32_t j=0; j<16; j++) {
+//        printf("%5u ", *((int *)tmp + i*16 + j));
+//      }
+//      printf("\n");
+//    } 
+//    printf("@@@@ READ: check this out!!!!##########33\n\n\n");
+//  }
   free(tmp);
 #endif
 

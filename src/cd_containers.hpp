@@ -75,19 +75,19 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     std::string entry_name(entry_str);
     CD_VECTOR_PRINT("CDVector Preserve elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
     if(myTaskID == 0) {
-    printf("CDVector [%s] Preserve elemsize:%zu, size:%zu cap:%zu\n", entry_name.c_str(), sizeof(T), this->size(), this->capacity()); 
+    CD_VECTOR_PRINT("CDVector [%s] Preserve elemsize:%zu, size:%zu cap:%zu\n", entry_name.c_str(), sizeof(T), this->size(), this->capacity()); 
     }
     id_ = GetCDEntryID(entry_name);
     //CheckID(entry_name); id_ = str2id[entry_name];
-//    printf("id:%lx\n", id_);
+//    CD_VECTOR_PRINT("id:%lx\n", id_);
     char *ptr = reinterpret_cast<char *>(this->data());
     packer::CDEntry entry(id_, prv_size, 0, ptr);
     uint64_t table_offset = packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
     if(myTaskID == 0 && (entry_name == "X" || entry_name == "Y"|| entry_name == "Z")) {
-      printf("Preserve %s at table:%lu, data:%lu, size:%lu\n", entry_name.c_str(), table_offset, entry.offset(), entry.size());
+      CD_VECTOR_PRINT("Preserve %s at table:%lu, data:%lu, size:%lu\n", entry_name.c_str(), table_offset, entry.offset(), entry.size());
       char *tmp = new char[entry.size()]();
       uint32_t *check4 = (uint32_t *)tmp;
-      printf("chk %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
+      CD_VECTOR_PRINT("chk %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
           , *(check4), *(check4+1), *(check4+2), *(check4+3), *(check4+4), *(check4+5), *(check4+6), *(check4+7));
 
       packer.data_->GetData(tmp, entry.size(), entry.offset());
@@ -99,13 +99,13 @@ class CDVector : public std::vector<T>, public PackerSerializable {
 
       
 
-      printf("ori %s: %f %f %f %f %f %f %f %f\n", entry_name.c_str()
+      CD_VECTOR_PRINT("ori %s: %f %f %f %f %f %f %f %f\n", entry_name.c_str()
           , *(check0), *(check0+1), *(check0+2), *(check0+3), *(check0+4), *(check0+5), *(check0+6), *(check0+7));
-      printf("ori %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
+      CD_VECTOR_PRINT("ori %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
           , *(check1), *(check1+1), *(check1+2), *(check1+3), *(check1+4), *(check1+5), *(check1+6), *(check1+7));
-      printf("prv %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
+      CD_VECTOR_PRINT("prv %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
           , *(check2), *(check2+1), *(check2+2), *(check2+3), *(check2+4), *(check2+5), *(check2+6), *(check2+7));
-      printf("prv %s: %f %f %f %f %f %f %f %f\n", entry_name.c_str()
+      CD_VECTOR_PRINT("prv %s: %f %f %f %f %f %f %f %f\n", entry_name.c_str()
           , *(check3), *(check3+1), *(check3+2), *(check3+3), *(check3+4), *(check3+5), *(check3+6), *(check3+7));
       delete [] tmp;
     }
@@ -133,7 +133,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     }
 
     if(myTaskID == 0 && (entry_name == "X" || entry_name == "Y"|| entry_name == "Z")) {
-      printf("Restore %s at data:%lu, size:%lu\n", entry_name.c_str(), pentry->offset(), pentry->size());
+      CD_VECTOR_PRINT("Restore %s at data:%lu, size:%lu\n", entry_name.c_str(), pentry->offset(), pentry->size());
     }
     }
     PackerEpilogue();
@@ -237,7 +237,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     }
     if(myTaskID == 0) {
     
-      printf("%s id:%s, %lu\n", __func__, str.c_str(), str2id[str]);
+      CD_VECTOR_PRINT("%s id:%s, %lu\n", __func__, str.c_str(), str2id[str]);
     }
   }
 

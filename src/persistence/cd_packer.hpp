@@ -28,12 +28,12 @@ class CDPacker : public Packer<CDEntry> {
 //      CDEntry *ret = pentry;
       int found_result = -1;      
       if(pentry == NULL) {
-        printf("[%d] not found %lu\n", packerTaskID, tag);
+        CD_PACKER_PRINT("[%d] not found %lu\n", packerTaskID, tag);
         //return NULL;
         found_result = 0;
       } else if(pentry->src_ == NULL) {
         if(packerTaskID == 0) {
-        printf("[%d] previously null %lu utr:%p, size:%lu, len:%lu, offset:%lx\n", 
+        CD_PACKER_PRINT("[%d] previously null %lu utr:%p, size:%lu, len:%lu, offset:%lx\n", 
             packerTaskID, tag, pentry->src_, pentry->size(), len, pentry->offset_);
         }
         // when preserved, data was null.
@@ -41,18 +41,18 @@ class CDPacker : public Packer<CDEntry> {
         found_result = 1;
       } else if(pentry->size() == 0) {
         if(packerTaskID == 0) {
-        printf("[%d] %lu dst:%p previously size:%lu, requested len:%lu\n", 
+        CD_PACKER_PRINT("[%d] %lu dst:%p previously size:%lu, requested len:%lu\n", 
             packerTaskID, tag, pentry->src_, pentry->size(), len);
         }
 //        return pentry;
         found_result = 2;
       } else if(len > pentry->size()) {
-        printf("[%d] %lu dst:%p reallocated from size:%lu to %lu (requested len)\n", 
+        CD_PACKER_PRINT("[%d] %lu dst:%p reallocated from size:%lu to %lu (requested len)\n", 
             packerTaskID, tag, pentry->src_, pentry->size(), len);
         found_result = 3;
       } else {
         if(packerTaskID == 0) {
-        printf("[Restore! %d] Preserved %lu ptr:%p, size:%lu, len:%lu, offset:%lx\n", 
+        CD_PACKER_PRINT("[Restore! %d] Preserved %lu ptr:%p, size:%lu, len:%lu, offset:%lx\n", 
             packerTaskID, tag, pentry->src_, pentry->size(), len, pentry->offset_);
         }
         found_result = 4;
@@ -61,7 +61,7 @@ class CDPacker : public Packer<CDEntry> {
         case 0:
         case 1:
         case 2: {
-//          printf("return:%d\n", found_result);
+//          CD_PACKER_PRINT("return:%d\n", found_result);
           return pentry;
                 }
         case 3:

@@ -24,11 +24,17 @@
 #include <math.h>
 // Kyushick
 //include <vector>
-#include "cd_containers.hpp"
+#define LULESH_PRINT(...)
 #include "cd_def.h"
+#if _CD
+#include "cd_containers.hpp"
 #include "cd.h"
 using namespace cd;
 
+#else
+#include <assert.h>
+#include <vector>
+#endif
 //**************************************************
 // Allow flexibility for arithmetic representations 
 //**************************************************
@@ -38,7 +44,7 @@ using namespace cd;
 
 // Precision specification
 typedef float        real4 ;
-typedef float       real8 ;
+typedef double       real8 ;
 typedef long double  real10 ;  // 10 bytes on x86
 
 typedef int    Index_t ; // array subscript and loop index
@@ -53,15 +59,15 @@ extern Index_t comBufSize;
 enum { VolumeError = -1, QStopError = -2 } ;
 
 inline real4  SQRT(real4  arg) { return sqrtf(arg) ; }
-//inline real8  SQRT(real8  arg) { return sqrt(arg) ; }
+inline real8  SQRT(real8  arg) { return sqrt(arg) ; }
 inline real10 SQRT(real10 arg) { return sqrtl(arg) ; }
 
 inline real4  CBRT(real4  arg) { return cbrtf(arg) ; }
-//inline real8  CBRT(real8  arg) { return cbrt(arg) ; }
+inline real8  CBRT(real8  arg) { return cbrt(arg) ; }
 inline real10 CBRT(real10 arg) { return cbrtl(arg) ; }
 
 inline real4  FABS(real4  arg) { return fabsf(arg) ; }
-//inline real8  FABS(real8  arg) { return fabs(arg) ; }
+inline real8  FABS(real8  arg) { return fabs(arg) ; }
 inline real10 FABS(real10 arg) { return fabsl(arg) ; }
 
 
@@ -225,9 +231,11 @@ struct Internal {
    }
 };
 
-
+#if _CD
 class Domain : public Internal, public PackerSerializable {
-
+#else
+class Domain : public Internal {
+#endif
    public:
 
    // Constructor
@@ -379,13 +387,14 @@ class Domain : public Internal, public PackerSerializable {
    Index_t&  regElemlist(Int_t r, Index_t idx) { return m_regElemlist[r][idx] ; }
 
    Index_t prv_idx;
+#if _CD
    Index_t*  nodelist(Index_t idx)    { 
      static uint64_t count = 0;
      prv_idx = idx;
      if(count++ % 100000 == 0) {
      const Index_t base = Index_t(8)*idx;
 #if 0 
-     printf("[%d] nodelist size:%zu/%zu (%d), %d %d %d %d %d %d %d %d\n", myRank, m_nodelist.size(), m_nodelist.capacity(), numElem(),
+     LULESH_PRINT("[%d] nodelist size:%zu/%zu (%d), %d %d %d %d %d %d %d %d\n", myRank, m_nodelist.size(), m_nodelist.capacity(), numElem(),
                                                             m_nodelist[base],
                                                             m_nodelist[base+1],
                                                             m_nodelist[base+2],
@@ -399,6 +408,11 @@ class Domain : public Internal, public PackerSerializable {
      }
      return &m_nodelist[Index_t(8)*idx] ; 
    }
+#else
+   Index_t*  nodelist(Index_t idx)    { 
+     return &m_nodelist[Index_t(8)*idx] ; 
+   }
+#endif
    Index_t*  Mynodelist()    { 
       return &m_nodelist[Index_t(8)*prv_idx] ; 
    }
@@ -552,6 +566,7 @@ class Domain : public Internal, public PackerSerializable {
    // IMPLEMENTATION
    //
   public:
+#if _CD
    /* Node-centered */
    CDVector<Real_t> m_x ;  /* coordinates */
    CDVector<Real_t> m_y ;
@@ -627,7 +642,84 @@ class Domain : public Internal, public PackerSerializable {
    CDVector<Real_t> m_ss ;      /* "sound speed" */
 
    CDVector<Real_t> m_elemMass ;  /* mass */
+#else
+   /* Node-centered */
+   std::vector<Real_t> m_x ;  /* coordinates */
+   std::vector<Real_t> m_y ;
+   std::vector<Real_t> m_z ;
 
+   std::vector<Real_t> m_xd ; /* velocities */
+   std::vector<Real_t> m_yd ;
+   std::vector<Real_t> m_zd ;
+
+   std::vector<Real_t> m_xdd ; /* accelerations */
+   std::vector<Real_t> m_ydd ;
+   std::vector<Real_t> m_zdd ;
+
+   std::vector<Real_t> m_fx ;  /* forces */
+   std::vector<Real_t> m_fy ;
+   std::vector<Real_t> m_fz ;
+
+   std::vector<Real_t> m_nodalMass ;  /* mass */
+
+   std::vector<Index_t> m_symmX ;  /* symmetry plane nodesets */
+   std::vector<Index_t> m_symmY ;
+   std::vector<Index_t> m_symmZ ;
+
+   // Element-centered
+
+/**
+ * Kyushick: defined in base class 
+   // Region information
+   Int_t    m_numReg ;
+   Int_t    m_cost; //imbalance cost
+   Index_t *m_regElemSize ;   // Size of region sets
+   Index_t *m_regNumList ;    // Region number per domain element
+   Index_t **m_regElemlist ;  // region indexset 
+*/
+   std::vector<Index_t>  m_nodelist ;     /* elemToNode connectivity */
+
+   std::vector<Index_t>  m_lxim ;  /* element connectivity across each face */
+   std::vector<Index_t>  m_lxip ;
+   std::vector<Index_t>  m_letam ;
+   std::vector<Index_t>  m_letap ;
+   std::vector<Index_t>  m_lzetam ;
+   std::vector<Index_t>  m_lzetap ;
+
+   std::vector<Int_t>    m_elemBC ;  /* symmetry/free-surface flags for each elem face */
+
+   std::vector<Real_t> m_dxx ;  /* principal strains -- temporary */
+   std::vector<Real_t> m_dyy ;
+   std::vector<Real_t> m_dzz ;
+
+   std::vector<Real_t> m_delv_xi ;    /* velocity gradient -- temporary */
+   std::vector<Real_t> m_delv_eta ;
+   std::vector<Real_t> m_delv_zeta ;
+
+   std::vector<Real_t> m_delx_xi ;    /* coordinate gradient -- temporary */
+   std::vector<Real_t> m_delx_eta ;
+   std::vector<Real_t> m_delx_zeta ;
+   
+   std::vector<Real_t> m_e ;   /* energy */
+
+   std::vector<Real_t> m_p ;   /* pressure */
+   std::vector<Real_t> m_q ;   /* q */
+   std::vector<Real_t> m_ql ;  /* linear term for q */
+   std::vector<Real_t> m_qq ;  /* quadratic term for q */
+
+   std::vector<Real_t> m_v ;     /* relative volume */
+   std::vector<Real_t> m_volo ;  /* reference volume */
+   std::vector<Real_t> m_vnew ;  /* new relative volume -- temporary */
+   std::vector<Real_t> m_delv ;  /* m_vnew - m_v */
+   std::vector<Real_t> m_vdov ;  /* volume derivative over volume */
+
+   std::vector<Real_t> m_arealg ;  /* characteristic length of an element */
+   
+   std::vector<Real_t> m_ss ;      /* "sound speed" */
+
+   std::vector<Real_t> m_elemMass ;  /* mass */
+
+#endif
    // Cutoffs (treat as constants)
    const Real_t  m_e_cut ;             // energy tolerance 
    const Real_t  m_p_cut ;             // pressure tolerance 
@@ -695,7 +787,7 @@ class Domain : public Internal, public PackerSerializable {
    Index_t m_colMin, m_colMax;
    Index_t m_planeMin, m_planeMax ;
 */
-
+#if _CD
 // Kyushick
    uint64_t serdes_vec;
    Internal preserved;
@@ -706,8 +798,8 @@ class Domain : public Internal, public PackerSerializable {
    Index_t prv_prv_idx;   
    void PrintDebugDetailInternal(int tg_idx) {
      const Index_t base = Index_t(8)*tg_idx; 
-     printf("prv idx:%d == %d\n", prv_idx, tg_idx);
-     printf("[Rank:%d] PrintDetail nodelist size:%zu/%zu (numElem:%d, base:%d)\n"
+     LULESH_PRINT("prv idx:%d == %d\n", prv_idx, tg_idx);
+     LULESH_PRINT("[Rank:%d] PrintDetail nodelist size:%zu/%zu (numElem:%d, base:%d)\n"
             "%6x %6x %6x %6x %6x %6x %6x %6x\n", 
              myRank, m_nodelist.size(), m_nodelist.capacity(), numElem(), base,
              m_nodelist[base],
@@ -728,7 +820,7 @@ class Domain : public Internal, public PackerSerializable {
      Index_t nd6i = m_nodelist[base+6];
      Index_t nd7i = m_nodelist[base+7];
     
-     printf("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"
+     LULESH_PRINT("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"
             "y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"
             "z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"
            , x(nd0i)
@@ -757,8 +849,8 @@ class Domain : public Internal, public PackerSerializable {
            , z(nd7i)
            );
      for(int stride = 0; stride <= 16; stride += 8) {
-       printf("-- stride %d -------------------------------------\n", stride);
-       printf("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"
+       LULESH_PRINT("-- stride %d -------------------------------------\n", stride);
+       LULESH_PRINT("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"
               "y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"
               "z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"
              , x(0 + stride)
@@ -795,23 +887,23 @@ class Domain : public Internal, public PackerSerializable {
    void PrintDebugDetail(bool do_prv=false) {
      static int counter = 0;
      if(myRank == 0) {
-       printf("======== [%s] Check %d %d ===================\n", (do_prv)? "Preserve":"Restore", m_cycle, counter++);
+       LULESH_PRINT("======== [%s] Check %d %d ===================\n", (do_prv)? "Preserve":"Restore", m_cycle, counter++);
        if(do_prv) {
          prv_prv_idx = prv_idx;
          PrintDebugDetailInternal(prv_idx);
        } else {
          if(prv_prv_idx != prv_idx)  {
-           printf("Same when PreserveObject\n");
+           LULESH_PRINT("Same when PreserveObject\n");
            PrintDebugDetailInternal(prv_prv_idx);
            PrintDebugDetailInternal(prv_idx);   
          } else {
-           printf("Same when PreserveObject\n");
+           LULESH_PRINT("Same when PreserveObject\n");
            PrintDebugDetailInternal(prv_idx);   
          }
 
        }
      } 
-     printf("=====================================\n\n");
+     LULESH_PRINT("=====================================\n\n");
    }
    void *Serialize(uint64_t &len_in_bytes) { return NULL; }
    void Deserialize(void *object) {}
@@ -828,13 +920,13 @@ class Domain : public Internal, public PackerSerializable {
       while(serdes_vec  != 0) {
          uint64_t id = vec2id(target_vec);
          if(serdes_vec & 0x1) {
-//            printf("target: %32s (%32lx)\n", id2str[id], target_vec);
+//            LULESH_PRINT("target: %32s (%32lx)\n", id2str[id], target_vec);
             prv_size += SelectPreserve(id, packer);
          }
          target_vec <<= 1;
          serdes_vec >>= 1;
       } // while ends
-//      printf("------------ Done -----------\n");
+//      LULESH_PRINT("------------ Done -----------\n");
      
       // Update Magic 
       uint64_t preserved_size_only   = packer.data_->used();
@@ -853,7 +945,7 @@ class Domain : public Internal, public PackerSerializable {
       magic.reserved_     = 0x01234567;
       packer.data_->FlushMagic(&magic);
 
-      printf("====================\npreservation size: %lu == %lu ~= %lu, (w/ table: %lu)\n======================\n", prv_size, preserved_size_only, preserved_size, total_size_);
+      LULESH_PRINT("====================\npreservation size: %lu == %lu ~= %lu, (w/ table: %lu)\n======================\n", prv_size, preserved_size_only, preserved_size, total_size_);
       PrintDebugDetail(true);
 
 
@@ -867,13 +959,13 @@ class Domain : public Internal, public PackerSerializable {
       while(serdes_vec  != 0) {
          uint64_t id = vec2id(target_vec);
          if(serdes_vec & 0x1) {
-//            printf("target: %32s (%32lx)\n", id2str[id], target_vec);
+//            LULESH_PRINT("target: %32s (%32lx)\n", id2str[id], target_vec);
             SelectRestore(id, packer);
          }
          target_vec <<= 1;
          serdes_vec >>= 1;
       } // while ends
-//      printf("------------ Done -----------\n");
+//      LULESH_PRINT("------------ Done -----------\n");
       PrintDebugDetail(false);
       return 0;
    }
@@ -885,7 +977,7 @@ class Domain : public Internal, public PackerSerializable {
    uint64_t SelectPreserve(uint64_t id, packer::CDPacker &packer) {
       restarted = false;
       if(myRank == 0) 
-         printf("%s %s\n", __func__, id2str[id]);
+         LULESH_PRINT("%s %s\n", __func__, id2str[id]);
       uint64_t prv_size = 0;
       switch(id) {
          case ID__X         : prv_size = m_x.PreserveObject(packer,        "X"        ); break;
@@ -904,7 +996,7 @@ class Domain : public Internal, public PackerSerializable {
          case ID__SYMMX     : prv_size = m_symmX.PreserveObject(packer,    "SYMMX"    ); break;  
          case ID__SYMMY     : prv_size = m_symmY.PreserveObject(packer,    "SYMMY"    ); break;
          case ID__SYMMZ     : prv_size = m_symmZ.PreserveObject(packer,    "SYMMZ"    ); break;
-         case ID__NODELIST  : prv_size = m_nodelist.PreserveObject(packer, "NODELIST" ); printf("[%d] Nodelist preserved %zu/%zu\n", myRank, m_nodelist.size(), m_nodelist.capacity()); break;
+         case ID__NODELIST  : prv_size = m_nodelist.PreserveObject(packer, "NODELIST" ); LULESH_PRINT("[%d] Nodelist preserved %zu/%zu\n", myRank, m_nodelist.size(), m_nodelist.capacity()); break;
          case ID__LXIM      : prv_size = m_lxim.PreserveObject(packer,     "LXIM"     ); break;  
          case ID__LXIP      : prv_size = m_lxip.PreserveObject(packer,     "LXIP"     ); break;
          case ID__LETAM     : prv_size = m_letam.PreserveObject(packer,    "LETAM"    ); break;
@@ -954,7 +1046,7 @@ class Domain : public Internal, public PackerSerializable {
          case ID__COMMBUFRECV : 
                      packer.Add((char *)commDataRecv, packer::CDEntry(GetCDEntryID("COMMBUFRECV"), comBufSize * sizeof(Real_t), 0, (char *)commDataRecv)); prv_size = comBufSize * sizeof(Real_t);
                      break;
-         default: printf("Error: Unsupported ID:%lu\n", id);
+         default: LULESH_PRINT("Error: Unsupported ID:%lu\n", id);
                      assert(0);
       }
       return prv_size;
@@ -963,7 +1055,7 @@ class Domain : public Internal, public PackerSerializable {
    void SelectRestore(uint64_t id, packer::CDPacker &packer) {
       restarted = true;
       if(myRank == 0) 
-         printf("%s %s\n", __func__, id2str[id]);
+         LULESH_PRINT("%s %s\n", __func__, id2str[id]);
       switch(id) {
          case ID__X         : m_x.Deserialize(packer,        "X"        ); break;
          case ID__Y         : m_y.Deserialize(packer,        "Y"        ); break;
@@ -983,7 +1075,7 @@ class Domain : public Internal, public PackerSerializable {
          case ID__SYMMZ     : m_symmZ.Deserialize(packer,    "SYMMZ"    ); break;
          case ID__NODELIST  : m_nodelist.Deserialize(packer, "NODELIST" ); 
                               if(myRank == 0) {
-                                printf("[%d] Nodelist restored, %zu/%zu\n", myRank, m_nodelist.size(), m_nodelist.capacity());
+                                LULESH_PRINT("[%d] Nodelist restored, %zu/%zu\n", myRank, m_nodelist.size(), m_nodelist.capacity());
                               }
                               break;
          case ID__LXIM      : m_lxim.Deserialize(packer,     "LXIM"     ); break;  
@@ -1035,11 +1127,11 @@ class Domain : public Internal, public PackerSerializable {
          case ID__COMMBUFRECV : 
                      packer.Restore(GetCDEntryID("COMMBUFRECV"));
                      break;
-         default: printf("Error: Unsupported ID:%lu\n", id);
+         default: LULESH_PRINT("Error: Unsupported ID:%lu\n", id);
                   assert(0);
       }
    }
-
+#endif // _CD ends
 } ;
 
 typedef Real_t &(Domain::* Domain_member )(Index_t) ;
