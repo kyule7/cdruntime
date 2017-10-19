@@ -22,7 +22,7 @@ static void computeVcm(SimFlat* s, real_t vcm[3]);
 /// initial atom positions and momenta.
 Atoms* initAtoms(LinkCell* boxes)
 {
-   Atoms* atoms = comdMalloc(sizeof(Atoms));
+   Atoms* atoms = (Atoms*)comdMalloc(sizeof(Atoms));
 
    int maxTotalAtoms = MAXATOMS*boxes->nTotalBoxes;
 
@@ -47,6 +47,37 @@ Atoms* initAtoms(LinkCell* boxes)
    }
 
    return atoms;
+}
+
+void serprvAtoms(Atoms* atoms, int maxTotalAtoms)
+{
+  cd_handle_t *cdh = getleafcd();
+
+  cd_preserve(cdh, &(atoms->nLocal), sizeof(int), kCopy, "Atoms_nLocal", NULL);
+  cd_preserve(cdh, &(atoms->nGlobal), sizeof(int), kCopy, "Atoms_nGlobal", NULL);
+  
+  cd_preserve(cdh, atoms->gid, maxTotalAtoms*sizeof(int), kCopy, "Atoms_gid", NULL);
+  cd_preserve(cdh, atoms->iSpecies, maxTotalAtoms*sizeof(int), kCopy, "Atoms_iSpecies", NULL);
+
+  cd_preserve(cdh, atoms->r, maxTotalAtoms*sizeof(real3), kCopy, "Atoms_r", NULL);
+  cd_preserve(cdh, atoms->p, maxTotalAtoms*sizeof(real3), kCopy, "Atoms_p", NULL);
+  cd_preserve(cdh, atoms->f, maxTotalAtoms*sizeof(real3), kCopy, "Atoms_f", NULL);
+  cd_preserve(cdh, atoms->U, maxTotalAtoms*sizeof(real_t), kCopy, "Atoms_U", NULL);
+  /*
+  cdh->cd_preserve(atoms, sizeof(Atoms), kCopy, "Atoms");
+  cdh->cd_preserve(gid, , kCopy, "Atoms");
+
+  Atoms* atoms = (Atoms*)comdMalloc(sizeof(Atoms));
+
+  int maxTotalAtoms = MAXATOMS*boxes->nTotalBoxes;
+
+  cdh->cd_preserve(atoms->gid, maxTotalAtoms*sizeof(int), kCopy, "AtomsGid");
+  cdh->cd_preserve(atoms->iSpecies, maxTotalAtoms*sizeof(int), kCopy, "AtomsSpecies");
+  cdh->cd_preserve(atoms->r, maxTotalAtoms*sizeof(real3), kCopy, "AtomsR");
+  cdh->cd_preserve(atoms->p, maxTotalAtoms*sizeof(real3), kCopy, "AtomsP");
+  cdh->cd_preserve(atoms->f, maxTotalAtoms*sizeof(real3), kCopy, "AtomsF");
+  cdh->cd_preserve(atoms->U, maxTotalAtoms*sizeof(real_t), kCopy, "AtomsU");
+  */
 }
 
 void destroyAtoms(Atoms *atoms)

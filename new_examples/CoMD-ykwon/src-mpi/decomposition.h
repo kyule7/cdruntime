@@ -29,5 +29,6 @@ struct DomainSt* initDecomposition(int xproc, int yproc, int zproc,
 
 /// Find the MPI rank of a neighbor domain from a relative coordinate.
 int processorNum(Domain* domain, int dix, int diy, int dik);
+void serprvDomain(Domain* domain); 
 
 #endif

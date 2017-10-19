@@ -11,6 +11,8 @@
 #include "memUtils.h"
 #include "parallel.h"
 
+#include "cd.h"
+
 /// \param [in] xproc x-size of domain decomposition grid.
 /// \param [in] yproc y-size of domain decomposition grid.
 /// \param [in] zproc z-size of domain decomposition grid.
@@ -19,7 +21,7 @@ Domain* initDecomposition(int xproc, int yproc, int zproc, real3 globalExtent)
 {
    assert( xproc * yproc * zproc == getNRanks());
 
-   Domain* dd = comdMalloc(sizeof(Domain));
+   Domain* dd = (Domain *)comdMalloc(sizeof(Domain));
    dd->procGrid[0] = xproc;
    dd->procGrid[1] = yproc;
    dd->procGrid[2] = zproc;
@@ -47,6 +49,22 @@ Domain* initDecomposition(int xproc, int yproc, int zproc, real3 globalExtent)
    }
 
    return dd;
+}
+
+void serprvDomain(Domain* domain)
+{
+  cd_handle_t *cdh = getleafcd();
+  
+  cd_preserve(cdh, &(domain->procGrid), 3*sizeof(int)/*real3*/, kCopy, "Domain_procGrid", NULL);
+  cd_preserve(cdh, &(domain->procCoord), 3*sizeof(int)/*real3*/, kCopy, "Domain_procCoord", NULL);
+
+  cd_preserve(cdh, &(domain->globalMin), 3*sizeof(real_t)/*real3*/, kCopy, "Domain_globalMin", NULL);
+  cd_preserve(cdh, &(domain->globalMax), 3*sizeof(real_t)/*real3*/, kCopy, "Domain_globalMax", NULL);
+  cd_preserve(cdh, &(domain->globalExtent), 3*sizeof(real_t)/*real3*/, kCopy, "Domain_globalExtent", NULL);
+
+  cd_preserve(cdh, &(domain->localMin), 3*sizeof(real_t)/*real3*/, kCopy, "Domain_localMin", NULL);
+  cd_preserve(cdh, &(domain->localMax), 3*sizeof(real_t)/*real3*/, kCopy, "Domain_localMax", NULL);
+  cd_preserve(cdh, &(domain->localExtent), 3*sizeof(real_t)/*real3*/, kCopy, "Domain_localExtent", NULL);
 }
 
 /// \details

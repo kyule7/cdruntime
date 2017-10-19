@@ -5,7 +5,7 @@
 #define __INIT_ATOMS_H
 
 #include "mytype.h"
-
+#include "cd.h"
 struct SimFlatSt;
 struct LinkCellSt;
 
@@ -28,6 +28,8 @@ typedef struct AtomsSt
 
 /// Allocates memory to store atom data.
 Atoms* initAtoms(struct LinkCellSt* boxes);
+void serprvAtoms(Atoms* atoms, int maxTotalAtoms);
+
 void destroyAtoms(struct AtomsSt* atoms);
 
 void createFccLattice(int nx, int ny, int nz, real_t lat, struct SimFlatSt* s);

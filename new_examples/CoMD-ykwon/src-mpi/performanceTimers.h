@@ -2,6 +2,7 @@
 /// Performance timer functions.
 #ifndef __PERFORMANCE_TIMERS_H_
 #define __PERFORMANCE_TIMERS_H_
+#define __STDC_FORMAT_MACROS
 
 #include <stdio.h>
 

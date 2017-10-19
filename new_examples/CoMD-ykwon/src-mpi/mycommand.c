@@ -9,6 +9,7 @@
 #include "cmdLineParser.h"
 #include "parallel.h"
 #include "mytype.h"
+#include "cd.h"
 
 /// \page pg_running_comd Running CoMD
 ///
@@ -185,6 +186,13 @@
 /// \param [in] argv the command line arguments array
 Command parseCommandLine(int argc, char** argv)
 {
+//#if _CD
+//  CDHandle *cdh = GetCurrentCD()->Create("parseCommandLine", kStrict, 0x1);
+//  CD_Begin(cdh, "true", "parseCommandLine");
+//  cdh->Preserve(&argc, sizeof(argc), kCopy, "argc");
+//  cdh->Preserve(argv, sizeof(*argv), kCopy, "argv");
+//#endif
+
    Command cmd;
 
    memset(cmd.potDir, 0, 1024);
@@ -245,6 +253,12 @@ Command parseCommandLine(int argc, char** argv)
       exit(2);
    }
    freeArgs();
+
+//#if _CD
+//   cdh->Detect();
+//   cdh->Complete();
+//   cdh->Destroy();
+//#endif
 
    return cmd;
 }

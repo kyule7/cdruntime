@@ -30,6 +30,7 @@ typedef struct LinkCellSt
 } LinkCell;
 
 LinkCell* initLinkCells(const struct DomainSt* domain, real_t cutoff);
+void serprvLinkCell(LinkCell* ll);
 void destroyLinkCells(LinkCell** boxes);
 
 int getNeighborBoxes(LinkCell* boxes, int iBox, int* nbrBoxes);

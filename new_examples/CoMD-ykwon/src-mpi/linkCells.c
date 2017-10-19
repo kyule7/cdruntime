@@ -83,7 +83,7 @@ static void getTuple(LinkCell* boxes, int iBox, int* ixp, int* iyp, int* izp);
 LinkCell* initLinkCells(const Domain* domain, real_t cutoff)
 {
    assert(domain);
-   LinkCell* ll = comdMalloc(sizeof(LinkCell));
+   LinkCell* ll = (LinkCell*)comdMalloc(sizeof(LinkCell));
 
    for (int i = 0; i < 3; i++)
    {
@@ -102,7 +102,7 @@ LinkCell* initLinkCells(const Domain* domain, real_t cutoff)
 
    ll->nTotalBoxes = ll->nLocalBoxes + ll->nHaloBoxes;
    
-   ll->nAtoms = comdMalloc(ll->nTotalBoxes*sizeof(int));
+   ll->nAtoms = (int*)comdMalloc(ll->nTotalBoxes*sizeof(int));
    for (int iBox=0; iBox<ll->nTotalBoxes; ++iBox)
       ll->nAtoms[iBox] = 0;
 
@@ -110,6 +110,22 @@ LinkCell* initLinkCells(const Domain* domain, real_t cutoff)
    return ll;
 }
 
+void serprvLinkCell(LinkCell* ll)
+{
+  cd_handle_t *cdh = getleafcd();
+  
+  cd_preserve(cdh, &(ll->gridSize), 3*sizeof(int), kCopy, "LinkCell_gridSize", NULL);
+  cd_preserve(cdh, &(ll->nLocalBoxes), sizeof(int), kCopy, "LinkCell_nLocalBoxes", NULL);
+  cd_preserve(cdh, &(ll->nHaloBoxes), sizeof(int), kCopy, "LinkCell_nHaloBoxes", NULL);
+  cd_preserve(cdh, &(ll->nTotalBoxes), sizeof(int), kCopy, "LinkCell_nTotalBoxes", NULL);
+
+  cd_preserve(cdh, &(ll->localMin), 3*sizeof(int)/*real3*/, kCopy, "LinkCell_localMin", NULL);
+  cd_preserve(cdh, &(ll->localMax), 3*sizeof(int)/*real3*/, kCopy, "LinkCell_localMax", NULL);
+  cd_preserve(cdh, &(ll->boxSize), 3*sizeof(int)/*real3*/, kCopy, "LinkCell_boxSize", NULL);
+  cd_preserve(cdh, &(ll->invBoxSize), 3*sizeof(int)/*real3*/, kCopy, "LinkCell_invBoxSize", NULL);
+
+  cd_preserve(cdh, ll->nAtoms, ll->nTotalBoxes*sizeof(int), kCopy, "LinkCell_nAtoms", NULL);
+}
 void destroyLinkCells(LinkCell** boxes)
 {
    if (! boxes) return;
@@ -153,6 +169,7 @@ int getNeighborBoxes(LinkCell* boxes, int iBox, int* nbrBoxes)
 /// \param [in] px    The x-component of the atom's momentum.
 /// \param [in] py    The y-component of the atom's momentum.
 /// \param [in] pz    The z-component of the atom's momentum.
+// FIXME : haloExchange
 void putAtomInBox(LinkCell* boxes, Atoms* atoms,
                   const int gid, const int iType,
                   const real_t x,  const real_t y,  const real_t z,

@@ -5,10 +5,8 @@ SHELL = /bin/bash
 ### CoMD can be built in either double or single precision and with or
 ### without MPI.  Select desired precision and MPI here.
 
-CD_ENABLED = 1
-
 # double precision (ON/OFF)
-DOUBLE_PRECISION = ON
+DOUBLE_PRECISION = OFF
 # MPI for parallel (ON/OFF)
 DO_MPI = ON
 
@@ -17,27 +15,21 @@ DO_MPI = ON
 ### specify paths to include files that the compiler can't find on its
 ### own.  If you need any -L or -l switches to get C standard libraries
 ### (such as -lm for the math library) put them in C_LIB.
+#CC = mpicc
 CC = mpicc
 CFLAGS = -std=gnu11
-#CD_ROOT=/home1/03341/kyushick/Work/CDs/pfsFix
-CD_ROOT=../../../
-ifeq (${CD_ENABLED}, 1)
-CD_ROOT := /home1/03341/kyushick/Work/CDs/pfsFix
-CD_FLAGS := 
-CD_CFLAGS := -I$(CD_ROOT)/include -D_CD=1
-CD_LINKFLAGS := -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
-else
-CD_FLAGS := 
-CD_CFLAGS :=
-CD_LINKFLAGS :=
-endif
-
 CFLAGS += ${CD_CFLAGS} ${CD_FLAGS}
 OPTFLAGS = -g -O5
 INCLUDES = 
-C_LIB = -lm ${CD_LINKFLAGS}
+C_LIB = -lm
 
-
+### Containment Domain setting
+#CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_DEBUG=0 -fpermissive -static-libstdc++
+CD_FLAGS += -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -D_CD5=1 -D_DEBUG=0 
+CD_ROOT=${CD_PATH}
+CD_CFLAGS = -I$(CD_ROOT)/include 
+CD_LINKFLAGS = -L$(CD_ROOT)/lib -lcd -Wl,-rpath=../../../lib -L$(CD_ROOT)/src/persistence -lpacker
+#CFLAGS += ${CD_FLAGS}
 ### If you need to specify include paths, library paths, or link flags
 ### for MPI, put them here.  Put both -L and -l switches into MPI_LIB.
 MPI_LIB =
@@ -66,7 +58,7 @@ OTHER_INCLUDE =
 BIN_DIR=../bin
 
 # Check for double precision
-ifeq ($(DOUBLE_PRECISION), ON)
+ifeq ($(DOUBLE_PRECISION), OFF)
 CFLAGS += -DDOUBLE
 else
 CFLAGS += -DSINGLE
@@ -78,11 +70,11 @@ ifeq ($(DO_MPI), ON)
 CoMD_VARIANT = CoMD-mpi
 INCLUDES += ${MPI_INCLUDE}
 CFLAGS += -DDO_MPI
-LDFLAGS += ${MPI_LIB}
+LDFLAGS += ${MPI_LIB} 
 endif
 CoMD_EXE = ${BIN_DIR}/${CoMD_VARIANT}
 
-LDFLAGS += ${C_LIB} ${OTHER_LIB}
+LDFLAGS += ${C_LIB} ${OTHER_LIB} ${CD_LINKFLAGS}
 CFLAGS  += ${OPTFLAGS} ${INCLUDES} ${OTHER_INCLUDE}
 
 

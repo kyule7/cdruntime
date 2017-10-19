@@ -71,6 +71,8 @@ HaloExchange;
 /// Create a HaloExchange for atom data.
 HaloExchange* initAtomHaloExchange(struct DomainSt* domain, struct LinkCellSt* boxes);
 
+void serprvHaloExchange(HaloExchange* hh);
+
 /// Create a HaloExchange for force data.
 HaloExchange* initForceHaloExchange(struct DomainSt* domain, struct LinkCellSt* boxes);
 

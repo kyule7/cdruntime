@@ -102,42 +102,42 @@
 
 #define MAX(A,B) ((A) > (B) ? (A) : (B))
 
-// kyushick: moved to CoMDType.h
-// /// Handles interpolation of tabular data.
-// ///
-// /// \see initInterpolationObject
-// /// \see interpolate
-// typedef struct InterpolationObjectSt 
-// {
-//    int n;          //!< the number of values in the table
-//    real_t x0;      //!< the starting ordinate range
-//    real_t invDx;   //!< the inverse of the table spacing
-//    real_t* values; //!< the abscissa values
-// } InterpolationObject;
-// /// Derived struct for an EAM potential.
-// /// Uses table lookups for function evaluation.
-// /// Polymorphic with BasePotential.
-// /// \see BasePotential
-// typedef struct EamPotentialSt 
-// {
-//    real_t cutoff;          //!< potential cutoff distance in Angstroms
-//    real_t mass;            //!< mass of atoms in intenal units
-//    real_t lat;             //!< lattice spacing (angs) of unit cell
-//    char latticeType[8];    //!< lattice type, e.g. FCC, BCC, etc.
-//    char  name[3];	   //!< element name
-//    int	 atomicNo;	   //!< atomic number  
-//    int  (*force)(SimFlat* s); //!< function pointer to force routine
-//    void (*print)(FILE* file, BasePotential* pot);
-//    void (*destroy)(BasePotential** pot); //!< destruction of the potential
-//    InterpolationObject* phi;  //!< Pair energy
-//    InterpolationObject* rho;  //!< Electron Density
-//    InterpolationObject* f;    //!< Embedding Energy
-// 
-//    real_t* rhobar;        //!< per atom storage for rhobar
-//    real_t* dfEmbed;       //!< per atom storage for derivative of Embedding
-//    HaloExchange* forceExchange;
-//    ForceExchangeData* forceExchangeData;
-// } EamPotential;
+/// Handles interpolation of tabular data.
+///
+/// \see initInterpolationObject
+/// \see interpolate
+typedef struct InterpolationObjectSt 
+{
+   int n;          //!< the number of values in the table
+   real_t x0;      //!< the starting ordinate range
+   real_t invDx;   //!< the inverse of the table spacing
+   real_t* values; //!< the abscissa values
+} InterpolationObject;
+
+/// Derived struct for an EAM potential.
+/// Uses table lookups for function evaluation.
+/// Polymorphic with BasePotential.
+/// \see BasePotential
+typedef struct EamPotentialSt 
+{
+   real_t cutoff;          //!< potential cutoff distance in Angstroms
+   real_t mass;            //!< mass of atoms in intenal units
+   real_t lat;             //!< lattice spacing (angs) of unit cell
+   char latticeType[8];    //!< lattice type, e.g. FCC, BCC, etc.
+   char  name[3];	   //!< element name
+   int	 atomicNo;	   //!< atomic number  
+   int  (*force)(SimFlat* s); //!< function pointer to force routine
+   void (*print)(FILE* file, BasePotential* pot);
+   void (*destroy)(BasePotential** pot); //!< destruction of the potential
+   InterpolationObject* phi;  //!< Pair energy
+   InterpolationObject* rho;  //!< Electron Density
+   InterpolationObject* f;    //!< Embedding Energy
+
+   real_t* rhobar;        //!< per atom storage for rhobar
+   real_t* dfEmbed;       //!< per atom storage for derivative of Embedding
+   HaloExchange* forceExchange;
+   ForceExchangeData* forceExchangeData;
+} EamPotential;
 
 // EAM functionality
 static int eamForce(SimFlat* s);
@@ -170,7 +170,7 @@ static void typeNotSupported(const char* callSite, const char* type);
 /// \param [in] type  The file format of the potential file (setfl or funcfl).
 BasePotential* initEamPot(const char* dir, const char* file, const char* type)
 {
-   EamPotential* pot = comdMalloc(sizeof(EamPotential));
+   EamPotential* pot = (EamPotential*)comdMalloc(sizeof(EamPotential));
    assert(pot);
    pot->force = eamForce;
    pot->print = eamPrint;
@@ -221,10 +221,10 @@ int eamForce(SimFlat* s)
    if (pot->forceExchange == NULL)
    {
       int maxTotalAtoms = MAXATOMS*s->boxes->nTotalBoxes;
-      pot->dfEmbed = comdMalloc(maxTotalAtoms*sizeof(real_t));
-      pot->rhobar  = comdMalloc(maxTotalAtoms*sizeof(real_t));
+      pot->dfEmbed = (real_t*)comdMalloc(maxTotalAtoms*sizeof(real_t));
+      pot->rhobar  = (real_t*)comdMalloc(maxTotalAtoms*sizeof(real_t));
       pot->forceExchange = initForceHaloExchange(s->domain, s->boxes);
-      pot->forceExchangeData = comdMalloc(sizeof(ForceExchangeData));
+      pot->forceExchangeData = (ForceExchangeData*)comdMalloc(sizeof(ForceExchangeData));
       pot->forceExchangeData->dfEmbed = pot->dfEmbed;
       pot->forceExchangeData->boxes = s->boxes;
    }
@@ -560,11 +560,11 @@ void bcastInterpolationObject(InterpolationObject** table)
    if (getMyRank() != 0)
    {
       assert(*table == NULL);
-      *table = comdMalloc(sizeof(InterpolationObject));
+      *table = (InterpolationObject*)comdMalloc(sizeof(InterpolationObject));
       (*table)->n      = buf.n;
       (*table)->x0     = buf.x0;
       (*table)->invDx  = buf.invDx;
-      (*table)->values = comdMalloc(sizeof(real_t) * (buf.n+3) );
+      (*table)->values = (real_t*)comdMalloc(sizeof(real_t) * (buf.n+3) );
       (*table)->values++;
    }
    
@@ -674,7 +674,7 @@ void eamReadSetfl(EamPotential* pot, const char* dir, const char* potName)
    
    // allocate read buffer
    int bufSize = MAX(nRho, nR);
-   real_t* buf = comdMalloc(bufSize * sizeof(real_t));
+   real_t* buf = (real_t*)comdMalloc(bufSize * sizeof(real_t));
    real_t x0 = 0.0;
 
    // Read embedding energy F(rhobar)
@@ -785,7 +785,7 @@ void eamReadFuncfl(EamPotential* pot, const char* dir, const char* potName)
 
    // allocate read buffer
    int bufSize = MAX(nRho, nR);
-   real_t* buf = comdMalloc(bufSize * sizeof(real_t));
+   real_t* buf = (real_t*)comdMalloc(bufSize * sizeof(real_t));
 
    // read embedding energy
    for (int ii=0; ii<nRho; ++ii)

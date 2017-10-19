@@ -8,4 +8,3 @@ struct BasePotentialSt;
 struct BasePotentialSt* initLjPot(void);
 
 #endif
-

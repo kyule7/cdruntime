@@ -62,15 +62,14 @@
 
 #if _CD
 #include "cd.h"
-#include "cd_comd.h"
 #endif
 
 #define REDIRECT_OUTPUT 0
 #define   MIN(A,B) ((A) < (B) ? (A) : (B))
 
-#if _CD
-#include "cd.h"
-#endif
+//FIXME:have them extern for CD_Init from parallel.c
+extern int myRank;
+extern int nRanks;
 
 static SimFlat* initSimulation(Command cmd);
 static void destroySimulation(SimFlat** ps);
@@ -89,11 +88,20 @@ static void printThings(SimFlat* s, int iStep, double elapsedTime);
 static void printSimulationDataYaml(FILE* file, SimFlat* s);
 static void sanityChecks(Command cmd, double cutoff, double latticeConst, char latticeType[8]);
 
+//FIXME foward declation 
+static void serprvSpecies(SpeciesData* species);
+void serprvSpeciesData(SpeciesData* species);
 
 int main(int argc, char** argv)
 {
    // Prolog
    initParallel(&argc, &argv);
+//#if _CD
+//   cd_handle_t* root_cd = CD_Init(nRanks, myRank); 
+//   cd_begin(root_cd, false, "Root");
+//   root_cd->cd_preserve(&argc, sizeof(argc), kCopy, "argc");
+//   root_cd->cd_preserve(argv, sizeof(*argv), kCopy, "argv");
+//#endif   
    profileStart(totalTimer);
    initSubsystems();
    timestampBarrier("Starting Initialization\n");
@@ -106,29 +114,27 @@ int main(int argc, char** argv)
    printCmdYaml(screenOut, &cmd);
 
    SimFlat* sim = initSimulation(cmd);
+   printf(" sizeof(real3) = %d, sizeof(real3*)=%d\n", sizeof(real3), sizeof(real3*));
    printSimulationDataYaml(yamlFile, sim);
    printSimulationDataYaml(screenOut, sim);
-
    Validate* validate = initValidate(sim); // atom counts, energy
    timestampBarrier("Initialization Finished\n");
 
    timestampBarrier("Starting simulation\n");
+
 #if _CD
    cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
-   cd_begin(root_cd, "Root");
+   cd_begin(root_cd, "0_Root");
    cd_preserve(root_cd, sim, sizeof(*sim), kCopy, "sim", NULL);
-   cd_handle_t *cd_lv1 = cd_create(root_cd, 1, "timestep (before communication)", kStrict, 0xF);
+   //FIXME: assumed only initLjpot case
+   serprvLjPot(sim->pot);           //initLjPot()
+   serprvSpeciesData(sim->species); //initSpecies(...)
+   serprvDomain(sim->domain);       //initDecomposition(...)
+   serprvLinkCell(sim->boxes);      //initLinkCells(...)
+   serprvAtoms(sim->atoms, MAXATOMS*(sim->boxes->nTotalBoxes) );   //initAtoms(...)
+   serprvHaloExchange(sim->atomExchange); //initAtomHaloExchange(...)
 #endif   
 
-#if _CD
-//   cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
-//   cd_begin(root_cd, "0_Root");
-   cd_handle_t* root_cd = cd_init(nRanks, myRank, kHDD); 
-   cd_begin(root_cd, "Root");
-   preserveSimFlat(root_cd, sim, cmd.doeam);
-
-   cd_handle_t *cdh = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF);
-#endif
    // This is the CoMD main loop
    const int nSteps = sim->nSteps;
    const int printRate = sim->printRate;
@@ -136,19 +142,49 @@ int main(int argc, char** argv)
    profileStart(loopTimer);
    for (; iStep<nSteps;)
    {
-      // kyushick: MPI_Allreduce in sumAtoms
+#if _CD1
+      cd_handle_t *cd_lv1 = cd_create(getcurrentcd(), 1, "1_main_loop", kStrict, 0xF);
+#endif
+
+#if   _CD1
+      cd_begin(cd_lv1, "1_sumAtoms"); 
+      //cd_preserve
+      cd_preserve(cd_lv1, &(sim->atoms->nLocal), sizeof(int), kRef, NULL, "sumAtoms_s_atoms_nLocal");
+      cd_preserve(cd_lv1, &(sim->atoms->nGlobal), sizeof(int), kRef, NULL, "sumAtoms_s_atoms_nGlobal");
+      cd_preserve(cd_lv1, &(sim->boxes->nLocalBoxes), sizeof(int), kRef, NULL, "sumAtoms_s_boxes_nLocalBoxes");
+#endif
       startTimer(commReduceTimer);
+      // communication happens in sumAtoms()
+      // O{s->atoms->[nLocal, nGlobal]} 
+      //    <- I{s->atoms->[nLocal, nGlobal], s->boxes->nLocalBoxes, s->boxes->nAtoms}
+      //  |+addIntParallel(&s->atoms->nLocal, &s->atoms->nGlobal, 1);
+      //      |-MPI_Allreduce
+      //      |-O{s->atoms->[nLocal, nGlobal]} <- I{s->atoms->[nLocal, nGlobal]}
       sumAtoms(sim);
       stopTimer(commReduceTimer);
 
       printThings(sim, iStep, getElapsedTime(timestepTimer));
+#if   _CD1
+      //TODO: once kOuput is ready 
+      //cd_preserve(cd_lv1, &(sim->atoms->nLocal), sizeof(int), kCopy|kOutput, "sumAtoms_s_atoms_nLocal", NULL);
+      //cd_preserve(cd_lv1, &(sim->atoms->nGlobal), sizeof(int), kCopy|kOutput, "sumAtoms_s_atoms_nGlobal", NULL);
+      cd_detect(cd_lv1);
+      cd_complete(cd_lv1);
+#endif
 
+//#if _CD1
+//      cd_handle_t *cd_lv1 = cd_create(getcurrentcd(), 1, "main_timestep", kStrict, 0xF);
+//#endif
       startTimer(timestepTimer);
-      //--------------------------------
-      //  [CD] Most of computation
+      //------------------
+      //Main computation
       timestep(sim, printRate, sim->dt);
-      //--------------------------------
+      //-------------------
       stopTimer(timestepTimer);
+
+#if _CD1
+      cd_destroy(cd_lv1);
+#endif
 
       iStep += printRate;
    }
@@ -159,7 +195,6 @@ int main(int argc, char** argv)
    timestampBarrier("Ending simulation\n");
 
 #if _CD
-   cd_destroy(cdh);
    cd_detect(root_cd);
    cd_complete(root_cd);
    cd_finalize();
@@ -168,13 +203,6 @@ int main(int argc, char** argv)
    // Epilog
    validateResult(validate, sim);
    profileStop(totalTimer);
-
-#if _CD
-   cd_destroy(cd_lv1);
-   cd_detect(root_cd);
-   cd_complete(root_cd);
-   cd_finalize();
-#endif
 
    printPerformanceResults(sim->atoms->nGlobal, sim->printRate);
    printPerformanceResultsYaml(yamlFile);
@@ -185,7 +213,6 @@ int main(int argc, char** argv)
 
    timestampBarrier("CoMD Ending\n");
    destroyParallel();
-
    return 0;
 }
 
@@ -202,7 +229,13 @@ int main(int argc, char** argv)
 /// must be initialized before the atoms.
 SimFlat* initSimulation(Command cmd)
 {
-   SimFlat* sim = comdMalloc(sizeof(SimFlat));
+//#if _CD
+//  cd_handle_t *cdh = getleafcd()->Create("initSimulation", kStrict, 0x1);
+//  cd_begin(cdh, "true", "initSim");
+//  cdh->cd_preserve(&cmd, sizeof(cmd), kCopy, "cmd");
+//#endif
+
+   SimFlat* sim = (SimFlat *)comdMalloc(sizeof(SimFlat));
    sim->nSteps = cmd.nSteps;
    sim->printRate = cmd.printRate;
    sim->dt = cmd.dt;
@@ -251,7 +284,11 @@ SimFlat* initSimulation(Command cmd)
    stopTimer(computeForceTimer);
 
    kineticEnergy(sim);
-
+//#if _CD
+//   cdh->cd_detect();
+//   cdh->cd_complete();
+//   cdh->Destroy();
+//#endif
    return sim;
 }
 
@@ -304,15 +341,12 @@ BasePotential* initPotential(
    else 
       pot = initLjPot();
    assert(pot);
-#if 1//_CD
-   is_eam = doeam;
-#endif
    return pot;
 }
 
 SpeciesData* initSpecies(BasePotential* pot)
 {
-   SpeciesData* species = comdMalloc(sizeof(SpeciesData));
+   SpeciesData* species = (SpeciesData *)comdMalloc(sizeof(SpeciesData));
 
    strcpy(species->name, pot->name);
    species->atomicNo = pot->atomicNo;
@@ -321,10 +355,18 @@ SpeciesData* initSpecies(BasePotential* pot)
    return species;
 }
 
+void serprvSpeciesData(SpeciesData* species)
+{
+  cd_handle_t *cdh = getleafcd();
+  cd_preserve(cdh, species->name, 3*sizeof(char), kCopy, "species_name", NULL);
+  cd_preserve(cdh, &(species->atomicNo), sizeof(int), kCopy, "species_atomicNo", NULL);
+  cd_preserve(cdh, &(species->mass), sizeof(real_t), kCopy, "species_mass", NULL);
+}
+
 Validate* initValidate(SimFlat* sim)
 {
    sumAtoms(sim);
-   Validate* val = comdMalloc(sizeof(Validate));
+   Validate* val = (Validate *)comdMalloc(sizeof(Validate));
    val->eTot0 = (sim->ePotential + sim->eKinetic) / sim->atoms->nGlobal;
    val->nAtoms0 = sim->atoms->nGlobal;
 
@@ -372,7 +414,8 @@ void sumAtoms(SimFlat* s)
 {
    // sum atoms across all processers
    s->atoms->nLocal = 0;
-   for (int i = 0; i < s->boxes->nLocalBoxes; i++)
+   int i = 0;
+   for (i = 0; i < s->boxes->nLocalBoxes; i++)
    {
       s->atoms->nLocal += s->boxes->nAtoms[i];
    }

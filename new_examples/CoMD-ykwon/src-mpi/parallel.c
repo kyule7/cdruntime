@@ -16,8 +16,9 @@
 #include <string.h>
 #include <assert.h>
 
-// kyu
-#include "CoMDTypes.h"
+//FIXME:changed into extern at CoMD.c for CD Init
+//static int myRank = 0;
+//static int nRanks = 1;
 
 int myRank = 0;
 int nRanks = 1;

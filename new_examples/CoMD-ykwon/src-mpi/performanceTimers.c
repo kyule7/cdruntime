@@ -40,6 +40,7 @@
 #include "parallel.h"
 #include "yamlOutput.h"
 
+
 static uint64_t getTime(void);
 static double getTick(void);
 static void timerStats(void);
@@ -195,7 +196,7 @@ void printPerformanceResultsYaml(FILE* file)
       {
          double totalTime = perfTimer[ii].total*tick;
          fprintf(file, "  Timer: %s\n", timerName[ii]);
-         fprintf(file, "    CallCount:  %"PRIu64"\n", perfTimer[ii].count); 
+         fprintf(file, "    CallCount:  %" PRIu64"\n", perfTimer[ii].count); 
          fprintf(file, "    AvgPerCall: %8.4f\n", totalTime/(double)perfTimer[ii].count);
          fprintf(file, "    Total:      %8.4f\n", totalTime);
          fprintf(file, "    PercentLoop: %8.2f\n", totalTime/loopTime*100);
