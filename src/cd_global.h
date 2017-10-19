@@ -97,6 +97,15 @@ typedef int           ColorT;
 typedef int           GroupT;
 #endif
 
+namespace packer {
+  extern bool orig_disabled;
+  extern bool orig_appside;
+}
+namespace tuned {
+  extern bool orig_disabled;
+  extern bool orig_appside;
+}
+
 namespace interface {
   class Profiler;
   class ErrorInjector; 
@@ -535,13 +544,16 @@ namespace tuned {
   tuned::elapsed_time += tuned::end_clk - tuned::begin_clk; \
   cd::app_side = true; \
   logger::disabled = false; 
+
 #define PackerPrologue() \
+  packer::orig_appside = cd::app_side; \
+  packer::orig_disabled = logger::disabled; \
   cd::app_side = false; \
-  logger::disabled = true; \
+  logger::disabled = true; 
 
 #define PackerEpilogue() \
-  cd::app_side = true; \
-  logger::disabled = false; 
+  cd::app_side = packer::orig_appside; \
+  logger::disabled = packer::orig_disabled; 
 } // namespace tuned ends
 
 #endif

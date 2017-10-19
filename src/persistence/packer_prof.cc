@@ -37,7 +37,7 @@ void Time::Init(const char *str)
 void Time::Print(void)
 {
   if(isHead && count > 0) { 
-    printf("[%s]\telapsed:%8.3lf, BW:%8.3lf, size:%12lu, count:%6lu\n", 
+    printf("[%16s] elapsed:%8.3lf, BW:%8.3lf, size:%12lu, count:%6lu\n", 
       name, elapsed, GetBW(), size, count); 
   }
 }

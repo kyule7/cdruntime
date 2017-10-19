@@ -186,8 +186,10 @@ uint64_t LogPacker::FreeMemory(uint64_t offset_from)
     freed_cnt = table_->FindWithAttr(kNeedFreed, offset_from, free_list.table_);
     //Print();
     LOGGER_PRINT("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
-    //printf("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
-    //free_list.Print();
+    if(taskID == 0) {
+//    printf("FreeMemory %ld == %lu entries from offset %lu\n", free_list.table_->used(), freed_cnt, offset_from);
+//    free_list.Print();
+    }
     //STOPHERE;
     for(uint32_t i=0; i<freed_cnt; i++) {
       LOGGER_PRINT("i:%u\n", i);
@@ -298,7 +300,7 @@ EXTERNC void free(void *ptr)
       LOGGER_PRINT("[free replay] find(%p) with %p\n", FT_free, ptr); 
       if(logger::taskID == 0) {
         printf("[free replay] find(%p) with %p\n", FT_free, ptr); 
-        GetLogger()->Print();
+//        GetLogger()->Print();
       }
       while(entry == NULL) {
         entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
@@ -417,14 +419,15 @@ EXTERNC void *malloc(size_t size)
     ret = FT_malloc(size);
     GetLogger()->Add(LogEntry(logger::libc_id, FTID_malloc, kNeedPushed, (uint64_t)ret));
   } else {
-    LOGGER_PRINT("Replaying %s\n", __func__); 
     LogEntry *entry = GetLogger()->GetNext();
     //assert(entry->ftype_ == FTID_malloc);
     if(entry->ftype_ == FTID_malloc) {
       ret = (void *)entry->offset_;
+//      printf("[Reexec %lu] Replay %s(zu)=%p\n", libc_id, __func__, size, ret); 
     } else {
       ret = FT_malloc(size);
       GetLogger()->Add(LogEntry(logger::libc_id, FTID_malloc, kNeedPushed, (uint64_t)ret));
+//      printf("[Reexec %lu] Regen %s(zu)=%p\n", libc_id, __func__, size, ret); 
     }
 //    entry->Print();
   }

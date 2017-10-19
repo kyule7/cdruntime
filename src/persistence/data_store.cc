@@ -73,7 +73,7 @@ void DataStore::InitFile(void)
   
   if(fh_ != NULL) {
     if(fh_->GetFileSize() < (int64_t)sizeof(MagicStore)) {
-      printf("fh_:%p, fsize:%lu, Write(0, %p, %zu)\n", fh_, fh_->GetFileSize(), ptr_ - sizeof(MagicStore), sizeof(MagicStore));
+      //printf("fh_:%p, fsize:%lu, Write(0, %p, %zu)\n", fh_, fh_->GetFileSize(), ptr_ - sizeof(MagicStore), sizeof(MagicStore));
       fh_->Write(0, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
       fh_->FileSync();
     }

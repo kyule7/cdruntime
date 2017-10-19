@@ -23,9 +23,13 @@
 #define ERROR_MESSAGE_PACKER(...) \
   { fprintf(stderr, __VA_ARGS__); fflush(stderr); assert(0); }
 
-#define PACKER_ASSERT(...) assert(__VA_ARGS__)
-
-#define PACKER_ASSERT_STR(COND, ...) { if((COND) == false) { printf(__VA_ARGS__); } assert(COND); }
+#ifdef _PACKER_DEBUG
+# define PACKER_ASSERT(...) assert(__VA_ARGS__)
+# define PACKER_ASSERT_STR(COND, ...) { if((COND) == false) { printf(__VA_ARGS__); } assert(COND); }
+#else
+# define PACKER_ASSERT(...) 
+# define PACKER_ASSERT_STR(COND, ...)
+#endif
 
 //#define ALIGN_UP(X, Y) (((X) & ((Y)-1) > 0)? ((X) & ~((Y)-1)) + (Y) : ((X) & ~((Y)-1)))
 

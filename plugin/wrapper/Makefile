@@ -1,9 +1,17 @@
 #!/bin/bash
+DEBUG_ENABLED=1
+
 CDPATH=/home1/03341/kyushick/Work/CDs/libc
 PACKER_PATH=${CDPATH}/src/persistence
 CC=g++
-CFLAGS=-std=gnu++0x -fPIC -Wall -g -c -O0 -I. -I${PACKER_PATH} #-fmax-errors=3
+
+CFLAGS=-std=gnu++0x -fPIC -Wall -c -I. -I${PACKER_PATH} #-fmax-errors=3
 LFLAGS=-fPIC -L${PACKER_PATH} -Wl,-rpath=${PACKER_PATH} -lpacker -ldl
+ifeq (${DEBUG_ENABLED}, 1)
+CFLAGS += -g -O0
+else
+CFLAGS += -O3
+endif
 
 OBJS=singleton.o libc_wrapper.o
 

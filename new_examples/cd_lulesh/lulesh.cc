@@ -165,6 +165,7 @@ Int_t myRank ;
 Int_t numRanks ;
 
 
+int global_counter = 0;
 #if _CD
 packer::MagicStore magic __attribute__((aligned(0x1000)));
 using namespace cd;
@@ -2907,13 +2908,13 @@ int main(int argc, char *argv[])
 
 #if _CD
       CD_Begin(cd_main_loop, "MainLoop");
-      cd_main_loop->Preserve(locDom->SetOp(preserve_vec_all/*M__SERDES_ALL*/), kCopy, "MainLoop");
+//      cd_main_loop->Preserve(locDom->SetOp(preserve_vec_all/*M__SERDES_ALL*/), kCopy, "MainLoop");
 #endif
 
 
       LagrangeLeapFrog(*locDom) ;
 
-
+      global_counter++;
 #if _CD
       cd_main_loop->Detect();
       cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
@@ -2921,8 +2922,8 @@ int main(int argc, char *argv[])
 
       if (myRank == 0) {
 //      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) {
-         printf("cycle = %d, time = %e, dt=%e\n",
-                locDom->cycle(), double(locDom->time()), double(locDom->deltatime()) ) ;
+         printf("cycle = %d (%d), time = %e, dt=%e\n",
+                locDom->cycle(), global_counter, double(locDom->time()), double(locDom->deltatime()) ) ;
       }
    }
 

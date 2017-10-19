@@ -8,9 +8,10 @@ CD_ENABLED = 1
 ifeq (${CD_ENABLED}, 1)
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 
 CD_CFLAGS = -std=gnu++0x -fmax-errors=1 -I${CD_PATH}/include -I${CD_PATH}/src -I${CD_PATH}/src/persistence -I${CD_PATH}/plugin/wrapper
-WRAPPER_LINKFLAGS = -lwrapLibc -L${CD_PATH}/plugin/wrapper -Wl,-rpath=${CD_PATH}/plugin/wrapper -lc 
-CD_LINKFLAGS = -L${CD_PATH}/lib -lcd -Wl,-rpath=${CD_PATH}/lib -L${CD_PATH}/src/persistence -lpacker -Wl,-rpath=${CD_PATH}/src/persistence -ldl
-#CD_LINKFLAGS = ${WRAPPER_LINKFLAGS} ${CD_LINKFLAGS}
+WRAPPER_LFLAGS = -lwrapLibc -L${CD_PATH}/plugin/wrapper -Wl,-rpath=${CD_PATH}/plugin/wrapper -lc 
+#WRAPPER_LFLAGS = #-lwrapLibc -L${CD_PATH}/plugin/wrapper -Wl,-rpath=${CD_PATH}/plugin/wrapper -lc 
+CD_LFLAGS = -L${CD_PATH}/lib -lcd -Wl,-rpath=${CD_PATH}/lib -L${CD_PATH}/src/persistence -lpacker -Wl,-rpath=${CD_PATH}/src/persistence -ldl
+CD_LINKFLAGS = ${WRAPPER_LFLAGS} ${CD_LFLAGS}
 else
 CD_FLAGS := 
 CD_CFLAGS :=

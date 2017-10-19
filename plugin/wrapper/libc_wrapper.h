@@ -256,6 +256,7 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
 //    }
 
     void Print(void) {
+      if(taskID == 0) {
       printf("---- Log Entries -----------------\n");
       LogEntry *ptr = table_->GetAt(0);
       for(uint32_t i=0; i<table_->used(); i++) {
@@ -263,6 +264,7 @@ class LogPacker : public packer::Packer< logger::LogEntry > {
         (ptr + i)->Print();
       }
       printf("----------------------------------\n");
+      }
     }
 };
 

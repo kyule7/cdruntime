@@ -363,7 +363,7 @@ Domain::SetupCommBuffers(Int_t edgeNodes)
   memset(this->commDataRecv, 0, comBufSize*sizeof(Real_t)) ;
   
   // kyushick
-  printf("Buffer size:%d\n", comBufSize);
+//  printf("Buffer size:%d\n", comBufSize);
 
 #endif   
 

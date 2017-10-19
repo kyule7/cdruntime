@@ -2102,7 +2102,7 @@ CDErrT CD::Preserve(void *data,
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
 //    cddbg<<"my_name "<< my_name<<endl;
     if(strcmp(my_name.c_str(), "MainLoop_symmX") == 0 || strcmp(my_name.c_str(), "locDom_Root") == 0 ) {
-      printf("[%d] #################### %s ############:%lu\n", myTaskID, my_name.c_str(), tag);
+//      printf("[%d] #################### %s ############:%lu\n", myTaskID, my_name.c_str(), tag);
     }
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : {
@@ -2625,7 +2625,7 @@ CDErrT CD::InternalReexecute(void)
   Stop();
 
   //printf("[%s]Rollback!\n", __func__);
-  printf("######### level : %d (rollback_point: %d) (%s)\n", level(), *rollback_point_, name_.c_str());
+//  printf("######### level : %d (rollback_point: %d) (%s)\n", level(), *rollback_point_, name_.c_str());
 
   // CDPrologue(); in CDHandle::Complete() should be paired with CDEpilouge() here.
   CDEpilogue();

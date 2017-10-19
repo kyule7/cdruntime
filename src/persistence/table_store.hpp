@@ -206,7 +206,7 @@ class TableStore : public BaseTable {
 
     EntryT *FindReverse(uint64_t &id, uint64_t start)
     {
-      assert(head_ == 0);
+      PACKER_ASSERT(head_ == 0);
       EntryT *ret = NULL;
       if(start >= tail_) return NULL;
       int64_t begin = (start > tail_)? tail_-1 : start;
@@ -237,7 +237,7 @@ class TableStore : public BaseTable {
 //          else {
 //            MYDBG("my task id:%d\n", packerTaskID);
 //          }
-//          assert(0);
+//          PACKER_ASSERT(0);
         }
       }
       return ret;
@@ -245,7 +245,7 @@ class TableStore : public BaseTable {
 
     EntryT *Find(uint64_t id)
     {
-      assert(head_ == 0);
+      PACKER_ASSERT(head_ == 0);
       EntryT *ret = NULL;
       for(uint32_t i=0; i<tail_; i++) {
         // The rule for entry is that the first element in object layout is always ID.
@@ -259,7 +259,7 @@ class TableStore : public BaseTable {
       // check
       if(ret == NULL) {
         if(packerTaskID == 0) {
-          MYDBG("[Find] tail:%lu\n", tail_); //assert(0);
+          MYDBG("[Find] tail:%lu\n", tail_); //PACKER_ASSERT(0);
           for(uint32_t i=0; i<tail_; i++) {
             // The rule for entry is that the first element in object layout is always ID.
             if( ptr_[i].id_ == id ) {
@@ -270,7 +270,7 @@ class TableStore : public BaseTable {
 //        else {
 //          MYDBG("my task id:%d\n", packerTaskID);
 //        }
-        //assert(0);
+        //PACKER_ASSERT(0);
       }
       //return (void *)ret;
       return ret;
@@ -296,7 +296,7 @@ class TableStore : public BaseTable {
       // checking
       if(ret == NULL) {
         if(packerTaskID == 0) {
-          MYDBG("[FindWithOffset] tail:%lu\n", tail_); assert(0);
+          MYDBG("[FindWithOffset] tail:%lu\n", tail_); PACKER_ASSERT(0);
           for(uint32_t i=table_offset; i<tail_; i++) {
             // The rule for entry is that the first element in object layout is always ID.
             if( ptr_[i].offset() == offset ) {
@@ -307,7 +307,7 @@ class TableStore : public BaseTable {
 //        else {
 //          MYDBG("my task id:%d\n", packerTaskID);
 //        }
-        //assert(0);
+        //PACKER_ASSERT(0);
       }
       table_offset = found_idx;
       return ret;
@@ -345,10 +345,10 @@ class TableStore : public BaseTable {
     // It is used in IsPushedLog
     EntryT *GetAt(uint64_t idx)
     {
-      assert(idx == 0 || idx < tail_);
-      assert(idx >= head_);
-      assert(head_ == 0);
-      uint64_t i = (head_ + idx) % size_;
+      PACKER_ASSERT(idx == 0 || idx < tail_);
+      PACKER_ASSERT(idx >= head_);
+      PACKER_ASSERT(head_ == 0);
+      const uint64_t i = (head_ + idx) % size_;
       return ptr_ + i;
     }
 
