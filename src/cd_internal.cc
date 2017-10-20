@@ -2261,7 +2261,7 @@ CD::InternalPreserve(void *data,
       pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, len_in_bytes, 0, (char *)data));
     }
 //#ifdef _DEBUG_0402        
-#if 1
+#if 0
     if(myTaskID == 0) {
       printf("== Preserve Complete [%s->%s at lv #%u %u] cnt:%lu, tag:%u size:%lu, %p ==\n", 
         label_.c_str(), my_name.c_str(), level(), GetCurrentCD()->level(), 

@@ -27,7 +27,9 @@ unsigned int preserveAtoms(cd_handle_t *cdh,
                            unsigned int is_U,
                            unsigned int is_iSpecies,
                            unsigned int from,
-                           int to
+                           int to,
+                           unsigned int is_print,
+                           char* idx
                           );
 unsigned int preserveSpeciesData(cd_handle_t *cdh, SpeciesData *species);
 unsigned int preserveLinkCell(cd_handle_t *cdh, 
@@ -82,7 +84,9 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
                                    0,  // is_U
                                    0,  // is_iSpecies
                                    0,  // from (entire atoms)
-                                  -1); // to (entire atoms)
+                                  -1,  // to (entire atoms)
+                                   1,  // is_print
+                                   NULL);
       //TODO: Do I need to preserve dt and nTotalBoxes? 
       //      Aren't they already preserved at the  begging at the root CD?
       //int cd_preserve(cd_handle_t *c_handle, 
@@ -125,8 +129,9 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
                                    0,  // is_U
                                    1,  // is_iSpecies
                                    0,  // from (entire atoms)
-                                  -1); // to (entire atoms)
-
+                                  -1,  // to (entire atoms)
+                                   1,  // is_print
+                                   NULL);
       //TODO: no need to preserve entier SpeciesData but only mass
       position_pre_size += preserveSpeciesData(cdh, s->species);
       printf("\n preservation size for advancePosition %d\n", position_pre_size);
@@ -157,7 +162,9 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
                                    1,  // is_U
                                    1,  // is_iSpecies 
                                    0,  // from (entire atoms)
-                                  -1); // to (entire atoms)
+                                  -1,  // to (entire atoms)
+                                   1,  // is_print
+                                   NULL); 
       // I{parms->pbcFactor}
       redist_pre_size = preserveHaloAtom(cdh, s->atomExchange->parms, 0, 1);
       printf("\n preservation size for redistributeAtoms %d\n", redist_pre_size);
@@ -227,8 +234,9 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
                                     0,  // is_U
                                     0,  // is_iSpecies
                                     0,  // from (entire atoms)
-                                   -1); // to (entire atoms)
-
+                                   -1,  // to (entire atoms)
+                                    1,  // is_print
+                                    NULL);
       printf("\n preservation size for advanceVelocity(@end) %d\n", 
             velocity_end_pre_size);
       startTimer(velocityTimer);
