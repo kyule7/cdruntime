@@ -132,12 +132,6 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
                                   -1,  // to (entire atoms)
                                    1,  // is_print
                                    NULL);
-
-//#if   _CD_advancePosition
-//      cd_detect(cd_lv1);
-//      cd_complete(cd_lv1);
-//      cd_begin(cd_lv1, "advancePosition");
-//#endif 
       //TODO: no need to preserve entier SpeciesData but only mass
       position_pre_size += preserveSpeciesData(cdh, s->species);
       printf("\n preservation size for advancePosition %d\n", position_pre_size);
@@ -146,13 +140,6 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       advancePosition(s, s->boxes->nLocalBoxes, dt);
       //------------------------------------------------
       stopTimer(positionTimer);
-
-//#if   _CD_redistributeAtoms
-//      cd_detect(cd_lv1);
-//      cd_complete(cd_lv1);
-//      cd_begin(cd_lv1, "redistributeAtoms");
-////      cdh->cd_preserve(&data, size, kCopy, "timestep_total");
-//#endif 
 
       cd_detect(cdh);
       cd_complete(cdh); 
@@ -210,13 +197,6 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       redistributeAtoms(s);
       stopTimer(redistributeTimer);
 
-//#if   _CD_computeForce
-//      cd_detect(cd_lv1);
-//      cd_complete(cd_lv1);
-//      cd_begin(cd_lv1, "computeForce");
-////      cdh->cd_preserve(&data, size, kCopy, "timestep_total");
-//#endif 
-=======
       //cd_detect(cdh);
       //cd_complete(cdh); 
       //-----------------------------------------------------------------------
@@ -237,25 +217,6 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       computeForce(s); // s->pot->force(s)
       stopTimer(computeForceTimer);
 
-//#if   _CD_advanceVelocity
-//      cd_detect(cd_lv1);
-//      cd_complete(cd_lv1);
-//      cd_begin(cd_lv1, "advanceVelocity");
-////      cdh->cd_preserve(&data, size, kCopy, "timestep_total");
-//#endif 
-
-      startTimer(velocityTimer);
-      advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
-      stopTimer(velocityTimer);
-//#if   _CD_loop
-//      cd_complete(cd_lv1);
-//#endif // _CD_loop
-   }
-//#if   _CD_kineticEnergy 
-//   cd_detect(cd_lv1);
-//   cd_complete(cd_lv1);
-//   cd_begin(cd_lv1, "kineticEnergy"); 
-//#endif
       cd_detect(cd_lv2);
       cd_complete(cd_lv2); 
 
@@ -296,11 +257,6 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
    //TODO: which CD to put this?
    kineticEnergy(s);
 
-//#if   _CD1   
-//   cd_detect(cd_lv1);
-//   cd_complete(cd_lv1);
-//#endif
-
    return s->ePotential;
 }
 
@@ -309,8 +265,7 @@ void computeForce(SimFlat* s)
    s->pot->force(s);
 }
 
-// kyushick
-// advanceVelocity : {atoms->p} <- {f,atoms->f,boxes->nLocalBoxes}
+
 void advanceVelocity(SimFlat* s, int nBoxes, real_t dt)
 {
    //printf("[DEBUG] task[%d] is calling advanceVelocity with %d nBoxes at time %f\n", 

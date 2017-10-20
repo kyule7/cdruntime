@@ -50,7 +50,6 @@ enum HaloFaceOrder {HALO_X_MINUS, HALO_X_PLUS,
 /// Don't change the order of the axes in this enum.
 enum HaloAxisOrder {HALO_X_AXIS, HALO_Y_AXIS, HALO_Z_AXIS};
 
-// kyushick: moved to CoMDType.h
 // /// Extra data members that are needed for the exchange of atom data.
 // /// For an atom exchange, the HaloExchangeSt::parms will point to a
 // /// structure of this type.

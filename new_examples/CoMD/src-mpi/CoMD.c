@@ -68,10 +68,6 @@
 #define REDIRECT_OUTPUT 0
 #define   MIN(A,B) ((A) < (B) ? (A) : (B))
 
-#if _CD
-#include "cd.h"
-#endif
-
 static SimFlat* initSimulation(Command cmd);
 static void destroySimulation(SimFlat** ps);
 
@@ -113,12 +109,6 @@ int main(int argc, char** argv)
    timestampBarrier("Initialization Finished\n");
 
    timestampBarrier("Starting simulation\n");
-#if _CD
-   cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
-   cd_begin(root_cd, "Root");
-   cd_preserve(root_cd, sim, sizeof(*sim), kCopy, "sim", NULL);
-   cd_handle_t *cd_lv1 = cd_create(root_cd, 1, "timestep (before communication)", kStrict, 0xF);
-#endif   
 
 #if _CD
 //   cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
@@ -136,7 +126,6 @@ int main(int argc, char** argv)
    profileStart(loopTimer);
    for (; iStep<nSteps;)
    {
-      // kyushick: MPI_Allreduce in sumAtoms
       startTimer(commReduceTimer);
       sumAtoms(sim);
       stopTimer(commReduceTimer);
@@ -168,13 +157,6 @@ int main(int argc, char** argv)
    // Epilog
    validateResult(validate, sim);
    profileStop(totalTimer);
-
-#if _CD
-   cd_destroy(cd_lv1);
-   cd_detect(root_cd);
-   cd_complete(root_cd);
-   cd_finalize();
-#endif
 
    printPerformanceResults(sim->atoms->nGlobal, sim->printRate);
    printPerformanceResultsYaml(yamlFile);
@@ -304,9 +286,6 @@ BasePotential* initPotential(
    else 
       pot = initLjPot();
    assert(pot);
-#if 1//_CD
-   is_eam = doeam;
-#endif
    return pot;
 }
 

@@ -79,7 +79,6 @@
 
 #define POT_SHIFT 1.0
 
-// kyushick: moved to CoMDType.h
 // /// Derived struct for a Lennard Jones potential.
 // /// Polymorphic with BasePotential.
 // /// \see BasePotential
