@@ -24,8 +24,8 @@ INCLUDES =
 C_LIB = -lm
 
 ### Containment Domain setting
-#CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_DEBUG=0 -fpermissive -static-libstdc++
-CD_FLAGS += -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -D_CD5=1 -D_DEBUG=0 
+CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_DEBUG=0 #-fpermissive -static-libstdc++
+#CD_FLAGS += -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -D_CD5=1 -D_DEBUG=0 
 CD_ROOT=${CD_PATH}
 CD_CFLAGS = -I$(CD_ROOT)/include 
 CD_LINKFLAGS = -L$(CD_ROOT)/lib -lcd -Wl,-rpath=../../../lib -L$(CD_ROOT)/src/persistence -lpacker

@@ -74,6 +74,7 @@
 
 #if _CD
 #include "cd.h"
+#define CD3_INTERVAL 100
 #endif
 
 #define POT_SHIFT 1.0
@@ -110,10 +111,12 @@ unsigned int preserveAtoms(cd_handle_t *cdh,
                            unsigned int is_U,
                            unsigned int is_iSpecies,
                            unsigned int from,
-                           int to
+                           int to,
+                           unsigned int is_print, 
+                           char* idx
                           );
 unsigned int preserveLinkCell(cd_handle_t *cdh, 
-                              LinkCell *linkcell, 
+    LinkCell *linkcell, 
                               unsigned int is_all,
                               unsigned int is_nAtoms,
                               unsigned int is_nTotalBoxes);
@@ -252,48 +255,59 @@ int ljForce(SimFlat* s)
           //Also, it is worth mentioning that the number of loop iterations for
           //the innermost loop below changes over time, depending on runtime
           //behavior due to moving atoms.
-          cd_begin(cdh_lv3, "ljForce_innermost"); 
-          //TODO: cd_preserve
-          //1. loop index for current loop
-          //  - iOff, iBox, MAXATOMS, ii, nIBox
-          //2. data to be read in the innermost loop below
-          //preserve all loop index parameters 
-          //From the iBox loop (outmost)
-          cd_preserve(cdh_lv3, &iBox, sizeof(int), kCopy, 
-                      "ljForce_innermost_iBox", "ljForce_innermost_iBox");
-          //From the neighbors of iBox loop (2nd loop)
-          cd_preserve(cdh_lv3, &jTmp, sizeof(int), kCopy, 
-                      "ljForce_innermost_jTmp", "ljForce_innermost_jTmp");
-          //From the atoms of iBox loop (3rd loop, the current loop)
-          cd_preserve(cdh_lv3, &iOff, sizeof(int), kCopy, 
-                      "ljForce_innermost_iOff", "ljForce_innermost_iOff");
-          cd_preserve(cdh_lv3, &ii, sizeof(int), kCopy, 
-                      "ljForce_innermost_ii", "ljForce_innermost_ii");
-          //For the nested loop below
-          cd_preserve(cdh_lv3, &iId, sizeof(int), kCopy, 
-                      "ljForce_innermost_iId", "ljForce_innermost_iId");
-          //TODO: the below preserve poistion(r) of all atoms every iteration, 
-          //      which is not the optimal case.
-          //      The otptimal preservation preserves poistons of atoms in the
-          //      current jBox [#: nJBox = s->atoms->nAtoms[jBox]
-          int ljForce_pre_size = preserveAtoms(cdh_lv3, s->atoms, 
-                                               s->boxes->nTotalBoxes, 
-                                               1,  // is_gid
-                                               1,  // is_r
-                                               0,  // is_p
-                                               0,  // is_f
-                                               0,  // is_U
-                                               0,  // is_iSpecies
-                                               0,  // from (entire atoms)
-                                              -1);  // to (entire atoms)
-          ljForce_pre_size += preserveLinkCell(cdh_lv3, s->boxes, 
-                                               0/*all*/, 
-                                               0/*only nAtoms*/,
-                                               1/*nLocalBoxes*/);      
-          //TODO: atoms->gid
-
-
-
+          if(iOff % CD3_INTERVAL == 0) {
+            cd_begin(cdh_lv3, "ljForce_innermost"); 
+            //TODO: cd_preserve
+            //1. loop index for current loop
+            //  - iOff, iBox, MAXATOMS, ii, nIBox
+            //2. data to be read in the innermost loop below
+            //preserve all loop index parameters 
+            //From the iBox loop (outmost)
+            cd_preserve(cdh_lv3, &iBox, sizeof(int), kCopy, 
+                "ljForce_innermost_iBox", "ljForce_innermost_iBox");
+            //From the neighbors of iBox loop (2nd loop)
+            cd_preserve(cdh_lv3, &jBox, sizeof(int), kCopy, 
+                "ljForce_innermost_jBox", "ljForce_innermost_jBox");
+            cd_preserve(cdh_lv3, &jTmp, sizeof(int), kCopy, 
+                "ljForce_innermost_jTmp", "ljForce_innermost_jTmp");
+            //From the atoms of iBox loop (3rd loop, the current loop)
+            cd_preserve(cdh_lv3, &iOff, sizeof(int), kCopy, 
+                "ljForce_innermost_iOff", "ljForce_innermost_iOff");
+            cd_preserve(cdh_lv3, &ii, sizeof(int), kCopy, 
+                "ljForce_innermost_ii", "ljForce_innermost_ii");
+            //For the nested loop below
+            cd_preserve(cdh_lv3, &iId, sizeof(int), kCopy, 
+                "ljForce_innermost_iId", "ljForce_innermost_iId");
+            //TODO: the below preserve poistion(r) of all atoms every iteration, 
+            //      which is not the optimal case.
+            //      The otptimal preservation preserves poistons of atoms in the
+            //      current jBox [#: nJBox = s->atoms->nAtoms[jBox]
+            //TODO: need to give different name for each preservation. could be 
+            //      associated with the indices, iBox, jTmp, and iOff
+            char pre_atoms_idx[256]= "-1";   //FIXME: it this always enough?
+            sprintf(pre_atoms_idx, "_%d_%d_%d", iBox, jTmp, iOff);
+            //if(getMyRank() == 0)
+            //  printf("preservation for atoms in ljForce index: %s\n",
+            //                                                  pre_atoms_idx);
+            int ljForce_pre_size = preserveAtoms(cdh_lv3, s->atoms, 
+                                                 s->boxes->nTotalBoxes, 
+                                                 1,  // is_gid
+                                                 1,  // is_r
+                                                 0,  // is_p
+                                                 0,  // is_f
+                                                 0,  // is_U
+                                                 0,  // is_iSpecies
+                                                 //MAXATOMS*jBox,          // from 
+                                                 //MAXATOMS*jBox+nJBox-1,  // to 
+                                                 0, // 
+                                                -1,
+                                                 0,
+                                                 pre_atoms_idx); // is_print
+            ljForce_pre_size += preserveLinkCell(cdh_lv3, s->boxes, 
+                0/*all*/, 
+                0/*only nAtoms*/,
+                1/*nLocalBoxes*/);      
+          }
         }
 
         //*****************************************************
@@ -346,8 +360,10 @@ int ljForce(SimFlat* s)
 
         } // loop over atoms in jBox
         if(is_first) {
-          cd_detect(cdh_lv3);
-          cd_complete(cdh_lv3); 
+          if(iOff % CD3_INTERVAL == 0) {
+            cd_detect(cdh_lv3);
+            cd_complete(cdh_lv3); 
+          }
         }
       } // loop over atoms in iBox
     } // loop over neighbor boxes
