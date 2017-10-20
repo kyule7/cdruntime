@@ -11,6 +11,8 @@ class CDPacker : public Packer<CDEntry> {
   public:
     CDPacker(TableStore<CDEntry> *table=NULL, DataStore *data=NULL) 
       : Packer<CDEntry>(table, data) {}
+    CDPacker(TableStore<CDEntry> *table, uint64_t table_size, DataStore *data, uint64_t data_size=DATA_GROW_UNIT) 
+      : Packer<CDEntry>(table_size, table, data, data_size, DEFAULT_FILEMODE) {}
     CDPacker(bool alloc, TableStore<CDEntry> *table, DataStore *data=NULL) 
       : Packer<CDEntry>(alloc, table, data) {}
     virtual ~CDPacker() {}
@@ -21,28 +23,53 @@ class CDPacker : public Packer<CDEntry> {
       CD_PACKER_PRINT("tag:%lu\n", tag); //getchar();
       // 1. Find entry in table store
       // 2. Copy data from data store to src
-      CDEntry *pentry = reinterpret_cast<CDEntry *>(table_->Find(tag));
+      //CDEntry *pentry = reinterpret_cast<CDEntry *>(table_->Find(tag));
+      CDEntry *pentry = table_->Find(tag);
 //      CDEntry *ret = pentry;
+      int found_result = -1;      
       if(pentry == NULL) {
-        CD_PACKER_PRINT("\n\n [%d] not found %lu\n", packerTaskID, tag);
-        return NULL;
+        CD_PACKER_PRINT("[%d] not found %lu\n", packerTaskID, tag);
+        //return NULL;
+        found_result = 0;
       } else if(pentry->src_ == NULL) {
-        CD_PACKER_PRINT("\n\n [%d] previously null %lu utr:%p, size:%lu, len:%lu, offset:%lx\n", 
+        if(packerTaskID == 0) {
+        CD_PACKER_PRINT("[%d] previously null %lu utr:%p, size:%lu, len:%lu, offset:%lx\n", 
             packerTaskID, tag, pentry->src_, pentry->size(), len, pentry->offset_);
+        }
         // when preserved, data was null.
-        return pentry;
+//        return pentry;
+        found_result = 1;
       } else if(pentry->size() == 0) {
-        CD_PACKER_PRINT("\n[%d] %lu dst:%p previously size:%lu, requested len:%lu\n", 
+        if(packerTaskID == 0) {
+        CD_PACKER_PRINT("[%d] %lu dst:%p previously size:%lu, requested len:%lu\n", 
             packerTaskID, tag, pentry->src_, pentry->size(), len);
-        printf("\n[%d] %lu dst:%p previously size:%lu, requested len:%lu\n", 
-            packerTaskID, tag, pentry->src_, pentry->size(), len);
-        return pentry;
+        }
+//        return pentry;
+        found_result = 2;
       } else if(len > pentry->size()) {
-        CD_PACKER_PRINT("\n[%d] %lu dst:%p reallocated from size:%lu to %lu (requested len)\n", 
+        CD_PACKER_PRINT("[%d] %lu dst:%p reallocated from size:%lu to %lu (requested len)\n", 
             packerTaskID, tag, pentry->src_, pentry->size(), len);
+        found_result = 3;
       } else {
-        CD_PACKER_PRINT("\n[%d] Preserved %lu ptr:%p, size:%lu, len:%lu, offset:%lx\n", 
+        if(packerTaskID == 0) {
+        CD_PACKER_PRINT("[Restore! %d] Preserved %lu ptr:%p, size:%lu, len:%lu, offset:%lx\n", 
             packerTaskID, tag, pentry->src_, pentry->size(), len, pentry->offset_);
+        }
+        found_result = 4;
+      }
+      switch(found_result) {
+        case 0:
+        case 1:
+        case 2: {
+//          CD_PACKER_PRINT("return:%d\n", found_result);
+          return pentry;
+                }
+        case 3:
+        case 4:
+          break;
+        default:
+          break;
+
       }
       CD_PACKER_PRINT("next tag:%lu\n", tag); //getchar();
 //      if(pentry == NULL) {

@@ -351,6 +351,12 @@ update the preserved data.
     // PFS
 //    PFSHandle *pfs_handle_;
 
+#if CD_LIBC_LOGGING
+    uint64_t libc_log_begin_;
+    uint64_t libc_log_end_;
+    uint64_t libc_log_id_;
+#endif
+
 #if CD_COMM_LOG_ENABLED
   public:
     //SZ

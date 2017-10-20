@@ -37,6 +37,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "serializable.h"
 #include "cd_packer.hpp"
+#include "cd_global.h"
 #include <vector>
 #include <map>
 #include <initializer_list>
@@ -57,29 +58,67 @@ class CDVector : public std::vector<T>, public PackerSerializable {
   void *Serialize(uint64_t &len_in_bytes) { return NULL; }
   void Deserialize(void *object) {}
   uint64_t PreserveObject(packer::DataStore *packer) {
+    PackerPrologue();
 //    CD_VECTOR_PRINT("CDVector Preserve elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
 //    char *ptr = reinterpret_cast<char *>(this->data());
 //    packer.Add(ptr, packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
     
+    PackerEpilogue();
     return 0; 
   
   }
-  uint64_t PreserveObject(packer::CDPacker &packer, const std::string &entry_name) {
+  //uint64_t PreserveObject(packer::CDPacker &packer, const std::string &entry_name) {
+  uint64_t PreserveObject(packer::CDPacker &packer, const char *entry_str) {
+    PackerPrologue();
+    uint64_t prv_size = this->size() * sizeof(T);
+    {
+    std::string entry_name(entry_str);
     CD_VECTOR_PRINT("CDVector Preserve elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
     if(myTaskID == 0) {
-    printf("CDVector [%s] Preserve elemsize:%zu, %zu %zu\n", entry_name.c_str(), sizeof(T), this->size(), this->capacity()); 
+    CD_VECTOR_PRINT("CDVector [%s] Preserve elemsize:%zu, size:%zu cap:%zu\n", entry_name.c_str(), sizeof(T), this->size(), this->capacity()); 
     }
     id_ = GetCDEntryID(entry_name);
     //CheckID(entry_name); id_ = str2id[entry_name];
-//    printf("id:%lx\n", id_);
+//    CD_VECTOR_PRINT("id:%lx\n", id_);
     char *ptr = reinterpret_cast<char *>(this->data());
-    uint64_t prv_size = this->size() * sizeof(T);
     packer::CDEntry entry(id_, prv_size, 0, ptr);
-    packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
+    uint64_t table_offset = packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
+    if(myTaskID == 0 && (entry_name == "X" || entry_name == "Y"|| entry_name == "Z")) {
+      CD_VECTOR_PRINT("Preserve %s at table:%lu, data:%lu, size:%lu\n", entry_name.c_str(), table_offset, entry.offset(), entry.size());
+      char *tmp = new char[entry.size()]();
+      uint32_t *check4 = (uint32_t *)tmp;
+      CD_VECTOR_PRINT("chk %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
+          , *(check4), *(check4+1), *(check4+2), *(check4+3), *(check4+4), *(check4+5), *(check4+6), *(check4+7));
+
+      packer.data_->GetData(tmp, entry.size(), entry.offset());
+//      uint32_t *check1 = (uint32_t *)ptr;
+      float *check0 = reinterpret_cast<float *>(this->data());
+      uint32_t *check1 = reinterpret_cast<uint32_t *>(this->data());
+      uint32_t *check2 = (uint32_t *)tmp;
+      float *check3 = (float *)tmp;
+
+      
+
+      CD_VECTOR_PRINT("ori %s: %f %f %f %f %f %f %f %f\n", entry_name.c_str()
+          , *(check0), *(check0+1), *(check0+2), *(check0+3), *(check0+4), *(check0+5), *(check0+6), *(check0+7));
+      CD_VECTOR_PRINT("ori %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
+          , *(check1), *(check1+1), *(check1+2), *(check1+3), *(check1+4), *(check1+5), *(check1+6), *(check1+7));
+      CD_VECTOR_PRINT("prv %s: %x %x %x %x %x %x %x %x\n", entry_name.c_str()
+          , *(check2), *(check2+1), *(check2+2), *(check2+3), *(check2+4), *(check2+5), *(check2+6), *(check2+7));
+      CD_VECTOR_PRINT("prv %s: %f %f %f %f %f %f %f %f\n", entry_name.c_str()
+          , *(check3), *(check3+1), *(check3+2), *(check3+3), *(check3+4), *(check3+5), *(check3+6), *(check3+7));
+      delete [] tmp;
+    }
+    }
+    PackerEpilogue();
     return prv_size; 
   
   }
-  uint64_t Deserialize(packer::CDPacker &packer, const std::string &entry_name) {
+  //uint64_t Deserialize(packer::CDPacker &packer, const std::string &entry_name) {
+  uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str) {
+    PackerPrologue();
+    {
+      std::string entry_name(entry_str);
     CD_VECTOR_PRINT("CDVector Restore elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
     id_ = GetCDEntryID(entry_name);
     //id_ = cd_hash(entry_name);
@@ -92,10 +131,17 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     } else {
       this->resize(pentry->size() / sizeof(T));
     }
+
+    if(myTaskID == 0 && (entry_name == "X" || entry_name == "Y"|| entry_name == "Z")) {
+      CD_VECTOR_PRINT("Restore %s at data:%lu, size:%lu\n", entry_name.c_str(), pentry->offset(), pentry->size());
+    }
+    }
+    PackerEpilogue();
     return 0; 
   
   }
   void Print(const char str[]="") {
+    PackerPrologue();
     std::cout << str << " ptr: "<< this->data() 
                 << ", vec size:" << this->size() 
                 << ", vec cap: " << this->capacity() 
@@ -118,6 +164,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     }
 
     std::cout << std::endl;
+    PackerEpilogue();
   }
 //  virtual int Preserv(packer::CDPacker &packer) { CD_VECTOR_PRINT("CDVector Preserv \n"); return 0; }
 //  virtual int Restore(packer::CDPacker &packer) { CD_VECTOR_PRINT("CDVector Restore \n"); return 0; }
@@ -190,7 +237,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     }
     if(myTaskID == 0) {
     
-      printf("%s id:%s, %lu\n", __func__, str.c_str(), str2id[str]);
+      CD_VECTOR_PRINT("%s id:%s, %lu\n", __func__, str.c_str(), str2id[str]);
     }
   }
 

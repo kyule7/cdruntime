@@ -48,7 +48,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_global.h"
 //#include "cd_handle.h"
 using namespace cd;
-using namespace cd::interface;
+using namespace ::interface;
 using namespace std;
 
 CD_CLOCK_T cd::prof_begin_clk;

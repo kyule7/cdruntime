@@ -165,6 +165,7 @@ Int_t myRank ;
 Int_t numRanks ;
 
 
+int global_counter = 0;
 #if _CD
 packer::MagicStore magic __attribute__((aligned(0x1000)));
 using namespace cd;
@@ -406,6 +407,7 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
   const Real_t z4 = z[4] ;   const Real_t z5 = z[5] ;
   const Real_t z6 = z[6] ;   const Real_t z7 = z[7] ;
   static unsigned long counter = 0;
+#if _CD
   if(myRank == 0 && 0) {
     bool print_detail = false;
     if(Domain::restarted) { 
@@ -415,14 +417,15 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
     }
     if(print_detail) {
       if(Domain::restarted) {
-        printf("\n[%d]..before..restared......\n", myRank);
+        LULESH_PRINT("\n[%d]..before..restared......\n", myRank);
       }
-      printf("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
-      printf("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
-      printf("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
+      LULESH_PRINT("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
+      LULESH_PRINT("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
+      LULESH_PRINT("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
     }
     
   }
+#endif
   Real_t fjxxi, fjxet, fjxze;
   Real_t fjyxi, fjyet, fjyze;
   Real_t fjzxi, fjzet, fjzze;
@@ -487,15 +490,17 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
   b[2][7] = -b[2][1];
 
   /* calculate jacobian determinant (volume) */
-  *volume = Real_t(8.) * ( fjxet * cjxet + fjyet * cjyet + fjzet * cjzet);
-  if(*volume < 0) {
+  Real_t vol = Real_t(8.) * ( fjxet * cjxet + fjyet * cjyet + fjzet * cjzet);
+  *volume = vol;
+#if _CD
+  if(vol < 0) {
     if(Domain::restarted && myRank == 0) {
-        printf("\n[%d]....restared......\n", myRank);
-        printf("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
-        printf("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
-        printf("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
+        LULESH_PRINT("\n[%d]....restarted......\n", myRank);
+        LULESH_PRINT("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
+        LULESH_PRINT("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
+        LULESH_PRINT("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
         const Index_t base = Index_t(8)*pDomain->prv_idx; 
-        printf("[%d] CHECK nodelist size:%zu/%zu (%d), %d %d %d %d %d %d %d %d\n", 
+        LULESH_PRINT("[%d] CHECK nodelist size:%zu/%zu (%d), %d %d %d %d %d %d %d %d\n", 
                 myRank, pDomain->m_nodelist.size(), pDomain->m_nodelist.capacity(), pDomain->numElem(),
                 pDomain->m_nodelist[base],
                 pDomain->m_nodelist[base+1],
@@ -506,11 +511,13 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
                 pDomain->m_nodelist[base+6],
                 pDomain->m_nodelist[base+7]
                 ); 
-        printf("volume:%le\n", *volume);
+        LULESH_PRINT("volume:%le\n", vol);
+        assert(0);
     }
      counter = 0;
      *volume = 0.0;
   }
+#endif
 }
 
 /******************************************/
@@ -655,7 +662,7 @@ void IntegrateStressForElems( Domain &domain,
   }
   // loop over all elements
 
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
   for( Index_t k=0 ; k<numElem ; ++k )
   {
     const Index_t* const elemToNode = domain.nodelist(k);
@@ -699,7 +706,7 @@ void IntegrateStressForElems( Domain &domain,
   if (numthreads > 1) {
      // If threaded, then we need to copy the data out of the temporary
      // arrays used above into the final forces field
-#pragma omp parallel for firstprivate(numNode)
+//#pragma omp parallel for firstprivate(numNode)
      for( Index_t gnode=0 ; gnode<numNode ; ++gnode )
      {
         Index_t count = domain.nodeElemCount(gnode) ;
@@ -1211,12 +1218,13 @@ void CalcVolumeForceForElems(Domain& domain)
 
       // call elemlib stress integration loop to produce nodal forces from
       // material stresses.
+      // [CDs] determ got changed here, and need to examine prev/rstr
       IntegrateStressForElems( domain,
                                sigxx, sigyy, sigzz, determ, numElem,
                                domain.numNode()) ;
 
       // check for negative element volume
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
       for ( Index_t k=0 ; k<numElem ; ++k ) {
          if (determ[k] <= Real_t(0.0)) {
 #if USE_MPI            
@@ -2900,13 +2908,13 @@ int main(int argc, char *argv[])
 
 #if _CD
       CD_Begin(cd_main_loop, "MainLoop");
-      cd_main_loop->Preserve(locDom->SetOp(preserve_vec_all/*M__SERDES_ALL*/), kCopy, "MainLoop");
+//      cd_main_loop->Preserve(locDom->SetOp(preserve_vec_all/*M__SERDES_ALL*/), kCopy, "MainLoop");
 #endif
 
 
       LagrangeLeapFrog(*locDom) ;
 
-
+      global_counter++;
 #if _CD
       cd_main_loop->Detect();
       cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
@@ -2914,8 +2922,8 @@ int main(int argc, char *argv[])
 
       if (myRank == 0) {
 //      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) {
-         printf("cycle = %d, time = %e, dt=%e\n",
-                locDom->cycle(), double(locDom->time()), double(locDom->deltatime()) ) ;
+         printf("cycle = %d (%d), time = %e, dt=%e\n",
+                locDom->cycle(), global_counter, double(locDom->time()), double(locDom->deltatime()) ) ;
       }
    }
 
@@ -3021,5 +3029,6 @@ char id2str[TOTAL_IDS][MAX_ID_STR_LEN] = {
     , "ID__COMMBUFSEND"
     , "ID__COMMBUFRECV"
 };
- 
+#if _CD 
 bool Domain::restarted = false;
+#endif

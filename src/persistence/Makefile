@@ -1,9 +1,16 @@
 #!/bin/bash
 CC=g++
 MPICC=mpicxx
-CFLAGS=-fPIC -Wall -g -c -std=gnu++0x -I. -fmax-errors=3
-LFLAGS=-fPIC -Wall -g -std=gnu++0x -I.
+ENABLE_DEBUG=1
+CFLAGS=-fPIC -Wall -c -std=gnu++0x -I. -fmax-errors=3
+LFLAGS=-fPIC -Wall -std=gnu++0x -I.
 
+ifeq (${ENABLE_DEBUG}, 1)
+CFLAGS += -g -O0 -D_PACKER_DEBUG
+LFLAGS += -g -D_PACKER_DEBUG
+else
+CFLAGS += -O3
+endif
 #all:  test_mpi
 
 OBJS=data_store.o buffer_consumer.o cd_file_handle.o table_store.o packer_prof.o
@@ -15,7 +22,7 @@ TARGET=libpacker.so
 all: ${TARGET}
 #all: test_base test_packer test_mpi
 ${TARGET}: ${MPIOBJS}
-	$(MPICC) -shared -Wl,-soname,libpacker.so $^ -o libpacker.so -lpthread
+	$(CC) -shared -Wl,-soname,libpacker.so $^ -o libpacker.so -lpthread
 
 #test_base: test_base.o ${MPIOBJS}
 #	${MPICC} ${LFLAGS} $^ -o $@ -lpthread

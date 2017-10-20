@@ -98,7 +98,7 @@ void internal_begin(cd_handle_t *c_handle, const char *label, int collective, ui
 #else
 void internal_begin(cd_handle_t *c_handle, const char *label, int collective, uint64_t sys_err_vec)
 {
-  TO_CDHandle(c_handle)->InternalBegin(label, collective, sys_err_vec);
+  TO_CDHandle(c_handle)->Begin(label, collective, sys_err_vec);
 }
 #endif
 
@@ -127,8 +127,7 @@ void cd_complete(cd_handle_t *c_handle)
   CD_Complete(TO_CDHandle(c_handle));
 }
 
-//FIXME: for now only supports this one preservation, and does not support RegenObject...
-//TODO: what is this ref_name? should that be the same with my_name? 
+// TODO: for now only supports this one preservation, and does not support RegenObject, yet.
 int cd_preserve(cd_handle_t *c_handle, 
                    void *data_ptr,
                    uint64_t len,

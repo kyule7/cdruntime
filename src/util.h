@@ -224,12 +224,13 @@ int MakeFileDir(const char *filepath_str)
   assert(filepath && *filepath);
   int ret = 0;
   struct stat sb;
+//  printf("filepath:%s\n", filepath_str);
   if(stat(filepath, &sb) != 0 || S_ISDIR(sb.st_mode) == 0) {
     char *ptr;
     char *next = NULL;
     for (ptr=strchr(filepath+1, '/'); ptr; next=ptr+1, ptr=strchr(next, '/')) {
       *ptr='\0';
-      printf("%p %s\n", ptr,  filepath);
+//      printf("%p %s\n", ptr,  filepath);
       int err = mkdir(filepath, S_IRWXU);
       if(err == -1 && errno != EEXIST) { 
         *ptr='/'; 
@@ -238,7 +239,7 @@ int MakeFileDir(const char *filepath_str)
       *ptr='/';
     }
     
-    if(*next != '\0') { 
+    if(next != NULL && *next != '\0') { 
       int err = mkdir(filepath, S_IRWXU);
       if(err == -1 && errno != EEXIST) { 
         ret = -1;

@@ -28,4 +28,4 @@ test_mpi.o: test_mpi.cc
 	${MPICC} ${CFLAGS} $^ -o $@
 
 clean:
-	rm ${TARGET}; rm test.ref.*; rm *.o
+	rm ${TARGET}; rm test.ref.*; rm *.o; rm prv_*;

@@ -48,6 +48,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_def_common.h"
 #include "cd_def_interface.h"
 #include "cd_global.h"
+//#include "libc_wrapper.h"
 
 namespace packer {
   class CDEntry;
@@ -94,15 +95,15 @@ namespace cd {
     class CommLog;
     class RuntimeLogger;
   }
-  namespace interface {
-
-  }
+//  namespace interface {
+//
+//  }
   class CDEvent;
 }
 
 using namespace common;
 using namespace cd::internal;
-using namespace cd::interface;
+using namespace interface;
 using namespace cd::logging;
 
 #if CD_MPI_ENABLED 
@@ -416,19 +417,30 @@ extern CD_CLOCK_T log_elapsed_time;
 //
 extern uint64_t state;
 extern int64_t failed_phase;
+extern int64_t failed_seqID;
 extern bool just_reexecuted;
+extern bool orig_app_side;
+extern bool orig_disabled;
+extern bool orig_msg_app_side;
+extern bool orig_msg_disabled;
 /**@addtogroup runtime_logging 
  * @{
  */
 
+#define CD_LIBC_LOGGING 1
+//#define CD_LIBC_LOGGING 0
 #define MsgPrologue() \
+  orig_msg_app_side = app_side; \
+  orig_msg_disabled = logger::disabled; \
   app_side = false; \
+  logger::disabled = true; \
   msg_begin_clk = CD_CLOCK(); 
 
 #define MsgEpilogue() \
-  app_side = true; \
   msg_end_clk = CD_CLOCK(); \
-  msg_elapsed_time += msg_end_clk - msg_begin_clk; 
+  msg_elapsed_time += msg_end_clk - msg_begin_clk; \
+  app_side = orig_msg_app_side; \
+  logger::disabled = orig_msg_disabled; 
 
 #define LogPrologue() \
   log_begin_clk = CD_CLOCK(); 
@@ -443,7 +455,10 @@ extern bool just_reexecuted;
  */
 
 #define CDPrologue() \
+  orig_app_side = app_side; \
+  orig_disabled = logger::disabled; \
   app_side = false; \
+  logger::disabled = true; \
   begin_clk = CD_CLOCK(); 
 
 
@@ -454,8 +469,21 @@ extern bool just_reexecuted;
 #define CDEpilogue() \
   end_clk = CD_CLOCK(); \
   elapsed_time += end_clk - begin_clk; \
-  app_side = true; \
+  app_side = orig_app_side; \
+  logger::disabled = orig_disabled; 
 
+/*
+#define TunedPrologue() \
+  cd::app_side = false; \
+  logger::disabled = true; \
+  tuned::begin_clk = CD_CLOCK(); 
+
+#define TunedEpilogue() \
+  tuned::end_clk = CD_CLOCK(); \
+  tuned::elapsed_time += tuned::end_clk - tuned::begin_clk; \
+  cd::app_side = true; \
+  logger::disabled = false; 
+*/
 //end_clk = CD_CLOCK(); 
 //  elapsed_time += end_clk - begin_clk; 
 

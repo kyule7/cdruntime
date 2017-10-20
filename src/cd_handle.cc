@@ -56,7 +56,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 using namespace cd;
 using namespace common;
-using namespace cd::interface;
+using namespace ::interface;
 using namespace cd::internal;
 using namespace std;
 #define STOPHANDLE 
@@ -83,10 +83,21 @@ SystemErrorInjector *CDHandle::system_error_injector_ = NULL;
 
 #endif
 
+bool cd::orig_app_side = true;
+bool cd::orig_disabled = false;
+bool cd::orig_msg_app_side = true;
+bool cd::orig_msg_disabled = false;
+bool packer::orig_disabled = false;
+bool packer::orig_appside = true;
+bool tuned::orig_disabled = false;
+bool tuned::orig_appside = true;
 CD_CLOCK_T cd::tot_begin_clk=0;
 CD_CLOCK_T cd::tot_end_clk=0;
 CD_CLOCK_T cd::begin_clk=0;
 CD_CLOCK_T cd::end_clk=0;
+CD_CLOCK_T tuned::begin_clk=0;
+CD_CLOCK_T tuned::end_clk=0;
+CD_CLOCK_T tuned::elapsed_time;
 CD_CLOCK_T cd::elapsed_time=0;
 CD_CLOCK_T cd::normal_sync_time=0;
 CD_CLOCK_T cd::reexec_sync_time=0;
@@ -318,7 +329,7 @@ void InitDir(int myTask, int numTask)
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   CDPrologue();
-
+  logger::taskID = myTask;
   cd::tot_begin_clk = CD_CLOCK();
   char *cd_config_file = getenv("CD_OUTPUT_BASE");
   if(cd_config_file != NULL) {
@@ -327,6 +338,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   else {
     cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
   }
+//  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
 #if CD_TUNING_ENABLED == 0
   cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
@@ -398,7 +410,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #endif
 
   end_clk = CD_CLOCK();
-  CDEpilogue();
+  CDEpilogue(); // It enables logging.
 
   return root_cd_handle;
 }
@@ -425,6 +437,7 @@ void CD_Finalize(void)
   CD_ASSERT_STR(CDPath::GetCDPath()->size()==1, 
       "path size:%lu\n", CDPath::GetCDPath()->size()); // There should be only on CD which is root CD
   assert(CDPath::GetCDPath()->back()!=NULL);
+
 
 
 #if CD_PROFILER_ENABLED
@@ -626,6 +639,10 @@ void CD_Finalize(void)
 #endif
   end_clk = CD_CLOCK();
   CDEpilogue();
+#if CD_LIBC_LOGGING
+  logger::Fini();
+  logger::disabled = true;
+#endif
 }
 
 
@@ -1129,20 +1146,23 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 CDErrT CDHandle::Destroy(bool collective) 
 {
   CDPrologue();
+  CDErrT err;
   TUNE_DEBUG("[Real %s] %u %d\n", __func__, level(), phase());
 //  printf("[Real %s] %u %d\n", __func__, level(), phase()); STOPHANDLE;
   uint32_t phase = ptr_cd_->phase();//phase();
+  {
   std::string label(GetLabel());
 
   CD_DEBUG("%s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
                                                        level(), need_reexec(), *CD::rollback_point_);
-  CDErrT err = InternalDestroy(collective);
+  err = InternalDestroy(collective);
 
   end_clk = CD_CLOCK();
   destroy_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   profMap[phase]->destroy_elapsed_time_ += end_clk - begin_clk;
 #endif
+  }
   CDEpilogue();
 
   return err;
@@ -1266,7 +1286,7 @@ CDErrT CDHandle::InternalDestroy(bool collective, bool need_destroy)
 //  return InternalBegin(collective, label, sys_error_vec);
 //}
 
-CDErrT CDHandle::InternalBegin(const char *label, bool collective, const uint64_t &sys_error_vec)
+CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_error_vec)
 {
   CDPrologue();
 
@@ -1293,7 +1313,10 @@ CDErrT CDHandle::InternalBegin(const char *label, bool collective, const uint64_
   //CDEpilogue(phaseTree.current_->profile_.RecordBegin());
   cd::phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, need_sync);
   CDEpilogue();
-
+#if CD_LIBC_LOGGING
+  app_side = true;
+  logger::disabled = false;
+#endif
   return err;
 }
 
@@ -1364,11 +1387,12 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   /// It will be averaged out with the number of seq. CDs.
   assert(ptr_cd_ != 0);
   bool is_reexec = (GetExecMode() == kReexecution);
+  CDErrT err;
+  {
   std::string entry_name(my_name);
-  CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+  err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
                                  entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
-
 #if CD_ERROR_INJECTION_ENABLED
   if(memory_error_injector_ != NULL) {
     memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
@@ -1406,6 +1430,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 //  }
 //#endif
   cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  }
   CDEpilogue();
   return err;
 }
@@ -1426,11 +1451,12 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   assert(ptr_cd_ != 0); 
   uint64_t len = 0;
   bool is_reexec = (GetExecMode() == kReexecution);
+  CDErrT err;
+  {
   std::string entry_name(my_name);
-  CDErrT err = ptr_cd_->Preserve((void *)&serdes, len, kSerdes | preserve_mask, 
+  err = ptr_cd_->Preserve((void *)&serdes, len, kSerdes | preserve_mask, 
                                  entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
-
 //#if CD_PROFILER_ENABLED
 //  if(is_reexecution) {
 ////    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
@@ -1467,6 +1493,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
 
 
   cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  }
   CDEpilogue();
   return err;
 }
@@ -1488,10 +1515,12 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
 //  bool is_reexec = (GetExecMode() == kReexecution);
 //#endif
   bool is_reexec = (GetExecMode() == kReexecution);
+  CDErrT err;
+  {
   std::string entry_name(my_name);
   // TODO CDEvent object need to be handled separately, 
   // this is essentially shared object among multiple nodes.
-  CDErrT err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+  err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
                               entry_name, ref_name, ref_offset,  
                               regen_object, data_usage);
 
@@ -1527,6 +1556,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   //CDEpilogue();
   
   cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  }
   CDEpilogue();
   return err;
 }
@@ -1681,7 +1711,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 #endif
     err = kAppError;
     
-  }
+  } // kErrorReported ends
   else {
 #if CD_ERROR_INJECTION_ENABLED
 /*

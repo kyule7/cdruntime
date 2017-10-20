@@ -2,6 +2,7 @@
 #define _PACKER_H
 
 #include "data_store.h"
+#include "packer_common.h"
 #include "table_store.hpp"
 #include "string.h"
 namespace packer {
@@ -26,41 +27,36 @@ class Packer {
     bool alloc_table;
     bool alloc_data;
   public:
-    Packer(uint64_t alloc=BASE_ENTRY_CNT, TableStore<EntryT> *table=NULL, DataStore *data=NULL) : cur_pos_(0) {
+    void InternalInit(uint64_t alloc, TableStore<EntryT> *table, DataStore *data, uint64_t init_size, int filemode) {
       if(table == NULL) {
         alloc_table = true; 
-        table_ = new TableStore<EntryT>(BASE_ENTRY_CNT);
+        table_ = new TableStore<EntryT>(alloc);
       } else {
         alloc_table = false; 
         table_ = table;
       }
       if(data == NULL) {
         alloc_data = true; 
-        data_ = new DataStore;
+        data_ = new DataStore(NULL, init_size, filemode);
       } else {
         alloc_data = false; 
         data_ = data;
       }
+    }
+    Packer(uint64_t alloc=BASE_ENTRY_CNT, TableStore<EntryT> *table=NULL, DataStore *data=NULL) : cur_pos_(0) {
+      InternalInit(alloc, table, data, DATA_GROW_UNIT, DEFAULT_FILEMODE);
     }
     Packer(TableStore<EntryT> *table, DataStore *data=NULL) : cur_pos_(0) {
-      if(table == NULL) {
-        alloc_table = true; 
-        table_ = new TableStore<EntryT>(true);
-      } else {
-        alloc_table = false; 
-        table_ = table;
-      }
-      if(data == NULL) {
-        alloc_data = true; 
-        data_ = new DataStore;
-      } else {
-        alloc_data = false; 
-        data_ = data;
-      }
+      InternalInit(BASE_ENTRY_CNT, table, data, DATA_GROW_UNIT, DEFAULT_FILEMODE);
     }
-    
+    Packer(TableStore<EntryT> *table, DataStore *data, uint64_t init_size, int filemode) : cur_pos_(0) {
+      InternalInit(BASE_ENTRY_CNT, table, data, init_size, filemode);
+    }
+    Packer(uint64_t alloc, TableStore<EntryT> *table, DataStore *data, uint64_t init_size, int filemode) : cur_pos_(0) {
+      InternalInit(alloc, table, data, init_size, filemode);
+    }
     Packer(void *object) : cur_pos_(0) {
-      data_ = new DataStore((char *)object);
+      data_ = new DataStore((char *)object, DATA_GROW_UNIT, DEFAULT_FILEMODE);
       table_ = ReadFromMemory(object, true);
       alloc_table = true;
       alloc_data  = true;
@@ -82,7 +78,7 @@ class Packer {
       if(reuse)
         data_->ReInit();
       else
-        data_->Init();
+        data_->Init(NULL, DATA_GROW_UNIT, DEFAULT_FILEMODE);
     }
 
     BaseTable *GetTable(void) { return table_; }
@@ -148,6 +144,12 @@ class Packer {
       }
       uint64_t ret = table_->Insert(EntryT(id, len, offset).SetSrc(app_data));
       return ret;
+    }
+
+    /// Inserts table entry only
+    uint64_t Add(EntryT &&entry)
+    {
+      return table_->Insert(entry);
     }
 
     uint64_t Add(char *src, EntryT *entry)
@@ -218,11 +220,24 @@ class Packer {
     // FIXME:Initially buffer should be flushed first.
     EntryT *GetNext(char *dst, uint64_t id)
     {
-      if(cur_pos_ < table_.used()) {
+      uint64_t used_entries = table_->used();
+      if(cur_pos_ < used_entries) {
         EntryT &entry = table_[cur_pos_++];
         assert(id == entry.id_);
         data_->Read(dst, entry.size(), entry.offset_);
         return &entry;
+      } else {
+        cur_pos_ = 0;
+        return NULL;
+      }
+    }
+
+    // FIXME:Initially buffer should be flushed first.
+    EntryT *GetNext(void)
+    {
+      uint64_t used_entries = table_->used();
+      if(cur_pos_ < used_entries) {
+        return table_->At(cur_pos_++);
       } else {
         cur_pos_ = 0;
         return NULL;

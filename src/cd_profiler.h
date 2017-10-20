@@ -258,5 +258,5 @@ public:
 
 
 } // namespace cd ends
-#endif
+#endif // _SIGHT ends
 #endif

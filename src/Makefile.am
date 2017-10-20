@@ -44,10 +44,16 @@ libcd_la_SOURCES = \
 										serdes.cc \
   	                sys_err_t.cc \
 										cd_capi.cc 
-MY_LDFLAGS=-L${abs_top_builddir}/src/persistence -lpacker -L${YAML_PATH}/lib -lyaml -ldl
-#libcd_la_LDFLAGS = -Wl,-rpath=${abs_top_builddir}/src/persistence -export-dynamic #-export-symbols-regex
-libcd_la_LDFLAGS = -export-dynamic #-export-symbols-regex
-libcd_la_CPPFLAGS = -I${abs_top_builddir}/src/persistence -I${YAML_PATH}/include
+CD_ABS_PATH=${abs_top_builddir}
+#MY_LDFLAGS=-L${CD_ABS_PATH}/plugin/wrapper -lwrapLibc -L${CD_ABS_PATH}/src/persistence -lpacker -L${YAML_PATH}/lib -lyaml -ldl
+#libcd_la_LDFLAGS = -Wl,-rpath=${CD_ABS_PATH}/plugin/wrapper -Wl,-rpath=${CD_ABS_PATH}/src/persistence -Wl,-rpath=${YAML_PATH}/lib -export-dynamic #-export-symbols-regex
+CD_LFLAG  = -L${CD_ABS_PATH}/src/persistence -lpacker -L${YAML_PATH}/lib -lyaml -ldl
+LOG_LFLAG = -L${CD_ABS_PATH}/plugin/wrapper -lwrapLibc 
+CD_RPATH  = -Wl,-rpath=${CD_ABS_PATH}/src/persistence -Wl,-rpath=${YAML_PATH}/lib -export-dynamic #-export-symbols-regex
+LOG_RPATH = -Wl,-rpath=${CD_ABS_PATH}/plugin/wrapper
+MY_LDFLAGS = ${LOG_LFLAG} ${CD_LFLAG}
+libcd_la_LDFLAGS = ${LOG_RPATH} ${CD_RPATH} 
+libcd_la_CPPFLAGS = -I${CD_ABS_PATH}/src/persistence -I${CD_ABS_PATH}/plugin/wrapper -I${YAML_PATH}/include
 #libcd_la_CPPFLAGS = $(cpp_flags)
 libcd_la_LIBADD = $(MY_LDFLAGS) $(external_libs) 
 

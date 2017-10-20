@@ -4,7 +4,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdint>
-
+#include "packer_common.h"
 //#define _DEBUG_ENABLED
 
 
@@ -16,14 +16,20 @@
 #define TABLE_ID_OFFSET 0xFFFFFFFF00000000
 #define CHUNK_ALIGNMENT 512
 #define DEFAULT_BASE_FILEPATH "."
+#define CHUNKSIZE_THRESHOLD_BASE 0x40000000 // 16KB
+#define DATA_GROW_UNIT           0x40000000
 //#ifdef _DEBUG_0402        
 
 #define ERROR_MESSAGE_PACKER(...) \
   { fprintf(stderr, __VA_ARGS__); fflush(stderr); assert(0); }
 
-#define PACKER_ASSERT(...) assert(__VA_ARGS__)
-
-#define PACKER_ASSERT_STR(COND, ...) { if((COND) == false) { printf(__VA_ARGS__); } assert(COND); }
+#ifdef _PACKER_DEBUG
+# define PACKER_ASSERT(...) assert(__VA_ARGS__)
+# define PACKER_ASSERT_STR(COND, ...) { if((COND) == false) { printf(__VA_ARGS__); } assert(COND); }
+#else
+# define PACKER_ASSERT(...) 
+# define PACKER_ASSERT_STR(COND, ...)
+#endif
 
 //#define ALIGN_UP(X, Y) (((X) & ((Y)-1) > 0)? ((X) & ~((Y)-1)) + (Y) : ((X) & ~((Y)-1)))
 
@@ -75,13 +81,6 @@ enum {
   kBufferReserved1=0x20,
   kBufferReserved2=0x40,
   kBufferReserved3=0x80
-};
-
-enum {
-  kVolatile       = 0x000, // 0x0X00
-  kPosixFile      = 0x100,
-  kAIOFile        = 0x200,
-  kMPIFile        = 0x400
 };
 
 //struct MagicStoreEntry {

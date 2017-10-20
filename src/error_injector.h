@@ -64,7 +64,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <initializer_list>
 #define DEFAULT_ERROR_THRESHOLD 0.0
 #define NO_ERROR_INJECTED 0
-namespace cd {
+//namespace cd {
   namespace interface {
 
 
@@ -238,10 +238,10 @@ public:
 };
 
 class SystemErrorInjector : public ErrorInjector {
-  SystemConfig &sc_;
+  cd::SystemConfig &sc_;
   CD_CLOCK_T prev_clk_;
 public:
-  SystemErrorInjector(SystemConfig &sc)
+  SystemErrorInjector(cd::SystemConfig &sc)
     : sc_(sc)
   {
     prev_clk_ = CD_CLOCK();
@@ -308,7 +308,7 @@ public:
 /** @} */ // Ends error_injector
 
 } // namespace interface ends
-} // namespace cd ends
+//} // namespace cd ends
 
 #endif
 #endif

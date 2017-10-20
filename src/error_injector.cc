@@ -36,8 +36,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "error_injector.h"
 #if CD_ERROR_INJECTION_ENABLED
 
-#include <cstdio>
-#include <cstdlib>
+#include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 //#include <random>
 #include "cd_def_internal.h"
@@ -48,7 +48,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define DEBUG_OFF_ERRORINJ 0
 
 using namespace cd;
-using namespace cd::interface;
+using namespace interface;
 
 
 // Uniform Random

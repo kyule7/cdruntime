@@ -54,16 +54,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <stdlib.h>
-#include <stdio.h>
 #include <string>
 #include <list>
 #include "cd_features.h"
 #include "cd_def_common.h"
+#include "libc_wrapper.h" // defined here due to tuned
 // This could be different from MPI program to PGAS program
 // key is the unique ID from 0 for each CD node.
 // value is the unique ID for mpi communication group or thread group.
@@ -97,6 +97,29 @@ typedef int           ColorT;
 typedef int           GroupT;
 #endif
 
+namespace packer {
+  extern bool orig_disabled;
+  extern bool orig_appside;
+}
+namespace tuned {
+  extern bool orig_disabled;
+  extern bool orig_appside;
+}
+
+namespace interface {
+  class Profiler;
+  class ErrorInjector; 
+  class ErrorProb;
+  class UniformRandom;
+  class LogNormal;
+  class Exponential;
+  class Normal;
+  class Poisson;
+  class ErrorInjector;
+  class CDErrorInjector;
+  class MemoryErrorInjector;
+  class NodeFailureInjector;
+}
 
 namespace cd {
   namespace internal {
@@ -110,20 +133,6 @@ namespace cd {
     class CDNameT;
     class CDID;
 //    class PFSHandle;
-  }
-  namespace interface {
-    class Profiler;
-    class ErrorInjector; 
-    class ErrorProb;
-    class UniformRandom;
-    class LogNormal;
-    class Exponential;
-    class Normal;
-    class Poisson;
-    class ErrorInjector;
-    class CDErrorInjector;
-    class MemoryErrorInjector;
-    class NodeFailureInjector;
   }
   namespace logging {
     class CommLog;
@@ -525,6 +534,26 @@ namespace tuned {
 ////    bool     active_;
 //  };
 
+#define TunedPrologue() \
+  cd::app_side = false; \
+  logger::disabled = true; \
+  tuned::begin_clk = CD_CLOCK(); 
+
+#define TunedEpilogue() \
+  tuned::end_clk = CD_CLOCK(); \
+  tuned::elapsed_time += tuned::end_clk - tuned::begin_clk; \
+  cd::app_side = true; \
+  logger::disabled = false; 
+
+#define PackerPrologue() \
+  packer::orig_appside = cd::app_side; \
+  packer::orig_disabled = logger::disabled; \
+  cd::app_side = false; \
+  logger::disabled = true; 
+
+#define PackerEpilogue() \
+  cd::app_side = packer::orig_appside; \
+  logger::disabled = packer::orig_disabled; 
 } // namespace tuned ends
 
 #endif

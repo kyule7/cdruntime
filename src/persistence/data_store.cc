@@ -1,6 +1,6 @@
 //#define _GNU_SOURCE
-#include <cstdlib>
-#include <cstdio>
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 //#include <utility>
 #include "define.h"
@@ -47,18 +47,33 @@ static uint64_t chunk_mask = CHUNK_ALIGNMENT - 1;
 //      chunksize_, written_len_, sizeof(MagicStore)); //getchar();
 //
 //}
-DataStore::DataStore(char *ptr)
+DataStore::DataStore(void)
+{
+
+  // Should be thread-safe
+  Init(NULL, DATA_GROW_UNIT, DEFAULT_FILEMODE);
+
+  InitFile();
+}
+
+DataStore::DataStore(char *ptr, uint64_t init_size, int filemode)
 {
   MYDBG("\nptr:%p", ptr);
 
   // Should be thread-safe
-  Init(ptr);
+  Init(ptr, init_size, filemode);
 
+  InitFile();
+}
+
+void DataStore::InitFile(void)
+{
   MYDBG("BeforeWrite ft:%u fh:%p ptralloc:%p magic:%lu\n",
         ftype(), fh_, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
   
   if(fh_ != NULL) {
     if(fh_->GetFileSize() < (int64_t)sizeof(MagicStore)) {
+      //printf("fh_:%p, fsize:%lu, Write(0, %p, %zu)\n", fh_, fh_->GetFileSize(), ptr_ - sizeof(MagicStore), sizeof(MagicStore));
       fh_->Write(0, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
       fh_->FileSync();
     }
@@ -71,18 +86,19 @@ DataStore::DataStore(char *ptr)
       chunksize_, written_len_, sizeof(MagicStore)); //getchar();
 }
 
-void DataStore::Init(char *ptr) 
+void DataStore::Init(char *ptr, uint64_t init_size, int filemode) 
 {
   pthread_mutex_lock(&mutex);
   ptr_ = NULL;
   buf_preserved_ = NULL;
   tail_preserved_ = 0;
-  grow_unit_ = DATA_GROW_UNIT;
-  size_ = grow_unit_;
+  grow_unit_ = init_size;
+  size_ = init_size;
   head_ = 0;//size_ - size_ / 4;
   tail_ = head_;//sizeof(MagicStore);
   allocated_ = 0;
-  mode_ = kBoundedMode | kMPIFile;//kPosixFile;
+  //mode_ = kBoundedMode | filemode;
+  mode_ = kGrowingMode | filemode;
   r_tail_ = 0;
   r_head_ = 0;
   if(ptr == NULL) 
@@ -130,7 +146,11 @@ CDErrType DataStore::Free(char *ptr)
 CDErrType DataStore::Alloc(void **ptr, uint64_t size)
 { 
   MYDBG("%lu\n", size);
-  posix_memalign(ptr, CHUNK_ALIGNMENT, size + sizeof(MagicStore)); 
+  int ret = posix_memalign(ptr, CHUNK_ALIGNMENT, size + sizeof(MagicStore)); 
+  if( ret != 0 ) { 
+    perror("posix_memalign:");
+    ERROR_MESSAGE_PACKER("%d = posix_memalign(%p, %lu)\n", ret, *ptr, size);
+  }
   MYDBG("done %d %p\n", size, *ptr); //getchar();
   *(char **)ptr = (char *)(*ptr) + sizeof(MagicStore);
   return kOK; 
@@ -366,6 +386,9 @@ uint64_t DataStore::Write(char *pfrom, int64_t len)
   if( CHECK_FLAG(mode_, kBoundedMode) ) {
 
     ret = WriteBufferMode(pfrom, len);
+    if( buf_used() >= chunksize_threshold ) {
+      SetActiveBuffer();
+    }
 
   } else { // Non-buffering mode
 //    bool is_empty = IsEmpty();
@@ -443,7 +466,7 @@ uint64_t DataStore::WriteBuffer(char *src, int64_t len)
     // It is safe to overlap writing data to not-yet-filled chunk in any case.
     // If there is no other chunks, it is still empty.
     if(available_in_chunk > 0) {
-      PACKER_ASSERT(len_to_write < chunksize_);
+      PACKER_ASSERT(len_to_write <= chunksize_);
 //      pthread_mutex_lock(&mutex);
       Copy(ptr_ + (tail_ % size_), src, len_to_write);
       tail_ += len_to_write;
@@ -479,10 +502,13 @@ void DataStore::WriteInternal(char *src, uint32_t len_to_write, int64_t &i)
 {
   MYDBG("%p %u %ld: %p <- %p (%u) \n", src, len_to_write, i, ptr_ + (tail_ % size_), src + i, len_to_write);
   pthread_mutex_lock(&mutex);
-  while( IsFull() ) {
-    pthread_cond_wait(&full, &mutex);
-  }
-
+  bool is_full = IsFull();
+  if(is_full) { 
+    pthread_cond_signal(&empty); 
+    while( IsFull() ) {
+      pthread_cond_wait(&full, &mutex);
+    }
+  } 
   Copy(ptr_ + (tail_ % size_), src + i, len_to_write);
   tail_ += len_to_write;
 
@@ -559,16 +585,16 @@ void DataStore::FileRead(char *pto, uint64_t chunk_in_file, uint64_t pos)
   fh_->Read((char *)tmp, len_to_read_aligned, pos_aligned_down);
   memcpy(pto, (char *)tmp + redundant_len, chunk_in_file);
 
-  if(pos == 66432) {
-    printf("@@@@ READ: check this out!!!!##########33\n\n\n");
-    for(uint32_t i=0; i<len_to_read/(16*4); i++) {
-      for(uint32_t j=0; j<16; j++) {
-        printf("%5u ", *((int *)tmp + i*16 + j));
-      }
-      printf("\n");
-    } 
-    printf("@@@@ READ: check this out!!!!##########33\n\n\n");
-  }
+//  if(pos == 66432) {
+//    printf("@@@@ READ: check this out!!!!##########33\n\n\n");
+//    for(uint32_t i=0; i<len_to_read/(16*4); i++) {
+//      for(uint32_t j=0; j<16; j++) {
+//        printf("%5u ", *((int *)tmp + i*16 + j));
+//      }
+//      printf("\n");
+//    } 
+//    printf("@@@@ READ: check this out!!!!##########33\n\n\n");
+//  }
   free(tmp);
 #endif
 
@@ -630,18 +656,20 @@ char *DataStore::ReadAll(uint64_t &totsize)
 void DataStore::CopyFromBuffer(char *dst, uint64_t len, uint64_t pos)
 {
   MYDBG("Copy %p <- %lu + %lu\n", dst, len, pos);
-  const uint64_t offset  = (pos == INVALID_NUM)? (head_ % size_) : (pos % size_);
-  const uint64_t first = size_ - offset;
-  const int64_t  rest  = len - first;
-  MYDBG("%lu + %lu > %lu (offset:%lu)\n", first, len, size_, offset);
-  if( rest > 0 ) {
-    MYDBG("First copy  %p <- %p, %lu\n", dst,         ptr_ + offset, first);
-    MYDBG("Second copy %p <- %p, %lu\n", dst + first, ptr_,        rest);
-    Copy(dst,         ptr_ + offset, first);
-    Copy(dst + first, ptr_,        rest);
-  } else {
-    MYDBG("Copy %p <- %p, %lu\n", ptr_ + offset, len);
-    Copy(dst, ptr_ + offset, len);
+  if(len != 0) {
+    const uint64_t offset  = (pos == INVALID_NUM)? (head_ % size_) : (pos % size_);
+    const uint64_t first = size_ - offset;
+    const int64_t  rest  = len - first;
+    MYDBG("%lu + %lu > %lu (offset:%lu)\n", first, len, size_, offset);
+    if( rest > 0 ) {
+      MYDBG("First copy  %p <- %p, %lu\n", dst,         ptr_ + offset, first);
+      MYDBG("Second copy %p <- %p, %lu\n", dst + first, ptr_,        rest);
+      Copy(dst,         ptr_ + offset, first);
+      Copy(dst + first, ptr_,        rest);
+    } else {
+      MYDBG("Copy %p <- %p, %lu\n", ptr_ + offset, len);
+      Copy(dst, ptr_ + offset, len);
+    }
   }
 }
 
@@ -649,20 +677,22 @@ void DataStore::CopyFromBuffer(char *dst, uint64_t len, uint64_t pos)
 // which is the opposite-direction copy operation of WriteMem.
 void DataStore::CopyToBuffer(char *src, uint64_t len, uint64_t pos)
 {
-  const uint64_t offset = (pos == INVALID_NUM)? tail_ % size_ : pos % size_;
   MYDBG("Copy %p -> %lu\n", src, len);
-//  const uint64_t tail  = buf_pos % size_;
-  const uint64_t first = size_ - offset;
-  const int64_t  rest  = len - first;
-  MYDBG("%lu + %lu > %lu (head:%lu)\n", offset, len, size_, head_ % size_);
-  if( rest > 0 ) {
-    MYDBG("First copy  %p <- %p, %lu\n", ptr_ + offset, src,         first);
-    MYDBG("Second copy %p <- %p, %lu\n", ptr_,          src + first, rest);
-    Copy(ptr_ + offset, src,         first);
-    Copy(ptr_,          src + first, rest);
-  } else {
-    MYDBG("Copy %p <- %p, %lu\n", ptr_ + offset, src, len);
-    Copy(ptr_ + offset, src, len);
+  if(len != 0) {
+    const uint64_t offset = (pos == INVALID_NUM)? tail_ % size_ : pos % size_;
+  //  const uint64_t tail  = buf_pos % size_;
+    const uint64_t first = size_ - offset;
+    const int64_t  rest  = len - first;
+    MYDBG("%lu + %lu > %lu (head:%lu)\n", offset, len, size_, head_ % size_);
+    if( rest > 0 ) {
+      MYDBG("First copy  %p <- %p, %lu\n", ptr_ + offset, src,         first);
+      MYDBG("Second copy %p <- %p, %lu\n", ptr_,          src + first, rest);
+      Copy(ptr_ + offset, src,         first);
+      Copy(ptr_,          src + first, rest);
+    } else {
+      MYDBG("Copy %p <- %p, %lu\n", ptr_ + offset, src, len);
+      Copy(ptr_ + offset, src, len);
+    }
   }
 }
 
@@ -671,22 +701,23 @@ void DataStore::CopyToBuffer(char *src, uint64_t len, uint64_t pos)
 CDErrType DataStore::CopyFileToBuffer(uint64_t buf_pos, int64_t len, uint64_t pos)
 {
   CDErrType ret = kOK;
-  const uint64_t tail = buf_pos % size_;
-  const uint64_t first = size_ - tail;
-  const int64_t  rest  = len - first;
-  MYDBG("%lu + %lu > %lu (head:%lu)\n", buf_pos, len, size_, r_head_ % size_);
-
-  if( rest > 0 ) {
-    MYDBG("First copy  %p <- %p, %lu\n", ptr_ + tail, pos,         first);
-    MYDBG("Second copy %p <- %p, %lu\n", ptr_,        pos + first, rest);
-    CDErrType iret = fh_->Read(ptr_ + tail, first, pos);
-    CDErrType jret = fh_->Read(ptr_,        rest,  pos + first);
-    ret = (CDErrType)((uint64_t)iret | (uint64_t)jret);
-  } else {
-    MYDBG("Copy %p <- %p, %lu\n", ptr_ + tail, pos, len);
-    ret = fh_->Read(ptr_ + tail, len, pos);
+  if(len != 0) {
+    const uint64_t tail = buf_pos % size_;
+    const uint64_t first = size_ - tail;
+    const int64_t  rest  = len - first;
+    MYDBG("%lu + %lu > %lu (head:%lu)\n", buf_pos, len, size_, r_head_ % size_);
+  
+    if( rest > 0 ) {
+      MYDBG("First copy  %p <- %p, %lu\n", ptr_ + tail, pos,         first);
+      MYDBG("Second copy %p <- %p, %lu\n", ptr_,        pos + first, rest);
+      CDErrType iret = fh_->Read(ptr_ + tail, first, pos);
+      CDErrType jret = fh_->Read(ptr_,        rest,  pos + first);
+      ret = (CDErrType)((uint64_t)iret | (uint64_t)jret);
+    } else {
+      MYDBG("Copy %p <- %p, %lu\n", ptr_ + tail, pos, len);
+      ret = fh_->Read(ptr_ + tail, len, pos);
+    }
   }
-
   return ret;
 }
 
@@ -730,47 +761,49 @@ CDErrType DataStore::CopyFileToBuffer(uint64_t buf_pos, int64_t len, uint64_t po
 CDErrType DataStore::CopyBufferToFile(uint64_t buf_pos, int64_t len, uint64_t file_offset)
 {
   CDErrType ret = kOK;
-  const uint64_t mask_len = ~chunk_mask;
-  const uint64_t pos_in_buf = buf_pos % size_;
-  const int64_t  first = size_ - pos_in_buf;
-//  const uint64_t file_offset = buf_pos + written_len_;
-  PACKER_ASSERT(first >= 0);
-  PACKER_ASSERT(first % CHUNK_ALIGNMENT == 0);
-  PACKER_ASSERT(file_offset % CHUNK_ALIGNMENT == 0);
-  char *pbegin = ptr_ + pos_in_buf;
-  if(len > first) {
-    CDErrType iret = fh_->Write(file_offset, pbegin, first);
-    PACKER_ASSERT_STR( ((pos_in_buf + first) % size_) == 0, 
-        "((%lu + %lu) %% %lu) == %lu\n", pos_in_buf, first, size_, ((pos_in_buf + first) % size_));
-
-    const int64_t second = len - first;
-    const uint64_t second_up   = align_up(second, CHUNK_ALIGNMENT);
-    const uint64_t second_down = second & mask_len;
-    ret = fh_->Write(file_offset + first, ptr_, second_up, second_down);
-    ret = (CDErrType)((uint64_t)iret | (uint64_t)(ret));
-  } else {
+  if(len != 0) {
+    const uint64_t mask_len = ~chunk_mask;
+    const uint64_t pos_in_buf = buf_pos % size_;
+    const int64_t  first = size_ - pos_in_buf;
+  //  const uint64_t file_offset = buf_pos + written_len_;
+    PACKER_ASSERT(first >= 0);
+    PACKER_ASSERT(first % CHUNK_ALIGNMENT == 0);
+    PACKER_ASSERT(file_offset % CHUNK_ALIGNMENT == 0);
+    char *pbegin = ptr_ + pos_in_buf;
+    if(len > first) {
+      CDErrType iret = fh_->Write(file_offset, pbegin, first);
+      PACKER_ASSERT_STR( ((pos_in_buf + first) % size_) == 0, 
+          "((%lu + %lu) %% %lu) == %lu\n", pos_in_buf, first, size_, ((pos_in_buf + first) % size_));
+  
+      const int64_t second = len - first;
+      const uint64_t second_up   = align_up(second, CHUNK_ALIGNMENT);
+      const uint64_t second_down = second & mask_len;
+      ret = fh_->Write(file_offset + first, ptr_, second_up, second_down);
+      ret = (CDErrType)((uint64_t)iret | (uint64_t)(ret));
+    } else {
 #ifdef _DEBUG_0402        
-    if(packerTaskID == 0) printf("foffset:%lx, total:%lu\n", file_offset, len);
+      if(packerTaskID == 0) printf("foffset:%lx, total:%lu\n", file_offset, len);
 #endif
-    //ret = fh_->Write(file_offset, begin(), len, mask_len & len);
-    ret = fh_->Write(file_offset, pbegin, align_up(len, CHUNK_ALIGNMENT), mask_len & len);
-  }
-  return ret;
+      //ret = fh_->Write(file_offset, begin(), len, mask_len & len);
+      ret = fh_->Write(file_offset, pbegin, align_up(len, CHUNK_ALIGNMENT), mask_len & len);
+    }
+    return ret;
 #if 0
-  const uint64_t r_tail = r_tail_ % size_;
-  const uint64_t first  = size_ - r_tail;
-  const int64_t  rest   = len - first;
-  MYDBG("%lu + %lu > %lu (head:%lu)\n", r_tail_, len, size_, r_head_ % size_);
-  if( rest > 0 ) {
-    MYDBG("First copy  %p <- %p, %lu\n", ptr_ + tail, pos,         first);
-    MYDBG("Second copy %p <- %p, %lu\n", ptr_,        pos + first, rest);
-    fh_->Read(ptr_ + r_tail, first, pos);
-    fh_->Read(ptr_,          rest,  pos + first);
-  } else {
-    MYDBG("Copy %p <- %p, %lu\n", ptr_ + tail, pos, len);
-    fh_->Read(ptr_ + r_tail, len, pos);
-  }
+    const uint64_t r_tail = r_tail_ % size_;
+    const uint64_t first  = size_ - r_tail;
+    const int64_t  rest   = len - first;
+    MYDBG("%lu + %lu > %lu (head:%lu)\n", r_tail_, len, size_, r_head_ % size_);
+    if( rest > 0 ) {
+      MYDBG("First copy  %p <- %p, %lu\n", ptr_ + tail, pos,         first);
+      MYDBG("Second copy %p <- %p, %lu\n", ptr_,        pos + first, rest);
+      fh_->Read(ptr_ + r_tail, first, pos);
+      fh_->Read(ptr_,          rest,  pos + first);
+    } else {
+      MYDBG("Copy %p <- %p, %lu\n", ptr_ + tail, pos, len);
+      fh_->Read(ptr_ + r_tail, len, pos);
+    }
 #endif
+  }
 }
 
 void DataStore::InitReadMode(void) 
@@ -800,21 +833,26 @@ void DataStore::InitReadMode(void)
 
 void DataStore::FinReadMode(void) 
 {
-  if( tail_preserved_ > 0 && (head_ + written_len_ <= r_tail_ - head_) //&& last_rtail <= head_ + pos + CHUNK_ALIGNMENT)
-//  if(r_tail_ >= head_ + used() && (r_tail_ <= head_ + used() + CHUNK_ALIGNMENT)
-    && CHECK_FLAG(mode_, kReadMode)) {
-//  if(r_tail_ == (head_<<1) && CHECK_FLAG(mode_, kReadMode)) {
-//    printf("\n<<<<<<< [%s] final!! %lu <= %ld, %d\n----------------", __func__,
-//   head_ + written_len_, r_tail_ - head_, CHECK_FLAG(mode_, kReadMode));
-    //getchar();
-//  if(r_tail_ - (head_ + written_len_) == head_ + written_len_) {// - written_len_) {
-    // Restore the remaining buffer state
-    CopyToBuffer(buf_preserved_, tail_preserved_);
-    tail_ = head_ + tail_preserved_;
-    free(buf_preserved_);
-    buf_preserved_ = NULL;
-    tail_preserved_ = 0;
+  if(CHECK_FLAG(mode_, kReadMode)) {
     CD_UNSET(mode_, kReadMode); 
+    bool finalize_read = (tail_preserved_ > 0); 
+//                      && (head_ + written_len_ <= r_tail_ - head_); 
+                    //&& last_rtail <= head_ + pos + CHUNK_ALIGNMENT)
+    if( finalize_read ) {
+  //  if(r_tail_ == (head_<<1) && CHECK_FLAG(mode_, kReadMode)) {
+  //    printf("\n<<<<<<< [%s] final!! %lu <= %ld, %d\n----------------", __func__,
+  //   head_ + written_len_, r_tail_ - head_, CHECK_FLAG(mode_, kReadMode));
+      //getchar();
+  //  if(r_tail_ - (head_ + written_len_) == head_ + written_len_) {// - written_len_) {
+      // Restore the remaining buffer state
+      CopyToBuffer(buf_preserved_, tail_preserved_);
+      tail_ = head_ + tail_preserved_;
+      free(buf_preserved_);
+      buf_preserved_ = NULL;
+      tail_preserved_ = 0;
+    }
+    tail_preserved_ = 0;
+    buf_preserved_ = NULL;
 //    printf("Checkthis:%d at %p\n", CHECK_FLAG(mode_, kReadMode), this);
   }
 }
@@ -832,8 +870,8 @@ void DataStore::GetData(char *dst, int64_t len, uint64_t pos, bool keep_reading)
   uint64_t fetch_pos = pos;
   int64_t tail_inc = 0; 
   int64_t head_inc = 0;
-  int64_t orig_len = len; 
-  uint64_t orig_rtail = r_tail_;
+//  int64_t orig_len = len; 
+//  uint64_t orig_rtail = r_tail_;
   while(len > 0) {
     int64_t consumed = FetchInternal(tail_inc, head_inc, len, fetch_pos, false);
     int64_t readsize = (len < consumed)? len : consumed;
@@ -1077,11 +1115,13 @@ uint64_t DataStore::CalcOffset(uint64_t &len_to_read, uint64_t &buf_offset,
 uint64_t DataStore::Fetch(int64_t len, uint64_t pos, bool locality)
 {
   time_read.Begin(len);
+  InitReadMode();
   int64_t tail_inc = 0;
   int64_t head_inc = 0;
   int64_t consumed = FetchInternal(tail_inc, head_inc, len, pos, locality);
   r_tail_ += tail_inc;
   r_head_ += head_inc;
+  FinReadMode();
   time_read.End();
   return consumed;
 }
@@ -1089,7 +1129,9 @@ uint64_t DataStore::Fetch(int64_t len, uint64_t pos, bool locality)
 uint64_t DataStore::Fetch(int64_t &tail_inc, int64_t &head_inc, int64_t len, uint64_t pos, bool locality)
 {
   time_read.Begin(len);
+  InitReadMode();
   uint64_t consumed = FetchInternal(tail_inc, head_inc, len, pos, locality);
+  FinReadMode();
   time_read.End();
   return consumed;
 }
@@ -1097,7 +1139,7 @@ uint64_t DataStore::Fetch(int64_t &tail_inc, int64_t &head_inc, int64_t len, uin
 uint64_t DataStore::FetchInternal(int64_t &tail_inc, int64_t &head_inc, int64_t len, uint64_t pos, bool locality)
 {
   MYDBG("len:%lu, pos:%lu, rhead:%lu,rtail:%lu\n", len, pos, r_head_, r_tail_);
-  InitReadMode();
+//  InitReadMode();
   PACKER_ASSERT(CHECK_FLAG(mode_, kReadMode));
   PACKER_ASSERT(len > 0);
   const uint64_t pos_align_down = align_down(pos);
@@ -1136,7 +1178,7 @@ uint64_t DataStore::FetchInternal(int64_t &tail_inc, int64_t &head_inc, int64_t 
   tail_inc = r_tail_next - r_tail_;
   head_inc = r_head_next - r_head_;
 
-  FinReadMode();
+//  FinReadMode();
   return aligned_len_to_read;
 }
 

@@ -72,6 +72,12 @@ extern CD_CLOCK_T advance_elapsed_time;
 
 extern CD_CLOCK_T mailbox_elapsed_time;
 }
+
+namespace tuned {
+extern CD_CLOCK_T begin_clk;
+extern CD_CLOCK_T end_clk;
+extern CD_CLOCK_T elapsed_time;
+}
 // FIXME
 //
 // CD_CLOCK() --> CD_CLOCK(clk)

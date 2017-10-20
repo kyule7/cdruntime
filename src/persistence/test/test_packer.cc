@@ -13,7 +13,7 @@ FILE *dbgfp=stdout;
 
 
 uint64_t PreserveObject(DataStore *data, int *datap, int elemsize, int chunksize) {
-  CDPacker nested_packer(NULL, data);
+  CDPacker nested_packer(NULL, 16, data);
   uint64_t orig_size = nested_packer.data_->used();
   uint64_t magic_offset = 0;
   bool opt = true;
@@ -105,7 +105,7 @@ uint64_t PreserveObject(DataStore *data, int *datap, int elemsize, int chunksize
 //  getchar();
 //}
 
-char *TestNestedPacker(int elemsize, int chunksize) 
+void TestNestedPacker(int elemsize, int chunksize) 
 {
   uint64_t totsize = elemsize * chunksize;
   int *dataA = new int[totsize];
@@ -133,7 +133,7 @@ char *TestNestedPacker(int elemsize, int chunksize)
 //////////////////////////////////////////////////////
   printf("totsize:%lu, %lu\n", totsize * sizeof(int), totsizeB * sizeof(int));
 
-  CDPacker packer;
+  CDPacker packer(NULL, 128, NULL, 4096);
 
   int *dataAtmp = dataA;
   int first = elemsize / 2;

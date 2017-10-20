@@ -2535,6 +2535,8 @@ int MPI_Init(int *argc, char ***argv)
 {
 //  printf("[%s]\n", __func__); getchar();
   app_side = false; 
+  bool orig_disabled = logger::disabled; 
+  logger::disabled = true; 
   int mpi_ret = 0;
 
   mpi_ret = PMPI_Init(argc, argv);
@@ -2544,6 +2546,7 @@ int MPI_Init(int *argc, char ***argv)
 #endif
   
   app_side = true; 
+  logger::disabled = orig_disabled; 
   return mpi_ret;
 }
 
@@ -2551,6 +2554,8 @@ int MPI_Init_thread(int *argc, char ***argv, int required, int *provided)
 {
 //  printf("[%s]\n", __func__); getchar();
   app_side = false; 
+  bool orig_disabled = logger::disabled; 
+  logger::disabled = true; 
   int mpi_ret = 0;
 
   mpi_ret = PMPI_Init_thread(argc, argv, required, provided);
@@ -2560,11 +2565,14 @@ int MPI_Init_thread(int *argc, char ***argv, int required, int *provided)
 #endif
   
   app_side = true; 
+  logger::disabled = orig_disabled; 
   return mpi_ret;
 }
 int MPI_Finalize(void)
 {
   app_side = false; 
+  bool orig_disabled = logger::disabled; 
+  logger::disabled = true; 
   int mpi_ret = 0;
 
 #if CD_AUTOMATED
@@ -2575,6 +2583,7 @@ int MPI_Finalize(void)
 
   
   app_side = true; 
+  logger::disabled = orig_disabled; 
   return mpi_ret;
 }
 int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],

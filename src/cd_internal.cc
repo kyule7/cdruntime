@@ -48,7 +48,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 using namespace cd;
 using namespace common;
 using namespace cd::internal;
-using namespace cd::interface;
+using namespace ::interface;
 using namespace cd::logging;
 using namespace std;
 
@@ -69,7 +69,9 @@ CD_CLOCK_T cd::log_elapsed_time;
 
 uint64_t cd::gen_object_id=0;
 uint64_t cd::state = 0;
+// the very first failed phase
 int64_t cd::failed_phase = HEALTHY;
+int64_t cd::failed_seqID = HEALTHY;
 //int32_t cd::failed_level = HEALTHY;
 int iterator_entry_count=0;
 //EntryDirType::hasher cd::str_hash;
@@ -107,11 +109,11 @@ void cd::internal::InitFileHandle(bool make_dir)
 {
   char *prv_base_str = getenv( "CD_PRV_BASEPATH" );
   if(prv_base_str != NULL) {
-    packer::FileHandle::basepath = prv_base_str;
+    strcpy(packer::FileHandle::basepath, prv_base_str);
   }
 
   if(make_dir) {
-    MakeFileDir(packer::FileHandle::basepath.c_str());
+    MakeFileDir(packer::FileHandle::basepath);
   }
 }
 
@@ -255,7 +257,7 @@ CD::CD(CDHandle *cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
- :  cd_id_(cd_id), entry_directory_(1, NULL, NULL)
+ :  cd_id_(cd_id), entry_directory_(32, NULL, NULL)
     //,
 //    file_handle_(prv_medium, 
 //                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
@@ -450,9 +452,14 @@ void CD::InternalInitialize(CDHandle *cd_parent)
     LOG_DEBUG("Set child's child_seq_id_ to 0\n");
     child_seq_id_ = 0;
 
+    // FIXME: 10142017
+#if 0
     uint32_t tmp_seq_id = cd_parent->ptr_cd()->child_seq_id_;
     LOG_DEBUG("With cd_parent = %p, set child's seq_id_ to parent's child_seq_id_(%d)\n", cd_parent, tmp_seq_id);
     cd_id_.SetSequentialID(tmp_seq_id);
+#else
+    cd_id_.SetSequentialID(0);
+#endif
 
 #if CD_LIBC_LOG_ENABLED
     //GONG
@@ -834,7 +841,10 @@ uint32_t BeginPhase(uint32_t level, const string &label) {
     if(phaseTree.current_ != NULL) {
       phase = phaseTree.current_->GetPhaseNode(level, label);
     } else {
-      phase = phaseTree.Init(level, label);
+      if(phaseTree.root_ == NULL)
+        phase = phaseTree.Init(level, label);
+      else 
+        phase = phaseTree.ReInit();
     }
 //    phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, just_reexecuted, );
   }
@@ -846,7 +856,7 @@ void CompletePhase(uint32_t phase)//, bool is_reexec=false)
 {
   CD_ASSERT(phaseTree.current_);
   if(tuned::tuning_enabled == false) {
-    if(phase <= failed_phase) { // reexecution
+    if(failed_phase != HEALTHY) { // reexecution
       CD_ASSERT(failed_phase >= 0);
       // Set failed state in phaseTree
       phaseTree.current_->state_ = kReexecution;
@@ -855,7 +865,10 @@ void CompletePhase(uint32_t phase)//, bool is_reexec=false)
 
     }
     if(phaseTree.current_ != NULL) {
+      phaseTree.current_->last_completed_phase = phaseTree.current_->phase_;
       phaseTree.current_ = phaseTree.current_->parent_;
+    } else {
+      ERROR_MESSAGE("NULL phase is completed.\n");
     }
   }
 }
@@ -880,7 +893,14 @@ CDErrT CD::Begin(const char *label, bool collective)
     CD_ASSERT_STR(new_phase == phaseTree.current_->phase_,
                   "phase : %u != %u\n", new_phase,  phaseTree.current_->phase_);
   }
-  profMap[cd_id_.cd_name_.phase_] = &cd::phaseTree.current_->profile_; //getchar();
+  const int64_t current_phase = cd_id_.cd_name_.phase_;
+  profMap[current_phase] = &cd::phaseTree.current_->profile_; //getchar();
+
+  // it is the first begin after Create()
+  // (sequential ID is initialized at Create())
+  if(cd_id_.sequential_id() == 0) {
+    phaseTree.current_->MarkSeqID();
+  }
  // cd_name_.phase_ = GetPhase(level(), label_);
 
 //  cd_name_.phase_ = phase;
@@ -893,8 +913,8 @@ CDErrT CD::Begin(const char *label, bool collective)
 
 //  printf("## Before chage %d %p ## [%s %u] %s %s\n", 
 //      begin_, this, cd_id_.GetStringID().c_str(), myTaskID, name_.c_str(), label);
-  CD_ASSERT_STR(begin_ == false, "%s %s at %u-%u-%u\n", 
-      __func__, label, level(), cd_id_.cd_name_.phase_, cd_id_.sequential_id_);
+  CD_ASSERT_STR(begin_ == false, "%s %s at %u-%ld-%u\n", 
+      __func__, label, level(), current_phase, cd_id_.sequential_id_);
   begin_ = true;
 
   CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);
@@ -973,6 +993,7 @@ CDErrT CD::Begin(const char *label, bool collective)
   }
 #endif
 
+
 #endif // comm_log ends
 
   CD_DEBUG("Sync \n");
@@ -986,6 +1007,33 @@ CDErrT CD::Begin(const char *label, bool collective)
 //FIXME 0324 Kyushick    
 //    SyncCDs(this);
   }
+#if CD_LIBC_LOGGING
+  if(failed_phase == HEALTHY) {
+    assert(cd_exec_mode_ == kExecution);
+    libc_log_id_ = logger::GetLogger()->Set(libc_log_begin_);
+    libc_log_end_ = libc_log_begin_;
+    if(myTaskID == 0) {
+      MYDBG("log ft:%lu, log id:%lu, log begin:%lu\n", logger::GetLogger()->GetNextID(), libc_log_id_, libc_log_begin_);
+//      logger::GetLogger()->Print();
+    }
+  }
+  else {
+  //else if(current_phase <= failed_phase) {
+  //} else if(cd_exec_mode_ == kReexecution) {
+    if(myTaskID == 0) {
+      MYDBG("before log ft:%lu, log id:%lu, log begin:%lu\n", logger::GetLogger()->GetNextID(), libc_log_id_, libc_log_begin_);
+    }
+    logger::GetLogger()->Reset(libc_log_id_, libc_log_begin_);
+    if(myTaskID == 0) {
+      MYDBG("[Mode=%d] after log ft:%lu, log id:%lu, log begin:%lu\n", phaseTree.current_->state_, 
+          logger::GetLogger()->GetNextID(), libc_log_id_, libc_log_begin_);
+      logger::GetLogger()->Print();
+    }
+  } 
+//  else {
+//    ERROR_MESSAGE("CD Begin with mode (%d) and state (curr:%ld > %ld failed).\n", cd_exec_mode_, current_phase, failed_phase);
+//  }
+#endif
 
   // NOTE: This point reset rollback_point_
   uint32_t new_rollback_point = SyncCDs(this, true);
@@ -1126,7 +1174,7 @@ void CD::Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
 CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 {
   if(myTaskID == 0) {
-    printf("#########%s level : %d (rollback_point: %d) (%s)\n", __func__, 
+    MYDBG("#########%s level : %d (rollback_point: %d) (%s)\n", __func__, 
       target->level(), *rollback_point_, target->label().c_str());
   }
 #if 0//CD_PROFILER_ENABLED
@@ -1248,6 +1296,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       recovery_sync_time += CD_CLOCK() - prof_sync_clk;
 //      check_sync_clk = false;
 #endif
+      CompletePhase(target->phase());
       return target;
     }
   }
@@ -1398,13 +1447,23 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     /// in reexecution with this assumption.
     /// When it reaches the original failed phase in reexecution,
     /// failed_phase must be reset to HEALTHY (-1) state 
-    failed_phase = (failed_phase < (int64_t)phase)? phase : failed_phase;
+
+//    failed_phase = (failed_phase < (int64_t)phase)? phase : failed_phase;
+    if(failed_phase == HEALTHY) {
+      failed_phase = phase;
+      failed_seqID = phaseTree.current_->seq_end_;
+    }
+    phaseTree.current_->seq_end_ = phaseTree.current_->seq_begin_;
+//    // [CHECK 10142017] Should be true
+//    if(failed_phase != HEALTHY) {
+//      assert(failed_phase >= (int64_t)phase);
+//    }
     GetCDToRecover( CDPath::GetCurrentCD(), need_sync )->ptr_cd()->Recover();
   }
   else { // No error occurred
 
     CD_DEBUG("## Complete. No error! ##\n\n");
-    if(failed_phase == this->phase()) {
+    if(failed_phase == this->phase() && failed_seqID == phaseTree.current_->seq_end_) {
       failed_phase = HEALTHY;
       // At this point, take the timer (update RuntimeInfo::clk_)
       // to measure the rest of execution time.
@@ -1423,6 +1482,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     DeleteEntryDirectory();
     ret = common::kOK;
 
+    phaseTree.current_->seq_end_++;
     CompletePhase(this->phase());
   }
 
@@ -1438,6 +1498,16 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
 //}
 
 CD::CDInternalErrT CD::CompleteLogs(void) {
+
+#if CD_LIBC_LOGGING
+  CDHandle *cdh_parent = CDPath::GetParentCD(level());
+  if(cdh_parent != NULL) {
+    CD *parent = cdh_parent->ptr_cd();
+    logger::GetLogger()->FreeMemory(libc_log_begin_);
+    parent->libc_log_end_ = logger::GetLogger()->PushLogs(libc_log_begin_) + parent->libc_log_end_;
+  }
+#endif
+
 #if comm_log
   // SZ: pack logs and push to parent
   if (GetParentHandle()!=NULL) {
@@ -2032,7 +2102,7 @@ CDErrT CD::Preserve(void *data,
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
 //    cddbg<<"my_name "<< my_name<<endl;
     if(strcmp(my_name.c_str(), "MainLoop_symmX") == 0 || strcmp(my_name.c_str(), "locDom_Root") == 0 ) {
-      printf("[%d] #################### %s ############:%lu\n", myTaskID, my_name.c_str(), tag);
+//      printf("[%d] #################### %s ############:%lu\n", myTaskID, my_name.c_str(), tag);
     }
     switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       case CDInternalErrT::kOK            : {
@@ -2082,7 +2152,7 @@ CDErrT CD::Preserve(void *data,
       if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
         PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
 //        printf("%p, %s\n", data, my_name.c_str());
-        len_in_bytes = serializer->Deserialize(entry_directory_, my_name);
+        len_in_bytes = serializer->Deserialize(entry_directory_, my_name.c_str());
 //        printf("restored_len:%lu\n", restored_len);
         if(prv_medium_ != kDRAM)
           entry_directory_.data_->Flush();
@@ -2091,13 +2161,14 @@ CDErrT CD::Preserve(void *data,
         // Potential benefit from prefetching app data from preserved data in
         // disk, overlapping reexecution of application.
         CDEntry *ret = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
+        if(myTaskID == 0) {
         if(ret == NULL) {
-          printf("[%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+          printf("Not Found [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
           assert(0);
         } else {
-          printf("[%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+          printf("Restore [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
         }
-
+        }
 //      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
 //        packer::CDErrType pret = entry_directory_.Restore(tag);//, (char *)data);
 //      } else {
@@ -2235,7 +2306,7 @@ CD::InternalPreserve(void *data,
       attr |= Attr::knested;
 //      uint64_t orig_tablesize = entry_directory_.table_->used();
 #if 1
-      len_in_bytes = serializer->PreserveObject(entry_directory_, my_name);
+      len_in_bytes = serializer->PreserveObject(entry_directory_, my_name.c_str());
       //len_in_bytes = serializer->PreserveObject(entry_directory_, my_name);
 #else
       entry_directory_.data_->PadZeros(0);
@@ -2554,8 +2625,10 @@ CDErrT CD::InternalReexecute(void)
   Stop();
 
   //printf("[%s]Rollback!\n", __func__);
-  // GPU
-  printf("######### level : %d (rollback_point: %d) (%s)\n", level(), *rollback_point_, name_.c_str());
+//  printf("######### level : %d (rollback_point: %d) (%s)\n", level(), *rollback_point_, name_.c_str());
+
+  // CDPrologue(); in CDHandle::Complete() should be paired with CDEpilouge() here.
+  CDEpilogue();
   //TODO We need to consider collective re-start. 
   if(ctxt_prv_mode_ == kExcludeStack) {
 
@@ -2957,7 +3030,7 @@ bool CD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry)
 
 void CD::DeleteEntryDirectory(void)
 {
-  //if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
+//  if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
   CD_DEBUG("Delete entry directory!\n");
   preserve_count_ = 0;
   restore_count_ = 0;
@@ -2967,7 +3040,7 @@ void CD::DeleteEntryDirectory(void)
 
 void HeadCD::DeleteEntryDirectory(void)
 {
-  //if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
+//  if(myTaskID == 0) printf("Complete : %s\n", label_.c_str());
   CD_DEBUG("Delete entry directory!\n");
   preserve_count_ = 0;
   restore_count_ = 0;

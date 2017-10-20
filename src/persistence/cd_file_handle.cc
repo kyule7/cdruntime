@@ -18,7 +18,11 @@ using namespace packer;
 //packer::Time packer::time_posix_read("posix_read"); 
 //packer::Time packer::time_posix_seek("posix_seek"); 
 
-std::string FileHandle::basepath(DEFAULT_BASEPATH); 
+int packer::packerTaskID = 0;
+int packer::packerTaskSize = 0;
+
+//std::string FileHandle::basepath(DEFAULT_BASEPATH); 
+char FileHandle::basepath[256] = DEFAULT_BASEPATH; 
 PosixFileHandle *PosixFileHandle::fh_ = NULL;
 
 void PosixFileHandle::Destructor(void)
@@ -45,7 +49,7 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath)
   if(base_filepath != NULL) {
     strcpy(base_filename, base_filepath);
   } else {
-    printf("ASDF############3 %s\n", DEFAULT_BASE_FILEPATH);
+    printf("cd_file_handle.cc:PosixFileHandle(%s) %s\n", filepath, DEFAULT_BASE_FILEPATH);
     strcpy(base_filename, DEFAULT_BASE_FILEPATH);
   }
   sprintf(full_filename, "%s/%s.%ld.%ld", base_filename, filepath, time.tv_sec, time.tv_usec);
@@ -125,7 +129,7 @@ CDErrType PosixFileHandle::Write(int64_t offset, char *src, int64_t len, int64_t
   offset_ = (inc >= 0)? offset_ + inc : offset_ + len;
   printf("offset:%lu\n", offset_); //getchar();
   // Error Check
-  if((uint64_t)written_size != len) {
+  if((int64_t)written_size != len) {
     perror("write:");
     ferr = kErrorFileWrite;
     ERROR_MESSAGE_PACKER("Error occurred while writing buffer contents to file: %d %ld == %ld\n", fdesc_, written_size, len);
@@ -210,3 +214,18 @@ uint32_t PosixFileHandle::GetBlkSize(void)
 //  }
   return CHUNK_ALIGNMENT;
 }
+
+//FileHandle *packer::GetFileHandle(uint32_t ftype)
+//{
+////  printf("GetFileHandle %u\n", ftype);
+//  switch(ftype) {
+//    case kPosixFile:
+//      return PosixFileHandle::Get();
+//    case kMPIFile:
+//      return MPIFileHandle::Get();
+////    case kAIOFile:
+////      return AIOFileHandle::Get();
+//    default:
+//      return NULL;
+//  }
+//}

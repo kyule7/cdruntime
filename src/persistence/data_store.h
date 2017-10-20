@@ -18,8 +18,8 @@ namespace packer {
 #define CD_UNSET(STATE,Y) ((STATE) &= ~(Y))
 #define CD_SET(STATE,Y)   ((STATE) |=  (Y))
 //#define CHUNKSIZE_THRESHOLD_BASE 0x1000 // 4KB
-#define CHUNKSIZE_THRESHOLD_BASE 0x800000 // 16KB
-#define DATA_GROW_UNIT           0x800000
+//#define CHUNKSIZE_THRESHOLD_BASE 0x40000000 // 16KB
+//#define DATA_GROW_UNIT           0x40000000
 //#define CHUNKSIZE_THRESHOLD_BASE 0x200 // 16KB
 
 //enum {
@@ -61,9 +61,12 @@ class DataStore {
     uint64_t r_head_;
   public:
 //    DataStore(bool alloc);
-    DataStore(char *ptr=NULL);
+    DataStore(void);
+    DataStore(char *ptr, uint64_t init_size, int filemode);
+    //DataStore(char *ptr=NULL, uint64_t init_size=GROW_UNIT, int filemode=DEFAULT_FILEMODE);
     virtual ~DataStore(void);
-    void Init(char *ptr=NULL);
+    void InitFile(void);
+    void Init(char *ptr, uint64_t init_size, int filemode);
     void ReInit(void);
     CDErrType AllocateData();
     CDErrType FreeData(bool reuse);
@@ -210,10 +213,13 @@ class DataStore {
   public:
     inline bool IsEmpty(void)  { PACKER_ASSERT(buf_used() >= 0); return (buf_used() < chunksize_); }
     inline bool IsFull(void) { 
-      printf("head:%lu tail:%lu\n", head_, tail_); 
+      bool is_full = (buf_used() > (int64_t)(size_ - chunksize_)); 
+      if(packerTaskID == 0) {
+        printf("%s head:%lu tail:%lu\n", (is_full)? "Full":"NotFull", head_, tail_); 
+      }
       PACKER_ASSERT(buf_used() >= 0);
       PACKER_ASSERT(size_ != 0);
-      return (buf_used() > (int64_t)(size_ - chunksize_)); 
+      return is_full; 
     }
     inline void SetActiveBuffer(bool high_priority=false);
     inline void WriteInternal(char *src, uint32_t len_to_write, int64_t &i); 

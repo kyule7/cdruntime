@@ -102,10 +102,11 @@
 
 #define MAX(A,B) ((A) > (B) ? (A) : (B))
 
-/// Handles interpolation of tabular data.
-///
-/// \see initInterpolationObject
-/// \see interpolate
+// kyushick: moved to CoMDType.h
+// /// Handles interpolation of tabular data.
+// ///
+// /// \see initInterpolationObject
+// /// \see interpolate
 // typedef struct InterpolationObjectSt 
 // {
 //    int n;          //!< the number of values in the table
@@ -113,7 +114,6 @@
 //    real_t invDx;   //!< the inverse of the table spacing
 //    real_t* values; //!< the abscissa values
 // } InterpolationObject;
-
 // /// Derived struct for an EAM potential.
 // /// Uses table lookups for function evaluation.
 // /// Polymorphic with BasePotential.

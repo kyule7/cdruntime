@@ -34,6 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 
 #include "cd_name_t.h"
+#include "cd_def_internal.h" 
 #include "util.h"
 
 using namespace cd;

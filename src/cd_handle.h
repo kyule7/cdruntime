@@ -61,10 +61,12 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "serdes.h"
 #include "cd_def_debug.h"
 //#define FUNC_ATTR inline __attribute__((always_inline))
-//using namespace cd::interface;
-//using namespace cd::internal;
-
-
+//using namespace interface;
+//using namespace internal;
+namespace interface {
+class CDErrorInjector;
+class MemoryErrorInjector;
+}
 /**@addtogroup cd_init_funcs
  * User must exeplicitly initialize and finalize CD runtime 
  * by calling CD_Init() and CD_Finalize().
@@ -151,10 +153,31 @@ void CD_Finalize(void);
  * @brief Interfaces that user need to know.
  * @{
  */
-namespace cd {
-
 
 #define CD_Begin(...) (FOUR_ARGS_MACRO(__VA_ARGS__, CD_BEGIN3, CD_BEGIN2, CD_BEGIN1, CD_BEGIN0)(__VA_ARGS__))
+#define CD_Complete(X) (X)->Complete()   
+
+#if CD_TUNING_ENABLED == 1
+
+// Macros for setjump / getcontext
+// So users should call this in their application, not call cd_handle->Begin().
+
+#define CD_BEGIN3(CDH, LABEL, COLLECTIVE, SYS_ERR_VEC) ({ \
+  (CDH)->Begin((LABEL), (COLLECTIVE), (SYS_ERR_VEC)); \
+  })
+
+#define CD_BEGIN2(CDH, LABEL, COLLECTIVE) ({ \
+  (CDH)->Begin((LABEL), (COLLECTIVE)); \
+  })
+
+#define CD_BEGIN1(CDH, LABEL) ({ \
+  (CDH)->Begin((LABEL)); \
+  })
+
+#define CD_BEGIN0(CDH) ({ \
+  (CDH)->Begin(); })
+
+#else 
 
 // Macros for setjump / getcontext
 // So users should call this in their application, not call cd_handle->Begin().
@@ -165,8 +188,8 @@ namespace cd {
   } else { \
     getcontext((CDH)->ctxt()); \
   } \
-  (CDH)->InternalBegin((LABEL), (COLLECTIVE), (SYS_ERR_VEC)); \
   CD_DEBUG("[%s %u ] Begin\n", (LABEL), CDH->level()); \
+  (CDH)->Begin((LABEL), (COLLECTIVE), (SYS_ERR_VEC)); \
   })
 
 #define CD_BEGIN2(CDH, LABEL, COLLECTIVE) ({ \
@@ -175,8 +198,8 @@ namespace cd {
   } else { \
     getcontext((CDH)->ctxt()); \
   } \
-  (CDH)->InternalBegin((LABEL), (COLLECTIVE)); \
   CD_DEBUG("[%s %u ] Begin\n", (LABEL), CDH->level()); \
+  (CDH)->Begin((LABEL), (COLLECTIVE)); \
   })
 
 #define CD_BEGIN1(CDH, LABEL) ({ \
@@ -185,8 +208,8 @@ namespace cd {
   } else { \
     getcontext((CDH)->ctxt()); \
   } \
-  (CDH)->InternalBegin((LABEL)); \
   CD_DEBUG("[%s %u ] Begin\n", (LABEL), CDH->level()); \
+  (CDH)->Begin((LABEL)); \
   })
 
 #define CD_BEGIN0(CDH) ({ \
@@ -195,10 +218,11 @@ namespace cd {
   } else { \
     getcontext((CDH)->ctxt()); \
   } \
-  (CDH)->InternalBegin(); })
+  (CDH)->Begin(); })
 
-#define CD_Complete(X) (X)->Complete()   
 
+#endif
+namespace cd {
 /**@defgroup cd_split CD split interface
  * @brief Method to split CDs to children CDs.
  * @ingroup user_interfaces
@@ -238,7 +262,7 @@ class CDHandle {
 /**@} */ // End cd_handle
   friend class internal::CD;
   friend class internal::HeadCD;
-  friend class interface::Profiler;
+  friend class ::interface::Profiler;
   friend class RegenObject;
   friend CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium);
   friend void CD_Finalize(void);
@@ -249,10 +273,10 @@ class CDHandle {
 
 #if CD_ERROR_INJECTION_ENABLED
   private:
-    interface::CDErrorInjector *cd_error_injector_;                //!< Error injector interface.
-    static interface::MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.
+    ::interface::CDErrorInjector *cd_error_injector_;                //!< Error injector interface.
+    static ::interface::MemoryErrorInjector *memory_error_injector_; //!< Error injector interface.
   public:
-    static interface::SystemErrorInjector *system_error_injector_; //!< Error injector interface.
+    static ::interface::SystemErrorInjector *system_error_injector_; //!< Error injector interface.
 #endif
   private:
     internal::CD    *ptr_cd_;       //!< Pointer to CD object which will not exposed to users.
@@ -264,7 +288,7 @@ class CDHandle {
 //    bool     active_;
   public:
 #if CD_PROFILER_ENABLED 
-    interface::Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
+    ::interface::Profiler* profiler_;  //!< Pointer to the profiling-related handler object.
                           //!< It will be valid when `CD_PROFILER_ENABLED` compile-time flag is on.
 #endif
 //    int     jmp_val_;     //!< Temporary flag related to longjmp/setjmp
@@ -477,22 +501,31 @@ class CDHandle {
        * @return Returns kOK when successful and kError otherwise.
        * @sa Complete()
        */
-       
-       inline __attribute__((always_inline))
        CDErrT Begin(const char *label=NO_LABEL,
                     bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
                                          //!< contained by this CD or whether its to be run by a single task 
                                          //!< only with the programmer responsible for synchronization. 
                     const uint64_t &sys_err_vec=0
-                   )
-        {
-//          if(ctxt_prv_mode() == kExcludeStack)  
-//            setjmp(*jmp_buffer());
-//           else  
-//            getcontext(ctxt()); 
-           
-          return (CDErrT)InternalBegin(label, collective, sys_err_vec); 
-        }
+                   );
+       
+//       inline __attribute__((always_inline))
+//       CDErrT Begin(const char *label=NO_LABEL,
+//                    bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
+//                                         //!< contained by this CD or whether its to be run by a single task 
+//                                         //!< only with the programmer responsible for synchronization. 
+//                    const uint64_t &sys_err_vec=0
+//                   )
+//        {
+////          if(ctxt_prv_mode() == kExcludeStack)  
+////            setjmp(*jmp_buffer());
+////           else  
+////            getcontext(ctxt()); 
+//           
+//          return (CDErrT)InternalBegin(label, collective, sys_err_vec); 
+//        }
+
+
+
 //        {
 //          CD_ASSERT(ptr_cd_);
 //          if(ctxt_prv_mode() == kExcludeStack) 
@@ -819,12 +852,12 @@ class CDHandle {
 
 
   public:
-   CDErrT InternalBegin(const char *label=NO_LABEL,
-                        bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
-                                             //!< contained by this CD or whether its to be run by a single task 
-                                             //!< only with the programmer responsible for synchronization. 
-                        const uint64_t &sys_err_vec=0
-                       );
+//   CDErrT InternalBegin(const char *label=NO_LABEL,
+//                        bool collective=true,//!< [in] Specifies whether this call is a collective across all tasks 
+//                                             //!< contained by this CD or whether its to be run by a single task 
+//                                             //!< only with the programmer responsible for synchronization. 
+//                        const uint64_t &sys_err_vec=0
+//                       );
 
    /** @ingroup cd_detection */
    /** @ingroup register_detection_recovery */
@@ -1027,9 +1060,9 @@ class CDHandle {
     */
 
 #if CD_ERROR_INJECTION_ENABLED
-    void RegisterMemoryErrorInjector(interface::MemoryErrorInjector *memory_error_injector);
+    void RegisterMemoryErrorInjector(::interface::MemoryErrorInjector *memory_error_injector);
 #else
-    void RegisterMemoryErrorInjector(interface::MemoryErrorInjector *memory_error_injector) {}
+    void RegisterMemoryErrorInjector(::interface::MemoryErrorInjector *memory_error_injector) {}
 #endif
 
 /**@brief Register error injection method into CD runtime system.
@@ -1048,9 +1081,9 @@ class CDHandle {
  * @param [in] newly created error injector object.
  */
 #if CD_ERROR_INJECTION_ENABLED
-    void RegisterErrorInjector(interface::CDErrorInjector *cd_error_injector);
+    void RegisterErrorInjector(::interface::CDErrorInjector *cd_error_injector);
 #else
-    void RegisterErrorInjector(interface::CDErrorInjector *cd_error_injector) {}
+    void RegisterErrorInjector(::interface::CDErrorInjector *cd_error_injector) {}
 #endif
 
  /** @} */ // Ends cd_split
