@@ -201,7 +201,7 @@ int ljForce(SimFlat* s)
   if(is_first) {
    //cd_handle_t *cdh_lv3 = cd_create(getcurrentcd(), 1, "ljForce", kStrict, 0xF);
    //cdh_lv3 = cd_create(getleafcd(), 1, "ljForce", kStrict, 0xC);
-   cdh_lv3 = cd_create(getcurrentcd(), 1, "ljForce", kStrict, 0xC);
+   cdh_lv3 = cd_create(getcurrentcd(), 1, "ljForce", kStrict|kDRAM, 0xC);
   }
   //*****************************************************
   // beginning of main computation (hot spot)
