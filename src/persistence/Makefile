@@ -6,7 +6,7 @@ CFLAGS=-fPIC -Wall -c -std=gnu++0x -I. -fmax-errors=3
 LFLAGS=-fPIC -Wall -std=gnu++0x -I.
 
 ifeq (${ENABLE_DEBUG}, 1)
-CFLAGS += -g -O0 -D_PACKER_DEBUG
+CFLAGS += -g -O3 -D_PACKER_DEBUG
 LFLAGS += -g -D_PACKER_DEBUG
 else
 CFLAGS += -O3

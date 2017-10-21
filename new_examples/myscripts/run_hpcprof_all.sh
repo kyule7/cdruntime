@@ -4,7 +4,7 @@ for tasknum in "${TASK_LIST[@]}"
 do
   for ((i=20;i<=100;i+=20))
   do
-    cd lulesh_${tasknum}_${i}; ../run_hpcprof.sh;
+    cd lulesh_${tasknum}_${i}; ../run_hpcprof.sh; cd ..;
   done
 
 done

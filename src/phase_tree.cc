@@ -1,4 +1,3 @@
-//#include <time.h>
 #include "phase_tree.h"
 #include "cd_global.h"
 #include "cd_def_preserve.h"
@@ -20,6 +19,7 @@ static FILE *inYAML = NULL;
 static FILE *outYAML = NULL;
 static FILE *outAll = NULL;
 static char output_filepath[256];
+static char output_basepath[512];
 //static inline
 //void AddIndent(int cnt)
 //{
@@ -35,7 +35,9 @@ void PhaseNode::PrintInputYAML(bool first)
 //    string &filepath = cd::output_basepath;
 //    printf("in yaml filepath:%s , %s\n", filepath.c_str(), std::string(CD_DEFAULT_OUTPUT_CONFIG_IN).c_str());
 //    filepath += std::string(CD_DEFAULT_OUTPUT_CONFIG_IN);
-    sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_IN);
+    memset(output_filepath, '\0', 256);
+    sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_CONFIG_IN);
+    printf("%s file:%s\n", __func__, output_basepath);
     inYAML = fopen(output_filepath, "a");
 //    printf("in yaml filepath:%s , %s\n", cd::output_basepath.c_str(), std::string(CD_DEFAULT_OUTPUT_CONFIG_IN).c_str());
 //    inYAML = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_CONFIG_IN)).c_str(), "a");
@@ -66,8 +68,9 @@ void PhaseNode::PrintOutputYAML(bool first)
 //    printf("out yaml filepath:%s , %s\n", filepath.c_str(), std::string(CD_DEFAULT_OUTPUT_CONFIG_OUT).c_str());
 //    filepath += std::string(CD_DEFAULT_OUTPUT_CONFIG_OUT);
 //    outYAML = fopen(filepath.c_str(), "a");
-    sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_OUT);
-    printf("Output File:%s\n", output_filepath);
+    memset(output_filepath, '\0', 256);
+    sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_CONFIG_OUT);
+    printf("%s Output File:%s\n", __func__, output_filepath);
     outYAML = fopen(output_filepath, "a");
   }
   std::string indent(level_<<1, ' ');
@@ -91,8 +94,9 @@ void PhaseNode::PrintOutputJson(void)
 {
   assert(outYAML == NULL);
   assert(parent_ == NULL);
-  sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_OUT);
-  printf("Output File:%s\n", output_filepath);
+  memset(output_filepath, '\0', 256);
+  sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_CONFIG_OUT);
+  printf("%s Output File:%s\n", __func__, output_filepath);
   outYAML = fopen(output_filepath, "a");
   
   fprintf(outYAML, "{\n"
@@ -158,15 +162,8 @@ void PhaseNode::Print(bool print_details, bool first)
 //    outAll = fopen(filepath.c_str(), "a");
 //    printf("profile out filepath:%s , %s\n", cd::output_basepath.c_str(), std::string(CD_DEFAULT_OUTPUT_PROFILE).c_str());
 //    outAll = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_PROFILE)).c_str(), "a");
-    //sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_PROFILE);
-    time_t rawtime;
-    time (&rawtime);
-    struct tm* ptm = localtime(&rawtime);
-    char sdate[25];
-    sprintf (sdate,"%04d:%02d:%02d-%02d:%02d:%02d",
-        ptm->tm_year + 1900, ptm->tm_mon+1,
-        ptm->tm_mday, ptm->tm_hour, ptm->tm_min,ptm->tm_sec);
-    sprintf(output_filepath, "%s%s.%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_PROFILE, sdate);
+    memset(output_filepath, '\0', 256);
+    sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_PROFILE);
     printf("[%s] %s\n", __func__, output_filepath);
     outAll = fopen(output_filepath, "w+");
   }
@@ -290,7 +287,15 @@ PhaseTree::~PhaseTree() {
   // phaseTree is not created.
   if(cd::myTaskID == 0) {
     if(root_ != NULL) {
-      printf("basepath:%s\n", cd::output_basepath.c_str());
+      char *cd_config_file = getenv("CD_OUTPUT_BASE");
+      if(cd_config_file != NULL) {
+        strcpy(output_basepath, cd_config_file);
+      }
+      else {
+        strcpy(output_basepath, CD_DEFAULT_OUTPUT_BASE);
+      }
+
+      printf("basepath:%s\n", output_basepath);
 //        Print();
       root_->PrintInputYAML(true);
 //      root_->PrintOutputYAML(true);

@@ -4,7 +4,7 @@ SHELL = /bin/sh
 .SUFFIXES: .cc .o
 
 CD_PATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../..
-CD_ENABLED = 0
+CD_ENABLED = 1
 ifeq (${CD_ENABLED}, 1)
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 
 CD_CFLAGS = -std=gnu++0x -fmax-errors=1 -I${CD_PATH}/include -I${CD_PATH}/src -I${CD_PATH}/src/persistence -I${CD_PATH}/plugin/wrapper
@@ -36,8 +36,8 @@ SOURCES2.0 = \
 OBJECTS2.0 = $(SOURCES2.0:.cc=.o)
 
 #Default build suggestions with OpenMP for g++
-CXXFLAGS = -g -O0 -I. -Wall
-LDFLAGS = -g -O0 
+CXXFLAGS = -g -O3 -I. -Wall
+LDFLAGS = -g -O3 
 CXXFLAGS += ${CD_CFLAGS} ${CD_FLAGS} 
 LDFLAGS  += ${CD_LINKFLAGS}
 CXXFLAGS += -fopenmp

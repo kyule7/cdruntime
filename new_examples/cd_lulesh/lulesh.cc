@@ -2908,7 +2908,7 @@ int main(int argc, char *argv[])
 
 #if _CD
       CD_Begin(cd_main_loop, "MainLoop");
-//      cd_main_loop->Preserve(locDom->SetOp(preserve_vec_all/*M__SERDES_ALL*/), kCopy, "MainLoop");
+      cd_main_loop->Preserve(locDom->SetOp(preserve_vec_all/*M__SERDES_ALL*/), kCopy, "MainLoop");
 #endif
 
 

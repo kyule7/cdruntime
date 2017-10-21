@@ -124,45 +124,49 @@ struct Singleton {
   }
 
   void BeginTimer(enum MeasureType target=kMeasureIO) {
-    if(finalized) return;
-    if(target == kMeasureIO) {
-      prv_timer = MPI_Wtime();
-    } else if(target == kMeasureNonIO) {
-      total_timer = MPI_Wtime();
+    if(finalized == false) {
+      if(target == kMeasureIO) {
+        prv_timer = MPI_Wtime();
+      } else if(target == kMeasureNonIO) {
+        total_timer = MPI_Wtime();
+      }
     }
     //printf("[%d] start:%lf\n", myRank, prv_timer);
   }
 
   void EndTimerPhase(int phase, int ckpt_id) {
-    if(finalized) return;
-    double newtime= MPI_Wtime();
-    double elapsed = newtime - prv_timer;
-    double total_elapsed = newtime - total_timer;
-    prv_time += elapsed;
-    total_overhead += total_elapsed;
-//    printf("[%d] elapsed:%lf (newtime %lf - prv_timer %lf)\n", myRank, elapsed, newtime, prv_timer);
-//    printf("phase:%d\n", phase);
-
-    if(phase != TOTAL_PHASE) {
-      InsertTime(phase, elapsed, ckpt_id);
+    if(finalized == false) { 
+      double newtime= MPI_Wtime();
+      double elapsed = newtime - prv_timer;
+      double total_elapsed = newtime - total_timer;
+      prv_time += elapsed;
+      total_overhead += total_elapsed;
+  //    printf("[%d] elapsed:%lf (newtime %lf - prv_timer %lf)\n", myRank, elapsed, newtime, prv_timer);
+  //    printf("phase:%d\n", phase);
+  
+      if(phase != TOTAL_PHASE) {
+        InsertTime(phase, elapsed, ckpt_id);
+      }
     }
   }
 
   void FinishTimer(uint32_t ckpt_id) {
-    if(finalized) return;
-    InsertTime(TOTAL_PHASE, prv_time, ckpt_id);
-    prv_elapsed += prv_time;
-    prv_cnt++;
-    prv_time = 0;
+    if(finalized == false) {
+      InsertTime(TOTAL_PHASE, prv_time, ckpt_id);
+      prv_elapsed += prv_time;
+      prv_cnt++;
+      prv_time = 0;
+    }
   }
   
   void CheckTime(void) {
-    if(finalized) return;
-    struct timeval end;
-    gettimeofday(&end, NULL);
-    double tv_val = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec))*0.000001;
-    if(myRank == 0)
-      printf("final elapsed:%lf\n", tv_val);
+    if(finalized) {
+      struct timeval end;
+      gettimeofday(&end, NULL);
+      double tv_val = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec))*0.000001;
+      if(myRank == 0)
+        printf("final elapsed:%lf\n", tv_val);
+    }
   }
 
   //FIXME

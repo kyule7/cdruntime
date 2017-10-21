@@ -72,7 +72,7 @@ cd::DebugBuf cd::cddbg;
 
 FILE *cd::cdout=NULL;
 FILE *cd::cdoutApp=NULL;
-std::string cd::output_basepath;
+//std::string cd::output_basepath;
 
 #define RANDOM_SEED 17
 #if CD_ERROR_INJECTION_ENABLED
@@ -332,12 +332,12 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   logger::taskID = myTask;
   cd::tot_begin_clk = CD_CLOCK();
   char *cd_config_file = getenv("CD_OUTPUT_BASE");
-  if(cd_config_file != NULL) {
-    cd::output_basepath = cd_config_file;
-  }
-  else {
-    cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
-  }
+//  if(cd_config_file != NULL) {
+//    cd::output_basepath = cd_config_file;
+//  }
+//  else {
+//    cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
+//  }
 //  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
 #if CD_TUNING_ENABLED == 0
   cd_config_file = getenv("CD_CONFIG_FILENAME");

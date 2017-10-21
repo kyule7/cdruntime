@@ -1027,7 +1027,7 @@ CDErrT CD::Begin(const char *label, bool collective)
     if(myTaskID == 0) {
       MYDBG("[Mode=%d] after log ft:%lu, log id:%lu, log begin:%lu\n", phaseTree.current_->state_, 
           logger::GetLogger()->GetNextID(), libc_log_id_, libc_log_begin_);
-      logger::GetLogger()->Print();
+//      logger::GetLogger()->Print();
     }
   } 
 //  else {
@@ -1463,8 +1463,11 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
   else { // No error occurred
 
     CD_DEBUG("## Complete. No error! ##\n\n");
-    if(failed_phase == this->phase() && failed_seqID == phaseTree.current_->seq_end_) {
+    const uint64_t curr_phase = this->phase();
+    const uint64_t curr_seqID = phaseTree.current_->seq_end_;
+    if(failed_phase == curr_phase && failed_seqID == curr_seqID) {
       failed_phase = HEALTHY;
+      failed_seqID = HEALTHY;
       // At this point, take the timer (update RuntimeInfo::clk_)
       // to measure the rest of execution time.
       CD_CLOCK_T now = CD_CLOCK();
