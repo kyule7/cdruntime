@@ -192,7 +192,10 @@ unsigned int preserveAtoms (cd_handle_t *cdh,
       //char* tmp_atoms_r= malloc(snprintf(NULL, 0, "Atoms_r%s", idx) + 1);
       //sprintf(tmp_atoms_r, idx);
       char tmp_atoms_r[256]= "-1";   //FIXME: it this always enough?
-      sprintf(tmp_atoms_r, "Atoms_r%s", idx);
+      if(idx == NULL)
+        sprintf(tmp_atoms_r, "Atoms_r");
+      else 
+        sprintf(tmp_atoms_r, "Atoms_r%s", idx);
       //cd_preserve(cdh, atoms->r+from*sizeof(real3*), r_size, kCopy, 
       //            "Atoms_r", "Atoms_r");
       cd_preserve(cdh, atoms->r+from*sizeof(real3*), r_size, kCopy, 
