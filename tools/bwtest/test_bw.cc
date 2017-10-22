@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 #define DEFAULT_FILEPATH "./file.out"
+#define MAX_CHUNKSIZE 1073741824 // 1GB
+//#define MAX_CHUNKSIZE 134217728 // 1GB
 static char err_str[512];
 static int err_len = 0, err_class = 0;
 static int myRank = 0;
@@ -65,28 +67,33 @@ void CloseFile(MPI_File *fdesc) {
   *fdesc = MPI_FILE_NULL;
 }
 
-void WriteFile(MPI_File *fdesc, int chunksize, int iter)
+void WriteFile(MPI_File *fdesc, uint64_t chunksize, int iter)
 {
 
   MPITimer mpi_timer;
   InitializeMPITimer(&mpi_timer, 1);
   MPI_Status status;
-  uint64_t offset = 0;
-  uint32_t *src = (uint32_t *)malloc(chunksize);
-  int numElem = chunksize / sizeof(uint32_t);
+  for(; chunksize <= MAX_CHUNKSIZE; chunksize *= 4) {
+    uint64_t offset = 0;
+    uint32_t *src = (uint32_t *)malloc(chunksize);
+    int numElem = chunksize / sizeof(uint32_t);
+    
+    for(int i=0; i<numElem; i++) {
+      src[i] = i % 64;
+    }
   
-  for(int i=0; i<numElem; i++) {
-    src[i] = i % 64;
+    for(int i=0; i<iter; i++, offset+=chunksize) {
+      BeginTimer(&mpi_timer);
+      CheckError( MPI_File_write_at(*fdesc, offset, src, chunksize, MPI_BYTE, &status) );
+      CheckError( MPI_File_sync(*fdesc) );
+      EndTimer(&mpi_timer, 0);
+      AdvanceTimer(&mpi_timer);
+    }
+  
+    GatherTimer(&mpi_timer, iter, chunksize);
+    ReInitMPITimer(&mpi_timer);
+    free(src);
   }
-
-  for(int i=0; i<iter; i++, offset+=chunksize) {
-    BeginTimer(&mpi_timer);
-    CheckError( MPI_File_write_at(*fdesc, offset, src, chunksize, MPI_BYTE, &status) );
-    EndTimer(&mpi_timer, 0);
-    AdvanceTimer(&mpi_timer);
-  }
-
-  GatherTimer(&mpi_timer, iter);
   FinalizeMPITimer(&mpi_timer);
 }
 

@@ -125,6 +125,18 @@ void InitializeMPITimer(MPITimer *mpi_timer, int num_phase) {
       hostname, node_id, myRank, nRanks, myRank_in_node, nRanks_in_node, myRank_in_heads, nRanks_in_heads); 
 }
 
+void ReInitMPITimer(MPITimer *mpi_timer)
+{
+  mpi_timer->begin_ = 0;
+  mpi_timer->end_ = 0;
+  mpi_timer->idx_ = 0;
+  uint32_t size = mpi_timer->size_;
+  uint32_t num_phase = mpi_timer->num_phase_;
+  float **elapsed = mpi_timer->elapsed_;
+  for(uint32_t i=0; i<num_phase; i++) {
+    memset(elapsed[i], 0, size);
+  }
+}
 void PrintTimer(MPITimer *mpi_timer);
 
 void FinalizeMPITimer(MPITimer *mpi_timer) {
@@ -137,7 +149,7 @@ void FinalizeMPITimer(MPITimer *mpi_timer) {
   free(elapsed);
 }
 
-void GatherTimer(MPITimer *mpi_timer, int iter) 
+void GatherTimer(MPITimer *mpi_timer, int iter, int chunksize) 
 {
   float **elapsed    = mpi_timer->elapsed_;
   uint32_t num_phase = mpi_timer->num_phase_;
@@ -210,6 +222,9 @@ void GatherTimer(MPITimer *mpi_timer, int iter)
   if(myRank == 0) {
     double tot_avg_elapsed = 0.0;
     double tot_avg_elapsed_sq = 0.0;
+    double avg_elapsed[num_phase];
+    double avg_elapsed_sq[num_phase];
+    double std_elapsed[num_phase];
     float **check = (float **)calloc(num_phase, sizeof(float *));
     for(uint32_t phase=0; phase<num_phase; phase++) {
       check[phase] = (float *)malloc(size);
@@ -217,14 +232,17 @@ void GatherTimer(MPITimer *mpi_timer, int iter)
     }
     printf("nRanks = %d\n", nRanks);
     for(uint32_t phase=0; phase<num_phase; phase++) {
+      avg_elapsed[phase] = 0.0;
+      avg_elapsed_sq[phase] = 0.0;
+      std_elapsed[phase] = 0.0;
       for(uint32_t i=0; i<max_idx; i++) {
         float orig_reduced = reduced[phase][i];
         float avg_elapsed_bw_tasks = reduced[phase][i] / nRanks;
         float avg_elapsed_sq_bw_tasks = reduced_sq[phase][i] / nRanks;
         reduced[phase][i]    = avg_elapsed_bw_tasks;
         reduced_sq[phase][i] = avg_elapsed_sq_bw_tasks;
-        tot_avg_elapsed     += avg_elapsed_bw_tasks;
-        tot_avg_elapsed_sq  += avg_elapsed_sq_bw_tasks;
+        avg_elapsed[phase]   += avg_elapsed_bw_tasks;
+        avg_elapsed_sq[phase]+= avg_elapsed_sq_bw_tasks;
 
         // sanity check
         float avg_check = 0.0;
@@ -237,11 +255,19 @@ void GatherTimer(MPITimer *mpi_timer, int iter)
         check[phase][i] = avg_check / nRanks;
 
       }
+      // sanity check
+      avg_elapsed[phase] /= iter;
+      avg_elapsed_sq[phase] /= iter;
+      double dev = avg_elapsed[phase] * avg_elapsed[phase] - avg_elapsed_sq[phase];
+      dev = (dev < 0)? -dev : dev;
+      std_elapsed[phase] = sqrt(dev);
+      tot_avg_elapsed += avg_elapsed[phase];
+      tot_avg_elapsed_sq += avg_elapsed_sq[phase];
     }
 
     // sanity check
-    tot_avg_elapsed /= iter;
-    tot_avg_elapsed_sq /= iter;
+//    tot_avg_elapsed /= iter;
+//    tot_avg_elapsed_sq /= iter;
     printf("-- Profile ------------------------\n");
     for(uint32_t phase=0; phase<num_phase; phase++) {
       for(uint32_t i=0; i<max_idx; i++) {
@@ -251,11 +277,14 @@ void GatherTimer(MPITimer *mpi_timer, int iter)
 
     printf("----------------------------------\n");
     double dev = tot_avg_elapsed * tot_avg_elapsed - tot_avg_elapsed_sq;
+    dev = (dev < 0)? -dev : dev;
     double std = sqrt(dev);
     printf("Avg Latency:%lf (%lf, %lf)\n", tot_avg_elapsed, dev, std);
-    double shift = 0.00;
-    double precision = 0.001;
-    //double precision = (8 * std) / 1000;
+    double min_elapsed = tot_avg_elapsed - 4*std;
+    double max_elapsed = tot_avg_elapsed + 4*std;
+    min_elapsed = (min_elapsed < 0)? 0.0 : min_elapsed;
+    //double precision = 0.001;
+    double precision = (8 * std) / 512;
     int max_bin = 1024;
     uint32_t **histogram = (uint32_t **)calloc(num_phase, sizeof(uint32_t *));
     for(uint32_t phase=0; phase<num_phase; phase++) {
@@ -266,8 +295,8 @@ void GatherTimer(MPITimer *mpi_timer, int iter)
       for(uint32_t i=0; i<max_idx; i++) {
         for(uint32_t n=0; n<numElem; n+=max_idx) {
 
-          printf("%f - %f / %lf\n", gathered[phase][i + n], shift, precision);
-          int32_t bin_idx = (int32_t)((gathered[phase][i + n] - shift) / precision);
+          printf("%f - %f / %lf\n", gathered[phase][i + n], min_elapsed, precision);
+          int32_t bin_idx = (int32_t)((gathered[phase][i + n] - min_elapsed) / precision);
           if(bin_idx < 0) {
             bin_idx = 0;
           } else if(bin_idx >= max_bin) {
@@ -278,25 +307,62 @@ void GatherTimer(MPITimer *mpi_timer, int iter)
       }
     }
     printf("\n-- Histogram --------------------------------\n");
+    char result_file[64];
+    memset(result_file, '\0', 64);
+    sprintf(result_file, "./result_%d.csv", mpi_timer->nRanks_);
+    FILE * fp = fopen(result_file, "a+");
     uint32_t tot_cnt_known = num_phase * max_idx * nRanks;
     for(uint32_t phase=0; phase<num_phase; phase++) {
       uint32_t tot_cnt = 0;
       int non_zero_now = 0;
-      for(uint32_t i=0; i<max_bin; i++) {
+      uint32_t i = 0;
+      uint32_t first_idx = 0;
+      uint32_t last_idx  = 0;
+      for(; i<max_bin; i++) {
         uint32_t cnt = histogram[phase][i];
-        if(cnt != 0) { 
+        if(cnt != 0 && non_zero_now == 0) { 
           non_zero_now = 1;
-          printf("%d, precision:%lf, shift:%lf\n", i, precision, shift);
+          first_idx = i;
+          double bandwidth = (double)chunksize/tot_avg_elapsed/1024/1024;
+          int nRanks = mpi_timer->nRanks_;
+          printf("<< phase:%u, %lf (%lf), from:%u, precision:%lf, min_elapsed:%lf, chunksize:%d, iter:%d, BW:%lf>>\n", 
+              phase, tot_avg_elapsed, std, first_idx, precision, min_elapsed, chunksize, iter, (double)chunksize/tot_avg_elapsed);
+          fprintf(fp,"<< phase:%u, %lf (%lf), from:%u, precision:%lf, min_elapsed:%lf, # ranks:%d, chunksize:%d, iter:%d >>\nBW:%lf\n", 
+              phase, tot_avg_elapsed, std, first_idx, precision, min_elapsed, mpi_timer->nRanks_, chunksize, iter, (double)chunksize/tot_avg_elapsed/1024/1024);
+          fprintf(fp,"phase,\tBW[MB/s],\t\t\t\t\t avg,\t\t\t\t\t std,\t\tranks,\t\t\t\t\tsize,\t\t\titer\n");
+          fprintf(fp, "%5u,\t%8.4lf,\t%12.6lf,\t%12.6lf,\t%7d,\t%12d,%8d\n", 
+              phase, bandwidth, avg_elapsed[phase], std_elapsed[phase], nRanks, chunksize, iter);
         }
         if(non_zero_now) { 
           printf("%u ", cnt);
+          fprintf(fp, "%u,", cnt);
           tot_cnt += cnt;
         }
-        if(tot_cnt == tot_cnt_known) break;
+        if(tot_cnt == tot_cnt_known) { last_idx = i; break;}
       }
       printf("\n-------------------------------------------\n");
+      fprintf(fp, "\n");
+      double start_time = min_elapsed + precision * first_idx;
+      for(uint32_t j=first_idx; j<=last_idx; j++, start_time += precision) {
+        fprintf(fp, "%lf,", start_time);
+      }
+      fprintf(fp, "\n");
+      fprintf(fp, ",,\n");
       printf("%u %u\n", tot_cnt, tot_cnt_known);
     }
+
+    // Writes gathered (elapsed) to file
+    for(uint32_t phase=0; phase<num_phase; phase++) {
+      fprintf(fp, "phase,%u\n", phase);
+      for(uint32_t i=0; i<max_idx; i++) {
+        for(uint32_t n=0; n<numElem; n+=max_idx) {
+          fprintf(fp, "%f,", gathered[phase][i + n]);
+        }
+        fprintf(fp, "\n");
+      }
+    }
+    fclose(fp);
+
     for(uint32_t i=0; i<num_phase; i++) {
       free(check[i]);
       free(reduced[i]);
