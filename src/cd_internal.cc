@@ -1027,7 +1027,7 @@ CDErrT CD::Begin(const char *label, bool collective)
     if(myTaskID == 0) {
       MYDBG("[Mode=%d] after log ft:%lu, log id:%lu, log begin:%lu\n", phaseTree.current_->state_, 
           logger::GetLogger()->GetNextID(), libc_log_id_, libc_log_begin_);
-      logger::GetLogger()->Print();
+      //logger::GetLogger()->Print();
     }
   } 
 //  else {
