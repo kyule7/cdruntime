@@ -60,7 +60,7 @@
 #include "timestep.h"
 #include "constants.h"
 
-#if _CD
+#if _ROOTCD
 #include "cd.h"
 #include "cd_comd.h"
 #endif
@@ -110,14 +110,13 @@ int main(int argc, char** argv)
 
    timestampBarrier("Starting simulation\n");
 
-#if _CD
+#if _ROOTCD
 //   cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
-//   cd_begin(root_cd, "0_Root");
-   cd_handle_t* root_cd = cd_init(nRanks, myRank, kHDD); 
+   cd_handle_t* root_cd = cd_init(nRanks, myRank, kHDD);  
    cd_begin(root_cd, "Root");
    preserveSimFlat(root_cd, sim, cmd.doeam);
 
-   cd_handle_t *cdh = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF);
+   cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF);
 #endif
    // This is the CoMD main loop
    const int nSteps = sim->nSteps;
@@ -147,8 +146,8 @@ int main(int argc, char** argv)
    printThings(sim, iStep, getElapsedTime(timestepTimer));
    timestampBarrier("Ending simulation\n");
 
-#if _CD
-   cd_destroy(cdh);
+#if _ROOTCD
+   cd_destroy(lv1_cd);
    cd_detect(root_cd);
    cd_complete(root_cd);
    cd_finalize();

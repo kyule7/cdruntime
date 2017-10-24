@@ -72,9 +72,9 @@
 #include "memUtils.h"
 #include "CoMDTypes.h"
 
-#if _CD
+#if _CD3
 #include "cd.h"
-#define CD3_INTERVAL 100
+#define CD3_INTERVAL 10000
 #endif
 
 #define POT_SHIFT 1.0
@@ -100,7 +100,7 @@
 static int ljForce(SimFlat* s);
 static void ljPrint(FILE* file, BasePotential* pot);
 
-#if _CD
+#if _CD3
 unsigned int preserveAtoms(cd_handle_t *cdh, 
                            Atoms *atoms, 
                            int nTotalBoxes,
@@ -169,7 +169,9 @@ void ljPrint(FILE* file, BasePotential* pot)
 }
 
 // to prevent CD for ljForce from being called during initialization  
+#if _CD3
 int is_first = 0; 
+#endif
 int ljForce(SimFlat* s)
 {
   //TODO: not creat sequential CD here since all the below are easy to get 
@@ -197,12 +199,20 @@ int ljForce(SimFlat* s)
   int nbrBoxes[27];
   // CD handler for level2 CD 
   // TODO: 0xF gets ignored when config.yaml specifies error mask
+#if _CD3
   cd_handle_t *cdh_lv3 = NULL;
   if(is_first) {
    //cd_handle_t *cdh_lv3 = cd_create(getcurrentcd(), 1, "ljForce", kStrict, 0xF);
    //cdh_lv3 = cd_create(getleafcd(), 1, "ljForce", kStrict, 0xC);
-   cdh_lv3 = cd_create(getcurrentcd(), 1, "ljForce", kStrict|kDRAM, 0xC);
+   //cdh_lv3 = cd_create(getcurrentcd(), 1, "ljForce", kStrict|kDRAM, 0xC);
+   cdh_lv3 = cd_create(getcurrentcd(), 
+                       getNRanks(), 
+                       "ljForce", 
+                       kStrict|kDRAM,
+                       0xC);
+
   }
+#endif
   //*****************************************************
   // beginning of main computation (hot spot)
   //*****************************************************
@@ -243,6 +253,7 @@ int ljForce(SimFlat* s)
       for (int iOff=iBox*MAXATOMS,ii=0; ii<nIBox; ii++,iOff++)
       {
         int iId = s->atoms->gid[iOff];
+#if _CD3
         if(is_first) {
           //cd_handle_t *cdh_lv2_inner = getleafcd();
           //This CD has a length of nJBox 
@@ -309,7 +320,7 @@ int ljForce(SimFlat* s)
                 1/*nLocalBoxes*/);      
           }
         }
-
+#endif
         //*****************************************************
         // loop over atoms in jBox
         //*****************************************************
@@ -359,25 +370,30 @@ int ljForce(SimFlat* s)
           }
 
         } // loop over atoms in jBox
+#if _CD3
         if(is_first) {
           if(iOff % CD3_INTERVAL == 0) {
             cd_detect(cdh_lv3);
             cd_complete(cdh_lv3); 
           }
         }
+#endif
+
       } // loop over atoms in iBox
     } // loop over neighbor boxes
   } // loop over local boxes in system
   //*****************************************************
   // end of main computation (hot spot)
   //*****************************************************
+#if _CD3
   if(is_first) {
     cd_destroy(cdh_lv3);
   }
-
+#endif
   ePot = ePot*4.0*epsilon;
   s->ePotential = ePot;
-  
+#if _CD3
   is_first = 1;
+#endif
   return 0;
 }

@@ -23,7 +23,13 @@ CFLAGS = -std=gnu11
 CD_ROOT=../../../
 ifeq (${CD_ENABLED}, 1)
 CD_FLAGS := 
-CD_CFLAGS := -I$(CD_ROOT)/include -D_CD=1
+# ROOTCD : CoMD.c
+# CD1 : timestep.c 
+# CD2 : timestep.c
+# CD3 : ljForce.c
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1
+CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD3=1
+#CD_CFLAGS := -I$(CD_ROOT)/include 
 CD_LINKFLAGS := -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
 else
 CD_FLAGS := 

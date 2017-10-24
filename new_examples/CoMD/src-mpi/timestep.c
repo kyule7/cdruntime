@@ -8,14 +8,14 @@
 #include "parallel.h"
 #include "performanceTimers.h"
 
-#if _CD
+#if _CD1
 #include "cd.h"
 #endif
 
 static void advanceVelocity(SimFlat* s, int nBoxes, real_t dt);
 static void advancePosition(SimFlat* s, int nBoxes, real_t dt);
 
-#if _CD
+#if _CD1
 unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam);
 unsigned int preserveAtoms(cd_handle_t *cdh, 
                            Atoms *atoms, 
@@ -65,18 +65,22 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh,
 double timestep(SimFlat* s, int nSteps, real_t dt)
 {
 
-   cd_handle_t *cdh = getleafcd(); //still cdh points at root_cd since hasn't begin yet
+#if _CD1
+   cd_handle_t *lv1_cd = getleafcd(); //still cdh points at root_cd since hasn't begin yet
+   //cd_handle_t *lv1_cd = getcurrentcd(); //still cdh points at root_cd since hasn't begin yet
+#endif 
    for (int ii=0; ii<nSteps; ++ii)
    {  
+#if _CD1
       //TODO
       //who preserve nStpes? Do current CDs need to preserve it as well?
       //************************************
       //            cd boundary: velocity (0.08%) (for both)
       //************************************
-      cd_begin(cdh, "advanceVelocity_start"); // cd_lv1 starts
+      cd_begin(lv1_cd, "advanceVelocity_start"); // cd_lv1 starts
       //FIXME: need to pass cmd.doeam
       //FIXME: should this be kRef?
-      int velocity_pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
+      int velocity_pre_size = preserveAtoms(lv1_cd, s->atoms, s->boxes->nTotalBoxes, 
                                    0,  // is_gid
                                    0,  // is_r
                                    0,  // is_p
@@ -85,7 +89,7 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
                                    0,  // is_iSpecies
                                    0,  // from (entire atoms)
                                   -1,  // to (entire atoms)
-                                   1,  // is_print
+                                   0,  // is_print
                                    NULL);
       //TODO: Do I need to preserve dt and nTotalBoxes? 
       //      Aren't they already preserved at the  begging at the root CD?
@@ -95,15 +99,16 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //             uint32_t preserve_mask,
       //             const char *my_name, 
       //             const char *ref_name)
-      cd_preserve(cdh, &dt, sizeof(real_t), kCopy, "advanceVelocity_dt", "advanceVelocity_dt");
-      cd_preserve(cdh, &ii, sizeof(int), kCopy, "advanceVelocity_ii", "advanceVelocity_ii");
+      cd_preserve(lv1_cd, &dt, sizeof(real_t), kCopy, "advanceVelocity_dt", "advanceVelocity_dt");
+      cd_preserve(lv1_cd, &ii, sizeof(int), kCopy, "advanceVelocity_ii", "advanceVelocity_ii");
       velocity_pre_size += sizeof(real_t);  // add the size of dt
       velocity_pre_size += sizeof(int);  // add the size of ii (loop index)
-      velocity_pre_size += preserveLinkCell(cdh, s->boxes, 
+      velocity_pre_size += preserveLinkCell(lv1_cd, s->boxes, 
                                             0/*all*/, 
                                             1/*only nAtoms*/,
                                             0/*nLocalBoxes*/);      
-      printf("\n preservation size for advanceVelocity(@beggining) %d\n", velocity_pre_size);
+      //printf("\n preservation size for advanceVelocity(@beggining) %d\n", velocity_pre_size);
+#endif 
       startTimer(velocityTimer);
       //------------------------------------------------
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
@@ -111,17 +116,20 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       stopTimer(velocityTimer);
       //TODO: cd_preserve for output with kOutput(?)
       //      output: s->atoms->p
-      cd_detect(cdh);
-      cd_complete(cdh); 
+#if _CD1
+      cd_detect(lv1_cd);
+      cd_complete(lv1_cd); 
+#endif
 
       //************************************
       //            cd boundary: position (0.09%)
       //************************************
-      cd_begin(cdh, "advancePosition"); 
+#if _CD1
+      cd_begin(lv1_cd, "advancePosition"); 
       //TODO: preserve dt and nAtoms by *kRef* or KCopy? 
       //TODO: for now, no way to refer only dt in SimFlat preserved at the root
       //cd_preserve(cdh, &dt, sizeof(real_t), kRef, "advancePosition_dt", "advancePosition_dt");
-      int position_pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
+      int position_pre_size = preserveAtoms(lv1_cd, s->atoms, s->boxes->nTotalBoxes, 
                                    0,  // is_gid
                                    0,  // is_r
                                    1,  // is_p
@@ -130,20 +138,21 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
                                    1,  // is_iSpecies
                                    0,  // from (entire atoms)
                                   -1,  // to (entire atoms)
-                                   1,  // is_print
+                                   0,  // is_print
                                    NULL);
       //TODO: no need to preserve entier SpeciesData but only mass
-      position_pre_size += preserveSpeciesData(cdh, s->species);
-      printf("\n preservation size for advancePosition %d\n", position_pre_size);
+      position_pre_size += preserveSpeciesData(lv1_cd, s->species);
+      //printf("\n preservation size for advancePosition %d\n", position_pre_size);
+#endif
       startTimer(positionTimer);
       //------------------------------------------------
       advancePosition(s, s->boxes->nLocalBoxes, dt);
       //------------------------------------------------
       stopTimer(positionTimer);
-
-      cd_detect(cdh);
-      cd_complete(cdh); 
-
+#if _CD1
+      cd_detect(lv1_cd);
+      cd_complete(lv1_cd); 
+#endif
 
       //-----------------------------------------------------------------------
       //            Communication
@@ -151,10 +160,11 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //************************************
       //            cd boundary: redistribution (6.88%)
       //************************************
-      cd_begin(cdh, "redistributeAtoms"); 
+#if _CD1
+      cd_begin(lv1_cd, "redistributeAtoms"); 
       //TODO: preserve nAtoms by kRef
       // I{atoms->[iSpecies, gid, r, p, f, U]}
-      int redist_pre_size = preserveAtoms(cdh, s->atoms, s->boxes->nTotalBoxes, 
+      int redist_pre_size = preserveAtoms(lv1_cd, s->atoms, s->boxes->nTotalBoxes, 
                                    1,  // is_gid
                                    1,  // is_r
                                    1,  // is_p
@@ -163,11 +173,11 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
                                    1,  // is_iSpecies 
                                    0,  // from (entire atoms)
                                   -1,  // to (entire atoms)
-                                   1,  // is_print
+                                   0,  // is_print
                                    NULL); 
       // I{parms->pbcFactor}
-      redist_pre_size = preserveHaloAtom(cdh, s->atomExchange->parms, 0, 1);
-      printf("\n preservation size for redistributeAtoms %d\n", redist_pre_size);
+      redist_pre_size = preserveHaloAtom(lv1_cd, s->atomExchange->parms, 0, 1);
+      //printf("\n preservation size for redistributeAtoms %d\n", redist_pre_size);
 
       //TODO: what to preserve here?
       //      //---------------
@@ -191,14 +201,16 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //   |- O{ atoms->ISpecies, atoms->gid, r,p} 
       //   |-         <- I{ atoms->ISpecies, atoms->gid, r, p}
       //---------------
-
+#endif
       //FIXME: communication logging?
       startTimer(redistributeTimer);
       redistributeAtoms(s);
       stopTimer(redistributeTimer);
 
-      //cd_detect(cdh);
-      //cd_complete(cdh); 
+#if _CD1
+      cd_detect(lv1_cd);
+      cd_complete(lv1_cd); 
+#endif
       //-----------------------------------------------------------------------
       //            Communication
       //-----------------------------------------------------------------------
@@ -207,25 +219,33 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //************************************
       //            cd boundary: force (92.96%)
       //************************************
-      cd_handle_t *cd_lv2 = cd_create(cdh, 
-                                      getNRanks(), 
-                                      "timestep_after_comm", 
-                                      kStrict, 0xE);
-      cd_begin(cd_lv2, "computeForce"); 
-
+#if _CD1
+//      cd_handle_t *cd_lv2 = cd_create(lv1_cd, 
+//                                      getNRanks(), 
+//                                      "timestep_after_comm", 
+//                                      //kStrict|kDRAM,
+//                                      kStrict,
+//                                      0xE);
+//      cd_begin(cd_lv2, "computeForce"); 
+      cd_begin(lv1_cd, "computeForce"); 
+#endif
       startTimer(computeForceTimer);
       computeForce(s); // s->pot->force(s)
       stopTimer(computeForceTimer);
+#if _CD1
+//      cd_detect(cd_lv2);
+//      cd_complete(cd_lv2); 
+      cd_detect(lv1_cd);
+      cd_complete(lv1_cd); 
 
-      cd_detect(cd_lv2);
-      cd_complete(cd_lv2); 
-
+#endif
       //************************************
       //            cd boundary : advanceVelocity (@ end)
       //************************************
-      cd_begin(cd_lv2, "advanceVelocity_end"); 
+#if _CD1
+      cd_begin(lv1_cd, "advanceVelocity_end"); 
       //TODO: preserve dt and nAtoms by kRef
-      int velocity_end_pre_size = preserveAtoms(cdh, 
+      int velocity_end_pre_size = preserveAtoms(lv1_cd, 
                                     s->atoms, s->boxes->nTotalBoxes, 
                                     0,  // is_gid
                                     0,  // is_r
@@ -235,23 +255,25 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
                                     0,  // is_iSpecies
                                     0,  // from (entire atoms)
                                    -1,  // to (entire atoms)
-                                    1,  // is_print
+                                    0,  // is_print
                                     NULL);
-      printf("\n preservation size for advanceVelocity(@end) %d\n", 
-            velocity_end_pre_size);
+      //printf("\n preservation size for advanceVelocity(@end) %d\n", 
+      //      velocity_end_pre_size);
+#endif
       startTimer(velocityTimer);
       advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
       stopTimer(velocityTimer);
+#if _CD1
+      cd_detect(lv1_cd);
+      cd_complete(lv1_cd); 
 
-      cd_detect(cd_lv2);
-      cd_complete(cd_lv2); 
+//      cd_destroy(lv1_cd);
+#endif
 
-      cd_destroy(cd_lv2);
-
-      //---
-      cd_detect(cdh);
-      cd_complete(cdh); 
-
+//#if _CD1
+//      cd_detect(lv1_cd);
+//      cd_complete(lv1_cd); 
+//#endif
    }
 
    //TODO: which CD to put this?
