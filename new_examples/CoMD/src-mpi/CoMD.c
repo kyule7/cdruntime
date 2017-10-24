@@ -115,9 +115,13 @@ int main(int argc, char** argv)
    cd_handle_t* root_cd = cd_init(nRanks, myRank, kHDD);  
    cd_begin(root_cd, "Root");
    preserveSimFlat(root_cd, sim, cmd.doeam);
+   //FIXME: what if the buffers for HaloExchnage (malloc)?
+#endif
 
+#if _CD1
    cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF);
 #endif
+
    // This is the CoMD main loop
    const int nSteps = sim->nSteps;
    const int printRate = sim->printRate;
@@ -146,8 +150,11 @@ int main(int argc, char** argv)
    printThings(sim, iStep, getElapsedTime(timestepTimer));
    timestampBarrier("Ending simulation\n");
 
-#if _ROOTCD
+#if _CD1
    cd_destroy(lv1_cd);
+#endif
+
+#if _ROOTCD
    cd_detect(root_cd);
    cd_complete(root_cd);
    cd_finalize();

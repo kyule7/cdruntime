@@ -77,7 +77,7 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //************************************
       //            cd boundary: velocity (0.08%) (for both)
       //************************************
-      cd_begin(lv1_cd, "advanceVelocity_start"); // cd_lv1 starts
+      cd_begin(lv1_cd, "advanceVelocity_start"); // lv1_cd starts
       //FIXME: need to pass cmd.doeam
       //FIXME: should this be kRef?
       int velocity_pre_size = preserveAtoms(lv1_cd, s->atoms, s->boxes->nTotalBoxes, 
