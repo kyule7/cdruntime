@@ -1,7 +1,7 @@
 #!/bin/bash
 DEBUG_ENABLED=1
 
-CDPATH=/home1/03341/kyushick/Work/CDs/libc
+CDPATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../..
 PACKER_PATH=${CDPATH}/src/persistence
 CC=g++
 
