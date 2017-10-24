@@ -335,8 +335,8 @@ class CDVector : public std::vector<T>, public PackerSerializable {
 //      return Compare<char *>(orip, newp, size);
 //    }
 //  }
-  template <typename T>
-  float Compare(T *orip, T *newp, uint32_t size) {
+  template <typename T1>
+  float Compare(T1 *orip, T1 *newp, uint32_t size) {
     float similarity = 0.0;
     uint32_t match_cnt = 0;
     uint32_t i=0;
