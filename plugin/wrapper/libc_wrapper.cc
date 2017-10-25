@@ -284,8 +284,17 @@ EXTERNC void free(void *ptr)
     //if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
       LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
       uint32_t idx = 0;
+      LOGGER_PRINT("[free noerror] find(%p) with %p\n", FT_free, ptr);
+#if _DEBUG_10252017
+      LogEntry *entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
+      if(entry != NULL) {
+        entry->size_.Unset(kNeedPushed);
+        entry->size_.Set(kNeedFreed);
+      } else {
+        printf("[%s(%p)] Potential memory leak\n", __func__, ptr);
+      }
+#else
       LogEntry *entry = NULL;
-      LOGGER_PRINT("[free noerror] find(%p) with %p\n", FT_free, ptr); 
       while(entry == NULL) {
         entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
   //      if(idx == -1U) { assert(0); }
@@ -293,6 +302,7 @@ EXTERNC void free(void *ptr)
       entry->size_.Unset(kNeedPushed);
       entry->size_.Set(kNeedFreed);
 //      entry->Print();
+#endif
     } else { // it is now replaying
   //    LOGGER_PRINT("Replaying %s(%p)\n", __func__, ptr); 
       uint32_t idx = 0;
@@ -474,6 +484,15 @@ EXTERNC void *realloc(void *ptr, size_t size)
     GetLogger()->Add(LogEntry(logger::libc_id, FTID_realloc, kNeedPushed, (uint64_t)ret));
 //    GetLogger()->table_->GetLast()->Print();
     uint32_t idx = 0;
+#if _DEBUG_10252017
+    LogEntry *entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
+    if(entry != NULL) {
+      entry->size_.Unset(kNeedPushed);
+      entry->size_.Set(kNeedFreed);
+    } else {
+      printf("[%s(%p, %zu)] Potential memory leak\n", __func__, ptr, size);
+    }
+#else
     LogEntry *entry = NULL;
     while(entry == NULL) {
       entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
@@ -482,6 +501,9 @@ EXTERNC void *realloc(void *ptr, size_t size)
     entry->size_.Unset(kNeedPushed);
     entry->size_.Set(kNeedFreed);
 //    entry->Print();
+#endif
+
+
   } else {
     LOGGER_PRINT("Replaying %s\n", __func__); 
     LogEntry *entry = GetLogger()->GetNext();
