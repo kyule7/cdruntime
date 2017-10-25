@@ -31,7 +31,7 @@ MPICXX = mpicxx -DUSE_MPI=1 -fmax-errors=3
 else
 SERCXX = cc -DUSE_MPI=0
 MPICXX = CC -DUSE_MPI=1
-
+CD_LINKFLAGS += -dynamic
 endif
 CXX = $(MPICXX)
 
