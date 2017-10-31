@@ -74,7 +74,7 @@
 
 #if _CD2
 #include "cd.h"
-#define CD2_INTERVAL 10000
+#define CD2_INTERVAL 1000
 #endif
 
 #define POT_SHIFT 1.0
@@ -209,20 +209,36 @@ int ljForce(SimFlat* s)
                        getNRanks(), 
                        "ljForce", 
                        kStrict|kDRAM,
-                       0xC);
+                       0xC); // detect F8,F4
 
   }
 #endif
   //*****************************************************
-  // beginning of main computation (hot spot)
+  //1. finest-grained mapping to wrap iteration for atoms in jBox
   //*****************************************************
   // loop over local boxes (link cells) [#: nLocalBoxes]
   // |-loop over neighbors of iBox k  [#: nNbrBoxes]
   //   |- loop over atoms in iBox [#: nIBox]
+  //      -----------------------------------------
   //      ---------------Level 3 CD----------------
   //      |- loop over atoms in jBox [#: nJBox]
   //         |- ljForce computation
   //      ---------------Level 3 CD----------------
+  //      -----------------------------------------
+  //*****************************************************
+  //1. coarser grained mapping
+  //*****************************************************
+  // loop over local boxes (link cells) [#: nLocalBoxes]
+  // |-loop over neighbors of iBox k  [#: nNbrBoxes]
+  //   --------------------------------------------
+  //   ------------------Level 3 CD----------------
+  //   |- loop over atoms in iBox [#: nIBox]
+  //      |- loop over atoms in jBox [#: nJBox]
+  //         |- ljForce computation
+  //   ------------------Level 3 CD----------------
+  //   --------------------------------------------
+  //*****************************************************
+  // beginning of main computation (hot spot)
   //*****************************************************
   // loop over local boxes
   //*****************************************************
@@ -310,8 +326,8 @@ int ljForce(SimFlat* s)
                                                  0,  // is_iSpecies
                                                  MAXATOMS*jBox,          // from 
                                                  MAXATOMS*jBox+nJBox-1,  // to 
-                                                 //0, // 
-                                                //-1,
+                                                 //0, // from 
+                                                 //-1, // to
                                                  0,
                                                  pre_atoms_idx); // is_print
             ljForce_pre_size += preserveLinkCell(lv3_cd, s->boxes, 

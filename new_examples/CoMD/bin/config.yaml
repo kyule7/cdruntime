@@ -46,6 +46,38 @@
 #     - label : advanceVelocity_end
 #       interval : 1
 #       errortype : 0xF
+######################################
+#- CD_0_0 :
+#  - label : Root
+#    interval : 1
+#    errortype : 0xF
+#  - CD_1_1 :
+#    - label : advanceVelocity_start
+#      interval : 1
+#      errortype : 0x7
+#  - CD_1_2 :
+#    - label : advancePosition
+#      interval : 1
+#      errortype : 0x7
+#  - CD_1_3 :
+#    - label : redistributeAtoms
+#      interval : 1
+#      errortype : 0x7
+#    - CD_2_4 :
+#      - label : computeForce
+#        interval : 1
+#        errortype : 0x3
+#      - CD_3_5 :
+#        - label : ljForce_innermost
+#          interval : 1
+#          errortype : 0x1
+#    - CD_2_6 :
+#      - label : advanceVelocity_end
+#        interval : 1
+#        errortype : 0x7
+######################################
+# Root CD or Level2 CD
+######################################
 - CD_0_0 :
   - label : Root
     interval : 1
@@ -53,34 +85,83 @@
   - CD_1_1 :
     - label : advanceVelocity_start
       interval : 1
-      errortype : 0x7
+      errortype : 0xF
   - CD_1_2 :
     - label : advancePosition
       interval : 1
-      errortype : 0x7
+      errortype : 0xF
   - CD_1_3 :
     - label : redistributeAtoms
       interval : 1
-      errortype : 0x7
-    - CD_2_4 :
-      - label : computeForce
+      errortype : 0xF
+  - CD_1_4 :
+    - label : computeForce
+      interval : 1
+      errortype : 0xF
+    - CD_2_5 :
+      - label : ljForce_innermost
         interval : 1
-        errortype : 0x3
-      - CD_3_5 :
-        - label : ljForce_innermost
-          interval : 1
-          errortype : 0x1
-    - CD_2_6 :
-      - label : advanceVelocity_end
-        interval : 1
-        errortype : 0x7
+        errortype : 0xF
+  - CD_1_6 :
+    - label : advanceVelocity_end
+      interval : 1
+      errortype : 0xF
+######################################
+# Root CD and Level 1 CD
+######################################
+#- CD_0_0 :
+#  - label : Root
+#    interval : 1
+#    errortype : 0xF
+#  - CD_1_1 :
+#    - label : advanceVelocity_start
+#      interval : 1
+#      errortype : 0xF
+#  - CD_1_2 :
+#    - label : advancePosition
+#      interval : 1
+#      errortype : 0xF
+#  - CD_1_3 :
+#    - label : redistributeAtoms
+#      interval : 1
+#      errortype : 0xF
+#  - CD_1_4 :
+#    - label : computeForce
+#      interval : 1
+#      errortype : 0xF
+#  - CD_1_5 :
+#    - label : advanceVelocity_end
+#      interval : 1
+#      errortype : 0xF
+######################################
+# Root:   0xF and KHDD
+# Level1: 0xF and kDRAM
+# Level2: 0xC and kDRAM
+######################################
+- FAILURE :
+  - F1 : 0.001
+  - F2 : 0.005
+  - F4 : 0.08 
+  - F8 : 0.01
+#- FAILURE :
+#  - F1 : 0.000
+#  - F2 : 0.000
+#  - F4 : 0.00
+#  - F8 : 0.00
 #- FAILURE :
 #  - F1 : 0.001
 #  - F2 : 0.005
-#  - F4 : 0.08
+#  - F4 : 0.05
 #  - F8 : 0.01
-- FAILURE :
-  - F1 : 0.000
-  - F2 : 0.000
-  - F4 : 0.00
-  - F8 : 0.00
+#- FAILURE :
+#  - F1 : 0.001
+#  - F2 : 0.01
+#  - F4 : 0.01
+#  - F8 : 0.01
+#- FAILURE :
+#  - F1 : 0.1
+#  - F2 : 0.1
+#  - F4 : 0.1
+#  - F8 : 0.1
+
+
