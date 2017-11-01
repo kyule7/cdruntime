@@ -1,7 +1,7 @@
 #!/bin/bash
 ENABLE_DEBUG=1
 
-IS_STAMPEDE=0
+IS_STAMPEDE=1
 ifeq (${IS_STAMPEDE}, 1)
 MYCC=g++
 MPICC=mpicxx

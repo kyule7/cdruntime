@@ -2165,12 +2165,12 @@ CDErrT CD::Preserve(void *data,
         // disk, overlapping reexecution of application.
         CDEntry *ret = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
         if(myTaskID == 0) {
-        if(ret == NULL) {
-          printf("Not Found [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
-          assert(0);
-        } else {
-          printf("Restore [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
-        }
+          if(ret == NULL) {
+            printf("Not Found [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+            assert(0);
+          } else {
+            printf("Restore [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+          }
         }
 //      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
 //        packer::CDErrType pret = entry_directory_.Restore(tag);//, (char *)data);

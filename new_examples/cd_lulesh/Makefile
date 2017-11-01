@@ -24,7 +24,7 @@ MPI_INC = /opt/local/include/openmpi
 MPI_LIB = /opt/local/lib
 
 
-IS_STAMPEDE=0
+IS_STAMPEDE=1
 ifeq (${IS_STAMPEDE}, 1)
 SERCXX = g++ -DUSE_MPI=0
 MPICXX = mpicxx -DUSE_MPI=1 -fmax-errors=3

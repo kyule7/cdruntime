@@ -210,6 +210,7 @@ class Packer {
       return dst;
     }
 
+    // Get data when already entry is found.
     char *GetAt(const EntryT &entry)
     {
       char *dst = new char[entry.size()];

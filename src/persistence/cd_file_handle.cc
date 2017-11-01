@@ -52,7 +52,7 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath)
     printf("cd_file_handle.cc:PosixFileHandle(%s) %s\n", filepath, DEFAULT_BASE_FILEPATH);
     strcpy(base_filename, DEFAULT_BASE_FILEPATH);
   }
-  sprintf(full_filename, "%s/%s.%ld.%ld", base_filename, filepath, time.tv_sec, time.tv_usec);
+  sprintf(full_filename, "%s/%s.%ld.%ld.%d", base_filename, filepath, time.tv_sec % 100, time.tv_usec % 100, packerTaskID);
   //fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT | O_APPEND, S_IRUSR | S_IWUSR);
   fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT, S_IRUSR | S_IWUSR);
   if(fdesc_ < 0) {
@@ -127,7 +127,7 @@ CDErrType PosixFileHandle::Write(int64_t offset, char *src, int64_t len, int64_t
   time_posix_write.End(len);
 
   offset_ = (inc >= 0)? offset_ + inc : offset_ + len;
-  printf("offset:%lu\n", offset_); //getchar();
+//  printf("offset:%lu\n", offset_); //getchar();
   // Error Check
   if((int64_t)written_size != len) {
     perror("write:");
@@ -184,11 +184,13 @@ void PosixFileHandle::FileSync(void)
 void PosixFileHandle::Truncate(uint64_t newsize)
 {
   MYDBG("%lu\n", newsize); //getchar();
+#if _TRUNCATE_FILE
   int ret = ftruncate(fdesc_, newsize); 
   if(ret != 0) {
     perror("ftruncate:");
     ERROR_MESSAGE_PACKER("Error during truncating file:%lu\n", newsize);
   }
+#endif
 }
 
 
