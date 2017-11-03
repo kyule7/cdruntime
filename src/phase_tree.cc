@@ -28,6 +28,10 @@ static char output_filepath[256];
 //  }
 //}
 
+//YKWON: This produces config.in (defined in CD_DEFAULT_OUTPUT_CONFIG_IN) for 
+//       for baseline of config.yaml, which runtime actually refers. 
+//       In addition to this file, user should add FAILURE information when 
+//       error inject is on.
 void PhaseNode::PrintInputYAML(bool first) 
 {
   if(first) {
@@ -36,7 +40,8 @@ void PhaseNode::PrintInputYAML(bool first)
 //    printf("in yaml filepath:%s , %s\n", filepath.c_str(), std::string(CD_DEFAULT_OUTPUT_CONFIG_IN).c_str());
 //    filepath += std::string(CD_DEFAULT_OUTPUT_CONFIG_IN);
     sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_IN);
-    inYAML = fopen(output_filepath, "a");
+    //inYAML = fopen(output_filepath, "a");
+    inYAML = fopen(output_filepath, "w+");
 //    printf("in yaml filepath:%s , %s\n", cd::output_basepath.c_str(), std::string(CD_DEFAULT_OUTPUT_CONFIG_IN).c_str());
 //    inYAML = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_CONFIG_IN)).c_str(), "a");
   }
@@ -58,6 +63,7 @@ void PhaseNode::PrintInputYAML(bool first)
   }
 }
 
+//YKWON: This is depreciated 
 void PhaseNode::PrintOutputYAML(bool first) 
 {
   if(first) {
@@ -87,13 +93,18 @@ void PhaseNode::PrintOutputYAML(bool first)
 }
 
 // Only root call this
+//YKWON: This proudces the file in JSON format for the estimator to find 
+//       optimal mappipng.
+//TODO: check interval, reex_cnt, error_vec 
 void PhaseNode::PrintOutputJson(void) 
 {
+  //FIXME(YKWON): Better to have different file handler
   assert(outYAML == NULL);
   assert(parent_ == NULL);
   sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_OUT);
   printf("Output File:%s\n", output_filepath);
-  outYAML = fopen(output_filepath, "a");
+  //outYAML = fopen(output_filepath, "a");
+  outYAML = fopen(output_filepath, "w+");
   
   fprintf(outYAML, "{\n"
                    "  // global parameters\n"
@@ -119,9 +130,17 @@ void PhaseNode::PrintOutputJsonInternal(void)
   std::string one_more_indent((tabsize+1)<<1, ' ');
   std::string two_more_indent((tabsize+2)<<1, ' ');
   fprintf(outYAML, "%s\"CD_%u_%u\" : {\n",               indent.c_str(), level_, phase_);
+  //TODO: the estimator does not require "label".
   fprintf(outYAML, "%s\"label\" : %s\n",        one_more_indent.c_str(), label_.c_str());
   fprintf(outYAML, "%s\"interval\" : %ld\n",    one_more_indent.c_str(), interval_);
   fprintf(outYAML, "%s\"errortype\" : 0x%lX\n", one_more_indent.c_str(), errortype_);
+  //YKWON: added the information about siblings
+  //FIXME: still this doesn't product the correct number of siblings
+  fprintf(outYAML, "%s\"siblingID:%8u\n",  one_more_indent.c_str(), sibling_id_);
+  fprintf(outYAML, "%s\"sibling #:%8u\n",  one_more_indent.c_str(), sibling_size_);
+  // This print exec_cnt, reex_cnt, tot_time, reex_time, vol_copy, vol_refer
+  // comm_log and error_ven, which are also printed in profile.out.
+  // TODO: let's change to be in B/ MB/ GB
   fprintf(outYAML, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
   fprintf(outYAML, "%s\"ChildCDs\" : {\n", one_more_indent.c_str());
 
@@ -285,6 +304,8 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 //  assert(tuned::phaseNodeCache.find(it->second) != tuned::phaseNodeCache.end());
 //  return tuned::phaseNodeCache[it->second];
 //}
+
+
 PhaseTree::~PhaseTree() {
   // If root_ == NULL,
   // phaseTree is not created.
@@ -295,6 +316,7 @@ PhaseTree::~PhaseTree() {
       root_->PrintInputYAML(true);
 //      root_->PrintOutputYAML(true);
       root_->PrintOutputJson();
+      //FIXME(YKWON): This sometimes fails to produce profile.out
       root_->Print(true, true);
 //      PrintProfile();
       fprintf(stdout, "%s %p\n", __func__, root_);
