@@ -94,7 +94,7 @@ void PhaseNode::PrintOutputYAML(bool first)
 
 // Only root call this
 //YKWON: This proudces the file in JSON format for the estimator to find 
-//       optimal mappipng.
+//       optimal mappipng. (estimation.json)
 //TODO: check interval, reex_cnt, error_vec 
 void PhaseNode::PrintOutputJson(void) 
 {
@@ -112,10 +112,10 @@ void PhaseNode::PrintOutputJson(void)
                    "    \"max_error\" : 20\n"
                    "  },\n"
                    "  // CD hierarchy\n"
-                   "  \"CDInfo\" : {\n"
+                   "  \"CD info\" : {\n"
          );
   PrintOutputJsonInternal();
-  fprintf(outYAML, "  } // CDInfo ends\n"
+  fprintf(outYAML, "  } // CD info ends\n"
                    "}\n"
          );
   fclose(outYAML);
@@ -129,6 +129,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
   std::string indent((tabsize)<<1, ' ');
   std::string one_more_indent((tabsize+1)<<1, ' ');
   std::string two_more_indent((tabsize+2)<<1, ' ');
+  //TODO: lable may be better for CD name instead of level and phase
   fprintf(outYAML, "%s\"CD_%u_%u\" : {\n",               indent.c_str(), level_, phase_);
   //TODO: the estimator does not require "label".
   fprintf(outYAML, "%s\"label\" : %s\n",        one_more_indent.c_str(), label_.c_str());
@@ -136,8 +137,8 @@ void PhaseNode::PrintOutputJsonInternal(void)
   fprintf(outYAML, "%s\"errortype\" : 0x%lX\n", one_more_indent.c_str(), errortype_);
   //YKWON: added the information about siblings
   //FIXME: still this doesn't product the correct number of siblings
-  fprintf(outYAML, "%s\"siblingID:%8u\n",  one_more_indent.c_str(), sibling_id_);
-  fprintf(outYAML, "%s\"sibling #:%8u\n",  one_more_indent.c_str(), sibling_size_);
+  fprintf(outYAML, "%s\"siblingID\" : %8u\n",  one_more_indent.c_str(), sibling_id_);
+  fprintf(outYAML, "%s\"sibling #\" : %8u\n",  one_more_indent.c_str(), sibling_size_);
   // This print exec_cnt, reex_cnt, tot_time, reex_time, vol_copy, vol_refer
   // comm_log and error_ven, which are also printed in profile.out.
   // TODO: let's change to be in B/ MB/ GB
