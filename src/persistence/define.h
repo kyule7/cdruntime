@@ -14,7 +14,8 @@
 #define FOUR_GIGABYTE 4294967296
 #define INVALID_NUM     0xFFFFFFFFFFFFFFFF
 #define TABLE_ID_OFFSET 0xFFFFFFFF00000000
-#define _USE_PFS
+
+//#define _USE_PFS
 
 #ifndef _USE_PFS
 // Small

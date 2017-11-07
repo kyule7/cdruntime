@@ -1,6 +1,8 @@
 #include "packer.hpp"
 #define CD_PACKER_PRINT(...)
 
+#define CDPACKER_FILEMODE kPosixFile
+//#define CDPACKER_FILEMODE DEFAULT_FILEMODE
 namespace packer {
 //  Preservation
 //    1. Single entry
@@ -12,9 +14,9 @@ class CDPacker : public Packer<CDEntry> {
     CDPacker(TableStore<CDEntry> *table=NULL, DataStore *data=NULL) 
       : Packer<CDEntry>(table, data) {}
     CDPacker(TableStore<CDEntry> *table, uint64_t table_size, DataStore *data, uint64_t data_size=DATA_GROW_UNIT) 
-      : Packer<CDEntry>(table_size, table, data, data_size, DEFAULT_FILEMODE) {}
-    CDPacker(bool alloc, TableStore<CDEntry> *table, DataStore *data=NULL) 
-      : Packer<CDEntry>(alloc, table, data) {}
+      : Packer<CDEntry>(table_size, table, data, data_size, CDPACKER_FILEMODE) {}
+    CDPacker(bool alloc, TableStore<CDEntry> *table, DataStore *data, uint64_t datasize=DATA_GROW_UNIT, int filemode=CDPACKER_FILEMODE) 
+      : Packer<CDEntry>(alloc, table, data, datasize, filemode) {}
     virtual ~CDPacker() {}
     CDEntry *Restore(uint64_t tag, char *dst=NULL, uint64_t len=0) 
     {

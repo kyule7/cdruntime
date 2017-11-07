@@ -91,8 +91,8 @@ void PosixFileHandle::Close(void)
 
 CDErrType PosixFileHandle::Write(int64_t offset, char *src, int64_t len, int64_t inc)
 {
-  printf("write (%d): %p (%ld) at file offset:%ld\n", 
-         fdesc_, src, len, offset); 
+//  printf("write (%d): %p (%ld) at file offset:%ld\n", 
+//         fdesc_, src, len, offset); 
   MYDBG("write (%d): %p (%ld) at file offset:%ld\n", 
          fdesc_, src, len, offset); 
 //  printf("write (%d): %p (%lu) at file offset:%lx\n", 

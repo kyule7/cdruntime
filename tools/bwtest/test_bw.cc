@@ -2,7 +2,10 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include <stdint.h>
-
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+//#define _MPI_TEST
 #define DEFAULT_FILEPATH "./file.out"
 #define MAX_CHUNKSIZE 1073741824 // 1GB
 //#define MAX_CHUNKSIZE 134217728 // 1GB
@@ -24,8 +27,15 @@ void CheckError(int err)
   }
 }
 
-void OpenFile(MPI_File *fdesc, const char *filepath)
+#ifdef _MPI_TEST
+typedef MPI_File FileType;
+#else
+typedef int FileType;
+#endif
+
+void OpenFile(FileType *fdesc, const char *filepath)
 {
+#ifdef _MPI_TEST
   // For error handling
   MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
@@ -33,13 +43,13 @@ void OpenFile(MPI_File *fdesc, const char *filepath)
     struct timeval time;
     gettimeofday(&time, NULL);
     char full_filepath[256];
-    sprintf(full_filepath, "%s.%d.%d.%d", filepath, time.tv_sec % 100, time.tv_usec % 100, myRank);
+    sprintf(full_filepath, "%s.mpi.%d.%d.%d", filepath, time.tv_sec % 100, time.tv_usec % 100, myRank);
     CheckError( MPI_File_open(MPI_COMM_SELF, full_filepath, MPI_MODE_CREATE | MPI_MODE_RDWR, MPI_INFO_NULL, fdesc) );
   } else { // N-to-1 file write
     struct timeval time;
     gettimeofday(&time, NULL);
     char full_filepath[256];
-    sprintf(full_filepath, "%s.%d.%d", filepath, time.tv_sec % 100, time.tv_usec % 100);
+    sprintf(full_filepath, "%s.mpi.%d.%d", filepath, time.tv_sec % 100, time.tv_usec % 100);
     CheckError( MPI_File_open(MPI_COMM_WORLD, full_filepath, MPI_MODE_CREATE | MPI_MODE_RDWR, MPI_INFO_NULL, fdesc) );
 
     MPI_Datatype ftype;
@@ -59,23 +69,45 @@ void OpenFile(MPI_File *fdesc, const char *filepath)
   }
   printf("[%d/%d] Opened file : %s, viewsize:%lu, chunk:%lu\n", 
         myRank, numRank, filepath, viewsize, (numRank)*viewsize);
-  
+#else
+  struct timeval time;
+  gettimeofday(&time, NULL);
+  char full_filepath[256];
+  sprintf(full_filepath, "%s.posix.%d.%d.%d", filepath, time.tv_sec % 100, time.tv_usec % 100, myRank);
+  *fdesc = open(full_filepath, O_CREAT | O_RDWR | O_DIRECT, S_IRUSR | S_IWUSR);
+#endif 
 }
 
-void CloseFile(MPI_File *fdesc) {
+void CloseFile(FileType *fdesc) {
+#ifdef _MPI_TEST
   MPI_File_close(fdesc);
   *fdesc = MPI_FILE_NULL;
+#else
+  close(*fdesc);
+  *fdesc = -1;
+#endif
+
 }
 
-void WriteFile(MPI_File *fdesc, uint64_t chunksize, int iter)
+void WriteFile(FileType *fdesc, uint64_t chunksize, int iter)
 {
 
   MPITimer mpi_timer;
   InitializeMPITimer(&mpi_timer, 1);
+#ifdef _MPI_TEST
   MPI_Status status;
+#endif
   for(; chunksize <= MAX_CHUNKSIZE; chunksize *= 4) {
     uint64_t offset = 0;
+#ifdef _MPI_TEST
     uint32_t *src = (uint32_t *)malloc(chunksize);
+#else
+    void *tmp = NULL;
+    int ret = posix_memalign(&tmp, 1048576, chunksize);
+    uint32_t *src = (uint32_t *)tmp;
+    assert(chunksize % 1048576 == 0);
+    if(ret != 0) { perror("posix_memalign"); }
+#endif
     int numElem = chunksize / sizeof(uint32_t);
     
     for(int i=0; i<numElem; i++) {
@@ -84,8 +116,19 @@ void WriteFile(MPI_File *fdesc, uint64_t chunksize, int iter)
   
     for(int i=0; i<iter; i++, offset+=chunksize) {
       BeginTimer(&mpi_timer);
+#ifdef _MPI_TEST
       CheckError( MPI_File_write_at(*fdesc, offset, src, chunksize, MPI_BYTE, &status) );
       CheckError( MPI_File_sync(*fdesc) );
+#else
+      ssize_t written_size = write(*fdesc, src, chunksize);
+      if((int64_t)written_size != chunksize) {
+        perror("write:");
+        printf("Error occurred while writing buffer contents to file: %d %ld == %ld\n", 
+            *fdesc, written_size, chunksize);
+        assert(0);
+      }
+
+#endif
       EndTimer(&mpi_timer, 0);
       AdvanceTimer(&mpi_timer);
     }
@@ -128,7 +171,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   MPI_Comm_size(MPI_COMM_WORLD, &numRank);
 
-  MPI_File fdesc;
+  FileType fdesc;
   OpenFile(&fdesc, filepath);
 
   WriteFile(&fdesc, chunksize, iter);

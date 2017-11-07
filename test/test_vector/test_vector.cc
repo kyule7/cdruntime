@@ -257,7 +257,7 @@ void Test3(int elemsize, int chunksize)
 
   if(CompareResult((char *)dataA, (char *)checkA, totsize*sizeof(int)) == 0) {
     TEST_PRINT("\n\n####################### Success ## %lu ######################\n\n", 
-        0//packer::GetFileHandle()->GetFileSize()
+        0UL//packer::GetFileHandle()->GetFileSize()
         ); //getchar();
   } else {
     TEST_PRINT("Failed\n"); assert(0);

@@ -125,9 +125,9 @@ void Obj1Test(int elemsize)
   } else {
     TEST_PRINT("Failed\n"); assert(0);
   }
-  table.Print();
-  data.Print();
-  table.PrintEntry();
+//  table.Print();
+//  data.Print();
+//  table.PrintEntry();
   delete dataA;
 }
 
@@ -196,7 +196,7 @@ void BoundedBufferTest(int elemsize, int chunksize) {
  // TableStore<CDEntry> table;
   //MyStore table;
   TableStore<BaseEntry> table;
-  DataStore data;
+  DataStore data(NULL, 32*1024*1024, kPosixFile);
 //  data.SetMode(kBoundedMode|kPosixFile);
 //  FileHandle fh;
 //  char filepath[64];
@@ -235,14 +235,14 @@ void BoundedBufferTest(int elemsize, int chunksize) {
   }
   //if(CompareResult((char *)dataA, data.GetPtr(), totsize*sizeof(int)) == 0) {
   if(CompareResult((char *)dataA, preserved, totsize*sizeof(int)) == 0) {
-    TEST_PRINT("\n\n####################### Success ## %lu ######################\n\n", GetFileHandle(kMPIFile)->GetFileSize()); //getchar();
+    TEST_PRINT("\n\n####################### Success ## %lu ######################\n\n", GetFileHandle(kPosixFile)->GetFileSize()); //getchar();
   } else {
     TEST_PRINT("Failed\n"); assert(0);
   }
   //getchar();
-  table.Print();
-  data.Print();
-  table.PrintEntry();
+//  table.Print();
+//  data.Print();
+//  table.PrintEntry();
 
   delete dataA;
   free(preserved);

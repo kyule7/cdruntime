@@ -43,7 +43,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <initializer_list>
 #include <iostream>
 #define CD_VECTOR_PRINT(...)
-#define DO_COMPARE 1
+#define DO_COMPARE 0
 #define UNDEFINED_NAME "undefined"
 
 namespace cd {
@@ -186,6 +186,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
   
   }
   void CheckVector(const char *entry_str=NULL) {
+      printf("[%d] %s %s\n", myTaskID, __func__, entry_str);
       if(orig_ != NULL) {
         char *ptr = reinterpret_cast<char *>(this->data());
         float difference = Compare<T>((T *)orig_, (T *)ptr, this->size());

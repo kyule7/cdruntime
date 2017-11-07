@@ -257,7 +257,7 @@ CD::CD(CDHandle *cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
- :  cd_id_(cd_id), entry_directory_(32, NULL, NULL)
+ :  cd_id_(cd_id), entry_directory_(32, NULL, NULL, DATA_GROW_UNIT, kMPIFile)
     //,
 //    file_handle_(prv_medium, 
 //                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
