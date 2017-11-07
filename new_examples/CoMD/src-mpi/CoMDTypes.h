@@ -114,7 +114,11 @@ typedef struct SimFlatSt
    int nSteps;            //<! number of time steps to run
    int printRate;         //<! number of steps between output
    double dt;             //<! time step
-   
+   int doeam;             //<! 
+#if _CD2
+   int preserveRate;
+#endif
+  
    Domain* domain;        //<! domain decomposition data
 
    LinkCell* boxes;       //<! link-cell data

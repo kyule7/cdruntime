@@ -74,7 +74,7 @@
 
 #if _CD2
 #include "cd.h"
-#define CD2_INTERVAL 1000
+//#define CD2_INTERVAL 1000
 #endif
 
 #define POT_SHIFT 1.0
@@ -174,6 +174,7 @@ int is_first = 0;
 #endif
 int ljForce(SimFlat* s)
 {
+  const int CD2_INTERVAL = s->preserveRate;
   //TODO: not creat sequential CD here since all the below are easy to get 
   LjPotential* pot = (LjPotential *) s->pot;
   real_t sigma = pot->sigma;

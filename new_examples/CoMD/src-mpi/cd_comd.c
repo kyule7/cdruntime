@@ -26,10 +26,10 @@ kineticEnergy(s);
 */
 
 //FIXME: replace with doeam (=cmd.doeam)
-int is_eam = 0;
+//int is_eam = 0;
 //extern int doeam;
 
-unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam)
+unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim)
 {   
     uint32_t size = sizeof(SimFlat); 
     //preserve object with shallow copy first
@@ -54,17 +54,18 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam)
                           0,  // is_print
                           NULL); 
     size += preserveSpeciesData(cdh, sim->species);   // flat
-    if(doeam) {
+    if(sim->doeam) {
       if(PRINTON==1)
-        printf("I am calling preserveEampot since doeam is %d\n", doeam);
-      size += preserveEamPot(cdh, 
+        printf("I am calling preserveEampot since doeam is %d\n", sim->doeam);
+      size += preserveEamPot(cdh,
+                             sim->doeam,
                              (EamPotential *)sim->pot, 
                              sim->boxes->nTotalBoxes);	  
     } else {
         size += preserveLjPot(cdh, (LjPotential *)sim->pot);	// flat 
     }
     //FIMXE: why always 0?
-    size += preserveHaloExchange(cdh, sim->atomExchange, 0);
+    size += preserveHaloExchange(cdh, sim->doeam, sim->atomExchange, 0);
     return size;
 }
 
@@ -276,9 +277,10 @@ unsigned int preserveInterpolationObject(cd_handle_t *cdh,
     return size;
 }
 
-unsigned int preserveEamPot(cd_handle_t *cdh, EamPotential *pot, int nTotalBoxes)
+unsigned int preserveEamPot(cd_handle_t *cdh, int doeam, EamPotential *pot, int nTotalBoxes)
 {
-    assert(is_eam);
+    //assert(is_eam);
+    assert(doeam);
     uint32_t size = sizeof(EamPotential);
     cd_preserve(cdh, pot, size, kCopy, "EamPotential", "EamPotential");
     //preserving rhobar and dfEmbed
@@ -301,13 +303,14 @@ unsigned int preserveEamPot(cd_handle_t *cdh, EamPotential *pot, int nTotalBoxes
     size += preserveInterpolationObject(cdh, pot->rho);
     size += preserveInterpolationObject(cdh, pot->f);
     //preserving HaloExchange
-    size += preserveHaloExchange(cdh, pot->forceExchange, is_eam);
+    //size += preserveHaloExchange(cdh, pot->forceExchange, is_eam);
+    size += preserveHaloExchange(cdh, doeam, pot->forceExchange, doeam);
     //preserving ForceExchangeDataSt
     size += preserveForceData(cdh, pot->forceExchangeData); // shallow copy
     return size;
 }
 
-unsigned int preserveHaloExchange(cd_handle_t *cdh, HaloExchange *xchange, int is_force)
+unsigned int preserveHaloExchange(cd_handle_t *cdh, int doeam, HaloExchange *xchange, int is_force)
 {
     uint32_t size = sizeof(HaloExchange);
     cd_preserve(cdh, xchange, size, kCopy, "HaloExchange", "HaloExchange");
@@ -316,7 +319,7 @@ unsigned int preserveHaloExchange(cd_handle_t *cdh, HaloExchange *xchange, int i
     if(is_force) {
         //TODO: This name is confusing.
         //      This is preserveing ForceExchangeParms
-        size += preserveHaloForce(cdh, xchange->parms);
+        size += preserveHaloForce(cdh, doeam,  xchange->parms);
     } else {
         //TODO: This name is confusing.
         //      This is preserveing AtomExchangeParms
@@ -363,10 +366,11 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh,
     return size;
 }
 
-unsigned int preserveHaloForce(cd_handle_t *cdh, ForceExchangeParms *xchange_parms)
+unsigned int preserveHaloForce(cd_handle_t *cdh, int doeam, ForceExchangeParms *xchange_parms)
 {
     //FIXME
-    assert(is_eam);
+    //assert(is_eam);
+    assert(doeam);
     uint32_t size = sizeof(ForceExchangeParms);
     cd_preserve(cdh, xchange_parms, size, kCopy, 
                 "ForceExchangeParms", "ForceExchangeParms");

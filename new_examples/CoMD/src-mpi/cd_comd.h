@@ -1,7 +1,6 @@
 #include "CoMDTypes.h"
-extern int is_eam;
-//int preserveSimFlat(SimFlat *sim);
-unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim, int doeam);
+//extern int is_eam;
+unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim);
 unsigned int preserveDomain(cd_handle_t *cdh, Domain *domain);
 unsigned int preserveLinkCell(cd_handle_t *cdh, 
                               LinkCell *linkcell, 
@@ -26,9 +25,11 @@ unsigned int preserveLjPot(cd_handle_t *cdh, LjPotential *pot);
 unsigned int preserveInterpolationObject(cd_handle_t *cdh, 
                                          InterpolationObject *obj);
 unsigned int preserveEamPot(cd_handle_t *cdh, 
+                            int doeam,
                             EamPotential *pot, 
                             int nTotalBoxes);
 unsigned int preserveHaloExchange(cd_handle_t *cdh, 
+                                  int doeam,
                                   HaloExchange *xchange, 
                                   int is_force);
 unsigned int preserveHaloAtom(cd_handle_t *cdh, 
@@ -36,6 +37,7 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh,
                               unsigned int is_cellList,
                               unsigned int is_pbcFactor);
 unsigned int preserveHaloForce(cd_handle_t *chd, 
+                               int doeam,
                                ForceExchangeParms *xchange);
 unsigned int preserveForceData(cd_handle_t *chd, 
                                ForceExchangeData *forceData);

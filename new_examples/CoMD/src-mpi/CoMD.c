@@ -114,7 +114,7 @@ int main(int argc, char** argv)
 //   cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM); 
    cd_handle_t* root_cd = cd_init(nRanks, myRank, kHDD);  
    cd_begin(root_cd, "Root");
-   preserveSimFlat(root_cd, sim, cmd.doeam);
+   preserveSimFlat(root_cd, sim);
    //FIXME: what if the buffers for HaloExchnage (malloc)?
 #endif
 
@@ -194,6 +194,11 @@ SimFlat* initSimulation(Command cmd)
    sim->nSteps = cmd.nSteps;
    sim->printRate = cmd.printRate;
    sim->dt = cmd.dt;
+   sim->doeam = cmd.doeam;
+#if _CD2
+   sim->preserveRate = cmd.preserveRate;
+#endif
+
    sim->domain = NULL;
    sim->boxes = NULL;
    sim->atoms = NULL;
