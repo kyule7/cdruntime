@@ -227,12 +227,18 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
 //                                      kStrict,
 //                                      0xE);
 //      cd_begin(cd_lv2, "computeForce"); 
+#endif
+
+//TODO: naming is really confusing. fix ASAP
+#if _CD2
       cd_begin(lv1_cd, "computeForce"); 
 #endif
+
       startTimer(computeForceTimer);
       computeForce(s); // s->pot->force(s)
       stopTimer(computeForceTimer);
-#if _CD1
+//#if _CD1
+#if _CD2
 //      cd_detect(cd_lv2);
 //      cd_complete(cd_lv2); 
       cd_detect(lv1_cd);

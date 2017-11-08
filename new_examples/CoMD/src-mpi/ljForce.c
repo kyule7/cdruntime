@@ -174,7 +174,9 @@ int is_first = 0;
 #endif
 int ljForce(SimFlat* s)
 {
+#if _CD2
   const int CD2_INTERVAL = s->preserveRate;
+#endif
   //TODO: not creat sequential CD here since all the below are easy to get 
   LjPotential* pot = (LjPotential *) s->pot;
   real_t sigma = pot->sigma;
