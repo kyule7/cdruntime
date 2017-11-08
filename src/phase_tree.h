@@ -35,6 +35,8 @@ struct PhaseNode {
     // sequenial ID
     uint64_t seq_begin_; // records at the first begin
     uint64_t seq_end_;   // increments at every begin
+    uint64_t seq_acc_;   // accumulated for every begin/compl
+    uint64_t seq_acc_rb_;   // accumulated for rollback every begin/compl
 
     CDExecMode state_;
 
@@ -66,7 +68,7 @@ struct PhaseNode {
     // for cd::phaseTree
     PhaseNode(PhaseNode *parent, uint32_t level, const std::string &label, CDExecMode state) 
       : level_(level), phase_(phase_gen), 
-        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), seq_begin_(0), seq_end_(0), 
+        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), seq_begin_(0), seq_end_(0), seq_acc_(0), seq_acc_rb_(0),
         state_(state), count_(0), interval_(-1), errortype_(-1), label_(label), profile_(phase_gen)
     {
       TUNE_DEBUG("PhaseNode %s\n", label.c_str());
@@ -79,7 +81,7 @@ struct PhaseNode {
     // executing application. 
     PhaseNode(PhaseNode *parent, uint32_t level, uint32_t phase)
       : level_(level), phase_(phase_gen), 
-        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), seq_begin_(0), seq_end_(0), 
+        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), seq_begin_(0), seq_end_(0), seq_acc_(0), seq_acc_rb_(0),
         state_(kExecution), count_(0), interval_(-1), errortype_(-1), profile_(phase_gen)
     {
       CD_ASSERT_STR(phase == phase_, "PhaseNode(%u == %u)\n", phase_, phase);
@@ -133,6 +135,15 @@ struct PhaseNode {
       }
       CD_ASSERT(next);
       return next;
+    }
+
+    void UpdateTaskInfo(uint32_t rank_in_level, uint32_t sibling_count, 
+                        uint32_t task_in_color, uint32_t task_count) 
+    {
+      sibling_id_   = rank_in_level;
+      sibling_size_ = sibling_count;
+      task_id_      = task_in_color;
+      task_size_    = task_count;
     }
 
     uint32_t GetPhaseNode(uint32_t level, const std::string &label);
@@ -190,7 +201,7 @@ struct PhaseNode {
       if(parent_ == NULL || parent_->state_ != kReexecution) { 
         ResetToExec();
       } else {
-        FinishRecovery(now);
+        parent_->FinishRecovery(now);
       }
     }
  
@@ -203,8 +214,10 @@ struct PhaseNode {
       }
     }
 
-    inline
-    void MarkSeqID(void) { seq_begin_ = seq_end_; }
+    // Only seq_begin_ should be updated here.
+    // seq_begin_ preverves sequential_id_.
+    // Its purpose is to reinit seq_end_
+    inline void MarkSeqID(int64_t seq_id) { seq_begin_ = seq_id; }
 };
 
 struct PhaseTree {
@@ -231,7 +244,7 @@ struct PhaseTree {
     void Print(int format=0) 
     {
       if(cd::myTaskID == 0) { 
-      switch(0) {
+      switch(format) {
         case 0: root_->PrintInputYAML(true); break;
         case 1: root_->Print(true, true); break;
       }

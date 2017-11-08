@@ -337,7 +337,8 @@ void SystemConfig::LoadConfig(const char *config, int myTask)
 #if CD_TUNING_ENABLED
         ParseParam(key);
 #else
-        ParseFailureParam(key);
+        ParseParam(key);
+        //ParseFailureParam(key);
 #endif
         break;
       }
@@ -352,13 +353,15 @@ void SystemConfig::LoadConfig(const char *config, int myTask)
 #if CD_TUNING_ENABLED
   fclose(tstream);
   tuned::phaseTree.Print();
-
+#endif
   // Initialize phase_gen for cd::phaseTree
   PhaseNode::max_phase = PhaseNode::phase_gen; 
 //  tuned::phaseNodeCache = new (PhaseNode*)[tuned::PhaseNode::max_phase](NULL);
   PhaseNode::phase_gen = 0;  
   tuned::phaseTree.current_ = tuned::phaseTree.root_;
-#endif
+//  if(cd::myTaskID == 0) {
+////    tuned::phaseTree.Print(1);
+//  }
   CD_PRINT_CONFIG(tstream, "Finish reading config. :%p %p\n", tuned::phaseTree.current_, tuned::phaseTree.root_);
 }
 

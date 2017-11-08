@@ -1,6 +1,7 @@
 #include "phase_tree.h"
 #include "cd_global.h"
 #include "cd_def_preserve.h"
+#include "sys_err_t.h"
 using namespace common;
 using namespace std;
 
@@ -17,6 +18,7 @@ int64_t common::PhaseNode::last_completed_phase = HEALTHY;
 
 static FILE *inYAML = NULL;
 static FILE *outYAML = NULL;
+static FILE *outJSON = NULL;
 static FILE *outAll = NULL;
 static char output_filepath[256];
 static char output_basepath[512];
@@ -47,9 +49,9 @@ void PhaseNode::PrintInputYAML(bool first)
   std::string one_more_indent((level_+1)<<1, ' ');
   std::string two_more_indent((level_+2)<<1, ' ');
   fprintf(inYAML, "%s- CD_%u_%u :\n",          indent.c_str(), level_, phase_);
-  fprintf(inYAML, "%s- label : %s\n", one_more_indent.c_str(), label_.c_str());
+  fprintf(inYAML, "%s- label    : %s\n", one_more_indent.c_str(), label_.c_str());
   fprintf(inYAML, "%sinterval : %ld\n",    two_more_indent.c_str(), interval_);
-  fprintf(inYAML, "%serrortype : 0x%lX\n", two_more_indent.c_str(), errortype_);
+  fprintf(inYAML, "%serrortype: 0x%lX\n", two_more_indent.c_str(), errortype_);
   //  fprintf(inYAML, "%s", profile_.GetRTInfoStr(level_+1).c_str());
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->PrintInputYAML(false);
@@ -57,6 +59,7 @@ void PhaseNode::PrintInputYAML(bool first)
 
   if(first) {
     fclose(inYAML);
+    inYAML = NULL;
   }
 }
 
@@ -77,29 +80,30 @@ void PhaseNode::PrintOutputYAML(bool first)
   std::string one_more_indent((level_+1)<<1, ' ');
   std::string two_more_indent((level_+2)<<1, ' ');
   fprintf(outYAML, "%s- CD_%u_%u :\n",               indent.c_str(), level_, phase_);
-  fprintf(outYAML, "%s- label : %s\n",      one_more_indent.c_str(), label_.c_str());
+  fprintf(outYAML, "%s- label    : %s\n",      one_more_indent.c_str(), label_.c_str());
   fprintf(outYAML, "%sinterval : %ld\n",    two_more_indent.c_str(), interval_);
-  fprintf(outYAML, "%serrortype : 0x%lX\n", two_more_indent.c_str(), errortype_);
+  fprintf(outYAML, "%serrortype: 0x%lX\n", two_more_indent.c_str(), errortype_);
 //  fprintf(outAll, "children size:%zu\n", children_.size()); getchar();
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->PrintOutputYAML(false);
   }
   if(first) {
     fclose(outYAML);
+    outYAML = NULL;
   }
 }
 
 // Only root call this
 void PhaseNode::PrintOutputJson(void) 
 {
-  assert(outYAML == NULL);
+  assert(outJSON == NULL);
   assert(parent_ == NULL);
   memset(output_filepath, '\0', 256);
   sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_CONFIG_OUT);
   printf("%s Output File:%s\n", __func__, output_filepath);
-  outYAML = fopen(output_filepath, "a");
+  outJSON = fopen(output_filepath, "a");
   
-  fprintf(outYAML, "{\n"
+  fprintf(outJSON, "{\n"
                    "  // global parameters\n"
                    "  \"global_param\" : {\n"
                    "    \"max_error\" : 20\n"
@@ -108,10 +112,11 @@ void PhaseNode::PrintOutputJson(void)
                    "  \"CDInfo\" : {\n"
          );
   PrintOutputJsonInternal();
-  fprintf(outYAML, "  } // CDInfo ends\n"
+  fprintf(outJSON, "  } // CDInfo ends\n"
                    "}\n"
          );
-  fclose(outYAML);
+  fclose(outJSON);
+  outJSON = NULL;
   
 }
 
@@ -122,18 +127,18 @@ void PhaseNode::PrintOutputJsonInternal(void)
   std::string indent((tabsize)<<1, ' ');
   std::string one_more_indent((tabsize+1)<<1, ' ');
   std::string two_more_indent((tabsize+2)<<1, ' ');
-  fprintf(outYAML, "%s\"CD_%u_%u\" : {\n",               indent.c_str(), level_, phase_);
-  fprintf(outYAML, "%s\"label\" : %s\n",        one_more_indent.c_str(), label_.c_str());
-  fprintf(outYAML, "%s\"interval\" : %ld\n",    one_more_indent.c_str(), interval_);
-  fprintf(outYAML, "%s\"errortype\" : 0x%lX\n", one_more_indent.c_str(), errortype_);
-  fprintf(outYAML, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
-  fprintf(outYAML, "%s\"ChildCDs\" : {\n", one_more_indent.c_str());
+  fprintf(outJSON, "%s\"CD_%u_%u\" : {\n",              indent.c_str(), level_, phase_);
+  fprintf(outJSON, "%s\"label\"    : %s\n",    one_more_indent.c_str(), label_.c_str());
+  fprintf(outJSON, "%s\"interval\" : %ld\n",   one_more_indent.c_str(), interval_);
+  fprintf(outJSON, "%s\"errortype\": 0x%lX\n", one_more_indent.c_str(), errortype_);
+  fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
+  fprintf(outJSON, "%s\"ChildCDs\" : {\n", one_more_indent.c_str());
 
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->PrintOutputJsonInternal();
   }
-  fprintf(outYAML, "%s}\n", one_more_indent.c_str());
-  fprintf(outYAML, "%s}\n",          indent.c_str());
+  fprintf(outJSON, "%s}\n", one_more_indent.c_str());
+  fprintf(outJSON, "%s}\n",          indent.c_str());
 }
 
 //void PhaseNode::Print(void) 
@@ -164,24 +169,26 @@ void PhaseNode::Print(bool print_details, bool first)
 //    outAll = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_PROFILE)).c_str(), "a");
     memset(output_filepath, '\0', 256);
     sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_PROFILE);
-    printf("[%s] %s\n", __func__, output_filepath);
+//    printf("[%s] %s\n", __func__, output_filepath);
     outAll = fopen(output_filepath, "w+");
   }
   std::string indent((level_)<<1, ' ');
   std::string one_more_indent((level_+1)<<1, ' ');
   fprintf(outAll, "%sCD_%u_%u\n",                indent.c_str(), level_, phase_);
   fprintf(outAll, "%s{\n",                       indent.c_str());
-  fprintf(outAll, "%slabel:%s\n",       one_more_indent.c_str(), label_.c_str());
-  fprintf(outAll, "%sstate    :%8u\n",  one_more_indent.c_str(), state_);
-  fprintf(outAll, "%sinterval :%8ld\n", one_more_indent.c_str(), interval_);
+  fprintf(outAll,   "%slabel      :%s\n",   one_more_indent.c_str(), label_.c_str());
+  fprintf(outAll,   "%sstate      :%8u\n",  one_more_indent.c_str(), state_);
+  fprintf(outAll,   "%sinterval   :%8ld\n", one_more_indent.c_str(), interval_);
   if(print_details) {
-    fprintf(outAll, "%serrtype:0x%8lX\n", one_more_indent.c_str(), errortype_);
-    fprintf(outAll, "%ssiblingID:%8u\n",  one_more_indent.c_str(), sibling_id_);
-    fprintf(outAll, "%ssibling #:%8u\n",  one_more_indent.c_str(), sibling_size_);
-    fprintf(outAll, "%stask ID  :%8u\n",  one_more_indent.c_str(), task_id_);
-    fprintf(outAll, "%stask #   :%8u\n",  one_more_indent.c_str(), task_size_);
-    fprintf(outAll, "%scount    :%8ld\n", one_more_indent.c_str(), count_);
-    fprintf(outAll, "%s", profile_.GetRTInfoStr(level_+1).c_str());
+    fprintf(outAll, "%serrortype  :0x%lX\n", one_more_indent.c_str(), errortype_);
+    fprintf(outAll, "%ssiblingID  :%8u\n",  one_more_indent.c_str(), sibling_id_);
+    fprintf(outAll, "%ssibling #  :%8u\n",  one_more_indent.c_str(), sibling_size_);
+    fprintf(outAll, "%stask ID    :%8u\n",  one_more_indent.c_str(), task_id_);
+    fprintf(outAll, "%stask #     :%8u\n",  one_more_indent.c_str(), task_size_);
+    fprintf(outAll, "%scount(tune):%8ld\n", one_more_indent.c_str(), count_);
+    fprintf(outAll, "%scount(cd)  :%8ld // # executions\n", one_more_indent.c_str(), seq_acc_);
+    fprintf(outAll, "%s# recreated:%8ld // # rexecutions\n", one_more_indent.c_str(), seq_acc_rb_);
+    fprintf(outAll, "%s", profile_.GetRTInfoStr(level_+1, RuntimeInfo::kPROF).c_str());
   }
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->Print(print_details, false);
@@ -260,6 +267,9 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     TUNE_DEBUG("Old Phase! %u %s\n", phase, phase_path.c_str()); //getchar();
 //    if(cd::myTaskID == 0) fprintf(outAll, "Old Phase! %u at lv#%u%s\n", phase, level, phase_path.c_str()); //getchar();
   }
+  auto pt = tuned::phaseNodeCache.find(phase);
+  assert(pt != tuned::phaseNodeCache.end());
+  cd::phaseTree.current_->errortype_ = pt->second->errortype_;
 
 //  // First visit
 //  if(last_completed_phase != phase) {

@@ -133,6 +133,12 @@ void MergeMaps(std::map<std::string, PrvProfEntry>& lhs,
 //  2. phaseNodeCache
 //  3. profPrvCache
 struct RuntimeInfo : public CDOverhead {
+  enum {
+    kJSON = 1,
+    kYAML = 2,
+    kPROF = 3,
+  };
+
   uint32_t id_;
   uint32_t exec_;
   uint32_t reexec_;
@@ -176,7 +182,7 @@ struct RuntimeInfo : public CDOverhead {
     Copy(record);
   }
   virtual std::string GetString(void);
-  std::string GetRTInfoStr(int cnt=0);
+  std::string GetRTInfoStr(int cnt=0, int style=kJSON);
   virtual void Print(void);
   RuntimeInfo &operator+=(const RuntimeInfo &record) {
     Merge(record);

@@ -13,7 +13,7 @@ string RuntimeInfo::GetString(void)
           + GetOverheadStr());
 }
 
-string RuntimeInfo::GetRTInfoStr(int cnt)
+string RuntimeInfo::GetRTInfoStr(int cnt, int style)
 {
 //  uint32_t str_len = 1024 + ((input_.size() + output_.size()) << 6);
 //  char *stringout = char[str_len];
@@ -22,25 +22,55 @@ string RuntimeInfo::GetRTInfoStr(int cnt)
   std::string indent(cnt<<1, ' ');
   std::string more_indent((cnt+1)<<1, ' ');
 #ifdef USE_JSON
-  snprintf(stringout, 1024, 
-                    "%s\"exec_cnt\" :%11u,\n"
-                    "%s\"reex_cnt\" :%11u,\n"
-                    "%s\"tot_time\" :%11.6lf, // [s]\n"
-                    "%s\"reex_time\":%11.6lf, // [s]\n"
-                    "%s\"wait_time\":%11.6lf, // [s]\n"
-                    "%s\"vol_copy\" :%11lu, // [B]\n"
-                    "%s\"vol_refer\":%11lu, // [B]\n"
-                    "%s\"comm_log\" :%11lu, // [B]\n"
-                    "%s\"error_vec\":0x%lx,\n",
-                    indent.c_str(), exec_,
-                    indent.c_str(), reexec_,
-                    indent.c_str(), total_time_,
-                    indent.c_str(), reexec_time_,
-                    indent.c_str(), sync_time_,
-                    indent.c_str(), prv_copy_,
-                    indent.c_str(), prv_ref_,
-                    indent.c_str(), msg_logging_,
-                    indent.c_str(), sys_err_vec_);
+  switch(style) {
+    case kJSON: {
+      snprintf(stringout, 1024, 
+                        "%s\"exec_cnt\" :%11u,\n"
+                        "%s\"reex_cnt\" :%11u,\n"
+                        "%s\"tot_time\" :%11.6lf, // [s]\n"
+                        "%s\"reex_time\":%11.6lf, // [s]\n"
+                        "%s\"wait_time\":%11.6lf, // [s]\n"
+                        "%s\"vol_copy\" :%11lu, // [B]\n"
+                        "%s\"vol_refer\":%11lu, // [B]\n"
+                        "%s\"comm_log\" :%11lu, // [B]\n"
+                        "%s\"error_vec\":0x%lx,\n",
+                        indent.c_str(), exec_,
+                        indent.c_str(), reexec_,
+                        indent.c_str(), total_time_,
+                        indent.c_str(), reexec_time_,
+                        indent.c_str(), sync_time_,
+                        indent.c_str(), prv_copy_,
+                        indent.c_str(), prv_ref_,
+                        indent.c_str(), msg_logging_,
+                        indent.c_str(), sys_err_vec_);
+                }
+                break;
+    default: {
+      snprintf(stringout, 1024, 
+                        "%sexec_cnt :%11u,\n"
+                        "%sreex_cnt :%11u,\n"
+                        "%stot_time :%11.6lf, // [s]\n"
+                        "%sreex_time:%11.6lf, // [s]\n"
+                        "%swait_time:%11.6lf, // [s]\n"
+                        "%sprsv_time:%11.6lf, // [s]\n"
+                        "%svol_copy :%11lu, // [B]\n"
+                        "%svol_refer:%11lu, // [B]\n"
+                        "%scomm_log :%11lu, // [B]\n"
+                        "%serror_vec:0x%lx,\n",
+                        indent.c_str(), exec_,
+                        indent.c_str(), reexec_,
+                        indent.c_str(), total_time_,
+                        indent.c_str(), reexec_time_,
+                        indent.c_str(), sync_time_,
+                        indent.c_str(), prv_elapsed_time_,
+                        indent.c_str(), prv_copy_,
+                        indent.c_str(), prv_ref_,
+                        indent.c_str(), msg_logging_,
+                        indent.c_str(), sys_err_vec_);
+                }
+  }
+
+                
 #else
   snprintf(stringout, 1024, 
                     "%sexec_cnt :%11u\n"
