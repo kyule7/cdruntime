@@ -70,6 +70,7 @@ CD_CLOCK_T cd::log_elapsed_time;
 uint64_t cd::gen_object_id=0;
 uint64_t cd::state = 0;
 // the very first failed phase
+int64_t prev_phase = HEALTHY;
 int64_t cd::failed_phase = HEALTHY;
 int64_t cd::failed_seqID = HEALTHY;
 //int32_t cd::failed_level = HEALTHY;
@@ -257,7 +258,7 @@ CD::CD(CDHandle *cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
- :  cd_id_(cd_id), entry_directory_(32, NULL, NULL)
+ :  cd_id_(cd_id), entry_directory_(32, NULL, NULL, DATA_GROW_UNIT, kMPIFile)
     //,
 //    file_handle_(prv_medium, 
 //                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
@@ -383,6 +384,7 @@ void CD::Initialize(CDHandle *cd_parent,
 #endif
 
   InternalInitialize(cd_parent);
+
 #if CD_MPI_ENABLED
   InitializeMailBox();
 #endif
@@ -771,7 +773,8 @@ void AttachChildCD(HeadCD *new_cd)
 inline 
 CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 {
-
+  // sequential_id_ is reinitialized in CD::InternalInitialize()
+  
   if(need_destroy == false) {
     CD_DEBUG("clean up CD meta data (%d windows) at %s (%s) level #%u\n", 
              task_size(), name_.c_str(), label_.c_str(), level());
@@ -885,11 +888,15 @@ CDErrT CD::Begin(const char *label, bool collective)
   
   if(tuned::tuning_enabled == false) {
     cd_id_.cd_name_.phase_ = BeginPhase(level(), label_);
+    sys_detect_bit_vector_ = phaseTree.current_->errortype_;
+    phaseTree.current_->UpdateTaskInfo(rank_in_level(), cd_id_.sibling_count(),
+                                       task_in_color(), cd_id_.task_count());
+    if(myTaskID == 4) printf("lv:%u, %s, %s, bitvec:%lx\n", level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
   } else { // phaseTree.current_ was updated at tuned::CDHandle before this
     cd_id_.cd_name_.phase_ = phaseTree.current_->phase_;
     sys_detect_bit_vector_ = phaseTree.current_->errortype_;
     CD_DEBUG("lv:%u, %s, %s, bitvec:%lx\n", level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
-//    printf("lv:%u, %s, %s, bitvec:%lx\n", level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
+    printf("lv:%u, %s, %s, bitvec:%lx\n", level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
     CD_ASSERT_STR(new_phase == phaseTree.current_->phase_,
                   "phase : %u != %u\n", new_phase,  phaseTree.current_->phase_);
   }
@@ -898,8 +905,13 @@ CDErrT CD::Begin(const char *label, bool collective)
 
   // it is the first begin after Create()
   // (sequential ID is initialized at Create())
-  if(cd_id_.sequential_id() == 0) {
-    phaseTree.current_->MarkSeqID();
+  //if(cd_id_.sequential_id() == 0) 
+  if(prev_phase != current_phase) 
+  {
+    prev_phase = current_phase;
+    if(failed_phase == HEALTHY) {
+      phaseTree.current_->MarkSeqID(cd_id_.sequential_id_); // set seq_begin_ = seq_end_
+    }
   }
  // cd_name_.phase_ = GetPhase(level(), label_);
 
@@ -1027,7 +1039,7 @@ CDErrT CD::Begin(const char *label, bool collective)
     if(myTaskID == 0) {
       MYDBG("[Mode=%d] after log ft:%lu, log id:%lu, log begin:%lu\n", phaseTree.current_->state_, 
           logger::GetLogger()->GetNextID(), libc_log_id_, libc_log_begin_);
-      //logger::GetLogger()->Print();
+//      logger::GetLogger()->Print();
     }
   } 
 //  else {
@@ -1453,7 +1465,11 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
       failed_phase = phase;
       failed_seqID = phaseTree.current_->seq_end_;
     }
-    phaseTree.current_->seq_end_ = phaseTree.current_->seq_begin_;
+    // Now seq_end_ is initialized to the seq_id at the first begin after create
+//    phaseTree.current_->seq_end_ = phaseTree.current_->seq_begin_;
+    
+//    assert(phaseTree.current_->seq_begin_ == 0);
+    
 //    // [CHECK 10142017] Should be true
 //    if(failed_phase != HEALTHY) {
 //      assert(failed_phase >= (int64_t)phase);
@@ -1463,8 +1479,14 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
   else { // No error occurred
 
     CD_DEBUG("## Complete. No error! ##\n\n");
-    if(failed_phase == this->phase() && failed_seqID == phaseTree.current_->seq_end_) {
+    const uint64_t curr_phase = this->phase();
+    const uint64_t curr_seqID = phaseTree.current_->seq_end_;
+    if(myTaskID == 0) { printf("## Complete. No error! ##, cur(%lu, %lu), failed(%ld,%ld) %ld\n",
+        curr_phase, curr_seqID, failed_phase, failed_seqID, phaseTree.current_->seq_begin_); }
+
+    if(failed_phase == curr_phase && failed_seqID == curr_seqID) {
       failed_phase = HEALTHY;
+      failed_seqID = HEALTHY;
       // At this point, take the timer (update RuntimeInfo::clk_)
       // to measure the rest of execution time.
       CD_CLOCK_T now = CD_CLOCK();
@@ -1475,14 +1497,19 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     CompleteLogs();
   
     // Increase sequential ID by one
-    cd_id_.sequential_id_++;
+    cd_id_.sequential_id_++; // reinit at create/destroy
+    phaseTree.current_->seq_end_++; // reinit at failure
+    if(failed_phase == HEALTHY) {
+      phaseTree.current_->seq_acc_++; // no reinit
+    } else {
+      phaseTree.current_->seq_acc_rb_++; // no reinit
+    }
     
     /// It deletes entry directory in the CD (for every Complete() call). 
     /// We might modify this in the profiler to support the overlapped data among sequential CDs.
     DeleteEntryDirectory();
     ret = common::kOK;
 
-    phaseTree.current_->seq_end_++;
     CompletePhase(this->phase());
   }
 
@@ -2162,12 +2189,12 @@ CDErrT CD::Preserve(void *data,
         // disk, overlapping reexecution of application.
         CDEntry *ret = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
         if(myTaskID == 0) {
-        if(ret == NULL) {
-          printf("Not Found [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
-          assert(0);
-        } else {
-          printf("Restore [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
-        }
+          if(ret == NULL) {
+            printf("Not Found [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+            assert(0);
+          } else {
+            printf("Restore [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+          }
         }
 //      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
 //        packer::CDErrType pret = entry_directory_.Restore(tag);//, (char *)data);
@@ -2423,7 +2450,7 @@ CDErrT CD::Restore()
   // In case we need to find reference name quickly we will maintain seperate structure such as binary search tree and each item will have CDEntry *.
 
 
-  printf("[%d %s at lv#%u] Reset to false at begin!\n", myTaskID, label_.c_str(), level());
+  if(myTaskID == 4) printf("[%d %s at lv#%u] Reset to false at begin!\n", myTaskID, label_.c_str(), level());
   //GONG
   begin_ = false;
 

@@ -240,6 +240,7 @@ CDErrType DataStore::Reallocate(uint64_t len)
   } else {
     err = kMallocFailed;
   }
+  chunksize_threshold = size_ * 0.8;
   return err;
 }
 
@@ -1367,7 +1368,7 @@ CDErrType DataStore::Flush(void)
   CDErrType ret = kOK;
   if(buf_used() > 0) {
     MYDBG("\n\n##### [%s] %ld %zu ###\n", __func__, buf_used(), sizeof(MagicStore));
-//    printf("\n\n##### [%s] %ld %zu ###\n", __func__, buf_used(), sizeof(MagicStore));
+//    if(packerTaskID == 4) printf("\n\n##### [%s] %ld %zu ###\n", __func__, buf_used(), sizeof(MagicStore));
     ret = WriteFile(buf_used());
     FileSync();
   }

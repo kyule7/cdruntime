@@ -1,15 +1,14 @@
 #!/bin/bash
 DEBUG_ENABLED=1
 
-CDPATH=${CD_PATH}
-#/home1/03341/kyushick/Work/CDs/libc
+CDPATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../..
 PACKER_PATH=${CDPATH}/src/persistence
 CC=g++
 
 CFLAGS=-std=gnu++0x -fPIC -Wall -c -I. -I${PACKER_PATH} #-fmax-errors=3
 LFLAGS=-fPIC -L${PACKER_PATH} -Wl,-rpath=${PACKER_PATH} -lpacker -ldl
 ifeq (${DEBUG_ENABLED}, 1)
-CFLAGS += -g -O0
+CFLAGS += -g -O3
 else
 CFLAGS += -O3
 endif

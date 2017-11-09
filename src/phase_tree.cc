@@ -1,7 +1,7 @@
-//#include <time.h>
 #include "phase_tree.h"
 #include "cd_global.h"
 #include "cd_def_preserve.h"
+#include "sys_err_t.h"
 using namespace common;
 using namespace std;
 
@@ -18,8 +18,10 @@ int64_t common::PhaseNode::last_completed_phase = HEALTHY;
 
 static FILE *inYAML = NULL;
 static FILE *outYAML = NULL;
+static FILE *outJSON = NULL;
 static FILE *outAll = NULL;
 static char output_filepath[256];
+static char output_basepath[512];
 //static inline
 //void AddIndent(int cnt)
 //{
@@ -39,9 +41,15 @@ void PhaseNode::PrintInputYAML(bool first)
 //    string &filepath = cd::output_basepath;
 //    printf("in yaml filepath:%s , %s\n", filepath.c_str(), std::string(CD_DEFAULT_OUTPUT_CONFIG_IN).c_str());
 //    filepath += std::string(CD_DEFAULT_OUTPUT_CONFIG_IN);
-    sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_IN);
-    //inYAML = fopen(output_filepath, "a");
-    inYAML = fopen(output_filepath, "w+");
+//<<<<<<< HEAD
+//    sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_IN);
+//    //inYAML = fopen(output_filepath, "a");
+//    inYAML = fopen(output_filepath, "w+");
+//=======
+    memset(output_filepath, '\0', 256);
+    sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_CONFIG_IN);
+    printf("%s file:%s\n", __func__, output_basepath);
+    inYAML = fopen(output_filepath, "a");
 //    printf("in yaml filepath:%s , %s\n", cd::output_basepath.c_str(), std::string(CD_DEFAULT_OUTPUT_CONFIG_IN).c_str());
 //    inYAML = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_CONFIG_IN)).c_str(), "a");
   }
@@ -50,9 +58,9 @@ void PhaseNode::PrintInputYAML(bool first)
   std::string one_more_indent((level_+1)<<1, ' ');
   std::string two_more_indent((level_+2)<<1, ' ');
   fprintf(inYAML, "%s- CD_%u_%u :\n",          indent.c_str(), level_, phase_);
-  fprintf(inYAML, "%s- label : %s\n", one_more_indent.c_str(), label_.c_str());
+  fprintf(inYAML, "%s- label    : %s\n", one_more_indent.c_str(), label_.c_str());
   fprintf(inYAML, "%sinterval : %ld\n",    two_more_indent.c_str(), interval_);
-  fprintf(inYAML, "%serrortype : 0x%lX\n", two_more_indent.c_str(), errortype_);
+  fprintf(inYAML, "%serrortype: 0x%lX\n", two_more_indent.c_str(), errortype_);
   //  fprintf(inYAML, "%s", profile_.GetRTInfoStr(level_+1).c_str());
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->PrintInputYAML(false);
@@ -60,6 +68,7 @@ void PhaseNode::PrintInputYAML(bool first)
 
   if(first) {
     fclose(inYAML);
+    inYAML = NULL;
   }
 }
 
@@ -72,23 +81,25 @@ void PhaseNode::PrintOutputYAML(bool first)
 //    printf("out yaml filepath:%s , %s\n", filepath.c_str(), std::string(CD_DEFAULT_OUTPUT_CONFIG_OUT).c_str());
 //    filepath += std::string(CD_DEFAULT_OUTPUT_CONFIG_OUT);
 //    outYAML = fopen(filepath.c_str(), "a");
-    sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_OUT);
-    printf("Output File:%s\n", output_filepath);
+    memset(output_filepath, '\0', 256);
+    sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_CONFIG_OUT);
+    printf("%s Output File:%s\n", __func__, output_filepath);
     outYAML = fopen(output_filepath, "a");
   }
   std::string indent(level_<<1, ' ');
   std::string one_more_indent((level_+1)<<1, ' ');
   std::string two_more_indent((level_+2)<<1, ' ');
   fprintf(outYAML, "%s- CD_%u_%u :\n",               indent.c_str(), level_, phase_);
-  fprintf(outYAML, "%s- label : %s\n",      one_more_indent.c_str(), label_.c_str());
+  fprintf(outYAML, "%s- label    : %s\n",      one_more_indent.c_str(), label_.c_str());
   fprintf(outYAML, "%sinterval : %ld\n",    two_more_indent.c_str(), interval_);
-  fprintf(outYAML, "%serrortype : 0x%lX\n", two_more_indent.c_str(), errortype_);
+  fprintf(outYAML, "%serrortype: 0x%lX\n", two_more_indent.c_str(), errortype_);
 //  fprintf(outAll, "children size:%zu\n", children_.size()); getchar();
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->PrintOutputYAML(false);
   }
   if(first) {
     fclose(outYAML);
+    outYAML = NULL;
   }
 }
 
@@ -98,15 +109,23 @@ void PhaseNode::PrintOutputYAML(bool first)
 //TODO: check interval, reex_cnt, error_vec 
 void PhaseNode::PrintOutputJson(void) 
 {
-  //FIXME(YKWON): Better to have different file handler
-  assert(outYAML == NULL);
+//<<<<<<< HEAD
+//  //FIXME(YKWON): Better to have different file handler
+//  assert(outYAML == NULL);
+//  assert(parent_ == NULL);
+//  sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_OUT);
+//  printf("Output File:%s\n", output_filepath);
+//  //outYAML = fopen(output_filepath, "a");
+//  outYAML = fopen(output_filepath, "w+");
+//=======
+  assert(outJSON == NULL);
   assert(parent_ == NULL);
-  sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_OUT);
-  printf("Output File:%s\n", output_filepath);
-  //outYAML = fopen(output_filepath, "a");
-  outYAML = fopen(output_filepath, "w+");
+  memset(output_filepath, '\0', 256);
+  sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_CONFIG_OUT);
+  printf("%s Output File:%s\n", __func__, output_filepath);
+  outJSON = fopen(output_filepath, "a");
   
-  fprintf(outYAML, "{\n"
+  fprintf(outJSON, "{\n"
                    "  // global parameters\n"
                    "  \"global_param\" : {\n"
                    "    \"max_error\" : 20\n"
@@ -115,10 +134,11 @@ void PhaseNode::PrintOutputJson(void)
                    "  \"CD info\" : {\n"
          );
   PrintOutputJsonInternal();
-  fprintf(outYAML, "  } // CD info ends\n"
+  fprintf(outJSON, "  } // CD info ends\n"
                    "}\n"
          );
-  fclose(outYAML);
+  fclose(outJSON);
+  outJSON = NULL;
   
 }
 
@@ -129,27 +149,37 @@ void PhaseNode::PrintOutputJsonInternal(void)
   std::string indent((tabsize)<<1, ' ');
   std::string one_more_indent((tabsize+1)<<1, ' ');
   std::string two_more_indent((tabsize+2)<<1, ' ');
-  //TODO: lable may be better for CD name instead of level and phase
-  fprintf(outYAML, "%s\"CD_%u_%u\" : {\n",               indent.c_str(), level_, phase_);
-  //TODO: the estimator does not require "label".
-  fprintf(outYAML, "%s\"label\" : %s\n",        one_more_indent.c_str(), label_.c_str());
-  fprintf(outYAML, "%s\"interval\" : %ld\n",    one_more_indent.c_str(), interval_);
-  fprintf(outYAML, "%s\"errortype\" : 0x%lX\n", one_more_indent.c_str(), errortype_);
-  //YKWON: added the information about siblings
-  //FIXME: still this doesn't product the correct number of siblings
-  fprintf(outYAML, "%s\"siblingID\" : %8u\n",  one_more_indent.c_str(), sibling_id_);
-  fprintf(outYAML, "%s\"sibling #\" : %8u\n",  one_more_indent.c_str(), sibling_size_);
-  // This print exec_cnt, reex_cnt, tot_time, reex_time, vol_copy, vol_refer
-  // comm_log and error_ven, which are also printed in profile.out.
-  // TODO: let's change to be in B/ MB/ GB
-  fprintf(outYAML, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
-  fprintf(outYAML, "%s\"ChildCDs\" : {\n", one_more_indent.c_str());
+//<<<<<<< HEAD
+//  //TODO: lable may be better for CD name instead of level and phase
+//  fprintf(outYAML, "%s\"CD_%u_%u\" : {\n",               indent.c_str(), level_, phase_);
+//  //TODO: the estimator does not require "label".
+//  fprintf(outYAML, "%s\"label\" : %s\n",        one_more_indent.c_str(), label_.c_str());
+//  fprintf(outYAML, "%s\"interval\" : %ld\n",    one_more_indent.c_str(), interval_);
+//  fprintf(outYAML, "%s\"errortype\" : 0x%lX\n", one_more_indent.c_str(), errortype_);
+//  //YKWON: added the information about siblings
+//  //FIXME: still this doesn't product the correct number of siblings
+//  fprintf(outYAML, "%s\"siblingID\" : %8u\n",  one_more_indent.c_str(), sibling_id_);
+//  fprintf(outYAML, "%s\"sibling #\" : %8u\n",  one_more_indent.c_str(), sibling_size_);
+//  // This print exec_cnt, reex_cnt, tot_time, reex_time, vol_copy, vol_refer
+//  // comm_log and error_ven, which are also printed in profile.out.
+//  // TODO: let's change to be in B/ MB/ GB
+//  fprintf(outYAML, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
+//  fprintf(outYAML, "%s\"ChildCDs\" : {\n", one_more_indent.c_str());
+//=======
+  fprintf(outJSON, "%s\"CD_%u_%u\" : {\n",              indent.c_str(), level_, phase_);
+  fprintf(outJSON, "%s\"label\"    : %s\n",    one_more_indent.c_str(), label_.c_str());
+  fprintf(outJSON, "%s\"interval\" : %ld\n",   one_more_indent.c_str(), interval_);
+  fprintf(outJSON, "%s\"errortype\": 0x%lX\n", one_more_indent.c_str(), errortype_);
+  fprintf(outJSON, "%s\"siblingID\" : %8u\n",  one_more_indent.c_str(), sibling_id_);
+  fprintf(outJSON, "%s\"sibling #\" : %8u\n",  one_more_indent.c_str(), sibling_size_);
+  fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
+  fprintf(outJSON, "%s\"ChildCDs\" : {\n", one_more_indent.c_str());
 
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->PrintOutputJsonInternal();
   }
-  fprintf(outYAML, "%s}\n", one_more_indent.c_str());
-  fprintf(outYAML, "%s}\n",          indent.c_str());
+  fprintf(outJSON, "%s}\n", one_more_indent.c_str());
+  fprintf(outJSON, "%s}\n",          indent.c_str());
 }
 
 //void PhaseNode::Print(void) 
@@ -178,33 +208,28 @@ void PhaseNode::Print(bool print_details, bool first)
 //    outAll = fopen(filepath.c_str(), "a");
 //    printf("profile out filepath:%s , %s\n", cd::output_basepath.c_str(), std::string(CD_DEFAULT_OUTPUT_PROFILE).c_str());
 //    outAll = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_PROFILE)).c_str(), "a");
-    //sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_PROFILE);
-    time_t rawtime;
-    time (&rawtime);
-    struct tm* ptm = localtime(&rawtime);
-    char sdate[25];
-    sprintf (sdate,"%04d:%02d:%02d-%02d:%02d:%02d",
-        ptm->tm_year + 1900, ptm->tm_mon+1,
-        ptm->tm_mday, ptm->tm_hour, ptm->tm_min,ptm->tm_sec);
-    sprintf(output_filepath, "%s%s.%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_PROFILE, sdate);
-    printf("[%s] %s\n", __func__, output_filepath);
+    memset(output_filepath, '\0', 256);
+    sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_PROFILE);
+//    printf("[%s] %s\n", __func__, output_filepath);
     outAll = fopen(output_filepath, "w+");
   }
   std::string indent((level_)<<1, ' ');
   std::string one_more_indent((level_+1)<<1, ' ');
   fprintf(outAll, "%sCD_%u_%u\n",                indent.c_str(), level_, phase_);
   fprintf(outAll, "%s{\n",                       indent.c_str());
-  fprintf(outAll, "%slabel:%s\n",       one_more_indent.c_str(), label_.c_str());
-  fprintf(outAll, "%sstate    :%8u\n",  one_more_indent.c_str(), state_);
-  fprintf(outAll, "%sinterval :%8ld\n", one_more_indent.c_str(), interval_);
+  fprintf(outAll,   "%slabel      :%s\n",   one_more_indent.c_str(), label_.c_str());
+  fprintf(outAll,   "%sstate      :%8u\n",  one_more_indent.c_str(), state_);
+  fprintf(outAll,   "%sinterval   :%8ld\n", one_more_indent.c_str(), interval_);
   if(print_details) {
-    fprintf(outAll, "%serrtype:0x%8lX\n", one_more_indent.c_str(), errortype_);
-    fprintf(outAll, "%ssiblingID:%8u\n",  one_more_indent.c_str(), sibling_id_);
-    fprintf(outAll, "%ssibling #:%8u\n",  one_more_indent.c_str(), sibling_size_);
-    fprintf(outAll, "%stask ID  :%8u\n",  one_more_indent.c_str(), task_id_);
-    fprintf(outAll, "%stask #   :%8u\n",  one_more_indent.c_str(), task_size_);
-    fprintf(outAll, "%scount    :%8ld\n", one_more_indent.c_str(), count_);
-    fprintf(outAll, "%s", profile_.GetRTInfoStr(level_+1).c_str());
+    fprintf(outAll, "%serrortype  :0x%lX\n", one_more_indent.c_str(), errortype_);
+    fprintf(outAll, "%ssiblingID  :%8u\n",  one_more_indent.c_str(), sibling_id_);
+    fprintf(outAll, "%ssibling #  :%8u\n",  one_more_indent.c_str(), sibling_size_);
+    fprintf(outAll, "%stask ID    :%8u\n",  one_more_indent.c_str(), task_id_);
+    fprintf(outAll, "%stask #     :%8u\n",  one_more_indent.c_str(), task_size_);
+    fprintf(outAll, "%scount(tune):%8ld\n", one_more_indent.c_str(), count_);
+    fprintf(outAll, "%scount(cd)  :%8ld // # executions\n", one_more_indent.c_str(), seq_acc_);
+    fprintf(outAll, "%s# recreated:%8ld // # rexecutions\n", one_more_indent.c_str(), seq_acc_rb_);
+    fprintf(outAll, "%s", profile_.GetRTInfoStr(level_+1, RuntimeInfo::kPROF).c_str());
   }
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->Print(print_details, false);
@@ -283,6 +308,9 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     TUNE_DEBUG("Old Phase! %u %s\n", phase, phase_path.c_str()); //getchar();
 //    if(cd::myTaskID == 0) fprintf(outAll, "Old Phase! %u at lv#%u%s\n", phase, level, phase_path.c_str()); //getchar();
   }
+  auto pt = tuned::phaseNodeCache.find(phase);
+  assert(pt != tuned::phaseNodeCache.end());
+  cd::phaseTree.current_->errortype_ = pt->second->errortype_;
 
 //  // First visit
 //  if(last_completed_phase != phase) {
@@ -312,7 +340,15 @@ PhaseTree::~PhaseTree() {
   // phaseTree is not created.
   if(cd::myTaskID == 0) {
     if(root_ != NULL) {
-      printf("basepath:%s\n", cd::output_basepath.c_str());
+      char *cd_config_file = getenv("CD_OUTPUT_BASE");
+      if(cd_config_file != NULL) {
+        strcpy(output_basepath, cd_config_file);
+      }
+      else {
+        strcpy(output_basepath, CD_DEFAULT_OUTPUT_BASE);
+      }
+
+      printf("basepath:%s\n", output_basepath);
 //        Print();
       root_->PrintInputYAML(true);
 //      root_->PrintOutputYAML(true);

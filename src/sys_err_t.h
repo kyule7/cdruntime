@@ -234,6 +234,7 @@ struct ConfigEntry {
   void Print(int64_t level, int64_t phase);
 };
 
+// mapping[level][phase]
 typedef std::map<uint64_t, std::map<uint64_t, ConfigEntry> > MappingConfig;
 
 //extern ConfigType config;

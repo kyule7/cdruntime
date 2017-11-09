@@ -1,16 +1,26 @@
 #!/bin/bash
-CC=g++
-MPICC=mpicxx
 ENABLE_DEBUG=1
+
+IS_STAMPEDE=1
+ifeq (${IS_STAMPEDE}, 1)
+MYCC=g++
+MPICC=mpicxx
 CFLAGS=-fPIC -Wall -c -std=gnu++0x -I. -fmax-errors=3
 LFLAGS=-fPIC -Wall -std=gnu++0x -I.
+else
+MYCC=CC
+MPICC=CC
+CFLAGS=-fPIC -c -I. -std=gnu++0x
+LFLAGS=-fPIC -I.
+endif
 
 ifeq (${ENABLE_DEBUG}, 1)
-CFLAGS += -g -O0 -D_PACKER_DEBUG
+CFLAGS += -g -O3 -D_PACKER_DEBUG
 LFLAGS += -g -D_PACKER_DEBUG
 else
 CFLAGS += -O3
 endif
+
 #all:  test_mpi
 
 OBJS=data_store.o buffer_consumer.o cd_file_handle.o table_store.o packer_prof.o
@@ -34,10 +44,10 @@ ${TARGET}: ${MPIOBJS}
 #	${MPICC} ${LFLAGS} $^ -o $@ -lpthread 
 
 buffer_consumer.o: buffer_consumer.cc
-	${CC} ${CFLAGS} $^ -o $@
+	${MYCC} ${CFLAGS} $^ -o $@
 
 cd_file_handle.o: cd_file_handle.cc
-	${CC} ${CFLAGS} $^ -o $@
+	${MYCC} ${CFLAGS} $^ -o $@
 
 mpi_file_handle.o: mpi_file_handle.cc
 	${MPICC} ${CFLAGS} $^ -o $@
@@ -46,21 +56,21 @@ cd_file_handle_interface.o: cd_file_handle_interface.cc
 	${MPICC} ${CFLAGS} $^ -o $@
 
 data_store.o: data_store.cc
-	${CC} ${CFLAGS} $^ -o $@
+	${MYCC} ${CFLAGS} $^ -o $@
 
 table_store.o: table_store.cc
-	${CC} ${CFLAGS} $^ -o $@
+	${MYCC} ${CFLAGS} $^ -o $@
 
 packer_prof.o: packer_prof.cc
-	${CC} ${CFLAGS} $^ -o $@
+	${MYCC} ${CFLAGS} $^ -o $@
 
 
 
 #test_base.o: test_base.cc
-#	${CC} ${CFLAGS} $^ -o $@
+#	${MYCC} ${CFLAGS} $^ -o $@
 #
 #test_packer.o: test_packer.cc 
-#	${CC} ${CFLAGS} $^ -o $@
+#	${MYCC} ${CFLAGS} $^ -o $@
 #
 #test_mpi.o: test_mpi.cc
 #	${MPICC} ${CFLAGS} $^ -o $@

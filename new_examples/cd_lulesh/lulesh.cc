@@ -2881,7 +2881,7 @@ int main(int argc, char *argv[])
 #if _CD
    CDHandle* root_cd = CD_Init(numRanks, myRank, kHDD);
    CD_Begin(root_cd, "Root");
-//   root_cd->Preserve(locDom->SetOp(M__SERDES_ALL), kCopy, "Root_All");
+   root_cd->Preserve(locDom->SetOp(M__SERDES_ALL), kCopy, "Root_All");
 #endif
 
 
@@ -2892,35 +2892,86 @@ int main(int argc, char *argv[])
    timeval start;
    gettimeofday(&start, NULL) ;
 #endif
-
-
+    
+  int intvl[3] = {32, 8, 1}; 
+  char *lulesh_intvl = getenv( "LULESH_LV0" );
+  if(lulesh_intvl != NULL) {
+    intvl[0] = atoi(lulesh_intvl);
+    if(myRank == 4) printf("0 %s\n", lulesh_intvl);
+    assert(intvl[0] > 0);
+  }
+  lulesh_intvl = getenv( "LULESH_LV1" );
+  if(lulesh_intvl != NULL) {
+    intvl[1] = atoi(lulesh_intvl);
+    if(myRank == 4) printf("1 %s\n", lulesh_intvl);
+    assert(intvl[1] > 0);
+  }
+  lulesh_intvl = getenv( "LULESH_LV2" );
+  if(lulesh_intvl != NULL) {
+    intvl[1] = atoi(lulesh_intvl);
+    if(myRank == 4) printf("2 %s\n", lulesh_intvl);
+    assert(intvl[1] > 0);
+  }
+  if(myRank == 4) printf("interval setting: lv0:%d lv1:%d lv2:%d\n", intvl[0], intvl[1], intvl[2]);
+  const int intvl0 = intvl[0];
+  const int intvl1 = intvl[1];
+  const int intvl2 = intvl[2];
 #if _CD
   CDHandle *cd_main_loop = root_cd->Create("Parent", kStrict|kHDD, 0xF);
+  CDHandle *cd_child_loop = NULL;
 #endif
 
+  bool is_main_loop_complete  = false;
+  bool is_child_loop_complete = false;
 
 //debug to see region sizes
 //   for(Int_t i = 0; i < locDom->numReg(); i++)
 //      std::cout << "region" << i + 1<< "size" << locDom->regElemSize(i) <<std::endl;
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
 
-      TimeIncrement(*locDom) ;
-
 #if _CD
-      CD_Begin(cd_main_loop, "MainLoop");
-//      cd_main_loop->Preserve(locDom->SetOp(preserve_vec_all/*M__SERDES_ALL*/), kCopy, "MainLoop");
+      if(locDom->cycle() % intvl0 == 0) 
+      {
+        is_main_loop_complete  = false;
+        CD_Begin(cd_main_loop, "MainLoop");
+        cd_main_loop->Preserve(locDom->SetOp(preserve_vec_all/*M__SERDES_ALL*/), kCopy, "MainLoop");
+        cd_child_loop = cd_main_loop->Create("Child", kStrict|kHDD, 0x3);
+      }
+      if(locDom->cycle() % intvl1 == 0) {
+        is_child_loop_complete = false;
+        CD_Begin(cd_child_loop, "LoopChild");
+        //if(locDom->cycle() % intvl0 != 0) 
+        {
+          cd_child_loop->Preserve(locDom->SetOp(preserve_vec_all/*M__SERDES_ALL*/), kCopy, "LoopChild");
+        }
+      }
 #endif
+      TimeIncrement(*locDom) ;
 
 
       LagrangeLeapFrog(*locDom) ;
 
       global_counter++;
 #if _CD
-      cd_main_loop->Detect();
-      cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
+      if(locDom->cycle() % intvl1 == (intvl1 - 1)) {
+        is_child_loop_complete = true;
+        cd_child_loop->Detect();
+        cd_child_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
+      }
+      if(locDom->cycle() % intvl0 == (intvl0 - 1)) {
+        is_main_loop_complete = true;
+        if(is_child_loop_complete == false) {
+          is_child_loop_complete = true;
+          cd_child_loop->Detect();
+          cd_child_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
+        }
+        cd_child_loop->Destroy();
+        cd_main_loop->Detect();
+        cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
+      }
 #endif
 
-      if (myRank == 0) {
+      if (myRank == 1) {
 //      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) {
          printf("cycle = %d (%d), time = %e, dt=%e\n",
                 locDom->cycle(), global_counter, double(locDom->time()), double(locDom->deltatime()) ) ;
@@ -2929,6 +2980,15 @@ int main(int argc, char *argv[])
 
 
 #if _CD
+   if(is_main_loop_complete == false) {
+      if(is_child_loop_complete == false) {
+        cd_child_loop->Detect();
+        cd_child_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
+      }
+      cd_child_loop->Destroy();
+      cd_main_loop->Detect();
+      cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
+   }
    cd_main_loop->Destroy();
 #endif
 

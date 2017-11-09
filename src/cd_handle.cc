@@ -72,7 +72,7 @@ cd::DebugBuf cd::cddbg;
 
 FILE *cd::cdout=NULL;
 FILE *cd::cdoutApp=NULL;
-std::string cd::output_basepath;
+//std::string cd::output_basepath;
 
 #define RANDOM_SEED 17
 #if CD_ERROR_INJECTION_ENABLED
@@ -329,15 +329,19 @@ void InitDir(int myTask, int numTask)
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   CDPrologue();
+  // Initialize static vars
   logger::taskID = myTask;
+  myTaskID      = myTask;
+  totalTaskSize = numTask;
+
   cd::tot_begin_clk = CD_CLOCK();
   char *cd_config_file = getenv("CD_OUTPUT_BASE");
-  if(cd_config_file != NULL) {
-    cd::output_basepath = cd_config_file;
-  }
-  else {
-    cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
-  }
+//  if(cd_config_file != NULL) {
+//    cd::output_basepath = cd_config_file;
+//  }
+//  else {
+//    cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
+//  }
 //  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
 #if CD_TUNING_ENABLED == 0
   cd_config_file = getenv("CD_CONFIG_FILENAME");
@@ -1349,7 +1353,13 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 //#if CD_PROFILER_ENABLED
 //  profMap[phase()]->compl_elapsed_time_ += end_clk - begin_clk;
 //#endif
-  current->profile_.RecordComplete(failed_phase != HEALTHY);
+
+  // This part may be a bit tricky. failed_phase is reset to HEALTHY
+  // in the case that current phase of CD is the end of the last failed point.
+  // Otherwise failed_phase is not healthy and increment reexec_
+  bool is_reexec = (failed_phase != HEALTHY);
+  if(myTaskID == 0) printf("is reexec:%d\n", is_reexec);
+  current->profile_.RecordComplete(is_reexec);
   CDEpilogue();
   //CDEpilogue();
 
@@ -2172,16 +2182,17 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
   uint64_t sys_err_vec = system_error_injector_->Inject();
   bool found = false;
   CD_DEBUG("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
-//  printf("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
   if(sys_err_vec == NO_ERROR_INJECTED) {
     return (int)CD::CDInternalErrT::kOK;
   } else {
+    
+    printf("[%s %d] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), myTaskID, sys_err_vec);
     CDHandle *cdh = this;
     // Find CD level that claimed "the raised sys_err_vec is covered."
     // If sys_err_vec > 
     while(cdh != NULL) {
 
-      printf("CHECK %lx %lx = %d, lv:%u, %s\n", 
+      printf("CHECK (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());

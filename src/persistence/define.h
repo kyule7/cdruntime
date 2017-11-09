@@ -14,7 +14,20 @@
 #define FOUR_GIGABYTE 4294967296
 #define INVALID_NUM     0xFFFFFFFFFFFFFFFF
 #define TABLE_ID_OFFSET 0xFFFFFFFF00000000
+
+//#define _USE_PFS
+
+#ifndef _USE_PFS
+// Small
 #define CHUNK_ALIGNMENT 512
+#define MAGIC_PAD_SIZE 480     // 512B - 32B
+#else
+#define CHUNK_ALIGNMENT 1048576
+#define MAGIC_PAD_SIZE 1048544 // 1MiB - 32B
+#endif
+
+#define _TRUNCATE_FILE 0
+
 #define DEFAULT_BASE_FILEPATH "."
 //#define CHUNKSIZE_THRESHOLD_BASE 0x40000000 // 16KB
 #define CHUNKSIZE_THRESHOLD_BASE 0x4000000 // 16KB
@@ -98,7 +111,7 @@ struct MagicStore {
   uint32_t entry_type_;
   uint32_t reserved_;
   uint64_t reserved2_; // 32 B
-  char pad_[480];
+  char pad_[MAGIC_PAD_SIZE];
   MagicStore(void);
   MagicStore(uint64_t total_size, uint64_t table_offset=0, uint32_t entry_type=1);
   MagicStore(const MagicStore &that);

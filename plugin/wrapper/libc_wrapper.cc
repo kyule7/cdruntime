@@ -280,12 +280,21 @@ EXTERNC void free(void *ptr)
     bool orig_disabled = logger::disabled; 
     logger::disabled = true; 
     LOGGER_PRINT("\n>>> Logging Begin %lu %s\n", logger::libc_id, ft2str[FTID_free]); 
-    if(logger::replaying == 0) {
+    if(logger::replaying == false) {
     //if(logger::replaying == false || GetLogger()->IsLogFound() == false) { 
       LOGGER_PRINT("Executing %s(%p), disabled:%d\n", __func__, ptr, logger::disabled); 
       uint32_t idx = 0;
+      LOGGER_PRINT("[free noerror] find(%p) with %p\n", FT_free, ptr);
+#if _DEBUG_10252017
+      LogEntry *entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
+      if(entry != NULL) {
+        entry->size_.Unset(kNeedPushed);
+        entry->size_.Set(kNeedFreed);
+      } else {
+        printf("[%s(%p)] Potential memory leak\n", __func__, ptr);
+      }
+#else
       LogEntry *entry = NULL;
-      LOGGER_PRINT("[free noerror] find(%p) with %p\n", FT_free, ptr); 
       while(entry == NULL) {
         entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
   //      if(idx == -1U) { assert(0); }
@@ -293,15 +302,16 @@ EXTERNC void free(void *ptr)
       entry->size_.Unset(kNeedPushed);
       entry->size_.Set(kNeedFreed);
 //      entry->Print();
-    } else {
+#endif
+    } else { // it is now replaying
   //    LOGGER_PRINT("Replaying %s(%p)\n", __func__, ptr); 
       uint32_t idx = 0;
       LogEntry *entry = NULL;
-      LOGGER_PRINT("[free replay] find(%p) with %p\n", FT_free, ptr); 
-      if(logger::taskID == 0) {
-        printf("[free replay] find(%p) with %p\n", FT_free, ptr); 
-//        GetLogger()->Print();
-      }
+      LOGGER_PRINT("[free replay] find(%p)\n", ptr); 
+//      if(logger::taskID == 0) {
+//        printf("[free replay] find(%p)\n", ptr); 
+////        GetLogger()->Print();
+//      }
       while(entry == NULL) {
         entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
         if(idx == -1U) { LOGGER_PRINT("free %p is not founded in malloc list\n", ptr); break; }
@@ -474,6 +484,15 @@ EXTERNC void *realloc(void *ptr, size_t size)
     GetLogger()->Add(LogEntry(logger::libc_id, FTID_realloc, kNeedPushed, (uint64_t)ret));
 //    GetLogger()->table_->GetLast()->Print();
     uint32_t idx = 0;
+#if _DEBUG_10252017
+    LogEntry *entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
+    if(entry != NULL) {
+      entry->size_.Unset(kNeedPushed);
+      entry->size_.Set(kNeedFreed);
+    } else {
+      printf("[%s(%p, %zu)] Potential memory leak\n", __func__, ptr, size);
+    }
+#else
     LogEntry *entry = NULL;
     while(entry == NULL) {
       entry = GetLogger()->table_->FindWithOffset((uint64_t)ptr, idx);
@@ -482,6 +501,9 @@ EXTERNC void *realloc(void *ptr, size_t size)
     entry->size_.Unset(kNeedPushed);
     entry->size_.Set(kNeedFreed);
 //    entry->Print();
+#endif
+
+
   } else {
     LOGGER_PRINT("Replaying %s\n", __func__); 
     LogEntry *entry = GetLogger()->GetNext();
@@ -515,7 +537,7 @@ EXTERNC void *memalign(size_t boundary, size_t size)
   void *ret = NULL;
   LOGGING_PROLOG(memalign, boundary, size);
   ret = FT_memalign(boundary, size);
-  if(logger::replaying == 0) { 
+  if(logger::replaying == false) { 
     ret = FT_memalign(boundary, size);
     GetLogger()->Add(LogEntry(logger::libc_id, FTID_memalign, kNeedPushed, (uint64_t)ret));
   } else {
@@ -540,7 +562,7 @@ EXTERNC int posix_memalign(void **memptr, size_t alignment, size_t size)
   int ret = -1;
   LOGGING_PROLOG(posix_memalign, memptr, alignment, size);
 
-  if(logger::replaying == 0) { 
+  if(logger::replaying == false) { 
     ret = FT_posix_memalign(memptr, alignment, size);
     GetLogger()->Add(LogEntry(logger::libc_id, FTID_posix_memalign, kNeedPushed, ret, (uint64_t)(*memptr)));
   } else {

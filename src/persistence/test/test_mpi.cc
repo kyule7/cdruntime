@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <sys/time.h>
 #include <mpi.h>
+#include "test_global.h"
 
 using namespace packer;
 struct timeval mytime;
@@ -16,12 +17,12 @@ class MyStore : public TableStore<CDEntry> {
   public:
     virtual void Print(void)
     {
-      MYDBG("[MyTable] %lu/%lu, grow:%lu, alloc:%u\n", tail_*sizeof(CDEntry), size_, grow_unit_, allocated_);
+      TEST_PRINT("[MyTable] %lu/%lu, grow:%lu, alloc:%u\n", tail_*sizeof(CDEntry), size_, grow_unit_, allocated_);
       //getchar();
     }
     void PrintEntry(uint64_t print_upto=0)
     {
-      printf("[MyTable PrintEntry]\n"); //getchar();
+      TEST_PRINT("[MyTable PrintEntry]\n"); //getchar();
       if(print_upto == 0) print_upto = tail_;
       for(uint64_t i=0; i<print_upto; i++) {
         ptr_[i].Print();
@@ -39,20 +40,20 @@ uint64_t CompareResult(char *ori, char *prv, uint64_t size) {
   if(ret != 0) {
   for(uint64_t i=0; i<intsize/16; i++) {
     for(uint64_t j=0; j<16; j++) {
-      printf("%5i ", ((int*)ori)[i*16 + j]);
+      TEST_PRINT("%5i ", ((int*)ori)[i*16 + j]);
     }
-    printf("\n");
+    TEST_PRINT("\n");
   }
-  printf("\n");
+  TEST_PRINT("\n");
 
-  printf("\n#####################################\n");
+  TEST_PRINT("\n#####################################\n");
   for(uint64_t i=0; i<intsize/16; i++) {
     for(uint64_t j=0; j<16; j++) {
-      printf("%5i ", ((int*)prv)[i*16 + j]);
+      TEST_PRINT("%5i ", ((int*)prv)[i*16 + j]);
     }
-    printf("\n");
+    TEST_PRINT("\n");
   }
-  printf("\n");
+  TEST_PRINT("\n");
   }
   return ret;
 }
@@ -75,7 +76,7 @@ struct UserObj1 {
     for(uint64_t i=0; i<64; i++) {
       f[i] = drand48();
     }
-    printf("%zu %zu %zu %zu\n", sizeof(c), sizeof(ii), sizeof(d), sizeof(f));
+    TEST_PRINT("%zu %zu %zu %zu\n", sizeof(c), sizeof(ii), sizeof(d), sizeof(f));
   }
 
 };
@@ -114,19 +115,19 @@ void Obj1Test(int elemsize)
     err = table.Insert(entry.SetOffset(offset));
     }
     if(err == 0) { assert(0); }
-//    printf("%p + %lu\n", dataAtmp, offset); 
+//    TEST_PRINT("%p + %lu\n", dataAtmp, offset); 
 //    if(i % 32 == 0) getchar();
     //dataAtmp+=chunksize;
   }
 
   if(CompareResult((char *)dataA, data.GetPtr(), totsize) == 0) {
-    printf("Success\n");
+    TEST_PRINT("Success\n");
   } else {
-    printf("Failed\n"); assert(0);
+    TEST_PRINT("Failed\n"); assert(0);
   }
-  table.Print();
-  data.Print();
-  table.PrintEntry();
+//  table.Print();
+//  data.Print();
+//  table.PrintEntry();
   delete dataA;
 }
 
@@ -146,19 +147,19 @@ void ArrayTest(int elemsize, int chunksize) {
     //CDEntry entry(i, chunksize * sizeof(int), (char *)dataAtmp);
     BaseEntry entry(i, chunksize * sizeof(int), 0);
     uint64_t offset = data.Write((char *)dataAtmp, chunksize*sizeof(int));
-   // printf("Test#####333\n");
+   // TEST_PRINT("Test#####333\n");
     uint64_t err = table.Insert(entry.SetOffset(offset));
 
     if(err == 0) { assert(0); }
-//    printf("%p + %lu\n", dataAtmp, offset); 
+//    TEST_PRINT("%p + %lu\n", dataAtmp, offset); 
 //    if(i % 32 == 0) getchar();
     dataAtmp+=chunksize;
   }
 
   if(CompareResult((char *)dataA, data.GetPtr(), totsize*sizeof(int)) == 0) {
-    printf("Success\n");
+    TEST_PRINT("Success\n");
   } else {
-    printf("Failed\n"); assert(0);
+    TEST_PRINT("Failed\n"); assert(0);
   }
   table.Print();
   data.Print();
@@ -167,17 +168,18 @@ void ArrayTest(int elemsize, int chunksize) {
 }
 
 void BoundedBufferTest(int elemsize, int chunksize) {
-  printf("\n\n\n=================== %s ====================\n\n", __func__);
+  TEST_PRINT("\n\n\n=================== %s ====================\n\n", __func__);
   uint64_t totsize = elemsize * chunksize;
   uint32_t *dataA = new uint32_t[totsize];
   for(uint64_t i=0; i<totsize; i++) {
     dataA[i] = lrand48() % 1000;
   }
 
+  // write input data to file for reference
   {
     char filename[64];
     sprintf(filename, "./test.ref.%d.%d.%d", elemsize, chunksize, myrank);
-    printf("filename:%s\n", filename);
+    TEST_PRINT("filename:%s\n", filename);
     FILE *fp = fopen(filename, "w");
     uint32_t rowsize = totsize/16; 
     for(uint64_t i=0; i<rowsize; i++) {
@@ -194,13 +196,13 @@ void BoundedBufferTest(int elemsize, int chunksize) {
  // TableStore<CDEntry> table;
   //MyStore table;
   TableStore<BaseEntry> table;
-  DataStore data;
+  DataStore data(NULL, 32*1024*1024, kPosixFile);
 //  data.SetMode(kBoundedMode|kPosixFile);
 //  FileHandle fh;
 //  char filepath[64];
- // sprintf(filepath, "./bounded.%d.%d", elemsize, chunksize);
+ // sTEST_PRINT(filepath, "./bounded.%d.%d", elemsize, chunksize);
 //  GetFileHandle()->SetFilepath(filepath);
-//  printf("filepath:%s\n", filepath); //getchar(); 
+//  TEST_PRINT("filepath:%s\n", filepath); //getchar(); 
   uint32_t *dataAtmp = dataA;
   for(int i=0; i<elemsize; i++) {
     //CDEntry entry(i, chunksize * sizeof(int), (char *)dataAtmp);
@@ -213,33 +215,34 @@ void BoundedBufferTest(int elemsize, int chunksize) {
     uint64_t err = table.Insert(entry.SetOffset(offset));
     //getchar();
     if(err == 0) { assert(0); }
-    printf("\n\n print %p + %lu\n\n\n", dataAtmp, offset); 
+    TEST_PRINT("\n\n print %p + %lu\n\n\n", dataAtmp, offset); 
 //    if(i % 32 == 0) //getchar();
     dataAtmp+=chunksize;
   }
 
-  FileHandle *fh = GetFileHandle(kMPIFile);
+  FileHandle *fh = GetFileHandle(kPosixFile);
+  //FileHandle *fh = GetFileHandle(kMPIFile);
   assert(fh != NULL);
   uint64_t read_size=0;
   //char *preserved = (char *)malloc(totsize * sizeof(int));
   //data.ReadAll(preserved);
   //
-  printf("Reached?\n");
+  TEST_PRINT("Reached?\n");
   char *preserved = data.ReadAll(read_size);
   data.Flush();
   if(totsize*sizeof(int) != read_size) {
-    printf("%lu != %lu (read)\n", totsize*sizeof(int), read_size);
+    TEST_PRINT("%lu != %lu (read)\n", totsize*sizeof(int), read_size);
   }
   //if(CompareResult((char *)dataA, data.GetPtr(), totsize*sizeof(int)) == 0) {
   if(CompareResult((char *)dataA, preserved, totsize*sizeof(int)) == 0) {
-    printf("\n\n####################### Success ## %lu ######################\n\n", GetFileHandle(kMPIFile)->GetFileSize()); //getchar();
+    TEST_PRINT("\n\n####################### Success ## %lu ######################\n\n", GetFileHandle(kPosixFile)->GetFileSize()); //getchar();
   } else {
-    printf("Failed\n"); assert(0);
+    TEST_PRINT("Failed\n"); assert(0);
   }
   //getchar();
-  table.Print();
-  data.Print();
-  table.PrintEntry();
+//  table.Print();
+//  data.Print();
+//  table.PrintEntry();
 
   delete dataA;
   free(preserved);
