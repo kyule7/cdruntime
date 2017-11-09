@@ -26,8 +26,10 @@ CD_FLAGS :=
 # ROOTCD : CoMD.c
 # CD1 : timestep.c 
 # CD2 : ljForce.c
-CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1
+CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 
 CD_LINKFLAGS := -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
+#CD_LINKFLAGS := -L$(CD_ROOT)/lib -lwrapLibc -lc -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
 else
 CD_FLAGS := 
 CD_CFLAGS :=
