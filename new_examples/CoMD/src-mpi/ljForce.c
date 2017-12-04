@@ -213,7 +213,25 @@ int ljForce(SimFlat* s)
                        "ljForce", 
                        kStrict|kDRAM,
                        0xC); // detect F8,F4
-
+   //*****************************************************
+   //This is important characteristics of CoMD force loop.
+   //*****************************************************
+   //The positions of entier atoms (s->atoms->r) need to be preserved 
+   //no matter how finer/frequently leaf CD (lv3 CD) begins or completes
+   //int ljForce_pre_size = preserveAtoms(lv3_cd, s->atoms, 
+   //    s->boxes->nTotalBoxes, 
+   //    1,  // is_gid
+   //    1,  // is_r
+   //    0,  // is_p
+   //    0,  // is_f
+   //    0,  // is_U
+   //    0,  // is_iSpecies
+   //    MAXATOMS*jBox,          // from 
+   //    MAXATOMS*jBox+nJBox-1,  // to 
+   //    //0, // from 
+   //    //-1, // to
+   //    0,
+   //    pre_atoms_idx); // is_print
   }
 #endif
   //*****************************************************
@@ -276,9 +294,6 @@ int ljForce(SimFlat* s)
         if(is_first) {
           //cd_handle_t *cdh_lv2_inner = getleafcd();
           //This CD has a length of nJBox 
-          //if(getMyRank() == 0)
-          //  printf("[rank0] lv3 cd begins[iOff:iId:iBox:nIBox:jBox:nJBox]:[%d:%d:%d:%d:%d:%d]\n",
-          //                            iOff, iId, iBox, nIBox, jBox, nJBox);
           //Note that cd_complete might fail if there if "continue" between
           //cd_begin and cd_complete, which is the case for innermost loop, 
           //shown below.
@@ -293,6 +308,7 @@ int ljForce(SimFlat* s)
             //2. data to be read in the innermost loop below
             //preserve all loop index parameters 
             //From the iBox loop (outmost)
+#ifdef DO_PRV
             cd_preserve(lv3_cd, &iBox, sizeof(int), kCopy, 
                 "ljForce_innermost_iBox", "ljForce_innermost_iBox");
             //From the neighbors of iBox loop (2nd loop)
@@ -308,17 +324,18 @@ int ljForce(SimFlat* s)
             //For the nested loop below
             cd_preserve(lv3_cd, &iId, sizeof(int), kCopy, 
                 "ljForce_innermost_iId", "ljForce_innermost_iId");
+#endif
             //TODO: the below preserve poistion(r) of all atoms every iteration, 
-            //      which is not the optimal case.
+            //      which is not the optimal case. 
+            //      (not all 64 atoms are occupied)
             //      The otptimal preservation preserves poistons of atoms in the
             //      current jBox [#: nJBox = s->atoms->nAtoms[jBox]
             //TODO: need to give different name for each preservation. could be 
             //      associated with the indices, iBox, jTmp, and iOff
             char pre_atoms_idx[256]= "-1";   //FIXME: it this always enough?
             sprintf(pre_atoms_idx, "_%d_%d_%d", iBox, jTmp, iOff);
-            //if(getMyRank() == 0)
-            //  printf("preservation for atoms in ljForce index: %s\n",
-            //                                                  pre_atoms_idx);
+            // preserve atoms in jBox
+            // FIXME: this is correct only when CD2_INTERVAL == 1
             int ljForce_pre_size = preserveAtoms(lv3_cd, s->atoms, 
                                                  s->boxes->nTotalBoxes, 
                                                  1,  // is_gid
@@ -328,6 +345,7 @@ int ljForce(SimFlat* s)
                                                  0,  // is_U
                                                  0,  // is_iSpecies
                                                  MAXATOMS*jBox,          // from 
+                                                 //MAXATOMS*jBox+MAXATOMS-1,  // to 
                                                  MAXATOMS*jBox+nJBox-1,  // to 
                                                  //0, // from 
                                                  //-1, // to

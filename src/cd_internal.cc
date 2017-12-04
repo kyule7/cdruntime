@@ -1481,8 +1481,8 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     CD_DEBUG("## Complete. No error! ##\n\n");
     const uint64_t curr_phase = this->phase();
     const uint64_t curr_seqID = phaseTree.current_->seq_end_;
-    if(myTaskID == 0) { printf("## Complete. No error! ##, cur(%lu, %lu), failed(%ld,%ld) %ld\n",
-        curr_phase, curr_seqID, failed_phase, failed_seqID, phaseTree.current_->seq_begin_); }
+    //if(myTaskID == 0) { printf("## Complete. No error! ##, cur(%lu, %lu), failed(%ld,%ld) %ld\n",
+    //    curr_phase, curr_seqID, failed_phase, failed_seqID, phaseTree.current_->seq_begin_); }
 
     if(failed_phase == curr_phase && failed_seqID == curr_seqID) {
       failed_phase = HEALTHY;
@@ -2212,11 +2212,12 @@ CDErrT CD::Preserve(void *data,
       if( restore_count_ == preserve_count_ ) { 
         cd_exec_mode_ = kExecution;
         restore_count_ = 0;
-      } 
-      if(myTaskID == 0) {
-        printf("[Restore] prv #: %lu, rst #: %lu, mode:%d\n", 
-                      preserve_count_, restore_count_, cd_exec_mode_);
       }
+      //YKWON
+      //if(myTaskID == 0) {
+      //  printf("[Restore] prv #: %lu, rst #: %lu, mode:%d\n", 
+      //                preserve_count_, restore_count_, cd_exec_mode_);
+      //}
 #if _MPI_VER
       if( restore_count_ == preserve_count_ ) { 
         CD_DEBUG("Test Asynch messages until start at %s / %s\n", 
@@ -2449,8 +2450,8 @@ CDErrT CD::Restore()
   //TODO currently we only have one iterator. This should be maintined to figure out the order. 
   // In case we need to find reference name quickly we will maintain seperate structure such as binary search tree and each item will have CDEntry *.
 
-
-  if(myTaskID == 4) printf("[%d %s at lv#%u] Reset to false at begin!\n", myTaskID, label_.c_str(), level());
+  //YKWON
+  //if(myTaskID == 4) printf("[%d %s at lv#%u] Reset to false at begin!\n", myTaskID, label_.c_str(), level());
   //GONG
   begin_ = false;
 

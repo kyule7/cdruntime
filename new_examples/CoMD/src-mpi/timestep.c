@@ -99,8 +99,10 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //             uint32_t preserve_mask,
       //             const char *my_name, 
       //             const char *ref_name)
+#if DOPRV
       cd_preserve(lv1_cd, &dt, sizeof(real_t), kCopy, "advanceVelocity_dt", "advanceVelocity_dt");
       cd_preserve(lv1_cd, &ii, sizeof(int), kCopy, "advanceVelocity_ii", "advanceVelocity_ii");
+#endif
       velocity_pre_size += sizeof(real_t);  // add the size of dt
       velocity_pre_size += sizeof(int);  // add the size of ii (loop index)
       velocity_pre_size += preserveLinkCell(lv1_cd, s->boxes, 
@@ -178,6 +180,9 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       // I{parms->pbcFactor}
       redist_pre_size = preserveHaloAtom(lv1_cd, s->atomExchange->parms, 0, 1);
       //printf("\n preservation size for redistributeAtoms %d\n", redist_pre_size);
+      // I{sim->boxes}
+      redist_pre_size += preserveLinkCell(lv1_cd, s->boxes, 
+                                    1/*all*/, 0/*nAtoms*/, 0/*nLocalBoxes*/);    
 
       //TODO: what to preserve here?
       //      //---------------
@@ -230,15 +235,30 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
 #endif
 
 //TODO: naming is really confusing. fix ASAP
-#if _CD2
+//#if _CD2
+#if _CD1
       cd_begin(lv1_cd, "computeForce"); 
+      int computeForce_pre_size = preserveAtoms(lv1_cd, s->atoms, 
+                                    s->boxes->nTotalBoxes, 
+                                    1,  // is_gid
+                                    1,  // is_r
+                                    0,  // is_p
+                                    0,  // is_f
+                                    0,  // is_U
+                                    0,  // is_iSpecies
+                                    //MAXATOMS*jBox,          // from 
+                                    //MAXATOMS*jBox+nJBox-1,  // to 
+                                    0, // from 
+                                    -1, // to
+                                    0,
+                                    NULL); // is_print
 #endif
 
       startTimer(computeForceTimer);
       computeForce(s); // s->pot->force(s)
       stopTimer(computeForceTimer);
-//#if _CD1
-#if _CD2
+//#if _CD2
+#if _CD1
 //      cd_detect(cd_lv2);
 //      cd_complete(cd_lv2); 
       cd_detect(lv1_cd);

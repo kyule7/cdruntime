@@ -119,7 +119,9 @@ int main(int argc, char** argv)
 #endif
 
 #if _CD1
-   cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF); // detect F8, F4, F2, F1
+   //cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF); // detect F8, F4, F2, F1
+   //cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep", kStrict|kDRAM, 0xF); // detect F8, F4, F2, F1
+   cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep", kStrict|kDRAM, 0xE); // detect F8, F4, F2
 #endif
 
    // This is the CoMD main loop

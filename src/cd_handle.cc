@@ -1358,7 +1358,7 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
   // in the case that current phase of CD is the end of the last failed point.
   // Otherwise failed_phase is not healthy and increment reexec_
   bool is_reexec = (failed_phase != HEALTHY);
-  if(myTaskID == 0) printf("is reexec:%d\n", is_reexec);
+  //if(myTaskID == 0) printf("is reexec:%d\n", is_reexec);
   current->profile_.RecordComplete(is_reexec);
   CDEpilogue();
   //CDEpilogue();

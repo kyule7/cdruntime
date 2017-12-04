@@ -7,6 +7,7 @@
 #include "cd_comd.h"
 
 #define PRINTON 0
+
 /*
  * nTotalBoxes is constant
 advanceVelocity(s, s->boxes->nLocalBoxes, 0.5*dt); 
@@ -34,7 +35,9 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim)
     uint32_t size = sizeof(SimFlat); 
     //preserve object with shallow copy first
     //the below preserve nSteps, printRate, dt, ePotential and eKinetic;
+#ifdef DO_PRV
     cd_preserve(cdh, sim, size, kCopy, "SimFlat", "SimFlat");
+#endif
     if(PRINTON==1)
       printf("Preserve SimFlat: %zu\n", sizeof(SimFlat));
 
@@ -73,7 +76,9 @@ unsigned int preserveDomain(cd_handle_t *cdh, Domain *domain)
 {
   uint32_t size = sizeof(Domain);
   //there is no pointer in Domain object
+#ifdef DO_PRV
   cd_preserve(cdh, domain, sizeof(Domain), kCopy, "Domain", "Domain");
+#endif
   if(PRINTON==1)
     printf("Preserve Domain: %zu\n", sizeof(Domain));
   return size;
@@ -104,10 +109,15 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell,
     assert( is_nAtoms == 0);
     assert( is_nTotalBoxes == 0);
     size += sizeof(LinkCell);
+#ifdef DO_PRV
     cd_preserve(cdh, linkcell, size, kCopy, "LinkCell", "LinkCell");
+#endif
     size += nAtoms_size;
+#ifdef DO_PRV
     cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, kCopy, 
                 "LinkCell_nAtoms", "LinkCell_nAtoms");
+#endif
+    size += nAtoms_size;
     if(PRINTON==1)
       printf("Preserven LinkCell %zu, nAtoms: %u\n", sizeof(LinkCell), nAtoms_size);
   }
@@ -115,8 +125,10 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell,
   if(is_nAtoms) {
     assert( is_all == 0);
     size += nAtoms_size;
+#ifdef DO_PRV
     cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, kCopy, 
                 "LinkCell_nAtoms", "LinkCell_nAtoms");
+#endif
     if(PRINTON==1)
       printf("Preserven LinkCell_nAtoms: %u\n", 0, nAtoms_size);
   }
@@ -124,8 +136,10 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell,
   if(is_nTotalBoxes) {
     assert( is_all == 0);
     size += sizeof(unsigned int);
+#ifdef DO_PRV
     cd_preserve(cdh, &(linkcell->nLocalBoxes), sizeof(unsigned int), kCopy, 
                 "LinkCell_nLocalBoxes", "LinkCell_nLocalBoxes");
+#endif
     if(PRINTON==1)
       printf("Preserven LinkCell_nLocalBoxes: %u\n", sizeof(unsigned int));
   }
@@ -156,7 +170,9 @@ unsigned int preserveAtoms (cd_handle_t *cdh,
     //when want to preserve entire data 
     //FIXME: need to implement to concatenate idx. for now done with r
     if( is_gid && is_iSpecies && is_r && is_p && is_f && is_U) {
+#ifdef DO_PRV
       cd_preserve(cdh, atoms, size, kCopy, "Atoms", "Atoms");
+#endif
     }
     //const uint32_t maxTotalAtoms = MAXATOMS * nTotalBoxes;
     uint32_t maxTotalAtoms = 0;
@@ -179,16 +195,21 @@ unsigned int preserveAtoms (cd_handle_t *cdh,
     uint32_t U_size=0; 
     if(is_gid == 1) {
       gid_size = maxTotalAtoms*sizeof(int);
+#ifdef DO_PRV
       cd_preserve(cdh, atoms->gid, gid_size, kCopy, "Atoms_gid", "Atoms_gid");
+#endif
     }
     if(is_iSpecies == 1) {
       iSpecies_size = maxTotalAtoms*sizeof(int);
+#ifdef DO_PRV
       cd_preserve(cdh, atoms->iSpecies+to*sizeof(int), iSpecies_size, kCopy, 
                   "Atoms_iSpecies", "Atoms_iSpecies");
+#endif
     }
     //TODO: implement from and to
     if(is_r == 1) {
       r_size = maxTotalAtoms*sizeof(real3);
+      //r_size = sizeof(real3);
       //TODO: need to check pointer address
       //char* tmp_atoms_r= malloc(snprintf(NULL, 0, "Atoms_r%s", idx) + 1);
       //sprintf(tmp_atoms_r, idx);
@@ -199,23 +220,31 @@ unsigned int preserveAtoms (cd_handle_t *cdh,
         sprintf(tmp_atoms_r, "Atoms_r%s", idx);
       //cd_preserve(cdh, atoms->r+from*sizeof(real3*), r_size, kCopy, 
       //            "Atoms_r", "Atoms_r");
+#ifdef DO_PRV
       cd_preserve(cdh, atoms->r+from*sizeof(real3*), r_size, kCopy, 
                   tmp_atoms_r, tmp_atoms_r);
+#endif
     }
     if(is_p == 1) {
       p_size = maxTotalAtoms*sizeof(real3);
+#ifdef DO_PRV
       cd_preserve(cdh, atoms->p+from*sizeof(real3*), p_size, kCopy, 
                   "Atoms_p", "Atoms_p");
+#endif
     }
     if(is_f == 1) {
       f_size = maxTotalAtoms*sizeof(real3);
+#ifdef DO_PRV
       cd_preserve(cdh, atoms->f+from*sizeof(real3*), f_size, kCopy, 
                   "Atoms_f", "Atoms_f");
+#endif
     }
     if(is_U == 1) {
       U_size = maxTotalAtoms*sizeof(real_t);
+#ifdef DO_PRV
       cd_preserve(cdh, atoms->U+from*sizeof(real3*), U_size, kCopy, 
                   "Atoms_u", "Atoms_u");
+#endif
     }
     size += gid_size + iSpecies_size + r_size + p_size + f_size + U_size;
     //if(is_gid == 1) size += gid_size;
@@ -243,7 +272,9 @@ unsigned int preserveAtoms (cd_handle_t *cdh,
 unsigned int preserveSpeciesData(cd_handle_t *cdh, SpeciesData *species)
 {
     uint32_t size = sizeof(SpeciesData);
+#ifdef DO_PRV
     cd_preserve(cdh, species, size, kCopy, "SpeciesData", "SpeciesData");
+#endif
     if(PRINTON==1)
       printf("Preserve SpeciesData %zu\n", sizeof(SpeciesData));
     return size;
@@ -252,7 +283,9 @@ unsigned int preserveSpeciesData(cd_handle_t *cdh, SpeciesData *species)
 unsigned int preserveLjPot(cd_handle_t *cdh, LjPotential *pot)
 {
     uint32_t size = sizeof(LjPotential);
+#ifdef DO_PRV
     cd_preserve(cdh, pot, size, kCopy, "LjPotential", "LjPotential");
+#endif
     //force function pointer
     //print function pointer
     //destroy function pointer
@@ -266,10 +299,14 @@ unsigned int preserveInterpolationObject(cd_handle_t *cdh,
                                          InterpolationObject *obj)
 {
     uint32_t size = sizeof(InterpolationObject);
+#ifdef DO_PRV
     cd_preserve(cdh, obj, size, kCopy, 
                 "InterpolationObject", "InterpolationObject");
+#endif
     uint32_t values_size = (obj->n + 3)*sizeof(real_t);
+#ifdef DO_PRV
     cd_preserve(cdh, obj->values, values_size, kCopy, "InterpolationObject_value", "");
+#endif
     size += values_size;
     //FIXME: isn't this called from EamPot instead of LJPotential?
     if(PRINTON==1)
@@ -282,15 +319,21 @@ unsigned int preserveEamPot(cd_handle_t *cdh, int doeam, EamPotential *pot, int 
     //assert(is_eam);
     assert(doeam);
     uint32_t size = sizeof(EamPotential);
+#ifdef DO_PRV
     cd_preserve(cdh, pot, size, kCopy, "EamPotential", "EamPotential");
+#endif
     //preserving rhobar and dfEmbed
     uint32_t maxTotalAtoms = MAXATOMS * nTotalBoxes;
     uint32_t rhobar_size = maxTotalAtoms*sizeof(real_t);
+#ifdef DO_PRV
     cd_preserve(cdh, pot->rhobar, size, kCopy, 
                 "EamPotential_rhobar", "EamPotential_rhobar");
+#endif
     uint32_t dfEmbed_size= maxTotalAtoms*sizeof(real_t);
+#ifdef DO_PRV
     cd_preserve(cdh, pot->dfEmbed, size, kCopy, 
                 "EamPotential_dfEmbed", "EamPotential_dfEmbed");
+#endif
     if(PRINTON==1)
       printf("Preserve EamPotential %zu, rhobar:%u, dfEmbed:%u\n"
         , sizeof(EamPotential)
@@ -313,7 +356,9 @@ unsigned int preserveEamPot(cd_handle_t *cdh, int doeam, EamPotential *pot, int 
 unsigned int preserveHaloExchange(cd_handle_t *cdh, int doeam, HaloExchange *xchange, int is_force)
 {
     uint32_t size = sizeof(HaloExchange);
+#ifdef DO_PRV
     cd_preserve(cdh, xchange, size, kCopy, "HaloExchange", "HaloExchange");
+#endif
     if(PRINTON==1)
       printf("Preserve HaloExchange: %zu\n", sizeof(HaloExchange));
     if(is_force) {
@@ -336,8 +381,10 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh,
     uint32_t size = 0;
     if( is_cellList && is_pbcFactor) {
       size += sizeof(AtomExchangeParms);
+#ifdef DO_PRV
       cd_preserve(cdh, xchange_parms, size, kCopy, 
                   "AtomExchangeParms", "AtomExchangeParms");
+#endif
       if(PRINTON==1)
         printf("Preserve Halo Atom:%zu\n", sizeof(AtomExchangeParms));
     }
@@ -348,8 +395,10 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh,
           printf("Preserve cellList[%d]:%u\n", i, xchange_parms->nCells[i] * sizeof(int));
         cellList_size += xchange_parms->nCells[i] * sizeof(int);
       }
+#ifdef DO_PRV
       cd_preserve(cdh, xchange_parms->cellList, cellList_size, kCopy, 
           "AtomExchangeParms_cellList", "AtomExchangeParms_cellList");
+#endif
     }
     uint32_t pbcFactor_size=0;
     if( is_pbcFactor == 1) {
@@ -358,8 +407,10 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh,
           printf("Preserve pbfFactor[%d]:%u\n", i, sizeof(real_t) * 3);
         pbcFactor_size += 3 * sizeof(real_t);
       }
+#ifdef DO_PRV
       cd_preserve(cdh, xchange_parms->pbcFactor, pbcFactor_size, kCopy, 
           "AtomExchangeParms_pbcFactor", "AtomExchangeParms_pbcFactor");
+#endif
     }
     size += cellList_size;
     size += pbcFactor_size;
@@ -372,8 +423,10 @@ unsigned int preserveHaloForce(cd_handle_t *cdh, int doeam, ForceExchangeParms *
     //assert(is_eam);
     assert(doeam);
     uint32_t size = sizeof(ForceExchangeParms);
+#ifdef DO_PRV
     cd_preserve(cdh, xchange_parms, size, kCopy, 
                 "ForceExchangeParms", "ForceExchangeParms");
+#endif
     if(PRINTON==1)
       printf("Preserve Halo Force:%zu\n", sizeof(ForceExchangeParms));
     uint32_t buffer_size=0;
@@ -382,10 +435,14 @@ unsigned int preserveHaloForce(cd_handle_t *cdh, int doeam, ForceExchangeParms *
         printf("Preserve buffer[%d]:%u\n", i, xchange_parms->nCells[i] * sizeof(int));
       buffer_size += xchange_parms->nCells[i] * sizeof(int);
     }
+#ifdef DO_PRV
     cd_preserve(cdh, xchange_parms->sendCells, buffer_size, kCopy, 
                 "ForceExchangeParms_sendCells", "ForceExchangeParms_sendCells");
+#endif
+#ifdef DO_PRV
     cd_preserve(cdh, xchange_parms->recvCells, buffer_size, kCopy, 
                 "ForceExchangeParms_recvCells", "ForceExchangeParms_recvCells");
+#endif
     size += buffer_size; //TODO: sendCells
     size += buffer_size; //TODO: recvCells
     return size;
@@ -395,17 +452,23 @@ unsigned int preserveHaloForce(cd_handle_t *cdh, int doeam, ForceExchangeParms *
 unsigned int preserveForceData(cd_handle_t *cdh, ForceExchangeData *forceData)
 {
     uint32_t size = sizeof(ForceExchangeData);
+#ifdef DO_PRV
     cd_preserve(cdh, forceData, size, kCopy, 
                 "ForceExchangeData", "ForceExchangeData");
+#endif
     if(PRINTON==1)
       printf("Preserve ForceExchangeData: %zu\n", sizeof(ForceExchangeData));
     //preserve dfEmbed and boxes
     uint32_t dfEmbed_size = sizeof(forceData->dfEmbed);
+#ifdef DO_PRV
     cd_preserve(cdh, forceData->dfEmbed, dfEmbed_size, kCopy, 
                 "ForceExchangeData_dfEmbed", "ForceExchangeData_dfEmbed");
+#endif
     uint32_t boxes_size = sizeof(forceData->boxes);
+#ifdef DO_PRV
     cd_preserve(cdh, forceData->boxes, boxes_size, kCopy, 
                 "ForceExchangeData_boxes", "ForceExchangeData_boxes");
+#endif
     size += dfEmbed_size + boxes_size;
     return size;
 }
