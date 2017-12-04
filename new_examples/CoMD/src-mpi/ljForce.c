@@ -339,7 +339,8 @@ int ljForce(SimFlat* s)
             int ljForce_pre_size = preserveAtoms(lv3_cd, s->atoms, 
                                                  s->boxes->nTotalBoxes, 
                                                  1,  // is_gid
-                                                 1,  // is_r
+                                                 //1,  // is_r
+                                                 0,  // is_r
                                                  0,  // is_p
                                                  0,  // is_f
                                                  0,  // is_U

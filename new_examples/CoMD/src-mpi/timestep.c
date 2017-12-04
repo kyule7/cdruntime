@@ -80,7 +80,9 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       cd_begin(lv1_cd, "advanceVelocity_start"); // lv1_cd starts
       //FIXME: need to pass cmd.doeam
       //FIXME: should this be kRef?
-      int velocity_pre_size = preserveAtoms(lv1_cd, s->atoms, s->boxes->nTotalBoxes, 
+      int velocity_pre_size = preserveAtoms(lv1_cd, 
+                                   s->atoms, 
+                                   s->boxes->nLocalBoxes, 
                                    0,  // is_gid
                                    0,  // is_r
                                    0,  // is_p
@@ -107,8 +109,8 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       velocity_pre_size += sizeof(int);  // add the size of ii (loop index)
       velocity_pre_size += preserveLinkCell(lv1_cd, s->boxes, 
                                             0/*all*/, 
-                                            1/*only nAtoms*/,
-                                            0/*nLocalBoxes*/);      
+                                            0/*only nAtoms*/,
+                                            1/*nLocalBoxes*/);      
       //printf("\n preservation size for advanceVelocity(@beggining) %d\n", velocity_pre_size);
 #endif 
       startTimer(velocityTimer);
@@ -131,7 +133,10 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       //TODO: preserve dt and nAtoms by *kRef* or KCopy? 
       //TODO: for now, no way to refer only dt in SimFlat preserved at the root
       //cd_preserve(cdh, &dt, sizeof(real_t), kRef, "advancePosition_dt", "advancePosition_dt");
-      int position_pre_size = preserveAtoms(lv1_cd, s->atoms, s->boxes->nTotalBoxes, 
+      int position_pre_size = preserveAtoms(lv1_cd, 
+                                    s->atoms, 
+                                    //s->boxes->nTotalBoxes, 
+                                    s->boxes->nLocalBoxes, 
                                    0,  // is_gid
                                    0,  // is_r
                                    1,  // is_p
@@ -166,9 +171,15 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       cd_begin(lv1_cd, "redistributeAtoms"); 
       //TODO: preserve nAtoms by kRef
       // I{atoms->[iSpecies, gid, r, p, f, U]}
+      // TODO:
+      // only atoms->r for local cells needs to be preserved since it's update 
+      // right before this while r for halo cells still need to be preserved.
+      // f and p are preserved in velocty_start and postion respectively, meaning
+      // being able to be preserved by referece
       int redist_pre_size = preserveAtoms(lv1_cd, s->atoms, s->boxes->nTotalBoxes, 
                                    1,  // is_gid
-                                   1,  // is_r
+                                   //1,  // is_r
+                                   0,  // is_r //assumed to be preserved by reference
                                    1,  // is_p
                                    1,  // is_f
                                    1,  // is_U
