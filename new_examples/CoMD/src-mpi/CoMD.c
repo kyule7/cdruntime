@@ -59,7 +59,7 @@
 #include "mycommand.h"
 #include "timestep.h"
 #include "constants.h"
-
+#include <mpi.h>
 #if _ROOTCD
 #include "cd.h"
 #include "cd_comd.h"
@@ -115,9 +115,13 @@ int main(int argc, char** argv)
    cd_handle_t* root_cd = cd_init(nRanks, myRank, kHDD);  
    cd_begin(root_cd, "Root");
    preserveSimFlat(root_cd, sim);
+   //FIXME/////////////////////////////////////////////////////////////
+   //cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "Root2", kStrict|kDRAM, 0xE); // detect F8, F4, F2
+   //cd_begin(lv1_cd, "Root2_begin");
+   //preserveSimFlat(lv1_cd, sim);
    //FIXME: what if the buffers for HaloExchnage (malloc)?
 #endif
-
+//    MPI_Barrier(MPI_COMM_WORLD);
 #if _CD1
    //cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep", kStrict, 0xF); // detect F8, F4, F2, F1
    //cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep", kStrict|kDRAM, 0xF); // detect F8, F4, F2, F1
@@ -157,6 +161,11 @@ int main(int argc, char** argv)
 #endif
 
 #if _ROOTCD
+   ////FIXME
+   //cd_detect(lv1_cd);
+   //cd_complete(lv1_cd);
+   //cd_destroy(lv1_cd);
+   ////FIXME
    cd_detect(root_cd);
    cd_complete(root_cd);
    cd_finalize();

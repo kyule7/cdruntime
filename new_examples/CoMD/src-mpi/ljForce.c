@@ -266,9 +266,27 @@ int ljForce(SimFlat* s)
   // O{nNbrBoxes, nIBox} <- I{s->boxes, s->boxes->[nLocalBoxes, nAtoms[iBox]], nbrBoxes}
   for (int iBox=0; iBox < s->boxes->nLocalBoxes; iBox++)
   {
-    //printf("Rank[%d] is processing iBox[%d]\n", getMyRank(), iBox);
+#if _CD2
+    if(is_first) {
+      if(iBox % CD2_INTERVAL == 0) {
+        cd_begin(lv3_cd, "ljForce_innermost"); 
+        //TODO: cd_preserve
+      }
+    }
+#endif
+        //printf("Rank[%d] is processing iBox[%d]\n", getMyRank(), iBox);
     int nIBox = s->boxes->nAtoms[iBox]; // #of atoms in ith box
-    if ( nIBox == 0 ) continue;
+    if ( nIBox == 0 ) {
+#if _CD2
+      if(is_first) {
+        if(iBox % CD2_INTERVAL == 0) {
+          cd_detect(lv3_cd);
+          cd_complete(lv3_cd); 
+        }
+      }
+#endif
+      continue;
+    }
     //Note that neighbors of iBox also include the box itself as 13th element
     int nNbrBoxes = getNeighborBoxes(s->boxes, iBox, nbrBoxes);
     // loop over neighbors of iBox
@@ -281,8 +299,15 @@ int ljForce(SimFlat* s)
 
       //#of atoms in jth box
       int nJBox = s->boxes->nAtoms[jBox];
-      if ( nJBox == 0 ) continue;
-
+      if ( nJBox == 0 ) {
+#if _CD2
+        if(is_first) {
+          if(iBox % CD2_INTERVAL == 0) {
+          }
+        }
+#endif
+        continue;
+      }
       //*****************************************************
       // loop over atoms in iBox
       //*****************************************************
@@ -291,6 +316,7 @@ int ljForce(SimFlat* s)
       {
         int iId = s->atoms->gid[iOff];
 #if _CD2
+/*
         if(is_first) {
           //cd_handle_t *cdh_lv2_inner = getleafcd();
           //This CD has a length of nJBox 
@@ -353,11 +379,12 @@ int ljForce(SimFlat* s)
                                                  0,
                                                  pre_atoms_idx); // is_print
             ljForce_pre_size += preserveLinkCell(lv3_cd, s->boxes, 
-                0/*all*/, 
-                0/*only nAtoms*/,
-                1/*nLocalBoxes*/);      
+                0,  //all
+                0,  //only nAtoms
+                1); //nLocalBoxes
           }
         }
+*/
 #endif
         //*****************************************************
         // loop over atoms in jBox
@@ -370,8 +397,15 @@ int ljForce(SimFlat* s)
         {
           real_t dr[3];
           int jId = s->atoms->gid[jOff];  
-          if (jBox < s->boxes->nLocalBoxes && jId <= iId )
+          if (jBox < s->boxes->nLocalBoxes && jId <= iId ) {
+#if _CD2
+            if(is_first) {
+              if(iBox % CD2_INTERVAL == 0) {
+              }
+            }
+#endif
             continue; // don't double count local-local pairs.
+          }
           real_t r2 = 0.0;
           for (int m=0; m<3; m++)
           {
@@ -382,8 +416,15 @@ int ljForce(SimFlat* s)
           }
         
           //If the atom is farther than cutoff, then do not process further.
-          if ( r2 > rCut2) continue;
-
+          if ( r2 > rCut2) {
+#if _CD2
+            if(is_first) {
+              if(iBox % CD2_INTERVAL == 0) {
+              }
+            }
+#endif
+            continue;
+          }
           // Important note:
           // from this point on r actually refers to 1.0/r
           r2 = 1.0/r2;
@@ -409,16 +450,26 @@ int ljForce(SimFlat* s)
 
         } // loop over atoms in jBox
 #if _CD2
+/*
         if(is_first) {
           if(iOff % CD2_INTERVAL == 0) {
             cd_detect(lv3_cd);
             cd_complete(lv3_cd); 
           }
         }
+*/
 #endif
 
       } // loop over atoms in iBox
     } // loop over neighbor boxes
+#if _CD2
+    if(is_first) {
+      if(iBox % CD2_INTERVAL == 0) {
+        cd_detect(lv3_cd);
+        cd_complete(lv3_cd); 
+      }
+    }
+#endif
   } // loop over local boxes in system
   //*****************************************************
   // end of main computation (hot spot)

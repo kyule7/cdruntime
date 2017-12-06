@@ -37,6 +37,8 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim)
     //the below preserve nSteps, printRate, dt, ePotential and eKinetic;
 #ifdef DO_PRV
     cd_preserve(cdh, sim, size, kCopy, "SimFlat", "SimFlat");
+    //cd_preserve(cdh, sim->domain, sizeof(Domain*), kCopy, "SimFlat_domain", "SimFlat_domain");
+    //cd_preserve(cdh, sim->boxes, sizeof(LinkCell*), kCopy, "SimFlat_boxes", "SimFlat_boxes");
 #endif
     if(PRINTON==1)
       printf("Preserve SimFlat: %zu\n", sizeof(SimFlat));

@@ -283,7 +283,8 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
       cd_begin(lv1_cd, "advanceVelocity_end"); 
       //TODO: preserve dt and nAtoms by kRef
       int velocity_end_pre_size = preserveAtoms(lv1_cd, 
-                                    s->atoms, s->boxes->nTotalBoxes, 
+                                    //s->atoms, s->boxes->nTotalBoxes, 
+                                    s->atoms, s->boxes->nLocalBoxes, 
                                     0,  // is_gid
                                     0,  // is_r
                                     0,  // is_p
@@ -294,6 +295,10 @@ double timestep(SimFlat* s, int nSteps, real_t dt)
                                    -1,  // to (entire atoms)
                                     0,  // is_print
                                     NULL);
+      velocity_end_pre_size += preserveLinkCell(lv1_cd, s->boxes, 
+                                            0/*all*/, 
+                                            0/*only nAtoms*/,
+                                            1/*nLocalBoxes*/);      
       //printf("\n preservation size for advanceVelocity(@end) %d\n", 
       //      velocity_end_pre_size);
 #endif
