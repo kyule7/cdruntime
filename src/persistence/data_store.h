@@ -162,6 +162,7 @@ class DataStore {
     inline uint64_t tail(void)      const { return tail_; }
     ///@brief Total bytes pushed to the current data store.
     inline uint64_t head(void)      const { return head_; }
+    inline uint64_t next_head(void)      const { return head_ + CHUNK_ALIGNMENT; }
     ///@brief Beginning pointer in the current data store.
     inline char    *begin(void)     const { return ptr_ + (head_ % size_); }
     ///@brief The size of data in memory buffer.
@@ -211,6 +212,11 @@ class DataStore {
     virtual CDErrType Copy(void *dst, char *src, int64_t len);
     virtual CDErrType Alloc(void **ptr, uint64_t size);
   public:
+    void PadAndInit(int64_t next_head) {
+      head_ = next_head;
+      tail_ = next_head; 
+      written_len_ = next_head;
+    }
     inline bool IsEmpty(void)  { PACKER_ASSERT(buf_used() >= 0); return (buf_used() < chunksize_); }
     inline bool IsFull(void) { 
       bool is_full = (buf_used() > (int64_t)(size_ - chunksize_)); 

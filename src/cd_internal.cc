@@ -581,8 +581,11 @@ CDHandle *CD::Create(CDHandle *parent,
   CD_DEBUG("CD::Create done\n");
 
   // FIXME: flush before child execution
+  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
   if(prv_medium_ != kDRAM) {
     entry_directory_.AppendTable();
+    entry_directory_.data_->Flush();
+//    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
   }
   this->AddChild(new_cd_handle);
 
@@ -911,6 +914,7 @@ CDErrT CD::Begin(const char *label, bool collective)
     prev_phase = current_phase;
     if(failed_phase == HEALTHY) {
       phaseTree.current_->MarkSeqID(cd_id_.sequential_id_); // set seq_begin_ = seq_end_
+      phaseTree.current_->seq_end_ = cd_id_.sequential_id_;
     }
   }
  // cd_name_.phase_ = GetPhase(level(), label_);
@@ -2873,8 +2877,15 @@ CDHandle *HeadCD::Create(CDHandle *parent,
   assert(new_cd_handle != NULL);
 
   // FIXME: flush before child execution
+//  if(prv_medium_ != kDRAM) {
+//    entry_directory_.AppendTable();
+//    entry_directory_.data_->Flush();
+//  }
+  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
   if(prv_medium_ != kDRAM) {
     entry_directory_.AppendTable();
+    entry_directory_.data_->Flush();
+//    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
   }
 
   this->AddChild(new_cd_handle);
