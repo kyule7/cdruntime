@@ -581,8 +581,11 @@ CDHandle *CD::Create(CDHandle *parent,
   CD_DEBUG("CD::Create done\n");
 
   // FIXME: flush before child execution
+  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
   if(prv_medium_ != kDRAM) {
     entry_directory_.AppendTable();
+    entry_directory_.data_->Flush();
+//    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
   }
   this->AddChild(new_cd_handle);
 
@@ -911,6 +914,7 @@ CDErrT CD::Begin(const char *label, bool collective)
     prev_phase = current_phase;
     if(failed_phase == HEALTHY) {
       phaseTree.current_->MarkSeqID(cd_id_.sequential_id_); // set seq_begin_ = seq_end_
+      phaseTree.current_->seq_end_ = cd_id_.sequential_id_;
     }
   }
  // cd_name_.phase_ = GetPhase(level(), label_);
@@ -1481,7 +1485,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     CD_DEBUG("## Complete. No error! ##\n\n");
     const uint64_t curr_phase = this->phase();
     const uint64_t curr_seqID = phaseTree.current_->seq_end_;
-    if(myTaskID == 0) { printf("## Complete. No error! ##, cur(%lu, %lu), failed(%ld,%ld) %ld\n",
+    if(myTaskID == 0) { printf("Complete. No error! ##, cur(%lu, %lu), failed(%ld,%ld) %ld\n",
         curr_phase, curr_seqID, failed_phase, failed_seqID, phaseTree.current_->seq_begin_); }
 
     if(failed_phase == curr_phase && failed_seqID == curr_seqID) {
@@ -2214,7 +2218,7 @@ CDErrT CD::Preserve(void *data,
         restore_count_ = 0;
       } 
       if(myTaskID == 0) {
-        printf("[Restore] prv #: %lu, rst #: %lu, mode:%d\n", 
+        printf("[Restore %s] prv #: %lu, rst #: %lu, mode:%d\n", my_name.c_str(),
                       preserve_count_, restore_count_, cd_exec_mode_);
       }
 #if _MPI_VER
@@ -2359,7 +2363,7 @@ CD::InternalPreserve(void *data,
       pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, len_in_bytes, 0, (char *)data));
     }
 //#ifdef _DEBUG_0402        
-#if 1
+#if 0
     if(myTaskID == 0) {
       printf("== Preserve Complete [%s->%s at lv #%u %u] cnt:%lu, tag:%u size:%lu, %p ==\n", 
         label_.c_str(), my_name.c_str(), level(), GetCurrentCD()->level(), 
@@ -2450,7 +2454,7 @@ CDErrT CD::Restore()
   // In case we need to find reference name quickly we will maintain seperate structure such as binary search tree and each item will have CDEntry *.
 
 
-  if(myTaskID == 4) printf("[%d %s at lv#%u] Reset to false at begin!\n", myTaskID, label_.c_str(), level());
+//  if(myTaskID == 4) printf("[%d %s at lv#%u] Reset to false at begin!\n", myTaskID, label_.c_str(), level());
   //GONG
   begin_ = false;
 
@@ -2872,8 +2876,15 @@ CDHandle *HeadCD::Create(CDHandle *parent,
   assert(new_cd_handle != NULL);
 
   // FIXME: flush before child execution
+//  if(prv_medium_ != kDRAM) {
+//    entry_directory_.AppendTable();
+//    entry_directory_.data_->Flush();
+//  }
+  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
   if(prv_medium_ != kDRAM) {
     entry_directory_.AppendTable();
+    entry_directory_.data_->Flush();
+//    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
   }
 
   this->AddChild(new_cd_handle);

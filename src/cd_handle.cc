@@ -1358,7 +1358,7 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
   // in the case that current phase of CD is the end of the last failed point.
   // Otherwise failed_phase is not healthy and increment reexec_
   bool is_reexec = (failed_phase != HEALTHY);
-  if(myTaskID == 0) printf("is reexec:%d\n", is_reexec);
+//  if(myTaskID == 0) printf("is reexec:%d\n", is_reexec);
   current->profile_.RecordComplete(is_reexec);
   CDEpilogue();
   //CDEpilogue();
@@ -1662,8 +1662,8 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     // FIXME
     CD_DEBUG("[%d] ### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
-    printf("[%d] ### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
-             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+//    printf("[%d] ### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
+//             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
 
     CDHandle *rb_cdh = CDPath::GetCDLevel(rollback_point);
     assert(rb_cdh != NULL);
@@ -2192,10 +2192,10 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
     // If sys_err_vec > 
     while(cdh != NULL) {
 
-      printf("CHECK (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
-          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
-          CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
-          cdh->level(), cdh->GetLabel());
+//      printf("CHECK (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+//          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+//          CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
+//          cdh->level(), cdh->GetLabel());
       CD_DEBUG("CHECK %lx %lx = %d, lv:%u, %s\n", 
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
@@ -2212,6 +2212,19 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
       }
       cdh = CDPath::GetParentCD(cdh->level());
     }
+    if(rollback_point < level()) {
+      printf("\n>>>> Escalation %u->%u (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+          level() , rollback_point, sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+          CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
+          cdh->level(), cdh->GetLabel());
+    } else if(rollback_point == level()) {
+      printf(">> Rollback (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+          CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
+          cdh->level(), cdh->GetLabel());
+
+    }
+
     if(found == false) assert(0);
     return (int)CD::CDInternalErrT::kErrorReported;
   }
