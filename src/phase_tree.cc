@@ -308,9 +308,12 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     TUNE_DEBUG("Old Phase! %u %s\n", phase, phase_path.c_str()); //getchar();
 //    if(cd::myTaskID == 0) fprintf(outAll, "Old Phase! %u at lv#%u%s\n", phase, level, phase_path.c_str()); //getchar();
   }
+
+#if CD_TUNING_ENABLED == 0 && CD_RUNTIME_ENABLED == 1
   auto pt = tuned::phaseNodeCache.find(phase);
   assert(pt != tuned::phaseNodeCache.end());
   cd::phaseTree.current_->errortype_ = pt->second->errortype_;
+#endif
 
 //  // First visit
 //  if(last_completed_phase != phase) {
