@@ -144,18 +144,38 @@ int main(int argc, char **argv) {
   profileStart(loopTimer);
   for (; iStep < nSteps;) {
 #if _CD1
+    //TODO: add interval to control lv1_cd
     cd_begin(lv1_cd, "main_loop");
-    //TODO: cd_preserve
-    //loop condition:
-    //iStep, nStep, printRate
-    //sumAtoms:
-    //boxes->nLocalBox
-    //atoms->nLocal, nGlobal
-    //timestep:
-    //almost all?
+    // Atoms : atoms->f
+    int velocity_pre_size =
+        preserveAtoms(lv1_cd, sim->atoms, sim->boxes->nLocalBoxes,
+                      0,  // is_all
+                      0,  // is_gid
+                      0,  // is_r
+                      0,  // is_p
+                      1,  // is_f
+                      0,  // is_U
+                      0,  // is_iSpecies
+                      0,  // from (entire atoms)
+                      -1, // to (entire atoms)
+                      0,  // is_print
+                      NULL);
+    // LinkCell : 
+    // TODO:
+#if DOPRV
+    // Constants (ignored): nStep, printRate
+    // iStep
+    //cd_preserve(lv1_cd, &iStep, sizeof(int), kCopy, "timestep_iStep",
+    //            "timestep_iStep");
+
+#endif //DOPRV
+
 #endif
     startTimer(commReduceTimer);
-    //TODO: add cd_complete and cd_begin here as an alternative mapping
+    // Let's ignore this for now since this doesn't contribute much and 
+    // estimator is probably to decide to remove this anyway.
+    // Note that SumAtoms() incurs communication as well
+    //TODO: add cd_complete and cd_begin here as for finer mapping
     sumAtoms(sim);
     stopTimer(commReduceTimer);
 
@@ -165,7 +185,7 @@ int main(int argc, char **argv) {
     // KHDD vs kDRAM
     cd_handle_t *lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep", 
                                     kStrict | kDRAM, 0xF);
-#endif 
+#endif //_CD2
     startTimer(timestepTimer);
     //--------------------------------
     //  [CD] Most of computation
