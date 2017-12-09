@@ -119,22 +119,22 @@ int main(int argc, char **argv) {
   // are enalbed. The first re-execution is fine and the issue does not show
   // up without preserveSimFlat().
   preserveSimFlat(root_cd, sim);
-// What if the buffers for HaloExchnage (malloc) and the others in SimFlat?
-// They are not freed if ROOT CD gets re-executed before calling
-// destroySimulation(), as does right now.
-// However, this should NOT be an issue because "sim" is to be reused on
-// purpose to test capability of reexeuction.
-
+  // What if the buffers for HaloExchnage (malloc) and the others in SimFlat?
+  // They are not freed if ROOT CD gets re-executed before calling
+  // destroySimulation(), as does right now.
+  // However, this should NOT be an issue because "sim" is to be reused on
+  // purpose to test capability of reexeuction.
 #endif
+
 #if _CD1
   // cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep", kStrict,
-  // 0xF); // detect F8, F4, F2, F1
+  //                                 0xF); // detect F8, F4, F2, F1
   // cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep",
-  // kStrict|kDRAM, 0xF); // detect F8, F4, F2, F1
-  cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep",
+  //                                 0xE);
+  // 0xE vs 0xF
+  // kHDD vs kDRAM
+  cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "main_loop",
                                   kStrict | kDRAM, 0xE); // detect F8, F4, F2
-// cd_handle_t *lv1_cd = cd_create(getcurrentcd(), getNRanks(), "timestep",
-// kStrict|kDRAM, 0xE); // detect F8, F4, F2
 #endif
 
   // This is the CoMD main loop
@@ -143,20 +143,44 @@ int main(int argc, char **argv) {
   int iStep = 0;
   profileStart(loopTimer);
   for (; iStep < nSteps;) {
+#if _CD1
+    cd_begin(lv1_cd, "main_loop");
+    //TODO: cd_preserve
+    //loop condition:
+    //iStep, nStep, printRate
+    //sumAtoms:
+    //boxes->nLocalBox
+    //atoms->nLocal, nGlobal
+    //timestep:
+    //almost all?
+#endif
     startTimer(commReduceTimer);
+    //TODO: add cd_complete and cd_begin here as an alternative mapping
     sumAtoms(sim);
     stopTimer(commReduceTimer);
 
     printThings(sim, iStep, getElapsedTime(timestepTimer));
 
+#if _CD2
+    // KHDD vs kDRAM
+    cd_handle_t *lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep", 
+                                    kStrict | kDRAM, 0xF);
+#endif 
     startTimer(timestepTimer);
     //--------------------------------
     //  [CD] Most of computation
     timestep(sim, printRate, sim->dt);
     //--------------------------------
     stopTimer(timestepTimer);
+#if _CD2
+    cd_destroy(lv2_cd);
+#endif 
 
     iStep += printRate;
+#if _CD1
+    cd_detect(lv1_cd);
+    cd_complete(lv1_cd);
+#endif
   }
   profileStop(loopTimer);
 

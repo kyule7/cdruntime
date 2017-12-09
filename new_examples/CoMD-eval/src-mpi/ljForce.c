@@ -74,9 +74,8 @@
 #include "CoMDTypes.h"
 #include "performanceTimers.h"
 
-#if _CD2
+#if _CD4
 #include "cd.h"
-//#define CD2_INTERVAL 1000
 #endif
 
 #define POT_SHIFT 1.0
@@ -102,7 +101,7 @@
 static int ljForce(SimFlat *s);
 static void ljPrint(FILE *file, BasePotential *pot);
 
-#if _CD2
+#if _CD4
 unsigned int preserveAtoms(cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes,
                            unsigned int is_all, unsigned int is_gid,
                            unsigned int is_r, unsigned int is_p,
@@ -161,11 +160,12 @@ void ljPrint(FILE *file, BasePotential *pot) {
 }
 
 // to prevent CD for ljForce from being called during initialization
-#if _CD2
+#if _CD4
 int is_not_first = 0;
 #endif
 int ljForce(SimFlat *s) {
-#if _CD2
+#if _CD4
+  //cd_handle_t *lv4_cd = getleafcd();
   const int CD2_INTERVAL = s->preserveRate;
 #endif
   // TODO: not creat sequential CD here since all the below are easy to get
@@ -192,24 +192,25 @@ int ljForce(SimFlat *s) {
   int nbrBoxes[27];
 // CD handler for level2 CD
 // TODO: 0xF gets ignored when config.yaml specifies error mask
-#if _CD2
-  cd_handle_t *lv3_cd = NULL;
+#if _CD4
+  cd_handle_t *lv4_cd = NULL;
+  //cd_handle_t *lv4_cd = getleafcd();
   if (is_not_first) {
-    // cd_handle_t *lv3_cd = cd_create(getcurrentcd(), 1, "ljForce", kStrict,
-    // 0xF);
-    // lv3_cd = cd_create(getleafcd(), 1, "ljForce", kStrict, 0xC);
-    // lv3_cd = cd_create(getcurrentcd(), 1, "ljForce", kStrict|kDRAM, 0xC);
-    // lv3_cd = cd_create(getcurrentcd(),
-    lv3_cd = cd_create(getleafcd(), getNRanks(),
-                       // 1,
-                       "ljForce", kStrict | kDRAM,
-                       0xC); // detect F8,F4
+    lv4_cd = cd_create(getleafcd(), 1, "ljForce_loop", 
+                       kStrict | kDRAM, 0xC);
+    // lv4_cd = cd_create(getleafcd(), 1, "ljForce", kStrict, 0xC);
+    // lv4_cd = cd_create(getcurrentcd(), 1, "ljForce", kStrict|kDRAM, 0xC);
+    // lv4_cd = cd_create(getcurrentcd(),
+    //lv4_cd = cd_create(getleafcd(), getNRanks(),
+    //                   // 1,
+    //                   "ljForce", kStrict | kDRAM,
+    //                   0xC); // detect F8,F4
     //*****************************************************
     // This is important characteristics of CoMD force loop.
     //*****************************************************
     // The positions of entier atoms (s->atoms->r) need to be preserved
     // no matter how finer/frequently leaf CD (lv3 CD) begins or completes
-    // int ljForce_pre_size = preserveAtoms(lv3_cd, s->atoms,
+    // int ljForce_pre_size = preserveAtoms(lv4_cd, s->atoms,
     //    s->boxes->nTotalBoxes,
     //    1,  // is_gid
     //    1,  // is_r
@@ -257,17 +258,17 @@ int ljForce(SimFlat *s) {
   // O{nNbrBoxes, nIBox} <- I{s->boxes, s->boxes->[nLocalBoxes, nAtoms[iBox]],
   // nbrBoxes}
   for (int iBox = 0; iBox < s->boxes->nLocalBoxes; iBox++) {
-#if _CD2
+#if _CD4
     if (is_not_first) {
       if (iBox % CD2_INTERVAL == 0) {
-        cd_begin(lv3_cd, "ljForce_outmost");
+        cd_begin(lv4_cd, "ljForce_outmost_loop");
         char tmp_iBox_idx[256] = "-1";
         sprintf(tmp_iBox_idx, "ljForce_outmost_iBox_%d", iBox);
 #ifdef DO_PRV
-        cd_preserve(lv3_cd, &iBox, sizeof(int), kCopy, tmp_iBox_idx,
+        cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy, tmp_iBox_idx,
                     tmp_iBox_idx);
 #endif
-        // cd_preserve(lv3_cd, &iBox, sizeof(int), kCopy,
+        // cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy,
         //    "ljForce_innermost_iBox", "ljForce_innermost_iBox");
         // TODO: cd_preserve
       }
@@ -277,11 +278,11 @@ int ljForce(SimFlat *s) {
     // printf("Rank[%d] is processing iBox[%d]\n", getMyRank(), iBox);
     int nIBox = s->boxes->nAtoms[iBox]; // #of atoms in ith box
                                         //    if ( nIBox == 0 ) {
-                                        //#if _CD2
+                                        //#if _CD4
                                         //      if(is_not_first) {
                                         //        if(iBox % CD2_INTERVAL == 0) {
-                                        //          cd_detect(lv3_cd);
-                                        //          cd_complete(lv3_cd);
+                                        //          cd_detect(lv4_cd);
+                                        //          cd_complete(lv4_cd);
                                         //        }
                                         //      }
                                         //#endif
@@ -301,7 +302,7 @@ int ljForce(SimFlat *s) {
       //#of atoms in jth box
       int nJBox = s->boxes->nAtoms[jBox];
       if (nJBox == 0) {
-#if _CD2
+#if _CD4
         if (is_not_first) {
           if (iBox % CD2_INTERVAL == 0) {
           }
@@ -315,7 +316,7 @@ int ljForce(SimFlat *s) {
       // O{iOff, iID} <- I{iOff, iBox, ii, atoms->gid}
       for (int iOff = iBox * MAXATOMS, ii = 0; ii < nIBox; ii++, iOff++) {
         int iId = s->atoms->gid[iOff];
-#if _CD2
+#if _CD4
 /*
         if(is_not_first) {
           //cd_handle_t *cdh_lv2_inner = getleafcd();
@@ -327,7 +328,7 @@ int ljForce(SimFlat *s) {
           //the innermost loop below changes over time, depending on runtime
           //behavior due to moving atoms.
           if(iOff % CD2_INTERVAL == 0) {
-            cd_begin(lv3_cd, "ljForce_innermost");
+            cd_begin(lv4_cd, "ljForce_innermost");
             //TODO: cd_preserve
             //1. loop index for current loop
             //  - iOff, iBox, MAXATOMS, ii, nIBox
@@ -335,20 +336,20 @@ int ljForce(SimFlat *s) {
             //preserve all loop index parameters
             //From the iBox loop (outmost)
 #ifdef DO_PRV
-            cd_preserve(lv3_cd, &iBox, sizeof(int), kCopy,
+            cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy,
                 "ljForce_innermost_iBox", "ljForce_innermost_iBox");
             //From the neighbors of iBox loop (2nd loop)
-            cd_preserve(lv3_cd, &jBox, sizeof(int), kCopy,
+            cd_preserve(lv4_cd, &jBox, sizeof(int), kCopy,
                 "ljForce_innermost_jBox", "ljForce_innermost_jBox");
-            cd_preserve(lv3_cd, &jTmp, sizeof(int), kCopy,
+            cd_preserve(lv4_cd, &jTmp, sizeof(int), kCopy,
                 "ljForce_innermost_jTmp", "ljForce_innermost_jTmp");
             //From the atoms of iBox loop (3rd loop, the current loop)
-            cd_preserve(lv3_cd, &iOff, sizeof(int), kCopy,
+            cd_preserve(lv4_cd, &iOff, sizeof(int), kCopy,
                 "ljForce_innermost_iOff", "ljForce_innermost_iOff");
-            cd_preserve(lv3_cd, &ii, sizeof(int), kCopy,
+            cd_preserve(lv4_cd, &ii, sizeof(int), kCopy,
                 "ljForce_innermost_ii", "ljForce_innermost_ii");
             //For the nested loop below
-            cd_preserve(lv3_cd, &iId, sizeof(int), kCopy,
+            cd_preserve(lv4_cd, &iId, sizeof(int), kCopy,
                 "ljForce_innermost_iId", "ljForce_innermost_iId");
 #endif
             //TODO: the below preserve poistion(r) of all atoms every iteration,
@@ -362,7 +363,7 @@ int ljForce(SimFlat *s) {
             sprintf(pre_atoms_idx, "_%d_%d_%d", iBox, jTmp, iOff);
             // preserve atoms in jBox
             // FIXME: this is correct only when CD2_INTERVAL == 1
-            int ljForce_pre_size = preserveAtoms(lv3_cd, s->atoms,
+            int ljForce_pre_size = preserveAtoms(lv4_cd, s->atoms,
                                                  s->boxes->nTotalBoxes,
                                                  1,  // is_gid
                                                  //1,  // is_r
@@ -379,7 +380,7 @@ to
                                                  //-1, // to
                                                  0,
                                                  pre_atoms_idx); // is_print
-            ljForce_pre_size += preserveLinkCell(lv3_cd, s->boxes,
+            ljForce_pre_size += preserveLinkCell(lv4_cd, s->boxes,
                 0,  //all
                 0,  //only nAtoms
                 1); //nLocalBoxes
@@ -400,7 +401,7 @@ to
           real_t dr[3];
           int jId = s->atoms->gid[jOff];
           if (jBox < s->boxes->nLocalBoxes && jId <= iId) {
-#if _CD2
+#if _CD4
             if (is_not_first) {
               if (iBox % CD2_INTERVAL == 0) {
               }
@@ -418,7 +419,7 @@ to
 
           // If the atom is farther than cutoff, then do not process further.
           if (r2 > rCut2) {
-#if _CD2
+#if _CD4
             if (is_not_first) {
               if (iBox % CD2_INTERVAL == 0) {
               }
@@ -449,12 +450,12 @@ to
           }
 
         } // loop over atoms in jBox
-#if _CD2
+#if _CD4
 /*
         if(is_not_first) {
           if(iOff % CD2_INTERVAL == 0) {
-            cd_detect(lv3_cd);
-            cd_complete(lv3_cd);
+            cd_detect(lv4_cd);
+            cd_complete(lv4_cd);
           }
         }
 */
@@ -463,11 +464,11 @@ to
       } // loop over atoms in iBox
     }   // loop over neighbor boxes
     stopTimer(ljForceTimer);
-#if _CD2
+#if _CD4
     if (is_not_first) {
       if (iBox % CD2_INTERVAL == 0) {
-        cd_detect(lv3_cd);
-        cd_complete(lv3_cd);
+        cd_detect(lv4_cd);
+        cd_complete(lv4_cd);
       }
     }
 #endif
@@ -476,14 +477,14 @@ to
     //*****************************************************
     // end of main computation (hot spot)
     //*****************************************************
-#if _CD2
+#if _CD4
   if (is_not_first) {
-    cd_destroy(lv3_cd);
+    cd_destroy(lv4_cd);
   }
 #endif
   ePot = ePot * 4.0 * epsilon;
   s->ePotential = ePot;
-#if _CD2
+#if _CD4
   is_not_first = 1;
 #endif
   return 0;
