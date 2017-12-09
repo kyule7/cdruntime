@@ -109,7 +109,8 @@ unsigned int preserveAtoms(cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes,
                            unsigned int is_iSpecies, unsigned int from, int to,
                            unsigned int is_print, char *idx);
 unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell,
-                              unsigned int is_all, unsigned int is_nAtoms,
+                              unsigned int is_all, 
+                              unsigned int is_nAtoms, unsigned int is_local,
                               unsigned int is_nTotalBoxes);
 #endif
 
@@ -383,6 +384,7 @@ to
             ljForce_pre_size += preserveLinkCell(lv4_cd, s->boxes,
                 0,  //all
                 0,  //only nAtoms
+                0,  //local 
                 1); //nLocalBoxes
           }
         }

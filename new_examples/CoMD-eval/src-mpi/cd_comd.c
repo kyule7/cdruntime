@@ -23,8 +23,8 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim) {
   // Further preserve by chasing pointers of *domain, *boxes, *species, *pot
   // and *atomExchange.
   size += preserveDomain(cdh, sim->domain); // Flat struct
-  size += preserveLinkCell(cdh, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
-                           0 /*nLocalBoxes*/);
+  size += preserveLinkCell(cdh, sim->boxes, 1 /*all*/, 0 /*nAtoms*/, 0/*local*/,
+                           0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
   size += preserveAtoms(cdh, sim->atoms, sim->boxes->nTotalBoxes,
                         1,                        // is_all
                         1,                        // is_gid
@@ -63,53 +63,80 @@ unsigned int preserveDomain(cd_handle_t *cdh, Domain *domain) {
 }
 
 unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell,
-                              unsigned int is_all, unsigned int is_nAtoms,
+                              unsigned int is_all, 
+                              unsigned int is_nAtoms, 
+                              unsigned int is_local, // nAtoms[0:nLocalBox-1]
+                              unsigned int is_nLocalBoxes,
                               unsigned int is_nTotalBoxes) {
   uint32_t size = 0;
-  uint32_t nAtoms_size = linkcell->nTotalBoxes * sizeof(int);
+  
+  // nAtoms_size: The amount of data for nAtoms[] to be preserved
+  // either nAtoms[0:nLocalBoxes-1] or nAtoms[0:nTotalBoxes-] with is_local 
+  // 1 or 0 respectively.
+  unsigned int nAtoms_size = 0;
+  if (is_local == 1) nAtoms_size = linkcell->nLocalBoxes; 
+  else if (is_local == 0) nAtoms_size = linkcell->nTotalBoxes;
+  else assert(1); // shouldn't be the case.
 
   // Preserve entire linkcell struct
   if (is_all) {
-    // When is_all is set to 1, all others should be set to 0.
+    // When is_all is set to 1, all the others should be set to 0.
     assert(is_nAtoms == 0);
+    assert(is_local == 0);
+    assert(is_nLocalBoxes == 0);
     assert(is_nTotalBoxes == 0);
-    size += sizeof(LinkCell);
 #ifdef DO_PRV
     // Preserve all but nAtoms array
     cd_preserve(cdh, linkcell, size, kCopy, "LinkCell", "LinkCell");
 #endif
-    size += nAtoms_size;
+    size += sizeof(LinkCell);
 #ifdef DO_PRV
     // Preserve nAtom int array
     cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, kCopy, "LinkCell_nAtoms",
                 "LinkCell_nAtoms");
 #endif
+    size += nAtoms_size;
     if (PRINTON == 1)
       printf("Preserven LinkCell %zu, nAtoms: %u\n", sizeof(LinkCell),
              nAtoms_size);
   }
 
-  // Prerse data being pointed by linkcell->nAtoms
+  // Preserve int array being pointed by linkcell->nAtoms
   if (is_nAtoms) {
     assert(is_all == 0);
-    size += nAtoms_size;
 #ifdef DO_PRV
     // Preserve nAtom int array
-    cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, kCopy, "LinkCell_nAtoms",
-                "LinkCell_nAtoms");
+    cd_preserve(cdh, &(linkcell->nAtoms), sizeof(int*), kCopy,
+                "LinkCell_nAtoms_ptr", "LinkCell_nAtoms_ptr");
+    cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, kCopy, 
+                "LinkCell_nAtoms", "LinkCell_nAtoms");
 #endif
+    size += nAtoms_size;
+    size += sizeof(int*);
     if (PRINTON == 1)
       printf("Preserven LinkCell_nAtoms: %u\n", 0, nAtoms_size);
   }
 
-  // Prerse only nTotalBoxes
+  // Preserve nLocalBoxes
+  if (is_nLocalBoxes) {
+    assert(is_all == 0);
+#ifdef DO_PRV
+    cd_preserve(cdh, &(linkcell->nLocalBoxes), sizeof(int), kCopy,
+                "LinkCell_nLocalBoxes", "LinkCell_nLocalBoxes");
+#endif
+    size += sizeof(int);
+    if (PRINTON == 1)
+      printf("Preserven LinkCell_nLocalBoxes: %u\n", sizeof(int));
+  }
+
+  // Preserve nTotalBoxes
   if (is_nTotalBoxes) {
     assert(is_all == 0);
-    size += sizeof(int);
 #ifdef DO_PRV
     cd_preserve(cdh, &(linkcell->nTotalBoxes), sizeof(int), kCopy,
                 "LinkCell_nTotalBoxes", "LinkCell_nTotalBoxes");
 #endif
+    size += sizeof(int);
     if (PRINTON == 1)
       printf("Preserven LinkCell_nTotalBoxes: %u\n", sizeof(int));
   }
