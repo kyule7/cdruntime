@@ -27,12 +27,12 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, SimFlat *sim) {
                            0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
   size += preserveAtoms(cdh, sim->atoms, sim->boxes->nTotalBoxes,
                         1,                        // is_all
-                        1,                        // is_gid
-                        1,                        // is_r
-                        1,                        // is_p
-                        1,                        // is_f
-                        1,                        // is_U
-                        1,                        // is_iSpecies
+                        0,                        // is_gid
+                        0,                        // is_r
+                        0,                        // is_p
+                        0,                        // is_f
+                        0,                        // is_U
+                        0,                        // is_iSpecies
                         0,                        // from
                         -1,                       // to (entire atoms)
                         0,                        // is_print
@@ -199,7 +199,12 @@ preserveAtoms(cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes,
 
   // Preserve entire strcut of AtomSt
   if (is_all) {
-    assert(is_gid && is_iSpecies && is_r && is_p && is_f && is_U);
+    assert(is_gid == 0);
+    assert(is_iSpecies == 0);
+    assert(is_r == 0); 
+    assert(is_p == 0);
+    assert(is_f == 0);
+    assert(is_U == 0);
     assert(from == 0);
     assert(to == -1);
 #ifdef DO_PRV

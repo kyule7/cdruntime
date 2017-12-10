@@ -248,21 +248,30 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif
 
 #if _CD3
-    //TODO: evalute 1, 2, 4 childrencases
     //FIXME: 8 (or getNRanks()) is not working properly as it doesn't get
     //       roll backed.
+    //TODO: evalute 1, 2, 4 childrencases
     cd_handle_t *lv3_cd = cd_create(getcurrentcd(), 4, //getNRanks(), 
                                     "ljForce", 
                                     kStrict | kDRAM, 0xC);
-    cd_begin(lv3_cd, "ljForce_in_timestep");
+    //TODO: add interval to control lv3_cd
+    const int CD3_INTERVAL = s->preserveRateLevel3;
+    //FIXME: this doesn't make sense 
+    //if ( ii % CD3_INTERVAL == 0) { 
+      cd_begin(lv3_cd, "ljForce_in_timestep");
+      // No need to preserve any since it's done already in the parent. 
+      // cd_preserve( ... )
+    //}
 #endif
     startTimer(computeForceTimer);
     computeForce(s); // s->pot->force(s)
     stopTimer(computeForceTimer);
 #if _CD3
-    cd_detect(lv3_cd);
-    cd_complete(lv3_cd);
-    cd_destroy(lv3_cd);
+    //if ( ii % CD3_INTERVAL == 0) { 
+      cd_detect(lv3_cd);
+      cd_complete(lv3_cd);
+      cd_destroy(lv3_cd);
+    //}
 #endif
 #if _CD2
     // Do I need cd_detect here when level2 is enabled? Yes, it won't

@@ -145,31 +145,44 @@ int main(int argc, char **argv) {
   for (; iStep < nSteps;) {
 #if _CD1
     //TODO: add interval to control lv1_cd
-    cd_begin(lv1_cd, "main_loop");
-    // Atoms : atoms->f
-    int velocity_pre_size =
-        preserveAtoms(lv1_cd, sim->atoms, sim->boxes->nLocalBoxes,
-                      0,  // is_all
-                      0,  // is_gid
-                      0,  // is_r
-                      0,  // is_p
-                      1,  // is_f
-                      0,  // is_U
-                      0,  // is_iSpecies
-                      0,  // from (entire atoms)
-                      -1, // to (entire atoms)
-                      0,  // is_print
-                      NULL);
-    // LinkCell : 
-    // TODO:
+    const int CD1_INTERVAL = sim->preserveRateLevel1;
+    // Notice that iStep is increasing by printRate.
+    if (iStep % (CD1_INTERVAL*printRate) == 0) {
+      cd_begin(lv1_cd, "main_loop");
+      //FIXME: this has an issue and not working properly. redistributeAtoms
+      // will fail for some unknown issue. 
+      // Preservation for timestep(...) : Atoms : atoms??
+      int main_loop_pre_size =
+          preserveAtoms(lv1_cd, sim->atoms, sim->boxes->nTotalBoxes,
+                        1,  // is_all
+                        0,  // is_gid
+                        0,  // is_r
+                        0,  // is_p
+                        0,  // is_f
+                        0,  // is_U
+                        0,  // is_iSpecies
+                        0,  // from (entire atoms)
+                        -1, // to (entire atoms)
+                        0,  // is_print
+                        NULL);
+      // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
+      // FIXME: seems not enough
+      main_loop_pre_size += preserveLinkCell(lv1_cd, sim->boxes, 1 /*all*/,
+                                             0 /*nAtoms*/, 0 /*local*/,
+                                             0 /*nLocalBoxes*/,
+                                             0 /*nTotalBoxes*/);
+      // Preserve pbcFactor
+      main_loop_pre_size = preserveHaloAtom(lv1_cd, sim->atomExchange->parms, 
+                                            0 /*cellList*/, 
+                                            0 /*pbcFactor*/);
 #if DOPRV
-    // Constants (ignored): nStep, printRate
-    // iStep
-    //cd_preserve(lv1_cd, &iStep, sizeof(int), kCopy, "timestep_iStep",
-    //            "timestep_iStep");
-
+      // Constants (ignored): nStep, printRate
+      // iStep
+      cd_preserve(lv1_cd, &iStep, sizeof(int), kCopy, "timestep_iStep",
+                  "timestep_iStep");
 #endif //DOPRV
-
+      main_loop_pre_size += sizeof(int);
+    } // CD1_INTERVAL
 #endif
     startTimer(commReduceTimer);
     // Let's ignore this for now since this doesn't contribute much and 
@@ -182,9 +195,14 @@ int main(int argc, char **argv) {
     printThings(sim, iStep, getElapsedTime(timestepTimer));
 
 #if _CD2
+    cd_handle_t *lv2_cd = NULL;
+    if (iStep % (CD1_INTERVAL*printRate) == 0) {
     // KHDD vs kDRAM
-    cd_handle_t *lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep", 
-                                    kStrict | kDRAM, 0xF);
+      lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep", 
+                                      kStrict | kDRAM, 0xF);
+      //cd_handle_t *lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep", 
+      //                                kStrict | kDRAM, 0xF);
+    }
 #endif //_CD2
     startTimer(timestepTimer);
     //--------------------------------
@@ -193,15 +211,20 @@ int main(int argc, char **argv) {
     //--------------------------------
     stopTimer(timestepTimer);
 #if _CD2
-    cd_destroy(lv2_cd);
+    if (iStep % (CD1_INTERVAL*printRate) == 0) {
+      cd_destroy(lv2_cd);
+    }
 #endif 
 
     iStep += printRate;
+
 #if _CD1
-    cd_detect(lv1_cd);
-    cd_complete(lv1_cd);
+    if (iStep % (CD1_INTERVAL*printRate) == 0) {
+      cd_detect(lv1_cd);
+      cd_complete(lv1_cd);
+    }
 #endif
-  }
+  } // iStep
   profileStop(loopTimer);
 
   sumAtoms(sim);
@@ -252,8 +275,14 @@ SimFlat *initSimulation(Command cmd) {
   sim->printRate = cmd.printRate;
   sim->dt = cmd.dt;
   sim->doeam = cmd.doeam;
-#if _CD2
-  sim->preserveRate = cmd.preserveRate;
+#if _CD1
+  sim->preserveRateLevel1 = cmd.preserveRateLevel1;
+#endif
+#if _CD3
+  sim->preserveRateLevel3 = cmd.preserveRateLevel3;
+#endif
+#if _CD4
+  sim->preserveRateLevel4 = cmd.preserveRateLevel4;
 #endif
 
   sim->domain = NULL;

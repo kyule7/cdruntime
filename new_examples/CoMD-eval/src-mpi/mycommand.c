@@ -209,8 +209,14 @@ Command parseCommandLine(int argc, char **argv) {
   cmd.zproc = 1;
   cmd.nSteps = 100;
   cmd.printRate = 10;
-#if _CD2
-  cmd.preserveRate = 1000;
+#if _CD1
+  cmd.preserveRateLevel1 = 1;
+#endif
+#if _CD3
+  cmd.preserveRateLevel3 = 1;
+#endif
+#if _CD4
+  cmd.preserveRateLevel3 = 1728;
 #endif
   cmd.dt = 1.0;
   cmd.lat = -1.0;
@@ -236,9 +242,17 @@ Command parseCommandLine(int argc, char **argv) {
   addArg("nSteps", 'N', 1, 'i', &(cmd.nSteps), 0, "number of time steps");
   addArg("printRate", 'n', 1, 'i', &(cmd.printRate), 0,
          "number of steps between output");
-#if _CD2
-  addArg("preserveRate", 'f', 1, 'i', &(cmd.preserveRate), 0,
-         "freq of preservation in leaf CD");
+#if _CD1
+  addArg("preserveRate", 'a', 1, 'i', &(cmd.preserveRateLevel1), 0,
+         "interval for level 1 CD");
+#endif
+#if _CD3
+  addArg("preserveRate", 'b', 1, 'i', &(cmd.preserveRateLevel3), 0,
+         "interval for level 3 CD");
+#endif
+#if _CD4
+  addArg("preserveRate", 'c', 1, 'i', &(cmd.preserveRateLevel4), 0,
+         "interval for level 4 CD");
 #endif
   addArg("dt", 'D', 1, 'd', &(cmd.dt), 0, "time step (in fs)");
   addArg("lat", 'l', 1, 'd', &(cmd.lat), 0, "lattice parameter (Angstroms)");
@@ -283,8 +297,14 @@ void printCmdYaml(FILE *file, Command *cmd) {
                 "  Lattice constant: %g Angstroms\n"
                 "  nSteps: %d\n"
                 "  printRate: %d\n"
-#if _CD2
-                "  preserveRate: %d\n"
+#if _CD1
+                "  Level1 CD Interval: %d\n"
+#endif
+#if _CD3
+                "  Level3 CD Interval: %d\n"
+#endif
+#if _CD4
+                "  Level4 CD Interval: %d\n"
 #endif
                 "  Time step: %g fs\n"
                 "  Initial Temperature: %g K\n"
@@ -293,8 +313,14 @@ void printCmdYaml(FILE *file, Command *cmd) {
           cmd->doeam, cmd->potDir, cmd->potName, cmd->potType, cmd->nx, cmd->ny,
           cmd->nz, cmd->xproc, cmd->yproc, cmd->zproc, cmd->lat, cmd->nSteps,
           cmd->printRate,
-#if _CD2
-          cmd->preserveRate,
+#if _CD1
+          cmd->preserveRateLevel1,
+#endif
+#if _CD3
+          cmd->preserveRateLevel3,
+#endif
+#if _CD4
+          cmd->preserveRateLevel4,
 #endif
           cmd->dt, cmd->temperature, cmd->initialDelta);
   fflush(file);
