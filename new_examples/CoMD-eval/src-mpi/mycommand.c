@@ -216,7 +216,7 @@ Command parseCommandLine(int argc, char **argv) {
   cmd.preserveRateLevel3 = 1;
 #endif
 #if _CD4
-  cmd.preserveRateLevel3 = 1728;
+  cmd.preserveRateLevel4 = 1728;
 #endif
   cmd.dt = 1.0;
   cmd.lat = -1.0;
