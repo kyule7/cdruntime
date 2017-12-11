@@ -253,6 +253,8 @@ struct PhaseTree {
     
     void PrintProfile(void) 
     { root_->PrintProfile(); }
+
+    void PrintStats(void);
 };
 
 } // namespace common ends

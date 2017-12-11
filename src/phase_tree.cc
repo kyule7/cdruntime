@@ -341,6 +341,15 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 PhaseTree::~PhaseTree() {
   // If root_ == NULL,
   // phaseTree is not created.
+  if(root_ != NULL) {
+    root_->Delete();
+  }
+}
+
+void PhaseTree::PrintStats(void)
+{
+  // If root_ == NULL,
+  // phaseTree is not created.
   if(cd::myTaskID == 0) {
     if(root_ != NULL) {
       char *cd_config_file = getenv("CD_OUTPUT_BASE");
@@ -360,7 +369,7 @@ PhaseTree::~PhaseTree() {
       root_->Print(true, true);
 //      PrintProfile();
       fprintf(stdout, "%s %p\n", __func__, root_);
-      root_->Delete();
     }
   }
+
 }

@@ -637,6 +637,8 @@ void CD_Finalize(void)
   CDPath::GetCDPath()->pop_back();
 
 
+  cd::phaseTree.PrintStats();
+  tuned::phaseTree.PrintStats();
 
 #if CD_DEBUG_ENABLED
   WriteDbgStream();
