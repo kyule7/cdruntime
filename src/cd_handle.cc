@@ -1771,8 +1771,10 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     // FIXME
 //    printf("### Error Injected.");
-//    printf(" Rollback Level #%u (%s %s) ###\n", 
-//             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+    printf(">> Error Injected >>  Rollback Level #%u (%s %s) ###\n", 
+             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+    CD_DEBUG(">> Error Injected >>  Rollback Level #%u (%s %s) ###\n", 
+             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
     ptr_cd_->SetRollbackPoint(rollback_point, false);
   } else {
 //    printf("err:  %d\n", err_desc);

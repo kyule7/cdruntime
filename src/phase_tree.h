@@ -121,6 +121,8 @@ struct PhaseNode {
       delete this;
     }
 
+    void GatherStats(void);
+
     PhaseNode *GetNextNode(const std::string &label) 
     {
       PhaseNode *next = NULL;

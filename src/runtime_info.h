@@ -128,6 +128,67 @@ void MergeMaps(std::map<std::string, PrvProfEntry>& lhs,
   lhs.insert(right, rhs.end());
 }
 
+struct RTInfoInt {
+  uint64_t exec_;
+  uint64_t reexec_;
+  uint64_t prv_copy_;
+  uint64_t prv_ref_;
+  uint64_t restore_;
+  uint64_t msg_logging_;
+  RTInfoInt(void) {}
+  RTInfoInt(  uint64_t exec,
+              uint64_t reexec,
+              uint64_t prv_copy,
+              uint64_t prv_ref,
+              uint64_t restore,
+              uint64_t msg_logging) {
+    exec_          = exec;
+    reexec_        = reexec;
+    prv_copy_      = prv_copy;
+    prv_ref_       = prv_ref;
+    restore_       = restore;
+    msg_logging_   = msg_logging;
+  }
+};
+
+struct RTInfoFloat {
+  double total_time_;
+  double reexec_time_;
+  double sync_time_;
+  double prv_elapsed_time_;
+  double rst_elapsed_time_;
+  double create_elapsed_time_;
+  double destroy_elapsed_time_;
+  double begin_elapsed_time_;
+  double compl_elapsed_time_;
+  double advance_elapsed_time_;
+  RTInfoFloat(void)
+  {
+
+  }
+  RTInfoFloat(double total_time,
+              double reexec_time,
+              double sync_time,
+              double prv_elapsed_time,
+              double rst_elapsed_time,
+              double create_elapsed_time,
+              double destroy_elapsed_time,
+              double begin_elapsed_time,
+              double compl_elapsed_time,
+              double advance_elapsed_time) {
+    total_time_              = total_time;          
+    reexec_time_             = reexec_time;
+    sync_time_               = sync_time;
+    prv_elapsed_time_        = prv_elapsed_time;
+    rst_elapsed_time_        = rst_elapsed_time;
+    create_elapsed_time_     = create_elapsed_time;
+    destroy_elapsed_time_    = destroy_elapsed_time;
+    begin_elapsed_time_      = begin_elapsed_time;
+    compl_elapsed_time_      = compl_elapsed_time;
+    advance_elapsed_time_    = advance_elapsed_time;
+  }
+};
+
 // id is used when access to caches
 //  1. profMap
 //  2. phaseNodeCache
@@ -206,6 +267,50 @@ struct RuntimeInfo : public CDOverhead {
     MergeMaps(output_, info_per_level.output_);
     MergeCDOverhead(info_per_level);
   }
+
+  RTInfoInt GetRTInfoInt(void) {
+    return RTInfoInt( exec_,
+                      reexec_,
+                      prv_copy_,
+                      prv_ref_,
+                      restore_,
+                      msg_logging_
+                    );
+  }
+  RTInfoFloat GetRTInfoFloat(void) {
+    return RTInfoFloat( total_time_,
+                        reexec_time_,
+                        sync_time_,
+                        prv_elapsed_time_,
+                        rst_elapsed_time_,
+                        create_elapsed_time_,
+                        destroy_elapsed_time_,
+                        begin_elapsed_time_,
+                        compl_elapsed_time_,
+                        advance_elapsed_time_
+            );
+  }
+  void SetRTInfoInt(const RTInfoInt &rt_info) {
+    exec_        = rt_info.exec_;
+    reexec_      = rt_info.reexec_;
+    prv_copy_    = rt_info.prv_copy_;
+    prv_ref_     = rt_info.prv_ref_;
+    restore_     = rt_info.restore_;
+    msg_logging_ = rt_info.msg_logging_;
+  }
+  void SetRTInfoFloat(const RTInfoFloat &rt_info) {
+    total_time_           = rt_info.total_time_;           
+    reexec_time_          = rt_info.reexec_time_;
+    sync_time_            = rt_info.sync_time_;
+    prv_elapsed_time_     = rt_info.prv_elapsed_time_;
+    rst_elapsed_time_     = rt_info.rst_elapsed_time_;
+    create_elapsed_time_  = rt_info.create_elapsed_time_;
+    destroy_elapsed_time_ = rt_info.destroy_elapsed_time_;
+    begin_elapsed_time_   = rt_info.begin_elapsed_time_;
+    compl_elapsed_time_   = rt_info.compl_elapsed_time_;
+    advance_elapsed_time_ = rt_info.advance_elapsed_time_;
+  }
+
 
   inline void RecordData(const std::string &entry_str, uint64_t len, uint32_t type, bool is_reexec)
   {

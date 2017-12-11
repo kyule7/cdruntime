@@ -346,8 +346,28 @@ PhaseTree::~PhaseTree() {
   }
 }
 
+void PhaseNode::GatherStats(void)
+{
+  for(auto it=children_.begin(); it!=children_.end(); ++it) {
+    (*it)->GatherStats();
+  }
+  printf("[%s %d] level:%u, phase:%u, taskid:%u\n", __func__, cd::myTaskID, phase_, level_, task_id_);
+  RTInfoInt rt_info_int     = profile_.GetRTInfoInt();
+  RTInfoFloat rt_info_float = profile_.GetRTInfoFloat();
+  RTInfoInt rt_info_int_recv;
+  RTInfoFloat rt_info_float_recv;
+
+  MPI_Reduce(&rt_info_int, &rt_info_int_recv, sizeof(RTInfoInt)/sizeof(uint64_t), MPI_UNSIGNED_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&rt_info_float, &rt_info_float_recv, sizeof(RTInfoFloat)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  if(cd::myTaskID == 0){
+      profile_.SetRTInfoInt(rt_info_int_recv);
+      profile_.SetRTInfoFloat(rt_info_float_recv);
+  }
+}
+
 void PhaseTree::PrintStats(void)
 {
+  root_->GatherStats();
   // If root_ == NULL,
   // phaseTree is not created.
   if(cd::myTaskID == 0) {

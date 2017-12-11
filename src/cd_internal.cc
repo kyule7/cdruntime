@@ -1379,7 +1379,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
   // to guarantee the correctness of CD-enabled program.
   uint32_t new_rollback_point = orig_rollback_point;
 #if BUGFIX_0327
-  if(collective) {
+  if(collective && task_size() > 1) {
     new_rollback_point = SyncCDs(this, false);
     CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
     new_rollback_point = SetRollbackPoint(new_rollback_point, false);

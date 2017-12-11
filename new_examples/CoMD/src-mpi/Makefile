@@ -26,8 +26,8 @@ CD_FLAGS :=
 # ROOTCD : CoMD.c
 # CD1 : timestep.c 
 # CD2 : ljForce.c
-CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -DDO_PRV
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -DDO_PRV
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -DDO_PRV
+CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -DDO_PRV #-D_CD1=1 
@@ -106,8 +106,8 @@ DEFAULT: ${CoMD_EXE}
 ${CoMD_EXE}: ${BIN_DIR} CoMD_info.h ${OBJECTS} 
 	${CC} ${CFLAGS} -o ${CoMD_EXE} ${OBJECTS} ${LDFLAGS}
 
-CoMD_info.h: Makefile
-	./generate_info_header ${CoMD_VARIANT} "$(CC)" "$(CFLAGS)" "$(LDFLAGS)"
+#CoMD_info.h: Makefile
+#	./generate_info_header ${CoMD_VARIANT} "$(CC)" "$(CFLAGS)" "$(LDFLAGS)"
 
 ${BIN_DIR}:
 	@if [ ! -d ${BIN_DIR} ]; then mkdir -p ${BIN_DIR} ; fi
