@@ -109,8 +109,14 @@ typedef struct SimFlatSt {
   int printRate; //<! number of steps between output
   double dt;     //<! time step
   int doeam;     //<!
-#if _CD2
-  int preserveRate;
+#if _CD1
+  int preserveRateLevel1;
+#endif
+#if _CD3
+  int preserveRateLevel3;
+#endif
+#if _CD4
+  int preserveRateLevel4;
 #endif
 
   Domain *domain; //<! domain decomposition data

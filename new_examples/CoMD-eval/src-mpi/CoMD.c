@@ -119,22 +119,22 @@ int main(int argc, char **argv) {
   // are enalbed. The first re-execution is fine and the issue does not show
   // up without preserveSimFlat().
   preserveSimFlat(root_cd, sim);
-// What if the buffers for HaloExchnage (malloc) and the others in SimFlat?
-// They are not freed if ROOT CD gets re-executed before calling
-// destroySimulation(), as does right now.
-// However, this should NOT be an issue because "sim" is to be reused on
-// purpose to test capability of reexeuction.
-
+  // What if the buffers for HaloExchnage (malloc) and the others in SimFlat?
+  // They are not freed if ROOT CD gets re-executed before calling
+  // destroySimulation(), as does right now.
+  // However, this should NOT be an issue because "sim" is to be reused on
+  // purpose to test capability of reexeuction.
 #endif
+
 #if _CD1
   // cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep", kStrict,
-  // 0xF); // detect F8, F4, F2, F1
+  //                                 0xF); // detect F8, F4, F2, F1
   // cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep",
-  // kStrict|kDRAM, 0xF); // detect F8, F4, F2, F1
-  cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep",
+  //                                 0xE);
+  // 0xE vs 0xF
+  // kHDD vs kDRAM
+  cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "main_loop",
                                   kStrict | kDRAM, 0xE); // detect F8, F4, F2
-// cd_handle_t *lv1_cd = cd_create(getcurrentcd(), getNRanks(), "timestep",
-// kStrict|kDRAM, 0xE); // detect F8, F4, F2
 #endif
 
   // This is the CoMD main loop
@@ -143,21 +143,88 @@ int main(int argc, char **argv) {
   int iStep = 0;
   profileStart(loopTimer);
   for (; iStep < nSteps;) {
+#if _CD1
+    //TODO: add interval to control lv1_cd
+    const int CD1_INTERVAL = sim->preserveRateLevel1;
+    // Notice that iStep is increasing by printRate.
+    if (iStep % (CD1_INTERVAL*printRate) == 0) {
+      cd_begin(lv1_cd, "main_loop");
+      //FIXME: this has an issue and not working properly. redistributeAtoms
+      // will fail for some unknown issue. 
+      // Preservation for timestep(...) : Atoms : atoms??
+      int main_loop_pre_size =
+          preserveAtoms(lv1_cd, sim->atoms, sim->boxes->nTotalBoxes,
+                        1,  // is_all
+                        0,  // is_gid
+                        0,  // is_r
+                        0,  // is_p
+                        0,  // is_f
+                        0,  // is_U
+                        0,  // is_iSpecies
+                        0,  // from (entire atoms)
+                        -1, // to (entire atoms)
+                        0,  // is_print
+                        NULL);
+      // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
+      // FIXME: seems not enough
+      main_loop_pre_size += preserveLinkCell(lv1_cd, sim->boxes, 1 /*all*/,
+                                             0 /*nAtoms*/, 0 /*local*/,
+                                             0 /*nLocalBoxes*/,
+                                             0 /*nTotalBoxes*/);
+      // Preserve pbcFactor
+      main_loop_pre_size = preserveHaloAtom(lv1_cd, sim->atomExchange->parms, 
+                                            0 /*cellList*/, 
+                                            0 /*pbcFactor*/);
+#if DOPRV
+      // Constants (ignored): nStep, printRate
+      // iStep
+      cd_preserve(lv1_cd, &iStep, sizeof(int), kCopy, "timestep_iStep",
+                  "timestep_iStep");
+#endif //DOPRV
+      main_loop_pre_size += sizeof(int);
+    } // CD1_INTERVAL
+#endif
     startTimer(commReduceTimer);
+    // Let's ignore this for now since this doesn't contribute much and 
+    // estimator is probably to decide to remove this anyway.
+    // Note that SumAtoms() incurs communication as well
+    //TODO: add cd_complete and cd_begin here as for finer mapping
     sumAtoms(sim);
     stopTimer(commReduceTimer);
 
     printThings(sim, iStep, getElapsedTime(timestepTimer));
 
+#if _CD2
+    cd_handle_t *lv2_cd = NULL;
+    if (iStep % (CD1_INTERVAL*printRate) == 0) {
+    // KHDD vs kDRAM
+      lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep", 
+                                      kStrict | kDRAM, 0xF);
+      //cd_handle_t *lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep", 
+      //                                kStrict | kDRAM, 0xF);
+    }
+#endif //_CD2
     startTimer(timestepTimer);
     //--------------------------------
     //  [CD] Most of computation
     timestep(sim, printRate, sim->dt);
     //--------------------------------
     stopTimer(timestepTimer);
+#if _CD2
+    if (iStep % (CD1_INTERVAL*printRate) == 0) {
+      cd_destroy(lv2_cd);
+    }
+#endif 
 
     iStep += printRate;
-  }
+
+#if _CD1
+    if (iStep % (CD1_INTERVAL*printRate) == 0) {
+      cd_detect(lv1_cd);
+      cd_complete(lv1_cd);
+    }
+#endif
+  } // iStep
   profileStop(loopTimer);
 
   sumAtoms(sim);
@@ -208,8 +275,14 @@ SimFlat *initSimulation(Command cmd) {
   sim->printRate = cmd.printRate;
   sim->dt = cmd.dt;
   sim->doeam = cmd.doeam;
-#if _CD2
-  sim->preserveRate = cmd.preserveRate;
+#if _CD1
+  sim->preserveRateLevel1 = cmd.preserveRateLevel1;
+#endif
+#if _CD3
+  sim->preserveRateLevel3 = cmd.preserveRateLevel3;
+#endif
+#if _CD4
+  sim->preserveRateLevel4 = cmd.preserveRateLevel4;
 #endif
 
   sim->domain = NULL;

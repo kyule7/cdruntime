@@ -21,8 +21,14 @@ typedef struct CommandSt {
   int zproc;     //!< number of processors in z direction
   int nSteps;    //!< number of time steps to run
   int printRate; //!< number of steps between output
-#if _CD2
-  int preserveRate; //!< freq of preservations in leaf CD (ljForce.c)
+#if _CD1
+  int preserveRateLevel1; //!< interval for level1 CD
+#endif
+#if _CD3
+  int preserveRateLevel3; //!< interval for level3 CD
+#endif
+#if _CD4
+  int preserveRateLevel4; //!< interval for level4 CD
 #endif
   double dt;           //!< time step (in femtoseconds)
   double lat;          //!< lattice constant (in Angstroms)
