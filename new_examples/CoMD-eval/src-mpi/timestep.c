@@ -105,16 +105,18 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     
     // TODO: cd_preserve for output with kOutput(?)
     //       output: s->atoms->p
-#if _CD2
-    cd_detect(lv2_cd);
-    cd_complete(lv2_cd);
-#endif
+//FIXME:CD2 optimization
+//#if _CD2
+//    cd_detect(lv2_cd);
+//    cd_complete(lv2_cd);
+//#endif
 
 //*****************************************************************************
 //            cd boundary: position (0.09%)
 //*****************************************************************************
 #if _CD2
-    cd_begin(lv2_cd, "advancePosition");
+//FIXME:CD2 optimization
+//    cd_begin(lv2_cd, "advancePosition");
     // Preserve atoms->p (momenta of local atoms)
     int position_pre_size = preserveAtoms(lv2_cd, s->atoms,
                                           s->boxes->nLocalBoxes, // not Total
@@ -138,8 +140,9 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                                           1 /*nLocalBoxes*/,
                                           0 /*nTotalBoxes*/);
 #if DOPRV
-    cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, 
-                "advancePosition_ii", "advancePosition_ii");
+//FIXME:CD2 optimization
+//    cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, 
+//                "advancePosition_ii", "advancePosition_ii");
 #endif //DOPRV
     position_pre_size += sizeof(int);  // add the size of ii (loop index)
     //printf("\n preservation size for advancePosition %d\n", position_pre_size);
@@ -250,8 +253,8 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #if _CD3
     //FIXME: 8 (or getNRanks()) is not working properly as it doesn't get
     //       roll backed.
-    //TODO: evalute 1, 2, 4 childrencases
-    cd_handle_t *lv3_cd = cd_create(getcurrentcd(), 4, //getNRanks(), 
+    //TODO: evalute 1, 2, 4 children cases
+    cd_handle_t *lv3_cd = cd_create(getcurrentcd(), 1, //getNRanks(), 
                                     "ljForce", 
                                     kStrict | kDRAM, 0xC);
     //TODO: add interval to control lv3_cd
