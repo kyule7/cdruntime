@@ -861,6 +861,13 @@ static inline
 void CompletePhase(uint32_t phase)//, bool is_reexec=false)
 {
   CD_ASSERT(phaseTree.current_);
+  phaseTree.current_->IncSeqID(failed_phase == HEALTHY);
+//  phaseTree.current_->seq_end_++; // reinit at failure
+//  if(failed_phase == HEALTHY) {
+//    phaseTree.current_->seq_acc_++; // no reinit
+//  } else {
+//    phaseTree.current_->seq_acc_rb_++; // no reinit
+//  }
   if(tuned::tuning_enabled == false) {
     if(failed_phase != HEALTHY) { // reexecution
       CD_ASSERT(failed_phase >= 0);
@@ -1502,12 +1509,13 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
   
     // Increase sequential ID by one
     cd_id_.sequential_id_++; // reinit at create/destroy
-    phaseTree.current_->seq_end_++; // reinit at failure
-    if(failed_phase == HEALTHY) {
-      phaseTree.current_->seq_acc_++; // no reinit
-    } else {
-      phaseTree.current_->seq_acc_rb_++; // no reinit
-    }
+
+//    phaseTree.current_->seq_end_++; // reinit at failure
+//    if(failed_phase == HEALTHY) {
+//      phaseTree.current_->seq_acc_++; // no reinit
+//    } else {
+//      phaseTree.current_->seq_acc_rb_++; // no reinit
+//    }
     
     /// It deletes entry directory in the CD (for every Complete() call). 
     /// We might modify this in the profiler to support the overlapped data among sequential CDs.

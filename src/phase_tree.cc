@@ -197,8 +197,30 @@ void PhaseNode::PrintOutputJsonInternal(void)
 //  AddIndent(level_);
 //  fprintf(outAll, "}\n");
 //}
-
-void PhaseNode::Print(bool print_details, bool first) 
+void PhaseNode::PrintNode(bool print_details, FILE *outfile)
+{
+  FILE *output_fp = outfile;
+  std::string indent((level_)<<1, ' ');
+  std::string one_more_indent((level_+1)<<1, ' ');
+  fprintf(output_fp, "%sCD_%u_%u\n",                indent.c_str(), level_, phase_);
+  fprintf(output_fp, "%s{\n",                       indent.c_str());
+  fprintf(output_fp,   "%slabel      :%s\n",   one_more_indent.c_str(), label_.c_str());
+  fprintf(output_fp,   "%sseq ID(%ld~%ld) :%ld(%ld) // # executions\n", one_more_indent.c_str(), seq_begin_, seq_end_, seq_acc_, seq_acc_rb_);
+  fprintf(output_fp,   "%sstate      :%8u\n",  one_more_indent.c_str(), state_);
+  fprintf(output_fp,   "%sinterval   :%8ld\n", one_more_indent.c_str(), interval_);
+  if(print_details) {
+    fprintf(output_fp, "%serrortype  :0x%lX\n", one_more_indent.c_str(), errortype_);
+    fprintf(output_fp, "%ssiblingID  :%8u\n",  one_more_indent.c_str(), sibling_id_);
+    fprintf(output_fp, "%ssibling #  :%8u\n",  one_more_indent.c_str(), sibling_size_);
+    fprintf(output_fp, "%stask ID    :%8u\n",  one_more_indent.c_str(), task_id_);
+    fprintf(output_fp, "%stask #     :%8u\n",  one_more_indent.c_str(), task_size_);
+    fprintf(output_fp, "%scount(tune):%8ld\n", one_more_indent.c_str(), count_);
+    fprintf(output_fp, "%scount(cd)  :%8ld // # executions\n", one_more_indent.c_str(), seq_acc_);
+    fprintf(output_fp, "%s# recreated:%8ld // # rexecutions\n", one_more_indent.c_str(), seq_acc_rb_);
+    fprintf(output_fp, "%s", profile_.GetRTInfoStr(level_+1, RuntimeInfo::kPROF).c_str());
+  }
+}
+void PhaseNode::Print(bool print_details, bool first, FILE *outfile) 
 {
   if(first) {
 //    assert(outAll == NULL);
@@ -208,10 +230,15 @@ void PhaseNode::Print(bool print_details, bool first)
 //    outAll = fopen(filepath.c_str(), "a");
 //    printf("profile out filepath:%s , %s\n", cd::output_basepath.c_str(), std::string(CD_DEFAULT_OUTPUT_PROFILE).c_str());
 //    outAll = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_PROFILE)).c_str(), "a");
+//    
     memset(output_filepath, '\0', 256);
     sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_PROFILE);
 //    printf("[%s] %s\n", __func__, output_filepath);
-    outAll = fopen(output_filepath, "w+");
+    if(outfile == NULL) { // default
+      outAll = fopen(output_filepath, "w+");
+    } else {
+      outAll = outfile;
+    }
   }
   std::string indent((level_)<<1, ' ');
   std::string one_more_indent((level_+1)<<1, ' ');
@@ -236,7 +263,11 @@ void PhaseNode::Print(bool print_details, bool first)
   }
   fprintf(outAll, "%s}\n", indent.c_str());
   if(first) {
-    fclose(outAll);
+    if(outfile == NULL) { // default
+      fclose(outAll);
+    } else {
+      fflush(outAll);
+    }
   }
 }
 
@@ -310,9 +341,11 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
   }
 
 #if CD_TUNING_ENABLED == 0 && CD_RUNTIME_ENABLED == 1
-  auto pt = tuned::phaseNodeCache.find(phase);
-  assert(pt != tuned::phaseNodeCache.end());
-  cd::phaseTree.current_->errortype_ = pt->second->errortype_;
+  if(tuned::phaseNodeCache.empty() == false) {
+    auto pt = tuned::phaseNodeCache.find(phase);
+    assert(pt != tuned::phaseNodeCache.end());
+    cd::phaseTree.current_->errortype_ = pt->second->errortype_;
+  }
 #endif
 
 //  // First visit

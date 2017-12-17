@@ -251,7 +251,8 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     //FIXME: 8 (or getNRanks()) is not working properly as it doesn't get
     //       roll backed.
     //TODO: evalute 1, 2, 4 childrencases
-    cd_handle_t *lv3_cd = cd_create(getcurrentcd(), 4, //getNRanks(), 
+    printf("get n ranks:%d\n", getNRanks());
+    cd_handle_t *lv3_cd = cd_create(getcurrentcd(), getNRanks(), 
                                     "ljForce", 
                                     kStrict | kDRAM, 0xC);
     //TODO: add interval to control lv3_cd
