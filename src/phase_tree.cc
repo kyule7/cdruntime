@@ -412,6 +412,7 @@ void PhaseNode::GatherStats(void)
 //  RTInfoInt rt_info_int_recv;
 //  RTInfoFloat rt_info_float_recv;
   RTInfo<double> rt_info = profile_.GetRTInfo();
+  RTInfo<double> &rt_info_min = common::cd_prof_map[phase_].min_;
   RTInfo<double> &rt_info_max = common::cd_prof_map[phase_].max_;
   RTInfo<double> &rt_info_avg = common::cd_prof_map[phase_].avg_;
   RTInfo<double> &rt_info_std = common::cd_prof_map[phase_].std_;
@@ -426,6 +427,7 @@ void PhaseNode::GatherStats(void)
   //printf("\n----------- Before receive -----------\n");
 //  MPI_Reduce(&rt_info_int, &rt_info_int_recv, sizeof(RTInfoInt)/sizeof(uint64_t), MPI_UNSIGNED_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
 //  MPI_Reduce(&rt_info_float, &rt_info_float_recv, sizeof(RTInfoFloat)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&rt_info, &rt_info_min, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
   MPI_Reduce(&rt_info, &rt_info_max, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   MPI_Reduce(&rt_info, &rt_info_avg, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(&rt_info_sqsum, &rt_info_std, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -491,22 +493,22 @@ void CDProfiles::Print(std::ostream &os, const std::string &head, const std::str
   const int pz0 = 16;
   const int pz1 = 12;
   os << str  
-  << head << std::left << std::setw(pz0) << "exec : "        << std::setw(pz1) << avg_.exec_                << " (" << std::setw(pz1) << std_.exec_                 << "), max: " << std::setw(8) << max_.exec_ << tail
-  << head << std::left << std::setw(pz0) << "reexec : "      << std::setw(pz1) << avg_.reexec_              << " (" << std::setw(pz1) << std_.reexec_               << "), max: " << std::setw(8) << max_.reexec_ << tail
-  << head << std::left << std::setw(pz0) << "prv_copy : "    << std::setw(pz1) << avg_.prv_copy_            << " (" << std::setw(pz1) << std_.prv_copy_             << "), max: " << std::setw(8) << max_.prv_copy_ << tail
-  << head << std::left << std::setw(pz0) << "prv_ref : "     << std::setw(pz1) << avg_.prv_ref_             << " (" << std::setw(pz1) << std_.prv_ref_              << "), max: " << std::setw(8) << max_.prv_ref_ << tail
-  << head << std::left << std::setw(pz0) << "restore : "     << std::setw(pz1) << avg_.restore_             << " (" << std::setw(pz1) << std_.restore_              << "), max: " << std::setw(8) << max_.restore_ << tail
-  << head << std::left << std::setw(pz0) << "msg_logging : " << std::setw(pz1) << avg_.msg_logging_         << " (" << std::setw(pz1) << std_.msg_logging_          << "), max: " << std::setw(8) << max_.msg_logging_ << tail
-  << head << std::left << std::setw(pz0) << "total_time : "  << std::setw(pz1) << avg_.total_time_          << " (" << std::setw(pz1) << std_.total_time_           << "), max: " << std::setw(8) << max_.total_time_ << tail
-  << head << std::left << std::setw(pz0) << "reexec_time : " << std::setw(pz1) << avg_.reexec_time_         << " (" << std::setw(pz1) << std_.reexec_time_          << "), max: " << std::setw(8) << max_.reexec_time_ << tail
-  << head << std::left << std::setw(pz0) << "sync_time : "   << std::setw(pz1) << avg_.sync_time_           << " (" << std::setw(pz1) << std_.sync_time_            << "), max: " << std::setw(8) << max_.sync_time_ << tail
-  << head << std::left << std::setw(pz0) << "prv_time : "    << std::setw(pz1) << avg_.prv_elapsed_time_    << " (" << std::setw(pz1) << std_.prv_elapsed_time_     << "), max: " << std::setw(8) << max_.prv_elapsed_time_ << tail
-  << head << std::left << std::setw(pz0) << "rst_time : "    << std::setw(pz1) << avg_.rst_elapsed_time_    << " (" << std::setw(pz1) << std_.rst_elapsed_time_     << "), max: " << std::setw(8) << max_.rst_elapsed_time_ << tail
-  << head << std::left << std::setw(pz0) << "create_time : " << std::setw(pz1) << avg_.create_elapsed_time_ << " (" << std::setw(pz1) << std_.create_elapsed_time_  << "), max: " << std::setw(8) << max_.create_elapsed_time_ << tail
-  << head << std::left << std::setw(pz0) << "destroy_time : "<< std::setw(pz1) << avg_.destroy_elapsed_time_<< " (" << std::setw(pz1) << std_.destroy_elapsed_time_ << "), max: " << std::setw(8) << max_.destroy_elapsed_time_ << tail
-  << head << std::left << std::setw(pz0) << "begin_time : "  << std::setw(pz1) << avg_.begin_elapsed_time_  << " (" << std::setw(pz1) << std_.begin_elapsed_time_   << "), max: " << std::setw(8) << max_.begin_elapsed_time_ << tail
-  << head << std::left << std::setw(pz0) << "compl_time : "  << std::setw(pz1) << avg_.compl_elapsed_time_  << " (" << std::setw(pz1) << std_.compl_elapsed_time_   << "), max: " << std::setw(8) << max_.compl_elapsed_time_ << tail
-  << head << std::left << std::setw(pz0) << "advance_time : "<< std::setw(pz1) << avg_.advance_elapsed_time_<< " (" << std::setw(pz1) << std_.advance_elapsed_time_ << "), max: " << std::setw(8) << max_.advance_elapsed_time_ << tail
+  << head << std::left << std::setw(pz0) << "exec : "        << std::setw(pz1) << avg_.exec_                << " (" << std::setw(pz1) << std_.exec_                 << "), min-max: " << std::setw(8) << min_.exec_                 << "-" << std::setw(8) << max_.exec_                 << tail
+  << head << std::left << std::setw(pz0) << "reexec : "      << std::setw(pz1) << avg_.reexec_              << " (" << std::setw(pz1) << std_.reexec_               << "), min-max: " << std::setw(8) << min_.reexec_               << "-" << std::setw(8) << max_.reexec_               << tail
+  << head << std::left << std::setw(pz0) << "prv_copy : "    << std::setw(pz1) << avg_.prv_copy_            << " (" << std::setw(pz1) << std_.prv_copy_             << "), min-max: " << std::setw(8) << min_.prv_copy_             << "-" << std::setw(8) << max_.prv_copy_             << tail
+  << head << std::left << std::setw(pz0) << "prv_ref : "     << std::setw(pz1) << avg_.prv_ref_             << " (" << std::setw(pz1) << std_.prv_ref_              << "), min-max: " << std::setw(8) << min_.prv_ref_              << "-" << std::setw(8) << max_.prv_ref_              << tail
+  << head << std::left << std::setw(pz0) << "restore : "     << std::setw(pz1) << avg_.restore_             << " (" << std::setw(pz1) << std_.restore_              << "), min-max: " << std::setw(8) << min_.restore_              << "-" << std::setw(8) << max_.restore_              << tail
+  << head << std::left << std::setw(pz0) << "msg_logging : " << std::setw(pz1) << avg_.msg_logging_         << " (" << std::setw(pz1) << std_.msg_logging_          << "), min-max: " << std::setw(8) << min_.msg_logging_          << "-" << std::setw(8) << max_.msg_logging_          << tail
+  << head << std::left << std::setw(pz0) << "total_time : "  << std::setw(pz1) << avg_.total_time_          << " (" << std::setw(pz1) << std_.total_time_           << "), min-max: " << std::setw(8) << min_.total_time_           << "-" << std::setw(8) << max_.total_time_           << tail
+  << head << std::left << std::setw(pz0) << "reexec_time : " << std::setw(pz1) << avg_.reexec_time_         << " (" << std::setw(pz1) << std_.reexec_time_          << "), min-max: " << std::setw(8) << min_.reexec_time_          << "-" << std::setw(8) << max_.reexec_time_          << tail
+  << head << std::left << std::setw(pz0) << "sync_time : "   << std::setw(pz1) << avg_.sync_time_           << " (" << std::setw(pz1) << std_.sync_time_            << "), min-max: " << std::setw(8) << min_.sync_time_            << "-" << std::setw(8) << max_.sync_time_            << tail
+  << head << std::left << std::setw(pz0) << "prv_time : "    << std::setw(pz1) << avg_.prv_elapsed_time_    << " (" << std::setw(pz1) << std_.prv_elapsed_time_     << "), min-max: " << std::setw(8) << min_.prv_elapsed_time_     << "-" << std::setw(8) << max_.prv_elapsed_time_     << tail
+  << head << std::left << std::setw(pz0) << "rst_time : "    << std::setw(pz1) << avg_.rst_elapsed_time_    << " (" << std::setw(pz1) << std_.rst_elapsed_time_     << "), min-max: " << std::setw(8) << min_.rst_elapsed_time_     << "-" << std::setw(8) << max_.rst_elapsed_time_     << tail
+  << head << std::left << std::setw(pz0) << "create_time : " << std::setw(pz1) << avg_.create_elapsed_time_ << " (" << std::setw(pz1) << std_.create_elapsed_time_  << "), min-max: " << std::setw(8) << min_.create_elapsed_time_  << "-" << std::setw(8) << max_.create_elapsed_time_  << tail
+  << head << std::left << std::setw(pz0) << "destroy_time : "<< std::setw(pz1) << avg_.destroy_elapsed_time_<< " (" << std::setw(pz1) << std_.destroy_elapsed_time_ << "), min-max: " << std::setw(8) << min_.destroy_elapsed_time_ << "-" << std::setw(8) << max_.destroy_elapsed_time_ << tail
+  << head << std::left << std::setw(pz0) << "begin_time : "  << std::setw(pz1) << avg_.begin_elapsed_time_  << " (" << std::setw(pz1) << std_.begin_elapsed_time_   << "), min-max: " << std::setw(8) << min_.begin_elapsed_time_   << "-" << std::setw(8) << max_.begin_elapsed_time_   << tail
+  << head << std::left << std::setw(pz0) << "compl_time : "  << std::setw(pz1) << avg_.compl_elapsed_time_  << " (" << std::setw(pz1) << std_.compl_elapsed_time_   << "), min-max: " << std::setw(8) << min_.compl_elapsed_time_   << "-" << std::setw(8) << max_.compl_elapsed_time_   << tail
+  << head << std::left << std::setw(pz0) << "advance_time : "<< std::setw(pz1) << avg_.advance_elapsed_time_<< " (" << std::setw(pz1) << std_.advance_elapsed_time_ << "), min-max: " << std::setw(8) << min_.advance_elapsed_time_ << "-" << std::setw(8) << max_.advance_elapsed_time_ << tail
   <<  std::endl;
 }
 
@@ -529,6 +531,23 @@ void CDProfiles::PrintJSON(std::ostream &os, const std::string &head)
   << head << "\"begin_time\" : "  << max_.begin_elapsed_time_       << ",\n"
   << head << "\"compl_time\" : "  << max_.compl_elapsed_time_       << ",\n"
   << head << "\"advance_time\" : "<< max_.advance_elapsed_time_     << ",\n"
+  // min << std::endl
+  << head << "\"min exec\" : "        << min_.exec_                 << ",\n"
+  << head << "\"min reexec\" : "      << min_.reexec_               << ",\n"
+  << head << "\"min prv_copy\" : "    << min_.prv_copy_             << ",\n"
+  << head << "\"min prv_ref\" : "     << min_.prv_ref_              << ",\n"
+  << head << "\"min restore\" : "     << min_.restore_              << ",\n"
+  << head << "\"min msg_logging\" : " << min_.msg_logging_          << ",\n"
+  << head << "\"min total_time\" : "  << min_.total_time_           << ",\n"
+  << head << "\"min reexec_time\" : " << min_.reexec_time_          << ",\n"
+  << head << "\"min sync_time\" : "   << min_.sync_time_            << ",\n"
+  << head << "\"min prv_time\" : "    << min_.prv_elapsed_time_     << ",\n"
+  << head << "\"min rst_time\" : "    << min_.rst_elapsed_time_     << ",\n"
+  << head << "\"min create_time\" : " << min_.create_elapsed_time_  << ",\n"
+  << head << "\"min destroy_time\" : "<< min_.destroy_elapsed_time_ << ",\n"
+  << head << "\"min begin_time\" : "  << min_.begin_elapsed_time_   << ",\n"
+  << head << "\"min compl_time\" : "  << min_.compl_elapsed_time_   << ",\n"
+  << head << "\"min advance_time\" : "<< min_.advance_elapsed_time_ << ",\n"
   // avg << std::endl
   << head << "\"avg exec\" : "        << avg_.exec_                 << ",\n"
   << head << "\"avg reexec\" : "      << avg_.reexec_               << ",\n"

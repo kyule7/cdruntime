@@ -277,6 +277,7 @@ struct CDProfiles {
   RTInfo<double> avg_;
   RTInfo<double> std_;
   RTInfo<double> max_;
+  RTInfo<double> min_;
   //void Print(std::ostream &os, const char *str="");
   void Print(std::ostream &os, const std::string &head, const std::string &tail, const char *str="");
   void PrintJSON(std::ostream &os, const std::string &head);
