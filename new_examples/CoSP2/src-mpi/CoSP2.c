@@ -54,6 +54,9 @@
 #include "performance.h"
 #include "mycommand.h"
 #include "constants.h"
+#if _ROOTCD
+#include "cd.h"
+#endif
 
 SparseMatrix* initSimulation(Command cmd)
 {

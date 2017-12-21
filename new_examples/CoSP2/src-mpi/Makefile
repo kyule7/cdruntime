@@ -9,6 +9,10 @@ DOUBLE_PRECISION = ON
 DO_MPI = ON
 #DO_MPI = OFF
 
+# Containment Domain (ON/OFF)
+ENABLE_CD = ON
+#ENABLE_CD = OFF
+
 # Contiguous arrays
 CONTIG_MATRIX = ON
 #CONTIG_MATRIX = OFF
@@ -19,7 +23,8 @@ DIAGPOS = POS1
 
 #CC = gcc
 CC = mpicc
-CFLAGS = -std=c99 -fopenmp -D$(DIAGPOS)
+#CFLAGS = -std=c99 -fopenmp -D$(DIAGPOS)
+CFLAGS = -std=gnu11 -fopenmp -D$(DIAGPOS)
 OPTFLAGS = -O5
 INCLUDES =
 C_LIB = -lm
@@ -38,6 +43,15 @@ OTHER_INCLUDE =
 .PHONY: DEFAULT clean distclean depend
 
 BIN_DIR=../bin
+
+
+ifeq ($(ENABLE_CD), ON)
+CD_ROOT := $(CD_PATH)
+CD_FLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1
+CD_LINKFLAGS := -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
+CFLAGS += ${CD_FLAGS}
+C_LIB += ${CD_LINKFLAGS}
+endif
 
 # Add contiguous arrays
 ifeq ($(CONTIG_MATRIX), ON)
