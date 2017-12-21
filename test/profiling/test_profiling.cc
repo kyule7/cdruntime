@@ -83,26 +83,35 @@ uint32_t level_gen = 0;
 void TestPhase(void) 
 {
   uint32_t level = level_gen++;
+  cd::begin_clk = CD_CLOCK();
   uint32_t phase = BeginPhase(level, "Root");
+  phaseTree.current_->profile_.RecordData("Root_prv", 1000, kCopy, false);
+  phaseTree.current_->profile_.reexec_time_ = 2;
+  phaseTree.current_->profile_.reexec_ = 4;
   if(my_rank == 0) {
     phaseTree.current_->PrintNode(true, stdout);
   }
+
   {
     uint32_t level = level_gen++;
     uint32_t phase = 0;
     for(int i = 0; i<5; i++) {
-      phase = BeginPhase(level, "Lv1_first");
       cd::begin_clk = CD_CLOCK();
+      phase = BeginPhase(level, "Lv1_first");
       phaseTree.current_->profile_.RecordData("Lv1_first_prv1", 1000, kCopy, false);
+      phaseTree.current_->profile_.reexec_time_ = 2 * my_rank;
+      phaseTree.current_->profile_.reexec_ = 4 * my_rank;
       if(my_rank == 0) {
         phaseTree.current_->PrintNode(true, stdout);
       }
       CompletePhase(phase); // Lv1
     }
     for(int i = 0; i<10; i++) {
-      phase = BeginPhase(level, "Lv1_second");
       cd::begin_clk = CD_CLOCK();
+      phase = BeginPhase(level, "Lv1_second");
       phaseTree.current_->profile_.RecordData("Lv1_second_prv1", 1000, kCopy, false);
+      phaseTree.current_->profile_.reexec_time_ = 4 * my_rank;
+      phaseTree.current_->profile_.reexec_ = 6 * my_rank;
       if(my_rank == 0) {
         phaseTree.current_->PrintNode(true, stdout);
       }
@@ -111,6 +120,7 @@ void TestPhase(void)
   }
 
   CompletePhase(phase);
+  phaseTree.PrintStats();
 }
 
 int main(int argc, char *argv[])
@@ -119,7 +129,8 @@ int main(int argc, char *argv[])
 
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
-  
+  cd::myTaskID = my_rank;
+  cd::totalTaskSize = comm_size;
   printf("[%s %d] Begin Test\n\n", __func__, my_rank);
  
   MPI_Barrier(MPI_COMM_WORLD);

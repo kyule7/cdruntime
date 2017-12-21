@@ -273,6 +273,15 @@ struct PhaseTree {
     void PrintStats(void);
 };
 
+struct CDProfiles {
+  RTInfo<double> avg_;
+  RTInfo<double> std_;
+  RTInfo<double> max_;
+  //void Print(std::ostream &os, const char *str="");
+  void Print(std::ostream &os, const std::string &head, const std::string &tail, const char *str="");
+  void PrintJSON(std::ostream &os, const std::string &head);
+};
+extern std::map<uint32_t, CDProfiles> cd_prof_map;
 } // namespace common ends
 
 using namespace common;

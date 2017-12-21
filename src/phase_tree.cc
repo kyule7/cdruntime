@@ -2,9 +2,11 @@
 #include "cd_global.h"
 #include "cd_def_preserve.h"
 #include "sys_err_t.h"
+#include <iomanip>      // std::setw
 using namespace common;
 using namespace std;
 
+std::map<uint32_t, CDProfiles> common::cd_prof_map;
 PhaseTree     cd::phaseTree;
 PhasePathType cd::phasePath;
 std::map<uint32_t, PhaseNode *> cd::phaseNodeCache;
@@ -134,7 +136,8 @@ void PhaseNode::PrintOutputJson(void)
                    "  \"CD info\" : {\n"
          );
   PrintOutputJsonInternal();
-  fprintf(outJSON, "  } // CD info ends\n"
+  fprintf(outJSON, "    \"last_param\" : {}\n"
+                   "  } // CD info ends\n"
                    "}\n"
          );
   fclose(outJSON);
@@ -142,10 +145,10 @@ void PhaseNode::PrintOutputJson(void)
   
 }
 
-static int adjust_tab = 2;
+static int adjust_tab = 1;
 void PhaseNode::PrintOutputJsonInternal(void) 
 {
-  int tabsize = level_ + adjust_tab;
+  int tabsize = level_ * 2  + adjust_tab;
   std::string indent((tabsize)<<1, ' ');
   std::string one_more_indent((tabsize+1)<<1, ' ');
   std::string two_more_indent((tabsize+2)<<1, ' ');
@@ -153,33 +156,43 @@ void PhaseNode::PrintOutputJsonInternal(void)
 //  //TODO: lable may be better for CD name instead of level and phase
 //  fprintf(outYAML, "%s\"CD_%u_%u\" : {\n",               indent.c_str(), level_, phase_);
 //  //TODO: the estimator does not require "label".
-//  fprintf(outYAML, "%s\"label\" : %s\n",        one_more_indent.c_str(), label_.c_str());
-//  fprintf(outYAML, "%s\"interval\" : %ld\n",    one_more_indent.c_str(), interval_);
-//  fprintf(outYAML, "%s\"errortype\" : 0x%lX\n", one_more_indent.c_str(), errortype_);
+//  fprintf(outYAML, "%s\"label\" : %s\n",        two_more_indent.c_str(), label_.c_str());
+//  fprintf(outYAML, "%s\"interval\" : %ld\n",    two_more_indent.c_str(), interval_);
+//  fprintf(outYAML, "%s\"errortype\" : 0x%lX\n", two_more_indent.c_str(), errortype_);
 //  //YKWON: added the information about siblings
 //  //FIXME: still this doesn't product the correct number of siblings
-//  fprintf(outYAML, "%s\"siblingID\" : %8u\n",  one_more_indent.c_str(), sibling_id_);
-//  fprintf(outYAML, "%s\"sibling #\" : %8u\n",  one_more_indent.c_str(), sibling_size_);
+//  fprintf(outYAML, "%s\"siblingID\" : %8u\n",  two_more_indent.c_str(), sibling_id_);
+//  fprintf(outYAML, "%s\"sibling #\" : %8u\n",  two_more_indent.c_str(), sibling_size_);
 //  // This print exec_cnt, reex_cnt, tot_time, reex_time, vol_copy, vol_refer
 //  // comm_log and error_ven, which are also printed in profile.out.
 //  // TODO: let's change to be in B/ MB/ GB
 //  fprintf(outYAML, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
-//  fprintf(outYAML, "%s\"ChildCDs\" : {\n", one_more_indent.c_str());
+//  fprintf(outYAML, "%s\"ChildCDs\" : {\n", two_more_indent.c_str());
 //=======
-  fprintf(outJSON, "%s\"CD_%u_%u\" : {\n",              indent.c_str(), level_, phase_);
-  fprintf(outJSON, "%s\"label\"    : %s\n",    one_more_indent.c_str(), label_.c_str());
-  fprintf(outJSON, "%s\"interval\" : %ld\n",   one_more_indent.c_str(), interval_);
-  fprintf(outJSON, "%s\"errortype\": 0x%lX\n", one_more_indent.c_str(), errortype_);
-  fprintf(outJSON, "%s\"siblingID\" : %8u\n",  one_more_indent.c_str(), sibling_id_);
-  fprintf(outJSON, "%s\"sibling #\" : %8u\n",  one_more_indent.c_str(), sibling_size_);
-  fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
-  fprintf(outJSON, "%s\"ChildCDs\" : {\n", one_more_indent.c_str());
+  fprintf(outJSON, "%s\"CD_%u_%u\" : {\n",      one_more_indent.c_str(), level_, phase_);
+  fprintf(outJSON, "%s\"label\"    : %s,\n",    two_more_indent.c_str(), label_.c_str());
+  fprintf(outJSON, "%s\"interval\" : %ld,\n",   two_more_indent.c_str(), interval_);
+  fprintf(outJSON, "%s\"errortype\": 0x%lX,\n", two_more_indent.c_str(), errortype_);
+  fprintf(outJSON, "%s\"siblingID\" : %8u,\n",  two_more_indent.c_str(), sibling_id_);
+  fprintf(outJSON, "%s\"sibling #\" : %8u,\n",  two_more_indent.c_str(), sibling_size_);
+  std::ostringstream oss; 
+  cd_prof_map[phase_].PrintJSON(oss, two_more_indent);
+  profile_.GetPrvDetails(oss, two_more_indent);
+//  cout << " DEBUG 22!!! \n" << oss.str() << endl; 
+//  getchar();
+  fprintf(outJSON, "%s", oss.str().c_str());
+  //fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
+  fprintf(outJSON, "%s\"ChildCDs\" : {\n", two_more_indent.c_str());
 
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->PrintOutputJsonInternal();
+//    if(it != children_.end() - 1)
+//      fprintf(outJSON, ",\n");
+//    else
+//      fprintf(outJSON, "\n");
   }
-  fprintf(outJSON, "%s}\n", one_more_indent.c_str());
-  fprintf(outJSON, "%s}\n",          indent.c_str());
+  fprintf(outJSON, "%s} // ChildCDs ends\n", two_more_indent.c_str());
+  fprintf(outJSON, "%s}", one_more_indent.c_str());
 }
 
 //void PhaseNode::Print(void) 
@@ -255,8 +268,15 @@ void PhaseNode::Print(bool print_details, bool first, FILE *outfile)
     fprintf(outAll, "%stask #     :%8u\n",  one_more_indent.c_str(), task_size_);
     fprintf(outAll, "%scount(tune):%8ld\n", one_more_indent.c_str(), count_);
     fprintf(outAll, "%scount(cd)  :%8ld // # executions\n", one_more_indent.c_str(), seq_acc_);
-    fprintf(outAll, "%s# recreated:%8ld // # rexecutions\n", one_more_indent.c_str(), seq_acc_rb_);
-    fprintf(outAll, "%s", profile_.GetRTInfoStr(level_+1, RuntimeInfo::kPROF).c_str());
+//    fprintf(outAll, "%s# recreated:%8ld // # rexecutions\n", one_more_indent.c_str(), seq_acc_rb_);
+    
+    std::ostringstream oss; 
+    cd_prof_map[phase_].Print(oss, one_more_indent, "\n");
+//    profile_.GetPrvDetails(oss, one_more_indent);
+//    cout << " DEBUG!!! \n" << oss.str() << endl;
+//    getchar();
+    fprintf(outAll, "%s", oss.str().c_str());
+//    fprintf(outAll, "%s", profile_.GetRTInfoStr(level_+1, RuntimeInfo::kPROF).c_str());
   }
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->Print(print_details, false);
@@ -384,17 +404,56 @@ void PhaseNode::GatherStats(void)
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->GatherStats();
   }
+  
+  //char buf[64];
   printf("[%s %d] level:%u, phase:%u, taskid:%u\n", __func__, cd::myTaskID, phase_, level_, task_id_);
-  RTInfoInt rt_info_int     = profile_.GetRTInfoInt();
-  RTInfoFloat rt_info_float = profile_.GetRTInfoFloat();
-  RTInfoInt rt_info_int_recv;
-  RTInfoFloat rt_info_float_recv;
-
-  MPI_Reduce(&rt_info_int, &rt_info_int_recv, sizeof(RTInfoInt)/sizeof(uint64_t), MPI_UNSIGNED_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&rt_info_float, &rt_info_float_recv, sizeof(RTInfoFloat)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+//  RTInfoInt rt_info_int     = profile_.GetRTInfoInt();
+//  RTInfoFloat rt_info_float = profile_.GetRTInfoFloat();
+//  RTInfoInt rt_info_int_recv;
+//  RTInfoFloat rt_info_float_recv;
+  RTInfo<double> rt_info = profile_.GetRTInfo();
+  RTInfo<double> &rt_info_max = common::cd_prof_map[phase_].max_;
+  RTInfo<double> &rt_info_avg = common::cd_prof_map[phase_].avg_;
+  RTInfo<double> &rt_info_std = common::cd_prof_map[phase_].std_;
+  RTInfo<double> rt_info_sqsum(rt_info);
+  rt_info_sqsum.DoSq();
+  //sprintf(buf, "Task %d", cd::myTaskID);
+  //rt_info.Print(std::cout, buf);
+  //sprintf(buf, "Task %d Sq", cd::myTaskID);
+  //rt_info_sqsum.Print(std::cout, buf);
+//  rt_info_int.Print(buf);
+//  rt_info_float.Print(buf);
+  //printf("\n----------- Before receive -----------\n");
+//  MPI_Reduce(&rt_info_int, &rt_info_int_recv, sizeof(RTInfoInt)/sizeof(uint64_t), MPI_UNSIGNED_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
+//  MPI_Reduce(&rt_info_float, &rt_info_float_recv, sizeof(RTInfoFloat)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&rt_info, &rt_info_max, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&rt_info, &rt_info_avg, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&rt_info_sqsum, &rt_info_std, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   if(cd::myTaskID == 0){
-      profile_.SetRTInfoInt(rt_info_int_recv);
-      profile_.SetRTInfoFloat(rt_info_float_recv);
+//      profile_.SetRTInfoInt(rt_info_int_recv);
+//      profile_.SetRTInfoFloat(rt_info_float_recv);
+      //printf("\n----------- After receive -----------\n");
+
+      //getchar();
+     //sprintf(buf, "Task %d Max", cd::myTaskID);
+     //rt_info_max.Print(std::cout, buf);
+      assert(cd::totalTaskSize > 0);
+      rt_info_avg.Divide(cd::totalTaskSize); // first momentum
+      rt_info_std.Divide(cd::totalTaskSize); // second momentum
+      RTInfo<double> rt_info_avg_sqsum(rt_info_avg);
+      rt_info_avg_sqsum.DoSq();
+     //sprintf(buf, "Task %d 2nd", cd::myTaskID);
+     //rt_info_std.Print(std::cout, buf);
+      rt_info_std -= rt_info_avg_sqsum;
+      rt_info_std.DoSqrt();
+     //sprintf(buf, "Task %d Avg", cd::myTaskID);
+     //rt_info_avg.Print(std::cout, buf);
+     //sprintf(buf, "Task %d Std", cd::myTaskID);
+     //rt_info_std.Print(std::cout, buf);
+     //sprintf(buf, "Task %d All\n", cd::myTaskID);
+     //common::cd_prof_map[phase_].Print(std::cout, " - ", "\n", buf);
+      //printf("\n----------- Done  receive -----------\n");
+      //getchar();
   }
 }
 
@@ -425,4 +484,83 @@ void PhaseTree::PrintStats(void)
     }
   }
 
+}
+
+void CDProfiles::Print(std::ostream &os, const std::string &head, const std::string &tail, const char *str)
+{
+  const int pz0 = 16;
+  const int pz1 = 12;
+  os << str  
+  << head << std::left << std::setw(pz0) << "exec : "        << std::setw(pz1) << avg_.exec_                << " (" << std::setw(pz1) << std_.exec_                 << "), max: " << std::setw(8) << max_.exec_ << tail
+  << head << std::left << std::setw(pz0) << "reexec : "      << std::setw(pz1) << avg_.reexec_              << " (" << std::setw(pz1) << std_.reexec_               << "), max: " << std::setw(8) << max_.reexec_ << tail
+  << head << std::left << std::setw(pz0) << "prv_copy : "    << std::setw(pz1) << avg_.prv_copy_            << " (" << std::setw(pz1) << std_.prv_copy_             << "), max: " << std::setw(8) << max_.prv_copy_ << tail
+  << head << std::left << std::setw(pz0) << "prv_ref : "     << std::setw(pz1) << avg_.prv_ref_             << " (" << std::setw(pz1) << std_.prv_ref_              << "), max: " << std::setw(8) << max_.prv_ref_ << tail
+  << head << std::left << std::setw(pz0) << "restore : "     << std::setw(pz1) << avg_.restore_             << " (" << std::setw(pz1) << std_.restore_              << "), max: " << std::setw(8) << max_.restore_ << tail
+  << head << std::left << std::setw(pz0) << "msg_logging : " << std::setw(pz1) << avg_.msg_logging_         << " (" << std::setw(pz1) << std_.msg_logging_          << "), max: " << std::setw(8) << max_.msg_logging_ << tail
+  << head << std::left << std::setw(pz0) << "total_time : "  << std::setw(pz1) << avg_.total_time_          << " (" << std::setw(pz1) << std_.total_time_           << "), max: " << std::setw(8) << max_.total_time_ << tail
+  << head << std::left << std::setw(pz0) << "reexec_time : " << std::setw(pz1) << avg_.reexec_time_         << " (" << std::setw(pz1) << std_.reexec_time_          << "), max: " << std::setw(8) << max_.reexec_time_ << tail
+  << head << std::left << std::setw(pz0) << "sync_time : "   << std::setw(pz1) << avg_.sync_time_           << " (" << std::setw(pz1) << std_.sync_time_            << "), max: " << std::setw(8) << max_.sync_time_ << tail
+  << head << std::left << std::setw(pz0) << "prv_time : "    << std::setw(pz1) << avg_.prv_elapsed_time_    << " (" << std::setw(pz1) << std_.prv_elapsed_time_     << "), max: " << std::setw(8) << max_.prv_elapsed_time_ << tail
+  << head << std::left << std::setw(pz0) << "rst_time : "    << std::setw(pz1) << avg_.rst_elapsed_time_    << " (" << std::setw(pz1) << std_.rst_elapsed_time_     << "), max: " << std::setw(8) << max_.rst_elapsed_time_ << tail
+  << head << std::left << std::setw(pz0) << "create_time : " << std::setw(pz1) << avg_.create_elapsed_time_ << " (" << std::setw(pz1) << std_.create_elapsed_time_  << "), max: " << std::setw(8) << max_.create_elapsed_time_ << tail
+  << head << std::left << std::setw(pz0) << "destroy_time : "<< std::setw(pz1) << avg_.destroy_elapsed_time_<< " (" << std::setw(pz1) << std_.destroy_elapsed_time_ << "), max: " << std::setw(8) << max_.destroy_elapsed_time_ << tail
+  << head << std::left << std::setw(pz0) << "begin_time : "  << std::setw(pz1) << avg_.begin_elapsed_time_  << " (" << std::setw(pz1) << std_.begin_elapsed_time_   << "), max: " << std::setw(8) << max_.begin_elapsed_time_ << tail
+  << head << std::left << std::setw(pz0) << "compl_time : "  << std::setw(pz1) << avg_.compl_elapsed_time_  << " (" << std::setw(pz1) << std_.compl_elapsed_time_   << "), max: " << std::setw(8) << max_.compl_elapsed_time_ << tail
+  << head << std::left << std::setw(pz0) << "advance_time : "<< std::setw(pz1) << avg_.advance_elapsed_time_<< " (" << std::setw(pz1) << std_.advance_elapsed_time_ << "), max: " << std::setw(8) << max_.advance_elapsed_time_ << tail
+  <<  std::endl;
+}
+
+void CDProfiles::PrintJSON(std::ostream &os, const std::string &head)
+{
+  os   
+  << head << "\"exec\" : "        << max_.exec_                     << ",\n"
+  << head << "\"reexec\" : "      << max_.reexec_                   << ",\n"
+  << head << "\"prv_copy\" : "    << max_.prv_copy_                 << ",\n"
+  << head << "\"prv_ref\" : "     << max_.prv_ref_                  << ",\n"
+  << head << "\"restore\" : "     << max_.restore_                  << ",\n"
+  << head << "\"msg_logging\" : " << max_.msg_logging_              << ",\n"
+  << head << "\"total_time\" : "  << max_.total_time_               << ",\n"
+  << head << "\"reexec_time\" : " << max_.reexec_time_              << ",\n"
+  << head << "\"sync_time\" : "   << max_.sync_time_                << ",\n"
+  << head << "\"prv_time\" : "    << max_.prv_elapsed_time_         << ",\n"
+  << head << "\"rst_time\" : "    << max_.rst_elapsed_time_         << ",\n"
+  << head << "\"create_time\" : " << max_.create_elapsed_time_      << ",\n"
+  << head << "\"destroy_time\" : "<< max_.destroy_elapsed_time_     << ",\n"
+  << head << "\"begin_time\" : "  << max_.begin_elapsed_time_       << ",\n"
+  << head << "\"compl_time\" : "  << max_.compl_elapsed_time_       << ",\n"
+  << head << "\"advance_time\" : "<< max_.advance_elapsed_time_     << ",\n"
+  // avg << std::endl
+  << head << "\"avg exec\" : "        << avg_.exec_                 << ",\n"
+  << head << "\"avg reexec\" : "      << avg_.reexec_               << ",\n"
+  << head << "\"avg prv_copy\" : "    << avg_.prv_copy_             << ",\n"
+  << head << "\"avg prv_ref\" : "     << avg_.prv_ref_              << ",\n"
+  << head << "\"avg restore\" : "     << avg_.restore_              << ",\n"
+  << head << "\"avg msg_logging\" : " << avg_.msg_logging_          << ",\n"
+  << head << "\"avg total_time\" : "  << avg_.total_time_           << ",\n"
+  << head << "\"avg reexec_time\" : " << avg_.reexec_time_          << ",\n"
+  << head << "\"avg sync_time\" : "   << avg_.sync_time_            << ",\n"
+  << head << "\"avg prv_time\" : "    << avg_.prv_elapsed_time_     << ",\n"
+  << head << "\"avg rst_time\" : "    << avg_.rst_elapsed_time_     << ",\n"
+  << head << "\"avg create_time\" : " << avg_.create_elapsed_time_  << ",\n"
+  << head << "\"avg destroy_time\" : "<< avg_.destroy_elapsed_time_ << ",\n"
+  << head << "\"avg begin_time\" : "  << avg_.begin_elapsed_time_   << ",\n"
+  << head << "\"avg compl_time\" : "  << avg_.compl_elapsed_time_   << ",\n"
+  << head << "\"avg advance_time\" : "<< avg_.advance_elapsed_time_ << ",\n"
+  // std << std::endl
+  << head << "\"std exec\" : "        << std_.exec_                 << ",\n"
+  << head << "\"std reexec\" : "      << std_.reexec_               << ",\n"
+  << head << "\"std prv_copy\" : "    << std_.prv_copy_             << ",\n"
+  << head << "\"std prv_ref\" : "     << std_.prv_ref_              << ",\n"
+  << head << "\"std restore\" : "     << std_.restore_              << ",\n"
+  << head << "\"std msg_logging\" : " << std_.msg_logging_          << ",\n"
+  << head << "\"std total_time\" : "  << std_.total_time_           << ",\n"
+  << head << "\"std reexec_time\" : " << std_.reexec_time_          << ",\n"
+  << head << "\"std sync_time\" : "   << std_.sync_time_            << ",\n"
+  << head << "\"std prv_time\" : "    << std_.prv_elapsed_time_     << ",\n"
+  << head << "\"std rst_time\" : "    << std_.rst_elapsed_time_     << ",\n"
+  << head << "\"std create_time\" : " << std_.create_elapsed_time_  << ",\n"
+  << head << "\"std destroy_time\" : "<< std_.destroy_elapsed_time_ << ",\n"
+  << head << "\"std begin_time\" : "  << std_.begin_elapsed_time_   << ",\n"
+  << head << "\"std compl_time\" : "  << std_.compl_elapsed_time_   << ",\n"
+  << head << "\"std advance_time\" : "<< std_.advance_elapsed_time_ << ",\n";
 }

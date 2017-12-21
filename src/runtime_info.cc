@@ -109,6 +109,22 @@ string RuntimeInfo::GetRTInfoStr(int cnt, int style)
   return oss.str();  
 }
 
+void RuntimeInfo::GetPrvDetails(std::ostream &oss, const std::string &indent)
+{
+  oss << indent << "\"cons\" : {\n";
+  for(auto it=input_.begin(); it!=input_.end(); ++it) {
+    oss << indent << "  " << it->first.c_str() << ':' 
+        << it->second.size_ << ',' << it->second.count_ << '\n';
+  }
+  oss << indent << "},\n";
+  oss << indent << "\"prod\" : {\n";
+  for(auto it=output_.begin(); it!=output_.end(); ++it) {
+    oss << indent << "  " << it->first.c_str() << ':' 
+        << it->second.size_ << ',' << it->second.count_ << '\n';
+  }
+  oss << indent << "},\n";
+}
+
 void RuntimeInfo::Print(void)
 {
   printf("%s", GetString().c_str());
