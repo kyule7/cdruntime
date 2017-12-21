@@ -118,6 +118,14 @@ int main(int argc, char** argv)
     printf("idemTol = %lg\n\n", idemTol);
   }
 
+#if _ROOTCD
+  //TODO: Should ROOTCD contain initialization step (pre)?
+  //      For now, let's include it since it accounts for some portion of time.
+  cd_handle_t *root_cd = cd_init(nRanks, myRank, kHDD);
+  cd_begin(root_cd, "Root");
+  //TODO: cd_preserve
+#endif 
+
   // Initialize
   startTimer(preTimer);
   SparseMatrix* spH = initSimulation(cmd);
@@ -151,8 +159,13 @@ int main(int argc, char** argv)
   destroySparseMatrix(spH);
   destroyDecomposition(domain);
 
-  destroyParallel();
+#if _ROOTCD
+  cd_detect(root_cd);
+  cd_complete(root_cd);
+  cd_finalize();
+#endif
 
+  destroyParallel();
   return 0;
 }
 

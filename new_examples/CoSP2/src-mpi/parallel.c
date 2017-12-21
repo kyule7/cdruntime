@@ -17,8 +17,11 @@
 #include <string.h>
 #include <assert.h>
 
-static int myRank = 0;
-static int nRanks = 1;
+//static int myRank = 0;
+//static int nRanks = 1;
+int myRank = 0;
+int nRanks = 1;
+
 #ifdef DO_MPI
 static MPI_Request* requestList;
 #endif

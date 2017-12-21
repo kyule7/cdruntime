@@ -24,6 +24,9 @@ static void zeroReal3(real3 a)
    a[2] = 0.0;
 }
 
+extern int myRank;
+extern int nRanks;
+
 #define screenOut stdout
 
 #endif
