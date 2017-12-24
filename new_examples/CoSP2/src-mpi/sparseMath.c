@@ -14,7 +14,8 @@
 
 // \details
 // Sparse matrix multiply X^2
-void sparseX2(real_t* trX, real_t* trX2, struct SparseMatrixSt* xmatrix, struct SparseMatrixSt* x2matrix, struct DomainSt* domain)
+void sparseX2(real_t* trX, real_t* trX2, struct SparseMatrixSt* xmatrix, 
+              struct SparseMatrixSt* x2matrix, struct DomainSt* domain)
 {
   int hsize = xmatrix->hsize;
   int ix[hsize];

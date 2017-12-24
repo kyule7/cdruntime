@@ -121,6 +121,7 @@ int main(int argc, char** argv)
 #if _ROOTCD
   //TODO: Should ROOTCD contain initialization step (pre)?
   //      For now, let's include it since it accounts for some portion of time.
+  //      (15% of Loop)
   cd_handle_t *root_cd = cd_init(nRanks, myRank, kHDD);
   cd_begin(root_cd, "Root");
   //TODO: cd_preserve
@@ -128,7 +129,10 @@ int main(int argc, char** argv)
 
   // Initialize
   startTimer(preTimer);
-  SparseMatrix* spH = initSimulation(cmd);
+  //----------------------------------------------------------------------------
+  // This takes 13% of Loop, most of which read Hamiltonian from a file
+  SparseMatrix* spH = initSimulation(cmd); 
+  //----------------------------------------------------------------------------
   stopTimer(preTimer);
 
   // Calculate domain decomposition
@@ -142,7 +146,10 @@ int main(int argc, char** argv)
 
   // Perform SP2 loop
   barrierParallel();
+  //----------------------------------------------------------------------------
+  // This takes most of simulation time (77%)
   sp2Loop(spH, domain);
+  //----------------------------------------------------------------------------
 
   // Done
   profileStop(totalTimer);

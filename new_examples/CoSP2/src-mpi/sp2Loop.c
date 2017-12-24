@@ -71,7 +71,10 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
 
     // Matrix multiply X^2
     startTimer(x2Timer);
+    //--------------------------------------------------------------------------
+    // This accounts for most computations (49.5% of Loop)
     sparseX2(&trX, &trX2, xmatrix, x2matrix, domain);
+    //--------------------------------------------------------------------------
     stopTimer(x2Timer);
 
 #ifdef DO_MPI
@@ -129,7 +132,10 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
     if (getNRanks() > 1)
     {
       startTimer(exchangeTimer);
+      //------------------------------------------------------------------------
+      // This accounts for 2nd most time (19.5% of Loop) for communication
       exchangeData(haloExchange, xmatrix, domain);
+      //------------------------------------------------------------------------
       stopTimer(exchangeTimer);
     }
 #endif
