@@ -26,12 +26,13 @@ CD_FLAGS :=
 # ROOTCD : CoMD.c
 # CD1 : timestep.c 
 # CD2 : ljForce.c
-CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -DDO_PRV
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -DDO_PRV
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -DDO_PRV
+CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -DDO_PRV #-D_CD1=1 
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -DDO_PRV -D_CD1=0 -D_CD2=0
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -DDO_PRV 
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 
+#CD_CFLAGS := -I$(CD_ROOT)/include 
 CD_LINKFLAGS := -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
 #CD_LINKFLAGS := -L$(CD_ROOT)/lib -lwrapLibc -lc -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
 else

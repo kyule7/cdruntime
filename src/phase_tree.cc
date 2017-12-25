@@ -211,7 +211,8 @@ void PhaseNode::Print(bool print_details, bool first)
     memset(output_filepath, '\0', 256);
     sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_PROFILE);
 //    printf("[%s] %s\n", __func__, output_filepath);
-    outAll = fopen(output_filepath, "w+");
+//    outAll = fopen(output_filepath, "w+");
+    outAll = fopen(output_filepath, "a");
   }
   std::string indent((level_)<<1, ' ');
   std::string one_more_indent((level_+1)<<1, ' ');
@@ -308,9 +309,12 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     TUNE_DEBUG("Old Phase! %u %s\n", phase, phase_path.c_str()); //getchar();
 //    if(cd::myTaskID == 0) fprintf(outAll, "Old Phase! %u at lv#%u%s\n", phase, level, phase_path.c_str()); //getchar();
   }
+
+#if CD_TUNING_ENABLED == 0 && CD_RUNTIME_ENABLED == 1
   auto pt = tuned::phaseNodeCache.find(phase);
   assert(pt != tuned::phaseNodeCache.end());
   cd::phaseTree.current_->errortype_ = pt->second->errortype_;
+#endif
 
 //  // First visit
 //  if(last_completed_phase != phase) {

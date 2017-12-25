@@ -1114,6 +1114,7 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
     new_rollback_point = cd_lv_to_sync->CheckRollbackPoint(false);
     CD_DEBUG("rollback point from head:%u (headID:%d at lv#%u)\n", 
               new_rollback_point, cd_lv_to_sync->head(), cd_lv_to_sync->level());
+
     uint32_t local_rollback_point = new_rollback_point;
     PMPI_Allreduce(&local_rollback_point, &new_rollback_point, 1, 
                    MPI_UNSIGNED, MPI_MIN, cd_lv_to_sync->color());
