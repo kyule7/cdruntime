@@ -30,7 +30,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   CDHandle *tuned_root_handle = new CDHandle(root_handle, 0, DEFAULT_ROOT_LABEL);
   CDPath::GetCDPath()->push_back(tuned_root_handle);
   TunedEpilogue();
-  printf("tuned root:%p %d\n", root_handle, logger::disabled);
+//  printf("tuned root:%p %d\n", root_handle, logger::disabled);
   return tuned_root_handle;
 }
 
@@ -44,6 +44,12 @@ void CD_Finalize(void)
       "path size:%lu\n", CDPath::GetCDPath()->size());
   delete CDPath::GetCDPath()->back(); // delete root
   CDPath::GetCDPath()->pop_back();
+
+
+
+  cd::phaseTree.PrintStats();
+  tuned::phaseTree.PrintStats();
+
   TunedEpilogue();
 #if CD_LIBC_LOGGING
   logger::Fini();

@@ -68,7 +68,7 @@ struct PhaseNode {
     // for cd::phaseTree
     PhaseNode(PhaseNode *parent, uint32_t level, const std::string &label, CDExecMode state) 
       : level_(level), phase_(phase_gen), 
-        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), seq_begin_(0), seq_end_(0), seq_acc_(0), seq_acc_rb_(0),
+        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), /*seq_begin_(0), seq_end_(0),*/ seq_acc_(0), seq_acc_rb_(0),
         state_(state), count_(0), interval_(-1), errortype_(-1), label_(label), profile_(phase_gen)
     {
       TUNE_DEBUG("PhaseNode %s\n", label.c_str());
@@ -81,7 +81,7 @@ struct PhaseNode {
     // executing application. 
     PhaseNode(PhaseNode *parent, uint32_t level, uint32_t phase)
       : level_(level), phase_(phase_gen), 
-        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), seq_begin_(0), seq_end_(0), seq_acc_(0), seq_acc_rb_(0),
+        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), /*seq_begin_(0), seq_end_(0),*/ seq_acc_(0), seq_acc_rb_(0),
         state_(kExecution), count_(0), interval_(-1), errortype_(-1), profile_(phase_gen)
     {
       CD_ASSERT_STR(phase == phase_, "PhaseNode(%u == %u)\n", phase_, phase);
@@ -91,6 +91,8 @@ struct PhaseNode {
 
     void Init(PhaseNode *parent, uint32_t level)
     {
+      seq_begin_ = 0;
+      seq_end_   = 0;
       if(parent != NULL) {
         parent_ = parent;
         if(parent_->children_.empty()) {
@@ -101,6 +103,9 @@ struct PhaseNode {
           prev_phase->right_ = this;
           left_ = prev_phase;
           right_ = NULL;
+          uint32_t last_seq_id = prev_phase->seq_end_;
+          seq_begin_ = last_seq_id;
+          seq_end_   = last_seq_id;
         }
         parent_->AddChild(this);
       } else { // for root
@@ -120,6 +125,8 @@ struct PhaseNode {
       right_ = NULL;
       delete this;
     }
+
+    void GatherStats(void);
 
     PhaseNode *GetNextNode(const std::string &label) 
     {
@@ -180,7 +187,8 @@ struct PhaseNode {
 //      TUNE_DEBUG("%s %p (%s, %u)\n", __func__, child, child->label_.c_str(), child->phase_);
       children_.push_back(child);
     }
-    void Print(bool print_details, bool first);
+    void Print(bool print_details, bool first, FILE *outfile=NULL);
+    void PrintNode(bool print_details, FILE *outfile=NULL);
 //    void PrintAll(bool print_details, bool first); 
     void PrintProfile(void);
     void PrintInputYAML(bool first); 
@@ -218,6 +226,14 @@ struct PhaseNode {
     // seq_begin_ preverves sequential_id_.
     // Its purpose is to reinit seq_end_
     inline void MarkSeqID(int64_t seq_id) { seq_begin_ = seq_id; }
+    inline void IncSeqID(bool err_free_exec) {
+      seq_end_++; // reinit at failure
+      if(err_free_exec) {
+        seq_acc_++; // no reinit
+      } else { // during rollback
+        seq_acc_rb_++; // no reinit
+      }
+    }
 };
 
 struct PhaseTree {
@@ -253,8 +269,20 @@ struct PhaseTree {
     
     void PrintProfile(void) 
     { root_->PrintProfile(); }
+
+    void PrintStats(void);
 };
 
+struct CDProfiles {
+  RTInfo<double> avg_;
+  RTInfo<double> std_;
+  RTInfo<double> max_;
+  RTInfo<double> min_;
+  //void Print(std::ostream &os, const char *str="");
+  void Print(std::ostream &os, const std::string &head, const std::string &tail, const char *str="");
+  void PrintJSON(std::ostream &os, const std::string &head);
+};
+extern std::map<uint32_t, CDProfiles> cd_prof_map;
 } // namespace common ends
 
 using namespace common;

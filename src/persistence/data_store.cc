@@ -1445,6 +1445,7 @@ uint64_t DataStore::WriteFlushMode(char *src, uint64_t len)
 #endif
 }
 
+// Basically, WriteFile + Flush.
 uint64_t DataStore::Flush(char *src, int64_t len) 
 {
   CDErrType err = kOK;
@@ -1453,7 +1454,7 @@ uint64_t DataStore::Flush(char *src, int64_t len)
   // The reason for not reusing Write(src,len) for writing table
   // is that it is likely to just flush data and table to get persistency at
   // some point, not keeping writing some data to data store.
-  // Therefore, it will be good to just make the data sture empty, then copy
+  // Therefore, it will be good to just make the data store empty, then copy
   // table store to buffer, then perform file write.
   // The reason for not performing file write from table store itself, but
   // copying to the tail of data store is that table store may be not aligned

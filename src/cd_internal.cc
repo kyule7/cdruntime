@@ -581,8 +581,11 @@ CDHandle *CD::Create(CDHandle *parent,
   CD_DEBUG("CD::Create done\n");
 
   // FIXME: flush before child execution
+  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
   if(prv_medium_ != kDRAM) {
     entry_directory_.AppendTable();
+    entry_directory_.data_->Flush();
+//    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
   }
   this->AddChild(new_cd_handle);
 
@@ -858,6 +861,13 @@ static inline
 void CompletePhase(uint32_t phase)//, bool is_reexec=false)
 {
   CD_ASSERT(phaseTree.current_);
+  phaseTree.current_->IncSeqID(failed_phase == HEALTHY);
+//  phaseTree.current_->seq_end_++; // reinit at failure
+//  if(failed_phase == HEALTHY) {
+//    phaseTree.current_->seq_acc_++; // no reinit
+//  } else {
+//    phaseTree.current_->seq_acc_rb_++; // no reinit
+//  }
   if(tuned::tuning_enabled == false) {
     if(failed_phase != HEALTHY) { // reexecution
       CD_ASSERT(failed_phase >= 0);
@@ -911,6 +921,7 @@ CDErrT CD::Begin(const char *label, bool collective)
     prev_phase = current_phase;
     if(failed_phase == HEALTHY) {
       phaseTree.current_->MarkSeqID(cd_id_.sequential_id_); // set seq_begin_ = seq_end_
+      phaseTree.current_->seq_end_ = cd_id_.sequential_id_;
     }
   }
  // cd_name_.phase_ = GetPhase(level(), label_);
@@ -1376,7 +1387,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
   // to guarantee the correctness of CD-enabled program.
   uint32_t new_rollback_point = orig_rollback_point;
 #if BUGFIX_0327
-  if(collective) {
+  if(collective && task_size() > 1) {
     new_rollback_point = SyncCDs(this, false);
     CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
     new_rollback_point = SetRollbackPoint(new_rollback_point, false);
@@ -1499,12 +1510,13 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
   
     // Increase sequential ID by one
     cd_id_.sequential_id_++; // reinit at create/destroy
-    phaseTree.current_->seq_end_++; // reinit at failure
-    if(failed_phase == HEALTHY) {
-      phaseTree.current_->seq_acc_++; // no reinit
-    } else {
-      phaseTree.current_->seq_acc_rb_++; // no reinit
-    }
+
+//    phaseTree.current_->seq_end_++; // reinit at failure
+//    if(failed_phase == HEALTHY) {
+//      phaseTree.current_->seq_acc_++; // no reinit
+//    } else {
+//      phaseTree.current_->seq_acc_rb_++; // no reinit
+//    }
     
     /// It deletes entry directory in the CD (for every Complete() call). 
     /// We might modify this in the profiler to support the overlapped data among sequential CDs.
@@ -2874,8 +2886,15 @@ CDHandle *HeadCD::Create(CDHandle *parent,
   assert(new_cd_handle != NULL);
 
   // FIXME: flush before child execution
+//  if(prv_medium_ != kDRAM) {
+//    entry_directory_.AppendTable();
+//    entry_directory_.data_->Flush();
+//  }
+  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
   if(prv_medium_ != kDRAM) {
     entry_directory_.AppendTable();
+    entry_directory_.data_->Flush();
+//    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
   }
 
   this->AddChild(new_cd_handle);

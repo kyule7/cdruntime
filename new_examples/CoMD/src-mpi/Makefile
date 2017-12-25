@@ -107,8 +107,8 @@ DEFAULT: ${CoMD_EXE}
 ${CoMD_EXE}: ${BIN_DIR} CoMD_info.h ${OBJECTS} 
 	${CC} ${CFLAGS} -o ${CoMD_EXE} ${OBJECTS} ${LDFLAGS}
 
-CoMD_info.h: Makefile
-	./generate_info_header ${CoMD_VARIANT} "$(CC)" "$(CFLAGS)" "$(LDFLAGS)"
+#CoMD_info.h: Makefile
+#	./generate_info_header ${CoMD_VARIANT} "$(CC)" "$(CFLAGS)" "$(LDFLAGS)"
 
 ${BIN_DIR}:
 	@if [ ! -d ${BIN_DIR} ]; then mkdir -p ${BIN_DIR} ; fi

@@ -6,7 +6,7 @@
 #include <assert.h>
 #include "cd_def_interface.h"
 #include "cd_def_common.h"
-
+#include "prof_entry.hpp"
 //#define INVALID_NUM -1U
 //class common::RuntimeInfo;
 namespace common {
@@ -128,6 +128,7 @@ void MergeMaps(std::map<std::string, PrvProfEntry>& lhs,
   lhs.insert(right, rhs.end());
 }
 
+
 // id is used when access to caches
 //  1. profMap
 //  2. phaseNodeCache
@@ -182,6 +183,7 @@ struct RuntimeInfo : public CDOverhead {
     Copy(record);
   }
   virtual std::string GetString(void);
+  void GetPrvDetails(std::ostream &oss, const std::string &indent);
   std::string GetRTInfoStr(int cnt=0, int style=kJSON);
   virtual void Print(void);
   RuntimeInfo &operator+=(const RuntimeInfo &record) {
@@ -206,6 +208,89 @@ struct RuntimeInfo : public CDOverhead {
     MergeMaps(output_, info_per_level.output_);
     MergeCDOverhead(info_per_level);
   }
+
+  RTInfo<double> GetRTInfo(void) {
+    return RTInfo<double>(exec_,
+                          reexec_,
+                          prv_copy_,
+                          prv_ref_,
+                          restore_,
+                          msg_logging_,
+                          total_time_,
+                          reexec_time_,
+                          sync_time_,
+                          prv_elapsed_time_,
+                          rst_elapsed_time_,
+                          create_elapsed_time_,
+                          destroy_elapsed_time_,
+                          begin_elapsed_time_,
+                          compl_elapsed_time_,
+                          advance_elapsed_time_
+                    );
+
+  }
+  RTInfoInt GetRTInfoInt(void) {
+    return RTInfoInt( exec_,
+                      reexec_,
+                      prv_copy_,
+                      prv_ref_,
+                      restore_,
+                      msg_logging_
+                    );
+  }
+  RTInfoFloat GetRTInfoFloat(void) {
+    return RTInfoFloat( total_time_,
+                        reexec_time_,
+                        sync_time_,
+                        prv_elapsed_time_,
+                        rst_elapsed_time_,
+                        create_elapsed_time_,
+                        destroy_elapsed_time_,
+                        begin_elapsed_time_,
+                        compl_elapsed_time_,
+                        advance_elapsed_time_
+            );
+  }
+
+  void SetRTInfo(const RTInfo<double> &rt_info) {
+    exec_                 = rt_info.exec_;
+    reexec_               = rt_info.reexec_;
+    prv_copy_             = rt_info.prv_copy_;
+    prv_ref_              = rt_info.prv_ref_;
+    restore_              = rt_info.restore_;
+    msg_logging_          = rt_info.msg_logging_;
+    total_time_           = rt_info.total_time_;           
+    reexec_time_          = rt_info.reexec_time_;
+    sync_time_            = rt_info.sync_time_;
+    prv_elapsed_time_     = rt_info.prv_elapsed_time_;
+    rst_elapsed_time_     = rt_info.rst_elapsed_time_;
+    create_elapsed_time_  = rt_info.create_elapsed_time_;
+    destroy_elapsed_time_ = rt_info.destroy_elapsed_time_;
+    begin_elapsed_time_   = rt_info.begin_elapsed_time_;
+    compl_elapsed_time_   = rt_info.compl_elapsed_time_;
+    advance_elapsed_time_ = rt_info.advance_elapsed_time_;
+  }
+  void SetRTInfoInt(const RTInfoInt &rt_info) {
+    exec_        = rt_info.exec_;
+    reexec_      = rt_info.reexec_;
+    prv_copy_    = rt_info.prv_copy_;
+    prv_ref_     = rt_info.prv_ref_;
+    restore_     = rt_info.restore_;
+    msg_logging_ = rt_info.msg_logging_;
+  }
+  void SetRTInfoFloat(const RTInfoFloat &rt_info) {
+    total_time_           = rt_info.total_time_;           
+    reexec_time_          = rt_info.reexec_time_;
+    sync_time_            = rt_info.sync_time_;
+    prv_elapsed_time_     = rt_info.prv_elapsed_time_;
+    rst_elapsed_time_     = rt_info.rst_elapsed_time_;
+    create_elapsed_time_  = rt_info.create_elapsed_time_;
+    destroy_elapsed_time_ = rt_info.destroy_elapsed_time_;
+    begin_elapsed_time_   = rt_info.begin_elapsed_time_;
+    compl_elapsed_time_   = rt_info.compl_elapsed_time_;
+    advance_elapsed_time_ = rt_info.advance_elapsed_time_;
+  }
+
 
   inline void RecordData(const std::string &entry_str, uint64_t len, uint32_t type, bool is_reexec)
   {
