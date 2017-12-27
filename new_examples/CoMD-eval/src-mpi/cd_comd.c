@@ -259,7 +259,7 @@ preserveAtoms(cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes,
       sprintf(tmp_atoms_r_ptr, "Atoms_r_ptr");
     } else {
       sprintf(tmp_atoms_r, "Atoms_r%s", idx);
-      sprintf(tmp_atoms_r, "Atoms_r_ptr%s", idx);
+      sprintf(tmp_atoms_r_ptr, "Atoms_r_ptr%s", idx);
     }
 #ifdef DO_PRV
     cd_preserve(cdh, &(atoms->r), sizeof(real3 *), kCopy, tmp_atoms_r_ptr,
