@@ -48,6 +48,9 @@ BIN_DIR=../bin
 ifeq ($(ENABLE_CD), ON)
 CD_ROOT := $(CD_PATH)
 CD_FLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1
+#CD_FLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1
+#CD_FLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1
+#CD_FLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -DDO_PRV
 CD_LINKFLAGS := -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
 CFLAGS += ${CD_FLAGS} -g
 C_LIB += ${CD_LINKFLAGS}

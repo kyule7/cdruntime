@@ -56,6 +56,7 @@
 #include "constants.h"
 #if _ROOTCD
 #include "cd.h"
+#include "cd_cosp2.h"
 #endif
 
 SparseMatrix* initSimulation(Command cmd)
@@ -125,7 +126,12 @@ int main(int argc, char** argv)
   cd_handle_t *root_cd = cd_init(nRanks, myRank, kHDD);
   cd_begin(root_cd, "Root");
   //TODO: cd_preserve
-#endif 
+  //      cmd?
+#if DOPRV
+  unsigned int prv_size = 0;
+  prv_size += preserveCommand(root_cd, &cmd);
+#endif // DOPRV
+#endif // _ROOTCD
 
   // Initialize
   startTimer(preTimer);
@@ -146,10 +152,17 @@ int main(int argc, char** argv)
 
   // Perform SP2 loop
   barrierParallel();
+#if _CD1
+  cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "sp2Loop",
+                                  kStrict | kHDD, 0xE);
+#endif
   //----------------------------------------------------------------------------
   // This takes most of simulation time (77%)
   sp2Loop(spH, domain);
   //----------------------------------------------------------------------------
+#if _CD1
+  cd_destroy(lv1_cd);
+#endif
 
   // Done
   profileStop(totalTimer);
@@ -167,6 +180,8 @@ int main(int argc, char** argv)
   destroyDecomposition(domain);
 
 #if _ROOTCD
+  // FIXME
+  // barrierParallel();
   cd_detect(root_cd);
   cd_complete(root_cd);
   cd_finalize();

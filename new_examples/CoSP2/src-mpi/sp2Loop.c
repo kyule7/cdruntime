@@ -14,11 +14,30 @@
 #include "parallel.h"
 #include "matrixio.h"
 #include "constants.h"
-
+#if _CD1
+#include "cd.h"
+#include "cd_cosp2.h"
+#endif
 /// \details
 /// The secpnd order spectral projection algorithm.
 void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
 {
+#if _CD1
+  cd_handle_t *lv1_cd = getleafcd();
+#endif
+#if _CD1
+  cd_begin(lv1_cd, "whileloop_sp2");
+  //TODO 
+  //cd_preserve(...) 
+  // xmatrix and domain
+#if DOPRV
+  unsigned int prv_size = 0;
+  char spm_name[8] = "x";
+  prv_size += preserveSparseMatrix(lv1_cd, xmatrix, spm_name);
+  prv_size += preserveDomain(lv1_cd, domain);
+#endif //DOPRV
+#endif
+
   HaloExchange* haloExchange;
 
   startTimer(sp2LoopTimer);
@@ -55,8 +74,28 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
   if (printRank() && debug == 1)
     printf("\nSP2Loop:\n");
 
+#if _CD2
+  cd_handle_t *lv2_cd = cd_create(getcurrentcd(), 1, "sp2Loop_while",
+                                  kStrict | kDRAM, 0xC);
+#endif
   while ( breakLoop == 0 && iter < 100 )
   {
+#if _CD2
+    cd_begin(lv2_cd, "sp2Loop_while_itr");
+    //TODO: cd_preserve
+    // xmatrix (normalized)
+    // haloExchange
+    // x2matrix : For the first iteration, this is just initialized and 
+    //            the contents of it mean nothing. Howerver after the first 
+    //            iteration, it gets updated and so it needs to be preserved
+    // TODO: when does x2matrix need to preserved? after sparseX2 or here?
+    // iter: iteration count
+
+    // idempErr, idempErr1, idempErr2: TODO???
+
+    // trX and trX2: no need to preserve since they are temporary for each itr
+    // domain: no need to preserve via Copy since it is not changed 
+#endif 
     trX = ZERO;
     trX2 = ZERO;
 
@@ -73,6 +112,11 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
     startTimer(x2Timer);
     //--------------------------------------------------------------------------
     // This accounts for most computations (49.5% of Loop)
+    // TODO: This doesn't involve communication and thus can have children 
+    //       as many as the number of ranks
+    // FIXME: The inner most loop in sparseX2 is parallelized with OpenMP
+    //        Therefore, the total number of inner loop is determined by given
+    //        number of thread (set by $OMP_NUM_THREADS)
     sparseX2(&trX, &trX2, xmatrix, x2matrix, domain);
     //--------------------------------------------------------------------------
     stopTimer(x2Timer);
@@ -139,8 +183,14 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
       stopTimer(exchangeTimer);
     }
 #endif
-  }
-
+#if _CD2
+    cd_detect(lv2_cd);
+    cd_complete(lv2_cd);
+#endif
+  } // end of while
+#if _CD2
+  cd_destroy(lv2_cd);
+#endif
   stopTimer(sp2LoopTimer);
 
   // Multiply by 2
@@ -160,6 +210,10 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
     destroyHaloExchange(haloExchange);
 #endif
   destroySparseMatrix(x2matrix);
+#if _CD1
+  cd_detect(lv1_cd);
+  cd_complete(lv1_cd);
+#endif
 }
 
 /// \details
