@@ -127,10 +127,10 @@ int main(int argc, char** argv)
   cd_begin(root_cd, "Root");
   //TODO: cd_preserve
   //      cmd?
-#if DOPRV
+#if DO_PRV
   unsigned int prv_size = 0;
   prv_size += preserveCommand(root_cd, &cmd);
-#endif // DOPRV
+#endif // DO_PRV
 #endif // _ROOTCD
 
   // Initialize

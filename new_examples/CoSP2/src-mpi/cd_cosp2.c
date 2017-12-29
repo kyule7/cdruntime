@@ -67,11 +67,11 @@ unsigned int preserveIndices_ELL(cd_handle_t *cdh, int** jja, const int hsize, c
 
 unsigned int preserveValues_ELL(cd_handle_t *cdh, real_t** val, const int hsize, const int msize, char* name) {
   unsigned int size = 0;
-  char val_with_name[6] = "-1";
   assert(name != NULL);
-  sprintf(val_with_name, "jja_%s", name);
 
 #ifdef CONTIG_MATRIX
+  char val_with_name[6] = "-1";
+  sprintf(val_with_name, "val_%s", name);
   size = hsize*msize*sizeof(real_t);
   //FIXME: if not CONTIG_MATRIX, need to preserve one row at a time
   //TODO: for now, let's assume CONTIG_MATRIX is always defined

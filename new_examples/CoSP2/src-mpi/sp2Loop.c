@@ -30,12 +30,11 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
   //TODO 
   //cd_preserve(...) 
   // xmatrix and domain
-#if DOPRV
-  unsigned int prv_size = 0;
-  char spm_name[8] = "x";
-  prv_size += preserveSparseMatrix(lv1_cd, xmatrix, spm_name);
-  prv_size += preserveDomain(lv1_cd, domain);
-#endif //DOPRV
+#if DO_PRV
+  unsigned int prv_size_lv1 = 0;
+  prv_size_lv1 += preserveSparseMatrix(lv1_cd, xmatrix, "x");
+  prv_size_lv1 += preserveDomain(lv1_cd, domain);
+#endif //DO_PRV
 #endif
 
   HaloExchange* haloExchange;
@@ -77,6 +76,7 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
 #if _CD2
   cd_handle_t *lv2_cd = cd_create(getcurrentcd(), 1, "sp2Loop_while",
                                   kStrict | kDRAM, 0xC);
+  char iter_with_idx[8] = "-1";
 #endif
   while ( breakLoop == 0 && iter < 100 )
   {
@@ -95,6 +95,17 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
 
     // trX and trX2: no need to preserve since they are temporary for each itr
     // domain: no need to preserve via Copy since it is not changed 
+#if DO_PRV
+    unsigned int prv_size_lv2 = 0;
+    //FIXME: this fails upon restoration
+//    prv_size_lv2 += preserveSparseMatrix(lv2_cd, xmatrix, "x_norm");
+//    prv_size_lv2 += preserveHaloExchange(lv2_cd, haloExchange);
+//    prv_size_lv2 += preserveSparseMatrix(lv2_cd, x2matrix, "x2");
+//    sprintf(iter_with_idx, "iter_%d", iter);
+//    cd_preserve(lv2_cd, &iter, sizeof(int), kCopy, iter_with_idx, iter_with_idx);
+//    prv_size_lv2 += sizeof(int);
+#endif //DO_PRV
+
 #endif 
     trX = ZERO;
     trX2 = ZERO;
