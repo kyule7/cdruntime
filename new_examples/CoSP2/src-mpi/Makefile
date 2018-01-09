@@ -46,7 +46,8 @@ BIN_DIR=../bin
 
 
 ifeq ($(ENABLE_CD), ON)
-CD_ROOT := $(CD_PATH)
+CDPATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../../..
+CD_ROOT := $(CDPATH)
 CD_FLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1
 #CD_FLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1
 #CD_FLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1

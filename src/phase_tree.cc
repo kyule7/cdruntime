@@ -399,6 +399,7 @@ PhaseTree::~PhaseTree() {
   }
 }
 
+
 void PhaseNode::GatherStats(void)
 {
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
@@ -414,12 +415,18 @@ void PhaseNode::GatherStats(void)
 //  RTInfoInt rt_info_int_recv;
 //  RTInfoFloat rt_info_float_recv;
   RTInfo<double> rt_info = profile_.GetRTInfo();
-  RTInfo<double> &rt_info_min = common::cd_prof_map[phase_].min_;
+  RTInfo<DoubleInt> rt_info_loc = rt_info;
+  RTInfo<DoubleInt> &rt_info_min = common::cd_prof_map[phase_].min_;
+  RTInfo<DoubleInt> &rt_info_max = common::cd_prof_map[phase_].max_;
   //RTInfo<double> &rt_info_min_rank = common::cd_prof_map[phase_].min_rank_;
-  RTInfo<double> &rt_info_max = common::cd_prof_map[phase_].max_;
   //RTInfo<double> &rt_info_max_rank = common::cd_prof_map[phase_].max_rank_;
   RTInfo<double> &rt_info_avg = common::cd_prof_map[phase_].avg_;
   RTInfo<double> &rt_info_std = common::cd_prof_map[phase_].std_;
+  int &max_rank = common::cd_prof_map[phase_].max_rank_;
+  int &min_rank = common::cd_prof_map[phase_].min_rank_;
+  DoubleInt max_result;
+  DoubleInt min_result;
+  int myRank    = cd::myTaskID;
   RTInfo<double> rt_info_sqsum(rt_info);
   rt_info_sqsum.DoSq();
   //sprintf(buf, "Task %d", cd::myTaskID);
@@ -431,12 +438,15 @@ void PhaseNode::GatherStats(void)
   //printf("\n----------- Before receive -----------\n");
 //  MPI_Reduce(&rt_info_int, &rt_info_int_recv, sizeof(RTInfoInt)/sizeof(uint64_t), MPI_UNSIGNED_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
 //  MPI_Reduce(&rt_info_float, &rt_info_float_recv, sizeof(RTInfoFloat)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&rt_info, &rt_info_min, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+  MPI_Allreduce(&rt_info, &rt_info_min, rt_info_min.Length(), MPI_DOUBLE_INT, MPI_MINLOC, MPI_COMM_WORLD);
+  MPI_Allreduce(&rt_info, &rt_info_max, rt_info_max.Length(), MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
+  //MPI_Reduce(&rt_info, &rt_info_max, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   //MPI_Reduce(&rt_info, &rt_info_min_rank, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MINLOC, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&rt_info, &rt_info_max, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   //MPI_Reduce(&rt_info, &rt_info_max_rank, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MAXLOC, 0, MPI_COMM_WORLD);
   MPI_Reduce(&rt_info, &rt_info_avg, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(&rt_info_sqsum, &rt_info_std, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Allreduce(&myRank, &max_rank, sizeof(int), MPI_INT, MPI_MAXLOC, MPI_COMM_WORLD);
+  MPI_Allreduce(&myRank, &min_rank, sizeof(int), MPI_INT, MPI_MINLOC, MPI_COMM_WORLD);
   if(cd::myTaskID == 0){
 //      profile_.SetRTInfoInt(rt_info_int_recv);
 //      profile_.SetRTInfoFloat(rt_info_float_recv);
