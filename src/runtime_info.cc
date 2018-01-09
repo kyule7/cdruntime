@@ -4,6 +4,19 @@
 using namespace std;
 using namespace common;
 
+
+int localTaskID = 0;
+double sqrt(const DoubleInt &that) 
+{ return sqrt(that.val_); }
+
+std::ostream &operator<<(std::ostream &os, const DoubleInt &that) 
+{
+ // ts << that.val_ << " (" << that.rank_ << ") ";
+  char tmp[64];
+  sprintf(tmp, "%12.4lf (%d) ", that.val_, that.rank_);
+  return os << tmp; 
+}
+
 //std::map<std::string, std::string, uint64_t> RuntimeInfo::per_entry_vol;
 string RuntimeInfo::GetString(void)
 {

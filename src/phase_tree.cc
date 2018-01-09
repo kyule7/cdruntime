@@ -410,18 +410,14 @@ void PhaseNode::GatherStats(void)
   //printf("[%s %d] level:%u, phase:%u, taskid:%u\n", __func__, cd::myTaskID, phase_, level_, task_id_);
   //YkWON: level_ and phase_ are swapped to fix
   printf("[%s %d] level:%u, phase:%u, taskid:%u\n", __func__, cd::myTaskID, level_,  phase_, task_id_);
-//  RTInfoInt rt_info_int     = profile_.GetRTInfoInt();
-//  RTInfoFloat rt_info_float = profile_.GetRTInfoFloat();
-//  RTInfoInt rt_info_int_recv;
-//  RTInfoFloat rt_info_float_recv;
-  RTInfo<double> rt_info = profile_.GetRTInfo();
-  RTInfo<DoubleInt> rt_info_loc = rt_info;
+  RTInfo<double> rt_info = profile_.GetRTInfo<double>();
+  RTInfo<double> &rt_info_avg = common::cd_prof_map[phase_].avg_;
+  RTInfo<double> &rt_info_std = common::cd_prof_map[phase_].std_;
+  RTInfo<DoubleInt> rt_info_loc = profile_.GetRTInfo<DoubleInt>(cd::myTaskID);
   RTInfo<DoubleInt> &rt_info_min = common::cd_prof_map[phase_].min_;
   RTInfo<DoubleInt> &rt_info_max = common::cd_prof_map[phase_].max_;
   //RTInfo<double> &rt_info_min_rank = common::cd_prof_map[phase_].min_rank_;
   //RTInfo<double> &rt_info_max_rank = common::cd_prof_map[phase_].max_rank_;
-  RTInfo<double> &rt_info_avg = common::cd_prof_map[phase_].avg_;
-  RTInfo<double> &rt_info_std = common::cd_prof_map[phase_].std_;
   int &max_rank = common::cd_prof_map[phase_].max_rank_;
   int &min_rank = common::cd_prof_map[phase_].min_rank_;
   DoubleInt max_result;
@@ -438,15 +434,13 @@ void PhaseNode::GatherStats(void)
   //printf("\n----------- Before receive -----------\n");
 //  MPI_Reduce(&rt_info_int, &rt_info_int_recv, sizeof(RTInfoInt)/sizeof(uint64_t), MPI_UNSIGNED_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
 //  MPI_Reduce(&rt_info_float, &rt_info_float_recv, sizeof(RTInfoFloat)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-  MPI_Allreduce(&rt_info, &rt_info_min, rt_info_min.Length(), MPI_DOUBLE_INT, MPI_MINLOC, MPI_COMM_WORLD);
-  MPI_Allreduce(&rt_info, &rt_info_max, rt_info_max.Length(), MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
+  MPI_Allreduce(&rt_info_loc, &rt_info_min, rt_info_min.Length(), MPI_DOUBLE_INT, MPI_MINLOC, MPI_COMM_WORLD);
+  MPI_Allreduce(&rt_info_loc, &rt_info_max, rt_info_max.Length(), MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
   //MPI_Reduce(&rt_info, &rt_info_max, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   //MPI_Reduce(&rt_info, &rt_info_min_rank, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MINLOC, 0, MPI_COMM_WORLD);
   //MPI_Reduce(&rt_info, &rt_info_max_rank, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MAXLOC, 0, MPI_COMM_WORLD);
   MPI_Reduce(&rt_info, &rt_info_avg, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce(&rt_info_sqsum, &rt_info_std, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Allreduce(&myRank, &max_rank, sizeof(int), MPI_INT, MPI_MAXLOC, MPI_COMM_WORLD);
-  MPI_Allreduce(&myRank, &min_rank, sizeof(int), MPI_INT, MPI_MINLOC, MPI_COMM_WORLD);
   if(cd::myTaskID == 0){
 //      profile_.SetRTInfoInt(rt_info_int_recv);
 //      profile_.SetRTInfoFloat(rt_info_float_recv);
@@ -505,8 +499,8 @@ void PhaseTree::PrintStats(void)
 
 void CDProfiles::Print(std::ostream &os, const std::string &head, const std::string &tail, const char *str)
 {
-  const int pz0 = 16;
-  const int pz1 = 12;
+  const int pz0 = 18;
+  const int pz1 = 14;
   os << str  
   << head << std::left << std::setw(pz0) << "               "      
                        << std::setw(pz1) << "Min"
@@ -532,14 +526,14 @@ void CDProfiles::Print(std::ostream &os, const std::string &head, const std::str
   << head << std::left << std::setw(pz0) << "vol_prv_copy : "    
                        << std::setw(pz1) << min_.prv_copy_            
                        << std::setw(pz1) << max_.prv_copy_              
-                       << std::setw(pz1)   << avg_.prv_copy_              
-                       << std::setw(pz1)   << std_.prv_copy_             
+                       << std::setw(pz1) << avg_.prv_copy_              
+                       << std::setw(pz1) << std_.prv_copy_             
                        << tail
   << head << std::left << std::setw(pz0) << "vol_prv_ref  : "     
                        << std::setw(pz1) << min_.prv_ref_             
                        << std::setw(pz1) << max_.prv_ref_               
-                       << std::setw(pz1)   << avg_.prv_ref_               
-                       << std::setw(pz1)   << std_.prv_ref_              
+                       << std::setw(pz1) << avg_.prv_ref_               
+                       << std::setw(pz1) << std_.prv_ref_              
                        << tail
   << head << std::left << std::setw(pz0) << "vol_restore  : "     
                        << std::setw(pz1) << min_.restore_             
@@ -626,7 +620,7 @@ void CDProfiles::PrintJSON(std::ostream &os, const std::string &head)
   << head << "\"prv_copy\" : "    << max_.prv_copy_                 << ",\n"
   << head << "\"prv_ref\" : "     << max_.prv_ref_                  << ",\n"
   << head << "\"restore\" : "     << max_.restore_                  << ",\n"
-  << head << "\"msg_log\" : " << max_.msg_logging_              << ",\n"
+  << head << "\"msg_log\" : "     << max_.msg_logging_              << ",\n"
   << head << "\"total_time\" : "  << max_.total_time_               << ",\n"
   << head << "\"reexec_time\" : " << max_.reexec_time_              << ",\n"
   << head << "\"sync_time\" : "   << max_.sync_time_                << ",\n"
@@ -643,7 +637,7 @@ void CDProfiles::PrintJSON(std::ostream &os, const std::string &head)
   << head << "\"min prv_copy\" : "    << min_.prv_copy_             << ",\n"
   << head << "\"min prv_ref\" : "     << min_.prv_ref_              << ",\n"
   << head << "\"min restore\" : "     << min_.restore_              << ",\n"
-  << head << "\"min msg_log\" : " << min_.msg_logging_          << ",\n"
+  << head << "\"min msg_log\" : "     << min_.msg_logging_          << ",\n"
   << head << "\"min total_time\" : "  << min_.total_time_           << ",\n"
   << head << "\"min reexec_time\" : " << min_.reexec_time_          << ",\n"
   << head << "\"min sync_time\" : "   << min_.sync_time_            << ",\n"
@@ -660,7 +654,7 @@ void CDProfiles::PrintJSON(std::ostream &os, const std::string &head)
   << head << "\"avg prv_copy\" : "    << avg_.prv_copy_             << ",\n"
   << head << "\"avg prv_ref\" : "     << avg_.prv_ref_              << ",\n"
   << head << "\"avg restore\" : "     << avg_.restore_              << ",\n"
-  << head << "\"avg msg_log\" : " << avg_.msg_logging_          << ",\n"
+  << head << "\"avg msg_log\" : "     << avg_.msg_logging_          << ",\n"
   << head << "\"avg total_time\" : "  << avg_.total_time_           << ",\n"
   << head << "\"avg reexec_time\" : " << avg_.reexec_time_          << ",\n"
   << head << "\"avg sync_time\" : "   << avg_.sync_time_            << ",\n"
@@ -677,7 +671,7 @@ void CDProfiles::PrintJSON(std::ostream &os, const std::string &head)
   << head << "\"std prv_copy\" : "    << std_.prv_copy_             << ",\n"
   << head << "\"std prv_ref\" : "     << std_.prv_ref_              << ",\n"
   << head << "\"std restore\" : "     << std_.restore_              << ",\n"
-  << head << "\"std msg_log\" : " << std_.msg_logging_          << ",\n"
+  << head << "\"std msg_log\" : "     << std_.msg_logging_          << ",\n"
   << head << "\"std total_time\" : "  << std_.total_time_           << ",\n"
   << head << "\"std reexec_time\" : " << std_.reexec_time_          << ",\n"
   << head << "\"std sync_time\" : "   << std_.sync_time_            << ",\n"

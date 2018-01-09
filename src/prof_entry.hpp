@@ -1,6 +1,12 @@
+#ifndef _PROF_ENTRY_HPP
+#define _PROF_ENTRY_HPP
 #include <ostream>
 #include <cstdint>
 #include <cmath>
+//namespace common {
+
+extern int localTaskID;
+
 struct RTInfoInt {
   uint64_t exec_;
   uint64_t reexec_;
@@ -155,27 +161,25 @@ struct DoubleInt {
   double val_;
   int    rank_;
   DoubleInt(void) : val_(0.0), rank_(0) {}
+  DoubleInt(int rank) : val_(0.0), rank_(rank) {}
+  DoubleInt(double val) : val_(val), rank_(localTaskID) {}
+  DoubleInt(double val, int rank) : val_(val), rank_(rank) {}
   DoubleInt(const DoubleInt& that) : val_(that.val_), rank_(that.rank_) {}
-  DoubleInt &operator=(const int val) { val_ = val; return *this; }
-  DoubleInt &operator=(const double val) { val_ = val; return *this; }
-//  DoubleInt &operator=(const double val, const int rank) { val_ = val; rank_ = rank; return *this; }
-  DoubleInt &operator=(const DoubleInt& that) { val_ = that.val_; rank_ = that.rank_; return *this; }
+  DoubleInt &operator=(const int &val)         { val_ = (double)val; rank_ = localTaskID; return *this; }
+  DoubleInt &operator=(const double &val)      { val_ = val; rank_ = localTaskID; return *this; }
+  DoubleInt &operator=(const DoubleInt& that)  { val_ = that.val_; rank_ = that.rank_; return *this; }
   DoubleInt &operator/=(const DoubleInt& that) { val_ /= that.val_; return *this; }
   DoubleInt &operator*=(const DoubleInt& that) { val_ *= that.val_; return *this; }
   DoubleInt &operator+=(const DoubleInt& that) { val_ += that.val_; return *this; }
   DoubleInt &operator-=(const DoubleInt& that) { val_ -= that.val_; return *this; }
-//  std::ostream &operator<<(const std::ostream &os) 
-//  { 
-//    return os << val_ << " (" << rank_ << ')'; 
-//  }
 };
 
-double sqrt(const DoubleInt &that) { return sqrt(that.val_); }
-
-std::ostream &operator<<(std::ostream &os, const DoubleInt &that) 
-{ 
-  return os << that.val_ << " (" << that.rank_ << ')'; 
-}
+//double sqrt(const DoubleInt &that) { return sqrt(that.val_); }
+//
+//std::ostream &operator<<(std::ostream &os, const DoubleInt &that) 
+//{ 
+//  return os << that.val_ << " (" << that.rank_ << ')'; 
+//}
 
 template <typename T>
 struct RTInfo {
@@ -431,4 +435,12 @@ std::ostream &operator<<(std::ostream &os, const RTInfo<T> &info)
      << "\n - compl_elapsed_time : "   << info.compl_elapsed_time_
      << "\n - advance_elapsed_time : " << info.advance_elapsed_time_
      << std::endl;
+  return os;
 }
+
+//} // namespace common ends
+
+double sqrt(const DoubleInt &that);
+std::ostream &operator<<(std::ostream &os, const DoubleInt &that);
+
+#endif
