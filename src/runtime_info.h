@@ -157,7 +157,7 @@ struct RuntimeInfo : public CDOverhead {
   CD_CLOCK_T reexec_clk_;
   RuntimeInfo(uint32_t id) 
     : CDOverhead(), id_(id),
-      exec_(0), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
+      exec_(0), reexec_(0), prv_copy_(0), prv_ref_(0), restore_(0), msg_logging_(0), sys_err_vec_(0),
       total_time_(0.0), reexec_time_(0.0), sync_time_(0.0)
   {}
 //  RuntimeInfo(uonst uint64_t &total_exec) 
