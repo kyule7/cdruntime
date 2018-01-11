@@ -209,13 +209,15 @@ struct RuntimeInfo : public CDOverhead {
     MergeCDOverhead(info_per_level);
   }
 
-  RTInfo<double> GetRTInfo(void) {
-    return RTInfo<double>(exec_,
-                          reexec_,
-                          prv_copy_,
-                          prv_ref_,
-                          restore_,
-                          msg_logging_,
+  template <typename T>
+  RTInfo<T> GetRTInfo(int myTaskID=0) {
+    localTaskID = myTaskID;
+    return RTInfo<T>((double)exec_,
+                     (double)reexec_,
+                     (double)prv_copy_,
+                     (double)prv_ref_,
+                     (double)restore_,
+                     (double)msg_logging_,
                           total_time_,
                           reexec_time_,
                           sync_time_,

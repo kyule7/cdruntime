@@ -1,5 +1,12 @@
+#ifndef _PROF_ENTRY_HPP
+#define _PROF_ENTRY_HPP
 #include <ostream>
+#include <cstdint>
 #include <cmath>
+//namespace common {
+
+extern int localTaskID;
+
 struct RTInfoInt {
   uint64_t exec_;
   uint64_t reexec_;
@@ -150,6 +157,30 @@ struct RTInfoFloat {
   }
 };
 
+struct DoubleInt {
+  double val_;
+  int    rank_;
+  DoubleInt(void) : val_(0.0), rank_(0) {}
+  DoubleInt(int rank) : val_(0.0), rank_(rank) {}
+  DoubleInt(double val) : val_(val), rank_(localTaskID) {}
+  DoubleInt(double val, int rank) : val_(val), rank_(rank) {}
+  DoubleInt(const DoubleInt& that) : val_(that.val_), rank_(that.rank_) {}
+  DoubleInt &operator=(const int &val)         { val_ = (double)val; rank_ = localTaskID; return *this; }
+  DoubleInt &operator=(const double &val)      { val_ = val; rank_ = localTaskID; return *this; }
+  DoubleInt &operator=(const DoubleInt& that)  { val_ = that.val_; rank_ = that.rank_; return *this; }
+  DoubleInt &operator/=(const DoubleInt& that) { val_ /= that.val_; return *this; }
+  DoubleInt &operator*=(const DoubleInt& that) { val_ *= that.val_; return *this; }
+  DoubleInt &operator+=(const DoubleInt& that) { val_ += that.val_; return *this; }
+  DoubleInt &operator-=(const DoubleInt& that) { val_ -= that.val_; return *this; }
+};
+
+//double sqrt(const DoubleInt &that) { return sqrt(that.val_); }
+//
+//std::ostream &operator<<(std::ostream &os, const DoubleInt &that) 
+//{ 
+//  return os << that.val_ << " (" << that.rank_ << ')'; 
+//}
+
 template <typename T>
 struct RTInfo {
   // count
@@ -190,10 +221,17 @@ struct RTInfo {
     compl_elapsed_time_ = 0;
     advance_elapsed_time_ = 0;
   }
-  RTInfo(const RTInfo<T> &that)
+//  RTInfo(const RTInfo<T> &that)
+//  { 
+//    Copy(that);
+//  }
+
+  template <typename R>
+  RTInfo(const RTInfo<R> &that)
   { 
     Copy(that);
   }
+
   RTInfo(T exec,
          T reexec,
          T prv_copy,
@@ -231,26 +269,28 @@ struct RTInfo {
   void Print(std::ostream &os, const char *str="")
   {
     os << str
-       << "\n - exec : "                 << exec_
-       << "\n - reexec : "               << reexec_
-       << "\n - prv_copy : "             << prv_copy_
-       << "\n - prv_ref : "              << prv_ref_
-       << "\n - restore : "              << restore_
-       << "\n - msg_logging : "          << msg_logging_
-       << "\n - total_time : "           << total_time_
-       << "\n - reexec_time : "          << reexec_time_
-       << "\n - sync_time : "            << sync_time_
-       << "\n - prv_elapsed_time : "     << prv_elapsed_time_
-       << "\n - rst_elapsed_time : "     << rst_elapsed_time_
-       << "\n - create_elapsed_time : "  << create_elapsed_time_
-       << "\n - destroy_elapsed_time : " << destroy_elapsed_time_
-       << "\n - begin_elapsed_time : "   << begin_elapsed_time_
-       << "\n - compl_elapsed_time : "   << compl_elapsed_time_
-       << "\n - advance_elapsed_time : " << advance_elapsed_time_
+       << *this
+//       << "\n - exec : "                 << exec_
+//       << "\n - reexec : "               << reexec_
+//       << "\n - prv_copy : "             << prv_copy_
+//       << "\n - prv_ref : "              << prv_ref_
+//       << "\n - restore : "              << restore_
+//       << "\n - msg_logging : "          << msg_logging_
+//       << "\n - total_time : "           << total_time_
+//       << "\n - reexec_time : "          << reexec_time_
+//       << "\n - sync_time : "            << sync_time_
+//       << "\n - prv_elapsed_time : "     << prv_elapsed_time_
+//       << "\n - rst_elapsed_time : "     << rst_elapsed_time_
+//       << "\n - create_elapsed_time : "  << create_elapsed_time_
+//       << "\n - destroy_elapsed_time : " << destroy_elapsed_time_
+//       << "\n - begin_elapsed_time : "   << begin_elapsed_time_
+//       << "\n - compl_elapsed_time : "   << compl_elapsed_time_
+//       << "\n - advance_elapsed_time : " << advance_elapsed_time_
        << std::endl;
   }
 
-  void Copy(const RTInfo<T> &that) 
+  template <typename R>
+  void Copy(const RTInfo<R> &that) 
   {
     exec_                    = that.exec_;
     reexec_                  = that.reexec_;
@@ -372,5 +412,35 @@ struct RTInfo {
     return *this;
   }
 
+  size_t Length(void) { return sizeof(RTInfo<T>) / sizeof(T); }
 };
 
+template <typename T>
+std::ostream &operator<<(std::ostream &os, const RTInfo<T> &info)
+{
+  os << "\n - exec : "                 << info.exec_
+     << "\n - reexec : "               << info.reexec_
+     << "\n - prv_copy : "             << info.prv_copy_
+     << "\n - prv_ref : "              << info.prv_ref_
+     << "\n - restore : "              << info.restore_
+     << "\n - msg_logging : "          << info.msg_logging_
+     << "\n - total_time : "           << info.total_time_
+     << "\n - reexec_time : "          << info.reexec_time_
+     << "\n - sync_time : "            << info.sync_time_
+     << "\n - prv_elapsed_time : "     << info.prv_elapsed_time_
+     << "\n - rst_elapsed_time : "     << info.rst_elapsed_time_
+     << "\n - create_elapsed_time : "  << info.create_elapsed_time_
+     << "\n - destroy_elapsed_time : " << info.destroy_elapsed_time_
+     << "\n - begin_elapsed_time : "   << info.begin_elapsed_time_
+     << "\n - compl_elapsed_time : "   << info.compl_elapsed_time_
+     << "\n - advance_elapsed_time : " << info.advance_elapsed_time_
+     << std::endl;
+  return os;
+}
+
+//} // namespace common ends
+
+double sqrt(const DoubleInt &that);
+std::ostream &operator<<(std::ostream &os, const DoubleInt &that);
+
+#endif
