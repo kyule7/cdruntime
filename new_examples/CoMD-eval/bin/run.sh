@@ -1,0 +1,10 @@
+ibrun -np 8 ./CoMD-mpi -i2 -j2 -k2 -x80 -y80 -z80 -c800 > lv3_f01_prv_opt_c800_f04_t1_1.log
+ibrun -np 8 ./CoMD-mpi -i2 -j2 -k2 -x80 -y80 -z80 -c800 > lv3_f01_prv_opt_c800_f04_t1_2.log
+ibrun -np 8 ./CoMD-mpi -i2 -j2 -k2 -x80 -y80 -z80 -c800 > lv3_f01_prv_opt_c800_f04_t1_3.log
+ibrun -np 8 ./CoMD-mpi -i2 -j2 -k2 -x80 -y80 -z80 -c800 > lv3_f01_prv_opt_c800_f04_t1_4.log
+ibrun -np 8 ./CoMD-mpi -i2 -j2 -k2 -x80 -y80 -z80 -c800 > lv3_f01_prv_opt_c800_f04_t1_5.log
+ibrun -np 8 ./CoMD-mpi -i2 -j2 -k2 -x80 -y80 -z80 -c800 > lv3_f01_prv_opt_c800_f04_t1_6.log
+ibrun -np 8 ./CoMD-mpi -i2 -j2 -k2 -x80 -y80 -z80 -c800 > lv3_f01_prv_opt_c800_f04_t1_7.log
+ibrun -np 8 ./CoMD-mpi -i2 -j2 -k2 -x80 -y80 -z80 -c800 > lv3_f01_prv_opt_c800_f04_t1_8.log
+ibrun -np 8 ./CoMD-mpi -i2 -j2 -k2 -x80 -y80 -z80 -c800 > lv3_f01_prv_opt_c800_f04_t1_9.log
+ibrun -np 8 ./CoMD-mpi -i2 -j2 -k2 -x80 -y80 -z80 -c800 > lv3_f01_prv_opt_c800_f04_t1_10.log
