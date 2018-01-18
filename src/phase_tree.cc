@@ -418,11 +418,11 @@ void PhaseNode::GatherStats(void)
   RTInfo<DoubleInt> &rt_info_max = common::cd_prof_map[phase_].max_;
   //RTInfo<double> &rt_info_min_rank = common::cd_prof_map[phase_].min_rank_;
   //RTInfo<double> &rt_info_max_rank = common::cd_prof_map[phase_].max_rank_;
-  int &max_rank = common::cd_prof_map[phase_].max_rank_;
-  int &min_rank = common::cd_prof_map[phase_].min_rank_;
+//  int &max_rank = common::cd_prof_map[phase_].max_rank_;
+//  int &min_rank = common::cd_prof_map[phase_].min_rank_;
   DoubleInt max_result;
   DoubleInt min_result;
-  int myRank    = cd::myTaskID;
+  //int myRank    = cd::myTaskID;
   RTInfo<double> rt_info_sqsum(rt_info);
   rt_info_sqsum.DoSq();
   //sprintf(buf, "Task %d", cd::myTaskID);

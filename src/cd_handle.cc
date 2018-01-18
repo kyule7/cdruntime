@@ -2222,10 +2222,16 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());
     } else if(rollback_point == level()) {
-      printf(">> Rollback (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+
+      const uint64_t curr_phase = ptr_cd_->phase();
+      const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
+      const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
+      printf(">> Rollback (%s) (syndrom:%lx == vec:%lx) = %d, lv:%u, %s phase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+          ptr_cd_->label_.c_str(),
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
-          cdh->level(), cdh->GetLabel());
+          cdh->level(), cdh->GetLabel(), 
+          cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
 
     }
 

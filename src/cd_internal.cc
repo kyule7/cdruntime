@@ -581,7 +581,7 @@ CDHandle *CD::Create(CDHandle *parent,
   CD_DEBUG("CD::Create done\n");
 
   // FIXME: flush before child execution
-  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
+//  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
   if(prv_medium_ != kDRAM) {
     entry_directory_.AppendTable();
     entry_directory_.data_->Flush();
@@ -858,10 +858,11 @@ uint32_t BeginPhase(uint32_t level, const string &label) {
 }
 
 static inline 
-void CompletePhase(uint32_t phase)//, bool is_reexec=false)
+void CompletePhase(uint32_t phase, bool is_reexec=false)
 {
   CD_ASSERT(phaseTree.current_);
-  phaseTree.current_->IncSeqID(failed_phase == HEALTHY);
+  if(is_reexec == false)
+    phaseTree.current_->IncSeqID(failed_phase == HEALTHY);
 //  phaseTree.current_->seq_end_++; // reinit at failure
 //  if(failed_phase == HEALTHY) {
 //    phaseTree.current_->seq_acc_++; // no reinit
@@ -888,7 +889,7 @@ void CompletePhase(uint32_t phase)//, bool is_reexec=false)
 
 /* CD::Begin()
  */ 
-
+static uint32_t prv_phase_chk = -1U;
 // Here we don't need to follow the exact CD API this is more like internal thing. 
 // CDHandle will follow the standard interface. 
 CDErrT CD::Begin(const char *label, bool collective)
@@ -901,12 +902,10 @@ CDErrT CD::Begin(const char *label, bool collective)
     sys_detect_bit_vector_ = phaseTree.current_->errortype_;
     phaseTree.current_->UpdateTaskInfo(rank_in_level(), cd_id_.sibling_count(),
                                        task_in_color(), cd_id_.task_count());
-    if(myTaskID == 4) printf("lv:%u, %s, %s, bitvec:%lx\n", level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
   } else { // phaseTree.current_ was updated at tuned::CDHandle before this
     cd_id_.cd_name_.phase_ = phaseTree.current_->phase_;
     sys_detect_bit_vector_ = phaseTree.current_->errortype_;
     CD_DEBUG("lv:%u, %s, %s, bitvec:%lx\n", level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
-    printf("lv:%u, %s, %s, bitvec:%lx\n", level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
     CD_ASSERT_STR(new_phase == phaseTree.current_->phase_,
                   "phase : %u != %u\n", new_phase,  phaseTree.current_->phase_);
   }
@@ -921,9 +920,24 @@ CDErrT CD::Begin(const char *label, bool collective)
     prev_phase = current_phase;
     if(failed_phase == HEALTHY) {
       phaseTree.current_->MarkSeqID(cd_id_.sequential_id_); // set seq_begin_ = seq_end_
-      phaseTree.current_->seq_end_ = cd_id_.sequential_id_;
+//      phaseTree.current_->seq_end_ = cd_id_.sequential_id_;
+    } else {
+      if(myTaskID == 0) {
+        printf("[In Rollback] ");
+        phaseTree.current_->PrintDetails();
+      }
     }
   }
+
+  if(prv_phase_chk == -1U || prv_phase_chk != current_phase) {
+    if(myTaskID == 4)  {
+      printf("[%s] lv:%u, %s, %s, bitvec:%lx, %ld(%ld), %ld~%ld\n", 
+        __func__, level(), name_.c_str(), label_.c_str(), sys_detect_bit_vector_, 
+        current_phase, failed_phase, phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_);
+    }
+  }
+
+
  // cd_name_.phase_ = GetPhase(level(), label_);
 
 //  cd_name_.phase_ = phase;
@@ -1201,6 +1215,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     MYDBG("#########%s level : %d (rollback_point: %d) (%s)\n", __func__, 
       target->level(), *rollback_point_, target->label().c_str());
   }
+  phaseTree.current_->ResetSeqID();
 #if 0//CD_PROFILER_ENABLED
   static bool check_sync_clk = false;
   if(check_sync_clk == false) {
@@ -1268,7 +1283,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #endif
 
       phaseTree.current_->profile_.RecordRollback(false); // measure timer and calculate sync time.
-      CompletePhase(target->phase());
+      CompletePhase(target->phase(), true);
       target->ptr_cd_->CompleteLogs();
       target->ptr_cd_->DeleteEntryDirectory();
       target->Destroy();
@@ -1320,10 +1335,10 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       recovery_sync_time += CD_CLOCK() - prof_sync_clk;
 //      check_sync_clk = false;
 #endif
-      CompletePhase(target->phase());
+      CompletePhase(target->phase(), true);
       return target;
     }
-  }
+  } // level == rollback_lv case ends
   else if(level > rollback_lv && rollback_lv != INVALID_ROLLBACK_POINT) {
 
     // This synchronization corresponds to that in Complete or Create of other tasks in the different CDs.
@@ -1351,7 +1366,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #endif
 
     phaseTree.current_->profile_.RecordRollback(false); // measure timer and calculate sync time.
-    CompletePhase(target->phase());
+    CompletePhase(target->phase(), true);
     target->ptr_cd_->CompleteLogs();
     target->ptr_cd_->DeleteEntryDirectory();
     target->Destroy(false);
@@ -1491,19 +1506,34 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
   else { // No error occurred
 
     CD_DEBUG("## Complete. No error! ##\n\n");
-    const uint64_t curr_phase = this->phase();
-    const uint64_t curr_seqID = phaseTree.current_->seq_end_;
+    const int64_t curr_phase = this->phase();
+    const int64_t curr_seqID = phaseTree.current_->seq_end_;
+    const int64_t curr_begID = phaseTree.current_->seq_begin_;
     //if(myTaskID == 0) { printf("## Complete. No error! ##, cur(%lu, %lu), failed(%ld,%ld) %ld\n",
     //    curr_phase, curr_seqID, failed_phase, failed_seqID, phaseTree.current_->seq_begin_); }
 
-    if(failed_phase == curr_phase && failed_seqID == curr_seqID) {
-      failed_phase = HEALTHY;
-      failed_seqID = HEALTHY;
-      // At this point, take the timer (update RuntimeInfo::clk_)
-      // to measure the rest of execution time.
-      CD_CLOCK_T now = CD_CLOCK();
-      phaseTree.current_->FinishRecovery(now);
-    } 
+    if(failed_phase != HEALTHY) {
+      if(failed_phase == curr_phase) {
+        if(failed_seqID == curr_seqID) {
+          failed_phase = HEALTHY;
+          failed_seqID = HEALTHY;
+          // At this point, take the timer (update RuntimeInfo::clk_)
+          // to measure the rest of execution time.
+          CD_CLOCK_T now = CD_CLOCK();
+          phaseTree.current_->FinishRecovery(now);
+          printf(">>> Reached failure (%s) but it was in recovery, phase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
+              label_.c_str(), failed_phase, curr_phase, failed_seqID, curr_seqID, curr_begID);
+        } else if(failed_seqID > curr_seqID) {
+          if(myTaskID == 0) {
+          printf(">>> No error (%s) but it was in recovery, phase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
+              label_.c_str(), failed_phase, curr_phase, failed_seqID, curr_seqID, curr_begID);
+          }
+        } else { // curr_seqID should not be greater than failed_seqID
+          ERROR_MESSAGE("Phase(%u, %s): curr_seqID (%lu~%lu) should not be greater than failed_seqID (%ld)\n", 
+                         phaseTree.current_->phase_, phaseTree.current_->label_.c_str(), curr_begID, curr_seqID, failed_seqID);
+        }
+      } 
+    }
     reported_error_ = false;
     reexecuted_     = false;
     CompleteLogs();
@@ -1523,6 +1553,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     DeleteEntryDirectory();
     ret = common::kOK;
 
+    phaseTree.current_->profile_.exec_++;
     CompletePhase(this->phase());
   }
 
@@ -2890,7 +2921,7 @@ CDHandle *HeadCD::Create(CDHandle *parent,
 //    entry_directory_.AppendTable();
 //    entry_directory_.data_->Flush();
 //  }
-  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
+//  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
   if(prv_medium_ != kDRAM) {
     entry_directory_.AppendTable();
     entry_directory_.data_->Flush();
