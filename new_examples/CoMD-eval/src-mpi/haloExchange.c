@@ -708,6 +708,7 @@ void sortAtomsInCell(Atoms *atoms, LinkCell *boxes, int iBox) {
 int sortAtomsById(const void *a, const void *b) {
   int aId = ((AtomMsg *)a)->gid;
   int bId = ((AtomMsg *)b)->gid;
+  if(aId == bId) { printf("aID:%d\n", aId); }
   assert(aId != bId);
 
   if (aId < bId)

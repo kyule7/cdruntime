@@ -502,7 +502,7 @@ void CDProfiles::Print(std::ostream &os, const std::string &head, const std::str
   const int pz0 = 18;
   const int pz1 = 14;
   os << str  
-  << head << std::left << std::setw(pz0) << "               "      
+  << head << std::left << std::setw(pz0) << "                          "      
                        << std::setw(pz1) << "Min"
                        << std::setw(pz1) << "Max"
                        << std::setw(pz1) << "Avg"

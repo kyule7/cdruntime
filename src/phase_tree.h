@@ -223,7 +223,13 @@ struct PhaseNode {
     }
 
     inline void PrintDetails(void) {
+      if(cd::myTaskID == 0) { 
       printf("Phase: %s (err:%lx, intvl:%ld) (lv:%u,ph:%u,seq:%lu~%lu, %lu/%lu)\n"
+             "(%s) siblingID:%u/%u, taskID:%u/%u, cnt:%ld\n",
+      label_.c_str(), errortype_, interval_, level_, phase_, seq_begin_, seq_end_, seq_acc_, seq_acc_rb_,
+      (state_ == kExecution)? "exec" : "reex", sibling_id_, sibling_size_, task_id_, task_size_, count_);
+      }
+      CD_DEBUG("Phase: %s (err:%lx, intvl:%ld) (lv:%u,ph:%u,seq:%lu~%lu, %lu/%lu)\n"
              "(%s) siblingID:%u/%u, taskID:%u/%u, cnt:%ld\n",
       label_.c_str(), errortype_, interval_, level_, phase_, seq_begin_, seq_end_, seq_acc_, seq_acc_rb_,
       (state_ == kExecution)? "exec" : "reex", sibling_id_, sibling_size_, task_id_, task_size_, count_);
@@ -245,11 +251,11 @@ struct PhaseNode {
       }
     }
 
-    inline void ResetSeqID(void) {
-      if(cd::myTaskID == 0) { 
+    inline void ResetSeqID(uint32_t rollback_lv) {
       PrintDetails();
+      if(rollback_lv < level_) {
+        seq_end_ = seq_begin_; 
       }
-      seq_end_ = seq_begin_; 
     }
 };
 

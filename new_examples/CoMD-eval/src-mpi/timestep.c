@@ -175,6 +175,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // For now, let's preserve everything required to evaluate from here
     // Preserve atoms->r, p, f, U
     int redist_pre_size =
+#if 0
         preserveAtoms(lv2_cd, s->atoms, s->boxes->nTotalBoxes,
                       0, // is_all
                       1, // is_gid
@@ -188,6 +189,22 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       -1, // to (entire atoms)
                       0,  // is_print
                       NULL);
+#else
+        preserveAtoms(lv2_cd, s->atoms, s->boxes->nTotalBoxes,
+                      1, // is_all
+                      0, // is_gid
+                      0,  // is_r
+                      //0,  // is_r //assumed to be preserved by reference
+                      0,  // is_p
+                      0,  // is_f
+                      0,  // is_U
+                      0,  // is_iSpecies
+                      0,  // from (entire atoms)
+                      -1, // to (entire atoms)
+                      0,  // is_print
+                      NULL);
+
+#endif
     // Preserve (almost) all in boxes. Note that this is over-preservation 
     // because boxSize and nHaloBoxes are not required while tiny they are.
     redist_pre_size += preserveLinkCell(lv2_cd, s->boxes, 1 /*all*/,

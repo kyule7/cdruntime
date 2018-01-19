@@ -220,11 +220,12 @@ public:
   static CDHandle *GetCDLevel(uint32_t level)
   { 
     if(uniquePath_ != NULL) {
-      if( uniquePath_->size() > 0 ) {
-        if(level < (uint32_t)uniquePath_->size()) {
+      size_t num_levels = uniquePath_->size();
+      if( num_levels > 0 ) {
+        if(level < num_levels) {
           return uniquePath_->at(level); 
         } else {
-          assert(0);
+          ERROR_MESSAGE("num_levels %zu <= %u level\n", num_levels, level);
 //          uint32_t s = uniquePath_->size();
 //          CD_DEBUG("level %u >= %u #cdobj\n", level, s);
         }
