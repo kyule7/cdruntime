@@ -114,14 +114,14 @@ void CD::CheckReexecution(void)
   CD_DEBUG("%s %s \t Reexec from %u\n", 
            cd_id_.GetString().c_str(), label_.c_str(), new_rollback_point);
 
-
+  uint32_t level = cd_id_.cd_name_.level_;
 //  if(new_rollback_point != INVALID_ROLLBACK_POINT) {
-  if(new_rollback_point <= level()) {//!= INVALID_ROLLBACK_POINT) {
+  if(new_rollback_point <= level) {//!= INVALID_ROLLBACK_POINT) {
     CD_DEBUG("\n\nReexec (Before calling GetCDToRecover()->Recover(false);\n\n");
 
     cd::phaseTree.current_->profile_.RecordRollback(true, kCreate); // measure timer and calculate sync time.
 
-    CD::GetCDToRecover(CDPath::GetCurrentCD(), false)->ptr_cd()->Recover();
+    CD::GetCDToRecover(CDPath::GetCurrentCD(), false)->ptr_cd()->Recover(level);
   } else {
     CD_DEBUG("\n\nReexec is false\n");
   }

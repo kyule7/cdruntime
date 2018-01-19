@@ -1161,6 +1161,10 @@ CDErrT CDHandle::Destroy(bool collective)
 
   CD_DEBUG("%s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
                                                        level(), need_reexec(), *CD::rollback_point_);
+  if(myTaskID == 0) {
+    printf("[Destroy] %s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
+                                                       level(), need_reexec(), *CD::rollback_point_);
+  }
   err = InternalDestroy(collective);
 
   end_clk = CD_CLOCK();
@@ -1317,6 +1321,15 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
 //  profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
 //#endif
   //CDEpilogue(phaseTree.current_->profile_.RecordBegin());
+  if(failed_phase != HEALTHY) {
+    const uint64_t curr_phase = ptr_cd_->phase();
+    const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
+    const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
+    CD_DEBUG("[REEXEC]%s (%s) " 
+             "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+             ptr_cd_->cd_id_.GetStringID().c_str(), label,
+             cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
+  }
   cd::phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, need_sync);
   CDEpilogue();
 #if CD_LIBC_LOGGING
@@ -1398,6 +1411,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   /// Accumulated volume of data to be preserved for Sequential CDs. 
   /// It will be averaged out with the number of seq. CDs.
   assert(ptr_cd_ != 0);
+  assert(len > 0);
   bool is_reexec = (GetExecMode() == kReexecution);
   CDErrT err;
   {
@@ -1469,6 +1483,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   err = ptr_cd_->Preserve((void *)&serdes, len, kSerdes | preserve_mask, 
                                  entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
+  assert(len > 0);
 //#if CD_PROFILER_ENABLED
 //  if(is_reexecution) {
 ////    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
@@ -1523,6 +1538,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   CDPrologue();
 
   assert(ptr_cd_ != 0);
+  assert(len > 0);
 //#if CD_PROFILER_ENABLED
 //  bool is_reexec = (GetExecMode() == kReexecution);
 //#endif
@@ -2221,11 +2237,27 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
           level() , rollback_point, sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());
-    } else if(rollback_point == level()) {
-      printf(">> Rollback (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
-          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+      CD_DEBUG("\n>>>> Escalation %u->%u (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+          level() , rollback_point, sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());
+    } else if(rollback_point == level()) {
+
+      const uint64_t curr_phase = ptr_cd_->phase();
+      const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
+      const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
+      printf(">>>> Rollback (%s) (syndrom:%lx == vec:%lx) = %d, lv:%u, %s phase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+          ptr_cd_->label_.c_str(),
+          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+          CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
+          cdh->level(), cdh->GetLabel(), 
+          cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
+      CD_DEBUG(">>>> Rollback (%s) (syndrom:%lx == vec:%lx) = %d, lv:%u, %s fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+          ptr_cd_->label_.c_str(),
+          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+          CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
+          cdh->level(), cdh->GetLabel(), 
+          cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
 
     }
 
@@ -2338,6 +2370,7 @@ bool     CDHandle::reexecuted(void)    const { return ptr_cd_->reexecuted_; }
 bool     CDHandle::need_reexec(void)   const { return *CD::rollback_point_ != INVALID_ROLLBACK_POINT; }
 uint32_t CDHandle::rollback_point(void)  const { return *CD::rollback_point_; }
 CDType   CDHandle::GetCDType(void)     const { return ptr_cd_->GetCDType(); }
+int      IsReexec(void)  { return cd::failed_phase != HEALTHY; }
 #if CD_MPI_ENABLED
 int CDHandle::GetCommLogMode(void) const {return ptr_cd_->GetCommLogMode(); }
 int CDHandle::GetCDLoggingMode(void) const {return ptr_cd_->cd_logging_mode_;}

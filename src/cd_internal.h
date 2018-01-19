@@ -543,7 +543,7 @@ public:
  *  If user does not register it, CD::Reexecute() is called by default. 
  *
  */
-    void Recover(bool collective=true);
+    void Recover(uint32_t level, bool collective=true);
 
 /** @brief Method to test if this CD can recover from an error/location mask
  *

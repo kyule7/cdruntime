@@ -349,6 +349,7 @@ struct RuntimeInfo : public CDOverhead {
       clk_ = now;
     } else {
       reexec_clk_ = now;
+      reexec_++;
     }
   }
 
@@ -370,15 +371,16 @@ struct RuntimeInfo : public CDOverhead {
     compl_elapsed_time_    += elapsed;
     if(is_reexec == false) { // normal execution
       total_time_ += now - clk_;
-      exec_       += 1;
+      //exec_       += 1;
     } else { // reexecution not from the current CDs 
       reexec_time_ += now - reexec_clk_;
-      reexec_      += 1;
+      //reexec_      += 1;
     }
   }
   
 
   // This is called at CD::Complete() in the case of error. 
+  // RecordRollback() is always followed by GetCDToRecover()
   // Before invoking RecordRollback().
   // 
   // For example, if there is error, the order of calls will be

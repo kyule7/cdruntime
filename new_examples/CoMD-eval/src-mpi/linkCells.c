@@ -71,7 +71,7 @@
 #include "decomposition.h"
 #include "performanceTimers.h"
 #include "CoMDTypes.h"
-
+#include "cd.h"
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 
@@ -81,6 +81,7 @@ static int getBoxFromCoord(LinkCell *boxes, real_t rr[3]);
 static void emptyHaloCells(LinkCell *boxes);
 static void getTuple(LinkCell *boxes, int iBox, int *ixp, int *iyp, int *izp);
 
+static void PrintBox(void);
 LinkCell *initLinkCells(const Domain *domain, real_t cutoff) {
   assert(domain);
   LinkCell *ll = comdMalloc(sizeof(LinkCell));
@@ -185,7 +186,7 @@ void putAtomInBox(LinkCell *boxes, Atoms *atoms, const int gid, const int iType,
 /// Because of the order in which the local and halo link cells are
 /// stored the indices of the halo cells are special cases.
 /// \see initLinkCells for an explanation of storage order.
-int getBoxFromTuple(LinkCell *boxes, int ix, int iy, int iz) {
+int getBoxFromTuple(LinkCell *boxes, volatile int ix, volatile int iy, volatile int iz) {
   int iBox = 0;
   const int *gridSize = boxes->gridSize; // alias
 
@@ -224,6 +225,42 @@ int getBoxFromTuple(LinkCell *boxes, int ix, int iy, int iz) {
   // local link celll.
   else {
     iBox = ix + gridSize[0] * iy + gridSize[0] * gridSize[1] * iz;
+  }
+  if(iBox < 0) {
+    printf("Error: iBox %d < 0\n", iBox);
+    assert(is_reexec());
+    // Halo in Z+
+    if (iz == gridSize[2]) {
+      if(is_reexec()) printf("[%s %d] Z+\n", __func__, getMyRank());
+    }
+    // Halo in Z-
+    else if (iz == -1) {
+      if(is_reexec()) printf("[%s %d] Z-\n", __func__, getMyRank());
+    }
+    // Halo in Y+
+    else if (iy == gridSize[1]) {
+      if(is_reexec()) printf("[%s %d] Y+\n", __func__, getMyRank());
+    }
+    // Halo in Y-
+    else if (iy == -1) {
+      if(is_reexec()) printf("[%s %d] Y-\n", __func__, getMyRank());
+    }
+    // Halo in X+
+    else if (ix == gridSize[0]) {
+      if(is_reexec()) printf("[%s %d] X+\n", __func__, getMyRank());
+    }
+    // Halo in X-
+    else if (ix == -1) {
+      if(is_reexec()) printf("[%s %d] X-\n", __func__, getMyRank());
+    }
+    // local link celll.
+    else {
+      if(is_reexec()) printf("[%s %d] local\n", __func__, getMyRank());
+    }
+    PrintBox();
+  }
+  if(iBox >= boxes->nTotalBoxes) {
+    printf("Error: iBox %d >= %d\n", iBox, boxes->nTotalBoxes);
   }
   assert(iBox >= 0);
   assert(iBox < boxes->nTotalBoxes);
@@ -322,6 +359,29 @@ void copyAtom(LinkCell *boxes, Atoms *atoms, int iAtom, int iBox, int jAtom,
 /// assignments for atoms that are near a link cell boundaries.  If no
 /// ranks claim an atom in a local cell it will be lost.  If multiple
 /// ranks claim an atom it will be duplicated.
+
+static int _t_ix=-1, _t_iy=-1, _t_iz=-1;
+static real_t _t_localMin[3]={-1.,-1.,-1.};
+static real_t _t_invBoxSize[3]={-1,-1,-1};
+static int _t_gridSize[3]={-1,-1,-1};
+static void PrintBox(void) {
+    printf("[%s %d] (%d,%d,%d), min=(%f,%f,%f), n=(%f,%f,%f), gridsize=(%d,%d,%d)\n", 
+           __func__, getMyRank(), 
+           _t_ix, 
+           _t_iy, 
+           _t_iz,
+           _t_localMin[0], 
+           _t_localMin[1], 
+           _t_localMin[2],
+           _t_invBoxSize[0],
+           _t_invBoxSize[1],
+           _t_invBoxSize[2],
+           _t_gridSize[0],
+           _t_gridSize[1],
+           _t_gridSize[2]
+            ); 
+
+}
 int getBoxFromCoord(LinkCell *boxes, real_t rr[3]) {
   const real_t *localMin = boxes->localMin; // alias
   const real_t *localMax = boxes->localMax; // alias
@@ -329,7 +389,20 @@ int getBoxFromCoord(LinkCell *boxes, real_t rr[3]) {
   int ix = (int)(floor((rr[0] - localMin[0]) * boxes->invBoxSize[0]));
   int iy = (int)(floor((rr[1] - localMin[1]) * boxes->invBoxSize[1]));
   int iz = (int)(floor((rr[2] - localMin[2]) * boxes->invBoxSize[2]));
-
+  if(is_reexec()) {
+    _t_ix            = ix;
+    _t_iy            = iy;
+    _t_iz            = iz;
+    _t_localMin[0]   = localMin[0];
+    _t_localMin[1]   = localMin[1];
+    _t_localMin[2]   = localMin[2];
+    _t_invBoxSize[0] = boxes->invBoxSize[0];
+    _t_invBoxSize[1] = boxes->invBoxSize[1];
+    _t_invBoxSize[2] = boxes->invBoxSize[2];
+    _t_gridSize[0]   = gridSize[0];
+    _t_gridSize[1]   = gridSize[1];
+    _t_gridSize[2]   = gridSize[2];
+  }
   // For each axis, if we are inside the local domain, make sure we get
   // a local link cell.  Otherwise, make sure we get a halo link cell.
   if (rr[0] < localMax[0]) {

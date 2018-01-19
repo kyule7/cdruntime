@@ -106,6 +106,7 @@ int cd_preserve_serdes(cd_handle_t *c_handle,
 cd_handle_t *getcurrentcd(void);
 cd_handle_t *getleafcd(void);
 void cd_detect(cd_handle_t *);
+int is_reexec(void);
 
 
 

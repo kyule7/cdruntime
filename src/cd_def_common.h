@@ -260,4 +260,5 @@
 
 //extern uint64_t GetCDEntryID(const char *str);
 extern const char *GetCDEntryStr(uint64_t id);
+extern int      IsReexec(void);
 #endif

@@ -183,6 +183,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     char idx_redist[256] = "-1"; // FIXME: it this always enough?
     sprintf(idx_redist, "redist_%d", ii);
     int redist_pre_size =
+#if 0
         preserveAtoms(lv2_cd, s->atoms, s->boxes->nTotalBoxes,
                       0, // is_all
                       1, // is_gid
@@ -197,6 +198,24 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       0,  // is_print
                       idx_redist);
                       //NULL);
+#else
+        preserveAtoms(lv2_cd, s->atoms, s->boxes->nTotalBoxes,
+                      1, // is_all
+                      0, // is_gid
+                      0,  // is_r
+                      //0,  // is_r //assumed to be preserved by reference
+                      0,  // is_p
+                      0,  // is_f
+                      0,  // is_U
+                      0,  // is_iSpecies
+                      0,  // from (entire atoms)
+                      -1, // to (entire atoms)
+                      0,  // is_print
+                      idx_redist);
+                      //NULL);
+
+#endif
+>>>>>>> d08bd688adfb9a8937f315c2921cf59e5fcc3b79
     // Preserve (almost) all in boxes. Note that this is over-preservation 
     // because boxSize and nHaloBoxes are not required while tiny they are.
     redist_pre_size += preserveLinkCell(lv2_cd, s->boxes, 1 /*all*/,

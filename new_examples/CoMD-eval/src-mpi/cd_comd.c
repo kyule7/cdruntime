@@ -68,7 +68,7 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell,
                               unsigned int is_local, // nAtoms[0:nLocalBox-1]
                               unsigned int is_nLocalBoxes,
                               unsigned int is_nTotalBoxes) {
-  uint32_t size = 0;
+  uint32_t size = sizeof(LinkCell);
   
   // nAtoms_size: The amount of data for nAtoms[] to be preserved
   // either nAtoms[0:nLocalBoxes-1] or nAtoms[0:nTotalBoxes-] with is_local 
@@ -477,16 +477,26 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh,
                 "AtomExchangeParms_cellList", "AtomExchangeParms_cellList");
 #endif
   }
-  uint32_t pbcFactor_size = 0;
+  uint32_t pbcFactor_size = 3 * sizeof(real_t);
   if (is_pbcFactor == 1) {
-    for (int i = 0; i < 6; i++) {
-      if (PRINTON == 1)
-        printf("Preserve pbfFactor[%d]:%u\n", i, sizeof(real_t) * 3);
-      pbcFactor_size += 3 * sizeof(real_t);
-    }
+//    for (int i = 0; i < 6; i++) {
+//      if (PRINTON == 1)
+//        printf("Preserve pbfFactor[%d]:%u\n", i, sizeof(real_t) * 3);
+//      pbcFactor_size += 3 * sizeof(real_t);
+//    }
 #ifdef DO_PRV
-    cd_preserve(cdh, xchange_parms->pbcFactor, pbcFactor_size, kCopy,
-                "AtomExchangeParms_pbcFactor", "AtomExchangeParms_pbcFactor");
+    cd_preserve(cdh, xchange_parms->pbcFactor[0], pbcFactor_size, kCopy,
+                "AtomExchangeParms_pbcFactor0", "AtomExchangeParms_pbcFactor0");
+    cd_preserve(cdh, xchange_parms->pbcFactor[1], pbcFactor_size, kCopy,
+                "AtomExchangeParms_pbcFactor1", "AtomExchangeParms_pbcFactor1");
+    cd_preserve(cdh, xchange_parms->pbcFactor[2], pbcFactor_size, kCopy,
+                "AtomExchangeParms_pbcFactor2", "AtomExchangeParms_pbcFactor2");
+    cd_preserve(cdh, xchange_parms->pbcFactor[3], pbcFactor_size, kCopy,
+                "AtomExchangeParms_pbcFactor3", "AtomExchangeParms_pbcFactor3");
+    cd_preserve(cdh, xchange_parms->pbcFactor[4], pbcFactor_size, kCopy,
+                "AtomExchangeParms_pbcFactor4", "AtomExchangeParms_pbcFactor4");
+    cd_preserve(cdh, xchange_parms->pbcFactor[5], pbcFactor_size, kCopy,
+                "AtomExchangeParms_pbcFactor5", "AtomExchangeParms_pbcFactor5");
 #endif
   }
   size += cellList_size;

@@ -165,3 +165,7 @@ void cd_detect(cd_handle_t *c_handle)
   TO_CDHandle(c_handle)->Detect();
 }
 
+int is_reexec(void)
+{
+  return IsReexec();
+}
