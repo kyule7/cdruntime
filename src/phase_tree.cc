@@ -40,20 +40,10 @@ void PhaseNode::PrintInputYAML(bool first)
 {
   if(first) {
     assert(inYAML == NULL);
-//    string &filepath = cd::output_basepath;
-//    printf("in yaml filepath:%s , %s\n", filepath.c_str(), std::string(CD_DEFAULT_OUTPUT_CONFIG_IN).c_str());
-//    filepath += std::string(CD_DEFAULT_OUTPUT_CONFIG_IN);
-//<<<<<<< HEAD
-//    sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_IN);
-//    //inYAML = fopen(output_filepath, "a");
-//    inYAML = fopen(output_filepath, "w+");
-//=======
     memset(output_filepath, '\0', 256);
     sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_CONFIG_IN);
     printf("%s file:%s\n", __func__, output_basepath);
     inYAML = fopen(output_filepath, "a");
-//    printf("in yaml filepath:%s , %s\n", cd::output_basepath.c_str(), std::string(CD_DEFAULT_OUTPUT_CONFIG_IN).c_str());
-//    inYAML = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_CONFIG_IN)).c_str(), "a");
   }
 
   std::string indent(level_<<1, ' ');
@@ -111,15 +101,6 @@ void PhaseNode::PrintOutputYAML(bool first)
 //TODO: check interval, reex_cnt, error_vec 
 void PhaseNode::PrintOutputJson(void) 
 {
-//<<<<<<< HEAD
-//  //FIXME(YKWON): Better to have different file handler
-//  assert(outYAML == NULL);
-//  assert(parent_ == NULL);
-//  sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_OUT);
-//  printf("Output File:%s\n", output_filepath);
-//  //outYAML = fopen(output_filepath, "a");
-//  outYAML = fopen(output_filepath, "w+");
-//=======
   assert(outJSON == NULL);
   assert(parent_ == NULL);
   memset(output_filepath, '\0', 256);
