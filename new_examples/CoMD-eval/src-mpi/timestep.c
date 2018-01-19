@@ -215,7 +215,6 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       //NULL);
 
 #endif
->>>>>>> d08bd688adfb9a8937f315c2921cf59e5fcc3b79
     // Preserve (almost) all in boxes. Note that this is over-preservation 
     // because boxSize and nHaloBoxes are not required while tiny they are.
     redist_pre_size += preserveLinkCell(lv2_cd, s->boxes, 1 /*all*/,
