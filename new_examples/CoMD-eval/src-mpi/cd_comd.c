@@ -208,6 +208,7 @@ preserveAtoms(cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes,
     assert(from == 0);
     assert(to == -1);
 #ifdef DO_PRV
+    //TODO: add idx
     // Preserve the values of nLocal and nGLobal and the pointers of
     // *gid, *iSpecies, *r, *p, *f and *U. (just pointers themselvs)
     cd_preserve(cdh, atoms, atoms_size, kCopy, "Atoms", "Atoms");
@@ -240,11 +241,21 @@ preserveAtoms(cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes,
   // Preserve array for iSpecies of atoms
   else if (is_iSpecies == 1) {
     assert(is_all != 1);
+    char tmp_atoms_iSpecies[256] = "-1"; // FIXME: it this always enough?
+    char tmp_atoms_iSpecies_ptr[256] = "-1"; // FIXME: it this always enough?
+    if (idx == NULL) {
+      sprintf(tmp_atoms_iSpecies, "Atoms_iSpecies");
+      sprintf(tmp_atoms_iSpecies_ptr, "Atoms_iSpecies_ptr");
+    } else {
+      sprintf(tmp_atoms_iSpecies, "Atoms_iSpecies%s", idx);
+      sprintf(tmp_atoms_iSpecies_ptr, "Atoms_iSpecies_ptr%s", idx);
+    }
+
 #ifdef DO_PRV
     cd_preserve(cdh, &(atoms->iSpecies), sizeof(int *), kCopy,
-                "Atoms_iSpecies_ptr", "Atoms_iSpecies_ptr");
-    cd_preserve(cdh, atoms->iSpecies, iSpecies_size, kCopy, "Atoms_iSpecies",
-                "Atoms_iSpecies");
+                tmp_atoms_iSpecies_ptr, tmp_atoms_iSpecies_ptr);
+    cd_preserve(cdh, atoms->iSpecies, iSpecies_size, kCopy, tmp_atoms_iSpecies,
+                tmp_atoms_iSpecies);
 #endif
     size += iSpecies_size;
   }
@@ -272,21 +283,39 @@ preserveAtoms(cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes,
   // Preserve array for atoms->p
   else if (is_p == 1) {
     assert(is_all != 1);
+    char tmp_atoms_p[256] = "-1"; // FIXME: it this always enough?
+    char tmp_atoms_p_ptr[256] = "-1"; // FIXME: it this always enough?
+    if (idx == NULL) {
+      sprintf(tmp_atoms_p, "Atoms_p");
+      sprintf(tmp_atoms_p_ptr, "Atoms_p_ptr");
+    } else {
+      sprintf(tmp_atoms_p, "Atoms_p%s", idx);
+      sprintf(tmp_atoms_p_ptr, "Atoms_p_ptr%s", idx);
+    }
 #ifdef DO_PRV
-    cd_preserve(cdh, &(atoms->p), sizeof(real3 *), kCopy, "Atoms_p_ptr",
-                "Atoms_p_ptr");
-    cd_preserve(cdh, atoms->p, p_size, kCopy, "Atoms_p", "Atoms_p");
+    cd_preserve(cdh, &(atoms->p), sizeof(real3 *), kCopy, tmp_atoms_p_ptr,
+                tmp_atoms_p_ptr);
+    cd_preserve(cdh, atoms->p, p_size, kCopy, tmp_atoms_p, tmp_atoms_p);
 #endif
     size += p_size;
   }
 
   // Preserve array for atoms->f
   else if (is_f == 1) {
-    assert(is_all != 1 && is_all != 1);
+    assert(is_all != 1);
+    char tmp_atoms_f[256] = "-1"; // FIXME: it this always enough?
+    char tmp_atoms_f_ptr[256] = "-1"; // FIXME: it this always enough?
+    if (idx == NULL) {
+      sprintf(tmp_atoms_f, "Atoms_f");
+      sprintf(tmp_atoms_f_ptr, "Atoms_f_ptr");
+    } else {
+      sprintf(tmp_atoms_f, "Atoms_f%s", idx);
+      sprintf(tmp_atoms_f_ptr, "Atoms_f_ptr%s", idx);
+    }
 #ifdef DO_PRV
-    cd_preserve(cdh, &(atoms->f), sizeof(real3 *), kCopy, "Atoms_f_ptr",
-                "Atoms_f_ptr");
-    cd_preserve(cdh, atoms->f, f_size, kCopy, "Atoms_f", "Atoms_f");
+    cd_preserve(cdh, &(atoms->f), sizeof(real3 *), kCopy, tmp_atoms_f_ptr,
+                tmp_atoms_f_ptr);
+    cd_preserve(cdh, atoms->f, f_size, kCopy, tmp_atoms_f, tmp_atoms_f);
 #endif
     size += f_size;
   }
@@ -294,10 +323,19 @@ preserveAtoms(cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes,
   // Preserve array for atoms->U
   else if (is_U == 1) {
     assert(is_all != 1);
+    char tmp_atoms_U[256] = "-1"; // FIXME: it this always enough?
+    char tmp_atoms_U_ptr[256] = "-1"; // FIXME: it this always enough?
+    if (idx == NULL) {
+      sprintf(tmp_atoms_U, "Atoms_U");
+      sprintf(tmp_atoms_U_ptr, "Atoms_U_ptr");
+    } else {
+      sprintf(tmp_atoms_U, "Atoms_U%s", idx);
+      sprintf(tmp_atoms_U_ptr, "Atoms_U_ptr%s", idx);
+    }
 #ifdef DO_PRV
-    cd_preserve(cdh, &(atoms->U), sizeof(real3 *), kCopy, "Atoms_u_ptr",
-                "Atoms_u_ptr");
-    cd_preserve(cdh, atoms->U, U_size, kCopy, "Atoms_u", "Atoms_u");
+    cd_preserve(cdh, &(atoms->U), sizeof(real3 *), kCopy, tmp_atoms_U_ptr,
+                tmp_atoms_U_ptr);
+    cd_preserve(cdh, atoms->U, U_size, kCopy, tmp_atoms_U, tmp_atoms_U);
 #endif
     size += U_size;
   } else {
