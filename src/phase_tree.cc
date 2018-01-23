@@ -363,7 +363,13 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 #if CD_TUNING_ENABLED == 0 && CD_RUNTIME_ENABLED == 1
   if(tuned::phaseNodeCache.empty() == false) {
     auto pt = tuned::phaseNodeCache.find(phase);
-    assert(pt != tuned::phaseNodeCache.end());
+    if(pt == tuned::phaseNodeCache.end()) {
+      for(auto it=tuned::phaseNodeCache.begin(); it!=tuned::phaseNodeCache.end(); ++it) {
+        printf("[%d] phase %u \n", cd::myTaskID, it->first);
+      }
+      ERROR_MESSAGE("Phase %u is missing in tuned::phaseNodeCache (%zu)\n", 
+          phase, tuned::phaseNodeCache.size());
+    }
     cd::phaseTree.current_->errortype_ = pt->second->errortype_;
   }
 #endif
@@ -471,7 +477,7 @@ void PhaseNode::GatherStats(void)
 
 void PhaseTree::PrintStats(void)
 {
-  root_->GatherStats();
+//  root_->GatherStats();
   // If root_ == NULL,
   // phaseTree is not created.
   if(cd::myTaskID == 0) {
@@ -486,8 +492,8 @@ void PhaseTree::PrintStats(void)
 
 //      printf("basepath:%s\n", output_basepath);
 //        Print();
-      root_->PrintInputYAML(true);
-      root_->PrintOutputJson();
+      root_->PrintInputYAML(true); // profile.out
+      root_->PrintOutputJson();    // estimation.json
       //FIXME(YKWON): This sometimes fails to produce profile.out
       root_->Print(true, true);
 //      PrintProfile();

@@ -221,7 +221,7 @@ CD::CD(void)
   is_window_reused_ = false;
   recreated_ = false;
   cd_type_ = kStrict;
-  prv_medium_ = kDRAM;
+  prv_medium_ = DEFAULT_MEDIUM;
   name_ = INITIAL_CDOBJ_NAME; 
   label_ = string(INITIAL_CDOBJ_LABEL); 
   sys_detect_bit_vector_ = 0;
@@ -798,7 +798,7 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
     }
 #endif
 
-    entry_directory_.Clear(true);
+//    entry_directory_.Clear(true);
 
 #if _MPI_VER
     FinalizeMailBox();
@@ -1075,6 +1075,15 @@ CDErrT CD::Begin(const char *label, bool collective)
 //    ERROR_MESSAGE("CD Begin with mode (%d) and state (curr:%ld > %ld failed).\n", cd_exec_mode_, current_phase, failed_phase);
 //  }
 #endif
+
+  // If it is not from complete (reexecution)
+  //if(failed_phase == HEALTHY) {
+  if(cd_exec_mode_ != kReexecution) {
+    if(prv_medium_ == kLocalDisk && entry_directory_.data_->ftype() != kPosixFile) {
+      entry_directory_.data_->InitFile(kPosixFile);
+    }
+    entry_directory_.data_->ReInit();
+  }
 
   // NOTE: This point reset rollback_point_
   uint32_t new_rollback_point = SyncCDs(this, true);
@@ -2236,7 +2245,8 @@ CDErrT CD::Preserve(void *data,
     // Everytime restore is called one entry is restored.
     ///////////////////////////////////////////////////////////////////////////////
     
-    CD_DEBUG("\n\nReexecution!!! entry directory size : %zu (medium:%d)\n\n", entry_directory_.table_->used(), prv_medium_);
+    CD_DEBUG("\n\nReexecution!!! entry directory size : %zu (medium:%d)\n\n", 
+             entry_directory_.table_->used(), prv_medium_);
 
     if( restore_count_ < preserve_count_ ) { // normal case
 
@@ -2255,10 +2265,12 @@ CDErrT CD::Preserve(void *data,
         CDEntry *ret = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
         if(myTaskID == 0) {
           if(ret == NULL) {
-            printf("Not Found [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+            printf("Not Found [%d %s]tag:%lu prv:%lu rst:%lu\n", 
+                myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
             assert(0);
           } else {
-            printf("Restore [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+            printf("Restore [%d %s]tag:%lu prv:%lu rst:%lu\n", 
+                myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
           }
         }
 //      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {

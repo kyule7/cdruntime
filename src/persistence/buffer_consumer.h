@@ -1,7 +1,8 @@
 #ifndef _BUFFER_CONSUMER_H
 #define _BUFFER_CONSUMER_H
 
-#include <vector>
+//#include <vector>
+#include <list>
 #include <cstdint>
 #include "buffer_consumer_interface.h"
 
@@ -11,7 +12,7 @@ class DataStore;
 // Singleton
 class BufferConsumer {
     static BufferConsumer *buffer_consumer_;
-    std::vector<DataStore *> buf_list_;
+    std::list<DataStore *> buf_list_;
     BufferConsumer(void) {}
     ~BufferConsumer(void);
     void Init(void);

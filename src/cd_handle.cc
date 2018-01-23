@@ -637,6 +637,7 @@ void CD_Finalize(void)
   CDPath::GetCDPath()->pop_back();
 
 
+  cd::phaseTree.root_->GatherStats();
   cd::phaseTree.PrintStats();
   //tuned::phaseTree.PrintStats();
 
@@ -1483,7 +1484,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   err = ptr_cd_->Preserve((void *)&serdes, len, kSerdes | preserve_mask, 
                                  entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
-  assert(len > 0);
+  //assert(len > 0);
 //#if CD_PROFILER_ENABLED
 //  if(is_reexecution) {
 ////    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);

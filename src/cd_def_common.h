@@ -138,14 +138,19 @@
  *
  * \sa CD::GetPlaceToPreserve()
  */
-  enum PrvMediumT { kDRAM=CD_BIT_2,  //!< Preserve to DRAM
-                    kHDD=CD_BIT_3,   //!< Preserve to HDD
-                    kSSD=CD_BIT_4,  //!< Preserve to SSD
-                    kPFS=CD_BIT_5,   //!< Preserve to Parallel File System
-                    kReserveMedium0=CD_BIT_6,  //!< Preserve to Parallel File System
-                    kReserveMedium1=CD_BIT_7,  //!< Preserve to Parallel File System
-                    kLocalFile=24,
-                    kAllFile=56
+  enum PrvMediumT { kUndefined=0,
+                    kLocalMemory=CD_BIT_2,  //!< Local memory (DRAM)
+                    kRemoteMemory=CD_BIT_3, //!< Buddy memory 
+                    kLocalDisk=CD_BIT_4,    //!< Local disk (SSD, HDD)
+                    kGlobalDisk=CD_BIT_5,   //!< Global disk (Lustre)
+                    kDRAM=CD_BIT_2,         //!< Preserve to DRAM
+                    kHDD=CD_BIT_4,          //!< Preserve to HDD
+                    kSSD=CD_BIT_4,          //!< Preserve to SSD
+                    kPFS=CD_BIT_5,          //!< Preserve to Parallel File System
+//                    kReserveMedium0=CD_BIT_6,  //!< Preserve to Parallel File System
+//                    kReserveMedium1=CD_BIT_7,  //!< Preserve to Parallel File System
+//                    kLocalFile=24,
+//                    kAllFile=56
                   };
 
 

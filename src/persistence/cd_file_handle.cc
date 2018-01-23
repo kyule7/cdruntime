@@ -38,7 +38,7 @@ FileHandle::FileHandle(const char *filepath)
 //  printf("basepath:%s\n", basepath.c_str()); getchar();
 }
 
-PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath) 
+PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath), fdesc_(-1)
 {
 //  printf("posix basepath:%s\n", basepath.c_str()); getchar();
   struct timeval time;
@@ -52,13 +52,18 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath)
     printf("cd_file_handle.cc:PosixFileHandle(%s) %s\n", filepath, DEFAULT_BASE_FILEPATH);
     strcpy(base_filename, DEFAULT_BASE_FILEPATH);
   }
-  sprintf(full_filename, "%s/%s.%ld.%ld.%d", base_filename, filepath, time.tv_sec % 100, time.tv_usec % 100, packerTaskID);
-  //fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT | O_APPEND, S_IRUSR | S_IWUSR);
-  fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT, S_IRUSR | S_IWUSR);
+  sprintf(full_filename, "%s/%s.%ld.%ld.%d", 
+                          base_filename, filepath, 
+                          time.tv_sec  % 100, 
+                          time.tv_usec % 100, 
+                          packerTaskID);
+  fdesc_ = open(full_filename, 
+                O_CREAT | O_RDWR | O_DIRECT /* | O_APPEND */, 
+                S_IRUSR | S_IWUSR);
   if(fdesc_ < 0) {
     ERROR_MESSAGE_PACKER("ERROR: File open path:%s\n", full_filename);
   }
-  MYDBG("Opened file : %s\n", full_filename); //getchar();
+  MYDBG("Opened file : %s\n", full_filename);
   fh_ = this;
 }
 
