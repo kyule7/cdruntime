@@ -159,7 +159,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     //------------------------------------------------
     stopTimer(positionTimer);
 #if _CD2
-    cd_detect(lv2_cd);
+//    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 #endif
 
@@ -221,6 +221,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                                         0 /*nAtoms*/, 0 /*local*/, 
                                         0 /*nLocalBoxes*/,
                                         0 /*nTotalBoxes*/);
+
     // Preserve pbcFactor
     redist_pre_size = preserveHaloAtom(lv2_cd, s->atomExchange->parms, 
                                        0 /*cellList*/, 
@@ -309,7 +310,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #if _CD2
     // Do I need cd_detect here when level2 is enabled? Yes, it won't
     // double detect here and in level3. (FIXME: should be verfified)
-    cd_detect(lv2_cd);
+//    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 #endif
 //*****************************************************************************
@@ -354,7 +355,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     advanceVelocity(s, s->boxes->nLocalBoxes, 0.5 * dt);
     stopTimer(velocityTimer);
 #if _CD2
-    cd_detect(lv2_cd);
+//    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 
 #endif

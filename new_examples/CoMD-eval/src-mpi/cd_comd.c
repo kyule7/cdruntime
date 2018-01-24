@@ -82,16 +82,18 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell,
   if (is_all) {
     // When is_all is set to 1, all the others should be set to 0.
     assert(is_nAtoms == 0);
-    assert(is_local == 0);
-    assert(is_nLocalBoxes == 0);
-    assert(is_nTotalBoxes == 0);
+    assert(is_local == 0);      // nAtoms_size = nTotalBoxes
+    assert(is_nLocalBoxes == 0); 
+    assert(is_nTotalBoxes == 0); 
 #ifdef DO_PRV
     // Preserve all but nAtoms array
+    assert(size > 0);
     cd_preserve(cdh, linkcell, size, kCopy, "LinkCell", "LinkCell");
 #endif
     size += sizeof(LinkCell);
 #ifdef DO_PRV
     // Preserve nAtom int array
+    assert(nAtoms_size > 0);
     cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, kCopy, "LinkCell_nAtoms",
                 "LinkCell_nAtoms");
 #endif
