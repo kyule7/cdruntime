@@ -76,6 +76,7 @@
 
 #if _CD4
 #include "cd.h"
+#include "cd_comd.h"
 #endif
 
 #define POT_SHIFT 1.0
@@ -102,16 +103,16 @@ static int ljForce(SimFlat *s);
 static void ljPrint(FILE *file, BasePotential *pot);
 
 #if _CD4
-unsigned int preserveAtoms(cd_handle_t *cdh, Atoms *atoms, int nTotalBoxes,
-                           unsigned int is_all, unsigned int is_gid,
-                           unsigned int is_r, unsigned int is_p,
-                           unsigned int is_f, unsigned int is_U,
-                           unsigned int is_iSpecies, unsigned int from, int to,
-                           unsigned int is_print, char *idx);
-unsigned int preserveLinkCell(cd_handle_t *cdh, LinkCell *linkcell,
-                              unsigned int is_all, 
-                              unsigned int is_nAtoms, unsigned int is_local,
-                              unsigned int is_nTotalBoxes);
+//unsigned int preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
+//                           unsigned int is_all, unsigned int is_gid,
+//                           unsigned int is_r, unsigned int is_p,
+//                           unsigned int is_f, unsigned int is_U,
+//                           unsigned int is_iSpecies, unsigned int from, int to,
+//                           unsigned int is_print, char *idx);
+//unsigned int preserveLinkCell(cd_handle_t *cdh, uint32_t knob, LinkCell *linkcell,
+//                              unsigned int is_all, 
+//                              unsigned int is_nAtoms, unsigned int is_local,
+//                              unsigned int is_nTotalBoxes);
 #endif
 
 void ljDestroy(BasePotential **inppot) {
@@ -301,7 +302,7 @@ int ljForce(SimFlat *s) {
             sprintf(pre_atoms_idx, "_%d_%d_%d", iBox, jTmp, iOff);
             // preserve atoms in jBox
             // FIXME: this is correct only when CD4_INTERVAL == 1
-            int ljForce_pre_size = preserveAtoms(lv4_cd, s->atoms,
+            int ljForce_pre_size = preserveAtoms(lv4_cd, kCopy, s->atoms,
                                                  s->boxes->nTotalBoxes,
                                                  1,  // is_gid
                                                  //1,  // is_r
@@ -318,7 +319,7 @@ to
                                                  //-1, // to
                                                  0,
                                                  pre_atoms_idx); // is_print
-            ljForce_pre_size += preserveLinkCell(lv4_cd, s->boxes,
+            ljForce_pre_size += preserveLinkCell(lv4_cd, kCopy, s->boxes,
                 0,  //all
                 0,  //only nAtoms
                 0,  //local 

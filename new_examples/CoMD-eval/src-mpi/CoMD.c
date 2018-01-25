@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
   // FIXME: Issue with 2nd re-execution when only Root CD and preserveSimFlat
   // are enalbed. The first re-execution is fine and the issue does not show
   // up without preserveSimFlat().
-  preserveSimFlat(root_cd, sim);
+  preserveSimFlat(root_cd, kCopy, sim);
   // What if the buffers for HaloExchnage (malloc) and the others in SimFlat?
   // They are not freed if ROOT CD gets re-executed before calling
   // destroySimulation(), as does right now.
@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
       // will fail for some unknown issue. 
       // Preservation for timestep(...) : Atoms : atoms??
       int main_loop_pre_size =
-          preserveAtoms(lv1_cd, sim->atoms, sim->boxes->nTotalBoxes,
+          preserveAtoms(lv1_cd, kCopy, sim->atoms, sim->boxes->nTotalBoxes,
                         1,  // is_all
                         0,  // is_gid
                         0,  // is_r
@@ -167,12 +167,12 @@ int main(int argc, char **argv) {
                         NULL);
       // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
       // FIXME: seems not enough
-      main_loop_pre_size += preserveLinkCell(lv1_cd, sim->boxes, 1 /*all*/,
+      main_loop_pre_size += preserveLinkCell(lv1_cd, kCopy, sim->boxes, 1 /*all*/,
                                              0 /*nAtoms*/, 0 /*local*/,
                                              0 /*nLocalBoxes*/,
                                              0 /*nTotalBoxes*/);
       // Preserve pbcFactor
-      main_loop_pre_size = preserveHaloAtom(lv1_cd, sim->atomExchange->parms, 
+      main_loop_pre_size = preserveHaloAtom(lv1_cd, kCopy, sim->atomExchange->parms, 
                                             0 /*cellList*/, 
                                             0 /*pbcFactor*/);
 #if DOPRV
