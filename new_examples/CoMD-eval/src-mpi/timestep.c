@@ -360,6 +360,22 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                                               0 /*nTotalBoxes*/);
     // TODO: kOutput
     //       s->atoms->p
+    int velocity_end_pre_out_size =
+        preserveAtoms(lv2_cd, kOutput,
+                      // s->atoms, s->boxes->nTotalBoxes,
+                      s->atoms, s->boxes->nLocalBoxes,
+                      0,  // is_all
+                      0,  // is_gid
+                      0,  // is_r
+                      1,  // is_p
+                      0,  // is_f
+                      0,  // is_U
+                      0,  // is_iSpecies
+                      0,  // from (entire atoms)
+                      -1, // to (entire atoms)
+                      0,  // is_print
+                      idx_advanceVelocity_end); //FIXME: what should be given?
+
 
 #if DOPRV
     // Preserve loop index (ii)
