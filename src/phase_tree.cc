@@ -134,23 +134,24 @@ void PhaseNode::PrintOutputJsonInternal(void)
   std::string one_more_indent((tabsize+1)<<1, ' ');
   std::string two_more_indent((tabsize+2)<<1, ' ');
 //<<<<<<< HEAD
-//  //TODO: lable may be better for CD name instead of level and phase
+
 //  fprintf(outYAML, "%s\"CD_%u_%u\" : {\n",               indent.c_str(), level_, phase_);
-//  //TODO: the estimator does not require "label".
+
 //  fprintf(outYAML, "%s\"label\" : %s\n",        two_more_indent.c_str(), label_.c_str());
 //  fprintf(outYAML, "%s\"interval\" : %ld\n",    two_more_indent.c_str(), interval_);
 //  fprintf(outYAML, "%s\"errortype\" : 0x%lX\n", two_more_indent.c_str(), errortype_);
 //  //YKWON: added the information about siblings
-//  //FIXME: still this doesn't product the correct number of siblings
 //  fprintf(outYAML, "%s\"siblingID\" : %8u\n",  two_more_indent.c_str(), sibling_id_);
 //  fprintf(outYAML, "%s\"sibling #\" : %8u\n",  two_more_indent.c_str(), sibling_size_);
 //  // This print exec_cnt, reex_cnt, tot_time, reex_time, vol_copy, vol_refer
 //  // comm_log and error_ven, which are also printed in profile.out.
-//  // TODO: let's change to be in B/ MB/ GB
+
 //  fprintf(outYAML, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
 //  fprintf(outYAML, "%s\"ChildCDs\" : {\n", two_more_indent.c_str());
 //=======
+  //TODO: lable may be better for CD name instead of level and phase
   fprintf(outJSON, "%s\"CD_%u_%u\" : {\n",      one_more_indent.c_str(), level_, phase_);
+  //TODO: the estimator does not require "label".
   fprintf(outJSON, "%s\"label\"    : %s,\n",    two_more_indent.c_str(), label_.c_str());
   fprintf(outJSON, "%s\"interval\" : %ld,\n",   two_more_indent.c_str(), interval_);
   fprintf(outJSON, "%s\"errortype\": 0x%lX,\n", two_more_indent.c_str(), errortype_);
@@ -158,9 +159,11 @@ void PhaseNode::PrintOutputJsonInternal(void)
   fprintf(outJSON, "%s\"sibling #\" : %8u,\n",  two_more_indent.c_str(), sibling_size_);
   std::ostringstream oss; 
   cd_prof_map[phase_].PrintJSON(oss, two_more_indent);
+  // TODO: let's change to be in B/ MB/ GB
   profile_.GetPrvDetails(oss, two_more_indent);
 //  cout << " DEBUG 22!!! \n" << oss.str() << endl; 
 //  getchar();
+
   fprintf(outJSON, "%s", oss.str().c_str());
   //fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
   fprintf(outJSON, "%s\"ChildCDs\" : {\n", two_more_indent.c_str());
