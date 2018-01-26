@@ -197,6 +197,7 @@ int ljForce(SimFlat *s) {
 
   int nbrBoxes[27];
 
+  //loop over local boxes in system
   for (int iBox = 0; iBox < s->boxes->nLocalBoxes; iBox++) {
 #if _CD4
     if (is_not_first) {
@@ -207,10 +208,8 @@ int ljForce(SimFlat *s) {
 #ifdef DO_PRV
         cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy, tmp_iBox_idx,
                     tmp_iBox_idx);
-#endif
-        // cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy,
-        //    "ljForce_innermost_iBox", "ljForce_innermost_iBox");
         // TODO: cd_preserve : atoms->r in the boxes of current iteration
+#endif
       }
     }
 #endif

@@ -189,6 +189,9 @@ int main(int argc, char **argv) {
     // estimator is probably to decide to remove this anyway.
     // Note that SumAtoms() incurs communication as well
     //TODO: add cd_complete and cd_begin here as for finer mapping
+    //      consumed: boxes -> nAtoms
+    //      produced: boxes -> nLocal
+    //      communication: AllReduce: send(nLocal) / recv(nGlobal)
     sumAtoms(sim);
     stopTimer(commReduceTimer);
 

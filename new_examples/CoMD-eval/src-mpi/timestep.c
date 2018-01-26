@@ -270,7 +270,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // Preserve atoms->r (postions)
     char idx_force[256] = "-1"; // FIXME: it this always enough?
     sprintf(idx_force, "force_%d", ii);
-    int computeForce_pre_size =
+    int computeForce_pre_lv2_size =
         preserveAtoms(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
                       0, // is_all
                       1, // is_gid
@@ -290,27 +290,39 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, 
                 "computeForce_ii", "computeForce_ii");
 #endif //DOPRV
-    computeForce_pre_size += sizeof(int);  // add the size of ii (loop index)
+    computeForce_pre_lv2_size += sizeof(int);  // add the size of ii (loop index)
 
 #endif
 
 #if _CD3
-    //FIXME: 8 (or getNRanks()) is not working properly as it doesn't get
-    //       roll backed.
-    //TODO: evalute 1, 2, 4 children cases
     cd_handle_t *lv3_cd = cd_create(getcurrentcd(), /*1,*/ getNRanks(), 
                                     "ljForce", 
                                     kStrict | kDRAM, 0xC);
     //TODO: add interval to control lv3_cd
-    // TODO: kOutput
-    //       s->atoms->f, U
-
-
     const int CD3_INTERVAL = s->preserveRateLevel3;
     //FIXME: this doesn't make sense 
     //if ( ii % CD3_INTERVAL == 0) { 
       cd_begin(lv3_cd, "ljForce_in_timestep");
-      // No need to preserve any since it's done already in the parent. 
+      //FIXME: check kRef semantic
+      int computeForce_pre_lv3_size =
+          preserveAtoms(lv2_cd, kRef, s->atoms, s->boxes->nLocalBoxes,
+                        0, // is_all
+                        1, // is_gid
+                        1, // is_r
+                        0, // is_p
+                        0, // is_f
+                        0, // is_U
+                        0, // is_iSpecies
+                        // MAXATOMS*jBox,          // from
+                        // MAXATOMS*jBox+nJBox-1,  // to
+                        0,  // from
+                        -1, // to
+                        0,
+                        idx_force); // is_print
+                        //NULL); // is_print
+
+      // FIXME: why do I need lv3_cd here? to create parallel children?
+      // No need to preserve any since it's done already in the parent (lv2_cd).
       // cd_preserve( ... )
     //}
 #endif
@@ -319,6 +331,24 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     stopTimer(computeForceTimer);
 #if _CD3
     //if ( ii % CD3_INTERVAL == 0) { 
+      // TODO: kOutput (lv3_cd)
+      //       s->atoms->f, U
+      int computeForce_pre_output_lv3_size =
+          preserveAtoms(lv2_cd, kOutput, s->atoms, s->boxes->nLocalBoxes,
+                        0, // is_all
+                        1, // is_gid
+                        0, // is_r
+                        0, // is_p
+                        1, // is_f
+                        1, // is_U
+                        0, // is_iSpecies
+                        // MAXATOMS*jBox,          // from
+                        // MAXATOMS*jBox+nJBox-1,  // to
+                        0,  // from
+                        -1, // to
+                        0,
+                        idx_force); // is_print
+                        //NULL); // is_print
       cd_detect(lv3_cd);
       cd_complete(lv3_cd);
       cd_destroy(lv3_cd);
@@ -337,7 +367,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     cd_begin(lv2_cd, "advanceVelocity_end");
     // Preserve local atoms->f (force)
     char idx_advanceVelocity_end[256] = "-1"; // FIXME: it this always enough?
-    sprintf(idx_advanceVelocity_end, "vel_end__%d", ii);
+    sprintf(idx_advanceVelocity_end, "vel_end_%d", ii);
     int velocity_end_pre_size =
         preserveAtoms(lv2_cd, kCopy,
                       // s->atoms, s->boxes->nTotalBoxes,
