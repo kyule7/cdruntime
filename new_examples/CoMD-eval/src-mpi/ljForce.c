@@ -198,17 +198,41 @@ int ljForce(SimFlat *s) {
   int nbrBoxes[27];
 
   //loop over local boxes in system
+  //ex: nLocalBoxes= 13824 (when x=y=z=40, i=j=k=2)
+  //    This is going to be called 18 times / each call
+  //                             = 17.28 = 13,824 / 800(=CD4_INTERVAL) ) 
+  //    and 1728 in total (when 10*10 iterations out there)
   for (int iBox = 0; iBox < s->boxes->nLocalBoxes; iBox++) {
 #if _CD4
     if (is_not_first) {
       if (iBox % CD4_INTERVAL == 0) {
+        // ex: iBox = 0, 800, 1600, ... , 13600
         cd_begin(lv4_cd, "ljForce_outmost_loop");
         char tmp_iBox_idx[256] = "-1";
-        sprintf(tmp_iBox_idx, "ljForce_outmost_iBox_%d", iBox);
+        sprintf(tmp_iBox_idx, "iBox_%d", iBox);
 #ifdef DO_PRV
         cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy, tmp_iBox_idx,
                     tmp_iBox_idx);
-        // TODO: cd_preserve : atoms->r in the boxes of current iteration
+        // TODO: cd_preserve : atoms->r in the boxes of current iteration (kRef)
+        char idx_force[256] = "-1"; // FIXME: it this always enough?
+        sprintf(idx_force, "_iBox_%d", iBox);
+        // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation
+        int computeForce_pre_lv4_size =
+            preserveAtoms(lv4_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
+                          0, // is_all
+                          1, // is_gid
+                          1, // is_r
+                          0, // is_p
+                          0, // is_f
+                          0, // is_U
+                          0, // is_iSpecies
+                          iBox,                    // from (index for boxes to be preserved)
+                          iBox + CD4_INTERVAL,     // to
+                          //0,  // from
+                          //-1, // to
+                          0,
+                          idx_force); // is_print
+    
 #endif
       }
     }
@@ -400,7 +424,7 @@ to
 #if _CD4
     if (is_not_first) {
       if (iBox % CD4_INTERVAL == 0) {
-        cd_detect(lv4_cd);
+//        cd_detect(lv4_cd);
         cd_complete(lv4_cd);
       }
     }
