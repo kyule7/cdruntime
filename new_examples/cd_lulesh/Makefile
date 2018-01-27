@@ -6,10 +6,10 @@ SHELL = /bin/sh
 CDPATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../..
 CD_ENABLED = 1
 ifeq (${CD_ENABLED}, 1)
-CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 
+CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 -D_LEAF_LV=0
 CD_CFLAGS = -std=gnu++0x -fmax-errors=1 -fPIC -I${CDPATH}/include -I${CDPATH}/src -I${CDPATH}/src/persistence -I${CDPATH}/plugin/wrapper
 #WRAPPER_LFLAGS = -lwrapLibc -L${CDPATH}/plugin/wrapper -Wl,-rpath=${CDPATH}/plugin/wrapper -lc 
-WRAPPER_LFLAGS = #-lwrapLibc -L${CDPATH}/plugin/wrapper -Wl,-rpath=${CDPATH}/plugin/wrapper -lc 
+WRAPPER_LFLAGS = -lwrapLibc -L${CDPATH}/plugin/wrapper -Wl,-rpath=${CDPATH}/plugin/wrapper -lc 
 CD_LFLAGS = -L${CDPATH}/lib -lcd -Wl,-rpath=${CDPATH}/lib -L${CDPATH}/src/persistence -lpacker -Wl,-rpath=${CDPATH}/src/persistence -ldl
 CD_LINKFLAGS = ${WRAPPER_LFLAGS} ${CD_LFLAGS}
 else

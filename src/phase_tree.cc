@@ -24,6 +24,21 @@ static FILE *outJSON = NULL;
 static FILE *outAll = NULL;
 static char output_filepath[256];
 static char output_basepath[512];
+const char *common::GetMedium(PrvMediumT medium)
+{
+  switch(medium) {
+    case kLocalMemory:  return "LocalMemory";
+    case kRemoteMemory: return "RemoteMemory";
+    case kLocalDisk:    return "LocalDisk";
+    case kGlobalDisk:   return "GlobalDisk";
+    default:
+#if CD_TUNING_ENABLED == 0 && CD_RUNTIME_ENABLED == 1
+      ERROR_MESSAGE("Undefined medium:%d\n", medium);
+#else
+      return "Undefined";
+#endif
+  }
+}
 //static inline
 //void AddIndent(int cnt)
 //{
@@ -53,6 +68,7 @@ void PhaseNode::PrintInputYAML(bool first)
   fprintf(inYAML, "%s- label    : %s\n", one_more_indent.c_str(), label_.c_str());
   fprintf(inYAML, "%sinterval : %ld\n",    two_more_indent.c_str(), interval_);
   fprintf(inYAML, "%serrortype: 0x%lX\n", two_more_indent.c_str(), errortype_);
+  fprintf(inYAML, "%smedium: %s\n", two_more_indent.c_str(), GetMedium(medium_));
   //  fprintf(inYAML, "%s", profile_.GetRTInfoStr(level_+1).c_str());
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->PrintInputYAML(false);
@@ -85,6 +101,7 @@ void PhaseNode::PrintOutputYAML(bool first)
   fprintf(outYAML, "%s- label    : %s\n",      one_more_indent.c_str(), label_.c_str());
   fprintf(outYAML, "%sinterval : %ld\n",    two_more_indent.c_str(), interval_);
   fprintf(outYAML, "%serrortype: 0x%lX\n", two_more_indent.c_str(), errortype_);
+  fprintf(outYAML, "%smedium: %s\n", two_more_indent.c_str(), GetMedium(medium_));
 //  fprintf(outAll, "children size:%zu\n", children_.size()); getchar();
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->PrintOutputYAML(false);
@@ -155,6 +172,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
   fprintf(outJSON, "%s\"label\"    : %s,\n",    two_more_indent.c_str(), label_.c_str());
   fprintf(outJSON, "%s\"interval\" : %ld,\n",   two_more_indent.c_str(), interval_);
   fprintf(outJSON, "%s\"errortype\": 0x%lX,\n", two_more_indent.c_str(), errortype_);
+  fprintf(outJSON, "%s\"medium\"   : %s\n",     two_more_indent.c_str(), GetMedium(medium_));
   fprintf(outJSON, "%s\"siblingID\" : %8u,\n",  two_more_indent.c_str(), sibling_id_);
   fprintf(outJSON, "%s\"sibling #\" : %8u,\n",  two_more_indent.c_str(), sibling_size_);
   std::ostringstream oss; 
@@ -207,6 +225,7 @@ void PhaseNode::PrintNode(bool print_details, FILE *outfile)
   fprintf(output_fp,   "%sinterval   :%8ld\n", one_more_indent.c_str(), interval_);
   if(print_details) {
     fprintf(output_fp, "%serrortype  :0x%lX\n", one_more_indent.c_str(), errortype_);
+    fprintf(output_fp, "%smedium     :%s\n",    one_more_indent.c_str(), GetMedium(medium_));
     fprintf(output_fp, "%ssiblingID  :%8u\n",  one_more_indent.c_str(), sibling_id_);
     fprintf(output_fp, "%ssibling #  :%8u\n",  one_more_indent.c_str(), sibling_size_);
     fprintf(output_fp, "%stask ID    :%8u\n",  one_more_indent.c_str(), task_id_);
@@ -246,6 +265,7 @@ void PhaseNode::Print(bool print_details, bool first, FILE *outfile)
   fprintf(outAll,   "%sinterval   :%8ld\n", one_more_indent.c_str(), interval_);
   if(print_details) {
     fprintf(outAll, "%serrortype  :0x%lX\n", one_more_indent.c_str(), errortype_);
+    fprintf(outAll, "%smedium     :%s\n",   one_more_indent.c_str(), GetMedium(medium_));
     fprintf(outAll, "%ssiblingID  :%8u\n",  one_more_indent.c_str(), sibling_id_);
     fprintf(outAll, "%ssibling #  :%8u\n",  one_more_indent.c_str(), sibling_size_);
     fprintf(outAll, "%stask ID    :%8u\n",  one_more_indent.c_str(), task_id_);
@@ -347,8 +367,16 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 #if CD_TUNING_ENABLED == 0 && CD_RUNTIME_ENABLED == 1
   if(tuned::phaseNodeCache.empty() == false) {
     auto pt = tuned::phaseNodeCache.find(phase);
-    assert(pt != tuned::phaseNodeCache.end());
-    cd::phaseTree.current_->errortype_ = pt->second->errortype_;
+    if(pt == tuned::phaseNodeCache.end()) {
+      for(auto it=tuned::phaseNodeCache.begin(); it!=tuned::phaseNodeCache.end(); ++it) {
+        printf("[%d] phase %u \n", cd::myTaskID, it->first);
+      }
+      ERROR_MESSAGE("Phase %u is missing in tuned::phaseNodeCache (%zu)\n", 
+          phase, tuned::phaseNodeCache.size());
+    }
+    const PhaseNode *pn = pt->second;
+    cd::phaseTree.current_->errortype_ = pn->errortype_;
+    cd::phaseTree.current_->medium_ = pn->medium_;
   }
 #endif
 
@@ -393,7 +421,7 @@ void PhaseNode::GatherStats(void)
   //char buf[64];
   //printf("[%s %d] level:%u, phase:%u, taskid:%u\n", __func__, cd::myTaskID, phase_, level_, task_id_);
   //YkWON: level_ and phase_ are swapped to fix
-  printf("[%s %d] level:%u, phase:%u, taskid:%u\n", __func__, cd::myTaskID, level_,  phase_, task_id_);
+//  printf("[%s %d] level:%u, phase:%u, taskid:%u\n", __func__, cd::myTaskID, level_,  phase_, task_id_);
   RTInfo<double> rt_info = profile_.GetRTInfo<double>();
   RTInfo<double> &rt_info_avg = common::cd_prof_map[phase_].avg_;
   RTInfo<double> &rt_info_std = common::cd_prof_map[phase_].std_;
@@ -455,7 +483,7 @@ void PhaseNode::GatherStats(void)
 
 void PhaseTree::PrintStats(void)
 {
-  root_->GatherStats();
+//  root_->GatherStats();
   // If root_ == NULL,
   // phaseTree is not created.
   if(cd::myTaskID == 0) {
@@ -470,8 +498,8 @@ void PhaseTree::PrintStats(void)
 
 //      printf("basepath:%s\n", output_basepath);
 //        Print();
-      root_->PrintInputYAML(true);
-      root_->PrintOutputJson();
+      root_->PrintInputYAML(true); // profile.out
+      root_->PrintOutputJson();    // estimation.json
       //FIXME(YKWON): This sometimes fails to produce profile.out
       root_->Print(true, true);
 //      PrintProfile();

@@ -24,6 +24,7 @@
 #include <math.h>
 // Kyushick
 //include <vector>
+#define DO_CHECK 0
 #define LULESH_PRINT(...)
 #include "cd_def.h"
 #if _CD
@@ -139,6 +140,10 @@ inline real10 FABS(real10 arg) { return fabsl(arg) ; }
  *  "Real_t &y(Index_t idx) { return m_coord[idx].y ; }"
  *  "Real_t &z(Index_t idx) { return m_coord[idx].z ; }"
  */
+extern bool r_regElemSize;  
+extern bool r_regNumList ;   
+extern bool r_regElemlist;  
+
 struct Internal {
    // Region information
    Int_t    m_numReg ;
@@ -189,7 +194,42 @@ struct Internal {
    Index_t m_colMin, m_colMax;
    Index_t m_planeMin, m_planeMax;
 
-   Internal(void) {}
+   Internal(void) :
+      m_numReg            (-1),
+      m_cost              (-1),
+      m_regElemSize       (NULL),
+      m_regNumList        (NULL),
+      m_regElemlist       (NULL),
+      m_dtcourant         (-1),
+      m_dthydro           (-1),
+      m_cycle             (-1),
+      m_dtfixed           (-1),
+      m_time              (-1),
+      m_deltatime         (-1),
+      m_deltatimemultlb   (-1),
+      m_deltatimemultub   (-1),
+      m_dtmax             (-1),
+      m_stoptime          (-1),
+      m_numRanks          (-1),
+      m_colLoc            (-1),
+      m_rowLoc            (-1),
+      m_planeLoc          (-1),
+      m_tp                (-1),
+      m_sizeX             (-1),
+      m_sizeY             (-1),
+      m_sizeZ             (-1),
+      m_numElem           (-1),
+      m_numNode           (-1),
+      m_maxPlaneSize      (-1),
+      m_maxEdgeSize       (-1),
+      m_nodeElemStart     (NULL),
+      m_nodeElemCornerList(NULL),
+      m_rowMin            (-1),
+      m_rowMax            (-1),
+      m_colMin            (-1),
+      m_colMax            (-1),
+      m_planeMin          (-1),
+      m_planeMax          (-1) {}
    Internal(const Internal &that) { copy(that); }
    Internal &operator=(const Internal &that) { copy(that); return *this; }
    void copy(const Internal &that) {
@@ -229,15 +269,180 @@ struct Internal {
       m_planeMin           = that.m_planeMin;
       m_planeMax           = that.m_planeMax;
    }
+
+   void CheckUpdate(const Internal &that, const char *str="") {
+#if _CD
+      bool numReg_changed = false;
+      if(m_numReg          != that.m_numReg) {
+        printf("numReg ");
+        m_numReg            = that.m_numReg;
+        numReg_changed = true;
+      }
+      if(m_cost            != that.m_cost) {
+        printf("cost ");
+        m_cost              = that.m_cost;
+      }
+      if(m_dtcourant       != that.m_dtcourant) {
+        printf("dtcourant ");
+        m_dtcourant         = that.m_dtcourant;
+      }
+      if(m_dthydro         != that.m_dthydro) {
+        printf("dthydro ");
+        m_dthydro           = that.m_dthydro;
+      }
+      if(m_cycle           != that.m_cycle) {
+        printf("cycle ");
+        m_cycle             = that.m_cycle;
+      }
+      if(m_dtfixed         != that.m_dtfixed) {
+        printf("dtfixed ");
+        m_dtfixed           = that.m_dtfixed;
+      }
+      if(m_time            != that.m_time) {
+        printf("time ");
+        m_time              = that.m_time;
+      }
+      if(m_deltatime       != that.m_deltatime) {
+        printf("deltatime ");
+        m_deltatime         = that.m_deltatime;
+      }
+      if(m_deltatimemultlb != that.m_deltatimemultlb) {
+        printf("deltatimemultlb ");
+        m_deltatimemultlb   = that.m_deltatimemultlb;
+      }
+      if(m_deltatimemultub != that.m_deltatimemultub) {
+        printf("deltatimemultub ");
+        m_deltatimemultub   = that.m_deltatimemultub;
+      }
+      if(m_dtmax           != that.m_dtmax) {
+        printf("dtmax ");
+        m_dtmax             = that.m_dtmax;
+      }
+      if(m_stoptime        != that.m_stoptime) {
+        printf("stoptime ");
+        m_stoptime          = that.m_stoptime;
+      }
+      if(m_numRanks        != that.m_numRanks) {
+        printf("numRanks ");
+        m_numRanks          = that.m_numRanks;
+      }
+      if(m_colLoc          != that.m_colLoc) {
+        printf("colLoc ");
+        m_colLoc            = that.m_colLoc;
+      }
+      if(m_rowLoc          != that.m_rowLoc) {
+        printf("rowLoc ");
+        m_rowLoc            = that.m_rowLoc;
+      }
+      if(m_planeLoc        != that.m_planeLoc) {
+        printf("planeLoc ");
+        m_planeLoc          = that.m_planeLoc;
+      }
+      if(m_tp              != that.m_tp) {
+        printf("tp ");
+        m_tp                = that.m_tp;
+      }
+      if(m_sizeX           != that.m_sizeX) {
+        printf("sizeX ");
+        m_sizeX             = that.m_sizeX;
+      }
+      if(m_sizeY           != that.m_sizeY) {
+        printf("sizeY ");
+        m_sizeY             = that.m_sizeY;
+      }
+      if(m_sizeZ           != that.m_sizeZ) {
+        printf("sizeZ ");
+        m_sizeZ             = that.m_sizeZ;
+      }
+      if(m_numElem         != that.m_numElem) {
+        printf("numElem ");
+        m_numElem           = that.m_numElem;
+      }
+      if(m_numNode         != that.m_numNode) {
+        printf("numNode ");
+        m_numNode           = that.m_numNode;
+      }
+      if(m_maxPlaneSize    != that.m_maxPlaneSize) {
+        printf("maxPlaneSize ");
+        m_maxPlaneSize      = that.m_maxPlaneSize;
+      }
+      if(m_maxEdgeSize     != that.m_maxEdgeSize) {
+        printf("maxEdgeSize ");
+        m_maxEdgeSize       = that.m_maxEdgeSize;
+      }
+      if(m_rowMin          != that.m_rowMin) {
+        printf("rowMin ");
+        m_rowMin            = that.m_rowMin;
+      }
+      if(m_rowMax          != that.m_rowMax) {
+        printf("rowMax ");
+        m_rowMax            = that.m_rowMax;
+      }
+      if(m_colMin          != that.m_colMin) {
+        printf("colMin ");
+        m_colMin            = that.m_colMin;
+      }
+      if(m_colMax          != that.m_colMax) {
+        printf("colMax ");
+        m_colMax            = that.m_colMax;
+      }
+      if(m_planeMin        != that.m_planeMin) {
+        printf("planeMin ");
+        m_planeMin          = that.m_planeMin;
+      }
+      if(m_planeMax        != that.m_planeMax) {
+        printf("planeMax ");
+        m_planeMax          = that.m_planeMax;
+      }
+      if(myRank == 0 && (r_regElemSize || r_regNumList|| r_regElemlist)) {
+        printf("Read %s %s %s %s\n", str, 
+              (r_regElemSize)? "regElemSize": "", 
+              (r_regNumList )? "regNumList" : "", 
+              (r_regElemlist)? "regElemlist" : "" );
+      }
+      cd::Compare(     m_regElemSize,      m_numReg,
+              that.m_regElemSize, that.m_numReg, sizeof(Index_t),
+              str, "regElemSize"
+              );
+      cd::Compare(     m_regNumList,      m_numElem,
+              that.m_regNumList, that.m_numElem, sizeof(Index_t),
+              str, "regNumList"
+              );
+
+      if(numReg_changed) {
+        if(m_regElemlist != NULL) 
+          m_regElemlist = (Index_t **)realloc(m_regElemlist, m_numReg * sizeof(Index_t **));
+        else 
+          m_regElemlist = (Index_t **)malloc(m_numReg * sizeof(Index_t **));
+      }
+      for(int i=0; i<m_numReg; i++) {
+        char elemID[32];
+        sprintf(elemID, "regElemlist_%d", i);
+        cd::Compare(     m_regElemlist[i],      m_regElemSize[i],
+                that.m_regElemlist[i], that.m_regElemSize[i], sizeof(Index_t),
+                str, elemID
+                );
+      }
+      r_regElemSize = false;  
+      r_regNumList  = false;   
+      r_regElemlist = false;  
+//      m_nodeElemStart      = that.m_nodeElemStart;
+//      m_nodeElemCornerList = that.m_nodeElemCornerList;
+//      Add((char *)commDataSend, (("COMMBUFSEND"), comBufSize * sizeof(Real_t), 0, (char *)commDataSend)); 
+//      Add((char *)commDataRecv, (("COMMBUFRECV"), comBufSize * sizeof(Real_t), 0, (char *)commDataRecv)); 
+#endif
+   }
 };
 
 #if _CD
-class Domain : public Internal, public PackerSerializable {
+class Domain : public Internal, public cd::PackerSerializable {
 #else
 class Domain : public Internal {
 #endif
    public:
-
+#if _CD
+   Internal preserved_;
+#endif
    // Constructor
    Domain(Int_t numRanks, Index_t colLoc,
           Index_t rowLoc, Index_t planeLoc,
@@ -345,26 +550,56 @@ class Domain : public Internal {
    //
 
    // Node-centered
-
+#if _CD
    // Nodal coordinates
+   Real_t& x(Index_t idx)    { m_x.SetRead(); return m_x[idx] ; }
+   Real_t& y(Index_t idx)    { m_y.SetRead(); return m_y[idx] ; }
+   Real_t& z(Index_t idx)    { m_z.SetRead(); return m_z[idx] ; }
+
+   // Nodal velocities
+   Real_t& xd(Index_t idx)   { m_xd.SetRead(); return m_xd[idx] ; }
+   Real_t& yd(Index_t idx)   { m_yd.SetRead(); return m_yd[idx] ; }
+   Real_t& zd(Index_t idx)   { m_zd.SetRead(); return m_zd[idx] ; }
+
+   // Nodal accelerations
+   Real_t& xdd(Index_t idx)  { m_xdd.SetRead(); return m_xdd[idx] ; }
+   Real_t& ydd(Index_t idx)  { m_ydd.SetRead(); return m_ydd[idx] ; }
+   Real_t& zdd(Index_t idx)  { m_zdd.SetRead(); return m_zdd[idx] ; }
+
+   // Nodal forces
+   Real_t& fx(Index_t idx)   { m_fx.SetRead();  return m_fx[idx] ; }
+   Real_t& fy(Index_t idx)   { m_fy.SetRead();  return m_fy[idx] ; }
+   Real_t& fz(Index_t idx)   { m_fz.SetRead();  return m_fz[idx] ; }
+
+   // Nodal mass
+   Real_t& nodalMass(Index_t idx) { return m_nodalMass[idx] ; }
+
+   // Nodes on symmertry planes
+   Index_t symmX(Index_t idx) { m_symmX.SetRead(); return m_symmX[idx] ; }
+   Index_t symmY(Index_t idx) { m_symmY.SetRead(); return m_symmY[idx] ; }
+   Index_t symmZ(Index_t idx) { m_symmZ.SetRead(); return m_symmZ[idx] ; }
+   bool symmXempty()          { m_symmX.SetRead(); return m_symmX.empty(); }
+   bool symmYempty()          { m_symmY.SetRead(); return m_symmY.empty(); }
+   bool symmZempty()          { m_symmZ.SetRead(); return m_symmZ.empty(); }
+#else
    Real_t& x(Index_t idx)    { return m_x[idx] ; }
    Real_t& y(Index_t idx)    { return m_y[idx] ; }
    Real_t& z(Index_t idx)    { return m_z[idx] ; }
 
    // Nodal velocities
-   Real_t& xd(Index_t idx)   { return m_xd[idx] ; }
-   Real_t& yd(Index_t idx)   { return m_yd[idx] ; }
-   Real_t& zd(Index_t idx)   { return m_zd[idx] ; }
+   Real_t& xd(Index_t idx)   {  return m_xd[idx] ; }
+   Real_t& yd(Index_t idx)   {  return m_yd[idx] ; }
+   Real_t& zd(Index_t idx)   {  return m_zd[idx] ; }
 
    // Nodal accelerations
-   Real_t& xdd(Index_t idx)  { return m_xdd[idx] ; }
-   Real_t& ydd(Index_t idx)  { return m_ydd[idx] ; }
-   Real_t& zdd(Index_t idx)  { return m_zdd[idx] ; }
+   Real_t& xdd(Index_t idx)  {  return m_xdd[idx] ; }
+   Real_t& ydd(Index_t idx)  {  return m_ydd[idx] ; }
+   Real_t& zdd(Index_t idx)  {  return m_zdd[idx] ; }
 
    // Nodal forces
-   Real_t& fx(Index_t idx)   { return m_fx[idx] ; }
-   Real_t& fy(Index_t idx)   { return m_fy[idx] ; }
-   Real_t& fz(Index_t idx)   { return m_fz[idx] ; }
+   Real_t& fx(Index_t idx)   {   return m_fx[idx] ; }
+   Real_t& fy(Index_t idx)   {   return m_fy[idx] ; }
+   Real_t& fz(Index_t idx)   {   return m_fz[idx] ; }
 
    // Nodal mass
    Real_t& nodalMass(Index_t idx) { return m_nodalMass[idx] ; }
@@ -376,24 +611,25 @@ class Domain : public Internal {
    bool symmXempty()          { return m_symmX.empty(); }
    bool symmYempty()          { return m_symmY.empty(); }
    bool symmZempty()          { return m_symmZ.empty(); }
-
+#endif
    //
    // Element-centered
    //
-   Index_t&  regElemSize(Index_t idx) { return m_regElemSize[idx] ; }
-   Index_t&  regNumList(Index_t idx) { return m_regNumList[idx] ; }
-   Index_t*  regNumList()            { return &m_regNumList[0] ; }
-   Index_t*  regElemlist(Int_t r)    { return m_regElemlist[r] ; }
-   Index_t&  regElemlist(Int_t r, Index_t idx) { return m_regElemlist[r][idx] ; }
+   Index_t&  regElemSize(Index_t idx) { r_regElemSize = true;  return m_regElemSize[idx] ; }
+   Index_t&  regNumList(Index_t idx)  { r_regNumList = true;   return m_regNumList[idx] ; }
+   Index_t*  regNumList()             { r_regNumList = true;   return &m_regNumList[0] ; }
+   Index_t*  regElemlist(Int_t r)     { r_regElemlist = true;  return m_regElemlist[r] ; }
+   Index_t&  regElemlist(Int_t r, Index_t idx) { r_regElemlist = true; return m_regElemlist[r][idx] ; }
 
    Index_t prv_idx;
 #if _CD
    Index_t*  nodelist(Index_t idx)    { 
+     m_nodelist.SetRead();
      static uint64_t count = 0;
      prv_idx = idx;
      if(count++ % 100000 == 0) {
-     const Index_t base = Index_t(8)*idx;
 #if 0 
+     const Index_t base = Index_t(8)*idx;
      LULESH_PRINT("[%d] nodelist size:%zu/%zu (%d), %d %d %d %d %d %d %d %d\n", myRank, m_nodelist.size(), m_nodelist.capacity(), numElem(),
                                                             m_nodelist[base],
                                                             m_nodelist[base+1],
@@ -414,24 +650,86 @@ class Domain : public Internal {
    }
 #endif
    Index_t*  Mynodelist()    { 
+#if _CD
+      m_nodelist.SetRead();
+#endif
       return &m_nodelist[Index_t(8)*prv_idx] ; 
    }
-
+#if _CD
    // elem connectivities through face
-   Index_t&  lxim(Index_t idx) { return m_lxim[idx] ; }
-   Index_t&  lxip(Index_t idx) { return m_lxip[idx] ; }
-   Index_t&  letam(Index_t idx) { return m_letam[idx] ; }
-   Index_t&  letap(Index_t idx) { return m_letap[idx] ; }
-   Index_t&  lzetam(Index_t idx) { return m_lzetam[idx] ; }
-   Index_t&  lzetap(Index_t idx) { return m_lzetap[idx] ; }
+   Index_t&  lxim(Index_t idx) { m_lxim.SetRead();   return m_lxim[idx] ; }
+   Index_t&  lxip(Index_t idx) { m_lxip.SetRead();   return m_lxip[idx] ; }
+   Index_t&  letam(Index_t idx) { m_letam.SetRead(); return m_letam[idx] ; }
+   Index_t&  letap(Index_t idx) { m_letap.SetRead(); return m_letap[idx] ; }
+   Index_t&  lzetam(Index_t idx) { m_lzetam.SetRead(); return m_lzetam[idx] ; }
+   Index_t&  lzetap(Index_t idx) { m_lzetap.SetRead(); return m_lzetap[idx] ; }
 
    // elem face symm/free-surface flag
-   Int_t&  elemBC(Index_t idx) { return m_elemBC[idx] ; }
+   Int_t&  elemBC(Index_t idx) { m_elemBC.SetRead(); return m_elemBC[idx] ; }
+                                         
+   // Principal strains - tempora        ry
+   Real_t& dxx(Index_t idx)    { m_dxx.SetRead(); return m_dxx[idx] ; }
+   Real_t& dyy(Index_t idx)    { m_dyy.SetRead(); return m_dyy[idx] ; }
+   Real_t& dzz(Index_t idx)    { m_dzz.SetRead(); return m_dzz[idx] ; }
 
-   // Principal strains - temporary
-   Real_t& dxx(Index_t idx)  { return m_dxx[idx] ; }
-   Real_t& dyy(Index_t idx)  { return m_dyy[idx] ; }
-   Real_t& dzz(Index_t idx)  { return m_dzz[idx] ; }
+   // Velocity gradient - temporary
+   Real_t& delv_xi(Index_t idx)    { m_delv_xi.SetRead();   return m_delv_xi[idx] ; }
+   Real_t& delv_eta(Index_t idx)   { m_delv_eta.SetRead();  return m_delv_eta[idx] ; }
+   Real_t& delv_zeta(Index_t idx)  { m_delv_zeta.SetRead(); return m_delv_zeta[idx] ; }
+
+   // Position gradient - temporary
+   Real_t& delx_xi(Index_t idx)    { m_delx_xi.SetRead();   return m_delx_xi[idx] ; }
+   Real_t& delx_eta(Index_t idx)   { m_delx_eta.SetRead();  return m_delx_eta[idx] ; }
+   Real_t& delx_zeta(Index_t idx)  { m_delx_zeta.SetRead(); return m_delx_zeta[idx] ; }
+
+   // Energy
+   Real_t& e(Index_t idx)          { m_e.SetRead();  return m_e[idx] ; }
+                                         
+   // Pressure                           
+   Real_t& p(Index_t idx)          { m_p.SetRead();  return m_p[idx] ; }
+                                         
+   // Artificial viscosity               
+   Real_t& q(Index_t idx)          { m_q.SetRead();  return m_q[idx] ; }
+                                         
+   // Linear term for q                  
+   Real_t& ql(Index_t idx)         { m_ql.SetRead(); return m_ql[idx] ; }
+   // Quadratic term for q               
+   Real_t& qq(Index_t idx)         { m_qq.SetRead(); return m_qq[idx] ; }
+                                         
+   // Relative volume                    
+   Real_t& v(Index_t idx)          { m_v.SetRead();  return m_v[idx] ; }
+   Real_t& delv(Index_t idx)       { m_delv.SetRead();  return m_delv[idx] ; }
+                                           
+   // Reference volume                     
+   Real_t& volo(Index_t idx)       { m_volo.SetRead();  return m_volo[idx] ; }
+                                           
+   // volume derivative over volume        
+   Real_t& vdov(Index_t idx)       { m_vdov.SetRead();  return m_vdov[idx] ; }
+                                           
+   // Element characteristic length        
+   Real_t& arealg(Index_t idx)     { m_arealg.SetRead();return m_arealg[idx] ; }
+
+   // Sound speed
+   Real_t& ss(Index_t idx)         { m_ss.SetRead(); return m_ss[idx] ; }
+
+   // Element mass
+   Real_t& elemMass(Index_t idx)  { m_elemMass.SetRead(); return m_elemMass[idx] ; }
+#else
+   // elem connectivities through face
+   Index_t&  lxim(Index_t idx)   {  return m_lxim[idx] ; }
+   Index_t&  lxip(Index_t idx)   {  return m_lxip[idx] ; }
+   Index_t&  letam(Index_t idx)  { return m_letam[idx] ; }
+   Index_t&  letap(Index_t idx)  { return m_letap[idx] ; }
+   Index_t&  lzetam(Index_t idx) {  return m_lzetam[idx] ; }
+   Index_t&  lzetap(Index_t idx) {  return m_lzetap[idx] ; }
+
+   // elem face symm/free-surface flag
+   Int_t&  elemBC(Index_t idx)   { return m_elemBC[idx] ; }
+                                         
+   // Principal strains - tempora        ry
+   Real_t& dxx(Index_t idx)    { return m_dxx[idx] ; }
+   Real_t& dyy(Index_t idx)    { return m_dyy[idx] ; }
+   Real_t& dzz(Index_t idx)    { return m_dzz[idx] ; }
 
    // Velocity gradient - temporary
    Real_t& delv_xi(Index_t idx)    { return m_delv_xi[idx] ; }
@@ -444,38 +742,39 @@ class Domain : public Internal {
    Real_t& delx_zeta(Index_t idx)  { return m_delx_zeta[idx] ; }
 
    // Energy
-   Real_t& e(Index_t idx)          { return m_e[idx] ; }
-
-   // Pressure
-   Real_t& p(Index_t idx)          { return m_p[idx] ; }
-
-   // Artificial viscosity
-   Real_t& q(Index_t idx)          { return m_q[idx] ; }
-
-   // Linear term for q
-   Real_t& ql(Index_t idx)         { return m_ql[idx] ; }
-   // Quadratic term for q
-   Real_t& qq(Index_t idx)         { return m_qq[idx] ; }
-
-   // Relative volume
-   Real_t& v(Index_t idx)          { return m_v[idx] ; }
-   Real_t& delv(Index_t idx)       { return m_delv[idx] ; }
-
-   // Reference volume
-   Real_t& volo(Index_t idx)       { return m_volo[idx] ; }
-
-   // volume derivative over volume
-   Real_t& vdov(Index_t idx)       { return m_vdov[idx] ; }
-
-   // Element characteristic length
+   Real_t& e(Index_t idx)          {  return m_e[idx] ; }
+                                         
+   // Pressure                           
+   Real_t& p(Index_t idx)          {  return m_p[idx] ; }
+                                     
+   // Artificial viscosity           
+   Real_t& q(Index_t idx)          {  return m_q[idx] ; }
+                                     
+   // Linear term for q              
+   Real_t& ql(Index_t idx)         {  return m_ql[idx] ; }
+   // Quadratic term for q           
+   Real_t& qq(Index_t idx)         {  return m_qq[idx] ; }
+                                     
+   // Relative volume                
+   Real_t& v(Index_t idx)          {  return m_v[idx] ; }
+   Real_t& delv(Index_t idx)       {   return m_delv[idx] ; }
+                                     
+   // Reference volume               
+   Real_t& volo(Index_t idx)       {   return m_volo[idx] ; }
+                                     
+   // volume derivative over volume  
+   Real_t& vdov(Index_t idx)       {   return m_vdov[idx] ; }
+                                     
+   // Element characteristic length  
    Real_t& arealg(Index_t idx)     { return m_arealg[idx] ; }
 
    // Sound speed
-   Real_t& ss(Index_t idx)         { return m_ss[idx] ; }
+   Real_t& ss(Index_t idx)         {  return m_ss[idx] ; }
 
    // Element mass
-   Real_t& elemMass(Index_t idx)  { return m_elemMass[idx] ; }
+   Real_t& elemMass(Index_t idx)  {  return m_elemMass[idx] ; }
 
+#endif
    Index_t nodeElemCount(Index_t idx)
    { return m_nodeElemStart[idx+1] - m_nodeElemStart[idx] ; }
 
@@ -531,7 +830,7 @@ class Domain : public Internal {
    Index_t&  sizeY()              { return m_sizeY ; }
    Index_t&  sizeZ()              { return m_sizeZ ; }
    Index_t&  numReg()             { return m_numReg ; }
-   Int_t&  cost()             { return m_cost ; }
+   Int_t&  cost()                 { return m_cost ; }
    Index_t&  numElem()            { return m_numElem ; }
    Index_t&  numNode()            { return m_numNode ; }
    
@@ -568,27 +867,27 @@ class Domain : public Internal {
   public:
 #if _CD
    /* Node-centered */
-   CDVector<Real_t> m_x ;  /* coordinates */
-   CDVector<Real_t> m_y ;
-   CDVector<Real_t> m_z ;
+   cd::CDVector<Real_t> m_x ;  /* coordinates */
+   cd::CDVector<Real_t> m_y ;
+   cd::CDVector<Real_t> m_z ;
 
-   CDVector<Real_t> m_xd ; /* velocities */
-   CDVector<Real_t> m_yd ;
-   CDVector<Real_t> m_zd ;
+   cd::CDVector<Real_t> m_xd ; /* velocities */
+   cd::CDVector<Real_t> m_yd ;
+   cd::CDVector<Real_t> m_zd ;
 
-   CDVector<Real_t> m_xdd ; /* accelerations */
-   CDVector<Real_t> m_ydd ;
-   CDVector<Real_t> m_zdd ;
+   cd::CDVector<Real_t> m_xdd ; /* accelerations */
+   cd::CDVector<Real_t> m_ydd ;
+   cd::CDVector<Real_t> m_zdd ;
 
-   CDVector<Real_t> m_fx ;  /* forces */
-   CDVector<Real_t> m_fy ;
-   CDVector<Real_t> m_fz ;
+   cd::CDVector<Real_t> m_fx ;  /* forces */
+   cd::CDVector<Real_t> m_fy ;
+   cd::CDVector<Real_t> m_fz ;
 
-   CDVector<Real_t> m_nodalMass ;  /* mass */
+   cd::CDVector<Real_t> m_nodalMass ;  /* mass */
 
-   CDVector<Index_t> m_symmX ;  /* symmetry plane nodesets */
-   CDVector<Index_t> m_symmY ;
-   CDVector<Index_t> m_symmZ ;
+   cd::CDVector<Index_t> m_symmX ;  /* symmetry plane nodesets */
+   cd::CDVector<Index_t> m_symmY ;
+   cd::CDVector<Index_t> m_symmZ ;
 
    // Element-centered
 
@@ -601,47 +900,47 @@ class Domain : public Internal {
    Index_t *m_regNumList ;    // Region number per domain element
    Index_t **m_regElemlist ;  // region indexset 
 */
-   CDVector<Index_t>  m_nodelist ;     /* elemToNode connectivity */
+   cd::CDVector<Index_t>  m_nodelist ;     /* elemToNode connectivity */
 
-   CDVector<Index_t>  m_lxim ;  /* element connectivity across each face */
-   CDVector<Index_t>  m_lxip ;
-   CDVector<Index_t>  m_letam ;
-   CDVector<Index_t>  m_letap ;
-   CDVector<Index_t>  m_lzetam ;
-   CDVector<Index_t>  m_lzetap ;
+   cd::CDVector<Index_t>  m_lxim ;  /* element connectivity across each face */
+   cd::CDVector<Index_t>  m_lxip ;
+   cd::CDVector<Index_t>  m_letam ;
+   cd::CDVector<Index_t>  m_letap ;
+   cd::CDVector<Index_t>  m_lzetam ;
+   cd::CDVector<Index_t>  m_lzetap ;
 
-   CDVector<Int_t>    m_elemBC ;  /* symmetry/free-surface flags for each elem face */
+   cd::CDVector<Int_t>    m_elemBC ;  /* symmetry/free-surface flags for each elem face */
 
-   CDVector<Real_t> m_dxx ;  /* principal strains -- temporary */
-   CDVector<Real_t> m_dyy ;
-   CDVector<Real_t> m_dzz ;
+   cd::CDVector<Real_t> m_dxx ;  /* principal strains -- temporary */
+   cd::CDVector<Real_t> m_dyy ;
+   cd::CDVector<Real_t> m_dzz ;
 
-   CDVector<Real_t> m_delv_xi ;    /* velocity gradient -- temporary */
-   CDVector<Real_t> m_delv_eta ;
-   CDVector<Real_t> m_delv_zeta ;
+   cd::CDVector<Real_t> m_delv_xi ;    /* velocity gradient -- temporary */
+   cd::CDVector<Real_t> m_delv_eta ;
+   cd::CDVector<Real_t> m_delv_zeta ;
 
-   CDVector<Real_t> m_delx_xi ;    /* coordinate gradient -- temporary */
-   CDVector<Real_t> m_delx_eta ;
-   CDVector<Real_t> m_delx_zeta ;
+   cd::CDVector<Real_t> m_delx_xi ;    /* coordinate gradient -- temporary */
+   cd::CDVector<Real_t> m_delx_eta ;
+   cd::CDVector<Real_t> m_delx_zeta ;
    
-   CDVector<Real_t> m_e ;   /* energy */
+   cd::CDVector<Real_t> m_e ;   /* energy */
 
-   CDVector<Real_t> m_p ;   /* pressure */
-   CDVector<Real_t> m_q ;   /* q */
-   CDVector<Real_t> m_ql ;  /* linear term for q */
-   CDVector<Real_t> m_qq ;  /* quadratic term for q */
+   cd::CDVector<Real_t> m_p ;   /* pressure */
+   cd::CDVector<Real_t> m_q ;   /* q */
+   cd::CDVector<Real_t> m_ql ;  /* linear term for q */
+   cd::CDVector<Real_t> m_qq ;  /* quadratic term for q */
 
-   CDVector<Real_t> m_v ;     /* relative volume */
-   CDVector<Real_t> m_volo ;  /* reference volume */
-   CDVector<Real_t> m_vnew ;  /* new relative volume -- temporary */
-   CDVector<Real_t> m_delv ;  /* m_vnew - m_v */
-   CDVector<Real_t> m_vdov ;  /* volume derivative over volume */
+   cd::CDVector<Real_t> m_v ;     /* relative volume */
+   cd::CDVector<Real_t> m_volo ;  /* reference volume */
+   cd::CDVector<Real_t> m_vnew ;  /* new relative volume -- temporary */
+   cd::CDVector<Real_t> m_delv ;  /* m_vnew - m_v */
+   cd::CDVector<Real_t> m_vdov ;  /* volume derivative over volume */
 
-   CDVector<Real_t> m_arealg ;  /* characteristic length of an element */
+   cd::CDVector<Real_t> m_arealg ;  /* characteristic length of an element */
    
-   CDVector<Real_t> m_ss ;      /* "sound speed" */
+   cd::CDVector<Real_t> m_ss ;      /* "sound speed" */
 
-   CDVector<Real_t> m_elemMass ;  /* mass */
+   cd::CDVector<Real_t> m_elemMass ;  /* mass */
 #else
    /* Node-centered */
    std::vector<Real_t> m_x ;  /* coordinates */
@@ -811,6 +1110,7 @@ class Domain : public Internal {
              m_nodelist[base+6],
              m_nodelist[base+7]
              ); 
+#if 0
      Index_t nd0i = m_nodelist[base];
      Index_t nd1i = m_nodelist[base+1];
      Index_t nd2i = m_nodelist[base+2];
@@ -819,7 +1119,7 @@ class Domain : public Internal {
      Index_t nd5i = m_nodelist[base+5];
      Index_t nd6i = m_nodelist[base+6];
      Index_t nd7i = m_nodelist[base+7];
-    
+#endif
      LULESH_PRINT("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"
             "y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"
             "z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n"
@@ -907,6 +1207,59 @@ class Domain : public Internal {
    }
    void *Serialize(uint64_t &len_in_bytes) { return NULL; }
    void Deserialize(void *object) {}
+   void CheckUpdate(const char *str) 
+   {
+#if DO_CHECK      
+      dynamic_cast<Internal *>(this)->CheckUpdate(dynamic_cast<Internal &>(*this), str);
+      m_x.CompareVector(        str /*"X"        */);
+      m_y.CompareVector(        str /*"Y"        */);
+      m_z.CompareVector(        str /*"Z"        */);
+      m_xd.CompareVector(       str /*"XD"       */); 
+      m_yd.CompareVector(       str /*"YD"       */);
+      m_zd.CompareVector(       str /*"ZD"       */);
+      m_xdd.CompareVector(      str /*"XDD"      */);
+      m_ydd.CompareVector(      str /*"YDD"      */);
+      m_zdd.CompareVector(      str /*"ZDD"      */);
+      m_fx.CompareVector(       str /*"FX"       */); 
+      m_fy.CompareVector(       str /*"FY"       */);
+      m_fz.CompareVector(       str /*"FZ"       */);
+      m_nodalMass.CompareVector(str /*"NODALMASS"*/); 
+      m_symmX.CompareVector(    str /*"SYMMX"    */);  
+      m_symmY.CompareVector(    str /*"SYMMY"    */);
+      m_symmZ.CompareVector(    str /*"SYMMZ"    */);
+      m_nodelist.CompareVector( str /*"NODELIST" */);
+      m_lxim.CompareVector(     str /*"LXIM"     */);  
+      m_lxip.CompareVector(     str /*"LXIP"     */);
+      m_letam.CompareVector(    str /*"LETAM"    */);
+      m_letap.CompareVector(    str /*"LETAP"    */);
+      m_lzetam.CompareVector(   str /*"LZETAM"   */);
+      m_lzetap.CompareVector(   str /*"LZETAP"   */);
+      m_elemBC.CompareVector(   str /*"ELEMBC"   */);
+      m_dxx.CompareVector(      str /*"DXX"      */);  
+      m_dyy.CompareVector(      str /*"DYY"      */);
+      m_dzz.CompareVector(      str /*"DZZ"      */);
+      m_delv_xi.CompareVector(  str /*"DELV_XI"  */); 
+      m_delv_eta.CompareVector( str /*"DELV_ETA" */);
+      m_delv_zeta.CompareVector(str /*"DELV_ZETA"*/);  
+      m_delx_xi.CompareVector(  str /*"DELX_XI"  */); 
+      m_delx_eta.CompareVector( str /*"DELX_ETA" */);
+      m_delx_zeta.CompareVector(str /*"DELX_ZETA"*/); 
+      m_e.CompareVector(        str /*"E"        */); 
+      m_p.CompareVector(        str /*"P"        */); 
+      m_q.CompareVector(        str /*"Q"        */); 
+      m_ql.CompareVector(       str /*"QL"       */);
+      m_qq.CompareVector(       str /*"QQ"       */);
+      m_v.CompareVector(        str /*"V"        */); 
+      m_volo.CompareVector(     str /*"VOLO"     */);
+      m_vnew.CompareVector(     str /*"VNEW"     */);
+      m_delv.CompareVector(     str /*"DELV"     */);
+      m_vdov.CompareVector(     str /*"VDOV"     */);
+      m_arealg.CompareVector(   str /*"AREALG"   */);  
+      m_ss.CompareVector(       str /*"SS"       */);      
+      m_elemMass.CompareVector( str /*"ELEMMASS" */);
+#endif
+   }
+
    uint64_t PreserveObject(packer::DataStore *packer) { return 0; }
    uint64_t PreserveObject(packer::CDPacker &packer, const char *entry_str) {
       std::string entry_name(entry_str);
@@ -914,7 +1267,7 @@ class Domain : public Internal {
 
       Internal *base = dynamic_cast<Internal *>(this);
       preserved = *base;
-      //packer.Add((char *)base, packer::CDEntry(GetCDEntryID("BaseObj"), sizeof(Internal), 0, (char *)base));
+      //packer.Add((char *)base, packer::CDEntry(cd::GetCDEntryID("BaseObj"), sizeof(Internal), 0, (char *)base));
       uint64_t target_vec = 1;
       uint64_t prv_size = 0;
       while(serdes_vec  != 0) {
@@ -949,25 +1302,26 @@ class Domain : public Internal {
       PrintDebugDetail(true);
 
 
-      return 0; 
+      return prv_size; 
    }
    uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str) { 
      std::string entry_name(entry_str);
-//      packer.Restore(GetCDEntryID("BaseObj"));
-      copy(preserved);
+//      packer.Restore(cd::GetCDEntryID("BaseObj"));
+//      copy(preserved);
       uint64_t target_vec = 1;
+      uint64_t rst_size = 0;
       while(serdes_vec  != 0) {
          uint64_t id = vec2id(target_vec);
          if(serdes_vec & 0x1) {
 //            LULESH_PRINT("target: %32s (%32lx)\n", id2str[id], target_vec);
-            SelectRestore(id, packer);
+            rst_size += SelectRestore(id, packer);
          }
          target_vec <<= 1;
          serdes_vec >>= 1;
       } // while ends
 //      LULESH_PRINT("------------ Done -----------\n");
       PrintDebugDetail(false);
-      return 0;
+      return rst_size;
    }
 
 
@@ -1027,24 +1381,24 @@ class Domain : public Internal {
          case ID__SS        : prv_size = m_ss.PreserveObject(packer,       "SS"       ); break;      
          case ID__ELEMMASS  : prv_size = m_elemMass.PreserveObject(packer, "ELEMMASS" ); break;
          case ID__REGELEMSIZE : 
-                     packer.Add((char *)m_regElemSize, packer::CDEntry(GetCDEntryID("REGELEMSIZE"), m_numReg * sizeof(Index_t), 0, (char *)m_regElemSize)); prv_size = m_numReg* sizeof(Index_t);
+                     packer.Add((char *)m_regElemSize, packer::CDEntry(cd::GetCDEntryID("REGELEMSIZE"), m_numReg * sizeof(Index_t), 0, (char *)m_regElemSize)); prv_size = m_numReg* sizeof(Index_t);
                      break; 
          case ID__REGNUMLIST  : 
-                     packer.Add((char *)m_regNumList, packer::CDEntry(GetCDEntryID("REGNUMLIST"), m_numElem * sizeof(Index_t), 0, (char *)m_regNumList)); prv_size = m_numElem* sizeof(Index_t);
+                     packer.Add((char *)m_regNumList, packer::CDEntry(cd::GetCDEntryID("REGNUMLIST"), m_numElem * sizeof(Index_t), 0, (char *)m_regNumList)); prv_size = m_numElem* sizeof(Index_t);
                      break;
          case ID__REGELEMLIST : 
-                     packer.Add((char *)m_regElemlist, packer::CDEntry(GetCDEntryID("REGELEMLIST"), m_numReg * sizeof(Index_t *), 0, (char *)m_regElemlist)); prv_size = m_numReg* sizeof(Index_t *);
+                     packer.Add((char *)m_regElemlist, packer::CDEntry(cd::GetCDEntryID("REGELEMLIST"), m_numReg * sizeof(Index_t *), 0, (char *)m_regElemlist)); prv_size = m_numReg* sizeof(Index_t *);
                      for(int i=0; i<m_numReg; i++) {
                         char elemID[32];
                         sprintf(elemID, "REGELEMLIST_%d", i);
-                        packer.Add((char *)(m_regElemlist[i]), packer::CDEntry(GetCDEntryID(elemID), regElemSize(i) * sizeof(Index_t), 0, (char *)(m_regElemlist[i]))); prv_size = regElemSize(i) * sizeof(Index_t);
+                        packer.Add((char *)(m_regElemlist[i]), packer::CDEntry(cd::GetCDEntryID(elemID), regElemSize(i) * sizeof(Index_t), 0, (char *)(m_regElemlist[i]))); prv_size = regElemSize(i) * sizeof(Index_t);
                      }
                      break;
          case ID__COMMBUFSEND : 
-                     packer.Add((char *)commDataSend, packer::CDEntry(GetCDEntryID("COMMBUFSEND"), comBufSize * sizeof(Real_t), 0, (char *)commDataSend)); prv_size = comBufSize * sizeof(Real_t);
+                     packer.Add((char *)commDataSend, packer::CDEntry(cd::GetCDEntryID("COMMBUFSEND"), comBufSize * sizeof(Real_t), 0, (char *)commDataSend)); prv_size = comBufSize * sizeof(Real_t);
                      break;
          case ID__COMMBUFRECV : 
-                     packer.Add((char *)commDataRecv, packer::CDEntry(GetCDEntryID("COMMBUFRECV"), comBufSize * sizeof(Real_t), 0, (char *)commDataRecv)); prv_size = comBufSize * sizeof(Real_t);
+                     packer.Add((char *)commDataRecv, packer::CDEntry(cd::GetCDEntryID("COMMBUFRECV"), comBufSize * sizeof(Real_t), 0, (char *)commDataRecv)); prv_size = comBufSize * sizeof(Real_t);
                      break;
          default: LULESH_PRINT("Error: Unsupported ID:%lu\n", id);
                      assert(0);
@@ -1052,85 +1406,90 @@ class Domain : public Internal {
       return prv_size;
    }
 
-   void SelectRestore(uint64_t id, packer::CDPacker &packer) {
+   uint64_t SelectRestore(uint64_t id, packer::CDPacker &packer) {
       restarted = true;
       if(myRank == 0) 
          LULESH_PRINT("%s %s\n", __func__, id2str[id]);
+      uint64_t rst_size = 0;
       switch(id) {
-         case ID__X         : m_x.Deserialize(packer,        "X"        ); break;
-         case ID__Y         : m_y.Deserialize(packer,        "Y"        ); break;
-         case ID__Z         : m_z.Deserialize(packer,        "Z"        ); break;
-         case ID__XD        : m_xd.Deserialize(packer,       "XD"       ); break; 
-         case ID__YD        : m_yd.Deserialize(packer,       "YD"       ); break;
-         case ID__ZD        : m_zd.Deserialize(packer,       "ZD"       ); break;
-         case ID__XDD       : m_xdd.Deserialize(packer,      "XDD"      ); break;
-         case ID__YDD       : m_ydd.Deserialize(packer,      "YDD"      ); break;
-         case ID__ZDD       : m_zdd.Deserialize(packer,      "ZDD"      ); break;
-         case ID__FX        : m_fx.Deserialize(packer,       "FX"       ); break; 
-         case ID__FY        : m_fy.Deserialize(packer,       "FY"       ); break;
-         case ID__FZ        : m_fz.Deserialize(packer,       "FZ"       ); break;
-         case ID__NODALMASS : m_nodalMass.Deserialize(packer,"NODALMASS"); break; 
-         case ID__SYMMX     : m_symmX.Deserialize(packer,    "SYMMX"    ); break;  
-         case ID__SYMMY     : m_symmY.Deserialize(packer,    "SYMMY"    ); break;
-         case ID__SYMMZ     : m_symmZ.Deserialize(packer,    "SYMMZ"    ); break;
-         case ID__NODELIST  : m_nodelist.Deserialize(packer, "NODELIST" ); 
+         case ID__X         : rst_size = m_x.Deserialize(packer,        "X"        ); break;
+         case ID__Y         : rst_size = m_y.Deserialize(packer,        "Y"        ); break;
+         case ID__Z         : rst_size = m_z.Deserialize(packer,        "Z"        ); break;
+         case ID__XD        : rst_size = m_xd.Deserialize(packer,       "XD"       ); break; 
+         case ID__YD        : rst_size = m_yd.Deserialize(packer,       "YD"       ); break;
+         case ID__ZD        : rst_size = m_zd.Deserialize(packer,       "ZD"       ); break;
+         case ID__XDD       : rst_size = m_xdd.Deserialize(packer,      "XDD"      ); break;
+         case ID__YDD       : rst_size = m_ydd.Deserialize(packer,      "YDD"      ); break;
+         case ID__ZDD       : rst_size = m_zdd.Deserialize(packer,      "ZDD"      ); break;
+         case ID__FX        : rst_size = m_fx.Deserialize(packer,       "FX"       ); break; 
+         case ID__FY        : rst_size = m_fy.Deserialize(packer,       "FY"       ); break;
+         case ID__FZ        : rst_size = m_fz.Deserialize(packer,       "FZ"       ); break;
+         case ID__NODALMASS : rst_size = m_nodalMass.Deserialize(packer,"NODALMASS"); break; 
+         case ID__SYMMX     : rst_size = m_symmX.Deserialize(packer,    "SYMMX"    ); break;  
+         case ID__SYMMY     : rst_size = m_symmY.Deserialize(packer,    "SYMMY"    ); break;
+         case ID__SYMMZ     : rst_size = m_symmZ.Deserialize(packer,    "SYMMZ"    ); break;
+         case ID__NODELIST  : rst_size = m_nodelist.Deserialize(packer, "NODELIST" ); 
                               if(myRank == 0) {
                                 LULESH_PRINT("[%d] Nodelist restored, %zu/%zu\n", myRank, m_nodelist.size(), m_nodelist.capacity());
                               }
                               break;
-         case ID__LXIM      : m_lxim.Deserialize(packer,     "LXIM"     ); break;  
-         case ID__LXIP      : m_lxip.Deserialize(packer,     "LXIP"     ); break;
-         case ID__LETAM     : m_letam.Deserialize(packer,    "LETAM"    ); break;
-         case ID__LETAP     : m_letap.Deserialize(packer,    "LETAP"    ); break;
-         case ID__LZETAM    : m_lzetam.Deserialize(packer,   "LZETAM"   ); break;
-         case ID__LZETAP    : m_lzetap.Deserialize(packer,   "LZETAP"   ); break;
-         case ID__ELEMBC    : m_elemBC.Deserialize(packer,   "ELEMBC"   ); break;
-         case ID__DXX       : m_dxx.Deserialize(packer,      "DXX"      ); break;  
-         case ID__DYY       : m_dyy.Deserialize(packer,      "DYY"      ); break;
-         case ID__DZZ       : m_dzz.Deserialize(packer,      "DZZ"      ); break;
-         case ID__DELV_XI   : m_delv_xi.Deserialize(packer,  "DELV_XI"  ); break; 
-         case ID__DELV_ETA  : m_delv_eta.Deserialize(packer, "DELV_ETA" ); break;
-         case ID__DELV_ZETA : m_delv_zeta.Deserialize(packer,"DELV_ZETA"); break;  
-         case ID__DELX_XI   : m_delx_xi.Deserialize(packer,  "DELX_XI"  ); break; 
-         case ID__DELX_ETA  : m_delx_eta.Deserialize(packer, "DELX_ETA" ); break;
-         case ID__DELX_ZETA : m_delx_zeta.Deserialize(packer,"DELX_ZETA"); break; 
-         case ID__E         : m_e.Deserialize(packer,        "E"        ); break; 
-         case ID__P         : m_p.Deserialize(packer,        "P"        ); break; 
-         case ID__Q         : m_q.Deserialize(packer,        "Q"        ); break; 
-         case ID__QL        : m_ql.Deserialize(packer,       "QL"       ); break;
-         case ID__QQ        : m_qq.Deserialize(packer,       "QQ"       ); break;
-         case ID__V         : m_v.Deserialize(packer,        "V"        ); break; 
-         case ID__VOLO      : m_volo.Deserialize(packer,     "VOLO"     ); break;
-         case ID__VNEW      : m_vnew.Deserialize(packer,     "VNEW"     ); break;
-         case ID__DELV      : m_delv.Deserialize(packer,     "DELV"     ); break;
-         case ID__VDOV      : m_vdov.Deserialize(packer,     "VDOV"     ); break;
-         case ID__AREALG    : m_arealg.Deserialize(packer,   "AREALG"   ); break;  
-         case ID__SS        : m_ss.Deserialize(packer,       "SS"       ); break;      
-         case ID__ELEMMASS  : m_elemMass.Deserialize(packer, "ELEMMASS" ); break;
+         case ID__LXIM      : rst_size = m_lxim.Deserialize(packer,     "LXIM"     ); break;  
+         case ID__LXIP      : rst_size = m_lxip.Deserialize(packer,     "LXIP"     ); break;
+         case ID__LETAM     : rst_size = m_letam.Deserialize(packer,    "LETAM"    ); break;
+         case ID__LETAP     : rst_size = m_letap.Deserialize(packer,    "LETAP"    ); break;
+         case ID__LZETAM    : rst_size = m_lzetam.Deserialize(packer,   "LZETAM"   ); break;
+         case ID__LZETAP    : rst_size = m_lzetap.Deserialize(packer,   "LZETAP"   ); break;
+         case ID__ELEMBC    : rst_size = m_elemBC.Deserialize(packer,   "ELEMBC"   ); break;
+         case ID__DXX       : rst_size = m_dxx.Deserialize(packer,      "DXX"      ); break;  
+         case ID__DYY       : rst_size = m_dyy.Deserialize(packer,      "DYY"      ); break;
+         case ID__DZZ       : rst_size = m_dzz.Deserialize(packer,      "DZZ"      ); break;
+         case ID__DELV_XI   : rst_size = m_delv_xi.Deserialize(packer,  "DELV_XI"  ); break; 
+         case ID__DELV_ETA  : rst_size = m_delv_eta.Deserialize(packer, "DELV_ETA" ); break;
+         case ID__DELV_ZETA : rst_size = m_delv_zeta.Deserialize(packer,"DELV_ZETA"); break;  
+         case ID__DELX_XI   : rst_size = m_delx_xi.Deserialize(packer,  "DELX_XI"  ); break; 
+         case ID__DELX_ETA  : rst_size = m_delx_eta.Deserialize(packer, "DELX_ETA" ); break;
+         case ID__DELX_ZETA : rst_size = m_delx_zeta.Deserialize(packer,"DELX_ZETA"); break; 
+         case ID__E         : rst_size = m_e.Deserialize(packer,        "E"        ); break; 
+         case ID__P         : rst_size = m_p.Deserialize(packer,        "P"        ); break; 
+         case ID__Q         : rst_size = m_q.Deserialize(packer,        "Q"        ); break; 
+         case ID__QL        : rst_size = m_ql.Deserialize(packer,       "QL"       ); break;
+         case ID__QQ        : rst_size = m_qq.Deserialize(packer,       "QQ"       ); break;
+         case ID__V         : rst_size = m_v.Deserialize(packer,        "V"        ); break; 
+         case ID__VOLO      : rst_size = m_volo.Deserialize(packer,     "VOLO"     ); break;
+         case ID__VNEW      : rst_size = m_vnew.Deserialize(packer,     "VNEW"     ); break;
+         case ID__DELV      : rst_size = m_delv.Deserialize(packer,     "DELV"     ); break;
+         case ID__VDOV      : rst_size = m_vdov.Deserialize(packer,     "VDOV"     ); break;
+         case ID__AREALG    : rst_size = m_arealg.Deserialize(packer,   "AREALG"   ); break;  
+         case ID__SS        : rst_size = m_ss.Deserialize(packer,       "SS"       ); break;      
+         case ID__ELEMMASS  : rst_size = m_elemMass.Deserialize(packer, "ELEMMASS" ); break;
          case ID__REGELEMSIZE : 
-                     packer.Restore(GetCDEntryID("REGELEMSIZE"));
+                     rst_size = packer.Restore(cd::GetCDEntryID("REGELEMSIZE"))->size();
+
                      break; 
          case ID__REGNUMLIST  : 
-                     packer.Restore(GetCDEntryID("REGNUMLIST"));
+                     rst_size = packer.Restore(cd::GetCDEntryID("REGNUMLIST"))->size();
                      break;
          case ID__REGELEMLIST : 
-                     packer.Restore(GetCDEntryID("REGELEMLIST"));
+                     rst_size = packer.Restore(cd::GetCDEntryID("REGELEMLIST"))->size();
                      for(int i=0; i<m_numReg; i++) {
                         char elemID[32];
                         sprintf(elemID, "REGELEMLIST_%d", i);
-                        packer.Restore(GetCDEntryID(elemID));
+                        rst_size += packer.Restore(cd::GetCDEntryID(elemID))->size();
                      }
                      break;
          case ID__COMMBUFSEND : 
-                     packer.Restore(GetCDEntryID("COMMBUFSEND"));
+                     rst_size += packer.Restore(cd::GetCDEntryID("COMMBUFSEND"))->size();
                      break;
          case ID__COMMBUFRECV : 
-                     packer.Restore(GetCDEntryID("COMMBUFRECV"));
+                     rst_size += packer.Restore(cd::GetCDEntryID("COMMBUFRECV"))->size();
                      break;
          default: LULESH_PRINT("Error: Unsupported ID:%lu\n", id);
                   assert(0);
       }
+      return rst_size;
    }
+#else
+   void CheckUpdate(const char *str) {}
 #endif // _CD ends
 } ;
 

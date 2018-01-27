@@ -335,7 +335,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   totalTaskSize = numTask;
 
   cd::tot_begin_clk = CD_CLOCK();
-  char *cd_config_file = getenv("CD_OUTPUT_BASE");
+//  char *cd_config_file = getenv("CD_OUTPUT_BASE");
 //  if(cd_config_file != NULL) {
 //    cd::output_basepath = cd_config_file;
 //  }
@@ -344,7 +344,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //  }
 //  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
 #if CD_TUNING_ENABLED == 0
-  cd_config_file = getenv("CD_CONFIG_FILENAME");
+  char *cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
     cd::config.LoadConfig(cd_config_file, myTask);
     //printf("loadthis??\n");
@@ -637,6 +637,7 @@ void CD_Finalize(void)
   CDPath::GetCDPath()->pop_back();
 
 
+  cd::phaseTree.root_->GatherStats();
   cd::phaseTree.PrintStats();
   //tuned::phaseTree.PrintStats();
 
@@ -940,6 +941,10 @@ CDHandle *CDHandle::Create(const char *name,
   profMap[phase()]->create_elapsed_time_ += elapsed;
 //  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
+  if(myTaskID == 0) {
+    printf("** [Create] %s at level %u \n", 
+            new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
+  }
   CDEpilogue();
   return new_cd_handle;
 }
@@ -1053,6 +1058,10 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 
   end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
+  if(myTaskID == 0) {
+    printf("** [Create] %s at level %u \n", 
+            new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
+  }
 #if CD_PROFILER_ENABLED
   profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
@@ -1114,6 +1123,10 @@ CDHandle *CDHandle::Create(uint32_t color,
 
   end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
+  if(myTaskID == 0) {
+    printf("** [Create] %s at level %u \n", 
+            new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
+  }
 #if CD_PROFILER_ENABLED
   profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
@@ -1141,6 +1154,10 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 
   end_clk = CD_CLOCK();
   begin_elapsed_time += end_clk - begin_clk;
+  if(myTaskID == 0) {
+    printf("** [Create] %s at level %u \n", 
+            new_cdh->ptr_cd_->name_.c_str(), new_cdh->level());
+  }
 #if CD_PROFILER_ENABLED
   profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
 #endif
@@ -1162,7 +1179,7 @@ CDErrT CDHandle::Destroy(bool collective)
   CD_DEBUG("%s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
                                                        level(), need_reexec(), *CD::rollback_point_);
   if(myTaskID == 0) {
-    printf("[Destroy] %s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
+    printf("** [Destroy] %s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
                                                        level(), need_reexec(), *CD::rollback_point_);
   }
   err = InternalDestroy(collective);
@@ -1170,7 +1187,9 @@ CDErrT CDHandle::Destroy(bool collective)
   end_clk = CD_CLOCK();
   destroy_elapsed_time += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
-  profMap[phase]->destroy_elapsed_time_ += end_clk - begin_clk;
+  auto it = profMap.find(phase);
+  if(it != profMap.end())
+    it->second->destroy_elapsed_time_ += end_clk - begin_clk;
 #endif
   }
   CDEpilogue();
@@ -1321,7 +1340,8 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
 //  profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
 //#endif
   //CDEpilogue(phaseTree.current_->profile_.RecordBegin());
-  if(failed_phase != HEALTHY) {
+  const bool is_reexec = (failed_phase != HEALTHY);
+  if(is_reexec) {
     const uint64_t curr_phase = ptr_cd_->phase();
     const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
     const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
@@ -1329,8 +1349,25 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
              "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
              ptr_cd_->cd_id_.GetStringID().c_str(), label,
              cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
+    if(myTaskID == 0) {
+      printf("** [REEXEC] %s %s (%s) " 
+               "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+               ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
+               cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
+    }
+  } else {
+    if(myTaskID == 0) {
+    const uint64_t curr_phase = ptr_cd_->phase();
+    const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
+    const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
+
+    printf("** [Begin] %s %s (%s) " 
+             "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+             ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
+             cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
+    }
   }
-  cd::phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, need_sync);
+  cd::phaseTree.current_->profile_.RecordBegin(is_reexec, need_sync);
   CDEpilogue();
 #if CD_LIBC_LOGGING
   app_side = true;
@@ -1343,7 +1380,11 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 {
   CDPrologue();
   TUNE_DEBUG("[Real %s lv:%u phase:%d]\n", __func__, level(), phase()); STOPHANDLE;
-  CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
+  if(myTaskID == 0) {
+  printf("** [%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
+                                                                      level(), need_reexec(), *CD::rollback_point_);
+  }
+  CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
 
 
@@ -1355,6 +1396,10 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
   // After Complete(), phaseTree.current_ changes to its parent
   PhaseNode *current = cd::phaseTree.current_;
 
+  // This part may be a bit tricky. failed_phase is reset to HEALTHY
+  // in the case that current phase of CD is the end of the last failed point.
+  // Otherwise failed_phase is not healthy and increment reexec_
+  bool is_reexec = (failed_phase != HEALTHY);
   // Profile will be acquired inside CD::Complete()
   CDErrT ret = ptr_cd_->Complete(update_preservations, collective);
 
@@ -1369,10 +1414,10 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 //  profMap[phase()]->compl_elapsed_time_ += end_clk - begin_clk;
 //#endif
 
-  // This part may be a bit tricky. failed_phase is reset to HEALTHY
-  // in the case that current phase of CD is the end of the last failed point.
-  // Otherwise failed_phase is not healthy and increment reexec_
-  bool is_reexec = (failed_phase != HEALTHY);
+//  // This part may be a bit tricky. failed_phase is reset to HEALTHY
+//  // in the case that current phase of CD is the end of the last failed point.
+//  // Otherwise failed_phase is not healthy and increment reexec_
+//  bool is_reexec = (failed_phase != HEALTHY);
   //if(myTaskID == 0) printf("is reexec:%d\n", is_reexec);
   current->profile_.RecordComplete(is_reexec);
   CDEpilogue();
@@ -1483,7 +1528,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   err = ptr_cd_->Preserve((void *)&serdes, len, kSerdes | preserve_mask, 
                                  entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
-  assert(len > 0);
+  //assert(len > 0);
 //#if CD_PROFILER_ENABLED
 //  if(is_reexecution) {
 ////    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
