@@ -51,6 +51,63 @@ namespace cd {
 
 static std::map<std::string, uint64_t> str2id;
 
+template <typename T1>
+float Compare(T1 *orip, T1 *newp, uint32_t size) {
+  float difference = 0.0;
+  uint32_t diff_cnt = 0;
+  uint32_t i=0;
+  if(size != 0) {
+    for(; i<size; i++, orip++, newp++) {
+      //printf("[%d] i:%u, size:%u, %p == %p\n", myTaskID, i, size, orip, newp);
+      diff_cnt = (*orip != *newp)? diff_cnt+1 : diff_cnt;
+    }
+    difference = (float)(diff_cnt) / size;
+  }
+  return difference;
+}
+
+template <typename T, typename Y>
+float Compare(     T &prsv_p,       Y &prsv_sz,
+             const T &orig_p, const Y &orig_sz,
+             size_t elem_sz, 
+             const char *entry_str="", 
+             const char *name="") {
+  PackerPrologue();
+  float difference = 0.0;
+  // compare
+  if(prsv_p == NULL) {
+    prsv_sz = orig_sz;
+    prsv_p = (T)malloc(orig_sz * elem_sz);
+    printf("First Preservation %s\n", name);
+  } else if(prsv_sz < orig_sz) {
+    difference = 1.0;
+    printf("Similarity %s:1.0 (realloced)\n", name);
+    prsv_sz = orig_sz;
+    prsv_sz *= 2;
+    prsv_p = (T)realloc(prsv_p, prsv_sz * elem_sz);
+    memcpy(prsv_p, orig_p, orig_sz);
+  } else {
+    difference = Compare<T>((T *)prsv_p, (T *)orig_p, orig_sz);
+    if(difference > 0.0) {
+      if(myTaskID == 0) {
+        printf("Similarity %s %s:%f (%lu/%lu)\t",
+            entry_str, name, difference, (uint64_t)(orig_sz * elem_sz * difference), orig_sz * elem_sz);
+      }
+      memcpy(prsv_p, orig_p, orig_sz * elem_sz);
+    }
+    if(prsv_sz != orig_sz) {
+      printf("Preservation size changed %lu->%lu\n", prsv_sz * elem_sz, orig_sz * elem_sz);
+      prsv_sz = orig_sz;
+    } else if(difference > 0.0) {
+      if(myTaskID == 0) {
+        printf("\n");
+      }
+    }
+  }
+  PackerEpilogue();
+  return difference;
+}
+
 template <typename T>
 class CDVector : public std::vector<T>, public PackerSerializable {
 //  int orig_size;
@@ -58,6 +115,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     uint64_t orig_size_;  
     uint64_t prv_size_;  
     float difference_;
+    bool  read_;
     std::string name_;
   public:
   void *Serialize(uint64_t &len_in_bytes) { return NULL; }
@@ -89,37 +147,11 @@ class CDVector : public std::vector<T>, public PackerSerializable {
 //    CD_VECTOR_PRINT("id:%lx\n", id_);
     char *ptr = reinterpret_cast<char *>(this->data());
     packer::CDEntry entry(id_, prv_size, 0, ptr);
-    uint64_t table_offset = packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
+    //uint64_t table_offset = packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
+    packer.Add(ptr, entry);
 
 #if DO_COMPARE
     CompareVector();
-//    // compare
-//    if(orig_ == NULL) {
-//      orig_size_ = prv_size;
-//      prv_size_ = prv_size;
-//      orig_ = (char *)malloc(orig_size_);
-//      printf("First Preservation %s\n", entry_str);
-//    } else if(orig_size_ < prv_size) {
-//      difference_ = 1.0;
-//      printf("Similarity %s:1.0 (realloced)\n", entry_str);
-//      orig_size_ = prv_size;
-//      orig_size_ *= 2;
-//      prv_size_ = prv_size;
-//      orig_ = (char *)realloc(orig_, orig_size_);
-//      memcpy(orig_, ptr, prv_size);
-//    } else {
-//      difference_ = Compare<T>((T *)orig_, (T *)ptr, this->size());
-//      if(difference_ > 0.0) {
-//        printf("Similarity %s:%f (%lu/%lu)\t", entry_str, difference_, (uint64_t)(prv_size * difference_),prv_size);
-//      }
-//      memcpy(orig_, ptr, prv_size);
-//      if(prv_size_ != prv_size) {
-//        printf("Preservation size changed %lu->%lu\n", prv_size_, prv_size);
-//        prv_size_ = prv_size;
-//      } else if(difference_ > 0.0) {
-//        printf("\n");
-//      }
-//    }
 #endif
 
 #if 0
@@ -160,6 +192,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     if(entry_str != NULL) {
       name_ = entry_str;
     }
+    uint64_t rst_size = this->size() * sizeof(T);
     CD_VECTOR_PRINT("CDVector Restore elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
     id_ = GetCDEntryID(name_);
     //id_ = cd_hash(name_);
@@ -167,11 +200,16 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     //CheckID(name_); id_ = str2id[name_];
 
     char *ptr = reinterpret_cast<char *>(this->data());
-    packer::CDEntry *pentry = reinterpret_cast<packer::CDEntry *>(packer.Restore(id_, ptr, this->size() * sizeof(T)));
-    if(pentry->size() == 0) {
+    packer::CDEntry *pentry = reinterpret_cast<packer::CDEntry *>(packer.Restore(id_, ptr, rst_size));
+    uint64_t rst_size_ser = pentry->size();
+    if(rst_size_ser == 0) {
       this->clear();
     } else {
-      this->resize(pentry->size() / sizeof(T));
+      this->resize(rst_size_ser / sizeof(T));
+    }
+    if(rst_size != rst_size_ser) {
+      printf("restored size check: %u == %u", rst_size, rst_size_ser); 
+      assert(0);
     }
 
 #if DO_COMPARE
@@ -182,11 +220,11 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       CD_VECTOR_PRINT("Restore %s at data:%lu, size:%lu\n", name_.c_str(), pentry->offset(), pentry->size());
     }
     PackerEpilogue();
-    return 0; 
+    return rst_size; 
   
   }
   void CheckVector(const char *entry_str=NULL) {
-      printf("[%d] %s %s\n", myTaskID, __func__, entry_str);
+      //printf("[%d] %s %s\n", myTaskID, __func__, entry_str);
       if(orig_ != NULL) {
         char *ptr = reinterpret_cast<char *>(this->data());
         float difference = Compare<T>((T *)orig_, (T *)ptr, this->size());
@@ -196,11 +234,20 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       }
   }
 
-  void CompareVector(const char *entry_str=NULL) {
+  // It copies app data to orig_ after comparison.
+  // Therefore, if data is updated by app, 
+  // orig_ and app data are synch'ed at every CompareVector.
+  void CompareVector(const char *entry_str="") {
     PackerPrologue();
-    const char *name = (entry_str == NULL)? name_.c_str() : entry_str;
+    //const char *name = (entry_str == NULL)? name_.c_str() : entry_str;
+    const char *name = name_.c_str();
     char *ptr = reinterpret_cast<char *>(this->data());
     uint64_t prv_size = this->size() * sizeof(T);
+    if(read_) {
+      if(myTaskID == 0)
+        printf("Read %s %s\n", entry_str, name);
+      read_ = false;
+    }
     // compare
     if(orig_ == NULL) {
       orig_size_ = prv_size;
@@ -217,15 +264,19 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       memcpy(orig_, ptr, prv_size);
     } else {
       difference_ = Compare<T>((T *)orig_, (T *)ptr, this->size());
-//      if(difference_ > 0.0) {
-//        printf("Similarity %s:%f (%lu/%lu)\t", name, difference_, (uint64_t)(prv_size * difference_),prv_size);
-//      }
-      memcpy(orig_, ptr, prv_size);
+      if(difference_ > 0.0) {
+        if(myTaskID == 0) {
+          printf("Similarity %s %s:%f (%lu/%lu)\t", entry_str, name, difference_, (uint64_t)(prv_size * difference_),prv_size);
+        }
+        memcpy(orig_, ptr, prv_size);
+      }
       if(prv_size_ != prv_size) {
         printf("Preservation size changed %lu->%lu\n", prv_size_, prv_size);
         prv_size_ = prv_size;
       } else if(difference_ > 0.0) {
-        //printf("\n");
+        if(myTaskID == 0) {
+          printf("\n");
+        }
       }
     }
     PackerEpilogue();
@@ -274,6 +325,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     orig_size_ = 0;
     prv_size_ = 0;
     difference_ = 0.0;
+    read_ = false;
     static bool init_str2id = false;
     if(init_str2id == false) {
       str2id["X"        ]   = 0xffef00;
@@ -330,6 +382,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       init_str2id = true;
     }
   }
+  void SetRead(void) { read_ = true; }
   void CheckID(const std::string &str) {
     auto it = str2id.find(str);
     static int cnt = 0;
@@ -350,20 +403,20 @@ class CDVector : public std::vector<T>, public PackerSerializable {
 //      return Compare<char *>(orip, newp, size);
 //    }
 //  }
-  template <typename T1>
-  float Compare(T1 *orip, T1 *newp, uint32_t size) {
-    float difference = 0.0;
-    uint32_t diff_cnt = 0;
-    uint32_t i=0;
-    if(size != 0) {
-      for(; i<size; i++, orip++, newp++) {
-        //printf("[%d] i:%u, size:%u, %p == %p\n", myTaskID, i, size, orip, newp);
-        diff_cnt = (*orip != *newp)? diff_cnt+1 : diff_cnt;
-      }
-      difference = (float)(diff_cnt) / size;
-    }
-    return difference;
-  }
+//  template <typename T1>
+//  float Compare(T1 *orip, T1 *newp, uint32_t size) {
+//    float difference = 0.0;
+//    uint32_t diff_cnt = 0;
+//    uint32_t i=0;
+//    if(size != 0) {
+//      for(; i<size; i++, orip++, newp++) {
+//        //printf("[%d] i:%u, size:%u, %p == %p\n", myTaskID, i, size, orip, newp);
+//        diff_cnt = (*orip != *newp)? diff_cnt+1 : diff_cnt;
+//      }
+//      difference = (float)(diff_cnt) / size;
+//    }
+//    return difference;
+//  }
 };
 
 

@@ -101,7 +101,7 @@
 #define CD_BIT_30    0x0000000040000000                       
 #define CD_BIT_31    0x0000000080000000                       
 
-#define DEFAULT_MEDIUM kHDD
+#define DEFAULT_MEDIUM kPFS
 
 #define INVALID_NUM64BIT -1UL
 #define INVALID_NUM32BIT -1U

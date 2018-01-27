@@ -253,7 +253,7 @@ struct PhaseNode {
     }
 
     inline void ResetSeqID(uint32_t rollback_lv) {
-      PrintDetails();
+      //PrintDetails();
       if(rollback_lv < level_) {
         seq_end_ = seq_begin_; 
       }
@@ -312,6 +312,7 @@ struct CDProfiles {
   void PrintJSON(std::ostream &os, const std::string &head);
 };
 extern std::map<uint32_t, CDProfiles> cd_prof_map;
+const char *GetMedium(PrvMediumT medium);
 } // namespace common ends
 
 using namespace common;

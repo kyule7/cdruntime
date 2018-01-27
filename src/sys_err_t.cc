@@ -69,11 +69,19 @@ PrvMediumT GetMedium(const char *key)
 {
   if(strcmp(key, "LocalMemory") == 0) {
     return kLocalMemory;
+  } else if(strcmp(key, "Local Memory") == 0) {
+    return kLocalMemory;
   } else if(strcmp(key, "RemoteMemory") == 0) {
+    return kRemoteMemory;
+  } else if(strcmp(key, "Remote Memory") == 0) {
     return kRemoteMemory;
   } else if(strcmp(key, "LocalDisk") == 0) {
     return kLocalDisk;
+  } else if(strcmp(key, "Local Disk") == 0) {
+    return kLocalDisk;
   } else if(strcmp(key, "GlobalDisk") == 0) {
+    return kGlobalDisk;
+  } else if(strcmp(key, "Global Disk") == 0) {
     return kGlobalDisk;
   } else {
     ERROR_MESSAGE("Undefined medium in input: %s\n", key);
@@ -213,7 +221,7 @@ void SystemConfig::ParseParam(char *key)
       medium = GetMedium(key); 
       tuned::phaseTree.current_->medium_ = medium;
       config.mapping_[level][phase].medium_ = medium;
-      CD_PRINT_CONFIG(tstream, "%s ", medium.c_str()); 
+      CD_PRINT_CONFIG(tstream, "%s ", GetMedium(medium)); 
     }
     CD_PRINT_CONFIG(tstream, "%s\n", key);
   }
