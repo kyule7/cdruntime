@@ -47,7 +47,9 @@ void BufferConsumer::Delete(void)
 
 void BufferConsumer::InsertBuffer(DataStore *ds) 
 {
-  MYDBG("%p (%p)\n", ds, this); //getchar();
+  MYDBG("%p (%p)\n", ds, this); 
+//  if(packerTaskID == 0) printf("Insert buffer %p (%p)\n", ds, this); //getchar();
+
   // PadZero is necessary!
   // Otherwise the data written by previous data_store obj
   // may be overwritten by new object's.
@@ -69,7 +71,7 @@ void BufferConsumer::RemoveBuffer(DataStore *ds)
     }
   }
   if( found == false ) {
-    //ERROR_MESSAGE_PACKER("Remove buffer which is not existing in buf_list_\n");
+    ERROR_MESSAGE_PACKER("Remove buffer %p which is not existing in buf_list_\n", ds);
   }
 }
 
@@ -116,7 +118,13 @@ DataStore *BufferConsumer::GetBuffer(void)
   return buffer;
 }
 
-
+/****************************************************
+ * Read buffer
+ * Write file until buffer is empty
+ *   read:  chunk_mask, head_, size_, ptr_, written_len_
+ *   write: DataStore::head_, FileHandle::offset_
+ * Sync file
+ ****************************************************/
 void *BufferConsumer::ConsumeBuffer(void *bc) 
 {
   MYDBG("\n");

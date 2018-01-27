@@ -399,7 +399,7 @@ extern CD_CLOCK_T log_elapsed_time;
 //extern CD_CLOCK_T prof_end_clk;
 //extern CD_CLOCK_T prof_sync_clk;
 //
-//extern CD_CLOCK_T begin_clk;
+extern CD_CLOCK_T begin_clk;
 //extern CD_CLOCK_T end_clk;
 //extern CD_CLOCK_T elapsed_time;
 //extern CD_CLOCK_T normal_sync_time;

@@ -158,7 +158,7 @@ struct RuntimeInfo : public CDOverhead {
   RuntimeInfo(uint32_t id) 
     : CDOverhead(), id_(id),
       exec_(0), reexec_(0), prv_copy_(0), prv_ref_(0), restore_(0), msg_logging_(0), sys_err_vec_(0),
-      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0)
+      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0), clk_(0), reexec_clk_(0)
   {}
 //  RuntimeInfo(uonst uint64_t &total_exec) 
 //    : CDOverhead(), 
@@ -304,18 +304,26 @@ struct RuntimeInfo : public CDOverhead {
 
       if( CHECK_TYPE(type, kCopy) ) {
         prv_copy_ += len;
+        input_[entry_str].Update(len, type);
+//        printf(" elapsed: %lf, copy %lu \n", elapsed, len);
       } else if( CHECK_TYPE(type, kRef) ) {
         prv_ref_  += len;
-      }
-      if( CHECK_TYPE(type, kOutput) ) {
-        output_[entry_str].Update(len, type);
-      } else {
         input_[entry_str].Update(len, type);
+//        printf(" elapsed: %lf, ref %lu \n", elapsed, len);
+      } else if( CHECK_TYPE(type, kOutput) ) {
+        output_[entry_str].Update(len, type);
+//        printf(" elapsed: %lf, prv output %lu \n", elapsed, len);
+      } else {
+        assert(0);
+        input_[entry_str].Update(len, type);
+//        printf(" elapsed: %lf,unknown (%u) %lu \n", elapsed, type, len);
       }
   
     } else { // reexecution 
       cd::rst_elapsed_time += elapsed; 
       rst_elapsed_time_    += elapsed; 
+      input_[entry_str].Update(len, type);
+      restore_ += len;
     } 
   }
 
@@ -345,12 +353,18 @@ struct RuntimeInfo : public CDOverhead {
       sync_time_  += now - cd::prof_sync_clk;
     }
     
-    if(is_reexec == false) {
-      clk_ = now;
-    } else {
-      reexec_clk_ = now;
+    if(is_reexec) {
       reexec_++;
+      reexec_clk_ = now;
+    } else {
+      clk_ = now;
     }
+//    if(is_reexec == false) {
+//      clk_ = now;
+//    } else {
+//      reexec_clk_ = now;
+//      reexec_++;
+//    }
   }
 
   // This is called at CDHandle::Complete(),
@@ -369,13 +383,20 @@ struct RuntimeInfo : public CDOverhead {
     const double elapsed = now - cd::begin_clk;
     cd::compl_elapsed_time += elapsed;
     compl_elapsed_time_    += elapsed;
-    if(is_reexec == false) { // normal execution
+    //if(is_reexec == false) { // normal execution
       total_time_ += now - clk_;
-      //exec_       += 1;
-    } else { // reexecution not from the current CDs 
+      exec_       += 1;
+    
+    // reexecution not from the current CDs 
+    if(reexec_clk_ != 0) {
       reexec_time_ += now - reexec_clk_;
-      //reexec_      += 1;
+      reexec_clk_ = 0;
     }
+//    if(is_reexec) {
+//      // reexecution not from the current CDs 
+//      reexec_time_ += now - reexec_clk_;
+//      //reexec_      += 1;
+//    }
   }
   
 

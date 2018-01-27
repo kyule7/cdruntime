@@ -5,7 +5,7 @@ IS_STAMPEDE=1
 ifeq (${IS_STAMPEDE}, 1)
 MYCC=g++
 MPICC=mpicxx
-CFLAGS=-fPIC -Wall -c -std=gnu++0x -I. -fmax-errors=3
+CFLAGS=-fPIC -Wall -c -std=gnu++0x -I. -fmax-errors=3 #-Weffc++
 LFLAGS=-fPIC -Wall -std=gnu++0x -I.
 else
 MYCC=CC

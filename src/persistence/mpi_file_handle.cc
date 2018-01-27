@@ -58,9 +58,10 @@ void MPIFileHandle::Init(const MPI_Comm &comm, const char *filepath)
   if(base_filepath != NULL) {
     strcpy(base_filename, base_filepath);
   } else {
-    strcpy(base_filename, DEFAULT_BASE_FILEPATH);
+    strcpy(base_filename, DEFAULT_BASE_FILEPATH "/global");
   }
 
+  MakeFileDir(base_filename);
   //viewsize_ = DEFAULT_VIEWSIZE;
   viewsize_ = 0;
   if(viewsize_ != 0) { // N-to-1 file write

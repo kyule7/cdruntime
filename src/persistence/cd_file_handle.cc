@@ -38,7 +38,7 @@ FileHandle::FileHandle(const char *filepath)
 //  printf("basepath:%s\n", basepath.c_str()); getchar();
 }
 
-PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath) 
+PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath), fdesc_(-1)
 {
 //  printf("posix basepath:%s\n", basepath.c_str()); getchar();
   struct timeval time;
@@ -50,15 +50,27 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath)
     strcpy(base_filename, base_filepath);
   } else {
     printf("cd_file_handle.cc:PosixFileHandle(%s) %s\n", filepath, DEFAULT_BASE_FILEPATH);
-    strcpy(base_filename, DEFAULT_BASE_FILEPATH);
+    strcpy(base_filename, DEFAULT_LOCAL_BASEPATH "/cd_local");
   }
-  sprintf(full_filename, "%s/%s.%ld.%ld.%d", base_filename, filepath, time.tv_sec % 100, time.tv_usec % 100, packerTaskID);
-  //fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT | O_APPEND, S_IRUSR | S_IWUSR);
-  fdesc_ = open(full_filename, O_CREAT | O_RDWR | O_DIRECT, S_IRUSR | S_IWUSR);
+  if(MakeFileDir(base_filename) == -1) {
+    ERROR_MESSAGE_PACKER("ERROR: Make File Directory %s Failed\n", base_filename);
+  }
+  sprintf(full_filename, "%s/%s.%ld.%ld.%d.XXXXXX", 
+                          base_filename, filepath, 
+                          time.tv_sec  % 100, 
+                          time.tv_usec % 100, 
+                          packerTaskID);
+//  fdesc_ = open(full_filename, 
+//                O_CREAT | O_RDWR | O_DIRECT /* | O_APPEND */, 
+//                S_IRUSR | S_IWUSR);
+  fdesc_ = mkostemp(full_filename, 
+                O_CREAT | O_RDWR | O_DIRECT /* | O_APPEND */);
   if(fdesc_ < 0) {
+    perror("open:");
+    
     ERROR_MESSAGE_PACKER("ERROR: File open path:%s\n", full_filename);
   }
-  MYDBG("Opened file : %s\n", full_filename); //getchar();
+  MYDBG("Opened file : %s\n", full_filename);
   fh_ = this;
 }
 
@@ -81,6 +93,11 @@ FileHandle *PosixFileHandle::Get(const char *filepath)
 
 void PosixFileHandle::Close(void) 
 {
+  char cmd[128];
+  sprintf(cmd, "mv -rf %s %s", DEFAULT_LOCAL_BASEPATH "/cd_local", DEFAULT_BASE_FILEPATH "/local");
+  if( system(cmd) == -1 ) {
+    ERROR_MESSAGE_PACKER("Failed on command %s\n", cmd);
+  }
   if(fdesc_ > 0) {
     close(fdesc_);
     fdesc_ = -1;
@@ -231,3 +248,34 @@ uint32_t PosixFileHandle::GetBlkSize(void)
 //      return NULL;
 //  }
 //}
+
+int packer::MakeFileDir(const char *filepath_str)
+{
+  char *filepath = const_cast<char *>(filepath_str); 
+  assert(filepath && *filepath);
+  int ret = 0;
+  struct stat sb;
+//  printf("filepath:%s\n", filepath_str);
+  if(stat(filepath, &sb) != 0 || S_ISDIR(sb.st_mode) == 0) {
+    char *ptr;
+    char *next = NULL;
+    for (ptr=strchr(filepath+1, '/'); ptr; next=ptr+1, ptr=strchr(next, '/')) {
+      *ptr='\0';
+//      printf("%p %s\n", ptr,  filepath);
+      int err = mkdir(filepath, S_IRWXU);
+      if(err == -1 && errno != EEXIST) { 
+        *ptr='/'; 
+        ret = -1;
+      }
+      *ptr='/';
+    }
+    
+    if(next != NULL && *next != '\0') { 
+      int err = mkdir(filepath, S_IRWXU);
+      if(err == -1 && errno != EEXIST) { 
+        ret = -1;
+      }
+    }
+  }
+  return ret;
+}

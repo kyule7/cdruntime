@@ -7,6 +7,7 @@
 #include "define.h"
 #define MAX_FILEPATH_SIZE 256
 #define DEFAULT_BASEPATH "./"
+#define DEFAULT_LOCAL_BASEPATH "/tmp"
 #define DEFAULT_FILEPATH_POSIX "prv_posix"
 #define DEFAULT_FILEPATH_AIO   "prv_aio"
 #define DEFAULT_FILEPATH_MPI   "prv_mpi"
@@ -62,6 +63,8 @@ class PosixFileHandle : public FileHandle {
 };
 
 FileHandle *GetFileHandle(uint32_t ftype=kPosixFile);
+
+int MakeFileDir(const char *filepath_str);
 
 // Singleton
 //class AIOFileHandle : public FileHandle {

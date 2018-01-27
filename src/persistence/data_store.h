@@ -65,7 +65,7 @@ class DataStore {
     DataStore(char *ptr, uint64_t init_size, int filemode);
     //DataStore(char *ptr=NULL, uint64_t init_size=GROW_UNIT, int filemode=DEFAULT_FILEMODE);
     virtual ~DataStore(void);
-    void InitFile(void);
+    void InitFile(uint32_t filetype=kVolatile);
     void Init(char *ptr, uint64_t init_size, int filemode);
     void ReInit(void);
     CDErrType AllocateData();

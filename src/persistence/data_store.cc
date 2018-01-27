@@ -48,6 +48,10 @@ static uint64_t chunk_mask = CHUNK_ALIGNMENT - 1;
 //
 //}
 DataStore::DataStore(void)
+  : size_(DATA_GROW_UNIT), head_(0), tail_(0), grow_unit_(DATA_GROW_UNIT), allocated_(0), 
+    written_len_(0), mode_(kGrowingMode|DEFAULT_FILEMODE), chunksize_(CHUNK_ALIGNMENT), 
+    ptr_(NULL), buf_preserved_(NULL),  tail_preserved_(0), head_preserved_(0),
+    fh_(NULL), r_tail_(0), r_head_(0)
 {
 
   // Should be thread-safe
@@ -57,6 +61,10 @@ DataStore::DataStore(void)
 }
 
 DataStore::DataStore(char *ptr, uint64_t init_size, int filemode)
+  : size_(init_size), head_(0), tail_(0), grow_unit_(init_size), allocated_(0), 
+    written_len_(0), mode_(kGrowingMode|filemode), chunksize_(CHUNK_ALIGNMENT), 
+    ptr_(NULL), buf_preserved_(NULL),  tail_preserved_(0), head_preserved_(0),
+    fh_(NULL), r_tail_(0), r_head_(0)
 {
   MYDBG("\nptr:%p", ptr);
 
@@ -66,14 +74,32 @@ DataStore::DataStore(char *ptr, uint64_t init_size, int filemode)
   InitFile();
 }
 
-void DataStore::InitFile(void)
+void DataStore::InitFile(uint32_t filetype)
 {
+  // if it is kVolatile, do not overwrite file mode
+  if(filetype != kVolatile) {
+    SET_FILE_TYPE(mode_, filetype);
+  }
   MYDBG("BeforeWrite ft:%u fh:%p ptralloc:%p magic:%lu\n",
         ftype(), fh_, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
   
+  pthread_mutex_lock(&mutex);
+  /** Order matters *************************/
+  fh_ = GetFileHandle(ftype()); // fh_ can be changed later.
+//  BufferConsumer::Get()->InsertBuffer(this);
+  /*****************************************/
+
+  // update chunksize
+  if(fh_ != NULL)
+    chunksize_ = fh_->GetBlkSize();
+  else
+    chunksize_ = CHUNK_ALIGNMENT;
+  chunk_mask = chunksize_ - 1;
+
   if(fh_ != NULL) {
     if(fh_->GetFileSize() < (int64_t)sizeof(MagicStore)) {
-      //printf("fh_:%p, fsize:%lu, Write(0, %p, %zu)\n", fh_, fh_->GetFileSize(), ptr_ - sizeof(MagicStore), sizeof(MagicStore));
+      //printf("fh_:%p, fsize:%lu, Write(0, %p, %zu)\n", 
+      //fh_, fh_->GetFileSize(), ptr_ - sizeof(MagicStore), sizeof(MagicStore));
       fh_->Write(0, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
       fh_->FileSync();
     }
@@ -82,14 +108,18 @@ void DataStore::InitFile(void)
   } else {
     written_len_ = CHUNK_ALIGNMENT;
   }
+
+  pthread_mutex_unlock(&mutex);
   MYDBG("blksize:%u filesize:%lu (%lu)\n", 
       chunksize_, written_len_, sizeof(MagicStore)); //getchar();
 }
 
+// [NOTE]
+// head_, size_, ptr_, written_len_, fh_ must be updated atomically.
 void DataStore::Init(char *ptr, uint64_t init_size, int filemode) 
 {
   pthread_mutex_lock(&mutex);
-  ptr_ = NULL;
+//  ptr_ = NULL;
   buf_preserved_ = NULL;
   tail_preserved_ = 0;
   grow_unit_ = init_size;
@@ -105,15 +135,17 @@ void DataStore::Init(char *ptr, uint64_t init_size, int filemode)
     AllocateData();
   else 
     ptr_ = ptr + sizeof(MagicStore);
-  /** Order matters *************************/
-  fh_ = GetFileHandle(ftype()); 
-  BufferConsumer::Get()->InsertBuffer(this);
-  /*****************************************/
-  if(fh_ != NULL)
-    chunksize_ = fh_->GetBlkSize();
-  else
-    chunksize_ = CHUNK_ALIGNMENT;
-
+//  /** Order matters *************************/
+//  fh_ = GetFileHandle(ftype()); // fh_ can be changed later.
+////  BufferConsumer::Get()->InsertBuffer(this);
+//  /*****************************************/
+//
+//  // update chunksize
+//  if(fh_ != NULL)
+//    chunksize_ = fh_->GetBlkSize();
+//  else
+//    chunksize_ = CHUNK_ALIGNMENT;
+//  chunk_mask = chunksize_ - 1;
   pthread_mutex_unlock(&mutex);
 }
 
@@ -282,9 +314,9 @@ CDErrType DataStore::FreeData(bool reuse)
     // free file
     if(fh_ != NULL)
       fh_->Truncate(written_len_);
+  } else {
+    BufferConsumer::Get()->RemoveBuffer(this); 
   }
-
-  BufferConsumer::Get()->RemoveBuffer(this); 
   pthread_mutex_unlock(&mutex);
   /*****************************************/
   return err;
@@ -358,7 +390,7 @@ uint64_t DataStore::Write(char *pfrom, int64_t len, uint64_t pos)
 //      ret = CopyBufferToFile(pfrom, len, pos + written_len_);
       ret = fh_->Write(pos + written_len_, pfrom, len, 0);
     } else { // pfrom is misaligned.
-      void *ptr;
+      void *ptr = NULL;
       const uint64_t len_up = align_up(len);
       posix_memalign(&ptr, CHUNK_ALIGNMENT, len_up);
       memcpy(ptr, pfrom, len);
@@ -580,7 +612,7 @@ void DataStore::FileRead(char *pto, uint64_t chunk_in_file, uint64_t pos)
 #if 0
   fh_->Read(pto, chunk_in_file, pos);
 #else
-  void *tmp;
+  void *tmp = NULL;
   posix_memalign(&tmp, CHUNK_ALIGNMENT, len_to_read_aligned); 
   memset(tmp, 0, len_to_read_aligned); 
   fh_->Read((char *)tmp, len_to_read_aligned, pos_aligned_down);
@@ -805,6 +837,7 @@ CDErrType DataStore::CopyBufferToFile(uint64_t buf_pos, int64_t len, uint64_t fi
     }
 #endif
   }
+  return ret;
 }
 
 void DataStore::InitReadMode(void) 

@@ -61,8 +61,32 @@ int64_t level = -1;
 int64_t phase = -1;
 int seq_cnt = 0;
 char prv;
-std::string label;
+static std::string label;
+static PrvMediumT medium = kUndefined;
 static FILE *tstream = NULL;
+
+PrvMediumT GetMedium(const char *key)
+{
+  if(strcmp(key, "LocalMemory") == 0) {
+    return kLocalMemory;
+  } else if(strcmp(key, "Local Memory") == 0) {
+    return kLocalMemory;
+  } else if(strcmp(key, "RemoteMemory") == 0) {
+    return kRemoteMemory;
+  } else if(strcmp(key, "Remote Memory") == 0) {
+    return kRemoteMemory;
+  } else if(strcmp(key, "LocalDisk") == 0) {
+    return kLocalDisk;
+  } else if(strcmp(key, "Local Disk") == 0) {
+    return kLocalDisk;
+  } else if(strcmp(key, "GlobalDisk") == 0) {
+    return kGlobalDisk;
+  } else if(strcmp(key, "Global Disk") == 0) {
+    return kGlobalDisk;
+  } else {
+    ERROR_MESSAGE("Undefined medium in input: %s\n", key);
+  }
+}
 
 uint64_t SoftMemErrInfo::get_pa_start(void)     { return pa_start_; }
 uint64_t SoftMemErrInfo::get_va_start(void)     { return va_start_; }
@@ -170,6 +194,9 @@ void SystemConfig::ParseParam(char *key)
   } else if(strcmp(key, "errortype") == 0) { 
     prv = key[0]; 
     AddIndent(seq_cnt); CD_PRINT_CONFIG(tstream, "%s: ", key);
+  } else if(strcmp(key, "medium") == 0) { 
+    prv = key[0]; 
+    AddIndent(seq_cnt); CD_PRINT_CONFIG(tstream, "%s: ", key);
   } else if(key[0] == 'F') { 
     prv = key[0]; 
     errortype = atol(key+1);
@@ -190,6 +217,11 @@ void SystemConfig::ParseParam(char *key)
       tuned::phaseTree.current_->errortype_ = errortype;
       config.mapping_[level][phase].failure_type_ = errortype;
       CD_PRINT_CONFIG(tstream, "0x%lX ", errortype); 
+    } else if(prv == 'm') {
+      medium = GetMedium(key); 
+      tuned::phaseTree.current_->medium_ = medium;
+      config.mapping_[level][phase].medium_ = medium;
+      CD_PRINT_CONFIG(tstream, "%s ", GetMedium(medium)); 
     }
     CD_PRINT_CONFIG(tstream, "%s\n", key);
   }

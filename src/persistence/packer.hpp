@@ -75,10 +75,11 @@ class Packer {
    
     virtual void Init(bool reuse=false) {
       table_->Init();
-      if(reuse)
-        data_->ReInit();
-      else
+      if(reuse == false) {
+//        data_->ReInit();
+//      else
         data_->Init(NULL, DATA_GROW_UNIT, DEFAULT_FILEMODE);
+      }
     }
 
     BaseTable *GetTable(void) { return table_; }

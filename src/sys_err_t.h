@@ -230,7 +230,8 @@ public:
 struct ConfigEntry {
   int64_t interval_;
   int64_t failure_type_;
-  ConfigEntry(void) : interval_(-1), failure_type_(-1) {}
+  PrvMediumT medium_;
+  ConfigEntry(void) : interval_(-1), failure_type_(-1), medium_(kUndefined) {}
   void Print(int64_t level, int64_t phase);
 };
 

@@ -323,6 +323,7 @@ class CDHandle {
       CD_ASSERT_STR(cur->begin_ == false, "[Tuned %s] %sat %u\n", __func__, label, cur->level_);
       cur->begin_ = true;
       cur->label_ = (strcmp(label, NO_LABEL) == 0)? cur->name_ : label;
+//      printf("[%s] label:%s, level:%u (parent)\n", __func__, label, cur->level_);
 #   if CD_RUNTIME_ENABLED
       //if(tuned::phaseTree.current_ != tuned::phaseTree.root_) 
       TUNE_DEBUG("[%s] label:%s, level:%u (parent)\n", __func__, label, tuned::phaseTree.current_->level_);
@@ -410,6 +411,8 @@ class CDHandle {
       cur->begin_ = false;
       TUNE_DEBUG("[Tune %s lv:%u phase:%u] \n", 
              __func__, cur->level_, cur->phase_); STOPHANDLE;
+//      printf("[Tune %s lv:%u phase:%u] \n", 
+//             __func__, cur->level_, cur->phase_); STOPHANDLE;
 #     if CD_RUNTIME_ENABLED
       RecordComplete(tuned::phaseTree.current_->profile_);
       PhaseNode *merging_node = tuned::phaseTree.current_->GetLeftMostNode();
@@ -468,9 +471,9 @@ class CDHandle {
                     )
     {
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
       CDErrT ret = common::kOK; 
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       TUNE_DEBUG("[Tune %s lv:%u phase:%u] name:%s count:%lu <= interval:%ld\n", 
           __func__, cur->level_, cur->phase_, my_name, 
           tuned::phaseTree.current_->count_,
@@ -515,9 +518,9 @@ class CDHandle {
                     )
     {
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
       CDErrT ret = common::kOK; 
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       TUNE_DEBUG("[Tune %s lv:%u phase:%u] name:%s count:%lu <= interval:%ld\n", 
           __func__, cur->level_, cur->phase_, my_name, 
           tuned::phaseTree.current_->count_,
@@ -561,9 +564,9 @@ class CDHandle {
                     )
     { 
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
       CDErrT ret = common::kOK;
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       TUNE_DEBUG("[Tune %s lv:%u phase:%u] name:%s count:%lu <= interval:%ld\n", 
           __func__, cur->level_, cur->phase_, my_name, 
           tuned::phaseTree.current_->count_,
@@ -613,9 +616,9 @@ class CDHandle {
                         )
     { 
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
       CDErrT ret = common::kOK;
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       if(cur->IsActive()) { ret = cur->handle_->CDAssertFail(test_true, err_report); }
 #     endif
       TunedEpilogue();
@@ -633,9 +636,9 @@ class CDHandle {
                          )
     { 
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
       CDErrT ret = common::kOK;
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       if(cur->IsActive()) { ret = cur->handle_->CDAssertNotify(test_true, err_report); }
 #     endif
       TunedEpilogue();
@@ -697,9 +700,9 @@ class CDHandle {
                             )
     { 
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
       CDErrT ret = common::kOK;
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       if(cur->IsActive()) { ret = cur->handle_->RegisterDetection(system_name_mask, system_loc_mask); }
 #     endif
       TunedEpilogue();
@@ -738,9 +741,9 @@ class CDHandle {
                             )
     { 
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
       CDErrT ret = common::kOK;
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       if(cur->IsActive()) { ret = cur->handle_->RegisterRecovery(error_name_mask, error_loc_mask, recoverObj); } 
 #     endif
       TunedEpilogue();
@@ -764,9 +767,9 @@ class CDHandle {
              )
     { 
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
       CDErrT ret = common::kOK;
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       if(cur->IsActive()) { ret = cur->handle_->RegisterRecovery(error_name_mask, error_loc_mask, recovery_func); }
 #     endif
       TunedEpilogue();
@@ -798,9 +801,9 @@ class CDHandle {
     CDErrT RegisterSplitMethod(cd::SplitFuncT split_func) 
     { 
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
       CDErrT ret = common::kOK;
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       if(cur->IsActive()) { ret = cur->handle_->RegisterSplitMethod(split_func); } 
 #     endif
       TunedEpilogue();
@@ -839,9 +842,9 @@ class CDHandle {
             )
     { 
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
       float prob = 0.0;
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       if(cur->IsActive()) { prob = cur->handle_->GetErrorProbability(error_type, error_num); }
 #     endif
       TunedEpilogue();
@@ -887,9 +890,9 @@ class CDHandle {
           )
     { 
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
       float prob = 0.0;
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       if(cur->IsActive()) { prob = cur->handle_->RequireErrorProbability(error_type, error_num, probability, fail_over); }
 #     endif
       TunedEpilogue();
@@ -923,8 +926,8 @@ class CDHandle {
     void RegisterMemoryErrorInjector(interface::MemoryErrorInjector *memory_error_injector)
     {
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       if(cur->IsActive()) { cur->handle_->RegisterMemoryErrorInjector(memory_error_injector); }
 #     endif
       TunedEpilogue();
@@ -949,8 +952,8 @@ class CDHandle {
     void RegisterErrorInjector(interface::CDErrorInjector *cd_error_injector) 
     { 
       TunedPrologue();
-      CDHandle *cur = GetLeafCD();
 #     if CD_RUNTIME_ENABLED
+      CDHandle *cur = GetLeafCD();
       if(cur->IsActive()) { cur->handle_->RegisterErrorInjector(cd_error_injector); }
 #     endif
       TunedEpilogue();

@@ -15,7 +15,7 @@
 #define INVALID_NUM     0xFFFFFFFFFFFFFFFF
 #define TABLE_ID_OFFSET 0xFFFFFFFF00000000
 
-//#define _USE_PFS
+#define _USE_PFS
 
 #ifndef _USE_PFS
 // Small
@@ -28,7 +28,7 @@
 
 #define _TRUNCATE_FILE 0
 
-#define DEFAULT_BASE_FILEPATH "."
+#define DEFAULT_BASE_FILEPATH "./preserved"
 //#define CHUNKSIZE_THRESHOLD_BASE 0x40000000 // 16KB
 #define CHUNKSIZE_THRESHOLD_BASE 0x4000000 // 16KB
 //#define DATA_GROW_UNIT           0x40000000
