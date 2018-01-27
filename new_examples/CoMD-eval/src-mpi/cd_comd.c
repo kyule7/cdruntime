@@ -186,21 +186,25 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
   uint32_t U_size = 0;
 
   const uint32_t maxTotalAtoms = MAXATOMS * nTotalBoxes;
+  const uint32_t prvStartIdx = MAXATOMS * from;
   // Total number of atoms to be preserved
-  uint32_t maxPreservedAtoms = 0;
+  uint32_t szPreservedAtoms = 0;
+
 
   // All allocated atom is to be preserved.
   if (to == -1) {
     assert(from == 0);
-    maxPreservedAtoms = maxTotalAtoms;
+    szPreservedAtoms = maxTotalAtoms;
   }
   // Given amount of atoms is to be preserved
   // For now, this is used only for aotms->r (positions)
   else if (to >= 1) { // at least 1 element
     // FIXME: This is now depreciated
-    //        Need to take the number of boxes
-    // the number of boxes to be preserved
-    maxPreservedAtoms = to - from + 1;
+    //        Need to take the ending number of box indices
+    // TODO:  (01.26.18) working on implementing this 
+    // the number of boxes to be preserved : to - from
+    // the number of atomx to be preserved 
+    szPreservedAtoms = MAXATOMS*(to - from);
     assert(1); // FIXME: to be fixed
   } else {
     // No atom to be preserved
@@ -208,12 +212,12 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
   }
 
   atoms_size = sizeof(Atoms);
-  gid_size = maxPreservedAtoms * sizeof(int);
-  iSpecies_size = maxPreservedAtoms * sizeof(int);
-  r_size = maxPreservedAtoms * sizeof(real3);
-  p_size = maxPreservedAtoms * sizeof(real3);
-  f_size = maxPreservedAtoms * sizeof(real3);
-  U_size = maxPreservedAtoms * sizeof(real_t);
+  gid_size = szPreservedAtoms * sizeof(int);
+  iSpecies_size = szPreservedAtoms * sizeof(int);
+  r_size = szPreservedAtoms * sizeof(real3);
+  p_size = szPreservedAtoms * sizeof(real3);
+  f_size = szPreservedAtoms * sizeof(real3);
+  U_size = szPreservedAtoms * sizeof(real_t);
 
   // Preserve entire strcut of AtomSt
   if (is_all) {
@@ -249,157 +253,181 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
     cd_preserve(cdh, atoms->U, U_size, knob, "Atoms_U", "Atoms_U");
 
 #endif
-    size = atoms_size + gid_size + iSpecies_size + r_size + p_size + f_size +
+    size += atoms_size + gid_size + iSpecies_size + r_size + p_size + f_size +
            U_size;
   }
 
   // Preserve array for gids of atoms
-  else if (is_gid == 1) {
-    // Be careful not to preserve twice
-    assert(is_all != 1);
+  else {
+    if (is_gid == 1) {
+      // Be careful not to preserve twice
+      assert(is_all != 1);
+      char tmp_atoms_gid[256] = "-1"; // FIXME: it this always enough?
+      char tmp_atoms_gid_ptr[256] = "-1"; // FIXME: it this always enough?
+      if (idx == NULL) {
+        sprintf(tmp_atoms_gid, "Atoms_gid");
+        sprintf(tmp_atoms_gid_ptr, "Atoms_gid_ptr");
+      } else {
+        sprintf(tmp_atoms_gid, "Atoms_gid%s", idx);
+        sprintf(tmp_atoms_gid_ptr, "Atoms_gid_ptr%s", idx);
+      }
 #ifdef DO_PRV
-    // FIXME: check whether this works or not
-    //cd_preserve(cdh, &(atoms->gid), sizeof(int *), kCopy, "Atoms_gid_ptr",
-    //            "Atoms_gid_ptr");
-    //cd_preserve(cdh, atoms->gid, gid_size, kCopy, "Atoms_gid", "Atoms_gid");
-    cd_preserve(cdh, &(atoms->gid), sizeof(int *), knob, "Atoms_gid_ptr",
-                "Atoms_gid_ptr");
-    cd_preserve(cdh, atoms->gid, gid_size, knob, "Atoms_gid", "Atoms_gid");
-
+      // FIXME: check whether this works or not
+      //cd_preserve(cdh, &(atoms->gid), sizeof(int *), kCopy, "Atoms_gid_ptr",
+      //            "Atoms_gid_ptr");
+      //cd_preserve(cdh, atoms->gid, gid_size, kCopy, "Atoms_gid", "Atoms_gid");
+      // FIXME: this may be preserved many times, which is not desired.
+      //        this should be preserved via kRef after initialization.
+      cd_preserve(cdh, &(atoms->gid), sizeof(int *), knob, 
+          tmp_atoms_gid_ptr, tmp_atoms_gid_ptr);
+      //            "Atoms_gid_ptr", "Atoms_gid_ptr");
+      cd_preserve(cdh, &(atoms->gid[prvStartIdx]), gid_size, knob, 
+          tmp_atoms_gid, tmp_atoms_gid);
+      //            "Atoms_gid", "Atoms_gid");
 #endif
-    size += gid_size;
-  }
-
-  // Preserve array for iSpecies of atoms
-  else if (is_iSpecies == 1) {
-    assert(is_all != 1);
-    char tmp_atoms_iSpecies[256] = "-1"; // FIXME: it this always enough?
-    char tmp_atoms_iSpecies_ptr[256] = "-1"; // FIXME: it this always enough?
-    if (idx == NULL) {
-      sprintf(tmp_atoms_iSpecies, "Atoms_iSpecies");
-      sprintf(tmp_atoms_iSpecies_ptr, "Atoms_iSpecies_ptr");
-    } else {
-      sprintf(tmp_atoms_iSpecies, "Atoms_iSpecies%s", idx);
-      sprintf(tmp_atoms_iSpecies_ptr, "Atoms_iSpecies_ptr%s", idx);
+      size += gid_size;
     }
 
+    // Preserve array for iSpecies of atoms
+    if (is_iSpecies == 1) {
+      assert(is_all != 1);
+      char tmp_atoms_iSpecies[256] = "-1"; // FIXME: it this always enough?
+      char tmp_atoms_iSpecies_ptr[256] = "-1"; // FIXME: it this always enough?
+      if (idx == NULL) {
+        sprintf(tmp_atoms_iSpecies, "Atoms_iSpecies");
+        sprintf(tmp_atoms_iSpecies_ptr, "Atoms_iSpecies_ptr");
+      } else {
+        sprintf(tmp_atoms_iSpecies, "Atoms_iSpecies%s", idx);
+        sprintf(tmp_atoms_iSpecies_ptr, "Atoms_iSpecies_ptr%s", idx);
+      }
 #ifdef DO_PRV
-    //cd_preserve(cdh, &(atoms->iSpecies), sizeof(int *), kCopy,
-    //            tmp_atoms_iSpecies_ptr, tmp_atoms_iSpecies_ptr);
-    //cd_preserve(cdh, atoms->iSpecies, iSpecies_size, kCopy, tmp_atoms_iSpecies,
-    //            tmp_atoms_iSpecies);
-    cd_preserve(cdh, &(atoms->iSpecies), sizeof(int *), knob,
-                tmp_atoms_iSpecies_ptr, tmp_atoms_iSpecies_ptr);
-    cd_preserve(cdh, atoms->iSpecies, iSpecies_size, knob, tmp_atoms_iSpecies,
-                tmp_atoms_iSpecies);
-
+      //cd_preserve(cdh, &(atoms->iSpecies), sizeof(int *), kCopy,
+      //            tmp_atoms_iSpecies_ptr, tmp_atoms_iSpecies_ptr);
+      //cd_preserve(cdh, atoms->iSpecies, iSpecies_size, kCopy, tmp_atoms_iSpecies,
+      //            tmp_atoms_iSpecies);
+      // FIXME: this may be preserved many times, which is not desired.
+      //        this should be preserved via kRef after initialization.
+      cd_preserve(cdh, &(atoms->iSpecies), sizeof(int *), knob,
+          tmp_atoms_iSpecies_ptr, tmp_atoms_iSpecies_ptr);
+      cd_preserve(cdh, &(atoms->iSpecies[prvStartIdx]), iSpecies_size, knob, 
+          tmp_atoms_iSpecies, tmp_atoms_iSpecies);
 #endif
-    size += iSpecies_size;
-  }
-
-  // Preserve array for atoms->r
-  else if (is_r == 1) {
-    assert(is_all != 1);
-    char tmp_atoms_r[256] = "-1"; // FIXME: it this always enough?
-    char tmp_atoms_r_ptr[256] = "-1"; // FIXME: it this always enough?
-    if (idx == NULL) {
-      sprintf(tmp_atoms_r, "Atoms_r");
-      sprintf(tmp_atoms_r_ptr, "Atoms_r_ptr");
-    } else {
-      sprintf(tmp_atoms_r, "Atoms_r%s", idx);
-      sprintf(tmp_atoms_r_ptr, "Atoms_r_ptr%s", idx);
+      size += iSpecies_size;
     }
+
+    // Preserve array for atoms->r
+    if (is_r == 1) {
+      assert(is_all != 1);
+      char tmp_atoms_r[256] = "-1"; // FIXME: it this always enough?
+      char tmp_atoms_r_ptr[256] = "-1"; // FIXME: it this always enough?
+      if (idx == NULL) {
+        sprintf(tmp_atoms_r, "Atoms_r");
+        sprintf(tmp_atoms_r_ptr, "Atoms_r_ptr");
+      } else {
+        sprintf(tmp_atoms_r, "Atoms_r%s", idx);
+        sprintf(tmp_atoms_r_ptr, "Atoms_r_ptr%s", idx);
+      }
 #ifdef DO_PRV
-    //cd_preserve(cdh, &(atoms->r), sizeof(real3 *), kCopy, tmp_atoms_r_ptr,
-    //            tmp_atoms_r_ptr);
-    //cd_preserve(cdh, atoms->r, r_size, kCopy, tmp_atoms_r, tmp_atoms_r);
-    cd_preserve(cdh, &(atoms->r), sizeof(real3 *), knob, tmp_atoms_r_ptr,
-                tmp_atoms_r_ptr);
-    cd_preserve(cdh, atoms->r, r_size, knob, tmp_atoms_r, tmp_atoms_r);
-
+      //cd_preserve(cdh, &(atoms->r), sizeof(real3 *), kCopy, tmp_atoms_r_ptr,
+      //            tmp_atoms_r_ptr);
+      //cd_preserve(cdh, atoms->r, r_size, kCopy, tmp_atoms_r, tmp_atoms_r);
+      // FIXME: this may be preserved many times, which is not desired.
+      //        this should be preserved via kRef after initialization.
+      cd_preserve(cdh, &(atoms->r), sizeof(real3 *), knob, tmp_atoms_r_ptr,
+          tmp_atoms_r_ptr);
+      cd_preserve(cdh, &(atoms->r[prvStartIdx]), r_size, knob, 
+          tmp_atoms_r, tmp_atoms_r);
 #endif
-    size += r_size;
-  }
-
-  // Preserve array for atoms->p
-  else if (is_p == 1) {
-    assert(is_all != 1);
-    char tmp_atoms_p[256] = "-1"; // FIXME: it this always enough?
-    char tmp_atoms_p_ptr[256] = "-1"; // FIXME: it this always enough?
-    if (idx == NULL) {
-      sprintf(tmp_atoms_p, "Atoms_p");
-      sprintf(tmp_atoms_p_ptr, "Atoms_p_ptr");
-    } else {
-      sprintf(tmp_atoms_p, "Atoms_p%s", idx);
-      sprintf(tmp_atoms_p_ptr, "Atoms_p_ptr%s", idx);
+      size += r_size;
     }
+
+    // Preserve array for atoms->p
+    if (is_p == 1) {
+      assert(is_all != 1);
+      char tmp_atoms_p[256] = "-1"; // FIXME: it this always enough?
+      char tmp_atoms_p_ptr[256] = "-1"; // FIXME: it this always enough?
+      if (idx == NULL) {
+        sprintf(tmp_atoms_p, "Atoms_p");
+        sprintf(tmp_atoms_p_ptr, "Atoms_p_ptr");
+      } else {
+        sprintf(tmp_atoms_p, "Atoms_p%s", idx);
+        sprintf(tmp_atoms_p_ptr, "Atoms_p_ptr%s", idx);
+      }
 #ifdef DO_PRV
-    //cd_preserve(cdh, &(atoms->p), sizeof(real3 *), kCopy, tmp_atoms_p_ptr,
-    //            tmp_atoms_p_ptr);
-    //cd_preserve(cdh, atoms->p, p_size, kCopy, tmp_atoms_p, tmp_atoms_p);
-    cd_preserve(cdh, &(atoms->p), sizeof(real3 *), knob, tmp_atoms_p_ptr,
-                tmp_atoms_p_ptr);
-    cd_preserve(cdh, atoms->p, p_size, knob, tmp_atoms_p, tmp_atoms_p);
-
+      //cd_preserve(cdh, &(atoms->p), sizeof(real3 *), kCopy, tmp_atoms_p_ptr,
+      //            tmp_atoms_p_ptr);
+      //cd_preserve(cdh, atoms->p, p_size, kCopy, tmp_atoms_p, tmp_atoms_p);
+      // FIXME: this may be preserved many times, which is not desired.
+      //        this should be preserved via kRef after initialization.
+      cd_preserve(cdh, &(atoms->p), sizeof(real3 *), knob, tmp_atoms_p_ptr,
+          tmp_atoms_p_ptr);
+      cd_preserve(cdh, &(atoms->p[prvStartIdx]), p_size, knob, 
+          tmp_atoms_p, tmp_atoms_p);
 #endif
-    size += p_size;
-  }
-
-  // Preserve array for atoms->f
-  else if (is_f == 1) {
-    assert(is_all != 1);
-    char tmp_atoms_f[256] = "-1"; // FIXME: it this always enough?
-    char tmp_atoms_f_ptr[256] = "-1"; // FIXME: it this always enough?
-    if (idx == NULL) {
-      sprintf(tmp_atoms_f, "Atoms_f");
-      sprintf(tmp_atoms_f_ptr, "Atoms_f_ptr");
-    } else {
-      sprintf(tmp_atoms_f, "Atoms_f%s", idx);
-      sprintf(tmp_atoms_f_ptr, "Atoms_f_ptr%s", idx);
+      size += p_size;
     }
+
+    // Preserve array for atoms->f
+    if (is_f == 1) {
+      assert(is_all != 1);
+      char tmp_atoms_f[256] = "-1"; // FIXME: it this always enough?
+      char tmp_atoms_f_ptr[256] = "-1"; // FIXME: it this always enough?
+      if (idx == NULL) {
+        sprintf(tmp_atoms_f, "Atoms_f");
+        sprintf(tmp_atoms_f_ptr, "Atoms_f_ptr");
+      } else {
+        sprintf(tmp_atoms_f, "Atoms_f%s", idx);
+        sprintf(tmp_atoms_f_ptr, "Atoms_f_ptr%s", idx);
+      }
 #ifdef DO_PRV
-    //cd_preserve(cdh, &(atoms->f), sizeof(real3 *), kCopy, tmp_atoms_f_ptr,
-    //            tmp_atoms_f_ptr);
-    //cd_preserve(cdh, atoms->f, f_size, kCopy, tmp_atoms_f, tmp_atoms_f);
-    cd_preserve(cdh, &(atoms->f), sizeof(real3 *), knob, tmp_atoms_f_ptr,
-                tmp_atoms_f_ptr);
-    cd_preserve(cdh, atoms->f, f_size, knob, tmp_atoms_f, tmp_atoms_f);
-
+      //cd_preserve(cdh, &(atoms->f), sizeof(real3 *), kCopy, tmp_atoms_f_ptr,
+      //            tmp_atoms_f_ptr);
+      //cd_preserve(cdh, atoms->f, f_size, kCopy, tmp_atoms_f, tmp_atoms_f);
+      // FIXME: this may be preserved many times, which is not desired.
+      //        this should be preserved via kRef after initialization.
+      cd_preserve(cdh, &(atoms->f), sizeof(real3 *), knob, tmp_atoms_f_ptr,
+          tmp_atoms_f_ptr);
+      cd_preserve(cdh, &(atoms->f[prvStartIdx]), f_size, knob, 
+          tmp_atoms_f, tmp_atoms_f);
 #endif
-    size += f_size;
-  }
-
-  // Preserve array for atoms->U
-  else if (is_U == 1) {
-    assert(is_all != 1);
-    char tmp_atoms_U[256] = "-1"; // FIXME: it this always enough?
-    char tmp_atoms_U_ptr[256] = "-1"; // FIXME: it this always enough?
-    if (idx == NULL) {
-      sprintf(tmp_atoms_U, "Atoms_U");
-      sprintf(tmp_atoms_U_ptr, "Atoms_U_ptr");
-    } else {
-      sprintf(tmp_atoms_U, "Atoms_U%s", idx);
-      sprintf(tmp_atoms_U_ptr, "Atoms_U_ptr%s", idx);
+      size += f_size;
     }
-#ifdef DO_PRV
-    //cd_preserve(cdh, &(atoms->U), sizeof(real3 *), kCopy, tmp_atoms_U_ptr,
-    //            tmp_atoms_U_ptr);
-    //cd_preserve(cdh, atoms->U, U_size, kCopy, tmp_atoms_U, tmp_atoms_U);
-    cd_preserve(cdh, &(atoms->U), sizeof(real3 *), knob, tmp_atoms_U_ptr,
-                tmp_atoms_U_ptr);
-    cd_preserve(cdh, atoms->U, U_size, knob, tmp_atoms_U, tmp_atoms_U);
 
+    // Preserve array for atoms->U
+    if (is_U == 1) {
+      assert(is_all != 1);
+      char tmp_atoms_U[256] = "-1"; // FIXME: it this always enough?
+      char tmp_atoms_U_ptr[256] = "-1"; // FIXME: it this always enough?
+      if (idx == NULL) {
+        sprintf(tmp_atoms_U, "Atoms_U");
+        sprintf(tmp_atoms_U_ptr, "Atoms_U_ptr");
+      } else {
+        sprintf(tmp_atoms_U, "Atoms_U%s", idx);
+        sprintf(tmp_atoms_U_ptr, "Atoms_U_ptr%s", idx);
+      }
+#ifdef DO_PRV
+      //cd_preserve(cdh, &(atoms->U), sizeof(real3 *), kCopy, tmp_atoms_U_ptr,
+      //            tmp_atoms_U_ptr);
+      //cd_preserve(cdh, atoms->U, U_size, kCopy, tmp_atoms_U, tmp_atoms_U);
+      // FIXME: this may be preserved many times, which is not desired.
+      //        this should be preserved via kRef after initialization.
+      cd_preserve(cdh, &(atoms->U), sizeof(real3 *), knob, tmp_atoms_U_ptr,
+          tmp_atoms_U_ptr);
+      cd_preserve(cdh, &(atoms->U[prvStartIdx]), U_size, knob, 
+          tmp_atoms_U, tmp_atoms_U);
 #endif
-    size += U_size;
-  } else {
-    // Someting went wrong. No need to call this in this case.
-    assert(1);
+      size += U_size;
+    } 
+    else {
+      // Someting went wrong. No need to call this in this case.
+      assert(1);
+    }
   }
 
   if (is_print == 1) {
     printf("Preserve Atoms: %zu, #totAtoms:%u, gid:%u, species:%u, r:%u, p:%u, "
            "f:%u, U:%u\n",
-           sizeof(Atoms), maxPreservedAtoms, gid_size, iSpecies_size, r_size,
+           sizeof(Atoms), szPreservedAtoms, gid_size, iSpecies_size, r_size,
            p_size, f_size, U_size);
   }
   return size;

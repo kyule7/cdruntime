@@ -70,7 +70,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // TODO: Did this preserved in level1? Yes.
     //       Then, need to skip when both level1 and level2 are enabled
     char idx_advanceVelocity_start[256] = "-1"; // FIXME: it this always enough?
-    sprintf(idx_advanceVelocity_start, "vel_start_%d", ii);
+    sprintf(idx_advanceVelocity_start, "_vel_start_%d", ii);
     int velocity_pre_size =
         preserveAtoms(lv2_cd, kCopy, s->atoms, 
                       s->boxes->nLocalBoxes, // not Total
@@ -130,7 +130,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 //    cd_begin(lv2_cd, "advancePosition");
     // Preserve atoms->p (momenta of local atoms)
     char idx_position[256] = "-1"; // FIXME: it this always enough?
-    sprintf(idx_position, "position_%d", ii);
+    sprintf(idx_position, "_position_%d", ii);
     int position_pre_size = preserveAtoms(lv2_cd, kCopy, s->atoms,
                                           s->boxes->nLocalBoxes, // not Total
                                           0,  // is_all
@@ -191,7 +191,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // For now, let's preserve everything required to evaluate from here
     // Preserve atoms->r, p, f, U
     char idx_redist[256] = "-1"; // FIXME: it this always enough?
-    sprintf(idx_redist, "redist_%d", ii);
+    sprintf(idx_redist, "_redist_%d", ii);
     int redist_pre_size =
 #if 0
         preserveAtoms(lv2_cd, kCopy, s->atoms, s->boxes->nTotalBoxes,
@@ -269,7 +269,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 
     // Preserve atoms->r (postions)
     char idx_force[256] = "-1"; // FIXME: it this always enough?
-    sprintf(idx_force, "force_%d", ii);
+    sprintf(idx_force, "_force_%d", ii);
     int computeForce_pre_lv2_size =
         preserveAtoms(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
                       0, // is_all
@@ -304,6 +304,12 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     //if ( ii % CD3_INTERVAL == 0) { 
       cd_begin(lv3_cd, "ljForce_in_timestep");
       //FIXME: check kRef semantic
+      //FIXME: This is not correct implementation. In level 4 CD, it has finer
+      //       grained than level 3 and the ref names should match with level 4
+      //       Begin/Complete interval
+      // Okay to reuse the same index. actually should
+      //char idx_force[256] = "-1"; // FIXME: it this always enough?
+      //sprintf(idx_force, "force_%d", ii);
       int computeForce_pre_lv3_size =
           preserveAtoms(lv2_cd, kRef, s->atoms, s->boxes->nLocalBoxes,
                         0, // is_all
@@ -333,6 +339,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     //if ( ii % CD3_INTERVAL == 0) { 
       // TODO: kOutput (lv3_cd)
       //       s->atoms->f, U
+#if DOOUTPUT
       int computeForce_pre_output_lv3_size =
           preserveAtoms(lv2_cd, kOutput, s->atoms, s->boxes->nLocalBoxes,
                         0, // is_all
@@ -349,7 +356,8 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                         0,
                         idx_force); // is_print
                         //NULL); // is_print
-      cd_detect(lv3_cd);
+#endif
+//      cd_detect(lv3_cd);
       cd_complete(lv3_cd);
       cd_destroy(lv3_cd);
     //}
@@ -367,7 +375,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     cd_begin(lv2_cd, "advanceVelocity_end");
     // Preserve local atoms->f (force)
     char idx_advanceVelocity_end[256] = "-1"; // FIXME: it this always enough?
-    sprintf(idx_advanceVelocity_end, "vel_end_%d", ii);
+    sprintf(idx_advanceVelocity_end, "_vel_end_%d", ii);
     int velocity_end_pre_size =
         preserveAtoms(lv2_cd, kCopy,
                       // s->atoms, s->boxes->nTotalBoxes,
@@ -390,6 +398,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                                               0 /*nTotalBoxes*/);
     // TODO: kOutput
     //       s->atoms->p
+#if DOOUTPUT
     int velocity_end_pre_out_size =
         preserveAtoms(lv2_cd, kOutput,
                       // s->atoms, s->boxes->nTotalBoxes,
@@ -405,8 +414,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       -1, // to (entire atoms)
                       0,  // is_print
                       idx_advanceVelocity_end); //FIXME: what should be given?
-
-
+#endif 
 #if DOPRV
     // Preserve loop index (ii)
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, 
