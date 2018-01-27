@@ -163,10 +163,6 @@
       - label    : advanceVelocity_start
         interval : 1
         errortype: 0xE
-#    - CD_2_3 :
-#      - label    : advancePosition
-#        interval : 1
-#        errortype: 0xE
     - CD_2_3 :
       - label    : redistributeAtoms
         interval : 1
@@ -198,6 +194,7 @@
   - F4 : 0.00 
 #  - F8 : 0.00
 #  - F8 : 0.005
-  - F8 : 0.01
+#  - F8 : 0.01
 #  - F8 : 0.02
 #  - F8 : 0.04
+  - F8 : 0.10
