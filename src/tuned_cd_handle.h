@@ -37,15 +37,15 @@ void RecordPreservation(RuntimeInfo &profile, uint32_t preserve_mask, uint64_t l
 static inline
 void RecordBegin(RuntimeInfo &profile)
 {
-  profile.exec_ += 1;
-  profile.clk_ = CD_CLOCK();  
+  profile.exec_cnt_ += 1;
+  profile.exec_clk_ = CD_CLOCK();  
 }
 
 static inline
 void RecordComplete(RuntimeInfo &profile)
 {
   CD_CLOCK_T end_time = CD_CLOCK();
-  profile.total_time_ += CD_CLK_MEA(end_time - profile.clk_);
+  profile.total_time_ += CD_CLK_MEA(end_time - profile.exec_clk_);
 }
 
 CDHandle *CD_Init(int numTask=1, int myTask=0, PrvMediumT prv_medium=DEFAULT_MEDIUM);

@@ -13,7 +13,10 @@ std::ostream &operator<<(std::ostream &os, const DoubleInt &that)
 {
  // ts << that.val_ << " (" << that.rank_ << ") ";
   char tmp[64];
-  sprintf(tmp, "%12.4lf (%d) ", that.val_, that.rank_);
+  if(that.val_ > 10000)
+    sprintf(tmp, "%12.4le (%d) ", that.val_, that.rank_);
+  else
+    sprintf(tmp, "%12.4lf (%d) ", that.val_, that.rank_);
   return os << tmp; 
 }
 
@@ -47,10 +50,10 @@ string RuntimeInfo::GetRTInfoStr(int cnt, int style)
                         "%s\"vol_refer\":%11lu, // [B]\n"
                         "%s\"comm_log\" :%11lu, // [B]\n"
                         "%s\"error_vec\":0x%lx,\n",
-                        indent.c_str(), exec_,
-                        indent.c_str(), reexec_,
+                        indent.c_str(), exec_cnt_,
+                        indent.c_str(), reex_cnt_,
                         indent.c_str(), total_time_,
-                        indent.c_str(), reexec_time_,
+                        indent.c_str(), reex_time_,
                         indent.c_str(), sync_time_,
                         indent.c_str(), prv_copy_,
                         indent.c_str(), prv_ref_,
@@ -70,10 +73,10 @@ string RuntimeInfo::GetRTInfoStr(int cnt, int style)
                         "%svol_refer:%11lu, // [B]\n"
                         "%scomm_log :%11lu, // [B]\n"
                         "%serror_vec:0x%lx,\n",
-                        indent.c_str(), exec_,
-                        indent.c_str(), reexec_,
+                        indent.c_str(), exec_cnt_,
+                        indent.c_str(), reex_cnt_,
                         indent.c_str(), total_time_,
-                        indent.c_str(), reexec_time_,
+                        indent.c_str(), reex_time_,
                         indent.c_str(), sync_time_,
                         indent.c_str(), prv_elapsed_time_,
                         indent.c_str(), prv_copy_,
@@ -95,10 +98,10 @@ string RuntimeInfo::GetRTInfoStr(int cnt, int style)
                     "%svol_refer:%11lu # [B]\n"
                     "%scomm_log :%11lu # [B]\n"
                     "%serror_vec:0x%lx\n",
-                    indent.c_str(), exec_,
-                    indent.c_str(), reexec_,
+                    indent.c_str(), exec_cnt_,
+                    indent.c_str(), reex_cnt_,
                     indent.c_str(), total_time_,
-                    indent.c_str(), reexec_time_,
+                    indent.c_str(), reex_time_,
                     indent.c_str(), sync_time_,
                     indent.c_str(), prv_copy_,
                     indent.c_str(), prv_ref_,

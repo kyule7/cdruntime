@@ -141,8 +141,8 @@ struct RuntimeInfo : public CDOverhead {
   };
 
   uint32_t id_;
-  uint32_t exec_;
-  uint32_t reexec_;
+  uint32_t exec_cnt_;
+  uint32_t reex_cnt_;
   uint64_t prv_copy_;
   std::map<std::string, PrvProfEntry> input_;
   std::map<std::string, PrvProfEntry> output_;
@@ -151,29 +151,29 @@ struct RuntimeInfo : public CDOverhead {
   uint64_t msg_logging_;
   uint64_t sys_err_vec_;
   double total_time_;
-  double reexec_time_;
+  double reex_time_;
   double sync_time_;
-  CD_CLOCK_T clk_;
-  CD_CLOCK_T reexec_clk_;
+  CD_CLOCK_T exec_clk_;
+  CD_CLOCK_T reex_clk_;
   RuntimeInfo(uint32_t id) 
     : CDOverhead(), id_(id),
-      exec_(0), reexec_(0), prv_copy_(0), prv_ref_(0), restore_(0), msg_logging_(0), sys_err_vec_(0),
-      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0), clk_(0), reexec_clk_(0)
+      exec_cnt_(0), reex_cnt_(0), prv_copy_(0), prv_ref_(0), restore_(0), msg_logging_(0), sys_err_vec_(0),
+      total_time_(0.0), reex_time_(0.0), sync_time_(0.0), exec_clk_(0), reex_clk_(0)
   {}
 //  RuntimeInfo(uonst uint64_t &total_exec) 
 //    : CDOverhead(), 
-//      exec_(total_exec), reexec_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
-//      total_time_(0.0), reexec_time_(0.0), sync_time_(0.0)
+//      exec_(total_exec), reex_cnt_(0), prv_copy_(0), prv_ref_(0), msg_logging_(0), sys_err_vec_(0),
+//      total_time_(0.0), reex_time_(0.0), sync_time_(0.0)
 //  {}
   void Copy(const RuntimeInfo &record) {
-    exec_        = record.exec_;
-    reexec_      = record.reexec_;
+    exec_cnt_    = record.exec_cnt_;
+    reex_cnt_    = record.reex_cnt_;
     prv_copy_    = record.prv_copy_;
     prv_ref_     = record.prv_ref_;
     msg_logging_ = record.msg_logging_;
     sys_err_vec_ = record.sys_err_vec_;
     total_time_  = record.total_time_;
-    reexec_time_ = record.reexec_time_;
+    reex_time_   = record.reex_time_;
     sync_time_   = record.sync_time_;
     input_       = record.input_;
     output_      = record.output_;
@@ -195,14 +195,14 @@ struct RuntimeInfo : public CDOverhead {
     return *this;
   }
   void Merge(const RuntimeInfo &info_per_level) {
-    exec_        += info_per_level.exec_;
-    reexec_      += info_per_level.reexec_;
+    exec_cnt_    += info_per_level.exec_cnt_;
+    reex_cnt_    += info_per_level.reex_cnt_;
     prv_copy_    += info_per_level.prv_copy_;
     prv_ref_     += info_per_level.prv_ref_;
     msg_logging_ += info_per_level.msg_logging_;
     sys_err_vec_ |= info_per_level.sys_err_vec_;
     total_time_  += info_per_level.total_time_;
-    reexec_time_ += info_per_level.reexec_time_;
+    reex_time_   += info_per_level.reex_time_;
     sync_time_   += info_per_level.sync_time_;
     MergeMaps(input_, info_per_level.input_);
     MergeMaps(output_, info_per_level.output_);
@@ -212,14 +212,14 @@ struct RuntimeInfo : public CDOverhead {
   template <typename T>
   RTInfo<T> GetRTInfo(int myTaskID=0) {
     localTaskID = myTaskID;
-    return RTInfo<T>((double)exec_,
-                     (double)reexec_,
+    return RTInfo<T>((double)exec_cnt_,
+                     (double)reex_cnt_,
                      (double)prv_copy_,
                      (double)prv_ref_,
                      (double)restore_,
                      (double)msg_logging_,
                           total_time_,
-                          reexec_time_,
+                          reex_time_,
                           sync_time_,
                           prv_elapsed_time_,
                           rst_elapsed_time_,
@@ -232,8 +232,8 @@ struct RuntimeInfo : public CDOverhead {
 
   }
   RTInfoInt GetRTInfoInt(void) {
-    return RTInfoInt( exec_,
-                      reexec_,
+    return RTInfoInt( exec_cnt_,
+                      reex_cnt_,
                       prv_copy_,
                       prv_ref_,
                       restore_,
@@ -242,7 +242,7 @@ struct RuntimeInfo : public CDOverhead {
   }
   RTInfoFloat GetRTInfoFloat(void) {
     return RTInfoFloat( total_time_,
-                        reexec_time_,
+                        reex_time_,
                         sync_time_,
                         prv_elapsed_time_,
                         rst_elapsed_time_,
@@ -255,14 +255,14 @@ struct RuntimeInfo : public CDOverhead {
   }
 
   void SetRTInfo(const RTInfo<double> &rt_info) {
-    exec_                 = rt_info.exec_;
-    reexec_               = rt_info.reexec_;
+    exec_cnt_             = rt_info.exec_cnt_;
+    reex_cnt_             = rt_info.reex_cnt_;
     prv_copy_             = rt_info.prv_copy_;
     prv_ref_              = rt_info.prv_ref_;
     restore_              = rt_info.restore_;
     msg_logging_          = rt_info.msg_logging_;
     total_time_           = rt_info.total_time_;           
-    reexec_time_          = rt_info.reexec_time_;
+    reex_time_            = rt_info.reex_time_;
     sync_time_            = rt_info.sync_time_;
     prv_elapsed_time_     = rt_info.prv_elapsed_time_;
     rst_elapsed_time_     = rt_info.rst_elapsed_time_;
@@ -273,8 +273,8 @@ struct RuntimeInfo : public CDOverhead {
     advance_elapsed_time_ = rt_info.advance_elapsed_time_;
   }
   void SetRTInfoInt(const RTInfoInt &rt_info) {
-    exec_        = rt_info.exec_;
-    reexec_      = rt_info.reexec_;
+    exec_cnt_    = rt_info.exec_cnt_;
+    reex_cnt_    = rt_info.reex_cnt_;
     prv_copy_    = rt_info.prv_copy_;
     prv_ref_     = rt_info.prv_ref_;
     restore_     = rt_info.restore_;
@@ -282,7 +282,7 @@ struct RuntimeInfo : public CDOverhead {
   }
   void SetRTInfoFloat(const RTInfoFloat &rt_info) {
     total_time_           = rt_info.total_time_;           
-    reexec_time_          = rt_info.reexec_time_;
+    reex_time_            = rt_info.reex_time_;
     sync_time_            = rt_info.sync_time_;
     prv_elapsed_time_     = rt_info.prv_elapsed_time_;
     rst_elapsed_time_     = rt_info.rst_elapsed_time_;
@@ -354,16 +354,17 @@ struct RuntimeInfo : public CDOverhead {
     }
     
     if(is_reexec) {
-      reexec_++;
-      reexec_clk_ = now;
+      reex_cnt_++;
+      reex_clk_ = (reex_clk_ == 0)? now : reex_clk_;
     } else {
-      clk_ = now;
+      reex_clk_ = 0;
     }
+    exec_clk_ = (exec_clk_ == 0)? now : exec_clk_;
 //    if(is_reexec == false) {
 //      clk_ = now;
 //    } else {
-//      reexec_clk_ = now;
-//      reexec_++;
+//      reex_cnt_clk_ = now;
+//      reex_cnt_++;
 //    }
   }
 
@@ -371,7 +372,7 @@ struct RuntimeInfo : public CDOverhead {
   // which means there is no error at the current CD.
   // This case is either forward execution, or reexecution not from current CD.
   // At this point, total_time_ is measured if there is no error.
-  // Otherwise, reexec_time_ is measured.
+  // Otherwise, reex_time_ is measured.
   inline void RecordComplete(bool is_reexec)
   {
     // When it is called, the current CD was executed without rollback.
@@ -384,18 +385,18 @@ struct RuntimeInfo : public CDOverhead {
     cd::compl_elapsed_time += elapsed;
     compl_elapsed_time_    += elapsed;
     //if(is_reexec == false) { // normal execution
-      total_time_ += now - clk_;
-      exec_       += 1;
-    
+    total_time_ += now - exec_clk_;
+    exec_cnt_   += 1;
+    exec_clk_    = 0; 
     // reexecution not from the current CDs 
-    if(reexec_clk_ != 0) {
-      reexec_time_ += now - reexec_clk_;
-      reexec_clk_ = 0;
+    if(reex_clk_ != 0) {
+      reex_time_ += now - reex_clk_;
+      reex_clk_   = 0;
     }
 //    if(is_reexec) {
 //      // reexecution not from the current CDs 
-//      reexec_time_ += now - reexec_clk_;
-//      //reexec_      += 1;
+//      reex_time_ += now - reex_cnt_clk_;
+//      //reex_cnt_      += 1;
 //    }
   }
   
@@ -412,15 +413,15 @@ struct RuntimeInfo : public CDOverhead {
   // RecordBegin -> Rollback -> RecordBegin ->RecordComplete
   //
   // total_time_ measures the time between the very beginning and the end.
-  // reexec_time_ measures the time between error point (RecordRollback) and 
+  // reex_time_ measures the time between error point (RecordRollback) and 
   // FailedPoint.
   //
-  // At this point, reexec_time is measured 
+  // At this point, reex_time is measured 
   inline void RecordRollback(bool is_first, CDOpState op=kNoop)
   {
     // if it is execution mode,
-    // the reexec_clk_ is set,
-    // otherwise, just count reexec_
+    // the reex_cnt_clk_ is set,
+    // otherwise, just count reex_cnt_
     CD_CLOCK_T now = CD_CLOCK();
     
     if(is_first) {
@@ -451,13 +452,13 @@ struct RuntimeInfo : public CDOverhead {
  
   // When failed_phased is reached, 
   // RecordRecoveryComplete() is called
-  // to record reexec_time_ for every uncompleted CDs.
+  // to record reex_time_ for every uncompleted CDs.
   // For the leaf CD, RecordRecoveryComplete() is called,
   // then RecordComplete() is called to measure total_time_
   inline void RecordRecoveryComplete(CD_CLOCK_T now)
   {
-    reexec_time_ += now - reexec_clk_;
-    reexec_      += 1;
+    reex_time_ += now - reex_clk_;
+    reex_cnt_  += 1;
   }
 
 
