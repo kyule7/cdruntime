@@ -1177,9 +1177,10 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
   int mpi_ret = 0;
   int ii=0;
   LOG_DEBUG("here inside MPI_Waitall\n");
-  if(CDPath::GetCurrentCD() != NULL) {
+  CDHandle *cdh = CDPath::GetCurrentCD();
+  if(cdh != NULL) {
     for (ii=0;ii<count;ii++) {
-      CD_DEBUG("[%s] %d ptr:%p\n", __func__, myTaskID, &(array_of_requests[ii]));
+      CD_DEBUG("[%s %s] %d ptr:%p\n", cdh->ptr_cd()->GetCDID().GetString().c_str(), cdh->GetLabel(), myTaskID, &(array_of_requests[ii]));
     }
   }
   CDHandle *cur_cdh = CDPath::GetCurrentCD();

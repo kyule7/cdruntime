@@ -1244,6 +1244,18 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     check_sync_clk = true;
   }
 #endif
+#if CD_MPI_ENABLED
+      if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kRelaxed) {
+        target->ptr_cd_->ProbeIncompleteLogs();
+      }
+      else if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kStrict) {
+        CD_DEBUG("[%s]\n", __func__);
+        target->ptr_cd_->InvalidateIncompleteLogs();
+      }
+      else {
+        ERROR_MESSAGE("[%s] Wrong control path. CD type is %d\n", __func__, target->ptr_cd_->cd_type_);
+      }
+#endif
 #if _MPI_VER
   // Before longjmp, it should decrement the event counts handled so far.
   target->ptr_cd_->DecPendingCounter();
@@ -1301,7 +1313,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       target->profiler_->FinishProfile();
 #endif
 
-      // Complete
+      // In GetCDToRecover
       phaseTree.current_->profile_.RecordRollback(false); // measure timer and calculate sync time.
       CompletePhase(target->phase(), true);
       target->ptr_cd_->CompleteLogs();
@@ -1315,18 +1327,18 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       return GetCDToRecover(next_cdh, need_sync_next_cdh);
     }
     else { // Otherwise, now it is the time to reexecute!
-#if CD_MPI_ENABLED
-      if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kRelaxed) {
-        target->ptr_cd_->ProbeIncompleteLogs();
-      }
-      if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kStrict) {
-        CD_DEBUG("[%s]\n", __func__);
-        target->ptr_cd_->InvalidateIncompleteLogs();
-      }
-      else {
-        ERROR_MESSAGE("[%s] Wrong control path. CD type is %d\n", __func__, target->ptr_cd_->cd_type_);
-      }
-#endif
+//#if CD_MPI_ENABLED
+//      if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kRelaxed) {
+//        target->ptr_cd_->ProbeIncompleteLogs();
+//      }
+//      else if(MASK_CDTYPE(target->ptr_cd_->cd_type_)==kStrict) {
+//        CD_DEBUG("[%s]\n", __func__);
+//        target->ptr_cd_->InvalidateIncompleteLogs();
+//      }
+//      else {
+//        ERROR_MESSAGE("[%s] Wrong control path. CD type is %d\n", __func__, target->ptr_cd_->cd_type_);
+//      }
+//#endif
 //      // It is also possible case that current task sets reexec from upper level,
 //      // but actually it was reexecuting some lower level CDs. 
 //      // while executing lower-level reexecution,
@@ -1550,17 +1562,17 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
           // to measure the rest of execution time.
           CD_CLOCK_T now = CD_CLOCK();
           phaseTree.current_->FinishRecovery(now);
-          printf(">>> Reached failure (%s) but it was in recovery, phase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
-              label_.c_str(), failed_phase, curr_phase, failed_seqID, curr_seqID, curr_begID);
-          CD_DEBUG(">>> Reached failure (%s) but it was in recovery, fphase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
-              label_.c_str(), failed_phase, curr_phase, failed_seqID, curr_seqID, curr_begID);
+          printf(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
+              level(), label_.c_str(), curr_phase, curr_seqID, curr_begID);
+          CD_DEBUG(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
+              level(), label_.c_str(), curr_phase, curr_seqID, curr_begID);
         } else if(failed_seqID > curr_seqID) {
           if(myTaskID == 0) {
-          printf(">>> No error (%s) but it was in recovery, phase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
-              label_.c_str(), failed_phase, curr_phase, failed_seqID, curr_seqID, curr_begID);
+          printf(">>> No error Lv#%u (%s) but it was in recovery, phase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
+              level(), label_.c_str(), failed_phase, curr_phase, failed_seqID, curr_seqID, curr_begID);
           }
-          CD_DEBUG(">>> No error (%s) but it was in recovery, fphase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
-              label_.c_str(), failed_phase, curr_phase, failed_seqID, curr_seqID, curr_begID);
+          CD_DEBUG(">>> No error Lv#%u (%s) but it was in recovery, fphase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
+              level(), label_.c_str(), failed_phase, curr_phase, failed_seqID, curr_seqID, curr_begID);
         } else { // curr_seqID should not be greater than failed_seqID
           ERROR_MESSAGE("Phase(%u, %s): curr_seqID (%lu~%lu) should not be greater than failed_seqID (%ld)\n", 
                          phaseTree.current_->phase_, phaseTree.current_->label_.c_str(), curr_begID, curr_seqID, failed_seqID);
@@ -1586,6 +1598,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     DeleteEntryDirectory();
     ret = common::kOK;
 
+    cd_exec_mode_ = kSuspension;
 //    phaseTree.current_->profile_.exec_++;
     CompletePhase(this->phase());
   }
@@ -1673,21 +1686,22 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
         }
         else if (!IsParentLocal()) {
           //SZ: FIXME: need to figure out a way to push logs to parent that resides in other address space
-          LOG_DEBUG("Should not come to here...\n");
+          LOG_DEBUG("Should not come to here...\n"); assert(0);
         }
       } else {
         ProbeIncompleteLogs();
       }
     }
-    else { // kStrict CDs
-//      ProbeIncompleteLogs();
+    else if (MASK_CDTYPE(cd_type_) == kStrict) {
       CD_DEBUG("[%s]\n", __func__);
       if(cd_exec_mode_ == kReexecution) {
         InvalidateIncompleteLogs();
       }
       //printf("%s %s %lu\n", GetCDID().GetString().c_str(), label_.c_str(), incomplete_log_.size());
     }
-
+    else { 
+      ERROR_MESSAGE("Wrong CD Type : %d\n", cd_type_);
+    }
 #if _LOG_PROFILING
     GetParentHandle()->ptr_cd()->CombineNumLogEntryAndLogVolume(num_log_entry_, tot_log_volume_);
     num_log_entry_ = 0;
@@ -1699,7 +1713,7 @@ CD::CDInternalErrT CD::CompleteLogs(void) {
     LOG_DEBUG("Set parent's SC at CD::Complete with value (%d).\n", sync_counter_);
 #endif
   }
-#endif
+#endif // comm_log ends
 
 #if CD_LIBC_LOG_ENABLED
   //GONG
@@ -2205,7 +2219,7 @@ CDErrT CD::Preserve(void *data,
 //  printf("%s %s\n", my_name.c_str(), ref_name.c_str());
   if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
         if(myTaskID == 0) {
-    printf("Preserv [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+//    printf("Preserv [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
         }
 //    cddbg<<"my_name "<< my_name<<endl;
     if(strcmp(my_name.c_str(), "MainLoop_symmX") == 0 || strcmp(my_name.c_str(), "locDom_Root") == 0 ) {
@@ -3249,7 +3263,8 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
 {
   LogPrologue();
   //printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
-  if(incomplete_log_.size()!=0) {
+  //if(incomplete_log_.size()!=0) 
+  {
     CD_DEBUG("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
 //    printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
   }
@@ -3267,7 +3282,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
     auto incompl_log = incomplete_log_.back();
     flag = incompl_log.flag_;
     incomplete_log_.pop_back();
-    printf("[%d] Trying to cancel ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
+//    printf("[%d] Trying to cancel ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
     CD_DEBUG("[%d] Trying to cancel ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
     int done = 0;
     MPI_Status status;

@@ -1361,10 +1361,10 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
     const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
     const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
 
-    printf("** [Begin] %s %s (%s) " 
-             "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
-             ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
-             cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
+//    printf("** [Begin] %s %s (%s) " 
+//             "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+//             ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
+//             cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
     }
   }
   const bool is_reexecution = (GetExecMode() == kReexecution);
@@ -1382,8 +1382,8 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
   CDPrologue();
   TUNE_DEBUG("[Real %s lv:%u phase:%d]\n", __func__, level(), phase()); STOPHANDLE;
   if(myTaskID == 0) {
-  printf("** [%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
-                                                                      level(), need_reexec(), *CD::rollback_point_);
+//  printf("** [%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
+//                                                                      level(), need_reexec(), *CD::rollback_point_);
   }
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
