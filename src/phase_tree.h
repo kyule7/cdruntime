@@ -69,8 +69,10 @@ struct PhaseNode {
     // for cd::phaseTree
     PhaseNode(PhaseNode *parent, uint32_t level, const std::string &label, CDExecMode state) 
       : level_(level), phase_(phase_gen), 
-        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), /*seq_begin_(0), seq_end_(0),*/ seq_acc_(0), seq_acc_rb_(0),
-        state_(state), count_(0), interval_(-1), errortype_(-1), label_(label), medium_(kUndefined), profile_(phase_gen)
+        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), 
+        /*seq_begin_(0), seq_end_(0),*/ seq_acc_(0), seq_acc_rb_(0),
+        state_(state), count_(0), interval_(-1), errortype_(-1), 
+        label_(label), medium_(kUndefined), profile_(phase_gen)
     {
       TUNE_DEBUG("PhaseNode %s\n", label.c_str());
       Init(parent, level);
@@ -82,8 +84,10 @@ struct PhaseNode {
     // executing application. 
     PhaseNode(PhaseNode *parent, uint32_t level, uint32_t phase)
       : level_(level), phase_(phase_gen), 
-        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), /*seq_begin_(0), seq_end_(0),*/ seq_acc_(0), seq_acc_rb_(0),
-        state_(kExecution), count_(0), interval_(-1), errortype_(-1), label_("Undefined"), medium_(kUndefined), profile_(phase_gen)
+        sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), 
+        /*seq_begin_(0), seq_end_(0),*/ seq_acc_(0), seq_acc_rb_(0),
+        state_(kExecution), count_(0), interval_(-1), errortype_(-1), 
+        label_("Undefined"), medium_(kUndefined), profile_(phase_gen)
     {
       CD_ASSERT_STR(phase == phase_, "PhaseNode(%u == %u)\n", phase_, phase);
       Init(parent, level);

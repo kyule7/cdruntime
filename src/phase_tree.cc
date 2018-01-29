@@ -180,7 +180,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
 //  //FIXME: still this doesn't product the correct number of siblings
 //  fprintf(outYAML, "%s\"siblingID\" : %8u\n",  two_more_indent.c_str(), sibling_id_);
 //  fprintf(outYAML, "%s\"sibling #\" : %8u\n",  two_more_indent.c_str(), sibling_size_);
-//  // This print exec_cnt, reex_cnt, tot_time, reex_time, vol_copy, vol_refer
+//  // This print exec_cnt_cnt, reex_cnt, tot_time, reex_time, vol_copy, vol_refer
 //  // comm_log and error_ven, which are also printed in profile.out.
 //  // TODO: let's change to be in B/ MB/ GB
 //  fprintf(outYAML, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
@@ -530,25 +530,25 @@ void CDProfiles::Print(std::ostream &os, const std::string &head, const std::str
   const int pz0 = 18;
   const int pz1 = 14;
   os << str  
-  << head << std::left << std::setw(pz0) << "                          "      
-                       << std::setw(pz1) << "Min"
-                       << std::setw(pz1) << "Max"
-                       << std::setw(pz1) << "Avg"
-                       << std::setw(pz1) << "Std"
+  << head << std::left << std::setw(pz0) << "                            "      
+                       << std::setw(pz1) << "   Min"
+                       << std::setw(pz1) << "   Max"
+                       << std::setw(pz1) << "   Avg"
+                       << std::setw(pz1) << "   Std"
                        << tail
   << head << std::left << std::setw(pz0) << "num_exec     : "        
-                       << std::setw(pz1) << min_.exec_              
-                       << std::setw(pz1) << max_.exec_                
-  //                     << std::setw(pz1) << "[" << min_rank_.exec_ << "] " << min_.exec_                
-  //                     << std::setw(pz1) << "[" << max_rank_.exec_ << "] " << max_.exec_                  
-                       << std::setw(pz1) << avg_.exec_                 
-                       << std::setw(pz1) << std_.exec_                 
+                       << std::setw(pz1) << min_.exec_cnt_              
+                       << std::setw(pz1) << max_.exec_cnt_                
+  //                     << std::setw(pz1) << "[" << min_rank_.exec_cnt_ << "] " << min_.exec_cnt_                
+  //                     << std::setw(pz1) << "[" << max_rank_.exec_cnt_ << "] " << max_.exec_cnt_                  
+                       << std::setw(pz1) << avg_.exec_cnt_                 
+                       << std::setw(pz1) << std_.exec_cnt_                 
                        << tail
   << head << std::left << std::setw(pz0) << "num_reexec   : "      
-                       << std::setw(pz1) << min_.reexec_              
-                       << std::setw(pz1) << max_.reexec_                
-                       << std::setw(pz1) << avg_.reexec_               
-                       << std::setw(pz1) << std_.reexec_  
+                       << std::setw(pz1) << min_.reex_cnt_              
+                       << std::setw(pz1) << max_.reex_cnt_                
+                       << std::setw(pz1) << avg_.reex_cnt_               
+                       << std::setw(pz1) << std_.reex_cnt_  
                        << tail
 
   << head << std::left << std::setw(pz0) << "vol_prv_copy : "    
@@ -583,10 +583,10 @@ void CDProfiles::Print(std::ostream &os, const std::string &head, const std::str
                        << std::setw(pz1) << std_.total_time_           
                        << tail
   << head << std::left << std::setw(pz0) << "time_reexec  : " 
-                       << std::setw(pz1) << min_.reexec_time_         
-                       << std::setw(pz1) << max_.reexec_time_           
-                       << std::setw(pz1) << avg_.reexec_time_           
-                       << std::setw(pz1) << std_.reexec_time_          
+                       << std::setw(pz1) << min_.reex_time_         
+                       << std::setw(pz1) << max_.reex_time_           
+                       << std::setw(pz1) << avg_.reex_time_           
+                       << std::setw(pz1) << std_.reex_time_          
                        << tail
   << head << std::left << std::setw(pz0) << "time_sync    : "   
                        << std::setw(pz1) << min_.sync_time_           
@@ -643,31 +643,31 @@ void CDProfiles::Print(std::ostream &os, const std::string &head, const std::str
 void CDProfiles::PrintJSON(std::ostream &os, const std::string &head)
 {
   os   
-  << head << "\"exec\" : "        << max_.exec_                     << ",\n"
-  << head << "\"reexec\" : "      << max_.reexec_                   << ",\n"
-  << head << "\"prv_copy\" : "    << max_.prv_copy_                 << ",\n"
-  << head << "\"prv_ref\" : "     << max_.prv_ref_                  << ",\n"
-  << head << "\"restore\" : "     << max_.restore_                  << ",\n"
-  << head << "\"msg_log\" : "     << max_.msg_logging_              << ",\n"
-  << head << "\"total_time\" : "  << max_.total_time_               << ",\n"
-  << head << "\"reexec_time\" : " << max_.reexec_time_              << ",\n"
-  << head << "\"sync_time\" : "   << max_.sync_time_                << ",\n"
-  << head << "\"prv_time\" : "    << max_.prv_elapsed_time_         << ",\n"
-  << head << "\"rst_time\" : "    << max_.rst_elapsed_time_         << ",\n"
-  << head << "\"create_time\" : " << max_.create_elapsed_time_      << ",\n"
-  << head << "\"destroy_time\" : "<< max_.destroy_elapsed_time_     << ",\n"
-  << head << "\"begin_time\" : "  << max_.begin_elapsed_time_       << ",\n"
-  << head << "\"compl_time\" : "  << max_.compl_elapsed_time_       << ",\n"
-  << head << "\"advance_time\" : "<< max_.advance_elapsed_time_     << ",\n"
+  << head << "\"exec\" : "            << max_.exec_cnt_             << ",\n"
+  << head << "\"reexec\" : "          << max_.reex_cnt_             << ",\n"
+  << head << "\"prv_copy\" : "        << max_.prv_copy_             << ",\n"
+  << head << "\"prv_ref\" : "         << max_.prv_ref_              << ",\n"
+  << head << "\"restore\" : "         << max_.restore_              << ",\n"
+  << head << "\"msg_log\" : "         << max_.msg_logging_          << ",\n"
+  << head << "\"total_time\" : "      << max_.total_time_           << ",\n"
+  << head << "\"reex_time\" : "       << max_.reex_time_            << ",\n"
+  << head << "\"sync_time\" : "       << max_.sync_time_            << ",\n"
+  << head << "\"prv_time\" : "        << max_.prv_elapsed_time_     << ",\n"
+  << head << "\"rst_time\" : "        << max_.rst_elapsed_time_     << ",\n"
+  << head << "\"create_time\" : "     << max_.create_elapsed_time_  << ",\n"
+  << head << "\"destroy_time\" : "    << max_.destroy_elapsed_time_ << ",\n"
+  << head << "\"begin_time\" : "      << max_.begin_elapsed_time_   << ",\n"
+  << head << "\"compl_time\" : "      << max_.compl_elapsed_time_   << ",\n"
+  << head << "\"advance_time\" : "    << max_.advance_elapsed_time_ << ",\n"
   // min << std::endl
-  << head << "\"min exec\" : "        << min_.exec_                 << ",\n"
-  << head << "\"min reexec\" : "      << min_.reexec_               << ",\n"
+  << head << "\"min exec\" : "        << min_.exec_cnt_             << ",\n"
+  << head << "\"min reexec\" : "      << min_.reex_cnt_             << ",\n"
   << head << "\"min prv_copy\" : "    << min_.prv_copy_             << ",\n"
   << head << "\"min prv_ref\" : "     << min_.prv_ref_              << ",\n"
   << head << "\"min restore\" : "     << min_.restore_              << ",\n"
   << head << "\"min msg_log\" : "     << min_.msg_logging_          << ",\n"
   << head << "\"min total_time\" : "  << min_.total_time_           << ",\n"
-  << head << "\"min reexec_time\" : " << min_.reexec_time_          << ",\n"
+  << head << "\"min reex_time\" : "   << min_.reex_time_            << ",\n"
   << head << "\"min sync_time\" : "   << min_.sync_time_            << ",\n"
   << head << "\"min prv_time\" : "    << min_.prv_elapsed_time_     << ",\n"
   << head << "\"min rst_time\" : "    << min_.rst_elapsed_time_     << ",\n"
@@ -677,14 +677,14 @@ void CDProfiles::PrintJSON(std::ostream &os, const std::string &head)
   << head << "\"min compl_time\" : "  << min_.compl_elapsed_time_   << ",\n"
   << head << "\"min advance_time\" : "<< min_.advance_elapsed_time_ << ",\n"
   // avg << std::endl
-  << head << "\"avg exec\" : "        << avg_.exec_                 << ",\n"
-  << head << "\"avg reexec\" : "      << avg_.reexec_               << ",\n"
+  << head << "\"avg exec\" : "        << avg_.exec_cnt_             << ",\n"
+  << head << "\"avg reexec\" : "      << avg_.reex_cnt_             << ",\n"
   << head << "\"avg prv_copy\" : "    << avg_.prv_copy_             << ",\n"
   << head << "\"avg prv_ref\" : "     << avg_.prv_ref_              << ",\n"
   << head << "\"avg restore\" : "     << avg_.restore_              << ",\n"
   << head << "\"avg msg_log\" : "     << avg_.msg_logging_          << ",\n"
   << head << "\"avg total_time\" : "  << avg_.total_time_           << ",\n"
-  << head << "\"avg reexec_time\" : " << avg_.reexec_time_          << ",\n"
+  << head << "\"avg reex_time\" : "   << avg_.reex_time_            << ",\n"
   << head << "\"avg sync_time\" : "   << avg_.sync_time_            << ",\n"
   << head << "\"avg prv_time\" : "    << avg_.prv_elapsed_time_     << ",\n"
   << head << "\"avg rst_time\" : "    << avg_.rst_elapsed_time_     << ",\n"
@@ -694,14 +694,14 @@ void CDProfiles::PrintJSON(std::ostream &os, const std::string &head)
   << head << "\"avg compl_time\" : "  << avg_.compl_elapsed_time_   << ",\n"
   << head << "\"avg advance_time\" : "<< avg_.advance_elapsed_time_ << ",\n"
   // std << std::endl
-  << head << "\"std exec\" : "        << std_.exec_                 << ",\n"
-  << head << "\"std reexec\" : "      << std_.reexec_               << ",\n"
+  << head << "\"std exec\" : "        << std_.exec_cnt_             << ",\n"
+  << head << "\"std reexec\" : "      << std_.reex_cnt_             << ",\n"
   << head << "\"std prv_copy\" : "    << std_.prv_copy_             << ",\n"
   << head << "\"std prv_ref\" : "     << std_.prv_ref_              << ",\n"
   << head << "\"std restore\" : "     << std_.restore_              << ",\n"
   << head << "\"std msg_log\" : "     << std_.msg_logging_          << ",\n"
   << head << "\"std total_time\" : "  << std_.total_time_           << ",\n"
-  << head << "\"std reexec_time\" : " << std_.reexec_time_          << ",\n"
+  << head << "\"std reex_time\" : "   << std_.reex_time_            << ",\n"
   << head << "\"std sync_time\" : "   << std_.sync_time_            << ",\n"
   << head << "\"std prv_time\" : "    << std_.prv_elapsed_time_     << ",\n"
   << head << "\"std rst_time\" : "    << std_.rst_elapsed_time_     << ",\n"

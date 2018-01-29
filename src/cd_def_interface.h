@@ -47,6 +47,7 @@ enum CDOpState { kBegin = 0,
  */
   enum CDExecMode  {kExecution=0, //!< Execution mode 
                     kReexecution, //!< Reexecution mode
+                    kRecreated,   //!< Reexecution mode
                     kSuspension   //!< Suspension mode (not active)
                      };
 
