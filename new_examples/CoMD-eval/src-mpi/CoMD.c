@@ -239,6 +239,7 @@ int main(int argc, char **argv) {
 #endif
 
 #if _ROOTCD
+  //TODO: need kOutput for root_cd?
   cd_detect(root_cd);
   cd_complete(root_cd);
   cd_finalize();

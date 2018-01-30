@@ -216,7 +216,7 @@ int ljForce(SimFlat *s) {
         // TODO: cd_preserve : atoms->r in the boxes of current iteration (kRef)
         char idx_force[256] = "-1"; // FIXME: it this always enough?
         sprintf(idx_force, "_iBox_%d", iBox);
-        // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation
+        // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation after debugging
         int computeForce_pre_lv4_size =
             preserveAtoms(lv4_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
                           0, // is_all
@@ -232,7 +232,6 @@ int ljForce(SimFlat *s) {
                           //-1, // to
                           0,
                           idx_force); // is_print
-    
 #endif
       }
     }
@@ -424,6 +423,28 @@ to
 #if _CD4
     if (is_not_first) {
       if (iBox % CD4_INTERVAL == 0) {
+#if DO_OUTPUT
+        // FIXME: Is this required to preserve via output at the end of every iteration?
+        //        What if we delay to preserve via output after all iterations? 
+        char idx_force[256] = "-1"; // FIXME: it this always enough?
+        sprintf(idx_force, "_iBox_%d", iBox);
+        // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation after debugging
+        int computeForce_pre_out_lv4_size =
+            preserveAtoms(lv4_cd, kOutput s->atoms, s->boxes->nLocalBoxes,
+                          0, // is_all
+                          0, // is_gid
+                          0, // is_r
+                          0, // is_p
+                          1, // is_f
+                          1, // is_U
+                          0, // is_iSpecies
+                          iBox,                    // from (index for boxes to be preserved)
+                          iBox + CD4_INTERVAL,     // to
+                          //0,  // from
+                          //-1, // to
+                          0,
+                          idx_force); // is_print
+#endif
 //        cd_detect(lv4_cd);
         cd_complete(lv4_cd);
       }
