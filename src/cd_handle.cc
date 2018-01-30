@@ -1367,6 +1367,7 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
              cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
     }
   }
+  const bool is_reexecution = (GetExecMode() == kReexecution);
   cd::phaseTree.current_->profile_.RecordBegin(is_reexec, need_sync);
   CDEpilogue();
 #if CD_LIBC_LOGGING

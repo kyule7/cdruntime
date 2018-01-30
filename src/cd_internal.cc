@@ -1093,6 +1093,7 @@ CDErrT CD::Begin(const char *label, bool collective)
   SetRollbackPoint(new_rollback_point, false);
 
 //  const uint32_t level = level();
+//  in Begin
   if(new_rollback_point < level) { 
     bool need_sync_next_cdh = CDPath::GetParentCD(level)->task_size() > task_size();
     phaseTree.current_->profile_.RecordRollback(true, kBegin); // measure timer and calculate sync time.
@@ -1300,6 +1301,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       target->profiler_->FinishProfile();
 #endif
 
+      // Complete
       phaseTree.current_->profile_.RecordRollback(false); // measure timer and calculate sync time.
       CompletePhase(target->phase(), true);
       target->ptr_cd_->CompleteLogs();
