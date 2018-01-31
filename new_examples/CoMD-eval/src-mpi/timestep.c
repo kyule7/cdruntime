@@ -238,6 +238,8 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       idx_redist);
                       //NULL);
 #else
+    // There is a possibility that any atome can be moved and it is not known
+    // statically. Therefore, we may have to preserve all atoms conservativelly.
         preserveAtoms(lv2_cd, kCopy, s->atoms, s->boxes->nTotalBoxes,
                       1, // is_all
                       0, // is_gid
@@ -256,6 +258,11 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif
     // Preserve (almost) all in boxes. Note that this is over-preservation 
     // because boxSize and nHaloBoxes are not required while tiny they are.
+    // TODO: preserve nAtoms[nLocalBoxes:nTotalBoxes] as shown below
+    //redist_pre_size += preserveLinkCell(lv2_cd, kCopy, s->boxes, 0 /*all*/,
+    //                                    1 /*nAtoms*/, 2 /*local*/, 
+    //                                    0 /*nLocalBoxes*/,
+    //                                    0 /*nTotalBoxes*/);
     redist_pre_size += preserveLinkCell(lv2_cd, kCopy, s->boxes, 1 /*all*/,
                                         0 /*nAtoms*/, 0 /*local*/, 
                                         0 /*nLocalBoxes*/,

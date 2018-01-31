@@ -74,12 +74,17 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, uint32_t knob,
   uint32_t size = sizeof(LinkCell);
   
   // nAtoms_size: The amount of data for nAtoms[] to be preserved
-  // either nAtoms[0:nLocalBoxes-1] or nAtoms[0:nTotalBoxes-] with is_local 
-  // 1 or 0 respectively.
+  // is_local = 0 : preserve nAtoms[0:nTotalBoxes]
+  // is_local = 1 : preserve nAtoms[0:nLocalBoxes]
+  // is_local = 2 : preserve nAtoms[nLocalBoxes:nTotalBoxes]
   unsigned int nAtoms_size = 0;
   // TODO: need to add one more switch to preserve only HaloCells [nLocalBoxes:nTotalBoxes]
-  if (is_local == 1) nAtoms_size = linkcell->nLocalBoxes; 
-  else if (is_local == 0) nAtoms_size = linkcell->nTotalBoxes;
+  if (is_local == 1) 
+    nAtoms_size = linkcell->nLocalBoxes; 
+  else if (is_local == 0) 
+    nAtoms_size = linkcell->nTotalBoxes;
+  else if (is_local == 2) 
+    nAtoms_size = linkcell->nTotalBoxes - linkcell->nLocalBoxes -1;
   else assert(1); // shouldn't be the case.
 
   // Preserve entire linkcell struct
@@ -120,10 +125,20 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, uint32_t knob,
     //            "LinkCell_nAtoms_ptr", "LinkCell_nAtoms_ptr");
     //cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, kCopy, 
     //            "LinkCell_nAtoms", "LinkCell_nAtoms");
-    cd_preserve(cdh, &(linkcell->nAtoms), sizeof(int*), knob,
-                "LinkCell_nAtoms_ptr", "LinkCell_nAtoms_ptr");
-    cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, knob, 
-                "LinkCell_nAtoms", "LinkCell_nAtoms");
+    if (is_local == 1 || is_local == 0) { 
+      cd_preserve(cdh, &(linkcell->nAtoms), sizeof(int*), knob,
+                  "LinkCell_nAtoms_ptr", "LinkCell_nAtoms_ptr");
+      cd_preserve(cdh, linkcell->nAtoms, nAtoms_size, knob, 
+                  "LinkCell_nAtoms", "LinkCell_nAtoms");
+    }
+    // is_local = 2 : preserve nAtoms[nLocalBoxes:nTotalBoxes]
+    else if (is_local == 2) { 
+      cd_preserve(cdh, &(linkcell->nAtoms), sizeof(int*), knob,
+                  "LinkCell_nAtoms_ptr", "LinkCell_nAtoms_ptr");
+      cd_preserve(cdh, &(linkcell->nAtoms[linkcell->nLocalBoxes]), nAtoms_size, knob, 
+                  "LinkCell_nAtoms", "LinkCell_nAtoms");
+    }
+    else assert(1); // shouldn't be the case.
 
 #endif
     size += nAtoms_size;

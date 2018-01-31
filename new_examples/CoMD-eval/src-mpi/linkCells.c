@@ -274,18 +274,21 @@ int getBoxFromTuple(LinkCell *boxes, volatile int ix, volatile int iy, volatile 
 /// \param jBox [in] The index of the link cell the particle is moving to.
 void moveAtom(LinkCell *boxes, Atoms *atoms, int iId, int iBox, int jBox) {
   int nj = boxes->nAtoms[jBox];
+  // copy iId(th) atoms datastructure in iBox to jBox
   copyAtom(boxes, atoms, iId, iBox, nj, jBox);
+  // increase nAtoms[jBox] by 1 after copying
   boxes->nAtoms[jBox]++;
 
   assert(boxes->nAtoms[jBox] < MAXATOMS);
-
+  // decrese nAtoms[iBox] by 1 after copying
   boxes->nAtoms[iBox]--;
   int ni = boxes->nAtoms[iBox];
-  if (ni)
+  if (ni) // if iBox is not empty
+    // copy the last atom (ni) in iBox to iId(th), where justed empty after moving
     copyAtom(boxes, atoms, ni, iBox, iId, iBox);
 
-  if (jBox > boxes->nLocalBoxes)
-    --atoms->nLocal;
+  if (jBox > boxes->nLocalBoxes) // if newly added atom is placed in halo box
+    --atoms->nLocal; 
 
   return;
 }
@@ -304,6 +307,8 @@ void moveAtom(LinkCell *boxes, Atoms *atoms, int iId, int iBox, int jBox) {
 /// exchange to avoid being lost.
 /// \see redistributeAtoms
 void updateLinkCells(LinkCell *boxes, Atoms *atoms) {
+  // remove nAtoms in halo cells 
+  // boxes->nAtoms[nLocalBoxes:nTotalBoxes] = 0
   emptyHaloCells(boxes);
 
   for (int iBox = 0; iBox < boxes->nLocalBoxes; ++iBox) {
@@ -311,7 +316,8 @@ void updateLinkCells(LinkCell *boxes, Atoms *atoms) {
     int ii = 0;
     while (ii < boxes->nAtoms[iBox]) {
       int jBox = getBoxFromCoord(boxes, atoms->r[iOff + ii]);
-      if (jBox != iBox)
+      if (jBox != iBox) // if not in the same box
+        // move ii(th) atom in iBox and append at the end of jBox
         moveAtom(boxes, atoms, ii, iBox, jBox);
       else
         ++ii;
