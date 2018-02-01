@@ -207,6 +207,42 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 
 }  
 
+void CD::GetRemoteEntry(void)
+{
+  if( cd_exec_mode_ == kExecution ) {
+    CD_DEBUG("Test Asynch messages until start at %s / %s\n", 
+             GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+    while( !(TestComm()) ); 
+    CheckMailBox();
+    while(!TestRecvComm());
+    CD_DEBUG("Test Asynch messages until done \n");
+    CD_DEBUG("Return to kExec\n");
+    cd_exec_mode_ = kExecution;
+    // This point means the beginning of body stage. Request EntrySearch at this routine
+  } else { 
+    CheckMailBox();
+    if(IsHead()) { 
+    
+      TestComm();
+      TestReqComm();
+  
+      if(task_size() > 1) {
+        CheckMailBox();
+      }
+      TestRecvComm();
+  
+    }
+    else {
+      TestComm();
+      TestReqComm();
+      if(task_size() > 1) {
+        CheckMailBox(); 
+      }
+      TestRecvComm();
+    }
+  }
+}
+
 bool CD::TestReqComm(bool is_all_valid)
 {
   CD_DEBUG("\nCD::TestReqComm at %s / %s \nentry request req Q size : %lu\n", 

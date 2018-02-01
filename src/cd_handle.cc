@@ -1357,10 +1357,10 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
     }
   } else {
     if(myTaskID == 0) {
-    const uint64_t curr_phase = ptr_cd_->phase();
-    const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
-    const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
-
+//    const uint64_t curr_phase = ptr_cd_->phase();
+//    const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
+//    const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
+//
 //    printf("** [Begin] %s %s (%s) " 
 //             "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
 //             ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
@@ -1462,7 +1462,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   CDErrT err;
   {
   std::string entry_name(my_name);
-  err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+  err = ptr_cd_->Preserve(data_ptr, len, (CDPrvType)preserve_mask, 
                                  entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
 #if CD_ERROR_INJECTION_ENABLED
@@ -1526,7 +1526,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   CDErrT err;
   {
   std::string entry_name(my_name);
-  err = ptr_cd_->Preserve((void *)&serdes, len, kSerdes | preserve_mask, 
+  err = ptr_cd_->Preserve((void *)&serdes, len, (CDPrvType)(kSerdes | preserve_mask), 
                                  entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
   //assert(len > 0);
@@ -1594,7 +1594,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   std::string entry_name(my_name);
   // TODO CDEvent object need to be handled separately, 
   // this is essentially shared object among multiple nodes.
-  err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+  err = ptr_cd_->Preserve(data_ptr, len, (CDPrvType)preserve_mask, 
                               entry_name, ref_name, ref_offset,  
                               regen_object, data_usage);
 

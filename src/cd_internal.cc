@@ -2191,7 +2191,7 @@ PrvMediumT CD::GetPlaceToPreserve()
 
 CDErrT CD::Preserve(void *data, 
                     uint64_t &len_in_bytes, 
-                    uint32_t preserve_mask, 
+                    CDPrvType preserve_mask, 
                     std::string my_name,          // data name      
                     std::string ref_name,         // reference name
 //                    const char *my_name, 
@@ -2203,7 +2203,7 @@ CDErrT CD::Preserve(void *data,
 //  printf("[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d], # reexec:%d\n", 
 //           data, len_in_bytes, my_name, ref_name, cd_exec_mode_, num_reexecution_); 
   CDErrT ret = CDErrT::kOK;
-  uint64_t tag = cd_hash(my_name);
+//  uint64_t tag = cd_hash(my_name);
 //  tag2str[tag] = my_name;
   CD_DEBUG("[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, ref_offset:%lu, [cd_exec_mode : %d]\n", 
            data, len_in_bytes, my_name.c_str(), ref_name.c_str(), ref_offset, cd_exec_mode_); 
@@ -2217,162 +2217,80 @@ CDErrT CD::Preserve(void *data,
 //           CHECK_PRV_TYPE(preserve_mask, kRegen),
 //           CHECK_PRV_TYPE(preserve_mask, kCoop));
 //  printf("%s %s\n", my_name.c_str(), ref_name.c_str());
-  if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
-        if(myTaskID == 0) {
-//    printf("Preserv [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
-        }
-//    cddbg<<"my_name "<< my_name<<endl;
-    if(strcmp(my_name.c_str(), "MainLoop_symmX") == 0 || strcmp(my_name.c_str(), "locDom_Root") == 0 ) {
-//      printf("[%d] #################### %s ############:%lu\n", myTaskID, my_name.c_str(), tag);
-    }
-    switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
-      case CDInternalErrT::kOK            : {
-              ret = CDErrT::kOK;
-              break;
-                                            }
-      case CDInternalErrT::kExecModeError : {
-              ret = CDErrT::kError;
-              break;
-                                            }
-      case CDInternalErrT::kEntryError    : {
-              ret = CDErrT::kError;
-              break;
-                                            }
-      default : assert(0);
-    }
 
-  }
-  else if(cd_exec_mode_ == kReexecution) { // Re-execution mode -> Restoration
-    /////////////////////////////////////////////////////////////////////////////////
-    //
-    // The below comments are old, potentially there is mismatch with current
-    // implementation.
-    //
-    ////////////////////////////////////////////////////////////////////////////////
-    // it is in re-execution mode, so instead of preserving data, restore the data 
-    // Two options, one is to do the job here, 
-    // another is that just skip and do nothing here but do the restoration job in different place 
-    // and go though all the CDEntry and call Restore() method. The later option seems to be more efficient 
-    // but it is not clear that whether this brings some consistency issue as restoration is done at the very beginning 
-    // while preservation was done one by one and sometimes there could be some computation in between the preservations.. 
-    // (but wait is it true?)
-    //
-    // Jinsuk: Because we want to make sure the order is the same as preservation, we go with Wait... It does not make sense. 
-    // Jinsuk: For now let's do nothing and just restore the entire directory at once.
-    // Jinsuk: Caveat: if user is going to read or write any memory space that will be eventually preserved, 
-    // FIRST user need to preserve that region and use them. Otherwise current way of restoration won't work. 
-    // Right now restore happens one by one. 
-    // Everytime restore is called one entry is restored.
-    ///////////////////////////////////////////////////////////////////////////////
-    
-    CD_DEBUG("\n\nReexecution!!! entry directory size : %zu (medium:%d)\n\n", 
-             entry_directory_.table_->used(), prv_medium_);
+  if( CHECK_PRV_TYPE(preserve_mask, kOutput) ) { 
 
-    if( restore_count_ < preserve_count_ ) { // normal case
-
-      CD_DEBUG("\n\nNow reexec!!! %d\n\n", iterator_entry_count++);
-      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
-        PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
-//        printf("%p, %s\n", data, my_name.c_str());
-        len_in_bytes = serializer->Deserialize(entry_directory_, my_name.c_str());
-//        printf("restored_len:%lu\n", restored_len);
-        if(prv_medium_ != kDRAM)
-          entry_directory_.data_->Flush();
-      } else {
-        // This will fetch from disk to memory
-        // Potential benefit from prefetching app data from preserved data in
-        // disk, overlapping reexecution of application.
-        CDEntry *ret = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
-        if(myTaskID == 0) {
-          if(ret == NULL) {
-            printf("Not Found [%d %s]tag:%lu prv:%lu rst:%lu\n", 
-                myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
-            assert(0);
-          } else {
-            printf("Restore [%d %s]tag:%lu prv:%lu rst:%lu\n", 
-                myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
-          }
-        }
-//      if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
-//        packer::CDErrType pret = entry_directory_.Restore(tag);//, (char *)data);
-//      } else {
-//        // this read data chunk to some buffer spacem, which will be the buffer for
-//        // packer object in deserializer. it will be deallocated after deserialization.
-//        char *nested_obj = entry_directory_.Restore(tag);
-//        PackerSerializable *deserializer = static_cast<PackerSerializable *>(data);
-//        deserializer->Deserialize(nested_obj);
-//      }
-      }
-
-
-      restore_count_++;
-      if( restore_count_ == preserve_count_ ) { 
-        cd_exec_mode_ = kExecution;
-        restore_count_ = 0;
-      }
-      //YKWON
-      //if(myTaskID == 0) {
-      //  printf("[Restore] prv #: %lu, rst #: %lu, mode:%d\n", 
-      //                preserve_count_, restore_count_, cd_exec_mode_);
-      //}
-#if _MPI_VER
-      if( restore_count_ == preserve_count_ ) { 
-        CD_DEBUG("Test Asynch messages until start at %s / %s\n", 
-                 GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
-        while( !(TestComm()) ); 
-        CheckMailBox();
-        while(!TestRecvComm());
-        CD_DEBUG("Test Asynch messages until done \n");
-        CD_DEBUG("Return to kExec\n");
-        cd_exec_mode_ = kExecution;
-        // This point means the beginning of body stage. Request EntrySearch at this routine
-      } else { 
-        CheckMailBox();
-        if(IsHead()) { 
-        
-          TestComm();
-          TestReqComm();
-
-          if(task_size() > 1) {
-            CheckMailBox();
-          }
-          TestRecvComm();
-
-        }
-        else {
-          TestComm();
-          TestReqComm();
-          if(task_size() > 1) {
-            CheckMailBox(); 
-          }
-          TestRecvComm();
-        }
-      }
-#endif
-//      ret = kOK;
-    }
-    else {  // abnormal case -> kReexecution mode, but iterator reaches the end.
-      CD_DEBUG("The end of reexec!!!\n");
-      // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
-      // we reached the last preserve function call. 
-      // Since we have reached the last point already now convert current execution mode into kExecution
+    if(cd_exec_mode_  == kExecution ) {    
+      //switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
       
-      // For now, let us assume that it is not possible.
-      ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called " 
-                    "more number of time than original, prv #: %lu, rst #: %lu, mode:%d\n", 
-                    preserve_count_, restore_count_, cd_exec_mode_); 
+    } else if(cd_exec_mode_ == kReexecution) { 
 
+    } else {
+      ERROR_MESSAGE("Undefined execution state : %d\n", cd_exec_mode_);
     }
 
-    CD_DEBUG("Reexecution mode finished...\n");
-  }   // Re-execution mode ends
-  else {  // Suspension mode
-    // Is it okay ?
-    // Is it possible to call Preserve() at Suspension mode?
-    assert(0);
-  }
-
+  } else {
+    if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
+          if(myTaskID == 0) {
+  //    printf("Preserv [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+          }
+  //    cddbg<<"my_name "<< my_name<<endl;
+      if(strcmp(my_name.c_str(), "MainLoop_symmX") == 0 || strcmp(my_name.c_str(), "locDom_Root") == 0 ) {
+  //      printf("[%d] #################### %s ############:%lu\n", myTaskID, my_name.c_str(), tag);
+      }
+      switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
+        case CDInternalErrT::kOK            : {
+                preserve_count_++;
+                ret = CDErrT::kOK;
+                break;
+                                              }
+        case CDInternalErrT::kExecModeError : {
+                ret = CDErrT::kError;
+                assert(0);
+                break;
+                                              }
+        case CDInternalErrT::kEntryError    : {
+                ret = CDErrT::kError;
+                assert(0);
+                break;
+                                              }
+        default : assert(0);
+      }
   
+    }
+    else if(cd_exec_mode_ == kReexecution) { // Re-execution mode -> Restoration
+      
+      CD_DEBUG("\n\nReexecution!!! entry directory size : %zu (medium:%d)\n\n", 
+               entry_directory_.table_->used(), prv_medium_);
+  
+      if( restore_count_ < preserve_count_ ) { // normal case
+  
+        CD_DEBUG("\n\nNow reexec!!! %d\n\n", iterator_entry_count++);
+        Restore((char *)data, len_in_bytes, preserve_mask, my_name, ref_name);
+        restore_count_++;
+        if( restore_count_ == preserve_count_ ) { 
+          cd_exec_mode_ = kExecution;
+          restore_count_ = 0;
+        } 
+        GetRemoteEntry(); 
+      }
+      else {  
+        // abnormal case -> kReexecution mode, but iterator reaches the end.
+        // NOT TRUE if we have reached this point that means now we should actually start preserving instead of restoring.. 
+        // we reached the last preserve function call. 
+        // Since we have reached the last point already now convert current execution mode into kExecution
+        ERROR_MESSAGE("Error: Now in re-execution mode but preserve function is called " 
+                      "more number of time than original, prv #: %lu, rst #: %lu, mode:%d\n", 
+                      preserve_count_, restore_count_, cd_exec_mode_); 
+      }
+  
+      CD_DEBUG("Reexecution mode finished...\n");
+    }   // Re-execution mode ends
+    else {  // Suspension mode
+      ERROR_MESSAGE("Preserve() is called during kSuspension(%d)\n", cd_exec_mode_);
+    }
+
+  } // prv_mode != kOutput ends
   return ret; // we should not encounter this point
 }
 
@@ -2382,7 +2300,7 @@ CDErrT CD::Preserve(void *data,
 CDErrT CD::Preserve(CDEvent &cd_event,     
                     void *data_ptr, 
                     uint64_t &len, 
-                    uint32_t preserve_mask, 
+                    CDPrvType preserve_mask, 
                     std::string my_name,          // data name      
                     std::string ref_name,         // reference name
 //                    const char *my_name, 
@@ -2395,10 +2313,11 @@ CDErrT CD::Preserve(CDEvent &cd_event,
   return kError; 
 }
 
+// https://github.com/opcm/pcm
 CD::CDInternalErrT 
 CD::InternalPreserve(void *data, 
                      uint64_t &len_in_bytes, 
-                     uint32_t preserve_mask, 
+                     CDPrvType preserve_mask, 
                      const std::string &my_name, 
                      const std::string &ref_name, 
                      uint64_t ref_offset, 
@@ -2415,8 +2334,11 @@ CD::InternalPreserve(void *data,
   uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
   CDEntry *pEntry = NULL;
 
-  PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
-  if( CHECK_PRV_TYPE(preserve_mask, kCopy) ) { // via-copy, so it saves data right now!
+  // TODO
+  // kOutput mode copies application data to packer immediately at Preserve()
+  // It may be optimized in the way that it registers entry at Preserve()
+  // and runtime decides actual copy from application space to preservation store.
+  if( CHECK_ANY(preserve_mask, kCopy|kOutput) ) { // via-copy, so it saves data right now!
 
     CD_ASSERT_STR(my_name.empty() == false, 
         "Entry name is not specified : %s\n", my_name.c_str());
@@ -2431,8 +2353,8 @@ CD::InternalPreserve(void *data,
       attr |= Attr::knested;
 //      uint64_t orig_tablesize = entry_directory_.table_->used();
 #if 1
-      len_in_bytes = serializer->PreserveObject(entry_directory_, my_name.c_str());
-      //len_in_bytes = serializer->PreserveObject(entry_directory_, my_name);
+      PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
+      len_in_bytes = serializer->PreserveObject(entry_directory_, kCopy, my_name.c_str());
 #else
       entry_directory_.data_->PadZeros(0);
       const uint64_t packed_offset  = entry_directory_.data_->used();
@@ -2473,20 +2395,32 @@ CD::InternalPreserve(void *data,
     
     CD_DEBUG("Preservation via %d (reference)\n", GetPlaceToPreserve());
   
-    uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
     uint64_t ref_id = cd_hash(ref_name);
+    // Let's just replace kRef entry ID with ref_id
+    // if there is no entry name passed by user.
+    uint64_t id = (my_name.empty())? ref_id : cd_hash(my_name);
+
     // CDEntry for reference has different format
     //  8B      8B            8B       8B
     // [ID] [ATTR|SIZE]    [OFFSET]   [SRC]
     //  ID  [ATTR|totsize] totoffset  REF_ID
     attr |= Attr::krefer;
     uint64_t size = len_in_bytes;
-    if(CHECK_PRV_TYPE(preserve_mask, kSerdes)){ 
+    
+    // IMPORTANT NOTE for the case of kSerdes | kRef
+    // Preserve() registers an entry only to packer table.
+    // In Restore(), it searches for this entry with ref_name (ref_id).
+    // If there is an CDEntry with ref_id somewhere,
+    // it MUST have the entries encapsulated by serializable entry. (Assumption)
+    if (CHECK_PRV_TYPE(preserve_mask, kSerdes)) { 
+      PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
       attr |= Attr::knested;// | Attr::ktable);
       size = serializer->GetTotalSize();
-    }
+    } 
 
-    pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, size, ref_offset, (char *)ref_id));
+    //pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, size, ref_offset, (char *)ref_id));
+    pEntry = entry_directory_.table_->InsertEntry(CDEntry(id, attr, size, ref_offset, (char *)ref_id));
+
     // When restore data for reference of serdes object,
     // check ref and nested first.
     // then find ref_id, then read table from ref_id to ref_id+size.
@@ -2513,22 +2447,132 @@ CD::InternalPreserve(void *data,
     }
   }
 
-  preserve_count_++;
+//  preserve_count_++;
 
   return err; 
 }
 
-
-
-
-/* CD::Restore()
+/**********************************************************************************
+ * CD::Restore()
+ **********************************************************************************
+ * Copy preserved data from packer to *data
+ * This restoration method has all the information 
+ * such as dst address, length, preservation type, reference ID.
+ * therefore it only needs to search source entry for actual preserved data.
+ * In the case of kCopy, the key (entry_str) should be its entry_name.
+ * In the case of kRef, the key (entry_str) should be ref_name.
+ **********************************************************************************
  * (1) Copy preserved data to application data. It calls restoreEntry() at each node of entryDirectory list.
- *
  * (2) Do something for process state
- *
  * (3) Logged data for recovery would be just replayed when reexecuted. We need to do something for this.
- */
-CDErrT CD::Restore()
+ **********************************************************************************/
+CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType preserve_mask, 
+                               const string &my_name, const string &ref_name)
+{
+  CD::CDInternalErrT ret = kOK; 
+  CD_DEBUG("\n\nNow reexec %s!!! %d\n\n", ref_name.c_str(), iterator_entry_count++);
+  uint32_t found_level = INVALID_NUM32;
+  uint64_t ref_id = cd_hash(ref_name);
+  uint64_t entry_id = cd_hash(my_name);
+  uint64_t search_tag = CHECK_PRV_TYPE(preserve_mask, kRef)? ref_id : entry_id;
+  CDEntry src;
+  bool found = SearchEntry(search_tag, found_level, src);
+  CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
+  if(found_level == level() && src.size_.Check(Attr::krefer)) {
+    assert(my_name.size() == 0); // double-check
+    assert(CHECK_PRV_TYPE(preserve_mask, kRef)); // double-check
+    found = GetParentCD(found_level)->ptr_cd()->SearchEntry(search_tag, found_level, src);
+    ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
+  }
+  CD_ASSERT_STR(found, "Failed to find entry %s\n", 
+                CHECK_PRV_TYPE(preserve_mask, kRef)? ref_name.c_str(): my_name.c_str());
+
+  if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
+    PackerSerializable *serializer = reinterpret_cast<PackerSerializable *>(data);
+    // It is very important to pass entry_directory_ of CD level that has search_tag.
+    uint64_t restored_len = serializer->Deserialize(ptr_cd->entry_directory_, my_name.c_str());
+    CD_ASSERT_STR(restored_len == len_in_bytes, "restored len:%lu==%lu\n", restored_len, len_in_bytes);
+//    if(prv_medium_ != kDRAM)
+//      entry_directory_.data_->Flush();
+  } else {
+    // This will fetch from disk to memory
+    // Potential benefit from prefetching app data from preserved data in
+    // disk, overlapping reexecution of application.
+    
+    CD_ASSERT_STR(src.src() == data, "%s src: %p==%p ",
+       CHECK_PRV_TYPE(preserve_mask, kRef)? ref_name.c_str() : my_name.c_str(), src.src(), data);
+    CD_ASSERT_STR(src.size() == len_in_bytes, "%s len: %lu==%lu ", 
+        CHECK_PRV_TYPE(preserve_mask, kRef)? ref_name.c_str() : my_name.c_str(), src.size(), len_in_bytes);
+    ptr_cd->entry_directory_.data_->GetData(data, len_in_bytes, src.offset());
+    
+    /*********************************************
+     * Test for kRef case
+     *********************************************/
+
+    if( CHECK_PRV_TYPE(preserve_mask, kRef) ) {
+      uint64_t my_id = cd_hash(my_name);
+      uint32_t my_lv = INVALID_NUM32;
+      CDEntry dst;
+      bool found = SearchEntry(my_id, my_lv, dst);
+      CD_ASSERT_STR(found, "Failed to find entry %s with %s (ref)\n", my_name.c_str(), ref_name.c_str());
+      CD_ASSERT_STR(dst.src() == data, "dst: %p==%p ", dst.src(), data);
+      CD_ASSERT_STR(dst.size() == len_in_bytes, "len: %lu==%lu ", dst.size(), len_in_bytes);
+    }
+#if 0
+    CDEntry *pentry = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
+    if(myTaskID == 0) {
+      if(pentry == NULL) {
+        printf("Not Found [%d %s]tag:%lu prv:%lu rst:%lu\n", 
+            myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+        assert(0);
+      } else {
+        printf("Restore [%d %s]tag:%lu prv:%lu rst:%lu\n", 
+            myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
+      }
+    }
+#endif
+//  if( CHECK_PRV_TYPE(preserve_mask, kSerdes) == false) {
+//    packer::CDErrType pret = entry_directory_.Restore(tag);//, (char *)data);
+//  } else {
+//    // this read data chunk to some buffer spacem, which will be the buffer for
+//    // packer object in deserializer. it will be deallocated after deserialization.
+//    char *nested_obj = entry_directory_.Restore(tag);
+//    PackerSerializable *deserializer = static_cast<PackerSerializable *>(data);
+//    deserializer->Deserialize(nested_obj);
+//  }
+  }
+  return ret;
+}
+
+
+/**********************************************************************************
+ * CD::Restore(const string &entry_name)
+ **********************************************************************************
+ * This method requires to search both src and dst, then copy.
+ **********************************************************************************/
+CD::CDInternalErrT CD::Restore(const string &entry_name) {
+
+  return kOK;
+}
+/**********************************************************************************
+ * CD::RestoreAll()
+ * Copy all the preserved data to application data.
+ * There are two methods to restore data from preserved data.
+ * One is to restore at Preserve(), which delays each restoration 
+ * at the very last moment.
+ * The other is to restore all the application data 
+ * right before re-executing CD. 
+ *
+ * This restoration method is not supported, yet. (01/29/2018)
+ *
+ * TODO : Restoration scheduling
+ * Begin point and Preserve() indicates the possible time window to
+ * restore application data from preservation medium. Depending on
+ * the window size, CD runtime might be able to asynchronously
+ * copy each data from preservation space to application space. 
+ * This might reduce/hide restoration time.
+ **********************************************************************************/
+CDErrT CD::RestoreAll()
 {
   //assert(0);
   //Jinsuk: Side question: how do we know if the recovery was successful or not? 
@@ -3121,7 +3165,7 @@ void HeadCD::set_cd_parent(CDHandle *cd_parent)
 
 
 // If it is found locally, cast type to RemoteCDEntry
-bool HeadCD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry) 
+bool HeadCD::InternalGetEntry(ENTRY_TAG_T entry_name, CDEntry &entry) 
 {
   CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
   
@@ -3133,7 +3177,8 @@ bool HeadCD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry)
     found = true;
   } 
   else {
-    CDEntry *cdentry = static_cast<CDEntry *>(entry_directory_.table_->Find(entry_name));
+    CDEntry *cdentry = entry_directory_.table_->Find(entry_name);
+    //CDEntry *cdentry = static_cast<CDEntry *>(entry_directory_.table_->Find(entry_name));
     if(cdentry != NULL) {
       entry = *cdentry;
       found = true;
@@ -3148,7 +3193,7 @@ bool HeadCD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry)
 }
 
 
-bool CD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry) 
+bool CD::InternalGetEntry(ENTRY_TAG_T entry_name, CDEntry &entry) 
 {
   CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
 
@@ -3159,7 +3204,8 @@ bool CD::InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry)
     entry = *(static_cast<CDEntry *>(jt->second));
     found = true;
   } else {
-    CDEntry *cdentry = static_cast<CDEntry *>(entry_directory_.table_->Find(entry_name));
+    CDEntry *cdentry = entry_directory_.table_->Find(entry_name);
+    //CDEntry *cdentry = static_cast<CDEntry *>(entry_directory_.table_->Find(entry_name));
     if(cdentry != NULL) {
       entry = *cdentry;
       found = true;
@@ -3648,7 +3694,7 @@ void HeadCD::Deserialize(void *object)
 
 
 
-bool CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, RemoteCDEntry &entry)
+bool CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, CDEntry &entry)
 {
   CD_DEBUG("Search Entry : %u (%s) at level #%u \n", tag_to_search, tag2str[tag_to_search].c_str(), level());
 

@@ -73,7 +73,7 @@ class PackerSerializable : public Serializable {
     virtual uint64_t PreserveObject(packer::DataStore *packer)=0;
 //    virtual uint64_t PreserveObject(packer::CDPacker &packer, const std::string &entry_name)=0;
 //    virtual uint64_t Deserialize(packer::CDPacker &packer, const std::string &entry_name)=0;
-    virtual uint64_t PreserveObject(packer::CDPacker &packer, const char *entry_str)=0;
+    virtual uint64_t PreserveObject(packer::CDPacker &packer, CDPrvType prv_type, const char *entry_str)=0;
     virtual uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str)=0;
 };
 
