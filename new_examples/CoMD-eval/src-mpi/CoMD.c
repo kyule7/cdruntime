@@ -39,26 +39,26 @@
 ///
 /// \subpage pg_whats_new
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
-#include <assert.h>
 
 #include "CoMDTypes.h"
+#include "constants.h"
 #include "decomposition.h"
-#include "linkCells.h"
 #include "eam.h"
-#include "ljForce.h"
 #include "initAtoms.h"
+#include "linkCells.h"
+#include "ljForce.h"
 #include "memUtils.h"
-#include "yamlOutput.h"
+#include "mycommand.h"
 #include "parallel.h"
 #include "performanceTimers.h"
-#include "mycommand.h"
 #include "timestep.h"
-#include "constants.h"
+#include "yamlOutput.h"
 #include <mpi.h>
 #if _ROOTCD
 #include "cd.h"
@@ -144,13 +144,13 @@ int main(int argc, char **argv) {
   profileStart(loopTimer);
   for (; iStep < nSteps;) {
 #if _CD1
-    //TODO: add interval to control lv1_cd
+    // TODO: add interval to control lv1_cd
     const int CD1_INTERVAL = sim->preserveRateLevel1;
     // Notice that iStep is increasing by printRate.
-    if (iStep % (CD1_INTERVAL*printRate) == 0) {
+    if (iStep % (CD1_INTERVAL * printRate) == 0) {
       cd_begin(lv1_cd, "main_loop");
-      //FIXME: this has an issue and not working properly. redistributeAtoms
-      // will fail for some unknown issue. 
+      // FIXME: this has an issue and not working properly. redistributeAtoms
+      // will fail for some unknown issue.
       // Preservation for timestep(...) : Atoms : atoms??
       int main_loop_pre_size =
           preserveAtoms(lv1_cd, kCopy, sim->atoms, sim->boxes->nTotalBoxes,
@@ -167,28 +167,27 @@ int main(int argc, char **argv) {
                         NULL);
       // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
       // FIXME: seems not enough
-      main_loop_pre_size += preserveLinkCell(lv1_cd, kCopy, sim->boxes, 1 /*all*/,
-                                             0 /*nAtoms*/, 0 /*local*/,
-                                             0 /*nLocalBoxes*/,
-                                             0 /*nTotalBoxes*/);
+      main_loop_pre_size +=
+          preserveLinkCell(lv1_cd, kCopy, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
+                           0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
       // Preserve pbcFactor
-      main_loop_pre_size = preserveHaloAtom(lv1_cd, kCopy, sim->atomExchange->parms, 
-                                            0 /*cellList*/, 
-                                            0 /*pbcFactor*/);
+      main_loop_pre_size =
+          preserveHaloAtom(lv1_cd, kCopy, sim->atomExchange->parms,
+                           0 /*cellList*/, 0 /*pbcFactor*/);
 #if DOPRV
       // Constants (ignored): nStep, printRate
       // iStep
       cd_preserve(lv1_cd, &iStep, sizeof(int), kCopy, "timestep_iStep",
                   "timestep_iStep");
-#endif //DOPRV
+#endif // DOPRV
       main_loop_pre_size += sizeof(int);
     } // CD1_INTERVAL
 #endif
     startTimer(commReduceTimer);
-    // Let's ignore this for now since this doesn't contribute much and 
+    // Let's ignore this for now since this doesn't contribute much and
     // estimator is probably to decide to remove this anyway.
     // Note that SumAtoms() incurs communication as well
-    //TODO: add cd_complete and cd_begin here as for finer mapping
+    // TODO: add cd_complete and cd_begin here as for finer mapping
     //      consumed: boxes -> nAtoms
     //      produced: boxes -> nLocal
     //      communication: AllReduce: send(nLocal) / recv(nGlobal)
@@ -199,12 +198,12 @@ int main(int argc, char **argv) {
 
 #if _CD2
     cd_handle_t *lv2_cd = NULL;
-    if (iStep % (CD1_INTERVAL*printRate) == 0) {
-    // KHDD vs kDRAM
-      lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep", 
-                                      kStrict | kLocalMemory, 0xF);
-                                      //kStrict | kDRAM, 0xF);
-      //cd_handle_t *lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep", 
+    if (iStep % (CD1_INTERVAL * printRate) == 0) {
+      // KHDD vs kDRAM
+      lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep",
+                         kStrict | kLocalMemory, 0xF);
+      // kStrict | kDRAM, 0xF);
+      // cd_handle_t *lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep",
       //                                kStrict | kDRAM, 0xF);
     }
 #endif //_CD2
@@ -215,15 +214,15 @@ int main(int argc, char **argv) {
     //--------------------------------
     stopTimer(timestepTimer);
 #if _CD2
-    if (iStep % (CD1_INTERVAL*printRate) == 0) {
+    if (iStep % (CD1_INTERVAL * printRate) == 0) {
       cd_destroy(lv2_cd);
     }
-#endif 
+#endif
 
     iStep += printRate;
 
 #if _CD1
-    if (iStep % (CD1_INTERVAL*printRate) == 0) {
+    if (iStep % (CD1_INTERVAL * printRate) == 0) {
       cd_detect(lv1_cd);
       cd_complete(lv1_cd);
     }
@@ -240,7 +239,7 @@ int main(int argc, char **argv) {
 #endif
 
 #if _ROOTCD
-  //TODO: need kOutput for root_cd?
+  // TODO: need kOutput for root_cd?
   cd_detect(root_cd);
   cd_complete(root_cd);
   cd_finalize();

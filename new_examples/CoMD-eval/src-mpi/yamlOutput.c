@@ -12,8 +12,8 @@
 
 #include "yamlOutput.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
 #include "CoMD_info.h"

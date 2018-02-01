@@ -4,12 +4,12 @@
 #ifndef __COMDTYPES_H_
 #define __COMDTYPES_H_
 
-#include <stdio.h>
-#include "mytype.h"
-#include "haloExchange.h"
-#include "linkCells.h"
 #include "decomposition.h"
+#include "haloExchange.h"
 #include "initAtoms.h"
+#include "linkCells.h"
+#include "mytype.h"
+#include <stdio.h>
 
 extern int myRank;
 extern int nRanks;
@@ -142,7 +142,7 @@ typedef struct SimFlatSt {
 typedef struct AtomExchangeParmsSt {
   int nCells[6];        //!< Number of cells in cellList for each face.
   int *cellList[6];     //!< List of link cells from which to load data for each
-                        //face.
+                        // face.
   real_t *pbcFactor[6]; //!< Whether this face is a periodic boundary.
 } AtomExchangeParms;
 

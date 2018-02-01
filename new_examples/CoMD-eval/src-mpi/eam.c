@@ -86,18 +86,18 @@
 
 #include "eam.h"
 
+#include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include <assert.h>
 
+#include "CoMDTypes.h"
 #include "constants.h"
+#include "haloExchange.h"
+#include "linkCells.h"
 #include "memUtils.h"
 #include "parallel.h"
-#include "linkCells.h"
-#include "CoMDTypes.h"
 #include "performanceTimers.h"
-#include "haloExchange.h"
 
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 

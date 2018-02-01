@@ -3,12 +3,12 @@
 
 #include "mycommand.h"
 
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cmdLineParser.h"
-#include "parallel.h"
 #include "mytype.h"
+#include "parallel.h"
 
 /// \page pg_running_comd Running CoMD
 ///
@@ -283,33 +283,34 @@ Command parseCommandLine(int argc, char **argv) {
 void printCmdYaml(FILE *file, Command *cmd) {
   if (!printRank())
     return;
-  fprintf(file, "Command Line Parameters:\n"
-                "  doeam: %d\n"
-                "  potDir: %s\n"
-                "  potName: %s\n"
-                "  potType: %s\n"
-                "  nx: %d\n"
-                "  ny: %d\n"
-                "  nz: %d\n"
-                "  xproc: %d\n"
-                "  yproc: %d\n"
-                "  zproc: %d\n"
-                "  Lattice constant: %g Angstroms\n"
-                "  nSteps: %d\n"
-                "  printRate: %d\n"
+  fprintf(file,
+          "Command Line Parameters:\n"
+          "  doeam: %d\n"
+          "  potDir: %s\n"
+          "  potName: %s\n"
+          "  potType: %s\n"
+          "  nx: %d\n"
+          "  ny: %d\n"
+          "  nz: %d\n"
+          "  xproc: %d\n"
+          "  yproc: %d\n"
+          "  zproc: %d\n"
+          "  Lattice constant: %g Angstroms\n"
+          "  nSteps: %d\n"
+          "  printRate: %d\n"
 #if _CD1
-                "  Level1 CD Interval: %d\n"
+          "  Level1 CD Interval: %d\n"
 #endif
 #if _CD3
-                "  Level3 CD Interval: %d\n"
+          "  Level3 CD Interval: %d\n"
 #endif
 #if _CD4
-                "  Level4 CD Interval: %d\n"
+          "  Level4 CD Interval: %d\n"
 #endif
-                "  Time step: %g fs\n"
-                "  Initial Temperature: %g K\n"
-                "  Initial Delta: %g Angstroms\n"
-                "\n",
+          "  Time step: %g fs\n"
+          "  Initial Temperature: %g K\n"
+          "  Initial Delta: %g Angstroms\n"
+          "\n",
           cmd->doeam, cmd->potDir, cmd->potName, cmd->potType, cmd->nx, cmd->ny,
           cmd->nz, cmd->xproc, cmd->yproc, cmd->zproc, cmd->lat, cmd->nSteps,
           cmd->printRate,

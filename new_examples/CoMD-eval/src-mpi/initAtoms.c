@@ -3,17 +3,17 @@
 
 #include "initAtoms.h"
 
-#include <math.h>
 #include <assert.h>
+#include <math.h>
 
 #include "constants.h"
 #include "decomposition.h"
-#include "parallel.h"
-#include "random.h"
 #include "linkCells.h"
-#include "timestep.h"
 #include "memUtils.h"
+#include "parallel.h"
 #include "performanceTimers.h"
+#include "random.h"
+#include "timestep.h"
 
 static void computeVcm(SimFlat *s, real_t vcm[3]);
 

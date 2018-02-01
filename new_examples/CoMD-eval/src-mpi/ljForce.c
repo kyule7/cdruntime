@@ -51,7 +51,8 @@
 ///
 /// \f{eqnarray*}{
 ///   F_i &=& - \sum_j U'_{LJ}(r_{ij})\hat{r}_{ij}\\
-///       &=& \sum_j 24 \frac{\epsilon}{r_{ij}} \left\{ 2 \left(\frac{\sigma}{r_{ij}}\right)^{12}
+///       &=& \sum_j 24 \frac{\epsilon}{r_{ij}} \left\{ 2
+///       \left(\frac{\sigma}{r_{ij}}\right)^{12}
 ///               - \left(\frac{\sigma}{r_{ij}}\right)^6 \right\} \hat{r}_{ij}
 /// \f}
 ///
@@ -62,16 +63,16 @@
 
 #include "ljForce.h"
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include "CoMDTypes.h"
 #include "constants.h"
-#include "mytype.h"
-#include "parallel.h"
 #include "linkCells.h"
 #include "memUtils.h"
-#include "CoMDTypes.h"
+#include "mytype.h"
+#include "parallel.h"
 #include "performanceTimers.h"
 
 #if _CD4
@@ -103,14 +104,16 @@ static int ljForce(SimFlat *s);
 static void ljPrint(FILE *file, BasePotential *pot);
 
 #if _CD4
-//unsigned int preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
+// unsigned int preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int
+// nTotalBoxes,
 //                           unsigned int is_all, unsigned int is_gid,
 //                           unsigned int is_r, unsigned int is_p,
 //                           unsigned int is_f, unsigned int is_U,
-//                           unsigned int is_iSpecies, unsigned int from, int to,
-//                           unsigned int is_print, char *idx);
-//unsigned int preserveLinkCell(cd_handle_t *cdh, uint32_t knob, LinkCell *linkcell,
-//                              unsigned int is_all, 
+//                           unsigned int is_iSpecies, unsigned int from, int
+//                           to, unsigned int is_print, char *idx);
+// unsigned int preserveLinkCell(cd_handle_t *cdh, uint32_t knob, LinkCell
+// *linkcell,
+//                              unsigned int is_all,
 //                              unsigned int is_nAtoms, unsigned int is_local,
 //                              unsigned int is_nTotalBoxes);
 #endif
@@ -169,9 +172,9 @@ int ljForce(SimFlat *s) {
 #if _CD4
   cd_handle_t *lv4_cd = NULL;
   if (is_not_first) {
-    lv4_cd = cd_create(getleafcd(), 1, "ljForce_loop", 
-                       kStrict | kLocalMemory, 0xC);
-                       //kStrict | kDRAM, 0xC);
+    lv4_cd =
+        cd_create(getleafcd(), 1, "ljForce_loop", kStrict | kLocalMemory, 0xC);
+    // kStrict | kDRAM, 0xC);
   }
   const int CD4_INTERVAL = s->preserveRateLevel4;
 #endif
@@ -198,10 +201,10 @@ int ljForce(SimFlat *s) {
 
   int nbrBoxes[27];
 
-  //loop over local boxes in system
-  //ex: nLocalBoxes= 13824 (when x=y=z=40, i=j=k=2)
+  // loop over local boxes in system
+  // ex: nLocalBoxes= 13824 (when x=y=z=40, i=j=k=2)
   //    This is going to be called 18 times / each call
-  //                             = 17.28 = 13,824 / 800(=CD4_INTERVAL) ) 
+  //                             = 17.28 = 13,824 / 800(=CD4_INTERVAL) )
   //    and 1728 in total (when 10*10 iterations out there)
   for (int iBox = 0; iBox < s->boxes->nLocalBoxes; iBox++) {
 #if _CD4
@@ -217,19 +220,20 @@ int ljForce(SimFlat *s) {
         // TODO: cd_preserve : atoms->r in the boxes of current iteration (kRef)
         char idx_force[256] = "-1"; // FIXME: it this always enough?
         sprintf(idx_force, "_iBox_%d", iBox);
-        // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation after debugging
+        // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation
+        // after debugging
         int computeForce_pre_lv4_size =
             preserveAtoms(lv4_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
-                          0, // is_all
-                          1, // is_gid
-                          1, // is_r
-                          0, // is_p
-                          0, // is_f
-                          0, // is_U
-                          0, // is_iSpecies
-                          iBox,                    // from (index for boxes to be preserved)
-                          iBox + CD4_INTERVAL,     // to
-                          //0,  // from
+                          0,    // is_all
+                          1,    // is_gid
+                          1,    // is_r
+                          0,    // is_p
+                          0,    // is_f
+                          0,    // is_U
+                          0,    // is_iSpecies
+                          iBox, // from (index for boxes to be preserved)
+                          iBox + CD4_INTERVAL, // to
+                          // 0,  // from
                           //-1, // to
                           0,
                           idx_force); // is_print
@@ -241,10 +245,10 @@ int ljForce(SimFlat *s) {
     startTimer(ljForceTimer);
 
     int nIBox = s->boxes->nAtoms[iBox]; // #of atoms in ith box
-    if ( nIBox == 0 ) {
+    if (nIBox == 0) {
 #if _CD4
-      if(is_not_first) {
-        if(iBox % CD4_INTERVAL == 0) {
+      if (is_not_first) {
+        if (iBox % CD4_INTERVAL == 0) {
           cd_detect(lv4_cd);
           cd_complete(lv4_cd);
         }
@@ -279,7 +283,7 @@ int ljForce(SimFlat *s) {
       for (int iOff = iBox * MAXATOMS, ii = 0; ii < nIBox; ii++, iOff++) {
         int iId = s->atoms->gid[iOff];
 #if _CD4
-/*
+/*    FIXME: this is too fine-grained and unlikely to enable
         if(is_not_first) {
           //cd_handle_t *cdh_lv2_inner = getleafcd();
           //This CD has a length of nJBox
@@ -345,7 +349,7 @@ to
             ljForce_pre_size += preserveLinkCell(lv4_cd, kCopy, s->boxes,
                 0,  //all
                 0,  //only nAtoms
-                0,  //local 
+                0,  //local
                 1); //nLocalBoxes
           }
         }
@@ -425,28 +429,30 @@ to
     if (is_not_first) {
       if (iBox % CD4_INTERVAL == 0) {
 #if DO_OUTPUT
-        // FIXME: Is this required to preserve via output at the end of every iteration?
-        //        What if we delay to preserve via output after all iterations? 
+        // FIXME: Is this required to preserve via output at the end of every
+        // iteration?
+        //        What if we delay to preserve via output after all iterations?
         char idx_force[256] = "-1"; // FIXME: it this always enough?
         sprintf(idx_force, "_iBox_%d", iBox);
-        // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation after debugging
+        // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation
+        // after debugging
         int computeForce_pre_out_lv4_size =
             preserveAtoms(lv4_cd, kOutput, s->atoms, s->boxes->nLocalBoxes,
-                          0, // is_all
-                          0, // is_gid
-                          0, // is_r
-                          0, // is_p
-                          1, // is_f
-                          1, // is_U
-                          0, // is_iSpecies
-                          iBox,                    // from (index for boxes to be preserved)
-                          iBox + CD4_INTERVAL,     // to
-                          //0,  // from
+                          0,    // is_all
+                          0,    // is_gid
+                          0,    // is_r
+                          0,    // is_p
+                          1,    // is_f
+                          1,    // is_U
+                          0,    // is_iSpecies
+                          iBox, // from (index for boxes to be preserved)
+                          iBox + CD4_INTERVAL, // to
+                          // 0,  // from
                           //-1, // to
                           0,
                           idx_force); // is_print
 #endif
-//        cd_detect(lv4_cd);
+        //        cd_detect(lv4_cd);
         cd_complete(lv4_cd);
       }
     }

@@ -34,10 +34,10 @@
 
 #include "CoMDTypes.h"
 #include "decomposition.h"
-#include "parallel.h"
-#include "linkCells.h"
 #include "eam.h"
+#include "linkCells.h"
 #include "memUtils.h"
+#include "parallel.h"
 #include "performanceTimers.h"
 
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
@@ -88,7 +88,9 @@ typedef struct AtomMsgSt {
 } AtomMsg;
 
 /// Package data for the force exchange.
-typedef struct ForceMsgSt { real_t dfEmbed; } ForceMsg;
+typedef struct ForceMsgSt {
+  real_t dfEmbed;
+} ForceMsg;
 
 static HaloExchange *initHaloExchange(Domain *domain);
 static void exchangeData(HaloExchange *haloExchange, void *data, int iAxis);
@@ -179,7 +181,7 @@ HaloExchange *initAtomHaloExchange(Domain *domain, LinkCell *boxes) {
       parms->pbcFactor[ii][jj] = 0.0;
   }
   int *procCoord = domain->procCoord; // alias
-  int *procGrid = domain->procGrid; // alias
+  int *procGrid = domain->procGrid;   // alias
   if (procCoord[HALO_X_AXIS] == 0)
     parms->pbcFactor[HALO_X_MINUS][HALO_X_AXIS] = +1.0;
   if (procCoord[HALO_X_AXIS] == procGrid[HALO_X_AXIS] - 1)
@@ -282,8 +284,8 @@ HaloExchange *initHaloExchange(Domain *domain) {
 /// \param [in, out] data Pointer to data that will be passed to the load and
 ///                       unload functions
 void exchangeData(HaloExchange *haloExchange, void *data, int iAxis) {
-  enum HaloFaceOrder faceM = 2 * iAxis; //face Minus
-  enum HaloFaceOrder faceP = faceM + 1; //face Plus
+  enum HaloFaceOrder faceM = 2 * iAxis; // face Minus
+  enum HaloFaceOrder faceP = faceM + 1; // face Plus
 
   char *sendBufM = comdMalloc(haloExchange->bufCapacity);
   char *sendBufP = comdMalloc(haloExchange->bufCapacity);
@@ -708,7 +710,9 @@ void sortAtomsInCell(Atoms *atoms, LinkCell *boxes, int iBox) {
 int sortAtomsById(const void *a, const void *b) {
   int aId = ((AtomMsg *)a)->gid;
   int bId = ((AtomMsg *)b)->gid;
-  if(aId == bId) { printf("aID:%d\n", aId); }
+  if (aId == bId) {
+    printf("aID:%d\n", aId);
+  }
   assert(aId != bId);
 
   if (aId < bId)
