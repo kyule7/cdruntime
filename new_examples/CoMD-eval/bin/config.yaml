@@ -112,6 +112,54 @@
 ######################################
 # Root, Level1, Level2, Level3, Level4
 ######################################
+- CD_0_0 :
+  - label    : Root
+    interval : 1
+    errortype: 0xE
+    medium: GlobalDisk
+  - CD_1_1 :
+    - label    : main_loop
+      interval : 1
+      errortype: 0xE
+      medium: LocalMemory
+    - CD_2_2 :
+      - label    : advanceVelocity_start
+        interval : 1
+        errortype: 0xE
+        medium: LocalMemory
+    - CD_2_3 :
+      - label    : advancePosition
+        interval : 1
+        errortype: 0xE
+        medium: LocalMemory
+    - CD_2_4 :
+      - label    : redistributeAtoms
+        interval : 1
+        errortype: 0xE
+        medium: LocalMemory
+    - CD_2_5 :
+      - label    : computeForce
+        interval : 1
+        errortype: 0xE
+        medium: LocalMemory
+      - CD_3_6 :
+        - label    : ljForce_in_timestep
+          interval : 1
+          errortype: 0xC
+          medium: LocalMemory
+        - CD_4_7 :
+          - label    : ljForce_outmost_loop
+            interval : 1
+            errortype: 0xC
+            medium: LocalMemory
+    - CD_2_8 :
+      - label    : advanceVelocity_end
+        interval : 1
+        errortype: 0xE
+        medium: LocalMemory
+######################################
+# [OPTIMIZATION] Root, Level1, Level2, Level3, Level4
+######################################
 #- CD_0_0 :
 #  - label    : Root
 #    interval : 1
@@ -125,64 +173,25 @@
 #        interval : 1
 #        errortype: 0xE
 #    - CD_2_3 :
-#      - label    : advancePosition
-#        interval : 1
-#        errortype: 0xE
-#    - CD_2_4 :
 #      - label    : redistributeAtoms
 #        interval : 1
 #        errortype: 0xE
-#    - CD_2_5 :
+#    - CD_2_4 :
 #      - label    : computeForce
 #        interval : 1
 #        errortype: 0xE
-#      - CD_3_6 :
+#      - CD_3_5 :
 #        - label    : ljForce_in_timestep
 #          interval : 1
 #          errortype: 0xC
-#        - CD_4_7 :
+#        - CD_4_6 :
 #          - label    : ljForce_outmost_loop
 #            interval : 1
 #            errortype: 0xC
-#    - CD_2_8 :
+#    - CD_2_7 :
 #      - label    : advanceVelocity_end
 #        interval : 1
 #        errortype: 0xE
-######################################
-# [OPTIMIZATION] Root, Level1, Level2, Level3, Level4
-######################################
-- CD_0_0 :
-  - label    : Root
-    interval : 1
-    errortype: 0xE
-  - CD_1_1 :
-    - label    : main_loop
-      interval : 1
-      errortype: 0xE
-    - CD_2_2 :
-      - label    : advanceVelocity_start
-        interval : 1
-        errortype: 0xE
-    - CD_2_3 :
-      - label    : redistributeAtoms
-        interval : 1
-        errortype: 0xE
-    - CD_2_4 :
-      - label    : computeForce
-        interval : 1
-        errortype: 0xE
-      - CD_3_5 :
-        - label    : ljForce_in_timestep
-          interval : 1
-          errortype: 0xC
-        - CD_4_6 :
-          - label    : ljForce_outmost_loop
-            interval : 1
-            errortype: 0xC
-    - CD_2_7 :
-      - label    : advanceVelocity_end
-        interval : 1
-        errortype: 0xE
 ######################################
 # Root:   0xF and KHDD
 # Level1: 0xF and kDRAM
