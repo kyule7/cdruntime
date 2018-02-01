@@ -2221,19 +2221,36 @@ CDErrT CD::Preserve(void *data,
   if( CHECK_PRV_TYPE(preserve_mask, kOutput) ) { 
 
     if(cd_exec_mode_  == kExecution ) {    
-      //switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
-      
+      switch( InternalPreserve(data, len_in_bytes, preserve_mask, 
+                               my_name, ref_name, ref_offset, 
+                               regen_object, data_usage) ) {
+        case CDInternalErrT::kOK            : {
+                ret = CDErrT::kOK;
+                break;
+                                              }
+        case CDInternalErrT::kExecModeError : {
+                ret = CDErrT::kError;
+                assert(0);
+                break;
+                                              }
+        case CDInternalErrT::kEntryError    : {
+                ret = CDErrT::kError;
+                assert(0);
+                break;
+                                              }
+        default : assert(0);
+      }
     } else if(cd_exec_mode_ == kReexecution) { 
-
+      // do nothing
     } else {
       ERROR_MESSAGE("Undefined execution state : %d\n", cd_exec_mode_);
     }
 
   } else {
     if(cd_exec_mode_  == kExecution ) {      // Normal execution mode -> Preservation
-          if(myTaskID == 0) {
+      if(myTaskID == 0) {
   //    printf("Preserv [%d %s]tag:%lu prv:%lu rst:%lu\n", myTaskID, my_name.c_str(), tag, preserve_count_, restore_count_);
-          }
+      }
   //    cddbg<<"my_name "<< my_name<<endl;
       if(strcmp(my_name.c_str(), "MainLoop_symmX") == 0 || strcmp(my_name.c_str(), "locDom_Root") == 0 ) {
   //      printf("[%d] #################### %s ############:%lu\n", myTaskID, my_name.c_str(), tag);
