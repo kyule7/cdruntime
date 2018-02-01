@@ -209,35 +209,19 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 //            cd boundary: redistribution (6.88%)
 //*****************************************************************************
 #if _CD2
-    cd_begin(lv2_cd, "redistributeAtoms");
-    // TODO: preserve nAtoms by kRef
-    // TODO: For optimization,
-    // only atoms->r for local cells needs to be preserved since it's update
-    // right before this while r for halo cells still need to be preserved.
-    // f and p are preserved in velocty_start and postion respectively, meaning
-    // being able to be preserved by referece
-    
-    // For now, let's preserve everything required to evaluate from here
-    // Preserve atoms->r, p, f, U
+  cd_begin(lv2_cd, "redistributeAtoms");
+  // TODO: preserve nAtoms by kRef
+  // TODO: For optimization,
+  // only atoms->r for local cells needs to be preserved since it's update
+  // right before this while r for halo cells still need to be preserved.
+  // f and p are preserved in velocty_start and postion respectively, meaning
+  // being able to be preserved by referece
+  
+  // For now, let's preserve everything required to evaluate from here
+  // Preserve atoms->r, p, f, U
     char idx_redist[256] = "-1"; // FIXME: it this always enough?
     sprintf(idx_redist, "_redist_%d", ii);
     int redist_pre_size =
-#if 0
-        preserveAtoms(lv2_cd, kCopy, s->atoms, s->boxes->nTotalBoxes,
-                      0, // is_all
-                      1, // is_gid
-                      1,  // TODO:should be preserved by reference
-                      //0,  // is_r //assumed to be preserved by reference
-                      1,  // is_p
-                      1,  // is_f
-                      1,  // is_U
-                      0,  // is_iSpecies
-                      0,  // from (entire atoms)
-                      -1, // to (entire atoms)
-                      0,  // is_print
-                      idx_redist);
-                      //NULL);
-#else
     // There is a possibility that any atome can be moved and it is not known
     // statically. Therefore, we may have to preserve all atoms conservativelly.
         preserveAtoms(lv2_cd, kCopy, s->atoms, s->boxes->nTotalBoxes,
@@ -254,8 +238,6 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       0,  // is_print
                       idx_redist);
                       //NULL);
-
-#endif
     // Preserve (almost) all in boxes. Note that this is over-preservation 
     // because boxSize and nHaloBoxes are not required while tiny they are.
     // TODO: preserve nAtoms[nLocalBoxes:nTotalBoxes] as shown below
@@ -269,9 +251,9 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                                         0 /*nTotalBoxes*/);
     // Preserve pbcFactor
     redist_pre_size = preserveHaloAtom(lv2_cd, kCopy, s->atomExchange->parms, 
-                                       0 /*cellList*/, 
+                                       1 /*cellList*/, 
                                        1 /*pbcFactor*/);
-
+//    int redist_pre_size = preserveSimFlat(lv2_cd, kCopy, s);
 #if DOPRV
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, 
                 "redistributeAtoms_ii", "redistributeAtoms_ii");
@@ -355,7 +337,8 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #if _CD3
     cd_handle_t *lv3_cd = cd_create(getcurrentcd(), /*1,*/ getNRanks(), 
                                     "ljForce", 
-                                    kStrict | kDRAM, 0xC);
+                                    kStrict | kLocalMemory, 0xC);
+                                    //kStrict | kDRAM, 0xC);
     //TODO: add interval to control lv3_cd
     const int CD3_INTERVAL = s->preserveRateLevel3;
     //FIXME: this doesn't make sense 

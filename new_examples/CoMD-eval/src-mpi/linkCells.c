@@ -307,17 +307,21 @@ void moveAtom(LinkCell *boxes, Atoms *atoms, int iId, int iBox, int jBox) {
 /// exchange to avoid being lost.
 /// \see redistributeAtoms
 void updateLinkCells(LinkCell *boxes, Atoms *atoms) {
-  // remove nAtoms in halo cells 
+  // clear nAtoms in halo cells 
   // boxes->nAtoms[nLocalBoxes:nTotalBoxes] = 0
   emptyHaloCells(boxes);
 
+  // for all local boxes
   for (int iBox = 0; iBox < boxes->nLocalBoxes; ++iBox) {
     int iOff = iBox * MAXATOMS;
     int ii = 0;
+    // for all atomes in local boxes
     while (ii < boxes->nAtoms[iBox]) {
       int jBox = getBoxFromCoord(boxes, atoms->r[iOff + ii]);
-      if (jBox != iBox) // if not in the same box
-        // move ii(th) atom in iBox and append at the end of jBox
+      // if the atoms is no longer in the current box
+      if (jBox != iBox) 
+        // move ii(th) atom in iBox and append at the end of jBox and
+        // update boxes
         moveAtom(boxes, atoms, ii, iBox, jBox);
       else
         ++ii;

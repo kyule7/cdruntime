@@ -170,7 +170,8 @@ int ljForce(SimFlat *s) {
   cd_handle_t *lv4_cd = NULL;
   if (is_not_first) {
     lv4_cd = cd_create(getleafcd(), 1, "ljForce_loop", 
-                       kStrict | kDRAM, 0xC);
+                       kStrict | kLocalMemory, 0xC);
+                       //kStrict | kDRAM, 0xC);
   }
   const int CD4_INTERVAL = s->preserveRateLevel4;
 #endif

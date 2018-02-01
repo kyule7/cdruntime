@@ -282,8 +282,8 @@ HaloExchange *initHaloExchange(Domain *domain) {
 /// \param [in, out] data Pointer to data that will be passed to the load and
 ///                       unload functions
 void exchangeData(HaloExchange *haloExchange, void *data, int iAxis) {
-  enum HaloFaceOrder faceM = 2 * iAxis;
-  enum HaloFaceOrder faceP = faceM + 1;
+  enum HaloFaceOrder faceM = 2 * iAxis; //face Minus
+  enum HaloFaceOrder faceP = faceM + 1; //face Plus
 
   char *sendBufM = comdMalloc(haloExchange->bufCapacity);
   char *sendBufP = comdMalloc(haloExchange->bufCapacity);

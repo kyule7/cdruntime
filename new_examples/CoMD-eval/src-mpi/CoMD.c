@@ -202,7 +202,8 @@ int main(int argc, char **argv) {
     if (iStep % (CD1_INTERVAL*printRate) == 0) {
     // KHDD vs kDRAM
       lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep", 
-                                      kStrict | kDRAM, 0xF);
+                                      kStrict | kLocalMemory, 0xF);
+                                      //kStrict | kDRAM, 0xF);
       //cd_handle_t *lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep", 
       //                                kStrict | kDRAM, 0xF);
     }
