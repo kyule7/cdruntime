@@ -131,7 +131,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
   
   }
   //uint64_t PreserveObject(packer::CDPacker &packer, const std::string &name_) {
-  uint64_t PreserveObject(packer::CDPacker &packer, CDPrvType prv_type, const char *entry_str=NULL) {
+  uint64_t PreserveObject(packer::CDPacker &packer, CDPrvType prv_type, const char *entry_str) {
     PackerPrologue();
     uint64_t prv_size = this->size() * sizeof(T);
     if(entry_str != NULL) {
@@ -146,7 +146,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     //CheckID(name_); id_ = str2id[name_];
 //    CD_VECTOR_PRINT("id:%lx\n", id_);
     char *ptr = reinterpret_cast<char *>(this->data());
-    packer::CDEntry entry(id_, CHECK_PRV_TYPE(prv_type,kRef)? krefer : 0, prv_size, 0, ptr);
+    packer::CDEntry entry(id_, ((prv_type & kRef) == kRef)? packer::Attr::krefer : 0, prv_size, 0, ptr);
     //uint64_t table_offset = packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
     packer.Add(ptr, entry);
 
@@ -187,7 +187,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
   
   }
   //uint64_t Deserialize(packer::CDPacker &packer, const std::string &name_) {
-  uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str=NULL, packer::CDEntry *dst=NULL) {
+  uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str=NULL) {
     PackerPrologue();
     if(entry_str != NULL) {
       name_ = entry_str;
@@ -208,7 +208,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       this->resize(rst_size_ser / sizeof(T));
     }
     if(rst_size != rst_size_ser) {
-      printf("restored size check: %u == %u", rst_size, rst_size_ser); 
+      printf("restored size check: %lu == %lu", rst_size, rst_size_ser); 
       assert(0);
     }
 

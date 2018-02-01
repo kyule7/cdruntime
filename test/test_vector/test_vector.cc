@@ -104,8 +104,8 @@ void Test1(void)
 
   TEST_PRINT("Original ptr: %p, vec size:%zu, vec cap:%zu, vec obj size:%zu\n", 
          vecA.data(), vecA.size(), vecA.capacity(), sizeof(vecA));
-  vecA.PreserveObject(packer, "A");
-  vecB.PreserveObject(packer, "B");
+  vecA.PreserveObject(packer, kCopy, "A");
+  vecB.PreserveObject(packer, kCopy, "B");
   if(myTaskID == 0) {
   vecA.Print("[Before]"); 
   vecB.Print("[Before]"); 
@@ -164,8 +164,8 @@ void Test2()
 
   TEST_PRINT("Original ptr: %p, vec size:%zu, vec cap:%zu, vec obj size:%zu\n", 
          vecA.data(), vecA.size(), vecA.capacity(), sizeof(vecA));
-  vecA.PreserveObject(packer, "A");
-  vecB.PreserveObject(packer, "B");
+  vecA.PreserveObject(packer, kCopy, "A");
+  vecB.PreserveObject(packer, kCopy, "B");
   if(myTaskID == 0) {
   vecA.Print("[Before]"); 
   vecB.Print("[Before]"); 
