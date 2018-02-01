@@ -277,7 +277,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
         preserveAtoms(lv2_cd, kOutput, s->atoms, s->boxes->nTotalBoxes,
                       0, // is_all
                       0, // is_gid
-                      1  // is_r //assumed to be preserved by reference
+                      1, // is_r //assumed to be preserved by reference
                       1,  // is_p
                       1,  // is_f
                       1,  // is_U
@@ -288,7 +288,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       idx_redist); //FIXME: correct name
     // TODO: kOutput
     //       boxes->nAtoms[nLocalBoxes:nTotalBoxes] (only HaloCells)
-    int redist_pre_out_size = 
+    redist_pre_out_size = 
         preserveLinkCell(lv2_cd, kOutput, s->boxes, 0 /*all*/,
                                         1 /*nAtoms*/, 0 /*local*/, 
                                         0 /*nLocalBoxes*/,

@@ -431,7 +431,7 @@ to
         sprintf(idx_force, "_iBox_%d", iBox);
         // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation after debugging
         int computeForce_pre_out_lv4_size =
-            preserveAtoms(lv4_cd, kOutput s->atoms, s->boxes->nLocalBoxes,
+            preserveAtoms(lv4_cd, kOutput, s->atoms, s->boxes->nLocalBoxes,
                           0, // is_all
                           0, // is_gid
                           0, // is_r

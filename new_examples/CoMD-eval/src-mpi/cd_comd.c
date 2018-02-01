@@ -80,11 +80,11 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, uint32_t knob,
   unsigned int nAtoms_size = 0;
   // TODO: need to add one more switch to preserve only HaloCells [nLocalBoxes:nTotalBoxes]
   if (is_local == 1) 
-    nAtoms_size = linkcell->nLocalBoxes; 
+    nAtoms_size = (linkcell->nLocalBoxes)*sizeof(int); 
   else if (is_local == 0) 
-    nAtoms_size = linkcell->nTotalBoxes;
+    nAtoms_size = (linkcell->nTotalBoxes)*sizeof(int);
   else if (is_local == 2) 
-    nAtoms_size = linkcell->nTotalBoxes - linkcell->nLocalBoxes -1;
+    nAtoms_size = (linkcell->nTotalBoxes - linkcell->nLocalBoxes -1)*sizeof(int);
   else assert(1); // shouldn't be the case.
 
   // Preserve entire linkcell struct
