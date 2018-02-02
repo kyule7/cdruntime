@@ -334,6 +334,8 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif
 
 #if _CD3
+    // FIXME: eam force has cocmmunication in it so that we can't create siblings there
+    // TODO: add switch to choose right CD either of LJ or EAM, depending on doeam
     cd_handle_t *lv3_cd = cd_create(getcurrentcd(), /*1,*/ getNRanks(),
                                     "ljForce", kStrict | kLocalMemory, 0xC);
     // kStrict | kDRAM, 0xC);
@@ -341,6 +343,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     const int CD3_INTERVAL = s->preserveRateLevel3;
     // FIXME: this doesn't make sense
     // if ( ii % CD3_INTERVAL == 0) {
+    // FIXME: this can be either LJ potential or EAM potential
     cd_begin(lv3_cd, "ljForce_in_timestep");
     // FIXME: check kRef semantic
     // FIXME: This is not correct implementation. In level 4 CD, it has finer
@@ -372,7 +375,8 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     //}
 #endif
     startTimer(computeForceTimer);
-    computeForce(s); // s->pot->force(s)
+    // call either eamForce or ljForce
+    computeForce(s); // s->pot->force(s) 
     stopTimer(computeForceTimer);
 #if _CD3
     // if ( ii % CD3_INTERVAL == 0) {
