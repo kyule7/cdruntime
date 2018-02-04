@@ -45,6 +45,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define CD_VECTOR_PRINT(...)
 #define DO_COMPARE 0
 #define UNDEFINED_NAME "undefined"
+#define VECTOR_INIT_NAME "V:"
 
 namespace cd {
 
@@ -118,6 +119,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     bool  read_;
     std::string name_;
   public:
+  const char *GetID(void) { return name_.c_str(); }
   void *Serialize(uint64_t &len_in_bytes) { return NULL; }
   void Deserialize(void *object) {}
   uint64_t PreserveObject(packer::DataStore *packer) {
@@ -135,7 +137,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     PackerPrologue();
     uint64_t prv_size = this->size() * sizeof(T);
     if(entry_str != NULL) {
-      name_ = entry_str;
+      name_ += entry_str;
     }
     CD_VECTOR_PRINT("CDVector Preserve elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
     if(myTaskID == 0) {
@@ -149,7 +151,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     packer::CDEntry entry(id_, ((prv_type & kRef) == kRef)? packer::Attr::krefer : 0, prv_size, 0, ptr);
     //uint64_t table_offset = packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
     packer.Add(ptr, entry);
-
+    //printf("CDVector %s preserved (%lu)\n", name_.c_str(), prv_size);
 #if DO_COMPARE
     CompareVector();
 #endif
@@ -189,18 +191,18 @@ class CDVector : public std::vector<T>, public PackerSerializable {
   //uint64_t Deserialize(packer::CDPacker &packer, const std::string &name_) {
   uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str=NULL) {
     PackerPrologue();
-    if(entry_str != NULL) {
-      name_ = entry_str;
-    }
     uint64_t rst_size = this->size() * sizeof(T);
     CD_VECTOR_PRINT("CDVector Restore elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
-    id_ = GetCDEntryID(name_);
+    uint64_t id = GetCDEntryID(name_);
+    assert(id == id_);
     //id_ = cd_hash(name_);
     //GetCDEntryID(name_.c_str());
     //CheckID(name_); id_ = str2id[name_];
 
     char *ptr = reinterpret_cast<char *>(this->data());
+    //printf("CDVector %s restored (%lu)\n", name_.c_str(), rst_size);
     packer::CDEntry *pentry = reinterpret_cast<packer::CDEntry *>(packer.Restore(id_, ptr, rst_size));
+    assert(pentry);
     uint64_t rst_size_ser = pentry->size();
     if(rst_size_ser == 0) {
       this->clear();
@@ -281,9 +283,9 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     }
     PackerEpilogue();
   }
-  void Print(const char str[]="") {
+  void Print(std::ostream &os, const char str[]="") {
     PackerPrologue();
-    std::cout << str << " ptr: "<< this->data() 
+    os << str << " " << name_ <<", ptr: "<< this->data() 
                 << ", vec size:" << this->size() 
                 << ", vec cap: " << this->capacity() 
                 << ", vec obj size: " << sizeof(*this) << std::endl;
@@ -293,27 +295,27 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       int numrows = size/stride;
       for(int i=0; i<numrows; i++) {
         for(int j=0; j<stride; j++) {
-//          std::cout << "index: "<<  j + i*stride <<", "<< size/8 << std::endl;
-          std::cout << this->at(j+i*stride) << '\t';
+//          os << "index: "<<  j + i*stride <<", "<< size/8 << std::endl;
+          os << this->at(j+i*stride) << '\t';
         }
-        std::cout << std::endl;
+        os << std::endl;
       }
     } else {
       for(int i=0; i<size; i++) {
-        std::cout << this->at(i) << '\t';
+        os << this->at(i) << '\t';
       }
     }
 
-    std::cout << std::endl;
+    os << std::endl;
     PackerEpilogue();
   }
 //  virtual int Preserv(packer::CDPacker &packer) { CD_VECTOR_PRINT("CDVector Preserv \n"); return 0; }
 //  virtual int Restore(packer::CDPacker &packer) { CD_VECTOR_PRINT("CDVector Restore \n"); return 0; }
-  CDVector<T>(void) : name_(UNDEFINED_NAME) { Init(); }
-  CDVector<T>(int len) : std::vector<T>(len) { Init(); }
+  CDVector<T>(void) : name_(VECTOR_INIT_NAME) { Init(); }
+  CDVector<T>(int len) : std::vector<T>(len), name_(VECTOR_INIT_NAME) { Init(); }
 //  CDVector<T>(const std::initializer_list<T> &il) : std::vector<T>(il), name_(UNDEFINED_NAME) { Init(); }
   CDVector<T>(const std::initializer_list<T> &il) 
-    : std::vector<T>(il) { Init(); }
+    : std::vector<T>(il), name_(VECTOR_INIT_NAME) { Init(); }
 //  CDVector<T>(void) : name_(UNDEFINED_NAME) { Init(); }
 //  CDVector<T>(int len, const char []str=UNDEFINED_NAME) : std::vector<T>(len), name_(str) { Init(); }
 ////  CDVector<T>(const std::initializer_list<T> &il) : std::vector<T>(il), name_(UNDEFINED_NAME) { Init(); }

@@ -33,8 +33,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   POSSIBILITY OF SUCH DAMAGE.
 */
 #include "cd_containers.hpp"
+#include "cd.h"
 using namespace cd;
+using namespace std;
 static int myRankID = 0;
+static int numProcs = 1;
+int LV0 = 1;
+int LV1 = 1;
+int LV2 = 1;
 #define TEST_PRINT(...) if(myRankID == 0) { printf(__VA_ARGS__); }
 
 static int count = 1;
@@ -96,8 +102,8 @@ void Test1(void)
   
 
   int arrA[8] = {0, 1, 2, 3, 4, 5, 6, 7}; // reference
-  CDVector<int> vecA({0, 1, 2, 3, 4, 5, 6, 7});
-  CDVector<float> vecB({0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7});
+  cd::CDVector<int> vecA({0, 1, 2, 3, 4, 5, 6, 7});
+  cd::CDVector<float> vecB({0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7});
   for(int i=0; i<8; i++) {
     vecB[i] = 1.1*i;
   }
@@ -106,21 +112,21 @@ void Test1(void)
          vecA.data(), vecA.size(), vecA.capacity(), sizeof(vecA));
   vecA.PreserveObject(packer, kCopy, "A");
   vecB.PreserveObject(packer, kCopy, "B");
-  if(myTaskID == 0) {
-  vecA.Print("[Before]"); 
-  vecB.Print("[Before]"); 
+  if(cd::myTaskID == 0) {
+  vecA.Print(std::cout, "[Before]"); 
+  vecB.Print(std::cout, "[Before]"); 
   }
   MutateVector(vecA);
   MutateVector(vecB);
-  if(myTaskID == 0) {
-  vecA.Print("[Mutated]"); 
-  vecB.Print("[Mutated]"); 
+  if(cd::myTaskID == 0) {
+  vecA.Print(std::cout, "[Mutated]"); 
+  vecB.Print(std::cout, "[Mutated]"); 
   }
   vecA.Deserialize(packer, "A");
   vecB.Deserialize(packer, "B");
-  if(myTaskID == 0) {
-  vecA.Print("[Deserialize]"); 
-  vecB.Print("[Deserialize]");
+  if(cd::myTaskID == 0) {
+  vecA.Print(std::cout, "[Deserialize]"); 
+  vecB.Print(std::cout, "[Deserialize]");
   }
 
 
@@ -153,8 +159,8 @@ void Test2()
 
   
 
-  CDVector<int> vecA(32);
-  CDVector<float> vecB(64);
+  cd::CDVector<int> vecA(32);
+  cd::CDVector<float> vecB(64);
   for(int i=0; i<64; i++) {
     if(i < 32) {
       vecA[i] = i;
@@ -166,21 +172,21 @@ void Test2()
          vecA.data(), vecA.size(), vecA.capacity(), sizeof(vecA));
   vecA.PreserveObject(packer, kCopy, "A");
   vecB.PreserveObject(packer, kCopy, "B");
-  if(myTaskID == 0) {
-  vecA.Print("[Before]"); 
-  vecB.Print("[Before]"); 
+  if(cd::myTaskID == 0) {
+  vecA.Print(std::cout, "[Before]"); 
+  vecB.Print(std::cout, "[Before]"); 
   }
   MutateVector(vecA);
   MutateVector(vecB);
-  if(myTaskID == 0) {
-  vecA.Print("[Mutated]"); 
-  vecB.Print("[Mutated]"); 
+  if(cd::myTaskID == 0) {
+  vecA.Print(std::cout, "[Mutated]"); 
+  vecB.Print(std::cout, "[Mutated]"); 
   }
   vecA.Deserialize(packer, "A");
   vecB.Deserialize(packer, "B");
-  if(myTaskID == 0) {
-  vecA.Print("[Deserialize]"); 
-  vecB.Print("[Deserialize]");
+  if(cd::myTaskID == 0) {
+  vecA.Print(std::cout, "[Deserialize]"); 
+  vecB.Print(std::cout, "[Deserialize]");
   }
 
 
@@ -234,7 +240,7 @@ void Test3(int elemsize, int chunksize)
     fclose(fp);
   }  
 
-  packer::Packer<packer::CDEntry> packer(8, NULL, NULL, 4*1024*1024, kPosixFile);
+  packer::Packer<packer::CDEntry> packer(8, NULL, NULL, 4*1024*1024, kMPIFile);
 
   // Preservation //////////////////////////
 
@@ -274,16 +280,171 @@ void Test3(int elemsize, int chunksize)
 }
 //packer::MagicStore magic __attribute__((aligned(0x1000)));
 
+template <typename T>
+void CorruptData(cd::CDVector<T> &vec)
+{
+  for(int i=0; i<vec.size(); i++) {
+    vec[i] -= 1;
+  }
+}
+#define PrintAll(str) { \
+    arrayA.Print(cd::cddbg, str); \
+    arrayB.Print(cd::cddbg, str); \
+    arrayC.Print(cd::cddbg, str); \
+    arrayD.Print(cd::cddbg, str); \
+    arrayE.Print(cd::cddbg, str); \
+    arrayF.Print(cd::cddbg, str); \
+    arrayG.Print(cd::cddbg, str); \
+}
+// Test basic preservation scheme.
+int TestCD(void)
+{
+  cd::CDVector<int>    arrayA({3,5,0,6}); // 4 elems
+  cd::CDVector<int>    arrayB({1,2,3,4,5,6,7,8}); // 8 elems
+  cd::CDVector<float>  arrayC({5.4, 0.1, 1.0, 0.0}); // 4 elems
+  cd::CDVector<int>    arrayD({9,8,7,6,5,4,3,2,1}); // 9 elems
+  cd::CDVector<double> arrayE({2.4, 3.2, 94.2, 91.55, 0.013}); // 5 elems
+  cd::CDVector<long>   arrayF({2,4,6,8,10,12,14,16}); // 8 elems
+  cd::CDVector<int>    arrayG({3,6,9,12,15,18,21,24,27,30}); // 10 elems
+  int test_results[8] = {0,};
+  int test_result = 0;
+  int num_reexecution = 0;
+
+
+  char arrAstr[32];
+  char arrBstr[32];
+  char arrCstr[32];
+  char arrDstr[32];
+  char arrEstr[32];
+  char arrFstr[32];
+  char arrGstr[32];
+  sprintf(arrAstr, "arrayA-%d", myRankID);
+  sprintf(arrBstr, "arrayB-%d", myRankID);
+  sprintf(arrCstr, "arrayC-%d", myRankID);
+  sprintf(arrDstr, "arrayD-%d", myRankID);
+  sprintf(arrEstr, "arrayE-%d", myRankID);
+  sprintf(arrFstr, "arrayF-%d", myRankID);
+  sprintf(arrGstr, "arrayG-%d", myRankID);
+	CDHandle *root = CD_Init(numProcs, myRankID, kPFS);
+  CD_Begin(root, "Root"); 
+  PrintAll((num_reexecution == 0)? "Before Preserve ": "Before Restore ");
+  root->Preserve(arrayA, kCopy, arrAstr); 
+  root->Preserve(arrayB, kCopy, arrBstr); 
+  root->Preserve(arrayC, kCopy, arrCstr); 
+  root->Preserve(arrayD, kCopy, arrDstr); 
+  root->Preserve(arrayE, kCopy, arrEstr);
+  root->Preserve(arrayF, kCopy, arrFstr); 
+  root->Preserve(arrayG, kCopy, arrGstr);
+
+  PrintAll((num_reexecution == 0)? "After Preserve ": "After  Restore ");
+
+  if (1) {
+    CDHandle* child_lv1=root->Create(LV1, "CD1", kStrict);
+    cd::cddbg << "Root Creates Level 1 CD. # of children CDs = " << LV1 << endl;
+  
+    CD_Begin(child_lv1, "CD LV 1");
+    cd::cddbg << "\t\tLevel 1 CD Begin..." << endl;
+  
+    CDPrvType prv_type_1 = kRef;
+    PrintAll((num_reexecution == 0)? "Before Preserve ": "Before Restore ");
+    child_lv1->Preserve(arrayA, prv_type_1, "refA", arrAstr); 
+    child_lv1->Preserve(arrayB, prv_type_1, "refB", arrBstr); 
+    child_lv1->Preserve(arrayE, prv_type_1, "refE", arrEstr);
+    PrintAll((num_reexecution == 0)? "After Preserve ": "After  Restore ");
+  
+    cd::cddbg << "\t\tPreserve via copy: arrayA (Share), arrayB (Share), arrayE (Share)\n" << endl;
+  
+    cd::cddbg.flush();
+    if (0) { // Level 2
+      CDHandle* child_lv2=child_lv1->Create(LV2, "CD2");
+      cd::cddbg << "\t\tCD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
+    
+      CD_Begin(child_lv2, "CD LV 2");
+      cd::cddbg << "\t\t\t\tLevel 2 CD Begin...\n" << endl;
+      cd::cddbg.flush();
+    
+      child_lv2->Preserve(arrayA, kRef, "arrA-Lv2", arrAstr); 
+      child_lv2->Preserve(arrayF, kRef, "arrF-Lv2", arrFstr);
+      child_lv2->Preserve(arrayB, kRef, "arrB-Lv2", arrBstr);
+      child_lv2->Preserve(arrayG, kRef, "arrG-Lv2", arrGstr);
+      child_lv2->Preserve(arrayC, kCopy, arrCstr);
+      cd::cddbg << "\t\t\t\tPreserve via ref : arrayA (local), arrayB (local), arrayF (remote), arrayG (remote)" << endl;
+      cd::cddbg << "\t\t\t\tPreserve via copy: arrayC" << endl;
+      cd::cddbg.flush();
+    
+    
+//      if(num_reexecution = 1) {
+//        CorruptData(arrayE);
+//        num_reexecution++;
+//      }
+      // Level 2 Body
+    
+    
+      // Detect Error here
+      child_lv2->Detect();
+    
+      CD_Complete(child_lv2);
+      cd::cddbg << "\t\t\t\tLevel 2 CD Complete...\n" << endl;
+      child_lv2->Destroy();
+      cd::cddbg << "\t\t\t\tLevel 2 CD Destroyed...\n" << endl;
+    }
+  
+    cd::cddbg.flush(); 
+    // Detect Error here
+    child_lv1->Detect();
+    if(num_reexecution == 0) {
+      CorruptData(arrayA);
+      CorruptData(arrayB);
+      CorruptData(arrayC);
+      num_reexecution++;
+      child_lv1->CDAssert(false);
+    }
+  
+    CD_Complete(child_lv1);
+    cd::cddbg << "\t\tLevel 1 CD Complete...\n" << endl;
+    child_lv1->Destroy();
+    cd::cddbg << "\t\tLevel 1 CD Destroyed...\n" << endl;
+  }
+
+  // Corrupt array arrayA and arrayB
+  if(num_reexecution == 0) {
+    CorruptData(arrayA);
+    CorruptData(arrayB);
+    CorruptData(arrayC);
+    num_reexecution++;
+    root->CDAssert(false);
+  }
+
+
+
+  // Detect Error here
+  root->Detect();
+
+  cout << "Root CD Complete...\n" << endl;
+  CD_Complete(root);
+  cd::cddbg << "Root CD Complete...\n" << endl;
+  cd::cddbg << "\t\tRoot CD Destroyed (Finalized) ...\n" << endl;
+  cd::cddbg << "\n==== TestPreservationViaRefRemote Done ====\n" << endl; 
+  cd::cddbg.flush(); 
+  CD_Finalize();
+  // check the test result   
+  return kOK; //
+}
+
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv) ;
   MPI_Comm_rank(MPI_COMM_WORLD, &myRankID);
+  MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
   MPI_Comm_rank(MPI_COMM_WORLD, &cd::myTaskID);
   MPI_Comm_size(MPI_COMM_WORLD, &cd::totalTaskSize);
-  if(myRankID == 0) {
-    for(int i=0; i<64; i++) {
-      Test3(1024*i, 32*i);
+  bool test_vector_only = false;
+  if(test_vector_only) {
+    for(int i=0; i<4; i++) {
+      printf("Working on %d\n", i);
+      Test3(16*i, 32*i);
     }
-      
+  } else {
+    TestCD();
   }
   MPI_Finalize();
   return 0;

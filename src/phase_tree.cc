@@ -418,6 +418,14 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 //  return tuned::phaseNodeCache[it->second];
 //}
 
+uint32_t PhaseTree::Init(uint64_t level,  const std::string &label)
+{ 
+  root_ = new PhaseNode(NULL, level, label, kExecution); 
+  current_ = root_;
+  cd::phaseNodeCache[current_->phase_] = root_;
+  return current_->phase_; 
+}
+
 
 PhaseTree::~PhaseTree() {
   // If root_ == NULL,

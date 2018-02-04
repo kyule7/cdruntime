@@ -270,7 +270,7 @@ class TableStore : public BaseTable {
 //        else {
 //          MYDBG("my task id:%d\n", packerTaskID);
 //        }
-        //PACKER_ASSERT(0);
+        PACKER_ASSERT(0);
       }
       //return (void *)ret;
       return ret;

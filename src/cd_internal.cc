@@ -78,13 +78,13 @@ int iterator_entry_count=0;
 //EntryDirType::hasher cd::str_hash;
 std::unordered_map<string,packer::CDEntry*> cd::str_hash_map;
 std::unordered_map<string,packer::CDEntry*>::hasher cd::str_hash;
+//std::unordered_map<uint64_t, string> tag2str;
 std::map<ENTRY_TAG_T, string> cd::tag2str;
 //std::map<uint64_t, string> cd::phase2str;
 std::list<CommInfo> CD::entry_req_;
 std::map<ENTRY_TAG_T, CommInfo> CD::entry_request_req_;
 std::map<ENTRY_TAG_T, CommInfo> CD::entry_recv_req_;
 std::list<EventHandler *> CD::cd_event_;
-
 map<uint32_t, uint32_t> Util::object_id;
 
 //map<string, uint32_t> CD::exec_count_;
@@ -2348,6 +2348,9 @@ CD::InternalPreserve(void *data,
 
   uint64_t id = (my_name.empty())? INVALID_NUM : cd_hash(my_name);
   tag2str[id] = my_name;
+  if(ref_name.empty() == false) { 
+    tag2str[cd_hash(ref_name)] = ref_name;
+  }
   uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
   CDEntry *pEntry = NULL;
 
@@ -2367,11 +2370,43 @@ CD::InternalPreserve(void *data,
     //  8B      8B            8B       8B
     // [ID] [ATTR|SIZE]    [OFFSET]   [SRC]
     //  ID  [ATTR|totsize] totoffset  tableoffset
+    //
+    //  +------------+   <--OFFSET
+    //  |            |
+    //  |            |
+    //  +------------+
+    //  |            |
+    //  |   Data     |
+    //  |            |
+    //  +------------+   <--SRC
+    //  |   Table    |
+    //  +------------+   
+    //
       attr |= Attr::knested;
 //      uint64_t orig_tablesize = entry_directory_.table_->used();
+      entry_directory_.data_->PadZeros(0);
+      const uint64_t packed_offset  = entry_directory_.data_->used();
 #if 1
       PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
+      // returns length of serialized object
       len_in_bytes = serializer->PreserveObject(entry_directory_, kCopy, my_name.c_str());
+      
+      tag2str[serializer->id_] = serializer->GetID();
+      uint64_t table_offset = entry_directory_.data_->used();
+      packer::MagicStore &magic = entry_directory_.data_->GetMagicStore();
+      magic.table_offset_ = entry_directory_.AppendTable();
+      magic.total_size_   = entry_directory_.data_->used();
+      magic.entry_type_   = packer::kCDEntry;
+      magic.reserved2_    = 0x12345678;
+      magic.reserved_     = 0x01234567;
+      uint64_t packed_total_size = entry_directory_.data_->used() - packed_offset;
+      entry_directory_.data_->FlushMagic(&magic);
+      pEntry = entry_directory_.table_->InsertEntry(
+          CDEntry(id, attr, packed_total_size, packed_offset, (char *)table_offset));
+      printf("[%s] Insert %s CDEntry(%lx, %lu, size:%lu, offset:%lu, table_offset:%lu)), (%lx, %s %s)\n", 
+           label_.c_str(), my_name.c_str(),
+           id, attr, packed_total_size, packed_offset, table_offset,
+           serializer->id_, tag2str[serializer->id_].c_str(), serializer->GetID());
 #else
       entry_directory_.data_->PadZeros(0);
       const uint64_t packed_offset  = entry_directory_.data_->used();
@@ -2382,6 +2417,8 @@ CD::InternalPreserve(void *data,
       uint64_t table_offset = serializer->PreserveObject(entry_directory_.data_);
       uint64_t packed_size = entry_directory_.data_->used() - packed_offset;
 //      int64_t table_size_in_datachunk = entry_directory_.data_->used() - table_offset_in_datachunk;
+      printf("Insert %s CDEntry(%lx, %lu, size:%lu, offset:%lu, table_offset:%lu))\n", my_name.c_str(),
+           id, attr, packed_size, packed_offset, table_offset);
       pEntry = entry_directory_.table_->InsertEntry(
           CDEntry(id, attr, packed_size, packed_offset, (char *)table_offset));
       entry_directory_.data_->Flush();
@@ -2413,9 +2450,11 @@ CD::InternalPreserve(void *data,
     CD_DEBUG("Preservation via %d (reference)\n", GetPlaceToPreserve());
   
     uint64_t ref_id = cd_hash(ref_name);
+    ref_id = (ref_name.empty())? id : ref_id;
     // Let's just replace kRef entry ID with ref_id
     // if there is no entry name passed by user.
-    uint64_t id = (my_name.empty())? ref_id : cd_hash(my_name);
+    //uint64_t id = (my_name.empty())? ref_id : cd_hash(my_name);
+    //tag2str[id] = my_name;
 
     // CDEntry for reference has different format
     //  8B      8B            8B       8B
@@ -2437,6 +2476,9 @@ CD::InternalPreserve(void *data,
 
     //pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, size, ref_offset, (char *)ref_id));
     pEntry = entry_directory_.table_->InsertEntry(CDEntry(id, attr, size, ref_offset, (char *)ref_id));
+    printf("[%s] Ref Insert %s CDEntry(%lx, %lu, size:%lu, offset:%lu, table_offset:%s(%lx))\n", 
+         label_.c_str(), my_name.c_str(),
+         id, attr, size, ref_offset, ref_name.c_str(), ref_id);
 
     // When restore data for reference of serdes object,
     // check ref and nested first.
@@ -2488,27 +2530,37 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
 {
   CD::CDInternalErrT ret = kOK; 
   CD_DEBUG("\n\nNow reexec %s!!! %d\n\n", ref_name.c_str(), iterator_entry_count++);
+  const bool is_ref = CHECK_PRV_TYPE(preserve_mask, kRef);
   uint32_t found_level = INVALID_NUM32;
   uint64_t ref_id = cd_hash(ref_name);
   uint64_t entry_id = cd_hash(my_name);
-  uint64_t search_tag = CHECK_PRV_TYPE(preserve_mask, kRef)? ref_id : entry_id;
+  uint64_t search_tag = (is_ref)? ref_id : entry_id;
   CDEntry src;
   bool found = SearchEntry(search_tag, found_level, src);
+  CD_ASSERT_STR(found, "Failed to search %lx=%lx %s (%d) lv:%u, entry #:%lu\n", 
+                        (is_ref)? ref_id : entry_id, search_tag,
+                        (is_ref)? ref_name.c_str() : my_name.c_str(), preserve_mask, 
+                        level(),
+                        entry_directory_.table_->used());
   CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
   if(found_level == level() && src.size_.Check(Attr::krefer)) {
     assert(my_name.size() == 0); // double-check
-    assert(CHECK_PRV_TYPE(preserve_mask, kRef)); // double-check
+    assert(is_ref); // double-check
     found = GetParentCD(found_level)->ptr_cd()->SearchEntry(search_tag, found_level, src);
+    CD_ASSERT_STR(found, "Failed to search %lx %s (%d) lv:%u\n", 
+        (is_ref)? ref_id : entry_id,
+        (is_ref)? ref_name.c_str() : my_name.c_str(), preserve_mask, ptr_cd->level());
     ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
   }
-  CD_ASSERT_STR(found, "Failed to find entry %s\n", 
-                CHECK_PRV_TYPE(preserve_mask, kRef)? ref_name.c_str(): my_name.c_str());
+  CD_ASSERT_STR(found, "Failed to find entry %lx %s\n", 
+                (is_ref)? ref_id : entry_id,
+                (is_ref)? ref_name.c_str(): my_name.c_str());
 
   if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
     PackerSerializable *serializer = reinterpret_cast<PackerSerializable *>(data);
     // It is very important to pass entry_directory_ of CD level that has search_tag.
     uint64_t restored_len = serializer->Deserialize(ptr_cd->entry_directory_, my_name.c_str());
-    CD_ASSERT_STR(restored_len == len_in_bytes, "restored len:%lu==%lu\n", restored_len, len_in_bytes);
+//    CD_ASSERT_STR(restored_len == len_in_bytes, "restored len:%lu==%lu\n", restored_len, len_in_bytes);
 //    if(prv_medium_ != kDRAM)
 //      entry_directory_.data_->Flush();
   } else {
@@ -2517,16 +2569,16 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     // disk, overlapping reexecution of application.
     
     CD_ASSERT_STR(src.src() == data, "%s src: %p==%p ",
-       CHECK_PRV_TYPE(preserve_mask, kRef)? ref_name.c_str() : my_name.c_str(), src.src(), data);
+       (is_ref)? ref_name.c_str() : my_name.c_str(), src.src(), data);
     CD_ASSERT_STR(src.size() == len_in_bytes, "%s len: %lu==%lu ", 
-        CHECK_PRV_TYPE(preserve_mask, kRef)? ref_name.c_str() : my_name.c_str(), src.size(), len_in_bytes);
+        (is_ref)? ref_name.c_str() : my_name.c_str(), src.size(), len_in_bytes);
     ptr_cd->entry_directory_.data_->GetData(data, len_in_bytes, src.offset());
     
     /*********************************************
      * Test for kRef case
      *********************************************/
 
-    if( CHECK_PRV_TYPE(preserve_mask, kRef) ) {
+    if( is_ref ) {
       uint64_t my_id = cd_hash(my_name);
       uint32_t my_lv = INVALID_NUM32;
       CDEntry dst;
@@ -2637,6 +2689,7 @@ CD::CDInternalErrT CD::Detect(uint32_t &rollback_point)
 void CD::Recover(uint32_t level, bool collective)
 //void CD::Recover()
 {
+  if(myTaskID == 0) printf("entry dir size:%lu\n", entry_directory_.table_->used());
   const uint32_t rollback_point = *rollback_point_;
   const int64_t curr_phase = phase();
   const int64_t curr_seqID = phaseNodeCache[curr_phase]->seq_end_;
@@ -3715,10 +3768,10 @@ bool CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, CDEntry &
 {
   CD_DEBUG("Search Entry : %u (%s) at level #%u \n", tag_to_search, tag2str[tag_to_search].c_str(), level());
 
-  CDHandle *parent_cd = CDPath::GetParentCD();
+  CDHandle *parent_cd = CDPath::GetCurrentCD();
+  //CDHandle *parent_cd = CDPath::GetParentCD();
 //  RemoteCDEntry *entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
 //
-  CD_DEBUG("Parent name : %s\n", parent_cd->GetName());
 //
 //  if(entry_tmp != NULL) { 
 //    CD_DEBUG("Parent dst addr : %p \tParent entry name : %s\n", 
@@ -3733,7 +3786,10 @@ bool CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, CDEntry &
 
   bool found = false;
   while( parent_cd != NULL ) {
+    CD_DEBUG("Parent name : %s\n", parent_cd->GetName());
     CD_DEBUG("InternalGetEntry at level #%u\n", parent_cd->ptr_cd()->GetCDID().level());
+    printf("Search %s (%lx) at level #%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
+        parent_cd->ptr_cd()->GetCDID().level(), parent_cd->ptr_cd()->label_.c_str());
 
     found = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search, entry);
 
