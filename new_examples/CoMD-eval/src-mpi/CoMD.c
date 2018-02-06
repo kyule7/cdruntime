@@ -111,7 +111,6 @@ int main(int argc, char **argv) {
 
 #if _ROOTCD
   // DRAM vs HDD
-  // cd_handle_t* root_cd = cd_init(nRanks, myRank, kDRAM);
   cd_handle_t *root_cd = cd_init(nRanks, myRank, kPFS);
   cd_begin(root_cd, "Root");
 
@@ -127,14 +126,9 @@ int main(int argc, char **argv) {
 #endif
 
 #if _CD1
-  // cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep", kStrict,
-  //                                 0xF); // detect F8, F4, F2, F1
-  // cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "timestep",
-  //                                 0xE);
-  // 0xE vs 0xF
-  // kHDD vs kDRAM
+  // TODO: 0xE vs 0xF, kHDD vs kDRAM(=kLocalMemory)
   cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "main_loop",
-                                  kStrict | kDRAM, 0xE); // detect F8, F4, F2
+                                  kStrict | kLocalMemory, 0xE); // F8, F4, F2
 #endif
 
   // This is the CoMD main loop
@@ -146,12 +140,13 @@ int main(int argc, char **argv) {
 #if _CD1
     // TODO: add interval to control lv1_cd
     const int CD1_INTERVAL = sim->preserveRateLevel1;
-    // Notice that iStep is increasing by printRate.
+    // Notice that iStep is increasing by printRate for every iteration.
     if (iStep % (CD1_INTERVAL * printRate) == 0) {
       cd_begin(lv1_cd, "main_loop");
       // FIXME: this has an issue and not working properly. redistributeAtoms
       // will fail for some unknown issue.
-      // Preservation for timestep(...) : Atoms : atoms??
+      // TODO: need to preserve via reference since there will be preserve via
+      //       kOutput right before cd_detect. be careful for the names.
       int main_loop_pre_size =
           preserveAtoms(lv1_cd, kCopy, sim->atoms, sim->boxes->nTotalBoxes,
                         1,  // is_all
@@ -223,6 +218,13 @@ int main(int argc, char **argv) {
 
 #if _CD1
     if (iStep % (CD1_INTERVAL * printRate) == 0) {
+      //TODO: add kOutput 
+      //      need to preserve the same data that we would need to preserve at
+      //      the beginning of lv1_cd above.
+      //      preserveAtoms
+      //      preserveLinkCell
+      //      preserveDomain
+      //      whatelse?
       cd_detect(lv1_cd);
       cd_complete(lv1_cd);
     }
@@ -239,7 +241,6 @@ int main(int argc, char **argv) {
 #endif
 
 #if _ROOTCD
-  // TODO: need kOutput for root_cd?
   cd_detect(root_cd);
   cd_complete(root_cd);
   cd_finalize();
