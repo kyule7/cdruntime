@@ -1574,10 +1574,8 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
           CD_DEBUG(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
               level(), label_.c_str(), curr_phase, curr_seqID, curr_begID);
         } else if(failed_seqID > curr_seqID) {
-          if(myTaskID == 0) {
-          printf(">>> No error Lv#%u (%s) but it was in recovery, phase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
+          PRINT_MPI(">>> No error Lv#%u (%s) but it was in recovery, phase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
               level(), label_.c_str(), failed_phase, curr_phase, failed_seqID, curr_seqID, curr_begID);
-          }
           CD_DEBUG(">>> No error Lv#%u (%s) but it was in recovery, fphase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
               level(), label_.c_str(), failed_phase, curr_phase, failed_seqID, curr_seqID, curr_begID);
         } else { // curr_seqID should not be greater than failed_seqID
@@ -2384,12 +2382,10 @@ CDEntry *CD::PreserveCopy(void *data,
     entry_directory_.data_->FlushMagic(&magic);
     pEntry = entry_directory_.table_->InsertEntry(
         CDEntry(id, attr, packed_total_size, packed_offset, (char *)table_offset));
-    if(myTaskID == 0) {
-    printf("[%s] Insert %s CDEntry(%lx, %lx, size:%lx, offset:%lx, tbl_offset:%lx, tblsize:%lx)), (%lx, %s %s), %zu\n", 
+    PRINT_MPI("[%s] Insert %s CDEntry(%lx, %lx, size:%lx, offset:%lx, tbl_offset:%lx, tblsize:%lx)), (%lx, %s %s), %zu\n", 
          label_.c_str(), my_name.c_str(),
          id, attr, packed_total_size, packed_offset, table_offset, packed_offset + packed_total_size - table_offset,
          serializer->id_, tag2str[serializer->id_].c_str(), serializer->GetID(), sizeof(CDEntry));
-    }
   }
   else { // preserve a single entry
     pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, len_in_bytes, 0, (char *)data));
@@ -2510,25 +2506,21 @@ CD::InternalPreserve(void *data,
           pEntry = entry_directory_.table_->InsertEntry(CDEntry(id, attr, size, ref_offset, (char *)ref_id));
         }
       } else { // not found
-        if(myTaskID == 0) {
-          printf("No entry %lx %s (mask:%d) for kRef. Now Copy! lv:%u, entry #:%lu\n", 
+        PRINT_MPI("No entry %lx %s (mask:%d) for kRef. Now Copy! lv:%u, entry #:%lu\n", 
                               ref_id, 
                               my_name.c_str(), preserve_mask, 
                               level(),
                               entry_directory_.table_->tablesize());
-        }
 
         pEntry = PreserveCopy(data, len_in_bytes, preserve_mask, my_name, ref_id);
 
       }
         
     }
-    if( myTaskID == 0) {
 
-    printf("[%s] Ref Insert %s CDEntry(%lx, %lu, size:%lu, offset:%lu, table_offset:%s(%lx)), tblsize:%lu\n", 
-         label_.c_str(), my_name.c_str(),
-         id, attr, size, ref_offset, ref_name.c_str(), ref_id, entry_directory_.table_->tablesize());
-    }
+    PRINT_MPI("[%s] Ref Insert %s CDEntry(%lx, %lu, size:%lu, offset:%lu, table_offset:%s(%lx)), tblsize:%lu\n", 
+               label_.c_str(), my_name.c_str(),
+               id, attr, size, ref_offset, ref_name.c_str(), ref_id, entry_directory_.table_->tablesize());
     // When restore data for reference of serdes object,
     // check ref and nested first.
     // then find ref_id, then read table from ref_id to ref_id+size.
@@ -2619,13 +2611,15 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
   if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
     PackerSerializable *serializer = reinterpret_cast<PackerSerializable *>(data);
     // It is very important to pass entry_directory_ of CD level that has search_tag.
-    printf("%p, %p, %p, %s, %s\n", ptr_cd->entry_directory_.table_, serializer, ptr_cd, ptr_cd->label_.c_str(), (is_ref)? ref_name.c_str() : my_name.c_str());
+    PRINT_MPI("%p, %p, %p, %s, %s\n", ptr_cd->entry_directory_.table_, serializer, ptr_cd, ptr_cd->label_.c_str(), (is_ref)? ref_name.c_str() : my_name.c_str());
+#if CD_DEBUG_ENABLED
     serializer->Print();
+#endif
     if( CHECK_PRV_TYPE(preserve_mask, kIgnore) == false ) {
       uint64_t restored_len = serializer->Deserialize(ptr_cd->entry_directory_, (is_ref)? ref_name.c_str() : my_name.c_str());
       if(restored_len == -1UL) {
         
-          printf("Print Entries at %s (#%u)\n", ptr_cd->label_.c_str(), ptr_cd->level());
+        PRINT_MPI("Print Entries at %s (#%u)\n", ptr_cd->label_.c_str(), ptr_cd->level());
         if(myTaskID == 0) {
           ptr_cd->entry_directory_.table_->PrintEntry();
         }
@@ -2759,7 +2753,7 @@ CD::CDInternalErrT CD::Detect(uint32_t &rollback_point)
 void CD::Recover(uint32_t level, bool collective)
 //void CD::Recover()
 {
-  if(myTaskID == 0) printf("entry dir size:%lu\n", entry_directory_.table_->tablesize());
+  PRINT_MPI("entry dir size:%lu\n", entry_directory_.table_->tablesize());
   const uint32_t rollback_point = *rollback_point_;
   const int64_t curr_phase = phase();
   const int64_t curr_seqID = phaseNodeCache[curr_phase]->seq_end_;
@@ -3335,7 +3329,7 @@ CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name)
   if(entry != NULL) {
     // if krefer is 1, not found
     entry = (entry->size_.Check(Attr::krefer) == 0)? entry : NULL;
-    if(myTaskID == 0) printf("Found %s (%lx) %s\n", tag2str[entry_name].c_str(), entry_name, (entry != NULL)? "Copy":"But Ref");
+    PRINT_MPI("Found %s (%lx) %s\n", tag2str[entry_name].c_str(), entry_name, (entry != NULL)? "Copy":"But Ref");
   } else {
     CD_DEBUG("[InternalGetEntry Failed] There is no entry for reference of %s at level #%u\n", 
         tag2str[entry_name].c_str(), level());
@@ -3803,7 +3797,7 @@ void *CD::Serialize(uint64_t &len_in_bytes)
 }
 void CD::Deserialize(void *object)
 {
-  printf("Deserialize(%p)\n", object);
+  //printf("Deserialize(%p)\n", object);
 }
 
 void *HeadCD::Serialize(uint64_t &len_in_bytes)
@@ -3812,7 +3806,7 @@ void *HeadCD::Serialize(uint64_t &len_in_bytes)
 }
 void HeadCD::Deserialize(void *object)
 {
-  printf("Deserialize(%p)\n", object);
+  //printf("Deserialize(%p)\n", object);
 }
 //-------------------------------------------------------
 
@@ -3828,10 +3822,8 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
   while( parent_cd != NULL ) {
     CD *ptr_cd = parent_cd->ptr_cd();
     CD_DEBUG("InternalGetEntry at %s level #%u\n", ptr_cd->label_.c_str(), ptr_cd->level());
-    if(myTaskID == 0) {
-      printf("Search %s (%lx) at level #%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
-          ptr_cd->level(), ptr_cd->label_.c_str());
-    }
+    PRINT_MPI("Search %s (%lx) at level #%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
+              ptr_cd->level(), ptr_cd->label_.c_str());
     entry = ptr_cd->InternalGetEntry(tag_to_search);
   
     if(entry != NULL) {
@@ -3840,10 +3832,8 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
        
       CD_DEBUG("Finally found entry! (%s %lu) with ref name (%lu) at level #%d (%s)\n", 
                tag2str[entry->id_], entry->id_, (uint64_t)entry->src_, found_level, GetNodeID().GetString().c_str());
-      if(myTaskID == 0) {
-        printf("Finally Found %s (%lx) at level #%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
+      PRINT_MPI("Finally Found %s (%lx) at level #%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
           ptr_cd->GetCDID().level(), ptr_cd->label_.c_str());
-      }
       break;
     }
     else {

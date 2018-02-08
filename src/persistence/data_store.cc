@@ -20,6 +20,7 @@ ActiveBuffer packer::active_buffer;
 #ifdef _DEBUG_ENABLED
 std::map<pthread_t, unsigned int> tid2str;
 int indent_cnt = 0; 
+FILE *packer::packer_stream = std::cout;
 #endif
 
 FILE *packer_stream = NULL;
