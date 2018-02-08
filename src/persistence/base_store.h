@@ -169,6 +169,7 @@ struct BaseEntry {
     { printf("%12lx %12lx %12lx\n", id_, size(), offset_); }
 
     inline uint64_t size(void)   const { return size_.attr_.size_; }
+    inline uint64_t invalid(void)  const { return size_.attr_.invalid_; }
     inline uint64_t attr(void)   const { return size_.code_ >> 48; }
     inline uint64_t offset(void) const { return offset_; }
 };
@@ -205,6 +206,7 @@ struct CDEntry {
     void Print(void) const
     { printf("%12lx %12lx %12lx %p\n", id_, size(), offset_, src_); }
     inline uint64_t size(void)   const { return size_.attr_.size_; }
+    inline uint64_t invalid(void)  const { return size_.attr_.invalid_; }
     inline uint64_t attr(void)   const { return size_.code_ >> 48; }
     inline uint64_t offset(void) const { return offset_; }
     inline char    *src(void)    const { return src_; }

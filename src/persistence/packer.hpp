@@ -307,8 +307,11 @@ class Packer {
     uint64_t AppendTable(void)
     {
 //      printf("%s ] %p, %lu\n", __func__, table_->GetCurrPtr(), table_->tablesize());
-      if(table_->used() != 0)
-        return data_->Write(table_->GetCurrPtr(), table_->tablesize());
+      if(table_->tablesize() > 0) {
+        const uint64_t ret = data_->Write(table_->GetCurrPtr(), table_->tablesize());
+//        table_->Advance();
+        return ret;
+      }
       else
         return INVALID_NUM;
     }

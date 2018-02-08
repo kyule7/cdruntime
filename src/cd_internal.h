@@ -585,6 +585,10 @@ public:
                                     uint64_t ref_offset, 
                                     const RegenObject *regen_object, 
                                     PreserveUseT data_usage);
+    CDEntry *PreserveCopy(void *data, 
+                          uint64_t &len_in_bytes, 
+                          CDPrvType preserve_mask, 
+                          const std::string &my_name, uint64_t id);
   
     CDErrT InternalReexecute(void);
 

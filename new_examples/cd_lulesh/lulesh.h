@@ -25,6 +25,7 @@
 // Kyushick
 //include <vector>
 #define DO_CHECK 0
+#define DOMAIN_INIT_NAME ""
 #define LULESH_PRINT(...)
 #include "cd_def.h"
 #if _CD
@@ -41,7 +42,7 @@ using namespace cd;
 //**************************************************
 
 #define MAX(a, b) ( ((a) > (b)) ? (a) : (b))
-
+#define CHECK_PRV_TYPE(X,Y) (((X) & (Y)) == (Y))
 
 // Precision specification
 typedef float        real4 ;
@@ -271,7 +272,7 @@ struct Internal {
    }
 
    void CheckUpdate(const Internal &that, const char *str="") {
-#if _CD
+#if _CD && DO_CHECK
       bool numReg_changed = false;
       if(m_numReg          != that.m_numReg) {
         printf("numReg ");
@@ -442,6 +443,7 @@ class Domain : public Internal {
    public:
 #if _CD
    Internal preserved_;
+   std::string name_;
 #endif
    // Constructor
    Domain(Int_t numRanks, Index_t colLoc,
@@ -1089,14 +1091,14 @@ class Domain : public Internal {
 #if _CD
 // Kyushick
    uint64_t serdes_vec;
-   Internal preserved;
+//   Internal preserved;
    Domain &SetOp(const uint64_t &vec) {                                                  
      serdes_vec = vec;                                                                          
      return *this;                                                                              
    }    
    Index_t prv_prv_idx;   
    void PrintDebugDetailInternal(int tg_idx) {
-     const Index_t base = Index_t(8)*tg_idx; 
+     //const Index_t base = Index_t(8)*tg_idx; 
      LULESH_PRINT("prv idx:%d == %d\n", prv_idx, tg_idx);
      LULESH_PRINT("[Rank:%d] PrintDetail nodelist size:%zu/%zu (numElem:%d, base:%d)\n"
             "%6x %6x %6x %6x %6x %6x %6x %6x\n", 
@@ -1185,7 +1187,7 @@ class Domain : public Internal {
 
    }
    void PrintDebugDetail(bool do_prv=false) {
-     static int counter = 0;
+     //static int counter = 0;
      if(myRank == 0) {
        LULESH_PRINT("======== [%s] Check %d %d ===================\n", (do_prv)? "Preserve":"Restore", m_cycle, counter++);
        if(do_prv) {
@@ -1260,13 +1262,17 @@ class Domain : public Internal {
 #endif
    }
 
+   const char *GetID(void) { return name_.c_str(); }
    uint64_t PreserveObject(packer::DataStore *packer) { return 0; }
-   uint64_t PreserveObject(packer::CDPacker &packer, const char *entry_str) {
+   uint64_t PreserveObject(packer::CDPacker &packer, CDPrvType prv_type, const char *entry_str) {
       std::string entry_name(entry_str);
+      if(entry_str != NULL && name_ == DOMAIN_INIT_NAME) {
+        name_ += entry_str;
+      }
       PrintDebugDetail(true);
 
       Internal *base = dynamic_cast<Internal *>(this);
-      preserved = *base;
+      preserved_ = *base;
       //packer.Add((char *)base, packer::CDEntry(cd::GetCDEntryID("BaseObj"), sizeof(Internal), 0, (char *)base));
       uint64_t target_vec = 1;
       uint64_t prv_size = 0;
@@ -1274,29 +1280,29 @@ class Domain : public Internal {
          uint64_t id = vec2id(target_vec);
          if(serdes_vec & 0x1) {
 //            LULESH_PRINT("target: %32s (%32lx)\n", id2str[id], target_vec);
-            prv_size += SelectPreserve(id, packer);
+            prv_size += SelectPreserve(id, packer, prv_type);
          }
          target_vec <<= 1;
          serdes_vec >>= 1;
       } // while ends
 //      LULESH_PRINT("------------ Done -----------\n");
      
-      // Update Magic 
-      uint64_t preserved_size_only   = packer.data_->used();
-      packer.data_->PadZeros(0); 
-      uint64_t preserved_size   = packer.data_->used();
-      uint64_t table_offset = packer.AppendTable();
-      uint64_t total_size_   = packer.data_->used();
-      uint64_t table_offset_ = table_offset;
-      uint64_t table_type_   = packer::kCDEntry;
-      packer.data_->Flush();
-      packer::MagicStore &magic = packer.data_->GetMagicStore();
-      magic.total_size_   = total_size_, 
-      magic.table_offset_ = table_offset_;
-      magic.entry_type_   = table_type_;
-      magic.reserved2_    = 0x12345678;
-      magic.reserved_     = 0x01234567;
-      packer.data_->FlushMagic(&magic);
+//      // Update Magic 
+//      uint64_t preserved_size_only   = packer.data_->used();
+//      packer.data_->PadZeros(0); 
+//      uint64_t preserved_size   = packer.data_->used();
+//      uint64_t table_offset = packer.AppendTable();
+//      uint64_t total_size_   = packer.data_->used();
+//      uint64_t table_offset_ = table_offset;
+//      uint64_t table_type_   = packer::kCDEntry;
+//      packer.data_->Flush();
+//      packer::MagicStore &magic = packer.data_->GetMagicStore();
+//      magic.total_size_   = total_size_, 
+//      magic.table_offset_ = table_offset_;
+//      magic.entry_type_   = table_type_;
+//      magic.reserved2_    = 0x12345678;
+//      magic.reserved_     = 0x01234567;
+//      packer.data_->FlushMagic(&magic);
 
       LULESH_PRINT("====================\npreservation size: %lu == %lu ~= %lu, (w/ table: %lu)\n======================\n", prv_size, preserved_size_only, preserved_size, total_size_);
       PrintDebugDetail(true);
@@ -1304,6 +1310,7 @@ class Domain : public Internal {
 
       return prv_size; 
    }
+
    uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str) { 
      std::string entry_name(entry_str);
 //      packer.Restore(cd::GetCDEntryID("BaseObj"));
@@ -1328,77 +1335,84 @@ class Domain : public Internal {
 
 
    static bool restarted;
-   uint64_t SelectPreserve(uint64_t id, packer::CDPacker &packer) {
+   uint64_t SelectPreserve(uint64_t id, packer::CDPacker &packer, CDPrvType prv_type) {
       restarted = false;
       if(myRank == 0) 
          LULESH_PRINT("%s %s\n", __func__, id2str[id]);
       uint64_t prv_size = 0;
+      bool is_ref = ((prv_type & kRef) == kRef);
       switch(id) {
-         case ID__X         : prv_size = m_x.PreserveObject(packer,        "X"        ); break;
-         case ID__Y         : prv_size = m_y.PreserveObject(packer,        "Y"        ); break;
-         case ID__Z         : prv_size = m_z.PreserveObject(packer,        "Z"        ); break;
-         case ID__XD        : prv_size = m_xd.PreserveObject(packer,       "XD"       ); break; 
-         case ID__YD        : prv_size = m_yd.PreserveObject(packer,       "YD"       ); break;
-         case ID__ZD        : prv_size = m_zd.PreserveObject(packer,       "ZD"       ); break;
-         case ID__XDD       : prv_size = m_xdd.PreserveObject(packer,      "XDD"      ); break;
-         case ID__YDD       : prv_size = m_ydd.PreserveObject(packer,      "YDD"      ); break;
-         case ID__ZDD       : prv_size = m_zdd.PreserveObject(packer,      "ZDD"      ); break;
-         case ID__FX        : prv_size = m_fx.PreserveObject(packer,       "FX"       ); break; 
-         case ID__FY        : prv_size = m_fy.PreserveObject(packer,       "FY"       ); break;
-         case ID__FZ        : prv_size = m_fz.PreserveObject(packer,       "FZ"       ); break;
-         case ID__NODALMASS : prv_size = m_nodalMass.PreserveObject(packer,"NODALMASS"); break; 
-         case ID__SYMMX     : prv_size = m_symmX.PreserveObject(packer,    "SYMMX"    ); break;  
-         case ID__SYMMY     : prv_size = m_symmY.PreserveObject(packer,    "SYMMY"    ); break;
-         case ID__SYMMZ     : prv_size = m_symmZ.PreserveObject(packer,    "SYMMZ"    ); break;
-         case ID__NODELIST  : prv_size = m_nodelist.PreserveObject(packer, "NODELIST" ); LULESH_PRINT("[%d] Nodelist preserved %zu/%zu\n", myRank, m_nodelist.size(), m_nodelist.capacity()); break;
-         case ID__LXIM      : prv_size = m_lxim.PreserveObject(packer,     "LXIM"     ); break;  
-         case ID__LXIP      : prv_size = m_lxip.PreserveObject(packer,     "LXIP"     ); break;
-         case ID__LETAM     : prv_size = m_letam.PreserveObject(packer,    "LETAM"    ); break;
-         case ID__LETAP     : prv_size = m_letap.PreserveObject(packer,    "LETAP"    ); break;
-         case ID__LZETAM    : prv_size = m_lzetam.PreserveObject(packer,   "LZETAM"   ); break;
-         case ID__LZETAP    : prv_size = m_lzetap.PreserveObject(packer,   "LZETAP"   ); break;
-         case ID__ELEMBC    : prv_size = m_elemBC.PreserveObject(packer,   "ELEMBC"   ); break;
-         case ID__DXX       : prv_size = m_dxx.PreserveObject(packer,      "DXX"      ); break;  
-         case ID__DYY       : prv_size = m_dyy.PreserveObject(packer,      "DYY"      ); break;
-         case ID__DZZ       : prv_size = m_dzz.PreserveObject(packer,      "DZZ"      ); break;
-         case ID__DELV_XI   : prv_size = m_delv_xi.PreserveObject(packer,  "DELV_XI"  ); break; 
-         case ID__DELV_ETA  : prv_size = m_delv_eta.PreserveObject(packer, "DELV_ETA" ); break;
-         case ID__DELV_ZETA : prv_size = m_delv_zeta.PreserveObject(packer,"DELV_ZETA"); break;  
-         case ID__DELX_XI   : prv_size = m_delx_xi.PreserveObject(packer,  "DELX_XI"  ); break; 
-         case ID__DELX_ETA  : prv_size = m_delx_eta.PreserveObject(packer, "DELX_ETA" ); break;
-         case ID__DELX_ZETA : prv_size = m_delx_zeta.PreserveObject(packer,"DELX_ZETA"); break; 
-         case ID__E         : prv_size = m_e.PreserveObject(packer,        "E"        ); break; 
-         case ID__P         : prv_size = m_p.PreserveObject(packer,        "P"        ); break; 
-         case ID__Q         : prv_size = m_q.PreserveObject(packer,        "Q"        ); break; 
-         case ID__QL        : prv_size = m_ql.PreserveObject(packer,       "QL"       ); break;
-         case ID__QQ        : prv_size = m_qq.PreserveObject(packer,       "QQ"       ); break;
-         case ID__V         : prv_size = m_v.PreserveObject(packer,        "V"        ); break; 
-         case ID__VOLO      : prv_size = m_volo.PreserveObject(packer,     "VOLO"     ); break;
-         case ID__VNEW      : prv_size = m_vnew.PreserveObject(packer,     "VNEW"     ); break;
-         case ID__DELV      : prv_size = m_delv.PreserveObject(packer,     "DELV"     ); break;
-         case ID__VDOV      : prv_size = m_vdov.PreserveObject(packer,     "VDOV"     ); break;
-         case ID__AREALG    : prv_size = m_arealg.PreserveObject(packer,   "AREALG"   ); break;  
-         case ID__SS        : prv_size = m_ss.PreserveObject(packer,       "SS"       ); break;      
-         case ID__ELEMMASS  : prv_size = m_elemMass.PreserveObject(packer, "ELEMMASS" ); break;
+         case ID__X         : prv_size = m_x.PreserveObject(packer,         prv_type, "X"        ); break;
+         case ID__Y         : prv_size = m_y.PreserveObject(packer,         prv_type, "Y"        ); break;
+         case ID__Z         : prv_size = m_z.PreserveObject(packer,         prv_type, "Z"        ); break;
+         case ID__XD        : prv_size = m_xd.PreserveObject(packer,        prv_type, "XD"       ); break; 
+         case ID__YD        : prv_size = m_yd.PreserveObject(packer,        prv_type, "YD"       ); break;
+         case ID__ZD        : prv_size = m_zd.PreserveObject(packer,        prv_type, "ZD"       ); break;
+         case ID__XDD       : prv_size = m_xdd.PreserveObject(packer,       prv_type, "XDD"      ); break;
+         case ID__YDD       : prv_size = m_ydd.PreserveObject(packer,       prv_type, "YDD"      ); break;
+         case ID__ZDD       : prv_size = m_zdd.PreserveObject(packer,       prv_type, "ZDD"      ); break;
+         case ID__FX        : prv_size = m_fx.PreserveObject(packer,        prv_type, "FX"       ); break; 
+         case ID__FY        : prv_size = m_fy.PreserveObject(packer,        prv_type, "FY"       ); break;
+         case ID__FZ        : prv_size = m_fz.PreserveObject(packer,        prv_type, "FZ"       ); break;
+         case ID__NODALMASS : prv_size = m_nodalMass.PreserveObject(packer, prv_type, "NODALMASS"); break; 
+         case ID__SYMMX     : prv_size = m_symmX.PreserveObject(packer,     prv_type, "SYMMX"    ); break;  
+         case ID__SYMMY     : prv_size = m_symmY.PreserveObject(packer,     prv_type, "SYMMY"    ); break;
+         case ID__SYMMZ     : prv_size = m_symmZ.PreserveObject(packer,     prv_type, "SYMMZ"    ); break;
+         case ID__NODELIST  : prv_size = m_nodelist.PreserveObject(packer,  prv_type, "NODELIST" ); LULESH_PRINT("[%d] Nodelist preserved %zu/%zu\n", myRank, m_nodelist.size(), m_nodelist.capacity()); break;
+         case ID__LXIM      : prv_size = m_lxim.PreserveObject(packer,      prv_type, "LXIM"     ); break;  
+         case ID__LXIP      : prv_size = m_lxip.PreserveObject(packer,      prv_type, "LXIP"     ); break;
+         case ID__LETAM     : prv_size = m_letam.PreserveObject(packer,     prv_type, "LETAM"    ); break;
+         case ID__LETAP     : prv_size = m_letap.PreserveObject(packer,     prv_type, "LETAP"    ); break;
+         case ID__LZETAM    : prv_size = m_lzetam.PreserveObject(packer,    prv_type, "LZETAM"   ); break;
+         case ID__LZETAP    : prv_size = m_lzetap.PreserveObject(packer,    prv_type, "LZETAP"   ); break;
+         case ID__ELEMBC    : prv_size = m_elemBC.PreserveObject(packer,    prv_type, "ELEMBC"   ); break;
+         case ID__DXX       : prv_size = m_dxx.PreserveObject(packer,       prv_type, "DXX"      ); break;  
+         case ID__DYY       : prv_size = m_dyy.PreserveObject(packer,       prv_type, "DYY"      ); break;
+         case ID__DZZ       : prv_size = m_dzz.PreserveObject(packer,       prv_type, "DZZ"      ); break;
+         case ID__DELV_XI   : prv_size = m_delv_xi.PreserveObject(packer,   prv_type, "DELV_XI"  ); break; 
+         case ID__DELV_ETA  : prv_size = m_delv_eta.PreserveObject(packer,  prv_type, "DELV_ETA" ); break;
+         case ID__DELV_ZETA : prv_size = m_delv_zeta.PreserveObject(packer, prv_type, "DELV_ZETA"); break;  
+         case ID__DELX_XI   : prv_size = m_delx_xi.PreserveObject(packer,   prv_type, "DELX_XI"  ); break; 
+         case ID__DELX_ETA  : prv_size = m_delx_eta.PreserveObject(packer,  prv_type, "DELX_ETA" ); break;
+         case ID__DELX_ZETA : prv_size = m_delx_zeta.PreserveObject(packer, prv_type, "DELX_ZETA"); break; 
+         case ID__E         : prv_size = m_e.PreserveObject(packer,         prv_type, "E"        ); break; 
+         case ID__P         : prv_size = m_p.PreserveObject(packer,         prv_type, "P"        ); break; 
+         case ID__Q         : prv_size = m_q.PreserveObject(packer,         prv_type, "Q"        ); break; 
+         case ID__QL        : prv_size = m_ql.PreserveObject(packer,        prv_type, "QL"       ); break;
+         case ID__QQ        : prv_size = m_qq.PreserveObject(packer,        prv_type, "QQ"       ); break;
+         case ID__V         : prv_size = m_v.PreserveObject(packer,         prv_type, "V"        ); break; 
+         case ID__VOLO      : prv_size = m_volo.PreserveObject(packer,      prv_type, "VOLO"     ); break;
+         case ID__VNEW      : prv_size = m_vnew.PreserveObject(packer,      prv_type, "VNEW"     ); break;
+         case ID__DELV      : prv_size = m_delv.PreserveObject(packer,      prv_type, "DELV"     ); break;
+         case ID__VDOV      : prv_size = m_vdov.PreserveObject(packer,      prv_type, "VDOV"     ); break;
+         case ID__AREALG    : prv_size = m_arealg.PreserveObject(packer,    prv_type, "AREALG"   ); break;  
+         case ID__SS        : prv_size = m_ss.PreserveObject(packer,        prv_type, "SS"       ); break;      
+         case ID__ELEMMASS  : prv_size = m_elemMass.PreserveObject(packer,  prv_type, "ELEMMASS" ); break;
          case ID__REGELEMSIZE : 
-                     packer.Add((char *)m_regElemSize, packer::CDEntry(cd::GetCDEntryID("REGELEMSIZE"), m_numReg * sizeof(Index_t), 0, (char *)m_regElemSize)); prv_size = m_numReg* sizeof(Index_t);
+                     packer.Add((char *)m_regElemSize, 
+                                packer::CDEntry(cd::GetCDEntryID("REGELEMSIZE"), 
+                                                (is_ref)? packer::Attr::krefer:0, 
+                                                m_numReg * sizeof(Index_t), 
+                                                0, 
+                                                (char *)m_regElemSize)); 
+                     prv_size = m_numReg* sizeof(Index_t);
                      break; 
          case ID__REGNUMLIST  : 
-                     packer.Add((char *)m_regNumList, packer::CDEntry(cd::GetCDEntryID("REGNUMLIST"), m_numElem * sizeof(Index_t), 0, (char *)m_regNumList)); prv_size = m_numElem* sizeof(Index_t);
+                     packer.Add((char *)m_regNumList, packer::CDEntry(cd::GetCDEntryID("REGNUMLIST"), CHECK_PRV_TYPE(prv_type,kRef)? packer::Attr::krefer:0, m_numElem * sizeof(Index_t), 0, (char *)m_regNumList)); prv_size = m_numElem* sizeof(Index_t);
                      break;
          case ID__REGELEMLIST : 
-                     packer.Add((char *)m_regElemlist, packer::CDEntry(cd::GetCDEntryID("REGELEMLIST"), m_numReg * sizeof(Index_t *), 0, (char *)m_regElemlist)); prv_size = m_numReg* sizeof(Index_t *);
+                     packer.Add((char *)m_regElemlist, packer::CDEntry(cd::GetCDEntryID("REGELEMLIST"), CHECK_PRV_TYPE(prv_type,kRef)? packer::Attr::krefer:0, m_numReg * sizeof(Index_t *), 0, (char *)m_regElemlist)); prv_size = m_numReg* sizeof(Index_t *);
                      for(int i=0; i<m_numReg; i++) {
                         char elemID[32];
                         sprintf(elemID, "REGELEMLIST_%d", i);
-                        packer.Add((char *)(m_regElemlist[i]), packer::CDEntry(cd::GetCDEntryID(elemID), regElemSize(i) * sizeof(Index_t), 0, (char *)(m_regElemlist[i]))); prv_size = regElemSize(i) * sizeof(Index_t);
+                        packer.Add((char *)(m_regElemlist[i]), packer::CDEntry(cd::GetCDEntryID(elemID), CHECK_PRV_TYPE(prv_type,kRef)? packer::Attr::krefer:0, regElemSize(i) * sizeof(Index_t), 0, (char *)(m_regElemlist[i]))); prv_size = regElemSize(i) * sizeof(Index_t);
                      }
                      break;
          case ID__COMMBUFSEND : 
-                     packer.Add((char *)commDataSend, packer::CDEntry(cd::GetCDEntryID("COMMBUFSEND"), comBufSize * sizeof(Real_t), 0, (char *)commDataSend)); prv_size = comBufSize * sizeof(Real_t);
+                     packer.Add((char *)commDataSend, packer::CDEntry(cd::GetCDEntryID("COMMBUFSEND"), CHECK_PRV_TYPE(prv_type,kRef)? packer::Attr::krefer:0, comBufSize * sizeof(Real_t), 0, (char *)commDataSend)); prv_size = comBufSize * sizeof(Real_t);
                      break;
          case ID__COMMBUFRECV : 
-                     packer.Add((char *)commDataRecv, packer::CDEntry(cd::GetCDEntryID("COMMBUFRECV"), comBufSize * sizeof(Real_t), 0, (char *)commDataRecv)); prv_size = comBufSize * sizeof(Real_t);
+                     packer.Add((char *)commDataRecv, packer::CDEntry(cd::GetCDEntryID("COMMBUFRECV"), CHECK_PRV_TYPE(prv_type,kRef)? packer::Attr::krefer:0, comBufSize * sizeof(Real_t), 0, (char *)commDataRecv)); prv_size = comBufSize * sizeof(Real_t);
                      break;
          default: LULESH_PRINT("Error: Unsupported ID:%lu\n", id);
                      assert(0);

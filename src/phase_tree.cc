@@ -392,7 +392,14 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     }
     const PhaseNode *pn = pt->second;
     cd::phaseTree.current_->errortype_ = pn->errortype_;
-    cd::phaseTree.current_->medium_ = pn->medium_;
+    cd::phaseTree.current_->medium_    = pn->medium_;
+//      printf("(%s, %lx) <- (%s, %lx)\n", 
+//          GetMedium(cd::phaseTree.current_->medium_),
+//          cd::phaseTree.current_->errortype_, 
+//          GetMedium(pn->medium_), 
+//          pn->errortype_);
+  } else {
+//    printf("it is empty?\n");
   }
 #endif
 

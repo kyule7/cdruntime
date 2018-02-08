@@ -536,6 +536,10 @@ namespace tuned {
 ////    bool     active_;
 //  };
 
+#define CD_LIBC_LOGGING 0
+
+#if CD_LIBC_LOGGING
+
 #define TunedPrologue() \
   cd::app_side = false; \
   logger::disabled = true; \
@@ -555,7 +559,29 @@ namespace tuned {
 
 #define PackerEpilogue() \
   cd::app_side = packer::orig_appside; \
-  logger::disabled = packer::orig_disabled; 
+  logger::disabled = packer::orig_disabled;
+
+#else
+
+#define TunedPrologue() \
+  cd::app_side = false; \
+  tuned::begin_clk = CD_CLOCK(); 
+
+#define TunedEpilogue() \
+  tuned::end_clk = CD_CLOCK(); \
+  tuned::elapsed_time += tuned::end_clk - tuned::begin_clk; \
+  cd::app_side = true; \
+
+#define PackerPrologue() \
+  packer::orig_appside = cd::app_side; \
+  cd::app_side = false; \
+
+#define PackerEpilogue() \
+  cd::app_side = packer::orig_appside; \
+
+
+#endif
+
 } // namespace tuned ends
 
 #endif

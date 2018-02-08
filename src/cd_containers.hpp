@@ -111,7 +111,6 @@ float Compare(     T &prsv_p,       Y &prsv_sz,
 
 template <typename T>
 class CDVector : public std::vector<T>, public PackerSerializable {
-//  int orig_size;
     char *orig_;  
     uint64_t orig_size_;  
     uint64_t prv_size_;  
@@ -136,7 +135,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
   uint64_t PreserveObject(packer::CDPacker &packer, CDPrvType prv_type, const char *entry_str) {
     PackerPrologue();
     uint64_t prv_size = this->size() * sizeof(T);
-    if(entry_str != NULL) {
+    if(entry_str != NULL && name_ == VECTOR_INIT_NAME) {
       name_ += entry_str;
     }
     CD_VECTOR_PRINT("CDVector Preserve elemsize:%zu, %zu %zu\n", sizeof(T), this->size(), this->capacity()); 
@@ -151,7 +150,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     packer::CDEntry entry(id_, ((prv_type & kRef) == kRef)? packer::Attr::krefer : 0, prv_size, 0, ptr);
     //uint64_t table_offset = packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
     packer.Add(ptr, entry);
-    //printf("CDVector %s preserved (%lu)\n", name_.c_str(), prv_size);
+//    if(myTaskID == 0) printf("CDVector %s (%lx) preserved (0x%lx)\n", name_.c_str(), id_, prv_size);
 #if DO_COMPARE
     CompareVector();
 #endif
@@ -202,7 +201,11 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     char *ptr = reinterpret_cast<char *>(this->data());
     //printf("CDVector %s restored (%lu)\n", name_.c_str(), rst_size);
     packer::CDEntry *pentry = reinterpret_cast<packer::CDEntry *>(packer.Restore(id_, ptr, rst_size));
-    assert(pentry);
+    if(pentry == NULL) { 
+
+      printf("Failed to restore CDVector %s (%lx) restored (%lu)\n", name_.c_str(), id_, rst_size);
+      return -1UL; }
+//    assert(pentry);
     uint64_t rst_size_ser = pentry->size();
     if(rst_size_ser == 0) {
       this->clear();
@@ -316,6 +319,9 @@ class CDVector : public std::vector<T>, public PackerSerializable {
 //  CDVector<T>(const std::initializer_list<T> &il) : std::vector<T>(il), name_(UNDEFINED_NAME) { Init(); }
   CDVector<T>(const std::initializer_list<T> &il) 
     : std::vector<T>(il), name_(VECTOR_INIT_NAME) { Init(); }
+  CDVector<T>(const CDVector<T> &that) 
+    : std::vector<T>(that), orig_(that.orig_), orig_size_(that.orig_size_), prv_size_(0), difference_(0.0), read_(false)
+  {}
 //  CDVector<T>(void) : name_(UNDEFINED_NAME) { Init(); }
 //  CDVector<T>(int len, const char []str=UNDEFINED_NAME) : std::vector<T>(len), name_(str) { Init(); }
 ////  CDVector<T>(const std::initializer_list<T> &il) : std::vector<T>(il), name_(UNDEFINED_NAME) { Init(); }
@@ -384,7 +390,12 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       init_str2id = true;
     }
   }
-  void SetRead(void) { read_ = true; }
+
+  inline 
+  void SetRead(long idx=0) { 
+    //if(idx < 0 || idx > (long)this->size()) { printf("idx %ld >= size %zu\n", idx, this->size()); assert(0); }
+    read_ = true; 
+  }
   void CheckID(const std::string &str) {
     auto it = str2id.find(str);
     static int cnt = 0;

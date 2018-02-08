@@ -365,6 +365,7 @@ class CDHandle {
 
       RecordBegin(tuned::phaseTree.current_->profile_);
 #   else
+      assert(CD_TUNING_ENABLED);
       if(cd::phaseTree.current_ != NULL) {
         cur->phase_ = cd::phaseTree.current_->GetPhaseNode(level_, label_);
       } else {
@@ -375,6 +376,11 @@ class CDHandle {
       TUNE_DEBUG("[Tune %s lv:%u phase:%u]  %s %s name:%s\n", 
              __func__, cur->level_, cur->phase_,
              cur->label_.c_str(), label, cur->name_.c_str()); STOPHANDLE;
+      if(cd::myTaskID == 0) {
+        printf("[Tune %s lv:%u phase:%u]  %s %s name:%s\n", 
+             __func__, cur->level_, cur->phase_,
+             cur->label_.c_str(), label, cur->name_.c_str()); STOPHANDLE;
+      }
       TunedEpilogue();
       return ret;
     } 
@@ -472,8 +478,12 @@ class CDHandle {
     {
       TunedPrologue();
       CDErrT ret = common::kOK; 
-#     if CD_RUNTIME_ENABLED
       CDHandle *cur = GetLeafCD();
+//      printf("[Tune1 %s lv:%u phase:%u] name:%s count:%lu <= interval:%ld\n", 
+//          __func__, cur->level_, cur->phase_, my_name, 
+//          cd::phaseTree.current_->count_,
+//          cd::phaseTree.current_->interval_ - 1);
+#     if CD_RUNTIME_ENABLED
       TUNE_DEBUG("[Tune %s lv:%u phase:%u] name:%s count:%lu <= interval:%ld\n", 
           __func__, cur->level_, cur->phase_, my_name, 
           tuned::phaseTree.current_->count_,
@@ -518,9 +528,13 @@ class CDHandle {
                     )
     {
       TunedPrologue();
+      CDHandle *cur = GetLeafCD();
+//      printf("[Tune %s lv:%u phase:%u] name:%s count:%lu <= interval:%ld\n", 
+//          __func__, cur->level_, cur->phase_, my_name, 
+//          cd::phaseTree.current_->count_,
+//          cd::phaseTree.current_->interval_ - 1);
       CDErrT ret = common::kOK; 
 #     if CD_RUNTIME_ENABLED
-      CDHandle *cur = GetLeafCD();
       TUNE_DEBUG("[Tune %s lv:%u phase:%u] name:%s count:%lu <= interval:%ld\n", 
           __func__, cur->level_, cur->phase_, my_name, 
           tuned::phaseTree.current_->count_,

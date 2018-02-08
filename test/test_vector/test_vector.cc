@@ -34,7 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 #include "cd_containers.hpp"
 #include "cd.h"
-using namespace cd;
+//using namespace cd;
 using namespace std;
 static int myRankID = 0;
 static int numProcs = 1;
@@ -309,6 +309,8 @@ int TestCD(void)
   int test_results[8] = {0,};
   int test_result = 0;
   int num_reexecution = 0;
+  int num_reexecution_lv1 = 0;
+  int num_reexecution_lv2 = 0;
 
 
   char arrAstr[32];
@@ -346,45 +348,57 @@ int TestCD(void)
     cd::cddbg << "\t\tLevel 1 CD Begin..." << endl;
   
     CDPrvType prv_type_1 = kRef;
-    PrintAll((num_reexecution == 0)? "Before Preserve ": "Before Restore ");
-    child_lv1->Preserve(arrayA, prv_type_1, "refA", arrAstr); 
-    child_lv1->Preserve(arrayB, prv_type_1, "refB", arrBstr); 
-    child_lv1->Preserve(arrayE, prv_type_1, "refE", arrEstr);
-    PrintAll((num_reexecution == 0)? "After Preserve ": "After  Restore ");
+    PrintAll((num_reexecution_lv1 == 0)? "Before Preserve ": "Before Restore ");
+    child_lv1->Preserve(arrayA, prv_type_1, "refA-Lv1", arrAstr); 
+    child_lv1->Preserve(arrayB, prv_type_1, "refB-Lv1", arrBstr); 
+    child_lv1->Preserve(arrayC, prv_type_1, "refC-Lv1", arrCstr);
+    child_lv1->Preserve(arrayE, prv_type_1, "refE-Lv1", arrEstr);
+    PrintAll((num_reexecution_lv1 == 0)? "After Preserve ": "After  Restore ");
+    CorruptData(arrayA);
+    CorruptData(arrayB);
+    CorruptData(arrayC);
   
     cd::cddbg << "\t\tPreserve via copy: arrayA (Share), arrayB (Share), arrayE (Share)\n" << endl;
   
     cd::cddbg.flush();
-    if (0) { // Level 2
+    if (1) { // Level 2
       CDHandle* child_lv2=child_lv1->Create(LV2, "CD2");
       cd::cddbg << "\t\tCD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
-    
-      CD_Begin(child_lv2, "CD LV 2");
-      cd::cddbg << "\t\t\t\tLevel 2 CD Begin...\n" << endl;
-      cd::cddbg.flush();
-    
-      child_lv2->Preserve(arrayA, kRef, "arrA-Lv2", arrAstr); 
-      child_lv2->Preserve(arrayF, kRef, "arrF-Lv2", arrFstr);
-      child_lv2->Preserve(arrayB, kRef, "arrB-Lv2", arrBstr);
-      child_lv2->Preserve(arrayG, kRef, "arrG-Lv2", arrGstr);
-      child_lv2->Preserve(arrayC, kCopy, arrCstr);
-      cd::cddbg << "\t\t\t\tPreserve via ref : arrayA (local), arrayB (local), arrayF (remote), arrayG (remote)" << endl;
-      cd::cddbg << "\t\t\t\tPreserve via copy: arrayC" << endl;
-      cd::cddbg.flush();
-    
-    
-//      if(num_reexecution = 1) {
-//        CorruptData(arrayE);
-//        num_reexecution++;
-//      }
-      // Level 2 Body
-    
-    
-      // Detect Error here
-      child_lv2->Detect();
-    
-      CD_Complete(child_lv2);
-      cd::cddbg << "\t\t\t\tLevel 2 CD Complete...\n" << endl;
+      for(int ii=0; ii<6; ii++) { 
+        CD_Begin(child_lv2, "CD LV 2");
+        cd::cddbg << "\t\t\t\tLevel 2 CD Begin...\n" << ii << endl;
+        cd::cddbg.flush();
+      
+        PrintAll((num_reexecution_lv2 == 0)? "Lv2 Before Preserve ": "Lv2 Before  Restore ");
+        child_lv2->Preserve(arrayA, kCopy, "arrA-Lv2", arrAstr); 
+        child_lv2->Preserve(arrayB, kCopy, "arrB-Lv2", arrBstr);
+        child_lv2->Preserve(arrayF, kRef, "arrF-Lv2", arrFstr);
+        child_lv2->Preserve(arrayG, kRef, "arrG-Lv2", arrGstr);
+        child_lv2->Preserve(arrayC, kCopy, arrCstr);
+        PrintAll((num_reexecution_lv2 == 0)? "Lv2 After Preserve ": "Lv2 After  Restore ");
+        cd::cddbg << "\t\t\t\tPreserve via ref : arrayA (local), arrayB (local), arrayF (remote), arrayG (remote)" << endl;
+        cd::cddbg << "\t\t\t\tPreserve via copy: arrayC" << endl;
+        cd::cddbg.flush();
+      
+      
+        if(num_reexecution_lv2 == 0 && ii == 4) {
+          CorruptData(arrayA);
+          CorruptData(arrayF);
+          CorruptData(arrayG);
+          CorruptData(arrayC);
+          num_reexecution_lv2++;
+          //child_lv2->CDAssert(false);
+          child_lv1->CDAssert(false);
+        }
+        // Level 2 Body
+      
+      
+        // Detect Error here
+        child_lv2->Detect();
+      
+        CD_Complete(child_lv2);
+        cd::cddbg << "\t\t\t\tLevel 2 CD Complete... "<< ii <<  endl;
+      }
       child_lv2->Destroy();
       cd::cddbg << "\t\t\t\tLevel 2 CD Destroyed...\n" << endl;
     }
@@ -392,11 +406,11 @@ int TestCD(void)
     cd::cddbg.flush(); 
     // Detect Error here
     child_lv1->Detect();
-    if(num_reexecution == 0) {
+    if(num_reexecution_lv1 == 0) {
       CorruptData(arrayA);
       CorruptData(arrayB);
       CorruptData(arrayC);
-      num_reexecution++;
+      num_reexecution_lv1++;
       child_lv1->CDAssert(false);
     }
   

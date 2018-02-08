@@ -200,7 +200,7 @@
                                     //!< duplicate the data because serialized data is
                                     //!< already another form of preservation.
                                     //!< This can be used such as kCopy | kSerdes
-                    kSource=CD_BIT_13, //!< Indicates application data
+                    kIgnore=CD_BIT_13, //!< Indicates application data
                     kModify=CD_BIT_14, //!< This indicates the modified data.
                                        //!< kModify is used for advance() call to
                                        //!< update preservation entries which are marked with it.

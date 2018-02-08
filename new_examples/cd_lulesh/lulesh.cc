@@ -173,8 +173,13 @@ int intvl0 = -1;
 int intvl1 = -1;
 int intvl2 = -1;
 #if _CD
+CDHandle *cd_main_loop = NULL;
+CDHandle *cd_child_loop = NULL;
+//CDHandle *cd_main_dummy = NULL;;
+CDHandle *cd_child_dummy = NULL;
 packer::MagicStore magic __attribute__((aligned(0x1000)));
 using namespace cd;
+#if 0
 uint64_t prvec_all = ( M__X  | M__Y  | M__Z  | 
                               M__XD | M__YD | M__ZD |
                               M__XDD| M__YDD| M__ZDD|
@@ -192,6 +197,25 @@ uint64_t prvec_all = ( M__X  | M__Y  | M__Z  |
                               M__ELEMBC | M__ELEMMASS | M__REGELEMSIZE 
 //                              | M__REGELEMLIST | M__REGELEMLIST_INNER | M__REG_NUMLIST 
                               );
+#endif
+uint64_t prvec_all = ( M__X  | M__Y  | M__Z  | 
+                              M__XD | M__YD | M__ZD |
+                              M__XDD| M__YDD| M__ZDD|
+                              M__DXX| M__DYY| M__DZZ|
+                              M__FX | M__FY | M__FZ |
+                              M__QQ | M__QL | M__SS |
+                              M__Q  | M__E  | M__VOLO | 
+                              M__V | M__P |// M__VNEW |
+                              M__DELV | M__VDOV | M__AREALG |
+                              M__DELX_ZETA  | M__DELX_XI  | M__DELX_ETA |
+                              M__SYMMX | M__SYMMY | M__SYMMZ |
+                              M__NODALMASS | //M__NODELIST | 
+                              M__LXIM | M__LXIP | M__LETAM | 
+                              M__LETAP | M__LZETAM | M__LZETAP | 
+                              M__ELEMBC | M__ELEMMASS | M__REGELEMSIZE 
+//                              | M__REGELEMLIST | M__REGNUMLIST 
+                              );
+
 uint64_t prvec_ref = ( M__SYMMX | M__SYMMY | M__SYMMZ |
                               M__NODALMASS | M__NODELIST | 
                               M__LXIM | M__LXIP | M__LETAM | 
@@ -215,6 +239,9 @@ uint64_t prvec_1   = ( M__X  | M__Y  | M__Z  |
 uint64_t prvec_elem = (M__DELV | M__VDOV | M__AREALG);
 uint64_t prvec_q    = (M__QL | M__QQ);
 uint64_t prvec_matrl = (M__E | M__P | M__Q | M__SS | M__V);
+uint64_t prvec_posall = (prvec_acc | prvec_vel | prvec_pos);
+
+
 // CalcLagrangeElements ~ CalcQForElems
 uint64_t prvec_2   = ( M__DELV | M__VDOV | M__AREALG | M__ELEMBC |
                               M__DXX| M__DYY| M__DZZ|
@@ -224,6 +251,11 @@ uint64_t prvec_2   = ( M__DELV | M__VDOV | M__AREALG | M__ELEMBC |
 // ApplyMaterialPropertiesForElems ~ UpdateVolumesForElems
 uint64_t prvec_3   = ( M__QQ | M__QL | M__SS |
                               M__Q  | M__E  | M__VOLO | M__V | M__P );
+
+uint64_t prvec_readwrite_all  = ( prvec_f | prvec_posall
+                             | prvec_elem | prvec_q | prvec_matrl );
+uint64_t prvec_readonly_all = (prvec_all & (PRVEC_MASK & (~prvec_readwrite_all)));
+
 #endif
 Domain *pDomain = NULL;
 /*********************************/
@@ -514,7 +546,7 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
         LULESH_PRINT("x: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", x0, x1, x2, x3, x4, x5, x6, x7);
         LULESH_PRINT("y: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", y0, y1, y2, y3, y4, y5, y6, y7);
         LULESH_PRINT("z: %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", z0, z1, z2, z3, z4, z5, z6, z7);
-        const Index_t base = Index_t(8)*pDomain->prv_idx; 
+//        const Index_t base = Index_t(8)*pDomain->prv_idx; 
         LULESH_PRINT("[%d] CHECK nodelist size:%zu/%zu (%d), %d %d %d %d %d %d %d %d\n", 
                 myRank, pDomain->m_nodelist.size(), pDomain->m_nodelist.capacity(), pDomain->numElem(),
                 pDomain->m_nodelist[base],
@@ -1164,8 +1196,13 @@ void CalcHourglassControlForElems(Domain& domain,
    Real_t *y8n  = Allocate<Real_t>(numElem8) ;
    Real_t *z8n  = Allocate<Real_t>(numElem8) ;
 
+   if(domain.cycle() == 63) {
+      printf("stop here\n");
+
+
+   }
    /* start loop over elements */
-#pragma omp parallel for firstprivate(numElem)
+//#pragma omp parallel for firstprivate(numElem)
    for (Index_t i=0 ; i<numElem ; ++i){
       Real_t  x1[8],  y1[8],  z1[8] ;
       Real_t pfx[8], pfy[8], pfz[8] ;
@@ -1283,12 +1320,19 @@ static inline void CalcForceForNodes(Domain& domain)
   CDHandle *leaf_cd = GetLeafCD();
   CD_Begin(leaf_cd, "CalcForce");
 //  leaf_cd->Preserve(domain.SetOp(prvec_ref_0), kRef, "CalcForceRef");
-  leaf_cd->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
+  #if _CD_DUMMY
+  leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy_Leaf");
+  #else
+  leaf_cd->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy_Leaf");
+  #endif
 #endif
 
   /* Calcforce calls partial, force, hourq */
   CalcVolumeForceForElems(domain) ;
-#if _CD && _LEAF_LV
+#if _CD && _CD_DUMMY
+  if(domain.cycle() % intvl1 == 0) {
+    cd_child_dummy->Preserve(domain.SetOp(prvec_f), kOutput, "CalcForceCopy_Leaf");
+  }
   leaf_cd->Detect();
   leaf_cd->Complete();
 #endif
@@ -1423,8 +1467,12 @@ void LagrangeNodal(Domain& domain)
   CDHandle *leaf_cd = GetLeafCD();
   CD_Begin(leaf_cd, "CalcPos");
 //  leaf_cd->Preserve(domain.SetOp(prvec_f | prvec_symm), kRef, "Force,Symm");
-  leaf_cd->Preserve(domain.SetOp(prvec_acc | prvec_vel | prvec_pos), kCopy, "Pos,Vel,Acc");
-  //leaf_cd->Preserve(domain.SetOp(prvec_acc | prvec_vel | prvec_pos), kRef, "Pos,Vel,Acc");
+  //leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
+  #if _CD_DUMMY
+  leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc_Leaf");
+  #else
+  leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc_Leaf");
+  #endif
 #endif
    CalcAccelerationForNodes(domain, domain.numNode());
    
@@ -1439,11 +1487,13 @@ void LagrangeNodal(Domain& domain)
    // Out{X,Y,Z} <- In{X,Y,Z,XD,YD,ZD}
    CalcPositionForNodes( domain, delt, domain.numNode() );
    domain.CheckUpdate("CalcPosition");
+#if _CD && _CD_DUMMY
 //   // Preserve to dummy
-//   GetParentCD()->Preserve(domain.SetOp(prvec_acc | prvec_vel | prvec_pos), kOutput, "Pos,Vel,Acc");
-#if _CD && _LEAF_LV
-  leaf_cd->Detect();
-  leaf_cd->Complete();
+   if(domain.cycle() % intvl1 == 0) {
+     cd_child_dummy->Preserve(domain.SetOp(prvec_posall), kOutput, "PosVelAcc_Leaf");
+   }
+   leaf_cd->Detect();
+   leaf_cd->Complete();
 #endif
 
 #if USE_MPI
@@ -2627,37 +2677,61 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 #if _CD && _LEAF_LV
   CDHandle *leaf_cd = GetLeafCD();
   CD_Begin(leaf_cd, "LagrangeElem");
-  leaf_cd->Preserve(domain.SetOp(prvec_elem), kCopy, "Elem");
+  #if _CD_DUMMY
+  leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem_Leaf");
+  #else
+  leaf_cd->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem_Leaf");
+  #endif
 //  leaf_cd->Preserve(domain.SetOp(prvec_f | prvec_symm), kRef, "Force,Symm");
-//  leaf_cd->Preserve(domain.SetOp(prvec_acc | prvec_vel | prvec_pos), kCopy, "Pos,Vel,Acc");
-  //leaf_cd->Preserve(domain.SetOp(prvec_acc | prvec_vel | prvec_pos), kRef, "Pos,Vel,Acc");
+//  leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
+  //leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc");
 #endif
   // Out{DELV,VDOV,AREALG} <- In{X,Y,Z,XD,YD,ZD,NODELIST
   //                             DXX,DYY,DZZ,V,VOLO,DELV,VDOV,AREALG}
   CalcLagrangeElements(domain, vnew) ;
   domain.CheckUpdate("CalcLagrangeElements");
 
+#if _CD && _LEAF_LV
+  #if _CD_DUMMY
+  if(domain.cycle() % intvl1 == 0) {
+    cd_child_dummy->Preserve(domain.SetOp(prvec_elem), kOutput, "LagrangeElem_Leaf");
+  }
+  #endif
+  leaf_cd->Detect();
+  leaf_cd->Complete();
+  CD_Begin(leaf_cd, "CalcQForElems");
+  #if _CD_DUMMY
+  leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem_Leaf");
+  #else
+  leaf_cd->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem_Leaf");
+  #endif
+#endif
   /* Calculate Q.  (Monotonic q option requires communication) */
   // Out{QL,QQ} <- In{regElemSize,regElemlist,X,Y,Z,XD,YD,ZD,NODELIST
   //                  LXIM,LXIP,LETAM,LETAP,LZETAM,LZETAP,ELEMBC,
   //                  DELV_XI,DELV_ETA,DELV_ZETA,DELX_XI,DELX_ETA,DELX_ZETA,
   //                  Q,QL,QQ,VOLO,VDOV,ELEMMASS}
-#if _CD && _LEAF_LV
-  leaf_cd->Detect();
-  leaf_cd->Complete();
-  CD_Begin(leaf_cd, "CalcQForElems");
-  leaf_cd->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
-#endif
   CalcQForElems(domain, vnew) ;
   domain.CheckUpdate("CalcQForElems");
 
-  // Out{E,P,Q,SS} <- In{regElemSize,regElemlist,E,P,Q,QL,QQ,V,DELV,SS}
 #if _CD && _LEAF_LV
+  #if _CD_DUMMY
+  if(domain.cycle() % intvl1 == 0) {
+    cd_child_dummy->Preserve(domain.SetOp(prvec_q), kOutput, "QforElem_Leaf");
+  }
+  #endif
   leaf_cd->Detect();
   leaf_cd->Complete();
+
   CD_Begin(leaf_cd, "ApplyMaterialPropertiesForElems");
-  leaf_cd->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem");
+  #if _CD_DUMMY
+  leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem_Leaf");
+  #else
+  leaf_cd->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem_Leaf");
+  #endif
 #endif
+
+  // Out{E,P,Q,SS} <- In{regElemSize,regElemlist,E,P,Q,QL,QQ,V,DELV,SS}
   ApplyMaterialPropertiesForElems(domain, vnew) ;
   domain.CheckUpdate("ApplyMaterialPropertiesForElems");
 
@@ -2667,6 +2741,13 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   domain.CheckUpdate("UpdateVolunesForElems");
 
 #if _CD && _LEAF_LV
+
+  #if _CD_DUMMY
+  if(domain.cycle() % intvl1 == 0) {
+    cd_child_dummy->Preserve(domain.SetOp(prvec_matrl), kOutput, "MaterialforElem_Leaf");
+  }
+  #endif
+  leaf_cd->Detect();
   leaf_cd->Complete();
 #endif
   Release(&vnew);
@@ -2989,7 +3070,13 @@ int main(int argc, char *argv[])
 #if _CD
    CDHandle* root_cd = CD_Init(numRanks, myRank, kPFS);
    CD_Begin(root_cd, "Root");
-   root_cd->Preserve(locDom->SetOp(M__SERDES_ALL), kCopy, "Root_All");
+   root_cd->Preserve(locDom->SetOp(prvec_readonly_all), kCopy, "ReadOnlyData");
+   root_cd->Preserve(locDom->SetOp(prvec_f), kCopy, "CalcForceCopy");
+   root_cd->Preserve(locDom->SetOp(prvec_posall), kCopy, "PosVelAcc");
+   root_cd->Preserve(locDom->SetOp(prvec_elem), kCopy, "LagrangeElem");
+   root_cd->Preserve(locDom->SetOp(prvec_q), kCopy, "QforElem");
+   root_cd->Preserve(locDom->SetOp(prvec_matrl), kCopy, "MaterialforElem");
+   //root_cd->Preserve(locDom->SetOp(M__SERDES_ALL), kCopy, "Root_All");
 #endif
 
   int intvl[3] = {32, 8, 1}; 
@@ -3016,16 +3103,21 @@ int main(int argc, char *argv[])
   intvl1 = intvl[1];
   intvl2 = intvl[2];
 #if _CD
-  CDHandle *cd_main_loop = root_cd->Create("Parent", kStrict|kPFS, 0xF);
-  CDHandle *cd_child_loop = NULL;
+  cd_main_loop = root_cd->Create("Parent", kStrict|kPFS, 0xF);
+  cd_child_loop = NULL;
+  //cd_main_dummy = root_cd;
+  cd_child_dummy = NULL;
 #endif
 
   bool is_main_loop_complete  = false;
   bool is_child_loop_complete = false;
 
+
 //debug to see region sizes
 //   for(Int_t i = 0; i < locDom->numReg(); i++)
 //      std::cout << "region" << i + 1<< "size" << locDom->regElemSize(i) <<std::endl;
+   bool leaf_first = true;
+   //std::cout << "CD:" <<  _CD << ", CD_DUMMY:" << _CD_DUMMY << " ,LEAF_LV:" << _LEAF_LV <<std::endl;
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
 
       TimeIncrement(*locDom) ;
@@ -3035,28 +3127,54 @@ int main(int argc, char *argv[])
       {
         is_main_loop_complete  = false;
         CD_Begin(cd_main_loop, "MainLoop");
-        if(myRank == 0) printf("0 Before Prsv:cycle:%d == %d\n", cycle, locDom->cycle());
+        if(myRank == 0) printf("0 Before Prsv:cycle:%d == %d, %lx\n", cycle, locDom->cycle(), prvec_readonly_all);
         cd_main_loop->Preserve(locDom, sizeof(Internal), kCopy, "MainLoopDomain");
-        cd_main_loop->Preserve(locDom->SetOp(prvec_all/*M__SERDES_ALL*/), kCopy, "MainLoop");
+        cd_main_loop->Preserve(locDom->SetOp(prvec_readonly_all), kRef, "ReadOnlyData-Main", "ReadOnlyData");
+        cd_main_loop->Preserve(locDom->SetOp(prvec_f),     kRef, "CalcForceCopy"   );
+        cd_main_loop->Preserve(locDom->SetOp(prvec_posall),kRef, "PosVelAcc"     );
+        cd_main_loop->Preserve(locDom->SetOp(prvec_elem),  kRef, "LagrangeElem"    );
+        cd_main_loop->Preserve(locDom->SetOp(prvec_q),     kRef, "QforElem"        );
+        cd_main_loop->Preserve(locDom->SetOp(prvec_matrl), kRef, "MaterialforElem" );
+
+//  #if _CD_DUMMY
+//        cd_main_dummy = cd_main_loop->Create("ParentDummy", kStrict|kPFS, 0x3);
+//        CD_Begin(cd_main_dummy, "MainDummy"); // never rollback from here
+//        cd_main_dummy->Preserve(locDom->SetOp(prvec_f), kRef, "CalcForceCopy");
+//        cd_main_dummy->Preserve(locDom->SetOp(prvec_posall), kRef, "PosVelAcc");
+//        cd_main_dummy->Preserve(locDom->SetOp(prvec_elem), kRef, "LagrangeElem");
+//        cd_main_dummy->Preserve(locDom->SetOp(prvec_q), kRef, "QforElem");
+//        cd_main_dummy->Preserve(locDom->SetOp(prvec_matrl), kRef, "MaterialforElem");
+//  #endif
+//        cd_main_loop->Preserve(locDom->SetOp(prvec_all/*M__SERDES_ALL*/), kCopy, "MainLoop");
+//
         if(myRank == 0) printf("0 After Prsv:cycle:%d == %d\n", cycle, locDom->cycle());
-        cd_child_loop = cd_main_loop->Create("Child", kStrict|kPFS, 0x3);
+        CDHandle *cd_child_parent = cd_main_loop;
+  #if _CD_DUMMY
+        cd_child_dummy = cd_main_loop->Create("LeafDummy", kStrict|kLocalDisk, 0x3);
+        CD_Begin(cd_child_dummy, "ChildDummy");
+        cd_child_parent = cd_child_dummy;
+  #endif
+        cd_child_loop = cd_child_parent->Create("Loop Child", kStrict|kLocalDisk, 0x3);
+
       }
+
       if(locDom->cycle() % intvl1 == 1) {
         is_child_loop_complete = false;
         CD_Begin(cd_child_loop, "LoopChild");
-//        loopchild_preserved = true;
-        //if(locDom->cycle() % intvl0 != 0) 
-        {
-          cd_child_loop->Preserve(locDom, sizeof(Internal), kCopy, "ChildLoopDomain");
-          cd_child_loop->Preserve(locDom->SetOp(prvec_all/*M__SERDES_ALL*/), kCopy, "LoopChild");
-        }
+        cd_child_loop->Preserve(locDom, sizeof(Internal), kCopy, "ChildLoopDomain");
+        // Preserve read-only data
+        cd_child_loop->Preserve(locDom->SetOp(prvec_readonly_all), kRef, "ReadOnlyData-Leaf", "ReadOnlyData");
+        // Preserve read-write data
+        cd_child_loop->Preserve(locDom->SetOp(prvec_f),     kRef, (leaf_first)? "CalcForceCopy"   : "CalcForceCopy_Leaf"   );
+        cd_child_loop->Preserve(locDom->SetOp(prvec_posall),kRef, (leaf_first)? "PosVelAcc"     : "PosVelAcc_Leaf"     );
+        cd_child_loop->Preserve(locDom->SetOp(prvec_elem),  kRef, (leaf_first)? "LagrangeElem"    : "LagrangeElem_Leaf"    );
+        cd_child_loop->Preserve(locDom->SetOp(prvec_q),     kRef, (leaf_first)? "QforElem"        : "QforElem_Leaf"        );
+        cd_child_loop->Preserve(locDom->SetOp(prvec_matrl), kRef, (leaf_first)? "MaterialforElem" : "MaterialforElem_Leaf" );
         if(myRank==0) printf("1:cycle:%d == %d\n", cycle, locDom->cycle());
-//        if(myRank == 0) printf("LoopChild begin: %d %d\n", locDom->cycle(), intvl1);
-      } else {
-//        if(myRank == 0) printf("LoopChild no begin %d %d\n", locDom->cycle(), intvl1);
-//        loopchild_preserved = false;
       }
-        
+//      else {
+//        if(myRank == 0) printf("LoopChild no begin %d %d\n", locDom->cycle(), intvl1);
+//      }      
 #endif
 //      TimeIncrement(*locDom) ;
 //      if(myRank == 0) printf("LoopChild after timeinc: %d %d\n", locDom->cycle(), intvl1);
@@ -3082,6 +3200,10 @@ int main(int argc, char *argv[])
           is_child_loop_complete = true;
         }
         cd_child_loop->Destroy();
+  #if _CD_DUMMY
+        cd_child_dummy->Complete(); // happens every intvl1
+        cd_child_dummy->Destroy();
+  #endif
         cd_main_loop->Detect();
         //printf("0 complete:cycle:%d == %d\n", cycle, locDom->cycle());
         cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
@@ -3104,6 +3226,10 @@ int main(int argc, char *argv[])
         cd_child_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
       }
       cd_child_loop->Destroy();
+  #if _CD_DUMMY
+      cd_child_dummy->Complete(); 
+      cd_child_dummy->Destroy();
+  #endif
       cd_main_loop->Detect();
       cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
    }
