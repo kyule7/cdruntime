@@ -421,6 +421,7 @@ int loadAtomsBuffer(void *vparms, void *data, int face, char *charBuf) {
 /// unloadBuffer parameters.
 void unloadAtomsBuffer(void *vparms, void *data, int face, int bufSize,
                        char *charBuf) {
+  // vparms (parms) is not used in unloadAtomsBuffer (only in unloadForceBuffer)
   AtomExchangeParms *parms = (AtomExchangeParms *)vparms;
   SimFlat *s = (SimFlat *)data;
   AtomMsg *buf = (AtomMsg *)charBuf;

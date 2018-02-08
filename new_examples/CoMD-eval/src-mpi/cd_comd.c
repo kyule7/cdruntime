@@ -43,7 +43,7 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, uint32_t knob, SimFlat *sim) {
     // If it is EAM method (FIXME: not verified)
     size += preserveEamPot(cdh, knob, sim->doeam, (EamPotential *)sim->pot,
                            sim->boxes->nTotalBoxes);
-    // preserve HaloForce by setting 1 at the end
+    // preserve HaloForce by setting 1(=sim->doeam) at the end
     size += preserveHaloExchange(cdh, knob, sim->doeam, sim->atomExchange, 1);
   } else {
     // If it is LJ force

@@ -143,12 +143,16 @@ int main(int argc, char **argv) {
     // Notice that iStep is increasing by printRate for every iteration.
     if (iStep % (CD1_INTERVAL * printRate) == 0) {
       cd_begin(lv1_cd, "main_loop");
-      // FIXME: this has an issue and not working properly. redistributeAtoms
-      // will fail for some unknown issue.
-      // TODO: need to preserve via reference since there will be preserve via
-      //       kOutput right before cd_detect. be careful for the names.
+      // Notice that this is to be preserved via reference since for the first
+      // iteration it's already preserved at Root CD and fot the rest of loops,
+      // this is to be preserved via kOutput at the end of this iteration.
       int main_loop_pre_size =
+#if DO_OUTPUT
+          preserveAtoms(lv1_cd, kRef, sim->atoms, sim->boxes->nTotalBoxes,
+#else
+          //TODO: kRef for the first iteration and kRef for the rest os loops
           preserveAtoms(lv1_cd, kCopy, sim->atoms, sim->boxes->nTotalBoxes,
+#endif
                         1,  // is_all
                         0,  // is_gid
                         0,  // is_r
@@ -161,19 +165,27 @@ int main(int argc, char **argv) {
                         0,  // is_print
                         NULL);
       // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
-      // FIXME: seems not enough
+      // This is very conservative because it preserves all the boxes 
       main_loop_pre_size +=
+#if DO_OUTPUT
+          preserveLinkCell(lv1_cd, kRef, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
+#else
+          //TODO: kRef for the first iteration and kRef for the rest os loops
           preserveLinkCell(lv1_cd, kCopy, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
+#endif
                            0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
       // Preserve pbcFactor
+      // Note that this is to be preserved via reference since it's preserved in
+      // Root CD and it gets never gets updated during this iteration.
       main_loop_pre_size =
-          preserveHaloAtom(lv1_cd, kCopy, sim->atomExchange->parms,
+          preserveHaloAtom(lv1_cd, kRef, sim->atomExchange->parms,
                            0 /*cellList*/, 0 /*pbcFactor*/);
 #if DOPRV
       // Constants (ignored): nStep, printRate
       // iStep
       cd_preserve(lv1_cd, &iStep, sizeof(int), kCopy, "timestep_iStep",
                   "timestep_iStep");
+      // kRef: sim->pot, sim->epotential
 #endif // DOPRV
       main_loop_pre_size += sizeof(int);
     } // CD1_INTERVAL
@@ -225,9 +237,42 @@ int main(int argc, char **argv) {
       //      preserveLinkCell
       //      preserveDomain
       //      whatelse?
+#if DO_OUTPUT
+      int main_loop_pre_out_size =
+          preserveAtoms(lv1_cd, kOutput, sim->atoms, sim->boxes->nTotalBoxes,
+                        1,  // is_all
+                        0,  // is_gid
+                        0,  // is_r
+                        0,  // is_p
+                        0,  // is_f
+                        0,  // is_U
+                        0,  // is_iSpecies
+                        0,  // from (entire atoms)
+                        -1, // to (entire atoms)
+                        0,  // is_print
+                        NULL);
+      // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
+      // FIXME: seems not enough
+      main_loop_pre_out_size +=
+          preserveLinkCell(lv1_cd, kOutput, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
+                           0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
+      // Preserve pbcFactor
+      // FIXME: check this since seems strange not to preserve cellList 
+      //        and pbcFactor
+      // FIXME: it seems atomExchange->parms won't be changing once allocated
+      main_loop_pre_out_size =
+          preserveHaloAtom(lv1_cd, kOutput, sim->atomExchange->parms,
+                           0 /*cellList*/, 0 /*pbcFactor*/);
+#if DOPRV
+      // Constants (ignored): nStep, printRate
+      cd_preserve(lv1_cd, &iStep, sizeof(int), kOutput, "timestep_iStep",
+                  "timestep_iStep");
+#endif // DOPRV
+      main_loop_pre_out_size += sizeof(int);
+#endif
       cd_detect(lv1_cd);
       cd_complete(lv1_cd);
-    }
+    } // CD1_INTERVAL
 #endif
   } // iStep
   profileStop(loopTimer);
@@ -241,6 +286,7 @@ int main(int argc, char **argv) {
 #endif
 
 #if _ROOTCD
+  // no kOuput for root_cd
   cd_detect(root_cd);
   cd_complete(root_cd);
   cd_finalize();
