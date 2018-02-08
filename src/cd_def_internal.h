@@ -427,8 +427,8 @@ extern bool orig_msg_disabled;
  * @{
  */
 
-//#define CD_LIBC_LOGGING 1
-#define CD_LIBC_LOGGING 0
+
+#if CD_LIBC_LOGGING
 #define MsgPrologue() \
   orig_msg_app_side = app_side; \
   orig_msg_disabled = logger::disabled; \
@@ -472,20 +472,46 @@ extern bool orig_msg_disabled;
   app_side = orig_app_side; \
   logger::disabled = orig_disabled; 
 
-/*
-#define TunedPrologue() \
-  cd::app_side = false; \
-  logger::disabled = true; \
-  tuned::begin_clk = CD_CLOCK(); 
+#else 
 
-#define TunedEpilogue() \
-  tuned::end_clk = CD_CLOCK(); \
-  tuned::elapsed_time += tuned::end_clk - tuned::begin_clk; \
-  cd::app_side = true; \
-  logger::disabled = false; 
-*/
-//end_clk = CD_CLOCK(); 
-//  elapsed_time += end_clk - begin_clk; 
+#define MsgPrologue() \
+  orig_msg_app_side = app_side; \
+  app_side = false; \
+  msg_begin_clk = CD_CLOCK(); 
+
+#define MsgEpilogue() \
+  msg_end_clk = CD_CLOCK(); \
+  msg_elapsed_time += msg_end_clk - msg_begin_clk; \
+  app_side = orig_msg_app_side; \
+
+#define LogPrologue() \
+  log_begin_clk = CD_CLOCK(); 
+
+#define LogEpilogue() \
+  log_end_clk = CD_CLOCK(); \
+  log_elapsed_time += log_end_clk - log_begin_clk; 
+
+
+/**@brief Set current context as non-application side. 
+ * @return true/false
+ */
+
+#define CDPrologue() \
+  orig_app_side = app_side; \
+  app_side = false; \
+  begin_clk = CD_CLOCK(); 
+
+
+/**@brief Set current context as application side. 
+ * @return true/false
+ */
+
+#define CDEpilogue() \
+  end_clk = CD_CLOCK(); \
+  elapsed_time += end_clk - begin_clk; \
+  app_side = orig_app_side; \
+
+#endif // CD_LIBC_LOGGING ends
 
 
 /**@brief Check current context is application side. 

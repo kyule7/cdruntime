@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdint>
 #include "packer_common.h"
+
 //#define _DEBUG_ENABLED
 
 
@@ -13,6 +14,7 @@
 #define TWO_GIGABYTE 2147483648
 #define FOUR_GIGABYTE 4294967296
 #define INVALID_NUM     0xFFFFFFFFFFFFFFFF
+#define INVALID_NUM32   0xFFFFFFFF
 #define TABLE_ID_OFFSET 0xFFFFFFFF00000000
 
 #define _USE_PFS

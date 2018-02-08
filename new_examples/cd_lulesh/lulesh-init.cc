@@ -18,6 +18,9 @@ Domain::Domain(Int_t numRanks, Index_t colLoc,
                Index_t rowLoc, Index_t planeLoc,
                Index_t nx, int tp, int nr, int balance, Int_t cost)
    :
+#if _CD
+   name_(DOMAIN_INIT_NAME),
+#endif
    m_e_cut(Real_t(1.0e-7)),
    m_p_cut(Real_t(1.0e-7)),
    m_q_cut(Real_t(1.0e-7)),

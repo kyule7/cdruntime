@@ -55,6 +55,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #endif
 
+// This header file is never included inside CD runtime itself.
+//#if CD_TUNING_ENABLED
+//  using namespace tuned;
+//#else
+//  using namespace cd;
+//#endif
+
 
 //#if CD_MPI_ENABLED == 0 && CD_AUTOMATED == 1
 //CDInitiator cd_init;

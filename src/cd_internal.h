@@ -428,7 +428,7 @@ update the preserved data.
 
     CDErrT Preserve(void *data,                   // address in the local process 
                     uint64_t &len_in_bytes,        // data size to preserve
-                    uint32_t preserve_mask, // preservation method
+                    CDPrvType preserve_mask, // preservation method
                     std::string my_name,          // data name      
                     std::string ref_name,         // reference name
 //                    const char *my_name=NO_LABEL,        // data name
@@ -445,7 +445,7 @@ update the preserved data.
     CDErrT Preserve(CDEvent &cd_event,            // Event object to synch
                     void *data_ptr, 
                     uint64_t &len, 
-                    uint32_t preserve_mask, 
+                    CDPrvType preserve_mask, 
                     std::string my_name, 
                     std::string ref_name, 
                     uint64_t ref_offset=0, 
@@ -453,7 +453,10 @@ update the preserved data.
                     PreserveUseT data_usage=kUnsure);
   
     CDInternalErrT Detect(uint32_t &rollback_point); 
-    CDErrT Restore(void);
+    CDErrT RestoreAll(void);
+    CDInternalErrT Restore(char *data, uint64_t len_in_bytes, CDPrvType preserve_mask, 
+                           const string &my_name, const string &ref_name);
+    CDInternalErrT Restore(const string &entry_name);
   
 //  [DISCUSSION]
 //  Jinsuk: About longjmp setjmp: By running some experiement, 
@@ -576,12 +579,16 @@ public:
     CDInternalErrT InternalDestroy(bool collective, bool need_destroy=false);
     CDInternalErrT InternalPreserve(void *data, 
                                     uint64_t &len_in_bytes,
-                                    uint32_t preserve_mask, 
+                                    CDPrvType preserve_mask, 
                                     const std::string &my_name, 
                                     const std::string &ref_name, 
                                     uint64_t ref_offset, 
                                     const RegenObject *regen_object, 
                                     PreserveUseT data_usage);
+    CDEntry *PreserveCopy(void *data, 
+                          uint64_t &len_in_bytes, 
+                          CDPrvType preserve_mask, 
+                          const std::string &my_name, uint64_t id);
   
     CDErrT InternalReexecute(void);
 
@@ -589,12 +596,16 @@ public:
     // copy should happen for the part that is needed.. 
     // so serializing entire CDEntry class does not make sense. 
 
-    // Search CDEntry with entry_name given. It is needed when its children preserve data via reference and search through its ancestors. If it cannot find in current CD object, it outputs NULL 
-    virtual bool InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry);
- 
-    bool SearchEntry(ENTRY_TAG_T entry_tag_to_search, uint32_t &found_level, RemoteCDEntry &entry);
+  protected:
+    // Search CDEntry with entry_name given. 
+    // It is needed when its children preserve data via reference 
+    // and search through its ancestors. 
+    // If it cannot find in current CD object, it outputs NULL 
+    CDEntry *InternalGetEntry(ENTRY_TAG_T entry_name);
+    virtual CDEntry *GetEntry(ENTRY_TAG_T entry_name);
+    virtual CDEntry *SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level);
     void AddEntryToSend(const ENTRY_TAG_T &entry_tag_to_search);
- 
+  private:
     // This comment is previous one, so may be confusing for current design. 
     //
     // When Restore is called, it should be copied the only part ... smartly. 
@@ -616,9 +627,10 @@ public:
     CDInternalErrT InvokeAllErrorHandler(void);
     // Test the completion of internal-CD communications
 #if CD_MPI_ENABLED
-    bool TestComm(bool test_untile_done=false);
+    bool TestComm(bool test_until_done=false);
     bool TestReqComm(bool is_all_valid=true);
     bool TestRecvComm(bool is_all_valid=true);
+    void GetRemoteEntry(void); 
 #endif
 
   protected:
@@ -765,7 +777,7 @@ class HeadCD : public CD {
 //    std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     // event related
 
-    virtual bool InternalGetEntry(ENTRY_TAG_T entry_name, RemoteCDEntry &entry);
+    virtual CDEntry *GetEntry(ENTRY_TAG_T entry_name);
     bool error_occurred;
 //    bool need_reexec;
 

@@ -14,7 +14,7 @@ class BaseTable {
     uint64_t grow_unit_;
     uint32_t allocated_;
   public:
-    BaseTable(void) : advance_point_(0), allocated_(0) {}
+    BaseTable(void) : advance_point_(0), grow_unit_(32), allocated_(0) {}
     virtual ~BaseTable(void) {}
     void SetGrowUnit(uint32_t grow_unit) { grow_unit_ = grow_unit; }
     void Print(void)
@@ -78,18 +78,24 @@ class TableStore : public BaseTable {
 //        tail_ = len_in_byte / sizeof(EntryT);
         head_ = 0;
         tail_ = head_;//0;//len_in_byte / sizeof(EntryT);
-        grow_unit_ = tail_ * 2;
+        advance_point_ = head_;
+        if(size_ > 0) {
+          grow_unit_ = size_ * 2;
+        }
       } else {
         AllocateTable(BASE_ENTRY_CNT);
       }
     }
-    void Reset(uint64_t tail) { tail_ = tail; }
+    void Reset(uint64_t tail) { tail_ = tail; advance_point_ = tail; }
     virtual void Init(void) {
         prv_entry_.id_++;
         prv_entry_.offset_ = INVALID_NUM;
         head_ = 0;
         tail_ = head_;
-        grow_unit_ = tail_ * 2;
+        advance_point_ = head_;
+        if(size_ > 0) {
+          grow_unit_ = size_ * 2;
+        }
     }
     virtual ~TableStore<EntryT>(void) {
       MYDBG("\n");
@@ -106,6 +112,7 @@ class TableStore : public BaseTable {
       CDErrType err = kOK;
       head_ = 0;
       tail_ = head_;
+      tail_ = advance_point_;
       if(entry_cnt != 0) {
         grow_unit_ = entry_cnt;
         MYDBG("[%s] grow:%lu ptr:%p, used:%lu | ", __func__, 
@@ -204,14 +211,18 @@ class TableStore : public BaseTable {
       }
     }
 
-    EntryT *FindReverse(uint64_t &id, uint64_t start)
+    EntryT *FindReverse(uint64_t &id, uint64_t start=INVALID_NUM, uint64_t finish=0)
     {
       PACKER_ASSERT(head_ == 0);
-      EntryT *ret = NULL;
-      if(start >= tail_) return NULL;
-      int64_t begin = (start > tail_)? tail_-1 : start;
+      EntryT *ret = NULL; 
+      // INVALID_NUM is always false
+      const int64_t begin = (start   > tail_)? tail_-1 : start;
+      const int64_t end   = (finish <= head_)? head_   : end;
+      const int64_t tail  = tail_;
+      assert(end == 0); // for now
+      
       if(begin >= 0) {
-        for(int64_t i=begin; i>=0; i--) {
+        for(int64_t i=begin; i>=end; i--) {
           // The rule for entry is that the first element in object layout is always ID.
           if( ptr_[i].id_ == id ) {
             MYDBG("%lu == %lu\n", ptr_[i].id_, id);
@@ -220,13 +231,13 @@ class TableStore : public BaseTable {
             break;
           }
         }
-  
+    
         // check
         if(ret == NULL) {
           if(packerTaskID == 0) {
             MYDBG("[FindReverse] Find %lu, tail:%lu\n", id, tail_); //getchar();
-            for(uint32_t i=0; i<tail_; i++) {
-  //          for(int64_t i=begin; i>=0; i--) {
+            for(int64_t i=0; i<tail; i++) {
+    //        for(int64_t i=begin; i>=0; i--) {
               // The rule for entry is that the first element in object layout is always ID.
               MYDBG("TEST %lu == %lu\n", ptr_[i].id_, id);
               if( ptr_[i].id_ == id ) {
@@ -234,10 +245,10 @@ class TableStore : public BaseTable {
               }
             }
           } 
-//          else {
-//            MYDBG("my task id:%d\n", packerTaskID);
-//          }
-//          PACKER_ASSERT(0);
+  //        else {
+  //          MYDBG("my task id:%d\n", packerTaskID);
+  //        }
+          PACKER_ASSERT(0);
         }
       }
       return ret;
@@ -270,7 +281,7 @@ class TableStore : public BaseTable {
 //        else {
 //          MYDBG("my task id:%d\n", packerTaskID);
 //        }
-        //PACKER_ASSERT(0);
+        PACKER_ASSERT(0);
       }
       //return (void *)ret;
       return ret;
@@ -370,6 +381,11 @@ class TableStore : public BaseTable {
       return ret; 
     }
 
+    virtual void Advance(void)
+    {
+      advance_point_ = tail_;
+    }
+
 //    static inline 
 //    uint64_t IterateChunks(uint64_t fetchsize, uint64_t &idx)
 //    {
@@ -438,7 +454,11 @@ class TableStore : public BaseTable {
     virtual uint64_t size(void)     const { return size_; }
     virtual uint64_t tail(void)     const { return tail_ % size_; }
     virtual int64_t  usedsize(void) const { return ((int64_t)tail_ - (int64_t)head_) * sizeof(EntryT); }
-    virtual int64_t  tablesize(void) const { return ((int64_t)tail_ - (int64_t)advance_point_) * sizeof(EntryT); }
+    virtual int64_t  tablesize(void) const {
+      if(((int64_t)tail_ - (int64_t)advance_point_) < 0) { 
+        printf("%lu < %lu\n", tail_, advance_point_); assert(0); 
+      }
+      return ((int64_t)tail_ - (int64_t)advance_point_) * sizeof(EntryT); }
     virtual char    *GetPtr(void)   const { return (char *)ptr_; }
     virtual char    *GetCurrPtr(void)   const { return (char *)(ptr_ + (advance_point_ % size_)); }
     virtual char    *GetTailPtr(void)   const { return (char *)(ptr_ + (tail_ % size_)); }
@@ -558,6 +578,7 @@ class TableStore : public BaseTable {
       MYDBG("reuse:%d\n", reuse);
       CDErrType err = kOK;
       tail_ = 0;
+      advance_point_ = 0;
       allocated_ = 0;
       if(reuse == false) {
         size_ = 0;

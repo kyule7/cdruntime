@@ -376,7 +376,14 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     }
     const PhaseNode *pn = pt->second;
     cd::phaseTree.current_->errortype_ = pn->errortype_;
-    cd::phaseTree.current_->medium_ = pn->medium_;
+    cd::phaseTree.current_->medium_    = pn->medium_;
+//      printf("(%s, %lx) <- (%s, %lx)\n", 
+//          GetMedium(cd::phaseTree.current_->medium_),
+//          cd::phaseTree.current_->errortype_, 
+//          GetMedium(pn->medium_), 
+//          pn->errortype_);
+  } else {
+//    printf("it is empty?\n");
   }
 #endif
 
@@ -401,6 +408,14 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 //  assert(tuned::phaseNodeCache.find(it->second) != tuned::phaseNodeCache.end());
 //  return tuned::phaseNodeCache[it->second];
 //}
+
+uint32_t PhaseTree::Init(uint64_t level,  const std::string &label)
+{ 
+  root_ = new PhaseNode(NULL, level, label, kExecution); 
+  current_ = root_;
+  cd::phaseNodeCache[current_->phase_] = root_;
+  return current_->phase_; 
+}
 
 
 PhaseTree::~PhaseTree() {
@@ -514,11 +529,11 @@ void CDProfiles::Print(std::ostream &os, const std::string &head, const std::str
   const int pz0 = 18;
   const int pz1 = 14;
   os << str  
-  << head << std::left << std::setw(pz0) << "                            "      
-                       << std::setw(pz1) << "   Min"
-                       << std::setw(pz1) << "   Max"
-                       << std::setw(pz1) << "   Avg"
-                       << std::setw(pz1) << "   Std"
+  << head << std::left << std::setw(pz0) << "                         "      
+                       << std::setw(pz1) << "      Min"
+                       << std::setw(pz1) << "      Max"
+                       << std::setw(pz1) << "      Avg"
+                       << std::setw(pz1) << "      Std"
                        << tail
   << head << std::left << std::setw(pz0) << "num_exec     : "        
                        << std::setw(pz1) << min_.exec_cnt_              

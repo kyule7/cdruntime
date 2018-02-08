@@ -255,4 +255,11 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__); }
 #   define TUNE_DEBUG(...) \
       CD_DEBUG(__VA_ARGS__)
 #endif
+
+#if CD_DEBUG_ENABLED
+#define PRINT_MPI(...) if(cd::myTaskID == 0) { printf(__VA_ARGS__); }
+#else
+#define PRINT_MPI(...) 
+#endif
+
 #endif // file ends

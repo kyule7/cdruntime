@@ -89,19 +89,20 @@ void HandleEntrySearch::HandleEvent(void)
   ENTRY_TAG_T &source_task_id = recvBuf[1];
   uint32_t found_level = 0;
   
-  RemoteCDEntry target_entry;
-  bool found = ptr_cd_->InternalGetEntry(tag_to_search, target_entry);
-  if(found) { 
-    CD_DEBUG("FOUND it at this level #%u\n", ptr_cd_->level());
-    found_level = ptr_cd_->level();
-  } 
-  else {
-    CD_DEBUG("NOT FOUND it at this level #%u\n", ptr_cd_->level());
-    found = ptr_cd_->SearchEntry(tag_to_search, found_level, target_entry);
-  }
+//  RemoteCDEntry *target_entry = ptr_cd_->InternalGetEntry(tag_to_search);
+//  if(found) { 
+//    CD_DEBUG("FOUND it at this level #%u\n", ptr_cd_->level());
+//    found_level = ptr_cd_->level();
+//  } 
+//  else {
+//    CD_DEBUG("NOT FOUND it at this level #%u\n", ptr_cd_->level());
+//    target_entry = ptr_cd_->SearchEntry(tag_to_search, found_level);
+//  }
+  RemoteCDEntry *target_entry = (RemoteCDEntry *)ptr_cd_->SearchEntry(tag_to_search, found_level);
+  assert(target_entry->size_.Check(Attr::kremote));
 
 
-  if(found) {
+  if(target_entry != NULL) {
     CD_DEBUG("It succeed in finding the entry at this level #%u if head task!\n", found_level);
 
     // It needs some effort to avoid the naming alias problem of entry tags.
@@ -113,10 +114,10 @@ void HandleEntrySearch::HandleEvent(void)
   
     // Found the entry!! 
     // Then, send it to the task that has the entry of actual copy
-    CD_ASSERT(target_entry.id_ == tag_to_search);
-    CD_ASSERT(target_entry.size_.attr_.remote_ == 1);
-    const int target_task_id  = target_entry.task_id_;
-    CD_ASSERT(target_entry.size_.attr_.remote_ == 1);
+    CD_ASSERT(target_entry->id_ == tag_to_search);
+    CD_ASSERT(target_entry->size_.attr_.remote_ == 1);
+    const int target_task_id  = target_entry->task_id_;
+    CD_ASSERT(target_entry->size_.attr_.remote_ == 1);
 
     CD_DEBUG("FOUND %s / %s at level #%u, target task id : %u\n", 
              found_cd->GetCDName().GetString().c_str(), 
@@ -152,10 +153,10 @@ void HandleEntrySearch::HandleEvent(void)
     }
     else {
       CD_DEBUG("HandleEntrySearch --> EntrySend (Head): entry was found at %u\n", found_level);
-      CD_DEBUG("sender ID : %lu (%u)\n", target_entry.size(), tag_to_search);
+      CD_DEBUG("sender ID : %lu (%u)\n", target_entry->size(), tag_to_search);
 
 
-      char *data_to_send = ptr_cd_->entry_directory_.GetAt(target_entry);
+      char *data_to_send = ptr_cd_->entry_directory_.GetAt(*target_entry);
 //      DataHandle &target = target_entry->dst_data_;
 //    
 //      if(target.handle_type() == kDRAM) {
@@ -190,7 +191,7 @@ void HandleEntrySearch::HandleEvent(void)
 
       // Should be non-blocking send to avoid deadlock situation. 
       PMPI_Ibsend(data_to_send, 
-                 target_entry.size(), 
+                 target_entry->size(), 
                  MPI_BYTE, 
                  source_task_id, 
                  ptr_cd_->cd_id_.GenMsgTag(tag_to_search), 
@@ -294,18 +295,19 @@ void HandleEntrySend::HandleEvent(void)
 
 
 
-  RemoteCDEntry entry;
-  bool found = ptr_cd_->InternalGetEntry(tag_to_search, entry);
-  if(found) { 
-    CD_DEBUG("FOUND it at this level #%u!\n", ptr_cd_->level());
-
-    found_level = ptr_cd_->level();
-  } 
-  else {
-    CD_DEBUG("NOT FOUND it at this level #%u!\n", ptr_cd_->level());
-
-    found = ptr_cd_->SearchEntry(tag_to_search, found_level, entry);
-  }
+//  RemoteCDEntry entry;
+//  bool found = ptr_cd_->InternalGetEntry(tag_to_search, entry);
+//  if(found) { 
+//    CD_DEBUG("FOUND it at this level #%u!\n", ptr_cd_->level());
+//
+//    found_level = ptr_cd_->level();
+//  } 
+//  else {
+//    CD_DEBUG("NOT FOUND it at this level #%u!\n", ptr_cd_->level());
+//
+//    found = ptr_cd_->SearchEntry(tag_to_search, found_level, entry);
+//  }
+  CDEntry *entry = ptr_cd_->SearchEntry(tag_to_search, found_level);
 
 
 
@@ -320,14 +322,14 @@ void HandleEntrySend::HandleEvent(void)
     CD_DEBUG("--------------------- level : %u --------------------------------", cdh->level());
   }
 
-  if(found == false) {
+  if(entry != NULL) {
     ERROR_MESSAGE("The received tag [%lu] does not work in %s. CD Level %u.\n",
                    tag_to_search, ptr_cd_->GetNodeID().GetString().c_str(), ptr_cd_->level());
   }
   else {
     CD_DEBUG("HandleEntrySend: entry was found at level #%u.\n", found_level);
 
-    char *data_to_send = ptr_cd_->entry_directory_.GetAt(entry);
+    char *data_to_send = ptr_cd_->entry_directory_.GetAt(*entry);
 ////    DataHandle &target = entry->dst_data_;
 //
 //    if(target.handle_type() == kDRAM) {
@@ -360,7 +362,7 @@ void HandleEntrySend::HandleEvent(void)
       
     // Should be non-blocking buffered send to avoid deadlock situation. 
     PMPI_Ibsend(data_to_send, 
-               entry.size(), 
+               entry->size(), 
                MPI_BYTE, 
                entry_source_task_id, 
                ptr_cd_->GetCDID().GenMsgTag(tag_to_search), 

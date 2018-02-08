@@ -941,10 +941,8 @@ CDHandle *CDHandle::Create(const char *name,
   profMap[phase()]->create_elapsed_time_ += elapsed;
 //  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
-  if(myTaskID == 0) {
-    printf("** [Create] %s at level %u \n", 
+  PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
-  }
   CDEpilogue();
   return new_cd_handle;
 }
@@ -1123,10 +1121,8 @@ CDHandle *CDHandle::Create(uint32_t color,
 
   end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
-  if(myTaskID == 0) {
-    printf("** [Create] %s at level %u \n", 
+  PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
-  }
 #if CD_PROFILER_ENABLED
   profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
@@ -1154,10 +1150,8 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 
   end_clk = CD_CLOCK();
   begin_elapsed_time += end_clk - begin_clk;
-  if(myTaskID == 0) {
-    printf("** [Create] %s at level %u \n", 
+  PRINT_MPI("** [Create] %s at level %u \n", 
             new_cdh->ptr_cd_->name_.c_str(), new_cdh->level());
-  }
 #if CD_PROFILER_ENABLED
   profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
 #endif
@@ -1178,10 +1172,9 @@ CDErrT CDHandle::Destroy(bool collective)
 
   CD_DEBUG("%s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
                                                        level(), need_reexec(), *CD::rollback_point_);
-  if(myTaskID == 0) {
-    printf("** [Destroy] %s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
+  PRINT_MPI("** [Destroy] %s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
                                                        level(), need_reexec(), *CD::rollback_point_);
-  }
+  
   err = InternalDestroy(collective);
 
   end_clk = CD_CLOCK();
@@ -1349,23 +1342,19 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
              "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
              ptr_cd_->cd_id_.GetStringID().c_str(), label,
              cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
-    if(myTaskID == 0) {
-      printf("** [REEXEC] %s %s (%s) " 
+    PRINT_MPI("** [REEXEC] %s %s (%s) " 
                "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
                ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
                cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
-    }
   } else {
-    if(myTaskID == 0) {
     const uint64_t curr_phase = ptr_cd_->phase();
     const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
     const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
 
-    printf("** [Begin] %s %s (%s) " 
+    PRINT_MPI("** [Begin] %s %s (%s) " 
              "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
              ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
              cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
-    }
   }
   const bool is_reexecution = (GetExecMode() == kReexecution);
   cd::phaseTree.current_->profile_.RecordBegin(is_reexec, need_sync);
@@ -1381,10 +1370,8 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 {
   CDPrologue();
   TUNE_DEBUG("[Real %s lv:%u phase:%d]\n", __func__, level(), phase()); STOPHANDLE;
-  if(myTaskID == 0) {
-  printf("** [%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
+  PRINT_MPI("** [%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
-  }
   CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
 
@@ -1462,7 +1449,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   CDErrT err;
   {
   std::string entry_name(my_name);
-  err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+  err = ptr_cd_->Preserve(data_ptr, len, (CDPrvType)preserve_mask, 
                                  entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
 #if CD_ERROR_INJECTION_ENABLED
@@ -1526,7 +1513,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   CDErrT err;
   {
   std::string entry_name(my_name);
-  err = ptr_cd_->Preserve((void *)&serdes, len, kSerdes | preserve_mask, 
+  err = ptr_cd_->Preserve((void *)&serdes, len, (CDPrvType)(kSerdes | preserve_mask), 
                                  entry_name, ref_name, ref_offset, 
                                  regen_object, data_usage);
   //assert(len > 0);
@@ -1594,7 +1581,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   std::string entry_name(my_name);
   // TODO CDEvent object need to be handled separately, 
   // this is essentially shared object among multiple nodes.
-  err = ptr_cd_->Preserve(data_ptr, len, preserve_mask, 
+  err = ptr_cd_->Preserve(data_ptr, len, (CDPrvType)preserve_mask, 
                               entry_name, ref_name, ref_offset,  
                               regen_object, data_usage);
 
@@ -1833,7 +1820,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     // FIXME
 //    printf("### Error Injected.");
-    printf(">> Error Injected >>  Rollback Level #%u (%s %s) ###\n", 
+    PRINT_MPI(">> Error Injected >>  Rollback Level #%u (%s %s) ###\n", 
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
     CD_DEBUG(">> Error Injected >>  Rollback Level #%u (%s %s) ###\n", 
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
@@ -2252,7 +2239,7 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
     return (int)CD::CDInternalErrT::kOK;
   } else {
     
-    printf("[%s %d] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), myTaskID, sys_err_vec);
+    PRINT_MPI("[%s %d] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), myTaskID, sys_err_vec);
     CDHandle *cdh = this;
     // Find CD level that claimed "the raised sys_err_vec is covered."
     // If sys_err_vec > 

@@ -271,12 +271,7 @@ struct PhaseTree {
     PhaseTree(void) : root_(NULL), current_(NULL) {}
     ~PhaseTree();
   
-    uint32_t Init(uint64_t level,  const std::string &label)
-    { 
-      root_ = new PhaseNode(NULL, level, label, kExecution); 
-      current_ = root_;
-      return current_->phase_; 
-    }
+    uint32_t Init(uint64_t level,  const std::string &label);
 
     inline
     uint32_t ReInit(void)

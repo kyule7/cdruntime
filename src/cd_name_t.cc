@@ -105,6 +105,9 @@ ostream& cd::internal::operator<<(ostream& str, const CDNameT& cd_name)
 }
 
 string CDNameT::GetString(void) const {
-  return ( string("CD") + to_string(level_) + string("_") + to_string(rank_in_level_) );
+  char tmp[256];
+  sprintf(tmp, "CD%u_%u_%u", level_, rank_in_level_, phase_);
+  return string(tmp);
+//  return ( string("CD") + to_string(level_) + string("_") + to_string(rank_in_level_) );
 }
 
