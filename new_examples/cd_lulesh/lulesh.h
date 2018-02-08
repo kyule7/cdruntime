@@ -1313,6 +1313,7 @@ class Domain : public Internal {
 
    uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str) { 
      std::string entry_name(entry_str);
+     printf("Deserialize %s\n", entry_str);
 //      packer.Restore(cd::GetCDEntryID("BaseObj"));
 //      copy(preserved);
       uint64_t target_vec = 1;

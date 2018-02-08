@@ -3068,17 +3068,6 @@ int main(int argc, char *argv[])
 #endif
    
 #if _CD
-   CDHandle* root_cd = CD_Init(numRanks, myRank, kPFS);
-   CD_Begin(root_cd, "Root");
-   root_cd->Preserve(locDom->SetOp(prvec_readonly_all), kCopy, "ReadOnlyData");
-   root_cd->Preserve(locDom->SetOp(prvec_f), kCopy, "CalcForceCopy");
-   root_cd->Preserve(locDom->SetOp(prvec_posall), kCopy, "PosVelAcc");
-   root_cd->Preserve(locDom->SetOp(prvec_elem), kCopy, "LagrangeElem");
-   root_cd->Preserve(locDom->SetOp(prvec_q), kCopy, "QforElem");
-   root_cd->Preserve(locDom->SetOp(prvec_matrl), kCopy, "MaterialforElem");
-   //root_cd->Preserve(locDom->SetOp(M__SERDES_ALL), kCopy, "Root_All");
-#endif
-
   int intvl[3] = {32, 8, 1}; 
   char *lulesh_intvl = getenv( "LULESH_LV0" );
   if(lulesh_intvl != NULL) {
@@ -3102,7 +3091,17 @@ int main(int argc, char *argv[])
   intvl0 = intvl[0];
   intvl1 = intvl[1];
   intvl2 = intvl[2];
-#if _CD
+
+  CDHandle* root_cd = CD_Init(numRanks, myRank, kPFS);
+  CD_Begin(root_cd, "Root");
+  root_cd->Preserve(locDom->SetOp(prvec_readonly_all), kCopy, "ReadOnlyData");
+  root_cd->Preserve(locDom->SetOp(prvec_f), kCopy, "CalcForceCopy");
+  root_cd->Preserve(locDom->SetOp(prvec_posall), kCopy, "PosVelAcc");
+  root_cd->Preserve(locDom->SetOp(prvec_elem), kCopy, "LagrangeElem");
+  root_cd->Preserve(locDom->SetOp(prvec_q), kCopy, "QforElem");
+  root_cd->Preserve(locDom->SetOp(prvec_matrl), kCopy, "MaterialforElem");
+  //root_cd->Preserve(locDom->SetOp(M__SERDES_ALL), kCopy, "Root_All");
+
   cd_main_loop = root_cd->Create("Parent", kStrict|kPFS, 0xF);
   cd_child_loop = NULL;
   //cd_main_dummy = root_cd;
@@ -3165,11 +3164,16 @@ int main(int argc, char *argv[])
         // Preserve read-only data
         cd_child_loop->Preserve(locDom->SetOp(prvec_readonly_all), kRef, "ReadOnlyData-Leaf", "ReadOnlyData");
         // Preserve read-write data
-        cd_child_loop->Preserve(locDom->SetOp(prvec_f),     kRef, (leaf_first)? "CalcForceCopy"   : "CalcForceCopy_Leaf"   );
-        cd_child_loop->Preserve(locDom->SetOp(prvec_posall),kRef, (leaf_first)? "PosVelAcc"     : "PosVelAcc_Leaf"     );
-        cd_child_loop->Preserve(locDom->SetOp(prvec_elem),  kRef, (leaf_first)? "LagrangeElem"    : "LagrangeElem_Leaf"    );
-        cd_child_loop->Preserve(locDom->SetOp(prvec_q),     kRef, (leaf_first)? "QforElem"        : "QforElem_Leaf"        );
-        cd_child_loop->Preserve(locDom->SetOp(prvec_matrl), kRef, (leaf_first)? "MaterialforElem" : "MaterialforElem_Leaf" );
+        cd_child_loop->Preserve(locDom->SetOp(prvec_f),     kRef,  "CalcForceCopy"   );
+        cd_child_loop->Preserve(locDom->SetOp(prvec_posall),kRef,  "PosVelAcc"       );
+        cd_child_loop->Preserve(locDom->SetOp(prvec_elem),  kRef,  "LagrangeElem"    );
+        cd_child_loop->Preserve(locDom->SetOp(prvec_q),     kRef,  "QforElem"        );
+        cd_child_loop->Preserve(locDom->SetOp(prvec_matrl), kRef,  "MaterialforElem" );
+//        cd_child_loop->Preserve(locDom->SetOp(prvec_f),     kRef, (leaf_first)? "CalcForceCopy"   : "CalcForceCopy_Leaf"   );
+//        cd_child_loop->Preserve(locDom->SetOp(prvec_posall),kRef, (leaf_first)? "PosVelAcc"     : "PosVelAcc_Leaf"     );
+//        cd_child_loop->Preserve(locDom->SetOp(prvec_elem),  kRef, (leaf_first)? "LagrangeElem"    : "LagrangeElem_Leaf"    );
+//        cd_child_loop->Preserve(locDom->SetOp(prvec_q),     kRef, (leaf_first)? "QforElem"        : "QforElem_Leaf"        );
+//        cd_child_loop->Preserve(locDom->SetOp(prvec_matrl), kRef, (leaf_first)? "MaterialforElem" : "MaterialforElem_Leaf" );
         if(myRank==0) printf("1:cycle:%d == %d\n", cycle, locDom->cycle());
       }
 //      else {
@@ -3216,6 +3220,7 @@ int main(int argc, char *argv[])
          printf("cycle = %d (%d), time = %e, dt=%e\n",
                 locDom->cycle(), global_counter, double(locDom->time()), double(locDom->deltatime()) ) ;
       }
+    leaf_first = false;
    }
 
 

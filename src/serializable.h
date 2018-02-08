@@ -76,6 +76,7 @@ class PackerSerializable : public Serializable {
 //    virtual uint64_t Deserialize(packer::CDPacker &packer, const std::string &entry_name)=0;
     virtual uint64_t PreserveObject(packer::CDPacker &packer, CDPrvType prv_type, const char *entry_str)=0;
     virtual uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str)=0;
+    void Print() { printf("Total size:%lu, offset:%lu, type:%lu, id:%lx\n", total_size_,table_offset_,table_type_,id_); }
 };
 
 }

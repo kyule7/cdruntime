@@ -14,7 +14,7 @@ class BaseTable {
     uint64_t grow_unit_;
     uint32_t allocated_;
   public:
-    BaseTable(void) : advance_point_(0), allocated_(0) {}
+    BaseTable(void) : advance_point_(0), grow_unit_(32), allocated_(0) {}
     virtual ~BaseTable(void) {}
     void SetGrowUnit(uint32_t grow_unit) { grow_unit_ = grow_unit; }
     void Print(void)
@@ -79,7 +79,9 @@ class TableStore : public BaseTable {
         head_ = 0;
         tail_ = head_;//0;//len_in_byte / sizeof(EntryT);
         advance_point_ = head_;
-        grow_unit_ = tail_ * 2;
+        if(size_ > 0) {
+          grow_unit_ = size_ * 2;
+        }
       } else {
         AllocateTable(BASE_ENTRY_CNT);
       }
@@ -91,7 +93,9 @@ class TableStore : public BaseTable {
         head_ = 0;
         tail_ = head_;
         advance_point_ = head_;
-        grow_unit_ = tail_ * 2;
+        if(size_ > 0) {
+          grow_unit_ = size_ * 2;
+        }
     }
     virtual ~TableStore<EntryT>(void) {
       MYDBG("\n");
@@ -207,19 +211,18 @@ class TableStore : public BaseTable {
       }
     }
 
-    EntryT *FindReverse(uint64_t &id, int64_t start=-1)
+    EntryT *FindReverse(uint64_t &id, uint64_t start=INVALID_NUM, uint64_t finish=0)
     {
       PACKER_ASSERT(head_ == 0);
       EntryT *ret = NULL; 
-      // start == -1, tail_ == 0 // return NULL
-      // start == 3 , tail_ == 3
       // INVALID_NUM is always false
-      const int64_t tail = static_cast<const int64_t>(tail_);
-      assert(tail >= 0);
-      const int64_t begin = (start > tail)? tail-1 : start;
+      const int64_t begin = (start   > tail_)? tail_-1 : start;
+      const int64_t end   = (finish <= head_)? head_   : end;
+      const int64_t tail  = tail_;
+      assert(end == 0); // for now
       
       if(begin >= 0) {
-        for(int64_t i=begin; i>=0; i--) {
+        for(int64_t i=begin; i>=end; i--) {
           // The rule for entry is that the first element in object layout is always ID.
           if( ptr_[i].id_ == id ) {
             MYDBG("%lu == %lu\n", ptr_[i].id_, id);
@@ -232,7 +235,7 @@ class TableStore : public BaseTable {
         // check
         if(ret == NULL) {
           if(packerTaskID == 0) {
-            MYDBG("[FindReverse] Find %lu, tail:%lu\n", id, tail); //getchar();
+            MYDBG("[FindReverse] Find %lu, tail:%lu\n", id, tail_); //getchar();
             for(int64_t i=0; i<tail; i++) {
     //        for(int64_t i=begin; i>=0; i--) {
               // The rule for entry is that the first element in object layout is always ID.

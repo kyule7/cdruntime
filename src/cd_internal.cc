@@ -2501,12 +2501,11 @@ CD::InternalPreserve(void *data,
       pEntry = entry_directory_.table_->InsertEntry(CDEntry(id, attr, size, ref_offset, (char *)ref_id));
     } else {
       uint32_t found_level = INVALID_NUM32;
-      CDEntry src;
-      const bool found = SearchEntry(ref_id, found_level, src);
-      if(found) {
+      CDEntry *src = SearchEntry(ref_id, found_level);
+      if(src != NULL) {
         CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
         if(ptr_cd == this) {
-          while(src.invalid()); // do not create CDEntry, but just wait until valid
+          while(src->invalid()); // do not create CDEntry, but just wait until valid
         } else {
           pEntry = entry_directory_.table_->InsertEntry(CDEntry(id, attr, size, ref_offset, (char *)ref_id));
         }
@@ -2526,9 +2525,9 @@ CD::InternalPreserve(void *data,
     }
     if( myTaskID == 0) {
 
-    printf("[%s] Ref Insert %s CDEntry(%lx, %lu, size:%lu, offset:%lu, table_offset:%s(%lx))\n", 
+    printf("[%s] Ref Insert %s CDEntry(%lx, %lu, size:%lu, offset:%lu, table_offset:%s(%lx)), tblsize:%lu\n", 
          label_.c_str(), my_name.c_str(),
-         id, attr, size, ref_offset, ref_name.c_str(), ref_id);
+         id, attr, size, ref_offset, ref_name.c_str(), ref_id, entry_directory_.table_->tablesize());
     }
     // When restore data for reference of serdes object,
     // check ref and nested first.
@@ -2545,6 +2544,9 @@ CD::InternalPreserve(void *data,
     ERROR_MESSAGE("\nUnsupported preservation type : %d\n", preserve_mask);
   }
 
+  // remote_entry_directory_map_ is a cache containing
+  // local preservation entry (CDEntry object) pointers
+  // in order to serialize them to send to HeadCD.
   if( (id != INVALID_NUM) && CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
     CD_DEBUG("[CD::InternalPreserve] Error : kRef | kCoop\n"
              "Tried to preserve via reference "
@@ -2590,38 +2592,44 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     ref_id = cd_hash(ref_name);
   }
   uint64_t search_tag = (is_ref)? ref_id : entry_id;
-  CDEntry src;
-  bool found = SearchEntry(search_tag, found_level, src);
-  if(src.size_.Check(Attr::krefer) == 0) {
-  CD_ASSERT_STR(found, "Failed to search %s %lx=%lx %s (%d) lv:%u, entry #:%lu\n", 
-                        tag2str[search_tag].c_str(),
-                        (is_ref)? ref_id : entry_id, search_tag,
-                        (is_ref)? ref_name.c_str() : my_name.c_str(), preserve_mask, 
-                        level(),
-                        entry_directory_.table_->tablesize());
+  
+  // Search the preservation entry which is not krefer.
+  // It tries to search until it finds the entry without krefer.
+  CDEntry *src = SearchEntry(search_tag, found_level);
+  if(src == NULL) {
+    CDHandle *parent_cd = GetCurrentCD();
+    while( parent_cd != NULL ) {
+      CD *ptr_cd = parent_cd->ptr_cd();
+      if(myTaskID == 0) {
+        ptr_cd->entry_directory_.table_->PrintEntry();
+      }
+      uint64_t tag = search_tag;
+      src = ptr_cd->entry_directory_.table_->FindReverse(tag);
+      parent_cd = CDPath::GetParentCD(ptr_cd->level());
+    }
   }
+  CD_ASSERT_STR(src, "Failed to search %s %lx=%lx %s (%d) lv:%u, entry #:%lu\n", 
+                          tag2str[search_tag].c_str(),
+                          (is_ref)? ref_id : entry_id, search_tag,
+                          (is_ref)? ref_name.c_str() : my_name.c_str(), preserve_mask, 
+                          level(),
+                          entry_directory_.table_->tablesize());
   CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
-  if(found_level == level() && src.size_.Check(Attr::krefer)) {
-    assert(my_name.size() == 0); // double-check
-    assert(is_ref); // double-check
-    found = GetParentCD(found_level)->ptr_cd()->SearchEntry(search_tag, found_level, src);
-    CD_ASSERT_STR(found, "Failed to search %lx %s (%d) lv:%u\n", 
-        (is_ref)? ref_id : entry_id,
-        (is_ref)? ref_name.c_str() : my_name.c_str(), preserve_mask, ptr_cd->level());
-    ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
-  }
-  CD_ASSERT_STR(found, "Failed to find entry %lx %s\n", 
-                (is_ref)? ref_id : entry_id,
-                (is_ref)? ref_name.c_str(): my_name.c_str());
 
   if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
     PackerSerializable *serializer = reinterpret_cast<PackerSerializable *>(data);
     // It is very important to pass entry_directory_ of CD level that has search_tag.
-    uint64_t restored_len = serializer->Deserialize(ptr_cd->entry_directory_, my_name.c_str());
-    if(restored_len == -1UL) {
-      if(myTaskID == 0) {
-        printf("Print Entries at %s (#%u)\n", ptr_cd->label_.c_str(), ptr_cd->level());
-        ptr_cd->entry_directory_.table_->PrintEntry();
+    printf("%p, %p, %p, %s, %s\n", ptr_cd->entry_directory_.table_, serializer, ptr_cd, ptr_cd->label_.c_str(), (is_ref)? ref_name.c_str() : my_name.c_str());
+    serializer->Print();
+    if( CHECK_PRV_TYPE(preserve_mask, kIgnore) == false ) {
+      uint64_t restored_len = serializer->Deserialize(ptr_cd->entry_directory_, (is_ref)? ref_name.c_str() : my_name.c_str());
+      if(restored_len == -1UL) {
+        
+          printf("Print Entries at %s (#%u)\n", ptr_cd->label_.c_str(), ptr_cd->level());
+        if(myTaskID == 0) {
+          ptr_cd->entry_directory_.table_->PrintEntry();
+        }
+          assert(0);
       }
     }
 //    CD_ASSERT_STR(restored_len == len_in_bytes, "restored len:%lu==%lu\n", restored_len, len_in_bytes);
@@ -2632,24 +2640,22 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     // Potential benefit from prefetching app data from preserved data in
     // disk, overlapping reexecution of application.
     
-    CD_ASSERT_STR(src.src() == data, "%s src: %p==%p ",
-       (is_ref)? ref_name.c_str() : my_name.c_str(), src.src(), data);
-    CD_ASSERT_STR(src.size() == len_in_bytes, "%s len: %lu==%lu ", 
-        (is_ref)? ref_name.c_str() : my_name.c_str(), src.size(), len_in_bytes);
-    ptr_cd->entry_directory_.data_->GetData(data, len_in_bytes, src.offset());
+    CD_ASSERT_STR(src->src() == data, "%s src: %p==%p ",
+       (is_ref)? ref_name.c_str() : my_name.c_str(), src->src(), data);
+    CD_ASSERT_STR(src->size() == len_in_bytes, "%s len: %lu==%lu ", 
+        (is_ref)? ref_name.c_str() : my_name.c_str(), src->size(), len_in_bytes);
+    ptr_cd->entry_directory_.data_->GetData(data, len_in_bytes, src->offset());
     
     /*********************************************
      * Test for kRef case
      *********************************************/
 
-    if( is_ref ) {
+    if( is_ref && (ref_name.empty() == false)) {
       uint64_t my_id = cd_hash(my_name);
       uint32_t my_lv = INVALID_NUM32;
-      CDEntry dst;
-      bool found = SearchEntry(my_id, my_lv, dst);
-      CD_ASSERT_STR(found, "Failed to find entry %s with %s (ref)\n", my_name.c_str(), ref_name.c_str());
-      CD_ASSERT_STR(dst.src() == data, "dst: %p==%p ", dst.src(), data);
-      CD_ASSERT_STR(dst.size() == len_in_bytes, "len: %lu==%lu ", dst.size(), len_in_bytes);
+      CDEntry *dst = SearchEntry(my_id, my_lv);
+      CD_ASSERT_STR(dst->src() == data, "dst: %p==%p ", dst->src(), data);
+      CD_ASSERT_STR(dst->size() == len_in_bytes, "len: %lu==%lu ", dst->size(), len_in_bytes);
     }
 #if 0
     CDEntry *pentry = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
@@ -3299,64 +3305,42 @@ void HeadCD::set_cd_parent(CDHandle *cd_parent)
 
 
 // If it is found locally, cast type to RemoteCDEntry
-bool HeadCD::InternalGetEntry(ENTRY_TAG_T entry_name, CDEntry &entry) 
+CDEntry *HeadCD::GetEntry(ENTRY_TAG_T entry_name) 
 {
-  CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
-  
-  bool found = false;  
-
-  auto jt = remote_entry_directory_map_.find(entry_name);
-  if(jt != remote_entry_directory_map_.end()) {
-    entry = *(static_cast<RemoteCDEntry *>(jt->second));
-    found = true;
-  } 
-  else {
-    CDEntry *cdentry = entry_directory_.table_->Find(entry_name);
-    //CDEntry *cdentry = static_cast<CDEntry *>(entry_directory_.table_->Find(entry_name));
-    if(cdentry != NULL) {
-      entry = *cdentry;
-      found = true;
-    }
+  CD_DEBUG("\nCD::GetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
+  CDEntry *entry = InternalGetEntry(entry_name);
+  if(entry != NULL) {
+    entry = remote_entry_table_.FindReverse(entry_name);
   }
-  
-  if(found) {
-    found = (entry.size_.Check(Attr::krefer) == 0); // if krefer is 1, not found
-    if(myTaskID == 0) printf("Found %s reference %lx %s\n", (found)?"Yes":"No",  entry_name, tag2str[entry_name].c_str());
-  } else {
-    CD_DEBUG("[InternalGetEntry Failed] There is no entry for reference of %s at level #%u\n", 
-        tag2str[entry_name].c_str(), level());
-  }
-  return found; 
+  return entry;
 }
 
-
-bool CD::InternalGetEntry(ENTRY_TAG_T entry_name, CDEntry &entry) 
+CDEntry *CD::GetEntry(ENTRY_TAG_T entry_name) 
 {
   CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
+  return InternalGetEntry(entry_name);
+}
 
-  bool found = false;  
-
+CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name)
+{
+  CDEntry *entry = NULL;
   auto jt = remote_entry_directory_map_.find(entry_name);
   if(jt != remote_entry_directory_map_.end()) {
-    entry = *(static_cast<CDEntry *>(jt->second));
-    found = true;
+    entry = jt->second;
   } else {
-    CDEntry *cdentry = entry_directory_.table_->Find(entry_name);
-    //CDEntry *cdentry = static_cast<CDEntry *>(entry_directory_.table_->Find(entry_name));
-    if(cdentry != NULL) {
-      entry = *cdentry;
-      found = true;
-    }
+    uint64_t tag = entry_name;
+    entry = entry_directory_.table_->FindReverse(tag);
   }
   
-  if(found) {
-    found = (entry.size_.Check(Attr::krefer) == 0); // if krefer is 1, not found
-    if(myTaskID == 0) printf("Found %s reference %lx %s\n", (found)?"Yes":"No", entry_name, tag2str[entry_name].c_str());
+  if(entry != NULL) {
+    // if krefer is 1, not found
+    entry = (entry->size_.Check(Attr::krefer) == 0)? entry : NULL;
+    if(myTaskID == 0) printf("Found %s (%lx) %s\n", tag2str[entry_name].c_str(), entry_name, (entry != NULL)? "Copy":"But Ref");
   } else {
     CD_DEBUG("[InternalGetEntry Failed] There is no entry for reference of %s at level #%u\n", 
         tag2str[entry_name].c_str(), level());
   }
-  return found; 
+  return entry; 
 }
 
 void CD::DeleteEntryDirectory(void)
@@ -3834,61 +3818,48 @@ void HeadCD::Deserialize(void *object)
 
 
 
-bool CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, CDEntry &entry)
+CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
 {
   CD_DEBUG("Search Entry : %u (%s) at level #%u \n", tag_to_search, tag2str[tag_to_search].c_str(), level());
 
   CDHandle *parent_cd = CDPath::GetCurrentCD();
-  //CDHandle *parent_cd = CDPath::GetParentCD();
-//  RemoteCDEntry *entry_tmp = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search);
-//
-//
-//  if(entry_tmp != NULL) { 
-//    CD_DEBUG("Parent dst addr : %p \tParent entry name : %s\n", 
-//              entry_tmp->src_, entry_tmp->offset_);
-//  } else {
-//    CD_DEBUG("There is no reference in parent level\n");
-//  }
+  CDEntry *entry = NULL;
 
-  //Here, we search Parent's entry and Parent's Parent's entry and so on.
-  //if ref_name does not exit, we believe it's original. 
-  //Otherwise, there is original copy somewhere else, maybe grand parent has it. 
-
-  bool found = false;
   while( parent_cd != NULL ) {
-    CD_DEBUG("Parent name : %s\n", parent_cd->GetName());
-    CD_DEBUG("InternalGetEntry at level #%u\n", parent_cd->ptr_cd()->GetCDID().level());
+    CD *ptr_cd = parent_cd->ptr_cd();
+    CD_DEBUG("InternalGetEntry at %s level #%u\n", ptr_cd->label_.c_str(), ptr_cd->level());
     if(myTaskID == 0) {
-    printf("Search %s (%lx) at level #%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
-        parent_cd->ptr_cd()->GetCDID().level(), parent_cd->ptr_cd()->label_.c_str());
+      printf("Search %s (%lx) at level #%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
+          ptr_cd->level(), ptr_cd->label_.c_str());
     }
-    found = parent_cd->ptr_cd()->InternalGetEntry(tag_to_search, entry);
-
-    if(found) {
-      found_level = parent_cd->ptr_cd()->level();
-
-      CD_DEBUG("\n\nI got my reference here!! found level : %d, Node ID : %s\n", 
-               found_level, GetNodeID().GetString().c_str());
+    entry = ptr_cd->InternalGetEntry(tag_to_search);
+  
+    if(entry != NULL) {
+      assert(entry->size_.Check(Attr::krefer) == 0);
+      found_level = ptr_cd->level();
+       
+      CD_DEBUG("Finally found entry! (%s %lu) with ref name (%lu) at level #%d (%s)\n", 
+               tag2str[entry->id_], entry->id_, (uint64_t)entry->src_, found_level, GetNodeID().GetString().c_str());
       if(myTaskID == 0) {
         printf("Finally Found %s (%lx) at level #%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
-          parent_cd->ptr_cd()->GetCDID().level(), parent_cd->ptr_cd()->label_.c_str());
+          ptr_cd->GetCDID().level(), ptr_cd->label_.c_str());
       }
-//      CD_DEBUG("Current entry name (%s %lu) with ref name (%lu) at level #%d\n", 
-//               tag2str[entry.id_], entry.id_, (uint64_t)entry.src_, found_level);
       break;
     }
     else {
-      parent_cd = CDPath::GetParentCD(parent_cd->ptr_cd()->level());
-      if(parent_cd != NULL) 
+      parent_cd = CDPath::GetParentCD(ptr_cd->level());
+      if(parent_cd != NULL) {
         CD_DEBUG("Gotta go to upper level! -> %s at level#%u\n", 
-            parent_cd->GetName(), parent_cd->ptr_cd()->GetCDID().level());
+            parent_cd->GetName(), ptr_cd->GetCDID().level());
+      }
     }
   } 
-  if(parent_cd == NULL) found = false;
-  CD_DEBUG("\n[CD::SearchEntry] Done. Check entry %lu at Node ID %s, CDName %s\n", 
-           entry.id_, GetNodeID().GetString().c_str(), GetCDName().GetString().c_str());
 
-  return found;
+  CD_DEBUG("\n[CD::SearchEntry] %s. Check entry %lx at Node ID %s, CDName %s\n", 
+           (entry != NULL)? "Found":"NotFound",
+           tag_to_search, GetNodeID().GetString().c_str(), GetCDName().GetString().c_str());
+
+  return entry;
 }
 
 
