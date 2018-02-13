@@ -82,12 +82,15 @@ class CDPacker : public Packer<CDEntry> {
       PACKER_ASSERT(pentry != NULL);
       CDEntry entry = *pentry;
       dst = (dst == NULL)? entry.src_ : dst;
+      uint64_t rst_size = (len != 0)? len : entry.size();
 //      PACKER_ASSERT(dst == entry.src_);
 
 #if 1
       if( entry.size_.Check(Attr::knested) == false) {
         CD_PACKER_PRINT("no nested\n");
-        data_->GetData(dst, entry.size(), entry.offset_);
+//        if(packerTaskID == 0) printf("  >> CDEntry(%p, %lx(==%lx,%lx), %lx)\n",
+//            dst, entry.size(), rst_size, len, entry.offset());
+        data_->GetData(dst, rst_size, entry.offset());
         //getchar();
       } else {
         CD_PACKER_PRINT("nested\n");
@@ -146,14 +149,18 @@ class CDPacker : public Packer<CDEntry> {
             CD_PACKER_PRINT("%4lx %8lx %8lx %8lx\n", *ptest, *(ptest+1), *(ptest+2), *(ptest+3));
           }
 #endif
-          data_->GetData(pEntry->src_, pEntry->size(), pEntry->offset_);
+
+          data_->GetData(dst, entry.size(), entry.offset_);
+          if(packerTaskID == 0) printf("%p, %lx, %lx (%p, %lx, %lx)\n",
+              dst, entry.size(), entry.offset(), pEntry->src(), pEntry->size(), pEntry->offset());
+          //data_->GetData(pEntry->src_, pEntry->size(), pEntry->offset_);
         }
         free(tmp_ptr);
 //        PACKER_ASSERT_STR(align_up(table_size) == consumed, 
 //            "tablesize:%lu==%lu(consumed)\n", table_size, consumed);
 
       }
-#else
+#else /////////////////////// outdated below ////////////////////////////
       if( entry.size_.Check(Attr::knested) == false ) {
         data_->Read(dst, entry.size(), entry.offset_);
       } else {

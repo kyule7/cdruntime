@@ -203,8 +203,8 @@ struct CDEntry {
       offset_ = that.offset_;
       src_    = that.src_;
     }
-    void Print(void) const
-    { printf("%12lx %12lx %12lx %p\n", id_, size(), offset_, src_); }
+    void Print(const char *str="") const
+    { printf("CDEntry:%s (%12lx %12lx %12lx %p)\n", str, id_, size(), offset(), src()); }
     inline uint64_t size(void)   const { return size_.attr_.size_; }
     inline uint64_t invalid(void)  const { return size_.attr_.invalid_; }
     inline uint64_t attr(void)   const { return size_.code_ >> 48; }

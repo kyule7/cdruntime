@@ -43,7 +43,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <initializer_list>
 #include <iostream>
 #define CD_VECTOR_PRINT(...)
-#define DO_COMPARE 0
+#define DO_COMPARE 1
 #define UNDEFINED_NAME "undefined"
 #define VECTOR_INIT_NAME "V:"
 
@@ -60,7 +60,10 @@ float Compare(T1 *orip, T1 *newp, uint32_t size) {
   if(size != 0) {
     for(; i<size; i++, orip++, newp++) {
       //printf("[%d] i:%u, size:%u, %p == %p\n", myTaskID, i, size, orip, newp);
-      diff_cnt = (*orip != *newp)? diff_cnt+1 : diff_cnt;
+      if(IsReexec() && *orip != *newp) {
+        std::cout << "["<< myTaskID << "] i:" << i << ", size:" << size << ", " << *orip << " == " << *newp << std::endl;
+      }
+      diff_cnt = (abs(*orip - *newp) > 1e-100)? diff_cnt+1 : diff_cnt;
     }
     difference = (float)(diff_cnt) / size;
   }
@@ -150,6 +153,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     packer::CDEntry entry(id_, ((prv_type & kRef) == kRef)? packer::Attr::krefer : 0, prv_size, 0, ptr);
     //uint64_t table_offset = packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
     packer.Add(ptr, entry);
+    if(myTaskID == 0) {printf("    ##  CHECK %s ## : ", name_.c_str()); entry.Print(name_.c_str());}
 //    if(myTaskID == 0) printf("CDVector %s (%lx) preserved (0x%lx)\n", name_.c_str(), id_, prv_size);
 #if DO_COMPARE
     CompareVector();
@@ -200,11 +204,17 @@ class CDVector : public std::vector<T>, public PackerSerializable {
 
     char *ptr = reinterpret_cast<char *>(this->data());
     //printf("CDVector %s restored (%lu)\n", name_.c_str(), rst_size);
+//      if(name_ == "V:SYMMX") {
+//        if(myTaskID == 0) {
+//          Print(std::cout, "Before Restoration V:SYMMX ");
+//        }
+//        MPI_Barrier(MPI_COMM_WORLD);
+//      }
     packer::CDEntry *pentry = reinterpret_cast<packer::CDEntry *>(packer.Restore(id_, ptr, rst_size));
     if(pentry == NULL) { 
-
       printf("Failed to restore CDVector %s (%lx) restored (%lu)\n", name_.c_str(), id_, rst_size);
-      return -1UL; }
+      return -1UL; 
+    }
 //    assert(pentry);
     uint64_t rst_size_ser = pentry->size();
     if(rst_size_ser == 0) {
@@ -214,11 +224,17 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     }
     if(rst_size != rst_size_ser) {
       printf("restored size check: %lu == %lu", rst_size, rst_size_ser); 
-      assert(0);
+      //assert(0);
     }
 
 #if DO_COMPARE
-    CheckVector(entry_str);
+    if(CheckVector(entry_str) > 0.0) {
+      if(myTaskID == 0) {
+        Print(std::cout, "Restoration Check ");
+        printf("Entry Check: "); pentry->Print();
+        assert(0);
+      }
+    }
 #endif
 
     if(myTaskID == 0 && (name_ == "X" || name_ == "Y"|| name_ == "Z")) {
@@ -228,15 +244,18 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     return rst_size; 
   
   }
-  void CheckVector(const char *entry_str=NULL) {
+
+  float CheckVector(const char *entry_str=NULL) {
       //printf("[%d] %s %s\n", myTaskID, __func__, entry_str);
+      float difference = 0.0;
       if(orig_ != NULL) {
         char *ptr = reinterpret_cast<char *>(this->data());
-        float difference = Compare<T>((T *)orig_, (T *)ptr, this->size());
+        difference = Compare<T>((T *)orig_, (T *)ptr, this->size());
         if(difference > 0.0) {
-          printf("[%d] <%s %s> difference=%f\n",myTaskID,  __func__, entry_str, difference);
+          if(myTaskID==0) printf("[%d] <%s %s> difference=%f\n",myTaskID,  __func__, entry_str, difference);
         }
       }
+      return difference;
   }
 
   // It copies app data to orig_ after comparison.
@@ -258,7 +277,8 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       orig_size_ = prv_size;
       prv_size_ = prv_size;
       orig_ = (char *)malloc(orig_size_);
-      printf("First Preservation %s\n", name);
+      if(myTaskID == 0) printf("First Preservation %s\n", name);
+      memcpy(orig_, ptr, prv_size);
     } else if(orig_size_ < prv_size) {
       difference_ = 0.0;
       printf("Similarity %s:1.0 (realloced)\n", name);
@@ -286,20 +306,24 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     }
     PackerEpilogue();
   }
-  void Print(std::ostream &os, const char str[]="") {
+  void Print(std::ostream &os, const char str[]="", uint64_t upto=0) {
     PackerPrologue();
     os << str << " " << name_ <<", ptr: "<< this->data() 
-                << ", vec size:" << this->size() 
-                << ", vec cap: " << this->capacity() 
+                << ", vec size:" << std::hex << this->size() * sizeof(T)
+                << ", vec cap: " << std::hex << this->capacity() * sizeof(T)
                 << ", vec obj size: " << sizeof(*this) << std::endl;
-    int size = this->size();
-    int stride = 8;
+    upto = (upto == 0) ? 64 : upto;
+    int size = upto; //this->size();
+    int stride = 4;
     if(size > stride) {
       int numrows = size/stride;
       for(int i=0; i<numrows; i++) {
         for(int j=0; j<stride; j++) {
-//          os << "index: "<<  j + i*stride <<", "<< size/8 << std::endl;
-          os << this->at(j+i*stride) << '\t';
+          os << this->at(j+i*stride) << ' ';
+        }
+        os << "  |  ";
+        for(int j=0; j<stride; j++) {
+          os << reinterpret_cast<T*>(orig_)[j+i*stride] << ' ';
         }
         os << std::endl;
       }

@@ -1266,6 +1266,8 @@ class Domain : public Internal {
    uint64_t PreserveObject(packer::DataStore *packer) { return 0; }
    uint64_t PreserveObject(packer::CDPacker &packer, CDPrvType prv_type, const char *entry_str) {
       std::string entry_name(entry_str);
+      uint64_t init_data_size  = packer.data_->used();
+      uint64_t init_tabl_size  = packer.table_->buf_used();
       if(entry_str != NULL && name_ == DOMAIN_INIT_NAME) {
         name_ += entry_str;
       }
@@ -1285,6 +1287,13 @@ class Domain : public Internal {
          target_vec <<= 1;
          serdes_vec >>= 1;
       } // while ends
+      uint64_t prv_data_size  = packer.data_->used()      - init_data_size;
+      uint64_t prv_tabl_size  = packer.table_->buf_used() - init_tabl_size;
+
+      total_size_   = prv_data_size + prv_tabl_size; 
+      table_offset_ = prv_data_size;
+      table_type_   = 0x12345678;
+      id_           = 0x56789;
 //      LULESH_PRINT("------------ Done -----------\n");
      
 //      // Update Magic 
@@ -1313,7 +1322,7 @@ class Domain : public Internal {
 
    uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str) { 
      std::string entry_name(entry_str);
-     printf("Deserialize %s\n", entry_str);
+     //printf("Deserialize %s\n", entry_str);
 //      packer.Restore(cd::GetCDEntryID("BaseObj"));
 //      copy(preserved);
       uint64_t target_vec = 1;

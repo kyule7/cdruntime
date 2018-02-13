@@ -1056,10 +1056,8 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 
   end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
-  if(myTaskID == 0) {
-    printf("** [Create] %s at level %u \n", 
+  PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
-  }
 #if CD_PROFILER_ENABLED
   profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif

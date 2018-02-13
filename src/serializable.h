@@ -69,6 +69,9 @@ class PackerSerializable : public Serializable {
     uint64_t table_type_;
     uint64_t id_;
     PackerSerializable(void) : total_size_(0), table_offset_(0), table_type_(0), id_(-1) {}
+    PackerSerializable(uint64_t total_size, uint64_t table_offset, uint64_t table_type, uint64_t id) 
+      : total_size_(total_size), table_offset_(table_offset), 
+        table_type_(table_type), id_(id) {}
     void SetID(uint64_t id) { id_ = id; }
     virtual const char *GetID(void)=0;
     virtual uint64_t PreserveObject(packer::DataStore *packer)=0;

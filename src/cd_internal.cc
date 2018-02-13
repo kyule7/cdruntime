@@ -52,6 +52,7 @@ using namespace ::interface;
 using namespace cd::logging;
 using namespace std;
 
+
 ProfMapType   common::profMap;
 bool tuned::tuning_enabled = false;
 uint32_t cd::new_phase = 0;
@@ -278,7 +279,7 @@ CD::CD(CDHandle *cd_parent,
   prv_medium_ = static_cast<PrvMediumT>(MASK_MEDIUM(prv_medium)); 
   name_ = (strcmp(name, NO_LABEL) == 0)? cd_id_.cd_name_.GetString() : name; 
   sys_detect_bit_vector_ = sys_bit_vector; 
-  entry_directory_.data_->SetMode(kVolatile);
+//  entry_directory_.data_->SetMode(kVolatile);
   // FIXME 
   // cd_id_ = 0; 
   // We need to call which returns unique id for this cd. 
@@ -575,6 +576,14 @@ CDHandle *CD::Create(CDHandle *parent,
 
   CD_DEBUG("CD::Create %s\n", name);
   CD_ASSERT(begin_ == true);
+  // NOTE
+  // Order b/w flush and creation is important!!!!
+  // Otherwise, written_len_ for child's entry_directory_ is set wrong!!
+  if(prv_medium_ != kDRAM) {
+    entry_directory_.AppendTable();
+    entry_directory_.data_->Flush();
+//    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
+  }
   *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
 
@@ -582,11 +591,11 @@ CDHandle *CD::Create(CDHandle *parent,
 
   // FIXME: flush before child execution
 //  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
-  if(prv_medium_ != kDRAM) {
-    entry_directory_.AppendTable();
-    entry_directory_.data_->Flush();
-//    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
-  }
+//  if(prv_medium_ != kDRAM) {
+//    entry_directory_.AppendTable();
+//    entry_directory_.data_->Flush();
+////    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
+//  }
   this->AddChild(new_cd_handle);
 
 //  new_cd_handle->UpdateParam(new_cd_handle->level(), new_cd_handle->phase());
@@ -1533,6 +1542,8 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
       const int64_t curr_begID = phaseTree.current_->seq_begin_;
       CD_DEBUG(">>> Failure Detected (%s), fphase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
           label_.c_str(), failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
+      if(myTaskID == 0) printf(">>> Failure Detected (%s), fphase:%ld==%u, seqID:%ld==%ld (beg:%ld) <<<\n", 
+          label_.c_str(), failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
       failed_phase = phase;
       failed_seqID = phaseTree.current_->seq_end_;
     }
@@ -2260,7 +2271,9 @@ CDErrT CD::Preserve(void *data,
       if(strcmp(my_name.c_str(), "MainLoop_symmX") == 0 || strcmp(my_name.c_str(), "locDom_Root") == 0 ) {
   //      printf("[%d] #################### %s ############:%lu\n", myTaskID, my_name.c_str(), tag);
       }
-      switch( InternalPreserve(data, len_in_bytes, preserve_mask, my_name, ref_name, ref_offset, regen_object, data_usage) ) {
+      switch( InternalPreserve(data, len_in_bytes, preserve_mask, 
+                               my_name, ref_name, ref_offset, 
+                               regen_object, data_usage) ) {
         case CDInternalErrT::kOK            : {
                 preserve_count_++;
                 ret = CDErrT::kOK;
@@ -2389,6 +2402,10 @@ CDEntry *CD::PreserveCopy(void *data,
   }
   else { // preserve a single entry
     pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, len_in_bytes, 0, (char *)data));
+    if(myTaskID == 0) { 
+      printf("Preserve %s (%lx), size:%lx, at %p\n", my_name.c_str(), id, len_in_bytes, data);
+      pEntry->Print("MainLoopDomain : ");
+    }
   }
 //#ifdef _DEBUG_0402        
 #if 0
@@ -2612,10 +2629,11 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     PackerSerializable *serializer = reinterpret_cast<PackerSerializable *>(data);
     // It is very important to pass entry_directory_ of CD level that has search_tag.
     PRINT_MPI("%p, %p, %p, %s, %s\n", ptr_cd->entry_directory_.table_, serializer, ptr_cd, ptr_cd->label_.c_str(), (is_ref)? ref_name.c_str() : my_name.c_str());
-#if CD_DEBUG_ENABLED
+#if CD_DEBUG_ENABLED_INTERNAL
     serializer->Print();
 #endif
-    if( CHECK_PRV_TYPE(preserve_mask, kIgnore) == false ) {
+    //if( CHECK_PRV_TYPE(preserve_mask, kIgnore) == false ) 
+    {
       uint64_t restored_len = serializer->Deserialize(ptr_cd->entry_directory_, (is_ref)? ref_name.c_str() : my_name.c_str());
       if(restored_len == -1UL) {
         
@@ -2623,7 +2641,7 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
         if(myTaskID == 0) {
           ptr_cd->entry_directory_.table_->PrintEntry();
         }
-          assert(0);
+          CD_ASSERT_STR(0, "Not deserialized %s %u / %u\n", name_.c_str(), level(), ptr_cd->level());
       }
     }
 //    CD_ASSERT_STR(restored_len == len_in_bytes, "restored len:%lu==%lu\n", restored_len, len_in_bytes);
@@ -2633,7 +2651,10 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     // This will fetch from disk to memory
     // Potential benefit from prefetching app data from preserved data in
     // disk, overlapping reexecution of application.
-    
+    if(myTaskID ==0) { 
+      printf("[%s, %s] It is not a serdes obj(%s,%s)\n", __func__, ptr_cd->label(), my_name.c_str(), ref_name.c_str());
+      entry_directory_.table_->PrintEntry();
+    }
     CD_ASSERT_STR(src->src() == data, "%s src: %p==%p ",
        (is_ref)? ref_name.c_str() : my_name.c_str(), src->src(), data);
     CD_ASSERT_STR(src->size() == len_in_bytes, "%s len: %lu==%lu ", 
@@ -3154,6 +3175,14 @@ CDHandle *HeadCD::Create(CDHandle *parent,
 //                   PMPI_INFO_NULL, new_cd_id.color(), &((ptr_headcd->family_mailbox_)[i]));
 //  }
 
+  // NOTE
+  // Order b/w flush and creation is important!!!!
+  // Otherwise, written_len_ for child's entry_directory_ is set wrong!!
+  if(prv_medium_ != kDRAM) {
+    entry_directory_.AppendTable();
+    entry_directory_.data_->Flush();
+//    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
+  }
 
   /// Create CD object with new CDID
   CDHandle *new_cd_handle = NULL;
@@ -3166,11 +3195,11 @@ CDHandle *HeadCD::Create(CDHandle *parent,
 //    entry_directory_.data_->Flush();
 //  }
 //  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
-  if(prv_medium_ != kDRAM) {
-    entry_directory_.AppendTable();
-    entry_directory_.data_->Flush();
-//    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
-  }
+//  if(prv_medium_ != kDRAM) {
+//    entry_directory_.AppendTable();
+//    entry_directory_.data_->Flush();
+////    child_entry_dir.data_->PadAndInit(entry_directory_.data_->next_head());
+//  }
 
   this->AddChild(new_cd_handle);
 
@@ -3430,8 +3459,9 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
   //if(incomplete_log_.size()!=0) 
   {
     CD_DEBUG("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
-//    printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
+    if(myTaskID ==7) printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
   }
+
 #if _MPI_VER
   void *flag = NULL; //
 //  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
@@ -3456,6 +3486,55 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
     }
   }
 #endif
+
+// FIXME: 20180212 
+// Should take a look at the below code for invalidating comms.
+//
+// http://mpi-forum.org/docs/mpi-1.1/mpi-11-html/node50.html
+// http://mpi-forum.org/docs/mpi-1.1/mpi-11-html/node47.html
+//
+//#if _MPI_VER
+//  void *flag = NULL; //
+////  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
+//////    PMPI_Cancel(reinterpret_cast<MPI_Request>(it->flag_));
+////    flag = it->flag_;
+////    printf("%lx\n", flag);
+////    PMPI_Cancel((MPI_Request *)(it->flag_));
+////    auto jt = it;
+////    incomplete_log_.erase(jt);
+////  }
+//  // FIXED: 20180211
+//  //while(incomplete_log_.size() != 0) {
+////  MPI_Status status;
+//  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
+//    auto incompl_log = *it;
+//    flag = incompl_log.flag_;
+//    //incomplete_log_.pop_back();
+//    if(myTaskID == 7) printf("[%d] Trying to cancel ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
+//    CD_DEBUG("[%d] Trying to cancel ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
+//    int done = 0;
+//    MPI_Status status;
+//    PMPI_Test((MPI_Request *)flag, &done, &status);
+//    if(done == 0) {
+//      PMPI_Cancel((MPI_Request *)(flag));
+//      ++it;
+//    } else {
+//      it = incomplete_log_.erase(it);
+//      if(myTaskID == 7) printf("[%d] ERASED (#:%zu)\n", myTaskID, incomplete_log_.size());
+//    }
+//  }
+//
+//  // deallocate cancelled requests
+//  while(incomplete_log_.size() != 0) {
+//    auto incompl_log = incomplete_log_.back();
+//    flag = incompl_log.flag_;
+//    if(myTaskID == 7) printf("[%d] Trying to dealloc ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
+//    incomplete_log_.pop_back();
+//    PMPI_Request_free((MPI_Request *)(flag));
+////    PMPI_Test_cancelled(&status, (MPI_Request *)(flag));
+//  }
+//#endif
+
   LogEpilogue();
   return kCommLogOK;
 }

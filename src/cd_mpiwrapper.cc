@@ -552,6 +552,7 @@ int MPI_Isend(const void *buf,
       case kStrictCD: {
         cdp->incomplete_log_.push_back(
             IncompleteLogEntry(buf, 0, dest, tag, comm, (void *)request, false));
+//        if(myTaskID == 7) printf("%s incompl log:%zu\n", cdp->label(), cdp->incomplete_log_.size());
 //        printf("test send: strict CD\t"); cdp->CheckIntraCDMsg(dest, g);
 //        CD_DEBUG("send1 %u\n", (int)(*request));
         mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
@@ -636,6 +637,7 @@ int MPI_Irecv(void *buf,
         cdp->incomplete_log_.push_back(
             IncompleteLogEntry(buf, 0, src, tag, comm, (void *)request, false)
             );
+//        if(myTaskID == 7) printf("%s incompl log:%zu\n", cdp->label(), cdp->incomplete_log_.size());
         CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
 //printf("test recv: strict CD\t"); cdp->CheckIntraCDMsg(src, g);
         mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
@@ -716,6 +718,14 @@ int MPI_Irecv(void *buf,
   }
   else {  // cur_cdh == NULL
     LOG_DEBUG("Warning: MPI_Irecv out of CD context...\n");
+    printf("Warning: MPI_Irecv out of CD context...\n");
+    CDHandle *cdt = GetLeafCD();
+    if(cdt != NULL) {
+      CD *cdtp = cdt->ptr_cd();
+      printf("%s, isReexec?%s, mode:%d", cdtp->label(), (IsReexec())?"Yes":"No", cdtp->GetExecMode());
+    } else {
+      printf("Even there is no CDHandle obj available!!!\n");
+    }
     mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
   }
   MsgEpilogue();

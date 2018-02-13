@@ -501,6 +501,7 @@ public:
     char    *name(void)          const { return (char *)name_.c_str(); }
     char    *label(void)         const { return (char *)label_.c_str(); }
     CDType   GetCDType(void)     const { return static_cast<CDType>(MASK_CDTYPE(cd_type_)); }
+    CDExecMode GetExecMode(void) const { return cd_exec_mode_; }
 #if CD_LIBC_LOG_ENABLED
     CommLog *libc_log_ptr()      const { return libc_log_ptr_; }
 #endif
