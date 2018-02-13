@@ -15,6 +15,13 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, uint32_t knob, SimFlat *sim) {
   // This preserves the values of nSteps, printRate, dt, ePotential, eKinetic.
   // Also, it does the pointeres for domain, boxes, atoms, species, pot, and
   // atomExchange arrays.
+  if(is_reexec()) {
+    printf("Before preserve SimFlat:%x\t%x\t%x\n", sim, sim->domain, sim->boxes);
+    printf("Let's nullify domain and boxes\n");
+    sim->domain = NULL;
+    sim->boxes = NULL;
+    printf("Before preserve SimFlat but nullified:%x\t%x\t%x\n", sim, sim->domain, sim->boxes);
+  }
   cd_preserve(cdh, sim, size, knob, "SimFlat", "SimFlat");
 #endif
   if (PRINTON == 1)
@@ -22,6 +29,13 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, uint32_t knob, SimFlat *sim) {
 
   // Further preserve by chasing pointers of *domain, *boxes, *species, *pot
   // and *atomExchange.
+  if(is_reexec()) {
+    printf("Before preserveDomain:%x\t%x\t%x\n", sim, sim->domain, sim->boxes);
+  }
+  size += preserveDomain(cdh, knob, sim->domain); // Flat struct
+  if(is_reexec()) {
+    printf("After preserveDomain:%x\t%x\t%x\n", sim, sim->domain, sim->boxes);
+  }
   size += preserveDomain(cdh, knob, sim->domain); // Flat struct
   size += preserveLinkCell(cdh, knob, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
                            0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
@@ -49,8 +63,8 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, uint32_t knob, SimFlat *sim) {
     // If it is LJ force
     // Note that there are some function pointers.
     size += preserveLjPot(cdh, knob, (LjPotential *)sim->pot); // Flat
-    // preserve HaloForce by setting 0 at the end
-    size += preserveHaloExchange(cdh, knob, sim->doeam, sim->atomExchange, 0);
+    // preserve HaloAtom by setting 0 at the end
+    //size += preserveHaloExchange(cdh, knob, sim->doeam, sim->atomExchange, 0);
   }
 
   return size;
@@ -477,7 +491,8 @@ unsigned int preserveEamPot(cd_handle_t *cdh, uint32_t knob, int doeam,
   size += preserveInterpolationObject(cdh, knob, pot->rho);
   size += preserveInterpolationObject(cdh, knob, pot->f);
   // preserving HaloExchange. Note that doeam must be 1 to get here.
-  size += preserveHaloExchange(cdh, knob, doeam, pot->forceExchange, doeam);
+  // FIXME: this is done separatelly in preserveSimFlat
+  //size += preserveHaloExchange(cdh, knob, doeam, pot->forceExchange, doeam);
   // preserving ForceExchangeDataSt
   size += preserveForceData(cdh, knob, pot->forceExchangeData); // shallow copy
   return size;
@@ -538,19 +553,19 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh, uint32_t knob,
 #endif
   }
   uint32_t pbcFactor_size = 3 * sizeof(real_t);
-#ifdef DO_PRV
   if (is_pbcFactor == 1) {
-    cd_preserve(cdh, xchange_parms->pbcFactor[0], pbcFactor_size, knob,
+#ifdef DO_PRV
+    cd_preserve(cdh, &(xchange_parms->pbcFactor[0]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor0", "AtomExchangeParms_pbcFactor0");
-    cd_preserve(cdh, xchange_parms->pbcFactor[1], pbcFactor_size, knob,
+    cd_preserve(cdh, &(xchange_parms->pbcFactor[1]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor1", "AtomExchangeParms_pbcFactor1");
-    cd_preserve(cdh, xchange_parms->pbcFactor[2], pbcFactor_size, knob,
+    cd_preserve(cdh, &(xchange_parms->pbcFactor[2]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor2", "AtomExchangeParms_pbcFactor2");
-    cd_preserve(cdh, xchange_parms->pbcFactor[3], pbcFactor_size, knob,
+    cd_preserve(cdh, &(xchange_parms->pbcFactor[3]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor3", "AtomExchangeParms_pbcFactor3");
-    cd_preserve(cdh, xchange_parms->pbcFactor[4], pbcFactor_size, knob,
+    cd_preserve(cdh, &(xchange_parms->pbcFactor[4]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor4", "AtomExchangeParms_pbcFactor4");
-    cd_preserve(cdh, xchange_parms->pbcFactor[5], pbcFactor_size, knob,
+    cd_preserve(cdh, &(xchange_parms->pbcFactor[5]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor5", "AtomExchangeParms_pbcFactor5");
 #endif
     //TODO: add PRINTON part

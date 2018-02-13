@@ -28,7 +28,7 @@ CD_FLAGS :=
 # CD2 : ljForce.c
 
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV -DDO_OUTPUT
-CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1
 
 #FIXME: Level 3 should be enabled with Level 4
@@ -41,7 +41,7 @@ CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 
 
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -DDO_PRV 
+CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -DDO_PRV 
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 
 
 #CD_CFLAGS := -I$(CD_ROOT)/include 

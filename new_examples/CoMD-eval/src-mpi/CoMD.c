@@ -112,6 +112,7 @@ int main(int argc, char **argv) {
 #if _ROOTCD
   // DRAM vs HDD
   cd_handle_t *root_cd = cd_init(nRanks, myRank, kPFS);
+  //cd_handle_t *root_cd = cd_init(nRanks, myRank, kLocalMemory);
   cd_begin(root_cd, "Root");
 
   // FIXME: Issue with 2nd re-execution when only Root CD and preserveSimFlat
