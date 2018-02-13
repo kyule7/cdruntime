@@ -6,7 +6,7 @@
 #include <cstdint>
 #include "packer_common.h"
 
-//#define _DEBUG_ENABLED
+#define _DEBUG_ENABLED
 
 
 #define MEGABYTE        1048576
@@ -120,10 +120,11 @@ struct MagicStore {
   void Print(void);
 } __attribute__((aligned(CHUNK_ALIGNMENT)));
 
+extern FILE *packer_stream;
+
 } // namespace packer ends
 
 
-extern FILE *packer_stream;
 #ifdef _DEBUG_ENABLED
 #include <map>
 #include <string>

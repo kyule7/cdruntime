@@ -256,7 +256,9 @@ if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__); }
       CD_DEBUG(__VA_ARGS__)
 #endif
 
-#if CD_DEBUG_ENABLED
+//#define CD_DEBUG_ENABLED_INTERNAL CD_DEBUG_ENABLED
+
+#if CD_DEBUG_ENABLED_INTERNAL
 #define PRINT_MPI(...) if(cd::myTaskID == 0) { printf(__VA_ARGS__); }
 #else
 #define PRINT_MPI(...) 

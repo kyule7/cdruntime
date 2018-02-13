@@ -34,7 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 */
 #include "cd_containers.hpp"
 #include "cd.h"
-//using namespace cd;
+using namespace cd;
 using namespace std;
 static int myRankID = 0;
 static int numProcs = 1;
@@ -287,6 +287,29 @@ void CorruptData(cd::CDVector<T> &vec)
     vec[i] -= 1;
   }
 }
+
+template <typename T>
+bool TestData(cd::CDVector<T> &vec, cd::CDVector<T> &ref)
+{
+  for(int i=0; i<vec.size(); i++) {
+    if(vec[i] != ref[i])  {
+      if(myRankID == 0) {
+      vec.Print(cout, "Vector Test ");
+      ref.Print(cout, "Refer  Test ");
+      }
+      return false;
+    }
+  }
+  return true;
+}
+cd::CDVector<int>    testA({3,5,0,6}); // 4 elems
+cd::CDVector<int>    testB({1,2,3,4,5,6,7,8}); // 8 elems
+cd::CDVector<float>  testC({5.4, 0.1, 1.0, 0.0}); // 4 elems
+cd::CDVector<int>    testD({9,8,7,6,5,4,3,2,1}); // 9 elems
+cd::CDVector<double> testE({2.4, 3.2, 94.2, 91.55, 0.013}); // 5 elems
+cd::CDVector<long>   testF({2,4,6,8,10,12,14,16}); // 8 elems
+cd::CDVector<int>    testG({3,6,9,12,15,18,21,24,27,30}); // 10 elems
+
 #define PrintAll(str) { \
     arrayA.Print(cd::cddbg, str); \
     arrayB.Print(cd::cddbg, str); \
@@ -329,6 +352,7 @@ int TestCD(void)
   sprintf(arrGstr, "arrayG-%d", myRankID);
 	CDHandle *root = CD_Init(numProcs, myRankID, kPFS);
   CD_Begin(root, "Root"); 
+  if(myRankID == 0) cout << "Level 0 CD Begin..." << endl;
   PrintAll((num_reexecution == 0)? "Before Preserve ": "Before Restore ");
   root->Preserve(arrayA, kCopy, arrAstr); 
   root->Preserve(arrayB, kCopy, arrBstr); 
@@ -337,7 +361,16 @@ int TestCD(void)
   root->Preserve(arrayE, kCopy, arrEstr);
   root->Preserve(arrayF, kCopy, arrFstr); 
   root->Preserve(arrayG, kCopy, arrGstr);
-
+  if(num_reexecution != 0) {
+    if( myRankID == 0) cout << "Test Level 0 .." << endl;
+    assert(TestData(arrayA, testA));
+    assert(TestData(arrayB, testB));
+    assert(TestData(arrayC, testC));
+    assert(TestData(arrayD, testD));
+    assert(TestData(arrayE, testE));
+    assert(TestData(arrayF, testF));
+    assert(TestData(arrayG, testG));
+  }
   PrintAll((num_reexecution == 0)? "After Preserve ": "After  Restore ");
 
   if (1) {
@@ -346,18 +379,27 @@ int TestCD(void)
   
     CD_Begin(child_lv1, "CD LV 1");
     cd::cddbg << "\t\tLevel 1 CD Begin..." << endl;
+    if( myRankID == 0) cout << "\tLevel 1 CD Begin..." << endl;
   
     CDPrvType prv_type_1 = kRef;
-    PrintAll((num_reexecution_lv1 == 0)? "Before Preserve ": "Before Restore ");
+    PrintAll((num_reexecution_lv1 == 0)? "  LV1 Before Preserve ": "  LV1 Before Restore ");
     child_lv1->Preserve(arrayA, prv_type_1, "refA-Lv1", arrAstr); 
     child_lv1->Preserve(arrayB, prv_type_1, "refB-Lv1", arrBstr); 
     child_lv1->Preserve(arrayC, prv_type_1, "refC-Lv1", arrCstr);
     child_lv1->Preserve(arrayE, prv_type_1, "refE-Lv1", arrEstr);
-    PrintAll((num_reexecution_lv1 == 0)? "After Preserve ": "After  Restore ");
-    CorruptData(arrayA);
-    CorruptData(arrayB);
-    CorruptData(arrayC);
-  
+    child_lv1->Preserve(arrayF, prv_type_1, "refF-Lv1", arrEstr);
+    child_lv1->Preserve(arrayG, prv_type_1, "refG-Lv1", arrEstr);
+    PrintAll((num_reexecution_lv1 == 0)? "  LV1 After Preserve ": "  LV1 After  Restore ");
+    if(num_reexecution_lv1 != 0 || num_reexecution_lv2 != 0) {
+      if( myRankID == 0) cout << "\tTest Level 1 .." << endl;
+      assert(TestData(arrayA, testA));
+      assert(TestData(arrayB, testB));
+      assert(TestData(arrayC, testC));
+      assert(TestData(arrayD, testD));
+      assert(TestData(arrayE, testE));
+      assert(TestData(arrayF, testF));
+      assert(TestData(arrayG, testG));
+    }
     cd::cddbg << "\t\tPreserve via copy: arrayA (Share), arrayB (Share), arrayE (Share)\n" << endl;
   
     cd::cddbg.flush();
@@ -366,19 +408,28 @@ int TestCD(void)
       cd::cddbg << "\t\tCD1 Creates Level 2 CD. # of children CDs = " << LV2 << "\n" << endl;
       for(int ii=0; ii<6; ii++) { 
         CD_Begin(child_lv2, "CD LV 2");
+        if( myRankID == 0) cout << "\t\tLevel 2 CD Begin..." << endl;
         cd::cddbg << "\t\t\t\tLevel 2 CD Begin...\n" << ii << endl;
         cd::cddbg.flush();
       
-        PrintAll((num_reexecution_lv2 == 0)? "Lv2 Before Preserve ": "Lv2 Before  Restore ");
+        PrintAll((num_reexecution_lv2 == 0)? "    Lv2 Before Preserve ": "    Lv2 Before  Restore ");
         child_lv2->Preserve(arrayA, kCopy, "arrA-Lv2", arrAstr); 
         child_lv2->Preserve(arrayB, kCopy, "arrB-Lv2", arrBstr);
         child_lv2->Preserve(arrayF, kRef, "arrF-Lv2", arrFstr);
         child_lv2->Preserve(arrayG, kRef, "arrG-Lv2", arrGstr);
         child_lv2->Preserve(arrayC, kCopy, arrCstr);
-        PrintAll((num_reexecution_lv2 == 0)? "Lv2 After Preserve ": "Lv2 After  Restore ");
+        PrintAll((num_reexecution_lv2 == 0)? "    Lv2 After Preserve ": "    Lv2 After  Restore ");
         cd::cddbg << "\t\t\t\tPreserve via ref : arrayA (local), arrayB (local), arrayF (remote), arrayG (remote)" << endl;
         cd::cddbg << "\t\t\t\tPreserve via copy: arrayC" << endl;
         cd::cddbg.flush();
+        if(num_reexecution_lv2 != 0) {
+          if( myRankID == 0) cout << "\t\tTest Level 2 .." << endl;
+          assert(TestData(arrayA, testA));     
+          assert(TestData(arrayB, testB));     
+          assert(TestData(arrayF, testF));     
+          assert(TestData(arrayG, testG));     
+          assert(TestData(arrayC, testC));     
+        }
       
       
         if(num_reexecution_lv2 == 0 && ii == 4) {
@@ -387,8 +438,8 @@ int TestCD(void)
           CorruptData(arrayG);
           CorruptData(arrayC);
           num_reexecution_lv2++;
-          //child_lv2->CDAssert(false);
-          child_lv1->CDAssert(false);
+          child_lv2->CDAssert(false);
+          //child_lv1->CDAssert(false);
         }
         // Level 2 Body
       
@@ -434,7 +485,7 @@ int TestCD(void)
   // Detect Error here
   root->Detect();
 
-  cout << "Root CD Complete...\n" << endl;
+  //cout << "Root CD Complete...\n" << endl;
   CD_Complete(root);
   cd::cddbg << "Root CD Complete...\n" << endl;
   cd::cddbg << "\t\tRoot CD Destroyed (Finalized) ...\n" << endl;
