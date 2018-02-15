@@ -118,6 +118,7 @@ int main(int argc, char **argv) {
   // FIXME: Issue with 2nd re-execution when only Root CD and preserveSimFlat
   // are enalbed. The first re-execution is fine and the issue does not show
   // up without preserveSimFlat().
+  // TODO:Update: This issue is now resolved by fixing runtime and packer.
   preserveSimFlat(root_cd, kCopy, sim);
   // What if the buffers for HaloExchnage (malloc) and the others in SimFlat?
   // They are not freed if ROOT CD gets re-executed before calling

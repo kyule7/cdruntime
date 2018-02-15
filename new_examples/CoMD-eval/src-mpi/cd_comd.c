@@ -16,26 +16,24 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, uint32_t knob, SimFlat *sim) {
   // Also, it does the pointeres for domain, boxes, atoms, species, pot, and
   // atomExchange arrays.
   if(is_reexec()) {
-    printf("Before preserve SimFlat:%x\t%x\t%x\n", sim, sim->domain, sim->boxes);
-    printf("Let's nullify domain and boxes\n");
+    printf("[Re-exeuction] Before nullyfying SimFlat(domain, boxes):%x\t%x\n", 
+        sim->domain, sim->boxes);
     sim->domain = NULL;
     sim->boxes = NULL;
-    printf("Before preserve SimFlat but nullified:%x\t%x\t%x\n", sim, sim->domain, sim->boxes);
+    printf("[Re-execution] After nullyfying SimFlat(domain, boxes):%x\t%x\n", 
+        sim->domain, sim->boxes);
   }
   cd_preserve(cdh, sim, size, knob, "SimFlat", "SimFlat");
+  if(is_reexec()) {
+    printf("[Re-execution] After restoring SimFlat(domain, boxes):%x\t%x\n", 
+        sim->domain, sim->boxes);
+  }
 #endif
   if (PRINTON == 1)
     printf("Preserve SimFlat: %zu\n", sizeof(SimFlat));
-
   // Further preserve by chasing pointers of *domain, *boxes, *species, *pot
   // and *atomExchange.
-  if(is_reexec()) {
-    printf("Before preserveDomain:%x\t%x\t%x\n", sim, sim->domain, sim->boxes);
-  }
   size += preserveDomain(cdh, knob, sim->domain); // Flat struct
-  if(is_reexec()) {
-    printf("After preserveDomain:%x\t%x\t%x\n", sim, sim->domain, sim->boxes);
-  }
   size += preserveDomain(cdh, knob, sim->domain); // Flat struct
   size += preserveLinkCell(cdh, knob, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
                            0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
@@ -64,7 +62,7 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, uint32_t knob, SimFlat *sim) {
     // Note that there are some function pointers.
     size += preserveLjPot(cdh, knob, (LjPotential *)sim->pot); // Flat
     // preserve HaloAtom by setting 0 at the end
-    //size += preserveHaloExchange(cdh, knob, sim->doeam, sim->atomExchange, 0);
+    size += preserveHaloExchange(cdh, knob, sim->doeam, sim->atomExchange, 0);
   }
 
   return size;
@@ -548,14 +546,32 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh, uint32_t knob,
       cellList_size += xchange_parms->nCells[i] * sizeof(int);
     }
 #ifdef DO_PRV
-    cd_preserve(cdh, xchange_parms->cellList, cellList_size, knob,
-                "AtomExchangeParms_cellList", "AtomExchangeParms_cellList");
+    //FIXME: The below brings restore failure for the next cd_preserve for pbcFactor.
+    //       Somehow it doesn't give a proper TableStore pointer after growth but
+    //       gives a outdated one before growh of the table.
+    //cd_preserve(cdh, xchange_parms->cellList, cellList_size, knob,
+    //            "AtomExchangeParms_cellList", "AtomExchangeParms_cellList");
+    cd_preserve(cdh, xchange_parms->cellList[0], (xchange_parms->nCells[0] * sizeof(int)), knob,
+                    "AtomExchangeParms_cellList0", "AtomExchangeParms_cellList0");
+    cd_preserve(cdh, xchange_parms->cellList[1], (xchange_parms->nCells[1] * sizeof(int)), knob,
+                    "AtomExchangeParms_cellList1", "AtomExchangeParms_cellList1");
+    cd_preserve(cdh, xchange_parms->cellList[2], (xchange_parms->nCells[2] * sizeof(int)), knob,
+                    "AtomExchangeParms_cellList2", "AtomExchangeParms_cellList2");
+    cd_preserve(cdh, xchange_parms->cellList[3], (xchange_parms->nCells[3] * sizeof(int)), knob,
+                    "AtomExchangeParms_cellList3", "AtomExchangeParms_cellList3");
+    cd_preserve(cdh, xchange_parms->cellList[4], (xchange_parms->nCells[4] * sizeof(int)), knob,
+                    "AtomExchangeParms_cellList4", "AtomExchangeParms_cellList4");
+    cd_preserve(cdh, xchange_parms->cellList[5], (xchange_parms->nCells[5] * sizeof(int)), knob,
+                    "AtomExchangeParms_cellList5", "AtomExchangeParms_cellList5");
 #endif
   }
   uint32_t pbcFactor_size = 3 * sizeof(real_t);
   if (is_pbcFactor == 1) {
 #ifdef DO_PRV
-    cd_preserve(cdh, &(xchange_parms->pbcFactor[0]), pbcFactor_size, knob,
+    printf("preserving AtomExchangeParms_pbcFactors\n");
+    //cd_preserve(cdh, &(xchange_parms->pbcFactor[0][0]), pbcFactor_size, knob,
+    //            "AtomExchangeParms_pbcFactor0", "AtomExchangeParms_pbcFactor0");
+    cd_preserve(cdh, xchange_parms->pbcFactor[0], pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor0", "AtomExchangeParms_pbcFactor0");
     cd_preserve(cdh, &(xchange_parms->pbcFactor[1]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor1", "AtomExchangeParms_pbcFactor1");
