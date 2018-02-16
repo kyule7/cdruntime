@@ -5,20 +5,51 @@ SHELL = /bin/sh
 
 CDPATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../..
 CD_ENABLED = 1
+#LULESH_EXEC = lulesh_bare.exe
+#LULESH_EXEC = lulesh_noprv.exe
+LULESH_EXEC = lulesh_cdrt.exe
+#LULESH_EXEC = lulesh_incr.exe
+#LULESH_EXEC = lulesh_full.exe
 ifeq (${CD_ENABLED}, 1)
-CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 -D_LEAF_LV=0 -D_CD_DUMMY=0 -D_CD_MAIN=1 -D_CD_ROOT=1 -D_CD_CHILD=0
+CD_CHILD = 1
+CD_INCR_CKPT = 0
+CD_FULL_CKPT = 0
+
+CD_OPS = -D_CD_MAIN=1 \
+				 -D_CD_ROOT=1 \
+				 -D_CD_CHILD=${CD_CHILD} \
+				 -D_CD_INCR_CKPT=${CD_INCR_CKPT} \
+				 -D_CD_FULL_CKPT=${CD_FULL_CKPT} \
+				 -D_LEAF_LV=1 \
+				 -D_CD_DUMMY=1 
+CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 ${CD_OPS} 
 CD_CFLAGS = -std=gnu++0x -fmax-errors=1 -fPIC -I${CDPATH}/include -I${CDPATH}/src -I${CDPATH}/src/persistence -I${CDPATH}/plugin/wrapper
 #WRAPPER_LFLAGS = -lwrapLibc -L${CDPATH}/plugin/wrapper -Wl,-rpath=${CDPATH}/plugin/wrapper -lc 
 WRAPPER_LFLAGS = -lwrapLibc -L${CDPATH}/plugin/wrapper -Wl,-rpath=${CDPATH}/plugin/wrapper -lc 
 CD_LFLAGS = -L${CDPATH}/lib -lcd -Wl,-rpath=${CDPATH}/lib -L${CDPATH}/src/persistence -lpacker -Wl,-rpath=${CDPATH}/src/persistence -ldl
 CD_LINKFLAGS = ${WRAPPER_LFLAGS} ${CD_LFLAGS}
+
 else
 CD_FLAGS := 
 CD_CFLAGS :=
 CD_LINKFLAGS :=
 endif
 
-LULESH_EXEC = lulesh_cd
+#ifeq (${CD_CHILD}, 1)
+#LULESH_EXEC = lulesh_cdrt.exe
+#else
+#LULESH_EXEC = lulesh_noprv.exe
+#endif
+#
+#ifeq ($(CD_INCR_CKPT), 1)
+#LULESH_EXEC = lulesh_incr.exe
+#else
+#LULESH_EXEC = lulesh_1.exe
+#endif
+#
+#ifeq (${CD_FULL_CKPT}, 1)
+#LULESH_EXEC = lulesh_full.exe
+#endif
 
 MPI_INC = /opt/local/include/openmpi
 MPI_LIB = /opt/local/lib
@@ -36,12 +67,11 @@ endif
 CXX = $(MPICXX)
 
 SOURCES2.0 = \
-	lulesh.cc \
 	lulesh-comm.cc \
 	lulesh-viz.cc \
 	lulesh-util.cc \
 	lulesh-init.cc
-OBJECTS2.0 = $(SOURCES2.0:.cc=.o)
+OBJECTS2.0 = $(SOURCES2.0:.cc=.o) lulesh.o
 
 #Default build suggestions with OpenMP for g++
 CXXFLAGS = -g -O3 -I. -Wall
@@ -68,18 +98,22 @@ LDFLAGS  += -fopenmp
 #CXXFLAGS = -g -DVIZ_MESH -I${SILO_INCDIR} -Wall -Wno-pragmas
 #LDFLAGS = -g -L${SILO_LIBDIR} -Wl,-rpath -Wl,${SILO_LIBDIR} -lsiloh5 -lhdf5
 
-.cc.o: lulesh.h
+all: $(LULESH_EXEC)
+
+.cc.o: lulesh.h $(OBJECTS2.0)
 	@echo "Building $<"
 	$(CXX) -c $(CXXFLAGS) -o $@  $<
 
-all: $(LULESH_EXEC)
+lulesh.o: lulesh.cc lulesh.h cd_def.h Makefile
+	@echo "Building $< OBJS $(OBJECTS2.0)"
+	$(CXX) -c $(CXXFLAGS) -o $@  $<
 
-lulesh_cd: $(OBJECTS2.0)
-	@echo "Linking"
+$(LULESH_EXEC): $(OBJECTS2.0)
+	@echo "Linking for $(LULESH_EXEC)"
 	$(CXX) $(OBJECTS2.0) $(LDFLAGS) -lm -o $@
 
 clean:
-	/bin/rm -f *.o *~ $(OBJECTS) $(LULESH_EXEC)
+	/bin/rm -f *.o *~ $(OBJECTS) $(LULESH_EXEC) *.exe
 	/bin/rm -rf *.dSYM
 
 tar: clean

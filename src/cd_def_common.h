@@ -266,4 +266,9 @@
 //extern uint64_t GetCDEntryID(const char *str);
 extern const char *GetCDEntryStr(uint64_t id);
 extern int      IsReexec(void);
+extern char exec_name[64];
+extern char ftype_name[64];
+extern char start_date[64];
+extern char end_date[64];
+extern char *exec_details;
 #endif

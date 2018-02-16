@@ -198,6 +198,16 @@ void SystemConfig::ParseParam(char *key)
     prv = key[0]; 
     AddIndent(seq_cnt); CD_PRINT_CONFIG(tstream, "%s: ", key);
   } else if(key[0] == 'F') { 
+    char ftype[32];
+    strcpy(ftype, key);
+//    printf("fypte:%s\n", ftype);
+    char *ftypep = strtok(ftype, "_");
+    if(strcmp(ftypep, "FAILURE") == 0) {
+      ftypep = strtok(NULL, "_");
+//      printf("ftypep:%s\n", ftypep);
+      strcpy(ftype_name, ftypep);
+    }
+    
     prv = key[0]; 
     errortype = atol(key+1);
     AddIndent(seq_cnt); CD_PRINT_CONFIG(tstream, "%s: ", key);

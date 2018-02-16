@@ -191,7 +191,7 @@ class Packer {
     { 
       if(src != NULL && entry.size()) {
         uint64_t offset = data_->Write(src, entry.size());
-        printf("offset:%lx ,size:%lx\n", offset, entry.size());
+//        printf("offset:%lx ,size:%lx\n", offset, entry.size());
         entry.SetOffset(offset);
       } else {
         entry.SetOffset(INVALID_NUM);

@@ -718,13 +718,13 @@ int MPI_Irecv(void *buf,
   }
   else {  // cur_cdh == NULL
     LOG_DEBUG("Warning: MPI_Irecv out of CD context...\n");
-    printf("Warning: MPI_Irecv out of CD context...\n");
+//    printf("Warning: MPI_Irecv out of CD context...\n");
     CDHandle *cdt = GetLeafCD();
     if(cdt != NULL) {
       CD *cdtp = cdt->ptr_cd();
-      printf("%s, isReexec?%s, mode:%d", cdtp->label(), (IsReexec())?"Yes":"No", cdtp->GetExecMode());
+//      printf("%s, isReexec?%s, mode:%d", cdtp->label(), (IsReexec())?"Yes":"No", cdtp->GetExecMode());
     } else {
-      printf("Even there is no CDHandle obj available!!!\n");
+//      printf("Even there is no CDHandle obj available!!!\n");
     }
     mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
   }
@@ -2546,6 +2546,18 @@ int MPI_Init(int *argc, char ***argv)
 {
 //  printf("[%s]\n", __func__); getchar();
   app_side = false; 
+  if(argv != NULL && (*argv)[0] != NULL) {
+    char tmp_name[128];
+    strcpy(tmp_name, (*argv)[0]);
+    char *ex_name = strtok(tmp_name, "/");
+    char *pt_name = tmp_name;
+    while(ex_name != NULL) {
+      pt_name = ex_name;
+      ex_name = strtok(NULL, "/");
+    }
+//    printf("exec:%s, %s\n", pt_name, tmp_name);
+    strcpy(exec_name, pt_name);
+  }
   bool orig_disabled = logger::disabled; 
   logger::disabled = true; 
   int mpi_ret = 0;

@@ -22,7 +22,7 @@ static FILE *inYAML = NULL;
 static FILE *outYAML = NULL;
 static FILE *outJSON = NULL;
 static FILE *outAll = NULL;
-static char output_filepath[256];
+static char output_filepath[1024];
 static char output_basepath[512];
 const char *common::GetMedium(PrvMediumT medium)
 {
@@ -63,7 +63,7 @@ void PhaseNode::PrintInputYAML(bool first)
 //    //inYAML = fopen(output_filepath, "a");
 //    inYAML = fopen(output_filepath, "w+");
 //=======
-    memset(output_filepath, '\0', 256);
+    memset(output_filepath, '\0', 512);
     sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_CONFIG_IN);
     printf("%s file:%s\n", __func__, output_basepath);
     inYAML = fopen(output_filepath, "a");
@@ -93,14 +93,15 @@ void PhaseNode::PrintInputYAML(bool first)
 //YKWON: This is depreciated 
 void PhaseNode::PrintOutputYAML(bool first) 
 {
+  assert(0);
   if(first) {
     assert(outYAML == NULL);
 //    string &filepath = cd::output_basepath;
-//    printf("out yaml filepath:%s , %s\n", filepath.c_str(), std::string(CD_DEFAULT_OUTPUT_CONFIG_OUT).c_str());
-//    filepath += std::string(CD_DEFAULT_OUTPUT_CONFIG_OUT);
+//    printf("out yaml filepath:%s , %s\n", filepath.c_str(), std::string(CD_DEFAULT_CONFIG_JSON).c_str());
+//    filepath += std::string(CD_DEFAULT_CONFIG_JSON);
 //    outYAML = fopen(filepath.c_str(), "a");
-    memset(output_filepath, '\0', 256);
-    sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_CONFIG_OUT);
+    memset(output_filepath, '\0', 512);
+    sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_CONFIG_JSON);
     printf("%s Output File:%s\n", __func__, output_filepath);
     outYAML = fopen(output_filepath, "a");
   }
@@ -132,29 +133,38 @@ void PhaseNode::PrintOutputJson(void)
 //  //FIXME(YKWON): Better to have different file handler
 //  assert(outYAML == NULL);
 //  assert(parent_ == NULL);
-//  sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_OUTPUT_CONFIG_OUT);
+//  sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_CONFIG_JSON);
 //  printf("Output File:%s\n", output_filepath);
 //  //outYAML = fopen(output_filepath, "a");
 //  outYAML = fopen(output_filepath, "w+");
 //=======
   assert(outJSON == NULL);
   assert(parent_ == NULL);
-  memset(output_filepath, '\0', 256);
-  sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_CONFIG_OUT);
+  memset(output_filepath, '\0', 1024);
+  sprintf(output_filepath, "%s/%s.%s.%s.%d.%s.%s.json", output_basepath, CD_DEFAULT_CONFIG_JSON, 
+      exec_name, (exec_details!=NULL)? exec_details : "NoInput", 
+      cd::totalTaskSize, ftype_name, end_date);
   printf("%s Output File:%s\n", __func__, output_filepath);
   outJSON = fopen(output_filepath, "a");
   
   fprintf(outJSON, "{\n"
+                   "  \"exec_name\"  : %s,\n"
+                   "  \"input\"      : %s,\n"
+                   "  \"numTasks\"   : %d,\n"
+                   "  \"ftype\"      : %s,\n"
+                   "  \"start_time\" : %s,\n"
+                   "  \"end_time\"   : %s,\n"
                    "  // global parameters\n"
                    "  \"global_param\" : {\n"
                    "    \"max_error\" : 20\n"
                    "  },\n"
                    "  // CD hierarchy\n"
-                   "  \"CD info\" : {\n"
+                   "  \"CD info\" : {\n",
+            exec_name, (exec_details!=NULL)? exec_details : "NoInput", 
+            cd::totalTaskSize, ftype_name, start_date, end_date
          );
   PrintOutputJsonInternal();
-  fprintf(outJSON, "    \"last_param\" : {}\n"
-                   "  } // CD info ends\n"
+  fprintf(outJSON, "  } // CD info ends\n"
                    "}\n"
          );
   fclose(outJSON);
@@ -190,27 +200,30 @@ void PhaseNode::PrintOutputJsonInternal(void)
   fprintf(outJSON, "%s\"label\"    : %s,\n",    two_more_indent.c_str(), label_.c_str());
   fprintf(outJSON, "%s\"interval\" : %ld,\n",   two_more_indent.c_str(), interval_);
   fprintf(outJSON, "%s\"errortype\": 0x%lX,\n", two_more_indent.c_str(), errortype_);
-  fprintf(outJSON, "%s\"medium\"   : %s\n",     two_more_indent.c_str(), GetMedium(medium_));
-  fprintf(outJSON, "%s\"siblingID\" : %8u,\n",  two_more_indent.c_str(), sibling_id_);
-  fprintf(outJSON, "%s\"sibling #\" : %8u,\n",  two_more_indent.c_str(), sibling_size_);
+  fprintf(outJSON, "%s\"medium\"   : %s,\n",     two_more_indent.c_str(), GetMedium(medium_));
+  fprintf(outJSON, "%s\"siblingID\": %8u,\n",  two_more_indent.c_str(), sibling_id_);
+  fprintf(outJSON, "%s\"sibling #\": %8u,\n",  two_more_indent.c_str(), sibling_size_);
   std::ostringstream oss; 
   cd_prof_map[phase_].PrintJSON(oss, two_more_indent);
-  profile_.GetPrvDetails(oss, two_more_indent);
+  profile_.GetPrvDetails(oss, two_more_indent); // print cons prod
 //  cout << " DEBUG 22!!! \n" << oss.str() << endl; 
 //  getchar();
   fprintf(outJSON, "%s", oss.str().c_str());
   //fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
-  fprintf(outJSON, "%s\"ChildCDs\" : {\n", two_more_indent.c_str());
+  if(children_.size() > 0) 
+    fprintf(outJSON, "%s\"ChildCDs\" : {\n", two_more_indent.c_str());
 
-  for(auto it=children_.begin(); it!=children_.end(); ++it) {
+  for(auto it=children_.begin(); it!=children_.end();) {
     (*it)->PrintOutputJsonInternal();
-//    if(it != children_.end() - 1)
-//      fprintf(outJSON, ",\n");
-//    else
-//      fprintf(outJSON, "\n");
+    ++it;
+    if(it != children_.end())
+      fprintf(outJSON, ",\n");
+    else
+      fprintf(outJSON, "\n");
   }
-  fprintf(outJSON, "%s} // ChildCDs ends\n", two_more_indent.c_str());
-  fprintf(outJSON, "%s}", one_more_indent.c_str());
+  if(children_.size() > 0) 
+    fprintf(outJSON, "%s} // ChildCDs ends\n", two_more_indent.c_str());
+  fprintf(outJSON, "%s}\n", one_more_indent.c_str());
 }
 
 //void PhaseNode::Print(void) 
@@ -263,7 +276,7 @@ void PhaseNode::Print(bool print_details, bool first, FILE *outfile)
 //    printf("profile out filepath:%s , %s\n", cd::output_basepath.c_str(), std::string(CD_DEFAULT_OUTPUT_PROFILE).c_str());
 //    outAll = fopen((cd::output_basepath + std::string(CD_DEFAULT_OUTPUT_PROFILE)).c_str(), "a");
 //    
-    memset(output_filepath, '\0', 256);
+    memset(output_filepath, '\0', 512);
     sprintf(output_filepath, "%s/%s", output_basepath, CD_DEFAULT_OUTPUT_PROFILE);
 //    printf("[%s] %s\n", __func__, output_filepath);
     if(outfile == NULL) { // default
@@ -655,9 +668,104 @@ void CDProfiles::Print(std::ostream &os, const std::string &head, const std::str
   <<  std::endl;
 }
 
+
+// FIXME: Could not figure out how to concatenate with dot
+#define PRINT_IN_JSON(PROF) \
+  << head << "\"" #PROF "\" : {\n"\
+  << indent << "\"max\" : " << max_.##PROF_.val_ << ",\n" \
+  << indent << "\"min\" : " << min_.##PROF_.val_ << ",\n" \
+  << indent << "\"avg\" : " << avg_.##PROF_      << ",\n" \
+  << indent << "\"std\" : " << std_.##PROF_      << "\n},\n"
+
+#define PAD_INDENT
+#define SCI_FORMATTING \
+  << std::setw(12) << std::scientific << std::right << std::setprecision(5)
 void CDProfiles::PrintJSON(std::ostream &os, const std::string &head)
 {
+  std::string indent = head + "  ";
   os   
+#if 1
+  << head << "\"exec\"         : {"
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.exec_cnt_.val_              << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.exec_cnt_.val_              << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.exec_cnt_                   << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.exec_cnt_                   << "},\n"
+  << head << "\"reexec\"       : {"                                              
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.reex_cnt_.val_              << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.reex_cnt_.val_              << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.reex_cnt_                   << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.reex_cnt_                   << "},\n"
+  << head << "\"prv_copy\"     : {"                                  
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.prv_copy_.val_              << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.prv_copy_.val_              << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.prv_copy_                   << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.prv_copy_                   << "},\n"
+  << head << "\"prv_ref\"      : {"                                   
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.prv_ref_.val_               << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.prv_ref_.val_               << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.prv_ref_                    << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.prv_ref_                    << "},\n"
+  << head << "\"restore\"      : {"                                   
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.restore_.val_               << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.restore_.val_               << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.restore_                    << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.restore_                    << "},\n"
+  << head << "\"msg_log\"      : {"         
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.msg_logging_.val_           << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.msg_logging_.val_           << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.msg_logging_                << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.msg_logging_                << "},\n"
+  << head << "\"total_time\"   : {"      
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.total_time_.val_            << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.total_time_.val_            << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.total_time_                 << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.total_time_                 << "},\n"
+  << head << "\"reex_time\"    : {"       
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.reex_time_.val_             << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.reex_time_.val_             << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.reex_time_                  << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.reex_time_                  << "},\n"
+  << head << "\"sync_time\"    : {"                                 
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.sync_time_.val_             << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.sync_time_.val_             << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.sync_time_                  << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.sync_time_                  << "},\n"
+  << head << "\"prv_time\"     : {"                                  
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.prv_elapsed_time_.val_      << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.prv_elapsed_time_.val_      << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.prv_elapsed_time_           << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.prv_elapsed_time_           << "},\n"
+  << head << "\"rst_time\"     : {"                                  
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.rst_elapsed_time_.val_      << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.rst_elapsed_time_.val_      << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.rst_elapsed_time_           << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.rst_elapsed_time_           << "},\n"
+  << head << "\"create_time\"  : {"     
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.create_elapsed_time_.val_   << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.create_elapsed_time_.val_   << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.create_elapsed_time_        << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.create_elapsed_time_        << "},\n"
+  << head << "\"destroy_time\" : {"    
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.destroy_elapsed_time_.val_  << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.destroy_elapsed_time_.val_  << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.destroy_elapsed_time_       << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.destroy_elapsed_time_       << "},\n"
+  << head << "\"begin_time\"   : {"      
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.begin_elapsed_time_.val_    << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.begin_elapsed_time_.val_    << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.begin_elapsed_time_         << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.begin_elapsed_time_         << "},\n"
+  << head << "\"compl_time\"   : {"      
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.compl_elapsed_time_.val_    << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.compl_elapsed_time_.val_    << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.compl_elapsed_time_         << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.compl_elapsed_time_         << "},\n"
+  << head << "\"advance_time\" : {"    
+  PAD_INDENT << "\"max\" : " SCI_FORMATTING << max_.advance_elapsed_time_.val_  << ","
+  PAD_INDENT << "\"min\" : " SCI_FORMATTING << min_.advance_elapsed_time_.val_  << ","
+  PAD_INDENT << "\"avg\" : " SCI_FORMATTING << avg_.advance_elapsed_time_       << ","
+  PAD_INDENT << "\"std\" : " SCI_FORMATTING << std_.advance_elapsed_time_       << "},\n";
+#else
   << head << "\"exec\" : "            << max_.exec_cnt_             << ",\n"
   << head << "\"reexec\" : "          << max_.reex_cnt_             << ",\n"
   << head << "\"prv_copy\" : "        << max_.prv_copy_             << ",\n"
@@ -725,4 +833,5 @@ void CDProfiles::PrintJSON(std::ostream &os, const std::string &head)
   << head << "\"std begin_time\" : "  << std_.begin_elapsed_time_   << ",\n"
   << head << "\"std compl_time\" : "  << std_.compl_elapsed_time_   << ",\n"
   << head << "\"std advance_time\" : "<< std_.advance_elapsed_time_ << ",\n";
+#endif
 }

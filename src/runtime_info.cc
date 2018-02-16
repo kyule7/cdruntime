@@ -127,18 +127,36 @@ string RuntimeInfo::GetRTInfoStr(int cnt, int style)
 
 void RuntimeInfo::GetPrvDetails(std::ostream &oss, const std::string &indent)
 {
-  oss << indent << "\"cons\" : {\n";
-  for(auto it=input_.begin(); it!=input_.end(); ++it) {
-    oss << indent << "  " << it->first.c_str() << ':' 
-        << it->second.size_ << ',' << it->second.count_ << '\n';
+//  oss << indent << "\"cons\" : {\n";
+//  for(auto it=input_.begin(); it!=input_.end(); ++it) {
+//    oss << indent << "  " << it->first.c_str() << ':' 
+//        << it->second.size_ << ',' << it->second.count_ << '\n';
+//  }
+//  oss << indent << "},\n";
+//  oss << indent << "\"prod\" : {\n";
+//  for(auto it=output_.begin(); it!=output_.end(); ++it) {
+//    oss << indent << "  " << it->first.c_str() << ':' 
+//        << it->second.size_ << ',' << it->second.count_ << '\n';
+//  }
+//  oss << indent << "},\n";
+  oss << indent.c_str() << "\"consumed\" : {";
+  for(auto it=input_.begin(); it!=input_.end();) {
+    oss << "\"" << it->first.c_str() << "\" : "
+        << (double)(it->second.size_) / it->second.count_;
+    ++it;
+    if(it != input_.end())
+      oss << ',';
   }
-  oss << indent << "},\n";
-  oss << indent << "\"prod\" : {\n";
-  for(auto it=output_.begin(); it!=output_.end(); ++it) {
-    oss << indent << "  " << it->first.c_str() << ':' 
-        << it->second.size_ << ',' << it->second.count_ << '\n';
+  oss << "},\n";
+  oss << indent.c_str() << "\"produced\" : {";
+  for(auto it=output_.begin(); it!=output_.end();) {
+    oss << "\"" << it->first.c_str() << "\" : "
+        << (double)(it->second.size_) / it->second.count_;
+    ++it;
+    if(it != output_.end())
+      oss << ',';
   }
-  oss << indent << "},\n";
+  oss << "},\n";
 }
 
 void RuntimeInfo::Print(void)
