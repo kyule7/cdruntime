@@ -34,7 +34,6 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, uint32_t knob, SimFlat *sim) {
   // Further preserve by chasing pointers of *domain, *boxes, *species, *pot
   // and *atomExchange.
   size += preserveDomain(cdh, knob, sim->domain); // Flat struct
-  size += preserveDomain(cdh, knob, sim->domain); // Flat struct
   size += preserveLinkCell(cdh, knob, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
                            0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
   size += preserveAtoms(cdh, knob, sim->atoms, sim->boxes->nTotalBoxes,
@@ -499,6 +498,7 @@ unsigned int preserveEamPot(cd_handle_t *cdh, uint32_t knob, int doeam,
 
 // Preserving HaloExchange strcuture. Note that LJ potential and EAM potential
 // will be preserved in different manner since they do different stuffs.
+// TODO: doeam and is_force are redundant
 unsigned int preserveHaloExchange(cd_handle_t *cdh, uint32_t knob, int doeam,
                                   HaloExchange *xchange, int is_force) {
   uint32_t size = sizeof(HaloExchange);

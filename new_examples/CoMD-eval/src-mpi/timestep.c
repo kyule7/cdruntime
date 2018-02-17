@@ -92,11 +92,11 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                          1 /*local*/, 1 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
     // dt is ignored since it's tiny and not changing.
 
-#if DOPRV
+#if DO_PRV
     // Preserve loop index (ii)
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, "advanceVelocity_start_ii",
                 "advanceVelocity_start_ii");
-#endif                                // DOPRV
+#endif                                // DO_PRV
     velocity_pre_size += sizeof(int); // add the size of ii (loop index)
     // printf("\n preservation size for advanceVelocity(@beggining) %d\n",
     //       velocity_pre_size);
@@ -167,11 +167,11 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     position_pre_size +=
         preserveLinkCell(lv2_cd, kCopy, s->boxes, 0 /*all*/, 1 /*only nAtoms*/,
                          1 /*local*/, 1 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
-#if DOPRV
+#if DO_PRV
     // FIXME:CD2 optimization
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, "advancePosition_ii",
                 "advancePosition_ii");
-#endif                                // DOPRV
+#endif                                // DO_PRV
     position_pre_size += sizeof(int); // add the size of ii (loop index)
     // printf("\n preservation size for advancePosition %d\n",
     // position_pre_size);
@@ -255,7 +255,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     redist_pre_size = preserveHaloAtom(lv2_cd, kCopy, s->atomExchange->parms,
                                        1 /*cellList*/, 1 /*pbcFactor*/);
 //    int redist_pre_size = preserveSimFlat(lv2_cd, kCopy, s);
-#if DOPRV
+#if DO_PRV
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, "redistributeAtoms_ii",
                 "redistributeAtoms_ii");
 #endif                              // DOPRV
@@ -325,10 +325,10 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       0,
                       idx_force); // is_print
                                   // NULL); // is_print
-#if DOPRV
+#if DO_PRV
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, "computeForce_ii",
                 "computeForce_ii");
-#endif                                        // DOPRV
+#endif                                        // DO_PRV
     computeForce_pre_lv2_size += sizeof(int); // add the size of ii (loop index)
 
 #endif
@@ -437,11 +437,11 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     velocity_end_pre_size +=
         preserveLinkCell(lv2_cd, kCopy, s->boxes, 0 /*all*/, 1 /*only nAtoms*/,
                          1 /*local*/, 1 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
-#if DOPRV
+#if DO_PRV
     // Preserve loop index (ii)
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, "advanceVelocity_end_ii",
                 "advanceVelocity_end_ii");
-#endif                                    // DOPRV
+#endif                                    // DO_PRV
     velocity_end_pre_size += sizeof(int); // add the size of ii (loop index)
 
     // printf("\n preservation size for advanceVelocity(@end) %d\n",
@@ -471,7 +471,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       idx_advanceVelocity_end); // FIXME: what should be given?
 #endif
 
-    //    cd_detect(lv2_cd);
+    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 
 #endif

@@ -2639,7 +2639,7 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
         
         PRINT_MPI("Print Entries at %s (#%u)\n", ptr_cd->label_.c_str(), ptr_cd->level());
         if(myTaskID == 0) {
-          ptr_cd->entry_directory_.table_->PrintEntry();
+//          ptr_cd->entry_directory_.table_->PrintEntry();
         }
           CD_ASSERT_STR(0, "Not deserialized %s %u / %u\n", name_.c_str(), level(), ptr_cd->level());
       }
@@ -2653,7 +2653,7 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     // disk, overlapping reexecution of application.
     if(myTaskID ==0) { 
       printf("[%s, %s] It is not a serdes obj(%s,%s)\n", __func__, ptr_cd->label(), my_name.c_str(), ref_name.c_str());
-      entry_directory_.table_->PrintEntry();
+//      entry_directory_.table_->PrintEntry();
     }
     CD_ASSERT_STR(src->src() == data, "%s src: %p==%p ",
        (is_ref)? ref_name.c_str() : my_name.c_str(), src->src(), data);

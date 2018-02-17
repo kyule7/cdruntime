@@ -38,10 +38,11 @@ CD_FLAGS :=
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 
 
+CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -DDO_PRV -DO_OUTPUT
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 
 
-CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -DDO_PRV 
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -DDO_PRV 
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 
 
 #CD_CFLAGS := -I$(CD_ROOT)/include 

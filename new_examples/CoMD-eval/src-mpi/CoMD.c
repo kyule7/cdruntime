@@ -129,6 +129,8 @@ int main(int argc, char **argv) {
 
 #if _CD1
   // TODO: 0xE vs 0xF, kHDD vs kDRAM(=kLocalMemory)
+  // Note that preservation medium (KLocalMemory) and error vector (0xE) will 
+  // be over-written by config.yaml.
   cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "main_loop",
                                   kStrict | kLocalMemory, 0xE); // F8, F4, F2
 #endif
@@ -149,6 +151,7 @@ int main(int argc, char **argv) {
       // iteration it's already preserved at Root CD and fot the rest of loops,
       // this is to be preserved via kOutput at the end of this iteration.
       int main_loop_pre_size =
+//            preserveSimFlat(lv1_cd, kCopy, sim); // For test
 #if DO_OUTPUT
           preserveAtoms(lv1_cd, kRef, sim->atoms, sim->boxes->nTotalBoxes,
 #else
@@ -179,16 +182,30 @@ int main(int argc, char **argv) {
       // Preserve pbcFactor
       // Note that this is to be preserved via reference since it's preserved in
       // Root CD and it gets never gets updated during this iteration.
-      main_loop_pre_size =
+      // FIXME: need to double check
+      main_loop_pre_size +=
+#if DO_OUTPUT
           preserveHaloAtom(lv1_cd, kRef, sim->atomExchange->parms,
-                           0 /*cellList*/, 0 /*pbcFactor*/);
-#if DOPRV
+#else
+          preserveHaloAtom(lv1_cd, kCopy, sim->atomExchange->parms,
+#endif
+                           1 /*cellList*/, 1 /*pbcFactor*/);
+
+//#if DO_OUTPUT
+//      // Preserve HaloExchange
+//      main_loop_pre_size += preserveHaloExchnage(lv1_cd, kCopy, sim->doeam,
+//                            sim->atomExchange, 0);
+//#else
+//      main_loop_pre_size += preserveDomain(lv1_cd, kCopy, sim->domain); 
+//#endif
+
+#if DO_PRV
       // Constants (ignored): nStep, printRate
       // iStep
       cd_preserve(lv1_cd, &iStep, sizeof(int), kCopy, "timestep_iStep",
                   "timestep_iStep");
       // kRef: sim->pot, sim->epotential
-#endif // DOPRV
+#endif // DO_PRV
       main_loop_pre_size += sizeof(int);
     } // CD1_INTERVAL
 #endif
@@ -264,14 +281,14 @@ int main(int argc, char **argv) {
       // FIXME: it seems atomExchange->parms won't be changing once allocated
       main_loop_pre_out_size =
           preserveHaloAtom(lv1_cd, kOutput, sim->atomExchange->parms,
-                           0 /*cellList*/, 0 /*pbcFactor*/);
-#if DOPRV
+                           1 /*cellList*/, 1 /*pbcFactor*/);
+#if DO_PRV
       // Constants (ignored): nStep, printRate
       cd_preserve(lv1_cd, &iStep, sizeof(int), kOutput, "timestep_iStep",
                   "timestep_iStep");
-#endif // DOPRV
+#endif // DO_PRV
       main_loop_pre_out_size += sizeof(int);
-#endif
+#endif // DO_OUTPUT
       cd_detect(lv1_cd);
       cd_complete(lv1_cd);
     } // CD1_INTERVAL
