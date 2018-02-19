@@ -568,7 +568,6 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh, uint32_t knob,
   uint32_t pbcFactor_size = 3 * sizeof(real_t);
   if (is_pbcFactor == 1) {
 #ifdef DO_PRV
-    printf("preserving AtomExchangeParms_pbcFactors\n");
     //cd_preserve(cdh, &(xchange_parms->pbcFactor[0][0]), pbcFactor_size, knob,
     //            "AtomExchangeParms_pbcFactor0", "AtomExchangeParms_pbcFactor0");
     cd_preserve(cdh, xchange_parms->pbcFactor[0], pbcFactor_size, knob,

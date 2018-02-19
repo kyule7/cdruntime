@@ -139,6 +139,7 @@ int main(int argc, char **argv) {
   const int nSteps = sim->nSteps;
   const int printRate = sim->printRate;
   int iStep = 0;
+  unsigned int numReexecution = 0;
   profileStart(loopTimer);
   for (; iStep < nSteps;) {
 #if _CD1
@@ -202,7 +203,11 @@ int main(int argc, char **argv) {
 #if DO_PRV
       // Constants (ignored): nStep, printRate
       // iStep
+#if DO_OUTPUT
+      cd_preserve(lv1_cd, &iStep, sizeof(int), kRef, "timestep_iStep",
+#else
       cd_preserve(lv1_cd, &iStep, sizeof(int), kCopy, "timestep_iStep",
+#endif
                   "timestep_iStep");
       // kRef: sim->pot, sim->epotential
 #endif // DO_PRV
@@ -219,7 +224,17 @@ int main(int argc, char **argv) {
     //      communication: AllReduce: send(nLocal) / recv(nGlobal)
     sumAtoms(sim);
     stopTimer(commReduceTimer);
-
+   
+    if(getMyRank() == 0) {
+      if(is_reexec()) {
+        numReexecution++;
+        printf("In %d re-execution(%d)\n",numReexecution, iStep);
+      }
+      else {
+        numReexecution = 0;
+        printf("In normal-exeuction(%d)\n", iStep);
+      }
+    }
     printThings(sim, iStep, getElapsedTime(timestepTimer));
 
 #if _CD2
@@ -293,7 +308,7 @@ int main(int argc, char **argv) {
       cd_complete(lv1_cd);
     } // CD1_INTERVAL
 #endif
-  } // iStep
+  } // for(iStep)
   profileStop(loopTimer);
 
   sumAtoms(sim);
