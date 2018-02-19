@@ -43,7 +43,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <initializer_list>
 #include <iostream>
 #define CD_VECTOR_PRINT(...)
-#define DO_COMPARE 1
+#define DO_COMPARE 0
 #define UNDEFINED_NAME "undefined"
 #define VECTOR_INIT_NAME "V:"
 
@@ -153,9 +153,9 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     packer::CDEntry entry(id_, ((prv_type & kRef) == kRef)? packer::Attr::krefer : 0, prv_size, 0, ptr);
     //uint64_t table_offset = packer.Add(ptr, entry);//packer::CDEntry(id_, this->size() * sizeof(T), 0, ptr));
     packer.Add(ptr, entry);
+#if DO_COMPARE
     if(myTaskID == 0) {printf("    ##  CHECK %s ## : ", name_.c_str()); entry.Print(name_.c_str());}
 //    if(myTaskID == 0) printf("CDVector %s (%lx) preserved (0x%lx)\n", name_.c_str(), id_, prv_size);
-#if DO_COMPARE
     CompareVector();
 #endif
 
@@ -232,7 +232,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       if(myTaskID == 0) {
         Print(std::cout, "Restoration Check ");
         printf("Entry Check: "); pentry->Print();
-        assert(0);
+        //assert(0);
       }
     }
 #endif

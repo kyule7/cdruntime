@@ -149,9 +149,9 @@ void CommRecv(Domain& domain, int msgType, Index_t xferFields,
       ++pmsg ;
    }
    if (colMax) {
-      if(IsReexec()) {
+//      if(IsReexec()) {
 //          printf("About to crash\n");
-      }
+//      }
       /* scattered memory */
       int fromRank = myRank + 1 ;
       int recvCount = dy * dz * xferFields ;

@@ -35,6 +35,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include <sys/stat.h>
 #include <cmath>
+#include <time.h>
 #include "cd_config.h"
 #include "cd_features.h"
 #include "cd_handle.h"
@@ -82,6 +83,11 @@ SystemErrorInjector *CDHandle::system_error_injector_ = NULL;
   (((X) & (Y)) == (X))
 
 #endif
+char exec_name[64] = "NoNamed";
+char ftype_name[64] = "NoNamed";
+char start_date[64] = "NoNamed";
+char end_date[64] = "NoNamed";
+char *exec_details = NULL;
 
 bool cd::orig_app_side = true;
 bool cd::orig_disabled = false;
@@ -343,6 +349,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //    cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
 //  }
 //  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
+  exec_details = getenv("CD_EXEC_DETAILS");
 #if CD_TUNING_ENABLED == 0
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
@@ -387,8 +394,12 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   PMPI_Comm_group(MPI_COMM_WORLD, &whole_group); 
   new_node_id = CDHandle::GenNewNodeID(ROOT_HEAD_ID, new_node_id, false);
 #endif
+  time_t right_now = time(NULL);
+  struct tm *p = localtime(&right_now);
+  strftime(start_date, 64, "%F-%A-%H-%M-%S", p);
   CD::CDInternalErrT internal_err;
-  CDHandle *root_cd_handle = CD::CreateRootCD(DEFAULT_ROOT_LABEL, CDID(CDNameT(0), new_node_id), 
+  CDHandle *root_cd_handle = CD::CreateRootCD( (strcmp(exec_name, "NoNamed") == 0)? DEFAULT_ROOT_LABEL : exec_name, 
+                                              CDID(CDNameT(0), new_node_id), 
                                               static_cast<CDType>(kStrict | prv_medium), 
                                              /* FilePath::global_prv_path_,*/ 
                                               ROOT_SYS_DETECT_VEC, &internal_err);
@@ -436,6 +447,12 @@ void CD_Finalize(void)
   //GONG
   CDPrologue();
 
+  time_t right_now = time(NULL);
+  struct tm *p = localtime(&right_now);
+  strftime(end_date, 64, "%F-%A-%H-%M-%S", p);
+//  start_date[strlen(start_date) - 1] = '\0';
+  cd::tot_end_clk = CD_CLOCK();
+
   CD_DEBUG("========================= Finalize [%d] ===============================\n", myTaskID);
 
   CD_ASSERT_STR(CDPath::GetCDPath()->size()==1, 
@@ -460,7 +477,6 @@ void CD_Finalize(void)
 //  CDPath::GetRootCD()->InternalDestroy(false);
 //
 //  cd::internal::Finalize();
-  cd::tot_end_clk = CD_CLOCK();
 /*
 #if CD_PROFILER_ENABLED 
   std::map<uint32_t, RuntimeInfo> runtime_info;
@@ -616,6 +632,7 @@ void CD_Finalize(void)
 
 
   */
+
 #if CD_ERROR_INJECTION_ENABLED
   if(CDHandle::memory_error_injector_ != NULL)
     delete CDHandle::memory_error_injector_;

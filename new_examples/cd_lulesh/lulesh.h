@@ -32,7 +32,7 @@
 #include "cd_containers.hpp"
 #include "cd.h"
 using namespace cd;
-
+#define PRINT_COMPARE(...) printf(__VA_ARGS__)
 #else
 #include <assert.h>
 #include <vector>
@@ -270,163 +270,203 @@ struct Internal {
       m_planeMin           = that.m_planeMin;
       m_planeMax           = that.m_planeMax;
    }
+   ~Internal() {}
 
-   void CheckUpdate(const Internal &that, const char *str="") {
-#if _CD && DO_CHECK
+   bool CheckInternal(const Internal &that, const char *str="", bool checkall=false) {
+#if _CD 
       bool numReg_changed = false;
+      bool any_changed = false;
       if(m_numReg          != that.m_numReg) {
-        printf("numReg ");
+        PRINT_COMPARE("numReg ");
         m_numReg            = that.m_numReg;
         numReg_changed = true;
+        any_changed |= true;
       }
       if(m_cost            != that.m_cost) {
-        printf("cost ");
+        PRINT_COMPARE("cost ");
+        any_changed |= true;
         m_cost              = that.m_cost;
       }
       if(m_dtcourant       != that.m_dtcourant) {
-        printf("dtcourant ");
+        PRINT_COMPARE("dtcourant ");
+        any_changed |= true;
         m_dtcourant         = that.m_dtcourant;
       }
       if(m_dthydro         != that.m_dthydro) {
-        printf("dthydro ");
+        PRINT_COMPARE("dthydro ");
+        any_changed |= true;
         m_dthydro           = that.m_dthydro;
       }
       if(m_cycle           != that.m_cycle) {
-        printf("cycle ");
+        PRINT_COMPARE("cycle ");
+        any_changed |= true;
         m_cycle             = that.m_cycle;
       }
       if(m_dtfixed         != that.m_dtfixed) {
-        printf("dtfixed ");
+        PRINT_COMPARE("dtfixed ");
+        any_changed |= true;
         m_dtfixed           = that.m_dtfixed;
       }
       if(m_time            != that.m_time) {
-        printf("time ");
+        PRINT_COMPARE("time ");
+        any_changed |= true;
         m_time              = that.m_time;
       }
       if(m_deltatime       != that.m_deltatime) {
-        printf("deltatime ");
+        PRINT_COMPARE("deltatime ");
+        any_changed |= true;
         m_deltatime         = that.m_deltatime;
       }
       if(m_deltatimemultlb != that.m_deltatimemultlb) {
-        printf("deltatimemultlb ");
+        PRINT_COMPARE("deltatimemultlb ");
+        any_changed |= true;
         m_deltatimemultlb   = that.m_deltatimemultlb;
       }
       if(m_deltatimemultub != that.m_deltatimemultub) {
-        printf("deltatimemultub ");
+        PRINT_COMPARE("deltatimemultub ");
+        any_changed |= true;
         m_deltatimemultub   = that.m_deltatimemultub;
       }
       if(m_dtmax           != that.m_dtmax) {
-        printf("dtmax ");
+        PRINT_COMPARE("dtmax ");
+        any_changed |= true;
         m_dtmax             = that.m_dtmax;
       }
       if(m_stoptime        != that.m_stoptime) {
-        printf("stoptime ");
+        PRINT_COMPARE("stoptime ");
+        any_changed |= true;
         m_stoptime          = that.m_stoptime;
       }
       if(m_numRanks        != that.m_numRanks) {
-        printf("numRanks ");
+        PRINT_COMPARE("numRanks ");
+        any_changed |= true;
         m_numRanks          = that.m_numRanks;
       }
       if(m_colLoc          != that.m_colLoc) {
-        printf("colLoc ");
+        PRINT_COMPARE("colLoc ");
+        any_changed |= true;
         m_colLoc            = that.m_colLoc;
       }
       if(m_rowLoc          != that.m_rowLoc) {
-        printf("rowLoc ");
+        PRINT_COMPARE("rowLoc ");
+        any_changed |= true;
         m_rowLoc            = that.m_rowLoc;
       }
       if(m_planeLoc        != that.m_planeLoc) {
-        printf("planeLoc ");
+        PRINT_COMPARE("planeLoc ");
+        any_changed |= true;
         m_planeLoc          = that.m_planeLoc;
       }
       if(m_tp              != that.m_tp) {
-        printf("tp ");
+        PRINT_COMPARE("tp ");
+        any_changed |= true;
         m_tp                = that.m_tp;
       }
       if(m_sizeX           != that.m_sizeX) {
-        printf("sizeX ");
+        PRINT_COMPARE("sizeX ");
+        any_changed |= true;
         m_sizeX             = that.m_sizeX;
       }
       if(m_sizeY           != that.m_sizeY) {
-        printf("sizeY ");
+        PRINT_COMPARE("sizeY ");
+        any_changed |= true;
         m_sizeY             = that.m_sizeY;
       }
       if(m_sizeZ           != that.m_sizeZ) {
-        printf("sizeZ ");
+        PRINT_COMPARE("sizeZ ");
+        any_changed |= true;
         m_sizeZ             = that.m_sizeZ;
       }
       if(m_numElem         != that.m_numElem) {
-        printf("numElem ");
+        PRINT_COMPARE("numElem ");
+        any_changed |= true;
         m_numElem           = that.m_numElem;
       }
       if(m_numNode         != that.m_numNode) {
-        printf("numNode ");
+        PRINT_COMPARE("numNode ");
+        any_changed |= true;
         m_numNode           = that.m_numNode;
       }
       if(m_maxPlaneSize    != that.m_maxPlaneSize) {
-        printf("maxPlaneSize ");
+        PRINT_COMPARE("maxPlaneSize ");
+        any_changed |= true;
         m_maxPlaneSize      = that.m_maxPlaneSize;
       }
       if(m_maxEdgeSize     != that.m_maxEdgeSize) {
-        printf("maxEdgeSize ");
+        PRINT_COMPARE("maxEdgeSize ");
+        any_changed |= true;
         m_maxEdgeSize       = that.m_maxEdgeSize;
       }
       if(m_rowMin          != that.m_rowMin) {
-        printf("rowMin ");
+        PRINT_COMPARE("rowMin ");
+        any_changed |= true;
         m_rowMin            = that.m_rowMin;
       }
       if(m_rowMax          != that.m_rowMax) {
-        printf("rowMax ");
+        PRINT_COMPARE("rowMax ");
+        any_changed |= true;
         m_rowMax            = that.m_rowMax;
       }
       if(m_colMin          != that.m_colMin) {
-        printf("colMin ");
+        PRINT_COMPARE("colMin ");
+        any_changed |= true;
         m_colMin            = that.m_colMin;
       }
       if(m_colMax          != that.m_colMax) {
-        printf("colMax ");
+        PRINT_COMPARE("colMax ");
+        any_changed |= true;
         m_colMax            = that.m_colMax;
       }
       if(m_planeMin        != that.m_planeMin) {
-        printf("planeMin ");
+        PRINT_COMPARE("planeMin ");
+        any_changed |= true;
         m_planeMin          = that.m_planeMin;
       }
       if(m_planeMax        != that.m_planeMax) {
-        printf("planeMax ");
+        PRINT_COMPARE("planeMax ");
+        any_changed |= true;
         m_planeMax          = that.m_planeMax;
       }
-      if(myRank == 0 && (r_regElemSize || r_regNumList|| r_regElemlist)) {
-        printf("Read %s %s %s %s\n", str, 
-              (r_regElemSize)? "regElemSize": "", 
-              (r_regNumList )? "regNumList" : "", 
-              (r_regElemlist)? "regElemlist" : "" );
-      }
-      cd::Compare(     m_regElemSize,      m_numReg,
-              that.m_regElemSize, that.m_numReg, sizeof(Index_t),
-              str, "regElemSize"
-              );
-      cd::Compare(     m_regNumList,      m_numElem,
-              that.m_regNumList, that.m_numElem, sizeof(Index_t),
-              str, "regNumList"
-              );
-
-      if(numReg_changed) {
-        if(m_regElemlist != NULL) 
-          m_regElemlist = (Index_t **)realloc(m_regElemlist, m_numReg * sizeof(Index_t **));
-        else 
-          m_regElemlist = (Index_t **)malloc(m_numReg * sizeof(Index_t **));
-      }
-      for(int i=0; i<m_numReg; i++) {
-        char elemID[32];
-        sprintf(elemID, "regElemlist_%d", i);
-        cd::Compare(     m_regElemlist[i],      m_regElemSize[i],
-                that.m_regElemlist[i], that.m_regElemSize[i], sizeof(Index_t),
-                str, elemID
+      if(checkall) {
+        if(myRank == 0 && (r_regElemSize || r_regNumList|| r_regElemlist)) {
+          printf("Read %s %s %s %s\n", str, 
+                (r_regElemSize)? "regElemSize": "", 
+                (r_regNumList )? "regNumList" : "", 
+                (r_regElemlist)? "regElemlist" : "" );
+        }
+        float diff = cd::Compare(     m_regElemSize,      m_numReg,
+                that.m_regElemSize, that.m_numReg, sizeof(Index_t),
+                str, "regElemSize"
                 );
+        bool regElemSize_changed = (diff > 0.0000)? true : false;
+        diff = cd::Compare(     m_regNumList,      m_numElem,
+                that.m_regNumList, that.m_numElem, sizeof(Index_t),
+                str, "regNumList"
+                );
+        bool regNumList_changed  = (diff > 0.0000)? true : false;
+        bool regElemList_changed = false;
+        if(numReg_changed) {
+          if(m_regElemlist != NULL) 
+            m_regElemlist = (Index_t **)realloc(m_regElemlist, m_numReg * sizeof(Index_t **));
+          else 
+            m_regElemlist = (Index_t **)malloc(m_numReg * sizeof(Index_t **));
+        }
+        for(int i=0; i<m_numReg; i++) {
+          char elemID[32];
+          sprintf(elemID, "regElemlist_%d", i);
+          float diff = cd::Compare(     m_regElemlist[i],      m_regElemSize[i],
+                  that.m_regElemlist[i], that.m_regElemSize[i], sizeof(Index_t),
+                  str, elemID
+                  );
+          regElemList_changed  = (diff > 0.0000)? true : false;
+  
+        }
+        r_regElemSize = false;  
+        r_regNumList  = false;   
+        r_regElemlist = false;  
+        any_changed |= (regElemSize_changed | regNumList_changed | regElemList_changed);
       }
-      r_regElemSize = false;  
-      r_regNumList  = false;   
-      r_regElemlist = false;  
+      return (any_changed);
 //      m_nodeElemStart      = that.m_nodeElemStart;
 //      m_nodeElemCornerList = that.m_nodeElemCornerList;
 //      Add((char *)commDataSend, (("COMMBUFSEND"), comBufSize * sizeof(Real_t), 0, (char *)commDataSend)); 
@@ -442,7 +482,7 @@ class Domain : public Internal {
 #endif
    public:
 #if _CD
-   Internal preserved_;
+   Internal *preserved_;
    std::string name_;
 #endif
    // Constructor
@@ -821,6 +861,12 @@ class Domain : public Internal {
    Real_t& dtfixed()              { return m_dtfixed ; }
 
    Int_t&  cycle()                { return m_cycle ; }
+#if _CD
+   bool    check_begin(int intvl) { const Int_t cycle = m_cycle - 1; assert(cycle >= 0); 
+                                    return (cycle % intvl == 0); }
+   bool    check_end(int intvl)   { const Int_t cycle = m_cycle - 1; assert(cycle >= 0);
+                                    return (cycle % intvl == intvl - 1); }
+#endif
    Index_t&  numRanks()           { return m_numRanks ; }
 
    Index_t&  colLoc()             { return m_colLoc ; }
@@ -1212,7 +1258,7 @@ class Domain : public Internal {
    void CheckUpdate(const char *str) 
    {
 #if DO_CHECK      
-      dynamic_cast<Internal *>(this)->CheckUpdate(dynamic_cast<Internal &>(*this), str);
+      dynamic_cast<Internal *>(this)->CheckInternal(dynamic_cast<Internal &>(*preserved_), str);
       m_x.CompareVector(        str /*"X"        */);
       m_y.CompareVector(        str /*"Y"        */);
       m_z.CompareVector(        str /*"Z"        */);
@@ -1273,8 +1319,11 @@ class Domain : public Internal {
       }
       PrintDebugDetail(true);
 
-      Internal *base = dynamic_cast<Internal *>(this);
-      preserved_ = *base;
+      // Copied by first preserve call.
+//      if(preserved_ == nullptr) {
+//        preserved_ = new Internal(*dynamic_cast<Internal *>(this));
+//      }
+      
       //packer.Add((char *)base, packer::CDEntry(cd::GetCDEntryID("BaseObj"), sizeof(Internal), 0, (char *)base));
       uint64_t target_vec = 1;
       uint64_t prv_size = 0;
@@ -1322,6 +1371,15 @@ class Domain : public Internal {
 
    uint64_t Deserialize(packer::CDPacker &packer, const char *entry_str) { 
      std::string entry_name(entry_str);
+     // Dealloced and checked by first restore call
+     // This means domain obj must be first restored,
+     // and succeeding Deserialize() will check the restored domain object.
+//     if(preserved_ != nullptr) {
+//       bool different = CheckInternal(*preserved_, "DomainObj Check:");
+//       assert(different);
+////       delete preserved_;
+//       preserved_ = nullptr;
+//     }
      //printf("Deserialize %s\n", entry_str);
 //      packer.Restore(cd::GetCDEntryID("BaseObj"));
 //      copy(preserved);

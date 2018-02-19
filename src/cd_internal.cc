@@ -2347,7 +2347,7 @@ CDErrT CD::Preserve(CDEvent &cd_event,
   // stub
   return kError; 
 }
-
+#include "packer_prof.h"
 CDEntry *CD::PreserveCopy(void *data, 
                           uint64_t &len_in_bytes, 
                           CDPrvType preserve_mask, 
@@ -2402,9 +2402,12 @@ CDEntry *CD::PreserveCopy(void *data,
   }
   else { // preserve a single entry
     pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, len_in_bytes, 0, (char *)data));
-    if(myTaskID == 0) { 
+    if(0)//if(myTaskID == 0) 
+    { 
       printf("Preserve %s (%lx), size:%lx, at %p\n", my_name.c_str(), id, len_in_bytes, data);
-      pEntry->Print("MainLoopDomain : ");
+      char tmp[64];
+      sprintf(tmp, "Domain %s : ", my_name.c_str());
+      pEntry->Print(tmp);
     }
   }
 //#ifdef _DEBUG_0402        
@@ -2418,6 +2421,7 @@ CDEntry *CD::PreserveCopy(void *data,
     
   if(prv_medium_ != kDRAM)
     entry_directory_.data_->Flush();
+//  if(myTaskID == 0) { printf("prv size:%lu, %lu\n", phaseTree.current_->profile_.prv_copy_ + len_in_bytes, packer::time_mpiio_write.size); }
   return pEntry;
 }
 
