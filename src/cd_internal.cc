@@ -1098,8 +1098,14 @@ CDErrT CD::Begin(const char *label, bool collective)
   // If it is not from complete (reexecution)
   //if(failed_phase == HEALTHY) {
   if(cd_exec_mode_ != kReexecution) {
-    if(prv_medium_ == kLocalDisk && entry_directory_.data_->ftype() != kPosixFile) {
-      entry_directory_.data_->InitFile(kPosixFile);
+    if(prv_medium_ == kLocalDisk) {
+      if(entry_directory_.data_->ftype() != kPosixFile) {
+        entry_directory_.data_->InitFile(kPosixFile);
+      } else {
+
+      }
+    } else if(prv_medium_ == kLocalMemory) {
+      entry_directory_.data_->SetMode(kVolatile);
     }
     entry_directory_.data_->ReInit();
   }

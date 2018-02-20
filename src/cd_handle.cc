@@ -1395,9 +1395,12 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 //                                                                      level(), need_reexec(), *CD::rollback_point_);
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
+  CD_ASSERT_STR(GetCurrentCD()->ptr_cd() == ptr_cd_, "Level %u is not complete before completing %u\n",
+        GetCurrentCD()->level(), level() );
 
   // After Complete(), phaseTree.current_ changes to its parent
   PhaseNode *current = cd::phaseTree.current_;
+
 
   // This part may be a bit tricky. failed_phase is reset to HEALTHY
   // in the case that current phase of CD is the end of the last failed point.

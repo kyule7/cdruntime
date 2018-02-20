@@ -148,23 +148,21 @@ void PhaseNode::PrintOutputJson(void)
   outJSON = fopen(output_filepath, "a");
   
   fprintf(outJSON, "{\n"
-                   "  \"exec_name\"  : %s,\n"
-                   "  \"input\"      : %s,\n"
+                   "  \"exec_name\"  : \"%s\",\n"
+                   "  \"input\"      : \"%s\",\n"
                    "  \"numTasks\"   : %d,\n"
-                   "  \"ftype\"      : %s,\n"
-                   "  \"start_time\" : %s,\n"
-                   "  \"end_time\"   : %s,\n"
-                   "  // global parameters\n"
+                   "  \"ftype\"      : \"%s\",\n"
+                   "  \"start_time\" : \"%s\",\n"
+                   "  \"end_time\"   : \"%s\",\n"
                    "  \"global_param\" : {\n"
                    "    \"max_error\" : 20\n"
                    "  },\n"
-                   "  // CD hierarchy\n"
                    "  \"CD info\" : {\n",
             exec_name, (exec_details!=NULL)? exec_details : "NoInput", 
             cd::totalTaskSize, ftype_name, start_date, end_date
          );
   PrintOutputJsonInternal();
-  fprintf(outJSON, "  } // CD info ends\n"
+  fprintf(outJSON, "\n  }\n"
                    "}\n"
          );
   fclose(outJSON);
@@ -197,22 +195,22 @@ void PhaseNode::PrintOutputJsonInternal(void)
 //  fprintf(outYAML, "%s\"ChildCDs\" : {\n", two_more_indent.c_str());
 //=======
   fprintf(outJSON, "%s\"CD_%u_%u\" : {\n",      one_more_indent.c_str(), level_, phase_);
-  fprintf(outJSON, "%s\"label\"    : %s,\n",    two_more_indent.c_str(), label_.c_str());
+  fprintf(outJSON, "%s\"label\"    : \"%s\",\n",    two_more_indent.c_str(), label_.c_str());
   fprintf(outJSON, "%s\"interval\" : %ld,\n",   two_more_indent.c_str(), interval_);
-  fprintf(outJSON, "%s\"errortype\": 0x%lX,\n", two_more_indent.c_str(), errortype_);
-  fprintf(outJSON, "%s\"medium\"   : %s,\n",     two_more_indent.c_str(), GetMedium(medium_));
+  fprintf(outJSON, "%s\"errortype\": \"0x%lX\",\n", two_more_indent.c_str(), errortype_);
+  fprintf(outJSON, "%s\"medium\"   : \"%s\",\n",     two_more_indent.c_str(), GetMedium(medium_));
   fprintf(outJSON, "%s\"siblingID\": %8u,\n",  two_more_indent.c_str(), sibling_id_);
   fprintf(outJSON, "%s\"sibling #\": %8u,\n",  two_more_indent.c_str(), sibling_size_);
   std::ostringstream oss; 
   cd_prof_map[phase_].PrintJSON(oss, two_more_indent);
   profile_.GetPrvDetails(oss, two_more_indent); // print cons prod
-//  cout << " DEBUG 22!!! \n" << oss.str() << endl; 
-//  getchar();
   fprintf(outJSON, "%s", oss.str().c_str());
   //fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
-  if(children_.size() > 0) 
-    fprintf(outJSON, "%s\"ChildCDs\" : {\n", two_more_indent.c_str());
-
+  if(children_.size() > 0) {
+    fprintf(outJSON, ",\n%s\"ChildCDs\" : {\n", two_more_indent.c_str());
+  } else {
+    fprintf(outJSON, "\n");
+  }
   for(auto it=children_.begin(); it!=children_.end();) {
     (*it)->PrintOutputJsonInternal();
     ++it;
@@ -222,8 +220,8 @@ void PhaseNode::PrintOutputJsonInternal(void)
       fprintf(outJSON, "\n");
   }
   if(children_.size() > 0) 
-    fprintf(outJSON, "%s} // ChildCDs ends\n", two_more_indent.c_str());
-  fprintf(outJSON, "%s}\n", one_more_indent.c_str());
+    fprintf(outJSON, "%s}\n", two_more_indent.c_str());
+  fprintf(outJSON, "%s}", one_more_indent.c_str());
 }
 
 //void PhaseNode::Print(void) 

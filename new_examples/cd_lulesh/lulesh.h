@@ -471,7 +471,71 @@ struct Internal {
 //      m_nodeElemCornerList = that.m_nodeElemCornerList;
 //      Add((char *)commDataSend, (("COMMBUFSEND"), comBufSize * sizeof(Real_t), 0, (char *)commDataSend)); 
 //      Add((char *)commDataRecv, (("COMMBUFRECV"), comBufSize * sizeof(Real_t), 0, (char *)commDataRecv)); 
-#endif
+#endif // _CD ends
+   }
+   void PrintInternal(void) {
+     if(myRank != 1) return;
+//   Int_t    m_numReg ;
+//   Int_t    m_cost; //imbalance cost
+//   Index_t *m_regElemSize ;   // Size of region sets, list size of numReg
+//   Index_t *m_regNumList ;    // Region number per domain element
+//   Index_t **m_regElemlist ;  // region indexset, list size of numReg
+//   Real_t  m_dtcourant ;         // courant constraint 
+//   Real_t  m_dthydro ;           // volume change constraint 
+//   Int_t   m_cycle ;             // iteration count for simulation 
+//   Real_t  m_dtfixed ;           // fixed time increment 
+//   Real_t  m_time ;              // current time 
+//   Real_t  m_deltatime ;         // variable time increment 
+//   Real_t  m_deltatimemultlb ;
+//   Real_t  m_deltatimemultub ;
+//   Real_t  m_dtmax ;             // maximum allowable time increment 
+//   Real_t  m_stoptime ;          // end time for simulation 
+//   Int_t   m_numRanks ;
+//   Index_t m_colLoc ;
+//   Index_t m_rowLoc ;
+//   Index_t m_planeLoc ;
+//   Index_t m_tp ;
+//   Index_t m_sizeX ;
+//   Index_t m_sizeY ;
+//   Index_t m_sizeZ ;
+//   Index_t m_numElem ;
+//   Index_t m_numNode ;
+//   Index_t m_maxPlaneSize ;
+//   Index_t m_maxEdgeSize ;
+//   Index_t m_rowMin, m_rowMax;
+//   Index_t m_colMin, m_colMax;
+//   Index_t m_planeMin, m_planeMax;
+   printf("cycle                :%d\n", m_cycle               );
+   printf("numRanks             :%d\n", m_numRanks            );
+   printf("numReg               :%d\n", m_numReg              );
+   printf("numElem              :%d\n", m_numElem             );
+   printf("numNode              :%d\n", m_numNode             );
+   printf("cost                 :%d\n", m_cost                );
+   printf("dtfixed              :%f\n", m_dtfixed             );
+   printf("time                 :%f\n", m_time                );
+   printf("deltatime            :%f\n", m_deltatime           );
+   printf("deltatimemultlb      :%f\n", m_deltatimemultlb     );
+   printf("deltatimemultub      :%f\n", m_deltatimemultub     );
+   printf("dtcourant            :%e\n", m_dtcourant           );
+   printf("dthydro              :%e\n", m_dthydro             );
+   printf("dtmax                :%f\n", m_dtmax               );
+   printf("stoptime             :%f\n", m_stoptime            );
+   printf("Loc(col,row,plane,tp):(%d,%d,%d,%d)\n", m_colLoc, m_rowLoc, m_planeLoc, m_tp);
+   printf("size(X,Y,Z)          :(%d,%d,%d)\n", m_sizeX, m_sizeY, m_sizeZ);
+   printf("max (Plane,Edge)     :(%d,%d)\n", m_maxPlaneSize, m_maxEdgeSize);
+   printf("row Min %d~%d Max\n",       m_rowMin, m_rowMax    );
+   printf("col Min %d~%d Max\n",       m_colMin, m_colMax    );
+   printf("planeMin %d~%d m_planeMax\n",m_planeMin, m_planeMax);
+   printf("regElemSize        :%p\n", m_regElemSize);
+   printf("regNumList         :%p\n", m_regNumList);
+   printf("regElemlist        :%p\n", m_regElemlist);
+   if(m_regElemSize != NULL)
+     printf("regElemSize        :%d %d %d %d\n", m_regElemSize[0], m_regElemSize[4], m_regElemSize[8], m_regElemSize[12]);
+   if(m_regNumList != NULL)
+     printf("regNumList         :%d %d %d %d\n",  m_regNumList[0],  m_regNumList[4],  m_regNumList[8],  m_regNumList[12]);
+   if(m_regElemlist != NULL) 
+     printf("regElemlist        :%d %d %d %d\n", m_regElemlist[0][0], m_regElemlist[2][0],  m_regElemlist[4][0], m_regElemlist[8][0]);
+
    }
 };
 
@@ -484,6 +548,77 @@ class Domain : public Internal {
 #if _CD
    Internal *preserved_;
    std::string name_;
+   void PrintDomain(void) {
+     if(myRank != 1) return;
+     if(preserved_ == NULL) 
+       PrintInternal();
+     else {
+       printf("cycle                :%d==%d\n", m_cycle          , preserved_->m_cycle              );
+       printf("numRanks             :%d==%d\n", m_numRanks       , preserved_->m_numRanks           );
+       printf("numReg               :%d==%d\n", m_numReg         , preserved_->m_numReg             );
+       printf("numElem              :%d==%d\n", m_numElem        , preserved_->m_numElem            );
+       printf("numNode              :%d==%d\n", m_numNode        , preserved_->m_numNode            );
+       printf("cost                 :%d==%d\n", m_cost           , preserved_->m_cost               );
+       printf("dtfixed              :%f==%f\n", m_dtfixed        , preserved_->m_dtfixed            );
+       printf("time                 :%f==%f\n", m_time           , preserved_->m_time               );
+       printf("deltatime            :%f==%f\n", m_deltatime      , preserved_->m_deltatime          );
+       printf("deltatimemultlb      :%f==%f\n", m_deltatimemultlb, preserved_->m_deltatimemultlb    );
+       printf("deltatimemultub      :%f==%f\n", m_deltatimemultub, preserved_->m_deltatimemultub    );
+       printf("dtcourant            :%e==%e\n", m_dtcourant      , preserved_->m_dtcourant          );
+       printf("dthydro              :%e==%e\n", m_dthydro        , preserved_->m_dthydro            );
+       printf("dtmax                :%f==%f\n", m_dtmax          , preserved_->m_dtmax              );
+       printf("stoptime             :%f==%f\n", m_stoptime       , preserved_->m_stoptime           );
+       printf("Loc(col,row,plane,tp):(%d,%d,%d,%d)==(%d,%d,%d,%d)\n", m_colLoc, m_rowLoc, m_planeLoc, m_tp, 
+           preserved_->m_colLoc, preserved_->m_rowLoc, preserved_->m_planeLoc, preserved_->m_tp);
+       printf("size(X,Y,Z)          :(%d,%d,%d)==(%d,%d,%d)\n",    m_sizeX, m_sizeY, m_sizeZ,
+                                                      preserved_->m_sizeX, preserved_->m_sizeY, preserved_->m_sizeZ);
+       printf("max (Plane,Edge)     :(%d,%d)==(%d,%d)\n", m_maxPlaneSize, m_maxEdgeSize, 
+           preserved_->m_maxPlaneSize, preserved_->m_maxEdgeSize);
+       printf("row Min %d~%d Max ==(%d~%d)\n",        m_rowMin, m_rowMax    , preserved_->m_rowMin,   preserved_->m_rowMax   );
+       printf("col Min %d~%d Max ==(%d~%d)\n",        m_colMin, m_colMax    , preserved_->m_colMin,   preserved_->m_colMax   );
+       printf("planeMin %d~%d m_planeMax == (%d~%d)\n",m_planeMin, m_planeMax, preserved_->m_planeMin, preserved_->m_planeMax );
+       printf("regElemSize        :%p==%p\n",   m_regElemSize, preserved_->m_regElemSize);
+       printf("regNumList         :%p==%p\n",   m_regNumList,  preserved_->m_regNumList);
+       printf("regElemlist        :%p==%p\n",   m_regElemlist, preserved_->m_regElemlist);
+//       printf("numReg                :%d==%d\n", m_numReg            , preserved_->m_numReg          );
+//       printf("cost                  :%d==%d\n", m_cost              , preserved_->m_cost            );
+//       printf("m_dtcourant           :%f==%f\n", m_dtcourant         , preserved_->m_dtcourant       );
+//       printf("m_dthydro             :%f==%f\n", m_dthydro           , preserved_->m_dthydro         );
+//       printf("m_cycle               :%d==%d\n", m_cycle             , preserved_->m_cycle           );
+//       printf("m_dtfixed             :%f==%f\n", m_dtfixed           , preserved_->m_dtfixed         );
+//       printf("m_time                :%f==%f\n", m_time              , preserved_->m_time            );
+//       printf("m_deltatime           :%f==%f\n", m_deltatime         , preserved_->m_deltatime       );
+//       printf("m_deltatimemultlb     :%f==%f\n", m_deltatimemultlb   , preserved_->m_deltatimemultlb );
+//       printf("m_deltatimemultub     :%f==%f\n", m_deltatimemultub   , preserved_->m_deltatimemultub );
+//       printf("m_dtmax               :%f==%f\n", m_dtmax             , preserved_->m_dtmax           );
+//       printf("m_stoptime            :%f==%f\n", m_stoptime          , preserved_->m_stoptime        );
+//       printf("m_numRanks            :%d==%d\n", m_numRanks          , preserved_->m_numRanks        );
+//       printf("m_colLoc              :%d==%d\n", m_colLoc            , preserved_->m_colLoc          );
+//       printf("m_rowLoc              :%d==%d\n", m_rowLoc            , preserved_->m_rowLoc          );
+//       printf("m_planeLoc            :%d==%d\n", m_planeLoc          , preserved_->m_planeLoc        );
+//       printf("m_tp                  :%d==%d\n", m_tp                , preserved_->m_tp              );
+//       printf("m_sizeX               :%d==%d\n", m_sizeX             , preserved_->m_sizeX           );
+//       printf("m_sizeY               :%d==%d\n", m_sizeY             , preserved_->m_sizeY           );
+//       printf("m_sizeZ               :%d==%d\n", m_sizeZ             , preserved_->m_sizeZ           );
+//       printf("m_numElem             :%d==%d\n", m_numElem           , preserved_->m_numElem         );
+//       printf("m_numNode             :%d==%d\n", m_numNode           , preserved_->m_numNode         );
+//       printf("m_maxPlaneSize        :%d==%d\n", m_maxPlaneSize      , preserved_->m_maxPlaneSize    );
+//       printf("m_maxEdgeSize         :%d==%d\n", m_maxEdgeSize       , preserved_->m_maxEdgeSize     );
+//       printf("m_rowMin %d~%d m_rowMax\n",m_rowMin, m_rowMax    );
+//       printf("m_colMin %d~%d m_colMax\n",m_colMin, m_colMax    );
+//       printf("m_planeMin %d~%d m_planeMax\n",m_planeMin, m_planeMax);
+//       printf("regElemSize        :%p\n", m_regElemSize);
+//       printf("regNumList         :%p\n", m_regNumList);
+//       printf("regElemlist        :%p\n", m_regElemlist);
+       if(m_regElemSize != NULL)
+         printf("regElemSize        :%d %d %d %d\n", m_regElemSize[0], m_regElemSize[4], m_regElemSize[8], m_regElemSize[12]);
+       if(m_regNumList != NULL)
+         printf("regNumList         :%d %d %d %d\n",  m_regNumList[0],  m_regNumList[4],  m_regNumList[8],  m_regNumList[12]);
+       if(m_regElemlist != NULL) 
+         printf("regElemlist        :%d %d %d %d\n", m_regElemlist[0][0], m_regElemlist[2][0],  m_regElemlist[4][0], m_regElemlist[8][0]);
+     }
+     assert(m_cycle);
+   }
 #endif
    // Constructor
    Domain(Int_t numRanks, Index_t colLoc,
@@ -862,9 +997,17 @@ class Domain : public Internal {
 
    Int_t&  cycle()                { return m_cycle ; }
 #if _CD
-   bool    check_begin(int intvl) { const Int_t cycle = m_cycle - 1; assert(cycle >= 0); 
+   bool    check_begin(int intvl) { const Int_t cycle = m_cycle - 1; 
+                                    if(cycle < 0) {
+                                      PrintDomain();
+                                      assert(0);
+                                    } 
                                     return (cycle % intvl == 0); }
-   bool    check_end(int intvl)   { const Int_t cycle = m_cycle - 1; assert(cycle >= 0);
+   bool    check_end(int intvl)   { const Int_t cycle = m_cycle - 1; 
+                                    if(cycle < 0) {
+                                      PrintDomain();
+                                      assert(0);
+                                    } 
                                     return (cycle % intvl == intvl - 1); }
 #endif
    Index_t&  numRanks()           { return m_numRanks ; }

@@ -205,7 +205,7 @@ void SystemConfig::ParseParam(char *key)
     if(strcmp(ftypep, "FAILURE") == 0) {
       ftypep = strtok(NULL, "_");
 //      printf("ftypep:%s\n", ftypep);
-      strcpy(ftype_name, ftypep);
+      if(ftypep != NULL) strcpy(ftype_name, ftypep);
     }
     
     prv = key[0]; 
