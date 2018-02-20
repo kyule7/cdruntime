@@ -104,6 +104,7 @@ void DataStore::InitFile(uint32_t filetype)
     }
   
     written_len_ = fh_->GetFileSize();
+    if(packerTaskID == 0) printf("written_len:%lx, mode:%lx\n", written_len_, mode_ & FILE_TYPE_MASK);
   } else {
     written_len_ = CHUNK_ALIGNMENT;
   }
@@ -348,7 +349,10 @@ MagicStore &DataStore::GetMagicStore(uint64_t offset)
 CDErrType DataStore::FlushMagic(const MagicStore *magic)
 {
   MYDBG("\n");
-  CDErrType ret = fh_->Write(0, (char *)magic, sizeof(MagicStore), 0);
+  CDErrType ret = kOK;
+  if(ftype() != kVolatile) {
+    ret = fh_->Write(0, (char *)magic, sizeof(MagicStore), 0);
+  }
   return ret;
 }
 
@@ -844,9 +848,9 @@ void DataStore::InitReadMode(void)
   if(CHECK_FLAG(mode_, kReadMode) == false) {
     CD_SET(mode_, kReadMode); 
     if(buf_used() > 0) {
-      PadZeros(0);
-      Flush();
-      assert(buf_used() == 0);
+//      PadZeros(0);
+//      Flush();
+//      assert(buf_used() == 0);
       CD_SET(mode_, kReadMode); 
       PACKER_ASSERT(buf_preserved_ == NULL);
       // Preserve the remaining buffer state

@@ -7,8 +7,8 @@
 // It just writes to buffer space.
 // 
 namespace packer {
-#define FILE_TYPE_MASK 0x00000F00
-#define BUFF_MODE_MASK 0x000000FF
+#define FILE_TYPE_MASK 0x00000F00UL
+#define BUFF_MODE_MASK 0x000000FFUL
 #define GET_BUFF_MODE(X)       ((X) & BUFF_MODE_MASK)
 #define GET_FILE_TYPE(X)       ((X) & FILE_TYPE_MASK)
 

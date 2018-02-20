@@ -156,7 +156,7 @@ void RuntimeInfo::GetPrvDetails(std::ostream &oss, const std::string &indent)
     if(it != output_.end())
       oss << ',';
   }
-  oss << "},\n";
+  oss << "}";
 }
 
 void RuntimeInfo::Print(void)
