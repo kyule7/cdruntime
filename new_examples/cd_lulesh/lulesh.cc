@@ -1329,7 +1329,7 @@ static inline void CalcForceForNodes(Domain& domain)
 
   /* Calcforce calls partial, force, hourq */
   CalcVolumeForceForElems(domain) ;
-#if _CD && _CD_DUMMY
+#if _CD && _CD_DUMMY && _CHILD_CD
   if(domain.check_end(intvl1)) {
     cd_child_dummy->Preserve(domain.SetOp(prvec_f), kOutput, "CalcForceCopy_Leaf");
   }
@@ -1487,7 +1487,7 @@ void LagrangeNodal(Domain& domain)
    // Out{X,Y,Z} <- In{X,Y,Z,XD,YD,ZD}
    CalcPositionForNodes( domain, delt, domain.numNode() );
    domain.CheckUpdate("CalcPosition");
-#if _CD && _CD_DUMMY
+#if _CD && _CD_DUMMY && _CHILD_CD
 //   // Preserve to dummy
    if(domain.check_end(intvl1)) {
      cd_child_dummy->Preserve(domain.SetOp(prvec_posall), kOutput, "PosVelAcc_Leaf");
@@ -3068,7 +3068,7 @@ int main(int argc, char *argv[])
 #endif
    
 #if _CD
-  int intvl[3] = {1, 1, 1}; 
+  int intvl[3] = {16, 4, 1}; 
   char *lulesh_intvl = getenv( "LULESH_LV0" );
   if(lulesh_intvl != NULL) {
     intvl[0] = atoi(lulesh_intvl);
@@ -3121,7 +3121,7 @@ int main(int argc, char *argv[])
 //   for(Int_t i = 0; i < locDom->numReg(); i++)
 //      std::cout << "region" << i + 1<< "size" << locDom->regElemSize(i) <<std::endl;
    bool leaf_first = true;
-   bool main_domain_preserved=false;
+//   bool main_domain_preserved=false;
    //std::cout << "CD:" <<  _CD << ", CD_DUMMY:" << _CD_DUMMY << " ,LEAF_LV:" << _LEAF_LV <<std::endl;
    double loop_time = 0.0;
    double dump_time = 0.0;
@@ -3131,17 +3131,19 @@ int main(int argc, char *argv[])
 
       TimeIncrement(*locDom) ;
 #if _CD
+//      if(locDom->check_begin(intvl1)) 
+//        locDom->PrintDomain();
       int cycle = locDom->cycle();
       if(locDom->check_begin(intvl0)) 
       {
         is_main_loop_complete  = false;
         CD_Begin(cd_main_loop, "MainLoop");
 //        if(myRank == 0) printf("0 Before Prsv:cycle:%d == %d, %lx\n", cycle, locDom->cycle(), prvec_readonly_all);
-        if(IsReexec() && myRank == 0) {printf("Before %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+        if(IsReexec() && myRank == 1) {printf(">> Before Main %4d, %6.3le %6.3le, %le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->PrintDomain();}
         cd_main_loop->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "MainLoopDomain");
-        main_domain_preserved = true;
+        //main_domain_preserved = true;
 //        cd_main_loop->Preserve(&(locDom->cycle()), sizeof(locDom->cycle()), kCopy, "MainLoopDomain");
-        if(IsReexec() && myRank == 0) {printf("After  %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+        if(IsReexec() && myRank == 1) {printf("\n\n>> After Main %4d, %6.3le %6.3le, %le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->PrintDomain();}
         double dump_start = MPI_Wtime();
   #if _CD_CHILD
         cd_main_loop->Preserve(locDom->SetOp(prvec_readonly_all), kRef, "ReadOnlyData-Main", "ReadOnlyData");
@@ -3175,8 +3177,9 @@ int main(int argc, char *argv[])
       if(locDom->check_begin(intvl1)) {
         is_child_loop_complete = false;
         CD_Begin(cd_child_loop, "LoopChild");
-        if(main_domain_preserved == false) 
-          cd_child_loop->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "ChildLoopDomain");
+        if(IsReexec() && myRank == 0) {printf("Before Leaf %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+        cd_child_loop->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "ChildLoopDomain");
+        if(IsReexec() && myRank == 0) {printf("After Leaf %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         // Preserve read-only data
         cd_child_loop->Preserve(locDom->SetOp(prvec_readonly_all), kRef, "ReadOnlyData-Leaf", "ReadOnlyData");
         // Preserve read-write data
@@ -3185,7 +3188,7 @@ int main(int argc, char *argv[])
         cd_child_loop->Preserve(locDom->SetOp(prvec_elem),  kRef,  "LagrangeElem"    );
         cd_child_loop->Preserve(locDom->SetOp(prvec_q),     kRef,  "QforElem"        );
         cd_child_loop->Preserve(locDom->SetOp(prvec_matrl), kRef,  "MaterialforElem" );
-        if(myRank==0) printf("1:cycle:%d == %d\n", cycle, locDom->cycle());
+        if(myRank==0) printf("1:cycle:%d == %d (cycle)\n", locDom->cycle(), cycle);
       }
   #endif // _CD_CHILD ends
 #endif // _CD ends
@@ -3225,14 +3228,14 @@ int main(int argc, char *argv[])
     #endif
         cd_main_loop->Detect();
         //printf("0 complete:cycle:%d == %d\n", cycle, locDom->cycle());
-        main_domain_preserved = false;
+        //main_domain_preserved = false;
         cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
         is_main_loop_complete = true;
       }
   #else
       cd_main_loop->Detect();
       //printf("0 complete:cycle:%d == %d\n", cycle, locDom->cycle());
-      main_domain_preserved = false;
+      //main_domain_preserved = false;
       cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
       is_main_loop_complete = true;
   #endif
@@ -3250,7 +3253,7 @@ int main(int argc, char *argv[])
 
 #if _CD
    if(is_main_loop_complete == false) {
-        main_domain_preserved = false;
+        //main_domain_preserved = false;
   #if _CD_CHILD
       if(is_child_loop_complete == false) {
         cd_child_loop->Detect();
@@ -3263,7 +3266,7 @@ int main(int argc, char *argv[])
     #endif
   #endif
       cd_main_loop->Detect();
-      main_domain_preserved = false;
+      //main_domain_preserved = false;
       cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
    }
    cd_main_loop->Destroy();

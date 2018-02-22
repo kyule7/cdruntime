@@ -15,12 +15,11 @@ LFLAGS=-fPIC -I.
 endif
 
 ifeq (${ENABLE_DEBUG}, 1)
-CFLAGS += -g -O3 -D_PACKER_DEBUG
+CFLAGS += -g -D_PACKER_DEBUG
 LFLAGS += -g -D_PACKER_DEBUG
-else
-CFLAGS += -O3
 endif
 
+#CFLAGS += -O3
 #all:  test_mpi
 
 OBJS=data_store.o buffer_consumer.o cd_file_handle.o table_store.o packer_prof.o
