@@ -273,9 +273,9 @@ struct Internal {
    ~Internal() {}
 
    bool CheckInternal(const Internal &that, const char *str="", bool checkall=false) {
+      bool any_changed = false;
 #if _CD 
       bool numReg_changed = false;
-      bool any_changed = false;
       if(m_numReg          != that.m_numReg) {
         PRINT_COMPARE("numReg ");
         m_numReg            = that.m_numReg;
@@ -466,12 +466,12 @@ struct Internal {
         r_regElemlist = false;  
         any_changed |= (regElemSize_changed | regNumList_changed | regElemList_changed);
       }
-      return (any_changed);
 //      m_nodeElemStart      = that.m_nodeElemStart;
 //      m_nodeElemCornerList = that.m_nodeElemCornerList;
 //      Add((char *)commDataSend, (("COMMBUFSEND"), comBufSize * sizeof(Real_t), 0, (char *)commDataSend)); 
 //      Add((char *)commDataRecv, (("COMMBUFRECV"), comBufSize * sizeof(Real_t), 0, (char *)commDataRecv)); 
 #endif // _CD ends
+      return (any_changed);
    }
    void PrintInternal(void) {
      if(myRank != 1) return;

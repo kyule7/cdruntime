@@ -292,6 +292,28 @@ namespace cd {
   extern int totalTaskSize;
   extern bool app_side;
 
+  enum {
+    TOTAL_PRF=0,
+    CDOVH_PRF,
+    CD_NS_PRF,
+    CD_RS_PRF,
+    CD_ES_PRF,
+    MSG_PRF,
+    LOG_PRF,
+    PRV_PRF,
+    RST_PRF,
+    CREAT_PRF,
+    DSTRY_PRF,
+    BEGIN_PRF,
+    COMPL_PRF,
+    PROF_GLOBAL_STATISTICS_NUM
+  };
+
+  extern double recvavg[PROF_GLOBAL_STATISTICS_NUM];
+  extern double recvstd[PROF_GLOBAL_STATISTICS_NUM];
+  extern double recvmin[PROF_GLOBAL_STATISTICS_NUM];
+  extern double recvmax[PROF_GLOBAL_STATISTICS_NUM];
+
   void InitDir(int myTask, int numTask);
 
 /** \addtogroup cd_accessor_funcs 

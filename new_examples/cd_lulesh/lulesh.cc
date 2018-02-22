@@ -179,6 +179,8 @@ CDHandle *cd_child_loop = NULL;
 CDHandle *cd_child_dummy = NULL;
 packer::MagicStore magic __attribute__((aligned(0x1000)));
 using namespace cd;
+double wait_time = 0.0;
+double wait_time_loop = 0.0;
 #if 0
 uint64_t prvec_all = ( M__X  | M__Y  | M__Z  | 
                               M__XD | M__YD | M__ZD |
@@ -1508,7 +1510,10 @@ void LagrangeNodal(Domain& domain)
    CommSend(domain, MSG_SYNC_POS_VEL, 6, fieldData,
             domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() + 1,
             false, false) ;
+   double wait_start = MPI_Wtime();
    CommSyncPosVel(domain) ;
+   double wait_end = MPI_Wtime() - wait_start;
+   wait_time_loop += wait_end;
 #endif
 #endif
    
@@ -2974,7 +2979,10 @@ void LagrangeLeapFrog(Domain& domain)
 
 #if USE_MPI   
 #ifdef SEDOV_SYNC_POS_VEL_LATE
+   double wait_start = MPI_Wtime();
    CommSyncPosVel(domain) ;
+   double wait_end = MPI_Wtime() - wait_start;
+   wait_time_loop += wait_end;
 #endif
 #endif   
 }
@@ -3068,7 +3076,11 @@ int main(int argc, char *argv[])
 #endif
    
 #if _CD
+#if _CD_INCR_CKPT || _CD_FULL_CKPT
+  int intvl[3] = {1, 1, 1}; 
+#else
   int intvl[3] = {16, 4, 1}; 
+#endif
   char *lulesh_intvl = getenv( "LULESH_LV0" );
   if(lulesh_intvl != NULL) {
     intvl[0] = atoi(lulesh_intvl);
@@ -3126,10 +3138,15 @@ int main(int argc, char *argv[])
    double loop_time = 0.0;
    double dump_time = 0.0;
    double dump_end = 0.0;
+   int total_its = opts.its;
+   double *local_loop = (double *)malloc(sizeof(double) * total_its * 2);
+   double *local_dump = (double *)malloc(sizeof(double) * total_its * 2);
+   double *local_wait = (double *)malloc(sizeof(double) * total_its * 2);
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
       double loop_start = MPI_Wtime();
 
       TimeIncrement(*locDom) ;
+      wait_time_loop = MPI_Wtime() - loop_start;
 #if _CD
 //      if(locDom->check_begin(intvl1)) 
 //        locDom->PrintDomain();
@@ -3204,6 +3221,7 @@ int main(int argc, char *argv[])
       global_counter++;
       const double loop_end = MPI_Wtime() - loop_start;
       loop_time += loop_end;
+      wait_time += wait_time_loop; 
 #if _CD 
   #if _CD_CHILD
       if(locDom->check_end(intvl1))
@@ -3232,20 +3250,26 @@ int main(int argc, char *argv[])
         cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
         is_main_loop_complete = true;
       }
-  #else
-      cd_main_loop->Detect();
-      //printf("0 complete:cycle:%d == %d\n", cycle, locDom->cycle());
-      //main_domain_preserved = false;
-      cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
-      is_main_loop_complete = true;
+  #else // _CD_CHILD ends
+      if(locDom->check_end(intvl0))
+      { 
+        cd_main_loop->Detect();
+        //printf("0 complete:cycle:%d == %d\n", cycle, locDom->cycle());
+        //main_domain_preserved = false;
+        cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
+        is_main_loop_complete = true;
+      }
   #endif
 #endif
+    local_loop[global_counter - 1] = loop_end;
+    local_dump[global_counter - 1] = dump_end;
+    local_wait[global_counter - 1] = wait_time_loop;
       if (myRank == 1) {
 //      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) 
-         printf("cycle = %d (%d), time = %5.4e, dt=%5.4e, loop=%5.3e, dump=%5.3e (%5.3e, %5.3e)\n",
+         printf("cycle = %d (%d), time = %5.4e, dt=%5.4e, loop=%5.3e, dump=%5.3e, wait=%5.3e (%5.3e, %5.3e, %5.3e)\n",
                 locDom->cycle(), global_counter, double(locDom->time()), double(locDom->deltatime()), 
-                loop_end, dump_end,
-                loop_time/global_counter, dump_time/global_counter ) ;
+                loop_end, dump_end, wait_time,
+                loop_time/global_counter, dump_time/global_counter, wait_time/global_counter ) ;
       }
     leaf_first = false;
    }
@@ -3289,6 +3313,45 @@ int main(int argc, char *argv[])
 #else
    elapsed_timeG = elapsed_time;
 #endif
+
+   double *total_loop = NULL;
+   double *total_dump = NULL;
+   double *total_wait = NULL;
+   int total_stat_cnt = total_its * numRanks;
+   if(myRank == 0) {
+     total_loop = (double *)malloc(total_stat_cnt * sizeof(double));
+     total_dump = (double *)malloc(total_stat_cnt * sizeof(double));
+     total_wait = (double *)malloc(total_stat_cnt * sizeof(double));
+   }
+   MPI_Gather(local_loop, total_its, MPI_DOUBLE, total_loop, total_its, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+   MPI_Gather(local_dump, total_its, MPI_DOUBLE, total_dump, total_its, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+   MPI_Gather(local_wait, total_its, MPI_DOUBLE, total_wait, total_its, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+   if(myRank == 0) {
+     char tmpfile[128];
+     sprintf(tmpfile, "local_stats.%s.%d.%d.%d", exec_name, numRanks, opts.nx, ((int)start) % 1000);
+     FILE *lfp = fopen(tmpfile, "w"); 
+     fprintf(lfp, "%s\n", exec_name);
+     if(lfp == 0) { printf("failed to open %s\n", tmpfile); assert(lfp); }
+     for(int i=0; i<total_stat_cnt; i++) {
+       fprintf(lfp, "%lf,", total_loop[i]);
+     }
+     fprintf(lfp, "\n");
+     for(int i=0; i<total_stat_cnt; i++) {
+       fprintf(lfp, "%lf,", total_dump[i]);
+     }
+     fprintf(lfp, "\n");
+     for(int i=0; i<total_stat_cnt; i++) {
+       fprintf(lfp, "%lf,", total_wait[i]);
+     }
+     fprintf(lfp, "\n");
+     fclose(lfp);
+     free(total_loop);
+     free(total_dump);
+     free(total_wait);
+   }
+   free(local_loop);
+   free(local_dump);
+   free(local_wait);
 
    // Write out final viz file */
    if (opts.viz) {
