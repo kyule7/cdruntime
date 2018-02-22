@@ -104,7 +104,7 @@ void DataStore::InitFile(uint32_t filetype)
     }
   
     written_len_ = fh_->GetFileSize();
-    if(packerTaskID == 0) printf("written_len:%lx, mode:%lx\n", written_len_, mode_ & FILE_TYPE_MASK);
+//    if(packerTaskID == 0) printf("written_len:%lx, mode:%lx\n", written_len_, mode_ & FILE_TYPE_MASK);
   } else {
     written_len_ = CHUNK_ALIGNMENT;
   }

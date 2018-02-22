@@ -434,7 +434,7 @@ CDErrT CD::CheckMailBox(void)
   
 //  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "=================== Check Mail Box Done  [Level #%d] =====================================================\n\n", level());
 #if CD_PROFILER_ENABLED
-  mailbox_elapsed_time += CD_CLOCK() - tstart;
+  cd::mailbox_elapsed_time += CD_CLOCK() - tstart;
 #endif
 
   return static_cast<CDErrT>(ret);
@@ -803,7 +803,7 @@ CDErrT CD::SetMailBox(const CDEventT &event)
   CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "== Set Mail Box Done ==============================\n\n");
 
 #if CD_PROFILER_ENABLED
-  mailbox_elapsed_time += CD_CLOCK() - tstart;
+  cd::mailbox_elapsed_time += CD_CLOCK() - tstart;
 #endif
   return static_cast<CDErrT>(ret);
 }
