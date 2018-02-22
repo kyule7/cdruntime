@@ -125,15 +125,16 @@ int main(int argc, char **argv) {
   // destroySimulation(), as does right now.
   // However, this should NOT be an issue because "sim" is to be reused on
   // purpose to test capability of reexeuction.
-#endif
+#endif // _ROOTCD
 
 #if _CD1
   // TODO: 0xE vs 0xF, kHDD vs kDRAM(=kLocalMemory)
   // Note that preservation medium (KLocalMemory) and error vector (0xE) will 
   // be over-written by config.yaml.
+  // Note that lv1_cd becomes dummy CD when kOutput enabled.
   cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "main_loop",
                                   kStrict | kLocalMemory, 0xE); // F8, F4, F2
-#endif
+#endif //_CD1
 
   // This is the CoMD main loop
   const int nSteps = sim->nSteps;
@@ -146,15 +147,31 @@ int main(int argc, char **argv) {
     // TODO: add interval to control lv1_cd
     const int CD1_INTERVAL = sim->preserveRateLevel1;
     // Notice that iStep is increasing by printRate for every iteration.
+#if DO_OUTPUT
+    cd_handle_t *lv1_cd_inner;
+#endif
     if (iStep % (CD1_INTERVAL * printRate) == 0) {
       cd_begin(lv1_cd, "main_loop");
       // Notice that this is to be preserved via reference since for the first
       // iteration it's already preserved at Root CD and fot the rest of loops,
       // this is to be preserved via kOutput at the end of this iteration.
+
+#if DO_OUTPUT
+      // Let's create dummy CD for main_loop (i.e. level 1 CD) for kOutput
+      // semantic. Note that This is not optional but required to be 
+      // semantically correct. Once we create lv1_cd_inner, lv1_cd becomes
+      // dummy cd for lv1_cd. Also notice that lv1_cd_inner has to have the same
+      // error vector associated with lv1_cd (its dummy) in order to its dummy
+      // to be really "dummy".
+      lv1_cd_inner = cd_create(getcurrentcd(), 1, "main_loop_inner",
+                                  kStrict | kLocalMemory, 0xE); // F8, F4, F2
+      cd_begin(lv1_cd_inner, "main_loop_inner");
+#endif
+
       int main_loop_pre_size =
 //            preserveSimFlat(lv1_cd, kCopy, sim); // For test
 #if DO_OUTPUT
-          preserveAtoms(lv1_cd, kRef, sim->atoms, sim->boxes->nTotalBoxes,
+          preserveAtoms(lv1_cd_inner, kRef, sim->atoms, sim->boxes->nTotalBoxes,
 #else
           //TODO: kRef for the first iteration and kRef for the rest os loops
           preserveAtoms(lv1_cd, kCopy, sim->atoms, sim->boxes->nTotalBoxes,
@@ -174,7 +191,7 @@ int main(int argc, char **argv) {
       // This is very conservative because it preserves all the boxes 
       main_loop_pre_size +=
 #if DO_OUTPUT
-          preserveLinkCell(lv1_cd, kRef, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
+          preserveLinkCell(lv1_cd_inner, kRef, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
 #else
           //TODO: kRef for the first iteration and kRef for the rest os loops
           preserveLinkCell(lv1_cd, kCopy, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
@@ -186,7 +203,7 @@ int main(int argc, char **argv) {
       // FIXME: need to double check
       main_loop_pre_size +=
 #if DO_OUTPUT
-          preserveHaloAtom(lv1_cd, kRef, sim->atomExchange->parms,
+          preserveHaloAtom(lv1_cd_inner, kRef, sim->atomExchange->parms,
 #else
           preserveHaloAtom(lv1_cd, kCopy, sim->atomExchange->parms,
 #endif
@@ -204,7 +221,8 @@ int main(int argc, char **argv) {
       // Constants (ignored): nStep, printRate
       // iStep
 #if DO_OUTPUT
-      cd_preserve(lv1_cd, &iStep, sizeof(int), kRef, "timestep_iStep",
+      //cd_preserve(lv1_cd_inner, &iStep, sizeof(int), kRef, "timestep_iStep",
+      cd_preserve(lv1_cd_inner, &iStep, sizeof(int), kCopy, "timestep_iStep",
 #else
       cd_preserve(lv1_cd, &iStep, sizeof(int), kCopy, "timestep_iStep",
 #endif
@@ -213,7 +231,7 @@ int main(int argc, char **argv) {
 #endif // DO_PRV
       main_loop_pre_size += sizeof(int);
     } // CD1_INTERVAL
-#endif
+#endif // _CD1
     startTimer(commReduceTimer);
     // Let's ignore this for now since this doesn't contribute much and
     // estimator is probably to decide to remove this anyway.
@@ -299,15 +317,23 @@ int main(int argc, char **argv) {
                            1 /*cellList*/, 1 /*pbcFactor*/);
 #if DO_PRV
       // Constants (ignored): nStep, printRate
-      cd_preserve(lv1_cd, &iStep, sizeof(int), kOutput, "timestep_iStep",
-                  "timestep_iStep");
+      // Let's ignore iStep for kOutput since it's tiny enough.
+      //cd_preserve(lv1_cd_inner, &iStep, sizeof(int), kOutput, "timestep_iStep",
+      //            "timestep_iStep");
 #endif // DO_PRV
       main_loop_pre_out_size += sizeof(int);
 #endif // DO_OUTPUT
+
+#if DO_OUTPUT
+      cd_detect(lv1_cd_inner);
+      cd_complete(lv1_cd_inner);
+      cd_destroy(lv1_cd_inner);
+#endif // DO_OUTPUT
+
       cd_detect(lv1_cd);
       cd_complete(lv1_cd);
     } // CD1_INTERVAL
-#endif
+#endif // _CD1
   } // for(iStep)
   profileStop(loopTimer);
 
