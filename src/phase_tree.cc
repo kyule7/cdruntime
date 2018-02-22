@@ -153,14 +153,31 @@ void PhaseNode::PrintOutputJson(void)
                    "  \"numTasks\"   : %d,\n"
                    "  \"ftype\"      : \"%s\",\n"
                    "  \"start_time\" : \"%s\",\n"
-                   "  \"end_time\"   : \"%s\",\n"
-                   "  \"global_param\" : {\n"
-                   "    \"max_error\" : 20\n"
-                   "  },\n"
-                   "  \"CD info\" : {\n",
+                   "  \"end_time\"   : \"%s\",\n",
             exec_name, (exec_details!=NULL)? exec_details : "NoInput", 
             cd::totalTaskSize, ftype_name, start_date, end_date
          );
+  fprintf(outJSON, "  \"total time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::TOTAL_PRF], cd::recvstd[cd::TOTAL_PRF], cd::recvmin[cd::TOTAL_PRF], cd::recvmax[cd::TOTAL_PRF]);
+  fprintf(outJSON, "  \"CD overhead\"   : [%le, %le, %le, %le],\n", cd::recvavg[cd::CDOVH_PRF], cd::recvstd[cd::CDOVH_PRF], cd::recvmin[cd::CDOVH_PRF], cd::recvmax[cd::CDOVH_PRF]); 
+  fprintf(outJSON, "  \"sync time exec\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_NS_PRF], cd::recvstd[cd::CD_NS_PRF], cd::recvmin[cd::CD_NS_PRF], cd::recvmax[cd::CD_NS_PRF]); 
+  fprintf(outJSON, "  \"sync time reex\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_RS_PRF], cd::recvstd[cd::CD_RS_PRF], cd::recvmin[cd::CD_RS_PRF], cd::recvmax[cd::CD_RS_PRF]); 
+  fprintf(outJSON, "  \"sync time recr\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_ES_PRF], cd::recvstd[cd::CD_ES_PRF], cd::recvmin[cd::CD_ES_PRF], cd::recvmax[cd::CD_ES_PRF]); 
+  fprintf(outJSON, "  \"preserve time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::PRV_PRF]  , cd::recvstd[cd::PRV_PRF]  , cd::recvmin[cd::PRV_PRF]  , cd::recvmax[cd::PRV_PRF]  ); 
+  fprintf(outJSON, "  \"restore time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::RST_PRF]  , cd::recvstd[cd::RST_PRF]  , cd::recvmin[cd::RST_PRF]  , cd::recvmax[cd::RST_PRF]  ); 
+  fprintf(outJSON, "  \"create time\"   : [%le, %le, %le, %le],\n", cd::recvavg[cd::CREAT_PRF], cd::recvstd[cd::CREAT_PRF], cd::recvmin[cd::CREAT_PRF], cd::recvmax[cd::CREAT_PRF]); 
+  fprintf(outJSON, "  \"destory time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::DSTRY_PRF], cd::recvstd[cd::DSTRY_PRF], cd::recvmin[cd::DSTRY_PRF], cd::recvmax[cd::DSTRY_PRF]); 
+  fprintf(outJSON, "  \"begin time   \" : [%le, %le, %le, %le],\n", cd::recvavg[cd::BEGIN_PRF], cd::recvstd[cd::BEGIN_PRF], cd::recvmin[cd::BEGIN_PRF], cd::recvmax[cd::BEGIN_PRF]); 
+  fprintf(outJSON, "  \"complete time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::COMPL_PRF], cd::recvstd[cd::COMPL_PRF], cd::recvmin[cd::COMPL_PRF], cd::recvmax[cd::COMPL_PRF]); 
+  fprintf(outJSON, "  \"mesg logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::MSG_PRF]  , cd::recvstd[cd::MSG_PRF]  , cd::recvmin[cd::MSG_PRF]  , cd::recvmax[cd::MSG_PRF]  );
+  fprintf(outJSON, "  \"libc logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::LOG_PRF]  , cd::recvstd[cd::LOG_PRF]  , cd::recvmin[cd::LOG_PRF]  , cd::recvmax[cd::LOG_PRF]  );
+#if CD_PROFILER_ENABLED & CD_MPI_ENABLED
+  fprintf(outJSON, "  \"mailbox overhead\": %lf,\n", CD_CLK_MEA(cd::mailbox_elapsed_time)); 
+#endif
+
+  fprintf(outJSON, "  \"global_param\" : {\n"
+                   "    \"max_error\" : 20\n"
+                   "  },\n"
+                   "  \"CD info\" : {\n");
   PrintOutputJsonInternal();
   fprintf(outJSON, "\n  }\n"
                    "}\n"

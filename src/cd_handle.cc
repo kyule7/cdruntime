@@ -116,6 +116,10 @@ CD_CLOCK_T cd::begin_elapsed_time=0;
 CD_CLOCK_T cd::compl_elapsed_time=0;
 CD_CLOCK_T cd::advance_elapsed_time=0;
 
+double cd::recvavg[PROF_GLOBAL_STATISTICS_NUM] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+double cd::recvstd[PROF_GLOBAL_STATISTICS_NUM] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+double cd::recvmin[PROF_GLOBAL_STATISTICS_NUM] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+double cd::recvmax[PROF_GLOBAL_STATISTICS_NUM] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 /// KL
 /// app_side is a global variable to differentiate application side and CD runtime side.
@@ -477,26 +481,25 @@ void CD_Finalize(void)
 //  CDPath::GetRootCD()->InternalDestroy(false);
 //
 //  cd::internal::Finalize();
-/*
 #if CD_PROFILER_ENABLED 
-  std::map<uint32_t, RuntimeInfo> runtime_info;
-  RuntimeInfo summary = Profiler::GetTotalInfo(runtime_info);
-  runtime_info[100] = summary;
+//  std::map<uint32_t, RuntimeInfo> runtime_info;
+//  RuntimeInfo summary = Profiler::GetTotalInfo(runtime_info);
+//  runtime_info[100] = summary;
 #endif
 #if CD_PROFILER_ENABLED
-  double cd_elapsed            = CD_CLK_MEA(cd::elapsed_time);
-  double normal_sync_elapsed   = CD_CLK_MEA(cd::normal_sync_time);
-  double reexec_sync_elapsed   = CD_CLK_MEA(cd::reexec_sync_time);
-  double recovery_sync_elapsed = CD_CLK_MEA(cd::recovery_sync_time);
-  double prv_elapsed           = CD_CLK_MEA(cd::prv_elapsed_time);
-  double rst_elapsed           = CD_CLK_MEA(cd::rst_elapsed_time);
-  double create_elapsed        = CD_CLK_MEA(cd::create_elapsed_time);
-  double destroy_elapsed       = CD_CLK_MEA(cd::destroy_elapsed_time);
-  double begin_elapsed         = CD_CLK_MEA(cd::begin_elapsed_time);
-  double compl_elapsed         = CD_CLK_MEA(cd::compl_elapsed_time);
-  double msg_elapsed           = CD_CLK_MEA(cd::msg_elapsed_time);
-  double log_elapsed           = CD_CLK_MEA(cd::log_elapsed_time);
-  double tot_elapsed           = CD_CLK_MEA(cd::tot_end_clk - cd::tot_begin_clk);
+  const double cd_elapsed            = CD_CLK_MEA(cd::elapsed_time);
+  const double normal_sync_elapsed   = CD_CLK_MEA(cd::normal_sync_time);
+  const double reexec_sync_elapsed   = CD_CLK_MEA(cd::reexec_sync_time);
+  const double recovery_sync_elapsed = CD_CLK_MEA(cd::recovery_sync_time);
+  const double prv_elapsed           = CD_CLK_MEA(cd::prv_elapsed_time);
+  const double rst_elapsed           = CD_CLK_MEA(cd::rst_elapsed_time);
+  const double create_elapsed        = CD_CLK_MEA(cd::create_elapsed_time);
+  const double destroy_elapsed       = CD_CLK_MEA(cd::destroy_elapsed_time);
+  const double begin_elapsed         = CD_CLK_MEA(cd::begin_elapsed_time);
+  const double compl_elapsed         = CD_CLK_MEA(cd::compl_elapsed_time);
+  const double msg_elapsed           = CD_CLK_MEA(cd::msg_elapsed_time);
+  const double log_elapsed           = CD_CLK_MEA(cd::log_elapsed_time);
+  const double tot_elapsed           = CD_CLK_MEA(cd::tot_end_clk - cd::tot_begin_clk);
   double sendbuf[PROF_STATISTICS_NUM]  = {
                          tot_elapsed, 
                          tot_elapsed * tot_elapsed,
@@ -532,106 +535,169 @@ void CD_Finalize(void)
 #if CD_MPI_ENABLED  
   MPI_Reduce(sendbuf, recvbuf, PROF_STATISTICS_NUM, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 #endif
-  double tot_elapsed_avg = recvbuf[TOT_AVG]/cd::totalTaskSize;
-  double tot_elapsed_var = (recvbuf[TOT_VAR] - recvbuf[TOT_AVG]*recvbuf[TOT_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-  double cd_elapsed_avg  = recvbuf[CD_AVG]/cd::totalTaskSize;
-  double cd_elapsed_var  = (recvbuf[CD_VAR] - recvbuf[CD_AVG]*recvbuf[CD_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-  double cd_ns_elapsed_avg  = recvbuf[CD_NS_AVG]/cd::totalTaskSize;
-  double cd_ns_elapsed_var  = (recvbuf[CD_NS_VAR] - recvbuf[CD_NS_AVG]*recvbuf[CD_NS_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-  double cd_rs_elapsed_avg  = recvbuf[CD_RS_AVG]/cd::totalTaskSize;
-  double cd_rs_elapsed_var  = (recvbuf[CD_RS_VAR] - recvbuf[CD_RS_AVG]*recvbuf[CD_RS_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-  double cd_es_elapsed_avg  = recvbuf[CD_ES_AVG]/cd::totalTaskSize;
-  double cd_es_elapsed_var  = (recvbuf[CD_ES_VAR] - recvbuf[CD_ES_AVG]*recvbuf[CD_ES_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-  double msg_elapsed_avg = recvbuf[MSG_AVG]/cd::totalTaskSize;
-  double msg_elapsed_var = (recvbuf[MSG_VAR] - recvbuf[MSG_AVG]*recvbuf[MSG_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-  double log_elapsed_avg = recvbuf[LOG_AVG]/cd::totalTaskSize;
-  double log_elapsed_var = (recvbuf[LOG_VAR] - recvbuf[LOG_AVG]*recvbuf[LOG_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-  double prv_elapsed_avg = recvbuf[PRV_AVG]/cd::totalTaskSize;
-  double prv_elapsed_var = (recvbuf[PRV_VAR] - recvbuf[PRV_AVG]*recvbuf[PRV_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-  double rst_elapsed_avg = recvbuf[RST_AVG]/cd::totalTaskSize;
-  double rst_elapsed_var = (recvbuf[RST_VAR] - recvbuf[RST_AVG]*recvbuf[RST_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-  double create_elapsed_avg = recvbuf[CREAT_AVG]/cd::totalTaskSize;
-  double create_elapsed_var = (recvbuf[CREAT_VAR] - recvbuf[CREAT_AVG]*recvbuf[CREAT_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
+  double tot_elapsed_avg     = recvbuf[TOT_AVG]/cd::totalTaskSize;
+  double cd_elapsed_avg      = recvbuf[CD_AVG]/cd::totalTaskSize;
+  double cd_ns_elapsed_avg   = recvbuf[CD_NS_AVG]/cd::totalTaskSize;
+  double cd_rs_elapsed_avg   = recvbuf[CD_RS_AVG]/cd::totalTaskSize;
+  double cd_es_elapsed_avg   = recvbuf[CD_ES_AVG]/cd::totalTaskSize;
+  double msg_elapsed_avg     = recvbuf[MSG_AVG]/cd::totalTaskSize;
+  double log_elapsed_avg     = recvbuf[LOG_AVG]/cd::totalTaskSize;
+  double prv_elapsed_avg     = recvbuf[PRV_AVG]/cd::totalTaskSize;
+  double rst_elapsed_avg     = recvbuf[RST_AVG]/cd::totalTaskSize;
+  double create_elapsed_avg  = recvbuf[CREAT_AVG]/cd::totalTaskSize;
   double destroy_elapsed_avg = recvbuf[DESTROY_AVG]/cd::totalTaskSize;
-  double destroy_elapsed_var = (recvbuf[DESTROY_VAR] - recvbuf[DESTROY_AVG]*recvbuf[DESTROY_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-  double begin_elapsed_avg = recvbuf[BEGIN_AVG]/cd::totalTaskSize;
-  double begin_elapsed_var = (recvbuf[BEGIN_VAR] - recvbuf[BEGIN_AVG]*recvbuf[BEGIN_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-  double compl_elapsed_avg = recvbuf[COMPL_AVG]/cd::totalTaskSize;
-  double compl_elapsed_var = (recvbuf[COMPL_VAR] - recvbuf[COMPL_AVG]*recvbuf[COMPL_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
+  double begin_elapsed_avg   = recvbuf[BEGIN_AVG]/cd::totalTaskSize;
+  double compl_elapsed_avg   = recvbuf[COMPL_AVG]/cd::totalTaskSize;
 
-  std::map<uint32_t, CDOverheadVar> lv_runtime_info;
-  for(auto it=runtime_info.begin(); it!=runtime_info.end(); ++it) {
-    double sendbuf_lv[PROF_LEVEL_STATISTICS_NUM]  = {
-                           it->second.prv_elapsed_time_, 
-                           it->second.prv_elapsed_time_ *     it->second.prv_elapsed_time_,
-                           it->second.rst_elapsed_time_, 
-                           it->second.rst_elapsed_time_ *     it->second.rst_elapsed_time_,
-                           it->second.create_elapsed_time_,
-                           it->second.create_elapsed_time_ *  it->second.create_elapsed_time_,
-                           it->second.destroy_elapsed_time_,
-                           it->second.destroy_elapsed_time_ * it->second.destroy_elapsed_time_,
-                           it->second.begin_elapsed_time_,
-                           it->second.begin_elapsed_time_ *   it->second.begin_elapsed_time_,
-                           it->second.compl_elapsed_time_,
-                           it->second.compl_elapsed_time_ *   it->second.compl_elapsed_time_
-                          };
-    double recvbuf_lv[PROF_LEVEL_STATISTICS_NUM] = {0.0,};
+  double tot_elapsed_var     = sqrt(recvbuf[TOT_VAR]     / cd::totalTaskSize - tot_elapsed_avg * tot_elapsed_avg);
+  double cd_elapsed_var      = sqrt(recvbuf[CD_VAR]      / cd::totalTaskSize - cd_elapsed_avg * cd_elapsed_avg);
+  double cd_ns_elapsed_var   = sqrt(recvbuf[CD_NS_VAR]   / cd::totalTaskSize - cd_ns_elapsed_avg * cd_ns_elapsed_avg);
+  double cd_rs_elapsed_var   = sqrt(recvbuf[CD_RS_VAR]   / cd::totalTaskSize - cd_rs_elapsed_avg * cd_rs_elapsed_avg);
+  double cd_es_elapsed_var   = sqrt(recvbuf[CD_ES_VAR]   / cd::totalTaskSize - cd_es_elapsed_avg * cd_es_elapsed_avg);
+  double msg_elapsed_var     = sqrt(recvbuf[MSG_VAR]     / cd::totalTaskSize - msg_elapsed_avg * msg_elapsed_avg);
+  double log_elapsed_var     = sqrt(recvbuf[LOG_VAR]     / cd::totalTaskSize - log_elapsed_avg * log_elapsed_avg);
+  double prv_elapsed_var     = sqrt(recvbuf[PRV_VAR]     / cd::totalTaskSize - prv_elapsed_avg * prv_elapsed_avg);
+  double rst_elapsed_var     = sqrt(recvbuf[RST_VAR]     / cd::totalTaskSize - rst_elapsed_avg * rst_elapsed_avg);
+  double create_elapsed_var  = sqrt(recvbuf[CREAT_VAR]   / cd::totalTaskSize - create_elapsed_avg * create_elapsed_avg);
+  double destroy_elapsed_var = sqrt(recvbuf[DESTROY_VAR] / cd::totalTaskSize - destroy_elapsed_avg * destroy_elapsed_avg);
+  double begin_elapsed_var   = sqrt(recvbuf[BEGIN_VAR]   / cd::totalTaskSize - begin_elapsed_avg * begin_elapsed_avg);
+  double compl_elapsed_var   = sqrt(recvbuf[COMPL_VAR]   / cd::totalTaskSize - compl_elapsed_avg * compl_elapsed_avg);
+
+
+  double trecvavg[] = { tot_elapsed_avg     ,
+              cd_elapsed_avg      ,
+              cd_ns_elapsed_avg   ,
+              cd_rs_elapsed_avg   ,
+              cd_es_elapsed_avg   ,
+              msg_elapsed_avg     ,
+              log_elapsed_avg     ,
+              prv_elapsed_avg     ,
+              rst_elapsed_avg     ,
+              create_elapsed_avg  ,
+              destroy_elapsed_avg ,
+              begin_elapsed_avg   ,
+              compl_elapsed_avg }; 
+
+  double trecvstd[] = { tot_elapsed_var     ,
+              cd_elapsed_var      ,
+              cd_ns_elapsed_var   ,
+              cd_rs_elapsed_var   ,
+              cd_es_elapsed_var   ,
+              msg_elapsed_var     ,
+              log_elapsed_var     ,
+              prv_elapsed_var     ,
+              rst_elapsed_var     ,
+              create_elapsed_var  ,
+              destroy_elapsed_var ,
+              begin_elapsed_var   ,
+              compl_elapsed_var   };
+
+  memcpy(recvavg, trecvavg, sizeof(double) * PROF_GLOBAL_STATISTICS_NUM);
+  memcpy(recvstd, trecvstd, sizeof(double) * PROF_GLOBAL_STATISTICS_NUM);
+
+
+
+
+
+
+
+
+
+
+
+
+  double sendbuf_min[PROF_GLOBAL_STATISTICS_NUM]  = {
+                         tot_elapsed, 
+                         cd_elapsed,
+                         normal_sync_elapsed, 
+                         reexec_sync_elapsed, 
+                         recovery_sync_elapsed, 
+                         msg_elapsed,
+                         log_elapsed,
+                         prv_elapsed,
+                         rst_elapsed,
+                         create_elapsed,
+                         destroy_elapsed,
+                         begin_elapsed,
+                         compl_elapsed
+  };
 #if CD_MPI_ENABLED  
-    MPI_Reduce(sendbuf_lv, recvbuf_lv, PROF_LEVEL_STATISTICS_NUM, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(sendbuf_min, recvmin, PROF_GLOBAL_STATISTICS_NUM, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+  MPI_Reduce(sendbuf_min, recvmax, PROF_GLOBAL_STATISTICS_NUM, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 #endif
-    lv_runtime_info[it->first].prv_elapsed_time_ = recvbuf_lv[LV_PRV_AVG]/cd::totalTaskSize;
-    lv_runtime_info[it->first].prv_elapsed_time_var_ = (recvbuf_lv[LV_PRV_VAR] - recvbuf_lv[LV_PRV_AVG]*recvbuf_lv[LV_PRV_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-    lv_runtime_info[it->first].rst_elapsed_time_ = recvbuf_lv[LV_RST_AVG]/cd::totalTaskSize;
-    lv_runtime_info[it->first].rst_elapsed_time_var_ = (recvbuf_lv[LV_RST_VAR] - recvbuf_lv[LV_RST_AVG]*recvbuf_lv[LV_RST_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-    lv_runtime_info[it->first].create_elapsed_time_ = recvbuf_lv[LV_CREAT_AVG]/cd::totalTaskSize;
-    lv_runtime_info[it->first].create_elapsed_time_var_ = (recvbuf_lv[LV_CREAT_VAR] - recvbuf_lv[LV_CREAT_AVG]*recvbuf_lv[LV_CREAT_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-    lv_runtime_info[it->first].destroy_elapsed_time_ = recvbuf_lv[LV_DESTROY_AVG]/cd::totalTaskSize;
-    lv_runtime_info[it->first].destroy_elapsed_time_var_ = (recvbuf_lv[LV_DESTROY_VAR] - recvbuf_lv[LV_DESTROY_AVG]*recvbuf_lv[LV_DESTROY_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-    lv_runtime_info[it->first].begin_elapsed_time_ = recvbuf_lv[LV_BEGIN_AVG]/cd::totalTaskSize;
-    lv_runtime_info[it->first].begin_elapsed_time_var_ = (recvbuf_lv[LV_BEGIN_VAR] - recvbuf_lv[LV_BEGIN_AVG]*recvbuf_lv[LV_BEGIN_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
-    lv_runtime_info[it->first].compl_elapsed_time_ = recvbuf_lv[LV_COMPL_AVG]/cd::totalTaskSize;
-    lv_runtime_info[it->first].compl_elapsed_time_var_ = (recvbuf_lv[LV_COMPL_VAR] - recvbuf_lv[LV_COMPL_AVG]*recvbuf_lv[LV_COMPL_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
 
-  }
+//  std::map<uint32_t, CDOverheadVar> lv_runtime_info;
+//  for(auto it=runtime_info.begin(); it!=runtime_info.end(); ++it) {
+//    double sendbuf_lv[PROF_LEVEL_STATISTICS_NUM]  = {
+//                           it->second.prv_elapsed_time_, 
+//                           it->second.prv_elapsed_time_ *     it->second.prv_elapsed_time_,
+//                           it->second.rst_elapsed_time_, 
+//                           it->second.rst_elapsed_time_ *     it->second.rst_elapsed_time_,
+//                           it->second.create_elapsed_time_,
+//                           it->second.create_elapsed_time_ *  it->second.create_elapsed_time_,
+//                           it->second.destroy_elapsed_time_,
+//                           it->second.destroy_elapsed_time_ * it->second.destroy_elapsed_time_,
+//                           it->second.begin_elapsed_time_,
+//                           it->second.begin_elapsed_time_ *   it->second.begin_elapsed_time_,
+//                           it->second.compl_elapsed_time_,
+//                           it->second.compl_elapsed_time_ *   it->second.compl_elapsed_time_
+//                          };
+//    double recvbuf_lv[PROF_LEVEL_STATISTICS_NUM] = {0.0,};
+//#if CD_MPI_ENABLED  
+//    MPI_Reduce(sendbuf_lv, recvbuf_lv, PROF_LEVEL_STATISTICS_NUM, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+//#endif
+//    lv_runtime_info[it->first].prv_elapsed_time_ = recvbuf_lv[LV_PRV_AVG]/cd::totalTaskSize;
+//    lv_runtime_info[it->first].prv_elapsed_time_var_ = (recvbuf_lv[LV_PRV_VAR] - recvbuf_lv[LV_PRV_AVG]*recvbuf_lv[LV_PRV_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
+//    lv_runtime_info[it->first].rst_elapsed_time_ = recvbuf_lv[LV_RST_AVG]/cd::totalTaskSize;
+//    lv_runtime_info[it->first].rst_elapsed_time_var_ = (recvbuf_lv[LV_RST_VAR] - recvbuf_lv[LV_RST_AVG]*recvbuf_lv[LV_RST_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
+//    lv_runtime_info[it->first].create_elapsed_time_ = recvbuf_lv[LV_CREAT_AVG]/cd::totalTaskSize;
+//    lv_runtime_info[it->first].create_elapsed_time_var_ = (recvbuf_lv[LV_CREAT_VAR] - recvbuf_lv[LV_CREAT_AVG]*recvbuf_lv[LV_CREAT_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
+//    lv_runtime_info[it->first].destroy_elapsed_time_ = recvbuf_lv[LV_DESTROY_AVG]/cd::totalTaskSize;
+//    lv_runtime_info[it->first].destroy_elapsed_time_var_ = (recvbuf_lv[LV_DESTROY_VAR] - recvbuf_lv[LV_DESTROY_AVG]*recvbuf_lv[LV_DESTROY_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
+//    lv_runtime_info[it->first].begin_elapsed_time_ = recvbuf_lv[LV_BEGIN_AVG]/cd::totalTaskSize;
+//    lv_runtime_info[it->first].begin_elapsed_time_var_ = (recvbuf_lv[LV_BEGIN_VAR] - recvbuf_lv[LV_BEGIN_AVG]*recvbuf_lv[LV_BEGIN_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
+//    lv_runtime_info[it->first].compl_elapsed_time_ = recvbuf_lv[LV_COMPL_AVG]/cd::totalTaskSize;
+//    lv_runtime_info[it->first].compl_elapsed_time_var_ = (recvbuf_lv[LV_COMPL_VAR] - recvbuf_lv[LV_COMPL_AVG]*recvbuf_lv[LV_COMPL_AVG]/cd::totalTaskSize)/cd::totalTaskSize;
+//
+//  }
+
 
   if(cd::myTaskID == 0) {
     printf("\n\n============================================\n");
-    printf("Total elapsed time : %lf (%lf) (var: %lf)\n", tot_elapsed_avg, tot_elapsed, tot_elapsed_var);
-    printf("-- CD Runtime Overhead Summary ----------\n");
-    printf("CD overhead time  : %lf (%lf) (var: %lf)\n", cd_elapsed_avg, cd_elapsed, cd_elapsed_var); 
-    printf("Normal Sync time  : %lf (%lf) (var: %lf)\n", cd_ns_elapsed_avg, normal_sync_elapsed, cd_ns_elapsed_var); 
-    printf("Reexec Sync time  : %lf (%lf) (var: %lf)\n", cd_rs_elapsed_avg, reexec_sync_elapsed, cd_rs_elapsed_var); 
-    printf("Recovery Sync time: %lf (%lf) (var: %lf)\n", cd_es_elapsed_avg, recovery_sync_elapsed, cd_es_elapsed_var); 
-    printf("Preservation      : %lf (%lf) (var: %lf)\n", prv_elapsed_avg, prv_elapsed, prv_elapsed_var); 
-    printf("Restoration       : %lf (%lf) (var: %lf)\n", rst_elapsed_avg, rst_elapsed, rst_elapsed_var); 
-    printf("Create            : %lf (%lf) (var: %lf)\n", create_elapsed_avg, create_elapsed, create_elapsed_var); 
-    printf("Destroy           : %lf (%lf) (var: %lf)\n", destroy_elapsed_avg, destroy_elapsed, destroy_elapsed_var); 
-    printf("Begin             : %lf (%lf) (var: %lf)\n", begin_elapsed_avg, begin_elapsed, begin_elapsed_var); 
-    printf("Complete          : %lf (%lf) (var: %lf)\n", compl_elapsed_avg, compl_elapsed, compl_elapsed_var); 
+    printf("Total time : %le %le %le %le\n", recvavg[TOTAL_PRF], recvstd[TOTAL_PRF], recvmin[TOTAL_PRF], recvmax[TOTAL_PRF]);
+    printf("CD time    : %le %le %le %le\n", recvavg[CDOVH_PRF], recvstd[CDOVH_PRF], recvmin[CDOVH_PRF], recvmax[CDOVH_PRF]); 
+    printf("Normal Sync: %le %le %le %le\n", recvavg[CD_NS_PRF], recvstd[CD_NS_PRF], recvmin[CD_NS_PRF], recvmax[CD_NS_PRF]); 
+    printf("Reexec Sync: %le %le %le %le\n", recvavg[CD_RS_PRF], recvstd[CD_RS_PRF], recvmin[CD_RS_PRF], recvmax[CD_RS_PRF]); 
+    printf("Recovr Sync: %le %le %le %le\n", recvavg[CD_ES_PRF], recvstd[CD_ES_PRF], recvmin[CD_ES_PRF], recvmax[CD_ES_PRF]); 
+    printf("Presv  Time: %le %le %le %le\n", recvavg[PRV_PRF]  , recvstd[PRV_PRF]  , recvmin[PRV_PRF]  , recvmax[PRV_PRF]  ); 
+    printf("Restr  Time: %le %le %le %le\n", recvavg[RST_PRF]  , recvstd[RST_PRF]  , recvmin[RST_PRF]  , recvmax[RST_PRF]  ); 
+    printf("Create     : %le %le %le %le\n", recvavg[CREAT_PRF], recvstd[CREAT_PRF], recvmin[CREAT_PRF], recvmax[CREAT_PRF]); 
+    printf("Destroy    : %le %le %le %le\n", recvavg[DSTRY_PRF], recvstd[DSTRY_PRF], recvmin[DSTRY_PRF], recvmax[DSTRY_PRF]); 
+    printf("Begin      : %le %le %le %le\n", recvavg[BEGIN_PRF], recvstd[BEGIN_PRF], recvmin[BEGIN_PRF], recvmax[BEGIN_PRF]); 
+    printf("Complete   : %le %le %le %le\n", recvavg[COMPL_PRF], recvstd[COMPL_PRF], recvmin[COMPL_PRF], recvmax[COMPL_PRF]); 
+    printf("MsgLog time: %le %le %le %le\n", recvavg[MSG_PRF]  , recvstd[MSG_PRF]  , recvmin[MSG_PRF]  , recvmax[MSG_PRF]  );
+    printf("Libc   time: %le %le %le %le\n", recvavg[LOG_PRF]  , recvstd[LOG_PRF]  , recvmin[LOG_PRF]  , recvmax[LOG_PRF]  );
 #if CD_PROFILER_ENABLED & CD_MPI_ENABLED
-    printf("Mailbox           : %lf \n", mailbox_elapsed_time); 
+    printf("Mailbox    : %lf \n", CD_CLK_MEA(cd::mailbox_elapsed_time)); 
 #endif
-    printf("-- Logging Overhead Summary ------------\n");
-    printf("Msg overhead time : %lf (%lf) (var: %lf)\n", msg_elapsed_avg, msg_elapsed, msg_elapsed_var);
-    printf("Log overhead time : %lf (%lf) (var: %lf)\n", log_elapsed_avg, log_elapsed, log_elapsed_var);
     printf("Ratio : %lf (Total) %lf (CD runtime) %lf (logging)\n", 
                             ((cd_elapsed_avg+msg_elapsed_avg) / tot_elapsed_avg) * 100,
                              (cd_elapsed_avg / tot_elapsed_avg) * 100, 
                              (msg_elapsed_avg / tot_elapsed_avg) * 100);
 
-#if CD_PROFILER_ENABLED 
-    printf("Profile Result =================================\n");
-    for(auto it=lv_runtime_info.begin(); it!=lv_runtime_info.end(); ++it) {
-      printf("-- CD Overhead Level #%u ---------\n", it->first);
-      it->second.Print();
-    }
-    printf("================================================\n\n");
-#endif
+    printf("\n\n============================================\n");
+//#if CD_PROFILER_ENABLED 
+//    printf("Profile Result =================================\n");
+//    for(auto it=lv_runtime_info.begin(); it!=lv_runtime_info.end(); ++it) {
+//      printf("-- CD Overhead Level #%u ---------\n", it->first);
+//      it->second.Print();
+//    }
+//    printf("================================================\n\n");
+//#endif
   }
 #endif // CD_PROFILER_ENABLED_ENDS
 
 
-  */
 
 #if CD_ERROR_INJECTION_ENABLED
   if(CDHandle::memory_error_injector_ != NULL)
