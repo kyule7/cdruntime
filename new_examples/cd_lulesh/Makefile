@@ -5,22 +5,21 @@ SHELL = /bin/sh
 
 CDPATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../..
 CD_ENABLED = 1
-#LULESH_EXEC = lulesh_bare.exe
-#LULESH_EXEC = lulesh_noprv.exe
-#LULESH_EXEC = lulesh_cdrt.exe
-#LULESH_EXEC = lulesh_main.exe
-LULESH_EXEC = lulesh_incr.exe
-#LULESH_EXEC = lulesh_full.exe
+#LULESH_EXEC = lulesh_bare
+#LULESH_EXEC = lulesh_noprv
+LULESH_EXEC = lulesh_cdrt
+#LULESH_EXEC = lulesh_main
+#LULESH_EXEC = lulesh_incr
+#LULESH_EXEC = lulesh_full
 ifeq (${CD_ENABLED}, 1)
-CD_CHILD = 0
-CD_INCR_CKPT = 1
+CD_CDRT = 1
+CD_INCR_CKPT = 0
 CD_FULL_CKPT = 0
 
-CD_OPS = -D_CD_MAIN=1 \
-				 -D_CD_ROOT=1 \
-				 -D_CD_CHILD=${CD_CHILD} \
+CD_OPS = -D_CD_CDRT=${CD_CDRT} \
 				 -D_CD_INCR_CKPT=${CD_INCR_CKPT} \
 				 -D_CD_FULL_CKPT=${CD_FULL_CKPT} \
+				 -D_CD_CHILD=0 \
 				 -D_LEAF_LV=0 \
 				 -D_CD_DUMMY=0 
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 ${CD_OPS} 
@@ -37,19 +36,19 @@ CD_LINKFLAGS :=
 endif
 
 #ifeq (${CD_CHILD}, 1)
-#LULESH_EXEC = lulesh_cdrt.exe
+#LULESH_EXEC = lulesh_cdrt
 #else
-#LULESH_EXEC = lulesh_noprv.exe
+#LULESH_EXEC = lulesh_noprv
 #endif
 #
 #ifeq ($(CD_INCR_CKPT), 1)
-#LULESH_EXEC = lulesh_incr.exe
+#LULESH_EXEC = lulesh_incr
 #else
-#LULESH_EXEC = lulesh_1.exe
+#LULESH_EXEC = lulesh_1
 #endif
 #
 #ifeq (${CD_FULL_CKPT}, 1)
-#LULESH_EXEC = lulesh_full.exe
+#LULESH_EXEC = lulesh_full
 #endif
 
 MPI_INC = /opt/local/include/openmpi
@@ -105,7 +104,7 @@ all: $(LULESH_EXEC)
 	@echo "Building $<"
 	$(CXX) -c $(CXXFLAGS) -o $@  $<
 
-lulesh.o: lulesh.cc lulesh.h cd_def.h Makefile
+lulesh.o: lulesh.cc lulesh.h cd_def.h Makefile 
 	@echo "Building $< OBJS $(OBJECTS2.0)"
 	$(CXX) -c $(CXXFLAGS) -o $@  $<
 
@@ -114,7 +113,7 @@ $(LULESH_EXEC): $(OBJECTS2.0)
 	$(CXX) $(OBJECTS2.0) $(LDFLAGS) -lm -o $@
 
 clean:
-	/bin/rm -f *.o *~ $(OBJECTS) $(LULESH_EXEC) *.exe
+	/bin/rm -f *.o *~ $(OBJECTS) $(LULESH_EXEC)
 	/bin/rm -rf *.dSYM
 
 tar: clean
