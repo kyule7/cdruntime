@@ -203,7 +203,6 @@ class CD : public Serializable {
     bool reexecuted_;
     bool is_window_reused_;
     bool reported_error_;
-    //GONG
     bool begin_;
 //  public:
 
@@ -716,7 +715,10 @@ public:
     inline CDFlagT GetEventFlag(void);
 //    inline void CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &new_rollback_point);
     inline void CheckReexecution(void);
-    inline void ForwardToLowerLevel(CD *cdp, const CDEventT &event); 
+    inline void ForwardToLowerLevel(CD *cdp, const CDEventT &event);
+    inline bool GetBegin() const { return begin_; } 
+    inline void SetBegin()       { CD_ASSERT_STR(begin_ == false, "Lv%u: %s\n", level(), label()); begin_ = true; } 
+    inline void UnsetBegin()     { CD_ASSERT_STR(begin_ == true, "Lv%u: %s\n", level(), label()); begin_ = false; } 
   public:
     int  BlockUntilValid(MPI_Request *request, MPI_Status *status);
     int  BlockallUntilValid(int count, MPI_Request array_of_request[], MPI_Status array_of_status[]);

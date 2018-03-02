@@ -7,14 +7,14 @@ CDPATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../..
 CD_ENABLED = 1
 #LULESH_EXEC = lulesh_bare
 #LULESH_EXEC = lulesh_noprv
-LULESH_EXEC = lulesh_cdrt
+#LULESH_EXEC = lulesh_cdrt
 #LULESH_EXEC = lulesh_main
 #LULESH_EXEC = lulesh_incr
-#LULESH_EXEC = lulesh_full
+LULESH_EXEC = lulesh_full
 ifeq (${CD_ENABLED}, 1)
-CD_CDRT = 1
+CD_CDRT = 0
 CD_INCR_CKPT = 0
-CD_FULL_CKPT = 0
+CD_FULL_CKPT = 1
 
 CD_OPS = -D_CD_CDRT=${CD_CDRT} \
 				 -D_CD_INCR_CKPT=${CD_INCR_CKPT} \

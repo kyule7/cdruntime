@@ -3118,9 +3118,9 @@ int main(int argc, char *argv[])
    opts.balance = 1;
    opts.cost = 1;
 
-   opts.nx=4;
-
    ParseCommandLineOptions(argc, argv, myRank, &opts);
+//   opts.nx=40;
+//   opts.its = 10;
 
    // overwrite parms
 //   opts.nx  = 60;
@@ -3304,7 +3304,7 @@ int main(int argc, char *argv[])
     #endif
         cd_child_loop = cd_child_parent->Create("Loop Child", kStrict|kLocalDisk, 0x3);
   #endif
-        if(myRank==0) printf("Parent Begin:cycle:%d == %d (cycle)\n", locDom->cycle(), cycle);
+//        if(myRank==0) printf("Parent Begin:cycle:%d == %d (cycle)\n", locDom->cycle(), cycle);
       }
 
   #if _CD_CHILD
@@ -3328,7 +3328,7 @@ int main(int argc, char *argv[])
         cd_child_loop->Preserve(locDom->SetOp(prvec_matrl), prv_type,  "MaterialforElem" );
     #endif
         dump_end  += MPI_Wtime() - dump_start;
-        if(myRank==0) printf("Child Begin :cycle:%d == %d (cycle)\n", locDom->cycle(), cycle);
+//        if(myRank==0) printf("Child Begin :cycle:%d == %d (cycle)\n", locDom->cycle(), cycle);
       }
   #endif // _CD_CHILD ends
 #endif // _CD ends
@@ -3344,7 +3344,7 @@ int main(int argc, char *argv[])
       if(locDom->check_end(intvl1))
       {
         cd_child_loop->Detect();
-        if(myRank==0) printf("child end:cycle:%d == %d\n", cycle, locDom->cycle());
+//        if(myRank==0) printf("child end:cycle:%d == %d\n", cycle, locDom->cycle());
         cd_child_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
         is_child_loop_complete = true;
       }
@@ -3352,7 +3352,7 @@ int main(int argc, char *argv[])
 
       if(locDom->check_end(intvl0))
       { 
-        if(myRank==0) printf("parent end:cycle:%d == %d\n", cycle, locDom->cycle());
+//        if(myRank==0) printf("parent end:cycle:%d == %d\n", cycle, locDom->cycle());
     #if _CD_CHILD
         if(is_child_loop_complete == false) {
           cd_child_loop->Detect();
@@ -3406,6 +3406,7 @@ int main(int argc, char *argv[])
                 loop_end, dump_end, wait_end, begn_end, cmpl_end,
                 loop_time/global_counter, dump_time/global_counter, wait_time/global_counter, begn_time/global_counter, cmpl_time/global_counter  ) ;
       }
+      cd_update_profile();
     //leaf_first = false;
    }
 
@@ -3652,18 +3653,21 @@ int main(int argc, char *argv[])
    MPI_Gather(local_cmpl.data(), global_counter, MPI_FLOAT, total_cmpl, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
    if(myRank == 0) {
      char tmpfile[256];
-     sprintf(tmpfile, "time_trace.%s.%d.%d.%d", exec_name, numRanks, opts.nx, ((int)start) % 10000);
+//     sprintf(tmpfile, "time_trace.%s.%d.%d.%d", exec_name, numRanks, opts.nx, ((int)start) % 10000);
+     sprintf(tmpfile, "time_trace.%s.%d.%d.%s", exec_name, numRanks, opts.nx, start_date);
      FILE *tfp = fopen(tmpfile, "w"); 
      if(tfp == 0) { printf("failed to open %s\n", tmpfile); assert(tfp); }
 
      fprintf(tfp, "{\n");
-     fprintf(tfp, "  \"name\":%s,\n", exec_name);
+     fprintf(tfp, "  \"name\":\"%s\",\n", exec_name);
      fprintf(tfp, "  \"input\":%d,\n", opts.nx);
      fprintf(tfp, "  \"nTask\":%d,\n", numRanks);
-     fprintf(tfp, "  \"loop\": ["); for(int i=0; i<tot_elems; i++) { fprintf(tfp, "%f,", total_loop[i]); } fprintf(tfp, "],\n");
-     fprintf(tfp, "  \"dump\": ["); for(int i=0; i<tot_elems; i++) { fprintf(tfp, "%f,", total_dump[i]); } fprintf(tfp, "],\n");
-     fprintf(tfp, "  \"wait\": ["); for(int i=0; i<tot_elems; i++) { fprintf(tfp, "%f,", total_wait[i]); } fprintf(tfp, "],\n");
-     fprintf(tfp, "  \"cdrt\": ["); for(int i=0; i<tot_elems; i++) { fprintf(tfp, "%f,", total_begn[i] + total_cmpl[i]); } fprintf(tfp, "]\n");
+     fprintf(tfp, "  \"prof\": {\n");
+     fprintf(tfp, "    \"loop\": [%f", total_loop[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_loop[i]); } fprintf(tfp, "],\n");
+     fprintf(tfp, "    \"dump\": [%f", total_dump[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump[i]); } fprintf(tfp, "],\n");
+     fprintf(tfp, "    \"wait\": [%f", total_wait[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_wait[i]); } fprintf(tfp, "],\n");
+     fprintf(tfp, "    \"cdrt\": [%f", total_begn[0] + total_cmpl[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_begn[i] + total_cmpl[i]); } fprintf(tfp, "]\n");
+     fprintf(tfp, "  }\n");
      fprintf(tfp, "}\n");
      free(total_loop);
      free(total_dump);

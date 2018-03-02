@@ -7,10 +7,11 @@
 #include <cstdlib>
 #include <sys/time.h>
 #include <mpi.h>
+#include <unistd.h>
 using namespace packer;
 struct timeval ttime;
 FILE *dbgfp=stdout;
-
+int myRank = 0;
 
 uint64_t PreserveObject(DataStore *data, int *datap, int elemsize, int chunksize) {
   CDPacker nested_packer(NULL, 16, data);
@@ -133,7 +134,8 @@ void TestNestedPacker(int elemsize, int chunksize)
 //////////////////////////////////////////////////////
   printf("totsize:%lu, %lu\n", totsize * sizeof(int), totsizeB * sizeof(int));
 
-  CDPacker packer(NULL, 128, NULL, 4096);
+//  CDPacker packer(NULL, 128, NULL, 4096);
+  CDPacker packer(true, NULL, NULL, 4096, kPosixFile);
 
   int *dataAtmp = dataA;
   int first = elemsize / 2;
@@ -141,6 +143,7 @@ void TestNestedPacker(int elemsize, int chunksize)
 //    if(i == first - 1) { printf("first i:%d\n", i); getchar(); }
 //    if(i == first) { printf("first i:%d\n", i); getchar(); }
     packer.Add((char *)dataAtmp, CDEntry(i+1, chunksize * sizeof(int), 0, (char *)dataAtmp));
+    if(myRank == 0) printf("Add %d, %lx, %p\n", i+1, chunksize * sizeof(int), dataAtmp);
     dataAtmp+=chunksize;
 
 //    if(err == 0) { assert(0); }
@@ -153,8 +156,8 @@ void TestNestedPacker(int elemsize, int chunksize)
 //  PrintArray((char *)dataA, first *chunksize* sizeof(int)); //getchar(); 
 //  PrintArray((char *)(dataA + first*chunksize), second *chunksize* sizeof(int)); //getchar(); 
 //  printf("==============================================\n");
-
-  {
+  sleep(10);
+  if(0) {
     uint64_t packed_offset = packer.data_->used();
     uint64_t table_offset = PreserveObject(packer.data_, dataB, elemsizeB, chunksizeB);
     uint64_t packed_size = packer.data_->used() - packed_offset;
@@ -171,10 +174,12 @@ void TestNestedPacker(int elemsize, int chunksize)
   packer.data_->Flush();
 //  printf("after pack offset (sync):%lx~%lx\n", 
 //      packer.data_->offset() + packer.data_->head(), packer.data_->used()); getchar();
-  for(int i=first+1; i<elemsize+1; i++) {
+  for(int i=first; i<elemsize; i++) {
+  //for(int i=first+1; i<elemsize+1; i++) {
 //    if(i == first+1) { printf("second i:%d\n", i); getchar(); }
     //uint64_t offset = 0;
     packer.Add((char *)dataAtmp, CDEntry(i+1, chunksize * sizeof(int), 0, (char *)dataAtmp));
+    if(myRank == 0) printf("Add %d, %lx, %p\n", i+1, chunksize * sizeof(int), dataAtmp);
 //    printf("packer offset after nested, [%d]: %d %lu %lx\n", i, *dataAtmp, chunksize*sizeof(int), offset); getchar();
     dataAtmp+=chunksize;
 //    if(i == 700)
@@ -186,7 +191,9 @@ void TestNestedPacker(int elemsize, int chunksize)
 
   packer.data_->Flush();
   // +1 is for packer
-  for(int i=0; i<elemsize+1; i++) {
+  for(int i=0; i<elemsize; i++) {
+  //for(int i=0; i<elemsize+1; i++) {
+    if(myRank == 0) printf("Restore %d, %lx\n", i+1, chunksize * sizeof(int));
     packer.Restore(i+1, NULL, chunksize * sizeof(int));
 //    char *ret = packer.Restore(i+1);
 //    if(ret != NULL) {
@@ -370,10 +377,11 @@ void TestUnpackerFile(FILE *fp)
 */
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   gettimeofday(&ttime,NULL);
   srand48(ttime.tv_usec);
   int elemsize = 8;
-  int chunksize = 64;
+  int chunksize = 0x1000000;
   //char *chunk = ArrayTest(elemsize, chunksize);
   TestNestedPacker(elemsize, chunksize);
 //    Packer packer;;

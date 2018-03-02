@@ -172,6 +172,7 @@ struct DoubleInt {
   DoubleInt &operator*=(const DoubleInt& that) { val_ *= that.val_; return *this; }
   DoubleInt &operator+=(const DoubleInt& that) { val_ += that.val_; return *this; }
   DoubleInt &operator-=(const DoubleInt& that) { val_ -= that.val_; return *this; }
+  double     operator/(const DoubleInt& that)  { return (val_ / that.val_); }
 };
 
 //double sqrt(const DoubleInt &that) { return sqrt(that.val_); }

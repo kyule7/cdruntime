@@ -300,6 +300,7 @@ struct RuntimeInfo : public CDOverhead {
     double elapsed = now - cd::begin_clk;
     if(is_reexec == false) { // normal execution
       cd::prv_elapsed_time += elapsed; 
+      cd::prv_elapsed_smpl += elapsed; 
       prv_elapsed_time_    += elapsed;
 
       if( CHECK_TYPE(type, kCopy) ) {
@@ -321,6 +322,7 @@ struct RuntimeInfo : public CDOverhead {
   
     } else { // reexecution 
       cd::rst_elapsed_time += elapsed; 
+      cd::rst_elapsed_smpl += elapsed; 
       rst_elapsed_time_    += elapsed; 
       input_[entry_str].Update(len, type);
       restore_ += len;
@@ -347,6 +349,7 @@ struct RuntimeInfo : public CDOverhead {
     CD_CLOCK_T now = CD_CLOCK();
     const double elapsed = now - cd::begin_clk;
     cd::begin_elapsed_time += elapsed;
+    cd::begin_elapsed_smpl += elapsed;
     begin_elapsed_time_    += elapsed;
 
     if(need_sync) { // should also include recreated case.
@@ -373,7 +376,7 @@ struct RuntimeInfo : public CDOverhead {
   // This case is either forward execution, or reexecution not from current CD.
   // At this point, total_time_ is measured if there is no error.
   // Otherwise, reex_time_ is measured.
-  inline void RecordComplete(bool is_reexec)
+  inline void RecordComplete(bool is_reexec, bool lowest_level)
   {
     // When it is called, the current CD was executed without rollback.
     // if it is_reexec is true and phase == failed_phase, 
@@ -383,9 +386,13 @@ struct RuntimeInfo : public CDOverhead {
     CD_CLOCK_T now = CD_CLOCK();
     const double elapsed = now - cd::begin_clk;
     cd::compl_elapsed_time += elapsed;
+    cd::compl_elapsed_smpl += elapsed;
     compl_elapsed_time_    += elapsed;
     //if(is_reexec == false) { // normal execution
     total_time_ += now - exec_clk_;
+    if(lowest_level) { 
+      cd::body_elapsed_time += now - exec_clk_; 
+      cd::body_elapsed_smpl += now - exec_clk_; }
     exec_cnt_   += 1;
     exec_clk_    = 0; 
     // reexecution not from the current CDs 
@@ -431,12 +438,15 @@ struct RuntimeInfo : public CDOverhead {
       // due to stack unwinding.
       cd::end_clk = now;
       const double elapsed = now - cd::begin_clk;
-      cd::elapsed_time       += elapsed; 
+//      cd::body_elapsed_time       += elapsed; 
+//      cd::body_elapsed_smpl       += elapsed; 
       if(op == kComplete) {
         cd::compl_elapsed_time += elapsed;
+        cd::compl_elapsed_smpl += elapsed;
         compl_elapsed_time_    += elapsed;
       } else if (op == kBegin) {
         cd::begin_elapsed_time += elapsed;
+        cd::begin_elapsed_smpl += elapsed;
         begin_elapsed_time_    += elapsed;
       } else if (op == kCreate) {
         cd::create_elapsed_time += elapsed;

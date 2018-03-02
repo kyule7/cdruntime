@@ -271,4 +271,5 @@ extern char ftype_name[64];
 extern char start_date[64];
 extern char end_date[64];
 extern char *exec_details;
+extern void cd_update_profile(void);
 #endif
