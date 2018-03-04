@@ -264,13 +264,10 @@ class TableStore : public BaseTable {
           // The rule for entry is that the first element in object layout is always ID.
           if( ptr_[i].id_ == id ) {
             MYDBG("%lu == %lu\n", ptr_[i].id_, id);
-<<<<<<< HEAD
-            if(ptr_[i].size_.CheckAny(attr) && attr != Attr::koutput) 
-=======
+            //if(ptr_[i].size_.CheckAny(attr) && attr != Attr::koutput) 
             CDEntry tentry = ptr_[i];
 //            if(packerTaskID == 0) {printf("%lx,", tentry.attr());}
             if(ptr_[i].attr() == attr && attr != Attr::knoattr) {
->>>>>>> fbfe9f580bd9074e99415683fd80d80f4d65fc95
               continue;
             } else {
               ret = &(ptr_[i]);
@@ -536,11 +533,7 @@ class TableStore : public BaseTable {
       MYDBG("[Table] %lu/%lu, grow:%lu, alloc:%u\n", tail_*sizeof(EntryT), size(), grow_unit_, allocated_);
     }
 
-<<<<<<< HEAD
-    void PrintEntry(char *str="", uint64_t print_upto=0)
-=======
     void PrintEntry(const char *str="", uint64_t print_upto=0)
->>>>>>> fbfe9f580bd9074e99415683fd80d80f4d65fc95
     {
       if(print_upto == 0) print_upto = tail_;
       for(uint64_t i=0; i<print_upto; i++) {
