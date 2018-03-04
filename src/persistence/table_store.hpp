@@ -273,7 +273,7 @@ class TableStore : public BaseTable {
               id = i;
               if(ptr_[i].size_.Check(attr) && attr != Attr::knoattr) {
                 char tmp[32];
-                sprintf(tmp, "ERROR %lx", attr);
+                sprintf(tmp, "ERROR %x", attr);
                 ptr_[i].Print(tmp); assert(0);
               }
               break;
@@ -532,7 +532,7 @@ class TableStore : public BaseTable {
       MYDBG("[Table] %lu/%lu, grow:%lu, alloc:%u\n", tail_*sizeof(EntryT), size(), grow_unit_, allocated_);
     }
 
-    void PrintEntry(char *str="", uint64_t print_upto=0)
+    void PrintEntry(const char *str="", uint64_t print_upto=0)
     {
       if(print_upto == 0) print_upto = tail_;
       for(uint64_t i=0; i<print_upto; i++) {
