@@ -3283,6 +3283,10 @@ int main(int argc, char *argv[])
         is_main_loop_complete  = false;
         double ts0 = MPI_Wtime();
         CD_Begin(cd_main_loop, "MainLoop");
+        begn_end = 0.0;
+        cmpl_end = 0.0;
+        wait_end = ts_loop - loop_start;
+
         begn_end += MPI_Wtime() - ts0;
 //        if(myRank == 0) printf("0 Before Prsv:cycle:%d == %d, %lx\n", cycle, locDom->cycle(), prvec_readonly_all);
         if(IsReexec() && myRank == 1) {printf(">> Before Main %4d, %6.3le %6.3le, %le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->PrintDomain();}
@@ -3306,7 +3310,7 @@ int main(int argc, char *argv[])
   #elif _CD_FULL_CKPT
         cd_main_loop->Preserve(locDom->SetOp(prvec_all), kCopy, "PrvAll-Main" );
   #endif
-        dump_end  += MPI_Wtime() - dump_start;
+        dump_end  = MPI_Wtime() - dump_start;
 
   #if _CD_CHILD
 //        if(myRank == 0) printf("After MainLoop Prsv:cycle:%d == %d\n", cycle, locDom->cycle());
@@ -3401,6 +3405,7 @@ int main(int argc, char *argv[])
       double now = MPI_Wtime();
       cmpl_end += now - compl_time_start;
       const double loop_end = now - loop_start;
+//      for(int i=0; i<5; i++) { dump_end += dump_phase[i]; }
       loop_time += loop_end;
       wait_time += wait_end; 
       dump_time += dump_end;
@@ -3421,6 +3426,7 @@ int main(int argc, char *argv[])
       local_dump3.push_back((float)dump_phase[3]);
       local_dump4.push_back((float)dump_phase[4]);
 #endif
+//      for(int i=0; i<5; i++) { dump_phase[i] = 0; }
       if (myRank == 0) {
 //      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) 
          printf("cycle = %d (%u), t=%5.4e, dt=%5.4e, loop=%5.3e, dump=%5.3e, wait=%5.3e, begin=%5.3e, complete=%5.3e (%5.3e, %5.3e, %5.3e, %5.3e, %5.3e)\n",
@@ -3740,11 +3746,12 @@ int main(int argc, char *argv[])
      free(total_begn);
      free(total_cmpl);
 
-#if _CD_CHILD && _CD
-     free(total_dump);
-     free(total_dump);
-     free(total_dump);
-     free(total_dump);
+#if _CD_CDRT && _CD
+     free(total_dump0);
+     free(total_dump1);
+     free(total_dump2);
+     free(total_dump3);
+     free(total_dump4);
 #endif
      fclose(tfp);
    }

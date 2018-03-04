@@ -263,7 +263,7 @@ class TableStore : public BaseTable {
           // The rule for entry is that the first element in object layout is always ID.
           if( ptr_[i].id_ == id ) {
             MYDBG("%lu == %lu\n", ptr_[i].id_, id);
-            if(ptr_[i].size_.CheckAny(attr)) 
+            if(ptr_[i].size_.CheckAny(attr) && attr != Attr::koutput) 
               continue;
             else {
               ret = &(ptr_[i]);
@@ -523,11 +523,11 @@ class TableStore : public BaseTable {
       MYDBG("[Table] %lu/%lu, grow:%lu, alloc:%u\n", tail_*sizeof(EntryT), size(), grow_unit_, allocated_);
     }
 
-    void PrintEntry(uint64_t print_upto=0)
+    void PrintEntry(char *str="", uint64_t print_upto=0)
     {
       if(print_upto == 0) print_upto = tail_;
       for(uint64_t i=0; i<print_upto; i++) {
-        ptr_[i].Print();
+        ptr_[i].Print(str);
       }
     }
   public:
