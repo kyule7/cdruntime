@@ -173,6 +173,14 @@ bool r_regElemlist = false;
 int intvl0 = -1;
 int intvl1 = -1;
 int intvl2 = -1;
+double wait_time = 0.0;
+double wait_end = 0.0;
+double dump_end = 0.0;
+double dump_phase[5] = { 0, 0, 0, 0, 0 };
+double begn_time = 0.0;
+double cmpl_time = 0.0;
+double begn_end = 0.0;
+double cmpl_end = 0.0;
 #if _CD
 CDHandle *cd_main_loop = NULL;
 CDHandle *cd_child_loop = NULL;
@@ -180,13 +188,6 @@ CDHandle *cd_child_loop = NULL;
 CDHandle *dummy_cd = NULL;
 packer::MagicStore magic __attribute__((aligned(0x1000)));
 using namespace cd;
-double wait_time = 0.0;
-double wait_end = 0.0;
-double dump_end = 0.0;
-double begn_time = 0.0;
-double cmpl_time = 0.0;
-double begn_end = 0.0;
-double cmpl_end = 0.0;
 #if 0
 uint64_t prvec_all = ( M__X  | M__Y  | M__Z  | 
                               M__XD | M__YD | M__ZD |
@@ -1344,6 +1345,7 @@ static inline void CalcForceForNodes(Domain& domain)
     leaf_cd->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy_Leaf");
   #endif
     dump_end  += MPI_Wtime() - prv_start;
+    dump_phase[0] = MPI_Wtime() - prv_start;
   }
 #endif
   /* Calcforce calls partial, force, hourq */
@@ -1510,6 +1512,7 @@ void LagrangeNodal(Domain& domain)
     leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc_Leaf");
   #endif
     dump_end  += MPI_Wtime() - prv_start;
+    dump_phase[1] = MPI_Wtime() - prv_start;
   }
 #endif
    CalcAccelerationForNodes(domain, domain.numNode());
@@ -2752,6 +2755,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
     leaf_cd->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem_Leaf");
   #endif
     dump_end  += MPI_Wtime() - prv_start;
+    dump_phase[2] = MPI_Wtime() - prv_start;
   }
 #endif
   // Out{DELV,VDOV,AREALG} <- In{X,Y,Z,XD,YD,ZD,NODELIST
@@ -2786,6 +2790,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
     leaf_cd->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem_Leaf");
   #endif
     dump_end  += MPI_Wtime() - prv_start;
+    dump_phase[3] = MPI_Wtime() - prv_start;
   }
 #endif
   /* Calculate Q.  (Monotonic q option requires communication) */
@@ -2823,6 +2828,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
     leaf_cd->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem_Leaf");
   #endif
     dump_end  += MPI_Wtime() - prv_start;
+    dump_phase[4] = MPI_Wtime() - prv_start;
   }
 #endif
 
@@ -3178,7 +3184,7 @@ int main(int argc, char *argv[])
 #if _CD_INCR_CKPT || _CD_FULL_CKPT
   int intvl[3] = {1, 1, 1}; 
 #else
-  int intvl[3] = {1, 1, 1}; 
+  int intvl[3] = {16, 4, 1}; 
 #endif
   char *lulesh_intvl = getenv( "LULESH_LV0" );
   if(lulesh_intvl != NULL) {
@@ -3245,11 +3251,21 @@ int main(int argc, char *argv[])
    std::vector<float> local_wait;
    std::vector<float> local_begn;
    std::vector<float> local_cmpl;
-   CDPrvType prv_type = kCopy;
+#if _CD_CDRT && _CD
+   std::vector<float> local_dump0;
+   std::vector<float> local_dump1;
+   std::vector<float> local_dump2;
+   std::vector<float> local_dump3;
+   std::vector<float> local_dump4;
+#endif
+#if _CD
 #if _CD_DUMMY
-   prv_type = kRef | kOutput;
+   CDPrvType prv_type = (CDPrvType)(kRef | kOutput);
+#else
+   CDPrvType prv_type = kCopy;
 #endif
    dummy_cd = root_cd;
+#endif
    while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
       dump_end = 0.0;
       begn_end = 0.0;
@@ -3398,7 +3414,13 @@ int main(int argc, char *argv[])
       local_wait.push_back((float)wait_end);
       local_begn.push_back((float)begn_end);
       local_cmpl.push_back((float)cmpl_end);
-      
+#if _CD_CDRT && _CD
+      local_dump0.push_back((float)dump_phase[0]);
+      local_dump1.push_back((float)dump_phase[1]);
+      local_dump2.push_back((float)dump_phase[2]);
+      local_dump3.push_back((float)dump_phase[3]);
+      local_dump4.push_back((float)dump_phase[4]);
+#endif
       if (myRank == 0) {
 //      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) 
          printf("cycle = %d (%u), t=%5.4e, dt=%5.4e, loop=%5.3e, dump=%5.3e, wait=%5.3e, begin=%5.3e, complete=%5.3e (%5.3e, %5.3e, %5.3e, %5.3e, %5.3e)\n",
@@ -3406,7 +3428,9 @@ int main(int argc, char *argv[])
                 loop_end, dump_end, wait_end, begn_end, cmpl_end,
                 loop_time/global_counter, dump_time/global_counter, wait_time/global_counter, begn_time/global_counter, cmpl_time/global_counter  ) ;
       }
+#if _CD
       cd_update_profile();
+#endif
     //leaf_first = false;
    }
 
@@ -3449,6 +3473,14 @@ int main(int argc, char *argv[])
 #else
    elapsed_timeG = elapsed_time;
 #endif
+#if _CD    
+   char *execname = exec_name; 
+   char *fname_last = start_date;
+#else
+   char execname[256] = "lulesh_bare";
+   char fname_last[256];
+   sprintf(fname_last, "%d", ((int)start) % 1000);
+#endif
 
    if(0) 
    {
@@ -3486,9 +3518,9 @@ int main(int argc, char *argv[])
      char tmpfile[128];
      
      // local stats /////////////////////////
-     sprintf(tmpfile, "local_stats.%s.%d.%d.%d", exec_name, numRanks, opts.nx, ((int)start) % 1000);
+     sprintf(tmpfile, "local_stats.%s.%d.%d.%s", execname, numRanks, opts.nx, fname_last);
      FILE *lfp = fopen(tmpfile, "w"); 
-     fprintf(lfp, "%s\n", exec_name);
+     fprintf(lfp, "%s\n", execname);
      if(lfp == 0) { printf("failed to open %s\n", tmpfile); assert(lfp); }
      double loop_min = DBL_MAX;
      double loop_max = 0;
@@ -3517,7 +3549,7 @@ int main(int argc, char *argv[])
      fclose(lfp);
      ////////////////////////////////////////
      // global stats /////////////////////////
-     sprintf(tmpfile, "global_stats.%s.%d.%d.%d", exec_name, numRanks, opts.nx, ((int)start) % 1000);
+     sprintf(tmpfile, "global_stats.%s.%d.%d.%s", execname, numRanks, opts.nx, fname_last);
      FILE *gfp = fopen(tmpfile, "w"); 
      fprintf(gfp, "loop,         dump,         wait\n");
      fprintf(gfp, "avg, %le, %le, %le\nstd, %le, %le, %le\nmin, %le, %le, %le\nmax, %le, %le, %le\nmin, %le, %le, %le\nmax, %le, %le, %le\n", 
@@ -3530,9 +3562,9 @@ int main(int argc, char *argv[])
      fclose(gfp);
      ////////////////////////////////////////
      // histogram ///////////////////////////
-     sprintf(tmpfile, "histogram.%s.%d.%d.%d", exec_name, numRanks, opts.nx, ((int)start) % 1000);
+     sprintf(tmpfile, "histogram.%s.%d.%d.%s", execname, numRanks, opts.nx, fname_last);
      FILE *hfp = fopen(tmpfile, "w"); 
-     fprintf(hfp, "%s\n", exec_name);
+     fprintf(hfp, "%s\n", execname);
      if(hfp == 0) { printf("failed to open %s\n", tmpfile); assert(hfp); }
      // based on optimal bin size calculation,
      // https://www.fmrib.ox.ac.uk/datasets/techrep/tr00mj2/tr00mj2/node24.html
@@ -3597,7 +3629,7 @@ int main(int argc, char *argv[])
      MPI_File fh;
      char trace_fname[256];
      if(myRank == 0) {
-       sprintf(trace_fname, "result_trace.%s.%d.%d.%d", exec_name, numRanks, opts.nx, ((int)start) % 1000);
+       sprintf(trace_fname, "result_trace.%s.%d.%d.%d", execname, numRanks, opts.nx, ((int)start) % 1000);
        PMPI_Bcast(&trace_fname, 256, MPI_CHAR, 0, MPI_COMM_WORLD);
      } else {
        PMPI_Bcast(&trace_fname, 256, MPI_CHAR, 0, MPI_COMM_WORLD);
@@ -3633,6 +3665,15 @@ int main(int argc, char *argv[])
    float *total_wait = NULL;
    float *total_begn = NULL;
    float *total_cmpl = NULL;
+
+#if _CD_CDRT && _CD
+   float *total_dump0 = NULL;
+   float *total_dump1 = NULL;
+   float *total_dump2 = NULL;
+   float *total_dump3 = NULL;
+   float *total_dump4 = NULL;
+#endif
+
    int tot_elems = global_counter * numRanks;
    if(myRank == 0) {
      total_loop = (float *)malloc(tot_elems * sizeof(float));
@@ -3640,31 +3681,55 @@ int main(int argc, char *argv[])
      total_wait = (float *)malloc(tot_elems * sizeof(float));
      total_begn = (float *)malloc(tot_elems * sizeof(float));
      total_cmpl = (float *)malloc(tot_elems * sizeof(float));
+
+#if _CD_CDRT && _CD
+     total_dump0 = (float *)malloc(tot_elems * sizeof(float));
+     total_dump1 = (float *)malloc(tot_elems * sizeof(float));
+     total_dump2 = (float *)malloc(tot_elems * sizeof(float));
+     total_dump3 = (float *)malloc(tot_elems * sizeof(float));
+     total_dump4 = (float *)malloc(tot_elems * sizeof(float));
+#endif
    }
-   assert(global_counter == local_loop.size());
-   assert(global_counter == local_dump.size());
-   assert(global_counter == local_wait.size());
-   assert(global_counter == local_begn.size());
-   assert(global_counter == local_cmpl.size());
+   assert(global_counter >= local_loop.size());
+   assert(global_counter >= local_dump.size());
+   assert(global_counter >= local_wait.size());
+   assert(global_counter >= local_begn.size());
+   assert(global_counter >= local_cmpl.size());
    MPI_Gather(local_loop.data(), global_counter, MPI_FLOAT, total_loop, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
    MPI_Gather(local_dump.data(), global_counter, MPI_FLOAT, total_dump, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
    MPI_Gather(local_wait.data(), global_counter, MPI_FLOAT, total_wait, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
    MPI_Gather(local_begn.data(), global_counter, MPI_FLOAT, total_begn, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
    MPI_Gather(local_cmpl.data(), global_counter, MPI_FLOAT, total_cmpl, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+#if _CD_CDRT && _CD
+   MPI_Gather(local_dump0.data(), global_counter, MPI_FLOAT, total_dump0, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Gather(local_dump1.data(), global_counter, MPI_FLOAT, total_dump1, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Gather(local_dump2.data(), global_counter, MPI_FLOAT, total_dump2, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Gather(local_dump3.data(), global_counter, MPI_FLOAT, total_dump3, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   MPI_Gather(local_dump4.data(), global_counter, MPI_FLOAT, total_dump4, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+#endif
+
    if(myRank == 0) {
      char tmpfile[256];
-//     sprintf(tmpfile, "time_trace.%s.%d.%d.%d", exec_name, numRanks, opts.nx, ((int)start) % 10000);
-     sprintf(tmpfile, "time_trace.%s.%d.%d.%s", exec_name, numRanks, opts.nx, start_date);
+//     sprintf(tmpfile, "time_trace.%s.%d.%d.%d", execname, numRanks, opts.nx, ((int)start) % 10000);
+     sprintf(tmpfile, "time_trace.%s.%d.%d.%s", execname, numRanks, opts.nx, fname_last);
      FILE *tfp = fopen(tmpfile, "w"); 
      if(tfp == 0) { printf("failed to open %s\n", tmpfile); assert(tfp); }
 
      fprintf(tfp, "{\n");
-     fprintf(tfp, "  \"name\":\"%s\",\n", exec_name);
+     fprintf(tfp, "  \"name\":\"%s\",\n", execname);
      fprintf(tfp, "  \"input\":%d,\n", opts.nx);
      fprintf(tfp, "  \"nTask\":%d,\n", numRanks);
      fprintf(tfp, "  \"prof\": {\n");
      fprintf(tfp, "    \"loop\": [%f", total_loop[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_loop[i]); } fprintf(tfp, "],\n");
      fprintf(tfp, "    \"dump\": [%f", total_dump[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump[i]); } fprintf(tfp, "],\n");
+#if _CD_CDRT && _CD
+     fprintf(tfp, "    \"dump0\": [%f", total_dump0[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump0[i]); } fprintf(tfp, "],\n");
+     fprintf(tfp, "    \"dump1\": [%f", total_dump1[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump1[i]); } fprintf(tfp, "],\n");
+     fprintf(tfp, "    \"dump2\": [%f", total_dump2[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump2[i]); } fprintf(tfp, "],\n");
+     fprintf(tfp, "    \"dump3\": [%f", total_dump3[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump3[i]); } fprintf(tfp, "],\n");
+     fprintf(tfp, "    \"dump4\": [%f", total_dump4[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump4[i]); } fprintf(tfp, "],\n");
+#endif
      fprintf(tfp, "    \"wait\": [%f", total_wait[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_wait[i]); } fprintf(tfp, "],\n");
      fprintf(tfp, "    \"cdrt\": [%f", total_begn[0] + total_cmpl[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_begn[i] + total_cmpl[i]); } fprintf(tfp, "]\n");
      fprintf(tfp, "  }\n");
@@ -3674,6 +3739,13 @@ int main(int argc, char *argv[])
      free(total_wait);
      free(total_begn);
      free(total_cmpl);
+
+#if _CD_CHILD && _CD
+     free(total_dump);
+     free(total_dump);
+     free(total_dump);
+     free(total_dump);
+#endif
      fclose(tfp);
    }
 

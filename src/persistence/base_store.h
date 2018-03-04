@@ -72,7 +72,8 @@ enum EntryType {
 
 struct AttrInternal {
     uint64_t size_:48;
-    uint64_t reserved_:8;
+    uint64_t reserved_:7;
+    uint64_t output_:1;
     uint64_t table_:1;     // the entry actually points to table chunk
     uint64_t nested_:1;    // the entry points to data+table nested in data chunk
     uint64_t tmpshared_:1; // the etnry is temporarily shared
@@ -85,14 +86,16 @@ struct AttrInternal {
 
 union Attr {
     enum {
-      ktable     = 0x80,
-      knested    = 0x40,  
-      ktmpshared = 0x20,
-      kshare     = 0x10,
-      kremote    = 0x08,
-      krefer     = 0x04, 
-      kdirty     = 0x02,  
-      kinvalid   = 0x01
+      koutput    = 0x100,
+      ktable     = 0x080,
+      knested    = 0x040,  
+      ktmpshared = 0x020,
+      kshare     = 0x010,
+      kremote    = 0x008,
+      krefer     = 0x004, 
+      kdirty     = 0x002,  
+      kinvalid   = 0x001,
+      knoattr    = 0x000
     };
     uint64_t code_;
     AttrInternal attr_;
@@ -204,7 +207,7 @@ struct CDEntry {
       src_    = that.src_;
     }
     void Print(const char *str="") const
-    { printf("CDEntry:%s (%12lx %12lx %12lx %p)\n", str, id_, size(), offset(), src()); }
+    { printf("CDEntry:%s (%16lx %10lx %10lx %p)\n", str, id_, size(), offset(), src()); }
     inline uint64_t size(void)   const { return size_.attr_.size_; }
     inline uint64_t invalid(void)  const { return size_.attr_.invalid_; }
     inline uint64_t attr(void)   const { return size_.code_ >> 48; }

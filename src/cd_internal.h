@@ -601,9 +601,9 @@ public:
     // It is needed when its children preserve data via reference 
     // and search through its ancestors. 
     // If it cannot find in current CD object, it outputs NULL 
-    CDEntry *InternalGetEntry(ENTRY_TAG_T entry_name);
-    virtual CDEntry *GetEntry(ENTRY_TAG_T entry_name);
-    virtual CDEntry *SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level);
+    CDEntry *InternalGetEntry(ENTRY_TAG_T entry_name, uint16_t attr);
+    virtual CDEntry *GetEntry(ENTRY_TAG_T entry_name, uint16_t attr);
+    virtual CDEntry *SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, uint16_t attr=0);
     void AddEntryToSend(const ENTRY_TAG_T &entry_tag_to_search);
   private:
     // This comment is previous one, so may be confusing for current design. 
@@ -780,7 +780,7 @@ class HeadCD : public CD {
 //    std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     // event related
 
-    virtual CDEntry *GetEntry(ENTRY_TAG_T entry_name);
+    virtual CDEntry *GetEntry(ENTRY_TAG_T entry_name, uint16_t attr);
     bool error_occurred;
 //    bool need_reexec;
 

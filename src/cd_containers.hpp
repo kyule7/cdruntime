@@ -60,9 +60,9 @@ float Compare(T1 *orip, T1 *newp, uint32_t size) {
   if(size != 0) {
     for(; i<size; i++, orip++, newp++) {
       //printf("[%d] i:%u, size:%u, %p == %p\n", myTaskID, i, size, orip, newp);
-      if(IsReexec() && (abs(*orip - *newp) > 1e-100)) {
-        std::cout << "["<< myTaskID << "] i:" << i << ", size:" << size << ", " << *orip << " == " << *newp << ", "<< diff_cnt << std::endl;
-      }
+//      if(IsReexec() && (abs(*orip - *newp) > 1e-100)) {
+//        std::cout << "["<< myTaskID << "] i:" << i << ", size:" << size << ", " << *orip << " == " << *newp << ", "<< diff_cnt << std::endl;
+//      }
       diff_cnt = (abs(*orip - *newp) > 1e-100)? diff_cnt+1 : diff_cnt;
     }
     difference = (float)(diff_cnt) / size;
@@ -70,8 +70,8 @@ float Compare(T1 *orip, T1 *newp, uint32_t size) {
   if(difference > 0.0) { 
 
 
-    if(IsReexec()) //if(myTaskID == 0) 
-      printf("different : %u/%u\n", diff_cnt, size);
+//    if(IsReexec()) //if(myTaskID == 0) 
+//      printf("different : %u/%u\n", diff_cnt, size);
 
   }
   return difference;
