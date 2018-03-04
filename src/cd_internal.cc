@@ -1133,32 +1133,32 @@ CDErrT CD::Begin(const char *label, bool collective)
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
-    char tmp[16];
-    sprintf(tmp, "EXEC %s %u", label, level);
-    if(myTaskID == 0)
-      entry_directory_.table_->PrintEntry(tmp);
-    CDHandle *parent = GetParentCD();
-    if(parent != NULL) {
-
-      sprintf(tmp, "P EXEC %s %u", parent->GetLabel(), parent->ptr_cd()->level());
-      if(myTaskID == 0) 
-        parent->ptr_cd()->entry_directory_.table_->PrintEntry(tmp);
-
-    }
+//    char tmp[16];
+//    sprintf(tmp, "EXEC %s %u", label, level);
+//    if(myTaskID == 0)
+//      entry_directory_.table_->PrintEntry(tmp);
+//    CDHandle *parent = GetParentCD();
+//    if(parent != NULL) {
+//
+//      sprintf(tmp, "P EXEC %s %u", parent->GetLabel(), parent->ptr_cd()->level());
+//      if(myTaskID == 0) 
+//        parent->ptr_cd()->entry_directory_.table_->PrintEntry(tmp);
+//
+//    }
   }
   else {
-    char tmp[16];
-    sprintf(tmp, "REEX %s %u", label, level);
-    if(myTaskID == 0)
-      entry_directory_.table_->PrintEntry(tmp);
-    CDHandle *parent = GetParentCD();
-    if(parent != NULL) {
-
-      sprintf(tmp, "P REEX %s %u", parent->GetLabel(), parent->ptr_cd()->level());
-      if(myTaskID == 0) 
-        parent->ptr_cd()->entry_directory_.table_->PrintEntry(tmp);
-
-    }
+//    char tmp[16];
+//    sprintf(tmp, "REEX %s %u", label, level);
+//    if(myTaskID == 0)
+//      entry_directory_.table_->PrintEntry(tmp);
+//    CDHandle *parent = GetParentCD();
+//    if(parent != NULL) {
+//
+//      sprintf(tmp, "P REEX %s %u", parent->GetLabel(), parent->ptr_cd()->level());
+//      if(myTaskID == 0) 
+//        parent->ptr_cd()->entry_directory_.table_->PrintEntry(tmp);
+//
+//    }
     //printf("don't need reexec next time. Now it is in reexec mode\n");
 //    need_reexec = false;
 //    *rollback_point_ = INVALID_ROLLBACK_POINT;
