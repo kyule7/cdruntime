@@ -143,7 +143,7 @@ void PhaseNode::PrintOutputJson(void)
   memset(output_filepath, '\0', 1024);
   sprintf(output_filepath, "%s/%s.%s.%s.%d.%s.%s.json", output_basepath, CD_DEFAULT_CONFIG_JSON, 
       exec_name, (exec_details!=NULL)? exec_details : "NoInput", 
-      cd::totalTaskSize, ftype_name, end_date);
+      cd::totalTaskSize, ftype_name, start_date);
   printf("%s Output File:%s\n", __func__, output_filepath);
   outJSON = fopen(output_filepath, "a");
   
@@ -353,7 +353,7 @@ void PhaseNode::PrintProfile(void)
 
 std::string PhaseNode::GetPhasePath(const std::string &label)
 {
-  if(parent_ !=NULL)
+  if(parent_ != NULL)
     return (GetPhasePath() + std::string("_") + label);
   else
     return label;
@@ -361,7 +361,7 @@ std::string PhaseNode::GetPhasePath(const std::string &label)
 
 std::string PhaseNode::GetPhasePath(void)
 {
-  if(parent_ !=NULL)
+  if(parent_ != NULL)
     return (parent_->GetPhasePath() + std::string("_") + label_);
   else
     return label_;
@@ -421,7 +421,7 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     const PhaseNode *pn = pt->second;
     cd::phaseTree.current_->errortype_ = pn->errortype_;
     cd::phaseTree.current_->medium_    = pn->medium_;
-//      printf("(%s, %lx) <- (%s, %lx)\n", 
+//      printf("%s (%s, %lx) <- (%s, %lx)\n", pn->label_.c_str(),
 //          GetMedium(cd::phaseTree.current_->medium_),
 //          cd::phaseTree.current_->errortype_, 
 //          GetMedium(pn->medium_), 
@@ -595,90 +595,90 @@ void CDProfiles::Print(std::ostream &os, const std::string &head, const std::str
                        << tail
 
   << head << std::left << std::setw(pz0) << "vol_prv_copy : "    
-                       << std::setw(pz1) << min_.prv_copy_            
-                       << std::setw(pz1) << max_.prv_copy_              
-                       << std::setw(pz1) << avg_.prv_copy_              
-                       << std::setw(pz1) << std_.prv_copy_             
+                       << std::setw(pz1) << min_.prv_copy_ / min_.exec_cnt_          
+                       << std::setw(pz1) << max_.prv_copy_ / max_.exec_cnt_            
+                       << std::setw(pz1) << avg_.prv_copy_ / avg_.exec_cnt_            
+                       << std::setw(pz1) << std_.prv_copy_ / std_.exec_cnt_           
                        << tail
   << head << std::left << std::setw(pz0) << "vol_prv_ref  : "     
-                       << std::setw(pz1) << min_.prv_ref_             
-                       << std::setw(pz1) << max_.prv_ref_               
-                       << std::setw(pz1) << avg_.prv_ref_               
-                       << std::setw(pz1) << std_.prv_ref_              
+                       << std::setw(pz1) << min_.prv_ref_ / min_.exec_cnt_             
+                       << std::setw(pz1) << max_.prv_ref_ / max_.exec_cnt_               
+                       << std::setw(pz1) << avg_.prv_ref_ / avg_.exec_cnt_               
+                       << std::setw(pz1) << std_.prv_ref_ / std_.exec_cnt_              
                        << tail
   << head << std::left << std::setw(pz0) << "vol_restore  : "     
-                       << std::setw(pz1) << min_.restore_             
-                       << std::setw(pz1) << max_.restore_               
-                       << std::setw(pz1) << avg_.restore_               
-                       << std::setw(pz1) << std_.restore_              
+                       << std::setw(pz1) << min_.restore_ / min_.exec_cnt_             
+                       << std::setw(pz1) << max_.restore_ / max_.exec_cnt_               
+                       << std::setw(pz1) << avg_.restore_ / avg_.exec_cnt_               
+                       << std::setw(pz1) << std_.restore_ / std_.exec_cnt_              
                        << tail
   << head << std::left << std::setw(pz0) << "vol_msg_log  : " 
-                       << std::setw(pz1) << min_.msg_logging_         
-                       << std::setw(pz1) << max_.msg_logging_           
-                       << std::setw(pz1) << avg_.msg_logging_           
-                       << std::setw(pz1) << std_.msg_logging_          
+                       << std::setw(pz1) << min_.msg_logging_ / min_.exec_cnt_         
+                       << std::setw(pz1) << max_.msg_logging_ / max_.exec_cnt_           
+                       << std::setw(pz1) << avg_.msg_logging_ / avg_.exec_cnt_           
+                       << std::setw(pz1) << std_.msg_logging_ / std_.exec_cnt_          
                        << tail
 
   << head << std::left << std::setw(pz0) << "time_total   : "  
-                       << std::setw(pz1) << min_.total_time_          
-                       << std::setw(pz1) << max_.total_time_            
-                       << std::setw(pz1) << avg_.total_time_            
-                       << std::setw(pz1) << std_.total_time_           
+                       << std::setw(pz1) << min_.total_time_ / min_.exec_cnt_          
+                       << std::setw(pz1) << max_.total_time_ / max_.exec_cnt_            
+                       << std::setw(pz1) << avg_.total_time_ / avg_.exec_cnt_            
+                       << std::setw(pz1) << std_.total_time_ / std_.exec_cnt_           
                        << tail
   << head << std::left << std::setw(pz0) << "time_reexec  : " 
-                       << std::setw(pz1) << min_.reex_time_         
-                       << std::setw(pz1) << max_.reex_time_           
-                       << std::setw(pz1) << avg_.reex_time_           
-                       << std::setw(pz1) << std_.reex_time_          
+                       << std::setw(pz1) << min_.reex_time_ / min_.exec_cnt_         
+                       << std::setw(pz1) << max_.reex_time_ / max_.exec_cnt_           
+                       << std::setw(pz1) << avg_.reex_time_ / avg_.exec_cnt_           
+                       << std::setw(pz1) << std_.reex_time_ / std_.exec_cnt_          
                        << tail
   << head << std::left << std::setw(pz0) << "time_sync    : "   
-                       << std::setw(pz1) << min_.sync_time_           
-                       << std::setw(pz1) << max_.sync_time_             
-                       << std::setw(pz1) << avg_.sync_time_             
-                       << std::setw(pz1) << std_.sync_time_            
+                       << std::setw(pz1) << min_.sync_time_ / min_.exec_cnt_           
+                       << std::setw(pz1) << max_.sync_time_ / max_.exec_cnt_             
+                       << std::setw(pz1) << avg_.sync_time_ / avg_.exec_cnt_             
+                       << std::setw(pz1) << std_.sync_time_ / std_.exec_cnt_            
                        << tail
   << head << std::left << std::setw(pz0) << "time_preserve: "    
-                       << std::setw(pz1) << min_.prv_elapsed_time_    
-                       << std::setw(pz1) << max_.prv_elapsed_time_      
-                       << std::setw(pz1) << avg_.prv_elapsed_time_      
-                       << std::setw(pz1) << std_.prv_elapsed_time_     
+                       << std::setw(pz1) << min_.prv_elapsed_time_ / min_.exec_cnt_    
+                       << std::setw(pz1) << max_.prv_elapsed_time_ / max_.exec_cnt_      
+                       << std::setw(pz1) << avg_.prv_elapsed_time_ / avg_.exec_cnt_      
+                       << std::setw(pz1) << std_.prv_elapsed_time_ / std_.exec_cnt_     
                        << tail
   << head << std::left << std::setw(pz0) << "time_restore : "    
-                       << std::setw(pz1) << min_.rst_elapsed_time_    
-                       << std::setw(pz1) << max_.rst_elapsed_time_      
-                       << std::setw(pz1) << avg_.rst_elapsed_time_      
-                       << std::setw(pz1) << std_.rst_elapsed_time_     
+                       << std::setw(pz1) << min_.rst_elapsed_time_ / min_.exec_cnt_    
+                       << std::setw(pz1) << max_.rst_elapsed_time_ / max_.exec_cnt_      
+                       << std::setw(pz1) << avg_.rst_elapsed_time_ / avg_.exec_cnt_      
+                       << std::setw(pz1) << std_.rst_elapsed_time_ / std_.exec_cnt_     
                        << tail
 
   << head << std::left << std::setw(pz0) << "time_create  : " 
-                       << std::setw(pz1) << min_.create_elapsed_time_ 
-                       << std::setw(pz1) << max_.create_elapsed_time_   
-                       << std::setw(pz1) << avg_.create_elapsed_time_   
-                       << std::setw(pz1) << std_.create_elapsed_time_  
+                       << std::setw(pz1) << min_.create_elapsed_time_ / min_.exec_cnt_ 
+                       << std::setw(pz1) << max_.create_elapsed_time_ / max_.exec_cnt_   
+                       << std::setw(pz1) << avg_.create_elapsed_time_ / avg_.exec_cnt_   
+                       << std::setw(pz1) << std_.create_elapsed_time_ / std_.exec_cnt_  
                        << tail
   << head << std::left << std::setw(pz0) << "time_destroy : "
-                       << std::setw(pz1) << min_.destroy_elapsed_time_
-                       << std::setw(pz1) << max_.destroy_elapsed_time_  
-                       << std::setw(pz1) << avg_.destroy_elapsed_time_  
-                       << std::setw(pz1) << std_.destroy_elapsed_time_ 
+                       << std::setw(pz1) << min_.destroy_elapsed_time_ / min_.exec_cnt_
+                       << std::setw(pz1) << max_.destroy_elapsed_time_ / max_.exec_cnt_  
+                       << std::setw(pz1) << avg_.destroy_elapsed_time_ / avg_.exec_cnt_  
+                       << std::setw(pz1) << std_.destroy_elapsed_time_ / std_.exec_cnt_ 
                        << tail
   << head << std::left << std::setw(pz0) << "time_begin   : "  
-                       << std::setw(pz1) << min_.begin_elapsed_time_  
-                       << std::setw(pz1) << max_.begin_elapsed_time_    
-                       << std::setw(pz1) << avg_.begin_elapsed_time_    
-                       << std::setw(pz1) << std_.begin_elapsed_time_   
+                       << std::setw(pz1) << min_.begin_elapsed_time_ / min_.exec_cnt_  
+                       << std::setw(pz1) << max_.begin_elapsed_time_ / max_.exec_cnt_    
+                       << std::setw(pz1) << avg_.begin_elapsed_time_ / avg_.exec_cnt_    
+                       << std::setw(pz1) << std_.begin_elapsed_time_ / std_.exec_cnt_   
                        << tail
   << head << std::left << std::setw(pz0) << "time_complete: " 
-                       << std::setw(pz1) << min_.compl_elapsed_time_  
-                       << std::setw(pz1) << max_.compl_elapsed_time_    
-                       << std::setw(pz1) << avg_.compl_elapsed_time_    
-                       << std::setw(pz1) << std_.compl_elapsed_time_ 
+                       << std::setw(pz1) << min_.compl_elapsed_time_ / min_.exec_cnt_  
+                       << std::setw(pz1) << max_.compl_elapsed_time_ / max_.exec_cnt_    
+                       << std::setw(pz1) << avg_.compl_elapsed_time_ / avg_.exec_cnt_    
+                       << std::setw(pz1) << std_.compl_elapsed_time_ / std_.exec_cnt_ 
                        << tail
   << head << std::left << std::setw(pz0) << "time_advance : "
-                       << std::setw(pz1) << min_.advance_elapsed_time_
-                       << std::setw(pz1) << max_.advance_elapsed_time_  
-                       << std::setw(pz1) << avg_.advance_elapsed_time_  
-                       << std::setw(pz1) << std_.advance_elapsed_time_
+                       << std::setw(pz1) << min_.advance_elapsed_time_ / min_.exec_cnt_
+                       << std::setw(pz1) << max_.advance_elapsed_time_ / max_.exec_cnt_  
+                       << std::setw(pz1) << avg_.advance_elapsed_time_ / avg_.exec_cnt_  
+                       << std::setw(pz1) << std_.advance_elapsed_time_ / std_.exec_cnt_
                        << tail
   <<  std::endl;
 }

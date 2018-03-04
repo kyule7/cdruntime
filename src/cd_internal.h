@@ -203,7 +203,6 @@ class CD : public Serializable {
     bool reexecuted_;
     bool is_window_reused_;
     bool reported_error_;
-    //GONG
     bool begin_;
 //  public:
 
@@ -602,9 +601,9 @@ public:
     // It is needed when its children preserve data via reference 
     // and search through its ancestors. 
     // If it cannot find in current CD object, it outputs NULL 
-    CDEntry *InternalGetEntry(ENTRY_TAG_T entry_name);
-    virtual CDEntry *GetEntry(ENTRY_TAG_T entry_name);
-    virtual CDEntry *SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level);
+    CDEntry *InternalGetEntry(ENTRY_TAG_T entry_name, uint16_t attr);
+    virtual CDEntry *GetEntry(ENTRY_TAG_T entry_name, uint16_t attr);
+    virtual CDEntry *SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, uint16_t attr=0);
     void AddEntryToSend(const ENTRY_TAG_T &entry_tag_to_search);
   private:
     // This comment is previous one, so may be confusing for current design. 
@@ -716,7 +715,10 @@ public:
     inline CDFlagT GetEventFlag(void);
 //    inline void CheckError(bool collective, uint32_t &orig_rollback_point, uint32_t &new_rollback_point);
     inline void CheckReexecution(void);
-    inline void ForwardToLowerLevel(CD *cdp, const CDEventT &event); 
+    inline void ForwardToLowerLevel(CD *cdp, const CDEventT &event);
+    inline bool GetBegin() const { return begin_; } 
+    inline void SetBegin()       { CD_ASSERT_STR(begin_ == false, "Lv%u: %s\n", level(), label()); begin_ = true; } 
+    inline void UnsetBegin()     { CD_ASSERT_STR(begin_ == true, "Lv%u: %s\n", level(), label()); begin_ = false; } 
   public:
     int  BlockUntilValid(MPI_Request *request, MPI_Status *status);
     int  BlockallUntilValid(int count, MPI_Request array_of_request[], MPI_Status array_of_status[]);
@@ -778,7 +780,7 @@ class HeadCD : public CD {
 //    std::map<ENTRY_TAG_T, CommInfo> entry_search_req_;
     // event related
 
-    virtual CDEntry *GetEntry(ENTRY_TAG_T entry_name);
+    virtual CDEntry *GetEntry(ENTRY_TAG_T entry_name, uint16_t attr);
     bool error_occurred;
 //    bool need_reexec;
 

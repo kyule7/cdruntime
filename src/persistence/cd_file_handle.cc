@@ -44,19 +44,21 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath), f
   struct timeval time;
   gettimeofday(&time, NULL);
   char full_filename[128];
-  char base_filename[128];
-  char *base_filepath = getenv("CD_BASE_FILEPATH");
-  if(base_filepath != NULL) {
-    strcpy(base_filename, base_filepath);
-  } else {
-    printf("cd_file_handle.cc:PosixFileHandle(%s) %s\n", filepath, DEFAULT_BASE_FILEPATH);
-    strcpy(base_filename, DEFAULT_LOCAL_BASEPATH "/cd_local");
-  }
-  if(MakeFileDir(base_filename) == -1) {
-    ERROR_MESSAGE_PACKER("ERROR: Make File Directory %s Failed\n", base_filename);
-  }
+  char base_filename[128] = "/tmp/cd_posix_file";
+//  char *base_filepath = getenv("CD_BASE_FILEPATH");
+//  if(base_filepath != NULL) {
+//    strcpy(base_filename, base_filepath);
+//  } else {
+//    printf("cd_file_handle.cc:PosixFileHandle(%s) %s\n", filepath, DEFAULT_BASE_FILEPATH);
+//    strcpy(base_filename, DEFAULT_LOCAL_BASEPATH "/cd_local");
+//  }
+//  if(MakeFileDir(base_filename) == -1) {
+//    ERROR_MESSAGE_PACKER("ERROR: Make File Directory %s Failed\n", base_filename);
+//  }
+  strcat(base_filename, "_XXXXXX");
+  char *posix_basepath = mkdtemp(base_filename);
   sprintf(full_filename, "%s/%s.%ld.%ld.%d.XXXXXX", 
-                          base_filename, filepath, 
+                          posix_basepath, filepath, 
                           time.tv_sec  % 100, 
                           time.tv_usec % 100, 
                           packerTaskID);
@@ -64,13 +66,14 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath), f
 //                O_CREAT | O_RDWR | O_DIRECT /* | O_APPEND */, 
 //                S_IRUSR | S_IWUSR);
   fdesc_ = mkostemp(full_filename, 
-                O_CREAT | O_RDWR | O_DIRECT /* | O_APPEND */);
+                O_CREAT | O_RDWR  /*| O_DIRECT */ /* | O_APPEND */);
   if(fdesc_ < 0) {
     perror("open:");
     
     ERROR_MESSAGE_PACKER("ERROR: File open path:%s\n", full_filename);
   }
   MYDBG("Opened file : %s\n", full_filename);
+  printf("Opened file : %s\n", full_filename);
   fh_ = this;
 }
 

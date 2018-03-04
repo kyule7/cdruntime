@@ -1,6 +1,6 @@
 #!/bin/bash
-CC=mpic++
-MPICC=mpic++
+CC=mpicxx
+MPICC=mpicxx
 CFLAGS=-fPIC -Wall -g -c -std=gnu++0x -I. -I.. -fmax-errors=3
 LFLAGS=-fPIC -Wall -g -std=gnu++0x
 LFLAGS_EXTRA=-L.. -Wl,-rpath=.. -lpacker -lpthread

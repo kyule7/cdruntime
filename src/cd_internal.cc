@@ -505,7 +505,6 @@ void CD::Init()
   reexecuted_ = false;
   reported_error_ = false;
   num_reexecution_ = 0;
-  //GONG
   begin_ = false;
 //  child_seq_id_ = 0;
   ctxt_prv_mode_ = kExcludeStack; 
@@ -575,7 +574,7 @@ CDHandle *CD::Create(CDHandle *parent,
   CDHandle *new_cd_handle = NULL;
 
   CD_DEBUG("CD::Create %s\n", name);
-  CD_ASSERT(begin_ == true);
+  CD_ASSERT(GetBegin());
   // NOTE
   // Order b/w flush and creation is important!!!!
   // Otherwise, written_len_ for child's entry_directory_ is set wrong!!
@@ -911,6 +910,9 @@ static uint32_t prv_phase_chk = -1U;
 // CDHandle will follow the standard interface. 
 CDErrT CD::Begin(const char *label, bool collective)
 {
+//  CD_ASSERT_STR(begin_ == false || cd_exec_mode_ == kReexecution, "%s %s at %u-%u\n", 
+//      __func__, label, level, cd_id_.sequential_id_);
+  SetBegin();
   //printf("[%s] not here? \n", __func__);
   label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label; 
   const uint32_t level = cd_id_.cd_name_.level_;
@@ -919,6 +921,7 @@ CDErrT CD::Begin(const char *label, bool collective)
     sys_detect_bit_vector_ = phaseTree.current_->errortype_;
     phaseTree.current_->UpdateTaskInfo(rank_in_level(), cd_id_.sibling_count(),
                                        task_in_color(), cd_id_.task_count());
+//    if(myTaskID == 0) printf("lv:%u, %s, %s, bitvec:%lx\n", level, name_.c_str(), label_.c_str(), sys_detect_bit_vector_);
   } else { // phaseTree.current_ was updated at tuned::CDHandle before this
     cd_id_.cd_name_.phase_ = phaseTree.current_->phase_;
     sys_detect_bit_vector_ = phaseTree.current_->errortype_;
@@ -973,9 +976,9 @@ CDErrT CD::Begin(const char *label, bool collective)
 
 //  printf("## Before chage %d %p ## [%s %u] %s %s\n", 
 //      begin_, this, cd_id_.GetStringID().c_str(), myTaskID, name_.c_str(), label);
-  CD_ASSERT_STR(begin_ == false || cd_exec_mode_ == kReexecution, "%s %s at %u-%ld-%u\n", 
-      __func__, label, level, current_phase, cd_id_.sequential_id_);
-  begin_ = true;
+//  CD_ASSERT_STR(begin_ == false || cd_exec_mode_ == kReexecution, "%s %s at %u-%ld-%u\n", 
+//      __func__, label, level, current_phase, cd_id_.sequential_id_);
+//  begin_ = true;
 
   CD_DEBUG("[%s] %s %s\n", cd_id_.GetStringID().c_str(), name_.c_str(), label);
   PrintDebug();
@@ -1227,10 +1230,13 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 #endif
 
 #if CD_PROFILER_ENABLED
-  if(for_recovery == false) 
+  if(for_recovery == false) { 
     normal_sync_time += sync_time;
-  else
+    normal_sync_smpl += sync_time;
+  } else {
     reexec_sync_time += sync_time; 
+    reexec_sync_smpl += sync_time; 
+  }
 #endif
   return new_rollback_point; 
 
@@ -1328,7 +1334,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     // It is possible for other task set to rollback_point lower than original.
     // It handles that case.
     // FIXME (11.02.2016) : should check with new_rollback_point
-//    if(level != rollback_lv) { 
+//    if(level != rollback_lv)  
     if(level != new_rollback_point) {  // Detected escalation from sibling CDs.
 #if CD_PROFILER_ENABLED
 //      if(myTaskID == 0) printf("[%s] CD level #%u (%s)\n", __func__, level, target->ptr_cd_->label_.c_str()); 
@@ -1338,6 +1344,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       // In GetCDToRecover
       phaseTree.current_->profile_.RecordRollback(false); // measure timer and calculate sync time.
       CompletePhase(target->phase(), true);
+      target->ptr_cd_->UnsetBegin();
       target->ptr_cd_->CompleteLogs();
       target->ptr_cd_->DeleteEntryDirectory();
       target->Destroy();
@@ -1387,9 +1394,11 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       //cdp->reported_error_ = false;
 #if CD_PROFILER_ENABLED
       recovery_sync_time += CD_CLOCK() - prof_sync_clk;
+      recovery_sync_smpl += CD_CLOCK() - prof_sync_clk;
 //      check_sync_clk = false;
 #endif
       CompletePhase(target->phase(), true);
+      target->ptr_cd_->UnsetBegin();
       return target;
     }
   } // level == rollback_lv case ends
@@ -1421,6 +1430,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 
     phaseTree.current_->profile_.RecordRollback(false); // measure timer and calculate sync time.
     CompletePhase(target->phase(), true);
+    target->ptr_cd_->UnsetBegin();
     target->ptr_cd_->CompleteLogs();
     target->ptr_cd_->DeleteEntryDirectory();
     target->Destroy(false);
@@ -1443,9 +1453,9 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 CDErrT CD::Complete(bool update_preservations, bool collective)
 {
   CDErrT ret = common::kCompleteError;
-  CD_ASSERT_STR(begin_ == true, "%s %s at %u-%u-%u\n", 
-      __func__, label_.c_str(), level(), phase(), cd_id_.sequential_id_);
-  begin_ = false;
+//  CD_ASSERT_STR(begin_ == true, "%s %s at %u-%u-%u\n", 
+//      __func__, label_.c_str(), level(), phase(), cd_id_.sequential_id_);
+//  UnsetBegin();
   uint32_t orig_rollback_point = CheckRollbackPoint(false);
 //  bool my_need_reexec = need_reexec;
   CD_DEBUG("%s %s \t Reexec from %u (Before Sync)\n", 
@@ -1548,6 +1558,9 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
       const int64_t curr_begID = phaseTree.current_->seq_begin_;
       CD_DEBUG(">>> Failure Detected (%s), fphase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
           label_.c_str(), failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
+      if(level() == 1) {
+        printf("something wrong...\n\n\n");
+      }
       if(myTaskID == 0) printf(">>> Failure Detected (%s), fphase:%ld==%u, seqID:%ld==%ld (beg:%ld) <<<\n", 
           label_.c_str(), failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
       failed_phase = phase;
@@ -1586,8 +1599,8 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
           // to measure the rest of execution time.
           CD_CLOCK_T now = CD_CLOCK();
           phaseTree.current_->FinishRecovery(now);
-          printf(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
-              level(), label_.c_str(), curr_phase, curr_seqID, curr_begID);
+          if(myTaskID == 0) {printf(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
+              level(), label_.c_str(), curr_phase, curr_seqID, curr_begID); }
           CD_DEBUG(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
               level(), label_.c_str(), curr_phase, curr_seqID, curr_begID);
         } else if(failed_seqID > curr_seqID) {
@@ -1601,6 +1614,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
         }
       } 
     }
+
     reported_error_ = false;
     reexecuted_     = false;
     CompleteLogs();
@@ -1623,6 +1637,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     cd_exec_mode_ = kSuspension;
 //    phaseTree.current_->profile_.exec_++;
     CompletePhase(this->phase());
+    UnsetBegin();
   }
 
   CD_ASSERT(ret == common::kOK);
@@ -2300,6 +2315,7 @@ CDErrT CD::Preserve(void *data,
   
     }
     else if(cd_exec_mode_ == kReexecution) { // Re-execution mode -> Restoration
+      assert(dont_preserve == false);
       
       CD_DEBUG("\n\nReexecution!!! entry directory size : %zu (medium:%d)\n\n", 
                entry_directory_.table_->tablesize(), prv_medium_);
@@ -2361,6 +2377,7 @@ CDEntry *CD::PreserveCopy(void *data,
 {
   CDEntry *pEntry = NULL;
   uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
+  attr = (CHECK_PRV_TYPE(preserve_mask, kOutput))? (Attr::koutput | attr) : attr;
   if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
   // CDEntry for reference has different format
   //  8B      8B            8B       8B
@@ -2470,113 +2487,124 @@ CD::InternalPreserve(void *data,
 //    printf("ref_id is valid\n");
   }
 
-  CDEntry *pEntry = NULL;
-
-  // TODO
-  // kOutput mode copies application data to packer immediately at Preserve()
-  // It may be optimized in the way that it registers entry at Preserve()
-  // and runtime decides actual copy from application space to preservation store.
-  if( CHECK_ANY(preserve_mask, kCopy|kOutput) ) { // via-copy, so it saves data right now!
-    CD_ASSERT_STR(my_name.empty() == false, 
-                  "Entry name is not specified : %s\n", my_name.c_str());
-    pEntry = PreserveCopy(data, len_in_bytes, preserve_mask, my_name, id);
-
-  } // end of preserve via copy
-  else if( CHECK_PRV_TYPE(preserve_mask, kRef) ) { // via-reference
-    uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? 
-                    Attr::kremote | Attr::krefer : Attr::krefer;
+  if(cd::dont_preserve == false) {
+    CDEntry *pEntry = NULL;
     
-    CD_DEBUG("Preservation via %d (reference)\n", GetPlaceToPreserve());
+    // TODO
+    // kOutput mode copies application data to packer immediately at Preserve()
+    // It may be optimized in the way that it registers entry at Preserve()
+    // and runtime decides actual copy from application space to preservation store.
+    if( CHECK_ANY(preserve_mask, kCopy|kOutput) ) { // via-copy, so it saves data right now!
+      CD_ASSERT_STR(my_name.empty() == false, 
+                    "Entry name is not specified : %s\n", my_name.c_str());
+      pEntry = PreserveCopy(data, len_in_bytes, preserve_mask, my_name, id);
   
-    // Let's just replace kRef entry ID with ref_id
-    // if there is no entry name passed by user.
-    //uint64_t id = (my_name.empty())? ref_id : cd_hash(my_name);
-    //tag2str[id] = my_name;
-
-    // CDEntry for reference has different format
-    //  8B      8B            8B       8B
-    // [ID] [ATTR|SIZE]    [OFFSET]   [SRC]
-    //  ID  [ATTR|totsize] totoffset  REF_ID
-    uint64_t size = len_in_bytes;
+    } // end of preserve via copy
+    else if( CHECK_PRV_TYPE(preserve_mask, kRef) ) { // via-reference
+      uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? 
+                      (Attr::kremote | Attr::krefer) : Attr::krefer;
+      
+      CD_DEBUG("Preservation via %d (reference)\n", GetPlaceToPreserve());
     
-    // IMPORTANT NOTE for the case of kSerdes | kRef
-    // Preserve() registers an entry only to packer table.
-    // In Restore(), it searches for this entry with ref_name (ref_id).
-    // If there is an CDEntry with ref_id somewhere,
-    // it MUST have the entries encapsulated by serializable entry. (Assumption)
-    if (CHECK_PRV_TYPE(preserve_mask, kSerdes)) { 
-      PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
-      attr |= Attr::knested;// | Attr::ktable);
-      size = serializer->GetTotalSize();
-      len_in_bytes = size;
-    } 
-
-    // NOTE
-    // for kRef | kIgnore, it does not search for tag when Preserve() is invoked.
-    // So, if there is no matching entry with ref_name on rollback,
-    // it will be failed.
-    // The semantic of kRef is to search for ref_id, 
-    // and if there is ref_id which is valid in the same level, do nothing.
-    // if it is not valid, wait until valid.
-    // If it is parent level, create entry with krefer.
-    if (CHECK_PRV_TYPE(preserve_mask, kIgnore)) { 
-      //pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, size, ref_offset, (char *)ref_id));
-      pEntry = entry_directory_.table_->InsertEntry(CDEntry(id, attr, size, ref_offset, (char *)ref_id));
-    } else {
-      uint32_t found_level = INVALID_NUM32;
-      CDEntry *src = SearchEntry(ref_id, found_level);
-      if(src != NULL) {
-        CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
-        if(ptr_cd == this) {
+      // Let's just replace kRef entry ID with ref_id
+      // if there is no entry name passed by user.
+      //uint64_t id = (my_name.empty())? ref_id : cd_hash(my_name);
+      //tag2str[id] = my_name;
+  
+      // CDEntry for reference has different format
+      //  8B      8B            8B       8B
+      // [ID] [ATTR|SIZE]    [OFFSET]   [SRC]
+      //  ID  [ATTR|totsize] totoffset  REF_ID
+      uint64_t size = len_in_bytes;
+      
+      // IMPORTANT NOTE for the case of kSerdes | kRef
+      // Preserve() registers an entry only to packer table.
+      // In Restore(), it searches for this entry with ref_name (ref_id).
+      // If there is an CDEntry with ref_id somewhere,
+      // it MUST have the entries encapsulated by serializable entry. (Assumption)
+      if (CHECK_PRV_TYPE(preserve_mask, kSerdes)) { 
+        PackerSerializable *serializer = static_cast<PackerSerializable *>(data);
+        attr |= Attr::knested;// | Attr::ktable);
+        size = serializer->GetTotalSize();
+        len_in_bytes = size;
+      } 
+  
+      // NOTE
+      // for kRef | kIgnore, it does not search for tag when Preserve() is invoked.
+      // So, if there is no matching entry with ref_name on rollback,
+      // it will be failed.
+      // The semantic of kRef is to search for ref_id, 
+      // and if there is ref_id which is valid in the same level, do nothing.
+      // if it is not valid, wait until valid.
+      // If it is parent level, create entry with krefer.
+      if (CHECK_PRV_TYPE(preserve_mask, kIgnore)) { 
+        //pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, size, ref_offset, (char *)ref_id));
+        pEntry = entry_directory_.table_->InsertEntry(CDEntry(id, attr, size, ref_offset, (char *)ref_id));
+      } else {
+        uint32_t found_level = INVALID_NUM32;
+        CDEntry *src = SearchEntry(ref_id, found_level, Attr::knoattr);
+//        CDEntry *src = entry_directory_.table_->FindReverse(ref_id, 0);
+        if(src != NULL) { // found entry
+//          CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
           while(src->invalid()); // do not create CDEntry, but just wait until valid
-        } else {
-          pEntry = entry_directory_.table_->InsertEntry(CDEntry(id, attr, size, ref_offset, (char *)ref_id));
+          src->size_.Unset(Attr::koutput);
+          if (CHECK_PRV_TYPE(preserve_mask, kOutput) == false) { // kRef 
+            pEntry = entry_directory_.table_->InsertEntry(CDEntry(id, attr, size, ref_offset, (char *)ref_id)); }
+//          CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
+//          if(ptr_cd == this) {
+//            while(src->invalid()); // do not create CDEntry, but just wait until valid
+//          } else {
+//            if (CHECK_PRV_TYPE(preserve_mask, kOutput) == false) { 
+//              pEntry = entry_directory_.table_->InsertEntry(CDEntry(id, attr, size, ref_offset, (char *)ref_id));
+//            }
+//          }
+        } else { // not found
+          PRINT_MPI("No entry %lx %s (mask:%d) for kRef. Now Copy! lv:%u, entry #:%lu\n", 
+                                ref_id, 
+                                my_name.c_str(), preserve_mask, 
+                                level(),
+                                entry_directory_.table_->tablesize());
+  
+          if (CHECK_PRV_TYPE(preserve_mask, kOutput) == false) { 
+            pEntry = PreserveCopy(data, len_in_bytes, preserve_mask, my_name, ref_id);
+          }
+  
         }
-      } else { // not found
-        PRINT_MPI("No entry %lx %s (mask:%d) for kRef. Now Copy! lv:%u, entry #:%lu\n", 
-                              ref_id, 
-                              my_name.c_str(), preserve_mask, 
-                              level(),
-                              entry_directory_.table_->tablesize());
-
-        pEntry = PreserveCopy(data, len_in_bytes, preserve_mask, my_name, ref_id);
-
+          
       }
-        
+  
+      PRINT_MPI("[%s] Ref Insert %s CDEntry(%lx, %lu, size:%lu, offset:%lu, table_offset:%s(%lx)), tblsize:%lu\n", 
+                 label_.c_str(), my_name.c_str(),
+                 id, attr, size, ref_offset, ref_name.c_str(), ref_id, entry_directory_.table_->tablesize());
+      // When restore data for reference of serdes object,
+      // check ref and nested first.
+      // then find ref_id, then read table from ref_id to ref_id+size.
+      // Then restore data 
+      err = CDInternalErrT::kOK;
     }
-
-    PRINT_MPI("[%s] Ref Insert %s CDEntry(%lx, %lu, size:%lu, offset:%lu, table_offset:%s(%lx)), tblsize:%lu\n", 
-               label_.c_str(), my_name.c_str(),
-               id, attr, size, ref_offset, ref_name.c_str(), ref_id, entry_directory_.table_->tablesize());
-    // When restore data for reference of serdes object,
-    // check ref and nested first.
-    // then find ref_id, then read table from ref_id to ref_id+size.
-    // Then restore data 
-    err = CDInternalErrT::kOK;
-  }
-  else if( CHECK_PRV_TYPE(preserve_mask, kRegen) ) { // via-regeneration
-    //TODO
-    ERROR_MESSAGE("Preservation via Regeneration is not supported, yet. :-(");
-    err = CDInternalErrT::kOK;
-  }
-  else {  // Preservation Type is none of kCopy, kRef, kRegen.
-    ERROR_MESSAGE("\nUnsupported preservation type : %d\n", preserve_mask);
-  }
-
-  // remote_entry_directory_map_ is a cache containing
-  // local preservation entry (CDEntry object) pointers
-  // in order to serialize them to send to HeadCD.
-  if( (id != INVALID_NUM) && CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
-    CD_DEBUG("[CD::InternalPreserve] Error : kRef | kCoop\n"
-             "Tried to preserve via reference "
-             "but tried to allow itself as reference to other node. "
-             "If it allow itself for reference locally, it is fine!");
-    remote_entry_directory_map_[id] = pEntry;
-    if(IsHead()) {
-      static_cast<HeadCD *>(this)->remote_entry_table_.Insert(RemoteCDEntry(*pEntry));
+    else if( CHECK_PRV_TYPE(preserve_mask, kRegen) ) { // via-regeneration
+      //TODO
+      ERROR_MESSAGE("Preservation via Regeneration is not supported, yet. :-(");
+      err = CDInternalErrT::kOK;
     }
-  }
-
+    else {  // Preservation Type is none of kCopy, kRef, kRegen.
+      ERROR_MESSAGE("\nUnsupported preservation type : %d\n", preserve_mask);
+    }
+  
+    // remote_entry_directory_map_ is a cache containing
+    // local preservation entry (CDEntry object) pointers
+    // in order to serialize them to send to HeadCD.
+    if( (id != INVALID_NUM) && CHECK_PRV_TYPE(preserve_mask, kCoop) ) {
+      CD_DEBUG("[CD::InternalPreserve] Error : kRef | kCoop\n"
+               "Tried to preserve via reference "
+               "but tried to allow itself as reference to other node. "
+               "If it allow itself for reference locally, it is fine!");
+      remote_entry_directory_map_[id] = pEntry;
+      if(IsHead()) {
+        static_cast<HeadCD *>(this)->remote_entry_table_.Insert(RemoteCDEntry(*pEntry));
+      }
+    }
+  } // dont_preserve ends
 //  preserve_count_++;
 
   return err; 
@@ -2623,7 +2651,7 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
         ptr_cd->entry_directory_.table_->PrintEntry();
       }
       uint64_t tag = search_tag;
-      src = ptr_cd->entry_directory_.table_->FindReverse(tag);
+      src = ptr_cd->entry_directory_.table_->FindReverse(tag, Attr::koutput);
       parent_cd = CDPath::GetParentCD(ptr_cd->level());
     }
   }
@@ -2648,9 +2676,9 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
       if(restored_len == -1UL) {
         
         PRINT_MPI("Print Entries at %s (#%u)\n", ptr_cd->label_.c_str(), ptr_cd->level());
-        if(myTaskID == 0) {
+//        if(myTaskID == 0) {
 //          ptr_cd->entry_directory_.table_->PrintEntry();
-        }
+//        }
           CD_ASSERT_STR(0, "Not deserialized %s %u / %u\n", name_.c_str(), level(), ptr_cd->level());
       }
     }
@@ -2661,10 +2689,10 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     // This will fetch from disk to memory
     // Potential benefit from prefetching app data from preserved data in
     // disk, overlapping reexecution of application.
-    if(myTaskID ==0) { 
-      printf("[%s, %s] It is not a serdes obj(%s,%s)\n", __func__, ptr_cd->label(), my_name.c_str(), ref_name.c_str());
+//    if(myTaskID ==0) { 
+//      printf("[%s, %s] It is not a serdes obj(%s,%s)\n", __func__, ptr_cd->label(), my_name.c_str(), ref_name.c_str());
 //      entry_directory_.table_->PrintEntry();
-    }
+//    }
     CD_ASSERT_STR(src->src() == data, "%s src: %p==%p ",
        (is_ref)? ref_name.c_str() : my_name.c_str(), src->src(), data);
     CD_ASSERT_STR(src->size() == len_in_bytes, "%s len: %lu==%lu ", 
@@ -3338,23 +3366,23 @@ void HeadCD::set_cd_parent(CDHandle *cd_parent)
 
 
 // If it is found locally, cast type to RemoteCDEntry
-CDEntry *HeadCD::GetEntry(ENTRY_TAG_T entry_name) 
+CDEntry *HeadCD::GetEntry(ENTRY_TAG_T entry_name, uint16_t attr) 
 {
   CD_DEBUG("\nCD::GetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
-  CDEntry *entry = InternalGetEntry(entry_name);
+  CDEntry *entry = InternalGetEntry(entry_name, attr);
   if(entry != NULL) {
-    entry = remote_entry_table_.FindReverse(entry_name);
+    entry = remote_entry_table_.FindReverse(entry_name, attr);
   }
   return entry;
 }
 
-CDEntry *CD::GetEntry(ENTRY_TAG_T entry_name) 
+CDEntry *CD::GetEntry(ENTRY_TAG_T entry_name, uint16_t attr) 
 {
   CD_DEBUG("\nCD::InternalGetEntry : %u - %s\n", entry_name, tag2str[entry_name].c_str());
-  return InternalGetEntry(entry_name);
+  return InternalGetEntry(entry_name, attr);
 }
 
-CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name)
+CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name, uint16_t attr)
 {
   CDEntry *entry = NULL;
   auto jt = remote_entry_directory_map_.find(entry_name);
@@ -3362,7 +3390,7 @@ CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name)
     entry = jt->second;
   } else {
     uint64_t tag = entry_name;
-    entry = entry_directory_.table_->FindReverse(tag);
+    entry = entry_directory_.table_->FindReverse(tag, attr);
   }
   
   if(entry != NULL) {
@@ -3901,7 +3929,7 @@ void HeadCD::Deserialize(void *object)
 
 
 
-CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
+CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, uint16_t attr)
 {
   CD_DEBUG("Search Entry : %u (%s) at level #%u \n", tag_to_search, tag2str[tag_to_search].c_str(), level());
 
@@ -3913,7 +3941,7 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level)
     CD_DEBUG("InternalGetEntry at %s level #%u\n", ptr_cd->label_.c_str(), ptr_cd->level());
     PRINT_MPI("Search %s (%lx) at level #%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
               ptr_cd->level(), ptr_cd->label_.c_str());
-    entry = ptr_cd->InternalGetEntry(tag_to_search);
+    entry = ptr_cd->InternalGetEntry(tag_to_search, attr);
   
     if(entry != NULL) {
       assert(entry->size_.Check(Attr::krefer) == 0);

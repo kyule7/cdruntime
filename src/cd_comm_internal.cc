@@ -54,6 +54,7 @@ using namespace std;
 #define BUGFIX_0327 1
 
 CD_CLOCK_T cd::mailbox_elapsed_time = 0;
+CD_CLOCK_T cd::mailbox_elapsed_smpl = 0;
 
 int requested_event_count = 0;
 bool CD::head_in_levels = false;
@@ -435,6 +436,7 @@ CDErrT CD::CheckMailBox(void)
 //  CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "=================== Check Mail Box Done  [Level #%d] =====================================================\n\n", level());
 #if CD_PROFILER_ENABLED
   cd::mailbox_elapsed_time += CD_CLOCK() - tstart;
+  cd::mailbox_elapsed_smpl += CD_CLOCK() - tstart;
 #endif
 
   return static_cast<CDErrT>(ret);
@@ -804,6 +806,7 @@ CDErrT CD::SetMailBox(const CDEventT &event)
 
 #if CD_PROFILER_ENABLED
   cd::mailbox_elapsed_time += CD_CLOCK() - tstart;
+  cd::mailbox_elapsed_smpl += CD_CLOCK() - tstart;
 #endif
   return static_cast<CDErrT>(ret);
 }
@@ -1566,7 +1569,6 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
 
 #else
 
-CD_CLOCK_T cd::mailbox_elapsed_time = 0;
 uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
 {
   if(rollback_lv < *(rollback_point_)) {

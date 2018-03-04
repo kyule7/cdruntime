@@ -549,7 +549,8 @@ class Domain : public Internal {
    Internal *preserved_;
    std::string name_;
    void PrintDomain(void) {
-     if(myRank != 1) return;
+     //if(myRank != 1) 
+       return;
      if(preserved_ == NULL) 
        PrintInternal();
      else {

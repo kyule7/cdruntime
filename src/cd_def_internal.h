@@ -386,6 +386,7 @@ namespace cd {
 
 extern CD_CLOCK_T tot_begin_clk;
 extern CD_CLOCK_T tot_end_clk;
+extern CD_CLOCK_T cdr_elapsed_time;
 
 extern CD_CLOCK_T msg_begin_clk;
 extern CD_CLOCK_T msg_end_clk;
@@ -423,6 +424,8 @@ extern bool orig_app_side;
 extern bool orig_disabled;
 extern bool orig_msg_app_side;
 extern bool orig_msg_disabled;
+extern bool dont_preserve;
+extern void GatherProfile(void);
 /**@addtogroup runtime_logging 
  * @{
  */
@@ -468,7 +471,7 @@ extern bool orig_msg_disabled;
 
 #define CDEpilogue() \
   end_clk = CD_CLOCK(); \
-  elapsed_time += end_clk - begin_clk; \
+  cdr_elapsed_time += end_clk - begin_clk; \
   app_side = orig_app_side; \
   logger::disabled = orig_disabled; 
 
@@ -508,7 +511,7 @@ extern bool orig_msg_disabled;
 
 #define CDEpilogue() \
   end_clk = CD_CLOCK(); \
-  elapsed_time += end_clk - begin_clk; \
+  cdr_elapsed_time += end_clk - begin_clk; \
   app_side = orig_app_side; \
 
 #endif // CD_LIBC_LOGGING ends

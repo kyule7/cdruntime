@@ -211,7 +211,44 @@ class TableStore : public BaseTable {
       }
     }
 
-    EntryT *FindReverse(uint64_t &id, uint64_t start=INVALID_NUM, uint64_t finish=0)
+    void UnsetAttr(uint16_t attr, uint64_t start=INVALID_NUM, uint64_t finish=0)
+    {
+
+      PACKER_ASSERT(head_ == 0);
+      EntryT *ret = NULL; 
+      // INVALID_NUM is always false
+      const int64_t begin = (start   > tail_)? tail_-1 : start;
+      const int64_t end   = (finish <= head_)? head_   : end;
+      const int64_t tail  = tail_;
+      assert(end == 0); // for now
+      
+      if(begin >= 0) {
+        for(int64_t i=begin; i>=end; i--) {
+          if(ptr_[i].size_.CheckAny(attr)) {
+            ret = &(ptr_[i]);
+            ptr_[i].size_.Unset(attr);
+          }
+        }
+    
+        // check
+        if(ret == NULL) {
+          if(packerTaskID == 0) {
+            MYDBG("[UnsetAttr] Find %x, tail:%lu\n", attr, tail_); //getchar();
+            for(int64_t i=0; i<tail; i++) {
+              // The rule for entry is that the first element in object layout is always ID.
+              MYDBG("TEST %lu == %lu\n", ptr_[i].id_, id);
+//              if( ptr_[i].id_ == id ) {
+//                MYDBG("TEST %lu == %lu\n", ptr_[i].id_, id);
+//              }
+            }
+          } 
+          PACKER_ASSERT(0);
+        }
+      }
+      return ret;
+    }
+
+    EntryT *FindReverse(uint64_t &id, uint16_t attr, uint64_t start=INVALID_NUM, uint64_t finish=0)
     {
       PACKER_ASSERT(head_ == 0);
       EntryT *ret = NULL; 
@@ -226,9 +263,13 @@ class TableStore : public BaseTable {
           // The rule for entry is that the first element in object layout is always ID.
           if( ptr_[i].id_ == id ) {
             MYDBG("%lu == %lu\n", ptr_[i].id_, id);
-            ret = &(ptr_[i]);
-            id = i;
-            break;
+            if(ptr_[i].size_.CheckAny(attr)) 
+              continue;
+            else {
+              ret = &(ptr_[i]);
+              id = i;
+              break;
+            }
           }
         }
     

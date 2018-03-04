@@ -97,6 +97,8 @@ bool packer::orig_disabled = false;
 bool packer::orig_appside = true;
 bool tuned::orig_disabled = false;
 bool tuned::orig_appside = true;
+bool cd::dont_preserve = false;
+CD_CLOCK_T cd::cdr_elapsed_time=0;
 CD_CLOCK_T cd::tot_begin_clk=0;
 CD_CLOCK_T cd::tot_end_clk=0;
 CD_CLOCK_T cd::begin_clk=0;
@@ -104,7 +106,7 @@ CD_CLOCK_T cd::end_clk=0;
 CD_CLOCK_T tuned::begin_clk=0;
 CD_CLOCK_T tuned::end_clk=0;
 CD_CLOCK_T tuned::elapsed_time;
-CD_CLOCK_T cd::elapsed_time=0;
+CD_CLOCK_T cd::body_elapsed_time=0;
 CD_CLOCK_T cd::normal_sync_time=0;
 CD_CLOCK_T cd::reexec_sync_time=0;
 CD_CLOCK_T cd::recovery_sync_time=0;
@@ -115,6 +117,142 @@ CD_CLOCK_T cd::destroy_elapsed_time=0;
 CD_CLOCK_T cd::begin_elapsed_time=0;
 CD_CLOCK_T cd::compl_elapsed_time=0;
 CD_CLOCK_T cd::advance_elapsed_time=0;
+
+CD_CLOCK_T cd::body_elapsed_smpl=0;
+CD_CLOCK_T cd::normal_sync_smpl=0;
+CD_CLOCK_T cd::reexec_sync_smpl=0;
+CD_CLOCK_T cd::recovery_sync_smpl=0;
+CD_CLOCK_T cd::prv_elapsed_smpl=0;
+CD_CLOCK_T cd::rst_elapsed_smpl=0;
+CD_CLOCK_T cd::create_elapsed_smpl=0;
+CD_CLOCK_T cd::destroy_elapsed_smpl=0;
+CD_CLOCK_T cd::begin_elapsed_smpl=0;
+CD_CLOCK_T cd::compl_elapsed_smpl=0;
+CD_CLOCK_T cd::advance_elapsed_smpl=0;
+
+std::vector<float> elapsed_trace;
+std::vector<float> nm_sync_trace;
+std::vector<float> rx_sync_trace;
+std::vector<float> rc_sync_trace;
+std::vector<float> prvtime_trace;
+std::vector<float> rsttime_trace;
+std::vector<float> creatcd_trace;
+std::vector<float> destroy_trace;
+std::vector<float> begincd_trace;
+std::vector<float> complcd_trace;
+std::vector<float> advance_trace;
+std::vector<float> mailbox_trace;
+
+uint64_t profile_counter = 0;
+void cd_update_profile(void)
+{
+  profile_counter++;
+  elapsed_trace.push_back(      body_elapsed_smpl);     body_elapsed_smpl=0;
+  nm_sync_trace.push_back(      normal_sync_smpl);       normal_sync_smpl=0;
+  rx_sync_trace.push_back(      reexec_sync_smpl);       reexec_sync_smpl=0;
+  rc_sync_trace.push_back(    recovery_sync_smpl);     recovery_sync_smpl=0;
+  prvtime_trace.push_back(      prv_elapsed_smpl);       prv_elapsed_smpl=0;
+  rsttime_trace.push_back(      rst_elapsed_smpl);       rst_elapsed_smpl=0;
+  creatcd_trace.push_back(   create_elapsed_smpl);    create_elapsed_smpl=0;
+  destroy_trace.push_back(  destroy_elapsed_smpl);   destroy_elapsed_smpl=0;
+  begincd_trace.push_back(    begin_elapsed_smpl);     begin_elapsed_smpl=0;
+  complcd_trace.push_back(    compl_elapsed_smpl);     compl_elapsed_smpl=0;
+  advance_trace.push_back(  advance_elapsed_smpl);   advance_elapsed_smpl=0;
+  mailbox_trace.push_back(  mailbox_elapsed_smpl);   mailbox_elapsed_smpl=0;
+}
+
+void cd::GatherProfile(void)
+{
+  float *elapsed_acc = NULL;
+  float *nm_sync_acc = NULL;
+  float *rx_sync_acc = NULL;
+  float *rc_sync_acc = NULL;
+  float *prvtime_acc = NULL;
+  float *rsttime_acc = NULL;
+  float *creatcd_acc = NULL;
+  float *destroy_acc = NULL;
+  float *begincd_acc = NULL;
+  float *complcd_acc = NULL;
+  float *advance_acc = NULL;
+  float *mailbox_acc = NULL;
+
+
+
+  int tot_elems = profile_counter * totalTaskSize;
+  if(myTaskID == 0) {
+    elapsed_acc = (float *)malloc(tot_elems * sizeof(float));
+    nm_sync_acc = (float *)malloc(tot_elems * sizeof(float));
+    rx_sync_acc = (float *)malloc(tot_elems * sizeof(float));
+    rc_sync_acc = (float *)malloc(tot_elems * sizeof(float));
+    prvtime_acc = (float *)malloc(tot_elems * sizeof(float));
+    rsttime_acc = (float *)malloc(tot_elems * sizeof(float));
+    creatcd_acc = (float *)malloc(tot_elems * sizeof(float));
+    destroy_acc = (float *)malloc(tot_elems * sizeof(float));
+    begincd_acc = (float *)malloc(tot_elems * sizeof(float));
+    complcd_acc = (float *)malloc(tot_elems * sizeof(float));
+    advance_acc = (float *)malloc(tot_elems * sizeof(float));
+    mailbox_acc = (float *)malloc(tot_elems * sizeof(float));
+
+  }
+  assert(profile_counter == elapsed_trace.size());
+  assert(profile_counter == nm_sync_trace.size());
+  assert(profile_counter == rx_sync_trace.size());
+  assert(profile_counter == rc_sync_trace.size());
+  assert(profile_counter == prvtime_trace.size());
+  MPI_Gather(elapsed_trace.data(), profile_counter, MPI_FLOAT, elapsed_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(nm_sync_trace.data(), profile_counter, MPI_FLOAT, nm_sync_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(rx_sync_trace.data(), profile_counter, MPI_FLOAT, rx_sync_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(rc_sync_trace.data(), profile_counter, MPI_FLOAT, rc_sync_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(prvtime_trace.data(), profile_counter, MPI_FLOAT, prvtime_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(rsttime_trace.data(), profile_counter, MPI_FLOAT, rsttime_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(creatcd_trace.data(), profile_counter, MPI_FLOAT, creatcd_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(destroy_trace.data(), profile_counter, MPI_FLOAT, destroy_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(begincd_trace.data(), profile_counter, MPI_FLOAT, begincd_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(complcd_trace.data(), profile_counter, MPI_FLOAT, complcd_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(advance_trace.data(), profile_counter, MPI_FLOAT, advance_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gather(mailbox_trace.data(), profile_counter, MPI_FLOAT, mailbox_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  if(myTaskID == 0) {
+    char tmpfile[512];
+    sprintf(tmpfile, "prof_trace.%s.%d.%s.%s", exec_name, totalTaskSize, (exec_details!=NULL)? exec_details : "NoInput", start_date);
+    FILE *tfp = fopen(tmpfile, "w"); 
+    if(tfp == 0) { printf("failed to open %s\n", tmpfile); assert(tfp); }
+
+    fprintf(tfp, "{\n");
+    fprintf(tfp, "  \"name\":\"%s\",\n", exec_name);
+    fprintf(tfp, "  \"input\":%s,\n", (exec_details!=NULL)? exec_details : "NoInput");
+    fprintf(tfp, "  \"nTask\":%d,\n", totalTaskSize);
+    fprintf(tfp, "  \"prof\": {\n");
+fprintf(tfp, "    \"elapsed\": [%f", elapsed_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", elapsed_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"nm_sync\": [%f", nm_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", nm_sync_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"rx_sync\": [%f", rx_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rx_sync_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"rc_sync\": [%f", rc_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rc_sync_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"prvtime\": [%f", prvtime_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", prvtime_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"rsttime\": [%f", rsttime_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rsttime_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"creatcd\": [%f", creatcd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", creatcd_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"destroy\": [%f", destroy_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", destroy_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"begincd\": [%f", begincd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", begincd_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"complcd\": [%f", complcd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", complcd_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"advance\": [%f", advance_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", advance_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"mailbox\": [%f", mailbox_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", mailbox_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"sync\": [%f", nm_sync_acc[0] + rx_sync_acc[0] + rc_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", nm_sync_acc[i] + rx_sync_acc[i] + rc_sync_acc[i]); } fprintf(tfp, "],\n");
+fprintf(tfp, "    \"cdrt\": [%f", begincd_acc[0] + complcd_acc[0] + creatcd_acc[0] + destroy_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", begincd_acc[i] + complcd_acc[i] + creatcd_acc[i] + destroy_acc[i]); } fprintf(tfp, "]\n");
+    fprintf(tfp, "  }\n");
+    fprintf(tfp, "}\n");
+    free(elapsed_acc);
+    free(nm_sync_acc);
+    free(rx_sync_acc);
+    free(rc_sync_acc);
+    free(prvtime_acc);
+    free(rsttime_acc);
+    free(creatcd_acc);
+    free(destroy_acc);
+    free(begincd_acc);
+    free(complcd_acc);
+    free(advance_acc);
+    free(mailbox_acc);
+    fclose(tfp);
+  }
+}
 
 double cd::recvavg[PROF_GLOBAL_STATISTICS_NUM] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
 double cd::recvstd[PROF_GLOBAL_STATISTICS_NUM] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -354,6 +492,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //  }
 //  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
   exec_details = getenv("CD_EXEC_DETAILS");
+  char *is_noprv = getenv("CD_NO_PRESERVE");
+  cd::dont_preserve = (is_noprv != NULL)? true:false;
 #if CD_TUNING_ENABLED == 0
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
@@ -487,7 +627,7 @@ void CD_Finalize(void)
 //  runtime_info[100] = summary;
 #endif
 #if CD_PROFILER_ENABLED
-  const double cd_elapsed            = CD_CLK_MEA(cd::elapsed_time);
+  const double cd_elapsed            = CD_CLK_MEA(cd::body_elapsed_time);
   const double normal_sync_elapsed   = CD_CLK_MEA(cd::normal_sync_time);
   const double reexec_sync_elapsed   = CD_CLK_MEA(cd::reexec_sync_time);
   const double recovery_sync_elapsed = CD_CLK_MEA(cd::recovery_sync_time);
@@ -685,6 +825,19 @@ void CD_Finalize(void)
                              (cd_elapsed_avg / tot_elapsed_avg) * 100, 
                              (msg_elapsed_avg / tot_elapsed_avg) * 100);
 
+    printf("elapsed_ti:%lf==%lf\n", body_elapsed_time,      body_elapsed_smpl);
+    printf("normal_syn:%lf==%lf\n", normal_sync_time,       normal_sync_smpl);
+    printf("reexec_syn:%lf==%lf\n", reexec_sync_time,       reexec_sync_smpl);
+    printf("recovery_s:%lf==%lf\n", recovery_sync_time,     recovery_sync_smpl);
+    printf("prv_elapse:%lf==%lf\n", prv_elapsed_time,       prv_elapsed_smpl);
+    printf("rst_elapse:%lf==%lf\n", rst_elapsed_time,       rst_elapsed_smpl);
+    printf("create_ela:%lf==%lf\n", create_elapsed_time,    create_elapsed_smpl);
+    printf("destroy_el:%lf==%lf\n", destroy_elapsed_time,   destroy_elapsed_smpl);
+    printf("begin_elap:%lf==%lf\n", begin_elapsed_time,     begin_elapsed_smpl);
+    printf("compl_elap:%lf==%lf\n", compl_elapsed_time,     compl_elapsed_smpl);
+    printf("advance_el:%lf==%lf\n", advance_elapsed_time,   advance_elapsed_smpl);
+    printf("mailbox_el:%lf==%lf\n", mailbox_elapsed_time,   mailbox_elapsed_smpl);
+
     printf("\n\n============================================\n");
 //#if CD_PROFILER_ENABLED 
 //    printf("Profile Result =================================\n");
@@ -695,6 +848,7 @@ void CD_Finalize(void)
 //    printf("================================================\n\n");
 //#endif
   }
+  GatherProfile();
 #endif // CD_PROFILER_ENABLED_ENDS
 
 
@@ -1020,6 +1174,7 @@ CDHandle *CDHandle::Create(const char *name,
   end_clk = CD_CLOCK();
   const double elapsed = end_clk - begin_clk;
   create_elapsed_time += elapsed;
+  create_elapsed_smpl += elapsed;
 #if CD_PROFILER_ENABLED
   profMap[phase()]->create_elapsed_time_ += elapsed;
 //  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
@@ -1139,6 +1294,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 
   end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
+  create_elapsed_smpl += end_clk - begin_clk;
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
 #if CD_PROFILER_ENABLED
@@ -1202,6 +1358,7 @@ CDHandle *CDHandle::Create(uint32_t color,
 
   end_clk = CD_CLOCK();
   create_elapsed_time += end_clk - begin_clk;
+  create_elapsed_smpl += end_clk - begin_clk;
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
 #if CD_PROFILER_ENABLED
@@ -1224,6 +1381,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
   CDHandle *new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
   CD_CLOCK_T clk = CD_CLOCK();
   create_elapsed_time += clk - begin_clk;
+  create_elapsed_smpl += clk - begin_clk;
 #if CD_PROFILER_ENABLED
   profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
 #endif
@@ -1231,6 +1389,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 
   end_clk = CD_CLOCK();
   begin_elapsed_time += end_clk - begin_clk;
+  begin_elapsed_smpl += end_clk - begin_clk;
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cdh->ptr_cd_->name_.c_str(), new_cdh->level());
 #if CD_PROFILER_ENABLED
@@ -1260,6 +1419,7 @@ CDErrT CDHandle::Destroy(bool collective)
 
   end_clk = CD_CLOCK();
   destroy_elapsed_time += end_clk - begin_clk;
+  destroy_elapsed_smpl += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   auto it = profMap.find(phase);
   if(it != profMap.end())
@@ -1491,7 +1651,7 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 //  // Otherwise failed_phase is not healthy and increment reexec_
 //  bool is_reexec = (failed_phase != HEALTHY);
   //if(myTaskID == 0) printf("is reexec:%d\n", is_reexec);
-  current->profile_.RecordComplete(is_reexec);
+  current->profile_.RecordComplete(is_reexec, level() == 1);
   CDEpilogue();
   //CDEpilogue();
 
@@ -1506,6 +1666,7 @@ CDErrT CDHandle::Advance(bool collective)
 
   end_clk = CD_CLOCK();
   advance_elapsed_time += end_clk - begin_clk;
+  advance_elapsed_smpl += end_clk - begin_clk;
 #if CD_PROFILER_ENABLED
   profMap[phase()]->advance_elapsed_time_ += end_clk - begin_clk;
 #endif
