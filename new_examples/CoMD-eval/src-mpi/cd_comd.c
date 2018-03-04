@@ -572,15 +572,15 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh, uint32_t knob,
     //            "AtomExchangeParms_pbcFactor0", "AtomExchangeParms_pbcFactor0");
     cd_preserve(cdh, xchange_parms->pbcFactor[0], pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor0", "AtomExchangeParms_pbcFactor0");
-    cd_preserve(cdh, &(xchange_parms->pbcFactor[1]), pbcFactor_size, knob,
+    cd_preserve(cdh, (xchange_parms->pbcFactor[1]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor1", "AtomExchangeParms_pbcFactor1");
-    cd_preserve(cdh, &(xchange_parms->pbcFactor[2]), pbcFactor_size, knob,
+    cd_preserve(cdh, (xchange_parms->pbcFactor[2]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor2", "AtomExchangeParms_pbcFactor2");
-    cd_preserve(cdh, &(xchange_parms->pbcFactor[3]), pbcFactor_size, knob,
+    cd_preserve(cdh, (xchange_parms->pbcFactor[3]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor3", "AtomExchangeParms_pbcFactor3");
-    cd_preserve(cdh, &(xchange_parms->pbcFactor[4]), pbcFactor_size, knob,
+    cd_preserve(cdh, (xchange_parms->pbcFactor[4]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor4", "AtomExchangeParms_pbcFactor4");
-    cd_preserve(cdh, &(xchange_parms->pbcFactor[5]), pbcFactor_size, knob,
+    cd_preserve(cdh, (xchange_parms->pbcFactor[5]), pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor5", "AtomExchangeParms_pbcFactor5");
 #endif
     //TODO: add PRINTON part
