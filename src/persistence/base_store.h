@@ -207,7 +207,7 @@ struct CDEntry {
       src_    = that.src_;
     }
     void Print(const char *str="") const
-    { printf("CDEntry:%s (%16lx %10lx %10lx %p)\n", str, id_, size(), offset(), src()); }
+    { printf("CDEntry:%s (%16lx %10lx %1lx %10lx %p)\n", str, id_, size(), attr(), offset(), src()); }
     inline uint64_t size(void)   const { return size_.attr_.size_; }
     inline uint64_t invalid(void)  const { return size_.attr_.invalid_; }
     inline uint64_t attr(void)   const { return size_.code_ >> 48; }

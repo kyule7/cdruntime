@@ -6,7 +6,6 @@ SHELL = /bin/bash
 ### without MPI.  Select desired precision and MPI here.
 
 CD_ENABLED = 1
-
 # double precision (ON/OFF)
 DOUBLE_PRECISION = ON
 # MPI for parallel (ON/OFF)
@@ -27,7 +26,8 @@ CD_FLAGS :=
 # CD1 : timestep.c 
 # CD2 : ljForce.c
 
-CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV -DDO_OUTPUT
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1
 
 #FIXME: Level 3 should be enabled with Level 4
@@ -37,6 +37,7 @@ CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 
 
+CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -DDO_PRV -DDO_OUTPUT
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 
 

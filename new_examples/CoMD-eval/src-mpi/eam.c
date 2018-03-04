@@ -86,18 +86,23 @@
 
 #include "eam.h"
 
+#include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include <assert.h>
 
+#include "CoMDTypes.h"
 #include "constants.h"
+#include "haloExchange.h"
+#include "linkCells.h"
 #include "memUtils.h"
 #include "parallel.h"
-#include "linkCells.h"
-#include "CoMDTypes.h"
 #include "performanceTimers.h"
-#include "haloExchange.h"
+
+#if _CD4
+#include "cd.h"
+#include "cd_comd.h"
+#endif
 
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 
@@ -209,7 +214,23 @@ BasePotential *initEamPot(const char *dir, const char *file, const char *type) {
 ///   -# Loop over all atoms and their neighbors, compute the embedding
 ///   energy contribution to the force and add to the two-body force
 ///
+
+// To prevent CD for ljForce from being called during initialization
+// FIXME: Not sure if I need this similary as ljForce.c
+#if _CD4
+int is_not_first_called = 0;
+#endif
+
 int eamForce(SimFlat *s) {
+#if _CD4
+  cd_handle_t *lv4_cd = NULL;
+  if (is_not_first_called) {
+    lv4_cd =
+        cd_create(getleafcd(), 1, "eam_loop", kStrict | kLocalMemory, 0xC);
+  }
+  const int CD4_INTERVAL = s->preserveRateLevel4;
+#endif
+
   EamPotential *pot = (EamPotential *)s->pot;
   assert(pot);
 
@@ -236,6 +257,15 @@ int eamForce(SimFlat *s) {
   int nbrBoxes[27];
   // loop over local boxes
   for (int iBox = 0; iBox < s->boxes->nLocalBoxes; iBox++) {
+#if _CD4
+    if (is_not_first_called) {
+      if (iBox % CD4_INTERVAL == 0) {
+        // ex: iBox = 0, 800, 1600, ... , 13600
+        cd_begin(lv4_cd, "ljForce_outmost_loop");
+        // TODO: add cd_preserve
+      }
+    }
+#endif
     int nIBox = s->boxes->nAtoms[iBox];
     int nNbrBoxes = getNeighborBoxes(s->boxes, iBox, nbrBoxes);
     // loop over neighbor boxes of iBox (some may be halo boxes)
@@ -290,10 +320,19 @@ int eamForce(SimFlat *s) {
         } // loop over atoms in jBox
       }   // loop over atoms in iBox
     }     // loop over neighbor boxes
+#if _CD4
+    if (is_not_first_called) {
+      if (iBox % CD4_INTERVAL == 0) {
+        //cd_detect(lv4_cd);
+        cd_complete(lv4_cd);
+      }
+    }
+#endif
   }       // loop over local boxes
 
   // Compute Embedding Energy
   // loop over all local boxes
+  // TODO: create new CD here
   for (int iBox = 0; iBox < s->boxes->nLocalBoxes; iBox++) {
     int iOff;
     int nIBox = s->boxes->nAtoms[iBox];
@@ -309,12 +348,15 @@ int eamForce(SimFlat *s) {
   }
 
   // exchange derivative of the embedding energy with repsect to rhobar
+  // TODO: create new CD here
+  // FIXME: Note that there happne communications in the function below.
   startTimer(eamHaloTimer);
   haloExchange(pot->forceExchange, pot->forceExchangeData);
   stopTimer(eamHaloTimer);
 
   // third pass
   // loop over local boxes
+  // TODO: create new CD here
   for (int iBox = 0; iBox < s->boxes->nLocalBoxes; iBox++) {
     int nIBox = s->boxes->nAtoms[iBox];
     int nNbrBoxes = getNeighborBoxes(s->boxes, iBox, nbrBoxes);

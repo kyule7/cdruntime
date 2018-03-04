@@ -1133,8 +1133,32 @@ CDErrT CD::Begin(const char *label, bool collective)
   if( cd_exec_mode_ != kReexecution ) { // normal execution
     num_reexecution_ = 0;
     cd_exec_mode_ = kExecution;
+//    char tmp[16];
+//    sprintf(tmp, "EXEC %s %u", label, level);
+//    if(myTaskID == 0)
+//      entry_directory_.table_->PrintEntry(tmp);
+//    CDHandle *parent = GetParentCD();
+//    if(parent != NULL) {
+//
+//      sprintf(tmp, "P EXEC %s %u", parent->GetLabel(), parent->ptr_cd()->level());
+//      if(myTaskID == 0) 
+//        parent->ptr_cd()->entry_directory_.table_->PrintEntry(tmp);
+//
+//    }
   }
   else {
+//    char tmp[16];
+//    sprintf(tmp, "REEX %s %u", label, level);
+//    if(myTaskID == 0)
+//      entry_directory_.table_->PrintEntry(tmp);
+//    CDHandle *parent = GetParentCD();
+//    if(parent != NULL) {
+//
+//      sprintf(tmp, "P REEX %s %u", parent->GetLabel(), parent->ptr_cd()->level());
+//      if(myTaskID == 0) 
+//        parent->ptr_cd()->entry_directory_.table_->PrintEntry(tmp);
+//
+//    }
     //printf("don't need reexec next time. Now it is in reexec mode\n");
 //    need_reexec = false;
 //    *rollback_point_ = INVALID_ROLLBACK_POINT;
@@ -2642,13 +2666,13 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
   
   // Search the preservation entry which is not krefer.
   // It tries to search until it finds the entry without krefer.
-  CDEntry *src = SearchEntry(search_tag, found_level);
+  CDEntry *src = SearchEntry(search_tag, found_level, Attr::koutput);
   if(src == NULL) {
     CDHandle *parent_cd = GetCurrentCD();
     while( parent_cd != NULL ) {
       CD *ptr_cd = parent_cd->ptr_cd();
       if(myTaskID == 0) {
-        ptr_cd->entry_directory_.table_->PrintEntry();
+        ptr_cd->entry_directory_.table_->PrintEntry("Restore");
       }
       uint64_t tag = search_tag;
       src = ptr_cd->entry_directory_.table_->FindReverse(tag, Attr::koutput);
@@ -2693,9 +2717,11 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
 //      printf("[%s, %s] It is not a serdes obj(%s,%s)\n", __func__, ptr_cd->label(), my_name.c_str(), ref_name.c_str());
 //      entry_directory_.table_->PrintEntry();
 //    }
+//    CD_ASSERT_STR(src->src() == data, "%s src: %p==%p ",
+//       (is_ref)? ref_name.c_str() : my_name.c_str(), src->src(), data);
     CD_ASSERT_STR(src->size() == len_in_bytes, "%s len: %lu==%lu ", 
         (is_ref)? ref_name.c_str() : my_name.c_str(), src->size(), len_in_bytes);
-    ptr_cd->entry_directory_.data_->GetData(data, len_in_bytes, src->offset());
+    ptr_cd->entry_directory_.data_->GetData(src->src(), len_in_bytes, src->offset());
     
     /*********************************************
      * Test for kRef case
@@ -3394,6 +3420,12 @@ CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name, uint16_t attr)
   } else {
     uint64_t tag = entry_name;
     entry = entry_directory_.table_->FindReverse(tag, attr);
+
+//    if(cd::failed_phase != HEALTHY && myTaskID == 0) {
+//      char tmp[16];
+//      sprintf(tmp, "SH %u", level());
+//      entry_directory_.table_->PrintEntry(tmp);
+//    }
   }
   
   if(entry != NULL) {
@@ -3961,6 +3993,8 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, uint1
       if(parent_cd != NULL) {
         CD_DEBUG("Gotta go to upper level! -> %s at level#%u\n", 
             parent_cd->GetName(), ptr_cd->GetCDID().level());
+//        if(myTaskID == 0) {  printf("Gotta go to upper level! -> %s at level#%u\n", 
+//            parent_cd->GetName(), ptr_cd->GetCDID().level()); }
       }
     }
   } 

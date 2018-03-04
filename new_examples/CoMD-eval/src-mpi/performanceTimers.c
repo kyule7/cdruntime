@@ -27,16 +27,16 @@
 
 #include "performanceTimers.h"
 
-#include <stdio.h>
-#include <sys/time.h>
-#include <string.h>
-#include <stdint.h>
 #include <inttypes.h>
 #include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
 
-#include "performanceTimers.h"
 #include "mytype.h"
 #include "parallel.h"
+#include "performanceTimers.h"
 #include "yamlOutput.h"
 
 static uint64_t getTime(void);

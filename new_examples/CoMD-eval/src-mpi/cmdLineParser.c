@@ -9,12 +9,12 @@
 
 #include "cmdLineParser.h"
 
-#include <stdio.h>
 #include <getopt.h>
+#include <stdio.h>
 #include <string.h>
 
-#include "mytype.h"
 #include "memUtils.h"
+#include "mytype.h"
 
 #define nextOption(o) ((MyOption *)o->next)
 
@@ -177,9 +177,10 @@ void processArgs(int argc, char **argv) {
       break;
     o = findOption(myargs, c);
     if (!o) {
-      fprintf(screenOut, "\n\n"
-                         "    invalid switch : -%c in getopt()\n"
-                         "\n\n",
+      fprintf(screenOut,
+              "\n\n"
+              "    invalid switch : -%c in getopt()\n"
+              "\n\n",
               c);
       break;
     }
