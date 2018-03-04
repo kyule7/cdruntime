@@ -1,24 +1,31 @@
 ######################################
 # Root CD 
 ######################################
-- CD_0_0 :
-  - label : Root
-    interval : 1
-    errortype : 0xF
-    medium: GlobalDisk
-######################################
-# Root CD and Level 1 CD
-######################################
 #- CD_0_0 :
 #  - label : Root
 #    interval : 1
 #    errortype : 0xF
 #    medium: GlobalDisk
-#  - CD_1_1 :
-#    - label : main_loop
-#      interval : 1
-#      errortype : 0xE
+######################################
+# Root CD and Level 1 CD
+######################################
+- CD_0_0 :
+  - label : Root
+    interval : 1
+    errortype : 0xF
+    medium: GlobalDisk
+  - CD_1_1 :
+    - label : main_loop
+      interval : 1
+      errortype : 0xE
 #      medium: LocalMemory
+      medium: GlobalDisk
+    - CD_2_2 :
+      - label    : main_loop_inner
+        interval : 1
+        errortype: 0xE
+#        medium: LocalMemory
+        medium: GlobalDisk
 ######################################
 # Root CD, Level 1 and  Level2 CD
 ######################################
@@ -231,13 +238,13 @@
 # Level1: 0xF and kDRAM
 # Level2: 0xC and kDRAM
 ######################################
-- FAILURE :
+- FAILURE_FTYPE0 :
   - F1 : 0.000
-  - F2 : 0.010
+  - F2 : 0.000
   - F4 : 0.00 
 #  - F8 : 0.00
 #  - F8 : 0.005
 #  - F8 : 0.01
-  - F8 : 0.02
+  - F8 : 0.05
 #  - F8 : 0.02
 #  - F8 : 0.04

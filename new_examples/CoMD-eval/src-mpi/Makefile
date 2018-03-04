@@ -6,7 +6,6 @@ SHELL = /bin/bash
 ### without MPI.  Select desired precision and MPI here.
 
 CD_ENABLED = 1
-
 # double precision (ON/OFF)
 DOUBLE_PRECISION = ON
 # MPI for parallel (ON/OFF)
