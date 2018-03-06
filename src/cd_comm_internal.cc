@@ -1165,7 +1165,7 @@ uint32_t CD::CheckRollbackPoint(bool remote)
       }
       CD_DEBUG("MPI_Group_translate_ranks %d->%d. Head's rollback_point_:%u at %s %s\n", 
                head_id, global_head_id, rollback_lv, cd_id_.GetString().c_str(), label_.c_str());
-    } else {
+    } else { // local check
       if(head_in_levels) {
         PMPI_Win_lock(MPI_LOCK_SHARED, GetRootCD()->task_in_color(), 0, rollbackWindow_);
         rollback_lv = *(rollback_point_);

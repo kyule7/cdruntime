@@ -1114,8 +1114,12 @@ CDErrT CD::Begin(const char *label, bool collective)
   }
 
   // NOTE: This point reset rollback_point_
+#if 1 // debug
   uint32_t new_rollback_point = SyncCDs(this, true);
   SetRollbackPoint(new_rollback_point, false);
+#else
+  uint32_t new_rollback_point = CheckRollbackPoint(false);
+#endif
 
 //  const uint32_t level = level();
 //  in Begin
@@ -2728,6 +2732,7 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
      *********************************************/
 
     if( is_ref ) {
+#if 0 // for now do not check this
       if(ref_name.empty() == false) {
         uint64_t my_id = cd_hash(my_name);
         uint32_t my_lv = INVALID_NUM32;
@@ -2735,6 +2740,7 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
         CD_ASSERT_STR(dst->src() == data, "dst: %p==%p ", dst->src(), data);
         CD_ASSERT_STR(dst->size() == len_in_bytes, "len: %lu==%lu ", dst->size(), len_in_bytes);
       }
+#endif
     } else {
       CD_ASSERT_STR(src->src() == data, "%s src: %p==%p ",
          (is_ref)? ref_name.c_str() : my_name.c_str(), src->src(), data);

@@ -1,5 +1,7 @@
 #ifndef _PACKER_COMMON_H
 #define _PACKER_COMMON_H
+#include <stdio.h>
+
 #define DEFAULT_FILEMODE kMPIFile
 enum {
   kVolatile       = 0x000, // 0x0X00
@@ -8,4 +10,6 @@ enum {
   kMPIFile        = 0x400,
   kLibcFile       = 0x800
 };
+
+extern void PrintPackerProf(FILE *buf=stdout);
 #endif

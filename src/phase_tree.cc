@@ -216,6 +216,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
   fprintf(outJSON, "%s\"interval\" : %ld,\n",   two_more_indent.c_str(), interval_);
   fprintf(outJSON, "%s\"errortype\": \"0x%lX\",\n", two_more_indent.c_str(), errortype_);
   fprintf(outJSON, "%s\"medium\"   : \"%s\",\n",     two_more_indent.c_str(), GetMedium(medium_));
+  fprintf(outJSON, "%s\"tasksize\": %8u,\n",   two_more_indent.c_str(), task_size_);
   fprintf(outJSON, "%s\"siblingID\": %8u,\n",  two_more_indent.c_str(), sibling_id_);
   fprintf(outJSON, "%s\"sibling #\": %8u,\n",  two_more_indent.c_str(), sibling_size_);
   std::ostringstream oss; 

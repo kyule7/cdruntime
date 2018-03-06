@@ -265,7 +265,7 @@ class TableStore : public BaseTable {
           if( ptr_[i].id_ == id ) {
             MYDBG("%lu == %lu\n", ptr_[i].id_, id);
             //if(ptr_[i].size_.CheckAny(attr) && attr != Attr::koutput) 
-            CDEntry tentry = ptr_[i];
+            //CDEntry tentry = ptr_[i];
 //            if(packerTaskID == 0) {printf("%lx,", tentry.attr());}
             if(ptr_[i].attr() == attr && attr != Attr::knoattr) {
               continue;

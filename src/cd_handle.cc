@@ -213,7 +213,7 @@ void cd::GatherProfile(void)
   MPI_Gather(mailbox_trace.data(), profile_counter, MPI_FLOAT, mailbox_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
   if(myTaskID == 0) {
     char tmpfile[512];
-    sprintf(tmpfile, "prof_trace.%s.%d.%s.%s", exec_name, totalTaskSize, (exec_details!=NULL)? exec_details : "NoInput", start_date);
+    sprintf(tmpfile, "prof_trace.%s.%d.%s.%s.json", exec_name, totalTaskSize, (exec_details!=NULL)? exec_details : "NoInput", start_date);
     FILE *tfp = fopen(tmpfile, "w"); 
     if(tfp == 0) { printf("failed to open %s\n", tmpfile); assert(tfp); }
 
@@ -222,6 +222,7 @@ void cd::GatherProfile(void)
     fprintf(tfp, "  \"input\":%s,\n", (exec_details!=NULL)? exec_details : "NoInput");
     fprintf(tfp, "  \"nTask\":%d,\n", totalTaskSize);
     fprintf(tfp, "  \"prof\": {\n");
+    PrintPackerProf(tfp);
 fprintf(tfp, "    \"elapsed\": [%f", elapsed_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", elapsed_acc[i]); } fprintf(tfp, "],\n");
 fprintf(tfp, "    \"nm_sync\": [%f", nm_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", nm_sync_acc[i]); } fprintf(tfp, "],\n");
 fprintf(tfp, "    \"rx_sync\": [%f", rx_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rx_sync_acc[i]); } fprintf(tfp, "],\n");
@@ -1736,7 +1737,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   }
   CDEpilogue();
-  return err;
+  return CHECK_PRV_TYPE(preserve_mask, kRef)? (CDErrT)0 : (CDErrT)len;
 }
 
 CDErrT CDHandle::Preserve(Serializable &serdes,                           
@@ -1800,7 +1801,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   }
   CDEpilogue();
-  return err;
+  return CHECK_PRV_TYPE(preserve_mask, kRef)? (CDErrT)0 : (CDErrT)len;
 }
 
 CDErrT CDHandle::Preserve(CDEvent &cd_event, 
@@ -1958,8 +1959,8 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
     // FIXME
     CD_DEBUG("[%d] ### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
-//    printf("[%d] ### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
-//             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
+    printf("[%d] ### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
+             rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
 
     CDHandle *rb_cdh = CDPath::GetCDLevel(rollback_point);
     assert(rb_cdh != NULL);

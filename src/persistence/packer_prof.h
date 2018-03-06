@@ -4,7 +4,8 @@
 #include <sys/time.h>
 #include <stdint.h>
 #include <stddef.h>
-
+#include <stdio.h>
+#include <vector>
 namespace packer {
 
 struct Time { 
@@ -26,10 +27,12 @@ struct Time {
     count++;
     size += len;
   }
-  void Print(void);
+  void Print(FILE *buf=stdout);
+  void PrintJSON(FILE *buf=stdout);
 };
 
 
+extern std::vector<Time *> prof_list;
 extern Time time_write; 
 extern Time time_read; 
 extern Time time_posix_write; 
@@ -38,6 +41,11 @@ extern Time time_posix_seek;
 extern Time time_mpiio_write; 
 extern Time time_mpiio_read; 
 extern Time time_mpiio_seek; 
+
+//struct ProfList : public std::vector<Time *> {
+//  void PrintJSON(FILE *buf=stdout);
+//};
+
 
 }
 
