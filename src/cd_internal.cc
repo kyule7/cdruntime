@@ -1586,9 +1586,6 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
       const int64_t curr_begID = phaseTree.current_->seq_begin_;
       CD_DEBUG(">>> Failure Detected (%s), fphase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
           label_.c_str(), failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
-      if(level() == 1) {
-        printf("something wrong...\n\n\n");
-      }
       if(myTaskID == 0) printf(">>> Failure Detected (%s), fphase:%ld==%u, seqID:%ld==%ld (beg:%ld) <<<\n", 
           label_.c_str(), failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
       failed_phase = phase;

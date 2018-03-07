@@ -1324,19 +1324,17 @@ static inline void CalcForceForNodes(Domain& domain)
      domain.fy(i) = Real_t(0.0) ;
      domain.fz(i) = Real_t(0.0) ;
   }
-
-#if _CD && _CD_CDRT && _LEAF_LV
-   double now = MPI_Wtime();
-   CDHandle *leaf_cd = GetCurrentCD()->Create(numRanks, "CalcForce", kStrict|kLocalMemory, 0x1);
-   begn_end += MPI_Wtime() - now;
-#endif
-
 #if _CD && _CD_CDRT
   // Out{FX,FY,FZ} <- In{X,Y,Z,XD,YD,ZD,FX,FY,FZ,NODELIST
   //                     P,Q,V,VOLO,SS,ELEMMASS}
   #if _LEAF_LV
-//  CDHandle *leaf_cd = GetLeafCD();
-  now = MPI_Wtime();
+    #if _FGCD
+   double now = MPI_Wtime();
+   CDHandle *leaf_cd = GetCurrentCD()->Create(numRanks, "CalcForce", kStrict|kLocalMemory, 0x1);
+    #else
+  CDHandle *leaf_cd = GetLeafCD();
+  double now = MPI_Wtime();
+    #endif
   CD_Begin(leaf_cd, "CalcForce");
   double prv_start = MPI_Wtime();
   begn_end += prv_start - now;
@@ -1369,11 +1367,15 @@ static inline void CalcForceForNodes(Domain& domain)
   now = MPI_Wtime();
   leaf_cd->Detect();
   leaf_cd->Complete();
+    #if _FGCD
   leaf_cd->Destroy();
   double then = MPI_Wtime();
   cmpl_end += then - now;
   leaf_cd = GetCurrentCD()->Create("LeafCD", kStrict|kLocalMemory, 0x1);
   begn_end += MPI_Wtime() - then;
+    #else
+  cmpl_end += MPI_Wtime() - now;
+    #endif
   #endif
 #endif
 
@@ -1483,12 +1485,6 @@ void LagrangeNodal(Domain& domain)
    Domain_member fieldData[6] ;
 #endif
 
-//#if _CD && _LEAF_LV
-//   double now = MPI_Wtime();
-//   CDHandle *leaf_cd = GetCurrentCD()->Create(numRanks, "CalcForce", kStrict|kLocalMemory, 0x1);
-//   begn_end += MPI_Wtime() - now;
-//#endif
-
    const Real_t delt = domain.deltatime() ;
    Real_t u_cut = domain.u_cut() ;
 
@@ -1521,15 +1517,12 @@ void LagrangeNodal(Domain& domain)
   CDHandle *leaf_cd = GetCurrentCD();
   double prv_start = MPI_Wtime();
   #endif
-//  leaf_cd->Preserve(domain.SetOp(prvec_f | prvec_symm), kRef, "Force,Symm");
-  //leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
-  //if(domain.check_begin(intvl1) || _LEAF_LV) 
   if(domain.check_begin(intvl0) || domain.check_begin(intvl1) || _LEAF_LV) // leaf always preserve per loop 
   {
   #if _CD_DUMMY
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc_Leaf");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc");
   #else
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc_Leaf");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
   #endif
 //    if(myRank == 1) printf("Prv %s       PosVelAcc %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
     dump_end  += MPI_Wtime() - prv_start;
@@ -1549,31 +1542,18 @@ void LagrangeNodal(Domain& domain)
    // Out{X,Y,Z} <- In{X,Y,Z,XD,YD,ZD}
    CalcPositionForNodes( domain, delt, domain.numNode() );
    domain.CheckUpdate("CalcPosition");
-//#if _CD && _CHILD_CD
-//  #if _CD_DUMMY
-////   // Preserve to dummy
-//   if(domain.check_end(intvl1) || _LEAF_LV) 
-//     dummy_cd->Preserve(domain.SetOp(prvec_posall), kOutput, "PosVelAcc_Leaf");
-//  #endif
-//  #if _LEAF_LV
-//   now = MPI_Wtime();
-//   leaf_cd->Detect();
-//   leaf_cd->Complete();
-//   cmpl_end += MPI_Wtime() - now;
-//  #endif
-//#endif
+
 #if _CD && _CD_CDRT
   #if _CD_DUMMY
-  //if(domain.check_end(intvl1) || _LEAF_LV) { 
   if(domain.check_end(intvl0) || domain.check_end(intvl1) || _LEAF_LV) 
-    prv_len += dummy_cd->Preserve(domain.SetOp(prvec_posall), kOutput, "PosVelAcc_Leaf"); }
+    prv_len += dummy_cd->Preserve(domain.SetOp(prvec_posall), kOutput, "PosVelAcc"); 
   #endif
 
   #if _LEAF_LV
-  now = MPI_Wtime();
+  double then = MPI_Wtime();
   leaf_cd->Detect();
   leaf_cd->Complete();
-  cmpl_end += MPI_Wtime() - now;
+  cmpl_end += MPI_Wtime() - then;
   #endif
 #endif
 
@@ -2769,13 +2749,12 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   CDHandle *leaf_cd = GetCurrentCD();
   double prv_start = MPI_Wtime();
   #endif
-  //if(domain.check_begin(intvl1) || _LEAF_LV)
   if(domain.check_begin(intvl0) || domain.check_begin(intvl1) || _LEAF_LV) // leaf always preserve per loop 
   { 
   #if _CD_DUMMY
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem_Leaf");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem");
   #else
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem_Leaf");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem");
   #endif
 //    if(myRank == 1) printf("Prv %s    LargrageElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
     dump_end  += MPI_Wtime() - prv_start;
@@ -2789,9 +2768,8 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 
 #if _CD && _CD_CDRT
   #if _CD_DUMMY
-  //if(domain.check_end(intvl1) || _LEAF_LV) 
   if(domain.check_end(intvl0) || domain.check_end(intvl1) || _LEAF_LV) 
-    prv_len += dummy_cd->Preserve(domain.SetOp(prvec_elem), kOutput, "LagrangeElem_Leaf");
+    prv_len += dummy_cd->Preserve(domain.SetOp(prvec_elem), kOutput, "LagrangeElem");
   #endif
 
   #if _LEAF_LV
@@ -2807,13 +2785,12 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   prv_start = MPI_Wtime();
   #endif
 
-  //if(domain.check_begin(intvl1) || _LEAF_LV) 
   if(domain.check_begin(intvl0) || domain.check_begin(intvl1) || _LEAF_LV) // leaf always preserve per loop 
   {
   #if _CD_DUMMY
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem_Leaf");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem");
   #else
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem_Leaf");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
   #endif
 //    if(myRank == 1) printf("Prv %s        QforElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
     dump_end  += MPI_Wtime() - prv_start;
@@ -2830,9 +2807,8 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 
 #if _CD && _CD_CDRT
   #if _CD_DUMMY
-  //if(domain.check_end(intvl1) || _LEAF_LV) 
   if(domain.check_end(intvl0) || domain.check_end(intvl1) || _LEAF_LV) 
-    prv_len += dummy_cd->Preserve(domain.SetOp(prvec_q), kOutput, "QforElem_Leaf");
+    prv_len += dummy_cd->Preserve(domain.SetOp(prvec_q), kOutput, "QforElem");
   #endif
 
   #if _LEAF_LV
@@ -2848,13 +2824,12 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   prv_start = MPI_Wtime();
   #endif
 
-  //if(domain.check_begin(intvl1) || _LEAF_LV) 
   if(domain.check_begin(intvl0) || domain.check_begin(intvl1) || _LEAF_LV) // leaf always preserve per loop 
   {
   #if _CD_DUMMY
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem_Leaf");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem");
   #else
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem_Leaf");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem");
   #endif
 //    if(myRank == 1) printf("Prv %s MaterialForElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
     dump_end  += MPI_Wtime() - prv_start;
@@ -2874,9 +2849,8 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 #if _CD && _CD_CDRT
 
   #if _CD_DUMMY
-  //if(domain.check_end(intvl1) || _LEAF_LV) 
   if(domain.check_end(intvl0) || domain.check_end(intvl1) || _LEAF_LV) 
-    prv_len += dummy_cd->Preserve(domain.SetOp(prvec_matrl), kOutput, "MaterialforElem_Leaf");
+    prv_len += dummy_cd->Preserve(domain.SetOp(prvec_matrl), kOutput, "MaterialforElem");
   #endif
 
   #if _LEAF_LV
@@ -3065,16 +3039,17 @@ void LagrangeLeapFrog(Domain& domain)
    Domain_member fieldData[6] ;
 #endif
 
-//#if _CD && _LEAF_LV
-//   double now = MPI_Wtime();
-//   CDHandle *leaf_cd = GetCurrentCD()->Create("LeafCD", kStrict|kLocalMemory, 0x1);
-//   begn_end += MPI_Wtime() - now;
-//#endif
+#if _CD && _LEAF_LV && _FGCD == 0
+   double now = MPI_Wtime();
+   CDHandle *leaf_cd = GetCurrentCD()->Create("LeafCD", kStrict|kLocalMemory, 0x1);
+   begn_end += MPI_Wtime() - now;
+#endif
 
    /* calculate nodal forces, accelerations, velocities, positions, with
     * applied boundary conditions and slide surface considerations */
    LagrangeNodal(domain);
 //   domain.CheckUpdate("After LagrangeNodal");
+
 
 #ifdef SEDOV_SYNC_POS_VEL_LATE
 #endif
@@ -3107,10 +3082,12 @@ void LagrangeLeapFrog(Domain& domain)
    CalcTimeConstraintsForElems(domain);
    domain.CheckUpdate("CalcTimeConstraintsForElems");
 #if _CD && _LEAF_LV
-   double now = MPI_Wtime();
+   double then = MPI_Wtime();
+#if _FGCD
    CDHandle *leaf_cd = GetLeafCD();
+#endif
    leaf_cd->Destroy();
-   cmpl_end += MPI_Wtime() - now;
+   cmpl_end += MPI_Wtime() - then;
 #endif
 
 #if USE_MPI   
@@ -3157,7 +3134,7 @@ int main(int argc, char *argv[])
 
    ParseCommandLineOptions(argc, argv, myRank, &opts);
 //   opts.nx=40;
-//   opts.its = 10;
+   opts.its = 300;
 
    // overwrite parms
 //   opts.nx  = 60;

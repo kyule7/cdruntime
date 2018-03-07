@@ -236,11 +236,11 @@ class CDVector : public std::vector<T>, public PackerSerializable {
 
 #if DO_COMPARE
     if(CheckVector(entry_str) > 0.0) {
-      if(myTaskID == 0) {
-        Print(std::cout, "Restoration Check ");
-        printf("Entry Check: "); pentry->Print();
-        //assert(0);
-      }
+//      if(myTaskID == 0) {
+//        Print(std::cout, "Restoration Check ");
+//        printf("Entry Check: "); pentry->Print();
+//        //assert(0);
+//      }
     }
 #endif
 
