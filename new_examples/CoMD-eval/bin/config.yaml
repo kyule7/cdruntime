@@ -15,17 +15,17 @@
     errortype : 0xF
     medium: GlobalDisk
   - CD_1_1 :
-    - label : main_loop
+    - label : main_loop_dummy
       interval : 1
       errortype : 0xE
-#      medium: LocalMemory
-      medium: GlobalDisk
+      medium: LocalMemory
+#      medium: GlobalDisk
     - CD_2_2 :
       - label    : main_loop_inner
         interval : 1
         errortype: 0xE
-#        medium: LocalMemory
-        medium: GlobalDisk
+        medium: LocalMemory
+#        medium: GlobalDisk
 ######################################
 # Root CD, Level 1 and  Level2 CD
 ######################################
