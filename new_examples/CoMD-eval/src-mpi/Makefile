@@ -45,6 +45,7 @@ CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -DDO_PRV -DDO_OUTPUT
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 
 
 #CD_CFLAGS := -I$(CD_ROOT)/include 
+
 CD_LINKFLAGS := -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
 #CD_LINKFLAGS := -L$(CD_ROOT)/lib -lwrapLibc -lc -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
 else
