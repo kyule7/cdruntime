@@ -219,7 +219,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
 //      }
     packer::CDEntry *pentry = reinterpret_cast<packer::CDEntry *>(packer.Restore(id_, ptr, rst_size));
     if(pentry == NULL) { 
-      printf("Failed to restore CDVector %s (%lx) restored (%lu)\n", name_.c_str(), id_, rst_size);
+      if(myTaskID == 0) printf("Failed to restore CDVector %s (%lx) restored (%lu)\n", name_.c_str(), id_, rst_size);
       return -1UL; 
     }
 //    assert(pentry);
@@ -236,11 +236,11 @@ class CDVector : public std::vector<T>, public PackerSerializable {
 
 #if DO_COMPARE
     if(CheckVector(entry_str) > 0.0) {
-      if(myTaskID == 0) {
-        Print(std::cout, "Restoration Check ");
-        printf("Entry Check: "); pentry->Print();
-        //assert(0);
-      }
+//      if(myTaskID == 0) {
+//        Print(std::cout, "Restoration Check ");
+//        printf("Entry Check: "); pentry->Print();
+//        //assert(0);
+//      }
     }
 #endif
 
@@ -259,7 +259,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
         char *ptr = reinterpret_cast<char *>(this->data());
         difference = Compare<T>((T *)orig_, (T *)ptr, this->size());
         if(difference > 0.0) {
-          if(myTaskID==0) printf("[%d] <%s %s> difference=%f\n",myTaskID,  __func__, entry_str, difference);
+          //if(myTaskID==0) printf("[%d] <%s %s> difference=%f\n",myTaskID,  __func__, entry_str, difference);
           memcpy(orig_, ptr, this->size());
         }
       }

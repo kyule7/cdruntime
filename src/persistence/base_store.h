@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <utility>
+#include <functional>
 #include "define.h"
 #define ENTRY_TYPE_CNT 8
 #define BASE_ENTRY_CNT 128
@@ -177,6 +178,7 @@ struct BaseEntry {
     inline uint64_t offset(void) const { return offset_; }
 };
 
+const char *DefaultHash(uint64_t id);
 struct CDEntry {
     uint64_t id_;
     Attr size_;
@@ -206,8 +208,9 @@ struct CDEntry {
       offset_ = that.offset_;
       src_    = that.src_;
     }
-    void Print(const char *str="") const
-    { printf("CDEntry:%s (%16lx %10lx %1lx %10lx %p)\n", str, id_, size(), attr(), offset(), src()); }
+
+    void Print(const char *str="", std::function<const char *(uint64_t)> hash=DefaultHash) const
+    { printf("%s (%24s %16lx %3lx %10lx %10lx %p)\n", str, hash(id_), id_, attr(), size(), offset(), src()); }
     inline uint64_t size(void)   const { return size_.attr_.size_; }
     inline uint64_t invalid(void)  const { return size_.attr_.invalid_; }
     inline uint64_t attr(void)   const { return size_.code_ >> 48; }

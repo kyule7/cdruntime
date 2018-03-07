@@ -120,7 +120,7 @@ struct LogEntry : public packer::BaseEntry {
       ftype_ = that.ftype_;
       copy(that);
     }
-    void Print(void) const
+    void Print(const char* str="") const
     { 
       printf("Entry [%16s] %5lx %4lx %4lx %lx\n", ft2str[ftype_], id_, attr(), size(), offset_); 
     }

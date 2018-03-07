@@ -1,11 +1,12 @@
 #include "packer_prof.h"
 #include "packer.h"
 #include "base_store.h"
-#include <stdio.h>
 #include <string.h>
 
 using namespace packer;
 
+std::vector<packer::Time *> packer::prof_list;
+//packer::ProfList packer::prof_list;
 bool packer::isHead = true;
 Time packer::time_write("time_write"); 
 Time packer::time_read("time_read"); 
@@ -18,6 +19,7 @@ Time packer::time_mpiio_seek("mpiio_seek");
 
 Time::Time(const char *str) { 
   Init(str); 
+  prof_list.push_back(this);
 }
 
 Time::~Time(void) {
@@ -26,7 +28,7 @@ Time::~Time(void) {
 
 void Time::Init(const char *str) 
 { 
-  elapsed = 0.0; size = 0; count = 0; 
+  elapsed = 0.000000000001; size = 0; count = 0; 
   if(str != NULL) {
     strcpy(name, str); 
   } else {
@@ -34,15 +36,31 @@ void Time::Init(const char *str)
   }
 }
 
-void Time::Print(void)
+void Time::Print(FILE *buf)
 {
   if(isHead && count > 0) { 
-    printf("[%16s] elapsed:%8.3lf, BW:%8.3lf, size:%12lu, count:%6lu\n", 
+    fprintf(buf, "[%16s] elapsed:%8.3lf, BW:%8.3lf, size:%12lu, count:%6lu\n", 
       name, elapsed, GetBW(), size, count); 
   }
+}
+
+void Time::PrintJSON(FILE *buf)
+{
+  fprintf(buf, "    \"%s\" : {\n", name);
+  fprintf(buf, "      \"volume\" : %lu,\n", size);
+  fprintf(buf, "      \"count\"  : %lu,\n", count);
+  fprintf(buf, "      \"bandwidth\" : %lf,\n", GetBW());
+  fprintf(buf, "      \"elapsed\"   : %lf,\n", elapsed);
+  fprintf(buf, "    },\n");
 }
 
 void packer::SetHead(bool head)
 {
   isHead = head;
+}
+
+void PrintPackerProf(FILE *buf)
+{
+  for(auto it=prof_list.begin(); it!=prof_list.end(); ++it) { 
+    (*it)->PrintJSON(buf); } 
 }

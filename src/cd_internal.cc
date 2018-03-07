@@ -1114,8 +1114,12 @@ CDErrT CD::Begin(const char *label, bool collective)
   }
 
   // NOTE: This point reset rollback_point_
+#if 1 // debug
   uint32_t new_rollback_point = SyncCDs(this, true);
   SetRollbackPoint(new_rollback_point, false);
+#else
+  uint32_t new_rollback_point = CheckRollbackPoint(false);
+#endif
 
 //  const uint32_t level = level();
 //  in Begin
@@ -1582,9 +1586,6 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
       const int64_t curr_begID = phaseTree.current_->seq_begin_;
       CD_DEBUG(">>> Failure Detected (%s), fphase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
           label_.c_str(), failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
-      if(level() == 1) {
-        printf("something wrong...\n\n\n");
-      }
       if(myTaskID == 0) printf(">>> Failure Detected (%s), fphase:%ld==%u, seqID:%ld==%ld (beg:%ld) <<<\n", 
           label_.c_str(), failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
       failed_phase = phase;
@@ -2605,7 +2606,7 @@ CD::InternalPreserve(void *data,
       // then find ref_id, then read table from ref_id to ref_id+size.
       // Then restore data 
       err = CDInternalErrT::kOK;
-    }
+    } // via-reference ends
     else if( CHECK_PRV_TYPE(preserve_mask, kRegen) ) { // via-regeneration
       //TODO
       ERROR_MESSAGE("Preservation via Regeneration is not supported, yet. :-(");
@@ -2672,7 +2673,9 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     while( parent_cd != NULL ) {
       CD *ptr_cd = parent_cd->ptr_cd();
       if(myTaskID == 0) {
-        ptr_cd->entry_directory_.table_->PrintEntry("Restore");
+        char tmp[16];
+        sprintf(tmp, "Restore %u", ptr_cd->level());
+        ptr_cd->entry_directory_.table_->PrintEntry(tmp, GetCDEntryStr);
       }
       uint64_t tag = search_tag;
       src = ptr_cd->entry_directory_.table_->FindReverse(tag, Attr::koutput);
@@ -2685,6 +2688,7 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
                           (is_ref)? ref_name.c_str() : my_name.c_str(), preserve_mask, 
                           level(),
                           entry_directory_.table_->tablesize());
+  assert(src);
   CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
 
   if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
@@ -2728,17 +2732,18 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
      *********************************************/
 
     if( is_ref ) {
-      if((ref_name.empty() == false) && false) {
+#if 0 // for now do not check this
+      if(ref_name.empty() == false) {
         uint64_t my_id = cd_hash(my_name);
         uint32_t my_lv = INVALID_NUM32;
         CDEntry *dst = SearchEntry(my_id, my_lv);
         CD_ASSERT_STR(dst->src() == data, "dst: %p==%p ", dst->src(), data);
         CD_ASSERT_STR(dst->size() == len_in_bytes, "len: %lu==%lu ", dst->size(), len_in_bytes);
       }
+#endif
     } else {
       CD_ASSERT_STR(src->src() == data, "%s src: %p==%p ",
          (is_ref)? ref_name.c_str() : my_name.c_str(), src->src(), data);
-
     }
 #if 0
     CDEntry *pentry = entry_directory_.Restore(tag, (char *)data, len_in_bytes);//, (char *)data);i
@@ -3421,12 +3426,6 @@ CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name, uint16_t attr)
   } else {
     uint64_t tag = entry_name;
     entry = entry_directory_.table_->FindReverse(tag, attr);
-
-//    if(cd::failed_phase != HEALTHY && myTaskID == 0) {
-//      char tmp[16];
-//      sprintf(tmp, "SH %u", level());
-//      entry_directory_.table_->PrintEntry(tmp);
-//    }
   }
   
   if(entry != NULL) {
@@ -3533,7 +3532,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
   //if(incomplete_log_.size()!=0) 
   {
     CD_DEBUG("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
-    if(myTaskID ==7) printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
+//    if(myTaskID ==7) printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
   }
 
 #if _MPI_VER
@@ -4003,7 +4002,15 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, uint1
   CD_DEBUG("\n[CD::SearchEntry] %s. Check entry %lx at Node ID %s, CDName %s\n", 
            (entry != NULL)? "Found":"NotFound",
            tag_to_search, GetNodeID().GetString().c_str(), GetCDName().GetString().c_str());
-
+  
+//  if(entry == NULL) {
+//    if(cd::failed_phase != HEALTHY && myTaskID == 0) {
+//      char tmp[16];
+//      sprintf(tmp, "SH %u", level());
+//      entry_directory_.table_->PrintEntry(tmp);
+//    }
+//    assert(0);
+//  }
   return entry;
 }
 
@@ -4057,6 +4064,7 @@ uint64_t cd::GetCDEntryID(const std::string &str)
 //  }
   //std::string entry_str(str);
   uint64_t id = cd_hash(str);
+  tag2str[id] = str;
   //uint64_t id = cd_hash(std::string(str));
 //  std::unordered_map<uint64_t, string>::const_iterator it = tag2str.find(id);
 //  if(it == tag2str.end()) {
@@ -4066,7 +4074,7 @@ uint64_t cd::GetCDEntryID(const std::string &str)
   return id;
 }
 
-const char *GetCDEntryStr(uint64_t id)
+const char *cd::GetCDEntryStr(uint64_t id)
 {
   return tag2str[id].c_str();
 }

@@ -19,4 +19,5 @@ BaseTable *GetTable(uint32_t entry_type, char *ptr_entry, uint32_t len_in_byte)
   printf("[%s] %u %p %u ret:%p\n", __func__, entry_type, ptr_entry, len_in_byte, ret);
   return ret;
 }
+const char *DefaultHash(uint64_t id) { return ""; }
 }
