@@ -828,7 +828,8 @@ class HeadCD : public CD {
 #endif    
 };
 
-
   } // namespace internal ends
+uint64_t GetCDEntryID(const std::string &str);
+const char *GetCDEntryStr(uint64_t id);
 } // namespace cd ends
 #endif

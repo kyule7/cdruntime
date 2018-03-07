@@ -213,7 +213,12 @@ void SystemConfig::ParseParam(char *key)
     AddIndent(seq_cnt); CD_PRINT_CONFIG(tstream, "%s: ", key);
   } else { // value
     if(prv == 'F') {
-      config.failure_rate_[errortype] = atof(key);
+      int num_tasks = 1;
+      char *keep_failure_rate_same = getenv( "KEEP_TOTAL_FAILURE_RATE_SAME" );
+      if(keep_failure_rate_same != NULL)
+        num_tasks = cd::totalTaskSize;
+      config.failure_rate_[errortype] = atof(key) / num_tasks;
+      if(myTaskID == 0) printf("failure rate %d:%lf, %lf\n", errortype, atof(key), config.failure_rate_[errortype]);
     } else if(prv == 'l') {
       label = key;
       tuned::phaseTree.current_->label_ = label;

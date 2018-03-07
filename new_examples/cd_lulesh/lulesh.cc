@@ -182,9 +182,12 @@ double cmpl_time = 0.0;
 double begn_end = 0.0;
 double cmpl_end = 0.0;
 uint64_t prv_len = 0;
+
+#define PRINT_ONE(...) if(myRank == 1) fprintf(stdout, __VA_ARGS__)
 #if _CD
 CDHandle *cd_main_loop = NULL;
 CDHandle *cd_child_loop = NULL;
+CDHandle *root_cd = NULL;
 //CDHandle *cd_main_dummy = NULL;;
 CDHandle *dummy_cd = NULL;
 packer::MagicStore magic __attribute__((aligned(0x1000)));
@@ -1343,23 +1346,46 @@ static inline void CalcForceForNodes(Domain& domain)
   double prv_start = MPI_Wtime();
   #endif
 
-  if(domain.check_begin(intvl0) || domain.check_begin(intvl1) || _LEAF_LV) // leaf always preserve per loop 
-  {
-  #if _CD_DUMMY
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy");
-  #else
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
+  #if _LEAF_LV  
+    prv_len += leaf_cd->Preserve(dynamic_cast<Internal *>(&domain), sizeof(Internal), kCopy, "LeafDomain");
   #endif
-//    if(myRank == 1) printf("Prv %s       CalcForce %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
-    dump_end  += MPI_Wtime() - prv_start;
-    dump_phase[0] = MPI_Wtime() - prv_start;
-  }
+
+  #if _CD_DUMMY
+  if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); }
+
+  #else
+
+  if(domain.check_begin(intvl0)) {
+    prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); 
+    PRINT_ONE("Prv Parent       CalcForce %luMB\n", prv_len/1000000); }
+  else if(domain.check_begin(intvl1)) {
+    prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); 
+    PRINT_ONE("Prv Child        CalcForce %luMB\n", prv_len/1000000); }
+
+  #endif
+  else if(_LEAF_LV) { // leaf always preserve per loop 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
+    PRINT_ONE("Prv LeafCD       CalcForce %luMB\n", prv_len/1000000); }
+//  if(myRank == 1) {
+//    if(domain.check_begin(intvl0) || domain.check_begin(intvl1))
+//      printf("Prv %s       CalcForce %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
+//    else
+//      printf("Prv LeafCD       CalcForce %luMB\n", prv_len/1000000);
+//  }
+  double prvtime = MPI_Wtime() - prv_start;
+  dump_phase[0] = prvtime;
+  dump_end  += prvtime;
 #endif
   /* Calcforce calls partial, force, hourq */
   CalcVolumeForceForElems(domain) ;
 #if _CD && _CD_CDRT
   #if _CD_DUMMY
-  if(domain.check_end(intvl0) || domain.check_end(intvl1) || _LEAF_LV) 
+  if(domain.check_end(intvl0))
+    prv_len += root_cd->Preserve(domain.SetOp(prvec_f), kOutput, "CalcForceCopy");
+  else if(domain.check_end(intvl1)) 
     prv_len += dummy_cd->Preserve(domain.SetOp(prvec_f), kOutput, "CalcForceCopy");
   #endif
 
@@ -1517,17 +1543,50 @@ void LagrangeNodal(Domain& domain)
   CDHandle *leaf_cd = GetCurrentCD();
   double prv_start = MPI_Wtime();
   #endif
-  if(domain.check_begin(intvl0) || domain.check_begin(intvl1) || _LEAF_LV) // leaf always preserve per loop 
-  {
-  #if _CD_DUMMY
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc");
-  #else
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
+//  if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) // leaf always preserve per loop 
+//  {
+//  #if _CD_DUMMY
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc");
+//  #else
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
+//  #endif
+////    if(myRank == 1) printf("Prv %s       PosVelAcc %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
+//    dump_end  += MPI_Wtime() - prv_start;
+//    dump_phase[1] = MPI_Wtime() - prv_start;
+//  } else {
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
+//  }
+  #if _LEAF_LV  
+    prv_len += leaf_cd->Preserve(dynamic_cast<Internal *>(&domain), sizeof(Internal), kCopy, "LeafDomain");
   #endif
-//    if(myRank == 1) printf("Prv %s       PosVelAcc %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
-    dump_end  += MPI_Wtime() - prv_start;
-    dump_phase[1] = MPI_Wtime() - prv_start;
-  }
+  #if _CD_DUMMY
+  if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc"); }
+
+  #else
+
+  if(domain.check_begin(intvl0)) {
+    prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc"); 
+    PRINT_ONE("Prv Parent       PosVelAcc %luMB\n", prv_len/1000000); }
+  else if(domain.check_begin(intvl1)) {
+    prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc"); 
+    PRINT_ONE("Prv Child        PosVelAcc %luMB\n", prv_len/1000000); }
+
+  #endif
+  else if(_LEAF_LV) { // leaf always preserve per loop 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
+    PRINT_ONE("Prv LeafCD       PosVelAcc %luMB\n", prv_len/1000000); }
+//  if(myRank == 1) {
+//    if(domain.check_begin(intvl0) || domain.check_begin(intvl1))
+//      printf("Prv %s       PosVelAcc %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
+//    else
+//      printf("Prv LeafCD       PosVelAcc %luMB\n", prv_len/1000000);
+//  }
+  double prvtime = MPI_Wtime() - prv_start;
+  dump_phase[1] = prvtime;
+  dump_end  += prvtime;
 #endif
    CalcAccelerationForNodes(domain, domain.numNode());
    
@@ -1545,8 +1604,10 @@ void LagrangeNodal(Domain& domain)
 
 #if _CD && _CD_CDRT
   #if _CD_DUMMY
-  if(domain.check_end(intvl0) || domain.check_end(intvl1) || _LEAF_LV) 
-    prv_len += dummy_cd->Preserve(domain.SetOp(prvec_posall), kOutput, "PosVelAcc"); 
+  if(domain.check_end(intvl0))
+    prv_len += root_cd->Preserve(domain.SetOp(prvec_posall), kOutput, "PosVelAcc");
+  else if(domain.check_end(intvl1)) 
+    prv_len += dummy_cd->Preserve(domain.SetOp(prvec_posall), kOutput, "PosVelAcc");
   #endif
 
   #if _LEAF_LV
@@ -2749,17 +2810,50 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   CDHandle *leaf_cd = GetCurrentCD();
   double prv_start = MPI_Wtime();
   #endif
-  if(domain.check_begin(intvl0) || domain.check_begin(intvl1) || _LEAF_LV) // leaf always preserve per loop 
-  { 
-  #if _CD_DUMMY
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem");
-  #else
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem");
+//  if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) // leaf always preserve per loop 
+//  { 
+//  #if _CD_DUMMY
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem");
+//  #else
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem");
+//  #endif
+////    if(myRank == 1) printf("Prv %s    LagrangeElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
+//    dump_end  += MPI_Wtime() - prv_start;
+//    dump_phase[2] = MPI_Wtime() - prv_start;
+//  } else {
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem");
+//  }
+  #if _LEAF_LV  
+    prv_len += leaf_cd->Preserve(dynamic_cast<Internal *>(&domain), sizeof(Internal), kCopy, "LeafDomain");
   #endif
-//    if(myRank == 1) printf("Prv %s    LargrageElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
-    dump_end  += MPI_Wtime() - prv_start;
-    dump_phase[2] = MPI_Wtime() - prv_start;
-  }
+  #if _CD_DUMMY
+  if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem"); }
+
+  #else
+
+  if(domain.check_begin(intvl0)) {
+    prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem"); 
+    PRINT_ONE("Prv Parent     LagrangeElem %luMB\n", prv_len/1000000); }
+  else if(domain.check_begin(intvl1)) {
+    prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem"); 
+    PRINT_ONE("Prv Child     LagrangeElem %luMB\n", prv_len/1000000); }
+
+  #endif
+  else if(_LEAF_LV) { // leaf always preserve per loop 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem");
+    PRINT_ONE("Prv LeafCD    LagrangeElem %luMB\n", prv_len/1000000); }
+//  if(myRank == 1) {
+//    if(domain.check_begin(intvl0) || domain.check_begin(intvl1))
+//      printf("Prv %s    LagrangeElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
+//    else
+//      printf("Prv LeafCD    LagrangeElem %luMB\n", prv_len/1000000);
+//  }
+  double prvtime = MPI_Wtime() - prv_start;
+  dump_phase[2] = prvtime;
+  dump_end  += prvtime;
 #endif
   // Out{DELV,VDOV,AREALG} <- In{X,Y,Z,XD,YD,ZD,NODELIST
   //                             DXX,DYY,DZZ,V,VOLO,DELV,VDOV,AREALG}
@@ -2768,7 +2862,9 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 
 #if _CD && _CD_CDRT
   #if _CD_DUMMY
-  if(domain.check_end(intvl0) || domain.check_end(intvl1) || _LEAF_LV) 
+  if(domain.check_end(intvl0))
+    prv_len += root_cd->Preserve(domain.SetOp(prvec_elem), kOutput, "LagrangeElem");
+  else if(domain.check_end(intvl1)) 
     prv_len += dummy_cd->Preserve(domain.SetOp(prvec_elem), kOutput, "LagrangeElem");
   #endif
 
@@ -2785,17 +2881,50 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   prv_start = MPI_Wtime();
   #endif
 
-  if(domain.check_begin(intvl0) || domain.check_begin(intvl1) || _LEAF_LV) // leaf always preserve per loop 
-  {
-  #if _CD_DUMMY
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem");
-  #else
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
+//  if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) // leaf always preserve per loop 
+//  {
+//  #if _CD_DUMMY
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem");
+//  #else
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
+//  #endif
+////    if(myRank == 1) printf("Prv %s        QforElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
+//    dump_end  += MPI_Wtime() - prv_start;
+//    dump_phase[3] = MPI_Wtime() - prv_start;
+//  } else {
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
+//  }
+  #if _LEAF_LV  
+    prv_len += leaf_cd->Preserve(dynamic_cast<Internal *>(&domain), sizeof(Internal), kCopy, "LeafDomain");
   #endif
-//    if(myRank == 1) printf("Prv %s        QforElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
-    dump_end  += MPI_Wtime() - prv_start;
-    dump_phase[3] = MPI_Wtime() - prv_start;
-  }
+  #if _CD_DUMMY
+  if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem"); }
+
+  #else
+
+  if(domain.check_begin(intvl0)) {
+    prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem"); 
+    PRINT_ONE("Prv Parent         QforElem %luMB\n", prv_len/1000000); }
+  else if(domain.check_begin(intvl1)) {
+    prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem"); 
+    PRINT_ONE("Prv Child         QforElem %luMB\n", prv_len/1000000); }
+
+  #endif
+  else if(_LEAF_LV) { // leaf always preserve per loop 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
+    PRINT_ONE("Prv LeafCD        QforElem %luMB\n", prv_len/1000000); }
+//  if(myRank == 1) {
+//    if(domain.check_begin(intvl0) || domain.check_begin(intvl1))
+//      printf("Prv %s        QforElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
+//    else
+//      printf("Prv LeafCD        QforElem %luMB\n", prv_len/1000000);
+//  }
+  prvtime = MPI_Wtime() - prv_start;
+  dump_phase[3] = prvtime;
+  dump_end  += prvtime;
 #endif
   /* Calculate Q.  (Monotonic q option requires communication) */
   // Out{QL,QQ} <- In{regElemSize,regElemlist,X,Y,Z,XD,YD,ZD,NODELIST
@@ -2807,7 +2936,9 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 
 #if _CD && _CD_CDRT
   #if _CD_DUMMY
-  if(domain.check_end(intvl0) || domain.check_end(intvl1) || _LEAF_LV) 
+  if(domain.check_end(intvl0))
+    prv_len += root_cd->Preserve(domain.SetOp(prvec_q), kOutput, "QforElem");
+  else if(domain.check_end(intvl1)) 
     prv_len += dummy_cd->Preserve(domain.SetOp(prvec_q), kOutput, "QforElem");
   #endif
 
@@ -2824,17 +2955,50 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   prv_start = MPI_Wtime();
   #endif
 
-  if(domain.check_begin(intvl0) || domain.check_begin(intvl1) || _LEAF_LV) // leaf always preserve per loop 
-  {
-  #if _CD_DUMMY
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem");
-  #else
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem");
+//  if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) // leaf always preserve per loop 
+//  {
+//  #if _CD_DUMMY
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem");
+//  #else
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem");
+//  #endif
+////    if(myRank == 1) printf("Prv %s MaterialForElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
+//    dump_end  += MPI_Wtime() - prv_start;
+//    dump_phase[4] = MPI_Wtime() - prv_start;
+//  } else {
+//    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem");
+//  }
+  #if _LEAF_LV  
+    prv_len += leaf_cd->Preserve(dynamic_cast<Internal *>(&domain), sizeof(Internal), kCopy, "LeafDomain");
   #endif
-//    if(myRank == 1) printf("Prv %s MaterialForElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
-    dump_end  += MPI_Wtime() - prv_start;
-    dump_phase[4] = MPI_Wtime() - prv_start;
-  }
+
+  #if _CD_DUMMY
+  if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem"); }
+
+  #else
+
+  if(domain.check_begin(intvl0)) {
+    prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem"); 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem"); 
+    PRINT_ONE("Prv Parent MaterialForElem %luMB\n", prv_len/1000000); }
+  else if(domain.check_begin(intvl1)) {
+    prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem"); 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem"); 
+    PRINT_ONE("Prv Child  MaterialForElem %luMB\n", prv_len/1000000); }
+  #endif
+  else if(_LEAF_LV) { // leaf always preserve per loop 
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem");
+    PRINT_ONE("Prv LeafCD MaterialForElem %luMB\n", prv_len/1000000); }
+//  if(myRank == 0) {
+//    if(domain.check_begin(intvl0) || domain.check_begin(intvl1))
+//      printf("Prv %s MaterialForElem %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
+//    else
+//      printf("Prv LeafCD MaterialForElem %luMB\n", prv_len/1000000);
+//  }
+  prvtime = MPI_Wtime() - prv_start;
+  dump_phase[4] = prvtime;
+  dump_end  += prvtime;
 #endif
 
   // Out{E,P,Q,SS} <- In{regElemSize,regElemlist,E,P,Q,QL,QQ,V,DELV,SS}
@@ -2849,7 +3013,9 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 #if _CD && _CD_CDRT
 
   #if _CD_DUMMY
-  if(domain.check_end(intvl0) || domain.check_end(intvl1) || _LEAF_LV) 
+  if(domain.check_end(intvl0))
+    prv_len += root_cd->Preserve(domain.SetOp(prvec_matrl), kOutput, "MaterialforElem");
+  else if(domain.check_end(intvl1)) 
     prv_len += dummy_cd->Preserve(domain.SetOp(prvec_matrl), kOutput, "MaterialforElem");
   #endif
 
@@ -3134,7 +3300,7 @@ int main(int argc, char *argv[])
 
    ParseCommandLineOptions(argc, argv, myRank, &opts);
 //   opts.nx=40;
-   opts.its = 300;
+//   opts.its = 300;
 
    // overwrite parms
 //   opts.nx  = 60;
@@ -3208,7 +3374,7 @@ int main(int argc, char *argv[])
   }
   lulesh_intvl = getenv( "LULESH_LV2" );
   if(lulesh_intvl != NULL) {
-    intvl[1] = atoi(lulesh_intvl);
+    intvl[2] = atoi(lulesh_intvl);
     if(myRank == 4) printf("2 %s\n", lulesh_intvl);
     assert(intvl[1] > 0);
   }
@@ -3217,7 +3383,7 @@ int main(int argc, char *argv[])
   intvl1 = intvl[1];
   intvl2 = intvl[2];
 
-  CDHandle* root_cd = CD_Init(numRanks, myRank, kPFS);
+  root_cd = CD_Init(numRanks, myRank, kPFS);
   CD_Begin(root_cd, "Root");
 #if _CD_CDRT 
   root_cd->Preserve(locDom->SetOp(prvec_readonly_all), kCopy, "ReadOnlyData");
@@ -3268,7 +3434,7 @@ int main(int argc, char *argv[])
 #endif
 #if _CD
 #if _CD_DUMMY
-   CDPrvType prv_type = (CDPrvType)(kRef | kOutput);
+   CDPrvType prv_type = (CDPrvType)(kRef);
 #else
    CDPrvType prv_type = kCopy;
 #endif

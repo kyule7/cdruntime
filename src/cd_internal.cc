@@ -2606,7 +2606,7 @@ CD::InternalPreserve(void *data,
       // then find ref_id, then read table from ref_id to ref_id+size.
       // Then restore data 
       err = CDInternalErrT::kOK;
-    }
+    } // via-reference ends
     else if( CHECK_PRV_TYPE(preserve_mask, kRegen) ) { // via-regeneration
       //TODO
       ERROR_MESSAGE("Preservation via Regeneration is not supported, yet. :-(");
@@ -2673,7 +2673,9 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     while( parent_cd != NULL ) {
       CD *ptr_cd = parent_cd->ptr_cd();
       if(myTaskID == 0) {
-        ptr_cd->entry_directory_.table_->PrintEntry("Restore");
+        char tmp[16];
+        sprintf(tmp, "Restore %u", ptr_cd->level());
+        ptr_cd->entry_directory_.table_->PrintEntry(tmp, GetCDEntryStr);
       }
       uint64_t tag = search_tag;
       src = ptr_cd->entry_directory_.table_->FindReverse(tag, Attr::koutput);
@@ -2686,6 +2688,7 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
                           (is_ref)? ref_name.c_str() : my_name.c_str(), preserve_mask, 
                           level(),
                           entry_directory_.table_->tablesize());
+  assert(src);
   CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
 
   if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
@@ -3529,7 +3532,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
   //if(incomplete_log_.size()!=0) 
   {
     CD_DEBUG("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
-    if(myTaskID ==7) printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
+//    if(myTaskID ==7) printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
   }
 
 #if _MPI_VER
@@ -4000,14 +4003,14 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, uint1
            (entry != NULL)? "Found":"NotFound",
            tag_to_search, GetNodeID().GetString().c_str(), GetCDName().GetString().c_str());
   
-  if(entry == NULL) {
-    if(cd::failed_phase != HEALTHY && myTaskID == 0) {
-      char tmp[16];
-      sprintf(tmp, "SH %u", level());
-      entry_directory_.table_->PrintEntry(tmp);
-    }
-    assert(0);
-  }
+//  if(entry == NULL) {
+//    if(cd::failed_phase != HEALTHY && myTaskID == 0) {
+//      char tmp[16];
+//      sprintf(tmp, "SH %u", level());
+//      entry_directory_.table_->PrintEntry(tmp);
+//    }
+//    assert(0);
+//  }
   return entry;
 }
 
@@ -4061,6 +4064,7 @@ uint64_t cd::GetCDEntryID(const std::string &str)
 //  }
   //std::string entry_str(str);
   uint64_t id = cd_hash(str);
+  tag2str[id] = str;
   //uint64_t id = cd_hash(std::string(str));
 //  std::unordered_map<uint64_t, string>::const_iterator it = tag2str.find(id);
 //  if(it == tag2str.end()) {
@@ -4070,7 +4074,7 @@ uint64_t cd::GetCDEntryID(const std::string &str)
   return id;
 }
 
-const char *GetCDEntryStr(uint64_t id)
+const char *cd::GetCDEntryStr(uint64_t id)
 {
   return tag2str[id].c_str();
 }

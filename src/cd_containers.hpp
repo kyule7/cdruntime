@@ -219,7 +219,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
 //      }
     packer::CDEntry *pentry = reinterpret_cast<packer::CDEntry *>(packer.Restore(id_, ptr, rst_size));
     if(pentry == NULL) { 
-      printf("Failed to restore CDVector %s (%lx) restored (%lu)\n", name_.c_str(), id_, rst_size);
+      if(myTaskID == 0) printf("Failed to restore CDVector %s (%lx) restored (%lu)\n", name_.c_str(), id_, rst_size);
       return -1UL; 
     }
 //    assert(pentry);
