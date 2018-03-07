@@ -3423,12 +3423,6 @@ CDEntry *CD::InternalGetEntry(ENTRY_TAG_T entry_name, uint16_t attr)
   } else {
     uint64_t tag = entry_name;
     entry = entry_directory_.table_->FindReverse(tag, attr);
-
-//    if(cd::failed_phase != HEALTHY && myTaskID == 0) {
-//      char tmp[16];
-//      sprintf(tmp, "SH %u", level());
-//      entry_directory_.table_->PrintEntry(tmp);
-//    }
   }
   
   if(entry != NULL) {
@@ -4005,7 +3999,15 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, uint1
   CD_DEBUG("\n[CD::SearchEntry] %s. Check entry %lx at Node ID %s, CDName %s\n", 
            (entry != NULL)? "Found":"NotFound",
            tag_to_search, GetNodeID().GetString().c_str(), GetCDName().GetString().c_str());
-
+  
+  if(entry == NULL) {
+    if(cd::failed_phase != HEALTHY && myTaskID == 0) {
+      char tmp[16];
+      sprintf(tmp, "SH %u", level());
+      entry_directory_.table_->PrintEntry(tmp);
+    }
+    assert(0);
+  }
   return entry;
 }
 

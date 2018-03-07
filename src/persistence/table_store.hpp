@@ -273,9 +273,10 @@ class TableStore : public BaseTable {
               ret = &(ptr_[i]);
               id = i;
               if(ptr_[i].size_.Check(attr) && attr != Attr::knoattr) {
-                char tmp[32];
-                sprintf(tmp, "ERROR %x", attr);
-                ptr_[i].Print(tmp); assert(0);
+//                char tmp[32];
+//                sprintf(tmp, "ERROR %x", attr);
+//                ptr_[i].Print(tmp); 
+                ret = NULL;
               }
               break;
             }

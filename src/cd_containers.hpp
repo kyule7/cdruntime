@@ -259,7 +259,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
         char *ptr = reinterpret_cast<char *>(this->data());
         difference = Compare<T>((T *)orig_, (T *)ptr, this->size());
         if(difference > 0.0) {
-          if(myTaskID==0) printf("[%d] <%s %s> difference=%f\n",myTaskID,  __func__, entry_str, difference);
+          //if(myTaskID==0) printf("[%d] <%s %s> difference=%f\n",myTaskID,  __func__, entry_str, difference);
           memcpy(orig_, ptr, this->size());
         }
       }
