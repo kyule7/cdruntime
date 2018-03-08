@@ -16,28 +16,6 @@
 static void advanceVelocity(SimFlat *s, int nBoxes, real_t dt);
 static void advancePosition(SimFlat *s, int nBoxes, real_t dt);
 
-#if _CD2
-// unsigned int preserveSimFlat(cd_handle_t *cdh, uint32_t knob, SimFlat *sim,
-// int doeam); unsigned int preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms
-// *atoms, int nTotalBoxes,
-//                           unsigned int is_all, unsigned int is_gid,
-//                           unsigned int is_r, unsigned int is_p,
-//                           unsigned int is_f, unsigned int is_U,
-//                           unsigned int is_iSpecies, unsigned int from, int
-//                           to, unsigned int is_print, char *idx);
-// unsigned int preserveSpeciesData(cd_handle_t *cdh, uint32_t knob, SpeciesData
-// *species); unsigned int preserveLinkCell(cd_handle_t *cdh, uint32_t knob,
-//                              LinkCell *linkcell,
-//                              unsigned int is_all,
-//                              unsigned int is_nAtoms, unsigned int is_local,
-//                              unsigned int is_nLocalBoxes,
-//                              unsigned int is_nTotalBoxes);
-// unsigned int preserveHaloAtom(cd_handle_t *cdh, uint32_t knob,
-//                              AtomExchangeParms *xchange_parms,
-//                              unsigned int is_cellList,
-//                              unsigned int is_pbcFactor);
-#endif
-
 /// Advance the simulation time to t+dt using a leap frog method
 /// (equivalent to velocity verlet).
 ///

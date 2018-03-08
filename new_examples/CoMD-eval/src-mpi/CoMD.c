@@ -149,6 +149,10 @@ int main(int argc, char **argv) {
   // TODO(estimator): 0xE vs 0xF, kHDD vs kDRAM(=kLocalMemory)
   cd_handle_t *lv1_cd_inner = cd_create(getcurrentcd(), 1, "main_loop_inner",
                               kStrict | kLocalMemory, 0xE); // F8, F4, F2
+#if _CD2
+  cd_handle_t *lv2_cd = NULL;
+#endif //_CD2 && _CD1
+
 #endif //_CD1
 
   // This is the CoMD main loop
@@ -277,7 +281,7 @@ int main(int argc, char **argv) {
     //      communication: AllReduce: send(nLocal) / recv(nGlobal)
     sumAtoms(sim);
     stopTimer(commReduceTimer);
-
+#if _CD1
     if(getMyRank() == 0) {
       if(is_reexec()) { 
         printf("[%d Re-execution(%d):Rank0] printThings\n",
@@ -289,18 +293,16 @@ int main(int argc, char **argv) {
 
       }
     }
+#endif
     printThings(sim, iStep, getElapsedTime(timestepTimer));
 
 #if _CD2
-    cd_handle_t *lv2_cd = NULL;
     // FIXME: CD1_INTERVAL and CD2_INTERVAL
     if (iStep % (CD1_INTERVAL * printRate) == 0) {
       //TODO(estimator): KHDD vs kDRAM
       lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep",
                          kStrict | kLocalMemory, 0xF);
                       // kStrict | kDRAM, 0xF);
-      // cd_handle_t *lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep",
-      //                                kStrict | kDRAM, 0xF);
     }
 #endif //_CD2
     startTimer(timestepTimer);
@@ -310,7 +312,9 @@ int main(int argc, char **argv) {
     //--------------------------------
     stopTimer(timestepTimer);
 #if _CD2
-    if (iStep % (CD1_INTERVAL * printRate) == 0) {
+    // Notice that iStep hasn't been increased yet.
+    if (iStep % (CD1_INTERVAL * printRate) == (CD1_INTERVAL-1) * printRate ) {
+    //if (iStep % (CD1_INTERVAL * printRate) == 0) {
       cd_destroy(lv2_cd);
     }
 #endif
@@ -390,6 +394,9 @@ int main(int argc, char **argv) {
 #if _CD1
   // for the corner case when lv1_cd_inner is not yet completed.
   if( is_lv1_completed == 0 ) {
+#if _CD2
+    cd_destroy(lv2_cd);
+#endif
     cd_detect(lv1_cd_inner);
     cd_complete(lv1_cd_inner);
     if(getMyRank() == 0) printf("[%d]lv1_cd_inner completes at %d\n\n", CD1_INTERVAL, iStep);
