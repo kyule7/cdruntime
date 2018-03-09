@@ -270,6 +270,10 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
 
   // Preserve array for gids of atoms
   else {
+    // FIXME :Let's preserve all the pointers regardless of what needed actually 
+    // since it's not super expensive.
+    // FIXME: then skip to manually preserve each pointer below
+    cd_preserve(cdh, atoms, atoms_size, knob, "Atoms", "Atoms");
     if (is_gid == 1) {
       // Be careful not to preserve twice
       assert(is_all != 1);
@@ -331,7 +335,7 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
 #ifdef DO_PRV
       cd_preserve(cdh, &(atoms->r), sizeof(real3 *), knob, tmp_atoms_r_ptr,
                   tmp_atoms_r_ptr);
-      cd_preserve(cdh, &(atoms->r[prvStartIdx]), r_size, knob, tmp_atoms_r,
+      cd_preserve(cdh, atoms->r[prvStartIdx], r_size, knob, tmp_atoms_r,
                   tmp_atoms_r);
 #endif
       size += r_size;
@@ -352,7 +356,7 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
 #ifdef DO_PRV
       cd_preserve(cdh, &(atoms->p), sizeof(real3 *), knob, tmp_atoms_p_ptr,
                   tmp_atoms_p_ptr);
-      cd_preserve(cdh, &(atoms->p[prvStartIdx]), p_size, knob, tmp_atoms_p,
+      cd_preserve(cdh, atoms->p[prvStartIdx], p_size, knob, tmp_atoms_p,
                   tmp_atoms_p);
 #endif
       size += p_size;
@@ -373,7 +377,7 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
 #ifdef DO_PRV
       cd_preserve(cdh, &(atoms->f), sizeof(real3 *), knob, tmp_atoms_f_ptr,
                   tmp_atoms_f_ptr);
-      cd_preserve(cdh, &(atoms->f[prvStartIdx]), f_size, knob, tmp_atoms_f,
+      cd_preserve(cdh, atoms->f[prvStartIdx], f_size, knob, tmp_atoms_f,
                   tmp_atoms_f);
 #endif
       size += f_size;
@@ -572,15 +576,15 @@ unsigned int preserveHaloAtom(cd_handle_t *cdh, uint32_t knob,
     //            "AtomExchangeParms_pbcFactor0", "AtomExchangeParms_pbcFactor0");
     cd_preserve(cdh, xchange_parms->pbcFactor[0], pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor0", "AtomExchangeParms_pbcFactor0");
-    cd_preserve(cdh, &(xchange_parms->pbcFactor[1]), pbcFactor_size, knob,
+    cd_preserve(cdh, xchange_parms->pbcFactor[1], pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor1", "AtomExchangeParms_pbcFactor1");
-    cd_preserve(cdh, &(xchange_parms->pbcFactor[2]), pbcFactor_size, knob,
+    cd_preserve(cdh, xchange_parms->pbcFactor[2], pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor2", "AtomExchangeParms_pbcFactor2");
-    cd_preserve(cdh, &(xchange_parms->pbcFactor[3]), pbcFactor_size, knob,
+    cd_preserve(cdh, xchange_parms->pbcFactor[3], pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor3", "AtomExchangeParms_pbcFactor3");
-    cd_preserve(cdh, &(xchange_parms->pbcFactor[4]), pbcFactor_size, knob,
+    cd_preserve(cdh, xchange_parms->pbcFactor[4], pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor4", "AtomExchangeParms_pbcFactor4");
-    cd_preserve(cdh, &(xchange_parms->pbcFactor[5]), pbcFactor_size, knob,
+    cd_preserve(cdh, xchange_parms->pbcFactor[5], pbcFactor_size, knob,
                 "AtomExchangeParms_pbcFactor5", "AtomExchangeParms_pbcFactor5");
 #endif
     //TODO: add PRINTON part
@@ -644,4 +648,35 @@ unsigned int preserveForceData(cd_handle_t *cdh, uint32_t knob,
 #endif
   size += dfEmbed_size + boxes_size;
   return size;
+}
+
+void destroyDataDuringReexecution(SimFlat *sim, int ranks) {
+  if(is_reexec()) {
+    // allranks
+    if( ranks == -1 ) {
+      // remove pointeres
+      //sim->domain = NULL;
+      //sim->boxes = NULL;
+      for(int i = 0; i < MAXATOMS; i++) {
+        sim->atoms->r[i][0] = 0;
+        sim->atoms->p[i][0] = 0;
+        sim->atoms->f[i][0] = 0;
+        sim->atoms->U[i] = 0;
+      }
+    }
+    // the specifed rank
+    else if( ranks >=0 && ranks <= getNRanks() ) {
+      if( ranks == getMyRank() ) {
+        // remove pointeres
+        //sim->domain = NULL;
+        //sim->boxes = NULL;
+        for(int i = 0; i < MAXATOMS; i++) {
+          sim->atoms->r[i][0] = 0;
+          sim->atoms->p[i][0] = 0;
+          sim->atoms->f[i][0] = 0;
+          sim->atoms->U[i] = 0;
+        }
+      }
+    }
+  }
 }

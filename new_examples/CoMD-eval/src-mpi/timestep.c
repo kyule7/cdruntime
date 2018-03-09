@@ -37,34 +37,43 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #if _CD2
   cd_handle_t *lv2_cd = getleafcd();
 #endif
+  // This will iterate as many as specified in "printRate (default:10)"
   for (int ii = 0; ii < nSteps; ++ii) {
 #if _CD2
     //*****************************************************************************
     //            cd boundary: velocity (0.08%) (for both)
     //*****************************************************************************
     cd_begin(lv2_cd, "advanceVelocity_start"); // lv2_cd starts
-    // FIXME: should this be kRef?
-
-    // Preserve local atoms->f (force)
+    // FIXME: should this be kRef for the first iteration?
+    // Note that we need to preserv atoms-> p as well 
+    // Preserve local atoms->f (force) and atoms->p (momentum) (read and written)
     // TODO: Did this preserved in level1? Yes.
     //       Then, need to skip when both level1 and level2 are enabled
-    char idx_advanceVelocity_start[256] = "-1"; // FIXME: it this always enough?
-    sprintf(idx_advanceVelocity_start, "_vel_start_%d", ii);
+    //char idx_advanceVelocity_start[256] = "-1"; // FIXME: it this always enough?
+    //sprintf(idx_advanceVelocity_start, "_vel_start_%d", ii);
+
+    destroyDataDuringReexecution(s, -1); // all ranks destroy pointers and atom
+
     int velocity_pre_size = preserveAtoms(lv2_cd, kCopy, s->atoms,
                                           s->boxes->nLocalBoxes, // not Total
+                                          //s->boxes->nTotalBoxes, // not Total
                                           0,                     // is_all
                                           0,                     // is_gid
                                           0,                     // is_r
-                                          0,                     // is_p
+                                          1,                     // is_p
                                           1,                     // is_f
                                           0,                     // is_U
                                           0,                     // is_iSpecies
                                           0,  // from (entire atoms)
                                           -1, // to (entire atoms)
                                           0,  // is_print
-                                          // NULL);
-                                          idx_advanceVelocity_start);
+                                          NULL);
+                                          //idx_advanceVelocity_start);
     // Preserve boxes->nLocalBoxes and boxes->nAtoms[0:nLocalBoxes-1]
+    // TODO: this doesn't gets changed until redistribtueAtoms below.
+    //       so that can be preserved via reference before it
+    // TODO: also, preserveAtoms actually preserve maximum number of atoms 
+    //        in a box. But still we need nAtoms for each box?
     velocity_pre_size +=
         preserveLinkCell(lv2_cd, kCopy, s->boxes, 0 /*all*/, 1 /*nAtoms*/,
                          1 /*local*/, 1 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
@@ -72,6 +81,8 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 
 #if DO_PRV
     // Preserve loop index (ii)
+    // TODO: this is not the most efficient way of preserving loop index
+    //       also we don't have to distinguish this in the sequential level2 CDs.
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, "advanceVelocity_start_ii",
                 "advanceVelocity_start_ii");
 #endif                                // DO_PRV
@@ -111,7 +122,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                                                   // as one at position?
 //    // s->boxes are not updated but just read in advanceVelocity()
 #endif
-    //    cd_detect(lv2_cd);
+    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 #endif
 
@@ -178,7 +189,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       0,                     // is_print
                       idx_position); // FIXME: what name should be given?
 #endif
-    //    cd_detect(lv2_cd);
+    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 #endif
 
@@ -377,7 +388,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       0,          // is_print
                       idx_force); // FIXME: correct name?
 #endif
-    //      cd_detect(lv3_cd);
+    cd_detect(lv3_cd);
     cd_complete(lv3_cd);
     cd_destroy(lv3_cd);
     //}
@@ -385,7 +396,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #if _CD2
     // Do I need cd_detect here when level2 is enabled? Yes, it won't
     // double detect here and in level3. (FIXME: should be verfified)
-    //    cd_detect(lv2_cd);
+    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 #endif
 //*****************************************************************************
@@ -393,7 +404,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 //*****************************************************************************
 #if _CD2
     cd_begin(lv2_cd, "advanceVelocity_end");
-    // Preserve local atoms->f (force)
+    // Preserve local atoms->f (force) and atoms->p (momentum) (read and written)
     char idx_advanceVelocity_end[256] = "-1"; // FIXME: it this always enough?
     sprintf(idx_advanceVelocity_end, "_vel_end_%d", ii);
     int velocity_end_pre_size =
@@ -403,18 +414,15 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       0,  // is_all
                       0,  // is_gid
                       0,  // is_r
-                      0,  // is_p
+                      1,  // is_p
                       1,  // is_f
                       0,  // is_U
                       0,  // is_iSpecies
                       0,  // from (entire atoms)
                       -1, // to (entire atoms)
                       0,  // is_print
-                      idx_advanceVelocity_end);
-    // Preserve boxes->nLocalBoxes and boxes->nAtoms[0:nLocalBoxes-1]
-    velocity_end_pre_size +=
-        preserveLinkCell(lv2_cd, kCopy, s->boxes, 0 /*all*/, 1 /*only nAtoms*/,
-                         1 /*local*/, 1 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
+                      NULL);
+                      //idx_advanceVelocity_end);
 #if DO_PRV
     // Preserve loop index (ii)
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, "advanceVelocity_end_ii",
@@ -434,8 +442,8 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     //       s->atoms->p
     int velocity_end_pre_out_size =
         preserveAtoms(lv2_cd, kOutput,
-                      // s->atoms, s->boxes->nTotalBoxes,
-                      s->atoms, s->boxes->nLocalBoxes,
+                      s->atoms, s->boxes->nTotalBoxes,
+                      //s->atoms, s->boxes->nLocalBoxes,
                       0,                        // is_all
                       0,                        // is_gid
                       0,                        // is_r
@@ -453,9 +461,10 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     cd_complete(lv2_cd);
 
 #endif
-  }
+  } // for loop
 
-  // This is out of level 2 cd
+  // This is out of level 2 cd and a part of level 1 cd
+  // TODO: eKinteic should be preserved
   kineticEnergy(s);
 
   return s->ePotential;

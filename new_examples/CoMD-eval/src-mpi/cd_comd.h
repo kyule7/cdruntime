@@ -1,5 +1,6 @@
 #include "CoMDTypes.h"
 #include "eam.h" // for ForceExchangeData
+#include "parallel.h" // getNRanks() and getMyRanks()
 
 #ifndef CD_COMD_H_
 #define CD_COMD_H_
@@ -35,5 +36,5 @@ unsigned int preserveHaloForce(cd_handle_t *cdh, uint32_t knob, int doeam,
                                ForceExchangeParms *xchange);
 unsigned int preserveForceData(cd_handle_t *cdh, uint32_t knob,
                                ForceExchangeData *forceData);
-
+void destroyDataDuringReexecution(SimFlat *sim, int ranks);
 #endif
