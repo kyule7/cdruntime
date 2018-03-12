@@ -650,7 +650,10 @@ unsigned int preserveForceData(cd_handle_t *cdh, uint32_t knob,
   return size;
 }
 
-void destroyDataDuringReexecution(SimFlat *sim, int ranks) {
+void destroyAtomInReexecution(SimFlat *sim, int ranks, unsigned int is_r, 
+                                                       unsigned int is_p,
+                                                       unsigned int is_f,
+                                                       unsigned int is_U) {
   if(is_reexec()) {
     // allranks
     if( ranks == -1 ) {
@@ -658,10 +661,10 @@ void destroyDataDuringReexecution(SimFlat *sim, int ranks) {
       //sim->domain = NULL;
       //sim->boxes = NULL;
       for(int i = 0; i < MAXATOMS; i++) {
-        sim->atoms->r[i][0] = 0;
-        sim->atoms->p[i][0] = 0;
-        sim->atoms->f[i][0] = 0;
-        sim->atoms->U[i] = 0;
+        if(is_r == 1) sim->atoms->r[i][0] = 0;
+        if(is_p == 1) sim->atoms->p[i][0] = 0;
+        if(is_f == 1) sim->atoms->f[i][0] = 0;
+        if(is_U == 1) sim->atoms->U[i] = 0;
       }
     }
     // the specifed rank
@@ -671,10 +674,10 @@ void destroyDataDuringReexecution(SimFlat *sim, int ranks) {
         //sim->domain = NULL;
         //sim->boxes = NULL;
         for(int i = 0; i < MAXATOMS; i++) {
-          sim->atoms->r[i][0] = 0;
-          sim->atoms->p[i][0] = 0;
-          sim->atoms->f[i][0] = 0;
-          sim->atoms->U[i] = 0;
+          if(is_r == 1) sim->atoms->r[i][0] = 0;
+          if(is_p == 1) sim->atoms->p[i][0] = 0;
+          if(is_f == 1) sim->atoms->f[i][0] = 0;
+          if(is_U == 1) sim->atoms->U[i] = 0;
         }
       }
     }

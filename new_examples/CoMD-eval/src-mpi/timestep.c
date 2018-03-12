@@ -49,11 +49,9 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // Preserve local atoms->f (force) and atoms->p (momentum) (read and written)
     // TODO: Did this preserved in level1? Yes.
     //       Then, need to skip when both level1 and level2 are enabled
-    //char idx_advanceVelocity_start[256] = "-1"; // FIXME: it this always enough?
-    //sprintf(idx_advanceVelocity_start, "_vel_start_%d", ii);
-
-    destroyDataDuringReexecution(s, -1); // all ranks destroy pointers and atom
-
+    char idx_advanceVelocity_start[256] = "-1"; // FIXME: it this always enough?
+    sprintf(idx_advanceVelocity_start, "_vel_start_%d", ii);
+    destroyAtomInReexecution(s, -1, 0, 1, 1, 0); // all ranks destroy pointers and atom
     int velocity_pre_size = preserveAtoms(lv2_cd, kCopy, s->atoms,
                                           s->boxes->nLocalBoxes, // not Total
                                           //s->boxes->nTotalBoxes, // not Total
@@ -67,8 +65,8 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                                           0,  // from (entire atoms)
                                           -1, // to (entire atoms)
                                           0,  // is_print
-                                          NULL);
-                                          //idx_advanceVelocity_start);
+                                          //NULL);
+                                          idx_advanceVelocity_start);
     // Preserve boxes->nLocalBoxes and boxes->nAtoms[0:nLocalBoxes-1]
     // TODO: this doesn't gets changed until redistribtueAtoms below.
     //       so that can be preserved via reference before it
@@ -132,14 +130,15 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #if _CD2
     // FIXME:CD2 optimization
     cd_begin(lv2_cd, "advancePosition");
-    // Preserve atoms->p (momenta of local atoms)
+    // Preserve atoms->p (momenta of local atoms) and atoms->r
     char idx_position[256] = "-1"; // FIXME: it this always enough?
     sprintf(idx_position, "_position_%d", ii);
+    destroyAtomInReexecution(s, -1, 1, 1, 0, 0); // all ranks destroy pointers and atom
     int position_pre_size = preserveAtoms(lv2_cd, kCopy, s->atoms,
                                           s->boxes->nLocalBoxes, // not Total
                                           0,                     // is_all
                                           0,                     // is_gid
-                                          0,                     // is_r
+                                          1,                     // is_r
                                           1,                     // is_p
                                           0,                     // is_f
                                           0,                     // is_U
@@ -298,6 +297,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // Preserve atoms->r (postions)
     char idx_force[256] = "-1"; // FIXME: it this always enough?
     sprintf(idx_force, "_force_%d", ii);
+    //destroyAtomInReexecution(s, -1, 1, 0, 0, 0); // all ranks destroy pointers and atom
     int computeForce_pre_lv2_size =
         preserveAtoms(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
                       0, // is_all
@@ -407,6 +407,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // Preserve local atoms->f (force) and atoms->p (momentum) (read and written)
     char idx_advanceVelocity_end[256] = "-1"; // FIXME: it this always enough?
     sprintf(idx_advanceVelocity_end, "_vel_end_%d", ii);
+    destroyAtomInReexecution(s, -1, 0, 1, 1, 0); // all ranks destroy pointers and atom
     int velocity_end_pre_size =
         preserveAtoms(lv2_cd, kCopy,
                       // s->atoms, s->boxes->nTotalBoxes,
@@ -421,8 +422,8 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       0,  // from (entire atoms)
                       -1, // to (entire atoms)
                       0,  // is_print
-                      NULL);
-                      //idx_advanceVelocity_end);
+                      //NULL);
+                      idx_advanceVelocity_end);
 #if DO_PRV
     // Preserve loop index (ii)
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, "advanceVelocity_end_ii",

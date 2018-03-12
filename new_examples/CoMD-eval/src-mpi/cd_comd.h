@@ -36,5 +36,8 @@ unsigned int preserveHaloForce(cd_handle_t *cdh, uint32_t knob, int doeam,
                                ForceExchangeParms *xchange);
 unsigned int preserveForceData(cd_handle_t *cdh, uint32_t knob,
                                ForceExchangeData *forceData);
-void destroyDataDuringReexecution(SimFlat *sim, int ranks);
+void destroyAtomInReexecution(SimFlat *sim, int ranks, unsigned int is_r, 
+                                                       unsigned int is_p,
+                                                       unsigned int is_f,
+                                                       unsigned int is_U);
 #endif

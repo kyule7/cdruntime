@@ -118,26 +118,22 @@ int main(int argc, char **argv) {
   preserveSimFlat(root_cd, kCopy, sim);
   // What if the buffers for HaloExchnage (malloc) and the others in SimFlat?
   // They are not freed if ROOT CD gets re-executed before calling
-  // destroySimulation(), as does right now.
+  // destroySimulation(), as done right now.
   // However, this should NOT be an issue because "sim" is to be reused on
   // purpose to test capability of reexeuction.
 #endif // _ROOTCD
 
 #if _CD1
-
   // Note that preservation medium (KLocalMemory) and error vector (0xE) will 
   // be over-written by config.yaml.
 
-  // Let's create dummy CD for main_loop (i.e. level 1 CD) for kOutput
-  // semantic. Note that This is not optional but required to be 
-  // semantically correct. Once we create lv1_cd_inner, lv1_cd becomes
-  // dummy cd for lv1_cd. Also notice that lv1_cd_inner has to have the same
-  // error vector associated with lv1_cd (its dummy) in order to its dummy
-  // to be really "dummy".
+  // Let's create dummy CD (lv1_cd_dummy) for main_loop (i.e. lv1_cd_inner) for 
+  // kOutput semantic. Also it plays an important role for preservation buffer
+  // for the actual lv1_cd. Note that this is not optional but required to be 
+  // semantically correct. Also notice that lv1_cd_inner has to have the same
+  // error vector associated with lv1_cd (its dummy) in order to make its dummy
+  // really "dummy".
 
-  // Note that lv1_cd becomes dummy CD (lv1_cd_dummy) when kOutput enabled.
-  // lv1_cd_dummy is the parent CD of the actual lv1_cd, and it plays an
-  // important role for preservation buffer for the actual lv1_cd.
   cd_handle_t *lv1_cd_dummy = cd_create(getcurrentcd(), 1, "main_loop_dummy",
                                   kStrict | kLocalMemory, 0xE); // F8, F4, F2
   // Note that this dummy CD may add a bit overhead when kOuput semantic is not
@@ -145,7 +141,6 @@ int main(int argc, char **argv) {
   // TODO: check the runtime overhead due to dummy CD.
   cd_begin(lv1_cd_dummy, "main_loop_dummy");
 
-  // TODO: lv1_cd_inner -> lv1_cd
   // TODO(estimator): 0xE vs 0xF, kHDD vs kDRAM(=kLocalMemory)
   cd_handle_t *lv1_cd_inner = cd_create(getcurrentcd(), 1, "main_loop_inner",
                               kStrict | kLocalMemory, 0xE); // F8, F4, F2
@@ -170,38 +165,15 @@ int main(int argc, char **argv) {
 #if _CD1
     // Notice that iStep is increasing by printRate for every iteration.
     if (iStep % (CD1_INTERVAL * printRate) == 0) {
-      if(getMyRank() == 0) printf("[%d]lv1_cd_inner begins at %d\n", CD1_INTERVAL, iStep);
       cd_begin(lv1_cd_inner, "main_loop_inner");
       is_lv1_completed = 0; // this has to be set in the end.
-      // FIXME: remove after debugging
-      if(getMyRank() == 0) {
-        if(is_reexec()) {
-          numReexecution++;
-          printf("[%d Re-execution(%d):Rank0] Before restoring Atoms via kRef\n", 
-                    numReexecution, iStep);
-          printf("[Re-execution:Rank0] Priting the first atom's momentum in X\n");
-          for(int i = 0; i < MAXATOMS; i++) {
-            printf("%f\t", sim->atoms->p[i][0]);
-          }
-          printf("\n[Re-execution:Rank0] Done printing \n");
-        }
-        else {
-          numReexecution = 0;
-          printf("[Normal-execution(%d):Rank0] Before restoring Atoms via kRef\n", 
-                   iStep);
-          printf("[Normal-execution:Rank0] Priting the first atom's momentum in X\n");
-          for(int i = 0; i < MAXATOMS; i++) {
-            printf("%f\t", sim->atoms->p[i][0]);
-          }
-          printf("\n[Normal-execution:Rank0] Done printing \n");
-        }
-      }
 
-      // Notice that this is to be preserved via reference since for the first
-      // iteration it's already preserved at Root CD and fot the rest of loops,
+      // Notice that this can be preserved via reference since for the first
+      // iteration since it's already preserved at Root CD and fot the rest of loops,
       // this is to be preserved via kOutput at the end of this iteration.
+      // TODO: implemente such the iteration count aware observation
       int main_loop_pre_size =
-#if DO_OUTPUT
+#if _CD1_OUTPUT
         preserveAtoms(lv1_cd_inner, kRef, sim->atoms, sim->boxes->nTotalBoxes,
 #else
         //TODO: kRef for the first iteration and kCopy for the rest of iterations
@@ -218,23 +190,11 @@ int main(int argc, char **argv) {
                         -1, // to (entire atoms)
                         0,  // is_print
                         NULL);
-      // FIXME: remove after debugging
-      if(getMyRank() == 0) {
-        if(is_reexec()) {
-          printf("[%d Re-execution(%d):Rank0] After restoring Atoms via kRef\n",
-                    numReexecution, iStep);
-          printf("[Re-execution:Rank0] Priting the first atom's momentum in X \n");
-          for(int i = 0; i < MAXATOMS; i++) {
-            printf("%f\t", sim->atoms->p[i][0]);
-          }
-          printf("\n[Re-execution:Rank0] Done printing \n");
-        }
-      }
 
       // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
       // This is very conservative because it preserves all the boxes 
       main_loop_pre_size +=
-#if DO_OUTPUT
+#if _CD1_OUTPUT
           preserveLinkCell(lv1_cd_inner, kRef, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
 #else
           //TODO: kRef for the first iteration and kCopy for the rest of iterations
@@ -246,7 +206,7 @@ int main(int argc, char **argv) {
       // Root CD and it gets never gets updated during this iteration.
       // FIXME: need to double check
       main_loop_pre_size +=
-#if DO_OUTPUT
+#if _CD1_OUTPUT
           preserveHaloAtom(lv1_cd_inner, kRef, sim->atomExchange->parms,
 #else
           //TODO: kRef for the first iteration and kCopy for the rest of iterations
@@ -255,7 +215,7 @@ int main(int argc, char **argv) {
                            1 /*cellList*/, 1 /*pbcFactor*/);
 
 #if DO_PRV
-      // Constants (ignored): nStep, printRate
+      // Constants (ignored for now but to be kRef): nStep, printRate
       // iStep
       cd_preserve(lv1_cd_inner, &iStep, sizeof(int), kCopy, "timestep_iStep",
                   "timestep_iStep");
@@ -333,18 +293,7 @@ int main(int argc, char **argv) {
       //      preserveLinkCell
       //      preserveDomain
       //      whatelse?
-#if DO_OUTPUT
-      if(getMyRank() == 0) {
-        if(is_reexec()) {
-          printf("[%d Re-execution(%d):Rank0] Before restoring Atoms via kOutput\n", 
-                    numReexecution, iStep);
-          printf("[Re-execution:Rank0] Priting the first atom's momentum in X\n");
-          for(int i = 0; i < MAXATOMS; i++) {
-            printf("%f\t", sim->atoms->p[i][0]);
-          }
-          printf("\n[Re-execution:Rank0] Done printing \n");
-        }
-      }
+#if _CD1_OUTPUT
       int main_loop_pre_out_size =
           preserveAtoms(lv1_cd_dummy, kOutput, sim->atoms, sim->boxes->nTotalBoxes,
                         1,  // is_all
@@ -360,17 +309,6 @@ int main(int argc, char **argv) {
                         NULL);
       // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
       // FIXME: seems not enough
-      if(getMyRank() == 0) {
-        if(is_reexec()) {
-          printf("[%d Re-execution(%d):Rank0] After restoring Atoms via kOutput\n",
-                    numReexecution, iStep);
-          printf("[Re-execution:Rank0] Priting the first atom's momentum in X \n");
-          for(int i = 0; i < MAXATOMS; i++) {
-            printf("%f\t", sim->atoms->p[i][0]);
-          }
-          printf("\n[Re-execution:Rank0] Done printing \n");
-        }
-      }
       main_loop_pre_out_size +=
           preserveLinkCell(lv1_cd_dummy, kOutput, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
                            0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
@@ -381,12 +319,11 @@ int main(int argc, char **argv) {
       main_loop_pre_out_size =
           preserveHaloAtom(lv1_cd_dummy, kOutput, sim->atomExchange->parms,
                            1 /*cellList*/, 1 /*pbcFactor*/);
-#endif // DO_OUTPUT
+#endif // _CD1_OUTPUT
 
       is_lv1_completed = 1;
       cd_detect(lv1_cd_inner);
       cd_complete(lv1_cd_inner);
-      if(getMyRank() == 0) printf("[%d]lv1_cd_inner completes at %d\n\n", CD1_INTERVAL, iStep);
     } // CD1_INTERVAL (lv1_cd_inner kOutput and complete)
 #endif // _CD1
   } // for(iStep)
@@ -399,7 +336,6 @@ int main(int argc, char **argv) {
 #endif
     cd_detect(lv1_cd_inner);
     cd_complete(lv1_cd_inner);
-    if(getMyRank() == 0) printf("[%d]lv1_cd_inner completes at %d\n\n", CD1_INTERVAL, iStep);
   }
   cd_destroy(lv1_cd_inner);
 #endif
