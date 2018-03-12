@@ -15,7 +15,6 @@ class STD:
     PRSV = 5
     COMM = 6
     CDRT = 7
-
 color_map = { 1000:'red', 512:'blue', 216:'c', 64:'green', 8:'m'}
 #MIN_BIN_PRECISION=0.025
 #def createDataFrameFromProfile(results):
@@ -217,41 +216,42 @@ def getDataFrame(gathered_dict):
                 prof['prsv'].append(ProfInfo(gathered_dict[apps][inputs][nTasks]['prsv'], inputs, nTasks, 'prsv'))
                 prof['comm'].append(ProfInfo(gathered_dict[apps][inputs][nTasks]['comm'], inputs, nTasks, 'comm'))
                 prof['cdrt'].append(ProfInfo(gathered_dict[apps][inputs][nTasks]['cdrt'], inputs, nTasks, 'cdrt'))
-                counter = 0
-                for ph in gathered_dict[apps][inputs][nTasks]['phase']:
-                    prof['phase'].append(ProfInfo(ph, inputs, nTasks, 'phase' + str(counter)))
-                    counter += 1
-                maptype = re.split(r'_', apps)[1]
-                if maptype == 'bare':
-                    dfmi['errFree','avg','bare'].loc['full'][inputs][nTasks] = prof['loop'][-1].avg_ 
-                    dfmi['errFree','avg','bare'].loc['incr'][inputs][nTasks] = prof['loop'][-1].avg_ 
-                    dfmi['errFree','avg','bare'].loc['cdrt_incr'][inputs][nTasks] = prof['loop'][-1].avg_ 
-                    dfmi['errFree','avg','bare'].loc['cdrt_opt'][inputs][nTasks]  = prof['loop'][-1].avg_ 
-                elif maptype == 'noprv':
-                    dfmi['errFree','avg','cd_noprv'].loc['cdrt_incr'][inputs][nTasks] = prof['loop'][-1].avg_ 
-                elif maptype == 'optnoprv':
-                    dfmi['errFree','avg','cd_noprv'].loc['cdrt_opt'][inputs][nTasks] = prof['loop'][-1].avg_ 
-                else:
-                    if maptype == 'cdrt':
-                        newmaptype = 'cdrt_incr'
-                    else:
-                        newmaptype = maptype
-                    dfmi['errFree','avg','loop'].loc[newmaptype][inputs][nTasks] =  prof['loop'][-1].avg_
-                    dfmi['errFree','avg','prsv'].loc[newmaptype][inputs][nTasks] =  prof['prsv'][-1].avg_
-                    dfmi['errFree','avg','comm'].loc[newmaptype][inputs][nTasks] =  prof['comm'][-1].avg_
-                    dfmi['errFree','avg','rtov'].loc[newmaptype][inputs][nTasks] =  prof['cdrt'][-1].avg_
-                    dfmi['errFree','std','loop'].loc[newmaptype][inputs][nTasks] =  prof['loop'][-1].std_
-                    dfmi['errFree','std','prsv'].loc[newmaptype][inputs][nTasks] =  prof['prsv'][-1].std_
-                    dfmi['errFree','std','comm'].loc[newmaptype][inputs][nTasks] =  prof['comm'][-1].std_
-                    dfmi['errFree','std','rtov'].loc[newmaptype][inputs][nTasks] =  prof['cdrt'][-1].std_
-                    dfmi['errFree','min','loop'].loc[newmaptype][inputs][nTasks] =  prof['loop'][-1].min_
-                    dfmi['errFree','min','prsv'].loc[newmaptype][inputs][nTasks] =  prof['prsv'][-1].min_
-                    dfmi['errFree','min','comm'].loc[newmaptype][inputs][nTasks] =  prof['comm'][-1].min_
-                    dfmi['errFree','min','rtov'].loc[newmaptype][inputs][nTasks] =  prof['cdrt'][-1].min_
-                    dfmi['errFree','max','loop'].loc[newmaptype][inputs][nTasks] =  prof['loop'][-1].max_
-                    dfmi['errFree','max','prsv'].loc[newmaptype][inputs][nTasks] =  prof['prsv'][-1].max_
-                    dfmi['errFree','max','comm'].loc[newmaptype][inputs][nTasks] =  prof['comm'][-1].max_
-                    dfmi['errFree','max','rtov'].loc[newmaptype][inputs][nTasks] =  prof['cdrt'][-1].max_
+#                counter = 0
+#                for ph in gathered_dict[apps][inputs][nTasks]['phase']:
+#                    prof['phase'].append(ProfInfo(ph, inputs, nTasks, 'phase' + str(counter)))
+#                    counter += 1
+#                maptype = re.split(r'_', apps)[1]
+#                if maptype == 'bare':
+#                    dfmi['errFree','avg','bare'].loc['full'][inputs][nTasks] = prof['loop'][-1].avg_ 
+#                    dfmi['errFree','avg','bare'].loc['incr'][inputs][nTasks] = prof['loop'][-1].avg_ 
+#                    dfmi['errFree','avg','bare'].loc['cdrt_incr'][inputs][nTasks] = prof['loop'][-1].avg_ 
+#                    dfmi['errFree','avg','bare'].loc['cdrt_opt'][inputs][nTasks]  = prof['loop'][-1].avg_ 
+#                elif maptype == 'noprv':
+#                    dfmi['errFree','avg','cd_noprv'].loc['cdrt_incr'][inputs][nTasks] = prof['loop'][-1].avg_ 
+#                elif maptype == 'optnoprv':
+#                    dfmi['errFree','avg','cd_noprv'].loc['cdrt_opt'][inputs][nTasks] = prof['loop'][-1].avg_ 
+#                else:
+#                    if maptype == 'cdrt':
+#                        newmaptype = 'cdrt_incr'
+#                    else:
+#                        newmaptype = maptype
+#                    print newmaptype, inputs, nTasks
+#                    dfmi['errFree','avg','loop'].loc[newmaptype][inputs][nTasks] =  prof['loop'][-1].avg_
+#                    dfmi['errFree','avg','prsv'].loc[newmaptype][inputs][nTasks] =  prof['prsv'][-1].avg_
+#                    dfmi['errFree','avg','comm'].loc[newmaptype][inputs][nTasks] =  prof['comm'][-1].avg_
+#                    dfmi['errFree','avg','rtov'].loc[newmaptype][inputs][nTasks] =  prof['cdrt'][-1].avg_
+#                    dfmi['errFree','std','loop'].loc[newmaptype][inputs][nTasks] =  prof['loop'][-1].std_
+#                    dfmi['errFree','std','prsv'].loc[newmaptype][inputs][nTasks] =  prof['prsv'][-1].std_
+#                    dfmi['errFree','std','comm'].loc[newmaptype][inputs][nTasks] =  prof['comm'][-1].std_
+#                    dfmi['errFree','std','rtov'].loc[newmaptype][inputs][nTasks] =  prof['cdrt'][-1].std_
+#                    dfmi['errFree','min','loop'].loc[newmaptype][inputs][nTasks] =  prof['loop'][-1].min_
+#                    dfmi['errFree','min','prsv'].loc[newmaptype][inputs][nTasks] =  prof['prsv'][-1].min_
+#                    dfmi['errFree','min','comm'].loc[newmaptype][inputs][nTasks] =  prof['comm'][-1].min_
+#                    dfmi['errFree','min','rtov'].loc[newmaptype][inputs][nTasks] =  prof['cdrt'][-1].min_
+#                    dfmi['errFree','max','loop'].loc[newmaptype][inputs][nTasks] =  prof['loop'][-1].max_
+#                    dfmi['errFree','max','prsv'].loc[newmaptype][inputs][nTasks] =  prof['prsv'][-1].max_
+#                    dfmi['errFree','max','comm'].loc[newmaptype][inputs][nTasks] =  prof['comm'][-1].max_
+#                    dfmi['errFree','max','rtov'].loc[newmaptype][inputs][nTasks] =  prof['cdrt'][-1].max_
     
             # Get binsize for loop and prsv
             binsize = 0.0
@@ -281,19 +281,27 @@ def getDataFrame(gathered_dict):
             # Get histogram for each loop and prsv
             maxval = 0.0
             for prof_info in prof['loop']:
-                prof_info.GetHistogram(binsize)
-                if prof_info.max_ > maxval:
-                    maxval = prof_info.max_
+                if prof_info.GetPercentile() > maxval:
+                    maxval = prof_info.GetPercentile()
+
             for prof_info in prof['prsv']:
                 if prof_info.avg_ > 0.0001: 
-                    prof_info.GetHistogram(binsize)
-                    if prof_info.max_ > maxval:
-                        maxval = prof_info.max_
+                    if prof_info.GetPercentile() > maxval:
+                        maxval = prof_info.GetPercentile()
             for prof_info in prof['phase']:
-                prof_info.GetHistogram(binsize)
                 print "\nprof_info"
                 print prof_info
-                raw_input("\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+            for prof_info in prof['loop']:
+                prof_info.GetHistogram(binsize, maxval)
+            for prof_info in prof['prsv']:
+                if prof_info.avg_ > 0.0001: 
+                    prof_info.GetHistogram(binsize, maxval)
+            for prof_info in prof['phase']:
+                prof_info.GetHistogram(binsize, maxval)
+
+            print apps, inputs
+            print 'max: ', maxval
+            raw_input("\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
     
             bins_for_all = np.linspace(0, maxval, int(maxval/binsize))
     
@@ -315,12 +323,14 @@ def getDataFrame(gathered_dict):
                         color=color_map[prof_info.nTask_])
             plt.legend()
             plt.title('Latency of loop and preservation (app:' + apps + ', input:'+str(inputs)+')')
-    #        plt.show()
+            plt.show()
+
             pdffig = plt.gcf()
             plt.draw()
             filename = 'latency_' + apps + '_' + str(inputs)
-            pdffig.savefig(filename+'.svg', format='svg', bbox_inches='tight')
-            pdffig.savefig(filename+'.pdf', format='pdf', bbox_inches='tight')
+            print filename
+#            pdffig.savefig(filename+'.svg', format='svg', bbox_inches='tight')
+#            pdffig.savefig(filename+'.pdf', format='pdf', bbox_inches='tight')
             plt.clf()
             hist_set[apps][inputs] = hist
     return dfmi, hist_set
@@ -351,10 +361,17 @@ class ProfInfo:
         self.samples_ = samples
         self.binsize_ = GetBinsize(self.std_, self.num_samples_)
 
-    def GetHistogram(self, binsize):
+    def GetPercentile(self):
+        return self.avg_ + self.std_*3
+
+    def GetHistogram(self, binsize, max_time):
 #        print int(self.max_/self.binsize_)
         print "name:%s, input:%d, nTask:%d, %d, avg:%f, std:%f, min:%f, max:%f, binsize:%f (%f), #bins:%d\n" % (self.name_, self.input_, self.nTask_, self.num_samples_, self.avg_, self.std_, self.min_, self.max_, binsize, self.binsize_, (self.max_ - self.min_)/self.binsize_)
-        hist, bars = np.histogram(self.samples_, bins=np.linspace(0, self.max_, int((self.max_)/binsize)))
+#        maxtime = self.max_
+#        if maxtime < max_time:
+#            maxtime = max_time
+#        print maxtime, (maxtime)/self.binsize_
+        hist, bars = np.histogram(self.samples_, bins=np.linspace(0, max_time, int((max_time)/binsize)))
 #        #np.divide(hist, self.num_samples_)
 ##        print hist
         self.hist_ = np.divide(hist,self.num_samples_, dtype=float)
