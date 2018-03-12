@@ -217,7 +217,10 @@ void SystemConfig::ParseParam(char *key)
       char *keep_failure_rate_same = getenv( "KEEP_TOTAL_FAILURE_RATE_SAME" );
       if(keep_failure_rate_same != NULL)
         num_tasks = atoi(keep_failure_rate_same);
-      config.failure_rate_[errortype] = atof(key) / ((num_tasks == 1)? cd::totalTaskSize : num_tasks);
+      if(num_tasks > 0)
+        config.failure_rate_[errortype] = atof(key) / ((num_tasks == 1)? cd::totalTaskSize : num_tasks);
+      else
+        config.failure_rate_[errortype] = 0.0;
       if(myTaskID == 1) printf("failure rate %d:%lf, %lf\n", errortype, atof(key), config.failure_rate_[errortype]);
     } else if(prv == 'l') {
       label = key;

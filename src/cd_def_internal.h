@@ -442,6 +442,7 @@ extern void GatherProfile(void);
 #define MsgEpilogue() \
   msg_end_clk = CD_CLOCK(); \
   msg_elapsed_time += msg_end_clk - msg_begin_clk; \
+  if(myTaskID == 1) printf("[MSG %s] msg time:%lf\n", __func__, msg_end_clk - msg_begin_clk); \
   app_side = orig_msg_app_side; \
   logger::disabled = orig_msg_disabled; 
 

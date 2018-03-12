@@ -46,6 +46,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_internal.h"
 #include "cd_def_preserve.h"
 #include "phase_tree.h"
+#include "packer_prof.h"
 //#include "persistence/define.h"
 //#include "machine_specific.h"
 //#include "profiler_interface.h"
@@ -163,6 +164,7 @@ void cd_update_profile(void)
 
 void cd::GatherProfile(void)
 {
+  packer::Time::GatherBW();
   float *elapsed_acc = NULL;
   float *nm_sync_acc = NULL;
   float *rx_sync_acc = NULL;
@@ -221,6 +223,9 @@ void cd::GatherProfile(void)
     fprintf(tfp, "  \"name\":\"%s\",\n", exec_name);
     fprintf(tfp, "  \"input\":%s,\n", (exec_details!=NULL)? exec_details : "NoInput");
     fprintf(tfp, "  \"nTask\":%d,\n", totalTaskSize);
+    fprintf(tfp, "  \"GlobalDisk BW\": [%lf,%lf,%lf,%lf]\n", packer::time_mpiio_write.bw_avg, packer::time_mpiio_write.bw_std, packer::time_mpiio_write.bw_min, packer::time_mpiio_write.bw_max);
+    fprintf(tfp, "  \"LocalDisk BW\":[%lf,%lf,%lf,%lf]\n", packer::time_posix_write.bw_avg, packer::time_posix_write.bw_std, packer::time_posix_write.bw_min, packer::time_posix_write.bw_max);
+    fprintf(tfp, "  \"LocalMemory BW\":[%lf,%lf,%lf,%lf]\n", packer::time_copy.bw_avg, packer::time_copy.bw_std, packer::time_copy.bw_min, packer::time_copy.bw_max);
     fprintf(tfp, "  \"prof\": {\n");
     PrintPackerProf(tfp);
 fprintf(tfp, "    \"elapsed\": [%f", elapsed_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", elapsed_acc[i]); } fprintf(tfp, "],\n");
@@ -735,17 +740,6 @@ void CD_Finalize(void)
 
   memcpy(recvavg, trecvavg, sizeof(double) * PROF_GLOBAL_STATISTICS_NUM);
   memcpy(recvstd, trecvstd, sizeof(double) * PROF_GLOBAL_STATISTICS_NUM);
-
-
-
-
-
-
-
-
-
-
-
 
   double sendbuf_min[PROF_GLOBAL_STATISTICS_NUM]  = {
                          tot_elapsed, 

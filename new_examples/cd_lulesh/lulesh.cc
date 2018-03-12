@@ -155,7 +155,6 @@ Additional BSD Notice
 #include <sys/time.h>
 #include <iostream>
 #include <unistd.h>
-
 #if _OPENMP
 # include <omp.h>
 #endif
@@ -177,14 +176,18 @@ double wait_time = 0.0;
 double wait_end = 0.0;
 double dump_end = 0.0;
 double dump_phase[5] = { 0, 0, 0, 0, 0 };
+double exec_phase[5] = { 0, 0, 0, 0, 0 };
+double totl_phase[5] = { 0, 0, 0, 0, 0 };
 double begn_time = 0.0;
 double cmpl_time = 0.0;
 double begn_end = 0.0;
 double cmpl_end = 0.0;
-uint64_t prv_len = 0;
+unsigned long prv_len = 0;
 
+//#define PRINT_ONE(...) 
 #define PRINT_ONE(...) if(myRank == 1) fprintf(stdout, __VA_ARGS__)
 #if _CD
+#include "packer_prof.h"
 CDHandle *cd_main_loop = NULL;
 CDHandle *cd_child_loop = NULL;
 CDHandle *root_cd = NULL;
@@ -1352,7 +1355,8 @@ static inline void CalcForceForNodes(Domain& domain)
 
   #if _CD_DUMMY
   if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); }
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); 
+    PRINT_ONE("Prv LeafCD       CalcForce %luMB (Ref)\n", prv_len/1000000); }
 
   #else
 
@@ -1375,18 +1379,30 @@ static inline void CalcForceForNodes(Domain& domain)
 //    else
 //      printf("Prv LeafCD       CalcForce %luMB\n", prv_len/1000000);
 //  }
-  double prvtime = MPI_Wtime() - prv_start;
+  double app_start = MPI_Wtime();  
+  double prvtime = app_start - prv_start;
   dump_phase[0] = prvtime;
   dump_end  += prvtime;
+#else // _CD_CDRT
+  double app_start = MPI_Wtime();  
 #endif
   /* Calcforce calls partial, force, hourq */
   CalcVolumeForceForElems(domain) ;
+
+  double app_end = MPI_Wtime();
+  exec_phase[0] = app_end - app_start;
 #if _CD && _CD_CDRT
   #if _CD_DUMMY
-  if(domain.check_end(intvl0))
+  if(domain.check_end(intvl0)) {
     prv_len += root_cd->Preserve(domain.SetOp(prvec_f), kOutput, "CalcForceCopy");
-  else if(domain.check_end(intvl1)) 
+    PRINT_ONE("Prv PDummy       CalcForce %luMB\n", prv_len/1000000); }
+  else if(domain.check_end(intvl1)) {
     prv_len += dummy_cd->Preserve(domain.SetOp(prvec_f), kOutput, "CalcForceCopy");
+    PRINT_ONE("Prv CDummy       CalcForce %luMB\n", prv_len/1000000); }
+  double now2 = MPI_Wtime();
+  prvtime = now2 - app_end;
+  dump_phase[0] += prvtime;
+  dump_end  += prvtime;
   #endif
 
   #if _LEAF_LV
@@ -1533,7 +1549,7 @@ void LagrangeNodal(Domain& domain)
    
 #if _CD && _CD_CDRT
    // Out{XDD,YDD,ZDD} <- In{XDD,YDD,ZDD,FX,FY,FZ,SYMMX,SYMMY,SYMMZ}
-  #if _LEAF_LV
+  #if _LEAF_LV && _POS_VEL_ACC
   CDHandle *leaf_cd = GetLeafCD();
   double now = MPI_Wtime();
   CD_Begin(leaf_cd, "CalcPos");
@@ -1556,12 +1572,13 @@ void LagrangeNodal(Domain& domain)
 //  } else {
 //    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
 //  }
-  #if _LEAF_LV  
+  #if _LEAF_LV && _POS_VEL_ACC
     prv_len += leaf_cd->Preserve(dynamic_cast<Internal *>(&domain), sizeof(Internal), kCopy, "LeafDomain");
   #endif
   #if _CD_DUMMY
   if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc"); }
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc"); 
+    PRINT_ONE("Prv LeafCD       PosVelAcc %luMB (Ref)\n", prv_len/1000000); }
 
   #else
 
@@ -1575,7 +1592,7 @@ void LagrangeNodal(Domain& domain)
     PRINT_ONE("Prv Child        PosVelAcc %luMB\n", prv_len/1000000); }
 
   #endif
-  else if(_LEAF_LV) { // leaf always preserve per loop 
+  else if(_LEAF_LV && _POS_VEL_ACC) { // leaf always preserve per loop 
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
     PRINT_ONE("Prv LeafCD       PosVelAcc %luMB\n", prv_len/1000000); }
 //  if(myRank == 1) {
@@ -1584,9 +1601,12 @@ void LagrangeNodal(Domain& domain)
 //    else
 //      printf("Prv LeafCD       PosVelAcc %luMB\n", prv_len/1000000);
 //  }
-  double prvtime = MPI_Wtime() - prv_start;
+  double app_start = MPI_Wtime();  
+  double prvtime = app_start - prv_start;
   dump_phase[1] = prvtime;
   dump_end  += prvtime;
+#else // _CD_CDRT
+  double app_start = MPI_Wtime();  
 #endif
    CalcAccelerationForNodes(domain, domain.numNode());
    
@@ -1602,15 +1622,23 @@ void LagrangeNodal(Domain& domain)
    CalcPositionForNodes( domain, delt, domain.numNode() );
    domain.CheckUpdate("CalcPosition");
 
+  double app_end = MPI_Wtime();
+  exec_phase[1] = app_end - app_start;
 #if _CD && _CD_CDRT
   #if _CD_DUMMY
-  if(domain.check_end(intvl0))
+  if(domain.check_end(intvl0)) {
     prv_len += root_cd->Preserve(domain.SetOp(prvec_posall), kOutput, "PosVelAcc");
-  else if(domain.check_end(intvl1)) 
+    PRINT_ONE("Prv PDummy       PosVelAcc %luMB\n", prv_len/1000000); }
+  else if(domain.check_end(intvl1)) {
     prv_len += dummy_cd->Preserve(domain.SetOp(prvec_posall), kOutput, "PosVelAcc");
+    PRINT_ONE("Prv CDummy       PosVelAcc %luMB\n", prv_len/1000000); }
+  double now2 = MPI_Wtime();
+  prvtime = now2 - app_end;
+  dump_phase[1] += prvtime;
+  dump_end  += prvtime;
   #endif
 
-  #if _LEAF_LV
+  #if _LEAF_LV && _POS_VEL_ACC
   double then = MPI_Wtime();
   leaf_cd->Detect();
   leaf_cd->Complete();
@@ -2800,7 +2828,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   Real_t *vnew = Allocate<Real_t>(numElem) ;  /* new relative vol -- temp */
 
 #if _CD && _CD_CDRT
-  #if _LEAF_LV
+  #if _LEAF_LV && _LAGRANGE_ELEM
   CDHandle *leaf_cd = GetLeafCD();
   double now = MPI_Wtime();
   CD_Begin(leaf_cd, "LagrangeElem");
@@ -2823,12 +2851,13 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 //  } else {
 //    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem");
 //  }
-  #if _LEAF_LV  
+  #if _LEAF_LV && _LAGRANGE_ELEM
     prv_len += leaf_cd->Preserve(dynamic_cast<Internal *>(&domain), sizeof(Internal), kCopy, "LeafDomain");
   #endif
   #if _CD_DUMMY
   if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem"); }
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem"); 
+    PRINT_ONE("Prv LeafCD    LagrangeElem %luMB (Ref)\n", prv_len/1000000); }
 
   #else
 
@@ -2842,7 +2871,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
     PRINT_ONE("Prv Child     LagrangeElem %luMB\n", prv_len/1000000); }
 
   #endif
-  else if(_LEAF_LV) { // leaf always preserve per loop 
+  else if(_LEAF_LV && _LAGRANGE_ELEM) { // leaf always preserve per loop 
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem");
     PRINT_ONE("Prv LeafCD    LagrangeElem %luMB\n", prv_len/1000000); }
 //  if(myRank == 1) {
@@ -2851,32 +2880,49 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 //    else
 //      printf("Prv LeafCD    LagrangeElem %luMB\n", prv_len/1000000);
 //  }
-  double prvtime = MPI_Wtime() - prv_start;
+  double app_start = MPI_Wtime();  
+  double prvtime = app_start - prv_start;
   dump_phase[2] = prvtime;
   dump_end  += prvtime;
+#else // _CD_CDRT
+  double app_start = MPI_Wtime();  
 #endif
+
   // Out{DELV,VDOV,AREALG} <- In{X,Y,Z,XD,YD,ZD,NODELIST
   //                             DXX,DYY,DZZ,V,VOLO,DELV,VDOV,AREALG}
   CalcLagrangeElements(domain, vnew) ;
   domain.CheckUpdate("CalcLagrangeElements");
 
+  double app_end = MPI_Wtime();
+  exec_phase[2] = app_end - app_start;
+
 #if _CD && _CD_CDRT
   #if _CD_DUMMY
-  if(domain.check_end(intvl0))
+  if(domain.check_end(intvl0)) {
     prv_len += root_cd->Preserve(domain.SetOp(prvec_elem), kOutput, "LagrangeElem");
-  else if(domain.check_end(intvl1)) 
+    PRINT_ONE("Prv PDummy    LagrangeElem %luMB\n", prv_len/1000000); }
+  else if(domain.check_end(intvl1)) {
     prv_len += dummy_cd->Preserve(domain.SetOp(prvec_elem), kOutput, "LagrangeElem");
+    PRINT_ONE("Prv CDummy    LagrangeElem %luMB\n", prv_len/1000000); }
+  double now1 = MPI_Wtime();
+  prvtime = now1 - app_end;
+  dump_phase[2] += prvtime;
+  dump_end  += prvtime;
   #endif
 
-  #if _LEAF_LV
+  #if _LEAF_LV && _LAGRANGE_ELEM
   double then = MPI_Wtime();
   leaf_cd->Detect();
   leaf_cd->Complete();
-  now = MPI_Wtime();
-  cmpl_end += now - then;
+  double now2 = MPI_Wtime();
+  cmpl_end += now2 - then;
+  #else
+  double now2 = MPI_Wtime();
+  #endif
+  #if _LEAF_LV && _CALC_FOR_ELEM
   CD_Begin(leaf_cd, "CalcQForElems");
   prv_start = MPI_Wtime();
-  begn_end += prv_start - now;
+  begn_end += prv_start - now2;
   #else
   prv_start = MPI_Wtime();
   #endif
@@ -2894,12 +2940,13 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 //  } else {
 //    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
 //  }
-  #if _LEAF_LV  
+  #if _LEAF_LV && _CALC_FOR_ELEM
     prv_len += leaf_cd->Preserve(dynamic_cast<Internal *>(&domain), sizeof(Internal), kCopy, "LeafDomain");
   #endif
   #if _CD_DUMMY
   if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem"); }
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem"); 
+    PRINT_ONE("Prv LeafCD        QforElem %luMB (Ref)\n", prv_len/1000000); }
 
   #else
 
@@ -2913,7 +2960,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
     PRINT_ONE("Prv Child         QforElem %luMB\n", prv_len/1000000); }
 
   #endif
-  else if(_LEAF_LV) { // leaf always preserve per loop 
+  else if(_LEAF_LV  && _CALC_FOR_ELEM) { // leaf always preserve per loop 
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
     PRINT_ONE("Prv LeafCD        QforElem %luMB\n", prv_len/1000000); }
 //  if(myRank == 1) {
@@ -2922,10 +2969,14 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 //    else
 //      printf("Prv LeafCD        QforElem %luMB\n", prv_len/1000000);
 //  }
-  prvtime = MPI_Wtime() - prv_start;
+  app_start = MPI_Wtime();  
+  prvtime = app_start - prv_start;
   dump_phase[3] = prvtime;
   dump_end  += prvtime;
+#else // _CD_CDRT
+  app_start = MPI_Wtime();  
 #endif
+
   /* Calculate Q.  (Monotonic q option requires communication) */
   // Out{QL,QQ} <- In{regElemSize,regElemlist,X,Y,Z,XD,YD,ZD,NODELIST
   //                  LXIM,LXIP,LETAM,LETAP,LZETAM,LZETAP,ELEMBC,
@@ -2933,24 +2984,36 @@ void LagrangeElements(Domain& domain, Index_t numElem)
   //                  Q,QL,QQ,VOLO,VDOV,ELEMMASS}
   CalcQForElems(domain, vnew) ;
   domain.CheckUpdate("CalcQForElems");
+  app_end = MPI_Wtime();
+  exec_phase[3] = app_end - app_start;
 
 #if _CD && _CD_CDRT
   #if _CD_DUMMY
-  if(domain.check_end(intvl0))
+  if(domain.check_end(intvl0)) {
     prv_len += root_cd->Preserve(domain.SetOp(prvec_q), kOutput, "QforElem");
-  else if(domain.check_end(intvl1)) 
+    PRINT_ONE("Prv PDummy        QforElem %luMB\n", prv_len/1000000); }
+  else if(domain.check_end(intvl1)) {
     prv_len += dummy_cd->Preserve(domain.SetOp(prvec_q), kOutput, "QforElem");
+    PRINT_ONE("Prv CDummy        QforElem %luMB\n", prv_len/1000000); }
+  double now3 = MPI_Wtime();
+  prvtime = now3 - app_end;
+  dump_phase[3] += prvtime;
+  dump_end  += prvtime;
   #endif
 
-  #if _LEAF_LV
+  #if _LEAF_LV && _CALC_FOR_ELEM
   then = MPI_Wtime();
   leaf_cd->Detect();
   leaf_cd->Complete();
-  now = MPI_Wtime();
-  cmpl_end += now - then;
+  double now4 = MPI_Wtime();
+  cmpl_end += now4 - then;
+  #else
+  double now4 = MPI_Wtime();
+  #endif
+  #if _LEAF_LV && _MATERIAL_PROP
   CD_Begin(leaf_cd, "ApplyMaterialPropertiesForElems");
   prv_start = MPI_Wtime();
-  begn_end += prv_start - now;
+  begn_end += prv_start - now4;
   #else
   prv_start = MPI_Wtime();
   #endif
@@ -2968,13 +3031,14 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 //  } else {
 //    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem");
 //  }
-  #if _LEAF_LV  
+  #if _LEAF_LV   && _MATERIAL_PROP
     prv_len += leaf_cd->Preserve(dynamic_cast<Internal *>(&domain), sizeof(Internal), kCopy, "LeafDomain");
   #endif
 
   #if _CD_DUMMY
   if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
-    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem"); }
+    prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem"); 
+    PRINT_ONE("Prv LeafCD MaterialForElem %luMB (Ref)\n", prv_len/1000000); }
 
   #else
 
@@ -2987,7 +3051,7 @@ void LagrangeElements(Domain& domain, Index_t numElem)
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem"); 
     PRINT_ONE("Prv Child  MaterialForElem %luMB\n", prv_len/1000000); }
   #endif
-  else if(_LEAF_LV) { // leaf always preserve per loop 
+  else if(_LEAF_LV && _MATERIAL_PROP) { // leaf always preserve per loop 
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem");
     PRINT_ONE("Prv LeafCD MaterialForElem %luMB\n", prv_len/1000000); }
 //  if(myRank == 0) {
@@ -2996,10 +3060,14 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 //    else
 //      printf("Prv LeafCD MaterialForElem %luMB\n", prv_len/1000000);
 //  }
-  prvtime = MPI_Wtime() - prv_start;
+  app_start = MPI_Wtime();  
+  prvtime = app_start - prv_start;
   dump_phase[4] = prvtime;
   dump_end  += prvtime;
+#else // _CD_CDRT
+  app_start = MPI_Wtime();  
 #endif
+
 
   // Out{E,P,Q,SS} <- In{regElemSize,regElemlist,E,P,Q,QL,QQ,V,DELV,SS}
   ApplyMaterialPropertiesForElems(domain, vnew) ;
@@ -3010,21 +3078,30 @@ void LagrangeElements(Domain& domain, Index_t numElem)
                         domain.v_cut(), numElem) ;
   domain.CheckUpdate("UpdateVolunesForElems");
 
+  app_end = MPI_Wtime();
+  exec_phase[4] = app_end - app_start;
+
 #if _CD && _CD_CDRT
 
   #if _CD_DUMMY
-  if(domain.check_end(intvl0))
+  if(domain.check_end(intvl0)) {
     prv_len += root_cd->Preserve(domain.SetOp(prvec_matrl), kOutput, "MaterialforElem");
-  else if(domain.check_end(intvl1)) 
+    PRINT_ONE("Prv PDummy MaterialforElem %luMB\n", prv_len/1000000); }
+  else if(domain.check_end(intvl1)) { 
     prv_len += dummy_cd->Preserve(domain.SetOp(prvec_matrl), kOutput, "MaterialforElem");
+    PRINT_ONE("Prv CDummy MaterialforElem %luMB\n", prv_len/1000000); }
+  double now5 = MPI_Wtime();
+  prvtime = now5 - app_end;
+  dump_phase[4] += prvtime;
+  dump_end  += prvtime;
   #endif
 
-  #if _LEAF_LV
+  #if _LEAF_LV && _MATERIAL_PROP
   then = MPI_Wtime();
   leaf_cd->Detect();
   leaf_cd->Complete();
-  now = MPI_Wtime();
-  cmpl_end += now - then;
+  now5 = MPI_Wtime();
+  cmpl_end += now5 - then;
   #endif
 #endif
   Release(&vnew);
@@ -3594,6 +3671,8 @@ int main(int argc, char *argv[])
       local_wait.push_back((float)wait_end);
       local_begn.push_back((float)begn_end);
       local_cmpl.push_back((float)cmpl_end);
+
+      for(int i=0; i<5; i++) totl_phase[i] += exec_phase[i];
 #if _CD_CDRT && _CD
       local_dump0.push_back((float)dump_phase[0]);
       local_dump1.push_back((float)dump_phase[1]);
@@ -3601,14 +3680,16 @@ int main(int argc, char *argv[])
       local_dump3.push_back((float)dump_phase[3]);
       local_dump4.push_back((float)dump_phase[4]);
 #endif
-      for(int i=0; i<5; i++) { dump_phase[i] = 0; }
       if (myRank == 1) {
 //      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) 
-         printf("cycle = %d (%u), t=%5.4e, dt=%5.4e, loop=%5.3e, dump=%5.3e, wait=%5.3e, begin=%5.3e, complete=%5.3e, vol=%lfMB (%5.3e, %5.3e, %5.3e, %5.3e, %5.3e)\n",
+         printf("cycle = %d (%u), t=%5.4e, dt=%5.4e, loop=%5.3e, dump=%5.3e, wait=%5.3e, begin=%5.3e, complete=%5.3e, vol=%lfMB (%5.3e, %5.3e, %5.3e, %5.3e, %5.3e),phase(%4.3f,%4.3f,%4.3f,%4.3f,%4.3f),dump(%4.3f,%4.3f,%4.3f,%4.3f,%4.3f)\n",
                 locDom->cycle(), global_counter, double(locDom->time()), double(locDom->deltatime()), 
                 loop_end, dump_end, wait_end, begn_end, cmpl_end, (double)prv_len/1000000,
-                loop_time/global_counter, dump_time/global_counter, wait_time/global_counter, begn_time/global_counter, cmpl_time/global_counter  ) ;
+                loop_time/global_counter, dump_time/global_counter, wait_time/global_counter, begn_time/global_counter, cmpl_time/global_counter, 
+                exec_phase[0], exec_phase[1],exec_phase[2], exec_phase[3],exec_phase[4],
+                dump_phase[0], dump_phase[1],dump_phase[2], dump_phase[3],dump_phase[4]) ;
       }
+      for(int i=0; i<5; i++) { dump_phase[i] = 0; }
 #if _CD
       cd_update_profile();
 #endif
@@ -3654,6 +3735,7 @@ int main(int argc, char *argv[])
 #else
    elapsed_timeG = elapsed_time;
 #endif
+
 #if _CD    
    char *execname = exec_name; 
    char *fname_last = start_date;
@@ -3663,147 +3745,190 @@ int main(int argc, char *argv[])
    sprintf(fname_last, "%d", ((int)start) % 1000);
 #endif
 
-   if(0) 
-   {
-   double *total_loop = NULL;
-   double *total_dump = NULL;
-   double *total_wait = NULL;
-   int total_stat_cnt = total_its * numRanks;
-   if(myRank == 0) {
-     total_loop = (double *)malloc(total_stat_cnt * sizeof(double));
-     total_dump = (double *)malloc(total_stat_cnt * sizeof(double));
-     total_wait = (double *)malloc(total_stat_cnt * sizeof(double));
-   }
    double lt_loc = loop_time / global_counter;
    double dt_loc = dump_time / global_counter;
    double wt_loc = wait_time / global_counter;
-   double sendbuf[4] = { lt_loc, dt_loc, wt_loc};
-   double sendbufstd[4] = { lt_loc * lt_loc, dt_loc * dt_loc, wt_loc * wt_loc};
-   double recvbufmax[4] = { 0, 0, 0 };
-   double recvbufmin[4] = { 0, 0, 0 };
-   double recvbufavg[4] = { 0, 0, 0 };
-   double recvbufstd[4] = { 0, 0, 0 };
-   MPI_Reduce(sendbuf, recvbufmax, 3, MPI_FLOAT, MPI_MAX, 0, MPI_COMM_WORLD);
-   MPI_Reduce(sendbuf, recvbufmin, 3, MPI_FLOAT, MPI_MIN, 0, MPI_COMM_WORLD);
-   MPI_Reduce(sendbuf, recvbufavg, 3, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
-   MPI_Reduce(sendbufstd, recvbufstd, 3, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
-   for(int i=0; i<3; i++) { 
+   double cd_loc = (begn_time + cmpl_time) / global_counter;
+   double aggregated_phase[5] = {0, 0, 0, 0, 0};
+   for(int i=0; i<5; i++) { totl_phase[i] /= global_counter; }
+#if _CD    
+   const unsigned prof_elems = 13;
+   double sendbuf[prof_elems] = { lt_loc, dt_loc, wt_loc, cd_loc, 
+                         packer::time_copy.GetBW(), 
+                         packer::time_write.GetBW(), 
+                         packer::time_read.GetBW(), 
+                         packer::time_posix_write.GetBW(), 
+                         packer::time_posix_read.GetBW(), 
+                         packer::time_posix_seek.GetBW(), 
+                         packer::time_mpiio_write.GetBW(), 
+                         packer::time_mpiio_read.GetBW(), 
+                         packer::time_mpiio_seek.GetBW()
+   };
+#else
+   const unsigned prof_elems = 4;
+   double sendbuf[prof_elems] = { lt_loc, dt_loc, wt_loc, cd_loc };
+#endif
+   double sendbufstd[prof_elems];//{ lt_loc * lt_loc, dt_loc * dt_loc, wt_loc * wt_loc, cd_loc * cd_loc };
+   for(int i=0; i<prof_elems; i++) { sendbufstd[i] = sendbuf[i] * sendbuf[i]; }
+   double recvbufmax[prof_elems] = { 0, 0, 0, 0 };
+   double recvbufmin[prof_elems] = { 0, 0, 0, 0 };
+   double recvbufavg[prof_elems] = { 0, 0, 0, 0 };
+   double recvbufstd[prof_elems] = { 0, 0, 0, 0 };
+   MPI_Reduce(totl_phase, aggregated_phase, 5, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+   MPI_Reduce(sendbuf, recvbufmax, prof_elems, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+   MPI_Reduce(sendbuf, recvbufmin, prof_elems, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+   MPI_Reduce(sendbuf, recvbufavg, prof_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+   MPI_Reduce(sendbufstd, recvbufstd, prof_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+   for(int i=0; i<prof_elems; i++) { 
      recvbufavg[i] /= numRanks; // avg
      recvbufstd[i] /= numRanks; // avg of 2nd momentum
      recvbufstd[i] =  sqrt(recvbufstd[i] - recvbufavg[i] * recvbufavg[i]);
    }
-   MPI_Gather(local_loop.data(), total_its, MPI_FLOAT, total_loop, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Gather(local_dump.data(), total_its, MPI_FLOAT, total_dump, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Gather(local_wait.data(), total_its, MPI_FLOAT, total_wait, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
    if(myRank == 0) {
-     char tmpfile[128];
-     
-     // local stats /////////////////////////
-     sprintf(tmpfile, "local_stats.%s.%d.%d.%s", execname, numRanks, opts.nx, fname_last);
-     FILE *lfp = fopen(tmpfile, "w"); 
-     fprintf(lfp, "%s\n", execname);
-     if(lfp == 0) { printf("failed to open %s\n", tmpfile); assert(lfp); }
-     double loop_min = DBL_MAX;
-     double loop_max = 0;
-     double dump_min = DBL_MAX;
-     double dump_max = 0;
-     double wait_min = DBL_MAX;
-     double wait_max = 0;
-     for(int i=0; i<total_stat_cnt; i++) {
-       fprintf(lfp, "%lf,", total_loop[i]);
-       if(total_loop[i] < loop_min) loop_min = total_loop[i];
-       if(total_loop[i] > loop_max) loop_max = total_loop[i];
+     for(int i=0; i<5; i++) { aggregated_phase[i] /= numRanks; }
+     fprintf(stdout, "loop %5.4lf, dump %5.4lf, wait %5.4lf, cdrt %5.4lf\n", lt_loc, dt_loc, wt_loc, cd_loc);
+     fprintf(stdout, "avg, %5.4lf, %5.4lf, %5.4lf, %5.4lf\n"
+                     "std, %5.4lf, %5.4lf, %5.4lf, %5.4lf\n"
+                     "min, %5.4lf, %5.4lf, %5.4lf, %5.4lf\n"
+                     "max, %5.4lf, %5.4lf, %5.4lf, %5.4lf\n", 
+         recvbufavg[0], recvbufavg[1], recvbufavg[2], recvbufavg[3], 
+         recvbufstd[0], recvbufstd[1], recvbufstd[2], recvbufstd[3], 
+         recvbufmin[0], recvbufmin[1], recvbufmin[2], recvbufmin[3], 
+         recvbufmax[0], recvbufmax[1], recvbufmax[2], recvbufmax[3]);
+     for(int i=4; i<prof_elems; i++) {
+       fprintf(stdout, "%5.4lf (%5.4lf) %5.4lf~%5.4lf\n", recvbufavg[i], recvbufstd[i], recvbufmin[i], recvbufmax[i]);
      }
-     fprintf(lfp, "\n");
-     for(int i=0; i<total_stat_cnt; i++) {
-       fprintf(lfp, "%lf,", total_dump[i]);
-       if(total_dump[i] < dump_min) dump_min = total_dump[i];
-       if(total_dump[i] > dump_max) dump_max = total_dump[i];
-     }
-     fprintf(lfp, "\n");
-     for(int i=0; i<total_stat_cnt; i++) {
-       fprintf(lfp, "%lf,", total_wait[i]);
-       if(total_wait[i] < wait_min) wait_min = total_wait[i];
-       if(total_wait[i] > wait_max) wait_max = total_wait[i];
-     }
-     fprintf(lfp, "\n");
-     fclose(lfp);
-     ////////////////////////////////////////
-     // global stats /////////////////////////
-     sprintf(tmpfile, "global_stats.%s.%d.%d.%s", execname, numRanks, opts.nx, fname_last);
-     FILE *gfp = fopen(tmpfile, "w"); 
-     fprintf(gfp, "loop,         dump,         wait\n");
-     fprintf(gfp, "avg, %le, %le, %le\nstd, %le, %le, %le\nmin, %le, %le, %le\nmax, %le, %le, %le\nmin, %le, %le, %le\nmax, %le, %le, %le\n", 
-         recvbufavg[0], recvbufavg[1], recvbufavg[2], 
-         recvbufstd[0], recvbufstd[1], recvbufstd[2], 
-         loop_min     ,      dump_min,      wait_min, 
-         loop_max     ,      dump_max,      wait_max,
-         recvbufmin[0], recvbufmin[1], recvbufmin[2], 
-         recvbufmax[0], recvbufmax[1], recvbufmax[2]);
-     fclose(gfp);
-     ////////////////////////////////////////
-     // histogram ///////////////////////////
-     sprintf(tmpfile, "histogram.%s.%d.%d.%s", execname, numRanks, opts.nx, fname_last);
-     FILE *hfp = fopen(tmpfile, "w"); 
-     fprintf(hfp, "%s\n", execname);
-     if(hfp == 0) { printf("failed to open %s\n", tmpfile); assert(hfp); }
-     // based on optimal bin size calculation,
-     // https://www.fmrib.ox.ac.uk/datasets/techrep/tr00mj2/tr00mj2/node24.html
-     double samples = pow(total_stat_cnt, -0.333333);
-     double binsize_loop = 3.49 * recvbufstd[0] * samples;
-     double binsize_dump = 3.49 * recvbufstd[1] * samples;
-     double binsize_wait = 3.49 * recvbufstd[2] * samples;
-     double window_loop = loop_max - loop_min;
-     double window_dump = dump_max - dump_min;
-     double window_wait = wait_max - wait_min;
-     int    bincnt_loop = window_loop / binsize_loop;
-     int    bincnt_dump = window_dump / binsize_dump;
-     int    bincnt_wait = window_wait / binsize_wait;
-     printf("loop: %lf~%lf=%lf %lf (%d)\n", loop_min, loop_max, window_loop, binsize_loop, bincnt_loop);
-     printf("dump: %lf~%lf=%lf %lf (%d)\n", dump_min, dump_max, window_dump, binsize_dump, bincnt_dump);
-     printf("wait: %lf~%lf=%lf %lf (%d)\n", wait_min, wait_max, window_wait, binsize_wait, bincnt_wait);
-     unsigned *hist_loop = (unsigned *)calloc(bincnt_loop, sizeof(unsigned));
-     unsigned *hist_dump = (unsigned *)calloc(bincnt_dump, sizeof(unsigned));
-     unsigned *hist_wait = (unsigned *)calloc(bincnt_wait, sizeof(unsigned));
-     for(int i=0; i<total_stat_cnt; i++) { 
-       int idx = (total_loop[i] - loop_min)/binsize_loop; 
-       idx = (idx >= bincnt_loop)? bincnt_loop : idx;
-       idx = (idx < 0)? 0 : idx;
-       hist_loop[idx]++; }
-     for(int i=0; i<total_stat_cnt; i++) { 
-       int idx = (total_dump[i] - dump_min)/binsize_dump; 
-       idx = (idx >= bincnt_dump)? bincnt_dump : idx;
-       idx = (idx < 0)? 0 : idx;
-       hist_dump[idx]++; }
-     for(int i=0; i<total_stat_cnt; i++) { 
-       int idx = (total_wait[i] - wait_min)/binsize_wait; 
-       idx = (idx >= bincnt_wait)? bincnt_wait : idx;
-       idx = (idx < 0)? 0 : idx;
-       hist_wait[idx]++; }
-     // X-axis for loop
-     for(int i=0; i<bincnt_loop; i++, loop_min += binsize_loop) { fprintf(hfp, "%lf,", loop_min); }
-     fprintf(hfp, "\n");
-     for(int i=0; i<bincnt_loop; i++) { fprintf(hfp, "%u,", hist_loop[i]); }
-     fprintf(hfp, "\n");
-     // X-axis for dump
-     for(int i=0; i<bincnt_dump; i++, dump_min += binsize_dump) { fprintf(hfp, "%lf,", dump_min); }
-     fprintf(hfp, "\n");
-     for(int i=0; i<bincnt_dump; i++) { fprintf(hfp, "%u,", hist_dump[i]); }
-     fprintf(hfp, "\n");
-     // X-axis for wait
-     for(int i=0; i<bincnt_wait; i++, wait_min += binsize_wait) { fprintf(hfp, "%lf,", wait_min); }
-     fprintf(hfp, "\n");
-     for(int i=0; i<bincnt_wait; i++) { fprintf(hfp, "%u,", hist_wait[i]); }
-     fprintf(hfp, "\n");
-     fclose(hfp);
-     free(hist_loop);
-     free(hist_dump);
-     free(hist_wait);
-     ////////////////////////////////////////
-     free(total_loop);
-     free(total_dump);
-     free(total_wait);
+     fprintf(stdout, "phase: %5.4lf %5.4lf %5.4lf %5.4lf %5.4lf\n",
+         aggregated_phase[0],
+         aggregated_phase[1],
+         aggregated_phase[2],
+         aggregated_phase[3],
+         aggregated_phase[4]
+         );
    }
+   if(0) 
+   {
+     double *total_loop = NULL;
+     double *total_dump = NULL;
+     double *total_wait = NULL;
+     int total_stat_cnt = total_its * numRanks;
+     if(myRank == 0) {
+       total_loop = (double *)malloc(total_stat_cnt * sizeof(double));
+       total_dump = (double *)malloc(total_stat_cnt * sizeof(double));
+       total_wait = (double *)malloc(total_stat_cnt * sizeof(double));
+     }
+     MPI_Gather(local_loop.data(), total_its, MPI_FLOAT, total_loop, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
+     MPI_Gather(local_dump.data(), total_its, MPI_FLOAT, total_dump, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
+     MPI_Gather(local_wait.data(), total_its, MPI_FLOAT, total_wait, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
+     if(myRank == 0) {
+       char tmpfile[128];
+       
+       // local stats /////////////////////////
+       sprintf(tmpfile, "local_stats.%s.%d.%d.%s", execname, numRanks, opts.nx, fname_last);
+       FILE *lfp = fopen(tmpfile, "w"); 
+       fprintf(lfp, "%s\n", execname);
+       if(lfp == 0) { printf("failed to open %s\n", tmpfile); assert(lfp); }
+       double loop_min = DBL_MAX;
+       double loop_max = 0;
+       double dump_min = DBL_MAX;
+       double dump_max = 0;
+       double wait_min = DBL_MAX;
+       double wait_max = 0;
+       for(int i=0; i<total_stat_cnt; i++) {
+         fprintf(lfp, "%lf,", total_loop[i]);
+         if(total_loop[i] < loop_min) loop_min = total_loop[i];
+         if(total_loop[i] > loop_max) loop_max = total_loop[i];
+       }
+       fprintf(lfp, "\n");
+       for(int i=0; i<total_stat_cnt; i++) {
+         fprintf(lfp, "%lf,", total_dump[i]);
+         if(total_dump[i] < dump_min) dump_min = total_dump[i];
+         if(total_dump[i] > dump_max) dump_max = total_dump[i];
+       }
+       fprintf(lfp, "\n");
+       for(int i=0; i<total_stat_cnt; i++) {
+         fprintf(lfp, "%lf,", total_wait[i]);
+         if(total_wait[i] < wait_min) wait_min = total_wait[i];
+         if(total_wait[i] > wait_max) wait_max = total_wait[i];
+       }
+       fprintf(lfp, "\n");
+       fclose(lfp);
+       ////////////////////////////////////////
+       // global stats /////////////////////////
+       sprintf(tmpfile, "global_stats.%s.%d.%d.%s", execname, numRanks, opts.nx, fname_last);
+       FILE *gfp = fopen(tmpfile, "w"); 
+       fprintf(gfp, "loop,         dump,         wait\n");
+       fprintf(gfp, "avg, %le, %le, %le\nstd, %le, %le, %le\nmin, %le, %le, %le\nmax, %le, %le, %le\nmin, %le, %le, %le\nmax, %le, %le, %le\n", 
+           recvbufavg[0], recvbufavg[1], recvbufavg[2], 
+           recvbufstd[0], recvbufstd[1], recvbufstd[2], 
+           loop_min     ,      dump_min,      wait_min, 
+           loop_max     ,      dump_max,      wait_max,
+           recvbufmin[0], recvbufmin[1], recvbufmin[2], 
+           recvbufmax[0], recvbufmax[1], recvbufmax[2]);
+       fclose(gfp);
+       ////////////////////////////////////////
+       // histogram ///////////////////////////
+       sprintf(tmpfile, "histogram.%s.%d.%d.%s", execname, numRanks, opts.nx, fname_last);
+       FILE *hfp = fopen(tmpfile, "w"); 
+       fprintf(hfp, "%s\n", execname);
+       if(hfp == 0) { printf("failed to open %s\n", tmpfile); assert(hfp); }
+       // based on optimal bin size calculation,
+       // https://www.fmrib.ox.ac.uk/datasets/techrep/tr00mj2/tr00mj2/node24.html
+       double samples = pow(total_stat_cnt, -0.333333);
+       double binsize_loop = 3.49 * recvbufstd[0] * samples;
+       double binsize_dump = 3.49 * recvbufstd[1] * samples;
+       double binsize_wait = 3.49 * recvbufstd[2] * samples;
+       double window_loop = loop_max - loop_min;
+       double window_dump = dump_max - dump_min;
+       double window_wait = wait_max - wait_min;
+       int    bincnt_loop = window_loop / binsize_loop;
+       int    bincnt_dump = window_dump / binsize_dump;
+       int    bincnt_wait = window_wait / binsize_wait;
+       printf("loop: %lf~%lf=%lf %lf (%d)\n", loop_min, loop_max, window_loop, binsize_loop, bincnt_loop);
+       printf("dump: %lf~%lf=%lf %lf (%d)\n", dump_min, dump_max, window_dump, binsize_dump, bincnt_dump);
+       printf("wait: %lf~%lf=%lf %lf (%d)\n", wait_min, wait_max, window_wait, binsize_wait, bincnt_wait);
+       unsigned *hist_loop = (unsigned *)calloc(bincnt_loop, sizeof(unsigned));
+       unsigned *hist_dump = (unsigned *)calloc(bincnt_dump, sizeof(unsigned));
+       unsigned *hist_wait = (unsigned *)calloc(bincnt_wait, sizeof(unsigned));
+       for(int i=0; i<total_stat_cnt; i++) { 
+         int idx = (total_loop[i] - loop_min)/binsize_loop; 
+         idx = (idx >= bincnt_loop)? bincnt_loop : idx;
+         idx = (idx < 0)? 0 : idx;
+         hist_loop[idx]++; }
+       for(int i=0; i<total_stat_cnt; i++) { 
+         int idx = (total_dump[i] - dump_min)/binsize_dump; 
+         idx = (idx >= bincnt_dump)? bincnt_dump : idx;
+         idx = (idx < 0)? 0 : idx;
+         hist_dump[idx]++; }
+       for(int i=0; i<total_stat_cnt; i++) { 
+         int idx = (total_wait[i] - wait_min)/binsize_wait; 
+         idx = (idx >= bincnt_wait)? bincnt_wait : idx;
+         idx = (idx < 0)? 0 : idx;
+         hist_wait[idx]++; }
+       // X-axis for loop
+       for(int i=0; i<bincnt_loop; i++, loop_min += binsize_loop) { fprintf(hfp, "%lf,", loop_min); }
+       fprintf(hfp, "\n");
+       for(int i=0; i<bincnt_loop; i++) { fprintf(hfp, "%u,", hist_loop[i]); }
+       fprintf(hfp, "\n");
+       // X-axis for dump
+       for(int i=0; i<bincnt_dump; i++, dump_min += binsize_dump) { fprintf(hfp, "%lf,", dump_min); }
+       fprintf(hfp, "\n");
+       for(int i=0; i<bincnt_dump; i++) { fprintf(hfp, "%u,", hist_dump[i]); }
+       fprintf(hfp, "\n");
+       // X-axis for wait
+       for(int i=0; i<bincnt_wait; i++, wait_min += binsize_wait) { fprintf(hfp, "%lf,", wait_min); }
+       fprintf(hfp, "\n");
+       for(int i=0; i<bincnt_wait; i++) { fprintf(hfp, "%u,", hist_wait[i]); }
+       fprintf(hfp, "\n");
+       fclose(hfp);
+       free(hist_loop);
+       free(hist_dump);
+       free(hist_wait);
+       ////////////////////////////////////////
+       free(total_loop);
+       free(total_dump);
+       free(total_wait);
+     } // rank 0 ends
    } else {
 
 #if 0

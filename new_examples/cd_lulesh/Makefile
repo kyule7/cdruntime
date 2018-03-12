@@ -21,8 +21,12 @@ CD_OPS = -D_CD_CDRT=${CD_CDRT} \
 				 -D_CD_INCR_CKPT=${CD_INCR_CKPT} \
 				 -D_CD_FULL_CKPT=${CD_FULL_CKPT} \
 				 -D_CD_CHILD=1 \
-				 -D_LEAF_LV=1 \
-				 -D_CD_DUMMY=1 \
+				 -D_LEAF_LV=0 \
+  			 -D_POS_VEL_ACC=0 \
+  			 -D_LAGRANGE_ELEM=0 \
+  			 -D_CALC_FOR_ELEM=0 \
+  			 -D_MATERIAL_PROP=0 \
+				 -D_CD_DUMMY=0 \
 				 -D_FGCD=0 
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 ${CD_OPS} 
 CD_CFLAGS = -std=gnu++0x -fmax-errors=1 -fPIC -I${CDPATH}/include -I${CDPATH}/src -I${CDPATH}/src/persistence -I${CDPATH}/plugin/wrapper

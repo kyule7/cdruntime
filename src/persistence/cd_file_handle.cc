@@ -73,7 +73,7 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath), f
     ERROR_MESSAGE_PACKER("ERROR: File open path:%s\n", full_filename);
   }
   MYDBG("Opened file : %s\n", full_filename);
-  printf("Opened file : %s\n", full_filename);
+//  printf("Opened file : %s\n", full_filename);
   fh_ = this;
 }
 

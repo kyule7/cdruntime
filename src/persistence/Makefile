@@ -1,5 +1,5 @@
 #!/bin/bash
-ENABLE_DEBUG=1
+ENABLE_DEBUG=0
 
 IS_STAMPEDE=1
 ifeq (${IS_STAMPEDE}, 1)

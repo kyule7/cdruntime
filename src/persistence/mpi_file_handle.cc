@@ -10,7 +10,7 @@
 //#include "cd_file_handle.h"
 #include "buffer_consumer_interface.h"
 #include <string.h> // strcpy
-
+#include <math.h>
 using namespace packer;
 //packer::Time packer::time_mpiio_write("mpiio_write"); 
 //packer::Time packer::time_mpiio_read("mpiio_read"); 
@@ -223,3 +223,42 @@ FileHandle *LibcFileHandle::Get(MPI_Comm comm, const char *filepath)
   return dynamic_cast<FileHandle *>(fh_);
 }
 
+void Time::GatherBW(void) 
+{
+  const int prof_elems = 9;
+  double sendbuf[9] = { 
+                         packer::time_copy.GetBW(), 
+                         packer::time_write.GetBW(), 
+                         packer::time_read.GetBW(), 
+                         packer::time_posix_write.GetBW(), 
+                         packer::time_posix_read.GetBW(), 
+                         packer::time_posix_seek.GetBW(), 
+                         packer::time_mpiio_write.GetBW(), 
+                         packer::time_mpiio_read.GetBW(), 
+                         packer::time_mpiio_seek.GetBW()
+  };
+  double recvbufmax[prof_elems] = { 0, 0, 0, 0 };
+  double recvbufmin[prof_elems] = { 0, 0, 0, 0 };
+  double recvbufavg[prof_elems] = { 0, 0, 0, 0 };
+  double recvbufstd[prof_elems] = { 0, 0, 0, 0 };
+  double sendbufstd[prof_elems];
+  for(int i=0; i<prof_elems; i++) { sendbufstd[i] = sendbuf[i] * sendbuf[i]; }
+  MPI_Reduce(sendbuf, recvbufmax, prof_elems, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(sendbuf, recvbufmin, prof_elems, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+  MPI_Reduce(sendbuf, recvbufavg, prof_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(sendbufstd, recvbufstd, prof_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  for(int i=0; i<prof_elems; i++) { 
+    recvbufavg[i] /= packerTaskSize; // avg
+    recvbufstd[i] /= packerTaskSize; // avg of 2nd momentum
+    recvbufstd[i] =  sqrt(recvbufstd[i] - recvbufavg[i] * recvbufavg[i]);
+  }
+  packer::time_copy.UpdateBW(       recvbufavg[0], recvbufstd[0], recvbufmin[0], recvbufmax[0]); 
+  packer::time_write.UpdateBW(      recvbufavg[1], recvbufstd[1], recvbufmin[1], recvbufmax[1]); 
+  packer::time_read.UpdateBW(       recvbufavg[2], recvbufstd[2], recvbufmin[2], recvbufmax[2]); 
+  packer::time_posix_write.UpdateBW(recvbufavg[3], recvbufstd[3], recvbufmin[3], recvbufmax[3]); 
+  packer::time_posix_read.UpdateBW( recvbufavg[4], recvbufstd[4], recvbufmin[4], recvbufmax[4]); 
+  packer::time_posix_seek.UpdateBW( recvbufavg[5], recvbufstd[5], recvbufmin[5], recvbufmax[5]); 
+  packer::time_mpiio_write.UpdateBW(recvbufavg[6], recvbufstd[6], recvbufmin[6], recvbufmax[6]); 
+  packer::time_mpiio_read.UpdateBW( recvbufavg[7], recvbufstd[7], recvbufmin[7], recvbufmax[7]); 
+  packer::time_mpiio_seek.UpdateBW( recvbufavg[8], recvbufstd[8], recvbufmin[8], recvbufmax[8]);
+}
