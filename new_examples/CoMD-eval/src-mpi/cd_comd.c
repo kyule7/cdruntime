@@ -160,7 +160,7 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, uint32_t knob,
     size += nAtoms_size;
     size += sizeof(int *);
     if (PRINTON == 1)
-      printf("Preserven LinkCell_nAtoms: %u\n", 0, nAtoms_size);
+      printf("Preserven LinkCell_nAtoms: %u\n", nAtoms_size);
   }
 
   // Preserve nLocalBoxes

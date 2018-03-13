@@ -17,7 +17,9 @@ DO_MPI = ON
 ### own.  If you need any -L or -l switches to get C standard libraries
 ### (such as -lm for the math library) put them in C_LIB.
 CC = mpicc
+
 CFLAGS = -std=gnu11
+#CFLAGS = -std=c11
 #CD_ROOT=/home1/03341/kyushick/Work/CDs/pfsFix
 CD_ROOT=../../../
 ifeq (${CD_ENABLED}, 1)
@@ -48,6 +50,7 @@ CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D
 #CD_CFLAGS := -I$(CD_ROOT)/include 
 
 CD_LINKFLAGS := -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
+#CD_LINKFLAGS := -L$(CD_ROOT)/lib -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence -dynamic
 #CD_LINKFLAGS := -L$(CD_ROOT)/lib -lwrapLibc -lc -lcd -Wl,-rpath=$(CD_ROOT)/lib -L$(CD_ROOT)/src/persistence -lpacker -Wl,-rpath=$(CD_ROOT)/src/persistence
 else
 CD_FLAGS := 
@@ -56,7 +59,8 @@ CD_LINKFLAGS :=
 endif
 
 CFLAGS += ${CD_CFLAGS} ${CD_FLAGS} -gdwarf-2
-OPTFLAGS = -g -O5
+#OPTFLAGS = -g -O5
+OPTFLAGS = -g -O3
 INCLUDES = 
 C_LIB = -lm ${CD_LINKFLAGS}
 
