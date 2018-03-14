@@ -160,8 +160,8 @@ int main(int argc, char **argv) {
   // CD1_INTERVAL set by command line argument ( 1 by default)
   const int CD1_INTERVAL = sim->preserveRateLevel1;
   unsigned int numReexecution = 0;   // TODO: for debugging purpose
-#endif                               //_CD1
   unsigned int is_lv1_completed = 0; // set to 1 for completion
+#endif                               //_CD1
   profileStart(loopTimer);
   for (; iStep < nSteps;) {
 #if _CD1

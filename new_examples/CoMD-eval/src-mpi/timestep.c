@@ -235,7 +235,6 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       -1, // to (entire atoms)
                       0,  // is_print
                       NULL);
-    // idx_redist);
     // Preserve (almost) all in boxes. Note that this is over-preservation
     // because boxSize and nHaloBoxes are not required while tiny they are.
     // TODO: preserve nAtoms[nLocalBoxes:nTotalBoxes] as shown below
@@ -286,7 +285,6 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       -1, // to (entire atoms)
                       0,  // is_print
                       NULL);
-    // idx_redist); // FIXME: correct name
     // TODO: kOutput
     //       boxes->nAtoms[nLocalBoxes:nTotalBoxes] (only HaloCells)
     redist_pre_out_size =
@@ -325,35 +323,28 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       0,  // from
                       -1, // to
                       0, NULL);
-    // idx_force); // is_print
-    // NULL); // is_print
 #if DO_PRV
     cd_preserve(lv2_cd, &ii, sizeof(int), kCopy, "timestep_ii", "timestep_ii");
 #endif                                        // DO_PRV
     computeForce_pre_lv2_size += sizeof(int); // add the size of ii (loop index)
 #endif                                        // _CD2
 
-#if _CD3
+#if _CD3 && _CD2
     // FIXME: eam force has cocmmunication in it so that we can't create
     // siblings there
     // TODO: add switch to choose right CD either of LJ or EAM, depending on
     // doeam
-    cd_handle_t *lv3_cd = cd_create(getcurrentcd(), /*1,*/ getNRanks(),
-                                    "ljForce", kStrict | kLocalMemory, 0xC);
-    // kStrict | kDRAM, 0xC);
-    // TODO: add interval to control lv3_cd
-    const int CD3_INTERVAL = s->preserveRateLevel3;
-    // FIXME: this doesn't make sense
-    // if ( ii % CD3_INTERVAL == 0) {
+
+    // Why do I need lv3_cd here? In order to create parallel children?
+    cd_handle_t *lv3_cd =
+        cd_create(getcurrentcd(), /*1,*/ getNRanks(), "computeForce_split",
+                  kStrict | kLocalMemory, 0xC);
     // FIXME: this can be either LJ potential or EAM potential
-    cd_begin(lv3_cd, "ljForce_in_timestep");
-    // FIXME: check kRef semantic
+    cd_begin(lv3_cd, "computeForce_split");
     // FIXME: This is not correct implementation. In level 4 CD, it has finer
     //       grained than level 3 and the ref names should match with level 4
     //       Begin/Complete interval
     // Okay to reuse the same index. actually should
-    // char idx_force[256] = "-1"; // FIXME: it this always enough?
-    // sprintf(idx_force, "force_%d", ii);
     int computeForce_pre_lv3_size =
         preserveAtoms(lv3_cd, kRef, s->atoms, s->boxes->nLocalBoxes,
                       0, // is_all
@@ -369,23 +360,16 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       -1, // to
                       0,  // is_print
                       NULL);
-    // idx_force);
-    // NULL);
 
-    // FIXME: why do I need lv3_cd here? to create parallel children?
-    // No need to preserve any since it's done already in the parent (lv2_cd).
-    // cd_preserve( ... )
-    //}
-#endif
+#endif // _CD3 && _CD2
     startTimer(computeForceTimer);
     // call either eamForce or ljForce
     computeForce(s); // s->pot->force(s)
     stopTimer(computeForceTimer);
-#if _CD3
-    // if ( ii % CD3_INTERVAL == 0) {
+#if _CD3 && _CD2
+#if DO_OUTPUT
     // TODO: kOutput (lv3_cd)
     //       s->atoms->f, U
-#if DO_OUTPUT
     int computeForce_pre_output_lv3_size =
         preserveAtoms(lv3_cd, kOutput, s->atoms, s->boxes->nLocalBoxes,
                       0, // is_all
@@ -405,8 +389,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     cd_detect(lv3_cd);
     cd_complete(lv3_cd);
     cd_destroy(lv3_cd);
-    //}
-#endif
+#endif // _CD3 && _CD2
 #if _CD2
     // Do I need cd_detect here when level2 is enabled? Yes, it won't
     // double detect here and in level3. (FIXME: should be verfified)
