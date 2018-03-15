@@ -535,15 +535,15 @@ int MPI_Isend(const void *buf,
               MPI_Request *request)
 {
   MsgPrologue();
-//  if(CDPath::GetCurrentCD() != NULL)
-//    CD_DEBUG("[%s] %d -> %d\n", __func__, myTaskID, dest);
-  if(CDPath::GetCurrentCD() != NULL)
-    CD_DEBUG("[%s] %d -> %d ptr:%p\n", __func__, myTaskID, dest, request);
+
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
+  if(cur_cdh != NULL) {
+    CD_DEBUG("[%s %s] %d -> %d ptr:%p\n", cur_cdh->GetName(), cur_cdh->GetLabel(), myTaskID, dest, request);
+  }
   int mpi_ret=0;
   LOG_DEBUG("here inside MPI_Isend\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh != NULL) {
     CD *cdp = cur_cdh->ptr_cd();
     MPI_Group g;
@@ -621,13 +621,14 @@ int MPI_Irecv(void *buf,
   int type_size;
   PMPI_Type_size(datatype, &type_size);
   RecordLog(count * type_size);
-  if(CDPath::GetCurrentCD() != NULL)
-    CD_DEBUG("[%s] %d <- %d ptr:%p\n", __func__, myTaskID, src, request);
+  CDHandle *cur_cdh = CDPath::GetCurrentCD();
+  if(cur_cdh != NULL) {
+    CD_DEBUG("[%s %s] %d <- %d ptr:%p\n", cur_cdh->GetName(), cur_cdh->GetLabel(), myTaskID, src, request);
+  }
 //    CD_DEBUG("[%s] ptr:%p\n", __func__, request);
   LOG_DEBUG("here inside MPI_Irecv\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle *cur_cdh = CDPath::GetCurrentCD();
   if(cur_cdh != NULL) {
     CD *cdp = cur_cdh->ptr_cd();
     MPI_Group g;
@@ -1123,10 +1124,11 @@ int MPI_Wait(MPI_Request *request,
 //        CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
 //        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
         // FIXME:03142018
-        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
+        //mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
+        mpi_ret = PMPI_Wait(request, status);
+        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
         CD_DEBUG("Now waits.....%s, %s\n", cur_cdh->GetLabel(), cur_cdh->GetName());
         CD_DEBUG("Now waits?.....%s, %s\n", GetLeafCD()->GetLabel(), GetLeafCD()->GetName());
-        //mpi_ret = PMPI_Wait(request, status);
 
 
 //        mpi_ret = PMPI_Wait(request, status);
@@ -1174,7 +1176,6 @@ int MPI_Wait(MPI_Request *request,
   }
   else {
     LOG_DEBUG("Warning: MPI_Wait out of CD context...\n");
-    printf("Warning: MPI_Wait out of CD context...\n");
     CDHandle *cdhh = GetLeafCD();
     if(cdhh != NULL) {
       CD_DEBUG("Out of CD context...%s\n", cdhh->GetLabel());}
@@ -1202,7 +1203,15 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
   CDHandle *cdh = CDPath::GetCurrentCD();
   if(cdh != NULL) {
     for (ii=0;ii<count;ii++) {
-      CD_DEBUG("[%s %s] %d ptr:%p\n", cdh->ptr_cd()->GetCDID().GetString().c_str(), cdh->GetLabel(), myTaskID, &(array_of_requests[ii]));
+      CD_DEBUG("[%s %s] (%d/%d) ptr:%p src:%d, tag:%d\n", 
+            cdh->ptr_cd()->GetCDID().GetString().c_str(), 
+            cdh->GetLabel(), ii, count, 
+            &(array_of_requests[ii]), 
+//            *(uint64_t *)(&array_of_requests[ii],
+             array_of_statuses[ii].MPI_SOURCE, 
+             array_of_statuses[ii].MPI_TAG
+            );
+         
     }
   }
   CDHandle *cur_cdh = CDPath::GetCurrentCD();
@@ -1212,8 +1221,13 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
 //printf("test waitall: strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
         CD_DEBUG("total incmpl size : %lu\n", cur_cdh->ptr_cd()->incomplete_log_.size());
         // FIXME:03142018
-        mpi_ret = cur_cdh->ptr_cd()->BlockallUntilValid(count, array_of_requests, array_of_statuses);
-        //mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
+        //mpi_ret = cur_cdh->ptr_cd()->BlockallUntilValid(count, array_of_requests, array_of_statuses);
+        mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
+        for (ii=0;ii<count;ii++) {
+          bool deleted = cur_cdh->ptr_cd()->DeleteIncompleteLog(&(array_of_requests[ii]));
+          CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); 
+
+        }
         
 //        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        if(mpi_ret != MPI_ERR_NEED_ESCALATE) {

@@ -221,7 +221,7 @@ void SystemConfig::ParseParam(char *key)
         config.failure_rate_[errortype] = atof(key) / ((num_tasks == 1)? cd::totalTaskSize : num_tasks);
       else
         config.failure_rate_[errortype] = 0.0;
-      if(myTaskID == 1) printf("failure rate %d:%lf, %lf\n", errortype, atof(key), config.failure_rate_[errortype]);
+      if(myTaskID == 1) printf("failure rate %ld:%lf, %lf\n", errortype, atof(key), config.failure_rate_[errortype]);
     } else if(prv == 'l') {
       label = key;
       tuned::phaseTree.current_->label_ = label;

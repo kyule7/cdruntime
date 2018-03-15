@@ -360,9 +360,9 @@ CDErrT CD::CheckMailBox(void)
   CD_CLOCK_T tstart = CD_CLOCK();
 #endif
   CD::CDInternalErrT ret=kOK;
-  PMPI_Win_lock(MPI_LOCK_SHARED, myTaskID, 0, pendingWindow_);
+  PMPI_Win_lock_all(0, pendingWindow_);
   int event_count = *pendingFlag_;//DecPendingCounter();
-  PMPI_Win_unlock(myTaskID, pendingWindow_);
+  PMPI_Win_unlock_all(pendingWindow_);
 
 //  int event_count = *pendingFlag_;
   //assert(event_count <= 1024);
@@ -1397,9 +1397,11 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
         break;
       } else {
         if(printed == false) {
-          CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
-              __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
-//          rollback_point = CheckRollbackPoint(true); // read from remote
+          int number_amount = 0;
+          PMPI_Get_count(status, MPI_INT, &number_amount);
+          CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s, mpi #:%d, mpi src:%d, mpi tag:%d\n", 
+              __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str(),
+              number_amount, status->MPI_SOURCE, status->MPI_TAG);
           
           printed = true;
         }
@@ -1437,9 +1439,12 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
   while(1) {
     ret = PMPI_Testall(count, array_of_requests, &flag, array_of_statuses);
     if(flag != 0) {
+      CD_DEBUG("delete %d requests\n", count);
       for (int ii=0;ii<count;ii++) {
         bool deleted = DeleteIncompleteLog(&(array_of_requests[ii]));
-        CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); 
+        CD_DEBUG("wait %p %u %s src:%d, tag:%d\n", 
+                 &array_of_requests[ii], array_of_requests[ii], (deleted)? "DELETED":"NOT DELETED",
+                 array_of_statuses[ii].MPI_SOURCE, array_of_statuses[ii].MPI_TAG); 
       }
       printed = false;
       break;
@@ -1468,6 +1473,7 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
       // checking mailbox ends
     }
   }
+  // FIXME: 03152018
   if(ret == MPI_ERR_NEED_ESCALATE) {
     CD_DEBUG("Error reported during MPI_Waitall!\n"); 
     for (int ii=0;ii<count;ii++) {

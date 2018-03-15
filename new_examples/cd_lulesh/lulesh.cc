@@ -1318,18 +1318,18 @@ static inline void CalcForceForNodes(Domain& domain)
 {
   Index_t numNode = domain.numNode() ;
 
-//#if USE_MPI  
-//  CommRecv(domain, MSG_COMM_SBN, 3,
-//           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() + 1,
-//           true, false) ;
-//#endif  
-//
-//#pragma omp parallel for firstprivate(numNode)
-//  for (Index_t i=0; i<numNode; ++i) {
-//     domain.fx(i) = Real_t(0.0) ;
-//     domain.fy(i) = Real_t(0.0) ;
-//     domain.fz(i) = Real_t(0.0) ;
-//  }
+#if USE_MPI  
+  CommRecv(domain, MSG_COMM_SBN, 3,
+           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() + 1,
+           true, false) ;
+#endif  
+
+#pragma omp parallel for firstprivate(numNode)
+  for (Index_t i=0; i<numNode; ++i) {
+     domain.fx(i) = Real_t(0.0) ;
+     domain.fy(i) = Real_t(0.0) ;
+     domain.fz(i) = Real_t(0.0) ;
+  }
 #if _CD && _CD_CDRT
   // Out{FX,FY,FZ} <- In{X,Y,Z,XD,YD,ZD,FX,FY,FZ,NODELIST
   //                     P,Q,V,VOLO,SS,ELEMMASS}
@@ -1377,31 +1377,8 @@ static inline void CalcForceForNodes(Domain& domain)
 #else // _CD_CDRT
   double app_start = MPI_Wtime();  
 #endif
-#if USE_MPI  
-  CommRecv(domain, MSG_COMM_SBN, 3,
-           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() + 1,
-           true, false) ;
-#endif  
-
-#pragma omp parallel for firstprivate(numNode)
-  for (Index_t i=0; i<numNode; ++i) {
-     domain.fx(i) = Real_t(0.0) ;
-     domain.fy(i) = Real_t(0.0) ;
-     domain.fz(i) = Real_t(0.0) ;
-  }
   /* Calcforce calls partial, force, hourq */
   CalcVolumeForceForElems(domain) ;
-#if USE_MPI  
-  Domain_member fieldData[3] ;
-  fieldData[0] = &Domain::fx ;
-  fieldData[1] = &Domain::fy ;
-  fieldData[2] = &Domain::fz ;
-  
-  CommSend(domain, MSG_COMM_SBN, 3, fieldData,
-           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() +  1,
-           true, false) ;
-  CommSBN(domain, 3, fieldData) ;
-#endif  
 
   double app_end = MPI_Wtime();
   exec_phase[0] = app_end - app_start;
@@ -1435,17 +1412,17 @@ static inline void CalcForceForNodes(Domain& domain)
   #endif
 #endif
 
-//#if USE_MPI  
-//  Domain_member fieldData[3] ;
-//  fieldData[0] = &Domain::fx ;
-//  fieldData[1] = &Domain::fy ;
-//  fieldData[2] = &Domain::fz ;
-//  
-//  CommSend(domain, MSG_COMM_SBN, 3, fieldData,
-//           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() +  1,
-//           true, false) ;
-//  CommSBN(domain, 3, fieldData) ;
-//#endif  
+#if USE_MPI  
+  Domain_member fieldData[3] ;
+  fieldData[0] = &Domain::fx ;
+  fieldData[1] = &Domain::fy ;
+  fieldData[2] = &Domain::fz ;
+  
+  CommSend(domain, MSG_COMM_SBN, 3, fieldData,
+           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() +  1,
+           true, false) ;
+  CommSBN(domain, 3, fieldData) ;
+#endif  
 }
 
 /******************************************/
@@ -4032,7 +4009,7 @@ int main(int argc, char *argv[])
    if(myRank == 0) {
      char tmpfile[256];
 //     sprintf(tmpfile, "time_trace.%s.%d.%d.%d", execname, numRanks, opts.nx, ((int)start) % 10000);
-     sprintf(tmpfile, "time_trace.%s.%d.%d.%s.json", execname, numRanks, opts.nx, fname_last);
+     sprintf(tmpfile, "time_trace.%s.%d.%d.%s.json", execname, opts.nx, numRanks, fname_last);
      FILE *tfp = fopen(tmpfile, "w"); 
      if(tfp == 0) { printf("failed to open %s\n", tmpfile); assert(tfp); }
 

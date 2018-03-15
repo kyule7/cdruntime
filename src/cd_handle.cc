@@ -89,6 +89,7 @@ char ftype_name[64] = "NoNamed";
 char start_date[64] = "NoNamed";
 char end_date[64] = "NoNamed";
 char *exec_details = NULL;
+char *exec_iterations = NULL;
 
 bool cd::runtime_initialized = false;
 bool cd::orig_app_side = true;
@@ -216,13 +217,14 @@ void cd::GatherProfile(void)
   MPI_Gather(mailbox_trace.data(), profile_counter, MPI_FLOAT, mailbox_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
   if(myTaskID == 0) {
     char tmpfile[512];
-    sprintf(tmpfile, "prof_trace.%s.%d.%s.%s.json", exec_name, totalTaskSize, (exec_details!=NULL)? exec_details : "NoInput", start_date);
+    sprintf(tmpfile, "prof_trace.%s.%s.%d.%s.json", exec_name, (exec_details!=NULL)? exec_details : "NoInput", totalTaskSize, start_date);
     FILE *tfp = fopen(tmpfile, "w"); 
     if(tfp == 0) { printf("failed to open %s\n", tmpfile); assert(tfp); }
 
     fprintf(tfp, "{\n");
     fprintf(tfp, "  \"name\":\"%s\",\n", exec_name);
     fprintf(tfp, "  \"input\":%s,\n", (exec_details!=NULL)? exec_details : "NoInput");
+    fprintf(tfp, "  \"iters\":%d,\n", (exec_iterations!=NULL)? atoi(exec_iterations) : 0);
     fprintf(tfp, "  \"nTask\":%d,\n", totalTaskSize);
     fprintf(tfp, "  \"GlobalDisk BW\": [%lf,%lf,%lf,%lf]\n", packer::time_mpiio_write.bw_avg, packer::time_mpiio_write.bw_std, packer::time_mpiio_write.bw_min, packer::time_mpiio_write.bw_max);
     fprintf(tfp, "  \"LocalDisk BW\":[%lf,%lf,%lf,%lf]\n", packer::time_posix_write.bw_avg, packer::time_posix_write.bw_std, packer::time_posix_write.bw_min, packer::time_posix_write.bw_max);
@@ -528,8 +530,9 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //    cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
 //  }
 //  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
-  exec_details = getenv("CD_EXEC_DETAILS");
-  char *is_noprv = getenv("CD_NO_PRESERVE");
+  exec_details    = getenv("CD_EXEC_DETAILS");
+  exec_iterations = getenv("CD_EXEC_ITERS");
+  char *is_noprv  = getenv("CD_NO_PRESERVE");
   cd::dont_preserve = (is_noprv != NULL)? true:false;
 #if CD_TUNING_ENABLED == 0
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
