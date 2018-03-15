@@ -3435,7 +3435,7 @@ int main(int argc, char *argv[])
 #if _CD_INCR_CKPT || _CD_FULL_CKPT
   int intvl[3] = {1, 1, 1}; 
 #else
-  int intvl[3] = {1, 1, 1}; 
+  int intvl[3] = {16, 4, 1}; 
 #endif
   char *lulesh_intvl = getenv( "LULESH_LV0" );
   if(lulesh_intvl != NULL) {

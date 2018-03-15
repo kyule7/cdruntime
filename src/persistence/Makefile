@@ -1,9 +1,9 @@
 #!/bin/bash
-ENABLE_DEBUG=0
+ENABLE_DEBUG=1
 
 IS_STAMPEDE=1
 ifeq (${IS_STAMPEDE}, 1)
-MYCC=g++
+MYCC=icpc
 MPICC=mpicxx
 CFLAGS=-fPIC -Wall -c -std=gnu++0x -I. -fmax-errors=3 #-Weffc++
 LFLAGS=-fPIC -Wall -std=gnu++0x -I.
@@ -15,8 +15,8 @@ LFLAGS=-fPIC -I.
 endif
 
 ifeq (${ENABLE_DEBUG}, 1)
-CFLAGS += -g -D_PACKER_DEBUG
-LFLAGS += -g -D_PACKER_DEBUG
+CFLAGS += -g -D_PACKER_DEBUG -O3
+LFLAGS += -g -D_PACKER_DEBUG -O3
 endif
 
 #CFLAGS += -O3
