@@ -1,6 +1,7 @@
 #include "phase_tree.h"
 #include "cd_global.h"
 #include "cd_def_preserve.h"
+#include "cd_features.h"
 #include "sys_err_t.h"
 #include <iomanip>      // std::setw
 using namespace common;
@@ -171,7 +172,7 @@ void PhaseNode::PrintOutputJson(void)
   fprintf(outJSON, "  \"mesg logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::MSG_PRF]  , cd::recvstd[cd::MSG_PRF]  , cd::recvmin[cd::MSG_PRF]  , cd::recvmax[cd::MSG_PRF]  );
   fprintf(outJSON, "  \"libc logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::LOG_PRF]  , cd::recvstd[cd::LOG_PRF]  , cd::recvmin[cd::LOG_PRF]  , cd::recvmax[cd::LOG_PRF]  );
 #if CD_PROFILER_ENABLED & CD_MPI_ENABLED
-  fprintf(outJSON, "  \"mailbox overhead\": %lf,\n", cd::mailbox_elapsed_time); 
+  fprintf(outJSON, "  \"mailbox overhead\": %lf,\n", CD_CLK_MEA(cd::mailbox_elapsed_time)); 
 #endif
 
   fprintf(outJSON, "  \"global_param\" : {\n"
@@ -411,7 +412,12 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 
 #if CD_TUNING_ENABLED == 0 && CD_RUNTIME_ENABLED == 1
   if(tuned::phaseNodeCache.empty() == false) {
-    auto pt = tuned::phaseNodeCache.find(phase);
+//    auto pt = tuned::phaseNodeCache.find(phase);
+    auto pt=tuned::phaseNodeCache.begin();
+    for(;pt!=tuned::phaseNodeCache.end(); ++pt) {
+      if(pt->second->label_ == label) break;
+    }
+
     if(pt == tuned::phaseNodeCache.end()) {
       for(auto it=tuned::phaseNodeCache.begin(); it!=tuned::phaseNodeCache.end(); ++it) {
         printf("[%d] phase %u \n", cd::myTaskID, it->first);
@@ -422,11 +428,13 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     const PhaseNode *pn = pt->second;
     cd::phaseTree.current_->errortype_ = pn->errortype_;
     cd::phaseTree.current_->medium_    = pn->medium_;
+//    if(cd::myTaskID == 1) {
 //      printf("%s (%s, %lx) <- (%s, %lx)\n", pn->label_.c_str(),
 //          GetMedium(cd::phaseTree.current_->medium_),
 //          cd::phaseTree.current_->errortype_, 
 //          GetMedium(pn->medium_), 
 //          pn->errortype_);
+//    }
   } else {
 //    printf("it is empty?\n");
   }

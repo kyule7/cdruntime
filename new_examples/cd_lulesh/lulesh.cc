@@ -3694,7 +3694,7 @@ int main(int argc, char *argv[])
       cd_update_profile();
 #endif
     //leaf_first = false;
-   }
+   } // while ends
 
 
 #if _CD
