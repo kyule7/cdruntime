@@ -296,6 +296,7 @@ namespace cd {
   extern int max_tag_level_bit;
   extern int max_tag_rank_bit;
   extern int max_tag_task_bit;
+  extern MPI_Errhandler mpi_err_handler;
 #endif
 
 
@@ -419,6 +420,7 @@ extern CD_CLOCK_T begin_clk;
 extern uint64_t state;
 extern int64_t failed_phase;
 extern int64_t failed_seqID;
+extern bool runtime_initialized;
 extern bool just_reexecuted;
 extern bool orig_app_side;
 extern bool orig_disabled;

@@ -1318,18 +1318,18 @@ static inline void CalcForceForNodes(Domain& domain)
 {
   Index_t numNode = domain.numNode() ;
 
-#if USE_MPI  
-  CommRecv(domain, MSG_COMM_SBN, 3,
-           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() + 1,
-           true, false) ;
-#endif  
-
-#pragma omp parallel for firstprivate(numNode)
-  for (Index_t i=0; i<numNode; ++i) {
-     domain.fx(i) = Real_t(0.0) ;
-     domain.fy(i) = Real_t(0.0) ;
-     domain.fz(i) = Real_t(0.0) ;
-  }
+//#if USE_MPI  
+//  CommRecv(domain, MSG_COMM_SBN, 3,
+//           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() + 1,
+//           true, false) ;
+//#endif  
+//
+//#pragma omp parallel for firstprivate(numNode)
+//  for (Index_t i=0; i<numNode; ++i) {
+//     domain.fx(i) = Real_t(0.0) ;
+//     domain.fy(i) = Real_t(0.0) ;
+//     domain.fz(i) = Real_t(0.0) ;
+//  }
 #if _CD && _CD_CDRT
   // Out{FX,FY,FZ} <- In{X,Y,Z,XD,YD,ZD,FX,FY,FZ,NODELIST
   //                     P,Q,V,VOLO,SS,ELEMMASS}
@@ -1357,9 +1357,7 @@ static inline void CalcForceForNodes(Domain& domain)
   if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); 
     PRINT_ONE("Prv LeafCD       CalcForce %luMB (Ref)\n", prv_len/1000000); }
-
   #else
-
   if(domain.check_begin(intvl0)) {
     prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); 
@@ -1368,17 +1366,10 @@ static inline void CalcForceForNodes(Domain& domain)
     prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); 
     PRINT_ONE("Prv Child        CalcForce %luMB\n", prv_len/1000000); }
-
   #endif
   else if(_LEAF_LV) { // leaf always preserve per loop 
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
     PRINT_ONE("Prv LeafCD       CalcForce %luMB\n", prv_len/1000000); }
-//  if(myRank == 1) {
-//    if(domain.check_begin(intvl0) || domain.check_begin(intvl1))
-//      printf("Prv %s       CalcForce %luMB\n", domain.check_begin(intvl0)? "Parent":"Child", prv_len/1000000);
-//    else
-//      printf("Prv LeafCD       CalcForce %luMB\n", prv_len/1000000);
-//  }
   double app_start = MPI_Wtime();  
   double prvtime = app_start - prv_start;
   dump_phase[0] = prvtime;
@@ -1386,8 +1377,31 @@ static inline void CalcForceForNodes(Domain& domain)
 #else // _CD_CDRT
   double app_start = MPI_Wtime();  
 #endif
+#if USE_MPI  
+  CommRecv(domain, MSG_COMM_SBN, 3,
+           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() + 1,
+           true, false) ;
+#endif  
+
+#pragma omp parallel for firstprivate(numNode)
+  for (Index_t i=0; i<numNode; ++i) {
+     domain.fx(i) = Real_t(0.0) ;
+     domain.fy(i) = Real_t(0.0) ;
+     domain.fz(i) = Real_t(0.0) ;
+  }
   /* Calcforce calls partial, force, hourq */
   CalcVolumeForceForElems(domain) ;
+#if USE_MPI  
+  Domain_member fieldData[3] ;
+  fieldData[0] = &Domain::fx ;
+  fieldData[1] = &Domain::fy ;
+  fieldData[2] = &Domain::fz ;
+  
+  CommSend(domain, MSG_COMM_SBN, 3, fieldData,
+           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() +  1,
+           true, false) ;
+  CommSBN(domain, 3, fieldData) ;
+#endif  
 
   double app_end = MPI_Wtime();
   exec_phase[0] = app_end - app_start;
@@ -1421,17 +1435,17 @@ static inline void CalcForceForNodes(Domain& domain)
   #endif
 #endif
 
-#if USE_MPI  
-  Domain_member fieldData[3] ;
-  fieldData[0] = &Domain::fx ;
-  fieldData[1] = &Domain::fy ;
-  fieldData[2] = &Domain::fz ;
-  
-  CommSend(domain, MSG_COMM_SBN, 3, fieldData,
-           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() +  1,
-           true, false) ;
-  CommSBN(domain, 3, fieldData) ;
-#endif  
+//#if USE_MPI  
+//  Domain_member fieldData[3] ;
+//  fieldData[0] = &Domain::fx ;
+//  fieldData[1] = &Domain::fy ;
+//  fieldData[2] = &Domain::fz ;
+//  
+//  CommSend(domain, MSG_COMM_SBN, 3, fieldData,
+//           domain.sizeX() + 1, domain.sizeY() + 1, domain.sizeZ() +  1,
+//           true, false) ;
+//  CommSBN(domain, 3, fieldData) ;
+//#endif  
 }
 
 /******************************************/

@@ -90,6 +90,7 @@ char start_date[64] = "NoNamed";
 char end_date[64] = "NoNamed";
 char *exec_details = NULL;
 
+bool cd::runtime_initialized = false;
 bool cd::orig_app_side = true;
 bool cd::orig_disabled = false;
 bool cd::orig_msg_app_side = true;
@@ -478,11 +479,41 @@ void InitDir(int myTask, int numTask)
 //  GetStackPtr(&sp_init);
 //  printf("init stack:%p\n", sp_init);
 //}
+#if CD_MPI_ENABLED
+char cd_err_str[256];
+int cd_err_len = 0, cd_err_class = 0;
+inline void CheckMPIError(int err) 
+{
+  if(err != MPI_SUCCESS) {
+    MPI_Error_class(err, &cd_err_class);
+    MPI_Error_string(err, cd_err_str, &cd_err_len);
+    CDHandle *cdl = GetLeafCD();
+    if(cdl != NULL) {
+      printf("MPI ERROR (%s, %d):%s\n", cdl->GetLabel(), cdl->GetExecMode(), cd_err_str); fflush(stdout);
+    } else {
+      printf("MPI ERROR:%s\n", cd_err_str); fflush(stdout);
+    }
+    assert(0);
+  }
+}
 
+MPI_Errhandler cd::mpi_err_handler;
+void CD_MPI_ErrHandler(MPI_Comm *comm, int *err, ...)
+{
+  CheckMPIError(*err);
+}
+#endif
 /// KL
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   CDPrologue();
+
+#if CD_MPI_ENABLED
+  // Define MPI error handler if necessary
+  PMPI_Comm_create_errhandler(CD_MPI_ErrHandler, &cd::mpi_err_handler);
+  PMPI_Comm_set_errhandler(MPI_COMM_WORLD, cd::mpi_err_handler);
+#endif
+
   // Initialize static vars
   logger::taskID = myTask;
   myTaskID      = myTask;
@@ -537,6 +568,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   OpenDebugFilepath(myTask, dbg_basepath);
 */
   InitDir(myTask, numTask);
+
+  cd::runtime_initialized = true;
 
   // Create Root CD
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);

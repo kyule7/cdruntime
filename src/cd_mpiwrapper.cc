@@ -1107,22 +1107,28 @@ int MPI_Wait(MPI_Request *request,
   MsgPrologue();
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Wait\n");
-  if(CDPath::GetCurrentCD() != NULL) {
-    CD_DEBUG("[%s] %s %s ptr:%p\n", __func__, 
-      CDPath::GetCurrentCD()->GetCDID().GetString().c_str(),
-      CDPath::GetCurrentCD()->GetLabel(), request);
+  CDHandle *cur_cdh = CDPath::GetCurrentCD();
+  if(cur_cdh != NULL) {
+    CD_DEBUG("[%s] %s %s ptr:%p\n", cur_cdh->GetLabel(), 
+      cur_cdh->GetCDID().GetString().c_str(),
+      cur_cdh->GetLabel(), request);
       
-    CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
+    cur_cdh->ptr_cd()->PrintDebug();
   }
 
-  CDHandle *cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh != NULL) {
     switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
 //printf("test wait : strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
 //        CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
 //        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
+        // FIXME:03142018
         mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
+        CD_DEBUG("Now waits.....%s, %s\n", cur_cdh->GetLabel(), cur_cdh->GetName());
+        CD_DEBUG("Now waits?.....%s, %s\n", GetLeafCD()->GetLabel(), GetLeafCD()->GetName());
+        //mpi_ret = PMPI_Wait(request, status);
+
+
 //        mpi_ret = PMPI_Wait(request, status);
 //        if(mpi_ret != MPI_ERR_NEED_ESCALATE) {
 //         cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
@@ -1168,6 +1174,12 @@ int MPI_Wait(MPI_Request *request,
   }
   else {
     LOG_DEBUG("Warning: MPI_Wait out of CD context...\n");
+    printf("Warning: MPI_Wait out of CD context...\n");
+    CDHandle *cdhh = GetLeafCD();
+    if(cdhh != NULL) {
+      CD_DEBUG("Out of CD context...%s\n", cdhh->GetLabel());}
+    else if(cd::runtime_initialized) {
+      CD_DEBUG("Out of CD context...\n");}
     mpi_ret = PMPI_Wait(request, status);
   }
   MsgEpilogue();
@@ -1199,8 +1211,10 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
       case kStrictCD: {
 //printf("test waitall: strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
         CD_DEBUG("total incmpl size : %lu\n", cur_cdh->ptr_cd()->incomplete_log_.size());
-
+        // FIXME:03142018
         mpi_ret = cur_cdh->ptr_cd()->BlockallUntilValid(count, array_of_requests, array_of_statuses);
+        //mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
+        
 //        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        if(mpi_ret != MPI_ERR_NEED_ESCALATE) {
 //         cur_cdh->ptr_cd()->DeleteIncompleteLog(request);

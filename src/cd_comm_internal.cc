@@ -360,7 +360,10 @@ CDErrT CD::CheckMailBox(void)
   CD_CLOCK_T tstart = CD_CLOCK();
 #endif
   CD::CDInternalErrT ret=kOK;
+  PMPI_Win_lock(MPI_LOCK_SHARED, myTaskID, 0, pendingWindow_);
   int event_count = *pendingFlag_;//DecPendingCounter();
+  PMPI_Win_unlock(myTaskID, pendingWindow_);
+
 //  int event_count = *pendingFlag_;
   //assert(event_count <= 1024);
   // Reset handled event counter
@@ -1272,7 +1275,7 @@ uint32_t CD::IncPendingCounter(void)
 
 void CD::PrintDebug() {
 
-  CD_DEBUG("[%s] pending event:%u, incomplete log:%lu\n", __func__, *pendingFlag_, incomplete_log_.size());
+  CD_DEBUG("pending event:%u, incomplete log:%lu\n", *pendingFlag_, incomplete_log_.size());
 
 }
 
