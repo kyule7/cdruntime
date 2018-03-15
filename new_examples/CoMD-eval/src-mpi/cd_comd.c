@@ -273,7 +273,7 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
     // FIXME :Let's preserve all the pointers regardless of what needed actually 
     // since it's not super expensive.
     // FIXME: then skip to manually preserve each pointer below
-    cd_preserve(cdh, atoms, atoms_size, knob, "Atoms", "Atoms");
+    //cd_preserve(cdh, atoms, atoms_size, knob, "Atoms", "Atoms");
     if (is_gid == 1) {
       // Be careful not to preserve twice
       assert(is_all != 1);

@@ -156,7 +156,7 @@ int is_not_first = 0;
 int ljForce(SimFlat *s) {
 #if _CD4
   cd_handle_t *lv4_cd = NULL;
-  const int CD4_INTERVAL = s->preserveRateLevel4;
+  const int CD4_INTERVAL = s->preserveRateLevel4; // default = 1728
   unsigned int is_lv4_completed = 0;
   if (is_not_first) {
     lv4_cd =
@@ -191,6 +191,9 @@ int ljForce(SimFlat *s) {
   //    This is going to be called 18 times / each call
   //                             = 17.28 = 13,824 / 800(=CD4_INTERVAL) )
   //    and 1728 in total (when 10*10 iterations out there)
+  //
+  //    Or 8 times / each call (with default CD4_INTERVAL = 1278)
+  //    and 800 in total (when 10*10 iterations out there)
   for (int iBox = 0; iBox < s->boxes->nLocalBoxes; iBox++) {
 #if _CD4
     if (is_not_first) {
@@ -198,33 +201,39 @@ int ljForce(SimFlat *s) {
         // ex: iBox = 0, 800, 1600, ... , 13600
         cd_begin(lv4_cd, "computeForce_loop");
         is_lv4_completed = 0;
+#ifdef DO_PRV
         char tmp_iBox_idx[256] = "-1";
         sprintf(tmp_iBox_idx, "iBox_%d", iBox);
-#ifdef DO_PRV
-        cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy, tmp_iBox_idx,
-                    tmp_iBox_idx);
+        //cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy, tmp_iBox_idx,
+        //            tmp_iBox_idx);
+        cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy, "iBox", "iBox");
+        //cd_preserve(lv4_cd, &ePot, sizeof(real_t), kCopy, "ePot", "ePot");
         // TODO: cd_preserve : atoms->r in the boxes of current iteration (kRef)
+#endif
         char idx_force[256] = "-1"; // FIXME: it this always enough?
         sprintf(idx_force, "_iBox_%d", iBox);
         // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation
         // after debugging
+        //int to = iBox + CD4_INTERVAL;
+        //if (to >= s->boxes->nLocalBoxes) to = s->boxes->nLocalBoxes -1;
         int computeForce_pre_lv4_size =
             preserveAtoms(lv4_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
                           0,    // is_all
                           1,    // is_gid
                           1,    // is_r
                           0,    // is_p
-                          0,    // is_f
-                          0,    // is_U
+                          1,    // is_f
+                          1,    // is_U
                           0,    // is_iSpecies
                           iBox, // from (index for boxes to be preserved)
                           iBox + CD4_INTERVAL, // to
+                          //to, // to
                           // 0,  // from
                           //-1, // to
                           0,
-                          idx_force); // is_print
-#endif
-      }
+                          NULL);
+                          //idx_force); // is_print
+      } // CD4_INTERVAL
     }
 #endif
     // Added local Timer
@@ -236,7 +245,7 @@ int ljForce(SimFlat *s) {
       if (is_not_first) {
         if (iBox % CD4_INTERVAL == (CD4_INTERVAL - 1)) {
           is_lv4_completed = 1;
-          // cd_detect(lv4_cd);
+          cd_detect(lv4_cd);
           cd_complete(lv4_cd);
         }
       }
@@ -327,6 +336,7 @@ int ljForce(SimFlat *s) {
         sprintf(idx_force, "_iBox_%d", iBox);
         // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation
         // after debugging
+
         int computeForce_pre_out_lv4_size =
             preserveAtoms(lv4_cd, kOutput, s->atoms, s->boxes->nLocalBoxes,
                           0,    // is_all
@@ -344,7 +354,7 @@ int ljForce(SimFlat *s) {
                           idx_force); // is_print
 #endif
         is_lv4_completed = 1;
-        // cd_detect(lv4_cd);
+        cd_detect(lv4_cd);
         cd_complete(lv4_cd);
       } // CD4_INTERVAL
     }
@@ -357,7 +367,7 @@ int ljForce(SimFlat *s) {
 #if _CD4
   if (is_not_first) {
     if (is_lv4_completed == 0) {
-      // cd_detect(lv4_cd);
+      cd_detect(lv4_cd);
       cd_complete(lv4_cd);
     }
     cd_destroy(lv4_cd);
