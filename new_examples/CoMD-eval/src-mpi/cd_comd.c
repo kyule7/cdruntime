@@ -225,7 +225,7 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
   else if (to >= 1) { // There must be at least 1 box to be preserved
     // the number of boxes to be preserved : to - from
     // the number of atoms to be preserved : (to - from) * MAXATOMS
-    szPreservedAtoms = MAXATOMS * (to - from);
+    szPreservedAtoms = MAXATOMS * (to - from + 1);
   } else {
     // No atom to be preserved
     assert(1); // shoudn't fall down here.
@@ -273,7 +273,7 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
     // FIXME :Let's preserve all the pointers regardless of what needed actually 
     // since it's not super expensive.
     // FIXME: then skip to manually preserve each pointer below
-    //cd_preserve(cdh, atoms, atoms_size, knob, "Atoms", "Atoms");
+    cd_preserve(cdh, atoms, atoms_size, knob, "Atoms", "Atoms");
     if (is_gid == 1) {
       // Be careful not to preserve twice
       assert(is_all != 1);
@@ -289,8 +289,8 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
 #ifdef DO_PRV
       // FIXME: this pointer may be preserved many times, which is not desired.
       //        this should be preserved via kRef after initialization.
-      cd_preserve(cdh, &(atoms->gid), sizeof(int *), knob, tmp_atoms_gid_ptr,
-                  tmp_atoms_gid_ptr);
+      //cd_preserve(cdh, &(atoms->gid), sizeof(int *), knob, tmp_atoms_gid_ptr,
+      //            tmp_atoms_gid_ptr);
       cd_preserve(cdh, &(atoms->gid[prvStartIdx]), gid_size, knob,
                   tmp_atoms_gid, tmp_atoms_gid);
 #endif
@@ -312,8 +312,8 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
 #ifdef DO_PRV
       // FIXME: this may be preserved many times, which is not desired.
       //        this should be preserved via kRef after initialization.
-      cd_preserve(cdh, &(atoms->iSpecies), sizeof(int *), knob,
-                  tmp_atoms_iSpecies_ptr, tmp_atoms_iSpecies_ptr);
+      //cd_preserve(cdh, &(atoms->iSpecies), sizeof(int *), knob,
+      //            tmp_atoms_iSpecies_ptr, tmp_atoms_iSpecies_ptr);
       cd_preserve(cdh, &(atoms->iSpecies[prvStartIdx]), iSpecies_size, knob,
                   tmp_atoms_iSpecies, tmp_atoms_iSpecies);
 #endif
@@ -333,8 +333,8 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
         sprintf(tmp_atoms_r_ptr, "Atoms_r_ptr%s", idx);
       }
 #ifdef DO_PRV
-      cd_preserve(cdh, &(atoms->r), sizeof(real3 *), knob, tmp_atoms_r_ptr,
-                  tmp_atoms_r_ptr);
+      //cd_preserve(cdh, &(atoms->r), sizeof(real3 *), knob, tmp_atoms_r_ptr,
+      //            tmp_atoms_r_ptr);
       cd_preserve(cdh, atoms->r[prvStartIdx], r_size, knob, tmp_atoms_r,
                   tmp_atoms_r);
 #endif
@@ -354,8 +354,8 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
         sprintf(tmp_atoms_p_ptr, "Atoms_p_ptr%s", idx);
       }
 #ifdef DO_PRV
-      cd_preserve(cdh, &(atoms->p), sizeof(real3 *), knob, tmp_atoms_p_ptr,
-                  tmp_atoms_p_ptr);
+      //cd_preserve(cdh, &(atoms->p), sizeof(real3 *), knob, tmp_atoms_p_ptr,
+      //            tmp_atoms_p_ptr);
       cd_preserve(cdh, atoms->p[prvStartIdx], p_size, knob, tmp_atoms_p,
                   tmp_atoms_p);
 #endif
@@ -375,8 +375,8 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
         sprintf(tmp_atoms_f_ptr, "Atoms_f_ptr%s", idx);
       }
 #ifdef DO_PRV
-      cd_preserve(cdh, &(atoms->f), sizeof(real3 *), knob, tmp_atoms_f_ptr,
-                  tmp_atoms_f_ptr);
+      //cd_preserve(cdh, &(atoms->f), sizeof(real3 *), knob, tmp_atoms_f_ptr,
+      //            tmp_atoms_f_ptr);
       cd_preserve(cdh, atoms->f[prvStartIdx], f_size, knob, tmp_atoms_f,
                   tmp_atoms_f);
 #endif
@@ -398,8 +398,8 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
 #ifdef DO_PRV
       // FIXME: this may be preserved many times, which is not desired.
       //        this should be preserved via kRef after initialization.
-      cd_preserve(cdh, &(atoms->U), sizeof(real3 *), knob, tmp_atoms_U_ptr,
-                  tmp_atoms_U_ptr);
+      //cd_preserve(cdh, &(atoms->U), sizeof(real3 *), knob, tmp_atoms_U_ptr,
+      //            tmp_atoms_U_ptr);
       cd_preserve(cdh, &(atoms->U[prvStartIdx]), U_size, knob, tmp_atoms_U,
                   tmp_atoms_U);
 #endif
