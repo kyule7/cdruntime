@@ -1739,6 +1739,9 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   assert(len > 0);
   bool is_reexec = (GetExecMode() == kReexecution);
   CDErrT err;
+  bool is_active_leaf = (GetCurrentCD() == this);
+  // is_active_leaf is false AND IsReexec() true --> jump
+  if(is_active_leaf || IsReexec() == false) 
   {
   std::string entry_name(my_name);
   err = ptr_cd_->Preserve(data_ptr, len, (CDPrvType)preserve_mask, 
@@ -1783,6 +1786,12 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   uint32_t phase = this->phase();
   cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  } else {
+    PRINT_BOTH("@@@ Parent (%s) level preserve call (%s) during rollback to %s %ld (isreex:%s, IsReex():%s, leaf?%s)>>>\n", 
+        GetLabel(), my_name,
+        cd::phaseNodeCache[cd::failed_phase]->label_.c_str(), cd::failed_seqID,
+        (is_reexec)? "YES":"NO", (IsReexec())? "YES":"NO", (is_active_leaf)? "YES":"NO"
+        );
   }
   CDEpilogue();
   return CHECK_PRV_TYPE(preserve_mask, kRef)? (CDErrT)0 : (CDErrT)len;
@@ -1805,6 +1814,10 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   uint64_t len = 0;
   bool is_reexec = (GetExecMode() == kReexecution);
   CDErrT err;
+  bool is_active_leaf = (GetCurrentCD() == this);
+  // is_active_leaf is false AND IsReexec() true --> jump
+  if(is_active_leaf || IsReexec() == false) 
+  //if(is_reexec || IsReexec() == false) 
   {
   std::string entry_name(my_name);
   err = ptr_cd_->Preserve((void *)&serdes, len, (CDPrvType)(kSerdes | preserve_mask), 
@@ -1849,7 +1862,14 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   uint32_t phase = this->phase();
   cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  } else {
+    PRINT_BOTH("@@@ Parent (%s) level preserve call (%s) during rollback to %s %ld (isreex:%s, IsReex():%s, leaf?%s)>>>\n", 
+        GetLabel(), my_name,
+        cd::phaseNodeCache[cd::failed_phase]->label_.c_str(), cd::failed_seqID,
+        (is_reexec)? "YES":"NO", (IsReexec())? "YES":"NO", (is_active_leaf)? "YES":"NO"
+        );
   }
+  
   CDEpilogue();
   return CHECK_PRV_TYPE(preserve_mask, kRef)? (CDErrT)0 : (CDErrT)len;
 }
@@ -2564,12 +2584,14 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
       cdh = CDPath::GetParentCD(cdh->level());
     }
     if(rollback_point < level()) {
-      printf("\n>>>> Escalation %u->%u (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
-          level() , rollback_point, sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+      printf("\n>>>> Escalation %u (%lu-%lu)->%u (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+          level(), phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_, 
+          rollback_point, sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());
-      CD_DEBUG("\n>>>> Escalation %u->%u (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
-          level() , rollback_point, sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+      CD_DEBUG("\n>>>> Escalation %u (%lu-%lu)->%u (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+          level(), phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_, 
+          rollback_point, sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());
     } else if(rollback_point == level()) {

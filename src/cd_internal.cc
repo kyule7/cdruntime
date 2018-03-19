@@ -2357,6 +2357,9 @@ CDErrT CD::Preserve(void *data,
         Restore((char *)data, len_in_bytes, preserve_mask, my_name, ref_name);
         restore_count_++;
         if( restore_count_ == preserve_count_ ) { 
+          PRINT_BOTH("@@@ Reset to kReexecution at %s @@@ %s (%ld), IsReexec():%s\n",
+                  label_.c_str(), cd::phaseNodeCache[cd::failed_phase]->label_.c_str(), 
+                  cd::failed_seqID, (IsReexec())? "YES":"NO");
           cd_exec_mode_ = kExecution;
           restore_count_ = 0;
         } 
@@ -2697,6 +2700,15 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
   assert(src);
   CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
 
+  PRINT_BOTH("  ** Restore %18s ** at %10s Lv%u %lu-%lu, (found at %10s Lv%u %lu-%lu) prvcnt:%lu==rstcnt:%lu\n", 
+             tag2str[search_tag].c_str(),
+             label_.c_str(), level(),   
+             phaseTree.current_->seq_begin_,
+             phaseTree.current_->seq_end_, 
+             ptr_cd->label_.c_str(), ptr_cd->level(), 
+             phaseNodeCache[ptr_cd->phase()]->seq_begin_,
+             phaseNodeCache[ptr_cd->phase()]->seq_end_,
+             preserve_count_, restore_count_);
   if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
     PackerSerializable *serializer = reinterpret_cast<PackerSerializable *>(data);
     // It is very important to pass entry_directory_ of CD level that has search_tag.
@@ -3537,7 +3549,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
   //printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
   //if(incomplete_log_.size()!=0) 
   {
-    PRINT_BOTH("### [%s] Incomplete log size: %zu at level #%u\n", label_.c_str(), incomplete_log_.size(), level());
+    CD_DEBUG("### [%s] Incomplete log size: %zu at level #%u\n", label_.c_str(), incomplete_log_.size(), level());
 //    if(myTaskID ==7) printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
   }
 // FIXME: 20180212 

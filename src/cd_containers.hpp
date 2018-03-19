@@ -43,6 +43,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <initializer_list>
 #include <iostream>
 #define CD_VECTOR_PRINT(...)
+#define CD_VECTOR_PRINT_ONE(...) if(myTaskID == 7) printf(__VA_ARGS__)
 #define DO_COMPARE 1
 #define UNDEFINED_NAME "undefined"
 #define VECTOR_INIT_NAME "V:"
@@ -230,7 +231,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       this->resize(rst_size_ser / sizeof(T));
     }
     if(rst_size != rst_size_ser) {
-      printf("restored size check: %lu == %lu", rst_size, rst_size_ser); 
+      CD_VECTOR_PRINT_ONE("restored size check: %lu == %lu", rst_size, rst_size_ser); 
       //assert(0);
     }
 

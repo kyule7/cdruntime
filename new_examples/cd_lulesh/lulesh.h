@@ -998,18 +998,25 @@ class Domain : public Internal {
 
    Int_t&  cycle()                { return m_cycle ; }
 #if _CD
-   bool    check_begin(int intvl) { const Int_t cycle = m_cycle - 1; 
+   bool    check_begin(int intvl) { if(intvl == 1) return true;
+                                    else {
+                                    const Int_t cycle = m_cycle - 1; 
                                     if(cycle < 0) {
                                       PrintDomain();
                                       assert(0);
                                     } 
-                                    return (cycle % intvl == 0); }
-   bool    check_end(int intvl)   { const Int_t cycle = m_cycle - 1; 
+                                    return (cycle % intvl == 0); 
+                                    }
+   }
+   bool    check_end(int intvl)   { if(intvl == 1) return true;
+                                    else {
+                                    const Int_t cycle = m_cycle - 1; 
                                     if(cycle < 0) {
                                       PrintDomain();
                                       assert(0);
                                     } 
                                     return (cycle % intvl == intvl - 1); }
+   }
 #endif
    Index_t&  numRanks()           { return m_numRanks ; }
 

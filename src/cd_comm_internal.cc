@@ -360,9 +360,9 @@ CDErrT CD::CheckMailBox(void)
   CD_CLOCK_T tstart = CD_CLOCK();
 #endif
   CD::CDInternalErrT ret=kOK;
-  PMPI_Win_lock_all(0, pendingWindow_);
+  //PMPI_Win_lock_all(0, pendingWindow_);
   int event_count = *pendingFlag_;//DecPendingCounter();
-  PMPI_Win_unlock_all(pendingWindow_);
+  //PMPI_Win_unlock_all(pendingWindow_);
 
 //  int event_count = *pendingFlag_;
   //assert(event_count <= 1024);
@@ -933,30 +933,26 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
         PMPI_Group_translate_ranks(group(), 1, &task_id, GetRootCD()->group(), &global_task_id);
         CD_DEBUG("MPI_Group_translate_ranks %d->%d at %s %s\n", 
                  task_id, global_task_id, cd_id_.GetString().c_str(), label_.c_str());
-
-        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_task_id, 0, pendingWindow_);
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Set CD Event %s at level #%u. CD Name : %s\n", 
                   event2str(event).c_str(), level(), GetCDName().GetString().c_str());
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Accumulate event at %d\n", global_task_id);
-  
+
+        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_task_id, 0, pendingWindow_);
         PMPI_Accumulate(&val, 1, MPI_INT, 
                        global_task_id, 0, 1, MPI_INT, 
                        MPI_SUM, pendingWindow_);
-        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "PMPI_Accumulate done for task #%d\n", global_task_id);
-
         PMPI_Win_unlock(global_task_id, pendingWindow_);
-    
+
+        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "PMPI_Accumulate done for task #%d\n", global_task_id);
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Finished to increment the pending counter at task #%d\n", task_id);
     
         if(task_id == task_in_color()) { 
           CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "after accumulate --> pending counter : %d\n", *pendingFlag_);
         }
         
+        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Set event start\n");
         // Inform the type of event to be requested
         PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_id, 0, mailbox_);
-
-        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Set event start\n");
-
         PMPI_Accumulate((void *)&event, 1, MPI_INT, 
                        task_id, 0, 1, MPI_INT, 
                        MPI_BOR, mailbox_);
