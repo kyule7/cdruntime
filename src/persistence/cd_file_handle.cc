@@ -96,11 +96,11 @@ FileHandle *PosixFileHandle::Get(const char *filepath)
 
 void PosixFileHandle::Close(void) 
 {
-  char cmd[128];
-  sprintf(cmd, "mv -rf %s %s", DEFAULT_LOCAL_BASEPATH "/cd_local", DEFAULT_BASE_FILEPATH "/local");
-  if( system(cmd) == -1 ) {
-    ERROR_MESSAGE_PACKER("Failed on command %s\n", cmd);
-  }
+  //char cmd[128];
+  //sprintf(cmd, "mv -rf %s %s", DEFAULT_LOCAL_BASEPATH "/cd_local", DEFAULT_BASE_FILEPATH "/local");
+  //if( system(cmd) == -1 ) {
+  //  ERROR_MESSAGE_PACKER("Failed on command %s\n", cmd);
+  //}
   if(fdesc_ > 0) {
     close(fdesc_);
     fdesc_ = -1;
