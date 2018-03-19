@@ -69,6 +69,7 @@ string RuntimeInfo::GetRTInfoStr(int cnt, int style)
                         "%sreex_time:%11.6lf, // [s]\n"
                         "%swait_time:%11.6lf, // [s]\n"
                         "%sprsv_time:%11.6lf, // [s]\n"
+                        "%sprsv_time:%11.6lf, // [s] (MAX)\n"
                         "%svol_copy :%11lu, // [B]\n"
                         "%svol_refer:%11lu, // [B]\n"
                         "%scomm_log :%11lu, // [B]\n"
@@ -79,6 +80,7 @@ string RuntimeInfo::GetRTInfoStr(int cnt, int style)
                         indent.c_str(), reex_time_,
                         indent.c_str(), sync_time_,
                         indent.c_str(), prv_elapsed_time_,
+                        indent.c_str(), max_prv_elapsed_time_,
                         indent.c_str(), prv_copy_,
                         indent.c_str(), prv_ref_,
                         indent.c_str(), msg_logging_,
@@ -139,7 +141,7 @@ void RuntimeInfo::GetPrvDetails(std::ostream &oss, const std::string &indent)
 //        << it->second.size_ << ',' << it->second.count_ << '\n';
 //  }
 //  oss << indent << "},\n";
-  oss << indent.c_str() << "\"consumed\" : {";
+  oss << indent.c_str() << "\"cons\" : {";
   for(auto it=input_.begin(); it!=input_.end();) {
     oss << "\"" << it->first.c_str() << "\" : "
         << (double)(it->second.size_) / it->second.count_;
@@ -148,7 +150,7 @@ void RuntimeInfo::GetPrvDetails(std::ostream &oss, const std::string &indent)
       oss << ',';
   }
   oss << "},\n";
-  oss << indent.c_str() << "\"produced\" : {";
+  oss << indent.c_str() << "\"prod\" : {";
   for(auto it=output_.begin(); it!=output_.end();) {
     oss << "\"" << it->first.c_str() << "\" : "
         << (double)(it->second.size_) / it->second.count_;
@@ -158,6 +160,22 @@ void RuntimeInfo::GetPrvDetails(std::ostream &oss, const std::string &indent)
   }
   oss << "}";
 }
+
+double RuntimeInfo::GetPrvVolume(bool is_input)
+{
+  double tot_vol = 0.0;
+  if(is_input) {
+    for(auto it=input_.begin(); it!=input_.end(); ++it) {
+       tot_vol += it->second.GetVolume(false);
+    } 
+  } else {
+    for(auto it=output_.begin(); it!=output_.end(); ++ it) {
+       tot_vol += it->second.GetVolume(false);
+    } 
+  }
+  return tot_vol;
+}
+
 
 void RuntimeInfo::Print(void)
 {
@@ -169,11 +187,13 @@ string CDOverhead::GetOverheadStr(void)
   char stringout[512];
   snprintf(stringout, 512, 
                     "preserve :%11.6lf # [s]\n"
+                    "preserve :%11.6lf # [s] (max)\n"
                     "create   :%11.6lf # [s]\n"
                     "destroy  :%11.6lf # [s]\n"
                     "begin    :%11.6lf # [s]\n"
                     "complete :%11.6lf # [s]\n", 
                     prv_elapsed_time_, 
+                    max_prv_elapsed_time_, 
                     create_elapsed_time_,
                     destroy_elapsed_time_,
                     begin_elapsed_time_,
@@ -192,11 +212,13 @@ string CDOverheadVar::GetOverheadVarStr(void)
   char stringout[512];
   snprintf(stringout, 512, 
                     "preserve:%11.6lf # [s] (var:%11.6lf)\n"
+                    "preserve:%11.6lf # [s] (var:%11.6lf) (max)\n"
                     "create  :%11.6lf # [s] (var:%11.6lf)\n"
                     "destroy :%11.6lf # [s] (var:%11.6lf)\n"
                     "begin   :%11.6lf # [s] (var:%11.6lf)\n"
                     "complete:%11.6lf # [s] (var:%11.6lf)\n", 
                     prv_elapsed_time_,     prv_elapsed_time_var_, 
+                    max_prv_elapsed_time_,  max_prv_elapsed_time_var_, 
                     create_elapsed_time_,  create_elapsed_time_var_,
                     destroy_elapsed_time_, destroy_elapsed_time_var_,
                     begin_elapsed_time_,   begin_elapsed_time_var_,

@@ -91,6 +91,7 @@ char end_date[64] = "NoNamed";
 char *exec_details = NULL;
 char *exec_iterations = NULL;
 
+bool cd::is_error_free = false;
 bool cd::runtime_initialized = false;
 bool cd::orig_app_side = true;
 bool cd::orig_disabled = false;
@@ -1207,12 +1208,13 @@ CDHandle *CDHandle::Create(const char *name,
 //  getchar();
   end_clk = CD_CLOCK();
   const double elapsed = end_clk - begin_clk;
-  create_elapsed_time += elapsed;
-  create_elapsed_smpl += elapsed;
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->create_elapsed_time_ += elapsed;
-//  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
-#endif
+  cd::phaseTree.current_->profile_.RecordCreate(elapsed);
+//  create_elapsed_time += elapsed;
+//  create_elapsed_smpl += elapsed;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->create_elapsed_time_ += elapsed;
+////  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
+//#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
   CDEpilogue();
@@ -1327,13 +1329,15 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 #endif
 
   end_clk = CD_CLOCK();
-  create_elapsed_time += end_clk - begin_clk;
-  create_elapsed_smpl += end_clk - begin_clk;
+  const double elapsed = end_clk - begin_clk;
+  cd::phaseTree.current_->profile_.RecordCreate(elapsed);
+//  create_elapsed_time += end_clk - begin_clk;
+//  create_elapsed_smpl += end_clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
+//#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
-#endif
   CDEpilogue();
 
   return new_cd_handle;
@@ -1391,13 +1395,15 @@ CDHandle *CDHandle::Create(uint32_t color,
 #endif
 
   end_clk = CD_CLOCK();
-  create_elapsed_time += end_clk - begin_clk;
-  create_elapsed_smpl += end_clk - begin_clk;
+  const double elapsed = end_clk - begin_clk;
+  cd::phaseTree.current_->profile_.RecordCreate(elapsed);
+//  create_elapsed_time += end_clk - begin_clk;
+//  create_elapsed_smpl += end_clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
+//#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
-#endif
   CDEpilogue();
   return new_cd_handle;
 }
@@ -1414,21 +1420,27 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
   TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
   CDHandle *new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
   CD_CLOCK_T clk = CD_CLOCK();
-  create_elapsed_time += clk - begin_clk;
-  create_elapsed_smpl += clk - begin_clk;
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
-#endif
+  const double elapsed = clk - begin_clk;
+  cd::phaseTree.current_->profile_.RecordCreate(elapsed);
+//  create_elapsed_time += clk - begin_clk;
+//  create_elapsed_smpl += clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
+//#endif
+  bool need_sync = just_reexecuted;
+
   new_cdh->Begin(name, false);
 
-  end_clk = CD_CLOCK();
-  begin_elapsed_time += end_clk - begin_clk;
-  begin_elapsed_smpl += end_clk - begin_clk;
+  const bool is_reexec = (failed_phase != HEALTHY);
+  cd::phaseTree.current_->profile_.RecordBegin(is_reexec, need_sync);
+//  end_clk = CD_CLOCK();
+//  begin_elapsed_time += end_clk - begin_clk;
+//  begin_elapsed_smpl += end_clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
+//#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cdh->ptr_cd_->name_.c_str(), new_cdh->level());
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
-#endif
   CDEpilogue();
   return new_cdh;
 }
@@ -1452,13 +1464,14 @@ CDErrT CDHandle::Destroy(bool collective)
   err = InternalDestroy(collective);
 
   end_clk = CD_CLOCK();
-  destroy_elapsed_time += end_clk - begin_clk;
-  destroy_elapsed_smpl += end_clk - begin_clk;
-#if CD_PROFILER_ENABLED
-  auto it = profMap.find(phase);
-  if(it != profMap.end())
-    it->second->destroy_elapsed_time_ += end_clk - begin_clk;
-#endif
+  cd::phaseTree.current_->profile_.RecordDestory(end_clk - begin_clk);
+//  destroy_elapsed_time += end_clk - begin_clk;
+//  destroy_elapsed_smpl += end_clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  auto it = profMap.find(phase);
+//  if(it != profMap.end())
+//    it->second->destroy_elapsed_time_ += end_clk - begin_clk;
+//#endif
   }
   CDEpilogue();
 
@@ -1767,7 +1780,9 @@ CDErrT CDHandle::Preserve(void *data_ptr,
 //    profMap[phase]->rst_elapsed_time_ += elapsed;
 //  }
 //#endif
-  cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  uint32_t phase = this->phase();
+  cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   }
   CDEpilogue();
   return CHECK_PRV_TYPE(preserve_mask, kRef)? (CDErrT)0 : (CDErrT)len;
@@ -1831,7 +1846,9 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
 //#endif
 
 
-  cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  uint32_t phase = this->phase();
+  cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   }
   CDEpilogue();
   return CHECK_PRV_TYPE(preserve_mask, kRef)? (CDErrT)0 : (CDErrT)len;
@@ -1895,7 +1912,9 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
 //#endif
   //CDEpilogue();
   
-  cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  uint32_t phase = this->phase();
+  cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   }
   CDEpilogue();
   return err;

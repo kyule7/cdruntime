@@ -37,7 +37,7 @@ struct Time {
   static void GatherBW(void);
 };
 
-
+extern bool gathered_bw;
 extern std::vector<Time *> prof_list;
 extern Time time_copy; 
 extern Time time_write; 

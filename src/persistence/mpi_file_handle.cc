@@ -244,6 +244,7 @@ void LibcFileHandle::Close(void)
 
 void Time::GatherBW(void) 
 {
+  gathered_bw = true;
   const int prof_elems = 9;
   double sendbuf[9] = { 
                          packer::time_copy.GetBW(), 

@@ -4,6 +4,7 @@
 #include <string.h>
 using namespace packer;
 
+bool packer::gathered_bw = false;
 std::vector<packer::Time *> packer::prof_list;
 //packer::ProfList packer::prof_list;
 Time packer::time_copy("time_copy"); 
