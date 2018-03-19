@@ -114,7 +114,6 @@ void MPIFileHandle::Init(const MPI_Comm &comm, const char *filepath)
   }
   
   filepath_ = full_filename;
-  printf("open file mpi : %s\n", filepath_.c_str());
 }
 
 MPIFileHandle::~MPIFileHandle(void) 
@@ -122,7 +121,6 @@ MPIFileHandle::~MPIFileHandle(void)
   //getchar();
   MPI_File_close(&fdesc_);
   MPI_Comm_free(&comm_);
-  printf("%s delete %s\n", __func__, filepath_.c_str());
   unlink(filepath_.c_str());
   fdesc_ = MPI_FILE_NULL;
   comm_ = MPI_COMM_NULL;
