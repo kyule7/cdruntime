@@ -6,7 +6,6 @@ using namespace packer;
 
 std::vector<packer::Time *> packer::prof_list;
 //packer::ProfList packer::prof_list;
-bool packer::isHead = true;
 Time packer::time_copy("time_copy"); 
 Time packer::time_write("time_write"); 
 Time packer::time_read("time_read"); 

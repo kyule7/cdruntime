@@ -572,14 +572,14 @@ extern void GatherProfile(void);
                          uint32_t tag, 
                          const ColorT &comm, 
                          void    *flag, 
-                         bool complete) 
+                         bool complete,
+                         bool irecv) 
         : addr_(const_cast<void *>(addr)), length_(length), taskID_(taskID), tag_(tag), 
-          comm_(comm), flag_(flag), complete_(complete) 
+          comm_(comm), flag_(flag), complete_(complete), isrecv_(irecv)
       {
         p_ = NULL;
         pushed_ = 0;
         level_ = 0;
-        isrecv_ = 0;
         intra_cd_msg_ = false;
       }
       std::string Print(void) {

@@ -491,9 +491,9 @@ inline void CheckMPIError(int err)
     MPI_Error_string(err, cd_err_str, &cd_err_len);
     CDHandle *cdl = GetLeafCD();
     if(cdl != NULL) {
-      printf("MPI ERROR (%s, %d):%s\n", cdl->GetLabel(), cdl->GetExecMode(), cd_err_str); fflush(stdout);
+      printf("[%d] MPI ERROR (%s, %d):\n%s\n", myTaskID, cdl->GetLabel(), cdl->GetExecMode(), cd_err_str); fflush(stdout);
     } else {
-      printf("MPI ERROR:%s\n", cd_err_str); fflush(stdout);
+      printf("[%d]MPI ERROR:\n%s\n", myTaskID, cd_err_str); fflush(stdout);
     }
     assert(0);
   }
@@ -898,13 +898,14 @@ void CD_Finalize(void)
     rit->second->ptr_cd_->Destroy(false, true);
     delete rit->second;
   }
-  cd::internal::Finalize();
+  //cd::internal::Finalize();
   assert(CDPath::GetCDPath()->size() == 1);
   GetRootCD()->ptr_cd()->Destroy(false, true);
   delete CDPath::GetCDPath()->back(); // delete root
   CDPath::GetCDPath()->pop_back();
 
 
+  cd::internal::Finalize();
   cd::phaseTree.root_->GatherStats();
   cd::phaseTree.PrintStats();
   //tuned::phaseTree.PrintStats();
@@ -912,6 +913,8 @@ void CD_Finalize(void)
 #if CD_DEBUG_ENABLED
   WriteDbgStream();
 #endif
+  // call packer finalization at the very last moment for safety
+  //packer::Finalize();  
   end_clk = CD_CLOCK();
   CDEpilogue();
 #if CD_LIBC_LOGGING

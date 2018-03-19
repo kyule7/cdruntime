@@ -109,6 +109,7 @@ CDMailBoxT CD::rollbackWindow_;
 
 void cd::internal::InitFileHandle(bool make_dir)
 {
+  packer::Initialize();
   char *prv_base_str = getenv( "CD_PRV_BASEPATH" );
   if(prv_base_str != NULL) {
     strcpy(packer::FileHandle::basepath, prv_base_str);
@@ -181,6 +182,7 @@ void cd::internal::Finalize(void)
   free(CD::rollback_point_);
 //  free(CD::pendingFlag_);
 #endif
+  packer::Finalize();  
 }
 
 
@@ -1284,9 +1286,10 @@ static inline
 void SetFailure(uint32_t phase, const char *label) 
 {
   if(failed_phase == HEALTHY) {
+    
     const int64_t curr_seqID = phaseTree.current_->seq_end_;
     const int64_t curr_begID = phaseTree.current_->seq_begin_;
-    CD_DEBUG(">>> Failure Detected (%s), fphase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
+    CD_DEBUG(">>> Failure Detected (%s), fphase:%ld==%u(current), fseqID:%ld==%ld (current) (beg:%ld) <<<\n", 
         label, failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
     if(myTaskID == 0) printf(">>> Failure Detected (%s), fphase:%ld==%u, seqID:%ld==%ld (beg:%ld) <<<\n", 
         label, failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
@@ -1678,7 +1681,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
 
 CD::CDInternalErrT CD::CompleteLogs(bool is_rollback) 
 {
-  CD_DEBUG("[%s]\n", (is_rollback)? "Rollback":"Complete");
+  CD_DEBUG("[%s]\n", (is_rollback)? "DeleteLogs (rollback)":"LeaveLogs");
 
 #if CD_LIBC_LOGGING
   CDHandle *cdh_parent = CDPath::GetParentCD(level());
@@ -3534,7 +3537,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
   //printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
   //if(incomplete_log_.size()!=0) 
   {
-    CD_DEBUG("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
+    PRINT_BOTH("### [%s] Incomplete log size: %zu at level #%u\n", label_.c_str(), incomplete_log_.size(), level());
 //    if(myTaskID ==7) printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
   }
 // FIXME: 20180212 
@@ -3543,18 +3546,100 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
 // http://mpi-forum.org/docs/mpi-1.1/mpi-11-html/node50.html
 // http://mpi-forum.org/docs/mpi-1.1/mpi-11-html/node47.html
 //
-#if _MPI_VER
-//  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
-////    PMPI_Cancel(reinterpret_cast<MPI_Request>(it->flag_));
-//    flag = it->flag_;
-//    printf("%lx\n", flag);
-//    PMPI_Cancel((MPI_Request *)(it->flag_));
-//    auto jt = it;
-//    incomplete_log_.erase(jt);
-//  }
-  // FIXED: 20180211
-  //while(incomplete_log_.size() != 0) {
-//  MPI_Status status;
+#if 1
+  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
+    //printf("[%d] Trying to test %p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
+    PRINT_BOTH("[%d] Invalidate ptr:%p (#:%zu) Probe...", myTaskID, it->flag_, incomplete_log_.size());
+    MPI_Status status;
+    //int is_probed = -1;
+    //MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
+    //if(is_probed < 1) 
+    if(1)
+    {
+      int done = -1;
+//      PRINT_BOTH("Failed...Test...");
+//      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
+      //if(done) 
+      if(1)
+      {
+        PRINT_BOTH("SUCCESS\n");
+        it = incomplete_log_.erase(it);
+      } else {
+        if(*(MPI_Request *)(it->flag_) != MPI_REQUEST_NULL) {
+          int is_cancelled = -1;
+          PMPI_Cancel((MPI_Request *)(it->flag_));
+          PMPI_Test_cancelled(&status, &is_cancelled);
+          PRINT_BOTH("Failed...Cancel ptr:%p ...", it->flag_);
+          if(is_cancelled <= 0) {
+            PRINT_BOTH("FAILED TO CANCEL\n");
+            it = incomplete_log_.erase(it);
+            //assert(0);
+          } else {
+            PRINT_BOTH("SUCCESS...");
+            PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
+            if(done) {
+              PRINT_BOTH("TESTED\n");
+            } else {
+              PRINT_BOTH("WAITED\n");
+              PMPI_Wait((MPI_Request *)(it->flag_), &status);
+            }
+            //PMPI_Request_free((MPI_Request *)(it->flag_));
+            it = incomplete_log_.erase(it);
+          }
+        } else {
+          PRINT_BOTH("DELETE NULL REQ\n");
+          it = incomplete_log_.erase(it);
+        }
+      } 
+    } else {
+      PRINT_BOTH("SUCCESS\n");
+      PRINT_BOTH("Probed?\n");
+      assert(0);
+      int done = -1;
+      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
+      it = incomplete_log_.erase(it);
+      assert(done);
+    }
+  }
+#else
+  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
+    //printf("[%d] Trying to test %p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
+    PRINT_BOTH("[%d] Trying to prob ptr:%p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
+    MPI_Status status;
+    int is_probed = -1;
+    MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
+    if(is_probed < 1) {
+      int is_cancelled = -1;
+      if(*(MPI_Request *)(it->flag_) != MPI_REQUEST_NULL) {
+        PMPI_Cancel((MPI_Request *)(it->flag_));
+        PMPI_Test_cancelled(&status, &is_cancelled);
+        PRINT_BOTH("FAIL...Trying to cancel ptr:%p (#:%zu)...", it->flag_, incomplete_log_.size());
+      } else {
+        PRINT_BOTH("DELETE NULL REQ\n");
+        it = incomplete_log_.erase(it);
+        continue;
+      }
+      if(is_cancelled < 1) {
+          assert(0);
+      } else {
+        PRINT_BOTH("SUCCESS, erase %p (#:%zu)\n", it->flag_, incomplete_log_.size());
+        PMPI_Request_free((MPI_Request *)(it->flag_));
+        it = incomplete_log_.erase(it);
+      }
+    } else {
+      PRINT_BOTH("SUCCESS\n");
+      PRINT_BOTH("Probed?\n");
+      assert(0);
+      int done = -1;
+      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
+      it = incomplete_log_.erase(it);
+      assert(done);
+    }
+  }
+
+#endif
+
+#if 0//_MPI_VER
   for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
     //printf("[%d] Trying to test %p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
     PRINT_BOTH("[%d] Trying to prob ptr:%p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
@@ -3595,6 +3680,8 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
           PRINT_BOTH("\n");
   //        PMPI_Request_free((MPI_Request *)(it->flag_));
           it = incomplete_log_.erase(it);
+          PRINT_BOTH("Cancel failed\n");
+          assert(0);
       } else {
         PRINT_BOTH("SUCCESS, erase %p (#:%zu)\n", it->flag_, incomplete_log_.size());
         PMPI_Request_free((MPI_Request *)(it->flag_));
@@ -3602,6 +3689,8 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
       }
     } else {
       PRINT_BOTH("SUCCESS\n");
+      PRINT_BOTH("Probed?\n");
+      assert(0);
       int done = -1;
       PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
       it = incomplete_log_.erase(it);
@@ -3734,6 +3823,10 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
 //      void    *p_;
 //      bool     pushed_;
 //      uint32_t level_;
+//
+//
+// 
+#if 0     
   bool printed = false;      
   while(incomplete_log_.size() > 0) {
     for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
@@ -3768,6 +3861,9 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
     }
     printed = true;
   }
+#else
+  assert(incomplete_log_.size()==0);
+#endif
 //    for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
 //      if(myTaskID == 7) printf("[%d] Now test %p (#:%zu) the cancellation...", myTaskID, it->flag_, incomplete_log_.size());
 //      PRINT_BOTH("[%d] Now test %p (#:%zu) the cancellation...", myTaskID, it->flag_, incomplete_log_.size());

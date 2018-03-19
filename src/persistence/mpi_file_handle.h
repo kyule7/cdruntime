@@ -22,13 +22,13 @@ class MPIFileHandle : public FileHandle {
     MPI_File fdesc_;
     MPI_Datatype ftype_;
   protected:
-    MPIFileHandle(void) : FileHandle(DEFAULT_FILEPATH_MPI) { Init(MPI_COMM_WORLD, DEFAULT_FILEPATH_MPI); }
-    MPIFileHandle(const MPI_Comm &comm, const char *filepath) : FileHandle(filepath) { Init(comm, filepath); }
+    MPIFileHandle(void) { Init(MPI_COMM_WORLD, DEFAULT_FILEPATH_MPI); }
+    MPIFileHandle(const MPI_Comm &comm, const char *filepath) { Init(comm, filepath); }
     virtual ~MPIFileHandle(void);
     void Init(const MPI_Comm &comm, const char *filepath);
   public:
-    static FileHandle *Get(MPI_Comm comm, const char *filepath=NULL);
-    void Close(void);
+    static FileHandle *Get(MPI_Comm comm=MPI_COMM_WORLD, const char *filepath=DEFAULT_FILEPATH_MPI);
+    static void Close(void);
     virtual CDErrType Write(int64_t offset, char *src, int64_t len, int64_t inc=-1);
     virtual char *Read(int64_t len, int64_t offset=0);
     virtual CDErrType Read(void *dst, int64_t len, int64_t offset=0);
@@ -48,7 +48,8 @@ class LibcFileHandle : public MPIFileHandle {
 //      printf("LibcFileHandle Created\n");
     }
   public:
-    static FileHandle *Get(MPI_Comm comm, const char *filepath=NULL);
+    static FileHandle *Get(MPI_Comm comm=MPI_COMM_WORLD, const char *filepath=DEFAULT_FILEPATH_LIBC);
+    static void Close(void);
 };
 
 }

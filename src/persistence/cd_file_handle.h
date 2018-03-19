@@ -28,7 +28,7 @@ class FileHandle {
   protected:
     std::string filepath_;
     uint64_t offset_;
-    FileHandle(const char *filepath=NULL);
+    FileHandle(const char *filepath="");
     virtual ~FileHandle(void) {}
   public: 
     virtual CDErrType Write(int64_t offset, char *src, int64_t len, int64_t inc=-1)=0;
@@ -51,8 +51,8 @@ class PosixFileHandle : public FileHandle {
     PosixFileHandle(const char *filepath=DEFAULT_FILEPATH_POSIX);
     virtual ~PosixFileHandle(void);
   public:
-    static FileHandle *Get(const char *filepath=NULL);
-    void Close(void);
+    static FileHandle *Get(const char *filepath=DEFAULT_FILEPATH_POSIX);
+    static void Close(void);
     virtual CDErrType Write(int64_t offset, char *src, int64_t len, int64_t inc=-1);
     virtual char *Read(int64_t len, int64_t offset=0);
     virtual CDErrType Read(void *dst, int64_t len, int64_t offset=0);
@@ -63,6 +63,7 @@ class PosixFileHandle : public FileHandle {
 };
 
 FileHandle *GetFileHandle(uint32_t ftype=kPosixFile);
+void DeleteFiles(void);
 
 int MakeFileDir(const char *filepath_str);
 
