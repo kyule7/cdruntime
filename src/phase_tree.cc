@@ -621,9 +621,10 @@ void PhaseNode::GatherStats(void)
                                          NULL, local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
       PMPI_Reduce(profile_.prsv_trace_.data(), NULL, local_cnt, MPI_FLOAT, MPI_MAX, 0, MPI_COMM_WORLD);
     }
-  } else {
-    printf("it is not err free\n");
-  }
+  } 
+//  else {
+//    printf("it is not err free\n");
+//  }
 //  printf("[%s %d] level:%u, phase:%u, taskid:%u\n", __func__, cd::myTaskID, level_,  phase_, task_id_);
   RTInfo<double> rt_info = profile_.GetRTInfo<double>();
   RTInfo<double> &rt_info_avg = common::cd_prof_map[phase_].avg_;

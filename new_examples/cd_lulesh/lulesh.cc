@@ -185,7 +185,7 @@ double cmpl_end = 0.0;
 unsigned long prv_len = 0;
 
 //#define PRINT_ONE(...) 
-#define PRINT_ONE(...) if(myRank == 1) fprintf(stdout, __VA_ARGS__)
+#define PRINT_ONE(...) if(myRank == 7) fprintf(stdout, __VA_ARGS__)
 #if _CD
 #include "packer_prof.h"
 CDHandle *cd_main_loop = NULL;
@@ -3372,7 +3372,7 @@ int main(int argc, char *argv[])
 
    ParseCommandLineOptions(argc, argv, myRank, &opts);
 //   opts.nx=40;
-   opts.its = 50;
+//   opts.its = 50;
 
    // overwrite parms
 //   opts.nx  = 60;
@@ -3430,7 +3430,7 @@ int main(int argc, char *argv[])
 #if _CD_INCR_CKPT || _CD_FULL_CKPT
   int intvl[3] = {1, 1, 1}; 
 #else
-  int intvl[3] = {16, 4, 1}; 
+  int intvl[3] = {36, 12, 2}; 
 #endif
   char *lulesh_intvl = getenv( "LULESH_LV0" );
   if(lulesh_intvl != NULL) {
@@ -4024,7 +4024,8 @@ int main(int argc, char *argv[])
    assert(global_counter >= local_wait.size());
    assert(global_counter >= local_begn.size());
    assert(global_counter >= local_cmpl.size());
-   MPI_Reduce(&global_counter, &min_global_counter, 1, MPI_UNSIGNED, MPI_MIN, 0, MPI_COMM_WORLD);
+   MPI_Allreduce(&global_counter, &min_global_counter, 1, MPI_UNSIGNED, MPI_MIN, MPI_COMM_WORLD);
+//   printf("[%d] min %u < %u\n", myRank, min_global_counter, global_counter);
    global_counter = min_global_counter;
    int tot_elems = global_counter * numRanks;
    if(myRank == 0) {

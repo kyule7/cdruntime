@@ -2215,8 +2215,60 @@ PrvMediumT CD::GetPlaceToPreserve()
   return prv_medium_;
 }
 
-/* This is old comments, but left here just in case.
+/**********************************************************************************
+ * CD::Preserve()
+ **********************************************************************************
+ * Every CDHandle::Preserve() calls this internal preserve call.
+ * It counts # of Preserve() in execution / reexecution mode
+ * in order to track "which point of program is the last point before rollback".
+ * This point is important for libc and comm logging aspects.
+ * The mode is represented with cd_exec_mode_.
  *
+ * [NOTE] Use case.
+ * One might catch up with some question on how to use Preserve()
+ * when he/she wants to map multiple CD levels like SCR.
+ * Let's consider three levels.
+ *
+ * 
+ * while(cond)
+ * {
+ *    // Current domain is leaf level
+ *    if(is_lv0_interval()) { parent->Preserve(A, sizeof(A), kCopy, "A"); 
+ *                            child->Preserve(A, sizeof(A), kRef, "A"); 
+ *                            leaf->Preserve(A, sizeof(A), kRef, "A"); } 
+ *    else if(is_lv1_interval()) { child->Preserve(A, sizeof(A), kCopy, "A"); 
+ *                            leaf->Preserve(A, sizeof(A), kRef, "A"); }
+ *    else if(is_lv2_interval()) { leaf->Preserve(A, sizeof(A), kCopy, "A"); }
+ *    DoCompute(A);
+ * }
+ *
+ * Users might be confused that A might be restored multiple times
+ * because of such a mapping with three successive preserve calls from
+ * different levels to the same array A.
+ * Note that the way to determine Preserve() or Restore() is based on
+ * cd_exec_mode_ which is independent per level. 
+ * When parent->Preserve() is performing restoration because of escalation for
+ * example, it counts restore_count_ in parent level.
+ * Therefore, during child/leaf-level reexecution, parent->Preserve() should be
+ * never called in order not to increment preserve_count_ at parent level, which
+ * will cause incorrect behavior by mapping. That is why we use different
+ * if-else conditions for preserving A with multiple CD levels.
+ *
+ * [NOTE] kOutput use case.
+ * while(cond)
+ * {
+ *    // Current domain is leaf level
+ *    if(is_lv2_interval()) { leaf->Preserve(A, sizeof(A), kRef, "A"); }
+ *    DoCompute(A);
+ *    if(is_lv0_interval())      { parent_dummy->Preserve(A, sizeof(A), kOutput, "A"); }
+ *    else if(is_lv1_interval()) { child_dummy->Preserve(A, sizeof(A), kOutput, "A"); }
+ *
+ * }
+ **********************************************************************************
+ 
+ **********************************************************************************
+ * The following comments are old and may be out-dated, but left here just in case.
+ **********************************************************************************
  * CD::Preserve(char *data_p, int data_l, enum preserveType prvTy, enum mediumLevel medLvl)
  * Register data information to preserve if needed.
  * (For now, since we restore per CD, this registration per cd_entry would be thought unnecessary.
@@ -2254,7 +2306,7 @@ PrvMediumT CD::GetPlaceToPreserve()
  * Otherwise current way of restoration won't work. 
  * Right now restore happens one by one. 
  * Everytime restore is called one entry is restored. 
- *
+ **********************************************************************************
  */
 
 CDErrT CD::Preserve(void *data, 
@@ -2700,15 +2752,15 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
   assert(src);
   CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
 
-  PRINT_BOTH("  ** Restore %18s ** at %10s Lv%u %lu-%lu, (found at %10s Lv%u %lu-%lu) prvcnt:%lu==rstcnt:%lu\n", 
-             tag2str[search_tag].c_str(),
-             label_.c_str(), level(),   
-             phaseTree.current_->seq_begin_,
-             phaseTree.current_->seq_end_, 
-             ptr_cd->label_.c_str(), ptr_cd->level(), 
-             phaseNodeCache[ptr_cd->phase()]->seq_begin_,
-             phaseNodeCache[ptr_cd->phase()]->seq_end_,
-             preserve_count_, restore_count_);
+//  PRINT_BOTH("  ** Restore %18s ** at %10s Lv%u %lu-%lu, (found at %10s Lv%u %lu-%lu) prvcnt:%lu==rstcnt:%lu\n", 
+//             tag2str[search_tag].c_str(),
+//             label_.c_str(), level(),   
+//             phaseTree.current_->seq_begin_,
+//             phaseTree.current_->seq_end_, 
+//             ptr_cd->label_.c_str(), ptr_cd->level(), 
+//             phaseNodeCache[ptr_cd->phase()]->seq_begin_,
+//             phaseNodeCache[ptr_cd->phase()]->seq_end_,
+//             preserve_count_, restore_count_);
   if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
     PackerSerializable *serializer = reinterpret_cast<PackerSerializable *>(data);
     // It is very important to pass entry_directory_ of CD level that has search_tag.
@@ -3549,7 +3601,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
   //printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
   //if(incomplete_log_.size()!=0) 
   {
-    CD_DEBUG("### [%s] Incomplete log size: %zu at level #%u\n", label_.c_str(), incomplete_log_.size(), level());
+    PRINT_BOTH("### [%s] Incomplete log size: %zu at level #%u\n", label_.c_str(), incomplete_log_.size(), level());
 //    if(myTaskID ==7) printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
   }
 // FIXME: 20180212 

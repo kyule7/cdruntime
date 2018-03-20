@@ -1741,57 +1741,36 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   CDErrT err;
   bool is_active_leaf = (GetCurrentCD() == this);
   // is_active_leaf is false AND IsReexec() true --> jump
-  if(is_active_leaf || IsReexec() == false) 
+  //if(is_reexec || is_active_leaf || IsReexec() == false) 
+  if(1)
   {
-  std::string entry_name(my_name);
-  err = ptr_cd_->Preserve(data_ptr, len, (CDPrvType)preserve_mask, 
-                                 entry_name, ref_name, ref_offset, 
-                                 regen_object, data_usage);
+    std::string entry_name(my_name);
+    CD_DEBUG("@@@ %s (%18s) (%12s) (%12s) (Prv: %s, %s, %s)\n", 
+                (is_reexec)? "Restore" : "Preserv",  my_name, GetCurrentCD()->GetLabel(), GetLabel(),
+                CHECK_PRV_TYPE(preserve_mask,kRef)? "Refr":"Copy", 
+                (is_active_leaf)? "ACTIVE":"INACTIVE",
+                (IsReexec())? "REEX":"EXEC");
+    err = ptr_cd_->Preserve(data_ptr, len, (CDPrvType)preserve_mask, 
+                                   entry_name, ref_name, ref_offset, 
+                                   regen_object, data_usage);
 #if CD_ERROR_INJECTION_ENABLED
-  if(memory_error_injector_ != NULL) {
-    memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
-    memory_error_injector_->Inject();
-  }
+    if(memory_error_injector_ != NULL) {
+      memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
+      memory_error_injector_->Inject();
+    }
 #endif
-
-//#if CD_PROFILER_ENABLED
-//  if(is_reexecution) {
-//    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
-//      profiler_->RecordProfile(PRV_COPY_DATA, len);
-//    }
-//    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
-//      profiler_->RecordProfile(PRV_REF_DATA, len);
-//    }
-////    profMap[phase]->prv_copy_ += profile_data;
-//  }
-//#endif
-
-//  end_clk = CD_CLOCK();
-//  double elapsed = end_clk - begin_clk;
-//  uint32_t phase = this->phase();
-//  phaseTree.current->RecordData(len, elapsed, GetExecMode() == kReexecution); 
-//
-//
-//
-//
-//
-//  prv_elapsed_time += elapsed;
-//#if CD_PROFILER_ENABLED
-//  if(is_reexecution) {
-//    profMap[phase]->prv_elapsed_time_ += elapsed;
-//  } else {
-//    profMap[phase]->rst_elapsed_time_ += elapsed;
-//  }
-//#endif
-  uint32_t phase = this->phase();
-  cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
-  //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
-  } else {
-    PRINT_BOTH("@@@ Parent (%s) level preserve call (%s) during rollback to %s %ld (isreex:%s, IsReex():%s, leaf?%s)>>>\n", 
-        GetLabel(), my_name,
-        cd::phaseNodeCache[cd::failed_phase]->label_.c_str(), cd::failed_seqID,
-        (is_reexec)? "YES":"NO", (IsReexec())? "YES":"NO", (is_active_leaf)? "YES":"NO"
-        );
+  
+    uint32_t phase = this->phase();
+    cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+    //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  } 
+  else {
+    CD_DEBUG("@@@ SKIP IT (%18s) (%12s) (%12s) (Prv: %s, %s, %s to %s %ld)\n", 
+                my_name, GetCurrentCD()->GetLabel(), GetLabel(),
+                CHECK_PRV_TYPE(preserve_mask,kRef)? "Refr":"Copy", 
+                (is_active_leaf)? "ACTIVE":"INACTIVE",
+                (IsReexec())? "REEX":"EXEC",
+                cd::phaseNodeCache[cd::failed_phase]->label_.c_str(), cd::failed_seqID);
   }
   CDEpilogue();
   return CHECK_PRV_TYPE(preserve_mask, kRef)? (CDErrT)0 : (CDErrT)len;
@@ -1816,58 +1795,33 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   CDErrT err;
   bool is_active_leaf = (GetCurrentCD() == this);
   // is_active_leaf is false AND IsReexec() true --> jump
-  if(is_active_leaf || IsReexec() == false) 
   //if(is_reexec || IsReexec() == false) 
+  //if(is_reexec || is_active_leaf || IsReexec() == false) 
+  if(1)
   {
-  std::string entry_name(my_name);
-  err = ptr_cd_->Preserve((void *)&serdes, len, (CDPrvType)(kSerdes | preserve_mask), 
-                                 entry_name, ref_name, ref_offset, 
-                                 regen_object, data_usage);
-  //assert(len > 0);
-//#if CD_PROFILER_ENABLED
-//  if(is_reexecution) {
-////    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
-////    if(len==0) {printf("len:0\n"); getchar(); }
-//    if(CHECK_PRV_TYPE(preserve_mask,kCopy) && (CHECK_PRV_TYPE(preserve_mask, kOutput) == false)) {
-//      profiler_->RecordProfile(PRV_COPY_DATA, len);
-//    }
-//    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
-//      profiler_->RecordProfile(PRV_REF_DATA, len);
-//    }
-////    profPrvCache[phase]
-//
-////    assert(len);
-//  }
-//#endif
-//  
-//  end_clk = CD_CLOCK();
-//  double elapsed = end_clk - begin_clk;
-//  uint32_t phase = this->phase();
-//
-//
-//  RecordProfile(phase, kProfData, len, elapsed, is_reexecution); 
-//
-//
-//  prv_elapsed_time += elapsed;
-//#if CD_PROFILER_ENABLED
-//  if(is_reexecution) {
-////    profPrvCache[phase][my_name] += len;
-//    profMap[phase]->prv_elapsed_time_ += elapsed;
-//  } else {
-//    profMap[phase]->rst_elapsed_time_ += elapsed;
-//  }
-//#endif
-
-
-  uint32_t phase = this->phase();
-  cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
-  //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
-  } else {
-    PRINT_BOTH("@@@ Parent (%s) level preserve call (%s) during rollback to %s %ld (isreex:%s, IsReex():%s, leaf?%s)>>>\n", 
-        GetLabel(), my_name,
-        cd::phaseNodeCache[cd::failed_phase]->label_.c_str(), cd::failed_seqID,
-        (is_reexec)? "YES":"NO", (IsReexec())? "YES":"NO", (is_active_leaf)? "YES":"NO"
-        );
+    std::string entry_name(my_name);
+    //if(CHECK_PRV_TYPE(preserve_mask,kRef) == false || is_reexec) 
+    CD_DEBUG("@@@ %s (%18s) (%12s) (%12s) (Prv: %s, %s, %s)\n", 
+                (is_reexec)? "Restore" : "Preserv",  my_name, GetCurrentCD()->GetLabel(), GetLabel(),
+                CHECK_PRV_TYPE(preserve_mask,kRef)? "Refr":"Copy", 
+                (is_active_leaf)? "ACTIVE":"INACTIVE",
+                (IsReexec())? "REEX":"EXEC");
+    err = ptr_cd_->Preserve((void *)&serdes, len, (CDPrvType)(kSerdes | preserve_mask), 
+                                   entry_name, ref_name, ref_offset, 
+                                   regen_object, data_usage);
+    //assert(len > 0);
+  
+    uint32_t phase = this->phase();
+    cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+    //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  } 
+  else {
+    CD_DEBUG("@@@ SKIP IT (%18s) (%12s) (%12s) (Prv: %s, %s, %s to %s %ld)\n", 
+                my_name, GetCurrentCD()->GetLabel(), GetLabel(),
+                CHECK_PRV_TYPE(preserve_mask,kRef)? "Refr":"Copy", 
+                (is_active_leaf)? "ACTIVE":"INACTIVE",
+                (IsReexec())? "REEX":"EXEC",
+                cd::phaseNodeCache[cd::failed_phase]->label_.c_str(), cd::failed_seqID);
   }
   
   CDEpilogue();
@@ -2584,14 +2538,18 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
       cdh = CDPath::GetParentCD(cdh->level());
     }
     if(rollback_point < level()) {
-      printf("\n>>>> Escalation %u (%lu-%lu)->%u (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+      printf("\n>>>> Escalation %u (%lu-%lu)->%u during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
           level(), phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_, 
-          rollback_point, sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+          rollback_point, 
+          (IsReexec())? "REEX" : "EXEC",
+          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());
-      CD_DEBUG("\n>>>> Escalation %u (%lu-%lu)->%u (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+      CD_DEBUG("\n>>>> Escalation %u (%lu-%lu)->%u during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
           level(), phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_, 
-          rollback_point, sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+          rollback_point, 
+          (IsReexec())? "REEX" : "EXEC",
+          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());
     } else if(rollback_point == level()) {
@@ -2599,14 +2557,16 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
       const uint64_t curr_phase = ptr_cd_->phase();
       const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
       const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
-      printf(">>>> Rollback (%s) (syndrom:%lx == vec:%lx) = %d, lv:%u, %s phase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+      printf(">>>> Rollback (%s) during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s phase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
           ptr_cd_->label_.c_str(),
+          (IsReexec())? "REEX" : "EXEC",
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel(), 
           cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
-      CD_DEBUG(">>>> Rollback (%s) (syndrom:%lx == vec:%lx) = %d, lv:%u, %s fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+      CD_DEBUG(">>>> Rollback (%s) during %s  (syndrom:%lx == vec:%lx) = %d, lv:%u, %s fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
           ptr_cd_->label_.c_str(),
+          (IsReexec())? "REEX" : "EXEC",
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel(), 

@@ -66,10 +66,11 @@ void MPIFileHandle::Init(const MPI_Comm &comm, const char *filepath)
       //strcpy(base_filename, DEFAULT_BASE_FILEPATH "/global");
     }
   }
-  PMPI_Bcast(base_filename, MAX_FILEPATH_SIZE, MPI_CHAR, 0, comm_);
   if(packerTaskID == 0) {
     MakeFileDir(base_filename);
   }
+  PMPI_Bcast(base_filename, MAX_FILEPATH_SIZE, MPI_CHAR, 0, comm_);
+
   //viewsize_ = DEFAULT_VIEWSIZE;
   char full_filename[MAX_FILEPATH_SIZE];
   viewsize_ = 0;
