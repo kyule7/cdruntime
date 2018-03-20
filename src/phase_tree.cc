@@ -214,6 +214,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
 //  fprintf(outYAML, "%s\"ChildCDs\" : {\n", two_more_indent.c_str());
 //=======
   fprintf(outJSON, "%s\"CD_%u_%u\" : {\n",      one_more_indent.c_str(), level_, phase_);
+  fprintf(outJSON, "%s\"label\"    : \"%s\",\n",    two_more_indent.c_str(), label_.c_str());
   if(children_.empty()) {
     fprintf(outJSON, "%s\"type\"   : \"leaf\",\n", two_more_indent.c_str());
   } else if(left_ == NULL && right_ == NULL) {
@@ -244,7 +245,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
   double cdrt_overhead = GetRuntimeOverhead();
   fprintf(outJSON, "%s\"runtime overhead\" : %lf, // accumulated:%lf\n",  two_more_indent.c_str(), cdrt_overhead/profile_.exec_cnt_, cdrt_overhead);
   double preserve_time = profile_.GetPreserveTime();
-  fprintf(outJSON, "%s\"preserve time\"    : %lf, // accumulated:%lf w/o deviation\n",  two_more_indent.c_str(), preserve_time/profile_.exec_cnt_, preserve_time);
+  fprintf(outJSON, "%s\"preserve time\"    : %lf, // accumulated:%lf w/ dev, %lf w/o dev\n",  two_more_indent.c_str(), preserve_time/profile_.exec_cnt_, preserve_time, profile_.prv_elapsed_time_);
   uint64_t errtype = errortype_;
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     errtype = errtype & ~((*it)->errortype_);
@@ -285,7 +286,6 @@ void PhaseNode::PrintOutputJsonInternal(void)
   }
   profile_.PrintTraces(outJSON, two_more_indent.c_str());
   fprintf(outJSON, "%s\"fault rate\"     : %f,\n",    two_more_indent.c_str(), failure_rate);
-  fprintf(outJSON, "%s\"label\"    : \"%s\",\n",    two_more_indent.c_str(), label_.c_str());
   fprintf(outJSON, "%s\"interval\" : %ld,\n",   two_more_indent.c_str(), interval_);
   fprintf(outJSON, "%s\"errortype\": \"0x%lX\",\n", two_more_indent.c_str(), errortype_);
   fprintf(outJSON, "%s\"medium\"   : \"%s\",\n",     two_more_indent.c_str(), GetMedium(medium_));
