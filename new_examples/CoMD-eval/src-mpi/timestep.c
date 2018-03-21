@@ -126,7 +126,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       NULL);
     // s->boxes are not updated but just read in advanceVelocity()
 #endif
-    //cd_detect(lv2_cd);
+    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 #endif // _CD2
 
@@ -195,7 +195,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       0,                     // is_print
                       idx_position); // FIXME: what name should be given?
 #endif
-    //cd_detect(lv2_cd);
+    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 #endif
 
@@ -291,7 +291,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
         preserveLinkCell(lv2_cd, kOutput, s->boxes, 0 /*all*/, 1 /*nAtoms*/,
                          0 /*local*/, 0 /*nLocalBoxes*/, 1 /*nTotalBoxes*/);
 #endif
-    //cd_detect(lv2_cd);
+    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 #endif //_CD2
 //-----------------------------------------------------------------------
@@ -386,14 +386,14 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       0,          // is_print
                       idx_force); // FIXME: correct name?
 #endif
-    //cd_detect(lv3_cd);
+    cd_detect(lv3_cd);
     cd_complete(lv3_cd);
     cd_destroy(lv3_cd);
 #endif // _CD3 && _CD2
 #if _CD2
     // Do I need cd_detect here when level2 is enabled? Yes, it won't
     // double detect here and in level3. (FIXME: should be verfified)
-    //cd_detect(lv2_cd);
+    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 #endif
 //*****************************************************************************
@@ -456,7 +456,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       NULL);
     // idx_advanceVelocity_end); // FIXME: what should be given?
 #endif
-    //cd_detect(lv2_cd);
+    cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 #endif
   } // for loop

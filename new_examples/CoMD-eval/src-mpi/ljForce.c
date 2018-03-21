@@ -226,7 +226,7 @@ int ljForce(SimFlat *s) {
         //cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy, tmp_iBox_idx,
         //            tmp_iBox_idx);
         cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy, "iBox", "iBox");
-        if(getMyRank() == 0) printf("LV4:Begin:%d\n", iBox);
+        //if(getMyRank() == 0) printf("LV4:Begin:%d\n", iBox);
         //cd_preserve(lv4_cd, &ePot, sizeof(real_t), kCopy, "ePot", "ePot");
         // TODO: cd_preserve : atoms->r in the boxes of current iteration (kRef)
 #endif
@@ -239,7 +239,7 @@ int ljForce(SimFlat *s) {
         // Let's preserve atoms->U and atoms->F in iBox first
         int to = iBox + CD4_INTERVAL;
         if (to >= s->boxes->nLocalBoxes) to = s->boxes->nLocalBoxes -1;
-        if(getMyRank() == 0) printf("LV4:Preserve(iBox)(f & U):%d:%d\n", iBox, to);
+        //if(getMyRank() == 0) printf("LV4:Preserve(iBox)(f & U):%d:%d\n", iBox, to);
         //FIXME: Now, this does preserve all boxes for some challnegs of 
         //       preserving neighboring boxes for all iBoxes in the given interval.
         //FIXME: This may be acceptable for coarse enough interval but may add
@@ -433,7 +433,7 @@ int ljForce(SimFlat *s) {
                           idx_force); // is_print
 #endif
         is_lv4_completed = 1;
-        if(getMyRank() == 0) printf("LV4:Complete:%d\n", iBox);
+        //if(getMyRank() == 0) printf("LV4:Complete:%d\n", iBox);
         cd_detect(lv4_cd);
         cd_complete(lv4_cd);
       } // CD4_INTERVAL
@@ -447,7 +447,7 @@ int ljForce(SimFlat *s) {
 #if _CD4
   if (is_not_first) {
     if (is_lv4_completed == 0) {
-      if(getMyRank() == 0) printf("LV4:Complete(afte loop)\n");
+      //if(getMyRank() == 0) printf("LV4:Complete(afte loop)\n");
       cd_detect(lv4_cd);
       cd_complete(lv4_cd);
     }

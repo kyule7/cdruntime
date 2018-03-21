@@ -252,14 +252,14 @@ int main(int argc, char **argv) {
     stopTimer(commReduceTimer);
 #if _CD1
     // FIXME: remove before measurement
-    if (getMyRank() == 0) {
-      if (is_reexec()) {
-        printf("[%d Re-execution(%d):Rank0] printThings\n", numReexecution,
-               iStep);
-      } else {
-        printf("[Normal-execution(%d):Rank0] printThings\n", iStep);
-      }
-    }
+    //if (getMyRank() == 0) {
+    //  if (is_reexec()) {
+    //    printf("[%d Re-execution(%d):Rank0] printThings\n", numReexecution,
+    //           iStep);
+    //  } else {
+    //    printf("[Normal-execution(%d):Rank0] printThings\n", iStep);
+    //  }
+    //}
 #endif
     printThings(sim, iStep, getElapsedTime(timestepTimer));
 

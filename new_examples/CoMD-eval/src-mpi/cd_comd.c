@@ -14,20 +14,21 @@ unsigned int preserveSimFlat(cd_handle_t *cdh, uint32_t knob, SimFlat *sim) {
   // Preserve SimFlat object with shallow copy first.
   // This preserves the values of nSteps, printRate, dt, ePotential, eKinetic.
   // Also, it does the pointeres for domain, boxes, atoms, species, pot, and
-  // atomExchange arrays.
-  if(is_reexec()) {
-    printf("[Re-exeuction] Before nullyfying SimFlat(domain, boxes):%x\t%x\n", 
-        sim->domain, sim->boxes);
-    sim->domain = NULL;
-    sim->boxes = NULL;
-    printf("[Re-execution] After nullyfying SimFlat(domain, boxes):%x\t%x\n", 
-        sim->domain, sim->boxes);
-  }
-  cd_preserve(cdh, sim, size, knob, "SimFlat", "SimFlat");
-  if(is_reexec()) {
-    printf("[Re-execution] After restoring SimFlat(domain, boxes):%x\t%x\n", 
-        sim->domain, sim->boxes);
-  }
+  // atomExchange arrays. 
+  //FIXME : turn off before measuring performance
+  //if(is_reexec()) {
+  //  printf("[Re-exeuction] Before nullyfying SimFlat(domain, boxes):%x\t%x\n", 
+  //      sim->domain, sim->boxes);
+  //  sim->domain = NULL;
+  //  sim->boxes = NULL;
+  //  printf("[Re-execution] After nullyfying SimFlat(domain, boxes):%x\t%x\n", 
+  //      sim->domain, sim->boxes);
+  //}
+  //cd_preserve(cdh, sim, size, knob, "SimFlat", "SimFlat");
+  //if(is_reexec()) {
+  //  printf("[Re-execution] After restoring SimFlat(domain, boxes):%x\t%x\n", 
+  //      sim->domain, sim->boxes);
+  //}
 #endif
   if (PRINTON == 1)
     printf("Preserve SimFlat: %zu\n", sizeof(SimFlat));
