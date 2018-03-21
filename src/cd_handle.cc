@@ -220,34 +220,36 @@ void cd::GatherProfile(void)
     char tmpfile[512];
     sprintf(tmpfile, "prof_trace.%s.%s.%d.%s.json", exec_name, (exec_details!=NULL)? exec_details : "NoInput", totalTaskSize, start_date);
     FILE *tfp = fopen(tmpfile, "w"); 
-    if(tfp == 0) { printf("failed to open %s\n", tmpfile); assert(tfp); }
-
-    fprintf(tfp, "{\n");
-    fprintf(tfp, "  \"name\":\"%s\",\n", exec_name);
-    fprintf(tfp, "  \"input\":%s,\n", (exec_details!=NULL)? exec_details : "NoInput");
-    fprintf(tfp, "  \"iters\":%d,\n", (exec_iterations!=NULL)? atoi(exec_iterations) : 0);
-    fprintf(tfp, "  \"nTask\":%d,\n", totalTaskSize);
-    fprintf(tfp, "  \"GlobalDisk BW\": [%lf,%lf,%lf,%lf]\n", packer::time_mpiio_write.bw_avg, packer::time_mpiio_write.bw_std, packer::time_mpiio_write.bw_min, packer::time_mpiio_write.bw_max);
-    fprintf(tfp, "  \"LocalDisk BW\":[%lf,%lf,%lf,%lf]\n", packer::time_posix_write.bw_avg, packer::time_posix_write.bw_std, packer::time_posix_write.bw_min, packer::time_posix_write.bw_max);
-    fprintf(tfp, "  \"LocalMemory BW\":[%lf,%lf,%lf,%lf]\n", packer::time_copy.bw_avg, packer::time_copy.bw_std, packer::time_copy.bw_min, packer::time_copy.bw_max);
-    fprintf(tfp, "  \"prof\": {\n");
-    PrintPackerProf(tfp);
-fprintf(tfp, "    \"elapsed\": [%f", elapsed_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", elapsed_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"nm_sync\": [%f", nm_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", nm_sync_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"rx_sync\": [%f", rx_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rx_sync_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"rc_sync\": [%f", rc_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rc_sync_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"prvtime\": [%f", prvtime_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", prvtime_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"rsttime\": [%f", rsttime_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rsttime_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"creatcd\": [%f", creatcd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", creatcd_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"destroy\": [%f", destroy_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", destroy_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"begincd\": [%f", begincd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", begincd_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"complcd\": [%f", complcd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", complcd_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"advance\": [%f", advance_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", advance_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"mailbox\": [%f", mailbox_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", mailbox_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"sync\": [%f", nm_sync_acc[0] + rx_sync_acc[0] + rc_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", nm_sync_acc[i] + rx_sync_acc[i] + rc_sync_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"cdrt\": [%f", begincd_acc[0] + complcd_acc[0] + creatcd_acc[0] + destroy_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", begincd_acc[i] + complcd_acc[i] + creatcd_acc[i] + destroy_acc[i]); } fprintf(tfp, "]\n");
-    fprintf(tfp, "  }\n");
-    fprintf(tfp, "}\n");
+    if(tfp == 0) { printf("failed to open %s\n", tmpfile); }
+    else {
+      fprintf(tfp, "{\n");
+      fprintf(tfp, "  \"name\":\"%s\",\n", exec_name);
+      fprintf(tfp, "  \"input\":%s,\n", (exec_details!=NULL)? exec_details : "NoInput");
+      fprintf(tfp, "  \"iters\":%d,\n", (exec_iterations!=NULL)? atoi(exec_iterations) : 0);
+      fprintf(tfp, "  \"nTask\":%d,\n", totalTaskSize);
+      fprintf(tfp, "  \"GlobalDisk BW\": [%lf,%lf,%lf,%lf]\n", packer::time_mpiio_write.bw_avg, packer::time_mpiio_write.bw_std, packer::time_mpiio_write.bw_min, packer::time_mpiio_write.bw_max);
+      fprintf(tfp, "  \"LocalDisk BW\":[%lf,%lf,%lf,%lf]\n", packer::time_posix_write.bw_avg, packer::time_posix_write.bw_std, packer::time_posix_write.bw_min, packer::time_posix_write.bw_max);
+      fprintf(tfp, "  \"LocalMemory BW\":[%lf,%lf,%lf,%lf]\n", packer::time_copy.bw_avg, packer::time_copy.bw_std, packer::time_copy.bw_min, packer::time_copy.bw_max);
+      fprintf(tfp, "  \"prof\": {\n");
+      PrintPackerProf(tfp);
+  fprintf(tfp, "    \"elapsed\": [%f", elapsed_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", elapsed_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"nm_sync\": [%f", nm_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", nm_sync_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"rx_sync\": [%f", rx_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rx_sync_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"rc_sync\": [%f", rc_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rc_sync_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"prvtime\": [%f", prvtime_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", prvtime_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"rsttime\": [%f", rsttime_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rsttime_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"creatcd\": [%f", creatcd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", creatcd_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"destroy\": [%f", destroy_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", destroy_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"begincd\": [%f", begincd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", begincd_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"complcd\": [%f", complcd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", complcd_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"advance\": [%f", advance_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", advance_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"mailbox\": [%f", mailbox_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", mailbox_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"sync\": [%f", nm_sync_acc[0] + rx_sync_acc[0] + rc_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", nm_sync_acc[i] + rx_sync_acc[i] + rc_sync_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"cdrt\": [%f", begincd_acc[0] + complcd_acc[0] + creatcd_acc[0] + destroy_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", begincd_acc[i] + complcd_acc[i] + creatcd_acc[i] + destroy_acc[i]); } fprintf(tfp, "]\n");
+      fprintf(tfp, "  }\n");
+      fprintf(tfp, "}\n");
+      fclose(tfp);
+    }
     free(elapsed_acc);
     free(nm_sync_acc);
     free(rx_sync_acc);
@@ -260,7 +262,6 @@ fprintf(tfp, "    \"cdrt\": [%f", begincd_acc[0] + complcd_acc[0] + creatcd_acc[
     free(complcd_acc);
     free(advance_acc);
     free(mailbox_acc);
-    fclose(tfp);
   }
 }
 

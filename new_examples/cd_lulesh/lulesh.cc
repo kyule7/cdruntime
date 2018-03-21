@@ -4152,40 +4152,41 @@ int main(int argc, char *argv[])
 //     sprintf(tmpfile, "time_trace.%s.%d.%d.%d", execname, numRanks, opts.nx, ((int)start) % 10000);
      sprintf(tmpfile, "time_trace.%s.%d.%d.%s.json", execname, opts.nx, numRanks, fname_last);
      FILE *tfp = fopen(tmpfile, "w"); 
-     if(tfp == 0) { printf("failed to open %s\n", tmpfile); assert(tfp); }
-
-     fprintf(tfp, "{\n");
-     fprintf(tfp, "  \"name\":\"%s\",\n", execname);
-     fprintf(tfp, "  \"input\":%d,\n", opts.nx);
-     fprintf(tfp, "  \"nTask\":%d,\n", numRanks);
-     fprintf(tfp, "  \"prof\": {\n");
-     fprintf(tfp, "    \"loop\": [%f", total_loop[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_loop[i]); } fprintf(tfp, "],\n");
-     fprintf(tfp, "    \"dump\": [%f", total_dump[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump[i]); } fprintf(tfp, "],\n");
+     if(tfp == 0) { printf("failed to open %s\n", tmpfile); fflush(stdout); }
+     else {
+       fprintf(tfp, "{\n");
+       fprintf(tfp, "  \"name\":\"%s\",\n", execname);
+       fprintf(tfp, "  \"input\":%d,\n", opts.nx);
+       fprintf(tfp, "  \"nTask\":%d,\n", numRanks);
+       fprintf(tfp, "  \"prof\": {\n");
+       fprintf(tfp, "    \"loop\": [%f", total_loop[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_loop[i]); } fprintf(tfp, "],\n");
+       fprintf(tfp, "    \"dump\": [%f", total_dump[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump[i]); } fprintf(tfp, "],\n");
 #if _CD_CDRT && _CD
-     fprintf(tfp, "    \"dump0\": [%f", total_dump0[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump0[i]); } fprintf(tfp, "],\n");
-     fprintf(tfp, "    \"dump1\": [%f", total_dump1[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump1[i]); } fprintf(tfp, "],\n");
-     fprintf(tfp, "    \"dump2\": [%f", total_dump2[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump2[i]); } fprintf(tfp, "],\n");
-     fprintf(tfp, "    \"dump3\": [%f", total_dump3[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump3[i]); } fprintf(tfp, "],\n");
-     fprintf(tfp, "    \"dump4\": [%f", total_dump4[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump4[i]); } fprintf(tfp, "],\n");
+       fprintf(tfp, "    \"dump0\": [%f", total_dump0[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump0[i]); } fprintf(tfp, "],\n");
+       fprintf(tfp, "    \"dump1\": [%f", total_dump1[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump1[i]); } fprintf(tfp, "],\n");
+       fprintf(tfp, "    \"dump2\": [%f", total_dump2[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump2[i]); } fprintf(tfp, "],\n");
+       fprintf(tfp, "    \"dump3\": [%f", total_dump3[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump3[i]); } fprintf(tfp, "],\n");
+       fprintf(tfp, "    \"dump4\": [%f", total_dump4[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump4[i]); } fprintf(tfp, "],\n");
 #endif
-     fprintf(tfp, "    \"wait\": [%f", total_wait[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_wait[i]); } fprintf(tfp, "],\n");
-     fprintf(tfp, "    \"cdrt\": [%f", total_begn[0] + total_cmpl[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_begn[i] + total_cmpl[i]); } fprintf(tfp, "]\n");
-     fprintf(tfp, "  }\n");
-     fprintf(tfp, "}\n");
-     free(total_loop);
-     free(total_dump);
-     free(total_wait);
-     free(total_begn);
-     free(total_cmpl);
-
+       fprintf(tfp, "    \"wait\": [%f", total_wait[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_wait[i]); } fprintf(tfp, "],\n");
+       fprintf(tfp, "    \"cdrt\": [%f", total_begn[0] + total_cmpl[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_begn[i] + total_cmpl[i]); } fprintf(tfp, "]\n");
+       fprintf(tfp, "  }\n");
+       fprintf(tfp, "}\n");
+       free(total_loop);
+       free(total_dump);
+       free(total_wait);
+       free(total_begn);
+       free(total_cmpl);
+  
 #if _CD_CDRT && _CD
-     free(total_dump0);
-     free(total_dump1);
-     free(total_dump2);
-     free(total_dump3);
-     free(total_dump4);
+       free(total_dump0);
+       free(total_dump1);
+       free(total_dump2);
+       free(total_dump3);
+       free(total_dump4);
 #endif
-     fclose(tfp);
+       fclose(tfp);
+     }
    }
 
 #endif
