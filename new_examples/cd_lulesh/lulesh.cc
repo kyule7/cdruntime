@@ -182,6 +182,10 @@ double begn_time = 0.0;
 double cmpl_time = 0.0;
 double begn_end = 0.0;
 double cmpl_end = 0.0;
+double collect_doms = 0.0;
+double calc_shape   = 0.0;
+double calc_normal  = 0.0;
+double sum_elems    = 0.0;
 unsigned long prv_len = 0;
 
 //#define PRINT_ONE(...) 
@@ -699,6 +703,22 @@ void SumElemStressesToNodeForces( const Real_t B[][8],
 
 /******************************************/
 
+#define COMPARE_ARR(ARR, SIZE) { \
+  static Real_t *ARR ## _r = NULL; \
+  static size_t ARR ## _s = 0; \
+  if((ARR ## _r) == NULL) { \
+    ARR ## _r =  (Real_t *)calloc(SIZE, sizeof(ARR[0])); ARR ## _s = SIZE; } \
+  else if((ARR ## _s) != (SIZE)) { \
+    ARR ## _r = (Real_t *)realloc(ARR ## _r, SIZE * sizeof(ARR[0])); ARR ## _s = SIZE; } \
+  uint32_t diff = 0; \
+  for(int i=0; i<SIZE; i++) { \
+    if(ARR[i] != ARR ## _r[i]) diff++; \
+  } \
+  if(diff > 0) { \
+    memcpy(ARR ## _r, ARR, sizeof(ARR[0]) * SIZE); \
+    if(myRank == 7) { printf("%s is changed: %d/%d\n", #ARR, diff, SIZE); } \
+  } }
+
 static inline
 void IntegrateStressForElems( Domain &domain,
                               Real_t *sigxx, Real_t *sigyy, Real_t *sigzz,
@@ -725,25 +745,47 @@ void IntegrateStressForElems( Domain &domain,
      fz_elem = Allocate<Real_t>(numElem8) ;
   }
   // loop over all elements
-
 //#pragma omp parallel for firstprivate(numElem)
+  double leaf_loop = MPI_Wtime();
   for( Index_t k=0 ; k<numElem ; ++k )
   {
+#if _FG_MORE
+    //if((myRank == 7 || myRank == 35 || myRank == 61 || myRank == 58)&& (k % 128000 == 0)) {
+    if((myRank >= 0) && (k % 128000 == 0)) {
+      leaf_loop = MPI_Wtime();
+      domain.CheckUpdate("FG");
+      COMPARE_ARR(sigxx, numElem);
+      COMPARE_ARR(sigyy, numElem);
+      COMPARE_ARR(sigzz, numElem);
+      COMPARE_ARR(determ, numElem);
+//      COMPARE_ARR(fx_elem, numElem*8);
+//      COMPARE_ARR(fy_elem, numElem*8);
+//      COMPARE_ARR(fz_elem, numElem*8);
+//    CollectDomainNodesToElemNodes
+//    CalcElemShapeFunctionDerivatives
+//    CalcElemNodeNormals
+//    SumElemStressesToNodeForces
+    }
+#endif
     const Index_t* const elemToNode = domain.nodelist(k);
     Real_t B[3][8] ;// shape function derivatives
     Real_t x_local[8] ;
     Real_t y_local[8] ;
     Real_t z_local[8] ;
-
+    
+    double now0 = MPI_Wtime();
     // get nodal coordinates from global arrays and copy into local arrays.
     CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
-
+    double now1 = MPI_Wtime();
+    
     // Volume calculation involves extra work for numerical consistency
     CalcElemShapeFunctionDerivatives(x_local, y_local, z_local,
                                          B, &determ[k]);
+    double now2 = MPI_Wtime();
 
     CalcElemNodeNormals( B[0], B[1], B[2],
                          x_local, y_local, z_local );
+    double now3 = MPI_Wtime();
 
     if (numthreads > 1) {
        // Eliminate thread writing conflicts at the nodes by giving
@@ -765,6 +807,16 @@ void IntegrateStressForElems( Domain &domain,
           domain.fz(gnode) += fz_local[lnode];
        }
     }
+#if _FG_MORE
+    double now4 = MPI_Wtime();
+    collect_doms += now1 - now0;
+    calc_shape   += now2 - now1;
+    calc_normal  += now3 - now2;
+    sum_elems    += now4 - now3;
+    if(myRank == 7 && (k % 128000 == (128000-1))) {
+      printf("[%d/%d] per loop:%le\n", k, numElem, MPI_Wtime() - leaf_loop);
+    }
+#endif
   }
 
   if (numthreads > 1) {
@@ -1361,12 +1413,18 @@ static inline void CalcForceForNodes(Domain& domain)
   #else
   if(domain.check_begin(intvl0)) {
     prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
+    #if _CD_CHILD
     prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); 
+    #endif
+    #if _LEAF_LV
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); 
+    #endif
     PRINT_ONE("Prv Parent       CalcForce %luMB\n", prv_len/1000000); }
   else if(domain.check_begin(intvl1)) {
     prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
+    #if _LEAF_LV
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); 
+    #endif
     PRINT_ONE("Prv Child        CalcForce %luMB\n", prv_len/1000000); }
   #endif
   else if(domain.check_begin(intvl2) || (_LEAF_LV && _SCR == 0)) { // leaf always preserve per loop 
@@ -1577,12 +1635,18 @@ void LagrangeNodal(Domain& domain)
 
   if(domain.check_begin(intvl0)) {
     prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
+    #if _CD_CHILD
     prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc"); 
+    #endif
+    #if _LEAF_LV
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc"); 
+    #endif
     PRINT_ONE("Prv Parent       PosVelAcc %luMB\n", prv_len/1000000); }
   else if(domain.check_begin(intvl1)) {
     prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_posall), kCopy, "PosVelAcc");
+    #if _LEAF_LV
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_posall), kRef, "PosVelAcc"); 
+    #endif
     PRINT_ONE("Prv Child        PosVelAcc %luMB\n", prv_len/1000000); }
 
   #endif
@@ -2852,12 +2916,18 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 
   if(domain.check_begin(intvl0)) {
     prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem");
+    #if _CD_CHILD
     prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem"); 
+    #endif
+    #if _LEAF_LV
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem"); 
+    #endif
     PRINT_ONE("Prv Parent     LagrangeElem %luMB\n", prv_len/1000000); }
   else if(domain.check_begin(intvl1)) {
     prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_elem), kCopy, "LagrangeElem");
+    #if _LEAF_LV
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_elem), kRef, "LagrangeElem"); 
+    #endif
     PRINT_ONE("Prv Child     LagrangeElem %luMB\n", prv_len/1000000); }
 
   #endif
@@ -2943,12 +3013,18 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 
   if(domain.check_begin(intvl0)) {
     prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
+    #if _CD_CHILD
     prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_q), kRef, "QforElem");
+    #endif
+    #if _LEAF_LV
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem"); 
+    #endif
     PRINT_ONE("Prv Parent         QforElem %luMB\n", prv_len/1000000); }
   else if(domain.check_begin(intvl1)) {
     prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_q), kCopy, "QforElem");
+    #if _LEAF_LV
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_q), kRef, "QforElem"); 
+    #endif
     PRINT_ONE("Prv Child         QforElem %luMB\n", prv_len/1000000); }
 
   #endif
@@ -3037,12 +3113,18 @@ void LagrangeElements(Domain& domain, Index_t numElem)
 
   if(domain.check_begin(intvl0)) {
     prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem"); 
+    #if _CD_CHILD
     prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem"); 
+    #endif
+    #if _LEAF_LV
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem"); 
+    #endif
     PRINT_ONE("Prv Parent MaterialForElem %luMB\n", prv_len/1000000); }
   else if(domain.check_begin(intvl1)) {
     prv_len += cd_child_loop->Preserve(domain.SetOp(prvec_matrl), kCopy, "MaterialforElem"); 
+    #if _LEAF_LV
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_matrl), kRef, "MaterialforElem"); 
+    #endif
     PRINT_ONE("Prv Child  MaterialForElem %luMB\n", prv_len/1000000); }
   #endif
   //else if(_LEAF_LV && _MATERIAL_PROP) { // leaf always preserve per loop 
@@ -3400,7 +3482,6 @@ int main(int argc, char *argv[])
    locDom = new Domain(numRanks, col, row, plane, opts.nx,
                        side, opts.numReg, opts.balance, opts.cost) ;
 
-
    pDomain = locDom;
 #if USE_MPI   
    fieldData = &Domain::nodalMass ;
@@ -3517,6 +3598,10 @@ int main(int argc, char *argv[])
       begn_end = 0.0;
       cmpl_end = 0.0;
       prv_len = 0;
+      collect_doms = 0.0;
+      calc_shape   = 0.0;
+      calc_normal  = 0.0;
+      sum_elems    = 0.0;
       double loop_start = MPI_Wtime();
 
       TimeIncrement(*locDom) ;
@@ -3710,13 +3795,18 @@ int main(int argc, char *argv[])
       local_dump3.push_back((float)dump_phase[3]);
       local_dump4.push_back((float)dump_phase[4]);
 #endif
-      if (myRank == 1) {
+      if (myRank == 7) {
 //      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) 
-         printf("cycle = %d (%u), t=%5.4e, dt=%5.4e, loop=%5.3e, dump=%5.3e, wait=%5.3e, begin=%5.3e, complete=%5.3e, vol=%lfMB (%5.3e, %5.3e, %5.3e, %5.3e, %5.3e),phase(%4.3f,%4.3f,%4.3f,%4.3f,%4.3f),dump(%4.3f,%4.3f,%4.3f,%4.3f,%4.3f)\n",
+         printf("cycle = %d (%u), t=%5.4e, dt=%5.4e, loop=%5.3e, dump=%5.3e, wait=%5.3e, begin=%5.3e, complete=%5.3e, vol=%lfMB (%5.3e, %5.3e, %5.3e, %5.3e, %5.3e),phase(%4.3f(%4.3f,%4.3f,%4.3f,%4.3f),%4.3f,%4.3f,%4.3f,%4.3f),dump(%4.3f,%4.3f,%4.3f,%4.3f,%4.3f)\n",
                 locDom->cycle(), global_counter, double(locDom->time()), double(locDom->deltatime()), 
                 loop_end, dump_end, wait_end, begn_end, cmpl_end, (double)prv_len/1000000,
                 loop_time/global_counter, dump_time/global_counter, wait_time/global_counter, begn_time/global_counter, cmpl_time/global_counter, 
-                exec_phase[0], exec_phase[1],exec_phase[2], exec_phase[3],exec_phase[4],
+                exec_phase[0], 
+                collect_doms,
+                calc_shape  ,
+                calc_normal ,
+                sum_elems   ,
+                exec_phase[1],exec_phase[2], exec_phase[3],exec_phase[4],
                 dump_phase[0], dump_phase[1],dump_phase[2], dump_phase[3],dump_phase[4]) ;
       }
       for(int i=0; i<5; i++) { dump_phase[i] = 0; }
