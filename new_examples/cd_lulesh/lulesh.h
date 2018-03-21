@@ -1409,7 +1409,7 @@ class Domain : public Internal {
    void CheckUpdate(const char *str) 
    {
 #if DO_CHECK      
-      dynamic_cast<Internal *>(this)->CheckInternal(dynamic_cast<Internal &>(*preserved_), str);
+      //dynamic_cast<Internal *>(this)->CheckInternal(dynamic_cast<Internal &>(*preserved_), str);
       m_x.CompareVector(        str /*"X"        */);
       m_y.CompareVector(        str /*"Y"        */);
       m_z.CompareVector(        str /*"Z"        */);
