@@ -3517,19 +3517,16 @@ int main(int argc, char *argv[])
   if(lulesh_intvl != NULL) {
     intvl[0] = atoi(lulesh_intvl);
     if(myRank == 4) printf("0 %s\n", lulesh_intvl);
-    assert(intvl[0] > 0);
   }
   lulesh_intvl = getenv( "LULESH_LV1" );
   if(lulesh_intvl != NULL) {
     intvl[1] = atoi(lulesh_intvl);
     if(myRank == 4) printf("1 %s\n", lulesh_intvl);
-    assert(intvl[1] > 0);
   }
   lulesh_intvl = getenv( "LULESH_LV2" );
   if(lulesh_intvl != NULL) {
     intvl[2] = atoi(lulesh_intvl);
     if(myRank == 4) printf("2 %s\n", lulesh_intvl);
-    assert(intvl[1] > 0);
   }
   if(myRank == 4) printf("interval setting: lv0:%d lv1:%d lv2:%d\n", intvl[0], intvl[1], intvl[2]);
   intvl0 = intvl[0];
