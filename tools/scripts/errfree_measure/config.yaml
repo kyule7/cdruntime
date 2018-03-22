@@ -1,0 +1,51 @@
+- CD_0_0 :
+  - label    : Root
+    interval : -1
+    errortype: 0xF
+    medium: GlobalDisk # Dummy level for MainLoop
+  - CD_1_1 :
+    - label    : MainLoop
+      interval : -1
+      errortype: 0xF
+      medium: GlobalDisk
+    - CD_2_2 :
+      - label    : ChildDummy # Dummy level for LoopChild
+        interval : -1
+        errortype: 0x3
+        medium: LocalDisk # Should be LocalDisk
+      - CD_3_3 :
+        - label    : LoopChild 
+          interval : -1
+          errortype: 0x3
+          medium: LocalDisk # Should be LocalDisk
+        - CD_4_4 :
+          - label    : CalcForce
+            interval : -1
+            errortype: 0x1
+            medium: LocalMemory
+        - CD_4_5 :
+          - label    : CalcPos
+            interval : -1
+            errortype: 0x1
+            medium: LocalMemory
+        - CD_4_6 :
+          - label    : LagrangeElem
+            interval : -1
+            errortype: 0x1
+            medium: LocalMemory
+        - CD_4_7 :
+          - label    : CalcQForElems
+            interval : -1
+            errortype: 0x1
+            medium: LocalMemory
+        - CD_4_8 :
+          - label    : ApplyMaterialPropertiesForElems
+            interval : -1
+            errortype: 0x1
+            medium: LocalMemory
+
+- FAILURE_Ftype0 :
+  - F1 : 0.0133
+  - F2 : 0.00267
+  - F4 : 0.000197
+  - F8 : 0.0001053
