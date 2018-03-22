@@ -1,7 +1,11 @@
 static const char help[] = "Geometric multigrid solver for finite-element elasticity.\n\n";
 
 #include "fefas.h"
+#ifdef CDENABLED
+#include "cd.h"
+#endif
 
+PetscErrorCode TestAddQuad(void);
 PetscErrorCode TestGrid(void);
 PetscErrorCode TestFESpace(void);
 PetscErrorCode TestFEGrad(void);
@@ -24,6 +28,7 @@ static PetscErrorCode ActionParse(int argc,char *argv[],PetscErrorCode (**action
   PetscFunctionBegin;
   *action = NULL;
 
+  ierr = PetscFunctionListAdd(&actionlist,"test-addquadpts",TestAddQuad);CHKERRQ(ierr);
   ierr = PetscFunctionListAdd(&actionlist,"test-grid",TestGrid);CHKERRQ(ierr);
   ierr = PetscFunctionListAdd(&actionlist,"test-fespace",TestFESpace);CHKERRQ(ierr);
   ierr = PetscFunctionListAdd(&actionlist,"test-fegrad",TestFEGrad);CHKERRQ(ierr);
@@ -59,12 +64,23 @@ int main(int argc, char *argv[])
   PetscErrorCode ierr,(*action)(void);
 
   PetscInitialize(&argc,&argv,NULL,help);
+#ifdef CDENABLED
+  int myrank, numranks;
+  MPI_Comm_rank(MPI_COMM_WORLD, myrank);
+  MPI_Comm_size(MPI_COMM_WORLD, numranks);
+  cd_handle_t* root_cd = cd_init(numranks, myrank, kPFS);
+  cd_begin(root_cd);
+#endif
   ierr = ActionParse(argc,argv,&action);CHKERRQ(ierr);
   if (!action) {
     PetscFinalize();
     return 1;
   }
   ierr = (*action)();CHKERRQ(ierr);
+#ifdef CDENABLED
+  cd_complete(root_cd);
+  cd_finalize();
+#endif
   PetscFinalize();
   return 0;
 }
