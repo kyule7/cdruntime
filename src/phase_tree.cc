@@ -168,7 +168,7 @@ void PhaseNode::PrintOutputJson(void)
   fprintf(outJSON, "  \"restore time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::RST_PRF]  , cd::recvstd[cd::RST_PRF]  , cd::recvmin[cd::RST_PRF]  , cd::recvmax[cd::RST_PRF]  ); 
   fprintf(outJSON, "  \"create time\"   : [%le, %le, %le, %le],\n", cd::recvavg[cd::CREAT_PRF], cd::recvstd[cd::CREAT_PRF], cd::recvmin[cd::CREAT_PRF], cd::recvmax[cd::CREAT_PRF]); 
   fprintf(outJSON, "  \"destory time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::DSTRY_PRF], cd::recvstd[cd::DSTRY_PRF], cd::recvmin[cd::DSTRY_PRF], cd::recvmax[cd::DSTRY_PRF]); 
-  fprintf(outJSON, "  \"begin time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::BEGIN_PRF], cd::recvstd[cd::BEGIN_PRF], cd::recvmin[cd::BEGIN_PRF], cd::recvmax[cd::BEGIN_PRF]); 
+  fprintf(outJSON, "  \"begin time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::BEGIN_PRF], cd::recvstd[cd::BEGIN_PRF], cd::recvmin[cd::BEGIN_PRF], cd::recvmax[cd::BEGIN_PRF]); 
   fprintf(outJSON, "  \"complete time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::COMPL_PRF], cd::recvstd[cd::COMPL_PRF], cd::recvmin[cd::COMPL_PRF], cd::recvmax[cd::COMPL_PRF]); 
   fprintf(outJSON, "  \"mesg logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::MSG_PRF]  , cd::recvstd[cd::MSG_PRF]  , cd::recvmin[cd::MSG_PRF]  , cd::recvmax[cd::MSG_PRF]  );
   fprintf(outJSON, "  \"libc logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::LOG_PRF]  , cd::recvstd[cd::LOG_PRF]  , cd::recvmin[cd::LOG_PRF]  , cd::recvmax[cd::LOG_PRF]  );
