@@ -153,11 +153,12 @@ void PhaseNode::PrintOutputJson(void)
                    "  \"exec_name\"  : \"%s\",\n"
                    "  \"input\"      : \"%s\",\n"
                    "  \"numTasks\"   : %d,\n"
+                   "  \"iterations\" : %d,\n"
                    "  \"ftype\"      : \"%s\",\n"
                    "  \"start_time\" : \"%s\",\n"
                    "  \"end_time\"   : \"%s\",\n",
             exec_name, (exec_details!=NULL)? exec_details : "NoInput", 
-            cd::totalTaskSize, ftype_name, start_date, end_date
+            cd::totalTaskSize, cd::app_input_size, ftype_name, start_date, end_date
          );
   fprintf(outJSON, "  \"total time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::TOTAL_PRF], cd::recvstd[cd::TOTAL_PRF], cd::recvmin[cd::TOTAL_PRF], cd::recvmax[cd::TOTAL_PRF]);
   fprintf(outJSON, "  \"CD overhead\"   : [%le, %le, %le, %le],\n", cd::recvavg[cd::CDOVH_PRF], cd::recvstd[cd::CDOVH_PRF], cd::recvmin[cd::CDOVH_PRF], cd::recvmax[cd::CDOVH_PRF]); 
