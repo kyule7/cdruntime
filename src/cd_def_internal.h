@@ -296,6 +296,7 @@ namespace cd {
   extern int max_tag_level_bit;
   extern int max_tag_rank_bit;
   extern int max_tag_task_bit;
+  extern MPI_Errhandler mpi_err_handler;
 #endif
 
 
@@ -419,6 +420,7 @@ extern CD_CLOCK_T begin_clk;
 extern uint64_t state;
 extern int64_t failed_phase;
 extern int64_t failed_seqID;
+extern bool runtime_initialized;
 extern bool just_reexecuted;
 extern bool orig_app_side;
 extern bool orig_disabled;
@@ -442,6 +444,7 @@ extern void GatherProfile(void);
 #define MsgEpilogue() \
   msg_end_clk = CD_CLOCK(); \
   msg_elapsed_time += msg_end_clk - msg_begin_clk; \
+  if(myTaskID == 1) printf("[MSG %s] msg time:%lf\n", __func__, msg_end_clk - msg_begin_clk); \
   app_side = orig_msg_app_side; \
   logger::disabled = orig_msg_disabled; 
 
@@ -569,14 +572,14 @@ extern void GatherProfile(void);
                          uint32_t tag, 
                          const ColorT &comm, 
                          void    *flag, 
-                         bool complete) 
+                         bool complete,
+                         bool irecv) 
         : addr_(const_cast<void *>(addr)), length_(length), taskID_(taskID), tag_(tag), 
-          comm_(comm), flag_(flag), complete_(complete) 
+          comm_(comm), flag_(flag), complete_(complete), isrecv_(irecv)
       {
         p_ = NULL;
         pushed_ = 0;
         level_ = 0;
-        isrecv_ = 0;
         intra_cd_msg_ = false;
       }
       std::string Print(void) {

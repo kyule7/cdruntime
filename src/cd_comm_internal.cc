@@ -360,7 +360,10 @@ CDErrT CD::CheckMailBox(void)
   CD_CLOCK_T tstart = CD_CLOCK();
 #endif
   CD::CDInternalErrT ret=kOK;
+  //PMPI_Win_lock_all(0, pendingWindow_);
   int event_count = *pendingFlag_;//DecPendingCounter();
+  //PMPI_Win_unlock_all(pendingWindow_);
+
 //  int event_count = *pendingFlag_;
   //assert(event_count <= 1024);
   // Reset handled event counter
@@ -930,30 +933,26 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
         PMPI_Group_translate_ranks(group(), 1, &task_id, GetRootCD()->group(), &global_task_id);
         CD_DEBUG("MPI_Group_translate_ranks %d->%d at %s %s\n", 
                  task_id, global_task_id, cd_id_.GetString().c_str(), label_.c_str());
-
-        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_task_id, 0, pendingWindow_);
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Set CD Event %s at level #%u. CD Name : %s\n", 
                   event2str(event).c_str(), level(), GetCDName().GetString().c_str());
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Accumulate event at %d\n", global_task_id);
-  
+
+        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_task_id, 0, pendingWindow_);
         PMPI_Accumulate(&val, 1, MPI_INT, 
                        global_task_id, 0, 1, MPI_INT, 
                        MPI_SUM, pendingWindow_);
-        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "PMPI_Accumulate done for task #%d\n", global_task_id);
-
         PMPI_Win_unlock(global_task_id, pendingWindow_);
-    
+
+        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "PMPI_Accumulate done for task #%d\n", global_task_id);
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Finished to increment the pending counter at task #%d\n", task_id);
     
         if(task_id == task_in_color()) { 
           CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "after accumulate --> pending counter : %d\n", *pendingFlag_);
         }
         
+        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Set event start\n");
         // Inform the type of event to be requested
         PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_id, 0, mailbox_);
-
-        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Set event start\n");
-
         PMPI_Accumulate((void *)&event, 1, MPI_INT, 
                        task_id, 0, 1, MPI_INT, 
                        MPI_BOR, mailbox_);
@@ -1272,7 +1271,7 @@ uint32_t CD::IncPendingCounter(void)
 
 void CD::PrintDebug() {
 
-  CD_DEBUG("[%s] pending event:%u, incomplete log:%lu\n", __func__, *pendingFlag_, incomplete_log_.size());
+  CD_DEBUG("pending event:%u, incomplete log:%lu\n", *pendingFlag_, incomplete_log_.size());
 
 }
 
@@ -1394,9 +1393,11 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
         break;
       } else {
         if(printed == false) {
-          CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s\n", 
-              __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
-//          rollback_point = CheckRollbackPoint(true); // read from remote
+          int number_amount = 0;
+          PMPI_Get_count(status, MPI_INT, &number_amount);
+          CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s, mpi #:%d, mpi src:%d, mpi tag:%d\n", 
+              __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str(),
+              number_amount, status->MPI_SOURCE, status->MPI_TAG);
           
           printed = true;
         }
@@ -1434,9 +1435,12 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
   while(1) {
     ret = PMPI_Testall(count, array_of_requests, &flag, array_of_statuses);
     if(flag != 0) {
+      CD_DEBUG("delete %d requests\n", count);
       for (int ii=0;ii<count;ii++) {
         bool deleted = DeleteIncompleteLog(&(array_of_requests[ii]));
-        CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); 
+        CD_DEBUG("wait %p %u %s src:%d, tag:%d\n", 
+                 &array_of_requests[ii], array_of_requests[ii], (deleted)? "DELETED":"NOT DELETED",
+                 array_of_statuses[ii].MPI_SOURCE, array_of_statuses[ii].MPI_TAG); 
       }
       printed = false;
       break;
@@ -1465,6 +1469,7 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
       // checking mailbox ends
     }
   }
+  // FIXME: 03152018
   if(ret == MPI_ERR_NEED_ESCALATE) {
     CD_DEBUG("Error reported during MPI_Waitall!\n"); 
     for (int ii=0;ii<count;ii++) {

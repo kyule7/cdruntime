@@ -3,9 +3,8 @@
 #include "cd_file_handle.h"
 #include "mpi_file_handle.h"
 //#include "new_file_handle.h"
-namespace packer {
 
-FileHandle *GetFileHandle(uint32_t ftype)
+packer::FileHandle *packer::GetFileHandle(uint32_t ftype)
 {
 //  printf("GetFileHandle %u\n", ftype);
   switch(ftype) {
@@ -22,5 +21,11 @@ FileHandle *GetFileHandle(uint32_t ftype)
   }
 }
 
+void packer::DeleteFiles(void)
+{
+  PosixFileHandle::Close();
+  MPIFileHandle::Close();
+  LibcFileHandle::Close();
 }
+
 #endif

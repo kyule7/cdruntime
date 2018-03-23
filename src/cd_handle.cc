@@ -46,6 +46,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "cd_internal.h"
 #include "cd_def_preserve.h"
 #include "phase_tree.h"
+#include "packer_prof.h"
 //#include "persistence/define.h"
 //#include "machine_specific.h"
 //#include "profiler_interface.h"
@@ -88,7 +89,10 @@ char ftype_name[64] = "NoNamed";
 char start_date[64] = "NoNamed";
 char end_date[64] = "NoNamed";
 char *exec_details = NULL;
+char *exec_iterations = NULL;
 
+bool cd::is_error_free = false;
+bool cd::runtime_initialized = false;
 bool cd::orig_app_side = true;
 bool cd::orig_disabled = false;
 bool cd::orig_msg_app_side = true;
@@ -163,6 +167,7 @@ void cd_update_profile(void)
 
 void cd::GatherProfile(void)
 {
+  packer::Time::GatherBW();
   float *elapsed_acc = NULL;
   float *nm_sync_acc = NULL;
   float *rx_sync_acc = NULL;
@@ -213,32 +218,38 @@ void cd::GatherProfile(void)
   MPI_Gather(mailbox_trace.data(), profile_counter, MPI_FLOAT, mailbox_acc, profile_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
   if(myTaskID == 0) {
     char tmpfile[512];
-    sprintf(tmpfile, "prof_trace.%s.%d.%s.%s.json", exec_name, totalTaskSize, (exec_details!=NULL)? exec_details : "NoInput", start_date);
+    sprintf(tmpfile, "prof_trace.%s.%s.%d.%s.json", exec_name, (exec_details!=NULL)? exec_details : "NoInput", totalTaskSize, start_date);
     FILE *tfp = fopen(tmpfile, "w"); 
-    if(tfp == 0) { printf("failed to open %s\n", tmpfile); assert(tfp); }
-
-    fprintf(tfp, "{\n");
-    fprintf(tfp, "  \"name\":\"%s\",\n", exec_name);
-    fprintf(tfp, "  \"input\":%s,\n", (exec_details!=NULL)? exec_details : "NoInput");
-    fprintf(tfp, "  \"nTask\":%d,\n", totalTaskSize);
-    fprintf(tfp, "  \"prof\": {\n");
-    PrintPackerProf(tfp);
-fprintf(tfp, "    \"elapsed\": [%f", elapsed_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", elapsed_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"nm_sync\": [%f", nm_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", nm_sync_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"rx_sync\": [%f", rx_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rx_sync_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"rc_sync\": [%f", rc_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rc_sync_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"prvtime\": [%f", prvtime_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", prvtime_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"rsttime\": [%f", rsttime_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rsttime_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"creatcd\": [%f", creatcd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", creatcd_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"destroy\": [%f", destroy_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", destroy_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"begincd\": [%f", begincd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", begincd_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"complcd\": [%f", complcd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", complcd_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"advance\": [%f", advance_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", advance_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"mailbox\": [%f", mailbox_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", mailbox_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"sync\": [%f", nm_sync_acc[0] + rx_sync_acc[0] + rc_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", nm_sync_acc[i] + rx_sync_acc[i] + rc_sync_acc[i]); } fprintf(tfp, "],\n");
-fprintf(tfp, "    \"cdrt\": [%f", begincd_acc[0] + complcd_acc[0] + creatcd_acc[0] + destroy_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", begincd_acc[i] + complcd_acc[i] + creatcd_acc[i] + destroy_acc[i]); } fprintf(tfp, "]\n");
-    fprintf(tfp, "  }\n");
-    fprintf(tfp, "}\n");
+    if(tfp == 0) { printf("failed to open %s\n", tmpfile); }
+    else {
+      fprintf(tfp, "{\n");
+      fprintf(tfp, "  \"name\":\"%s\",\n", exec_name);
+      fprintf(tfp, "  \"input\":%s,\n", (exec_details!=NULL)? exec_details : "NoInput");
+      fprintf(tfp, "  \"iters\":%d,\n", (exec_iterations!=NULL)? atoi(exec_iterations) : 0);
+      fprintf(tfp, "  \"nTask\":%d,\n", totalTaskSize);
+      fprintf(tfp, "  \"GlobalDisk BW\": [%lf,%lf,%lf,%lf]\n", packer::time_mpiio_write.bw_avg, packer::time_mpiio_write.bw_std, packer::time_mpiio_write.bw_min, packer::time_mpiio_write.bw_max);
+      fprintf(tfp, "  \"LocalDisk BW\":[%lf,%lf,%lf,%lf]\n", packer::time_posix_write.bw_avg, packer::time_posix_write.bw_std, packer::time_posix_write.bw_min, packer::time_posix_write.bw_max);
+      fprintf(tfp, "  \"LocalMemory BW\":[%lf,%lf,%lf,%lf]\n", packer::time_copy.bw_avg, packer::time_copy.bw_std, packer::time_copy.bw_min, packer::time_copy.bw_max);
+      fprintf(tfp, "  \"prof\": {\n");
+      PrintPackerProf(tfp);
+  fprintf(tfp, "    \"elapsed\": [%f", elapsed_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", elapsed_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"nm_sync\": [%f", nm_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", nm_sync_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"rx_sync\": [%f", rx_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rx_sync_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"rc_sync\": [%f", rc_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rc_sync_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"prvtime\": [%f", prvtime_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", prvtime_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"rsttime\": [%f", rsttime_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", rsttime_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"creatcd\": [%f", creatcd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", creatcd_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"destroy\": [%f", destroy_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", destroy_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"begincd\": [%f", begincd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", begincd_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"complcd\": [%f", complcd_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", complcd_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"advance\": [%f", advance_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", advance_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"mailbox\": [%f", mailbox_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", mailbox_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"sync\": [%f", nm_sync_acc[0] + rx_sync_acc[0] + rc_sync_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", nm_sync_acc[i] + rx_sync_acc[i] + rc_sync_acc[i]); } fprintf(tfp, "],\n");
+  fprintf(tfp, "    \"cdrt\": [%f", begincd_acc[0] + complcd_acc[0] + creatcd_acc[0] + destroy_acc[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", begincd_acc[i] + complcd_acc[i] + creatcd_acc[i] + destroy_acc[i]); } fprintf(tfp, "]\n");
+      fprintf(tfp, "  }\n");
+      fprintf(tfp, "}\n");
+      fclose(tfp);
+    }
     free(elapsed_acc);
     free(nm_sync_acc);
     free(rx_sync_acc);
@@ -251,7 +262,6 @@ fprintf(tfp, "    \"cdrt\": [%f", begincd_acc[0] + complcd_acc[0] + creatcd_acc[
     free(complcd_acc);
     free(advance_acc);
     free(mailbox_acc);
-    fclose(tfp);
   }
 }
 
@@ -473,11 +483,41 @@ void InitDir(int myTask, int numTask)
 //  GetStackPtr(&sp_init);
 //  printf("init stack:%p\n", sp_init);
 //}
+#if CD_MPI_ENABLED
+char cd_err_str[256];
+int cd_err_len = 0, cd_err_class = 0;
+inline void CheckMPIError(int err) 
+{
+  if(err != MPI_SUCCESS) {
+    MPI_Error_class(err, &cd_err_class);
+    MPI_Error_string(err, cd_err_str, &cd_err_len);
+    CDHandle *cdl = GetLeafCD();
+    if(cdl != NULL) {
+      printf("[%d] MPI ERROR (%s, %d):\n%s\n", myTaskID, cdl->GetLabel(), cdl->GetExecMode(), cd_err_str); fflush(stdout);
+    } else {
+      printf("[%d]MPI ERROR:\n%s\n", myTaskID, cd_err_str); fflush(stdout);
+    }
+    assert(0);
+  }
+}
 
+MPI_Errhandler cd::mpi_err_handler;
+void CD_MPI_ErrHandler(MPI_Comm *comm, int *err, ...)
+{
+  CheckMPIError(*err);
+}
+#endif
 /// KL
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   CDPrologue();
+
+#if CD_MPI_ENABLED
+  // Define MPI error handler if necessary
+  PMPI_Comm_create_errhandler(CD_MPI_ErrHandler, &cd::mpi_err_handler);
+  PMPI_Comm_set_errhandler(MPI_COMM_WORLD, cd::mpi_err_handler);
+#endif
+
   // Initialize static vars
   logger::taskID = myTask;
   myTaskID      = myTask;
@@ -492,8 +532,9 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //    cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
 //  }
 //  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
-  exec_details = getenv("CD_EXEC_DETAILS");
-  char *is_noprv = getenv("CD_NO_PRESERVE");
+  exec_details    = getenv("CD_EXEC_DETAILS");
+  exec_iterations = getenv("CD_EXEC_ITERS");
+  char *is_noprv  = getenv("CD_NO_PRESERVE");
   cd::dont_preserve = (is_noprv != NULL)? true:false;
 #if CD_TUNING_ENABLED == 0
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
@@ -532,6 +573,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   OpenDebugFilepath(myTask, dbg_basepath);
 */
   InitDir(myTask, numTask);
+
+  cd::runtime_initialized = true;
 
   // Create Root CD
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
@@ -736,17 +779,6 @@ void CD_Finalize(void)
   memcpy(recvavg, trecvavg, sizeof(double) * PROF_GLOBAL_STATISTICS_NUM);
   memcpy(recvstd, trecvstd, sizeof(double) * PROF_GLOBAL_STATISTICS_NUM);
 
-
-
-
-
-
-
-
-
-
-
-
   double sendbuf_min[PROF_GLOBAL_STATISTICS_NUM]  = {
                          tot_elapsed, 
                          cd_elapsed,
@@ -868,13 +900,14 @@ void CD_Finalize(void)
     rit->second->ptr_cd_->Destroy(false, true);
     delete rit->second;
   }
-  cd::internal::Finalize();
+  //cd::internal::Finalize();
   assert(CDPath::GetCDPath()->size() == 1);
   GetRootCD()->ptr_cd()->Destroy(false, true);
   delete CDPath::GetCDPath()->back(); // delete root
   CDPath::GetCDPath()->pop_back();
 
 
+  cd::internal::Finalize();
   cd::phaseTree.root_->GatherStats();
   cd::phaseTree.PrintStats();
   //tuned::phaseTree.PrintStats();
@@ -882,6 +915,8 @@ void CD_Finalize(void)
 #if CD_DEBUG_ENABLED
   WriteDbgStream();
 #endif
+  // call packer finalization at the very last moment for safety
+  //packer::Finalize();  
   end_clk = CD_CLOCK();
   CDEpilogue();
 #if CD_LIBC_LOGGING
@@ -1174,12 +1209,13 @@ CDHandle *CDHandle::Create(const char *name,
 //  getchar();
   end_clk = CD_CLOCK();
   const double elapsed = end_clk - begin_clk;
-  create_elapsed_time += elapsed;
-  create_elapsed_smpl += elapsed;
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->create_elapsed_time_ += elapsed;
-//  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
-#endif
+  cd::phaseTree.current_->profile_.RecordCreate(elapsed);
+//  create_elapsed_time += elapsed;
+//  create_elapsed_smpl += elapsed;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->create_elapsed_time_ += elapsed;
+////  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
+//#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
   CDEpilogue();
@@ -1294,13 +1330,15 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 #endif
 
   end_clk = CD_CLOCK();
-  create_elapsed_time += end_clk - begin_clk;
-  create_elapsed_smpl += end_clk - begin_clk;
+  const double elapsed = end_clk - begin_clk;
+  cd::phaseTree.current_->profile_.RecordCreate(elapsed);
+//  create_elapsed_time += end_clk - begin_clk;
+//  create_elapsed_smpl += end_clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
+//#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
-#endif
   CDEpilogue();
 
   return new_cd_handle;
@@ -1358,13 +1396,15 @@ CDHandle *CDHandle::Create(uint32_t color,
 #endif
 
   end_clk = CD_CLOCK();
-  create_elapsed_time += end_clk - begin_clk;
-  create_elapsed_smpl += end_clk - begin_clk;
+  const double elapsed = end_clk - begin_clk;
+  cd::phaseTree.current_->profile_.RecordCreate(elapsed);
+//  create_elapsed_time += end_clk - begin_clk;
+//  create_elapsed_smpl += end_clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
+//#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
-#endif
   CDEpilogue();
   return new_cd_handle;
 }
@@ -1381,21 +1421,27 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
   TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
   CDHandle *new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
   CD_CLOCK_T clk = CD_CLOCK();
-  create_elapsed_time += clk - begin_clk;
-  create_elapsed_smpl += clk - begin_clk;
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
-#endif
+  const double elapsed = clk - begin_clk;
+  cd::phaseTree.current_->profile_.RecordCreate(elapsed);
+//  create_elapsed_time += clk - begin_clk;
+//  create_elapsed_smpl += clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->create_elapsed_time_ += end_clk - begin_clk;
+//#endif
+  bool need_sync = just_reexecuted;
+
   new_cdh->Begin(name, false);
 
-  end_clk = CD_CLOCK();
-  begin_elapsed_time += end_clk - begin_clk;
-  begin_elapsed_smpl += end_clk - begin_clk;
+  const bool is_reexec = (failed_phase != HEALTHY);
+  cd::phaseTree.current_->profile_.RecordBegin(is_reexec, need_sync);
+//  end_clk = CD_CLOCK();
+//  begin_elapsed_time += end_clk - begin_clk;
+//  begin_elapsed_smpl += end_clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
+//#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cdh->ptr_cd_->name_.c_str(), new_cdh->level());
-#if CD_PROFILER_ENABLED
-  profMap[phase()]->begin_elapsed_time_ += end_clk - begin_clk;
-#endif
   CDEpilogue();
   return new_cdh;
 }
@@ -1419,13 +1465,14 @@ CDErrT CDHandle::Destroy(bool collective)
   err = InternalDestroy(collective);
 
   end_clk = CD_CLOCK();
-  destroy_elapsed_time += end_clk - begin_clk;
-  destroy_elapsed_smpl += end_clk - begin_clk;
-#if CD_PROFILER_ENABLED
-  auto it = profMap.find(phase);
-  if(it != profMap.end())
-    it->second->destroy_elapsed_time_ += end_clk - begin_clk;
-#endif
+  cd::phaseTree.current_->profile_.RecordDestory(end_clk - begin_clk);
+//  destroy_elapsed_time += end_clk - begin_clk;
+//  destroy_elapsed_smpl += end_clk - begin_clk;
+//#if CD_PROFILER_ENABLED
+//  auto it = profMap.find(phase);
+//  if(it != profMap.end())
+//    it->second->destroy_elapsed_time_ += end_clk - begin_clk;
+//#endif
   }
   CDEpilogue();
 
@@ -1693,48 +1740,38 @@ CDErrT CDHandle::Preserve(void *data_ptr,
   assert(len > 0);
   bool is_reexec = (GetExecMode() == kReexecution);
   CDErrT err;
+  bool is_active_leaf = (GetCurrentCD() == this);
+  // is_active_leaf is false AND IsReexec() true --> jump
+  //if(is_reexec || is_active_leaf || IsReexec() == false) 
+  if(1)
   {
-  std::string entry_name(my_name);
-  err = ptr_cd_->Preserve(data_ptr, len, (CDPrvType)preserve_mask, 
-                                 entry_name, ref_name, ref_offset, 
-                                 regen_object, data_usage);
+    std::string entry_name(my_name);
+    CD_DEBUG("@@@ %s (%18s) (%12s) (%12s) (Prv: %s, %s, %s)\n", 
+                (is_reexec)? "Restore" : "Preserv",  my_name, GetCurrentCD()->GetLabel(), GetLabel(),
+                CHECK_PRV_TYPE(preserve_mask,kRef)? "Refr":"Copy", 
+                (is_active_leaf)? "ACTIVE":"INACTIVE",
+                (IsReexec())? "REEX":"EXEC");
+    err = ptr_cd_->Preserve(data_ptr, len, (CDPrvType)preserve_mask, 
+                                   entry_name, ref_name, ref_offset, 
+                                   regen_object, data_usage);
 #if CD_ERROR_INJECTION_ENABLED
-  if(memory_error_injector_ != NULL) {
-    memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
-    memory_error_injector_->Inject();
-  }
+    if(memory_error_injector_ != NULL) {
+      memory_error_injector_->PushRange(data_ptr, len/sizeof(int), sizeof(int), my_name);
+      memory_error_injector_->Inject();
+    }
 #endif
-
-//#if CD_PROFILER_ENABLED
-//  if(is_reexecution) {
-//    if(CHECK_PRV_TYPE(preserve_mask,kCopy)) {
-//      profiler_->RecordProfile(PRV_COPY_DATA, len);
-//    }
-//    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
-//      profiler_->RecordProfile(PRV_REF_DATA, len);
-//    }
-////    profMap[phase]->prv_copy_ += profile_data;
-//  }
-//#endif
-
-//  end_clk = CD_CLOCK();
-//  double elapsed = end_clk - begin_clk;
-//  uint32_t phase = this->phase();
-//  phaseTree.current->RecordData(len, elapsed, GetExecMode() == kReexecution); 
-//
-//
-//
-//
-//
-//  prv_elapsed_time += elapsed;
-//#if CD_PROFILER_ENABLED
-//  if(is_reexecution) {
-//    profMap[phase]->prv_elapsed_time_ += elapsed;
-//  } else {
-//    profMap[phase]->rst_elapsed_time_ += elapsed;
-//  }
-//#endif
-  cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  
+    uint32_t phase = this->phase();
+    cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+    //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  } 
+  else {
+    CD_DEBUG("@@@ SKIP IT (%18s) (%12s) (%12s) (Prv: %s, %s, %s to %s %ld)\n", 
+                my_name, GetCurrentCD()->GetLabel(), GetLabel(),
+                CHECK_PRV_TYPE(preserve_mask,kRef)? "Refr":"Copy", 
+                (is_active_leaf)? "ACTIVE":"INACTIVE",
+                (IsReexec())? "REEX":"EXEC",
+                cd::phaseNodeCache[cd::failed_phase]->label_.c_str(), cd::failed_seqID);
   }
   CDEpilogue();
   return CHECK_PRV_TYPE(preserve_mask, kRef)? (CDErrT)0 : (CDErrT)len;
@@ -1757,49 +1794,37 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
   uint64_t len = 0;
   bool is_reexec = (GetExecMode() == kReexecution);
   CDErrT err;
+  bool is_active_leaf = (GetCurrentCD() == this);
+  // is_active_leaf is false AND IsReexec() true --> jump
+  //if(is_reexec || IsReexec() == false) 
+  //if(is_reexec || is_active_leaf || IsReexec() == false) 
+  if(1)
   {
-  std::string entry_name(my_name);
-  err = ptr_cd_->Preserve((void *)&serdes, len, (CDPrvType)(kSerdes | preserve_mask), 
-                                 entry_name, ref_name, ref_offset, 
-                                 regen_object, data_usage);
-  //assert(len > 0);
-//#if CD_PROFILER_ENABLED
-//  if(is_reexecution) {
-////    printf("\nserialize len?? : %lu, check kSerdes : %d (%x)\n\n", len, CHECK_PRV_TYPE(preserve_mask, kSerdes), preserve_mask);
-////    if(len==0) {printf("len:0\n"); getchar(); }
-//    if(CHECK_PRV_TYPE(preserve_mask,kCopy) && (CHECK_PRV_TYPE(preserve_mask, kOutput) == false)) {
-//      profiler_->RecordProfile(PRV_COPY_DATA, len);
-//    }
-//    else if(CHECK_PRV_TYPE(preserve_mask,kRef)) {
-//      profiler_->RecordProfile(PRV_REF_DATA, len);
-//    }
-////    profPrvCache[phase]
-//
-////    assert(len);
-//  }
-//#endif
-//  
-//  end_clk = CD_CLOCK();
-//  double elapsed = end_clk - begin_clk;
-//  uint32_t phase = this->phase();
-//
-//
-//  RecordProfile(phase, kProfData, len, elapsed, is_reexecution); 
-//
-//
-//  prv_elapsed_time += elapsed;
-//#if CD_PROFILER_ENABLED
-//  if(is_reexecution) {
-////    profPrvCache[phase][my_name] += len;
-//    profMap[phase]->prv_elapsed_time_ += elapsed;
-//  } else {
-//    profMap[phase]->rst_elapsed_time_ += elapsed;
-//  }
-//#endif
-
-
-  cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+    std::string entry_name(my_name);
+    //if(CHECK_PRV_TYPE(preserve_mask,kRef) == false || is_reexec) 
+    CD_DEBUG("@@@ %s (%18s) (%12s) (%12s) (Prv: %s, %s, %s)\n", 
+                (is_reexec)? "Restore" : "Preserv",  my_name, GetCurrentCD()->GetLabel(), GetLabel(),
+                CHECK_PRV_TYPE(preserve_mask,kRef)? "Refr":"Copy", 
+                (is_active_leaf)? "ACTIVE":"INACTIVE",
+                (IsReexec())? "REEX":"EXEC");
+    err = ptr_cd_->Preserve((void *)&serdes, len, (CDPrvType)(kSerdes | preserve_mask), 
+                                   entry_name, ref_name, ref_offset, 
+                                   regen_object, data_usage);
+    //assert(len > 0);
+  
+    uint32_t phase = this->phase();
+    cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+    //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  } 
+  else {
+    CD_DEBUG("@@@ SKIP IT (%18s) (%12s) (%12s) (Prv: %s, %s, %s to %s %ld)\n", 
+                my_name, GetCurrentCD()->GetLabel(), GetLabel(),
+                CHECK_PRV_TYPE(preserve_mask,kRef)? "Refr":"Copy", 
+                (is_active_leaf)? "ACTIVE":"INACTIVE",
+                (IsReexec())? "REEX":"EXEC",
+                cd::phaseNodeCache[cd::failed_phase]->label_.c_str(), cd::failed_seqID);
   }
+  
   CDEpilogue();
   return CHECK_PRV_TYPE(preserve_mask, kRef)? (CDErrT)0 : (CDErrT)len;
 }
@@ -1862,7 +1887,9 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
 //#endif
   //CDEpilogue();
   
-  cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  uint32_t phase = this->phase();
+  cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
+  //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   }
   CDEpilogue();
   return err;
@@ -2512,12 +2539,18 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
       cdh = CDPath::GetParentCD(cdh->level());
     }
     if(rollback_point < level()) {
-      printf("\n>>>> Escalation %u->%u (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
-          level() , rollback_point, sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+      printf("\n>>>> Escalation %u (%lu-%lu)->%u during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+          level(), phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_, 
+          rollback_point, 
+          (IsReexec())? "REEX" : "EXEC",
+          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());
-      CD_DEBUG("\n>>>> Escalation %u->%u (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
-          level() , rollback_point, sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
+      CD_DEBUG("\n>>>> Escalation %u (%lu-%lu)->%u during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+          level(), phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_, 
+          rollback_point, 
+          (IsReexec())? "REEX" : "EXEC",
+          sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());
     } else if(rollback_point == level()) {
@@ -2525,14 +2558,16 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
       const uint64_t curr_phase = ptr_cd_->phase();
       const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
       const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
-      printf(">>>> Rollback (%s) (syndrom:%lx == vec:%lx) = %d, lv:%u, %s phase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+      printf(">>>> Rollback (%s) during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s phase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
           ptr_cd_->label_.c_str(),
+          (IsReexec())? "REEX" : "EXEC",
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel(), 
           cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
-      CD_DEBUG(">>>> Rollback (%s) (syndrom:%lx == vec:%lx) = %d, lv:%u, %s fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+      CD_DEBUG(">>>> Rollback (%s) during %s  (syndrom:%lx == vec:%lx) = %d, lv:%u, %s fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
           ptr_cd_->label_.c_str(),
+          (IsReexec())? "REEX" : "EXEC",
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel(), 

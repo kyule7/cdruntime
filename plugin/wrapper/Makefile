@@ -3,7 +3,7 @@ DEBUG_ENABLED=1
 
 CDPATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../..
 PACKER_PATH=${CDPATH}/src/persistence
-CC=g++
+CC=icpc
 
 CFLAGS=-std=gnu++0x -fPIC -Wall -c -I. -I${PACKER_PATH} #-fmax-errors=3
 LFLAGS=-fPIC -L${PACKER_PATH} -Wl,-rpath=${PACKER_PATH} -lpacker -ldl

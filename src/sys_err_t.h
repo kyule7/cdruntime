@@ -244,6 +244,7 @@ typedef std::map<uint64_t, std::map<uint64_t, ConfigEntry> > MappingConfig;
 struct SystemConfig {
   MappingConfig mapping_;
   std::map<int64_t, float> failure_rate_;
+  std::map<int64_t, float> failure_rate_record_;
   void ParseParam(char *key);
   void ParseFailureParam(char *key);
 //  void ParseCDHierarchy(const char *key, int seq_cnt);

@@ -22,7 +22,7 @@ int packer::packerTaskID = 0;
 int packer::packerTaskSize = 0;
 
 //std::string FileHandle::basepath(DEFAULT_BASEPATH); 
-char FileHandle::basepath[256] = DEFAULT_BASEPATH; 
+char FileHandle::basepath[MAX_FILEPATH_SIZE] = DEFAULT_BASEPATH; 
 PosixFileHandle *PosixFileHandle::fh_ = NULL;
 
 void PosixFileHandle::Destructor(void)
@@ -33,18 +33,18 @@ void PosixFileHandle::Destructor(void)
 
 
 FileHandle::FileHandle(const char *filepath) 
-  : filepath_(filepath), offset_(0) 
+  : offset_(0) 
 {
 //  printf("basepath:%s\n", basepath.c_str()); getchar();
 }
 
-PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath), fdesc_(-1)
+PosixFileHandle::PosixFileHandle(const char *filepath) : fdesc_(-1)
 {
 //  printf("posix basepath:%s\n", basepath.c_str()); getchar();
   struct timeval time;
   gettimeofday(&time, NULL);
-  char full_filename[128];
   char base_filename[128] = "/tmp/cd_posix_file";
+  char full_filename[MAX_FILEPATH_SIZE];
 //  char *base_filepath = getenv("CD_BASE_FILEPATH");
 //  if(base_filepath != NULL) {
 //    strcpy(base_filename, base_filepath);
@@ -73,19 +73,33 @@ PosixFileHandle::PosixFileHandle(const char *filepath) : FileHandle(filepath), f
     ERROR_MESSAGE_PACKER("ERROR: File open path:%s\n", full_filename);
   }
   MYDBG("Opened file : %s\n", full_filename);
-  printf("Opened file : %s\n", full_filename);
+//  printf("Opened file : %s\n", full_filename);
   fh_ = this;
+  
+  filepath_ = full_filename;
 }
 
 PosixFileHandle::~PosixFileHandle(void) 
 {
-  Close();
+#if 0 // disable mv preservation file for debugging
+  char cmd[128];
+  sprintf(cmd, "mv -rf %s %s", DEFAULT_LOCAL_BASEPATH "/cd_local", DEFAULT_BASE_FILEPATH "/local");
+  if( system(cmd) == -1 ) {
+    ERROR_MESSAGE_PACKER("Failed on command %s\n", cmd);
+  }
+#else
+  unlink(filepath_.c_str());
+#endif
+  if(fdesc_ > 0) {
+    close(fdesc_);
+    fdesc_ = -1;
+  }
 }
 
 FileHandle *PosixFileHandle::Get(const char *filepath) 
 {
   if(fh_ == NULL) {
-    if(filepath == NULL) {
+    if(strcmp(filepath, "") == 0) {
       fh_ = new PosixFileHandle; 
     } else {
       fh_ = new PosixFileHandle(filepath); 
@@ -96,14 +110,7 @@ FileHandle *PosixFileHandle::Get(const char *filepath)
 
 void PosixFileHandle::Close(void) 
 {
-  //char cmd[128];
-  //sprintf(cmd, "mv -rf %s %s", DEFAULT_LOCAL_BASEPATH "/cd_local", DEFAULT_BASE_FILEPATH "/local");
-  //if( system(cmd) == -1 ) {
-  //  ERROR_MESSAGE_PACKER("Failed on command %s\n", cmd);
-  //}
-  if(fdesc_ > 0) {
-    close(fdesc_);
-    fdesc_ = -1;
+  if(fh_ != NULL) {
     delete fh_;
     fh_ = NULL;
   }

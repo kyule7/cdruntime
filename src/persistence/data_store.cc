@@ -193,9 +193,11 @@ CDErrType DataStore::Copy(void *dst, char *src, int64_t len)
 { 
   PACKER_ASSERT_STR(len >= 0, "len:%ld\n", len);
   PACKER_ASSERT_STR(dst != NULL && src != NULL, "Read failed:%p<-%p\n", dst, src); 
+  time_copy.Begin();
   if(len > 0) {
     memcpy(dst, src, len); 
-  } 
+  }
+  time_copy.End(len); 
   return kOK; 
 }
 

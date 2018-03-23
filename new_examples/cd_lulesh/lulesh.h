@@ -27,12 +27,19 @@
 #define DO_CHECK 0
 #define DOMAIN_INIT_NAME ""
 #define LULESH_PRINT(...)
+
+#if DO_CHECK
+  #define CHECK_INPUT(...) {__VA_ARGS__;}
+  #define PRINT_COMPARE(...) printf(__VA_ARGS__)
+#else
+  #define CHECK_INPUT(...)
+  #define PRINT_COMPARE(...) 
+#endif
 #include "cd_def.h"
 #if _CD
 #include "cd_containers.hpp"
 #include "cd.h"
 using namespace cd;
-#define PRINT_COMPARE(...) printf(__VA_ARGS__)
 #else
 #include <assert.h>
 #include <vector>
@@ -730,35 +737,35 @@ class Domain : public Internal {
    // Node-centered
 #if _CD
    // Nodal coordinates
-   Real_t& x(Index_t idx)    { m_x.SetRead(); return m_x[idx] ; }
-   Real_t& y(Index_t idx)    { m_y.SetRead(); return m_y[idx] ; }
-   Real_t& z(Index_t idx)    { m_z.SetRead(); return m_z[idx] ; }
+   Real_t& x(Index_t idx)    { CHECK_INPUT(m_x.SetRead();) return m_x[idx] ; }
+   Real_t& y(Index_t idx)    { CHECK_INPUT(m_y.SetRead();) return m_y[idx] ; }
+   Real_t& z(Index_t idx)    { CHECK_INPUT(m_z.SetRead();) return m_z[idx] ; }
 
    // Nodal velocities
-   Real_t& xd(Index_t idx)   { m_xd.SetRead(); return m_xd[idx] ; }
-   Real_t& yd(Index_t idx)   { m_yd.SetRead(); return m_yd[idx] ; }
-   Real_t& zd(Index_t idx)   { m_zd.SetRead(); return m_zd[idx] ; }
+   Real_t& xd(Index_t idx)   { CHECK_INPUT(m_xd.SetRead();) return m_xd[idx] ; }
+   Real_t& yd(Index_t idx)   { CHECK_INPUT(m_yd.SetRead();) return m_yd[idx] ; }
+   Real_t& zd(Index_t idx)   { CHECK_INPUT(m_zd.SetRead();) return m_zd[idx] ; }
 
    // Nodal accelerations
-   Real_t& xdd(Index_t idx)  { m_xdd.SetRead(); return m_xdd[idx] ; }
-   Real_t& ydd(Index_t idx)  { m_ydd.SetRead(); return m_ydd[idx] ; }
-   Real_t& zdd(Index_t idx)  { m_zdd.SetRead(); return m_zdd[idx] ; }
+   Real_t& xdd(Index_t idx)  { CHECK_INPUT(m_xdd.SetRead();) return m_xdd[idx] ; }
+   Real_t& ydd(Index_t idx)  { CHECK_INPUT(m_ydd.SetRead();) return m_ydd[idx] ; }
+   Real_t& zdd(Index_t idx)  { CHECK_INPUT(m_zdd.SetRead();) return m_zdd[idx] ; }
 
    // Nodal forces
-   Real_t& fx(Index_t idx)   { m_fx.SetRead();  return m_fx[idx] ; }
-   Real_t& fy(Index_t idx)   { m_fy.SetRead();  return m_fy[idx] ; }
-   Real_t& fz(Index_t idx)   { m_fz.SetRead();  return m_fz[idx] ; }
+   Real_t& fx(Index_t idx)   { CHECK_INPUT(m_fx.SetRead();) return m_fx[idx] ; }
+   Real_t& fy(Index_t idx)   { CHECK_INPUT(m_fy.SetRead();) return m_fy[idx] ; }
+   Real_t& fz(Index_t idx)   { CHECK_INPUT(m_fz.SetRead();) return m_fz[idx] ; }
 
    // Nodal mass
    Real_t& nodalMass(Index_t idx) { return m_nodalMass[idx] ; }
 
    // Nodes on symmertry planes
-   Index_t symmX(Index_t idx) { m_symmX.SetRead(); return m_symmX[idx] ; }
-   Index_t symmY(Index_t idx) { m_symmY.SetRead(); return m_symmY[idx] ; }
-   Index_t symmZ(Index_t idx) { m_symmZ.SetRead(); return m_symmZ[idx] ; }
-   bool symmXempty()          { m_symmX.SetRead(); return m_symmX.empty(); }
-   bool symmYempty()          { m_symmY.SetRead(); return m_symmY.empty(); }
-   bool symmZempty()          { m_symmZ.SetRead(); return m_symmZ.empty(); }
+   Index_t symmX(Index_t idx) { CHECK_INPUT(m_symmX.SetRead();) return m_symmX[idx] ; }
+   Index_t symmY(Index_t idx) { CHECK_INPUT(m_symmY.SetRead();) return m_symmY[idx] ; }
+   Index_t symmZ(Index_t idx) { CHECK_INPUT(m_symmZ.SetRead();) return m_symmZ[idx] ; }
+   bool symmXempty()          { CHECK_INPUT(m_symmX.SetRead();) return m_symmX.empty(); }
+   bool symmYempty()          { CHECK_INPUT(m_symmY.SetRead();) return m_symmY.empty(); }
+   bool symmZempty()          { CHECK_INPUT(m_symmZ.SetRead();) return m_symmZ.empty(); }
 #else
    Real_t& x(Index_t idx)    { return m_x[idx] ; }
    Real_t& y(Index_t idx)    { return m_y[idx] ; }
@@ -800,13 +807,12 @@ class Domain : public Internal {
    Index_t&  regElemlist(Int_t r, Index_t idx) { r_regElemlist = true; return m_regElemlist[r][idx] ; }
 
    Index_t prv_idx;
-#if _CD
    Index_t*  nodelist(Index_t idx)    { 
-     m_nodelist.SetRead();
+     CHECK_INPUT(m_nodelist.SetRead();)
+#if 0 
      static uint64_t count = 0;
      prv_idx = idx;
      if(count++ % 100000 == 0) {
-#if 0 
      const Index_t base = Index_t(8)*idx;
      LULESH_PRINT("[%d] nodelist size:%zu/%zu (%d), %d %d %d %d %d %d %d %d\n", myRank, m_nodelist.size(), m_nodelist.capacity(), numElem(),
                                                             m_nodelist[base],
@@ -818,80 +824,73 @@ class Domain : public Internal {
                                                             m_nodelist[base+6],
                                                             m_nodelist[base+7]
                                                             ); 
-#endif
      }
-     return &m_nodelist[Index_t(8)*idx] ; 
-   }
-#else
-   Index_t*  nodelist(Index_t idx)    { 
-     return &m_nodelist[Index_t(8)*idx] ; 
-   }
 #endif
+     return &m_nodelist[Index_t(8)*idx] ; 
+   }
    Index_t*  Mynodelist()    { 
-#if _CD
-      m_nodelist.SetRead();
-#endif
+      CHECK_INPUT(m_nodelist.SetRead();)
       return &m_nodelist[Index_t(8)*prv_idx] ; 
    }
 #if _CD
    // elem connectivities through face
-   Index_t&  lxim(Index_t idx) { m_lxim.SetRead();   return m_lxim[idx] ; }
-   Index_t&  lxip(Index_t idx) { m_lxip.SetRead();   return m_lxip[idx] ; }
-   Index_t&  letam(Index_t idx) { m_letam.SetRead(); return m_letam[idx] ; }
-   Index_t&  letap(Index_t idx) { m_letap.SetRead(); return m_letap[idx] ; }
-   Index_t&  lzetam(Index_t idx) { m_lzetam.SetRead(); return m_lzetam[idx] ; }
-   Index_t&  lzetap(Index_t idx) { m_lzetap.SetRead(); return m_lzetap[idx] ; }
+   Index_t&  lxim(Index_t idx)   { CHECK_INPUT(m_lxim.SetRead();  ) return m_lxim[idx] ; }
+   Index_t&  lxip(Index_t idx)   { CHECK_INPUT(m_lxip.SetRead();  ) return m_lxip[idx] ; }
+   Index_t&  letam(Index_t idx)  { CHECK_INPUT(m_letam.SetRead(); ) return m_letam[idx] ; }
+   Index_t&  letap(Index_t idx)  { CHECK_INPUT(m_letap.SetRead(); ) return m_letap[idx] ; }
+   Index_t&  lzetam(Index_t idx) { CHECK_INPUT(m_lzetam.SetRead();) return m_lzetam[idx] ; }
+   Index_t&  lzetap(Index_t idx) { CHECK_INPUT(m_lzetap.SetRead();) return m_lzetap[idx] ; }
 
    // elem face symm/free-surface flag
-   Int_t&  elemBC(Index_t idx) { m_elemBC.SetRead(); return m_elemBC[idx] ; }
+   Int_t&  elemBC(Index_t idx) { CHECK_INPUT(m_elemBC.SetRead();) return m_elemBC[idx] ; }
                                          
    // Principal strains - tempora        ry
-   Real_t& dxx(Index_t idx)    { m_dxx.SetRead(); return m_dxx[idx] ; }
-   Real_t& dyy(Index_t idx)    { m_dyy.SetRead(); return m_dyy[idx] ; }
-   Real_t& dzz(Index_t idx)    { m_dzz.SetRead(); return m_dzz[idx] ; }
+   Real_t& dxx(Index_t idx)    { CHECK_INPUT(m_dxx.SetRead();) return m_dxx[idx] ; }
+   Real_t& dyy(Index_t idx)    { CHECK_INPUT(m_dyy.SetRead();) return m_dyy[idx] ; }
+   Real_t& dzz(Index_t idx)    { CHECK_INPUT(m_dzz.SetRead();) return m_dzz[idx] ; }
 
    // Velocity gradient - temporary
-   Real_t& delv_xi(Index_t idx)    { m_delv_xi.SetRead();   return m_delv_xi[idx] ; }
-   Real_t& delv_eta(Index_t idx)   { m_delv_eta.SetRead();  return m_delv_eta[idx] ; }
-   Real_t& delv_zeta(Index_t idx)  { m_delv_zeta.SetRead(); return m_delv_zeta[idx] ; }
+   Real_t& delv_xi(Index_t idx)    { CHECK_INPUT(m_delv_xi.SetRead();  ) return m_delv_xi[idx] ; }
+   Real_t& delv_eta(Index_t idx)   { CHECK_INPUT(m_delv_eta.SetRead(); ) return m_delv_eta[idx] ; }
+   Real_t& delv_zeta(Index_t idx)  { CHECK_INPUT(m_delv_zeta.SetRead();) return m_delv_zeta[idx] ; }
 
    // Position gradient - temporary
-   Real_t& delx_xi(Index_t idx)    { m_delx_xi.SetRead();   return m_delx_xi[idx] ; }
-   Real_t& delx_eta(Index_t idx)   { m_delx_eta.SetRead();  return m_delx_eta[idx] ; }
-   Real_t& delx_zeta(Index_t idx)  { m_delx_zeta.SetRead(); return m_delx_zeta[idx] ; }
+   Real_t& delx_xi(Index_t idx)    { CHECK_INPUT(m_delx_xi.SetRead();  ) return m_delx_xi[idx] ; }
+   Real_t& delx_eta(Index_t idx)   { CHECK_INPUT(m_delx_eta.SetRead(); ) return m_delx_eta[idx] ; }
+   Real_t& delx_zeta(Index_t idx)  { CHECK_INPUT(m_delx_zeta.SetRead();) return m_delx_zeta[idx] ; }
 
    // Energy
-   Real_t& e(Index_t idx)          { m_e.SetRead();  return m_e[idx] ; }
+   Real_t& e(Index_t idx)          { CHECK_INPUT(m_e.SetRead();)  return m_e[idx] ; }
                                          
    // Pressure                           
-   Real_t& p(Index_t idx)          { m_p.SetRead();  return m_p[idx] ; }
+   Real_t& p(Index_t idx)          { CHECK_INPUT(m_p.SetRead();)  return m_p[idx] ; }
                                          
    // Artificial viscosity               
-   Real_t& q(Index_t idx)          { m_q.SetRead();  return m_q[idx] ; }
+   Real_t& q(Index_t idx)          { CHECK_INPUT(m_q.SetRead();)  return m_q[idx] ; }
                                          
    // Linear term for q                  
-   Real_t& ql(Index_t idx)         { m_ql.SetRead(); return m_ql[idx] ; }
+   Real_t& ql(Index_t idx)         { CHECK_INPUT(m_ql.SetRead();) return m_ql[idx] ; }
    // Quadratic term for q               
-   Real_t& qq(Index_t idx)         { m_qq.SetRead(); return m_qq[idx] ; }
+   Real_t& qq(Index_t idx)         { CHECK_INPUT(m_qq.SetRead();) return m_qq[idx] ; }
                                          
    // Relative volume                    
-   Real_t& v(Index_t idx)          { m_v.SetRead();  return m_v[idx] ; }
-   Real_t& delv(Index_t idx)       { m_delv.SetRead();  return m_delv[idx] ; }
+   Real_t& v(Index_t idx)          { CHECK_INPUT(m_v.SetRead();)  return m_v[idx] ; }
+   Real_t& delv(Index_t idx)       { CHECK_INPUT(m_delv.SetRead();)  return m_delv[idx] ; }
                                            
    // Reference volume                     
-   Real_t& volo(Index_t idx)       { m_volo.SetRead();  return m_volo[idx] ; }
+   Real_t& volo(Index_t idx)       { CHECK_INPUT(m_volo.SetRead();)  return m_volo[idx] ; }
                                            
    // volume derivative over volume        
-   Real_t& vdov(Index_t idx)       { m_vdov.SetRead();  return m_vdov[idx] ; }
+   Real_t& vdov(Index_t idx)       { CHECK_INPUT(m_vdov.SetRead();)  return m_vdov[idx] ; }
                                            
    // Element characteristic length        
-   Real_t& arealg(Index_t idx)     { m_arealg.SetRead();return m_arealg[idx] ; }
+   Real_t& arealg(Index_t idx)     { CHECK_INPUT(m_arealg.SetRead();) return m_arealg[idx] ; }
 
    // Sound speed
-   Real_t& ss(Index_t idx)         { m_ss.SetRead(); return m_ss[idx] ; }
+   Real_t& ss(Index_t idx)         { CHECK_INPUT(m_ss.SetRead();) return m_ss[idx] ; }
 
    // Element mass
-   Real_t& elemMass(Index_t idx)  { m_elemMass.SetRead(); return m_elemMass[idx] ; }
+   Real_t& elemMass(Index_t idx)  { CHECK_INPUT(m_elemMass.SetRead();) return m_elemMass[idx] ; }
 #else
    // elem connectivities through face
    Index_t&  lxim(Index_t idx)   {  return m_lxim[idx] ; }
@@ -998,18 +997,22 @@ class Domain : public Internal {
 
    Int_t&  cycle()                { return m_cycle ; }
 #if _CD
-   bool    check_begin(int intvl) { const Int_t cycle = m_cycle - 1; 
-                                    if(cycle < 0) {
-                                      PrintDomain();
-                                      assert(0);
+   bool    check_begin(int intvl) { if(intvl > 1) {
+                                      const Int_t cycle = m_cycle - 1; 
+                                      if(cycle < 0) { PrintDomain(); assert(0); }
+                                      return (cycle % intvl == 0); 
                                     } 
-                                    return (cycle % intvl == 0); }
-   bool    check_end(int intvl)   { const Int_t cycle = m_cycle - 1; 
-                                    if(cycle < 0) {
-                                      PrintDomain();
-                                      assert(0);
-                                    } 
-                                    return (cycle % intvl == intvl - 1); }
+                                    else if(intvl == 1) { return true; }
+                                    else { return false; }
+                                  }
+   bool    check_end(int intvl)   { if(intvl > 1) { 
+                                      const Int_t cycle = m_cycle - 1; 
+                                      if(cycle < 0) { PrintDomain(); assert(0); }
+                                      return (cycle % intvl == intvl - 1); 
+                                    }
+                                    else if(intvl == 1) { return true; }
+                                    else { return false; }
+                                  }
 #endif
    Index_t&  numRanks()           { return m_numRanks ; }
 
@@ -1401,8 +1404,8 @@ class Domain : public Internal {
    void Deserialize(void *object) {}
    void CheckUpdate(const char *str) 
    {
-#if DO_CHECK      
-      dynamic_cast<Internal *>(this)->CheckInternal(dynamic_cast<Internal &>(*preserved_), str);
+#if DO_CHECK && _CD_ROOT 
+      //dynamic_cast<Internal *>(this)->CheckInternal(dynamic_cast<Internal &>(*preserved_), str);
       m_x.CompareVector(        str /*"X"        */);
       m_y.CompareVector(        str /*"Y"        */);
       m_z.CompareVector(        str /*"Z"        */);

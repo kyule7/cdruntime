@@ -1,7 +1,9 @@
 #include "phase_tree.h"
 #include "cd_global.h"
 #include "cd_def_preserve.h"
+#include "cd_features.h"
 #include "sys_err_t.h"
+#include "packer_prof.h"
 #include <iomanip>      // std::setw
 using namespace common;
 using namespace std;
@@ -166,7 +168,7 @@ void PhaseNode::PrintOutputJson(void)
   fprintf(outJSON, "  \"restore time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::RST_PRF]  , cd::recvstd[cd::RST_PRF]  , cd::recvmin[cd::RST_PRF]  , cd::recvmax[cd::RST_PRF]  ); 
   fprintf(outJSON, "  \"create time\"   : [%le, %le, %le, %le],\n", cd::recvavg[cd::CREAT_PRF], cd::recvstd[cd::CREAT_PRF], cd::recvmin[cd::CREAT_PRF], cd::recvmax[cd::CREAT_PRF]); 
   fprintf(outJSON, "  \"destory time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::DSTRY_PRF], cd::recvstd[cd::DSTRY_PRF], cd::recvmin[cd::DSTRY_PRF], cd::recvmax[cd::DSTRY_PRF]); 
-  fprintf(outJSON, "  \"begin time   \" : [%le, %le, %le, %le],\n", cd::recvavg[cd::BEGIN_PRF], cd::recvstd[cd::BEGIN_PRF], cd::recvmin[cd::BEGIN_PRF], cd::recvmax[cd::BEGIN_PRF]); 
+  fprintf(outJSON, "  \"begin time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::BEGIN_PRF], cd::recvstd[cd::BEGIN_PRF], cd::recvmin[cd::BEGIN_PRF], cd::recvmax[cd::BEGIN_PRF]); 
   fprintf(outJSON, "  \"complete time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::COMPL_PRF], cd::recvstd[cd::COMPL_PRF], cd::recvmin[cd::COMPL_PRF], cd::recvmax[cd::COMPL_PRF]); 
   fprintf(outJSON, "  \"mesg logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::MSG_PRF]  , cd::recvstd[cd::MSG_PRF]  , cd::recvmin[cd::MSG_PRF]  , cd::recvmax[cd::MSG_PRF]  );
   fprintf(outJSON, "  \"libc logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::LOG_PRF]  , cd::recvstd[cd::LOG_PRF]  , cd::recvmin[cd::LOG_PRF]  , cd::recvmax[cd::LOG_PRF]  );
@@ -213,6 +215,77 @@ void PhaseNode::PrintOutputJsonInternal(void)
 //=======
   fprintf(outJSON, "%s\"CD_%u_%u\" : {\n",      one_more_indent.c_str(), level_, phase_);
   fprintf(outJSON, "%s\"label\"    : \"%s\",\n",    two_more_indent.c_str(), label_.c_str());
+  if(children_.empty()) {
+    fprintf(outJSON, "%s\"type\"   : \"leaf\",\n", two_more_indent.c_str());
+  } else if(left_ == NULL && right_ == NULL) {
+    fprintf(outJSON, "%s\"type\"   : \"hmcd\",\n", two_more_indent.c_str());
+  } else {
+    fprintf(outJSON, "%s\"type\"   : \"htcd\",\n", two_more_indent.c_str());
+  }
+  double execution_time = profile_.total_time_;
+  double child_total_exec_time = 0.0;
+  if(!children_.empty()) {
+    auto it=children_.begin();
+    for(; it!=children_.end(); ++it) {
+      fprintf(outJSON, "%s\"iter begin\"    : %lu,\n", two_more_indent.c_str(), (*it)->seq_begin_);
+      fprintf(outJSON, "%s\"iter end\"      : %lu,\n", two_more_indent.c_str(), (*it)->seq_end_);
+      fprintf(outJSON, "%s\"iterations\"    : %lu, // childs'\n", two_more_indent.c_str(), (*it)->seq_end_ - (*it)->seq_begin_);
+      break;
+      // TODO: for now, iteration for heterogeneous CDs does not work.
+    }
+    for(it=children_.begin(); it!=children_.end(); ++it) {
+      child_total_exec_time += (*it)->profile_.total_time_;
+    //  printf("child time:%lf\n", (*it)->profile_.total_time_);
+    }
+  } 
+  //execution_time -= child_total_exec_time;
+  fprintf(outJSON, "%s\"execution time\"   : %lf, // accumulated:%lf time - childs' time %lf - %lf\n", two_more_indent.c_str(), 
+      (execution_time - child_total_exec_time)/profile_.exec_cnt_, 
+      execution_time-child_total_exec_time, execution_time, child_total_exec_time);
+  double cdrt_overhead = GetRuntimeOverhead();
+  fprintf(outJSON, "%s\"runtime overhead\" : %lf, // accumulated:%lf\n",  two_more_indent.c_str(), cdrt_overhead/profile_.exec_cnt_, cdrt_overhead);
+  double preserve_time = profile_.GetPreserveTime();
+  fprintf(outJSON, "%s\"preserve time\"    : %lf, // accumulated:%lf w/ dev, %lf w/o dev\n",  two_more_indent.c_str(), preserve_time/profile_.exec_cnt_, preserve_time, profile_.prv_elapsed_time_);
+  uint64_t errtype = errortype_;
+  for(auto it=children_.begin(); it!=children_.end(); ++it) {
+    errtype = errtype & ~((*it)->errortype_);
+  }
+  uint64_t err_mask = 1;
+  float failure_rate = 0.0;
+//  for(auto tt=cd::config.failure_rate_record_.begin(); tt!=cd::config.failure_rate_record_.end(); ++tt) { printf("%lx - %f\n", tt->first, tt->second); }
+  while(errtype != 0) {
+    uint64_t err_vec = errtype & err_mask; // check the bit for current err_mask
+    failure_rate += cd::config.failure_rate_record_[err_vec];
+//    printf("[%lx] err_mask:%8lx, err_vec:%lx, errtype: %lx, failure_rate:%f\n", errortype_, err_mask, err_vec, errtype, failure_rate);
+    errtype &= ~err_vec; // unset err_vec in errtype
+    err_mask <<= 1;
+  }
+
+  double prv_bw = GetPrvBW();
+  double vol_in  = profile_.GetPrvVolume(true);
+  double vol_out = profile_.GetPrvVolume(false);
+  fprintf(outJSON, "%s\"input volume\" : %lf, // (avg:%lf)\n", two_more_indent.c_str(), vol_in, vol_in/profile_.exec_cnt_);
+  fprintf(outJSON, "%s\"output volume\": %lf, // (avg:%lf)\n", two_more_indent.c_str(), vol_out, vol_out/profile_.exec_cnt_);
+  fprintf(outJSON, "%s\"rd_bw\"        : %lf, // check : %lf\n",    two_more_indent.c_str(), prv_bw, vol_in/(cdrt_overhead + preserve_time));
+  fprintf(outJSON, "%s\"wr_bw\"        : %lf,\n",    two_more_indent.c_str(), prv_bw);
+  if(medium_ == kGlobalDisk) {
+    // We will generate this file during error-free run, there will be
+    // no profiled read bandwidth. For now, just use write bandwidth for read
+    // bandwidth to pass it to tuner.
+    //fprintf(outJSON, "%s\"rd_bw\"    : \"%f\",\n",    two_more_indent.c_str(), packer::time_mpiio_read.bw_avg);
+    fprintf(outJSON, "%s\"rd_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_mpiio_write.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"wr_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_mpiio_write.bw_avg * 1000000);
+  } else if(medium_ == kLocalDisk) {
+    fprintf(outJSON, "%s\"rd_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_posix_write.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"wr_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_posix_write.bw_avg * 1000000);
+  } else if(medium_ == kLocalMemory) {
+    fprintf(outJSON, "%s\"rd_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_copy.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"wr_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_copy.bw_avg * 1000000);
+  } else {
+    assert(0);
+  }
+  profile_.PrintTraces(outJSON, two_more_indent.c_str());
+  fprintf(outJSON, "%s\"fault rate\"     : %f,\n",    two_more_indent.c_str(), failure_rate);
   fprintf(outJSON, "%s\"interval\" : %ld,\n",   two_more_indent.c_str(), interval_);
   fprintf(outJSON, "%s\"errortype\": \"0x%lX\",\n", two_more_indent.c_str(), errortype_);
   fprintf(outJSON, "%s\"medium\"   : \"%s\",\n",     two_more_indent.c_str(), GetMedium(medium_));
@@ -411,7 +484,12 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 
 #if CD_TUNING_ENABLED == 0 && CD_RUNTIME_ENABLED == 1
   if(tuned::phaseNodeCache.empty() == false) {
-    auto pt = tuned::phaseNodeCache.find(phase);
+//    auto pt = tuned::phaseNodeCache.find(phase);
+    auto pt=tuned::phaseNodeCache.begin();
+    for(;pt!=tuned::phaseNodeCache.end(); ++pt) {
+      if(pt->second->label_ == label) break;
+    }
+
     if(pt == tuned::phaseNodeCache.end()) {
       for(auto it=tuned::phaseNodeCache.begin(); it!=tuned::phaseNodeCache.end(); ++it) {
         printf("[%d] phase %u \n", cd::myTaskID, it->first);
@@ -422,11 +500,13 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     const PhaseNode *pn = pt->second;
     cd::phaseTree.current_->errortype_ = pn->errortype_;
     cd::phaseTree.current_->medium_    = pn->medium_;
+//    if(cd::myTaskID == 1) {
 //      printf("%s (%s, %lx) <- (%s, %lx)\n", pn->label_.c_str(),
 //          GetMedium(cd::phaseTree.current_->medium_),
 //          cd::phaseTree.current_->errortype_, 
 //          GetMedium(pn->medium_), 
 //          pn->errortype_);
+//    }
   } else {
 //    printf("it is empty?\n");
   }
@@ -471,16 +551,80 @@ PhaseTree::~PhaseTree() {
   }
 }
 
-
 void PhaseNode::GatherStats(void)
 {
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     (*it)->GatherStats();
   }
-  
-  //char buf[64];
-  //printf("[%s %d] level:%u, phase:%u, taskid:%u\n", __func__, cd::myTaskID, phase_, level_, task_id_);
-  //YkWON: level_ and phase_ are swapped to fix
+
+  // Gather traces for each level
+  if(cd::is_error_free) {
+    if(cd::myTaskID == 0) {
+
+      uint64_t total_cnt = profile_.exec_trace_.size() * cd::totalTaskSize;
+      uint64_t local_cnt = profile_.exec_trace_.size();
+#if 1
+      std::vector<float> exec_trace(profile_.exec_trace_);
+      std::vector<float> prsv_trace(profile_.prsv_trace_);
+      profile_.max_prsv_.resize(local_cnt);
+      std::vector<float> cdrt_trace(profile_.cdrt_trace_);
+      profile_.exec_trace_.resize(total_cnt);
+      profile_.prsv_trace_.resize(total_cnt);
+      profile_.cdrt_trace_.resize(total_cnt);
+#else      
+      float *exec_trace    = new float[total_cnt];
+      float *prsv_trace    = new float[total_cnt];
+      float *cdrt_trace    = new float[total_cnt];
+      float *maxprsv_trace = new float[local_cnt];
+#endif
+//      printf("[%s %s %u] total:%lu, gathered:%zu\n", __func__, label_.c_str(), level_, total_cnt, local_cnt);
+#if 1          
+      PMPI_Gather(exec_trace.data()         , local_cnt, MPI_FLOAT, 
+                 profile_.exec_trace_.data(), local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
+      PMPI_Gather(prsv_trace.data()         , local_cnt, MPI_FLOAT, 
+                 profile_.prsv_trace_.data(), local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
+      PMPI_Gather(cdrt_trace.data()         , local_cnt, MPI_FLOAT, 
+                 profile_.cdrt_trace_.data(), local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
+      PMPI_Reduce(prsv_trace.data(), profile_.max_prsv_.data(), local_cnt, MPI_FLOAT, MPI_MAX, 0, MPI_COMM_WORLD);
+#else      
+      PMPI_Gather(profile_.exec_trace_.data(), local_cnt, MPI_FLOAT, 
+                  exec_trace                 , local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
+      PMPI_Gather(profile_.prsv_trace_.data(), local_cnt, MPI_FLOAT, 
+                  prsv_trace                 , local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
+      PMPI_Gather(profile_.cdrt_trace_.data(), local_cnt, MPI_FLOAT, 
+                  cdrt_trace                 , local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
+      PMPI_Reduce(profile_.prsv_trace_.data(), maxprsv_trace, local_cnt, MPI_FLOAT, MPI_MAX, 0, MPI_COMM_WORLD);
+#endif
+      float avg_max_prsv = 0.0;
+      for(auto mp=profile_.max_prsv_.begin(); mp!=profile_.max_prsv_.end(); ++mp) {
+        avg_max_prsv += *mp;
+      }
+//      avg_max_prsv /= profile_.max_prsv_.size();
+      profile_.max_prv_elapsed_time_ = avg_max_prsv;
+#if 0
+      delete [] exec_trace   ;
+      delete [] prsv_trace   ;
+      delete [] cdrt_trace   ;
+      delete [] maxprsv_trace;
+#endif
+
+    } else {
+      uint64_t local_cnt = profile_.exec_trace_.size();
+//      printf("[%s %s %u] rest: exec:%zu prsv:%zu cdrt:%zu\n", 
+//          __func__, label_.c_str(), level_,
+//          profile_.exec_trace_.size(), profile_.prsv_trace_.size(), profile_.cdrt_trace_.size());
+      PMPI_Gather(profile_.exec_trace_.data(), local_cnt, MPI_FLOAT, 
+                                         NULL, local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
+      PMPI_Gather(profile_.prsv_trace_.data(), local_cnt, MPI_FLOAT, 
+                                         NULL, local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
+      PMPI_Gather(profile_.cdrt_trace_.data(), local_cnt, MPI_FLOAT, 
+                                         NULL, local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
+      PMPI_Reduce(profile_.prsv_trace_.data(), NULL, local_cnt, MPI_FLOAT, MPI_MAX, 0, MPI_COMM_WORLD);
+    }
+  } 
+//  else {
+//    printf("it is not err free\n");
+//  }
 //  printf("[%s %d] level:%u, phase:%u, taskid:%u\n", __func__, cd::myTaskID, level_,  phase_, task_id_);
   RTInfo<double> rt_info = profile_.GetRTInfo<double>();
   RTInfo<double> &rt_info_avg = common::cd_prof_map[phase_].avg_;
@@ -506,13 +650,13 @@ void PhaseNode::GatherStats(void)
   //printf("\n----------- Before receive -----------\n");
 //  MPI_Reduce(&rt_info_int, &rt_info_int_recv, sizeof(RTInfoInt)/sizeof(uint64_t), MPI_UNSIGNED_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
 //  MPI_Reduce(&rt_info_float, &rt_info_float_recv, sizeof(RTInfoFloat)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-  MPI_Allreduce(&rt_info_loc, &rt_info_min, rt_info_min.Length(), MPI_DOUBLE_INT, MPI_MINLOC, MPI_COMM_WORLD);
-  MPI_Allreduce(&rt_info_loc, &rt_info_max, rt_info_max.Length(), MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
+  PMPI_Allreduce(&rt_info_loc, &rt_info_min, rt_info_min.Length(), MPI_DOUBLE_INT, MPI_MINLOC, MPI_COMM_WORLD);
+  PMPI_Allreduce(&rt_info_loc, &rt_info_max, rt_info_max.Length(), MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
   //MPI_Reduce(&rt_info, &rt_info_max, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   //MPI_Reduce(&rt_info, &rt_info_min_rank, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MINLOC, 0, MPI_COMM_WORLD);
   //MPI_Reduce(&rt_info, &rt_info_max_rank, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MAXLOC, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&rt_info, &rt_info_avg, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce(&rt_info_sqsum, &rt_info_std, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  PMPI_Reduce(&rt_info, &rt_info_avg, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  PMPI_Reduce(&rt_info_sqsum, &rt_info_std, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   if(cd::myTaskID == 0){
 //      profile_.SetRTInfoInt(rt_info_int_recv);
 //      profile_.SetRTInfoFloat(rt_info_float_recv);

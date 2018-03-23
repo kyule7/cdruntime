@@ -133,6 +133,16 @@ struct PhaseNode {
 
     void GatherStats(void);
 
+    double GetRuntimeOverhead(bool include_prv_time=false) {
+      double create_time = (parent_!=NULL)? parent_->profile_.create_elapsed_time_ : 0.0;
+      double prv_time = (include_prv_time)? profile_.GetPreserveTime() : 0.0;
+      return profile_.GetCDRTOverhead(create_time + prv_time);
+    }
+
+    double GetPrvBW(bool is_input=true) {
+      return profile_.GetPrvVolume(is_input) / GetRuntimeOverhead(true);
+    }
+
     PhaseNode *GetNextNode(const std::string &label) 
     {
       PhaseNode *next = NULL;

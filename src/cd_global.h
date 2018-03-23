@@ -291,6 +291,7 @@ namespace cd {
   extern int myTaskID;
   extern int totalTaskSize;
   extern bool app_side;
+  extern bool is_error_free;
 
   enum {
     TOTAL_PRF=0,

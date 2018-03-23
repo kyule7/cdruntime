@@ -13,6 +13,10 @@ struct Time {
   struct timeval begin;
   struct timeval end;
   double elapsed;
+  double bw_avg;
+  double bw_std;
+  double bw_min;
+  double bw_max;
   uint64_t size;
   uint64_t count;
   Time(const char *str=NULL);
@@ -29,10 +33,13 @@ struct Time {
   }
   void Print(FILE *buf=stdout);
   void PrintJSON(FILE *buf=stdout);
+  void UpdateBW(double avg, double std, double min, double max);
+  static void GatherBW(void);
 };
 
-
+extern bool gathered_bw;
 extern std::vector<Time *> prof_list;
+extern Time time_copy; 
 extern Time time_write; 
 extern Time time_read; 
 extern Time time_posix_write; 

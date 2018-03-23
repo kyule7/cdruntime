@@ -642,7 +642,7 @@ public:
     virtual void *Serialize(uint64_t &len_in_bytes);
     virtual void Deserialize(void *object);
     static CDHandle *GetCDToRecover(CDHandle *cd_level, bool collective=true);
-    CDInternalErrT CompleteLogs(void);
+    CDInternalErrT CompleteLogs(bool is_rollback=false);
 #if CD_LIBC_LOG_ENABLED
 public:
     //GONG: duplicated for libc logging

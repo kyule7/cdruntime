@@ -3,7 +3,6 @@ ENABLE_DEBUG=1
 
 IS_STAMPEDE=1
 ifeq (${IS_STAMPEDE}, 1)
-#MYCC=g++
 MYCC=icpc
 MPICC=mpicxx
 CFLAGS=-fPIC -Wall -c -std=gnu++0x -I. -fmax-errors=3 #-Weffc++
@@ -16,14 +15,14 @@ LFLAGS=-fPIC -I.
 endif
 
 ifeq (${ENABLE_DEBUG}, 1)
-CFLAGS += -g -D_PACKER_DEBUG
-LFLAGS += -g -D_PACKER_DEBUG
+CFLAGS += -g -D_PACKER_DEBUG -O3
+LFLAGS += -g -D_PACKER_DEBUG -O3
 endif
 
 #CFLAGS += -O3
 #all:  test_mpi
 
-OBJS=data_store.o buffer_consumer.o cd_file_handle.o table_store.o packer_prof.o
+OBJS=data_store.o buffer_consumer.o cd_file_handle.o table_store.o packer_prof.o packer_common.o
 
 MPIOBJS=${OBJS} mpi_file_handle.o  cd_file_handle_interface.o
 
@@ -42,6 +41,9 @@ ${TARGET}: ${MPIOBJS}
 #
 #test_mpi: test_mpi.o ${MPIOBJS} 
 #	${MPICC} ${LFLAGS} $^ -o $@ -lpthread 
+
+packer_common.o: packer_common.cc
+	${MYCC} ${CFLAGS} $^ -o $@
 
 buffer_consumer.o: buffer_consumer.cc
 	${MYCC} ${CFLAGS} $^ -o $@

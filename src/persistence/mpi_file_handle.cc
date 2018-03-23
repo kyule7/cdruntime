@@ -9,8 +9,9 @@
 //#include <errno.h>
 //#include "cd_file_handle.h"
 #include "buffer_consumer_interface.h"
+#include <unistd.h>
 #include <string.h> // strcpy
-
+#include <math.h>
 using namespace packer;
 //packer::Time packer::time_mpiio_write("mpiio_write"); 
 //packer::Time packer::time_mpiio_read("mpiio_read"); 
@@ -52,24 +53,33 @@ void MPIFileHandle::Init(const MPI_Comm &comm, const char *filepath)
   // For error handling,
   MPI_Errhandler_set(comm_, MPI_ERRORS_RETURN);
 
-  char full_filename[128];
-  char base_filename[128];
-  char *base_filepath = getenv("CD_BASE_FILEPATH");
-  if(base_filepath != NULL) {
-    strcpy(base_filename, base_filepath);
-  } else {
-    strcpy(base_filename, DEFAULT_BASE_FILEPATH "/global");
+  char base_filename[MAX_FILEPATH_SIZE];
+  if(packerTaskID == 0) {
+    char *base_filepath = getenv("CD_BASE_FILEPATH");
+    if(base_filepath != NULL) {
+      sprintf(base_filename, "%s-%ld-%ld", 
+          base_filepath, time.tv_sec % 100, time.tv_usec % 100);
+      //strcpy(base_filename, base_filepath);
+    } else {
+      sprintf(base_filename, "%s-%ld-%ld", 
+          DEFAULT_BASE_FILEPATH "/global" , time.tv_sec % 100, time.tv_usec % 100);
+      //strcpy(base_filename, DEFAULT_BASE_FILEPATH "/global");
+    }
   }
+  if(packerTaskID == 0) {
+    MakeFileDir(base_filename);
+  }
+  PMPI_Bcast(base_filename, MAX_FILEPATH_SIZE, MPI_CHAR, 0, comm_);
 
-  MakeFileDir(base_filename);
   //viewsize_ = DEFAULT_VIEWSIZE;
+  char full_filename[MAX_FILEPATH_SIZE];
   viewsize_ = 0;
   if(viewsize_ != 0) { // N-to-1 file write
     if(rank == 0) {
       sprintf(full_filename, "%s/%s.%ld.%ld", base_filename, filepath, time.tv_sec % 100, time.tv_usec % 100);
-      PMPI_Bcast(&full_filename, 128, MPI_CHAR, 0, comm_);
+      PMPI_Bcast(&full_filename, MAX_FILEPATH_SIZE, MPI_CHAR, 0, comm_);
     } else {
-      PMPI_Bcast(&full_filename, 128, MPI_CHAR, 0, comm_);
+      PMPI_Bcast(&full_filename, MAX_FILEPATH_SIZE, MPI_CHAR, 0, comm_);
     }
     CheckError( MPI_File_open(comm_, full_filename, MPI_MODE_CREATE | MPI_MODE_RDWR, MPI_INFO_NULL, &fdesc_) );
   } else { // N-to-N file write
@@ -104,6 +114,7 @@ void MPIFileHandle::Init(const MPI_Comm &comm, const char *filepath)
         rank, commsize, rank, full_filename, viewsize_, (commsize)*viewsize_);
   }
   
+  filepath_ = full_filename;
 }
 
 MPIFileHandle::~MPIFileHandle(void) 
@@ -111,6 +122,7 @@ MPIFileHandle::~MPIFileHandle(void)
   //getchar();
   MPI_File_close(&fdesc_);
   MPI_Comm_free(&comm_);
+  unlink(filepath_.c_str());
   fdesc_ = MPI_FILE_NULL;
   comm_ = MPI_COMM_NULL;
   fh_ = NULL;
@@ -120,7 +132,7 @@ MPIFileHandle::~MPIFileHandle(void)
 FileHandle *MPIFileHandle::Get(MPI_Comm comm, const char *filepath)
 {
   if(fh_ == NULL) {
-    if(filepath == NULL) {
+    if(strcmp(filepath, "") == 0) {
       fh_ = new MPIFileHandle; 
     } else {
       fh_ = new MPIFileHandle(comm, filepath); 
@@ -131,8 +143,9 @@ FileHandle *MPIFileHandle::Get(MPI_Comm comm, const char *filepath)
 
 void MPIFileHandle::Close(void) 
 {
-  delete fh_;
-  fh_ = NULL;
+  if(fh_ != NULL) {
+    delete fh_;
+  }
 }
 
 CDErrType MPIFileHandle::Write(int64_t offset, char *src, int64_t len, int64_t inc)
@@ -214,7 +227,7 @@ uint32_t MPIFileHandle::GetBlkSize(void)
 FileHandle *LibcFileHandle::Get(MPI_Comm comm, const char *filepath)
 {
   if(fh_ == NULL) {
-    if(filepath == NULL) {
+    if(strcmp(filepath, "") == 0) {
       fh_ = new LibcFileHandle; 
     } else {
       fh_ = new LibcFileHandle(comm, filepath); 
@@ -223,3 +236,50 @@ FileHandle *LibcFileHandle::Get(MPI_Comm comm, const char *filepath)
   return dynamic_cast<FileHandle *>(fh_);
 }
 
+void LibcFileHandle::Close(void) 
+{
+  if(fh_ != NULL) {
+    delete fh_;
+  }
+}
+
+void Time::GatherBW(void) 
+{
+  gathered_bw = true;
+  const int prof_elems = 9;
+  double sendbuf[9] = { 
+                         packer::time_copy.GetBW(), 
+                         packer::time_write.GetBW(), 
+                         packer::time_read.GetBW(), 
+                         packer::time_posix_write.GetBW(), 
+                         packer::time_posix_read.GetBW(), 
+                         packer::time_posix_seek.GetBW(), 
+                         packer::time_mpiio_write.GetBW(), 
+                         packer::time_mpiio_read.GetBW(), 
+                         packer::time_mpiio_seek.GetBW()
+  };
+  double recvbufmax[prof_elems] = { 0, 0, 0, 0 };
+  double recvbufmin[prof_elems] = { 0, 0, 0, 0 };
+  double recvbufavg[prof_elems] = { 0, 0, 0, 0 };
+  double recvbufstd[prof_elems] = { 0, 0, 0, 0 };
+  double sendbufstd[prof_elems];
+  for(int i=0; i<prof_elems; i++) { sendbufstd[i] = sendbuf[i] * sendbuf[i]; }
+  MPI_Reduce(sendbuf, recvbufmax, prof_elems, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(sendbuf, recvbufmin, prof_elems, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+  MPI_Reduce(sendbuf, recvbufavg, prof_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(sendbufstd, recvbufstd, prof_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  for(int i=0; i<prof_elems; i++) { 
+    recvbufavg[i] /= packerTaskSize; // avg
+    recvbufstd[i] /= packerTaskSize; // avg of 2nd momentum
+    recvbufstd[i] =  sqrt(recvbufstd[i] - recvbufavg[i] * recvbufavg[i]);
+  }
+  packer::time_copy.UpdateBW(       recvbufavg[0], recvbufstd[0], recvbufmin[0], recvbufmax[0]); 
+  packer::time_write.UpdateBW(      recvbufavg[1], recvbufstd[1], recvbufmin[1], recvbufmax[1]); 
+  packer::time_read.UpdateBW(       recvbufavg[2], recvbufstd[2], recvbufmin[2], recvbufmax[2]); 
+  packer::time_posix_write.UpdateBW(recvbufavg[3], recvbufstd[3], recvbufmin[3], recvbufmax[3]); 
+  packer::time_posix_read.UpdateBW( recvbufavg[4], recvbufstd[4], recvbufmin[4], recvbufmax[4]); 
+  packer::time_posix_seek.UpdateBW( recvbufavg[5], recvbufstd[5], recvbufmin[5], recvbufmax[5]); 
+  packer::time_mpiio_write.UpdateBW(recvbufavg[6], recvbufstd[6], recvbufmin[6], recvbufmax[6]); 
+  packer::time_mpiio_read.UpdateBW( recvbufavg[7], recvbufstd[7], recvbufmin[7], recvbufmax[7]); 
+  packer::time_mpiio_seek.UpdateBW( recvbufavg[8], recvbufstd[8], recvbufmin[8], recvbufmax[8]);
+}

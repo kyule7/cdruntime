@@ -535,28 +535,31 @@ int MPI_Isend(const void *buf,
               MPI_Request *request)
 {
   MsgPrologue();
-//  if(CDPath::GetCurrentCD() != NULL)
-//    CD_DEBUG("[%s] %d -> %d\n", __func__, myTaskID, dest);
-  if(CDPath::GetCurrentCD() != NULL)
-    CD_DEBUG("[%s] %d -> %d ptr:%p\n", __func__, myTaskID, dest, request);
+
+  CDHandle * cur_cdh = CDPath::GetCurrentCD();
+  if(cur_cdh != NULL) {
+    CD_DEBUG("[%s %s] %d -> %d (tag:%d) ptr:%p\n", cur_cdh->GetName(), cur_cdh->GetLabel(), myTaskID, dest, tag, request);
+  }
   int mpi_ret=0;
   LOG_DEBUG("here inside MPI_Isend\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle * cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh != NULL) {
     CD *cdp = cur_cdh->ptr_cd();
     MPI_Group g;
     MPI_Comm_group(comm, &g);
     switch (cdp->GetCDLoggingMode()) {
       case kStrictCD: {
-        cdp->incomplete_log_.push_back(
-            IncompleteLogEntry(buf, 0, dest, tag, comm, (void *)request, false));
-//        if(myTaskID == 7) printf("%s incompl log:%zu\n", cdp->label(), cdp->incomplete_log_.size());
-//        printf("test send: strict CD\t"); cdp->CheckIntraCDMsg(dest, g);
-//        CD_DEBUG("send1 %u\n", (int)(*request));
         mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
-//        CD_DEBUG("send2 %u\n", (int)(*request));
+        cdp->incomplete_log_.push_back(
+            IncompleteLogEntry(buf, 0, dest, tag, comm, (void *)request, false, false));
+        if(cur_cdh != NULL) {
+          CD_DEBUG("[After %s %s] %d -> %d (tag:%d) ptr:%p\n", 
+                    cur_cdh->GetName(), cur_cdh->GetLabel(), myTaskID, dest, tag, request);
+        }
+//        MPI_Status status;
+//        PMPI_Wait(request, &status);
+//        printf("test send: strict CD\t"); cdp->CheckIntraCDMsg(dest, g);
         CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
         break;
       }
@@ -621,26 +624,26 @@ int MPI_Irecv(void *buf,
   int type_size;
   PMPI_Type_size(datatype, &type_size);
   RecordLog(count * type_size);
-  if(CDPath::GetCurrentCD() != NULL)
-    CD_DEBUG("[%s] %d <- %d ptr:%p\n", __func__, myTaskID, src, request);
+  CDHandle *cur_cdh = CDPath::GetCurrentCD();
+  if(cur_cdh != NULL) {
+    CD_DEBUG("[%s %s] %d <- %d ptr:%p\n", cur_cdh->GetName(), cur_cdh->GetLabel(), myTaskID, src, request);
+  }
 //    CD_DEBUG("[%s] ptr:%p\n", __func__, request);
   LOG_DEBUG("here inside MPI_Irecv\n");
   LOG_DEBUG("buf=%p, &buf=%p\n", buf, &buf);
 
-  CDHandle *cur_cdh = CDPath::GetCurrentCD();
   if(cur_cdh != NULL) {
     CD *cdp = cur_cdh->ptr_cd();
     MPI_Group g;
     MPI_Comm_group(comm, &g);
     switch( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
-        cdp->incomplete_log_.push_back(
-            IncompleteLogEntry(buf, 0, src, tag, comm, (void *)request, false)
-            );
-//        if(myTaskID == 7) printf("%s incompl log:%zu\n", cdp->label(), cdp->incomplete_log_.size());
-        CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
-//printf("test recv: strict CD\t"); cdp->CheckIntraCDMsg(src, g);
         mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
+        cdp->incomplete_log_.push_back(
+            IncompleteLogEntry(buf, 0, src, tag, comm, (void *)request, false, true)
+            );
+//        printf("test recv: strict CD\t"); cdp->CheckIntraCDMsg(src, g);
+        CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
         break;
       }
       case kRelaxedCDGen: { // Execution
@@ -1107,31 +1110,37 @@ int MPI_Wait(MPI_Request *request,
   MsgPrologue();
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Wait\n");
-  if(CDPath::GetCurrentCD() != NULL) {
-    CD_DEBUG("[%s] %s %s ptr:%p\n", __func__, 
-      CDPath::GetCurrentCD()->GetCDID().GetString().c_str(),
-      CDPath::GetCurrentCD()->GetLabel(), request);
+  CDHandle *cur_cdh = CDPath::GetCurrentCD();
+  if(cur_cdh != NULL) {
+    CD_DEBUG("[%s] %s %s ptr:%p\n", cur_cdh->GetLabel(), 
+      cur_cdh->GetCDID().GetString().c_str(),
+      cur_cdh->GetLabel(), request);
       
-    CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
+    cur_cdh->ptr_cd()->PrintDebug();
   }
 
-  CDHandle *cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh != NULL) {
     switch ( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
-//printf("test wait : strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
-//        CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
-//        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
+//        if(cur_cdh != NULL) {
+//        auto it = cur_cdh->ptr_cd()->incomplete_log_.find(request);
+//        if(it!=cur_cdh->ptr_cd()->incomplete_log_.end()) {
+//          if(myTaskID == 7) printf("Now waits %p.....(%s, %s) %s, src:%d, tag:%d\n", cur_cdh->GetLabel(), cur_cdh->GetName(), 
+//              (it->isrecv_)? "recv":"send", it->taskID_, it->tag_);
+//        } else {
+//          if(myTaskID == 7) printf("Now waits %p.....(%s, %s) for no entry\n", request, cur_cdh->GetLabel(), cur_cdh->GetName());
+//        }
+//        }
+#if 1        
+        // FIXME:03142018
         mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
-//        mpi_ret = PMPI_Wait(request, status);
 //        if(mpi_ret != MPI_ERR_NEED_ESCALATE) {
 //         cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
 //        }
-//        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
-//        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
-//        assert(CD::need_reexec == false);
-        // delete incomplete entries...
-//        cur_cdh->ptr_cd()->ProbeAndLogData((void *)request);
+#else
+        mpi_ret = PMPI_Wait(request, status);
+        cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
+#endif
         break;
       }
       case kRelaxedCDGen: {
@@ -1168,6 +1177,11 @@ int MPI_Wait(MPI_Request *request,
   }
   else {
     LOG_DEBUG("Warning: MPI_Wait out of CD context...\n");
+    CDHandle *cdhh = GetLeafCD();
+    if(cdhh != NULL) {
+      CD_DEBUG("Out of CD context...%s\n", cdhh->GetLabel());}
+    else if(cd::runtime_initialized) {
+      CD_DEBUG("Out of CD context...\n");}
     mpi_ret = PMPI_Wait(request, status);
   }
   MsgEpilogue();
@@ -1190,35 +1204,37 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
   CDHandle *cdh = CDPath::GetCurrentCD();
   if(cdh != NULL) {
     for (ii=0;ii<count;ii++) {
-      CD_DEBUG("[%s %s] %d ptr:%p\n", cdh->ptr_cd()->GetCDID().GetString().c_str(), cdh->GetLabel(), myTaskID, &(array_of_requests[ii]));
+      CD_DEBUG("[%s %s] (%d/%d) ptr:%p src:%d, tag:%d\n", 
+            cdh->ptr_cd()->GetCDID().GetString().c_str(), 
+            cdh->GetLabel(), ii, count, 
+            &(array_of_requests[ii]), 
+//            *(uint64_t *)(&array_of_requests[ii],
+             array_of_statuses[ii].MPI_SOURCE, 
+             array_of_statuses[ii].MPI_TAG
+            );
+         
     }
   }
   CDHandle *cur_cdh = CDPath::GetCurrentCD();
   if (cur_cdh != NULL) {
     switch( cur_cdh->ptr_cd()->GetCDLoggingMode() ) {
       case kStrictCD: {
-//printf("test waitall: strict CD\t"); //cdp->CheckIntraCDMsg(dest, g);
         CD_DEBUG("total incmpl size : %lu\n", cur_cdh->ptr_cd()->incomplete_log_.size());
-
+        // FIXME:03142018
+#if 1
         mpi_ret = cur_cdh->ptr_cd()->BlockallUntilValid(count, array_of_requests, array_of_statuses);
-//        mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        if(mpi_ret != MPI_ERR_NEED_ESCALATE) {
 //         cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
 //        }
-//
-//        mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
-//
-//        for (ii=0;ii<count;ii++) {
-//          bool deleted = cur_cdh->ptr_cd()->DeleteIncompleteLog(&(array_of_requests[ii]));
-//          CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); 
-//
-//        }
+#else
+        mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
+        for (ii=0;ii<count;ii++) {
+          bool deleted = cur_cdh->ptr_cd()->DeleteIncompleteLog(&(array_of_requests[ii]));
+          CD_DEBUG("wait %p %u deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], deleted); 
 
+        }
+#endif   
         CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
-        // delete incomplete entries...
-//        for (ii=0;ii<count;ii++) {
-//          cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[ii]);
-//        }
         break;
       }
       case kRelaxedCDGen: {  // execution

@@ -43,7 +43,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <initializer_list>
 #include <iostream>
 #define CD_VECTOR_PRINT(...)
-#define DO_COMPARE 1
+#define CD_VECTOR_PRINT_ONE(...) if(myTaskID == 7) printf(__VA_ARGS__)
+#define DO_COMPARE 0
 #define UNDEFINED_NAME "undefined"
 #define VECTOR_INIT_NAME "V:"
 
@@ -70,8 +71,8 @@ float Compare(T1 *orip, T1 *newp, uint32_t size) {
   if(difference > 0.0) { 
 
 
-//    if(IsReexec()) //if(myTaskID == 0) 
-//      printf("different : %u/%u\n", diff_cnt, size);
+    if(IsReexec() && myTaskID == 7) 
+      printf("different : %u/%u\n", diff_cnt, size);
 
   }
   return difference;
@@ -230,7 +231,7 @@ class CDVector : public std::vector<T>, public PackerSerializable {
       this->resize(rst_size_ser / sizeof(T));
     }
     if(rst_size != rst_size_ser) {
-      printf("restored size check: %lu == %lu", rst_size, rst_size_ser); 
+      CD_VECTOR_PRINT_ONE("restored size check: %lu == %lu", rst_size, rst_size_ser); 
       //assert(0);
     }
 
@@ -244,9 +245,9 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     }
 #endif
 
-    if(myTaskID == 0 && (name_ == "X" || name_ == "Y"|| name_ == "Z")) {
-      CD_VECTOR_PRINT("Restore %s at data:%lu, size:%lu\n", name_.c_str(), pentry->offset(), pentry->size());
-    }
+//    if(myTaskID == 0 && (name_ == "X" || name_ == "Y"|| name_ == "Z")) {
+//      CD_VECTOR_PRINT("Restore %s at data:%lu, size:%lu\n", name_.c_str(), pentry->offset(), pentry->size());
+//    }
     PackerEpilogue();
     return rst_size; 
   
@@ -297,15 +298,16 @@ class CDVector : public std::vector<T>, public PackerSerializable {
     } else {
       difference_ = Compare<T>((T *)orig_, (T *)ptr, this->size());
       if(difference_ > 0.0) {
-        //if(myTaskID == 0) printf("Similarity %s %s:%f (%lu/%lu)\t", entry_str, name, difference_, (uint64_t)(prv_size * difference_),prv_size);
-        
+        if(myTaskID == 7) 
+        { 
+          printf("Similarity %s %s:%f (%lu/%lu)\n", entry_str, name, difference_, (uint64_t)(prv_size * difference_),prv_size); }
         memcpy(orig_, ptr, prv_size);
       }
       if(prv_size_ != prv_size) {
         printf("Preservation size changed %lu->%lu\n", prv_size_, prv_size);
         prv_size_ = prv_size;
       } else if(difference_ > 0.0) {
-        if(myTaskID == 0) {
+        if(myTaskID == 7) {
           //printf("\n");
         }
       }

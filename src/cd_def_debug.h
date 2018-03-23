@@ -171,76 +171,80 @@ namespace cd {
 // Set up debug printouts
 #if CD_DEBUG_DEST == CD_DEBUG_SILENT  // No printouts 
 
-#define CD_DEBUG(...) 
-#define CD_DEBUG_COND(...)
-#define LOG_DEBUG(...) 
-#define LIBC_DEBUG(...)
+  #define CD_DEBUG(...) 
+  #define CD_DEBUG_COND(...)
+  #define LOG_DEBUG(...) 
+  #define LIBC_DEBUG(...)
+  #define PRINT_BOTH(...) 
  
 #elif CD_DEBUG_DEST == CD_DEBUG_TO_FILE  // Print to fileout
 
-#define CD_DEBUG(...) \
-  CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__)
-
-#define CD_DEBUG_COND(DEBUG_OFF, ...) \
-if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__); }
-
-#define LOG_DEBUG(...) /*\
-  { if(cd::app_side) {\
-      cd::app_side=false;\
-      CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__);\
-      cd::app_side = true;}\
-    else CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__);\
-  }*/
-
-#define LIBC_DEBUG(...) /*\
+  #define CD_DEBUG(...) \
+    CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__)
+  #define PRINT_BOTH(...) \
+    fprintf(cd::cdout, __VA_ARGS__); fflush(cd::cdout);\
+    if(cd::myTaskID == 7) printf(__VA_ARGS__);
+     
+  #define CD_DEBUG_COND(DEBUG_OFF, ...) \
+  if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__); }
+  
+  #define LOG_DEBUG(...) /*\
     { if(cd::app_side) {\
         cd::app_side=false;\
-        CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
+        CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__);\
         cd::app_side = true;}\
-      else CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
+      else CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__);\
     }*/
+  
+  #define LIBC_DEBUG(...) /*\
+      { if(cd::app_side) {\
+          cd::app_side=false;\
+          CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
+          cd::app_side = true;}\
+        else CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
+      }*/
 
 
 
 #elif CD_DEBUG_DEST == CD_DEBUG_STDOUT  // print to stdout 
 
-#define CD_DEBUG(...) \
-  CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__)
-
-#define CD_DEBUG_COND(DEBUG_OFF, ...) \
-if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__); }
-
-
-#define LOG_DEBUG(...) /*\
-  { if(cd::app_side) {\
-      cd::app_side=false;\
-      CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
-      cd::app_side = true;}\
-    else CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
-  }*/
-
-#define LIBC_DEBUG(...)/* \
+  #define CD_DEBUG(...) \
+    CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__)
+  
+  #define CD_DEBUG_COND(DEBUG_OFF, ...) \
+  if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__); }
+  
+  
+  #define LOG_DEBUG(...) /*\
     { if(cd::app_side) {\
         cd::app_side=false;\
         CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
         cd::app_side = true;}\
       else CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
     }*/
+  
+  #define LIBC_DEBUG(...)/* \
+      { if(cd::app_side) {\
+          cd::app_side=false;\
+          CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
+          cd::app_side = true;}\
+        else CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__);\
+      }*/
 
 
 #elif CD_DEBUG_DEST == CD_DEBUG_STDERR  // print to stderr
 
-#define CD_DEBUG(...) \
-  CD_DEBUG_TRACE_INFO(stderr, __VA_ARGS__)
-
-#define CD_DEBUG_COND(DEBUG_OFF, ...) \
-if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__); }
+  #define CD_DEBUG(...) \
+    CD_DEBUG_TRACE_INFO(stderr, __VA_ARGS__)
+  
+  #define CD_DEBUG_COND(DEBUG_OFF, ...) \
+  if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(cd::cdout, __VA_ARGS__); }
 
 
 #else  // -------------------------------------
 
-#define CD_DEBUG(...) \
-  CD_DEBUG_TRACE_INFO(stderr, __VA_ARGS__)
+  #define CD_DEBUG(...) \
+    CD_DEBUG_TRACE_INFO(stderr, __VA_ARGS__)
 
 #endif
 
