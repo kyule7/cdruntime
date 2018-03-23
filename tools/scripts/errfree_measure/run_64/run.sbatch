@@ -37,6 +37,15 @@ MAX_RUNS=3
 NUM_MEASURE=$(seq 1 $MAX_RUNS)
 for COUNT in ${NUM_MEASURE}
 do
+  export CD_EXEC_NAME=lulesh_errfreeGD
+  if [ $COUNT -eq 2 ]; then
+    export CD_CONFIG_FILENAME=/scratch/03341/kyushick/lulesh/0319/config.ld.yaml
+    export CD_EXEC_NAME=lulesh_errfreeLD
+  fi
+  if [ $COUNT -eq 3 ]; then
+    export CD_CONFIG_FILENAME=/scratch/03341/kyushick/lulesh/0319/config.lm.yaml
+    export CD_EXEC_NAME=lulesh_errfreeLM
+  fi
   export CD_EXEC_DETAILS=40
   export LULESH_LV0=$lv0_intvl_s40
   export LULESH_LV1=$lv1_intvl_s40
