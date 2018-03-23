@@ -90,6 +90,7 @@ char start_date[64] = "NoNamed";
 char end_date[64] = "NoNamed";
 char *exec_details = NULL;
 char *exec_iterations = NULL;
+int cd::app_input_size = 0;
 
 bool cd::is_error_free = false;
 bool cd::runtime_initialized = false;
@@ -225,7 +226,7 @@ void cd::GatherProfile(void)
       fprintf(tfp, "{\n");
       fprintf(tfp, "  \"name\":\"%s\",\n", exec_name);
       fprintf(tfp, "  \"input\":%s,\n", (exec_details!=NULL)? exec_details : "NoInput");
-      fprintf(tfp, "  \"iters\":%d,\n", (exec_iterations!=NULL)? atoi(exec_iterations) : 0);
+      fprintf(tfp, "  \"iters\":%d,\n", app_input_size);
       fprintf(tfp, "  \"nTask\":%d,\n", totalTaskSize);
       fprintf(tfp, "  \"GlobalDisk BW\": [%lf,%lf,%lf,%lf]\n", packer::time_mpiio_write.bw_avg, packer::time_mpiio_write.bw_std, packer::time_mpiio_write.bw_min, packer::time_mpiio_write.bw_max);
       fprintf(tfp, "  \"LocalDisk BW\":[%lf,%lf,%lf,%lf]\n", packer::time_posix_write.bw_avg, packer::time_posix_write.bw_std, packer::time_posix_write.bw_min, packer::time_posix_write.bw_max);
@@ -534,6 +535,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
   exec_details    = getenv("CD_EXEC_DETAILS");
   exec_iterations = getenv("CD_EXEC_ITERS");
+  app_input_size  = (exec_iterations!=NULL)? atoi(exec_iterations) : 0;
+
   char *is_noprv  = getenv("CD_NO_PRESERVE");
   cd::dont_preserve = (is_noprv != NULL)? true:false;
 #if CD_TUNING_ENABLED == 0

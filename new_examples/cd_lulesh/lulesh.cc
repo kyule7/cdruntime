@@ -3929,7 +3929,7 @@ int main(int argc, char *argv[])
          recvbufmin[0], recvbufmin[1], recvbufmin[2], recvbufmin[3], 
          recvbufmax[0], recvbufmax[1], recvbufmax[2], recvbufmax[3]);
      for(int i=4; i<prof_elems; i++) {
-       fprintf(stdout, "%5.4lf (%5.4lf) %5.4lf~%5.4lf\n", recvbufavg[i], recvbufstd[i], recvbufmin[i], recvbufmax[i]);
+       fprintf(stdout, "BW: %5.4lf (%5.4lf) %5.4lf~%5.4lf\n", recvbufavg[i], recvbufstd[i], recvbufmin[i], recvbufmax[i]);
      }
      fprintf(stdout, "phase: %5.4lf %5.4lf %5.4lf %5.4lf %5.4lf\n",
          aggregated_phase[0],
@@ -4160,6 +4160,14 @@ int main(int argc, char *argv[])
      if(tfp == 0) { printf("failed to open %s\n", tmpfile); fflush(stdout); }
      else {
        fprintf(tfp, "{\n");
+       // print for gathered prof ///////////////
+       fprintf(tfp, "  \"loop\" : [%8.4lf,%8.4lf,%8.4lf,%8.4lf],\n", recvbufavg[0],recvbufstd[0],recvbufmin[0],recvbufmax[0]);
+       fprintf(tfp, "  \"dump\" : [%8.4lf,%8.4lf,%8.4lf,%8.4lf],\n", recvbufavg[1],recvbufstd[1],recvbufmin[1],recvbufmax[1]);
+       fprintf(tfp, "  \"wait\" : [%8.4lf,%8.4lf,%8.4lf,%8.4lf],\n", recvbufavg[2],recvbufstd[2],recvbufmin[2],recvbufmax[2]);
+       fprintf(tfp, "  \"cdrt\" : [%8.4lf,%8.4lf,%8.4lf,%8.4lf],\n", recvbufavg[3],recvbufstd[3],recvbufmin[3],recvbufmax[3]);
+       for(int i=0; i<5; i++) {
+         fprintf(tfp, "  \"phase%d\": %8.4lf,\n", i, aggregated_phase[i]); }
+       //////////////////////////////////////////
        fprintf(tfp, "  \"name\":\"%s\",\n", execname);
        fprintf(tfp, "  \"input\":%d,\n", opts.nx);
        fprintf(tfp, "  \"nTask\":%d,\n", numRanks);

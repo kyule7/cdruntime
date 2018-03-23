@@ -290,6 +290,7 @@ namespace cd {
 
   extern int myTaskID;
   extern int totalTaskSize;
+  extern int app_input_size;
   extern bool app_side;
   extern bool is_error_free;
 

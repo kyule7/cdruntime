@@ -370,11 +370,11 @@ struct RTInfo {
   {
     exec_cnt_             = sqrt(exec_cnt_             );
     reex_cnt_             = sqrt(reex_cnt_             );
-    prv_copy_             = sqrt(prv_copy_             ); if(std::isnan(prv_copy_)) {prv_copy_ = 0; }
+    prv_copy_             = sqrt(prv_copy_             ); if(std::isnan(prv_copy_))    { prv_copy_ = 0; }
     prv_ref_              = sqrt(prv_ref_              );
     restore_              = sqrt(restore_              );
-    msg_logging_          = sqrt(msg_logging_          ); if(std::isnan(msg_logging_)) {msg_logging_ = 0; }
-    total_time_           = sqrt(total_time_           );
+    msg_logging_          = sqrt(msg_logging_          ); if(std::isnan(msg_logging_)) { msg_logging_ = 0; }
+    total_time_           = sqrt(total_time_           ); if(std::isnan(total_time_))  { total_time_ = 0; }
     reex_time_            = sqrt(reex_time_            );
     sync_time_            = sqrt(sync_time_            );
     prv_elapsed_time_     = sqrt(prv_elapsed_time_     );

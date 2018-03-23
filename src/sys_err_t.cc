@@ -218,15 +218,17 @@ void SystemConfig::ParseParam(char *key)
       config.failure_rate_record_[errortype] = atof(key);
       if(keep_failure_rate_same != NULL)
         num_tasks = atoi(keep_failure_rate_same);
-      if(num_tasks > 0)
-        config.failure_rate_[errortype] = atof(key) / ((num_tasks == 1)? cd::totalTaskSize : num_tasks);
+      if(num_tasks > 1)
+        config.failure_rate_[errortype] = atof(key);
+      else if(num_tasks == 1)
+        config.failure_rate_[errortype] = atof(key) / cd::totalTaskSize;
       else if(num_tasks == 0) {
         config.failure_rate_[errortype] = 0.0;
         is_error_free = true;
       } else {
         ERROR_MESSAGE("Wrong KEEP_TOTAL_FAILURE_RATE_SAME var:%d\n", num_tasks);
       }
-      if(myTaskID == 1) printf("failure rate %ld:%lf, %lf (%lf)\n", errortype, atof(key), config.failure_rate_[errortype], config.failure_rate_record_[errortype]);
+      if(myTaskID == 1) printf("my failure rate %ld:%lf, %lf (%lf)\n", errortype, atof(key), config.failure_rate_[errortype], config.failure_rate_record_[errortype]);
     } else if(prv == 'l') {
       label = key;
       tuned::phaseTree.current_->label_ = label;
