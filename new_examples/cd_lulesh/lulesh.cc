@@ -190,6 +190,12 @@ unsigned long prv_len = 0;
 
 //#define PRINT_ONE(...) 
 #define PRINT_ONE(...) if(myRank == 7) fprintf(stdout, __VA_ARGS__)
+#if _FG_MORE
+  #define FG_MORE_TIMER(...) {__VA_ARGS__}
+#else
+  #define FG_MORE_TIMER(...) 
+#endif
+
 #if _CD
 #include "packer_prof.h"
 CDHandle *cd_main_loop = NULL;
@@ -475,7 +481,8 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
   const Real_t z4 = z[4] ;   const Real_t z5 = z[5] ;
   const Real_t z6 = z[6] ;   const Real_t z7 = z[7] ;
   static unsigned long counter = 0;
-#if _CD
+#if 0
+//#if _CD 
   if(myRank == 0 && 0) {
     bool print_detail = false;
     if(Domain::restarted) { 
@@ -560,7 +567,8 @@ void CalcElemShapeFunctionDerivatives( Real_t const x[],
   /* calculate jacobian determinant (volume) */
   Real_t vol = Real_t(8.) * ( fjxet * cjxet + fjyet * cjyet + fjzet * cjzet);
   *volume = vol;
-#if _CD
+#if 0
+//#if _CD
   if(vol < 0) {
     if(Domain::restarted && myRank == 0) {
         LULESH_PRINT("\n[%d]....restarted......\n", myRank);
@@ -773,19 +781,19 @@ void IntegrateStressForElems( Domain &domain,
     Real_t y_local[8] ;
     Real_t z_local[8] ;
     
-    double now0 = MPI_Wtime();
+    FG_MORE_TIMER(double now0 = MPI_Wtime());
     // get nodal coordinates from global arrays and copy into local arrays.
     CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
-    double now1 = MPI_Wtime();
+    FG_MORE_TIMER(double now1 = MPI_Wtime());
     
     // Volume calculation involves extra work for numerical consistency
     CalcElemShapeFunctionDerivatives(x_local, y_local, z_local,
                                          B, &determ[k]);
-    double now2 = MPI_Wtime();
+    FG_MORE_TIMER(double now2 = MPI_Wtime());
 
     CalcElemNodeNormals( B[0], B[1], B[2],
                          x_local, y_local, z_local );
-    double now3 = MPI_Wtime();
+    FG_MORE_TIMER(double now3 = MPI_Wtime());
 
     if (numthreads > 1) {
        // Eliminate thread writing conflicts at the nodes by giving
@@ -3507,7 +3515,7 @@ int main(int argc, char *argv[])
    gettimeofday(&start, NULL) ;
 #endif
    
-#if _CD
+#if _CD && _CD_ROOT
 #if _CD_INCR_CKPT || _CD_FULL_CKPT
   int intvl[3] = {1, 1, 1}; 
 #else
@@ -3575,7 +3583,7 @@ int main(int argc, char *argv[])
    std::vector<float> local_wait;
    std::vector<float> local_begn;
    std::vector<float> local_cmpl;
-#if _CD_CDRT && _CD
+#if _CD && _CD_CDRT
    std::vector<float> local_dump0;
    std::vector<float> local_dump1;
    std::vector<float> local_dump2;
@@ -3605,7 +3613,7 @@ int main(int argc, char *argv[])
       double ts_loop = MPI_Wtime();
       wait_end = ts_loop - loop_start;
       locDom->CheckUpdate("TimeIncrement");
-#if _CD
+#if _CD && _CD_ROOT
       int cycle = locDom->cycle();
       if(locDom->check_begin(intvl0)) 
       {
@@ -3705,7 +3713,7 @@ int main(int argc, char *argv[])
 
       global_counter++;
       double compl_time_start = MPI_Wtime(); 
-#if _CD 
+#if _CD  && _CD_ROOT
   #if _CD_CDRT
 
     #if _LEAF_LV && _SCR
@@ -3785,7 +3793,7 @@ int main(int argc, char *argv[])
       local_cmpl.push_back((float)cmpl_end);
 
       for(int i=0; i<5; i++) totl_phase[i] += exec_phase[i];
-#if _CD_CDRT && _CD
+#if _CD && _CD_ROOT && _CD_CDRT
       local_dump0.push_back((float)dump_phase[0]);
       local_dump1.push_back((float)dump_phase[1]);
       local_dump2.push_back((float)dump_phase[2]);
@@ -3807,14 +3815,14 @@ int main(int argc, char *argv[])
                 dump_phase[0], dump_phase[1],dump_phase[2], dump_phase[3],dump_phase[4]) ;
       }
       for(int i=0; i<5; i++) { dump_phase[i] = 0; }
-#if _CD
+#if _CD && _CD_ROOT
       cd_update_profile();
 #endif
     //leaf_first = false;
    } // while ends
 
 
-#if _CD
+#if _CD && _CD_ROOT
    if(is_main_loop_complete == false) {
         //main_domain_preserved = false;
   #if _CD_CDRT && _CD_CHILD
@@ -3861,7 +3869,7 @@ int main(int argc, char *argv[])
    elapsed_timeG = elapsed_time;
 #endif
 
-#if _CD    
+#if _CD  && _CD_ROOT   
    char *execname = exec_name; 
    char *fname_last = start_date;
 #else
@@ -3876,7 +3884,7 @@ int main(int argc, char *argv[])
    double cd_loc = (begn_time + cmpl_time) / global_counter;
    double aggregated_phase[5] = {0, 0, 0, 0, 0};
    for(int i=0; i<5; i++) { totl_phase[i] /= global_counter; }
-#if _CD    
+#if _CD && _CD_ROOT    
    const unsigned prof_elems = 13;
    double sendbuf[prof_elems] = { lt_loc, dt_loc, wt_loc, cd_loc, 
                          packer::time_copy.GetBW(), 
@@ -4097,7 +4105,7 @@ int main(int argc, char *argv[])
    float *total_begn = NULL;
    float *total_cmpl = NULL;
 
-#if _CD_CDRT && _CD
+#if _CD && _CD_CDRT
    float *total_dump0 = NULL;
    float *total_dump1 = NULL;
    float *total_dump2 = NULL;
@@ -4122,7 +4130,7 @@ int main(int argc, char *argv[])
      total_begn = (float *)malloc(tot_elems * sizeof(float));
      total_cmpl = (float *)malloc(tot_elems * sizeof(float));
 
-#if _CD_CDRT && _CD
+#if _CD && _CD_CDRT
      total_dump0 = (float *)malloc(tot_elems * sizeof(float));
      total_dump1 = (float *)malloc(tot_elems * sizeof(float));
      total_dump2 = (float *)malloc(tot_elems * sizeof(float));
@@ -4136,7 +4144,7 @@ int main(int argc, char *argv[])
    MPI_Gather(local_begn.data(), global_counter, MPI_FLOAT, total_begn, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
    MPI_Gather(local_cmpl.data(), global_counter, MPI_FLOAT, total_cmpl, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-#if _CD_CDRT && _CD
+#if _CD && _CD_CDRT
    MPI_Gather(local_dump0.data(), global_counter, MPI_FLOAT, total_dump0, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
    MPI_Gather(local_dump1.data(), global_counter, MPI_FLOAT, total_dump1, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
    MPI_Gather(local_dump2.data(), global_counter, MPI_FLOAT, total_dump2, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
@@ -4158,7 +4166,7 @@ int main(int argc, char *argv[])
        fprintf(tfp, "  \"prof\": {\n");
        fprintf(tfp, "    \"loop\": [%f", total_loop[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_loop[i]); } fprintf(tfp, "],\n");
        fprintf(tfp, "    \"dump\": [%f", total_dump[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump[i]); } fprintf(tfp, "],\n");
-#if _CD_CDRT && _CD
+#if _CD && _CD_CDRT
        fprintf(tfp, "    \"dump0\": [%f", total_dump0[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump0[i]); } fprintf(tfp, "],\n");
        fprintf(tfp, "    \"dump1\": [%f", total_dump1[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump1[i]); } fprintf(tfp, "],\n");
        fprintf(tfp, "    \"dump2\": [%f", total_dump2[0]); for(int i=1; i<tot_elems; i++) { fprintf(tfp, ",%f", total_dump2[i]); } fprintf(tfp, "],\n");
@@ -4175,7 +4183,7 @@ int main(int argc, char *argv[])
        free(total_begn);
        free(total_cmpl);
   
-#if _CD_CDRT && _CD
+#if _CD && _CD_CDRT
        free(total_dump0);
        free(total_dump1);
        free(total_dump2);
@@ -4203,7 +4211,7 @@ int main(int argc, char *argv[])
    if(myRank == 0) {
      printf("Loop time:%lf, Dump time:%lf\n", loop_time/global_counter, dump_time/global_counter);
    }
-#if _CD
+#if _CD && _CD_ROOT
   root_cd->Complete();
   CD_Finalize();
 #endif
