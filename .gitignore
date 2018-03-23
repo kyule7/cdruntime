@@ -1,0 +1,10 @@
+*.o
+*.lo
+*.m4
+*.cache
+*.log
+.*.swp
+*.so
+*.pyc
+Makefile.in
+
