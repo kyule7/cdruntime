@@ -177,7 +177,7 @@ void PhaseNode::PrintOutputJson(void)
   fprintf(outJSON, "  \"mailbox overhead\": %lf,\n", CD_CLK_MEA(cd::mailbox_elapsed_time)); 
 #endif
 
-  fprintf(outJSON, "  \"global_param\" : {\n"
+  fprintf(outJSON, "  \"global param\" : {\n"
                    "    \"max_error\" : 20\n"
                    "  },\n"
                    "  \"CD info\" : {\n");
@@ -212,9 +212,13 @@ void PhaseNode::PrintOutputJsonInternal(void)
 //  // comm_log and error_ven, which are also printed in profile.out.
 //  // TODO: let's change to be in B/ MB/ GB
 //  fprintf(outYAML, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
-//  fprintf(outYAML, "%s\"ChildCDs\" : {\n", two_more_indent.c_str());
+//  fprintf(outYAML, "%s\"child CDs\" : {\n", two_more_indent.c_str());
 //=======
-  fprintf(outJSON, "%s\"CD_%u_%u\" : {\n",      one_more_indent.c_str(), level_, phase_);
+  if(level_ > 0) {
+    fprintf(outJSON, "%s\"CD_%u_%u\" : {\n",      one_more_indent.c_str(), level_, phase_);
+  } else if(level_ == 0) {
+    fprintf(outJSON, "%s\"root CD\" : {\n",      one_more_indent.c_str());
+  } 
   fprintf(outJSON, "%s\"label\"    : \"%s\",\n",    two_more_indent.c_str(), label_.c_str());
   if(children_.empty()) {
     fprintf(outJSON, "%s\"type\"   : \"leaf\",\n", two_more_indent.c_str());
@@ -227,6 +231,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
   double child_total_exec_time = 0.0;
   if(!children_.empty()) {
     auto it=children_.begin();
+    fprintf(outJSON, "%s\"child siblings\"  : %u,\n", two_more_indent.c_str(), (*it)->sibling_size_);
     for(; it!=children_.end(); ++it) {
       fprintf(outJSON, "%s\"iter begin\"    : %lu,\n", two_more_indent.c_str(), (*it)->seq_begin_);
       fprintf(outJSON, "%s\"iter end\"      : %lu,\n", two_more_indent.c_str(), (*it)->seq_end_);
@@ -299,7 +304,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
   fprintf(outJSON, "%s", oss.str().c_str());
   //fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
   if(children_.size() > 0) {
-    fprintf(outJSON, ",\n%s\"ChildCDs\" : {\n", two_more_indent.c_str());
+    fprintf(outJSON, ",\n%s\"child CDs\" : {\n", two_more_indent.c_str());
   } else {
     fprintf(outJSON, "\n");
   }
