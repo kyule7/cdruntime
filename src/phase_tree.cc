@@ -222,7 +222,8 @@ void PhaseNode::PrintOutputJsonInternal(void)
   fprintf(outJSON, "%s\"label\"    : \"%s\",\n",    two_more_indent.c_str(), label_.c_str());
   if(children_.empty()) {
     fprintf(outJSON, "%s\"type\"   : \"leaf\",\n", two_more_indent.c_str());
-  } else if(left_ == NULL && right_ == NULL) {
+  //} else if(left_ == NULL && right_ == NULL) { 
+  } else if(children_.size() == 1) { // hmcd for child level
     fprintf(outJSON, "%s\"type\"   : \"hmcd\",\n", two_more_indent.c_str());
   } else {
     fprintf(outJSON, "%s\"type\"   : \"htcd\",\n", two_more_indent.c_str());
