@@ -3615,14 +3615,16 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
     //printf("[%d] Trying to test %p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
     PRINT_BOTH("[%d] Invalidate ptr:%p (#:%zu) Probe...", myTaskID, it->flag_, incomplete_log_.size());
     MPI_Status status;
-    int is_probed = -1;
-    MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
-    if(is_probed < 1) 
+//    int is_probed = -1;
+//    MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
+    //if(is_probed < 1) 
+    if(0)
     {
       int done = -1;
       PRINT_BOTH("Failed...Test...");
-      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
+//      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
       if(done) 
+      if(0)
       {
         PRINT_BOTH("SUCCESS\n");
         it = incomplete_log_.erase(it);
