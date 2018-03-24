@@ -5,10 +5,10 @@ SHELL = /bin/sh
 
 CDPATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../..
 CD_ENABLED = 1
-LULESH_EXEC = lulesh_nocd
+#LULESH_EXEC = lulesh_nocd
 #LULESH_EXEC = lulesh_bare
 #LULESH_EXEC = lulesh_noprv
-#LULESH_EXEC = lulesh_fgcd
+LULESH_EXEC = lulesh_fgcd
 #LULESH_EXEC = lulesh_scr
 #LULESH_EXEC = lulesh_lv2
 #LULESH_EXEC = lulesh_cdrt
@@ -16,21 +16,21 @@ LULESH_EXEC = lulesh_nocd
 #LULESH_EXEC = lulesh_incr
 #LULESH_EXEC = lulesh_full
 ifeq (${CD_ENABLED}, 1)
-CD_CDRT = 0
+CD_CDRT = 1
 CD_INCR_CKPT = 0
 CD_FULL_CKPT = 0
 
 CD_OPS = -D_CD_CDRT=${CD_CDRT} \
 				 -D_CD_INCR_CKPT=${CD_INCR_CKPT} \
 				 -D_CD_FULL_CKPT=${CD_FULL_CKPT} \
-				 -D_CD_ROOT=0 \
-				 -D_CD_CHILD=0 \
-				 -D_LEAF_LV=0 \
-  			 -D_POS_VEL_ACC=0 \
-  			 -D_LAGRANGE_ELEM=0 \
-  			 -D_CALC_FOR_ELEM=0 \
-  			 -D_MATERIAL_PROP=0 \
-				 -D_SCR=0 \
+				 -D_CD_ROOT=1 \
+				 -D_CD_CHILD=1 \
+				 -D_LEAF_LV=1 \
+  			 -D_POS_VEL_ACC=1 \
+  			 -D_LAGRANGE_ELEM=1 \
+  			 -D_CALC_FOR_ELEM=1 \
+  			 -D_MATERIAL_PROP=1 \
+				 -D_SCR=1 \
 				 -D_CD_DUMMY=0 \
 				 -D_FGCD=0
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 ${CD_OPS} 
