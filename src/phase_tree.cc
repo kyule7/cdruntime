@@ -270,8 +270,9 @@ void PhaseNode::PrintOutputJsonInternal(void)
   failure_rate /= sibling_size_;
   double prv_bw = GetPrvBW();
   double vol_in  = profile_.GetPrvVolume(true);
+  double vol_in_check  = profile_.GetPrvVolume(true, true);
   double vol_out = profile_.GetPrvVolume(false);
-  fprintf(outJSON, "%s\"input volume\" : %lf, // (avg:%lf)\n", two_more_indent.c_str(), vol_in, vol_in/profile_.exec_cnt_);
+  fprintf(outJSON, "%s\"input volume\" : %lf, // (avg:%lf, %lf)\n", two_more_indent.c_str(), vol_in, vol_in/profile_.exec_cnt_, vol_in_check);
   fprintf(outJSON, "%s\"output volume\": %lf, // (avg:%lf)\n", two_more_indent.c_str(), vol_out, vol_out/profile_.exec_cnt_);
   fprintf(outJSON, "%s\"rd_bw\"        : %lf, // check : %lf\n",    two_more_indent.c_str(), prv_bw, vol_in/(cdrt_overhead + preserve_time));
   fprintf(outJSON, "%s\"wr_bw\"        : %lf,\n",    two_more_indent.c_str(), prv_bw);

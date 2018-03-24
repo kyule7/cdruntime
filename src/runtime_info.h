@@ -349,7 +349,7 @@ struct RuntimeInfo : public CDOverhead {
     advance_elapsed_time_ = rt_info.advance_elapsed_time_;
   }
 
-  double GetPrvVolume(bool is_input=true);
+  double GetPrvVolume(bool is_input=true, bool is_avg=false);
 
   inline void RecordData(const std::string &entry_str, uint64_t len, uint32_t type, bool is_reexec)
   {
