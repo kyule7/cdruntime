@@ -293,6 +293,7 @@ namespace cd {
   extern int app_input_size;
   extern bool app_side;
   extern bool is_error_free;
+  extern bool is_koutput_disabled;
 
   enum {
     TOTAL_PRF=0,
