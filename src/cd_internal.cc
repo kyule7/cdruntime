@@ -3623,7 +3623,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
       int done = -1;
       PRINT_BOTH("Failed...Test...");
 //      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
-      if(done) 
+//      if(done) 
       if(0)
       {
         PRINT_BOTH("SUCCESS\n");
