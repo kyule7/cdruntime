@@ -178,7 +178,7 @@ void PhaseNode::PrintOutputJson(void)
 #endif
 
   fprintf(outJSON, "  \"global param\" : {\n"
-                   "    \"max_error\" : 20\n"
+                   "    \"max error\" : 20\n"
                    "  },\n"
                    "  \"CD info\" : {\n");
   PrintOutputJsonInternal();
@@ -267,7 +267,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
     errtype &= ~err_vec; // unset err_vec in errtype
     err_mask <<= 1;
   }
-
+  failure_rate /= sibling_size_;
   double prv_bw = GetPrvBW();
   double vol_in  = profile_.GetPrvVolume(true);
   double vol_out = profile_.GetPrvVolume(false);
