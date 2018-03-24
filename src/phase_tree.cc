@@ -236,7 +236,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
     for(; it!=children_.end(); ++it) {
       fprintf(outJSON, "%s\"iter begin\"    : %lu,\n", two_more_indent.c_str(), (*it)->seq_begin_);
       fprintf(outJSON, "%s\"iter end\"      : %lu,\n", two_more_indent.c_str(), (*it)->seq_end_);
-      fprintf(outJSON, "%s\"iterations\"    : %lu, // childs'\n", two_more_indent.c_str(), (*it)->seq_end_ - (*it)->seq_begin_);
+      fprintf(outJSON, "%s\"iterations\"    : %u, // childs'\n", two_more_indent.c_str(), (*it)->profile_.exec_cnt_);
       break;
       // TODO: for now, iteration for heterogeneous CDs does not work.
     }
