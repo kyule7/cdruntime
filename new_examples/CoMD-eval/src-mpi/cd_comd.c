@@ -217,6 +217,11 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
   // Total number of atoms to be preserved
   uint32_t szPreservedAtoms = 0;
 
+  //---------------------------------------------------------------------------
+  // FIXME: if nTotalBoxes is given, better to preserve "Local" and "Halo" 
+  //        separately so that the other preserveAtoms with "_Local" can find
+  //        the preserved data properly.
+  //---------------------------------------------------------------------------
   // All allocated atoms are to be preserved.
   if (to == -1) {
     assert(from == 0);
@@ -274,7 +279,13 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms, int nTotalBoxes,
     // FIXME :Let's preserve all the pointers regardless of what needed actually 
     // since it's not super expensive.
     // FIXME: then skip to manually preserve each pointer below
-    cd_preserve(cdh, atoms, atoms_size, knob, "Atoms", "Atoms");
+    char tmp_atoms[256] = "-1";     // FIXME: it this always enough?
+    if (idx == NULL) {
+      sprintf(tmp_atoms, "Atoms");
+    } else {
+      sprintf(tmp_atoms, "Atoms%s", idx);
+    }
+    cd_preserve(cdh, atoms, atoms_size, knob, tmp_atoms, tmp_atoms);
     if (is_gid == 1) {
       // Be careful not to preserve twice
       assert(is_all != 1);

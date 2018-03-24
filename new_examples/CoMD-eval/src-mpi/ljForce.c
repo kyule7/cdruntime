@@ -221,6 +221,7 @@ int ljForce(SimFlat *s) {
                          -1, // to
                           0,
                           NULL);
+                          //"_Local");
 #ifdef DO_PRV
         // Preserve: loop index (iBox)
         //cd_preserve(lv4_cd, &iBox, sizeof(int), kCopy, tmp_iBox_idx,
@@ -259,6 +260,7 @@ int ljForce(SimFlat *s) {
                           -1, // to
                           0,
                           NULL);
+                          //"_Local");
         // TODO: then preserve atoms-U and atoms->F in jBox (neighboring box)
       } // CD4_INTERVAL
     }
@@ -430,7 +432,8 @@ int ljForce(SimFlat *s) {
                           // 0,  // from
                           //-1, // to
                           0,
-                          idx_force); // is_print
+                          NULL); // is_print
+                          //"_Local"); // is_print
 #endif
         is_lv4_completed = 1;
         //if(getMyRank() == 0) printf("LV4:Complete:%d\n", iBox);

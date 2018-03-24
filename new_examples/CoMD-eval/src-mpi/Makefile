@@ -21,14 +21,17 @@ CC = mpicc
 CFLAGS = -std=gnu11
 #CFLAGS = -std=c11
 #CD_ROOT=/home1/03341/kyushick/Work/CDs/pfsFix
-CD_ROOT=../../../
+#CD_ROOT=../../../
+CD_ROOT=/work/03710/ykwon/stampede2/SPRING18/cdresilience
 ifeq (${CD_ENABLED}, 1)
 CD_FLAGS := 
 # ROOTCD : CoMD.c
 # CD1 : timestep.c 
 # CD2 : ljForce.c
 
-CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT -D_CD3=1 -D_CD4=1 -DDO_PRV
+CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD3=1 -D_CD4=1
 
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV -DDO_OUTPUT
