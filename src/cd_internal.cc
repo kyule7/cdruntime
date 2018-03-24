@@ -2340,7 +2340,9 @@ CDErrT CD::Preserve(void *data,
 
   if( CHECK_PRV_TYPE(preserve_mask, kOutput) ) { 
 
-    if(cd_exec_mode_  == kExecution ) {    
+    if(is_koutput_disabled) {
+      // do nothing
+    } else if(cd_exec_mode_  == kExecution ) {    
       switch( InternalPreserve(data, len_in_bytes, preserve_mask, 
                                my_name, ref_name, ref_offset, 
                                regen_object, data_usage) ) {

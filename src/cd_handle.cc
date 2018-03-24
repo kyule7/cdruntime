@@ -92,6 +92,7 @@ char *exec_details = NULL;
 char *exec_iterations = NULL;
 int cd::app_input_size = 0;
 
+bool cd::is_koutput_disabled = false;
 bool cd::is_error_free = false;
 bool cd::runtime_initialized = false;
 bool cd::orig_app_side = true;
@@ -533,6 +534,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 //    cd::output_basepath = CD_DEFAULT_OUTPUT_BASE;
 //  }
 //  printf("\n@@ Check %d\n", CD_TUNING_ENABLED);
+  char *disable_koutput  = getenv("CD_KOUTPUT_DISABLED");
+  is_koutput_disabled = (disable_koutput != NULL)? true : false;
   exec_details    = getenv("CD_EXEC_DETAILS");
   exec_iterations = getenv("CD_EXEC_ITERS");
   app_input_size  = (exec_iterations!=NULL)? atoi(exec_iterations) : 0;
