@@ -272,23 +272,23 @@ void PhaseNode::PrintOutputJsonInternal(void)
   double vol_in  = profile_.GetPrvVolume(true);
   double vol_in_check  = profile_.GetPrvVolume(true, true);
   double vol_out = profile_.GetPrvVolume(false);
-  fprintf(outJSON, "%s\"input volume\" : %lf, // (avg:%lf, %lf)\n", two_more_indent.c_str(), vol_in, vol_in/profile_.exec_cnt_, vol_in_check);
-  fprintf(outJSON, "%s\"output volume\": %lf, // (avg:%lf)\n", two_more_indent.c_str(), vol_out, vol_out/profile_.exec_cnt_);
-  fprintf(outJSON, "%s\"rd_bw\"        : %lf, // check : %lf\n",    two_more_indent.c_str(), prv_bw, vol_in/(cdrt_overhead + preserve_time));
-  fprintf(outJSON, "%s\"wr_bw\"        : %lf,\n",    two_more_indent.c_str(), prv_bw);
+  fprintf(outJSON, "%s\"input volume\" : %le, // (avg:%lf, %lf)\n", two_more_indent.c_str(), vol_in, vol_in/profile_.exec_cnt_, vol_in_check);
+  fprintf(outJSON, "%s\"output volume\": %le, // (avg:%lf)\n", two_more_indent.c_str(), vol_out, vol_out/profile_.exec_cnt_);
+  fprintf(outJSON, "%s\"rd_bw\"        : %le, // check : %lf\n",    two_more_indent.c_str(), prv_bw, vol_in/(cdrt_overhead + preserve_time));
+  fprintf(outJSON, "%s\"wr_bw\"        : %le,\n",    two_more_indent.c_str(), prv_bw);
   if(medium_ == kGlobalDisk) {
     // We will generate this file during error-free run, there will be
     // no profiled read bandwidth. For now, just use write bandwidth for read
     // bandwidth to pass it to tuner.
     //fprintf(outJSON, "%s\"rd_bw\"    : \"%f\",\n",    two_more_indent.c_str(), packer::time_mpiio_read.bw_avg);
-    fprintf(outJSON, "%s\"rd_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_mpiio_write.bw_avg * 1000000);
-    fprintf(outJSON, "%s\"wr_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_mpiio_write.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"rd_bw_mea\"    : %le,\n",    two_more_indent.c_str(), packer::time_mpiio_write.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"wr_bw_mea\"    : %le,\n",    two_more_indent.c_str(), packer::time_mpiio_write.bw_avg * 1000000);
   } else if(medium_ == kLocalDisk) {
-    fprintf(outJSON, "%s\"rd_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_posix_write.bw_avg * 1000000);
-    fprintf(outJSON, "%s\"wr_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_posix_write.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"rd_bw_mea\"    : %le,\n",    two_more_indent.c_str(), packer::time_posix_write.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"wr_bw_mea\"    : %le,\n",    two_more_indent.c_str(), packer::time_posix_write.bw_avg * 1000000);
   } else if(medium_ == kLocalMemory) {
-    fprintf(outJSON, "%s\"rd_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_copy.bw_avg * 1000000);
-    fprintf(outJSON, "%s\"wr_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_copy.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"rd_bw_mea\"    : %le,\n",    two_more_indent.c_str(), packer::time_copy.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"wr_bw_mea\"    : %le,\n",    two_more_indent.c_str(), packer::time_copy.bw_avg * 1000000);
   } else {
     assert(0);
   }
