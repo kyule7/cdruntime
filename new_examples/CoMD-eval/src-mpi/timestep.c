@@ -340,13 +340,14 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 
     // Why do I need lv3_cd here? In order to create parallel children?
     cd_handle_t *lv3_cd =
+#if _CD3_NO_SPLIT
+        cd_create(getcurrentcd(), 1 /*getNRanks(),*/, "computeForce_split",
+#else
         cd_create(getcurrentcd(), /*1,*/ getNRanks(), "computeForce_split",
+#endif
                   kStrict | kLocalMemory, 0xC);
     // FIXME: this can be either LJ potential or EAM potential
     cd_begin(lv3_cd, "computeForce_split");
-    // FIXME: This is not correct implementation. In level 4 CD, it has finer
-    //       grained than level 3 and the ref names should match with level 4
-    //       Begin/Complete interval
     // Okay to reuse the same index. actually should
     int computeForce_pre_lv3_size =
         preserveAtoms(lv3_cd, kRef, s->atoms, s->boxes->nLocalBoxes,

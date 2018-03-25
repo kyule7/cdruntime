@@ -412,28 +412,30 @@ int ljForce(SimFlat *s) {
 #if DO_OUTPUT
         // FIXME: Is this required to preserve via output at the end of every
         // iteration?
+        // FIXME: This is no longer required since this CD is too fine to take
+        //        advantage of dummy CD.
         //        What if we delay to preserve via output after all iterations?
-        char idx_force[256] = "-1"; // FIXME: it this always enough?
-        sprintf(idx_force, "_iBox_%d", iBox);
-        // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation
-        // after debugging
-
-        int computeForce_pre_out_lv4_size =
-            preserveAtoms(lv4_cd, kOutput, s->atoms, s->boxes->nLocalBoxes,
-                          0,    // is_all
-                          0,    // is_gid
-                          0,    // is_r
-                          0,    // is_p
-                          1,    // is_f
-                          1,    // is_U
-                          0,    // is_iSpecies
-                          iBox, // from (index for boxes to be preserved)
-                          iBox + CD4_INTERVAL, // to
-                          // 0,  // from
-                          //-1, // to
-                          0,
-                          NULL); // is_print
-                          //"_Local"); // is_print
+//        char idx_force[256] = "-1"; // FIXME: it this always enough?
+//        sprintf(idx_force, "_iBox_%d", iBox);
+//        // FIXME: either kCopy -> kRef or remove Level 2 and 3 preservation
+//        // after debugging
+//
+//        int computeForce_pre_out_lv4_size =
+//            preserveAtoms(lv4_cd, kOutput, s->atoms, s->boxes->nLocalBoxes,
+//                          0,    // is_all
+//                          0,    // is_gid
+//                          0,    // is_r
+//                          0,    // is_p
+//                          1,    // is_f
+//                          1,    // is_U
+//                          0,    // is_iSpecies
+//                          iBox, // from (index for boxes to be preserved)
+//                          iBox + CD4_INTERVAL, // to
+//                          // 0,  // from
+//                          //-1, // to
+//                          0,
+//                          NULL); // is_print
+//                          //"_Local"); // is_print
 #endif
         is_lv4_completed = 1;
         //if(getMyRank() == 0) printf("LV4:Complete:%d\n", iBox);
