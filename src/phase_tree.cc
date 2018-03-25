@@ -585,7 +585,7 @@ void PhaseNode::GatherStats(void)
       float *cdrt_trace    = new float[total_cnt];
       float *maxprsv_trace = new float[local_cnt];
 #endif
-//      printf("[%s %s %u] total:%lu, gathered:%zu\n", __func__, label_.c_str(), level_, total_cnt, local_cnt);
+      printf("[%s %s %u] total:%lu, gathered:%zu, max_prsv size:%zu\n", __func__, label_.c_str(), level_, total_cnt, local_cnt, profile_.max_prsv_.size());
 #if 1          
       PMPI_Gather(exec_trace.data()         , local_cnt, MPI_FLOAT, 
                  profile_.exec_trace_.data(), local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
