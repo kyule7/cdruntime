@@ -236,7 +236,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
     for(; it!=children_.end(); ++it) {
       fprintf(outJSON, "%s\"iter begin\"    : %lu,\n", two_more_indent.c_str(), (*it)->seq_begin_);
       fprintf(outJSON, "%s\"iter end\"      : %lu,\n", two_more_indent.c_str(), (*it)->seq_end_);
-      fprintf(outJSON, "%s\"counts\"        : %u, // # execs\n", two_more_indent.c_str(), (*it)->profile_.exec_cnt_);
+      fprintf(outJSON, "%s\"child counts\"  : %u, // # execs\n", two_more_indent.c_str(), (*it)->profile_.exec_cnt_);
       fprintf(outJSON, "%s\"iterations\"    : %lu, // childs'\n", two_more_indent.c_str(), (*it)->seq_max_);
       break;
       // TODO: for now, iteration for heterogeneous CDs does not work.
@@ -246,6 +246,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
     //  printf("child time:%lf\n", (*it)->profile_.total_time_);
     }
   } 
+  fprintf(outJSON, "%s\"current counts\"        : %u, // # execs\n", two_more_indent.c_str(), profile_.exec_cnt_);
   //execution_time -= child_total_exec_time;
   fprintf(outJSON, "%s\"execution time\": %lf, // accumulated:%lf time - childs' time %lf - %lf\n", two_more_indent.c_str(), 
       (execution_time - child_total_exec_time)/profile_.exec_cnt_, 

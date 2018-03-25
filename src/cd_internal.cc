@@ -1185,6 +1185,9 @@ CDErrT CD::Begin(const char *label, bool collective)
 }
 
 // static
+// https://software.intel.com/en-us/mpi-developer-reference-linux-asynchronous-progress-control
+// https://software.intel.com/en-us/mpi-developer-guide-windows-prerequisite-steps
+// https://software.intel.com/en-us/forums/intel-clusters-and-hpc-technology/topic/557206
 uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 {
 #if CD_MPI_ENABLED
@@ -1200,13 +1203,14 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
   if(cd_lv_to_sync->task_size() > 1) {
     cd_lv_to_sync->CheckMailBox();
     CD_DEBUG("[%s] fence in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
-#if CD_PROFILER_ENABLED 
+  #if CD_PROFILER_ENABLED 
     CD_CLOCK_T begin_here = CD_CLOCK();
-#endif
+  #endif
     MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
-#if CD_PROFILER_ENABLED
+    //MPI_Win_flush_local_all(cd_lv_to_sync->mailbox_);
+  #if CD_PROFILER_ENABLED
     sync_time += CD_CLOCK() - begin_here;
-#endif
+  #endif
     cd_lv_to_sync->CheckMailBox();
 
     new_rollback_point = cd_lv_to_sync->CheckRollbackPoint(false);
@@ -1223,13 +1227,13 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
   } else {
     CD_DEBUG("[%s] No fence\n", __func__);
   }
-#else
+#else // BUGFIX_0327
   if(cd_lv_to_sync->task_size() > 1) {
 
     cd_lv_to_sync->CheckMailBox();
 
     CD_DEBUG("[%s] fence 1 in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
-#if CD_PROFILER_ENABLED
+  #if CD_PROFILER_ENABLED
     CD_CLOCK_T begin_here = CD_CLOCK();
     MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
     sync_time += CD_CLOCK() - begin_here;
@@ -1240,13 +1244,13 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
     begin_here = CD_CLOCK();
     MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
     sync_time += CD_CLOCK() - begin_here;
-#else
+  #else
     MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
     cd_lv_to_sync->CheckMailBox();
 
     CD_DEBUG("[%s] fence 2 in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
     MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
-#endif    
+  #endif    
     if(cd_lv_to_sync->IsHead() == false) {
       cd_lv_to_sync->CheckMailBox();
     }
@@ -3619,14 +3623,14 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
     MPI_Status status;
 //    int is_probed = -1;
 //    MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
-    //if(is_probed < 1) 
-    if(0)
+//    if(is_probed < 1) 
+    if(1)
     {
       int done = -1;
       PRINT_BOTH("Failed...Test...");
-//      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
-//      if(done) 
-      if(0)
+      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
+      if(done) 
+//      if(0)
       {
         PRINT_BOTH("SUCCESS\n");
         it = incomplete_log_.erase(it);

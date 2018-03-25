@@ -950,12 +950,16 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
                   event2str(event).c_str(), level(), GetCDName().GetString().c_str());
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Accumulate event at %d\n", global_task_id);
 
+#if 0 // FIXME
+        printf("global_task_id:%d, task_id:%d, myid:%d\n", global_task_id, task_id, myTaskID); fflush(stdout);
         PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_task_id, 0, pendingWindow_);
+//        PMPI_Win_flush(global_task_id, pendingWindow_);
         PMPI_Accumulate(&val, 1, MPI_INT, 
                        global_task_id, 0, 1, MPI_INT, 
                        MPI_SUM, pendingWindow_);
+//        PMPI_Win_flush(global_task_id, pendingWindow_);
         PMPI_Win_unlock(global_task_id, pendingWindow_);
-
+#endif
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "PMPI_Accumulate done for task #%d\n", global_task_id);
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Finished to increment the pending counter at task #%d\n", task_id);
     
