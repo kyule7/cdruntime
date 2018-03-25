@@ -146,7 +146,7 @@ void PhaseNode::PrintOutputJson(void)
   sprintf(output_filepath, "%s/%s.%s.%s.%d.%s.%s.json", output_basepath, CD_DEFAULT_CONFIG_JSON, 
       exec_name, (exec_details!=NULL)? exec_details : "NoInput", 
       cd::totalTaskSize, ftype_name, start_date);
-  printf("%s Output File:%s\n", __func__, output_filepath);
+  printf("%s Output File: %s\n", __func__, output_filepath);
   outJSON = fopen(output_filepath, "a");
   
   fprintf(outJSON, "{\n"
@@ -219,24 +219,25 @@ void PhaseNode::PrintOutputJsonInternal(void)
   } else if(level_ == 0) {
     fprintf(outJSON, "%s\"root CD\" : {\n",      one_more_indent.c_str());
   } 
-  fprintf(outJSON, "%s\"label\"    : \"%s\",\n",    two_more_indent.c_str(), label_.c_str());
+  fprintf(outJSON,   "%s\"label\"         : \"%s\",\n",    two_more_indent.c_str(), label_.c_str());
   if(children_.empty()) {
-    fprintf(outJSON, "%s\"type\"   : \"leaf\",\n", two_more_indent.c_str());
+    fprintf(outJSON, "%s\"type\"          : \"leaf\",\n", two_more_indent.c_str());
   //} else if(left_ == NULL && right_ == NULL) { 
   } else if(children_.size() == 1) { // hmcd for child level
-    fprintf(outJSON, "%s\"type\"   : \"hmcd\",\n", two_more_indent.c_str());
+    fprintf(outJSON, "%s\"type\"          : \"hmcd\",\n", two_more_indent.c_str());
   } else {
-    fprintf(outJSON, "%s\"type\"   : \"htcd\",\n", two_more_indent.c_str());
+    fprintf(outJSON, "%s\"type\"          : \"htcd\",\n", two_more_indent.c_str());
   }
   double execution_time = profile_.total_time_;
   double child_total_exec_time = 0.0;
   if(!children_.empty()) {
     auto it=children_.begin();
-    fprintf(outJSON, "%s\"child siblings\"  : %u,\n", two_more_indent.c_str(), (*it)->sibling_size_);
+    fprintf(outJSON, "%s\"child siblings\": %u,\n", two_more_indent.c_str(), (*it)->sibling_size_);
     for(; it!=children_.end(); ++it) {
       fprintf(outJSON, "%s\"iter begin\"    : %lu,\n", two_more_indent.c_str(), (*it)->seq_begin_);
       fprintf(outJSON, "%s\"iter end\"      : %lu,\n", two_more_indent.c_str(), (*it)->seq_end_);
-      fprintf(outJSON, "%s\"iterations\"    : %u, // childs'\n", two_more_indent.c_str(), (*it)->profile_.exec_cnt_);
+      fprintf(outJSON, "%s\"counts\"        : %u, // # execs\n", two_more_indent.c_str(), (*it)->profile_.exec_cnt_);
+      fprintf(outJSON, "%s\"iterations\"    : %lu, // childs'\n", two_more_indent.c_str(), (*it)->seq_max_);
       break;
       // TODO: for now, iteration for heterogeneous CDs does not work.
     }
@@ -246,13 +247,16 @@ void PhaseNode::PrintOutputJsonInternal(void)
     }
   } 
   //execution_time -= child_total_exec_time;
-  fprintf(outJSON, "%s\"execution time\"   : %lf, // accumulated:%lf time - childs' time %lf - %lf\n", two_more_indent.c_str(), 
+  fprintf(outJSON, "%s\"execution time\": %lf, // accumulated:%lf time - childs' time %lf - %lf\n", two_more_indent.c_str(), 
       (execution_time - child_total_exec_time)/profile_.exec_cnt_, 
       execution_time-child_total_exec_time, execution_time, child_total_exec_time);
   double cdrt_overhead = GetRuntimeOverhead();
-  fprintf(outJSON, "%s\"runtime overhead\" : %lf, // accumulated:%lf\n",  two_more_indent.c_str(), cdrt_overhead/profile_.exec_cnt_, cdrt_overhead);
+  double cdrt_ovhd_per_cd = cdrt_overhead/profile_.exec_cnt_;
+  fprintf(outJSON, "%s\"CDrt overhead\" : %lf, // accumulated:%lf\n",  two_more_indent.c_str(), cdrt_ovhd_per_cd, cdrt_overhead);
   double preserve_time = profile_.GetPreserveTime();
-  fprintf(outJSON, "%s\"preserve time\"    : %lf, // accumulated:%lf w/ dev, %lf w/o dev\n",  two_more_indent.c_str(), preserve_time/profile_.exec_cnt_, preserve_time, profile_.prv_elapsed_time_);
+  double preserve_time_per_cd = preserve_time /profile_.exec_cnt_;
+  double loc_preserve_time_per_cd = profile_.prv_elapsed_time_ / profile_.exec_cnt_;
+  fprintf(outJSON, "%s\"preserve time\" : %lf, // accumulated:%lf w/ dev, %lf w/o dev, cnt:%u\n",  two_more_indent.c_str(), preserve_time_per_cd, preserve_time, profile_.prv_elapsed_time_, profile_.exec_cnt_);
   uint64_t errtype = errortype_;
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     errtype = errtype & ~((*it)->errortype_);
@@ -268,41 +272,49 @@ void PhaseNode::PrintOutputJsonInternal(void)
     err_mask <<= 1;
   }
   failure_rate /= sibling_size_;
-  double prv_bw = GetPrvBW();
-  double vol_in  = profile_.GetPrvVolume(true);
+  double prv_bw_chk = GetPrvBW();
+  double vol_in  = profile_.GetPrvVolume(true, false);
+  double vol_in_check  = profile_.GetPrvVolume(true, true);
+  double vol_out_check  = profile_.GetPrvVolume(false, true);
   double vol_out = profile_.GetPrvVolume(false);
-  fprintf(outJSON, "%s\"input volume\" : %lf, // (avg:%lf)\n", two_more_indent.c_str(), vol_in, vol_in/profile_.exec_cnt_);
-  fprintf(outJSON, "%s\"output volume\": %lf, // (avg:%lf)\n", two_more_indent.c_str(), vol_out, vol_out/profile_.exec_cnt_);
-  fprintf(outJSON, "%s\"rd_bw\"        : %lf, // check : %lf\n",    two_more_indent.c_str(), prv_bw, vol_in/(cdrt_overhead + preserve_time));
-  fprintf(outJSON, "%s\"wr_bw\"        : %lf,\n",    two_more_indent.c_str(), prv_bw);
+  double prv_bw = vol_in_check / (cdrt_ovhd_per_cd + preserve_time_per_cd);
+  fprintf(outJSON, "%s\"input volume\"  : %le, // (avg:%le, acc:%le)\n", two_more_indent.c_str(), 
+                                                                    vol_in_check, vol_in/profile_.exec_cnt_, vol_in);
+  fprintf(outJSON, "%s\"output volume\" : %le, // (avg:%le)\n", two_more_indent.c_str(), vol_out, vol_out/profile_.exec_cnt_);
+  fprintf(outJSON, "%s\"rd_bw\"         : %le, // <- w/ rtov. w/o rtov: %le (w/ max prv) %le(w/ loc prv)\n",    two_more_indent.c_str(), prv_bw, vol_in_check/preserve_time_per_cd, vol_in_check/loc_preserve_time_per_cd);
+  fprintf(outJSON, "%s\"wr_bw\"         : %le,\n",    two_more_indent.c_str(), prv_bw);
   if(medium_ == kGlobalDisk) {
     // We will generate this file during error-free run, there will be
     // no profiled read bandwidth. For now, just use write bandwidth for read
     // bandwidth to pass it to tuner.
     //fprintf(outJSON, "%s\"rd_bw\"    : \"%f\",\n",    two_more_indent.c_str(), packer::time_mpiio_read.bw_avg);
-    fprintf(outJSON, "%s\"rd_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_mpiio_write.bw_avg * 1000000);
-    fprintf(outJSON, "%s\"wr_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_mpiio_write.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"rd_bw_mea\"     : %le,\n",    two_more_indent.c_str(), packer::time_mpiio_write.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"wr_bw_mea\"     : %le,\n",    two_more_indent.c_str(), packer::time_mpiio_write.bw_avg * 1000000);
   } else if(medium_ == kLocalDisk) {
-    fprintf(outJSON, "%s\"rd_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_posix_write.bw_avg * 1000000);
-    fprintf(outJSON, "%s\"wr_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_posix_write.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"rd_bw_mea\"     : %le,\n",    two_more_indent.c_str(), packer::time_posix_write.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"wr_bw_mea\"     : %le,\n",    two_more_indent.c_str(), packer::time_posix_write.bw_avg * 1000000);
   } else if(medium_ == kLocalMemory) {
-    fprintf(outJSON, "%s\"rd_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_copy.bw_avg * 1000000);
-    fprintf(outJSON, "%s\"wr_bw_mea\"    : %lf,\n",    two_more_indent.c_str(), packer::time_copy.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"rd_bw_mea\"     : %le,\n",    two_more_indent.c_str(), packer::time_copy.bw_avg * 1000000);
+    fprintf(outJSON, "%s\"wr_bw_mea\"     : %le,\n",    two_more_indent.c_str(), packer::time_copy.bw_avg * 1000000);
   } else {
     assert(0);
   }
-  profile_.PrintTraces(outJSON, two_more_indent.c_str());
-  fprintf(outJSON, "%s\"fault rate\"     : %f,\n",    two_more_indent.c_str(), failure_rate);
-  fprintf(outJSON, "%s\"interval\" : %ld,\n",   two_more_indent.c_str(), interval_);
-  fprintf(outJSON, "%s\"errortype\": \"0x%lX\",\n", two_more_indent.c_str(), errortype_);
-  fprintf(outJSON, "%s\"medium\"   : \"%s\",\n",     two_more_indent.c_str(), GetMedium(medium_));
-  fprintf(outJSON, "%s\"tasksize\": %8u,\n",   two_more_indent.c_str(), task_size_);
-  fprintf(outJSON, "%s\"siblingID\": %8u,\n",  two_more_indent.c_str(), sibling_id_);
-  fprintf(outJSON, "%s\"sibling #\": %8u,\n",  two_more_indent.c_str(), sibling_size_);
+  fprintf(outJSON, "%s\"fault rate\"    : %f,\n",    two_more_indent.c_str(), failure_rate);
+  fprintf(outJSON, "%s\"interval\"      : %ld,\n",   two_more_indent.c_str(), interval_);
+  fprintf(outJSON, "%s\"errortype\"     : \"0x%lX\",\n", two_more_indent.c_str(), errortype_);
+  fprintf(outJSON, "%s\"medium\"        : \"%s\",\n",     two_more_indent.c_str(), GetMedium(medium_));
+  fprintf(outJSON, "%s\"tasksize\"      : %u,\n",   two_more_indent.c_str(), task_size_);
+  fprintf(outJSON, "%s\"siblingID\"     : %u,\n",  two_more_indent.c_str(), sibling_id_);
+  fprintf(outJSON, "%s\"sibling #\"     : %u,\n",  two_more_indent.c_str(), sibling_size_);
   std::ostringstream oss; 
-  cd_prof_map[phase_].PrintJSON(oss, two_more_indent);
   profile_.GetPrvDetails(oss, two_more_indent); // print cons prod
+  cd_prof_map[phase_].PrintJSON(oss, two_more_indent);
   fprintf(outJSON, "%s", oss.str().c_str());
+  profile_.PrintTraces(outJSON, two_more_indent.c_str());
+  fprintf(outJSON, "%s\"max prv only bw\": %le,\n",  two_more_indent.c_str(), vol_in_check/preserve_time_per_cd);
+  fprintf(outJSON, "%s\"loc prv only bw\": %le,\n",  two_more_indent.c_str(), vol_in_check/loc_preserve_time_per_cd);
+  fprintf(outJSON, "%s\"loc prv time\": %lf",  two_more_indent.c_str(), loc_preserve_time_per_cd);
+
   //fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
   if(children_.size() > 0) {
     fprintf(outJSON, ",\n%s\"child CDs\" : {\n", two_more_indent.c_str());
@@ -584,7 +596,7 @@ void PhaseNode::GatherStats(void)
       float *cdrt_trace    = new float[total_cnt];
       float *maxprsv_trace = new float[local_cnt];
 #endif
-//      printf("[%s %s %u] total:%lu, gathered:%zu\n", __func__, label_.c_str(), level_, total_cnt, local_cnt);
+      printf("[%s %s %u] total:%lu, gathered:%zu, max_prsv size:%zu\n", __func__, label_.c_str(), level_, total_cnt, local_cnt, profile_.max_prsv_.size());
 #if 1          
       PMPI_Gather(exec_trace.data()         , local_cnt, MPI_FLOAT, 
                  profile_.exec_trace_.data(), local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);

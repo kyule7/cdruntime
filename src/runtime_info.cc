@@ -158,19 +158,19 @@ void RuntimeInfo::GetPrvDetails(std::ostream &oss, const std::string &indent)
     if(it != output_.end())
       oss << ',';
   }
-  oss << "}";
+  oss << "},\n";
 }
 
-double RuntimeInfo::GetPrvVolume(bool is_input)
+double RuntimeInfo::GetPrvVolume(bool is_input, bool is_avg)
 {
   double tot_vol = 0.0;
   if(is_input) {
     for(auto it=input_.begin(); it!=input_.end(); ++it) {
-       tot_vol += it->second.GetVolume(false);
+       tot_vol += it->second.GetVolume(is_avg);
     } 
   } else {
     for(auto it=output_.begin(); it!=output_.end(); ++ it) {
-       tot_vol += it->second.GetVolume(false);
+       tot_vol += it->second.GetVolume(is_avg);
     } 
   }
   return tot_vol;

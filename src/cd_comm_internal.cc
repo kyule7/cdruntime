@@ -903,7 +903,20 @@ CD::CDInternalErrT CD::RemoteSetMailBox(const CDEventT &event)
   return ret;
 }
 
-
+/*************************************************************************
+ * Passive target synchronization with MPI_Win_lock and MPI_Win_unlock
+ * Note that MPI_Win_unlock waits for all the dispatched RMA calls (Get/Put)
+ * since MPI_Win_lock. Therefore, if the RMA calls are between lock and unlock
+ * are not complete, MPI_Win_unlock will block the execution.
+ * For some reason it does not progress the RMA operations at the target side
+ * when MPI_WIN_(UN)LOCK is called, which leads to deadlock-like behaviour
+ * unless another communication call is made (MPI_BARRIER in your case). 
+ * Worth taking a look at discussions on passive RMA synch in MPI
+ * https://stackoverflow.com/questions/18737545/mpi-with-c-passive-rma-synchronization
+ * https://stackoverflow.com/questions/35005654/why-mpi-win-unlock-is-so-low
+ * http://www.mcs.anl.gov/~thakur/papers/ijhpca-rma.pdf
+ * https://software.intel.com/en-us/videos/intel-mpi-library-implementation-of-a-new-mpi30-standard-new-features-and-performance
+ * ***********************************************************************/
 CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
 {
   CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\n\n=================== Set Mail Box (%s, %d) Start! myTaskID #%d at %s level #%u ==========================\n", 

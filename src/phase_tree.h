@@ -35,6 +35,7 @@ struct PhaseNode {
     // sequenial ID
     uint64_t seq_begin_; // records at the first begin
     uint64_t seq_end_;   // increments at every begin
+    uint64_t seq_max_;   // accumulated until parent CD complete
     uint64_t seq_acc_;   // accumulated for every begin/compl
     uint64_t seq_acc_rb_;   // accumulated for rollback every begin/compl
 
@@ -70,7 +71,7 @@ struct PhaseNode {
     PhaseNode(PhaseNode *parent, uint32_t level, const std::string &label, CDExecMode state) 
       : level_(level), phase_(phase_gen), 
         sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), 
-        /*seq_begin_(0), seq_end_(0),*/ seq_acc_(0), seq_acc_rb_(0),
+        /*seq_begin_(0), seq_end_(0),*/ seq_max_(0), seq_acc_(0), seq_acc_rb_(0),
         state_(state), count_(0), interval_(-1), errortype_(-1), 
         label_(label), medium_(kUndefined), profile_(phase_gen)
     {
@@ -85,7 +86,7 @@ struct PhaseNode {
     PhaseNode(PhaseNode *parent, uint32_t level, uint32_t phase)
       : level_(level), phase_(phase_gen), 
         sibling_id_(0), sibling_size_(1), task_id_(0), task_size_(1), 
-        /*seq_begin_(0), seq_end_(0),*/ seq_acc_(0), seq_acc_rb_(0),
+        /*seq_begin_(0), seq_end_(0),*/ seq_max_(0), seq_acc_(0), seq_acc_rb_(0),
         state_(kExecution), count_(0), interval_(-1), errortype_(-1), 
         label_("Undefined"), medium_(kUndefined), profile_(phase_gen)
     {
@@ -140,7 +141,7 @@ struct PhaseNode {
     }
 
     double GetPrvBW(bool is_input=true) {
-      return profile_.GetPrvVolume(is_input) / GetRuntimeOverhead(true);
+      return profile_.GetPrvVolume(is_input, false) / GetRuntimeOverhead(true);
     }
 
     PhaseNode *GetNextNode(const std::string &label) 
@@ -259,6 +260,7 @@ struct PhaseNode {
     }
     inline void IncSeqID(bool err_free_exec) {
       seq_end_++; // reinit at failure
+      seq_max_ = (seq_end_ > seq_max_)? seq_end_ : seq_max_; 
       if(err_free_exec) {
         seq_acc_++; // no reinit
       } else { // during rollback

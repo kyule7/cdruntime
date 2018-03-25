@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <inttypes.h>
 
+#if CD
+#include "cd.h"
+#endif
+
 static const PetscInt _coarse_grids[][3] = {{2,2,2}, {2,2,3}, {2,2,4}, {2,3,3}, {2,3,4}, {3,3,3}, {3,3,4}, {3,4,4}};
 static const size_t _n_coarse_grids = sizeof _coarse_grids / sizeof _coarse_grids[0];
 
@@ -130,7 +134,22 @@ static PetscErrorCode ReportMemoryUsage(MPI_Comm comm,PetscLogDouble memused,Pet
   PetscFunctionReturn(0);
 }
 
+#if CD
+extern int mgfcycle_index;
+#endif
+
 static PetscErrorCode SampleOnGrid(MPI_Comm comm,Op op,const PetscInt M[3],const PetscInt smooth[2],PetscInt nrepeat,PetscLogDouble mintime,PetscLogDouble *memused,PetscLogDouble *memavail,PetscBool monitor) {
+#if CD
+  cd_handle_t* cd_sampleongrid = cd_create(getcurrentcd(), 1, "cd_sampleongrid", kStrict | kLocalMemory, 0xE);
+  cd_begin(cd_sampleongrid);
+  #if DO_PRV
+  cd_preserve(cd_sampleongrid, M, sizeof(PetscInt)*3, kCopy, "cd_sampleongrid_M", "cd_sampleongrid_M");
+  cd_preserve(cd_sampleongrid, smooth, sizeof(PetscInt)*2, kCopy, "cd_sampleongrid_smooth", "cd_sampleongrid_smooth");
+  cd_preserve(cd_sampleongrid, &nrepeat, sizeof(PetscInt), kCopy, "cd_sampleongrid_nrepeat", "cd_sampleongrid_nrepeat");
+  cd_preserve(cd_sampleongrid, &mintime, sizeof(PetscLogDouble), kCopy, "cd_sampleongrid_mintime", "cd_sampleongrid_mintime");
+  cd_preserve(cd_sampleongrid, &monitor, sizeof(PetscBool), kCopy, "cd_sampleongrid_monitor", "cd_sampleongrid_monitor");
+  #endif
+#endif
   PetscErrorCode ierr;
   PetscInt pgrid[3],cmax,fedegree,dof,addquadpts,nlevels,M_max,solve_type=0;
   PetscMPIInt nranks;
@@ -206,6 +225,9 @@ static PetscErrorCode SampleOnGrid(MPI_Comm comm,Op op,const PetscInt M[3],const
     ierr = PetscTime(&t0);CHKERRQ(ierr);
     flops = petsc_TotalFlops;
     if (!ksp_only) {
+    #if CD
+      mgfcycle_index=0;
+    #endif
       ierr = MGFCycle(op,mg,smooth[0],smooth[1],F,U);CHKERRQ(ierr);
     }
     else {
@@ -236,6 +258,10 @@ static PetscErrorCode SampleOnGrid(MPI_Comm comm,Op op,const PetscInt M[3],const
   ierr = VecDestroy(&F);CHKERRQ(ierr);
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
   ierr = GridDestroy(&grid);CHKERRQ(ierr);
+#if CD
+  cd_complete(cd_sampleongrid);
+  cd_destroy(cd_sampleongrid);
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -274,17 +300,39 @@ PetscErrorCode RunSample() {
   ierr = MemoryGetUsage(&memused,&memavail);CHKERRQ(ierr);
   ierr = ReportMemoryUsage(comm,memused,memavail);CHKERRQ(ierr);
 
+#if CD
+  cd_handle_t* cd_l1 = cd_create(getcurrentcd(), 1, "cd_l1", kStrict | kGlobalDisk, 0xF);
+  cd_begin(cd_l1, "cd_l1");
+  #if DO_PRV
+  // preserve nsamples
+  cd_preserve(cd_l1, &nsamples, sizeof(PetscInt), kCopy, "cd_l1_nsamples", "cd_l1_nsamples");
+  // preserve gridsize
+  for (PetscInt ii=0; ii<nsamples; ii++){
+    char prv_name[20];
+    sprintf(prv_name, "cd_l1_gridsize_%d", ii);
+    cd_preserve(cd_l1, gridsize[ii], sizeof(PetscInt)*3, kCopy, prv_name, prv_name);
+  }
+  // preserve op?
+  // SZNOTE: op is read-only data, choose not to preserve here; if op is corrupted, escalate to root cd
+  #endif
+#endif
+
   ierr = PetscPrintf(comm,"Small Test G[%5D%5D%5D]\n",gridsize[nsamples-1][0],gridsize[nsamples-1][1],gridsize[nsamples-1][2]);CHKERRQ(ierr);
   ierr = SampleOnGrid(comm,op,gridsize[nsamples-1],smooth,1,0,NULL,NULL,PETSC_FALSE);CHKERRQ(ierr);
   ierr = PetscPrintf(comm,"Large Test G[%5D%5D%5D]\n",gridsize[0][0],gridsize[0][1],gridsize[0][2]);CHKERRQ(ierr);
   ierr = SampleOnGrid(comm,op,gridsize[0],smooth,1,0,&memused,&memavail,PETSC_TRUE);CHKERRQ(ierr);
 
+  // MPI_Allreduce to gather usage information
   ierr = ReportMemoryUsage(comm,memused,memavail);CHKERRQ(ierr);
 
   ierr = PetscPrintf(comm,"Starting performance sampling\n");CHKERRQ(ierr);
   for (PetscInt i=nsamples-1; i>=0; i--) {
     ierr = SampleOnGrid(comm,op,gridsize[i],smooth,repeat,mintime,NULL,NULL,PETSC_FALSE);CHKERRQ(ierr);
   }
+#if CD
+  cd_complete(cd_l1);
+  cd_destroy(cd_l1);
+#endif
 
   ierr = PetscFree(gridsize);CHKERRQ(ierr);
   ierr = OpDestroy(&op);CHKERRQ(ierr);
