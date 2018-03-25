@@ -556,6 +556,7 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 
 uint32_t PhaseTree::Init(uint64_t level,  const std::string &label)
 { 
+  cd::runtime_activated = true;
   root_ = new PhaseNode(NULL, level, label, kExecution); 
   current_ = root_;
   cd::phaseNodeCache[current_->phase_] = root_;
