@@ -140,7 +140,7 @@ struct PhaseNode {
     }
 
     double GetPrvBW(bool is_input=true) {
-      return profile_.GetPrvVolume(is_input) / GetRuntimeOverhead(true);
+      return profile_.GetPrvVolume(is_input, false) / GetRuntimeOverhead(true);
     }
 
     PhaseNode *GetNextNode(const std::string &label) 

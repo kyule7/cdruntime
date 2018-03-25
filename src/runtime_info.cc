@@ -158,7 +158,7 @@ void RuntimeInfo::GetPrvDetails(std::ostream &oss, const std::string &indent)
     if(it != output_.end())
       oss << ',';
   }
-  oss << "}";
+  oss << "},\n";
 }
 
 double RuntimeInfo::GetPrvVolume(bool is_input, bool is_avg)
