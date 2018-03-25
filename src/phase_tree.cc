@@ -236,7 +236,8 @@ void PhaseNode::PrintOutputJsonInternal(void)
     for(; it!=children_.end(); ++it) {
       fprintf(outJSON, "%s\"iter begin\"    : %lu,\n", two_more_indent.c_str(), (*it)->seq_begin_);
       fprintf(outJSON, "%s\"iter end\"      : %lu,\n", two_more_indent.c_str(), (*it)->seq_end_);
-      fprintf(outJSON, "%s\"iterations\"    : %u, // childs'\n", two_more_indent.c_str(), (*it)->profile_.exec_cnt_);
+      fprintf(outJSON, "%s\"counts\"        : %u, // # execs\n", two_more_indent.c_str(), (*it)->profile_.exec_cnt_);
+      fprintf(outJSON, "%s\"iterations\"    : %lu, // childs'\n", two_more_indent.c_str(), (*it)->seq_max_);
       break;
       // TODO: for now, iteration for heterogeneous CDs does not work.
     }
@@ -310,8 +311,9 @@ void PhaseNode::PrintOutputJsonInternal(void)
   cd_prof_map[phase_].PrintJSON(oss, two_more_indent);
   fprintf(outJSON, "%s", oss.str().c_str());
   profile_.PrintTraces(outJSON, two_more_indent.c_str());
-  fprintf(outJSON, "%s\"max prv time\": %lf,\n",  two_more_indent.c_str(), preserve_time_per_cd);
-  fprintf(outJSON, "%s\"loc prv time\": %lf\n",  two_more_indent.c_str(), loc_preserve_time_per_cd);
+  fprintf(outJSON, "%s\"max prv only bw\": %le,\n",  two_more_indent.c_str(), vol_in_check/preserve_time_per_cd);
+  fprintf(outJSON, "%s\"loc prv only bw\": %le,\n",  two_more_indent.c_str(), vol_in_check/loc_preserve_time_per_cd);
+  fprintf(outJSON, "%s\"loc prv time\": %lf",  two_more_indent.c_str(), loc_preserve_time_per_cd);
 
   //fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
   if(children_.size() > 0) {
