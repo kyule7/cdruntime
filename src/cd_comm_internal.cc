@@ -949,7 +949,7 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Set CD Event %s at level #%u. CD Name : %s\n", 
                   event2str(event).c_str(), level(), GetCDName().GetString().c_str());
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Accumulate event at %d\n", global_task_id);
-
+//
 #if 1 // FIXME
 //        printf("global_task_id:%d, task_id:%d, myid:%d\n", global_task_id, task_id, myTaskID); fflush(stdout);
 //        PMPI_Win_lock_all(0, pendingWindow_);
