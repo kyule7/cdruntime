@@ -1,7 +1,7 @@
 static const char help[] = "Geometric multigrid solver for finite-element elasticity.\n\n";
 
 #include "fefas.h"
-#ifdef CDENABLED
+#if CD
 #include "cd.h"
 #endif
 
@@ -64,12 +64,12 @@ int main(int argc, char *argv[])
   PetscErrorCode ierr,(*action)(void);
 
   PetscInitialize(&argc,&argv,NULL,help);
-#ifdef CDENABLED
+#if CD
   int myrank, numranks;
-  MPI_Comm_rank(MPI_COMM_WORLD, myrank);
-  MPI_Comm_size(MPI_COMM_WORLD, numranks);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numranks);
   cd_handle_t* root_cd = cd_init(numranks, myrank, kPFS);
-  cd_begin(root_cd);
+  cd_begin(root_cd, "root_cd");
 #endif
   ierr = ActionParse(argc,argv,&action);CHKERRQ(ierr);
   if (!action) {
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
     return 1;
   }
   ierr = (*action)();CHKERRQ(ierr);
-#ifdef CDENABLED
+#if CD
   cd_complete(root_cd);
   cd_finalize();
 #endif

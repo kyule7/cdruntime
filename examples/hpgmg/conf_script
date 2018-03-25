@@ -15,3 +15,11 @@
 # finite-element
 ###################################
 
+## original hpgmg-fe
+./configure --no-fv --fe --arch=build_fe_org --CC=mpicc --CFLAGS="-g -fmax-errors=1 -DCD=0 -DSCR=0" 
+
+## cd-mapped hpgmg-fe - no preservation
+./configure --no-fv --fe --arch=build_fe_cd_noprv --CC=mpicc --CFLAGS="-g -fmax-errors=1 -I$WORK/cdresilience/include -DCD=1 -DDO_PRV=0 -DSCR=0" --LDFLAGS="-L$WORK/cdresilience/lib -L$WORK/cdresilience/src/persistence" --LDLIBS="-lcd -Wl,-rpath $WORK/cdresilience/lib -lpacker -Wl,-rpath $WORK/cdresilience/src/persistence"
+
+## cd-mapped hpgmg-fe - with preservation
+./configure --no-fv --fe --arch=build_fe_cd_prv   --CC=mpicc --CFLAGS="-g -fmax-errors=1 -I$WORK/cdresilience/include -DCD=1 -DDO_PRV=1 -DSCR=0" --LDFLAGS="-L$WORK/cdresilience/lib -L$WORK/cdresilience/src/persistence" --LDLIBS="-lcd -Wl,-rpath $WORK/cdresilience/lib -lpacker -Wl,-rpath $WORK/cdresilience/src/persistence"
