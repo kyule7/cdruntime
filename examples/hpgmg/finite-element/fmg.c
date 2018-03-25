@@ -1,6 +1,9 @@
 #include "fefas.h"
 #include "op/fefas-op.h"
 #include <petscksp.h>
+#if CD
+#include "cd.h"
+#endif
 
 typedef struct Options_private *Options;
 struct Options_private {
@@ -290,9 +293,22 @@ static PetscErrorCode MGVCycle(Op op,MG mg,PetscInt presmooths,PetscInt postsmoo
   PetscFunctionReturn(0);
 }
 
+#if CD
+int mgfcycle_index=0;
+char cd_mg_name[20];
+#endif
 PetscErrorCode MGFCycle(Op op,MG mg,PetscInt presmooths,PetscInt postsmooths,Vec B,Vec U) {
-  PetscErrorCode ierr;
 
+#if CD
+  //int myrank;
+  //MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  //printf("%d:cd_mgfcycle_l%d\n", myrank, mgfcycle_index);
+  //fflush(stdout);
+  //sprintf(cd_mg_name, "cd_mgfcycle_l%d", mgfcycle_index++);
+  //cd_handle_t * cd_mgfcycle = cd_create(getcurrentcd(), 1, cd_mg_name, kStrict | kLocalMemory, 0xE);
+  //cd_begin(cd_mgfcycle);
+#endif
+  PetscErrorCode ierr;
   PetscFunctionBegin;
   ierr = PetscLogStagePush(mg->stage);CHKERRQ(ierr);
   ierr = VecNorm(B,NORM_2,&mg->bnorm2);CHKERRQ(ierr);
@@ -319,6 +335,10 @@ PetscErrorCode MGFCycle(Op op,MG mg,PetscInt presmooths,PetscInt postsmooths,Vec
   ierr = PetscLogStagePop();CHKERRQ(ierr);
   ierr = MGRecordDiagnostics(op,mg,B,U);CHKERRQ(ierr);
   PetscFunctionReturn(0);
+#if CD
+  //cd_complete(cd_mgfcycle);
+  //cd_destroy(cd_mgfcycle);
+#endif
 }
 
 PetscErrorCode RunMGV()
