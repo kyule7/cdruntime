@@ -25,7 +25,7 @@ static FILE *outYAML = NULL;
 static FILE *outJSON = NULL;
 static FILE *outAll = NULL;
 static char output_filepath[1024];
-static char output_basepath[512];
+static char output_basepath[512]=".";
 const char *common::GetMedium(PrvMediumT medium)
 {
   switch(medium) {
@@ -129,7 +129,7 @@ void PhaseNode::PrintOutputYAML(bool first)
 //YKWON: This proudces the file in JSON format for the estimator to find 
 //       optimal mappipng. (estimation.json)
 //TODO: check interval, reex_cnt, error_vec 
-void PhaseNode::PrintOutputJson(void) 
+void PhaseNode::PrintOutputJson(PhaseNode *root) 
 {
 //<<<<<<< HEAD
 //  //FIXME(YKWON): Better to have different file handler
@@ -141,7 +141,7 @@ void PhaseNode::PrintOutputJson(void)
 //  outYAML = fopen(output_filepath, "w+");
 //=======
   assert(outJSON == NULL);
-  assert(parent_ == NULL);
+//  assert(parent_ == NULL);
   memset(output_filepath, '\0', 1024);
   sprintf(output_filepath, "%s/%s.%s.%s.%d.%s.%s.json", output_basepath, CD_DEFAULT_CONFIG_JSON, 
       exec_name, (exec_details!=NULL)? exec_details : "NoInput", 
@@ -177,14 +177,21 @@ void PhaseNode::PrintOutputJson(void)
   fprintf(outJSON, "  \"mailbox overhead\": %lf,\n", CD_CLK_MEA(cd::mailbox_elapsed_time)); 
 #endif
 
-  fprintf(outJSON, "  \"global param\" : {\n"
-                   "    \"max error\" : 20\n"
-                   "  },\n"
-                   "  \"CD info\" : {\n");
-  PrintOutputJsonInternal();
-  fprintf(outJSON, "\n  }\n"
-                   "}\n"
-         );
+  if(root != NULL) {
+    fprintf(outJSON, "  \"global param\" : {\n"
+                     "    \"max error\" : 20\n"
+                     "  },\n"
+                     "  \"CD info\" : {\n");
+    root->PrintOutputJsonInternal();
+    fprintf(outJSON, "\n  }\n"
+                     "}\n"
+           );
+  } else {
+    fprintf(outJSON, "  \"global param\" : {\n"
+                     "    \"max error\" : 20\n"
+                     "  },\n"
+                     "}\n");
+  }
   fclose(outJSON);
   outJSON = NULL;
   
@@ -236,7 +243,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
     for(; it!=children_.end(); ++it) {
       fprintf(outJSON, "%s\"iter begin\"    : %lu,\n", two_more_indent.c_str(), (*it)->seq_begin_);
       fprintf(outJSON, "%s\"iter end\"      : %lu,\n", two_more_indent.c_str(), (*it)->seq_end_);
-      fprintf(outJSON, "%s\"counts\"        : %u, // # execs\n", two_more_indent.c_str(), (*it)->profile_.exec_cnt_);
+      fprintf(outJSON, "%s\"child counts\"  : %u, // # execs\n", two_more_indent.c_str(), (*it)->profile_.exec_cnt_);
       fprintf(outJSON, "%s\"iterations\"    : %lu, // childs'\n", two_more_indent.c_str(), (*it)->seq_max_);
       break;
       // TODO: for now, iteration for heterogeneous CDs does not work.
@@ -246,6 +253,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
     //  printf("child time:%lf\n", (*it)->profile_.total_time_);
     }
   } 
+  fprintf(outJSON, "%s\"current counts\"        : %u, // # execs\n", two_more_indent.c_str(), profile_.exec_cnt_);
   //execution_time -= child_total_exec_time;
   fprintf(outJSON, "%s\"execution time\": %lf, // accumulated:%lf time - childs' time %lf - %lf\n", two_more_indent.c_str(), 
       (execution_time - child_total_exec_time)/profile_.exec_cnt_, 
@@ -555,6 +563,7 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
 
 uint32_t PhaseTree::Init(uint64_t level,  const std::string &label)
 { 
+  cd::runtime_activated = true;
   root_ = new PhaseNode(NULL, level, label, kExecution); 
   current_ = root_;
   cd::phaseNodeCache[current_->phase_] = root_;
@@ -722,7 +731,7 @@ void PhaseTree::PrintStats(void)
 //      printf("basepath:%s\n", output_basepath);
 //        Print();
       root_->PrintInputYAML(true); // profile.out
-      root_->PrintOutputJson();    // estimation.json
+      root_->PrintOutputJson(root_);    // estimation.json
       //FIXME(YKWON): This sometimes fails to produce profile.out
       root_->Print(true, true);
 //      PrintProfile();

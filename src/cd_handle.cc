@@ -95,6 +95,7 @@ int cd::app_input_size = 0;
 bool cd::is_koutput_disabled = false;
 bool cd::is_error_free = false;
 bool cd::runtime_initialized = false;
+bool cd::runtime_activated = false;
 bool cd::orig_app_side = true;
 bool cd::orig_disabled = false;
 bool cd::orig_msg_app_side = true;
@@ -912,10 +913,13 @@ void CD_Finalize(void)
   delete CDPath::GetCDPath()->back(); // delete root
   CDPath::GetCDPath()->pop_back();
 
-
   cd::internal::Finalize();
-  cd::phaseTree.root_->GatherStats();
-  cd::phaseTree.PrintStats();
+  if(cd::runtime_activated) {
+    cd::phaseTree.root_->GatherStats();
+    cd::phaseTree.PrintStats();
+  } else {
+    PhaseNode::PrintOutputJson(NULL);  
+  }
   //tuned::phaseTree.PrintStats();
 
 #if CD_DEBUG_ENABLED

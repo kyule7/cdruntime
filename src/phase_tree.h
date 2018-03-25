@@ -209,7 +209,7 @@ struct PhaseNode {
     void PrintProfile(void);
     void PrintInputYAML(bool first); 
     void PrintOutputYAML(bool first); 
-    void PrintOutputJson(void);
+    static void PrintOutputJson(PhaseNode *root);
     void PrintOutputJsonInternal(void);
     std::string GetPhasePath(void);
     std::string GetPhasePath(const std::string &label);
