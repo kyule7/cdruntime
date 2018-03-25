@@ -917,6 +917,8 @@ void CD_Finalize(void)
   if(cd::runtime_activated) {
     cd::phaseTree.root_->GatherStats();
     cd::phaseTree.PrintStats();
+  } else {
+    PhaseNode::PrintOutputJson(NULL);  
   }
   //tuned::phaseTree.PrintStats();
 

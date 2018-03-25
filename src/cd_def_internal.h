@@ -421,7 +421,6 @@ extern uint64_t state;
 extern int64_t failed_phase;
 extern int64_t failed_seqID;
 extern bool runtime_initialized;
-extern bool runtime_activated;
 extern bool just_reexecuted;
 extern bool orig_app_side;
 extern bool orig_disabled;

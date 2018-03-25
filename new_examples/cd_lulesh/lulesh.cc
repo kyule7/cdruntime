@@ -3516,11 +3516,11 @@ int main(int argc, char *argv[])
 #endif
    
 #if _CD && _CD_ROOT
-#if _CD_INCR_CKPT || _CD_FULL_CKPT
+  #if _CD_INCR_CKPT || _CD_FULL_CKPT
   int intvl[3] = {1, 1, 1}; 
-#else
+  #else
   int intvl[3] = {36, 12, 2}; 
-#endif
+  #endif
   char *lulesh_intvl = getenv( "LULESH_LV0" );
   if(lulesh_intvl != NULL) {
     intvl[0] = atoi(lulesh_intvl);
@@ -3540,10 +3540,12 @@ int main(int argc, char *argv[])
   intvl0 = intvl[0];
   intvl1 = intvl[1];
   intvl2 = intvl[2];
-
+#endif
+#if _CD
   root_cd = CD_Init(numRanks, myRank, kPFS);
+  #if _CD_ROOT
   CD_Begin(root_cd, "Root");
-#if _CD_CDRT 
+    #if _CD_CDRT 
   root_cd->Preserve(locDom->SetOp(prvec_readonly_all), kCopy, "ReadOnlyData");
   root_cd->Preserve(locDom->SetOp(prvec_f), kCopy, "CalcForceCopy");
   root_cd->Preserve(locDom->SetOp(prvec_posall), kCopy, "PosVelAcc");
@@ -3551,15 +3553,16 @@ int main(int argc, char *argv[])
   root_cd->Preserve(locDom->SetOp(prvec_q), kCopy, "QforElem");
   root_cd->Preserve(locDom->SetOp(prvec_matrl), kCopy, "MaterialforElem");
   //root_cd->Preserve(locDom->SetOp(M__SERDES_ALL), kCopy, "Root_All");
-#elif _CD_INCR_CKPT 
+    #elif _CD_INCR_CKPT 
   root_cd->Preserve(locDom->SetOp(prvec_readonly_all), kCopy, "ReadOnlyData");
-#endif // do not preserve anything in loop for global ckpt case
+    #endif // do not preserve anything in loop for global ckpt case
 
 
   cd_main_loop = root_cd->Create("Parent", kStrict|kPFS, 0xF);
   cd_child_loop = NULL;
   //cd_main_dummy = root_cd;
   dummy_cd = NULL;
+  #endif // _CD_ROOT ends
 #endif
 
   bool is_main_loop_complete  = false;
@@ -4219,8 +4222,10 @@ int main(int argc, char *argv[])
    if(myRank == 0) {
      printf("Loop time:%lf, Dump time:%lf\n", loop_time/global_counter, dump_time/global_counter);
    }
-#if _CD && _CD_ROOT
+#if _CD 
+  #if _CD_ROOT
   root_cd->Complete();
+  #endif
   CD_Finalize();
 #endif
 
