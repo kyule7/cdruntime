@@ -73,6 +73,7 @@ extern CD_CLOCK_T compl_elapsed_time;
 extern CD_CLOCK_T advance_elapsed_time;
 extern CD_CLOCK_T mailbox_elapsed_time;
 extern double     mailbox_elapsed_time_in_sec;
+extern double     tot_rtov[4];
 
 extern CD_CLOCK_T body_elapsed_smpl;
 extern CD_CLOCK_T reex_elapsed_smpl;

@@ -1302,6 +1302,8 @@ void SetFailure(uint32_t phase, const char *label)
         label, failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
     failed_phase = phase;
     failed_seqID = phaseTree.current_->seq_end_;
+
+    global_reex_clk = CD_CLOCK();
   }
 }
 
@@ -1634,6 +1636,8 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
           // to measure the rest of execution time.
           CD_CLOCK_T now = CD_CLOCK();
           phaseTree.current_->FinishRecovery(now);
+          reex_elapsed_time += now - global_reex_clk;
+          global_reex_clk = now;
           if(myTaskID == 0) {printf(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
               level(), label_.c_str(), curr_phase, curr_seqID, curr_begID); }
           CD_DEBUG(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 

@@ -163,6 +163,7 @@ void PhaseNode::PrintOutputJson(PhaseNode *root)
   fprintf(outJSON, "  \"total time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::TOTAL_PRF], cd::recvstd[cd::TOTAL_PRF], cd::recvmin[cd::TOTAL_PRF], cd::recvmax[cd::TOTAL_PRF]);
   fprintf(outJSON, "  \"reex time\"     : [%le, %le, %le, %le],\n", cd::recvavg[cd::REEX_PRF], cd::recvstd[cd::REEX_PRF], cd::recvmin[cd::REEX_PRF], cd::recvmax[cd::REEX_PRF]);
   fprintf(outJSON, "  \"CD overhead\"   : [%le, %le, %le, %le],\n", cd::recvavg[cd::CDOVH_PRF], cd::recvstd[cd::CDOVH_PRF], cd::recvmin[cd::CDOVH_PRF], cd::recvmax[cd::CDOVH_PRF]); 
+  fprintf(outJSON, "  \"CD ovhd calc\"  : [%le, %le, %le, %le],\n", tot_rtov[0], tot_rtov[1], tot_rtov[2], tot_rtov[3]); 
   fprintf(outJSON, "  \"sync time exec\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_NS_PRF], cd::recvstd[cd::CD_NS_PRF], cd::recvmin[cd::CD_NS_PRF], cd::recvmax[cd::CD_NS_PRF]); 
   fprintf(outJSON, "  \"sync time reex\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_RS_PRF], cd::recvstd[cd::CD_RS_PRF], cd::recvmin[cd::CD_RS_PRF], cd::recvmax[cd::CD_RS_PRF]); 
   fprintf(outJSON, "  \"sync time recr\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_ES_PRF], cd::recvstd[cd::CD_ES_PRF], cd::recvmin[cd::CD_ES_PRF], cd::recvmax[cd::CD_ES_PRF]); 
@@ -191,7 +192,9 @@ void PhaseNode::PrintOutputJson(PhaseNode *root)
     fprintf(outJSON, "  \"global param\" : {\n"
                      "    \"max error\" : 20\n"
                      "  },\n"
-                     "}\n");
+                     "  \"CD info\" : {}\n"
+                     "}\n"
+                     );
   }
   fclose(outJSON);
   outJSON = NULL;

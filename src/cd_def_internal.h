@@ -385,6 +385,7 @@ namespace cd {
     }
   }
 
+extern CD_CLOCK_T global_reex_clk;
 extern CD_CLOCK_T tot_begin_clk;
 extern CD_CLOCK_T tot_end_clk;
 extern CD_CLOCK_T cdr_elapsed_time;
