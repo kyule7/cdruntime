@@ -3,6 +3,11 @@ import json
 import pandas as pd
 import numpy as np
 import re
+import csv
+import matplotlib.pyplot as plt
+
+#import commentjson
+
 #def createDataFrameFromProfile(results):
 #    need_alloc_df = True
 #    for eachpgsize in results:
@@ -54,12 +59,12 @@ def makeFlatCDs(flattened, cds_list):
     for cds in cds_list: # list of sequential CDs
         flattened[cds] = {}
         for item in cds_list[cds]:
-            #print item
-            if item != 'ChildCDs':
+            ##print item
+            if item != 'child CDs':
                 flattened[cds][item] = cds_list[cds][item]
             else:
                 makeFlatCDs(flattened, cds_list[cds][item])
-    #print flattened
+#    print flattened
 
 def gatherJSONObj(filelist):
     newfile = open(filelist, 'r')
@@ -71,8 +76,20 @@ def gatherJSONObj(filelist):
     tg = []
     for each_filename in file_list:
         print each_filename
-        with open(each_filename) as each:
-            eachjson = json.load(each)
+        with open(each_filename, 'r') as each:
+            jsonfile = '\n'
+            for row in each.readlines():
+#                print 'orig:', row
+                splitted = row.split('//')
+                if len(splitted) == 1:
+#                    print 'splt:',splitted[0]
+                    jsonfile += row 
+                else:
+#                    print 'splt:',splitted[0]
+                    jsonfile += splitted[0] + '\n'
+
+#            eachjson = json.loads('\n'.join([row for row in each.readlines() if len(row.split('//')) == 1]))
+            eachjson = json.loads(jsonfile)
             #pd.read_json(
             #df = pd.DataFrame.from_dict(eachjson, orient='index')
 #            print eachjson
@@ -83,13 +100,14 @@ def gatherJSONObj(filelist):
             numTasks  = eachjson['numTasks' ]
             input_size= eachjson['input'    ]
             cd_info   = eachjson['CD info'  ]
-            print '=======================\n'
+#            print '=======================\n'
             print exec_name, fail_type, numTasks, input_size
 #            df = pd.DataFrame.from_dict(cd_info, orient='index')
 #            print cd_info
 #            df.reset_index(level=0, inplace=True)
             #print df
-            print '=======================\n'
+#            print '=======================\n'
+#            raw_input('check cdinfo')
 #            print cd_info
 #            if gathered[each_name][fail_type][numTasks][input_size] 
             if exec_name not in gathered:
@@ -125,7 +143,7 @@ def gatherJSONObj(filelist):
 #                flattened[cds] = {}
 #                for item in cd_info[cds]:
 #                    print item
-#                    if item != 'ChildCDs':
+#                    if item != 'child CDs':
 #                        flattened[cds][item] = cd_info[cds][item]
             
             makeFlatCDs(flattened, cd_info)
@@ -145,7 +163,7 @@ def gatherJSONObj(filelist):
 #            print "complete time" , eachjson["complete time" ][0]
 #            print "mesg logging"  , eachjson["mesg logging"  ][0]
 #            print "libc logging"  , eachjson["libc logging"  ][0]
-#            raw_input('..............................')
+            #raw_input('..............................')
 
             gathered[exec_name][fail_type][numTasks][input_size]["total time"    ].append(eachjson["total time"    ][0])
             gathered[exec_name][fail_type][numTasks][input_size]["CD overhead"   ].append(eachjson["CD overhead"   ][0])
@@ -162,10 +180,13 @@ def gatherJSONObj(filelist):
             gathered[exec_name][fail_type][numTasks][input_size]["libc logging"  ].append(eachjson["libc logging"  ][0])
             gathered[exec_name][fail_type][numTasks][input_size]["mailbox overhead"].append(eachjson["mailbox overhead"])
             gathered[exec_name][fail_type][numTasks][input_size]['CD info'].append(flattened)
-    return gathered
+    return gathered, cd_info
 
 def averageCDTree(cdtree_list):
-#    print cdtree_list
+
+    #print 'now start\n\n'
+    #print cdtree_list
+    #print 'now start'
     if len(cdtree_list['CD info']) == 1:
         result = {}
         result['CD info'] = cdtree_list['CD info'][0]
@@ -207,6 +228,21 @@ def averageCDTree(cdtree_list):
             for phase_id in cdtree_infos:
 #                print "phase : ", phase_id, len(cdtree_list)
 #                raw_input("@@@@")
+                result_infos[phase_id]["execution time"] += float(cdtree_infos[phase_id]["execution time"] )
+                result_infos[phase_id]["current counts"] += float(cdtree_infos[phase_id]["current counts"] )
+                result_infos[phase_id]["input volume"]   += float(cdtree_infos[phase_id]["input volume"]   )
+                result_infos[phase_id]["output volume"]  += float(cdtree_infos[phase_id]["output volume"]  )
+                result_infos[phase_id]["rd_bw"]          += float(cdtree_infos[phase_id]["rd_bw"]          )
+                result_infos[phase_id]["wr_bw"]          += float(cdtree_infos[phase_id]["wr_bw"]          )
+                result_infos[phase_id]["rd_bw_mea"]      += float(cdtree_infos[phase_id]["rd_bw_mea"]      )
+                result_infos[phase_id]["wr_bw_mea"]      += float(cdtree_infos[phase_id]["wr_bw_mea"]      )
+                result_infos[phase_id]["fault rate"]     += float(cdtree_infos[phase_id]["fault rate"]     )
+                result_infos[phase_id]["tasksize"]      += float(cdtree_infos[phase_id]["tasksize"]      )
+                result_infos[phase_id]["max prv only bw"]+= float(cdtree_infos[phase_id]["max prv only bw"])
+                result_infos[phase_id]["loc prv only bw"]+= float(cdtree_infos[phase_id]["loc prv only bw"])
+                result_infos[phase_id]["loc prv time"]   += float(cdtree_infos[phase_id]["loc prv time"]   )
+                result_infos[phase_id]["CDrt overhead"]  += float(cdtree_infos[phase_id]["CDrt overhead"]  )
+                result_infos[phase_id]["preserve time"]  += float(cdtree_infos[phase_id]["preserve time"]  )
                 result_infos[phase_id]["exec"        ]["max"] += float(cdtree_infos[phase_id]["exec"        ]["max"])
                 result_infos[phase_id]["exec"        ]["min"] += float(cdtree_infos[phase_id]["exec"        ]["min"])
                 result_infos[phase_id]["exec"        ]["avg"] += float(cdtree_infos[phase_id]["exec"        ]["avg"])
@@ -274,6 +310,21 @@ def averageCDTree(cdtree_list):
         num_results = len(cdtree_list)
     
         for phase_id in result_infos:
+            result_infos[phase_id]["execution time"] /= num_results
+            result_infos[phase_id]["current counts"] /= num_results
+            result_infos[phase_id]["input volume"]   /= num_results
+            result_infos[phase_id]["output volume"]  /= num_results
+            result_infos[phase_id]["rd_bw"]          /= num_results
+            result_infos[phase_id]["wr_bw"]          /= num_results
+            result_infos[phase_id]["rd_bw_mea"]      /= num_results
+            result_infos[phase_id]["wr_bw_mea"]      /= num_results
+            result_infos[phase_id]["fault rate"]     /= num_results
+            result_infos[phase_id]["tasksize"]      /= num_results
+            result_infos[phase_id]["max prv only bw"]/= num_results
+            result_infos[phase_id]["loc prv only bw"]/= num_results
+            result_infos[phase_id]["loc prv time"]   /= num_results
+            result_infos[phase_id]["CDrt overhead"]  /= num_results
+            result_infos[phase_id]["preserve time"]  /= num_results
             result_infos[phase_id]["exec"        ]["max"] /= num_results
             result_infos[phase_id]["exec"        ]["min"] /= num_results
             result_infos[phase_id]["exec"        ]["avg"] /= num_results
@@ -339,6 +390,7 @@ def averageCDTree(cdtree_list):
             result_infos[phase_id]["advance_time"]["avg"] /= num_results
             result_infos[phase_id]["advance_time"]["std"] /= num_results
         return result                                                                                   
+        #return result_infos
 
 def printResults(result):
     for phase_id in result:
@@ -385,13 +437,190 @@ def genEmptyDF(apps, inputs, nTasks, ftype):
                         index=miindex,
                         columns=micolumns).sort_index().sort_index(axis=1)
     return dfmi
-result = gatherJSONObj('file_list.txt')
+
+def genEmptyDF2(apps, inputs, nTasks, ftype, phase_list):
+    print 'genDF'
+    print apps, inputs, nTasks, ftype
+    miindex = pd.MultiIndex.from_product([apps,
+                                          inputs,
+                                          nTasks])
+#    labels = ['total time', 'runtime', 'preserve', 'restore', 'rollback', 'vol', 'bw', 'prv loc', 'rt loc', 'rt max', 'exec', 'reex']
+
+
+    labels = ['total time','preserve','runtime','restore','rollback','vol in','vol out','bw','bw real','prsv loc','prsv max','rtov loc','rtov max','exec','reex']
+    micolumns = pd.MultiIndex.from_product( [phase_list, labels] )
+#    micolumns = pd.MultiIndex.from_tuples([ ('errFree','avg','bare'), ('errFree','avg','cd_noprv'), 
+#      ('errFree','avg','loop'),('errFree','avg','prsv'), ('errFree','avg','comm'),('errFree','avg','rtov'),
+#      ('errFree','std','loop'),('errFree','std','prsv'), ('errFree','std','comm'),('errFree','std','rtov'),
+#      ('errFree','min','loop'),('errFree','min','prsv'), ('errFree','min','comm'),('errFree','min','rtov'),
+#      ('errFree','max','loop'),('errFree','max','prsv'), ('errFree','max','comm'),('errFree','max','rtov'),
+#      ('fRate_0','tot','exec'),('fRate_0','tot','prsv'), ('fRate_0','tot','comm'),('fRate_0','tot','rtov'),
+#      ('fRate_0','lv0','exec'),('fRate_0','lv0','prsv'), ('fRate_0','lv0','comm'),('fRate_0','lv0','rtov'),
+#      ('fRate_0','lv1','exec'),('fRate_0','lv1','prsv'), ('fRate_0','lv1','comm'),('fRate_0','lv1','rtov'),
+#      ('fRate_0','lv2','exec'),('fRate_0','lv2','prsv'), ('fRate_0','lv2','comm'),('fRate_0','lv2','rtov'),
+#                                          ],
+#                                          names=['failure', 'level', 'breakdown'])
+    
+    dfmi = pd.DataFrame(np.zeros(len(miindex)*len(micolumns)).reshape((len(miindex),len(micolumns))),
+                        index=miindex,
+                        columns=micolumns).sort_index().sort_index(axis=1)
+    return dfmi
+
+# Recurse CD hierarchy and make per-level info flattened (as list)
+def getLevelInfoFlattened(cd_elem, prof_list):
+    #print "-----get Level Info start--------------------------------"
+    #print cd_elem
+    #print "-----get Level Info start--------------------------------"
+    for phase in cd_elem['CD info']:
+       elem = cd_elem['CD info'][phase]
+       #print elem
+       #raw_input('3333333333333333')
+       prof_list.extend([ elem["preserve time"], elem["CDrt overhead"], elem["reex_time"]["avg"], elem["rst_time"]["avg"] ])
+       #prof_list.extend([ elem['wr_bw'], elem[u'loc prv time'] ])
+       #print elem["wr_bw"], elem["loc prv time"]
+       #print "%s: %f %f %f %f" % (phase,elem["preserve time"], elem["CDrt overhead"], elem["reex_time"]["avg"], elem["rst_time"]["avg"])
+#       raw_input('---------------------------------')
+
+def getEstInfo(result):
+    printed_head = False
+    header = ['app', 'input', 'tasks']
+    per_est_file_info = []
+    for app in result:
+        for ftype in result[app]:
+            for nTask in result[app][ftype]:
+                for inputsize in result[app][ftype][nTask]:
+                    #print app, nTask, inputsize
+                    #print result[app][ftype][nTask][inputsize]
+                    elem = result[app][ftype][nTask][inputsize]#["CD info"]
+                    # now we have a CD info for one estimation file
+                    # which is dict of phaseID:cd_info
+                    if printed_head == False:
+                        for phase in elem:
+#                            print 'phase', phase
+#                            print '12234'
+#                            raw_input('0000')
+                            header.append(phase)
+                            header.append(phase)
+                            header.append(phase)
+                            header.append(phase)
+                        printed_head = True
+                    print app, nTask, inputsize
+                    #print elem
+                    print 'cccccccccccccccccccccccccccccc'
+                    prof_list = [app, inputsize, nTask]
+                    getLevelInfoFlattened(elem, prof_list)
+                    per_est_file_info.append(prof_list)
+    ret = [header,per_est_file_info]
+    return ret
+#                    for lv0 in cd_info: 
+#                    result[app][ftype][nTask][inputsize]
+                    
+#     for cdtree in cdtree_list['CD info'][1:]:
+#         cdtree_infos = cdtree
+#         for phase_id in cdtree_infos:
+#     for lv0 in cd_info: 
+#         for lv1 in cd_info[lv0]['child CDs']:
+#             for lv2 in cd_info[lv0]['child CDs'][lv1]['child CDs']:
+#         flattened[cds] = {}
+#         for item in cds_list[cds]:
+#             #print item
+#             if item != 'child CDs':
+#                 flattened[cds][item] = cds_list[cds][item]
+#             else:
+#                 makeFlatCDs(flattened, cds_list[cds][item])
+
+
+# Write each elem info in CSV format                
+def writeCSV(est_info, csv_filename):
+    csvf = csv.writer(open(csv_filename, "wb"))
+    csvf.writerow(est_info[0])
+    for row in est_info[1]:
+        csvf.writerow(row)
+
+#    #print flattened
+#    f = csv.writer(open(csv_filename, "wb+"))
+#    f.writerow(["app", "size","task","bare","noprv","errfree","error","preserve","rollback","runtime","prsv errfree","prsv w/error", "rtov errfree", "rtov w/error", "rollback w/error"])
+#
+#def writeCSV(elemcsv, result, cd_info, app, inputsize, nTask):
+#
+#    elemcsv.writerow([app, inputsize, nTask, ])
+#    elemcsv.writerow(['GPUs / Node'               , gpus_per_node             ,])
+#    elemcsv.writerow(['Nodes / Blade'             , nodes_per_blade           ,])
+#    elemcsv.writerow(['Blades / Cage'             , blades_per_cage           ,])
+#    elemcsv.writerow(['Cages / Cabinet'           , cages_per_cabinet         ,])
+#    elemcsv.writerow(['Cabinets / System'         , cabinets_per_system       ,])
+#    elemcsv.writerow(['GPU Cores / GPU'           , gpu_cores_per_gpu         ,])
+#    elemcsv.writerow(['GPU Clock Frequency'       , gpu_clock_freq            ,])
+#    elemcsv.writerow(['GPU TFLOPS / GPU'          , gpu_tflops_per_gpu        ,])
+#    elemcsv.writerow(['GPU Memory stacks / GPU'   , gpu_mem_stacks_per_gpu    ,])
+#    elemcsv.writerow(['GPU Memory chips / stack'  , gpu_mem_chips_per_stack   ,])
+#    elemcsv.writerow(['GPU Memory capacity / chip', gpu_mem_capacity_per_chip ,])
+#    elemcsv.writerow(['GPU Memory IO clock (GHz)' , gpu_mem_io_clk            ,])
+#    elemcsv.writerow(['GPU Memory IO width / ch'  , gpu_mem_io_width_per_ch   ,])
+#    elemcsv.writerow(['GPU Memory channels'       , gpu_mem_channels          ,])
+#    elemcsv.writerow(['CPU Cores / CPU'           , cpu_cores_per_cpu         ,])
+#    elemcsv.writerow(['CPU Clock Frequency'       , cpu_clk_freq              ,])
+#    if len(cdtree_list['CD info']) == 1:
+#        result = {}
+#        result['CD info'] = cdtree_list['CD info'][0]
+#        result["total time"    ]   = cdtree_list["total time"    ][0]
+#        result["CD overhead"   ]   = cdtree_list["CD overhead"   ][0]
+#        result["sync time exec"]   = cdtree_list["sync time exec"][0]
+#        result["sync time reex"]   = cdtree_list["sync time reex"][0]
+#        result["sync time recr"]   = cdtree_list["sync time recr"][0]
+#        result["preserve time" ]   = cdtree_list["preserve time" ][0]
+#        result["restore time"  ]   = cdtree_list["restore time"  ][0]
+#        result["create time"   ]   = cdtree_list["create time"   ][0]
+#        result["destory time"  ]   = cdtree_list["destory time"  ][0]
+#        result["begin time"    ]   = cdtree_list["begin time"    ][0]
+#        result["complete time" ]   = cdtree_list["complete time" ][0]
+#        result["mesg logging"  ]   = cdtree_list["mesg logging"  ][0]
+#        result["libc logging"  ]   = cdtree_list["libc logging"  ][0]
+#        result["mailbox overhead"] = cdtree_list["mailbox overhead"][0]
+#        return result
+#    else:
+#        result = {}
+#        result['CD info'] = cdtree_list['CD info'][0]
+#        result["total time"    ]   = np.mean(cdtree_list["total time"    ]  )
+#        result["CD overhead"   ]   = np.mean(cdtree_list["CD overhead"   ]  )
+#        result["sync time exec"]   = np.mean(cdtree_list["sync time exec"]  )
+#        result["sync time reex"]   = np.mean(cdtree_list["sync time reex"]  )
+#        result["sync time recr"]   = np.mean(cdtree_list["sync time recr"]  )
+#        result["preserve time" ]   = np.mean(cdtree_list["preserve time" ]  )
+#        result["restore time"  ]   = np.mean(cdtree_list["restore time"  ]  )
+#        result["create time"   ]   = np.mean(cdtree_list["create time"   ]  )
+#        result["destory time"  ]   = np.mean(cdtree_list["destory time"  ]  )
+#        result["begin time"    ]   = np.mean(cdtree_list["begin time"    ]  )
+#        result["complete time" ]   = np.mean(cdtree_list["complete time" ]  )
+#        result["mesg logging"  ]   = np.mean(cdtree_list["mesg logging"  ]  )
+#        result["libc logging"  ]   = np.mean(cdtree_list["libc logging"  ]  )
+#        result["mailbox overhead"] = np.mean(cdtree_list["mailbox overhead"])
+#        result_infos = result['CD info']
+#        for cdtree in cdtree_list['CD info'][1:]:
+#            cdtree_infos = cdtree
+#            for phase_id in cdtree_infos:
+##                print "phase : ", phase_id, len(cdtree_list)
+##                raw_input("@@@@")
+#                result_infos[phase_id]["execution time"] += float(cdtree_infos[phase_id]["execution time"] )
+#                result_infos[phase_id]["current counts"] += float(cdtree_infos[phase_id]["current counts"] )
+#                result_infos[phase_id]["input volume"]   += float(cdtree_infos[phase_id]["input volume"]   )
+#                result_infos[phase_id]["output volume"]  += float(cdtree_infos[phase_id]["output volume"]  )
+#                result_infos[phase_id]["rd_bw"]          += float(cdtree_infos[phase_id]["rd_bw"]          )
+
+
+result, cd_info = gatherJSONObj('file_list.txt')
+
 #df = pd.DataFrame.from_dict(result, orient='index')
+#
+
+###############################################################################
+# Generate empty dataframe
+###############################################################################
 apps = {}
 ftypes = {}
 nTasks = {}
 inputsizes = {}
-
+phase_dict = {}
 for app in result:
     apps[app] = 0
     for ftype in result[app]:
@@ -400,30 +629,57 @@ for app in result:
             nTasks[nTask] = 0
             for inputsize in result[app][ftype][nTask]:
                 inputsizes[inputsize] = 0
+                if len(phase_dict) == 0:
+                    for phase in result[app][ftype][nTask][inputsize]['CD info'][0]:
+                        print phase
+                        phase_dict[phase] = 0
+phase_list = []
+for phase in phase_dict:
+    phase_list.append(phase)
+
+app_dict = {}
 app_list = []
 ftype_list = []
 nTask_list = []
 inputsize_list = []
+#print apps
 for app in apps:
-    print app
-    app_type = re.split(r'_', app)[1]
-    if app_type == 'errfree' or app_type == 'bare' or app_type == 'noprv':
-        continue
-    else:
-        app_list.append(app)
+    #print app
+    splitted = re.split(r'_', app)
+    app_type = splitted[1]
+    app_name = splitted[0]
+    app_dict[app_name] = app_type
+#    print app_name, app_type
+#    raw_input('asdf')
+##    if app_type == 'errfree' or app_type == 'bare' or app_type == 'noprv':
+##        continue
+##    else:
+#
+#    print app_list
+#    if app_list.find
+for app in app_dict:
+    app_list.append(app)
+
 for ftype in ftypes:
-    print ftype
+    #print ftype
     ftype_list.append(ftype)
 for nTask in nTasks:
-    print nTask
+    #print nTask
     nTask_list.append(str(nTask))
 for inputsize in inputsizes:
-    print inputsize
+    #print inputsize
     inputsize_list.append(inputsize)
-dfmi = genEmptyDF(app_list, inputsize_list, nTask_list, ftype_list)
 
-#print dfmi
-print dfmi['bare'].loc['lulesh_opt','40','216']
+print phase_list
+dfmi = genEmptyDF(app_list, inputsize_list, nTask_list, ftype_list)
+dfmi2 = genEmptyDF2(app_list, inputsize_list, nTask_list, ftype_list, phase_list)
+
+print dfmi
+print dfmi2
+raw_input('33333333333333333333')
+###############################################################################
+
+#print dfmi['bare'].loc['lulesh','40','216']
 #for app in result:
 #    for ftype in result[app]:
 #        for nTask in result[app][ftype]:
@@ -431,17 +687,61 @@ print dfmi['bare'].loc['lulesh_opt','40','216']
 #                print dfmi['bare'].loc[app][inputsize][nTask]
 #                raw_input('3333333333333333333333333333333333')
 
+
+###############################################################################
+# Average and merge estimations for the same measurements (same est.json files)
+###############################################################################
 for app in result:
     for ftype in result[app]:
         for nTask in result[app][ftype]:
             for inputsize in result[app][ftype][nTask]:
                 # Now we have all the measurements for the same configs
-#                avg_cdinfo = {}
+                print "\n\n\n Final %s %s %s~~~~~~~~~~~~~" % (app, nTask, inputsize)
+                #print result[app][ftype][nTask][inputsize]
+                print '----------------------------------------'
+                print "\n\n\n Final %s %s %s~~~~~~~~~~~~~" % (app, nTask, inputsize)
+                #raw_input( '----------------------------------------')
+
                 result[app][ftype][nTask][inputsize] = averageCDTree(result[app][ftype][nTask][inputsize])
-#                print "\n\n\n Final %s %s %s~~~~~~~~~~~~~" % (app, nTask, inputsize)
+                #print "\n\n\n Final %s %s %s~~~~~~~~~~~~~" % (app, nTask, inputsize)
 #                printResults(avg_result['CD info'])
-print dfmi['bare'].loc['lulesh_opt','40','216']
-print dfmi['errfree'].loc['lulesh_opt','60','216'] 
+
+
+
+# Now result[app][ftype][nTask][inputsize] is dict of phaseID:cd_info
+#print dfmi['bare'].loc['lulesh_fgcd','80','1000']
+#print dfmi['errfree'].loc['lulesh_fgcd','60','512'] 
+
+###############################################################################
+# Get per estimation info in list (in order to print per-level info in csv format)
+###############################################################################
+per_est_info = getEstInfo(result)
+#for per_est in per_est_info:
+    #print per_est
+    #raw_input("\n******************************\n")
+#
+#print cd_info
+#for lv0 in cd_info:
+#    print lv0
+#
+#    raw_input("222222222222check2322222222")
+#    print cd_info[lv0]['child CDs']
+#    for lv1 in cd_info[lv0]["child CDs"]:
+#        print "  ", lv1
+#        for lv2 in cd_info[lv0]["child CDs"][lv1]["child CDs"]:
+#            print "    ", lv2
+#raw_input("222222222222check")
+#print per_est_info
+#raw_input("222222222222check")
+
+writeCSV(per_est_info, "gathered.csv")
+
+for app in result:
+   for ftype in result[app]:
+       for nTask in result[app][ftype]:
+           for inputsize in result[app][ftype][nTask]:
+                print app, inputsize, nTask
+                print 'check first'
 
 for app in result:
     app_type = re.split(r'_', app)[1]
@@ -454,16 +754,21 @@ for app in result:
                 for inputsize in result[app][ftype][nTask]:
 #                    print (app_name + '_errfree'), ftype, nTask, inputsize
 #                    print result[app_name + '_errfree'][ftype][nTask][inputsize]
-                    print app, inputsize, nTask
-                    print dfmi
+#                    print app, inputsize, nTask
+#                    print dfmi
+#                    print app_name + '_noprv'
+#                    raw_input('333333333333333333333')
+#                    for key in result[app_name + '_noprv'][ftype][nTask][inputsize]:
+#                        print key
+                    cd_elem = result[app][ftype][nTask][inputsize]
                     noprv    = result[app_name + '_noprv'][ftype][nTask][inputsize]['total time']
                     errfree  = result[app_name + '_errfree'][ftype][nTask][inputsize]['total time']
                     preserve = result[app_name + '_errfree'][ftype][nTask][inputsize]['preserve time']
                     total_w_err    = result[app][ftype][nTask][inputsize]['total time']
-                    dfmi['noprv'    ].loc[app,str(inputsize),str(nTask)] = noprv 
-                    dfmi['errfree'  ].loc[app,str(inputsize),str(nTask)] = errfree
-                    dfmi['preserve'].loc[app,str(inputsize),str(nTask)]  = preserve
-                    dfmi['total'].loc[app,str(inputsize),str(nTask)] = total_w_err
+                    dfmi['noprv'    ].loc[app_name,str(inputsize),str(nTask)] = noprv 
+                    dfmi['errfree'  ].loc[app_name,str(inputsize),str(nTask)] = errfree
+                    dfmi['preserve'].loc[app_name,str(inputsize),str(nTask)]  = preserve
+                    dfmi['total'].loc[app_name,str(inputsize),str(nTask)] = total_w_err
                     total    = result[app][ftype][nTask][inputsize]['total time']
                     runtime_overhead = result[app][ftype][nTask][inputsize]['begin time'] \
                                      + result[app][ftype][nTask][inputsize]['complete time'] \
@@ -474,12 +779,62 @@ for app in result:
 #                                    + result[app][ftype][nTask][inputsize]['sync time recr']
                     rt_overhead = errfree - preserve - noprv
                     if rt_overhead > 0:
-                        dfmi['runtime'].loc[app,str(inputsize),str(nTask)] = rt_overhead
+                        dfmi['runtime'].loc[app_name,str(inputsize),str(nTask)] = rt_overhead
                     else:
-                        dfmi['runtime'].loc[app,str(inputsize),str(nTask)] = 0
-                    dfmi['rollback'].loc[app,str(inputsize),str(nTask)] = total_w_err - errfree
+                        dfmi['runtime'].loc[app_name,str(inputsize),str(nTask)] = 0
+                    dfmi['rollback'].loc[app_name,str(inputsize),str(nTask)] = total_w_err - errfree
+                    for phase in cd_elem['CD info']:
+                        elem = cd_elem['CD info'][phase]
+    #labels = ['total time','preserve', 'runtime', 'rollback', 'vol', 'bw', 'prv loc', 'rt loc', 'rt max', 'exec', 'reex']
+                        dfmi2[phase, 'total time'].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['total_time']['avg']
+                        dfmi2[phase, 'preserve'  ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['preserve time']
+                        dfmi2[phase, 'runtime'   ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['CDrt overhead']
+                        dfmi2[phase, 'restore'   ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['restore']['avg']
+                        dfmi2[phase, 'rollback'  ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['reex_time']['avg']
+                        dfmi2[phase, 'vol in'    ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['input volume']
+                        dfmi2[phase, 'vol out'   ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['output volume']
+                        dfmi2[phase, 'bw'        ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['rd_bw']
+                        dfmi2[phase, 'bw real'   ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['rd_bw_mea']
+                        dfmi2[phase, 'prsv loc'  ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['loc prv time']
+                        dfmi2[phase, 'prsv max'  ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['loc prv time']
+                        dfmi2[phase, 'rtov loc'  ].loc[app_name,str(inputsize),str(nTask)] = 0#cd_elem['CD info'][phase]['loc rtov time']
+                        dfmi2[phase, 'rtov max'  ].loc[app_name,str(inputsize),str(nTask)] = 0#cd_elem['CD info'][phase]['max rtov time']
+                        dfmi2[phase, 'exec'      ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['exec']['avg']
+                        dfmi2[phase, 'reex'      ].loc[app_name,str(inputsize),str(nTask)] = cd_elem['CD info'][phase]['reexec']['avg']
+                       #prof_list.extend([ elem["preserve time"], elem["CDrt overhead"], elem["reex_time"]["avg"], elem["rst_time"]["avg"] ])
 
-print dfmi
+# print dfmi
+# raw_input('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+# print dfmi2
+dfmi.to_csv("result_lulesh.csv")
+dfmi2.to_csv("breakdown.csv")
+
+# #dfmi.plot(x='A', y='B').plot(kind='bar')
+# raw_input('~~~~~~~~~~~~~~~0~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+# df2 = dfmi2.groupby(level=0).count()
+# print df2
+# raw_input('~~~~~~~~~~~~~~~1~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+# df2 = dfmi2.groupby(level=1).count()
+# print df2
+# 
+# raw_input('~~~~~~~~~~~~~~~2~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+# df2 = dfmi2.groupby(level=2).count()
+# print df2
+# raw_input('~~~~~~~~~~~~~~~3~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+# 
+# #df3 =dfmi.groupby(['1000', '512']).cout()
+# #print df3
+# #df3 =dfmi.groupby(['1000', '512'])['1000']
+# #print df3
+# df3 =dfmi2.groupby(level=1, by=['total time', 'preserve', 'runtime', 'restore', 'rollback'])['total time']
+# #['total time'].count().unstack('preserve').fillna(0)
+# print df3
+# print 'END'
+#df2 = dfmi2.groupby(['Name', 'Abuse/NFF'])['Name'].count().unstack('Abuse/NFF').fillna(0)
+#df2[['abuse','nff']].plot(kind='bar', stacked=True)
+###############################################################################
+# Now draw graph
+###############################################################################
 
 
 
