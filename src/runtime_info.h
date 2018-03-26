@@ -43,6 +43,7 @@ struct PrvProfEntry : public std::string {
 struct CDOverhead {
   double prv_elapsed_time_;
   double max_prv_elapsed_time_;
+  double max_cdrt_elapsed_time_;
   double rst_elapsed_time_;
   double create_elapsed_time_;
   double destroy_elapsed_time_;
@@ -52,6 +53,7 @@ struct CDOverhead {
   CDOverhead(void) 
     : prv_elapsed_time_(0.0),
       max_prv_elapsed_time_(0.0),
+      max_cdrt_elapsed_time_(0.0),
       rst_elapsed_time_(0.0),
       create_elapsed_time_(0.0),
       destroy_elapsed_time_(0.0),
@@ -62,6 +64,7 @@ struct CDOverhead {
   void CopyCDOverhead(const CDOverhead &record) {
     prv_elapsed_time_     = record.prv_elapsed_time_; 
     max_prv_elapsed_time_ = record.max_prv_elapsed_time_; 
+    max_cdrt_elapsed_time_ = record.max_cdrt_elapsed_time_; 
     rst_elapsed_time_     = record.rst_elapsed_time_; 
     create_elapsed_time_  = record.create_elapsed_time_;  
     destroy_elapsed_time_ = record.destroy_elapsed_time_; 
@@ -72,6 +75,7 @@ struct CDOverhead {
   void MergeCDOverhead(const CDOverhead &info_per_level) {
     prv_elapsed_time_     += info_per_level.prv_elapsed_time_; 
     max_prv_elapsed_time_ += info_per_level.max_prv_elapsed_time_; 
+    max_cdrt_elapsed_time_ += info_per_level.max_cdrt_elapsed_time_; 
     rst_elapsed_time_     += info_per_level.rst_elapsed_time_; 
     create_elapsed_time_  += info_per_level.create_elapsed_time_;  
     destroy_elapsed_time_ += info_per_level.destroy_elapsed_time_; 
@@ -94,11 +98,19 @@ struct CDOverhead {
     return *this;
   }
   double GetCDRTOverhead(double create_time=0.0) {
-    return (create_time
-          + destroy_elapsed_time_
-          + begin_elapsed_time_
-          + compl_elapsed_time_
-          + advance_elapsed_time_);
+    double rtovhd= (destroy_elapsed_time_
+                  + begin_elapsed_time_
+                  + compl_elapsed_time_
+                  + advance_elapsed_time_);
+    rtovhd = (max_cdrt_elapsed_time_ > rtovhd)? max_cdrt_elapsed_time_ : rtovhd;
+    return rtovhd + create_time;
+  }
+  double GetCDRTOverheadLocal(double create_time=0.0) {
+    double rtovhd= (destroy_elapsed_time_
+                  + begin_elapsed_time_
+                  + compl_elapsed_time_
+                  + advance_elapsed_time_);
+    return rtovhd + create_time;
   }
   double GetCDRTOverheadAll(void) {
     return ( create_elapsed_time_
@@ -111,21 +123,24 @@ struct CDOverhead {
     //printf("max prv:%lf (%lf, %lf)\n", max_prv_elapsed_time_, prv_elapsed_time_, rst_elapsed_time_);
     //return (prv_elapsed_time_ + max_prv_elapsed_time_ + rst_elapsed_time_);
     double prv_time = (max_prv_elapsed_time_ > prv_elapsed_time_)? max_prv_elapsed_time_ : prv_elapsed_time_;
-    return (prv_time + rst_elapsed_time_);
+    return (prv_time);
+    //return (prv_time + rst_elapsed_time_);
   }
-  double GetOverheadAll(void) {
-    return (GetPreserveTime()
-          + create_elapsed_time_
-          + destroy_elapsed_time_
-          + begin_elapsed_time_
-          + compl_elapsed_time_
-          + advance_elapsed_time_);
+  double GetOverheadAll(double parent_create_time) {
+//    return (GetPreserveTime()
+//          + create_elapsed_time_
+//          + destroy_elapsed_time_
+//          + begin_elapsed_time_
+//          + compl_elapsed_time_
+//          + advance_elapsed_time_);
+    return (GetPreserveTime() + GetCDRTOverhead(parent_create_time));
   }
 };
 
 struct CDOverheadVar : public CDOverhead {
   double prv_elapsed_time_var_;
   double max_prv_elapsed_time_var_;
+  double max_cdrt_elapsed_time_var_;
   double rst_elapsed_time_var_;
   double create_elapsed_time_var_;
   double destroy_elapsed_time_var_;
@@ -136,6 +151,7 @@ struct CDOverheadVar : public CDOverhead {
     : CDOverhead(),
       prv_elapsed_time_var_(0.0),
       max_prv_elapsed_time_var_(0.0),
+      max_cdrt_elapsed_time_var_(0.0),
       rst_elapsed_time_var_(0.0),
       create_elapsed_time_var_(0.0),
       destroy_elapsed_time_var_(0.0),
@@ -203,6 +219,7 @@ struct RuntimeInfo : public CDOverhead {
   std::vector<float> exec_trace_;
   std::vector<float> prsv_trace_;
   std::vector<float> max_prsv_;
+  std::vector<float> max_cdrt_;
   std::vector<float> cdrt_trace_;
   CD_CLOCK_T exec_clk_;
   CD_CLOCK_T reex_clk_;
@@ -275,6 +292,7 @@ struct RuntimeInfo : public CDOverhead {
                           sync_time_,
                           prv_elapsed_time_,
                           max_prv_elapsed_time_,
+                          max_cdrt_elapsed_time_,
                           rst_elapsed_time_,
                           create_elapsed_time_,
                           destroy_elapsed_time_,
@@ -299,6 +317,7 @@ struct RuntimeInfo : public CDOverhead {
                         sync_time_,
                         prv_elapsed_time_,
                         max_prv_elapsed_time_,
+                        max_cdrt_elapsed_time_,
                         rst_elapsed_time_,
                         create_elapsed_time_,
                         destroy_elapsed_time_,
@@ -320,6 +339,7 @@ struct RuntimeInfo : public CDOverhead {
     sync_time_            = rt_info.sync_time_;
     prv_elapsed_time_     = rt_info.prv_elapsed_time_;
     max_prv_elapsed_time_ = rt_info.max_prv_elapsed_time_;
+    max_cdrt_elapsed_time_= rt_info.max_cdrt_elapsed_time_;
     rst_elapsed_time_     = rt_info.rst_elapsed_time_;
     create_elapsed_time_  = rt_info.create_elapsed_time_;
     destroy_elapsed_time_ = rt_info.destroy_elapsed_time_;
@@ -341,6 +361,7 @@ struct RuntimeInfo : public CDOverhead {
     sync_time_            = rt_info.sync_time_;
     prv_elapsed_time_     = rt_info.prv_elapsed_time_;
     max_prv_elapsed_time_ = rt_info.max_prv_elapsed_time_;
+    max_cdrt_elapsed_time_= rt_info.max_cdrt_elapsed_time_;
     rst_elapsed_time_     = rt_info.rst_elapsed_time_;
     create_elapsed_time_  = rt_info.create_elapsed_time_;
     destroy_elapsed_time_ = rt_info.destroy_elapsed_time_;
@@ -468,7 +489,7 @@ struct RuntimeInfo : public CDOverhead {
 
     exec_trace_.push_back((float)cd_total_time);
     prsv_trace_.push_back((float)prsv_time_smpl_);
-    cdrt_trace_.push_back((float)cdrt_time_smpl_);
+    cdrt_trace_.push_back((float)(cdrt_time_smpl_ + prsv_time_smpl_));
     prsv_time_smpl_ = 0.0;
     cdrt_time_smpl_ = 0.0;
 //    if(is_reexec) {
@@ -524,7 +545,7 @@ struct RuntimeInfo : public CDOverhead {
       } else if (op == kCreate) {
         cd::create_elapsed_time += elapsed;
         create_elapsed_time_    += elapsed;
-        cdrt_time_smpl_         += elapsed;
+        //cdrt_time_smpl_         += elapsed;
       } else {
         assert(0);
       }
@@ -550,7 +571,8 @@ struct RuntimeInfo : public CDOverhead {
     cd::create_elapsed_time += elapsed;
     cd::create_elapsed_smpl += elapsed;
     create_elapsed_time_    += elapsed;
-    cdrt_time_smpl_         += elapsed;
+    //cdrt_time_smpl_         += elapsed; // create should be
+                                          // parent's 
   }
 
   inline void RecordDestory(double elapsed)
@@ -615,6 +637,20 @@ struct RuntimeInfo : public CDOverhead {
         fprintf(fout, "0");
       }
       for(;jt!=max_prsv_.end(); ++jt) {
+        fprintf(fout, ",%f", *jt);
+      }
+      fprintf(fout, "],\n");
+    }
+    {
+      fprintf(fout, "%s\"max_cdrt\"    : [", indent);
+      auto jt=max_cdrt_.begin();
+      if(jt!=max_cdrt_.end()) {
+        fprintf(fout, "%f", *jt);
+        ++jt;
+      } else {
+        fprintf(fout, "0");
+      }
+      for(;jt!=max_cdrt_.end(); ++jt) {
         fprintf(fout, ",%f", *jt);
       }
       fprintf(fout, "],\n");
