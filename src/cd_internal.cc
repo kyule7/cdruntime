@@ -130,9 +130,9 @@ void cd::internal::Initialize(void)
   *CD::pendingFlag_ = 0;
   *CD::rollback_point_ = INVALID_ROLLBACK_POINT;
 
-  MPI_Win_create(CD::pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
+  PMPI_Win_create(CD::pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
                  MPI_INFO_NULL, GetRootCD()->color(), &CD::pendingWindow_);
-  MPI_Win_create(CD::rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
+  PMPI_Win_create(CD::rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
                  MPI_INFO_NULL, GetRootCD()->color(), &CD::rollbackWindow_);
 #else
   CD::rollback_point_ = new CDFlagT(INVALID_ROLLBACK_POINT);
@@ -1192,9 +1192,9 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 {
 #if CD_MPI_ENABLED
 
-#if CD_PROFILER_ENABLED
+  #if CD_PROFILER_ENABLED
   double sync_time = 0.0;
-#endif
+  #endif
 
 #if BUGFIX_0327
 
@@ -1206,11 +1206,14 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
   #if CD_PROFILER_ENABLED 
     CD_CLOCK_T begin_here = CD_CLOCK();
   #endif
+
     MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
     //MPI_Win_flush_local_all(cd_lv_to_sync->mailbox_);
+    
   #if CD_PROFILER_ENABLED
     sync_time += CD_CLOCK() - begin_here;
   #endif
+
     cd_lv_to_sync->CheckMailBox();
 
     new_rollback_point = cd_lv_to_sync->CheckRollbackPoint(false);
