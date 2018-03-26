@@ -697,6 +697,7 @@ void CD_Finalize(void)
   const double msg_elapsed           = CD_CLK_MEA(cd::msg_elapsed_time);
   const double log_elapsed           = CD_CLK_MEA(cd::log_elapsed_time);
   const double tot_elapsed           = CD_CLK_MEA(cd::tot_end_clk - cd::tot_begin_clk);
+//  printf("tot elapsed:%lf\n", tot_elapsed);
   double sendbuf[PROF_STATISTICS_NUM]  = {
                          tot_elapsed, 
                          tot_elapsed * tot_elapsed,
@@ -869,7 +870,7 @@ void CD_Finalize(void)
     printf("Destroy    : %le %le %le %le\n", recvavg[DSTRY_PRF], recvstd[DSTRY_PRF], recvmin[DSTRY_PRF], recvmax[DSTRY_PRF]); 
     printf("Begin      : %le %le %le %le\n", recvavg[BEGIN_PRF], recvstd[BEGIN_PRF], recvmin[BEGIN_PRF], recvmax[BEGIN_PRF]); 
     printf("Complete   : %le %le %le %le\n", recvavg[COMPL_PRF], recvstd[COMPL_PRF], recvmin[COMPL_PRF], recvmax[COMPL_PRF]); 
-    printf("MsgLog time: %le %le %le %le\n", recvavg[MSG_PRF]  , recvstd[MSG_PRF]  , recvmin[MSG_PRF]  , recvmax[MSG_PRF]  );
+    printf("Msg time   : %le %le %le %le\n", recvavg[MSG_PRF]  , recvstd[MSG_PRF]  , recvmin[MSG_PRF]  , recvmax[MSG_PRF]  );
     printf("Libc   time: %le %le %le %le\n", recvavg[LOG_PRF]  , recvstd[LOG_PRF]  , recvmin[LOG_PRF]  , recvmax[LOG_PRF]  );
 #if CD_PROFILER_ENABLED & CD_MPI_ENABLED
     printf("Mailbox    : %lf \n", cd::mailbox_elapsed_time_in_sec); 
@@ -933,7 +934,9 @@ void CD_Finalize(void)
     cd::phaseTree.root_->GatherStats();
     cd::phaseTree.PrintStats();
   } else {
-    PhaseNode::PrintOutputJson(NULL);  
+    if(cd::myTaskID == 0) {
+      PhaseNode::PrintOutputJson(NULL);  
+    }
   }
   //tuned::phaseTree.PrintStats();
 

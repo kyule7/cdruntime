@@ -172,7 +172,7 @@ void PhaseNode::PrintOutputJson(PhaseNode *root)
   fprintf(outJSON, "  \"destory time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::DSTRY_PRF], cd::recvstd[cd::DSTRY_PRF], cd::recvmin[cd::DSTRY_PRF], cd::recvmax[cd::DSTRY_PRF]); 
   fprintf(outJSON, "  \"begin time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::BEGIN_PRF], cd::recvstd[cd::BEGIN_PRF], cd::recvmin[cd::BEGIN_PRF], cd::recvmax[cd::BEGIN_PRF]); 
   fprintf(outJSON, "  \"complete time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::COMPL_PRF], cd::recvstd[cd::COMPL_PRF], cd::recvmin[cd::COMPL_PRF], cd::recvmax[cd::COMPL_PRF]); 
-  fprintf(outJSON, "  \"mesg logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::MSG_PRF]  , cd::recvstd[cd::MSG_PRF]  , cd::recvmin[cd::MSG_PRF]  , cd::recvmax[cd::MSG_PRF]  );
+  fprintf(outJSON, "  \"messaging time\": [%le, %le, %le, %le],\n", cd::recvavg[cd::MSG_PRF]  , cd::recvstd[cd::MSG_PRF]  , cd::recvmin[cd::MSG_PRF]  , cd::recvmax[cd::MSG_PRF]  );
   fprintf(outJSON, "  \"libc logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::LOG_PRF]  , cd::recvstd[cd::LOG_PRF]  , cd::recvmin[cd::LOG_PRF]  , cd::recvmax[cd::LOG_PRF]  );
 #if CD_PROFILER_ENABLED & CD_MPI_ENABLED
   fprintf(outJSON, "  \"mailbox overhead\": %lf,\n", cd::mailbox_elapsed_time_in_sec); 
