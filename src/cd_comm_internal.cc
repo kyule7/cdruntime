@@ -55,6 +55,7 @@ using namespace std;
 #define LOCAL_LOCK_ENABLED 0
 #define LOCAL_LOCK_ENABLED_FIXME 0
 CD_CLOCK_T cd::mailbox_elapsed_time = 0;
+double     cd::mailbox_elapsed_time_in_sec = 0;
 CD_CLOCK_T cd::mailbox_elapsed_smpl = 0;
 
 int requested_event_count = 0;

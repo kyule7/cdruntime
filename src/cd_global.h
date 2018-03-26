@@ -298,6 +298,7 @@ namespace cd {
 
   enum {
     TOTAL_PRF=0,
+    REEX_PRF,
     CDOVH_PRF,
     CD_NS_PRF,
     CD_RS_PRF,

@@ -479,7 +479,9 @@ struct RuntimeInfo : public CDOverhead {
     exec_clk_    = 0; 
     // reexecution not from the current CDs 
     if(reex_clk_ != 0) {
-      reex_time_ += now - reex_clk_;
+      cd::reex_elapsed_time += now - reex_clk_;
+      cd::reex_elapsed_smpl += now - reex_clk_;
+      reex_time_            += now - reex_clk_;
       reex_clk_   = 0;
     }
 // NOTE: max_prsv is gathered at Finalize()
@@ -562,7 +564,9 @@ struct RuntimeInfo : public CDOverhead {
   // then RecordComplete() is called to measure total_time_
   inline void RecordRecoveryComplete(CD_CLOCK_T now)
   {
-    reex_time_ += now - reex_clk_;
+    cd::reex_elapsed_time += now - reex_clk_;
+    cd::reex_elapsed_smpl += now - reex_clk_;
+    reex_time_            += now - reex_clk_;
     reex_cnt_  += 1;
   }
   

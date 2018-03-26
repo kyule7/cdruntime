@@ -60,6 +60,7 @@ extern CD_CLOCK_T prof_sync_clk;
 extern CD_CLOCK_T begin_clk;
 extern CD_CLOCK_T end_clk;
 extern CD_CLOCK_T body_elapsed_time;
+extern CD_CLOCK_T reex_elapsed_time;
 extern CD_CLOCK_T normal_sync_time;
 extern CD_CLOCK_T reexec_sync_time;
 extern CD_CLOCK_T recovery_sync_time;
@@ -71,8 +72,10 @@ extern CD_CLOCK_T begin_elapsed_time;
 extern CD_CLOCK_T compl_elapsed_time;
 extern CD_CLOCK_T advance_elapsed_time;
 extern CD_CLOCK_T mailbox_elapsed_time;
+extern double     mailbox_elapsed_time_in_sec;
 
 extern CD_CLOCK_T body_elapsed_smpl;
+extern CD_CLOCK_T reex_elapsed_smpl;
 extern CD_CLOCK_T normal_sync_smpl;
 extern CD_CLOCK_T reexec_sync_smpl;
 extern CD_CLOCK_T recovery_sync_smpl;
