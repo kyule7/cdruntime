@@ -372,11 +372,18 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     computeForce(s); // s->pot->force(s)
     stopTimer(computeForceTimer);
 #if _CD3 && _CD2
+    cd_detect(lv3_cd);
+    cd_complete(lv3_cd);
+    cd_destroy(lv3_cd);
+#endif // _CD3 && _CD2
+#if _CD2
+    // Do I need cd_detect here when level2 is enabled? Yes, it won't
+    // double detect here and in level3. 
 #if _CD2_OUTPUT
-    // TODO: kOutput (lv3_cd)
+    // TODO: kOutput (lv2_cd)
     //       s->atoms->f, U
-    int computeForce_pre_output_lv3_size =
-        preserveAtoms(lv3_cd, kOutput, s->atoms, s->boxes->nLocalBoxes,
+    int computeForce_pre_output_lv2_size =
+        preserveAtoms(lv2_cd, kOutput, s->atoms, s->boxes->nLocalBoxes,
                       0, // is_all
                       0, // is_gid
                       0, // is_r
@@ -391,14 +398,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                       0,          // is_print
                       NULL); 
                       //"_Local"); 
-#endif
-    cd_detect(lv3_cd);
-    cd_complete(lv3_cd);
-    cd_destroy(lv3_cd);
-#endif // _CD3 && _CD2
-#if _CD2
-    // Do I need cd_detect here when level2 is enabled? Yes, it won't
-    // double detect here and in level3. (FIXME: should be verfified)
+#endif // _CD2_OUTPUT
     cd_detect(lv2_cd);
     cd_complete(lv2_cd);
 #endif
