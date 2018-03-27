@@ -6,10 +6,23 @@
     interval : 1
     errortype: 0xF
     medium: GlobalDisk
+  - CD_1_1 :
+    - label    : whileloop_sp2
+      interval : 1
+      errortype: 0xF
+      medium: GlobalDisk
+    - CD_2_2 :
+      - label    : sp2Loop_while_itr
+        interval : 1
+        errortype: 0xF
+        medium: GlobalDisk
 
 - FAILURE_FTYPE0 :
-  - F1 : 0.000
-  - F2 : 0.000
-  - F4 : 0.00 
-  - F8 : 0.01
-
+  #- F1 : 0.0133
+  #- F2 : 0.00267
+  #- F4 : 0.000197
+  #- F8 : 0.0
+  - F1 : 0.2133
+  - F2 : 0.20267
+  - F4 : 0.200197
+  - F8 : 0.2
