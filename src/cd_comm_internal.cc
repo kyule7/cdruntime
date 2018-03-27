@@ -790,6 +790,7 @@ void CD::ForwardToLowerLevel(CD *cdp, const CDEventT &event)
                         MPI_MIN, rollbackWindow_);
         PMPI_Win_unlock_all(rollbackWindow_);
       }
+
       if(cur_head_id != cd::myTaskID) {
         PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cur_head_id, 0, cur_cd->mailbox_);
         // Inform the type of event to be requested
@@ -1009,30 +1010,10 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Accumulate event at %d\n", global_task_id);
 
 //        printf("global_task_id:%d, task_id:%d, myid:%d\n", global_task_id, task_id, myTaskID); fflush(stdout);
-#if LOCAL_LOCK_ENABLED        
-        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_task_id, 0, pendingWindow_);
-//        PMPI_Win_flush(global_task_id, pendingWindow_);
-        PMPI_Accumulate(&val, 1, MPI_INT, 
-                       global_task_id, 0, 1, MPI_INT, 
-                       MPI_SUM, pendingWindow_);
-//        PMPI_Win_flush(global_task_id, pendingWindow_);
-        PMPI_Win_unlock(global_task_id, pendingWindow_);
-        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "PMPI_Accumulate done for task #%d\n", global_task_id);
-        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Finished to increment the pending counter at task #%d\n", task_id);
-    
-        if(task_id == task_in_color()) { 
-          CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "after accumulate --> pending counter : %d\n", *pendingFlag_);
-        }
-        
-        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Set event start\n");
-        // Inform the type of event to be requested
-        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_id, 0, mailbox_);
-        PMPI_Accumulate((void *)&event, 1, MPI_INT, 
-                       task_id, 0, 1, MPI_INT, 
-                       MPI_BOR, mailbox_);
-        PMPI_Win_unlock(task_id, mailbox_);
-#else
-        if(global_task_id != cd::myTaskID) {
+#if 1//LOCAL_LOCK_ENABLED        
+        //if(global_task_id != cd::myTaskID) 
+        if(0)
+        {
           PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_task_id, 0, pendingWindow_);
           PMPI_Accumulate(&val, 1, MPI_INT, 
                          global_task_id, 0, 1, MPI_INT, 
@@ -1046,11 +1027,12 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
           }
           
           CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Set event start\n");
-        } else {
+        } else {  // global_task_id == cd::myTaskID
           PMPI_Win_lock_all(0, pendingWindow_);
           PMPI_Accumulate(&val, 1, MPI_INT, 
                          global_task_id, 0, 1, MPI_INT, 
                          MPI_SUM, pendingWindow_);
+          PMPI_Win_flush(global_task_id, pendingWindow_);
           PMPI_Win_unlock_all(pendingWindow_);
           CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "PMPI_Accumulate done for task #%d\n", global_task_id);
           CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Finished to increment the pending counter at task #%d\n", task_id);
@@ -1076,6 +1058,28 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
                          MPI_BOR, mailbox_);
           PMPI_Win_unlock_all(mailbox_);
         }
+#else
+        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_task_id, 0, pendingWindow_);
+//        PMPI_Win_flush(global_task_id, pendingWindow_);
+        PMPI_Accumulate(&val, 1, MPI_INT, 
+                       global_task_id, 0, 1, MPI_INT, 
+                       MPI_SUM, pendingWindow_);
+//        PMPI_Win_flush(global_task_id, pendingWindow_);
+        PMPI_Win_unlock(global_task_id, pendingWindow_);
+        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "PMPI_Accumulate done for task #%d\n", global_task_id);
+        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Finished to increment the pending counter at task #%d\n", task_id);
+    
+        if(task_id == task_in_color()) { 
+          CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "after accumulate --> pending counter : %d\n", *pendingFlag_);
+        }
+        
+        CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Set event start\n");
+        // Inform the type of event to be requested
+        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_id, 0, mailbox_);
+        PMPI_Accumulate((void *)&event, 1, MPI_INT, 
+                       task_id, 0, 1, MPI_INT, 
+                       MPI_BOR, mailbox_);
+        PMPI_Win_unlock(task_id, mailbox_);
 #endif
       }
 
@@ -1375,9 +1379,15 @@ void CD::UnsetEventFlag(CDFlagT &event_flag, CDFlagT event_mask) {
     assert(0);
   }
 #if MAILBOX_LOCK_ENABLED
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
+  #if LOCAL_LOCK_ENABLED
+  PMPI_Win_lock_all(0, mailbox_);
   event_flag &= ~event_mask;
-  PMPI_Win_unlock(task_in_color(), mailbox_);
+  PMPI_Win_unlock_all(mailbox_);
+  #else
+  //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
+  event_flag &= ~event_mask;
+  //PMPI_Win_unlock(task_in_color(), mailbox_);
+  #endif
 #else
   event_flag &= ~event_mask;
 #endif
@@ -1402,10 +1412,18 @@ uint32_t CD::GetPendingCounter(void)
 uint32_t CD::DecPendingCounter(void)
 {
   uint32_t pending_counter = CD_UINT32_MAX;
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
+#if LOCAL_LOCK_ENABLED
+  PMPI_Win_lock_all(0, pendingWindow_);
   (*pendingFlag_) -= EventHandler::handled_event_count;
   pending_counter = (*pendingFlag_);
-  PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+  PMPI_Win_unlock_all(pendingWindow_);
+#else
+  //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
+  (*pendingFlag_) -= EventHandler::handled_event_count;
+  pending_counter = (*pendingFlag_);
+  //PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+#endif
+
   // Initialize handled_event_count;
 //  CD_DEBUG("handled : %d, pending_counter : %u\n", EventHandler::handled_event_count, pending_counter);
   EventHandler::handled_event_count = 0;
@@ -1416,10 +1434,17 @@ inline
 uint32_t CD::IncPendingCounter(void)
 {
   uint32_t pending_counter = CD_UINT32_MAX;
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
+#if LOCAL_LOCK_ENABLED
+  PMPI_Win_lock_all(0, pendingWindow_);
   (*pendingFlag_) += 1;
   pending_counter = (*pendingFlag_);
-  PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+  PMPI_Win_unlock_all(pendingWindow_);
+#else
+//  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
+  (*pendingFlag_) += 1;
+  pending_counter = (*pendingFlag_);
+//  PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+#endif
   return pending_counter;
 }
 
@@ -1434,12 +1459,21 @@ void CD::PrintDebug() {
 
 void CD::InitializeMailBox(void)
 {
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
+#if LOCAL_LOCK_ENABLED
+  PMPI_Win_lock_all(0, pendingWindow_);
   *pendingFlag_ = 0;
-  PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
-  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+  PMPI_Win_unlock_all(pendingWindow_);
+  PMPI_Win_lock_all(0, rollbackWindow_);
   *rollback_point_ = INVALID_ROLLBACK_POINT;
-  PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+  PMPI_Win_unlock_all(rollbackWindow_);
+#else
+  //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
+  *pendingFlag_ = 0;
+  //PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+  //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+  *rollback_point_ = INVALID_ROLLBACK_POINT;
+  //PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+#endif
   // Initialization of event flags
   if(is_window_reused_==false) {
     if(IsHead() == false) {
