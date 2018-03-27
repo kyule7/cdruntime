@@ -88,6 +88,7 @@ extern CD_CLOCK_T begin_elapsed_smpl;
 extern CD_CLOCK_T compl_elapsed_smpl;
 extern CD_CLOCK_T advance_elapsed_smpl;
 extern CD_CLOCK_T mailbox_elapsed_smpl;
+extern bool is_error_free;
 }
 
 namespace tuned {

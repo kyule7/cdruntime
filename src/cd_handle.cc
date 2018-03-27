@@ -862,24 +862,25 @@ void CD_Finalize(void)
   cd::tot_rtov[3]= recvmax[CREAT_PRF] + recvmax[DSTRY_PRF] + recvmax[BEGIN_PRF] +recvmax[COMPL_PRF];
   cd::mailbox_elapsed_time_in_sec = CD_CLK_MEA(cd::mailbox_elapsed_time);
   if(cd::myTaskID == 0) {
-    printf("\n\n============================================\n");
-    printf("Total time  : %le %le %le %le\n", recvavg[TOTAL_PRF], recvstd[TOTAL_PRF], recvmin[TOTAL_PRF], recvmax[TOTAL_PRF]);
-    printf("Rollback    : %le %le %le %le\n", recvavg[REEX_PRF], recvstd[REEX_PRF], recvmin[REEX_PRF], recvmax[REEX_PRF]);
-    printf("CD ovhd     : %le %le %le %le\n", recvavg[CDOVH_PRF], recvstd[CDOVH_PRF], recvmin[CDOVH_PRF], recvmax[CDOVH_PRF]); 
-    printf("CD ovhd calc: %le %le %le %le\n", tot_rtov[0], tot_rtov[1], tot_rtov[2], tot_rtov[3]); 
-    printf("Normal Sync : %le %le %le %le\n", recvavg[CD_NS_PRF], recvstd[CD_NS_PRF], recvmin[CD_NS_PRF], recvmax[CD_NS_PRF]); 
-    printf("Reexec Sync : %le %le %le %le\n", recvavg[CD_RS_PRF], recvstd[CD_RS_PRF], recvmin[CD_RS_PRF], recvmax[CD_RS_PRF]); 
-    printf("Recovr Sync : %le %le %le %le\n", recvavg[CD_ES_PRF], recvstd[CD_ES_PRF], recvmin[CD_ES_PRF], recvmax[CD_ES_PRF]); 
-    printf("Preserve[s] : %le %le %le %le\n", recvavg[PRV_PRF]  , recvstd[PRV_PRF]  , recvmin[PRV_PRF]  , recvmax[PRV_PRF]  ); 
-    printf("Restore [s] : %le %le %le %le\n", recvavg[RST_PRF]  , recvstd[RST_PRF]  , recvmin[RST_PRF]  , recvmax[RST_PRF]  ); 
-    printf("Create      : %le %le %le %le\n", recvavg[CREAT_PRF], recvstd[CREAT_PRF], recvmin[CREAT_PRF], recvmax[CREAT_PRF]); 
-    printf("Destroy     : %le %le %le %le\n", recvavg[DSTRY_PRF], recvstd[DSTRY_PRF], recvmin[DSTRY_PRF], recvmax[DSTRY_PRF]); 
-    printf("Begin       : %le %le %le %le\n", recvavg[BEGIN_PRF], recvstd[BEGIN_PRF], recvmin[BEGIN_PRF], recvmax[BEGIN_PRF]); 
-    printf("Complete    : %le %le %le %le\n", recvavg[COMPL_PRF], recvstd[COMPL_PRF], recvmin[COMPL_PRF], recvmax[COMPL_PRF]); 
-    printf("Msg time    : %le %le %le %le\n", recvavg[MSG_PRF]  , recvstd[MSG_PRF]  , recvmin[MSG_PRF]  , recvmax[MSG_PRF]  );
-    printf("Libc   time : %le %le %le %le\n", recvavg[LOG_PRF]  , recvstd[LOG_PRF]  , recvmin[LOG_PRF]  , recvmax[LOG_PRF]  );
+    printf("\n\n=============================================================\n");
+    printf("                       AVG          STD          MIN          MAX\n");
+    printf("Total time  : %4le %4le %4le %4le\n", recvavg[TOTAL_PRF], recvstd[TOTAL_PRF], recvmin[TOTAL_PRF], recvmax[TOTAL_PRF]);
+    printf("Preserve[s] : %4le %4le %4le %4le\n", recvavg[PRV_PRF]  , recvstd[PRV_PRF]  , recvmin[PRV_PRF]  , recvmax[PRV_PRF]  ); 
+    printf("Restore [s] : %4le %4le %4le %4le\n", recvavg[RST_PRF]  , recvstd[RST_PRF]  , recvmin[RST_PRF]  , recvmax[RST_PRF]  ); 
+    printf("Rollback    : %4le %4le %4le %4le\n", recvavg[REEX_PRF], recvstd[REEX_PRF], recvmin[REEX_PRF], recvmax[REEX_PRF]);
+    printf("Msg time    : %4le %4le %4le %4le\n", recvavg[MSG_PRF]  , recvstd[MSG_PRF]  , recvmin[MSG_PRF]  , recvmax[MSG_PRF]  );
+    printf("CD overhead : %4le %4le %4le %4le\n", tot_rtov[0], tot_rtov[1], tot_rtov[2], tot_rtov[3]); 
+    printf("CD Body     : %4le %4le %4le %4le\n", recvavg[CDOVH_PRF], recvstd[CDOVH_PRF], recvmin[CDOVH_PRF], recvmax[CDOVH_PRF]); 
+    printf("Normal Sync : %4le %4le %4le %4le\n", recvavg[CD_NS_PRF], recvstd[CD_NS_PRF], recvmin[CD_NS_PRF], recvmax[CD_NS_PRF]); 
+    printf("Reexec Sync : %4le %4le %4le %4le\n", recvavg[CD_RS_PRF], recvstd[CD_RS_PRF], recvmin[CD_RS_PRF], recvmax[CD_RS_PRF]); 
+    printf("Recovr Sync : %4le %4le %4le %4le\n", recvavg[CD_ES_PRF], recvstd[CD_ES_PRF], recvmin[CD_ES_PRF], recvmax[CD_ES_PRF]); 
+    printf("Create      : %4le %4le %4le %4le\n", recvavg[CREAT_PRF], recvstd[CREAT_PRF], recvmin[CREAT_PRF], recvmax[CREAT_PRF]); 
+    printf("Destroy     : %4le %4le %4le %4le\n", recvavg[DSTRY_PRF], recvstd[DSTRY_PRF], recvmin[DSTRY_PRF], recvmax[DSTRY_PRF]); 
+    printf("Begin       : %4le %4le %4le %4le\n", recvavg[BEGIN_PRF], recvstd[BEGIN_PRF], recvmin[BEGIN_PRF], recvmax[BEGIN_PRF]); 
+    printf("Complete    : %4le %4le %4le %4le\n", recvavg[COMPL_PRF], recvstd[COMPL_PRF], recvmin[COMPL_PRF], recvmax[COMPL_PRF]); 
+    printf("Libc   time : %4le %4le %4le %4le\n", recvavg[LOG_PRF]  , recvstd[LOG_PRF]  , recvmin[LOG_PRF]  , recvmax[LOG_PRF]  );
 #if CD_PROFILER_ENABLED & CD_MPI_ENABLED
-    printf("Mailbox     : %lf \n", cd::mailbox_elapsed_time_in_sec); 
+    printf("Mailbox     : %7.4lf \n", cd::mailbox_elapsed_time_in_sec); 
 #endif
     printf("Ratio : %lf (Total) %lf (CD runtime) %lf (logging)\n", 
                             ((cd_elapsed_avg+msg_elapsed_avg) / tot_elapsed_avg) * 100,

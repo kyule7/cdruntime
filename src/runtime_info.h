@@ -403,7 +403,7 @@ struct RuntimeInfo : public CDOverhead {
       cd::rst_elapsed_time += elapsed; 
       cd::rst_elapsed_smpl += elapsed; 
       rst_elapsed_time_    += elapsed; 
-      input_[entry_str].Update(len, type);
+//      input_[entry_str].Update(len, type);
       restore_ += len;
     } 
   }
@@ -489,16 +489,24 @@ struct RuntimeInfo : public CDOverhead {
 //    if(prv_elapsed_time_ > max_prv_elapsed_time_)
 //      max_prv_elapsed_time_ = prv_elapsed_time_;
 
-    exec_trace_.push_back((float)cd_total_time);
-    prsv_trace_.push_back((float)prsv_time_smpl_);
-    cdrt_trace_.push_back((float)(cdrt_time_smpl_ + prsv_time_smpl_));
-    prsv_time_smpl_ = 0.0;
-    cdrt_time_smpl_ = 0.0;
-//    if(is_reexec) {
+//    exec_trace_.push_back((float)cd_total_time);
+//    prsv_trace_.push_back((float)prsv_time_smpl_);
+//    cdrt_trace_.push_back((float)(cdrt_time_smpl_ + prsv_time_smpl_));
+//    prsv_time_smpl_ = 0.0;
+//    cdrt_time_smpl_ = 0.0;
+    if(is_reexec == false) {
+      exec_trace_.push_back((float)cd_total_time);
+      prsv_trace_.push_back((float)prsv_time_smpl_);
+      cdrt_trace_.push_back((float)(cdrt_time_smpl_ + prsv_time_smpl_));
+      prsv_time_smpl_ = 0.0;
+      cdrt_time_smpl_ = 0.0;
+
 //      // reexecution not from the current CDs 
 //      reex_time_ += now - reex_cnt_clk_;
 //      //reex_cnt_      += 1;
-//    }
+    } else {
+      assert(cd::is_error_free == false);
+    }
   }
   
 
