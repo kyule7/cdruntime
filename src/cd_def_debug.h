@@ -211,6 +211,10 @@ namespace cd {
   #define CD_DEBUG(...) \
     CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__)
   
+  #define PRINT_BOTH(...) \
+    fprintf(stdout, __VA_ARGS__); fflush(stdout);\
+    if(cd::myTaskID == 7) printf(__VA_ARGS__);
+     
   #define CD_DEBUG_COND(DEBUG_OFF, ...) \
   if(DEBUG_OFF == 0) { CD_DEBUG_TRACE_INFO(stdout, __VA_ARGS__); }
   

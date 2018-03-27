@@ -209,6 +209,12 @@ int irecvAnyParallel(void* recvBuf, int recvLen)
   MPI_Request request;
   MPI_Irecv(recvBuf, recvLen, MPI_BYTE,
     MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request);
+#if _ROOTCD
+  //int myrank, numranks;
+  //MPI_Comm_size(MPI_COMM_WORLD, &numranks);
+  //MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  //printf("%d/%d: irecvanyparallel saved request=%ld\n", myrank, numranks, (int64_t)request);
+#endif
 
   int rind = saveRequest(request);
 
@@ -224,6 +230,12 @@ int waitIrecv(int rind)
   MPI_Status status;
   int bytesReceived;
 
+#if _ROOTCD
+  //int myrank, numranks;
+  //MPI_Comm_size(MPI_COMM_WORLD, &numranks);
+  //MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  //printf("%d/%d: waitirecv request=%ld\n", myrank, numranks, (int64_t)requestList[rind]);
+#endif
   MPI_Wait(&requestList[rind], &status);
   MPI_Get_count(&status, MPI_BYTE, &bytesReceived); 
 
@@ -240,6 +252,12 @@ int testIrecv(int rind)
   int bytesReceived;
   int flag;
 
+#if _ROOTCD
+  //int myrank, numranks;
+  //MPI_Comm_size(MPI_COMM_WORLD, &numranks);
+  //MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  //printf("%d/%d: testirecv request=%ld\n", myrank, numranks, (int64_t)requestList[rind]);
+#endif
   MPI_Test(&requestList[rind], &flag, &status);
   if (flag > 0)
   {
@@ -257,6 +275,12 @@ int waitIsend(int rind)
 #ifdef DO_MPI
   MPI_Status status;
 
+#if _ROOTCD
+  //int myrank, numranks;
+  //MPI_Comm_size(MPI_COMM_WORLD, &numranks);
+  //MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  //printf("%d/%d: waitisend request=%ld\n", myrank, numranks, (int64_t)requestList[rind]);
+#endif
   MPI_Wait(&requestList[rind], &status);
   
   rUsed[rind] = 0;
@@ -271,6 +295,12 @@ int testIsend(int rind)
   MPI_Status status;
   int flag;
 
+#if _ROOTCD
+  //int myrank, numranks;
+  //MPI_Comm_size(MPI_COMM_WORLD, &numranks);
+  //MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  //printf("%d/%d: testisend request=%ld\n", myrank, numranks, (int64_t)requestList[rind]);
+#endif
   MPI_Test(&requestList[rind], &flag, &status);
   if (flag > 0)
   {
@@ -312,6 +342,12 @@ int irecvParallel(void* recvBuf, int recvLen, int source)
   MPI_Request request;
   MPI_Irecv(recvBuf, recvLen, MPI_BYTE,
     source, 0, MPI_COMM_WORLD, &request);
+#if _ROOTCD
+  //int myrank, numranks;
+  //MPI_Comm_size(MPI_COMM_WORLD, &numranks);
+  //MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  //printf("%d/%d: irecvparallel: saved request=%ld\n", myrank, numranks, (int64_t)request);
+#endif
 
   int rind = saveRequest(request);
   return rind;

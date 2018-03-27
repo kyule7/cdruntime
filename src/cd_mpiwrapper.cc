@@ -552,7 +552,7 @@ int MPI_Isend(const void *buf,
       case kStrictCD: {
         mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
         cdp->incomplete_log_.push_back(
-            IncompleteLogEntry(buf, 0, dest, tag, comm, (void *)request, false, false));
+            IncompleteLogEntry(buf, 0, dest, tag, comm, (int64_t)*request, false, false));
         if(cur_cdh != NULL) {
           CD_DEBUG("[After %s %s] %d -> %d (tag:%d) ptr:%p\n", 
                     cur_cdh->GetName(), cur_cdh->GetLabel(), myTaskID, dest, tag, request);
@@ -573,7 +573,7 @@ int MPI_Isend(const void *buf,
         } else { // Log message for inter-CD communication
           //printf("Inter-CD message\n");
         }
-        cdp->LogData(buf, 0, dest, false, (void *)request, 0, false, cdp->CheckIntraCDMsg(dest, g));
+        cdp->LogData(buf, 0, dest, false, (int64_t)*request, 0, false, cdp->CheckIntraCDMsg(dest, g));
         break;
       }
       case kRelaxedCDRead: {
@@ -587,7 +587,7 @@ int MPI_Isend(const void *buf,
         if (ret == kCommLogCommLogModeFlip) {
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
           mpi_ret = PMPI_Isend(buf, count, datatype, dest, tag, comm, request);
-          cur_cdh->ptr_cd()->LogData(buf, 0, dest, false, (void *)request, 0, false, cdp->CheckIntraCDMsg(dest, g));
+          cur_cdh->ptr_cd()->LogData(buf, 0, dest, false, (int64_t)*request, 0, false, cdp->CheckIntraCDMsg(dest, g));
         }
         else if (ret == kCommLogError) {
           ERROR_MESSAGE("Incomplete log entry for non-blocking communication! Needs to escalate, not implemented yet...\n");
@@ -640,7 +640,7 @@ int MPI_Irecv(void *buf,
       case kStrictCD: {
         mpi_ret = PMPI_Irecv(buf, count, datatype, src, tag, comm, request);
         cdp->incomplete_log_.push_back(
-            IncompleteLogEntry(buf, 0, src, tag, comm, (void *)request, false, true)
+            IncompleteLogEntry(buf, 0, src, tag, comm, (int64_t)*request, false, true)
             );
 //        printf("test recv: strict CD\t"); cdp->CheckIntraCDMsg(src, g);
         CDPath::GetCurrentCD()->ptr_cd()->PrintDebug();
@@ -658,11 +658,11 @@ int MPI_Irecv(void *buf,
 //    CommLogErrT LogData(const void *data_ptr, void * length, uint32_t task_id=0,
 //                      bool completed=true, void * flag=0,
 //                      bool isrecv=0, bool isrepeated=0, bool intra_cd_msg=false);
-          cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (void *)request, 1, false, true, tag, comm);
+          cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (int64_t)*request, 1, false, true, tag, comm);
           
         } else { // Log message for inter-CD communication
           //printf("Inter-CD message\n");
-          cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (void *)request, 1, false, false, tag, comm);
+          cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (int64_t)*request, 1, false, false, tag, comm);
         }
         break;
       } 
@@ -699,12 +699,12 @@ int MPI_Irecv(void *buf,
             //printf("Intra-CD message\n");
             // FIXME Record just event, length should be 0
             // log event to check for escalation.
-            cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (void *)request, 1, false, true, tag, comm);
+            cur_cdh->ptr_cd()->LogData(buf, 0, src, false, (int64_t)*request, 1, false, true, tag, comm);
             
           } 
           else { // Log message for inter-CD communication
             //printf("Inter-CD message\n");
-            cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (void *)request, 1, false, false, tag, comm);
+            cur_cdh->ptr_cd()->LogData(buf, count*type_size, src, false, (int64_t)*request, 1, false, false, tag, comm);
           }
         }
         else if (ret == kCommLogError) {
@@ -752,7 +752,7 @@ int MPI_Test(MPI_Request *request,
         // delete incomplete entries...
         if (*flag == 1)
         {
-          cur_cdh->ptr_cd()->ProbeAndLogData((void *)request);
+          cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)*request);
         }
         break;
       }
@@ -763,7 +763,7 @@ int MPI_Test(MPI_Request *request,
         {
           LOG_DEBUG("Operation complete, log flag and data...\n");
           cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0);
-          cur_cdh->ptr_cd()->ProbeAndLogData((void *)request);
+          cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)*request);
         }
         else
         {
@@ -786,7 +786,7 @@ int MPI_Test(MPI_Request *request,
           if (*flag == 1) {
             LOG_DEBUG("Operation complete, log flag and data...\n");
             cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0);
-            cur_cdh->ptr_cd()->ProbeAndLogData((void *)request);
+            cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)*request);
           }
           else {
             LOG_DEBUG("Operation not complete, log flag...\n");
@@ -833,7 +833,7 @@ int MPI_Testall(int count,
         {
           for (int ii=0;ii<count;ii++)
           {
-            cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[ii]);
+            cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[ii]);
           }
         }
         break;
@@ -848,7 +848,7 @@ int MPI_Testall(int count,
           for (int ii=0;ii<count;ii++)
           {
             LOG_DEBUG("Log data with count(%d) and index(%d)...\n",count,ii);
-            cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[ii]);
+            cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[ii]);
           }
           LOG_DEBUG("Passed log flag and data...\n");
         }
@@ -881,7 +881,7 @@ int MPI_Testall(int count,
             cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0);
             for (int ii=0;ii<count;ii++)
             {
-              cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[ii]);
+              cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[ii]);
             }
           }
           else
@@ -935,7 +935,7 @@ int MPI_Testany(int count,
       // delete incomplete entries...
       if (*flag == 1)
       {
-        cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[*index]);
+        cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[*index]);
       }
       break;
 
@@ -946,7 +946,7 @@ int MPI_Testany(int count,
         LOG_DEBUG("Operation complete, log flag and data...\n");
         cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0);
         cur_cdh->ptr_cd()->LogData(index, sizeof(int), 0);
-        cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[*index]);
+        cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[*index]);
       }
       else
       {
@@ -975,7 +975,7 @@ int MPI_Testany(int count,
             LOG_DEBUG("Operation complete, log flag and data...\n");
             cur_cdh->ptr_cd()->LogData(flag, sizeof(int), 0);
             cur_cdh->ptr_cd()->LogData(index, sizeof(int), 0);
-            cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[*index]);
+            cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[*index]);
           }
           else
           {
@@ -1026,7 +1026,7 @@ int MPI_Testsome(int incount,
       {
         for (int ii=0;ii<*outcount;ii++)
         {
-          cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[array_of_indices[ii]]);
+          cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[array_of_indices[ii]]);
         }
       }
       break;
@@ -1040,7 +1040,7 @@ int MPI_Testsome(int incount,
         cur_cdh->ptr_cd()->LogData(outcount, sizeof(int), 0);
         for (int ii=0;ii<*outcount;ii++)
         {
-          cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[array_of_indices[ii]]);
+          cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[array_of_indices[ii]]);
         }
       }
       else
@@ -1073,7 +1073,7 @@ int MPI_Testsome(int incount,
             cur_cdh->ptr_cd()->LogData(outcount, sizeof(int), 0);
             for (int ii=0;ii<*outcount;ii++)
             {
-              cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[array_of_indices[ii]]);
+              cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[array_of_indices[ii]]);
             }
           }
           else
@@ -1110,6 +1110,7 @@ int MPI_Wait(MPI_Request *request,
   MsgPrologue();
   int mpi_ret = 0;
   LOG_DEBUG("here inside MPI_Wait\n");
+  //printf("%s:*request=%d\n", __func__, *request);
   CDHandle *cur_cdh = CDPath::GetCurrentCD();
   if(cur_cdh != NULL) {
     CD_DEBUG("[%s] %s %s ptr:%p\n", cur_cdh->GetLabel(), 
@@ -1152,7 +1153,7 @@ int MPI_Wait(MPI_Request *request,
 //        if( cur_cdh->CheckIntraCDMsg(dest, g) ) {
 //          printf("Intra-CD message\n");
 //        } 
-        cur_cdh->ptr_cd()->ProbeAndLogData((void *)request);
+        cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)*request);
         break;
       } 
       case kRelaxedCDRead: {
@@ -1162,7 +1163,7 @@ int MPI_Wait(MPI_Request *request,
           LOG_DEBUG("Reached end of logs, and begin to generate logs...\n");
           LOG_DEBUG("Should not come here because error happens between Isend/Irecv and WaitXXX...\n");
           mpi_ret = PMPI_Wait(request, status);
-          cur_cdh->ptr_cd()->ProbeAndLogData((void *)request);
+          cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)*request);
         }
         else if (ret == kCommLogError) {
           ERROR_MESSAGE("Incomplete log entry for non-blocking communication! Needs to escalate, not implemented yet...\n");
@@ -1245,7 +1246,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
 //        printf("Intra-CD message? %d\n", cur_cdh->CheckIntraCDMsg(dest, g));
   
         for (ii=0;ii<count;ii++) { // probe incomplete, log data and log event
-          cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[ii]);
+          cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[ii]);
         }
     
         break;
@@ -1274,7 +1275,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
           LOG_DEBUG("Should not come here because error happens between Isend/Irecv and WaitXXX...\n");
           mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
           for (ii=0;ii<count;ii++) {
-            cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[ii]);
+            cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[ii]);
           }
         }
         else if (ret == kCommLogError) {
@@ -1322,14 +1323,14 @@ int MPI_Waitany(int count, MPI_Request *array_of_requests,
     case kStrictCD:
       mpi_ret = PMPI_Waitany(count, array_of_requests, index, status);
       // delete incomplete entries...
-      cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[*index]);
+      cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[*index]);
       break;
 
     case kRelaxedCDGen:
       mpi_ret = PMPI_Waitany(count, array_of_requests, index, status);
       LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
       cur_cdh->ptr_cd()->LogData(index, sizeof(int), 0);
-      cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[*index]);
+      cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[*index]);
       break;
 
     case kRelaxedCDRead:
@@ -1346,7 +1347,7 @@ int MPI_Waitany(int count, MPI_Request *array_of_requests,
           LOG_DEBUG("Should not come here because error happens between Isend/Irecv and WaitXXX...\n");
           mpi_ret = PMPI_Waitany(count, array_of_requests, index, status);
           cur_cdh->ptr_cd()->LogData(index, sizeof(int), 0);
-          cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[*index]);
+          cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[*index]);
         }
         else if (ret == kCommLogError)
         {
@@ -1391,7 +1392,7 @@ int MPI_Waitsome(int incount,
       // delete incomplete entries...
       for (ii=0;ii<*outcount;ii++)
       {
-        cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[array_of_indices[ii]]);
+        cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[array_of_indices[ii]]);
       }
       break;
 
@@ -1402,7 +1403,7 @@ int MPI_Waitsome(int incount,
       cur_cdh->ptr_cd()->LogData(array_of_indices, *outcount*sizeof(int), 0);
       for (ii=0;ii<*outcount;ii++)
       {
-        cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[array_of_indices[ii]]);
+        cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[array_of_indices[ii]]);
       }
       break;
 
@@ -1427,7 +1428,7 @@ int MPI_Waitsome(int incount,
           cur_cdh->ptr_cd()->LogData(array_of_indices, *outcount*sizeof(int), 0);
           for (ii=0;ii<*outcount;ii++)
           {
-            cur_cdh->ptr_cd()->ProbeAndLogData((void *)&array_of_requests[array_of_indices[ii]]);
+            cur_cdh->ptr_cd()->ProbeAndLogData((int64_t)array_of_requests[array_of_indices[ii]]);
           }
         }
         else if (ret == kCommLogError)
