@@ -157,7 +157,7 @@ int ljForce(SimFlat *s) {
 #if _CD3
   cd_handle_t *lv3_cd = NULL;
   // CD3_INTERVAL(default) = 5763 (10 iterations for 1024K atoms per rank)
-  const int CD3_INTERVAL = s->preserveRateLevel3; 
+  const int CD3_INTERVAL = s->preserveRateLevel3;
   unsigned int is_lv3_completed = 0;
   if (is_not_first) {
     lv3_cd = getleafcd();
@@ -187,7 +187,7 @@ int ljForce(SimFlat *s) {
   int nbrBoxes[27];
 
   // loop over local boxes in system
-  // Note that, for 1024K atoms per rank (nLocalBoxes = 57624), the default 
+  // Note that, for 1024K atoms per rank (nLocalBoxes = 57624), the default
   // CD3_INTERVAL (5763)  begins and completes 10 times.
   for (int iBox = 0; iBox < s->boxes->nLocalBoxes; iBox++) {
 #if _CD3
@@ -197,25 +197,23 @@ int ljForce(SimFlat *s) {
         is_lv3_completed = 0;
 
         // Preserve: atoms->r and atoms-> gid via kRef
-       
+
         // atoms->r and atoms->gid is going to read throughout the iterations.
         // Note that r and gid for entire atoms are preserved at the parents
-        // at the leve 2 via copy and they are  not going to be updated here 
-        // while being read Therefore, let's preserve r and gid via reference first.
+        // at the leve 2 via copy and they are  not going to be updated here
+        // while being read Therefore, let's preserve r and gid via reference
+        // first.
         int computeForce_loop_pre_lv3_size =
-            preserveAtoms(lv3_cd, kRef, s->atoms, s->boxes->nLocalBoxes,
-                          0,    // is_all
-                          1,    // is_gid
-                          1,    // is_r
-                          0,    // is_p
-                          0,    // is_f
-                          0,    // is_U
-                          0,    // is_iSpecies
-                          0,  // from
-                         -1, // to
-                          0,
-                          NULL);
-                          //"_Local");
+            preserveAtoms(lv3_cd, kRef, s->atoms,
+                          1,                     // is_gid
+                          1,                     // is_r
+                          0,                     // is_p
+                          0,                     // is_f
+                          0,                     // is_U
+                          0,                     // is_iSpecies
+                          0,                     // from
+                          s->boxes->nLocalBoxes, // to
+                          0, "Local");
 #ifdef DO_PRV
         // Preserve: loop index (iBox)
         cd_preserve(lv3_cd, &iBox, sizeof(int), kCopy, "iBox", "iBox");
@@ -226,30 +224,26 @@ int ljForce(SimFlat *s) {
         // atoms->U and atoms->f are not only to be read but also to be written.
         // Therefore, they need to be preserved carefully.
         // By carefull, I mean the box (iBox) and its neighboring boxes (jBoxes)
-       
+
         // Let's preserve atoms->U and atoms->F in iBox first
-        int to = iBox + CD3_INTERVAL;
-        if (to >= s->boxes->nLocalBoxes) to = s->boxes->nLocalBoxes -1;
-        //FIXME: Now, this does preserve all boxes for some challnegs of 
-        //       preserving neighboring boxes for all iBoxes in the given interval.
-        //FIXME: This may be acceptable for coarse enough interval but may add
+        // int to = iBox + CD3_INTERVAL;
+        // if (to >= s->boxes->nLocalBoxes) to = s->boxes->nLocalBoxes -1;
+        // FIXME: Now, this does preserve all boxes for some challnegs of
+        //       preserving neighboring boxes for all iBoxes in the given
+        //       interval.
+        // FIXME: This may be acceptable for coarse enough interval but may add
         //       significant overhead for very fine interval (CD3_INTERVAL)
         computeForce_loop_pre_lv3_size =
-            preserveAtoms(lv3_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
-                          0,    // is_all
-                          0,    // is_gid
-                          0,    // is_r
-                          0,    // is_p
-                          1,    // is_f
-                          1,    // is_U
-                          0,    // is_iSpecies
-                          //iBox, // from (index for boxes to be preserved)
-                          //to, // to
-                          0,  // from
-                          -1, // to
-                          0,
-                          NULL);
-                          //"_Local");
+            preserveAtoms(lv3_cd, kCopy, s->atoms,
+                          0,                     // is_gid
+                          0,                     // is_r
+                          0,                     // is_p
+                          1,                     // is_f
+                          1,                     // is_U
+                          0,                     // is_iSpecies
+                          0,                     // from
+                          s->boxes->nLocalBoxes, // to
+                          0, "Local");
         // TODO: then preserve atoms-U and atoms->F in jBox (neighboring box)
       } // CD3_INTERVAL
     }

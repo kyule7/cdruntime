@@ -1,5 +1,5 @@
 #include "CoMDTypes.h"
-#include "eam.h" // for ForceExchangeData
+#include "eam.h"      // for ForceExchangeData
 #include "parallel.h" // getNRanks() and getMyRanks()
 
 #ifndef CD_COMD_H_
@@ -13,12 +13,17 @@ unsigned int preserveLinkCell(cd_handle_t *cdh, uint32_t knob,
                               unsigned int is_nLocalBoxes,
                               unsigned int is_nTotalBoxes);
 unsigned int preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms,
-                           int nTotalBoxes, unsigned int is_all,
                            unsigned int is_gid, unsigned int is_r,
                            unsigned int is_p, unsigned int is_f,
                            unsigned int is_U, unsigned int is_iSpecies,
                            unsigned int from, int to, unsigned int is_print,
                            char *idx);
+unsigned int preserveAtomsInLocalBox(cd_handle_t *cdh, uint32_t knob,
+                                     Atoms *atoms, int nBoxes,
+                                     unsigned int is_print);
+unsigned int preserveAtomsInHaloBox(cd_handle_t *cdh, uint32_t knob,
+                                    Atoms *atoms, int nLocalBoxes,
+                                    int nTotalBoxes, unsigned int is_print);
 unsigned int preserveSpeciesData(cd_handle_t *cdh, uint32_t knob,
                                  SpeciesData *species);
 unsigned int preserveLjPot(cd_handle_t *cdh, uint32_t knob, LjPotential *pot);
@@ -36,8 +41,7 @@ unsigned int preserveHaloForce(cd_handle_t *cdh, uint32_t knob, int doeam,
                                ForceExchangeParms *xchange);
 unsigned int preserveForceData(cd_handle_t *cdh, uint32_t knob,
                                ForceExchangeData *forceData);
-void destroyAtomInReexecution(SimFlat *sim, int ranks, unsigned int is_r, 
-                                                       unsigned int is_p,
-                                                       unsigned int is_f,
-                                                       unsigned int is_U);
+void destroyAtomInReexecution(SimFlat *sim, int ranks, unsigned int is_r,
+                              unsigned int is_p, unsigned int is_f,
+                              unsigned int is_U);
 #endif

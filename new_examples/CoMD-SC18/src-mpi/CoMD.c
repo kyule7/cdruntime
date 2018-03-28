@@ -160,27 +160,16 @@ int main(int argc, char **argv) {
       // loops, this is to be preserved via kOutput at the end of this
       // iteration.
       // TODO: implemente such an iteration count aware observation
-      int main_loop_pre_size =
-          preserveAtoms(lv1_cd_inner, kCopy, sim->atoms, sim->boxes->nTotalBoxes,
-                        1,  // is_all
-                        0,  // is_gid
-                        0,  // is_r
-                        0,  // is_p
-                        0,  // is_f
-                        0,  // is_U
-                        0,  // is_iSpecies
-                        0,  // from (entire atoms)
-                        -1, // to (entire atoms)
-                        0,  // is_print
-                        NULL);
-                        //"_Total");
-
+      int main_loop_pre_size = preserveAtomsInLocalBox(
+          lv1_cd_inner, kCopy, sim->atoms, sim->boxes->nLocalBoxes, 0);
+      main_loop_pre_size += preserveAtomsInHaloBox(
+          lv1_cd_inner, kCopy, sim->atoms, sim->boxes->nLocalBoxes,
+          sim->boxes->nTotalBoxes, 0);
       // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
       // This is very conservative because it preserves all the boxes
-      main_loop_pre_size +=
-          preserveLinkCell(lv1_cd_inner, kCopy, sim->boxes, 1 /*all*/,
-                           0 /*nAtoms*/,
-                           0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
+      main_loop_pre_size += preserveLinkCell(
+          lv1_cd_inner, kCopy, sim->boxes, 1 /*all*/, 0 /*nAtoms*/, 0 /*local*/,
+          0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
       // Preserve pbcFactor
       // Note that this is to be preserved via reference since it's preserved in
       // Root CD and it gets never gets updated during this iteration.
@@ -254,20 +243,11 @@ int main(int argc, char **argv) {
       //      preserveDomain
       //      whatelse?
 #if _CD1_OUTPUT
-      int main_loop_pre_out_size = preserveAtoms(
-          lv1_cd_inner, kOutput, sim->atoms, sim->boxes->nTotalBoxes,
-          1,  // is_all
-          0,  // is_gid
-          0,  // is_r
-          0,  // is_p
-          0,  // is_f
-          0,  // is_U
-          0,  // is_iSpecies
-          0,  // from (entire atoms)
-          -1, // to (entire atoms)
-          0,  // is_print
-          NULL);
-          //"_Total");
+      int main_loop_pre_out_size = preserveAtomsInLocalBox(
+          lv1_cd_inner, kOutput, sim->atoms, sim->boxes->nLocalBoxes, 0);
+      main_loop_pre_out_size += preserveAtomsInHaloBox(
+          lv1_cd_inner, kOutput, sim->atoms, sim->boxes->nLocalBoxes,
+          sim->boxes->nTotalBoxes, 0);
       // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
       main_loop_pre_out_size += preserveLinkCell(
           lv1_cd_inner, kOutput, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
