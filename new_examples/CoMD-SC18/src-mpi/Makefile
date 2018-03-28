@@ -20,7 +20,6 @@ CC = mpicc
 
 CFLAGS = -std=gnu11
 #CFLAGS = -std=c11
-#CD_ROOT=/home1/03341/kyushick/Work/CDs/pfsFix
 #CD_ROOT=../../../
 CD_ROOT=/work/03710/ykwon/stampede2/SPRING18/cdresilience
 ifeq (${CD_ENABLED}, 1)
@@ -30,23 +29,16 @@ CD_FLAGS :=
 # CD2 : ljForce.c
 
 # CD2_COMBINED
-CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_COMBINED -D_CD2_OUTPUT -D_CD3=1 -D_CD4=1 -DDO_PRV
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_COMBINE -D_CD2_OUTPUT -D_CD3=1 -DDO_PRV
 
 # CD3_NO_SPLIT
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT -D_CD3=1 -D_CD4=1 -DDO_PRV -D_CD3_NO_SPLIT
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT -D_CD3=1 -DDO_PRV -D_CD3_NO_SPLIT
 
+###############################################################################
 # defalt fine grained mapping with all CDs enabled
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT -D_CD3=1 -D_CD4=1 -DDO_PRV
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV
+CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD3=1 -DDO_PRV
+###############################################################################
 
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD3=1 -D_CD4=1
-
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV -DDO_OUTPUT
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1 -DDO_PRV
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -D_CD4=1
-
-#FIXME: Level 3 should be enabled with Level 4
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD3=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1 -DDO_PRV
 #CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD2=1 -D_CD3=1
