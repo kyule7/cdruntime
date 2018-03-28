@@ -370,6 +370,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif // _CD2_COMBINE
 
 #if _CD3 && _CD2
+    // FIXME: this can be either LJ potential or EAM potential
     // FIXME: eam force has cocmmunication in it so that we can't create
     // parallel children there
     // TODO: add switch to choose right CD either of LJ or EAM, depending on
@@ -378,39 +379,19 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // TODO(estimator): will determine the optimal number of parallel children
     cd_handle_t *lv3_cd =
 #if _CD3_NO_SPLIT
-        cd_create(getcurrentcd(), 1 /*getNRanks(),*/, "computeForce_split",
+        cd_create(getcurrentcd(), 1 /*getNRanks(),*/, "computeForce_loop",
 #else
-        cd_create(getcurrentcd(), /*1,*/ getNRanks(), "computeForce_split",
+        cd_create(getcurrentcd(), /*1,*/ getNRanks(), "computeForce_loop",
 #endif
-                  kStrict | kLocalMemory, 0xC);
-    // FIXME: this can be either LJ potential or EAM potential
-    cd_begin(lv3_cd, "computeForce_split");
-    // Okay to reuse the same index. actually should
-    int computeForce_pre_lv3_size =
-        preserveAtoms(lv3_cd, kRef, s->atoms, s->boxes->nLocalBoxes,
-                      0, // is_all
-                      1, // is_gid
-                      1, // is_r
-                      0, // is_p
-                      0, // is_f
-                      0, // is_U
-                      0, // is_iSpecies
-                      // MAXATOMS*jBox,          // from
-                      // MAXATOMS*jBox+nJBox-1,  // to
-                      0,  // from
-                      -1, // to
-                      0,  // is_print
-                      NULL);
-                      //"_Local");
-
+                  kStrict | kLocalMemory, 0x1);
 #endif // _CD3 && _CD2
     startTimer(computeForceTimer);
     // call either eamForce or ljForce
     computeForce(s); // s->pot->force(s)
     stopTimer(computeForceTimer);
 #if _CD3 && _CD2
-    cd_detect(lv3_cd);
-    cd_complete(lv3_cd);
+    //cd_detect(lv3_cd);
+    //cd_complete(lv3_cd);
     cd_destroy(lv3_cd);
 #endif // _CD3 && _CD2
 

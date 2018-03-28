@@ -361,9 +361,6 @@ SimFlat *initSimulation(Command cmd) {
 #if _CD3
   sim->preserveRateLevel3 = cmd.preserveRateLevel3;
 #endif
-#if _CD4
-  sim->preserveRateLevel4 = cmd.preserveRateLevel4;
-#endif
 
   sim->domain = NULL;
   sim->boxes = NULL;

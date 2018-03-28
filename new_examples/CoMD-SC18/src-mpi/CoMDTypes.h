@@ -118,9 +118,6 @@ typedef struct SimFlatSt {
 #if _CD3
   int preserveRateLevel3;
 #endif
-#if _CD4
-  int preserveRateLevel4;
-#endif
 
   Domain *domain; //<! domain decomposition data
 

@@ -216,10 +216,7 @@ Command parseCommandLine(int argc, char **argv) {
   cmd.preserveRateLevel2 = 1;
 #endif
 #if _CD3
-  cmd.preserveRateLevel3 = 1;
-#endif
-#if _CD4
-  cmd.preserveRateLevel4 = 1728;
+  cmd.preserveRateLevel3 = 5763;
 #endif
   cmd.dt = 1.0;
   cmd.lat = -1.0;
@@ -256,10 +253,6 @@ Command parseCommandLine(int argc, char **argv) {
 #if _CD3
   addArg("preserveRate", '3', 1, 'i', &(cmd.preserveRateLevel3), 0,
          "interval for level 3 CD");
-#endif
-#if _CD4
-  addArg("preserveRate", '4', 1, 'i', &(cmd.preserveRateLevel4), 0,
-         "interval for level 4 CD");
 #endif
   addArg("dt", 'D', 1, 'd', &(cmd.dt), 0, "time step (in fs)");
   addArg("lat", 'l', 1, 'd', &(cmd.lat), 0, "lattice parameter (Angstroms)");
@@ -311,9 +304,6 @@ void printCmdYaml(FILE *file, Command *cmd) {
 #if _CD3
           "  Level3 CD Interval: %d\n"
 #endif
-#if _CD4
-          "  Level4 CD Interval: %d\n"
-#endif
           "  Time step: %g fs\n"
           "  Initial Temperature: %g K\n"
           "  Initial Delta: %g Angstroms\n"
@@ -326,9 +316,6 @@ void printCmdYaml(FILE *file, Command *cmd) {
 #endif
 #if _CD3
           cmd->preserveRateLevel3,
-#endif
-#if _CD4
-          cmd->preserveRateLevel4,
 #endif
           cmd->dt, cmd->temperature, cmd->initialDelta);
   fflush(file);

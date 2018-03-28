@@ -30,9 +30,6 @@ typedef struct CommandSt {
 #if _CD3
   int preserveRateLevel3; //!< interval for level3 CD
 #endif
-#if _CD4
-  int preserveRateLevel4; //!< interval for level4 CD
-#endif
   double dt;           //!< time step (in femtoseconds)
   double lat;          //!< lattice constant (in Angstroms)
   double temperature;  //!< simulation initial temperature (in Kelvin)

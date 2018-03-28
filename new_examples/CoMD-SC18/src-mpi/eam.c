@@ -99,7 +99,7 @@
 #include "parallel.h"
 #include "performanceTimers.h"
 
-#if _CD4
+#if _CD3
 #include "cd.h"
 #include "cd_comd.h"
 #endif
@@ -217,18 +217,17 @@ BasePotential *initEamPot(const char *dir, const char *file, const char *type) {
 
 // To prevent CD for ljForce from being called during initialization
 // FIXME: Not sure if I need this similary as ljForce.c
-#if _CD4
+#if _CD3
 int is_not_first_called = 0;
 #endif
 
 int eamForce(SimFlat *s) {
-#if _CD4
-  cd_handle_t *lv4_cd = NULL;
+#if _CD3
+  cd_handle_t *lv3_cd = NULL;
   if (is_not_first_called) {
-    lv4_cd =
-        cd_create(getleafcd(), 1, "eam_loop", kStrict | kLocalMemory, 0xC);
+    lv3_cd = getleafcd();
   }
-  const int CD4_INTERVAL = s->preserveRateLevel4;
+  const int CD3_INTERVAL = s->preserveRateLevel3;
 #endif
 
   EamPotential *pot = (EamPotential *)s->pot;
@@ -257,11 +256,10 @@ int eamForce(SimFlat *s) {
   int nbrBoxes[27];
   // loop over local boxes
   for (int iBox = 0; iBox < s->boxes->nLocalBoxes; iBox++) {
-#if _CD4
+#if _CD3
     if (is_not_first_called) {
-      if (iBox % CD4_INTERVAL == 0) {
-        // ex: iBox = 0, 800, 1600, ... , 13600
-        cd_begin(lv4_cd, "ljForce_outmost_loop");
+      if (iBox % CD3_INTERVAL == 0) {
+        cd_begin(lv3_cd, "eam_loop");
         // TODO: add cd_preserve
       }
     }
@@ -320,11 +318,11 @@ int eamForce(SimFlat *s) {
         } // loop over atoms in jBox
       }   // loop over atoms in iBox
     }     // loop over neighbor boxes
-#if _CD4
+#if _CD3
     if (is_not_first_called) {
-      if (iBox % CD4_INTERVAL == 0) {
-        //cd_detect(lv4_cd);
-        cd_complete(lv4_cd);
+      if (iBox % CD3_INTERVAL == 0) {
+        //cd_detect(lv3_cd);
+        cd_complete(lv3_cd);
       }
     }
 #endif
