@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
 
   // Note that the Root CD, by CD semantic,  is assumped to be associated with
   // all error vectors and thus is able to detect all types of errors.
-  cd_handle_t *root_cd = cd_init(nRanks, myRank, kPFS);
+  cd_handle_t *root_cd = cd_init(nRanks, myRank, kGlobalDisk);
   cd_begin(root_cd, "Root");
   preserveSimFlat(root_cd, kCopy, sim);
   // What if the buffers for HaloExchnage (malloc) and the others in SimFlat?
@@ -127,27 +127,10 @@ int main(int argc, char **argv) {
   // Note that preservation medium (KLocalMemory) and error vector (0xE) will
   // be over-written by config.yaml.
 
-#if _SOMEDAY
-  // Let's create dummy CD (lv1_cd_dummy) for main_loop (i.e. lv1_cd_inner) for
-  // kOutput semantic. Also it plays an important role for preservation buffer
-  // for the actual lv1_cd. Note that this is not optional but required to be
-  // semantically correct. Also notice that lv1_cd_inner has to have the same
-  // error vector associated with lv1_cd (its dummy) in order to make its dummy
-  // really "dummy".
-
-  cd_handle_t *lv1_cd_dummy =
-      cd_create(getcurrentcd(), 1, "main_loop_dummy", kStrict | kLocalMemory,
-                0xE); // F8, F4, F2
-  // Note that this dummy CD may add a bit overhead when kOuput semantic is not
-  // used. However, it should be small enoguth to be ignored.
-  // TODO: check the runtime overhead due to dummy CD.
-  cd_begin(lv1_cd_dummy, "main_loop_dummy");
-#endif
-
-  // TODO(estimator): 0xE vs 0xF, kHDD vs kDRAM(=kLocalMemory)
+  // TODO(estimator): 0x3 vs 0xF, kLocalDisk vs kGlobalDisk
   cd_handle_t *lv1_cd_inner =
       cd_create(getcurrentcd(), 1, "main_loop_inner", kStrict | kLocalMemory,
-                0xE); // F8, F4, F2
+                0xF); // F8, F4, F2
 #if _CD2
   cd_handle_t *lv2_cd = NULL;
 #endif //_CD2 && _CD1
@@ -178,25 +161,6 @@ int main(int argc, char **argv) {
       // iteration.
       // TODO: implemente such an iteration count aware observation
       int main_loop_pre_size =
-//#if _CD1_OUTPUT
-//#if _SOMEDAY
-//          preserveAtoms(lv1_cd_inner, kRef, sim->atoms, sim->boxes->nTotalBoxes,
-//          // TODO: kRef for the first iteration and kCopy for the rest of
-//          // iterations
-//          //-------------------------------------------------------------------
-//          // FIXME: When nTotalBoxes is given, cd_comd.c had better to preserve 
-//          //        "Local" and "Halo" separately so that the other preserveAtoms
-//          //        with "_Local" can find the preserved data properly when the
-//          //        estimator is looking for merging opportinites. 
-//          // FIXME: For now, there is no sequential CD following this CD so let's
-//          //        keep going for SC'18.
-//          //-------------------------------------------------------------------
-//#else
-//          preserveAtoms(lv1_cd_inner, kCopy, sim->atoms, sim->boxes->nTotalBoxes,
-//#endif // _SOMEDAY
-//#else
-//          preserveAtoms(lv1_cd_inner, kCopy, sim->atoms, sim->boxes->nTotalBoxes,
-//#endif
           preserveAtoms(lv1_cd_inner, kCopy, sim->atoms, sim->boxes->nTotalBoxes,
                         1,  // is_all
                         0,  // is_gid
@@ -214,20 +178,6 @@ int main(int argc, char **argv) {
       // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
       // This is very conservative because it preserves all the boxes
       main_loop_pre_size +=
-//#if _CD1_OUTPUT
-//#if _SOMEDAY
-//          preserveLinkCell(lv1_cd_inner, kRef, sim->boxes, 1 /*all*/,
-//                           0 /*nAtoms*/,
-//#else
-//          // TODO: kRef for the first iteration and kCopy for the rest of
-//          // iterations
-//          preserveLinkCell(lv1_cd_inner, kCopy, sim->boxes, 1 /*all*/,
-//                           0 /*nAtoms*/,
-//#endif // _SOMEDAY
-//#else
-//          preserveLinkCell(lv1_cd_inner, kCopy, sim->boxes, 1 /*all*/,
-//                           0 /*nAtoms*/,
-//#endif
           preserveLinkCell(lv1_cd_inner, kCopy, sim->boxes, 1 /*all*/,
                            0 /*nAtoms*/,
                            0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
@@ -236,18 +186,6 @@ int main(int argc, char **argv) {
       // Root CD and it gets never gets updated during this iteration.
       // FIXME: need to double check
       main_loop_pre_size +=
-//#if _CD1_OUTPUT
-//#if _SOMEDAY
-//          preserveHaloAtom(lv1_cd_inner, kRef, sim->atomExchange->parms,
-//
-//#else
-//          // TODO: kRef for the first iteration and kCopy for the rest of
-//          // iterations
-//          preserveHaloAtom(lv1_cd_inner, kCopy, sim->atomExchange->parms,
-//#endif // _SOMEDAY
-//#else
-//          preserveHaloAtom(lv1_cd_inner, kCopy, sim->atomExchange->parms,
-//#endif
           preserveHaloAtom(lv1_cd_inner, kCopy, sim->atomExchange->parms,
                            1 /*cellList*/, 1 /*pbcFactor*/);
 
@@ -258,7 +196,6 @@ int main(int argc, char **argv) {
                   "timestep_iStep");
       // TODO: timestep (level 3) updates these and therefore it needs to
       //       presereve there.
-      // TODO: kCopy is okay?
       cd_preserve(lv1_cd_inner, &(sim->ePotential), sizeof(real_t), kCopy,
                   "timestep_ePotential", "timestep_ePotential");
       cd_preserve(lv1_cd_inner, &(sim->eKinetic), sizeof(real_t), kCopy,
@@ -278,17 +215,6 @@ int main(int argc, char **argv) {
     //      communication: AllReduce: send(nLocal) / recv(nGlobal)
     sumAtoms(sim);
     stopTimer(commReduceTimer);
-#if _CD1
-    // FIXME: remove before measurement
-    //if (getMyRank() == 0) {
-    //  if (is_reexec()) {
-    //    printf("[%d Re-execution(%d):Rank0] printThings\n", numReexecution,
-    //           iStep);
-    //  } else {
-    //    printf("[Normal-execution(%d):Rank0] printThings\n", iStep);
-    //  }
-    //}
-#endif
     printThings(sim, iStep, getElapsedTime(timestepTimer));
 
 #if _CD2
@@ -297,7 +223,6 @@ int main(int argc, char **argv) {
       // TODO(estimator): KHDD vs kDRAM
       lv2_cd = cd_create(getcurrentcd(), 1, "main_timestep",
                          kStrict | kLocalMemory, 0xF);
-      // kStrict | kDRAM, 0xF);
     }
 #endif //_CD2
     startTimer(timestepTimer);
@@ -309,7 +234,6 @@ int main(int argc, char **argv) {
 #if _CD2
     // Notice that iStep hasn't been increased yet.
     if (iStep % (CD1_INTERVAL * printRate) == (CD1_INTERVAL - 1) * printRate) {
-      // if (iStep % (CD1_INTERVAL * printRate) == 0) {
       cd_destroy(lv2_cd);
     }
 #endif
@@ -331,9 +255,6 @@ int main(int argc, char **argv) {
       //      whatelse?
 #if _CD1_OUTPUT
       int main_loop_pre_out_size = preserveAtoms(
-//#if _SOMEDAY
-//          lv1_cd_dummy, kOutput, sim->atoms, sim->boxes->nTotalBoxes,
-//#endif
           lv1_cd_inner, kOutput, sim->atoms, sim->boxes->nTotalBoxes,
           1,  // is_all
           0,  // is_gid
@@ -348,21 +269,11 @@ int main(int argc, char **argv) {
           NULL);
           //"_Total");
       // Preservation for sumAtoms(sim) : LinkCell : nAtoms[0:nLocalBoxes-1]
-      // FIXME: seems not enough
       main_loop_pre_out_size += preserveLinkCell(
-//#if _SOMEDAY
-//          lv1_cd_dummy, kOutput, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
-//#endif
           lv1_cd_inner, kOutput, sim->boxes, 1 /*all*/, 0 /*nAtoms*/,
           0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
       // Preserve pbcFactor
-      // FIXME: check this since seems strange not to preserve cellList
-      //        and pbcFactor
-      // FIXME: it seems atomExchange->parms won't be changing once allocated
       main_loop_pre_out_size =
-//#if _SOMEDAY
-//          preserveHaloAtom(lv1_cd_dummy, kOutput, sim->atomExchange->parms,
-//#endif
           preserveHaloAtom(lv1_cd_inner, kOutput, sim->atomExchange->parms,
                            1 /*cellList*/, 1 /*pbcFactor*/);
 #endif // _CD1_OUTPUT
