@@ -423,6 +423,7 @@ extern int64_t failed_phase;
 extern int64_t failed_seqID;
 extern bool runtime_initialized;
 extern bool just_reexecuted;
+extern bool first_complete;
 extern bool orig_app_side;
 extern bool orig_disabled;
 extern bool orig_msg_app_side;

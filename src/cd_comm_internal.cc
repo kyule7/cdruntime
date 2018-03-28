@@ -1011,8 +1011,8 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
 
 //        printf("global_task_id:%d, task_id:%d, myid:%d\n", global_task_id, task_id, myTaskID); fflush(stdout);
 #if 1//LOCAL_LOCK_ENABLED        
-        //if(global_task_id != cd::myTaskID) 
-        if(0)
+        if(global_task_id != cd::myTaskID) 
+        //if(0)
         {
           PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_task_id, 0, pendingWindow_);
           PMPI_Accumulate(&val, 1, MPI_INT, 
@@ -1032,7 +1032,7 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
           PMPI_Accumulate(&val, 1, MPI_INT, 
                          global_task_id, 0, 1, MPI_INT, 
                          MPI_SUM, pendingWindow_);
-          PMPI_Win_flush(global_task_id, pendingWindow_);
+//          PMPI_Win_flush(global_task_id, pendingWindow_);
           PMPI_Win_unlock_all(pendingWindow_);
           CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "PMPI_Accumulate done for task #%d\n", global_task_id);
           CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Finished to increment the pending counter at task #%d\n", task_id);

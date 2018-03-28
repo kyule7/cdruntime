@@ -57,6 +57,7 @@ ProfMapType   common::profMap;
 bool tuned::tuning_enabled = false;
 uint32_t cd::new_phase = 0;
 bool cd::just_reexecuted;
+bool cd::first_complete = false;
 
 // serializable
 //uint64_t cd::PackerSerializable::gen_id = 0;
@@ -718,10 +719,8 @@ CD::InternalCreate(CDHandle *parent,
     }
 
 #if _MPI_VER
-//  printf("# mailbox %u\n", num_mailbox_to_create);
     if(num_mailbox_to_create != 0) { 
       CD_DEBUG("# mailbox to create : %u\n", num_mailbox_to_create);
-//    printf("# mailbox to create : %u\n", num_mailbox_to_create);
       PMPI_Alloc_mem(num_mailbox_to_create*sizeof(CDFlagT), 
                     MPI_INFO_NULL, &(new_cd->event_flag_));
     
@@ -729,11 +728,27 @@ CD::InternalCreate(CDHandle *parent,
       for(uint32_t i=0; i<num_mailbox_to_create; i++) {
         new_cd->event_flag_[i] = 0;
       }
-  
+
+      /*int MPI_Win_allocate(MPI_Aint size, int disp_unit,
+       *                     MPI_Info info, 
+       *                     MPI_Comm comm, 
+       *                     void *baseptr, MPI_Win *win)
+       *  int MPI_Win_create(void *base, MPI_Aint size, int disp_unit, 
+       *                     MPI_Info info, 
+       *                     MPI_Comm comm, MPI_Win *win)
+       * int MPI_Win_allocate_shared(MPI_Aint size, int disp_unit,
+       * MPI_Info info, MPI_Comm comm, void *baseptr, MPI_Win *win);
+       * 
+       */
+#if USE_ALLOC_SHM      
+      // FIXME : should it be MPI_COMM_WORLD?
       // Create memory region where RDMA is enabled
       MPI_Win_create(new_cd->event_flag_, num_mailbox_to_create*sizeof(CDFlagT), sizeof(CDFlagT),
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
-    
+#else
+      MPI_Win_create(new_cd->event_flag_, num_mailbox_to_create*sizeof(CDFlagT), sizeof(CDFlagT),
+                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
+#endif
       CD_DEBUG("mpi win create for %u pending window done, new Node ID : %s\n", 
                 task_count, new_cd_id.node_id_.GetString().c_str());
   
@@ -747,17 +762,9 @@ CD::InternalCreate(CDHandle *parent,
       CD_DEBUG("Create pending/reexec windows %u level:%u %p\n", 
                 task_count, new_cd_id.level(), &(pendingWindow_));
       // FIXME : should it be MPI_COMM_WORLD?
-//      MPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
-//                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
-//      MPI_Win_create(new_cd->rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
-//                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->rollbackWindow_));
       CD_DEBUG("After Create pending/reexec windows %u level:%u %p \n", 
                 task_count, new_cd_id.level(), &(pendingWindow_));
     }
-  
-//    if( new_cd->GetPlaceToPreserve() == kPFS ) 
-//      new_cd->pfs_handle_ = new PFSHandle(new_cd, new_cd->file_handle_.GetFilePath()); 
-  
 #endif
 
     *new_cd_handle = new CDHandle(new_cd);
@@ -1625,6 +1632,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     //if(myTaskID == 0) { printf("## Complete. No error! ##, cur(%lu, %lu), failed(%ld,%ld) %ld\n",
     //    curr_phase, curr_seqID, failed_phase, failed_seqID, phaseTree.current_->seq_begin_); }
 
+//    if(level() == 1) { cd::first_complete = true;   printf("first complete\n");   }
     if(failed_phase != HEALTHY) {
       if(failed_phase == curr_phase) {
         if(failed_seqID == curr_seqID) {

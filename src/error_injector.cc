@@ -299,7 +299,11 @@ uint64_t SystemErrorInjector::Inject(void)
   uint64_t error_vec = NO_ERROR_INJECTED;
   CD_CLOCK_T curr_clk = CD_CLOCK();
   double period = CD_CLK_MEA(curr_clk - prev_clk_);
+
+//  if((curr_clk - cd::tot_begin_clk) < 30) return 0;
+//  if(cd::first_complete == false) {   return 0;  } 
   prev_clk_ = curr_clk;
+
 
   // [Kyushick]
   // Check if error happened at every CD level. 
