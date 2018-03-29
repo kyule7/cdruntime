@@ -235,7 +235,7 @@ CommLogErrT CommLog::Realloc()
 
 bool CommLog::ProbeAndLogData(void *addr, 
                               uint64_t length,
-                              void *flag,
+                              int64_t flag,
                               bool isrecv)
 {
   uint64_t pos;
@@ -272,7 +272,7 @@ bool CommLog::ProbeAndLogData(void *addr,
 
 bool CommLog::ProbeAndLogDataPacked(void *addr, 
                                     uint64_t length,
-                                    void *flag,
+                                    int64_t flag,
                                     bool isrecv)
 {
   if(isrecv) {
@@ -338,7 +338,7 @@ bool CommLog::ProbeAndLogDataPacked(void *addr,
 }
 
 bool CommLog::FoundRepeatedEntry(const void *data_ptr, uint64_t data_length, 
-                                 bool completed, void *flag)
+                                 bool completed, int64_t flag)
 {
   //LOG_DEBUG("Inside FoundRepeatedEntry:\n");
   //LOG_DEBUG("isrepeated_=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].isrepeated_);
@@ -355,7 +355,7 @@ bool CommLog::FoundRepeatedEntry(const void *data_ptr, uint64_t data_length,
 
 
 CommLogErrT CommLog::LogData(const void *data_ptr, uint64_t data_length, uint32_t taskID,
-                          bool completed, void *flag, 
+                          bool completed, int64_t flag, 
                           bool isrecv, bool isrepeated, 
                           bool intra_cd_msg, int tag, ColorT comm)
 {
@@ -427,7 +427,7 @@ CommLogErrT CommLog::LogData(const void *data_ptr, uint64_t data_length, uint32_
 
 
 CommLogErrT CommLog::WriteLogTable (uint32_t taskID, const void *data_ptr, uint64_t data_length, 
-                                  bool completed, void *flag, bool isrepeated)
+                                  bool completed, int64_t flag, bool isrepeated)
 {
   CommLogErrT ret;
   if (log_table_.cur_pos_ >= log_table_.table_size_) 
@@ -809,7 +809,7 @@ void CommLog::Print()
   for (ii=0;ii<log_table_.cur_pos_;ii++)
   {
     LOG_DEBUG("log_table_.base_ptr_[%ld]:\n", ii);
-    LOG_DEBUG("pos_=%ld, length_=%ld, completed_=%d, flag_=%lx, counter_=%ld, reexec_counter_=%ld, isrepeated=%d\n\n"
+    LOG_DEBUG("pos_=%ld, length_=%ld, completed_=%d, flag_=%ld, counter_=%ld, reexec_counter_=%ld, isrepeated=%d\n\n"
         ,log_table_.base_ptr_[ii].pos_
         ,log_table_.base_ptr_[ii].length_
         ,log_table_.base_ptr_[ii].completed_

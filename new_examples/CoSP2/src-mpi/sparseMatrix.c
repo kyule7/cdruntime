@@ -201,11 +201,13 @@ void gershgorin(struct SparseMatrixSt* spmatrix, struct DomainSt* domain)
   if (getNRanks() > 1)
   {
     startTimer(reduceCommTimer);
+    // MPI_Allreduce
     minRealReduce(&eMin);
     stopTimer(reduceCommTimer);
     collectCounter(reduceCounter, sizeof(real_t));
    
     startTimer(reduceCommTimer);
+    // MPI_Allreduce
     maxRealReduce(&eMax);
     stopTimer(reduceCommTimer);
     collectCounter(reduceCounter, sizeof(real_t));

@@ -1559,11 +1559,13 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
   CD_DEBUG("[%s] pending event:%u, incomplete log:%lu (%p)\n", __func__, *pendingFlag_, incomplete_log_.size(), request);
   
   int flag = 0, ret = 0;
+  int64_t int_req = (int64_t)*request;
   while(1) {
+    //printf("%s:*request=%d\n", __func__, int_req);
     ret = PMPI_Test(request, &flag, status);
     if(flag != 0) {
       printed = false;
-      DeleteIncompleteLog(request);
+      DeleteIncompleteLog(int_req);
       break;
     } else {
 //      assert(need_reexec == false); // should be false at this point.
@@ -1615,9 +1617,11 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
 
 int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]) 
 {
+  int64_t *int_reqs = (int64_t*) malloc(count*sizeof(int64_t));
   for (int ii=0;ii<count;ii++) {
     CD_DEBUG("[%s] pending event:%u, incomplete log:%lu (%p)\n", 
         cd_id_.GetStringID().c_str(), *pendingFlag_, incomplete_log_.size(), &array_of_requests[ii]);
+    int_reqs[ii] = (int64_t)array_of_requests[ii];
   }
   int flag = 0, ret = 0;
   while(1) {
@@ -1625,7 +1629,7 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
     if(flag != 0) {
       CD_DEBUG("delete %d requests\n", count);
       for (int ii=0;ii<count;ii++) {
-        bool deleted = DeleteIncompleteLog(&(array_of_requests[ii]));
+        bool deleted = DeleteIncompleteLog(int_reqs[ii]);
         CD_DEBUG("wait %p %u %s src:%d, tag:%d\n", 
                  &array_of_requests[ii], array_of_requests[ii], (deleted)? "DELETED":"NOT DELETED",
                  array_of_statuses[ii].MPI_SOURCE, array_of_statuses[ii].MPI_TAG); 
@@ -1637,7 +1641,7 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
       CheckMailBox();
       uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
 //      uint32_t rollback_point = CheckRollbackPoint(false);
-//      if(rollback_point != INVALID_ROLLBACK_POINT) { // This could be set inside CD::CheckMailBox()
+//      if(rollback_point != INVALID_ROLLBACK_POINT)  // This could be set inside CD::CheckMailBox()
       if(rollback_point <= level()) {
         CD_DEBUG("\nReexec is true, %u->%u, %s %s\n\n", 
             level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
@@ -1663,7 +1667,7 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
     for (int ii=0;ii<count;ii++) {
       PMPI_Test(&array_of_requests[ii], &flag, &array_of_statuses[ii]);
       if(flag != 0) {
-        bool deleted = DeleteIncompleteLog(&(array_of_requests[ii]));
+        bool deleted = DeleteIncompleteLog(int_reqs[ii]);
         CD_DEBUG("wait %p(%u) deleted? %d\n", &array_of_requests[ii], array_of_requests[ii], (deleted)? "Yes":"No"); 
       }
     }
@@ -1676,6 +1680,8 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
 //  GetCDToRecover(CDPath::GetCurrentCD(), true)->ptr_cd()->Recover();
 //  CDHandle *cur_cdh = CDPath::GetCurrentCD();
 //  GetCDToRecover(cur_cdh, cur_cdh->task_size() > target->task_size());
+
+  free(int_reqs);
   
   return ret;
 }

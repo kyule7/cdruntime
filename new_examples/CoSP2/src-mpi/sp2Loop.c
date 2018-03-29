@@ -23,17 +23,17 @@
 void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
 {
 #if _CD1
-  cd_handle_t *lv1_cd = getleafcd();
-#endif
-#if _CD1
+  cd_handle_t *lv1_cd = cd_create(getcurrentcd(), 1, "sp2Loop",
+                                  kStrict | kHDD, 0xE);
   cd_begin(lv1_cd, "whileloop_sp2");
-  //TODO 
-  //cd_preserve(...) 
-  // xmatrix and domain
+
 #if DO_PRV
+  // preserve xmatrix and domain
   unsigned int prv_size_lv1 = 0;
-  prv_size_lv1 += preserveSparseMatrix(lv1_cd, xmatrix, "x");
-  prv_size_lv1 += preserveDomain(lv1_cd, domain);
+  ////SZNOTE: sparse matrix is all zeros now, not need to preserve here..
+  //prv_size_lv1 += preserveSparseMatrix(lv1_cd, xmatrix, "cd_lv1");
+
+  prv_size_lv1 += preserveDomain(lv1_cd, domain, "cd_lv1");
 #endif //DO_PRV
 #endif
 
@@ -42,11 +42,13 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
   startTimer(sp2LoopTimer);
 
 #ifdef DO_MPI
+  // buffer allocation for communication
   if (getNRanks() > 1)
     haloExchange = initHaloExchange(domain);
 #endif
 
   int hsize = xmatrix->hsize;
+  // allocate for sparse matrix, and set all elements to 0
   SparseMatrix* x2matrix = initSparseMatrix(xmatrix->hsize, xmatrix->msize);
 
   // Do gershgorin normalization
@@ -81,32 +83,34 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
   while ( breakLoop == 0 && iter < 100 )
   {
 #if _CD2
-    cd_begin(lv2_cd, "sp2Loop_while_itr");
-    //TODO: cd_preserve
-    // xmatrix (normalized)
-    // haloExchange
-    // x2matrix : For the first iteration, this is just initialized and 
-    //            the contents of it mean nothing. Howerver after the first 
-    //            iteration, it gets updated and so it needs to be preserved
-    // TODO: when does x2matrix need to preserved? after sparseX2 or here?
-    // iter: iteration count
-
-    // idempErr, idempErr1, idempErr2: TODO???
-
-    // trX and trX2: no need to preserve since they are temporary for each itr
-    // domain: no need to preserve via Copy since it is not changed 
+    cd_begin(lv2_cd, "sp2Loop_while");
 #if DO_PRV
     unsigned int prv_size_lv2 = 0;
-    //FIXME: this fails upon restoration
-//    prv_size_lv2 += preserveSparseMatrix(lv2_cd, xmatrix, "x_norm");
-//    prv_size_lv2 += preserveHaloExchange(lv2_cd, haloExchange);
-//    prv_size_lv2 += preserveSparseMatrix(lv2_cd, x2matrix, "x2");
-//    sprintf(iter_with_idx, "iter_%d", iter);
-//    cd_preserve(lv2_cd, &iter, sizeof(int), kCopy, iter_with_idx, iter_with_idx);
-//    prv_size_lv2 += sizeof(int);
-#endif //DO_PRV
+    //// PRV via Copy
+    // iter: iteration count
+    cd_preserve(lv2_cd, &iter,  sizeof(int), kCopy, "sp2Loop_while_iter",  "sp2Loop_while_iter");
+    prv_size_lv2 += sizeof(int);
+    // preserve idempErr, idempErr1; idempErr2 not needed since RAW
+    cd_preserve(lv2_cd, &idempErr,  sizeof(real_t), kCopy, "sp2Loop_while_idempErr",  "sp2Loop_while_idempErr");
+    prv_size_lv2 += sizeof(real_t);
+    cd_preserve(lv2_cd, &idempErr1, sizeof(real_t), kCopy, "sp2Loop_while_idempErr1", "sp2Loop_while_idempErr1");
+    prv_size_lv2 += sizeof(real_t);
 
+    // xmatrix
+    printf("before preservations: xmatrix=%p, x2matrix=%p\n", xmatrix, x2matrix);
+    prv_size_lv2 += preserveSparseMatrix(lv2_cd, xmatrix,  "sp2Loop_while_x");
+    printf("between preservations: xmatrix=%p, x2matrix=%p\n", xmatrix, x2matrix);
+    prv_size_lv2 += preserveSparseMatrix(lv2_cd, x2matrix, "sp2Loop_while_x2");
+    printf("after preservations: xmatrix=%p, x2matrix=%p\n", xmatrix, x2matrix);
+    // HaloExchange
+    prv_size_lv2 += preserveHaloExchange(lv2_cd, haloExchange, "sp2Loop_while");
+
+    //// PRV via Ref
+    // preserve domain via kRef since it is read-only information
+    cd_preserve(lv2_cd, domain, sizeof(Domain), kRef, "sp2Loop_while_domain", "sp2Loop_while_domain");
+#endif //DO_PRV
 #endif 
+
     trX = ZERO;
     trX2 = ZERO;
 
@@ -114,6 +118,7 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
     if (getNRanks() > 1)
     {
       startTimer(exchangeTimer);
+      // SZNOTE: post MPI_Irecv
       exchangeSetup(haloExchange, xmatrix, domain);
       stopTimer(exchangeTimer);
     }
@@ -123,9 +128,9 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
     startTimer(x2Timer);
     //--------------------------------------------------------------------------
     // This accounts for most computations (49.5% of Loop)
-    // TODO: This doesn't involve communication and thus can have children 
-    //       as many as the number of ranks
-    // FIXME: The inner most loop in sparseX2 is parallelized with OpenMP
+    // NOTE1: This doesn't involve communication and thus can have children 
+    //        as many as the number of ranks
+    // NOTE2: The inner most loop in sparseX2 is parallelized with OpenMP
     //        Therefore, the total number of inner loop is determined by given
     //        number of thread (set by $OMP_NUM_THREADS)
     sparseX2(&trX, &trX2, xmatrix, x2matrix, domain);
@@ -221,9 +226,11 @@ void sp2Loop(struct SparseMatrixSt* xmatrix, struct DomainSt* domain)
     destroyHaloExchange(haloExchange);
 #endif
   destroySparseMatrix(x2matrix);
+
 #if _CD1
   cd_detect(lv1_cd);
   cd_complete(lv1_cd);
+  cd_destroy(lv1_cd);
 #endif
 }
 

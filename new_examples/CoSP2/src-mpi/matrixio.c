@@ -87,7 +87,7 @@ void writeMTX(char* fname, struct SparseMatrixSt* spmatrix)
   mFile = fopen(fname, "w");
 
   // Write header
-  fprintf(mFile, "\%\%\%MatrixMarket matrix coordinate real general\n");
+  fprintf(mFile, "%%%%%%MatrixMarket matrix coordinate real general\n");
 
   // Collect number of non-zero elements
   // Write out matrix size as dense and number of non-zero elements

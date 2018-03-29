@@ -24,6 +24,9 @@ typedef struct CommandSt {
 #if _CD1
   int preserveRateLevel1; //!< interval for level1 CD
 #endif
+#if _CD2
+  int preserveRateLevel2; //!< interval for level2 CD
+#endif
 #if _CD3
   int preserveRateLevel3; //!< interval for level3 CD
 #endif

@@ -2070,7 +2070,7 @@ unsigned int CD::PullMemLogs()
       for(it=parent_CD->mem_alloc_log_.begin(); it!=parent_CD->mem_alloc_log_.end();it++)
       { 
         //bring all logs lower than or equal to current CD
-        CD_DEBUG("try to pull logs %p %lu %u %u\n", it->p_, it->flag_, it->level_, level());
+        CD_DEBUG("try to pull logs %p %ld %u %u\n", it->p_, it->flag_, it->level_, level());
         if(it->level_ >= level())
         {
           mem_alloc_log_.insert(mem_alloc_log_.end(), *it);      
@@ -2085,7 +2085,7 @@ unsigned int CD::PullMemLogs()
     }
   }
   for(it=mem_alloc_log_.begin(); it!=mem_alloc_log_.end(); it++)
-    CD_DEBUG("pulled logs %p %i %i %lu\n", it->p_, it->complete_, it->pushed_, it->flag_);
+    CD_DEBUG("pulled logs %p %i %i %ld\n", it->p_, it->complete_, it->pushed_, it->flag_);
     CD_DEBUG("cur_pos_mem_alloc_log: %u\n", num_logs);
 
   return num_logs;
@@ -2114,7 +2114,7 @@ void *CD::MemAllocSearch(CD *curr_cd, unsigned int level, unsigned long index, v
           std::vector<IncompleteLogEntry>::iterator it;
           for (it=parent_CD->mem_alloc_log_.begin(); it!=parent_CD->mem_alloc_log_.end(); it++){
             //should be unique!
-            if(it->level_ == level && it->flag_ == (void *)index){
+            if(it->level_ == level && it->flag_ == (int64_t)index){
               CD_DEBUG("level: %u, index: %lu\n", level, index);   
               ret = it->p_;
 //              break;
@@ -3634,39 +3634,40 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
 #if 1
   for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
     //printf("[%d] Trying to test %p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
-    PRINT_BOTH("[%d] Invalidate ptr:%p (#:%zu) Probe...", myTaskID, it->flag_, incomplete_log_.size());
+    PRINT_BOTH("[%d] Invalidate ptr:%ld (#:%zu) Probe...", myTaskID, it->flag_, incomplete_log_.size());
     MPI_Status status;
 //    int is_probed = -1;
 //    MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
 //    if(is_probed < 1) 
+    MPI_Request t_req = (MPI_Request)(it->flag_);
     if(1)
     {
       int done = -1;
       PRINT_BOTH("Failed...Test...");
-      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
+      PMPI_Test(&t_req, &done, &status);
       if(done) 
 //      if(0)
       {
         PRINT_BOTH("SUCCESS\n");
         it = incomplete_log_.erase(it);
       } else {
-        if(*(MPI_Request *)(it->flag_) != MPI_REQUEST_NULL) {
+        if(t_req != MPI_REQUEST_NULL) {
           int is_cancelled = -1;
-          PMPI_Cancel((MPI_Request *)(it->flag_));
+          PMPI_Cancel(&t_req);
           PMPI_Test_cancelled(&status, &is_cancelled);
-          PRINT_BOTH("Failed...Cancel ptr:%p ...", it->flag_);
+          PRINT_BOTH("Failed...Cancel request:%ld ...", it->flag_);
           if(is_cancelled <= 0) {
             PRINT_BOTH("FAILED TO CANCEL\n");
             it = incomplete_log_.erase(it);
             //assert(0);
           } else {
             PRINT_BOTH("SUCCESS...");
-            PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
+            PMPI_Test(&t_req, &done, &status);
             if(done) {
               PRINT_BOTH("TESTED\n");
             } else {
               PRINT_BOTH("WAITED\n");
-              PMPI_Wait((MPI_Request *)(it->flag_), &status);
+              PMPI_Wait(&t_req, &status);
             }
             //PMPI_Request_free((MPI_Request *)(it->flag_));
             it = incomplete_log_.erase(it);
@@ -3681,373 +3682,13 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
       PRINT_BOTH("Probed?\n");
       assert(0);
       int done = -1;
-      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
+      PMPI_Test(&t_req, &done, &status);
       it = incomplete_log_.erase(it);
       assert(done);
     }
   }
 #else
-  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
-    //printf("[%d] Trying to test %p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
-    PRINT_BOTH("[%d] Trying to prob ptr:%p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
-    MPI_Status status;
-    int is_probed = -1;
-    MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
-    if(is_probed < 1) {
-      int is_cancelled = -1;
-      if(*(MPI_Request *)(it->flag_) != MPI_REQUEST_NULL) {
-        PMPI_Cancel((MPI_Request *)(it->flag_));
-        PMPI_Test_cancelled(&status, &is_cancelled);
-        PRINT_BOTH("FAIL...Trying to cancel ptr:%p (#:%zu)...", it->flag_, incomplete_log_.size());
-      } else {
-        PRINT_BOTH("DELETE NULL REQ\n");
-        it = incomplete_log_.erase(it);
-        continue;
-      }
-      if(is_cancelled < 1) {
-          assert(0);
-      } else {
-        PRINT_BOTH("SUCCESS, erase %p (#:%zu)\n", it->flag_, incomplete_log_.size());
-        PMPI_Request_free((MPI_Request *)(it->flag_));
-        it = incomplete_log_.erase(it);
-      }
-    } else {
-      PRINT_BOTH("SUCCESS\n");
-      PRINT_BOTH("Probed?\n");
-      assert(0);
-      int done = -1;
-      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
-      it = incomplete_log_.erase(it);
-      assert(done);
-    }
-  }
-
 #endif
-
-#if 0//_MPI_VER
-  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
-    //printf("[%d] Trying to test %p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
-    PRINT_BOTH("[%d] Trying to prob ptr:%p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
-    MPI_Status status;
-    int is_probed = -1;
-    MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
-    if(is_probed < 1) {
-      int is_cancelled = -1;
-      if(*(MPI_Request *)(it->flag_) != MPI_REQUEST_NULL) {
-        PMPI_Cancel((MPI_Request *)(it->flag_));
-        PMPI_Test_cancelled(&status, &is_cancelled);
-        PRINT_BOTH("FAIL...Trying to cancel ptr:%p (#:%zu)...", it->flag_, incomplete_log_.size());
-      } else {
-        PRINT_BOTH("DELETE NULL REQ\n");
-        it = incomplete_log_.erase(it);
-        continue;
-      }
-      if(is_cancelled < 1) {
-        int done = -1;
-        PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
-        PRINT_BOTH("FAILED...Test...%s,  ptr:%p (#:%zu)...", (done>0)? "SUCCESS":"FAILED", it->flag_, incomplete_log_.size());
-//        if(done) {
-//          PRINT_BOTH("\n");
-//  //        PMPI_Request_free((MPI_Request *)(it->flag_));
-//          it = incomplete_log_.erase(it);
-//        } else {
-//          //PMPI_Request_free((MPI_Request *)(it->flag_));
-//          //it = incomplete_log_.erase(it);
-////          MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
-////          if(is_probed) {
-////            PRINT_BOTH(", but eventuallyed probed!\n");
-////            it = incomplete_log_.erase(it); 
-////          } else {
-////            PRINT_BOTH(", and fail to probe!\n");
-////            ++it;
-////          }
-//        }
-          PRINT_BOTH("\n");
-  //        PMPI_Request_free((MPI_Request *)(it->flag_));
-          it = incomplete_log_.erase(it);
-          PRINT_BOTH("Cancel failed\n");
-          assert(0);
-      } else {
-        PRINT_BOTH("SUCCESS, erase %p (#:%zu)\n", it->flag_, incomplete_log_.size());
-        PMPI_Request_free((MPI_Request *)(it->flag_));
-        it = incomplete_log_.erase(it);
-      }
-    } else {
-      PRINT_BOTH("SUCCESS\n");
-      PRINT_BOTH("Probed?\n");
-      assert(0);
-      int done = -1;
-      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
-      it = incomplete_log_.erase(it);
-      assert(done);
-    }
-  }
-
-#if 0
-  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
-    //printf("[%d] Trying to test %p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
-    PRINT_BOTH("[%d] Trying to prob ptr:%p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
-    MPI_Status status;
-    int is_probed = -1;
-    MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
-    if(is_probed < 1) {
-      int is_cancelled = -1;
-      if(*(MPI_Request *)(it->flag_) != MPI_REQUEST_NULL) {
-        PMPI_Cancel((MPI_Request *)(it->flag_));
-        PMPI_Test_cancelled(&status, &is_cancelled);
-        PRINT_BOTH("FAIL...Trying to cancel ptr:%p (#:%zu)...", it->flag_, incomplete_log_.size());
-      } else {
-        PRINT_BOTH("DELETE NULL REQ\n");
-        it = incomplete_log_.erase(it);
-        continue;
-      }
-      if(is_cancelled < 1) {
-        int done = -1;
-        PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
-        PRINT_BOTH("FAILED...Test...%s,  ptr:%p (#:%zu)...", (done>0)? "SUCCESS":"FAILED", it->flag_, incomplete_log_.size());
-//        if(done) {
-//          PRINT_BOTH("\n");
-//  //        PMPI_Request_free((MPI_Request *)(it->flag_));
-//          it = incomplete_log_.erase(it);
-//        } else {
-//          //PMPI_Request_free((MPI_Request *)(it->flag_));
-//          //it = incomplete_log_.erase(it);
-////          MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
-////          if(is_probed) {
-////            PRINT_BOTH(", but eventuallyed probed!\n");
-////            it = incomplete_log_.erase(it); 
-////          } else {
-////            PRINT_BOTH(", and fail to probe!\n");
-////            ++it;
-////          }
-//        }
-          PRINT_BOTH("\n");
-  //        PMPI_Request_free((MPI_Request *)(it->flag_));
-          it = incomplete_log_.erase(it);
-      } else {
-        PRINT_BOTH("SUCCESS, erase %p (#:%zu)\n", it->flag_, incomplete_log_.size());
-        PMPI_Request_free((MPI_Request *)(it->flag_));
-        it = incomplete_log_.erase(it);
-      }
-    } else {
-      PRINT_BOTH("SUCCESS\n");
-      int done = -1;
-      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
-      it = incomplete_log_.erase(it);
-      assert(done);
-    }
-  }
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
-//    //printf("[%d] Trying to test %p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
-//    if(myTaskID == 7) printf("[%d] Trying to cancel %p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
-//    PRINT_BOTH("[%d] Trying to cancel ptr:%p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
-//    MPI_Status status;
-//    PMPI_Cancel((MPI_Request *)(it->flag_));
-//    int is_cancelled = -1;
-//    PMPI_Test_cancelled(&status, &is_cancelled);
-//    if(is_cancelled < 1) {
-//      int done = -1;
-//      PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
-//      if(myTaskID == 7) printf("FAILED...Test...%s,  ptr:%p (#:%zu)...", (done>0)? "SUCCESS":"FAILED", it->flag_, incomplete_log_.size());
-//      PRINT_BOTH("FAILED...Test...%s,  ptr:%p (#:%zu)...", (done>0)? "SUCCESS":"FAILED", it->flag_, incomplete_log_.size());
-//      if(done) {
-//        if(myTaskID == 7) printf("\n");
-//        PRINT_BOTH("\n");
-////        PMPI_Request_free((MPI_Request *)(it->flag_));
-//        it = incomplete_log_.erase(it);
-//      } else {
-//        //PMPI_Request_free((MPI_Request *)(it->flag_));
-//        //it = incomplete_log_.erase(it);
-//        int is_probed = -1;
-//        MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
-//        if(is_probed) {
-//          if(myTaskID == 7) printf(", but eventallyed probed!\n");
-//          PRINT_BOTH(", but eventallyed probed!\n");
-//          it = incomplete_log_.erase(it); 
-//        } else {
-//          if(myTaskID == 7) printf(", and fail to probe!\n");
-//          PRINT_BOTH(", and fail to probe!\n");
-//          ++it;
-//        }
-//      }
-//    } else {
-//      if(myTaskID == 7) printf("SUCCESS, erase %p (#:%zu)\n", it->flag_, incomplete_log_.size());
-//      PRINT_BOTH("SUCCESS, erase %p (#:%zu)\n", it->flag_, incomplete_log_.size());
-//      PMPI_Request_free((MPI_Request *)(it->flag_));
-//      it = incomplete_log_.erase(it);
-//    }
-//  }
-
-  // deallocate cancelled requests
-//    struct IncompleteLogEntry {
-//      void    *addr_;
-//      uint64_t length_;
-//      uint32_t taskID_;
-//      uint32_t tag_;
-//      ColorT   comm_;
-//      void    *flag_;
-//      bool     complete_;
-//      bool     isrecv_;
-//      bool     intra_cd_msg_;
-//      //GONG
-//      void    *p_;
-//      bool     pushed_;
-//      uint32_t level_;
-//
-//
-// 
-#if 0     
-  bool printed = false;      
-  while(incomplete_log_.size() > 0) {
-    for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
-      if(printed == false) {
-      PRINT_BOTH("[%d] Now test %p (#:%zu) the cancellation...", myTaskID, it->flag_, incomplete_log_.size());
-      }
-      MPI_Status status;
-      int is_cancelled = -1;
-      MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_cancelled, &status);
-      //PMPI_Cancel((MPI_Request *)(it->flag_));
-//      PMPI_Test_cancelled(&status, &is_cancelled);
-      if(is_cancelled > 0) {
-      if(printed == false) {
-        PRINT_BOTH("Success. erase %p %d (#:%zu)\n", it->flag_, is_cancelled, incomplete_log_.size());
-      }
-  //      PMPI_Request_free((MPI_Request *)(it->flag_));
-        it = incomplete_log_.erase(it);
-      } else if(is_cancelled == 0) {
-        PRINT_BOTH("\n");
-//        PMPI_Cancel((MPI_Request *)(it->flag_));
-//        int done = 0;
-//        PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
-//        if(myTaskID == 7) printf("Failed. try cancel %p %d, test:%d again (#:%zu)\n", it->flag_, is_cancelled, done, incomplete_log_.size());
-//   //     if(done)
-//   //       PMPI_Request_free((MPI_Request *)(it->flag_));
-//        it = incomplete_log_.erase(it);
-        ++it;        
-      } else {
-        printf("ERROR here %d\n", is_cancelled);
-        assert(0);
-      }
-    }
-    printed = true;
-  }
-#else
-  assert(incomplete_log_.size()==0);
-#endif
-//    for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
-//      if(myTaskID == 7) printf("[%d] Now test %p (#:%zu) the cancellation...", myTaskID, it->flag_, incomplete_log_.size());
-//      PRINT_BOTH("[%d] Now test %p (#:%zu) the cancellation...", myTaskID, it->flag_, incomplete_log_.size());
-//      MPI_Status status;
-//      PMPI_Cancel((MPI_Request *)(it->flag_));
-//      int is_cancelled = -1;
-//      PMPI_Test_cancelled(&status, &is_cancelled);
-//      if(is_cancelled > 0) {
-//        if(myTaskID == 7) printf("Success. erase %p %d (#:%zu)\n", it->flag_, is_cancelled, incomplete_log_.size());
-//  //      PMPI_Request_free((MPI_Request *)(it->flag_));
-//        it = incomplete_log_.erase(it);
-//      } else if(is_cancelled == 0) {
-//        PMPI_Cancel((MPI_Request *)(it->flag_));
-//        int done = 0;
-//        PMPI_Test((MPI_Request *)(it->flag_), &done, &status);
-//        if(myTaskID == 7) printf("Failed. try cancel %p %d, test:%d again (#:%zu)\n", it->flag_, is_cancelled, done, incomplete_log_.size());
-//   //     if(done)
-//   //       PMPI_Request_free((MPI_Request *)(it->flag_));
-//        it = incomplete_log_.erase(it);
-//      } else {
-//        printf("ERROR here %d\n", is_cancelled);
-//        assert(0);
-//      }
-//    }
- // printf("[%d] No more incomplete logs:%zu)\n", myTaskID, incomplete_log_.size());
-#endif
-
-#if 0//_MPI_VER
-  void *flag = NULL; //
-//  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
-////    PMPI_Cancel(reinterpret_cast<MPI_Request>(it->flag_));
-//    flag = it->flag_;
-//    printf("%lx\n", flag);
-//    PMPI_Cancel((MPI_Request *)(it->flag_));
-//    auto jt = it;
-//    incomplete_log_.erase(jt);
-//  }
-  while(incomplete_log_.size() != 0) {
-    auto incompl_log = incomplete_log_.back();
-    flag = incompl_log.flag_;
-    incomplete_log_.pop_back();
-//    printf("[%d] Trying to cancel ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
-    PRINT_BOTH("[%d] Trying to cancel ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
-    int done = 0;
-    MPI_Status status;
-    PMPI_Test((MPI_Request *)flag, &done, &status);
-    if(done == 0) {
-      PMPI_Cancel((MPI_Request *)(flag));
-    }
-  }
-#endif
-
-// FIXME: 20180212 
-// Should take a look at the below code for invalidating comms.
-//
-// http://mpi-forum.org/docs/mpi-1.1/mpi-11-html/node50.html
-// http://mpi-forum.org/docs/mpi-1.1/mpi-11-html/node47.html
-//
-//#if _MPI_VER
-//  void *flag = NULL; //
-////  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
-//////    PMPI_Cancel(reinterpret_cast<MPI_Request>(it->flag_));
-////    flag = it->flag_;
-////    printf("%lx\n", flag);
-////    PMPI_Cancel((MPI_Request *)(it->flag_));
-////    auto jt = it;
-////    incomplete_log_.erase(jt);
-////  }
-//  // FIXED: 20180211
-//  //while(incomplete_log_.size() != 0) {
-////  MPI_Status status;
-//  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
-//    auto incompl_log = *it;
-//    flag = incompl_log.flag_;
-//    //incomplete_log_.pop_back();
-//    if(myTaskID == 7) printf("[%d] Trying to cancel ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
-//    PRINT_BOTH("[%d] Trying to cancel ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
-//    int done = 0;
-//    MPI_Status status;
-//    PMPI_Test((MPI_Request *)flag, &done, &status);
-//    if(done == 0) {
-//      PMPI_Cancel((MPI_Request *)(flag));
-//      ++it;
-//    } else {
-//      it = incomplete_log_.erase(it);
-//      if(myTaskID == 7) printf("[%d] ERASED (#:%zu)\n", myTaskID, incomplete_log_.size());
-//    }
-//  }
-//
-//  // deallocate cancelled requests
-//  while(incomplete_log_.size() != 0) {
-//    auto incompl_log = incomplete_log_.back();
-//    flag = incompl_log.flag_;
-//    if(myTaskID == 7) printf("[%d] Trying to dealloc ptr:%p (#:%zu)\n", myTaskID, flag, incomplete_log_.size());
-//    incomplete_log_.pop_back();
-//    PMPI_Request_free((MPI_Request *)(flag));
-////    PMPI_Test_cancelled(&status, (MPI_Request *)(flag));
-//  }
-//#endif
 
   LogEpilogue();
   return kCommLogOK;
@@ -4087,7 +3728,7 @@ CommLogErrT CD::ProbeIncompleteLogs(void)
   return kCommLogOK;
 }
 
-bool CD::DeleteIncompleteLog(void *flag)
+bool CD::DeleteIncompleteLog(int64_t flag)
 {
   bool deleted = false;
 //  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
@@ -4097,11 +3738,12 @@ bool CD::DeleteIncompleteLog(void *flag)
 //      deleted = true;
 //    }
 //  }
+  //printf("%s:*request=%d\n", __func__, flag);
   auto it = incomplete_log_.find(flag);
   if(it != incomplete_log_.end()) {
     incomplete_log_.erase(it);
     deleted = true;
-    CD_DEBUG("FIND flag %p\n", flag);
+    CD_DEBUG("FIND flag %ld\n", flag);
   }
   
   return deleted;
@@ -4109,7 +3751,7 @@ bool CD::DeleteIncompleteLog(void *flag)
 
 
 //SZ
-CommLogErrT CD::ProbeAndLogData(void *flag)
+CommLogErrT CD::ProbeAndLogData(int64_t flag)
 {
   LogPrologue();
   // look for the entry in incomplete_log_
@@ -4118,7 +3760,7 @@ CommLogErrT CD::ProbeAndLogData(void *flag)
   CD *tmp_cd = this;
   LOG_DEBUG("size of incomplete_log_=%ld\n",incomplete_log_.size());
   for (it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
-    LOG_DEBUG("it->flag_=%p, and flag=%p\n", it->flag_, flag);
+    LOG_DEBUG("it->flag_=%ld, and flag=%ld\n", it->flag_, flag);
     if (it->flag_ == flag) {
       found = 1;
       LOG_DEBUG("Found the entry in incomplete_log_ in current CD\n");
@@ -4197,7 +3839,7 @@ CommLogErrT CD::ProbeAndLogData(void *flag)
     }
     // need to log that wait op completes 
 #if _MPI_VER
-    comm_log_ptr_->LogData((MPI_Request*)flag, 0, it->taskID_);
+    comm_log_ptr_->LogData((void*)flag, 0, it->taskID_);
 //    comm_log_ptr_->LogData(&flag, 0, it->taskID_);
 #elif _PGAS_VER
     comm_log_ptr_->LogData((void*)flag, 0, it->taskID_);
@@ -4209,7 +3851,7 @@ CommLogErrT CD::ProbeAndLogData(void *flag)
    // std::cout << it->taskID_ << std::endl;
 //    if( &*it != 0 ) // FIXME
     ERROR_MESSAGE("[%s] Wrong control flow!\n", __func__);
-      comm_log_ptr_->LogData((MPI_Request*)flag, 0, it->taskID_);
+      comm_log_ptr_->LogData((void*)flag, 0, it->taskID_);
 //    comm_log_ptr_->LogData(&flag, 0, it->taskID_);
 #elif _PGAS_VER
     comm_log_ptr_->LogData((void*)flag, 0, it->taskID_);
@@ -4226,7 +3868,7 @@ CommLogErrT CD::ProbeAndLogData(void *flag)
 
 //SZ
 CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, uint32_t task_id, 
-                      bool completed, void *flag, bool isrecv, bool isrepeated, 
+                      bool completed, int64_t flag, bool isrecv, bool isrepeated, 
                       bool intra_cd_msg, int tag, ColorT comm)
 {
   LogPrologue();

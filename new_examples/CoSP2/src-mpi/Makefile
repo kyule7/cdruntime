@@ -25,7 +25,8 @@ DIAGPOS = POS1
 CC = mpicc
 #CFLAGS = -std=c99 -fopenmp -D$(DIAGPOS)
 CFLAGS = -std=gnu11 -fopenmp -D$(DIAGPOS)
-OPTFLAGS = -O5
+#OPTFLAGS = -O5
+OPTFLAGS = -O3
 INCLUDES =
 C_LIB = -lm
 
