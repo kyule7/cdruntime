@@ -12,7 +12,7 @@
       errortype: 0xF
       medium: GlobalDisk
     - CD_2_2 :
-      - label    : sp2Loop_while_itr
+      - label    : sp2Loop_while
         interval : 1
         errortype: 0xF
         medium: GlobalDisk
@@ -22,7 +22,7 @@
   #- F2 : 0.00267
   #- F4 : 0.000197
   #- F8 : 0.0
-  - F1 : 0.2133
-  - F2 : 0.20267
-  - F4 : 0.200197
-  - F8 : 0.2
+  - F1 : 0
+  - F2 : 0
+  - F4 : 0
+  - F8 : 0

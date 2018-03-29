@@ -503,9 +503,9 @@ extern void GatherProfile(void);
  */
 
 #define CDPrologue() \
-  orig_app_side = app_side; \
-  app_side = false; \
-  begin_clk = CD_CLOCK(); 
+  cd::orig_app_side = cd::app_side; \
+  cd::app_side = false; \
+  cd::begin_clk = CD_CLOCK(); 
 
 
 /**@brief Set current context as application side. 
@@ -513,9 +513,9 @@ extern void GatherProfile(void);
  */
 
 #define CDEpilogue() \
-  end_clk = CD_CLOCK(); \
-  cdr_elapsed_time += end_clk - begin_clk; \
-  app_side = orig_app_side; \
+  cd::end_clk = CD_CLOCK(); \
+  cd::cdr_elapsed_time += cd::end_clk - cd::begin_clk; \
+  cd::app_side = cd::orig_app_side; \
 
 #endif // CD_LIBC_LOGGING ends
 

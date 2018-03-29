@@ -17,8 +17,8 @@ unsigned int preserveIndices_ELL(cd_handle_t *cdh,  int** jja, const int hsize, 
 unsigned int preserveValues_ELL( cd_handle_t *cdh,  real_t** val, const int hsize, const int msize, char* name);
 
 //preserve Domain struct
-unsigned int preserveDomain(cd_handle_t *cdh, Domain* domain);
+unsigned int preserveDomain(cd_handle_t *cdh, Domain* domain, char* name);
 
 //preserve HaloExchange struct
-unsigned int preserveHaloExchange(cd_handle_t *cdh, HaloExchange* haloExchange);
+unsigned int preserveHaloExchange(cd_handle_t *cdh, HaloExchange* haloExchange, char* name);
 #endif

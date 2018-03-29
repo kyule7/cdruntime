@@ -14,6 +14,10 @@
 #include "constants.h"
 #include "mytype.h"
 
+#ifdef DO_MPI
+#include <mpi.h>
+#endif
+
 /// A structure to package data for a single row to pack into a
 /// send/recv buffer.
 typedef struct NonZeroMsgSt
