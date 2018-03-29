@@ -2058,6 +2058,7 @@ void CalcLagrangeElements(Domain& domain, Real_t* vnew)
         // See if any volumes are negative, and take appropriate action.
          if (vnew[k] <= Real_t(0.0))
         {
+          printf("vnew[%d]: %lf\n", k, vnew[k]);
 #if USE_MPI           
            MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
 #else
@@ -3854,6 +3855,15 @@ int main(int argc, char *argv[])
    cd_main_loop->Destroy();
 #endif
 
+
+#if _CD 
+  #if _CD_ROOT
+  root_cd->Complete();
+  #endif
+  CD_Finalize();
+#endif
+
+
    // Use reduced max elapsed time
    double elapsed_time;
 #if USE_MPI   
@@ -4222,12 +4232,12 @@ int main(int argc, char *argv[])
    if(myRank == 0) {
      printf("Loop time:%lf, Dump time:%lf\n", loop_time/global_counter, dump_time/global_counter);
    }
-#if _CD 
-  #if _CD_ROOT
-  root_cd->Complete();
-  #endif
-  CD_Finalize();
-#endif
+//#if _CD 
+//  #if _CD_ROOT
+//  root_cd->Complete();
+//  #endif
+//  CD_Finalize();
+//#endif
 
 
 #if USE_MPI

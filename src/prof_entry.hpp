@@ -73,6 +73,7 @@ struct RTInfoFloat {
   double sync_time_;
   double prv_elapsed_time_;
   double max_prv_elapsed_time_;
+  double max_cdrt_elapsed_time_;
   double rst_elapsed_time_;
   double create_elapsed_time_;
   double destroy_elapsed_time_;
@@ -86,6 +87,7 @@ struct RTInfoFloat {
     sync_time_ = 0.0;
     prv_elapsed_time_ = 0.0;
     max_prv_elapsed_time_ = 0.0;
+    max_cdrt_elapsed_time_ = 0.0;
     rst_elapsed_time_ = 0.0;
     create_elapsed_time_ = 0.0;
     destroy_elapsed_time_ = 0.0;
@@ -102,6 +104,7 @@ struct RTInfoFloat {
               double sync_time,
               double prv_elapsed_time,
               double max_prv_elapsed_time,
+              double max_cdrt_elapsed_time,
               double rst_elapsed_time,
               double create_elapsed_time,
               double destroy_elapsed_time,
@@ -113,6 +116,7 @@ struct RTInfoFloat {
     sync_time_               = sync_time;
     prv_elapsed_time_        = prv_elapsed_time;
     max_prv_elapsed_time_    = max_prv_elapsed_time;
+    max_cdrt_elapsed_time_    = max_cdrt_elapsed_time;
     rst_elapsed_time_        = rst_elapsed_time;
     create_elapsed_time_     = create_elapsed_time;
     destroy_elapsed_time_    = destroy_elapsed_time;
@@ -128,6 +132,7 @@ struct RTInfoFloat {
                 "sync_time           :%lf\n"
                 "prv_elapsed_time    :%lf\n"
                 "prv_elapsed_time    :%lf (max)\n"
+                "cdrt_elapsed_time   :%lf (max)\n"
                 "rst_elapsed_time    :%lf\n"
                 "create_elapsed_time :%lf\n"
                 "destroy_elapsed_time:%lf\n"
@@ -140,6 +145,7 @@ struct RTInfoFloat {
                sync_time_,
                prv_elapsed_time_,
                max_prv_elapsed_time_,
+               max_cdrt_elapsed_time_,
                rst_elapsed_time_,
                create_elapsed_time_,
                destroy_elapsed_time_,
@@ -154,6 +160,7 @@ struct RTInfoFloat {
     sync_time_               = that.sync_time_;
     prv_elapsed_time_        = that.prv_elapsed_time_;
     max_prv_elapsed_time_    = that.max_prv_elapsed_time_;
+    max_cdrt_elapsed_time_   = that.max_cdrt_elapsed_time_;
     rst_elapsed_time_        = that.rst_elapsed_time_;
     create_elapsed_time_     = that.create_elapsed_time_;
     destroy_elapsed_time_    = that.destroy_elapsed_time_;
@@ -204,6 +211,7 @@ struct RTInfo {
   T sync_time_;
   T prv_elapsed_time_;
   T max_prv_elapsed_time_;
+  T max_cdrt_elapsed_time_;
   T rst_elapsed_time_;
   T create_elapsed_time_;
   T destroy_elapsed_time_;
@@ -224,6 +232,7 @@ struct RTInfo {
     sync_time_ = 0;
     prv_elapsed_time_ = 0;
     max_prv_elapsed_time_ = 0;
+    max_cdrt_elapsed_time_ = 0;
     rst_elapsed_time_ = 0;
     create_elapsed_time_ = 0;
     destroy_elapsed_time_ = 0;
@@ -253,6 +262,7 @@ struct RTInfo {
          T sync_time,
          T prv_elapsed_time,
          T max_prv_elapsed_time,
+         T max_cdrt_elapsed_time,
          T rst_elapsed_time,
          T create_elapsed_time,
          T destroy_elapsed_time,
@@ -270,6 +280,7 @@ struct RTInfo {
     sync_time_               = sync_time;
     prv_elapsed_time_        = prv_elapsed_time;
     max_prv_elapsed_time_    = max_prv_elapsed_time;
+    max_cdrt_elapsed_time_   = max_cdrt_elapsed_time;
     rst_elapsed_time_        = rst_elapsed_time;
     create_elapsed_time_     = create_elapsed_time;
     destroy_elapsed_time_    = destroy_elapsed_time;
@@ -293,6 +304,7 @@ struct RTInfo {
 //       << "\n - sync_time : "            << sync_time_
 //       << "\n - prv_elapsed_time : "     << prv_elapsed_time_
 //       << "\n - max_prv_elapsed_time : " << max_prv_elapsed_time_
+//       << "\n - max_cdrt_elapsed_time : "<< max_cdrt_elapsed_time_
 //       << "\n - rst_elapsed_time : "     << rst_elapsed_time_
 //       << "\n - create_elapsed_time : "  << create_elapsed_time_
 //       << "\n - destroy_elapsed_time : " << destroy_elapsed_time_
@@ -316,6 +328,7 @@ struct RTInfo {
     sync_time_               = that.sync_time_;
     prv_elapsed_time_        = that.prv_elapsed_time_;
     max_prv_elapsed_time_    = that.max_prv_elapsed_time_;
+    max_cdrt_elapsed_time_    = that.max_cdrt_elapsed_time_;
     rst_elapsed_time_        = that.rst_elapsed_time_;
     create_elapsed_time_     = that.create_elapsed_time_;
     destroy_elapsed_time_    = that.destroy_elapsed_time_;
@@ -337,6 +350,7 @@ struct RTInfo {
     sync_time_              /=  div;
     prv_elapsed_time_       /=  div;
     max_prv_elapsed_time_   /=  div;
+    max_cdrt_elapsed_time_   /=  div;
     rst_elapsed_time_       /=  div;
     create_elapsed_time_    /=  div;
     destroy_elapsed_time_   /=  div;
@@ -357,7 +371,7 @@ struct RTInfo {
     reex_time_              *=  reex_time_           ;
     sync_time_              *=  sync_time_           ;
     prv_elapsed_time_       *=  prv_elapsed_time_    ;
-    max_prv_elapsed_time_   *=  max_prv_elapsed_time_;
+    max_cdrt_elapsed_time_  *=  max_cdrt_elapsed_time_;
     rst_elapsed_time_       *=  rst_elapsed_time_    ;
     create_elapsed_time_    *=  create_elapsed_time_ ;
     destroy_elapsed_time_   *=  destroy_elapsed_time_;
@@ -378,7 +392,8 @@ struct RTInfo {
     reex_time_            = sqrt(reex_time_            );
     sync_time_            = sqrt(sync_time_            );
     prv_elapsed_time_     = sqrt(prv_elapsed_time_     );
-    max_prv_elapsed_time_ = sqrt(max_prv_elapsed_time_ );
+    max_prv_elapsed_time_ = sqrt(max_prv_elapsed_time_ );  if(std::isnan(max_prv_elapsed_time_)) { max_prv_elapsed_time_ = 0; }
+    max_cdrt_elapsed_time_= sqrt(max_cdrt_elapsed_time_ ); if(std::isnan(max_cdrt_elapsed_time_)) { max_cdrt_elapsed_time_ = 0;}
     rst_elapsed_time_     = sqrt(rst_elapsed_time_     );
     create_elapsed_time_  = sqrt(create_elapsed_time_  );
     destroy_elapsed_time_ = sqrt(destroy_elapsed_time_ );
@@ -400,6 +415,7 @@ struct RTInfo {
     sync_time_              -= that.sync_time_;
     prv_elapsed_time_       -= that.prv_elapsed_time_;
     max_prv_elapsed_time_   -= that.max_prv_elapsed_time_;
+    max_cdrt_elapsed_time_  -= that.max_cdrt_elapsed_time_;
     rst_elapsed_time_       -= that.rst_elapsed_time_;
     create_elapsed_time_    -= that.create_elapsed_time_;
     destroy_elapsed_time_   -= that.destroy_elapsed_time_;
@@ -422,6 +438,7 @@ struct RTInfo {
     sync_time_              += that.sync_time_;
     prv_elapsed_time_       += that.prv_elapsed_time_;
     max_prv_elapsed_time_   += that.max_prv_elapsed_time_;
+    max_cdrt_elapsed_time_   += that.max_cdrt_elapsed_time_;
     rst_elapsed_time_       += that.rst_elapsed_time_;
     create_elapsed_time_    += that.create_elapsed_time_;
     destroy_elapsed_time_   += that.destroy_elapsed_time_;
@@ -448,6 +465,7 @@ std::ostream &operator<<(std::ostream &os, const RTInfo<T> &info)
      << "\n - sync_time : "            << info.sync_time_
      << "\n - prv_elapsed_time : "     << info.prv_elapsed_time_
      << "\n - max_prv_elapsed_time : " << info.max_prv_elapsed_time_
+     << "\n - max_cdrt_elapsed_time : " << info.max_cdrt_elapsed_time_
      << "\n - rst_elapsed_time : "     << info.rst_elapsed_time_
      << "\n - create_elapsed_time : "  << info.create_elapsed_time_
      << "\n - destroy_elapsed_time : " << info.destroy_elapsed_time_

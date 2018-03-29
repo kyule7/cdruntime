@@ -70,6 +70,7 @@ string RuntimeInfo::GetRTInfoStr(int cnt, int style)
                         "%swait_time:%11.6lf, // [s]\n"
                         "%sprsv_time:%11.6lf, // [s]\n"
                         "%sprsv_time:%11.6lf, // [s] (MAX)\n"
+                        "%scdrt_time:%11.6lf, // [s] (MAX)\n"
                         "%svol_copy :%11lu, // [B]\n"
                         "%svol_refer:%11lu, // [B]\n"
                         "%scomm_log :%11lu, // [B]\n"
@@ -81,6 +82,7 @@ string RuntimeInfo::GetRTInfoStr(int cnt, int style)
                         indent.c_str(), sync_time_,
                         indent.c_str(), prv_elapsed_time_,
                         indent.c_str(), max_prv_elapsed_time_,
+                        indent.c_str(), max_cdrt_elapsed_time_,
                         indent.c_str(), prv_copy_,
                         indent.c_str(), prv_ref_,
                         indent.c_str(), msg_logging_,
@@ -188,12 +190,14 @@ string CDOverhead::GetOverheadStr(void)
   snprintf(stringout, 512, 
                     "preserve :%11.6lf # [s]\n"
                     "preserve :%11.6lf # [s] (max)\n"
+                    "cdrt ovhd:%11.6lf # [s] (max)\n"
                     "create   :%11.6lf # [s]\n"
                     "destroy  :%11.6lf # [s]\n"
                     "begin    :%11.6lf # [s]\n"
                     "complete :%11.6lf # [s]\n", 
                     prv_elapsed_time_, 
                     max_prv_elapsed_time_, 
+                    max_cdrt_elapsed_time_, 
                     create_elapsed_time_,
                     destroy_elapsed_time_,
                     begin_elapsed_time_,
@@ -213,12 +217,14 @@ string CDOverheadVar::GetOverheadVarStr(void)
   snprintf(stringout, 512, 
                     "preserve:%11.6lf # [s] (var:%11.6lf)\n"
                     "preserve:%11.6lf # [s] (var:%11.6lf) (max)\n"
+                    "cdrtovhd:%11.6lf # [s] (var:%11.6lf) (max)\n"
                     "create  :%11.6lf # [s] (var:%11.6lf)\n"
                     "destroy :%11.6lf # [s] (var:%11.6lf)\n"
                     "begin   :%11.6lf # [s] (var:%11.6lf)\n"
                     "complete:%11.6lf # [s] (var:%11.6lf)\n", 
                     prv_elapsed_time_,     prv_elapsed_time_var_, 
                     max_prv_elapsed_time_,  max_prv_elapsed_time_var_, 
+                    max_cdrt_elapsed_time_,  max_cdrt_elapsed_time_var_, 
                     create_elapsed_time_,  create_elapsed_time_var_,
                     destroy_elapsed_time_, destroy_elapsed_time_var_,
                     begin_elapsed_time_,   begin_elapsed_time_var_,

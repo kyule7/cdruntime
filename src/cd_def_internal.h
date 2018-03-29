@@ -385,6 +385,7 @@ namespace cd {
     }
   }
 
+extern CD_CLOCK_T global_reex_clk;
 extern CD_CLOCK_T tot_begin_clk;
 extern CD_CLOCK_T tot_end_clk;
 extern CD_CLOCK_T cdr_elapsed_time;
@@ -422,6 +423,7 @@ extern int64_t failed_phase;
 extern int64_t failed_seqID;
 extern bool runtime_initialized;
 extern bool just_reexecuted;
+extern bool first_complete;
 extern bool orig_app_side;
 extern bool orig_disabled;
 extern bool orig_msg_app_side;
