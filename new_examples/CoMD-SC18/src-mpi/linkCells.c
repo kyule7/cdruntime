@@ -81,7 +81,7 @@ static int getBoxFromCoord(LinkCell *boxes, real_t rr[3]);
 static void emptyHaloCells(LinkCell *boxes);
 static void getTuple(LinkCell *boxes, int iBox, int *ixp, int *iyp, int *izp);
 
-//static void PrintBox(void);
+// static void PrintBox(void);
 LinkCell *initLinkCells(const Domain *domain, real_t cutoff) {
   assert(domain);
   LinkCell *ll = comdMalloc(sizeof(LinkCell));
@@ -227,7 +227,7 @@ int getBoxFromTuple(LinkCell *boxes, volatile int ix, volatile int iy,
   else {
     iBox = ix + gridSize[0] * iy + gridSize[0] * gridSize[1] * iz;
   }
-  //if (iBox < 0) {
+  // if (iBox < 0) {
   //  printf("Error: iBox %d < 0\n", iBox);
   //  assert(is_reexec());
   //  // Halo in Z+
@@ -267,7 +267,7 @@ int getBoxFromTuple(LinkCell *boxes, volatile int ix, volatile int iy,
   //  }
   //  PrintBox();
   //}
-  //if (iBox >= boxes->nTotalBoxes) {
+  // if (iBox >= boxes->nTotalBoxes) {
   //  printf("Error: iBox %d >= %d\n", iBox, boxes->nTotalBoxes);
   //}
   assert(iBox >= 0);
@@ -379,13 +379,14 @@ void copyAtom(LinkCell *boxes, Atoms *atoms, int iAtom, int iBox, int jAtom,
 /// ranks claim an atom in a local cell it will be lost.  If multiple
 /// ranks claim an atom it will be duplicated.
 
-//static int _t_ix = -1, _t_iy = -1, _t_iz = -1;
-//static real_t _t_localMin[3] = {-1., -1., -1.};
-//static real_t _t_invBoxSize[3] = {-1, -1, -1};
-//static int _t_gridSize[3] = {-1, -1, -1};
-//static void PrintBox(void) {
+// static int _t_ix = -1, _t_iy = -1, _t_iz = -1;
+// static real_t _t_localMin[3] = {-1., -1., -1.};
+// static real_t _t_invBoxSize[3] = {-1, -1, -1};
+// static int _t_gridSize[3] = {-1, -1, -1};
+// static void PrintBox(void) {
 //  printf(
-//      "[%s %d] (%d,%d,%d), min=(%f,%f,%f), n=(%f,%f,%f), gridsize=(%d,%d,%d)\n",
+//      "[%s %d] (%d,%d,%d), min=(%f,%f,%f), n=(%f,%f,%f),
+//      gridsize=(%d,%d,%d)\n",
 //      __func__, getMyRank(), _t_ix, _t_iy, _t_iz, _t_localMin[0],
 //      _t_localMin[1], _t_localMin[2], _t_invBoxSize[0], _t_invBoxSize[1],
 //      _t_invBoxSize[2], _t_gridSize[0], _t_gridSize[1], _t_gridSize[2]);
@@ -397,7 +398,7 @@ int getBoxFromCoord(LinkCell *boxes, real_t rr[3]) {
   int ix = (int)(floor((rr[0] - localMin[0]) * boxes->invBoxSize[0]));
   int iy = (int)(floor((rr[1] - localMin[1]) * boxes->invBoxSize[1]));
   int iz = (int)(floor((rr[2] - localMin[2]) * boxes->invBoxSize[2]));
-  //if (is_reexec()) {
+  // if (is_reexec()) {
   //  _t_ix = ix;
   //  _t_iy = iy;
   //  _t_iz = iz;

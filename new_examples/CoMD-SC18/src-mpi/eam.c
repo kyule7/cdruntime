@@ -321,12 +321,12 @@ int eamForce(SimFlat *s) {
 #if _CD3
     if (is_not_first_called) {
       if (iBox % CD3_INTERVAL == 0) {
-        //cd_detect(lv3_cd);
+        // cd_detect(lv3_cd);
         cd_complete(lv3_cd);
       }
     }
 #endif
-  }       // loop over local boxes
+  } // loop over local boxes
 
   // Compute Embedding Energy
   // loop over all local boxes
