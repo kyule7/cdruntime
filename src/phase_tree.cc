@@ -161,20 +161,22 @@ void PhaseNode::PrintOutputJson(PhaseNode *root)
             cd::totalTaskSize, cd::app_input_size, ftype_name, start_date, end_date
          );
   fprintf(outJSON, "  \"total time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::TOTAL_PRF], cd::recvstd[cd::TOTAL_PRF], cd::recvmin[cd::TOTAL_PRF], cd::recvmax[cd::TOTAL_PRF]);
-  fprintf(outJSON, "  \"CD overhead\"   : [%le, %le, %le, %le],\n", cd::recvavg[cd::CDOVH_PRF], cd::recvstd[cd::CDOVH_PRF], cd::recvmin[cd::CDOVH_PRF], cd::recvmax[cd::CDOVH_PRF]); 
+  fprintf(outJSON, "  \"reex time\"     : [%le, %le, %le, %le],\n", cd::recvavg[cd::REEX_PRF], cd::recvstd[cd::REEX_PRF], cd::recvmin[cd::REEX_PRF], cd::recvmax[cd::REEX_PRF]);
+  fprintf(outJSON, "  \"preserve time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::PRV_PRF]  , cd::recvstd[cd::PRV_PRF]  , cd::recvmin[cd::PRV_PRF]  , cd::recvmax[cd::PRV_PRF]  ); 
+  fprintf(outJSON, "  \"restore time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::RST_PRF]  , cd::recvstd[cd::RST_PRF]  , cd::recvmin[cd::RST_PRF]  , cd::recvmax[cd::RST_PRF]  ); 
+  fprintf(outJSON, "  \"CD body\"       : [%le, %le, %le, %le],\n", cd::recvavg[cd::CDOVH_PRF], cd::recvstd[cd::CDOVH_PRF], cd::recvmin[cd::CDOVH_PRF], cd::recvmax[cd::CDOVH_PRF]); 
+  fprintf(outJSON, "  \"CD overhead\"   : [%le, %le, %le, %le],\n", cd::tot_rtov[0], cd::tot_rtov[1], cd::tot_rtov[2], cd::tot_rtov[3]); 
+  fprintf(outJSON, "  \"messaging time\": [%le, %le, %le, %le],\n", cd::recvavg[cd::MSG_PRF]  , cd::recvstd[cd::MSG_PRF]  , cd::recvmin[cd::MSG_PRF]  , cd::recvmax[cd::MSG_PRF]  );
   fprintf(outJSON, "  \"sync time exec\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_NS_PRF], cd::recvstd[cd::CD_NS_PRF], cd::recvmin[cd::CD_NS_PRF], cd::recvmax[cd::CD_NS_PRF]); 
   fprintf(outJSON, "  \"sync time reex\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_RS_PRF], cd::recvstd[cd::CD_RS_PRF], cd::recvmin[cd::CD_RS_PRF], cd::recvmax[cd::CD_RS_PRF]); 
   fprintf(outJSON, "  \"sync time recr\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_ES_PRF], cd::recvstd[cd::CD_ES_PRF], cd::recvmin[cd::CD_ES_PRF], cd::recvmax[cd::CD_ES_PRF]); 
-  fprintf(outJSON, "  \"preserve time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::PRV_PRF]  , cd::recvstd[cd::PRV_PRF]  , cd::recvmin[cd::PRV_PRF]  , cd::recvmax[cd::PRV_PRF]  ); 
-  fprintf(outJSON, "  \"restore time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::RST_PRF]  , cd::recvstd[cd::RST_PRF]  , cd::recvmin[cd::RST_PRF]  , cd::recvmax[cd::RST_PRF]  ); 
   fprintf(outJSON, "  \"create time\"   : [%le, %le, %le, %le],\n", cd::recvavg[cd::CREAT_PRF], cd::recvstd[cd::CREAT_PRF], cd::recvmin[cd::CREAT_PRF], cd::recvmax[cd::CREAT_PRF]); 
   fprintf(outJSON, "  \"destory time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::DSTRY_PRF], cd::recvstd[cd::DSTRY_PRF], cd::recvmin[cd::DSTRY_PRF], cd::recvmax[cd::DSTRY_PRF]); 
   fprintf(outJSON, "  \"begin time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::BEGIN_PRF], cd::recvstd[cd::BEGIN_PRF], cd::recvmin[cd::BEGIN_PRF], cd::recvmax[cd::BEGIN_PRF]); 
   fprintf(outJSON, "  \"complete time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::COMPL_PRF], cd::recvstd[cd::COMPL_PRF], cd::recvmin[cd::COMPL_PRF], cd::recvmax[cd::COMPL_PRF]); 
-  fprintf(outJSON, "  \"mesg logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::MSG_PRF]  , cd::recvstd[cd::MSG_PRF]  , cd::recvmin[cd::MSG_PRF]  , cd::recvmax[cd::MSG_PRF]  );
   fprintf(outJSON, "  \"libc logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::LOG_PRF]  , cd::recvstd[cd::LOG_PRF]  , cd::recvmin[cd::LOG_PRF]  , cd::recvmax[cd::LOG_PRF]  );
 #if CD_PROFILER_ENABLED & CD_MPI_ENABLED
-  fprintf(outJSON, "  \"mailbox overhead\": %lf,\n", CD_CLK_MEA(cd::mailbox_elapsed_time)); 
+  fprintf(outJSON, "  \"mailbox overhead\": %lf,\n", cd::mailbox_elapsed_time_in_sec); 
 #endif
 
   if(root != NULL) {
@@ -190,7 +192,9 @@ void PhaseNode::PrintOutputJson(PhaseNode *root)
     fprintf(outJSON, "  \"global param\" : {\n"
                      "    \"max error\" : 20\n"
                      "  },\n"
-                     "}\n");
+                     "  \"CD info\" : {}\n"
+                     "}\n"
+                     );
   }
   fclose(outJSON);
   outJSON = NULL;
@@ -253,7 +257,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
     //  printf("child time:%lf\n", (*it)->profile_.total_time_);
     }
   } 
-  fprintf(outJSON, "%s\"current counts\"        : %u, // # execs\n", two_more_indent.c_str(), profile_.exec_cnt_);
+  fprintf(outJSON, "%s\"current counts\": %u, // # execs\n", two_more_indent.c_str(), profile_.exec_cnt_);
   //execution_time -= child_total_exec_time;
   fprintf(outJSON, "%s\"execution time\": %lf, // accumulated:%lf time - childs' time %lf - %lf\n", two_more_indent.c_str(), 
       (execution_time - child_total_exec_time)/profile_.exec_cnt_, 
@@ -264,17 +268,20 @@ void PhaseNode::PrintOutputJsonInternal(void)
   double loc_cdrt_ovhd_per_cd = cdrt_overhead_loc/profile_.exec_cnt_;
   double cdrt_overhead    = cdrt_overhead_loc;
   double cdrt_ovhd_per_cd = loc_cdrt_ovhd_per_cd;
-  fprintf(outJSON, "%s\"CDrt overhead\" : %lf, // accumulated:%lf (loc:%lf, percd:%lf) (max:%lf, percd:%lf)\n",  
-              two_more_indent.c_str(), 
-              cdrt_ovhd_per_cd, cdrt_overhead, 
-              cdrt_overhead_loc, loc_cdrt_ovhd_per_cd, 
-              cdrt_overhead_max, max_cdrt_ovhd_per_cd);
+  fprintf(outJSON, "%s\"per-CD overhead\": %lf, // (loc:%lf) (max:%lf)\n",  
+              two_more_indent.c_str(), cdrt_ovhd_per_cd, loc_cdrt_ovhd_per_cd, max_cdrt_ovhd_per_cd);
+  fprintf(outJSON, "%s\"CDrt overhead\"  : %lf, // (loc:%lf) (max:%lf)\n",  
+              two_more_indent.c_str(), cdrt_overhead, cdrt_overhead_loc, cdrt_overhead_max);
   double preserve_time        = profile_.GetPreserveTime();
   double preserve_time_per_cd = preserve_time / profile_.exec_cnt_;
   double loc_prsv_time_per_cd = profile_.prv_elapsed_time_ / profile_.exec_cnt_;
-  fprintf(outJSON, "%s\"preserve time\" : %lf, // accumulated:%lf w/ dev, %lf w/o dev, cnt:%u, percd:%lf\n",  
-      two_more_indent.c_str(), 
-      preserve_time_per_cd, preserve_time, profile_.prv_elapsed_time_, profile_.exec_cnt_, loc_prsv_time_per_cd);
+//  fprintf(outJSON, "%s\"preserve time\" : %lf, // accumulated:%lf w/ dev, %lf w/o dev, cnt:%u, percd:%lf\n",  
+//      two_more_indent.c_str(), 
+//      preserve_time_per_cd, preserve_time, profile_.prv_elapsed_time_, profile_.exec_cnt_, loc_prsv_time_per_cd);
+  fprintf(outJSON, "%s\"preserve time\" : %lf, // w/ dev, %lf w/o dev cnt:%u\n",  
+                    two_more_indent.c_str(), preserve_time_per_cd,  loc_prsv_time_per_cd, profile_.exec_cnt_);
+  fprintf(outJSON, "%s\"total preserve\": %lf, // w/ dev, %lf w/o dev\n",  
+                    two_more_indent.c_str(), preserve_time, profile_.prv_elapsed_time_);
   uint64_t errtype = errortype_;
   for(auto it=children_.begin(); it!=children_.end(); ++it) {
     errtype = errtype & ~((*it)->errortype_);
@@ -301,6 +308,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
   fprintf(outJSON, "%s\"output volume\" : %le, // (avg:%le)\n", two_more_indent.c_str(), vol_out, vol_out/profile_.exec_cnt_);
   fprintf(outJSON, "%s\"rd_bw\"         : %le, // <- w/ rtov. w/o rtov: %le (w/ max prv) %le(w/ loc prv)\n",    two_more_indent.c_str(), prv_bw, vol_in_check/preserve_time_per_cd, vol_in_check/loc_prsv_time_per_cd);
   fprintf(outJSON, "%s\"wr_bw\"         : %le,\n",    two_more_indent.c_str(), prv_bw);
+  fprintf(outJSON, "%s\"eff_bw\"        : %le,\n",    two_more_indent.c_str(), vol_in_check/preserve_time_per_cd);
   if(medium_ == kGlobalDisk) {
     // We will generate this file during error-free run, there will be
     // no profiled read bandwidth. For now, just use write bandwidth for read
@@ -597,12 +605,21 @@ void PhaseNode::GatherStats(void)
     (*it)->GatherStats();
   }
 
+  float avg_max_prsv = 0.0, avg_max_cdrt = 0.0;
+  uint64_t profile_cnt_local = profile_.exec_trace_.size();
+  uint64_t profile_cnt = profile_cnt_local;
+  PMPI_Allreduce(&profile_cnt_local, &profile_cnt, 1, MPI_UNSIGNED_LONG, MPI_MIN, MPI_COMM_WORLD);
+  uint64_t local_cnt = profile_cnt;
+//  if(profile_cnt_local != local_cnt) {
+//    printf("[%s %d] Different profile count:%lu == %lu\n", __func__, cd::myTaskID, local_cnt, profile_cnt_local);
+//  }
   // Gather traces for each level
-  if(cd::is_error_free) {
+  //if(cd::is_error_free) 
+  if(1)
+  {
     if(cd::myTaskID == 0) {
 
-      uint64_t total_cnt = profile_.exec_trace_.size() * cd::totalTaskSize;
-      uint64_t local_cnt = profile_.exec_trace_.size();
+      uint64_t total_cnt = profile_cnt * cd::totalTaskSize;
 #if 1
       std::vector<float> exec_trace(profile_.exec_trace_);
       std::vector<float> prsv_trace(profile_.prsv_trace_);
@@ -618,7 +635,7 @@ void PhaseNode::GatherStats(void)
       float *cdrt_trace    = new float[total_cnt];
       float *maxprsv_trace = new float[local_cnt];
 #endif
-      printf("[%s %s %u] total:%lu, gathered:%zu, max_prsv size:%zu\n", __func__, label_.c_str(), level_, total_cnt, local_cnt, profile_.max_prsv_.size());
+ //     printf("[%s %s %u] total:%lu, gathered:%zu, max_prsv size:%zu\n", __func__, label_.c_str(), level_, total_cnt, local_cnt, profile_.max_prsv_.size());
 #if 1          
       PMPI_Gather(exec_trace.data()         , local_cnt, MPI_FLOAT, 
                  profile_.exec_trace_.data(), local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
@@ -637,7 +654,6 @@ void PhaseNode::GatherStats(void)
                   cdrt_trace                 , local_cnt, MPI_FLOAT, 0, MPI_COMM_WORLD);
       PMPI_Reduce(profile_.prsv_trace_.data(), maxprsv_trace, local_cnt, MPI_FLOAT, MPI_MAX, 0, MPI_COMM_WORLD);
 #endif
-      float avg_max_prsv = 0.0, avg_max_cdrt = 0.0;
       for(auto mp=profile_.max_prsv_.begin(); mp!=profile_.max_prsv_.end(); ++mp) {
         avg_max_prsv += *mp;
       }
@@ -655,7 +671,6 @@ void PhaseNode::GatherStats(void)
 #endif
 
     } else {
-      uint64_t local_cnt = profile_.exec_trace_.size();
 //      printf("[%s %s %u] rest: exec:%zu prsv:%zu cdrt:%zu\n", 
 //          __func__, label_.c_str(), level_,
 //          profile_.exec_trace_.size(), profile_.prsv_trace_.size(), profile_.cdrt_trace_.size());
@@ -668,7 +683,12 @@ void PhaseNode::GatherStats(void)
       PMPI_Reduce(profile_.prsv_trace_.data(), NULL, local_cnt, MPI_FLOAT, MPI_MAX, 0, MPI_COMM_WORLD);
       PMPI_Reduce(profile_.cdrt_trace_.data(), NULL, local_cnt, MPI_FLOAT, MPI_MAX, 0, MPI_COMM_WORLD);
     }
-  } 
+  }
+//  if(cd::myTaskID == 0) {
+//    printf("--------------------------\n"); 
+//    profile_.Print();
+//    printf("-----------after----------\n");
+//  }
 //  else {
 //    printf("it is not err free\n");
 //  }
@@ -704,7 +724,7 @@ void PhaseNode::GatherStats(void)
   //MPI_Reduce(&rt_info, &rt_info_max_rank, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_MAXLOC, 0, MPI_COMM_WORLD);
   PMPI_Reduce(&rt_info, &rt_info_avg, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   PMPI_Reduce(&rt_info_sqsum, &rt_info_std, sizeof(RTInfo<double>)/sizeof(double), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  if(cd::myTaskID == 0){
+  if(cd::myTaskID == 0) {
 //      profile_.SetRTInfoInt(rt_info_int_recv);
 //      profile_.SetRTInfoFloat(rt_info_float_recv);
       //printf("\n----------- After receive -----------\n");
@@ -729,6 +749,18 @@ void PhaseNode::GatherStats(void)
      //common::cd_prof_map[phase_].Print(std::cout, " - ", "\n", buf);
       //printf("\n----------- Done  receive -----------\n");
       //getchar();
+//      printf("-----after----\n");
+      profile_.SetRTInfo(rt_info_avg);
+      //if(cd::is_error_free) 
+      if(1)
+      {
+        profile_.max_prv_elapsed_time_  = avg_max_prsv;
+        profile_.max_cdrt_elapsed_time_ = avg_max_cdrt - avg_max_prsv;
+      } else {
+        profile_.max_prv_elapsed_time_  = profile_.prv_elapsed_time_;
+        profile_.max_cdrt_elapsed_time_ = profile_.GetCDRTOverheadLocal();
+      }
+//      profile_.Print();
   }
 }
 

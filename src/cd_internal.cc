@@ -57,6 +57,7 @@ ProfMapType   common::profMap;
 bool tuned::tuning_enabled = false;
 uint32_t cd::new_phase = 0;
 bool cd::just_reexecuted;
+bool cd::first_complete = false;
 
 // serializable
 //uint64_t cd::PackerSerializable::gen_id = 0;
@@ -130,9 +131,9 @@ void cd::internal::Initialize(void)
   *CD::pendingFlag_ = 0;
   *CD::rollback_point_ = INVALID_ROLLBACK_POINT;
 
-  MPI_Win_create(CD::pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
+  PMPI_Win_create(CD::pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
                  MPI_INFO_NULL, GetRootCD()->color(), &CD::pendingWindow_);
-  MPI_Win_create(CD::rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
+  PMPI_Win_create(CD::rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
                  MPI_INFO_NULL, GetRootCD()->color(), &CD::rollbackWindow_);
 #else
   CD::rollback_point_ = new CDFlagT(INVALID_ROLLBACK_POINT);
@@ -718,10 +719,8 @@ CD::InternalCreate(CDHandle *parent,
     }
 
 #if _MPI_VER
-//  printf("# mailbox %u\n", num_mailbox_to_create);
     if(num_mailbox_to_create != 0) { 
       CD_DEBUG("# mailbox to create : %u\n", num_mailbox_to_create);
-//    printf("# mailbox to create : %u\n", num_mailbox_to_create);
       PMPI_Alloc_mem(num_mailbox_to_create*sizeof(CDFlagT), 
                     MPI_INFO_NULL, &(new_cd->event_flag_));
     
@@ -729,11 +728,27 @@ CD::InternalCreate(CDHandle *parent,
       for(uint32_t i=0; i<num_mailbox_to_create; i++) {
         new_cd->event_flag_[i] = 0;
       }
-  
+
+      /*int MPI_Win_allocate(MPI_Aint size, int disp_unit,
+       *                     MPI_Info info, 
+       *                     MPI_Comm comm, 
+       *                     void *baseptr, MPI_Win *win)
+       *  int MPI_Win_create(void *base, MPI_Aint size, int disp_unit, 
+       *                     MPI_Info info, 
+       *                     MPI_Comm comm, MPI_Win *win)
+       * int MPI_Win_allocate_shared(MPI_Aint size, int disp_unit,
+       * MPI_Info info, MPI_Comm comm, void *baseptr, MPI_Win *win);
+       * 
+       */
+#if USE_ALLOC_SHM      
+      // FIXME : should it be MPI_COMM_WORLD?
       // Create memory region where RDMA is enabled
       MPI_Win_create(new_cd->event_flag_, num_mailbox_to_create*sizeof(CDFlagT), sizeof(CDFlagT),
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
-    
+#else
+      MPI_Win_create(new_cd->event_flag_, num_mailbox_to_create*sizeof(CDFlagT), sizeof(CDFlagT),
+                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
+#endif
       CD_DEBUG("mpi win create for %u pending window done, new Node ID : %s\n", 
                 task_count, new_cd_id.node_id_.GetString().c_str());
   
@@ -747,17 +762,9 @@ CD::InternalCreate(CDHandle *parent,
       CD_DEBUG("Create pending/reexec windows %u level:%u %p\n", 
                 task_count, new_cd_id.level(), &(pendingWindow_));
       // FIXME : should it be MPI_COMM_WORLD?
-//      MPI_Win_create(new_cd->pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
-//                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->pendingWindow_));
-//      MPI_Win_create(new_cd->rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
-//                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->rollbackWindow_));
       CD_DEBUG("After Create pending/reexec windows %u level:%u %p \n", 
                 task_count, new_cd_id.level(), &(pendingWindow_));
     }
-  
-//    if( new_cd->GetPlaceToPreserve() == kPFS ) 
-//      new_cd->pfs_handle_ = new PFSHandle(new_cd, new_cd->file_handle_.GetFilePath()); 
-  
 #endif
 
     *new_cd_handle = new CDHandle(new_cd);
@@ -1192,9 +1199,9 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 {
 #if CD_MPI_ENABLED
 
-#if CD_PROFILER_ENABLED
+  #if CD_PROFILER_ENABLED
   double sync_time = 0.0;
-#endif
+  #endif
 
 #if BUGFIX_0327
 
@@ -1206,11 +1213,14 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
   #if CD_PROFILER_ENABLED 
     CD_CLOCK_T begin_here = CD_CLOCK();
   #endif
+
     MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
     //MPI_Win_flush_local_all(cd_lv_to_sync->mailbox_);
+    
   #if CD_PROFILER_ENABLED
     sync_time += CD_CLOCK() - begin_here;
   #endif
+
     cd_lv_to_sync->CheckMailBox();
 
     new_rollback_point = cd_lv_to_sync->CheckRollbackPoint(false);
@@ -1299,6 +1309,8 @@ void SetFailure(uint32_t phase, const char *label)
         label, failed_phase, phase, failed_seqID, curr_seqID, curr_begID);
     failed_phase = phase;
     failed_seqID = phaseTree.current_->seq_end_;
+
+    global_reex_clk = CD_CLOCK();
   }
 }
 
@@ -1620,6 +1632,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     //if(myTaskID == 0) { printf("## Complete. No error! ##, cur(%lu, %lu), failed(%ld,%ld) %ld\n",
     //    curr_phase, curr_seqID, failed_phase, failed_seqID, phaseTree.current_->seq_begin_); }
 
+//    if(level() == 1) { cd::first_complete = true;   printf("first complete\n");   }
     if(failed_phase != HEALTHY) {
       if(failed_phase == curr_phase) {
         if(failed_seqID == curr_seqID) {
@@ -1631,6 +1644,8 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
           // to measure the rest of execution time.
           CD_CLOCK_T now = CD_CLOCK();
           phaseTree.current_->FinishRecovery(now);
+          reex_elapsed_time += now - global_reex_clk;
+          global_reex_clk = now;
           if(myTaskID == 0) {printf(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
               level(), label_.c_str(), curr_phase, curr_seqID, curr_begID); }
           CD_DEBUG(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 

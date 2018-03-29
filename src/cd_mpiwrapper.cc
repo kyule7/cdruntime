@@ -1131,7 +1131,7 @@ int MPI_Wait(MPI_Request *request,
 //          if(myTaskID == 7) printf("Now waits %p.....(%s, %s) for no entry\n", request, cur_cdh->GetLabel(), cur_cdh->GetName());
 //        }
 //        }
-#if 1        
+#if 1
         // FIXME:03142018
         mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
 //        if(mpi_ret != MPI_ERR_NEED_ESCALATE) {
