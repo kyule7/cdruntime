@@ -212,6 +212,9 @@ Command parseCommandLine(int argc, char **argv) {
 #if _CD1
   cmd.preserveRateLevel1 = 1;
 #endif
+#if _CD2
+  cmd.preserveRateLevel2 = 1;
+#endif
 #if _CD3
   cmd.preserveRateLevel3 = 1;
 #endif
@@ -243,15 +246,19 @@ Command parseCommandLine(int argc, char **argv) {
   addArg("printRate", 'n', 1, 'i', &(cmd.printRate), 0,
          "number of steps between output");
 #if _CD1
-  addArg("preserveRate", 'a', 1, 'i', &(cmd.preserveRateLevel1), 0,
+  addArg("preserveRate", '1', 1, 'i', &(cmd.preserveRateLevel1), 0,
          "interval for level 1 CD");
 #endif
+#if _CD2
+  addArg("preserveRate", '2', 1, 'i', &(cmd.preserveRateLevel2), 0,
+         "interval for level 2 CD");
+#endif
 #if _CD3
-  addArg("preserveRate", 'b', 1, 'i', &(cmd.preserveRateLevel3), 0,
+  addArg("preserveRate", '3', 1, 'i', &(cmd.preserveRateLevel3), 0,
          "interval for level 3 CD");
 #endif
 #if _CD4
-  addArg("preserveRate", 'c', 1, 'i', &(cmd.preserveRateLevel4), 0,
+  addArg("preserveRate", '4', 1, 'i', &(cmd.preserveRateLevel4), 0,
          "interval for level 4 CD");
 #endif
   addArg("dt", 'D', 1, 'd', &(cmd.dt), 0, "time step (in fs)");

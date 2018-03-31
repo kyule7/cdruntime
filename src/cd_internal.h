@@ -655,7 +655,8 @@ public:
 #if CD_COMM_LOG_ENABLED
 public:
     //KL
-    bool DeleteIncompleteLog(void *flag);
+    bool DeleteIncompleteLog(int64_t flag);
+    //bool DeleteIncompleteLog(void* request);
     CommLogErrT InvalidateIncompleteLogs(void);
     CommLogErrT ProbeIncompleteLogs(void);
     //SZ
@@ -666,12 +667,12 @@ public:
     //SZ
     CDHandle *GetParentHandle();
     //SZ
-    CommLogErrT ProbeAndLogData(void *flag);
+    CommLogErrT ProbeAndLogData(int64_t flag);
     //SZ
     CommLogErrT LogData(const void *data_ptr, 
                         unsigned long length, 
                         uint32_t task_id=0,
-                        bool completed=true, void *flag=NULL,
+                        bool completed=true, int64_t flag=0,
                         bool isrecv=0, bool isrepeated=0, 
                         // KL : added these three things
                         bool intra_cd_msg=false, 

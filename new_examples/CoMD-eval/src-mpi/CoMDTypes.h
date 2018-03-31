@@ -112,6 +112,9 @@ typedef struct SimFlatSt {
 #if _CD1
   int preserveRateLevel1;
 #endif
+#if _CD2
+  int preserveRateLevel2;
+#endif
 #if _CD3
   int preserveRateLevel3;
 #endif

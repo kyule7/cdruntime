@@ -505,9 +505,9 @@ extern void GatherProfile(void);
  */
 
 #define CDPrologue() \
-  orig_app_side = app_side; \
-  app_side = false; \
-  begin_clk = CD_CLOCK(); 
+  cd::orig_app_side = cd::app_side; \
+  cd::app_side = false; \
+  cd::begin_clk = CD_CLOCK(); 
 
 
 /**@brief Set current context as application side. 
@@ -515,9 +515,9 @@ extern void GatherProfile(void);
  */
 
 #define CDEpilogue() \
-  end_clk = CD_CLOCK(); \
-  cdr_elapsed_time += end_clk - begin_clk; \
-  app_side = orig_app_side; \
+  cd::end_clk = CD_CLOCK(); \
+  cd::cdr_elapsed_time += cd::end_clk - cd::begin_clk; \
+  cd::app_side = cd::orig_app_side; \
 
 #endif // CD_LIBC_LOGGING ends
 
@@ -545,7 +545,7 @@ extern void GatherProfile(void);
       uint32_t taskID_;
       uint32_t tag_;
       ColorT   comm_;
-      void    *flag_;
+      int64_t flag_;
       bool     complete_;
       bool     isrecv_;
       bool     intra_cd_msg_;
@@ -557,7 +557,7 @@ extern void GatherProfile(void);
         taskID_ = 0;
         addr_ = NULL;
         length_ = 0;
-        flag_ = NULL;
+        flag_ = 0;
         complete_ = 0;
         isrecv_ = 0;
         intra_cd_msg_ = false;
@@ -573,7 +573,7 @@ extern void GatherProfile(void);
                          uint32_t taskID, 
                          uint32_t tag, 
                          const ColorT &comm, 
-                         void    *flag, 
+                         int64_t flag, 
                          bool complete,
                          bool irecv) 
         : addr_(const_cast<void *>(addr)), length_(length), taskID_(taskID), tag_(tag), 
@@ -586,7 +586,7 @@ extern void GatherProfile(void);
       }
       std::string Print(void) {
         char buf[256];
-        sprintf(buf, "\n== Incomplete Log Entry ==\ntaskID:%u\nlength:%lu\naddr:%p\ntag:%u\nflag:%p\ncomplete:%d\nisrecv:%d\nintra_msg:%d\np:%p\npushed:%d\nlevel:%u\n==========================\n", taskID_, length_, addr_, tag_, flag_, complete_, isrecv_, intra_cd_msg_, p_, pushed_, level_);
+        sprintf(buf, "\n== Incomplete Log Entry ==\ntaskID:%u\nlength:%lu\naddr:%p\ntag:%u\nflag:%ld\ncomplete:%d\nisrecv:%d\nintra_msg:%d\np:%p\npushed:%d\nlevel:%u\n==========================\n", taskID_, length_, addr_, tag_, flag_, complete_, isrecv_, intra_cd_msg_, p_, pushed_, level_);
         return std::string(buf);
       }
     };
@@ -596,7 +596,7 @@ extern void GatherProfile(void);
     public:
       IncompleteLogStore(){}
       IncompleteLogStore(uint32_t unit_size) : unit_size_(unit_size) {}
-      std::vector<IncompleteLogEntry>::iterator find(void *flag) {
+      std::vector<IncompleteLogEntry>::iterator find(int64_t flag) {
         std::vector<IncompleteLogEntry>::iterator it = begin();
         for(; it!=end(); ++it) {
           if(it->flag_ == flag) 
