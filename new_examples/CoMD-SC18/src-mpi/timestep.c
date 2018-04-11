@@ -287,7 +287,29 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 //            cd boundary: force (92.96%)
 //*****************************************************************************
 #if _CD2_COMBINE
-    // nothing to do
+    // atoms->r needs to be preserved here via kCopy since it's referenced
+    // in CD3
+    int computeForce_pre_lv2combined_size = preserveAtoms(lv2_cd, kCopy, s->atoms,
+                                                  1, // is_gid
+                                                  1, // is_r
+                                                  0, // is_p
+                                                  0, // is_f
+                                                  0, // is_U
+                                                  0, // is_iSpecies
+                                                  0, // from
+                                                  s->boxes->nLocalBoxes, // to
+                                                  0, "Local");
+    computeForce_pre_lv2combined_size = preserveAtomsInLocalBox(lv2_cd, 
+                                    kCopy, s->atoms, s->boxes->nLocalBoxes, 0);
+                                                      
+    computeForce_pre_lv2combined_size +=
+        preserveAtomsInHaloBox(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
+                               s->boxes->nTotalBoxes, 0);
+    // FIXME: not verified
+    computeForce_pre_lv2combined_size =
+        preserveLinkCell(lv2_cd, kCopy, s->boxes, 1 /*all*/, 0 /*nAtoms*/,
+                         0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
+
 #else // _CD2_COMBINE
 #if _CD2
     cd_begin(lv2_cd, "computeForce"); // 4th (/ 5 sequential lv2_cd s)
@@ -310,6 +332,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif // _CD2
 #endif // _CD2_COMBINE
 
+// Note that we will creat CD3 for either when CD2 is combined or not
 #if _CD3 && _CD2
     // FIXME: this can be either LJ potential or EAM potential
     // FIXME: eam force has cocmmunication in it so that we can't create
@@ -319,7 +342,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 
     // TODO(estimator): will determine the optimal number of parallel children
     cd_handle_t *lv3_cd =
-#if _CD3_NO_SPLIT
+#if _CD2_NO_SPLIT
         cd_create(getcurrentcd(), 1 /*getNRanks(),*/, "computeForce_loop",
 #else
         cd_create(getcurrentcd(), /*1,*/ getNRanks(), "computeForce_loop",
@@ -330,12 +353,13 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // call either eamForce or ljForce
     computeForce(s); // s->pot->force(s)
     stopTimer(computeForceTimer);
-#if _CD3 && _CD2
+#if _CD3 && _CD2 
     // cd_detect(lv3_cd);
     // cd_complete(lv3_cd);
     cd_destroy(lv3_cd);
 #endif // _CD3 && _CD2
-
+// FIXME: combine with _CD3 && _CD2
+//        nothing different
 #if _CD2_COMBINE
     // nothing to do
 #else // _CD2_COMBINE
