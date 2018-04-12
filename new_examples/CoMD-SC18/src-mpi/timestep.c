@@ -37,35 +37,37 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #if _CD2
   cd_handle_t *lv2_cd = getleafcd();
   // Note that l2_cd, which is heterogeneous CDs with 5 children, can not be
-  // optimized by adjusting interval but only done by merging 5 sequential CDs
-  // ,guided by estimators.
+  // optimized by adjusting interval but only done by merging 5 sequential CDs,
+  // guided by estimators.
   const int CD2_INTERVAL = s->preserveRateLevel2;
 #endif
   // This will iterate as many as specified in "printRate (default:10)"
   for (int ii = 0; ii < nSteps; ++ii) {
 #if _CD2_COMBINE
 #if _CD2
-    //************************************************************************//
-    //            cd boundary: velocity (0.08%) (for both)
-    //************************************************************************//
+//*****************************************************************************
+//            cd boundary: (1) velocity (0.08%) (for both)
+//*****************************************************************************
     cd_begin(lv2_cd, "lv2_combined");
+    // For debugging, preserve all data structures
+    //int lv2_combined_pre_size = preserveSimFlat(lv2_cd, kCopy, s);
+    
     // FIXME: should this be kRef for the first iteration?
     // FIXME: this is not working corectly.
-    int lv2_combined_pre_size = preserveSimFlat(lv2_cd, kCopy, s);
-    //int lv2_combined_pre_size = preserveAtomsInLocalBox(
-    //    lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes, 0);
+    int lv2_combined_pre_size = preserveAtomsInLocalBox(
+        lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes, 0);
     //lv2_combined_pre_size +=
     //    preserveAtomsInHaloBox(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
     //                           s->boxes->nTotalBoxes, 0);
-    //// TODO: No need to preserve entier SpeciesData but only mass.
-    //// But this is tiny anyway so that let's leave it for now.
-    //lv2_combined_pre_size += preserveSpeciesData(lv2_cd, kCopy, s->species);
-    //lv2_combined_pre_size +=
-    //    preserveLinkCell(lv2_cd, kCopy, s->boxes, 1 /*all*/, 0 /*nAtoms*/,
-    //                     0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
-    //// Preserve HaloAtom
-    //lv2_combined_pre_size += preserveHaloAtom(
-    //    lv2_cd, kCopy, s->atomExchange->parms, 1 /*cellList*/, 1 /*pbcFactor*/);
+    // TODO: No need to preserve entier SpeciesData but only mass.
+    // But this is tiny anyway so that let's leave it for now.
+    lv2_combined_pre_size += preserveSpeciesData(lv2_cd, kCopy, s->species);
+    lv2_combined_pre_size +=
+        preserveLinkCell(lv2_cd, kCopy, s->boxes, 1 /*all*/, 0 /*nAtoms*/,
+                         0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
+    // Preserve HaloAtom
+    lv2_combined_pre_size += preserveHaloAtom(
+        lv2_cd, kCopy, s->atomExchange->parms, 1 /*cellList*/, 1 /*pbcFactor*/);
 
 #if DO_PRV
     // Preserve loop index (ii)
@@ -76,9 +78,9 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif // _CD2
 #else  // _CD2_COMBINE
 #if _CD2
-    //************************************************************************//
-    //            cd boundary: velocity (0.08%) (for both)
-    //************************************************************************//
+//*****************************************************************************
+//            cd boundary: (1) velocity (0.08%) (for both)
+//*****************************************************************************
     // Note that this is to be preserved at lv1_cd
     cd_begin(lv2_cd,
              "advanceVelocity_start"); // lv2_cd starts ( 1 / 5 sequential CDs)
@@ -151,7 +153,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif // _CD2_COMBINE
 
 //*****************************************************************************
-//            cd boundary: position (0.09%)
+//            cd boundary: (2) position (0.09%)
 //*****************************************************************************
 // TODO: CD2 optimization (combination of potential merges among 5 sequential
 //       CDs shown below.
@@ -221,7 +223,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 //            Communication
 //-----------------------------------------------------------------------
 //*****************************************************************************
-//            cd boundary: redistribution (6.88%)
+//            cd boundary: (3) redistribution (6.88%)
 //*****************************************************************************
 #if _CD2_COMBINE
     // nothing to do
@@ -284,7 +286,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 //-----------------------------------------------------------------------
 
 //*****************************************************************************
-//            cd boundary: force (92.96%)
+//            cd boundary: (4) force (92.96%)
 //*****************************************************************************
 #if _CD2_COMBINE
     // atoms->r needs to be preserved here via kCopy since it's referenced
@@ -387,7 +389,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif // _CD2
 #endif // _CD2_COMBINE
 //*****************************************************************************
-//            cd boundary : advanceVelocity (@ end)
+//            cd boundary : (5) advanceVelocity (@ end)
 //*****************************************************************************
 #if _CD2_COMBINE
     // nothing to do
