@@ -588,14 +588,15 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 */
   InitDir(myTask, numTask);
 
-  cd::runtime_initialized = true;
 
   // Create Root CD
   NodeID new_node_id = NodeID(ROOT_COLOR, myTask, ROOT_HEAD_ID, numTask);
 #if CD_MPI_ENABLED 
-  PMPI_Comm_group(MPI_COMM_WORLD, &whole_group); 
   new_node_id = CDHandle::GenNewNodeID(ROOT_HEAD_ID, new_node_id, false);
+  //PMPI_Comm_group(new_node_id.color_, &whole_group); 
+  whole_group = new_node_id.task_group_; 
 #endif
+  cd::runtime_initialized = true;
   time_t right_now = time(NULL);
   struct tm *p = localtime(&right_now);
   strftime(start_date, 64, "%F-%A-%H-%M-%S", p);
@@ -1196,7 +1197,7 @@ NodeID CDHandle::GenNewNodeID(int new_head, const NodeID &node_id, bool is_reuse
 #if CD_MPI_ENABLED
   if(is_reuse == false) {
     PMPI_Comm_dup(node_id.color_, &(new_node_id.color_));
-//    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
+    PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
   }
 #endif
   new_node_id.set_head(new_head);
@@ -1696,7 +1697,7 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
   TUNE_DEBUG("[Real %s lv:%u phase:%d]\n", __func__, level(), phase()); STOPHANDLE;
   PRINT_MPI("** [%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
-  CD_DEBUG("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
+  CD_DEBUG("%s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
 
 
@@ -2019,9 +2020,9 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     err = kError;
     // FIXME
-    CD_DEBUG("[%d] ### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
+    CD_DEBUG("[%d] #### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
-    printf("[%d] ### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
+    printf("[%d] #### Error Injected:%x Rollback Level #%u (%s %s) ###\n", myTaskID, err_desc,
              rollback_point, ptr_cd_->cd_id_.GetStringID().c_str(), ptr_cd_->label_.c_str()); 
 
     CDHandle *rb_cdh = CDPath::GetCDLevel(rollback_point);
@@ -2574,8 +2575,8 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
       cdh = CDPath::GetParentCD(cdh->level());
     }
     if(rollback_point < level()) {
-      printf("\n>>>> Escalation %u (%lu-%lu)->%u during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
-          level(), phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_, 
+      printf("\n[%d] >>>> Escalation %u (%lu-%lu)->%u during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+          cd::myTaskID, level(), phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_, 
           rollback_point, 
           (IsReexec())? "REEX" : "EXEC",
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
@@ -2593,8 +2594,8 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
       const uint64_t curr_phase = ptr_cd_->phase();
       const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
       const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
-      printf(">>>> Rollback (%s) during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s phase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
-          ptr_cd_->label_.c_str(),
+      printf("[%d] >>>> Rollback (%s) during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s phase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+          cd::myTaskID, ptr_cd_->label_.c_str(),
           (IsReexec())? "REEX" : "EXEC",
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),

@@ -65,6 +65,7 @@ bool cd::first_complete = false;
 //#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
 #define BUGFIX_0327 1
 #define _LOG_PROFILING 0
+#define USE_ALLOC_SHM 1
 CD_CLOCK_T cd::log_begin_clk;
 CD_CLOCK_T cd::log_end_clk;
 CD_CLOCK_T cd::log_elapsed_time;
@@ -99,14 +100,21 @@ map<uint32_t, CDHandle *> CD::delete_store_;
 
 //bool CD::need_reexec = false;
 bool CD::need_escalation = false;
-//uint32_t *CD::rollback_point_ = INVALID_ROLLBACK_POINT;
-
 CDFlagT *CD::rollback_point_ = NULL; 
 #if _MPI_VER
 CDFlagT *CD::pendingFlag_ = NULL; 
 CDMailBoxT CD::pendingWindow_;
 CDMailBoxT CD::rollbackWindow_;
 #endif
+// Node-local specifics
+ColorT cd::node_color;
+GroupT cd::node_group;
+int cd::node_rank = 0;
+int cd::node_size = 1;
+int cd::head_in_node = 0;
+int cd::node_name_sz=32;
+char cd::node_name[MPI_MAX_PROCESSOR_NAME];
+////////////////////////
 
 void cd::internal::InitFileHandle(bool make_dir)
 {
@@ -121,24 +129,86 @@ void cd::internal::InitFileHandle(bool make_dir)
   }
 }
 
+
 void cd::internal::Initialize(void)
 {
 #if _MPI_VER
+  MPI_Get_processor_name(cd::node_name, &cd::node_name_sz);
+  MPI_Comm_split_type(GetRootCD()->color(), MPI_COMM_TYPE_SHARED, 
+                      cd::myTaskID, 
+                      MPI_INFO_NULL, &cd::node_color);
+  PMPI_Comm_group(cd::node_color, &cd::node_group); 
+  MPI_Comm_rank(cd::node_color, &cd::node_rank);
+  MPI_Comm_size(cd::node_color, &cd::node_size);
+  int local_head_in_node = 0;
+  PMPI_Group_translate_ranks(cd::node_group, 1, &local_head_in_node, cd::whole_group, &head_in_node);
+//  printf("[%s %d] node:%d/%d (%d)\n", cd::node_name, cd::myTaskID, 
+//          cd::node_rank, cd::node_size, head_in_node);
+  #if USE_ALLOC_SHM      
+  /*int MPI_Win_allocate(MPI_Aint size, int disp_unit,
+   *                     MPI_Info info, 
+   *                     MPI_Comm comm, 
+   *                     void *baseptr, MPI_Win *win)
+   *  int MPI_Win_create(void *base, MPI_Aint size, int disp_unit, 
+   *                     MPI_Info info, 
+   *                     MPI_Comm comm, MPI_Win *win)
+   * int MPI_Win_allocate_shared(MPI_Aint size, int disp_unit,
+   *                             MPI_Info info, MPI_Comm comm, 
+   *                             void *baseptr, MPI_Win *win);
+   * 
+   */
+  MPI_Info win_info;
+  MPI_Info_create(&win_info);
+  MPI_Info_set(win_info, "alloc_shared_noncontig", "true");
+  PMPI_Win_allocate_shared(sizeof(CDFlagT), sizeof(CDFlagT), 
+                           win_info /*MPI_INFO_NULL*/, 
+                           GetRootCD()->color(), 
+                           &CD::pendingFlag_, &CD::pendingWindow_);
+    PMPI_Win_allocate_shared(sizeof(CDFlagT), sizeof(CDFlagT), 
+                             win_info /*MPI_INFO_NULL*/, 
+                             GetRootCD()->color(), 
+                             &CD::rollback_point_, &CD::rollbackWindow_);
+    *CD::rollback_point_ = INVALID_ROLLBACK_POINT;
+  MPI_Aint rp_size=-1;
+  int rp_dist=-1;
+//  if(cd::node_rank == 0) {
+//    PMPI_Win_allocate_shared(sizeof(CDFlagT), sizeof(CDFlagT), 
+//                             win_info /*MPI_INFO_NULL*/, 
+//                             GetRootCD()->color(), 
+//                             &CD::rollback_point_, &CD::rollbackWindow_);
+//    *CD::rollback_point_ = INVALID_ROLLBACK_POINT;
+//
+//  } else {
+//    PMPI_Win_allocate_shared(0, sizeof(CDFlagT), 
+//                             win_info /*MPI_INFO_NULL*/, 
+//                             GetRootCD()->color(), 
+//                             &CD::rollback_point_, &CD::rollbackWindow_);
+//    MPI_Win_shared_query(CD::rollbackWindow_, head_in_node, &rp_size, &rp_dist, &CD::rollback_point_);
+//  }
+  printf("[%s %3d] node:%2d/%2d (%3d), rp:%3ld,%3d,%p, pd:%p\n", cd::node_name, cd::myTaskID, 
+          cd::node_rank, cd::node_size, head_in_node,
+          rp_size, rp_dist, CD::rollback_point_, CD::pendingFlag_);
+//  PMPI_Win_allocate_shared(sizeof(CDFlagT), sizeof(CDFlagT), 
+//                           MPI_INFO_NULL, GetRootCD()->color(), 
+//                           CD::pendingFlag_, &CD::pendingWindow_);
+  #else
   PMPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &(CD::pendingFlag_));
   PMPI_Alloc_mem(sizeof(CDFlagT), MPI_INFO_NULL, &(CD::rollback_point_));
-
-  // Initialize pending flag
-  *CD::pendingFlag_ = 0;
-  *CD::rollback_point_ = INVALID_ROLLBACK_POINT;
 
   PMPI_Win_create(CD::pendingFlag_, sizeof(CDFlagT), sizeof(CDFlagT), 
                  MPI_INFO_NULL, GetRootCD()->color(), &CD::pendingWindow_);
   PMPI_Win_create(CD::rollback_point_, sizeof(CDFlagT), sizeof(CDFlagT), 
                  MPI_INFO_NULL, GetRootCD()->color(), &CD::rollbackWindow_);
-#else
+  *CD::rollback_point_ = INVALID_ROLLBACK_POINT;
+  #endif
+#else // Single process
   CD::rollback_point_ = new CDFlagT(INVALID_ROLLBACK_POINT);
 //  CD::pendingFlag_ = new CDFlagT(0);
 #endif
+
+  // Initialize pending flag
+  *CD::pendingFlag_ = 0;
+  MPI_Info_free( &win_info );
 
 #if _MPI_VER
   // Tag-related
@@ -177,8 +247,12 @@ void cd::internal::Finalize(void)
 #if _MPI_VER
   PMPI_Win_free(&CD::pendingWindow_);
   PMPI_Win_free(&CD::rollbackWindow_);
+  #if USE_ALLOC_SHM
+  // Do nothing? 
+  #else
   PMPI_Free_mem(CD::pendingFlag_);
   PMPI_Free_mem(CD::rollback_point_);
+  #endif
 #else
   free(CD::rollback_point_);
 //  free(CD::pendingFlag_);
@@ -743,8 +817,14 @@ CD::InternalCreate(CDHandle *parent,
 #if USE_ALLOC_SHM      
       // FIXME : should it be MPI_COMM_WORLD?
       // Create memory region where RDMA is enabled
-      MPI_Win_create(new_cd->event_flag_, num_mailbox_to_create*sizeof(CDFlagT), sizeof(CDFlagT),
-                     MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
+      MPI_Info window_info;
+      MPI_Info_create(&window_info);
+      MPI_Info_set(window_info, "alloc_shared_noncontig", "true");
+      PMPI_Win_allocate_shared(num_mailbox_to_create*sizeof(CDFlagT), sizeof(CDFlagT),
+                               window_info /*MPI_INFO_NULL*/, 
+                               new_cd_id.color(),
+                               &new_cd->event_flag_, 
+                               &(new_cd->mailbox_));
 #else
       MPI_Win_create(new_cd->event_flag_, num_mailbox_to_create*sizeof(CDFlagT), sizeof(CDFlagT),
                      MPI_INFO_NULL, new_cd_id.color(), &(new_cd->mailbox_));
@@ -752,6 +832,7 @@ CD::InternalCreate(CDHandle *parent,
       CD_DEBUG("mpi win create for %u pending window done, new Node ID : %s\n", 
                 task_count, new_cd_id.node_id_.GetString().c_str());
   
+      MPI_Info_free(&window_info);
       new_cd->is_window_reused_ = false;
     } 
     else {
@@ -830,7 +911,11 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
       PMPI_Group_free(&cd_id_.node_id_.task_group_);
       PMPI_Comm_free(&cd_id_.node_id_.color_);
       PMPI_Win_free(&mailbox_);
+  #if USE_ALLOC_SHM
+  // Do nothing? 
+  #else
       PMPI_Free_mem(event_flag_);
+  #endif
       CD_DEBUG("[%s Window] CD's Windows are destroyed.\n", __func__);
     }
     else
@@ -851,6 +936,8 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
   return CDInternalErrT::kOK;
 }
 
+static inline 
+void SetFailure(uint32_t phase, const char *label);
 
 //static inline void BeginPhase(const std::string &label)
 //{
@@ -1135,6 +1222,7 @@ CDErrT CD::Begin(const char *label, bool collective)
   if(new_rollback_point < level) { 
     bool need_sync_next_cdh = CDPath::GetParentCD(level)->task_size() > task_size();
     phaseTree.current_->profile_.RecordRollback(true, kBegin); // measure timer and calculate sync time.
+    SetFailure(current_phase, label_.c_str());
     GetCDToRecover( CDPath::GetCurrentCD(), need_sync_next_cdh )->ptr_cd()->Recover(level);
   } 
   else {
@@ -1206,15 +1294,18 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 #if BUGFIX_0327
 
   uint32_t new_rollback_point = INVALID_ROLLBACK_POINT;
+  const int64_t curr_phase = cd_lv_to_sync->phase();
+  const int64_t now_seqID = phaseNodeCache[curr_phase]->seq_end_;
+  const int64_t now_begID = phaseNodeCache[curr_phase]->seq_begin_;
 
   if(cd_lv_to_sync->task_size() > 1) {
     cd_lv_to_sync->CheckMailBox();
-    CD_DEBUG("[%s] fence in at %s level %u\n", __func__, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
+    CD_DEBUG("[%ld->%ld] fence in at %s level %u\n", now_begID, now_seqID, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
   #if CD_PROFILER_ENABLED 
     CD_CLOCK_T begin_here = CD_CLOCK();
   #endif
 
-    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
+    //MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
     //MPI_Win_flush_local_all(cd_lv_to_sync->mailbox_);
     
   #if CD_PROFILER_ENABLED
@@ -1379,7 +1470,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 #if BUGFIX_0327
       
     uint32_t new_rollback_point = (collective)? SyncCDs(target->ptr_cd(), true) : 
-                                  target->ptr_cd()->CheckRollbackPoint(true); // read from head
+                                  target->ptr_cd()->CheckRollbackPoint(false/*true*/); // read from head
     if(new_rollback_point > rollback_lv) {
       CD_DEBUG("head did not notice error yet.....\n");
       new_rollback_point = rollback_lv;
@@ -1452,7 +1543,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     // The tasks in the same CD should reach here together. (No tasks execute further Complete/Create)
 #if BUGFIX_0327
     uint32_t new_rollback_point = (collective)? SyncCDs(target->ptr_cd(), true) : 
-                                  target->ptr_cd()->CheckRollbackPoint(true); // read from head
+                                  target->ptr_cd()->CheckRollbackPoint(false/*true*/); // read from head
     target->ptr_cd()->SetRollbackPoint(new_rollback_point, false);
 //    if(collective) {
 //      uint32_t new_rollback_point = SyncCDs(target->ptr_cd(), true);
@@ -1504,8 +1595,14 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
 //  UnsetBegin();
   uint32_t orig_rollback_point = CheckRollbackPoint(false);
 //  bool my_need_reexec = need_reexec;
-  CD_DEBUG("%s %s \t Reexec from %u (Before Sync)\n", 
-          GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
+  const int64_t now_phase = phase();
+  const int64_t now_seqID = phaseNodeCache[now_phase]->seq_end_;
+  const int64_t now_begID = phaseNodeCache[now_phase]->seq_begin_;
+  CD_DEBUG("%s %s %ld->%ld\t Reexec from %u (Before Sync)\n", 
+          GetCDName().GetString().c_str(), 
+          GetNodeID().GetString().c_str(), 
+          now_begID, now_seqID,
+          orig_rollback_point);
 //  printf("%s check this out\n", __func__);
 
 #if CD_MPI_ENABLED
@@ -2344,7 +2441,7 @@ CDErrT CD::Preserve(void *data,
   CDErrT ret = CDErrT::kOK;
 //  uint64_t tag = cd_hash(my_name);
 //  tag2str[tag] = my_name;
-  CD_DEBUG("[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, ref_offset:%lu, [cd_exec_mode : %d]\n", 
+  CD_DEBUG("LV%u data addr: %p, len: %lu, entry name : %s, ref name: %s, ref_offset:%lu, [cd_exec_mode : %d]\n", level(),
            data, len_in_bytes, my_name.c_str(), ref_name.c_str(), ref_offset, cd_exec_mode_); 
 //  printf("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
 //           data, len_in_bytes, my_name, ref_name, cd_exec_mode_); 
@@ -2425,8 +2522,9 @@ CDErrT CD::Preserve(void *data,
                entry_directory_.table_->tablesize(), prv_medium_);
   
       if( restore_count_ < preserve_count_ ) { // normal case
-  
-        CD_DEBUG("\n\nNow reexec!!! %d\n\n", iterator_entry_count++);
+        
+        CD_DEBUG("\t\t\tNow reexec!!! %d rstr:%u < prsv:%u (fail:%ld/%ld)\n\n", iterator_entry_count++, restore_count_, preserve_count_, cd::failed_phase, cd::failed_seqID);
+        assert(cd::failed_phase >= 0 && cd::failed_seqID >= 0);
         Restore((char *)data, len_in_bytes, preserve_mask, my_name, ref_name);
         restore_count_++;
         if( restore_count_ == preserve_count_ ) { 
@@ -2735,7 +2833,8 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
                                const string &my_name, const string &ref_name)
 {
   CD::CDInternalErrT ret = kOK; 
-  CD_DEBUG("\n\nNow reexec %s!!! %d\n\n", ref_name.c_str(), iterator_entry_count++);
+  CD_DEBUG("\t\t\tNow reexec %s!!! %d rstr:%u < prsv:%u (fail:%ld/%ld)\n\n\n", 
+      ref_name.c_str(), iterator_entry_count++, restore_count_, preserve_count_, cd::failed_phase, cd::failed_seqID);
   const bool is_ref = CHECK_PRV_TYPE(preserve_mask, kRef);
   uint32_t found_level = INVALID_NUM32;
   uint64_t ref_id = 0; //cd_hash(ref_name);

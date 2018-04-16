@@ -99,6 +99,7 @@ private:
   int head_;
   int size_;
   int color_id_;
+public:
   ColorT color_;
   GroupT task_group_;
 

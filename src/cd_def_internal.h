@@ -290,7 +290,14 @@ namespace cd {
   // Local CDHandle object and CD object are managed by CDPath (Local means the current process)
 
 #if CD_MPI_ENABLED
-  extern MPI_Group whole_group;
+  extern GroupT whole_group;
+  extern ColorT node_color;
+  extern GroupT node_group;
+  extern int node_rank;
+  extern int head_in_node;
+  extern int node_size;
+  extern char node_name[MPI_MAX_PROCESSOR_NAME];
+  extern int node_name_sz;
 //  extern int handled_event_count;
   extern int max_tag_bit;
   extern int max_tag_level_bit;

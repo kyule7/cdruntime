@@ -2632,6 +2632,7 @@ int MPI_Finalize(void)
   logger::disabled = orig_disabled; 
   return mpi_ret;
 }
+
 int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],
                               MPI_Group group2, int ranks2[]) {
   assert(group2);
@@ -2639,6 +2640,9 @@ int MPI_Group_translate_ranks(MPI_Group group1, int n, const int ranks1[],
                                     group2, ranks2);
 }
 
+/************************************************************************
+ * MPI One-Sided Communications
+ ************************************************************************/
 std::map<uint32_t, uint32_t> epoch_num;
 //unsigned epoch_num = 0;
 int MPI_Win_fence(int assert, MPI_Win win)
