@@ -1300,7 +1300,13 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 
   if(cd_lv_to_sync->task_size() > 1) {
     cd_lv_to_sync->CheckMailBox();
-    CD_DEBUG("[%ld->%ld] fence in at %s level %u\n", now_begID, now_seqID, cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level());
+    CD_DEBUG("[%ld->%ld, (%u, %u, %u)] fence in at %s level %u\n", 
+        now_begID, now_seqID,
+        phaseNodeCache[curr_phase]->seq_acc_,
+        phaseNodeCache[curr_phase]->seq_acc_rb_,
+        cd_lv_to_sync->cd_id_.sequential_id_,
+        cd_lv_to_sync->name_.c_str(), cd_lv_to_sync->level()
+        );
   #if CD_PROFILER_ENABLED 
     CD_CLOCK_T begin_here = CD_CLOCK();
   #endif
@@ -1609,23 +1615,27 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
   // This is important synchronization point 
   // to guarantee the correctness of CD-enabled program.
   uint32_t new_rollback_point = orig_rollback_point;
-#if BUGFIX_0327
+  #if BUGFIX_0327
   if(collective && task_size() > 1) {
     new_rollback_point = SyncCDs(this, false);
     CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
-    new_rollback_point = SetRollbackPoint(new_rollback_point, false);
+    new_rollback_point = SetRollbackPoint(new_rollback_point, false); // FIXME 04152018
   } else {
     new_rollback_point = CheckRollbackPoint(false);
     CD_DEBUG("rollback point from head:%u\n", new_rollback_point);
     new_rollback_point = SetRollbackPoint(new_rollback_point, false);
   }
-#else
+  #else
   if(collective) {
     SyncCDs(this);
   }
 
-  CD_DEBUG("%s %s \t Reexec from %u (After Sync)\n", 
-          GetCDName().GetString().c_str(), GetNodeID().GetString().c_str(), orig_rollback_point);
+  CD_DEBUG("%s %s (%u, %u)\t Reexec from %u (After Sync)\n", 
+          GetCDName().GetString().c_str(), 
+          GetNodeID().GetString().c_str(), 
+          phaseTree.current_->seq_end_, 
+          phaseTree.current_->seq_acc_, 
+          orig_rollback_point);
 
   if(task_size() > 1 && (CDPath::GetCurrentCD() != GetRootCD())) {
     new_rollback_point = CheckRollbackPoint(true); // read from head
@@ -1635,7 +1645,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
   } else {
     new_rollback_point = CheckRollbackPoint(false);
   }
-#endif
+  #endif
 
 #else // CD_MPI_ENABLED ends
   //printf("[%s] okay?\n"); fflush(stdout);

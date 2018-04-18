@@ -2015,7 +2015,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 
   CD_DEBUG("[%s] rollback %u -> %u (%d == %d)\n", 
       ptr_cd_->cd_id_.GetStringID().c_str(), 
-      rollback_point, level(), err_desc, CD::CDInternalErrT::kErrorReported);
+      level(), rollback_point, err_desc, CD::CDInternalErrT::kErrorReported);
 
   if(err_desc == CD::CDInternalErrT::kErrorReported) {
     err = kError;
@@ -2058,6 +2058,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
         ptr_cd_->SetRollbackPoint(rollback_point, false);
       } else { // FIXME
         ptr_cd_->SetRollbackPoint(rollback_point, true);
+        ptr_cd_->SetRollbackPoint(rollback_point, false);
 //        ptr_cd_->SetRollbackPoint(level(), false);
       }
     } else {

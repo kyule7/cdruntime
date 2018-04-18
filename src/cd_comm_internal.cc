@@ -1257,7 +1257,9 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
 #if USE_LOCAL_MEM_ACCESS
         PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cd::myTaskID, 0, rollbackWindow_);
         const CDFlagT rbp = *rollback_point_;
-        *rollback_point_ = (rollback_lv < rbp)? rollback_lv : rbp;
+        const uint32_t min_rbp = (rollback_lv < rbp)? rollback_lv : rbp;
+        rollback_point = min_rbp;
+        *rollback_point_ = min_rbp;
         PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
 #else
         PMPI_Win_lock_all(0, rollbackWindow_);
@@ -1270,6 +1272,7 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
       CD_DEBUG("MPI_Group_translate_ranks %d->%d. Set %u to Head's rollback_point_ at %s %s\n", 
              head_id, global_head_id, rollback_lv, cd_id_.GetString().c_str(), label_.c_str());
     } else {
+#if 0
       if(head_in_levels) {
         PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
         // This is important. It is necessary to set it locally, too.
@@ -1287,6 +1290,14 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
         }
         rollback_point = *(rollback_point_);
       }
+#else
+      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cd::myTaskID, 0, rollbackWindow_);
+      const CDFlagT rbp = *rollback_point_;
+      const uint32_t min_rbp = (rollback_lv < rbp)? rollback_lv : rbp;
+      rollback_point = min_rbp;
+      *rollback_point_ = min_rbp;
+      PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
+#endif
       CD_DEBUG("level %u local set %u to current task #%d\n", level(), rollback_point, task_in_color());
     }
     return rollback_point; 
@@ -1356,11 +1367,16 @@ uint32_t CD::CheckRollbackPoint(bool remote)
         PMPI_Win_unlock_all(rollbackWindow_);
 #else
 //        PMPI_Win_lock(MPI_LOCK_SHARED, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+        PMPI_Win_lock(MPI_LOCK_SHARED, cd::myTaskID, 0, rollbackWindow_);
         rollback_lv = *(rollback_point_);
+        PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
 //        PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
 #endif
       } else {
+        //rollback_lv = *(rollback_point_);
+        PMPI_Win_lock(MPI_LOCK_SHARED, cd::myTaskID, 0, rollbackWindow_);
         rollback_lv = *(rollback_point_);
+        PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
       }
     }
   //  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
