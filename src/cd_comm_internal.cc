@@ -1229,89 +1229,82 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(const CDEventT &event)
 
 uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
 {
-  if(rollback_lv == INVALID_ROLLBACK_POINT) {
-    //printf("[%s] do not need to set rollback_point_ : %u\n", __func__, rollback_lv);
-    return rollback_lv;
-  } else {
-    //printf("[%s] neet to set rollback point\n", __func__);
-  }
-  if(task_size() > 1) {
-//  printf("[%s] cur level : %u size:%u\n", __func__, level(), task_size());
-//  CD *cur_cd = CDPath::GetCoarseCD(this);
-//  CD *cur_cd = CDPath::GetRootCD()->ptr_cd();
-//  printf("[%s] check level : %u size:%u\n", __func__, cur_cd->level(), cur_cd->task_size());
-    uint32_t rollback_point = rollback_lv;
-    if(remote == true) {
-      CD_DEBUG("level %u remote set %u to head\n", level(), rollback_lv);
-      
-      int head_id = head();
-      int global_head_id = head(); 
-      PMPI_Group_translate_ranks(group(), 1, &head_id, GetRootCD()->group(), &global_head_id);
-      if(global_head_id != cd::myTaskID) {
-        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_head_id, 0, rollbackWindow_);
-        PMPI_Accumulate(&rollback_lv, 1, MPI_UNSIGNED,
-                        global_head_id, 0,   1, MPI_UNSIGNED, 
-                        MPI_MIN, rollbackWindow_);
-        PMPI_Win_unlock(global_head_id, rollbackWindow_);
-      } else {
-#if USE_LOCAL_MEM_ACCESS
+  uint32_t rbp_ret = rollback_lv;
+  if(rollback_lv != INVALID_ROLLBACK_POINT) {
+    if(task_size() > 1) {
+      if(remote == true) {
+        CD_DEBUG("level %u remote set %u to head\n", level(), rollback_lv);
+        
+        int head_id = head();
+        int global_head_id = head(); 
+        PMPI_Group_translate_ranks(group(), 1, &head_id, GetRootCD()->group(), &global_head_id);
+        if(global_head_id != cd::myTaskID) {
+          PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, global_head_id, 0, rollbackWindow_);
+          PMPI_Accumulate(&rollback_lv, 1, MPI_UNSIGNED,
+                          global_head_id, 0,   1, MPI_UNSIGNED, 
+                          MPI_MIN, rollbackWindow_);
+          PMPI_Win_unlock(global_head_id, rollbackWindow_);
+          // rbp_ret = rollback_lv;
+        } else {
+  #if USE_LOCAL_MEM_ACCESS
+          PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cd::myTaskID, 0, rollbackWindow_);
+          const CDFlagT rbp = *rollback_point_;
+          const uint32_t min_rbp = (rollback_lv < rbp)? rollback_lv : rbp;
+          *rollback_point_ = min_rbp;
+          PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
+          rbp_ret = min_rbp;
+  #else
+          PMPI_Win_lock_all(0, rollbackWindow_);
+          PMPI_Accumulate(&rollback_lv, 1, MPI_UNSIGNED,
+                          global_head_id, 0,   1, MPI_UNSIGNED, 
+                          MPI_MIN, rollbackWindow_);
+          PMPI_Win_unlock_all(rollbackWindow_);
+  #endif
+        }
+        CD_DEBUG("MPI_Group_translate_ranks %d->%d. Set %u to Head's rollback_point_ at %s %s\n", 
+                 head_id, global_head_id, rollback_lv, cd_id_.GetString().c_str(), label_.c_str());
+      } else { // local update
+  #if 0
+        if(head_in_levels) {
+          PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+          // This is important. It is necessary to set it locally, too.
+          if(rollback_lv < *(rollback_point_)) {
+            *(rollback_point_) = rollback_lv;
+          }
+          rbp_ret = *(rollback_point_);
+    //      if(*(rollback_point_) != INVALID_ROLLBACK_POINT)
+    //        need_reexec = true;
+          PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+        } else {
+          //printf("[%s] set rollback_point_\n", __func__);
+          if(rollback_lv < *(rollback_point_)) {
+            *(rollback_point_) = rollback_lv;
+          }
+          rbp_ret = *(rollback_point_);
+        }
+  #else
         PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cd::myTaskID, 0, rollbackWindow_);
         const CDFlagT rbp = *rollback_point_;
         const uint32_t min_rbp = (rollback_lv < rbp)? rollback_lv : rbp;
-        rollback_point = min_rbp;
         *rollback_point_ = min_rbp;
         PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
-#else
-        PMPI_Win_lock_all(0, rollbackWindow_);
-        PMPI_Accumulate(&rollback_lv, 1, MPI_UNSIGNED,
-                        global_head_id, 0,   1, MPI_UNSIGNED, 
-                        MPI_MIN, rollbackWindow_);
-        PMPI_Win_unlock_all(rollbackWindow_);
-#endif
+        rbp_ret = min_rbp;
+  #endif
+        CD_DEBUG("level %u local set %u to current task #%d\n", level(), rbp_ret, task_in_color());
       }
-      CD_DEBUG("MPI_Group_translate_ranks %d->%d. Set %u to Head's rollback_point_ at %s %s\n", 
-             head_id, global_head_id, rollback_lv, cd_id_.GetString().c_str(), label_.c_str());
-    } else {
-#if 0
-      if(head_in_levels) {
-        PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
-        // This is important. It is necessary to set it locally, too.
-        if(rollback_lv < *(rollback_point_)) {
-          *(rollback_point_) = rollback_lv;
-        }
-        rollback_point = *(rollback_point_);
-  //      if(*(rollback_point_) != INVALID_ROLLBACK_POINT)
-  //        need_reexec = true;
-        PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
-      } else {
-        //printf("[%s] set rollback_point_\n", __func__);
-        if(rollback_lv < *(rollback_point_)) {
-          *(rollback_point_) = rollback_lv;
-        }
-        rollback_point = *(rollback_point_);
+    }
+    else if(totalTaskSize == 1) {
+      //printf("[%s] set rollback_point_ %u for single task version\n", __func__, rollback_lv);
+      if(rollback_lv < *(rollback_point_)) {
+        *(rollback_point_) = rollback_lv;
       }
-#else
-      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cd::myTaskID, 0, rollbackWindow_);
-      const CDFlagT rbp = *rollback_point_;
-      const uint32_t min_rbp = (rollback_lv < rbp)? rollback_lv : rbp;
-      rollback_point = min_rbp;
-      *rollback_point_ = min_rbp;
-      PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
-#endif
-      CD_DEBUG("level %u local set %u to current task #%d\n", level(), rollback_point, task_in_color());
+      rbp_ret = rollback_lv;
     }
-    return rollback_point; 
-  }
-  else if(totalTaskSize == 1) {
-    //printf("[%s] set rollback_point_ %u for single task version\n", __func__, rollback_lv);
-    if(rollback_lv < *(rollback_point_)) {
-      *(rollback_point_) = rollback_lv;
+    else { // case of 1 task in a CD. (totalTaskSize > 0 && task_size() > 1)
+      rbp_ret = GetCoarseCD(this)->SetRollbackPoint(rollback_lv, remote);
     }
-    return rollback_lv;
-  }
-  else {
-    return GetCoarseCD(this)->SetRollbackPoint(rollback_lv, remote);
-  }
+  } 
+  return rbp_ret;
 }
 
 uint32_t CD::CheckRollbackPoint(bool remote) 
@@ -1319,7 +1312,6 @@ uint32_t CD::CheckRollbackPoint(bool remote)
   if(task_size() > 1) {
     uint32_t rollback_lv = INVALID_ROLLBACK_POINT;
     // Read lock is used because everybody will just read it.
-  //  PMPI_Win_lock_all(0, cur_cd->rollbackWindow_);
     if(remote == true) { 
       int head_id = head();
       int global_head_id = head(); 
@@ -1334,8 +1326,7 @@ uint32_t CD::CheckRollbackPoint(bool remote)
       } else {
 #if USE_LOCAL_MEM_ACCESS
         PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cd::myTaskID, 0, rollbackWindow_);
-        const CDFlagT rbp = *rollback_point_;
-        *rollback_point_ = (rollback_lv < rbp)? rollback_lv : rbp;
+        rollback_lv = *rollback_point_;
         PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
 #else
         PMPI_Win_lock_all(0, rollbackWindow_);
@@ -1348,11 +1339,11 @@ uint32_t CD::CheckRollbackPoint(bool remote)
       }
       // This is important and tricky part.
       // If head tells some lower level for rollback point than
-      // head's CD level, it is about some other task gruop, not 
+      // head's CD level, it is about some other task group, not 
       // this task. rollback_lv is only valid when it is equal or upper level
       // than head task.
       if(level() < rollback_lv && (rollback_lv != INVALID_ROLLBACK_POINT)) {
-
+          assert(0); // FIXME
         //if((CDPath::GetCDLevel(rollback_lv) != NULL) && (task_size() > CDPath::GetCDLevel(rollback_lv)->task_size())) {
           rollback_lv = INVALID_ROLLBACK_POINT;
         //}
@@ -1360,26 +1351,20 @@ uint32_t CD::CheckRollbackPoint(bool remote)
       CD_DEBUG("MPI_Group_translate_ranks %d->%d. Head's rollback_point_:%u at %s %s\n", 
                head_id, global_head_id, rollback_lv, cd_id_.GetString().c_str(), label_.c_str());
     } else { // local check
-      if(head_in_levels) {
 #if LOCAL_LOCK_ENABLED
+      if(head_in_levels) {
         PMPI_Win_lock_all(0, rollbackWindow_);
         rollback_lv = *(rollback_point_);
         PMPI_Win_unlock_all(rollbackWindow_);
-#else
-//        PMPI_Win_lock(MPI_LOCK_SHARED, GetRootCD()->task_in_color(), 0, rollbackWindow_);
-        PMPI_Win_lock(MPI_LOCK_SHARED, cd::myTaskID, 0, rollbackWindow_);
-        rollback_lv = *(rollback_point_);
-        PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
-//        PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
-#endif
       } else {
-        //rollback_lv = *(rollback_point_);
-        PMPI_Win_lock(MPI_LOCK_SHARED, cd::myTaskID, 0, rollbackWindow_);
         rollback_lv = *(rollback_point_);
-        PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
       }
+#else
+      PMPI_Win_lock(MPI_LOCK_SHARED, cd::myTaskID, 0, rollbackWindow_);
+      rollback_lv = *(rollback_point_);
+      PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
+#endif
     }
-  //  PMPI_Win_unlock_all(cur_cd->rollbackWindow_);
   
     return rollback_lv;
   }
