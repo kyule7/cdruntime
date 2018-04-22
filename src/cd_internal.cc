@@ -724,7 +724,17 @@ CDErrT CD::Destroy(bool collective, bool need_destroy)
 
 bool CD::CheckToReuseCD(const std::string &cd_obj_key) 
 {
-  return (access_store_.find(phaseTree.current_->GetPhasePath(cd_obj_key)) != access_store_.end());
+  bool is_reuse = (access_store_.find(phaseTree.current_->GetPhasePath(cd_obj_key)) != access_store_.end());
+  if (false) //(is_reuse == false)
+  {
+    if(task_size() > 1) {
+      uint32_t rollback_point = SyncCDs(this, false);
+      if(rollback_point <= level()) {
+        Escalate(CDPath::GetCurrentCD(), false);
+      }
+    }
+  }
+  return is_reuse;
 }
 
 CD::CDInternalErrT 
@@ -754,7 +764,7 @@ CD::InternalCreate(CDHandle *parent,
     *new_cd_handle = cdh_it->second;
     CD_DEBUG("Reused! [%s] New Node ID: %s\n", 
              cd_obj_key.c_str(), 
-             cdh_it->second->node_id_.GetString().c_str());
+             cdh_it->second->node_id().GetString().c_str());
 
     (*new_cd_handle)->ptr_cd_->Initialize(parent, name, new_cd_id, cd_type, new_prv_medium, sys_bit_vector);
   }
@@ -938,6 +948,21 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 
 static inline 
 void SetFailure(uint32_t phase, const char *label);
+
+static inline 
+void SetHealthy(void)
+{
+  failed_phase = HEALTHY;
+  failed_seqID = HEALTHY;
+  //need_escalation = false;
+  //*rollback_point_ = INVALID_ROLLBACK_POINT;        
+  // At this point, take the timer (update RuntimeInfo::clk_)
+  // to measure the rest of execution time.
+  CD_CLOCK_T now = CD_CLOCK();
+  phaseTree.current_->FinishRecovery(now);
+  reex_elapsed_time += now - global_reex_clk;
+  global_reex_clk = now;
+}
 
 //static inline void BeginPhase(const std::string &label)
 //{
@@ -1300,8 +1325,8 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 
   if(cd_lv_to_sync->task_size() > 1) {
     cd_lv_to_sync->CheckMailBox();
-    CD_DEBUG("[%ld->%ld, (%u, %u, %u)] fence in at %s level %u\n", 
-        now_begID, now_seqID,
+    CD_DEBUG("[phase:%ld, seq:%ld->%ld, (acc:%u, accrb:%u, seqid:%u)] fence in at %s level %u\n", 
+        curr_phase, now_begID, now_seqID,
         phaseNodeCache[curr_phase]->seq_acc_,
         phaseNodeCache[curr_phase]->seq_acc_rb_,
         cd_lv_to_sync->cd_id_.sequential_id_,
@@ -1743,16 +1768,17 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     if(failed_phase != HEALTHY) {
       if(failed_phase == curr_phase) {
         if(failed_seqID == curr_seqID) {
-          failed_phase = HEALTHY;
-          failed_seqID = HEALTHY;
-          //need_escalation = false;
-          //*rollback_point_ = INVALID_ROLLBACK_POINT;        
-          // At this point, take the timer (update RuntimeInfo::clk_)
-          // to measure the rest of execution time.
-          CD_CLOCK_T now = CD_CLOCK();
-          phaseTree.current_->FinishRecovery(now);
-          reex_elapsed_time += now - global_reex_clk;
-          global_reex_clk = now;
+          SetHealthy();
+//          failed_phase = HEALTHY;
+//          failed_seqID = HEALTHY;
+//          //need_escalation = false;
+//          //*rollback_point_ = INVALID_ROLLBACK_POINT;        
+//          // At this point, take the timer (update RuntimeInfo::clk_)
+//          // to measure the rest of execution time.
+//          CD_CLOCK_T now = CD_CLOCK();
+//          phaseTree.current_->FinishRecovery(now);
+//          reex_elapsed_time += now - global_reex_clk;
+//          global_reex_clk = now;
           if(myTaskID == 0) {printf(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
               level(), label_.c_str(), curr_phase, curr_seqID, curr_begID); }
           CD_DEBUG(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
@@ -2528,12 +2554,14 @@ CDErrT CD::Preserve(void *data,
     else if(cd_exec_mode_ == kReexecution) { // Re-execution mode -> Restoration
       assert(dont_preserve == false);
       
-      CD_DEBUG("\n\nReexecution!!! entry directory size : %zu (medium:%d)\n\n", 
+      CD_DEBUG("Reexecution!!! entry directory size : %zu (medium:%d)\n\n", 
                entry_directory_.table_->tablesize(), prv_medium_);
   
       if( restore_count_ < preserve_count_ ) { // normal case
         
-        CD_DEBUG("\t\t\tNow reexec!!! %d rstr:%u < prsv:%u (fail:%ld/%ld)\n\n", iterator_entry_count++, restore_count_, preserve_count_, cd::failed_phase, cd::failed_seqID);
+        CD_DEBUG("\t\t\tNow reexec %s Lv%u!!! %d rstr:%u < prsv:%u (fail:%u->%ld|%ld->%ld)\n\n", 
+            my_name.c_str(), level(), iterator_entry_count++, restore_count_, preserve_count_, 
+            this->phase(), cd::failed_phase, cd::phaseTree.current_->seq_end_, cd::failed_seqID);
         assert(cd::failed_phase >= 0 && cd::failed_seqID >= 0);
         Restore((char *)data, len_in_bytes, preserve_mask, my_name, ref_name);
         restore_count_++;
@@ -2843,8 +2871,9 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
                                const string &my_name, const string &ref_name)
 {
   CD::CDInternalErrT ret = kOK; 
-  CD_DEBUG("\t\t\tNow reexec %s!!! %d rstr:%u < prsv:%u (fail:%ld/%ld)\n\n\n", 
-      ref_name.c_str(), iterator_entry_count++, restore_count_, preserve_count_, cd::failed_phase, cd::failed_seqID);
+  CD_DEBUG("\t\t\tNow reexec %s!!! %d rstr:%u < prsv:%u (fail:%u->%ld/%ld->%ld)\n\n\n", 
+      my_name.c_str(), level(), iterator_entry_count++, restore_count_, preserve_count_, this->phase(), cd::failed_phase, 
+      cd::phaseTree.current_->seq_end_, cd::failed_seqID);
   const bool is_ref = CHECK_PRV_TYPE(preserve_mask, kRef);
   uint32_t found_level = INVALID_NUM32;
   uint64_t ref_id = 0; //cd_hash(ref_name);
@@ -4158,7 +4187,7 @@ void HeadCD::Deserialize(void *object)
 
 CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, uint16_t attr)
 {
-  CD_DEBUG("Search Entry : %u (%s) at level #%u \n", tag_to_search, tag2str[tag_to_search].c_str(), level());
+  CD_DEBUG("Search Entry at Lv%u (%s): %lx (%s) at level #%u \n", level(), name_.c_str(), tag_to_search, tag2str[tag_to_search].c_str(), level());
 
   CDHandle *parent_cd = CDPath::GetCurrentCD();
   CDEntry *entry = NULL;

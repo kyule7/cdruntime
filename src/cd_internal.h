@@ -488,7 +488,7 @@ public:
     uint32_t phase(void)         const { return cd_id_.cd_name_.phase_; }
     uint32_t rank_in_level(void) const { return cd_id_.cd_name_.rank_in_level_; }
     uint32_t sibling_num(void)   const { return cd_id_.cd_name_.size_; }
-    ColorT   color(void)         const { return cd_id_.node_id_.color_; }
+    ColorT  &color(void)               { return cd_id_.node_id_.color_; }
     GroupT  &group(void)               { return cd_id_.node_id_.task_group_; }
     int      task_in_color(void) const { return cd_id_.node_id_.task_in_color_; }
     int      head(void)          const { return cd_id_.node_id_.head_; }
@@ -568,7 +568,7 @@ public:
     // we can change it to preserve file by flag when we compile cd runtime. (with MEMORY=0)
     // We need some good strategy to decide the most efficient medium of the CD for preservation.
     PrvMediumT GetPlaceToPreserve(void);
-    static bool CheckToReuseCD(const std::string &cd_obj_key);
+    bool CheckToReuseCD(const std::string &cd_obj_key);
     static CDInternalErrT InternalCreate(CDHandle *parent, 
                      const char *name, 
                      const CDID& child_cd_id, 

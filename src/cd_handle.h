@@ -280,7 +280,7 @@ class CDHandle {
 #endif
   private:
     internal::CD    *ptr_cd_;       //!< Pointer to CD object which will not exposed to users.
-    internal::NodeID node_id_;      //!< NodeID contains the information to access to the task.
+//    internal::NodeID node_id_;      //!< NodeID contains the information to access to the task.
     SplitFuncT SplitCD;   //!<function object that will be set to some appropriate split strategy.
 //    uint64_t count_;
 //    uint64_t interval_;
@@ -1195,7 +1195,7 @@ class CDHandle {
                                 uint64_t error_loc_mask=0);
 
     /// @brief Get NodeID with given new_color and new_task
-    static internal::NodeID GenNewNodeID(int new_head, const internal::NodeID &new_node_id, bool is_reuse);
+    static internal::NodeID GenNewNodeID(int new_head, internal::NodeID &new_node_id, bool is_reuse);
 
     /// @brief Check mail box.
     CDErrT CheckMailBox(void);
@@ -1205,7 +1205,7 @@ class CDHandle {
 
 #if CD_MPI_ENABLED
     /// @brief Get NodeID with given new_color and new_task.
-    internal::NodeID GenNewNodeID(const ColorT &my_color, 
+    internal::NodeID GenNewNodeID(ColorT &my_color, 
                         const int &new_color, 
                         const int &new_task, 
                         int new_head,
@@ -1290,7 +1290,7 @@ class CDHandle {
     
     ///@brief Get color of the current CD.
     ///       In MPI version, color means a communicator.
-    ColorT   color(void)         const;
+    ColorT   &color(void)         ;
 
     ///@brief Get task ID in the task group of this CD.
     int      task_in_color(void) const;
@@ -1309,8 +1309,10 @@ class CDHandle {
     ///@return Pointer to CDHandle of parent
     CDHandle *GetParent(void)    const;
 
+    internal::NodeID &GetNodeID(void);
+
     ///@brief Operator to check equality between CDHandles.
-    bool     operator==(const CDHandle &other) const ;
+    bool     operator==(CDHandle &other);
 
 /** @} */ // End cd_accessor and user_interfaces
 

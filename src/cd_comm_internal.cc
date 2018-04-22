@@ -69,7 +69,7 @@ void CD::FreeCommResource(void)
 {
   //PMPI_Comm_free(&cd_id_.node_id_.color_);
 }
-NodeID CDHandle::GenNewNodeID(const ColorT &my_color, 
+NodeID CDHandle::GenNewNodeID(ColorT &my_color, 
                               const int &new_color, 
                               const int &new_task, 
                               int new_head_id, 
@@ -188,7 +188,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
   
     PMPI_Gather(serialized_entry, 1, sType,
                entry_to_deserialize, 1, sType,
-               node_id_.head(), node_id_.color());
+               node_id().head(), color());
   
     if(IsHead()) {
       
@@ -199,7 +199,7 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
       ((HeadCD *)ptr_cd())->DeserializeRemoteEntryDir(entry_to_deserialize, task_count * serialized_len_in_bytes); 
   
       CD_DEBUG("\n\n[After] Check entries after deserialization, size : %lu, # of tasks : %u, level : %u\n", 
-               ptr_cd()->remote_entry_directory_map_.size(), node_id_.size(), ptr_cd()->GetCDID().level());
+               ptr_cd()->remote_entry_directory_map_.size(), node_id().size(), ptr_cd()->GetCDID().level());
   
       CD_DEBUG("\n\n============================ End of deserialization ===========================\n\n");
     }
@@ -214,13 +214,13 @@ void CDHandle::CollectHeadInfoAndEntry(const NodeID &new_node_id)
 void CD::GetRemoteEntry(void)
 {
   if( cd_exec_mode_ == kExecution ) {
-    CD_DEBUG("Test Asynch messages until start at %s / %s\n", 
-             GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
+//    CD_DEBUG("Test Asynch messages until start at %s / %s\n", 
+//             GetCDName().GetString().c_str(), GetNodeID().GetString().c_str());
     while( !(TestComm()) ); 
     CheckMailBox();
     while(!TestRecvComm());
-    CD_DEBUG("Test Asynch messages until done \n");
-    CD_DEBUG("Return to kExec\n");
+//    CD_DEBUG("Test Asynch messages until done \n");
+//    CD_DEBUG("Return to kExec\n");
     cd_exec_mode_ = kExecution;
     // This point means the beginning of body stage. Request EntrySearch at this routine
   } else { 
@@ -249,16 +249,16 @@ void CD::GetRemoteEntry(void)
 
 bool CD::TestReqComm(bool is_all_valid)
 {
-  CD_DEBUG("\nCD::TestReqComm at %s / %s \nentry request req Q size : %lu\n", 
-           GetCDName().GetString().c_str(), 
-           GetNodeID().GetString().c_str(), 
-           entry_request_req_.size());
+//  CD_DEBUG("\nCD::TestReqComm at %s / %s \nentry request req Q size : %lu\n", 
+//           GetCDName().GetString().c_str(), 
+//           GetNodeID().GetString().c_str(), 
+//           entry_request_req_.size());
 
   is_all_valid = true;
   for(auto it=entry_request_req_.begin(); it!=entry_request_req_.end(); ) {
     PMPI_Test(&(it->second.req_), &(it->second.valid_), &(it->second.stat_));
 
-    CD_DEBUG("%d ", it->second.valid_);
+//    CD_DEBUG("%d ", it->second.valid_);
     if(it->second.valid_) {
       entry_request_req_.erase(it++);
     }
@@ -267,7 +267,7 @@ bool CD::TestReqComm(bool is_all_valid)
       ++it;
     }
   }
-  CD_DEBUG("\nTestReqComm end\n");
+//  CD_DEBUG("\nTestReqComm end\n");
   return is_all_valid;
 }
 
@@ -297,15 +297,15 @@ bool CD::TestRecvComm(bool is_all_valid)
 
 bool CD::TestComm(bool test_until_done)
 {
-  CD_DEBUG("\nCD::TestComm at %s / %s \nentry req Q size : %lu\nentry request req Q size : %zu\nentry recv req Q size : %zu\n", 
-           GetCDName().GetString().c_str(), 
-           GetNodeID().GetString().c_str(), 
-           entry_req_.size(),
-           entry_recv_req_.size(),
-           entry_request_req_.size());
+//  CD_DEBUG("\nCD::TestComm at %s / %s \nentry req Q size : %lu\nentry request req Q size : %zu\nentry recv req Q size : %zu\n", 
+//           GetCDName().GetString().c_str(), 
+//           GetNodeID().GetString().c_str(), 
+//           entry_req_.size(),
+//           entry_recv_req_.size(),
+//           entry_request_req_.size());
   bool is_all_valid = true;
   is_all_valid = TestReqComm(is_all_valid);
-  CD_DEBUG("============================");
+//  CD_DEBUG("============================");
 
 //
 //  for(auto it=entry_recv_req_.begin(); it!=entry_recv_req_.end(); ) {
@@ -339,7 +339,7 @@ bool CD::TestComm(bool test_until_done)
 
     PMPI_Test(&(it->req_), &(it->valid_), &(it->stat_));
 
-    CD_DEBUG("%d ", it->valid_);
+//    CD_DEBUG("%d ", it->valid_);
     if(it->valid_) {
       is_all_valid &= it->valid_;
       entry_req_.erase(it++);
@@ -350,7 +350,7 @@ bool CD::TestComm(bool test_until_done)
     }
   }
 
-  CD_DEBUG("\nIs all valid : %d\n==============================\n", is_all_valid);
+//  CD_DEBUG("\nIs all valid : %d\n==============================\n", is_all_valid);
 
   return is_all_valid;
 }
@@ -409,8 +409,8 @@ CDErrT CD::CheckMailBox(void)
                     "---- Internal Check Mail [Level #%u], # of pending events : %d ----\n", 
                     curr_cdh->ptr_cd_->level(), event_count);
 
-      if( curr_cdh->node_id_.size() > 1) {
-        ret = curr_cdh->ptr_cd_->InternalCheckMailBox();
+      if( curr_cdh->node_id().size() > 1) {
+        ret = curr_cdh->ptr_cd()->InternalCheckMailBox();
       }
       else {
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, 
@@ -421,7 +421,7 @@ CDErrT CD::CheckMailBox(void)
       // If current CD is Root CD and CDPath::GetParentCD is called, it returns NULL
       CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "ReadMailBox %s / %s at level #%u\n", 
                curr_cdh->ptr_cd()->GetCDName().GetString().c_str(), 
-               curr_cdh->node_id_.GetString().c_str(), 
+               curr_cdh->node_id().GetString().c_str(), 
                curr_cdh->ptr_cd()->GetCDID().level());
 
       CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Original current CD %s / %s at level #%u\n", 
@@ -1615,12 +1615,13 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
     } else {
 //      assert(need_reexec == false); // should be false at this point.
       CheckMailBox();
-      uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
+      //uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
+      uint32_t rollback_point = CheckRollbackPoint(false);
 //      uint32_t rollback_point = CheckRollbackPoint(false);
 //      if(rollback_point != INVALID_ROLLBACK_POINT) { // This could be set inside CD::CheckMailBox()
       if(rollback_point <= level()){
         CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
-            cd_id_.GetString().c_str(), level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+            cd_id_.GetString().c_str(), level(), rollback_point, label_.c_str(), cd_id_.node_id().GetString().c_str());
         
         printed = false;
 //        GetCDToRecover(CDPath::GetCurrentCD(), false)->ptr_cd()->Recover();
@@ -1631,7 +1632,7 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
           int number_amount = 0;
           PMPI_Get_count(status, MPI_INT, &number_amount);
           CD_DEBUG("[%s] Reexec is false, %u->%u, %s %s, mpi #:%d, mpi src:%d, mpi tag:%d\n", 
-              __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str(),
+              __func__, level(), rollback_point, label_.c_str(), cd_id_.node_id().GetString().c_str(),
               number_amount, status->MPI_SOURCE, status->MPI_TAG);
           
           printed = true;
@@ -1684,12 +1685,13 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
     } else {
 //      assert(need_reexec == false); // should be false at this point.
       CheckMailBox();
-      uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
+      //uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
+      uint32_t rollback_point = CheckRollbackPoint(false);
 //      uint32_t rollback_point = CheckRollbackPoint(false);
 //      if(rollback_point != INVALID_ROLLBACK_POINT)  // This could be set inside CD::CheckMailBox()
       if(rollback_point <= level()) {
         CD_DEBUG("\nReexec is true, %u->%u, %s %s\n\n", 
-            level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+            level(), rollback_point, label_.c_str(), cd_id_.node_id().GetString().c_str());
         
         printed = false;
 //        GetCDToRecover(CDPath::GetCurrentCD(), false)->ptr_cd()->Recover();
@@ -1698,7 +1700,7 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
       } else {
         if(printed == false) {
           CD_DEBUG("Reexec is false, %u->%u, %s %s\n", 
-              level(), rollback_point, label_.c_str(), cd_id_.node_id_.GetString().c_str());
+              level(), rollback_point, label_.c_str(), cd_id_.node_id().GetString().c_str());
           
           printed = true;
         }

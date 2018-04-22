@@ -3379,7 +3379,7 @@ void LagrangeLeapFrog(Domain& domain)
    LagrangeNodal(domain);
 //   domain.CheckUpdate("After LagrangeNodal");
 
-
+  // after communication inside LagrangeNodal
 #ifdef SEDOV_SYNC_POS_VEL_LATE
 #endif
 

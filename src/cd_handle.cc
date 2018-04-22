@@ -1090,7 +1090,7 @@ int SplitCD_1D(const int& my_task_id,
 // CDHandle Member Methods ------------------------------------------------------------
 
 CDHandle::CDHandle()
-  : ptr_cd_(0), node_id_(-1)/*, ctxt_(CDPath::GetRootCD()->ctxt_)*/
+  : ptr_cd_(0)//, node_id_(-1)/*, ctxt_(CDPath::GetRootCD()->ctxt_)*/
 {
   // FIXME
   assert(0);
@@ -1126,7 +1126,7 @@ CDHandle::CDHandle()
 /// clear children list
 /// request to add me as a children to parent (to Head CD object)
 CDHandle::CDHandle(CD *ptr_cd) 
-  : ptr_cd_(ptr_cd), node_id_(ptr_cd->cd_id_.node_id_)/*, ctxt_(ptr_cd->ctxt_)*/
+  : ptr_cd_(ptr_cd)//, node_id_(ptr_cd->cd_id_.node_id_)/*, ctxt_(ptr_cd->ctxt_)*/
 {
   SplitCD = &SplitCD_1D;
 
@@ -1174,7 +1174,7 @@ CDHandle::~CDHandle()
 void CDHandle::Init(CD *ptr_cd)
 { 
   ptr_cd_   = ptr_cd;
-  node_id_  = ptr_cd_->cd_id_.node_id_;
+  //node_id_  = ptr_cd_->cd_id_.node_id_;
 }
 
 int CDHandle::SelectHead(uint32_t task_size)
@@ -1190,7 +1190,7 @@ CDErrT CDHandle::RegisterSplitMethod(SplitFuncT split_func)
 }
 
 
-NodeID CDHandle::GenNewNodeID(int new_head, const NodeID &node_id, bool is_reuse)
+NodeID CDHandle::GenNewNodeID(int new_head, NodeID &node_id, bool is_reuse)
 {
   // just set the same as parent.
   NodeID new_node_id(node_id);
@@ -1228,8 +1228,15 @@ CDHandle *CDHandle::Create(const char *name,
   // Create a new CDHandle and CD object
   // and populate its data structure correctly (CDID, etc...)
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
-  
-  NodeID new_node_id = GenNewNodeID(SelectHead(task_size()), node_id_, CD::CheckToReuseCD(name));
+  bool is_reuse =  ptr_cd_->CheckToReuseCD(name);
+  NodeID new_node_id = GenNewNodeID(SelectHead(task_size()), node_id(), is_reuse);
+
+  if(is_reuse == false) {
+    CollectHeadInfoAndEntry(new_node_id); 
+  } // otherwise, it will be done later.
+  else {
+    CD_DEBUG("Skip CollectHeadInfoAndEntry %s\n", GetName());
+  }
 
 
   // Generate CDID
@@ -1270,7 +1277,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
 #if CD_MPI_ENABLED
 
-  CD_DEBUG("CDHandle::Create Node ID : %s\n", node_id_.GetString().c_str());
+  CD_DEBUG("CDHandle::Create Node ID : %s\n", node_id().GetString().c_str());
   // Create a new CDHandle and CD object
   // and populate its data structure correctly (CDID, etc...)
   //  This is an extremely powerful mechanism for dividing a single communicating group of processes into k subgroups, 
@@ -1303,31 +1310,31 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 
 //  Sync();
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
-  int new_size = (int)((double)node_id_.size() / num_children);
+  int new_size = (int)((double)node_id().size() / num_children);
   int new_color=0, new_task = 0;
   int err=0;
 
 //  ColorT new_comm = 0;
 //  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, new_size);
-  NodeID new_node_id(node_id_);
+  NodeID new_node_id(node_id());
 
 //  CD_DEBUG("[Before] old: %s, new: %s\n", node_id_.GetString().c_str(), new_node_id.GetString().c_str());
-  bool is_reuse = CD::CheckToReuseCD(name);
+  bool is_reuse = ptr_cd_->CheckToReuseCD(name);
   if(num_children > 1) {
-    err = SplitCD(node_id_.task_in_color(), node_id_.size(), num_children, new_color, new_task);
+    err = SplitCD(node_id().task_in_color(), node_id().size(), num_children, new_color, new_task);
     CD_DEBUG("[%s], GenNewNodeID\n", __func__);
-    new_node_id = GenNewNodeID(node_id_.color(), new_color, new_task, SelectHead(new_size), is_reuse);
+    new_node_id = GenNewNodeID(color(), new_color, new_task, SelectHead(new_size), is_reuse);
 //    assert(new_size == new_node_id.size());
   }
   else if(num_children == 1) {
-    new_node_id = GenNewNodeID(SelectHead(task_size()), node_id_, is_reuse);
+    new_node_id = GenNewNodeID(SelectHead(task_size()), node_id(), is_reuse);
   }
   else {
     ERROR_MESSAGE("Number of children to create is wrong.\n");
   }
 
   // Generate CDID
-  CD_DEBUG("new_color : %d in %s\n", new_color, node_id_.GetString().c_str());
+  CD_DEBUG("new_color : %d in %s\n", new_color, node_id().GetString().c_str());
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color, name);
   CD_DEBUG("New CD Name : %s\n", new_cd_name.GetString().c_str());
 
@@ -1342,6 +1349,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
     CollectHeadInfoAndEntry(new_node_id); 
   } // otherwise, it will be done later.
   else {
+    CD_DEBUG("Skip CollectHeadInfoAndEntry %s\n", GetName());
 //    if(myTaskID == 5)
 //      printf("first time! %s\n", name);
   }
@@ -1398,10 +1406,10 @@ CDHandle *CDHandle::Create(uint32_t color,
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
   int err=0;
 
-  bool is_reuse = CD::CheckToReuseCD(name);
+  bool is_reuse = ptr_cd_->CheckToReuseCD(name);
 //  ColorT new_comm;
 //  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, num_children);
-  NodeID new_node_id = GenNewNodeID(node_id_.color(), color, task_in_color, SelectHead(task_size()/num_children), is_reuse);
+  NodeID new_node_id = GenNewNodeID(this->color(), color, task_in_color, SelectHead(task_size()/num_children), is_reuse);
 
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, color, name);
@@ -1414,7 +1422,9 @@ CDHandle *CDHandle::Create(uint32_t color,
   if(is_reuse == false) {
     CollectHeadInfoAndEntry(new_node_id); 
   } // otherwise, it will be done later.
-
+  else {
+    CD_DEBUG("Skip CollectHeadInfoAndEntry %s\n", GetName());
+  }
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
   CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), 
@@ -2120,7 +2130,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 #endif
 
 //    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
-    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id().GetString().c_str());
   }
 
   CheckMailBox();
@@ -2180,34 +2190,34 @@ char *CDHandle::GetLabel(void) const
 
 std::string &CDHandle::name(void)                { return ptr_cd_->name_; }
 std::string &CDHandle::label(void)               { return ptr_cd_->label_; }
-CDID     &CDHandle::GetCDID(void)             { return ptr_cd_->GetCDID(); }
-CDNameT  &CDHandle::GetCDName(void)           { return ptr_cd_->GetCDName(); }
-NodeID   &CDHandle::node_id(void)             { return node_id_; }
+CDID     &CDHandle::GetCDID(void)             { return ptr_cd_->cd_id_; }
+CDNameT  &CDHandle::GetCDName(void)           { return ptr_cd_->cd_id_.cd_name_; }
+NodeID   &CDHandle::node_id(void)             { return ptr_cd_->cd_id_.node_id_; }
 CD       *CDHandle::ptr_cd(void)        const { return ptr_cd_; }
 void      CDHandle::SetCD(CD *ptr_cd)         { ptr_cd_=ptr_cd; }
 uint32_t  CDHandle::level(void)         const { return ptr_cd_->GetCDName().level(); }
 uint32_t  CDHandle::phase(void)         const { return ptr_cd_->GetCDName().phase(); }
 uint32_t  CDHandle::rank_in_level(void) const { return ptr_cd_->GetCDName().rank_in_level(); }
 uint32_t  CDHandle::sibling_num(void)   const { return ptr_cd_->GetCDName().size(); }
-ColorT    CDHandle::color(void)         const { return node_id_.color(); }
-int       CDHandle::task_in_color(void) const { return node_id_.task_in_color(); }
-int       CDHandle::head(void)          const { return node_id_.head(); }
-int       CDHandle::task_size(void)     const { return node_id_.size(); }
+ColorT   &CDHandle::color(void)               { return ptr_cd_->cd_id_.node_id_.color_; }
+int       CDHandle::task_in_color(void) const { return ptr_cd_->cd_id_.node_id_.task_in_color_; }
+int       CDHandle::head(void)          const { return ptr_cd_->cd_id_.node_id_.head_; }
+int       CDHandle::task_size(void)     const { return ptr_cd_->cd_id_.node_id_.size_; }
 GroupT   &CDHandle::group(void)               { return ptr_cd_->cd_id_.node_id_.task_group_; }
 int       CDHandle::GetExecMode(void)   const { return ptr_cd_->cd_exec_mode_; }
 int       CDHandle::GetSeqID(void)      const { return ptr_cd_->GetCDID().sequential_id(); }
 CDHandle *CDHandle::GetParent(void)     const { return CDPath::GetParentCD(ptr_cd_->GetCDName().level()); }
-bool      CDHandle::IsHead(void)        const { return node_id_.IsHead(); } // FIXME
+bool      CDHandle::IsHead(void)        const { return ptr_cd_->cd_id_.node_id_.IsHead(); } // FIXME
 // FIXME
 // For now task_id_==0 is always Head which is not good!
 // head is always task id 0 for now
 
-bool CDHandle::operator==(const CDHandle &other) const 
+bool CDHandle::operator==(CDHandle &other) 
 {
-  bool ptr_cd = (other.ptr_cd() == ptr_cd_);
-  bool color  = (other.node_id_.color()  == node_id_.color());
-  bool task   = (other.node_id_.task_in_color()   == node_id_.task_in_color());
-  bool size   = (other.node_id_.size()   == node_id_.size());
+  bool ptr_cd = (other.ptr_cd() == this->ptr_cd());
+  bool color  = (other.color()  == this->color());
+  bool task   = (other.task_in_color()   == task_in_color());
+  bool size   = (other.task_size()   == task_size());
   return (ptr_cd && color && task && size);
 }
 
@@ -2412,7 +2422,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 #endif
 
 //    PMPI_Win_fence(0, CDPath::GetCoarseCD(this)->ptr_cd()->mailbox_);
-    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id_.GetString().c_str());
+    CD_DEBUG("\n\n[Barrier] CDHandle::Detect 1 - %s / %s\n\n", ptr_cd_->GetCDName().GetString().c_str(), node_id().GetString().c_str());
   }
 
   CheckMailBox();
@@ -2734,3 +2744,4 @@ void CDHandle::PrintCommLog(void) const {
 #endif
 
 
+NodeID &CDHandle::GetNodeID(void) { return ptr_cd_->cd_id_.node_id_; }
