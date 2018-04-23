@@ -511,7 +511,7 @@ inline void CheckMPIError(int err)
   }
 }
 
-MPI_Errhandler cd::mpi_err_handler;
+//MPI_Errhandler *cd::mpi_err_handler = NULL;
 void CD_MPI_ErrHandler(MPI_Comm *comm, int *err, ...)
 {
   CheckMPIError(*err);
@@ -523,9 +523,10 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   CDPrologue();
 
 #if CD_MPI_ENABLED
+  MPI_Errhandler mpi_err_handler;
   // Define MPI error handler if necessary
-  PMPI_Comm_create_errhandler(CD_MPI_ErrHandler, &cd::mpi_err_handler);
-  PMPI_Comm_set_errhandler(MPI_COMM_WORLD, cd::mpi_err_handler);
+  PMPI_Comm_create_errhandler(CD_MPI_ErrHandler, &mpi_err_handler);
+  PMPI_Comm_set_errhandler(MPI_COMM_WORLD, mpi_err_handler);
 #endif
 
   // Initialize static vars
@@ -628,6 +629,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 #endif
 
   end_clk = CD_CLOCK();
+  if(cd::myTaskID == 0) printf("CD Init time:%lfs\n", CD_CLK_MEA(end_clk - cd::tot_begin_clk));
   CDEpilogue(); // It enables logging.
 
   return root_cd_handle;
@@ -1196,6 +1198,7 @@ NodeID CDHandle::GenNewNodeID(int new_head, NodeID &node_id, bool is_reuse)
   NodeID new_node_id(node_id);
 #if CD_MPI_ENABLED
   if(is_reuse == false) {
+    //printf("[%d] NowReuse 1\n", cd::myTaskID);
     PMPI_Comm_dup(node_id.color_, &(new_node_id.color_));
     PMPI_Comm_group(new_node_id.color_, &(new_node_id.task_group_));
   }

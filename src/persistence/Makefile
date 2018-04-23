@@ -3,7 +3,7 @@ ENABLE_DEBUG=1
 
 IS_STAMPEDE=1
 ifeq (${IS_STAMPEDE}, 1)
-MYCC=icpc
+MYCC=gcc
 MPICC=mpicxx
 CFLAGS=-fPIC -Wall -c -std=gnu++0x -I. -fmax-errors=3 #-Weffc++
 LFLAGS=-fPIC -Wall -std=gnu++0x -I.

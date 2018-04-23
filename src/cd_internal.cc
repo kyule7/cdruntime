@@ -2902,12 +2902,12 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
       parent_cd = CDPath::GetParentCD(ptr_cd->level());
     }
   }
-  CD_ASSERT_STR(src, "Failed to search %s %lx=%lx %s (%d) lv:%u, entry #:%lu\n", 
-                          tag2str[search_tag].c_str(),
-                          (is_ref)? ref_id : entry_id, search_tag,
-                          (is_ref)? ref_name.c_str() : my_name.c_str(), preserve_mask, 
-                          level(),
-                          entry_directory_.table_->tablesize());
+  CD_ASSERT_STR(src != NULL, "Failed to search %s %lx=%lx %s (%x) lv:%u, entry #:%ld\n", 
+                     tag2str[search_tag].c_str(),
+                     (is_ref)? ref_id : entry_id, search_tag,
+                     (is_ref)? ref_name.c_str() : my_name.c_str(), preserve_mask, 
+                     level(),
+                     entry_directory_.table_->tablesize());
   assert(src);
   CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
 

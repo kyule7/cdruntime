@@ -50,10 +50,10 @@ using namespace std;
 
 #define DEBUG_OFF_MAILBOX 1
 #define LOCK_PER_MAILBOX 0
-#define MAILBOX_LOCK_ENABLED 1
 #define BUGFIX_0327 1
-#define LOCAL_LOCK_ENABLED 0
+#define LOCKALL_ENABLED 0
 #define LOCAL_LOCK_ENABLED_FIXME 0
+#define MAILBOX_LOCK_ENABLED 1
 #define USE_LOCAL_MEM_ACCESS 1
 CD_CLOCK_T cd::mailbox_elapsed_time = 0;
 double     cd::mailbox_elapsed_time_in_sec = 0;
@@ -79,6 +79,7 @@ NodeID CDHandle::GenNewNodeID(ColorT &my_color,
 
   NodeID new_node_id(new_head_id);
   if(is_reuse == false) {
+    //printf("[%d] NowReuse multiple\n", cd::myTaskID);
     PMPI_Comm_split(my_color, new_color, new_task, &(new_node_id.color_));
     PMPI_Comm_size(new_node_id.color_, &(new_node_id.size_));
     PMPI_Comm_rank(new_node_id.color_, &(new_node_id.task_in_color_));
@@ -364,16 +365,15 @@ CDErrT CD::CheckMailBox(void)
 #endif
   CD::CDInternalErrT ret=kOK;
 
-#if LOCAL_LOCK_ENABLED && LOCAL_LOCK_ENABLED_FIXME
+#if LOCKALL_ENABLED
+  // && LOCAL_LOCK_ENABLED_FIXME
   PMPI_Win_lock_all(0, pendingWindow_);
   int event_count = *pendingFlag_;//DecPendingCounter();
   PMPI_Win_unlock_all(pendingWindow_);
 #else
-  //PMPI_Win_lock_all(0, pendingWindow_);
-  PMPI_Win_lock(MPI_LOCK_SHARED, cd::myTaskID, 0, rollbackWindow_);
+  PMPI_Win_lock(MPI_LOCK_SHARED, cd::myTaskID, 0, pendingWindow_);
   int event_count = *pendingFlag_;//DecPendingCounter();
-  PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
-  //PMPI_Win_unlock_all(pendingWindow_);
+  PMPI_Win_unlock(cd::myTaskID, pendingWindow_);
 #endif
 //  int event_count = *pendingFlag_;
   //assert(event_count <= 1024);
@@ -504,19 +504,20 @@ CD::CDInternalErrT HeadCD::InternalCheckMailBox(void)
 {
   CDEventHandleT resolved = CDEventHandleT::kEventNone;
   CDInternalErrT ret = kOK;
-#if LOCK_PER_MAILBOX
+//#if LOCK_PER_MAILBOX
   CDFlagT *event = GetEventFlag();
-#else
-
-#if MAILBOX_LOCK_ENABLED
-  #if LOCAL_LOCK_ENABLED
-  PMPI_Win_lock_all(0, mailbox_);
-  #else 
-  //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
-  #endif
-#endif
-  CDFlagT *event = event_flag_; 
-#endif
+//#else
+//
+//  #if MAILBOX_LOCK_ENABLED
+//    #if LOCAL_LOCK_ENABLED
+//  PMPI_Win_lock_all(0, mailbox_);
+//    #else 
+//  //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
+//    #endif
+//  #endif
+//  //CDFlagT *event = event_flag_; 
+//  CDFlagT *event = GetEventFlag();
+//#endif
   //CDFlagT *event = event_flag_;
   //assert(event_flag_);
 
@@ -552,19 +553,20 @@ CD::CDInternalErrT HeadCD::InternalCheckMailBox(void)
   CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "cd event queue size : %lu, handled event count : %d\n", 
            cd_event_.size(), EventHandler::handled_event_count);
 
-#if LOCK_PER_MAILBOX
   delete event;
-#else
-
-#if MAILBOX_LOCK_ENABLED
-  #if LOCAL_LOCK_ENABLED
-  PMPI_Win_unlock_all(mailbox_);
-  #else
-  //PMPI_Win_unlock(task_in_color(), mailbox_);
-  #endif
-#endif
-
-#endif
+//#if LOCK_PER_MAILBOX
+//  delete event;
+//#else
+//
+//#if MAILBOX_LOCK_ENABLED
+//  #if LOCAL_LOCK_ENABLED
+//  PMPI_Win_unlock_all(mailbox_);
+//  #else
+//  //PMPI_Win_unlock(task_in_color(), mailbox_);
+//  #endif
+//#endif
+//
+//#endif
 
 
   return ret;
@@ -619,7 +621,7 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, int idx)
 {
   CDFlagT event = *p_event;
   CD_DEBUG_COND(CHECK_NO_EVENT(event), 
-                "CDEventHandleT HeadCD::HandleEvent(%s, %d) %u\n", 
+                "HeadCD::HandleEvent(%s, %d) %x\n", 
                 event2str(event).c_str(), idx, event);
   CDEventHandleT ret = CDEventHandleT::kEventResolved;
 
@@ -637,24 +639,26 @@ CDEventHandleT HeadCD::ReadMailBox(CDFlagT *p_event, int idx)
       CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Error Occurred at task ID : %d at level #%u\n", idx, level());
       assert(task_size() > 1); 
       if(error_occurred == true) {
-        CD_DEBUG("Event kErrorOccurred %d", idx);
+        CD_DEBUG("Event kErrorOccurred %d %x\n", idx, event);
         EventHandler::IncHandledEventCounter();
       }
       else {
-        CD_DEBUG("Event kErrorOccurred %d (Initiator)", idx);
+        CD_DEBUG("Event kErrorOccurred %d %x (Initiator)\n", idx, event);
         cd_event_.push_back(new HandleErrorOccurred(this, idx));
         error_occurred = true;
       }
 #if LOCK_PER_MAILBOX
       UnsetEventFlag(event_flag_[idx], kErrorOccurred); 
 #else
-      event_flag_[idx] &= ~kErrorOccurred;
+      // FIXME
+      UnsetEventFlag(event_flag_[idx], kErrorOccurred); 
+      //event_flag_[idx] &= ~kErrorOccurred;
 #endif
     } // kErrorOccurred ends
 
     if( CHECK_EVENT(event, kEntrySearch) ) {
 
-      CD_DEBUG("ENTRY SEARCH\n");
+      CD_DEBUG("ENTRY SEARCH %x\n", event);
       cd_event_.push_back(new HandleEntrySearch(this, idx));
 
 #if LOCK_PER_MAILBOX
@@ -1038,7 +1042,7 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
         CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "Accumulate event at %d\n", global_task_id);
 
 //        printf("global_task_id:%d, task_id:%d, myid:%d\n", global_task_id, task_id, myTaskID); fflush(stdout);
-#if 1//LOCAL_LOCK_ENABLED        
+#if 1//LOCKALL_ENABLED        
         //if(0)
         if(global_task_id != cd::myTaskID) 
         {
@@ -1397,20 +1401,20 @@ CDFlagT CD::GetEventFlag(void)
 inline
 CDFlagT *HeadCD::GetEventFlag(void)
 {
-#if LOCK_PER_MAILBOX
+#if MAILBOX_LOCK_ENABLED
   // FIXME: Assuming the same size of event flag array
-  CDFlagT *event_flag = new CDFlagT[task_size()];
+  CDFlagT *event_flag = new CDFlagT[task_size()]();
   if(is_window_reused_) {
     assert(0);
   }
-  #if LOCAL_LOCK_ENABLED
+  #if LOCKALL_ENABLED
   PMPI_Win_lock_all(0, mailbox_);
-  memcpy(event_flag, event_flag_, task_size());
+  memcpy(event_flag, event_flag_, task_size() * sizeof(CDFlagT));
   PMPI_Win_unlock_all(mailbox_);
   #else
-//  PMPI_Win_lock(MPI_LOCK_SHARED, task_in_color(), 0, mailbox_);
-  memcpy(event_flag, event_flag_, task_size());
-//  PMPI_Win_unlock(task_in_color(), mailbox_);
+  PMPI_Win_lock(MPI_LOCK_SHARED, task_in_color(), 0, mailbox_);
+  memcpy(event_flag, event_flag_, task_size() * sizeof(CDFlagT));
+  PMPI_Win_unlock(task_in_color(), mailbox_);
   #endif
   return event_flag;
 #else
@@ -1420,36 +1424,38 @@ CDFlagT *HeadCD::GetEventFlag(void)
 
 inline
 void CD::UnsetEventFlag(CDFlagT &event_flag, CDFlagT event_mask) {
+  CD_DEBUG("Event Flag %x\n", event_flag);
   if(is_window_reused_) {
     assert(0);
   }
 #if MAILBOX_LOCK_ENABLED
-  #if LOCAL_LOCK_ENABLED
+  #if LOCKALL_ENABLED
   PMPI_Win_lock_all(0, mailbox_);
   event_flag &= ~event_mask;
   PMPI_Win_unlock_all(mailbox_);
   #else
-  //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
   event_flag &= ~event_mask;
-  //PMPI_Win_unlock(task_in_color(), mailbox_);
+  PMPI_Win_unlock(task_in_color(), mailbox_);
   #endif
 #else
   event_flag &= ~event_mask;
 #endif
+  CD_DEBUG("Event Flag %x\n", event_flag);
 }
 
 inline
 uint32_t CD::GetPendingCounter(void)
 {
   uint32_t pending_counter = CD_UINT32_MAX;
-#if LOCAL_LOCK_ENABLED
+#if LOCKALL_ENABLED
   PMPI_Win_lock_all(0, pendingWindow_);
   pending_counter = (*pendingFlag_);
   PMPI_Win_unlock_all(pendingWindow_);
 #else
-//  PMPI_Win_lock(MPI_LOCK_SHARED, GetRootCD()->task_in_color(), 0, pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_SHARED, cd::myTaskID, 0, pendingWindow_);
   pending_counter = (*pendingFlag_);
-//  PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+  PMPI_Win_unlock(cd::myTaskID, pendingWindow_);
 #endif
   return pending_counter;
 }
@@ -1459,14 +1465,14 @@ uint32_t CD::DecPendingCounter(void)
   uint32_t pending_counter = CD_UINT32_MAX;
 #if LOCAL_LOCK_ENABLED
   PMPI_Win_lock_all(0, pendingWindow_);
-  (*pendingFlag_) -= EventHandler::handled_event_count;
-  pending_counter = (*pendingFlag_);
+  pending_counter = (*pendingFlag_) - EventHandler::handled_event_count;
+  (*pendingFlag_) = pending_counter;
   PMPI_Win_unlock_all(pendingWindow_);
 #else
-  //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
-  (*pendingFlag_) -= EventHandler::handled_event_count;
-  pending_counter = (*pendingFlag_);
-  //PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cd::myTaskID, 0, pendingWindow_);
+  pending_counter = (*pendingFlag_) - EventHandler::handled_event_count;
+  (*pendingFlag_) = pending_counter;
+  PMPI_Win_unlock(cd::myTaskID, pendingWindow_);
 #endif
 
   // Initialize handled_event_count;
@@ -1479,16 +1485,16 @@ inline
 uint32_t CD::IncPendingCounter(void)
 {
   uint32_t pending_counter = CD_UINT32_MAX;
-#if LOCAL_LOCK_ENABLED
+#if LOCKALL_ENABLED
   PMPI_Win_lock_all(0, pendingWindow_);
   (*pendingFlag_) += 1;
   pending_counter = (*pendingFlag_);
   PMPI_Win_unlock_all(pendingWindow_);
 #else
-//  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cd::myTaskID, 0, pendingWindow_);
   (*pendingFlag_) += 1;
   pending_counter = (*pendingFlag_);
-//  PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
+  PMPI_Win_unlock(cd::myTaskID, pendingWindow_);
 #endif
   return pending_counter;
 }
@@ -1504,7 +1510,7 @@ void CD::PrintDebug() {
 
 void CD::InitializeMailBox(void)
 {
-#if LOCAL_LOCK_ENABLED
+#if LOCKALL_ENABLED
   PMPI_Win_lock_all(0, pendingWindow_);
   *pendingFlag_ = 0;
   PMPI_Win_unlock_all(pendingWindow_);
@@ -1512,12 +1518,12 @@ void CD::InitializeMailBox(void)
   *rollback_point_ = INVALID_ROLLBACK_POINT;
   PMPI_Win_unlock_all(rollbackWindow_);
 #else
-  //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cd::myTaskID, 0, pendingWindow_);
   *pendingFlag_ = 0;
-  //PMPI_Win_unlock(GetRootCD()->task_in_color(), pendingWindow_);
-  //PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, GetRootCD()->task_in_color(), 0, rollbackWindow_);
+  PMPI_Win_unlock(cd::myTaskID, pendingWindow_);
+  PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cd::myTaskID, 0, rollbackWindow_);
   *rollback_point_ = INVALID_ROLLBACK_POINT;
-  //PMPI_Win_unlock(GetRootCD()->task_in_color(), rollbackWindow_);
+  PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
 #endif
   // Initialization of event flags
   if(is_window_reused_==false) {

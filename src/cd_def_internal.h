@@ -303,7 +303,7 @@ namespace cd {
   extern int max_tag_level_bit;
   extern int max_tag_rank_bit;
   extern int max_tag_task_bit;
-  extern MPI_Errhandler mpi_err_handler;
+//  extern MPI_Errhandler *mpi_err_handler;
 #endif
 
 

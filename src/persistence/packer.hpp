@@ -338,8 +338,8 @@ class Packer {
     }
 
     void Copy(const Packer& that) {
-      that.table_->Copy(table_);
-      that.data_->Copy(data_);
+      that.table_->copy(table_);
+      that.data_->copy(*data_);
     }
 
     // Soon to be deprecated
