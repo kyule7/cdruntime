@@ -315,6 +315,7 @@ uint64_t SystemErrorInjector::Inject(void)
   for(auto it=sc_.failure_rate_.rbegin(); it!=sc_.failure_rate_.rend(); ++it) {
     if( InjectError(GetErrorProb(it->second, period)) ) { 
       error_vec |= it->first;
+      sc_.error_count_[it->first]++;
     }
     //if(myTaskID == 4) printf("ERROR!!! %lx, curr: %lx (%lf)\n", error_vec, it->first, it->second);
     CD_DEBUG_COND(DEBUG_OFF_ERRORINJ, "Error rate %lu : %f (%lx) [period:%lf]\n", 

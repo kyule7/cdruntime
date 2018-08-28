@@ -1,7 +1,8 @@
 #include <assert.h>
+#include "parallel.h" //getNRanks()
+#ifdef _ROOTCD
 #include "cd.h"
 #include "cd_cosp2.h"
-#include "parallel.h" //getNRanks()
 
 unsigned int preserveCommand(cd_handle_t *cdh, Command* cmd) {
   unsigned int size = sizeof(Command);
@@ -127,3 +128,4 @@ unsigned int preserveHaloExchange(cd_handle_t *cdh, HaloExchange* haloExchange, 
 
   return size;
 }
+#endif

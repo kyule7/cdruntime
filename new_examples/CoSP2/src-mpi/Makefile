@@ -10,8 +10,8 @@ DO_MPI = ON
 #DO_MPI = OFF
 
 # Containment Domain (ON/OFF)
-ENABLE_CD = ON
-#ENABLE_CD = OFF
+#ENABLE_CD = ON
+ENABLE_CD = OFF
 
 # Contiguous arrays
 CONTIG_MATRIX = ON

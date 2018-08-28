@@ -237,7 +237,7 @@ public:
 
 };
 
-class SystemErrorInjector : public ErrorInjector {
+struct SystemErrorInjector : public ErrorInjector {
   cd::SystemConfig &sc_;
   CD_CLOCK_T prev_clk_;
 public:

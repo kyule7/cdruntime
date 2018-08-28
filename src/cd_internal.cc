@@ -2848,6 +2848,14 @@ CD::InternalPreserve(void *data,
       }
     }
   } // dont_preserve ends
+//  else {
+//    if (myTaskID == 0) {
+//      std::cout << "do not preserve is true" << std::endl;
+//    }
+//  }
+//    if (myTaskID == 0) {
+//      std::cout << "do not preserve is " << cd::dont_preserve<<std::endl;
+//    }
 //  preserve_count_++;
 
   return err; 

@@ -245,6 +245,7 @@ struct SystemConfig {
   MappingConfig mapping_;
   std::map<int64_t, float> failure_rate_;
   std::map<int64_t, float> failure_rate_record_;
+  std::map<int64_t, uint32_t> error_count_;
   void ParseParam(char *key);
   void ParseFailureParam(char *key);
 //  void ParseCDHierarchy(const char *key, int seq_cnt);

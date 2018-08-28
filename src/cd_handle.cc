@@ -665,7 +665,24 @@ void CD_Finalize(void)
   assert(CDPath::GetCDPath()->back()!=NULL);
 
 
-
+  // Get total aggregated errors
+  std::map<int64_t, uint32_t> &error_count = CDHandle::system_error_injector_->sc_.error_count_;
+  uint32_t errors[error_count.size()];
+  uint32_t total_errors[error_count.size()];
+  int idx = 0;
+  uint32_t error_cnt = 0;
+  uint32_t error_cnt_loc = error_count.size();
+  for (auto &v : error_count) {
+    errors[idx++] = v.second;
+  }
+  PMPI_Allreduce(&error_cnt_loc, &error_cnt, 1, MPI_UNSIGNED, MPI_MAX, MPI_COMM_WORLD);
+  assert(error_cnt_loc == error_cnt);
+  PMPI_Reduce(errors, total_errors, error_count.size(), MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD);
+  if (myTaskID == 0) {
+    for (int i=0; i<idx; i++) {
+      printf("errors : %u %u\n", total_errors[i], errors[i]);
+    }
+  }
 #if CD_PROFILER_ENABLED
   // Profiler-related  
   CDPath::GetRootCD()->profiler_->FinalizeViz();
