@@ -206,7 +206,7 @@ preserveAtoms(cd_handle_t *cdh, uint32_t knob, Atoms *atoms,
   // create label(name) for preservation
   char atoms_name[16] = "";
   char gid_name[16] = "";
-  char iSpecies_name[16] = "";
+  char iSpecies_name[32] = "";
   char r_name[16] = "";
   char p_name[16] = "";
   char f_name[16] = "";
