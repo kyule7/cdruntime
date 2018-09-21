@@ -358,7 +358,7 @@ bool CD::TestComm(bool test_until_done)
 
 // ------------------------- Preemption ---------------------------------------------------
 
-CDErrT CD::CheckMailBox(void)
+CDErrT CD::CheckMailBox(bool not_print)
 {
 #if CD_PROFILER_ENABLED
   CD_CLOCK_T tstart = CD_CLOCK();
@@ -375,6 +375,13 @@ CDErrT CD::CheckMailBox(void)
   int event_count = *pendingFlag_;//DecPendingCounter();
   PMPI_Win_unlock(cd::myTaskID, pendingWindow_);
 #endif
+  if (not_print == false)
+    CD_DEBUG(">>> %s (%ld) %s # of pending events : %d <<<\n"
+        , label()
+        , phaseNodeCache[phase()]->seq_acc_rb_
+        , IsHead()? "(*)":"   "
+        , event_count
+        );
 //  int event_count = *pendingFlag_;
   //assert(event_count <= 1024);
   // Reset handled event counter
@@ -574,7 +581,7 @@ CD::CDInternalErrT HeadCD::InternalCheckMailBox(void)
 
 CDEventHandleT CD::ReadMailBox(const CDFlagT &event)
 {
-  CD_DEBUG_COND(CHECK_NO_EVENT(event), "\nCD::ReadMailBox(%s)\n", event2str(event).c_str());
+  CD_DEBUG_COND(CHECK_NO_EVENT(event), "(%s)\n", event2str(event).c_str());
 
   CDEventHandleT ret = CDEventHandleT::kEventResolved;
 
@@ -589,8 +596,13 @@ CDEventHandleT CD::ReadMailBox(const CDFlagT &event)
 // kAllResume is also weird here. Imagine that it is just "Resume" when you open the mailbox.
 // I am currently "resumed" (my current forward execution), so it does not make sense.
 
-    if( CHECK_EVENT(event, kEntrySearch) || CHECK_EVENT(event, kErrorOccurred) ) {
-      assert(0);
+    if( CHECK_EVENT(event, kEntrySearch) ) {
+      UnsetEventFlag(*event_flag_, kEntrySearch);
+    }
+    
+    if( CHECK_EVENT(event, kErrorOccurred) ) {
+      //assert(0);
+      UnsetEventFlag(*event_flag_, kErrorOccurred);
     }
 
     if( CHECK_EVENT(event, kEntrySend) ) {
@@ -1307,7 +1319,18 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
     else { // case of 1 task in a CD. (totalTaskSize > 0 && task_size() > 1)
       rbp_ret = GetCoarseCD(this)->SetRollbackPoint(rollback_lv, remote);
     }
-  } 
+  } else { // reset to INVALID_ROLLBACK_POINT
+    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, cd::myTaskID, 0, rollbackWindow_);
+    *rollback_point_ = INVALID_ROLLBACK_POINT;
+    PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
+
+    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
+    uint32_t event = *event_flag_;
+    *event_flag_ &= ~kAllReexecute;
+    PMPI_Win_unlock(task_in_color(), mailbox_);
+    if (event != 0) {
+      PRINT_BOTH("\t[%d %s] >> event <<\t :%x\n", cd::myTaskID, label(), event); }
+  }
   return rbp_ret;
 }
 
@@ -1474,7 +1497,7 @@ uint32_t CD::DecPendingCounter(void)
   (*pendingFlag_) = pending_counter;
   PMPI_Win_unlock(cd::myTaskID, pendingWindow_);
 #endif
-
+  CD_DEBUG("%s Pending Counter:%u\n", label(), pending_counter);
   // Initialize handled_event_count;
 //  CD_DEBUG("handled : %d, pending_counter : %u\n", EventHandler::handled_event_count, pending_counter);
   EventHandler::handled_event_count = 0;
@@ -1496,6 +1519,7 @@ uint32_t CD::IncPendingCounter(void)
   pending_counter = (*pendingFlag_);
   PMPI_Win_unlock(cd::myTaskID, pendingWindow_);
 #endif
+  CD_DEBUG("%s Pending Counter:%u\n", label(), pending_counter);
   return pending_counter;
 }
 
@@ -1620,7 +1644,7 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
       break;
     } else {
 //      assert(need_reexec == false); // should be false at this point.
-      CheckMailBox();
+      CheckMailBox(true);
       //uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
       uint32_t rollback_point = CheckRollbackPoint(false);
 //      uint32_t rollback_point = CheckRollbackPoint(false);
@@ -1675,7 +1699,14 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
         cd_id_.GetStringID().c_str(), *pendingFlag_, incomplete_log_.size(), &array_of_requests[ii]);
     int_reqs[ii] = (int64_t)array_of_requests[ii];
   }
-  int flag = 0, ret = 0;
+  int flag = 0, flagtest = 0;
+  int ret = PMPI_Testall(count, array_of_requests, &flag, array_of_statuses);
+  std::string senders("sender:");
+  char tmp[16];
+//   for (int ii=0;ii<count;ii++) { senders.append(itoa(array_of_statuses[ii].MPI_SOURCE)); }
+//   for (int ii=0;ii<count;ii++) { senders.append(itoa(array_of_statuses)); }
+  for (int ii=0;ii<count;ii++) { PMPI_Test(&array_of_requests[ii], &flagtest, &array_of_statuses[ii]); sprintf(tmp, "%d%c ", array_of_statuses[ii].MPI_SOURCE, (flagtest==0)? '*' : ' '); senders.append(tmp); }
+  CD_DEBUG("%s\n", senders.c_str());
   while(1) {
     ret = PMPI_Testall(count, array_of_requests, &flag, array_of_statuses);
     if(flag != 0) {
@@ -1690,7 +1721,7 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
       break;
     } else {
 //      assert(need_reexec == false); // should be false at this point.
-      CheckMailBox();
+      CheckMailBox(true);
       //uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
       uint32_t rollback_point = CheckRollbackPoint(false);
 //      uint32_t rollback_point = CheckRollbackPoint(false);
@@ -1819,7 +1850,7 @@ bool CD::CheckIntraCDMsg(int target_id, MPI_Group &target_group)
 //  return subset;
 //}
 
-#else
+#else // _MPI_VER ends
 
 uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote) 
 {

@@ -262,14 +262,14 @@ struct PhaseNode {
       seq_begin_ = seq_id; 
       seq_end_   = seq_id;
     }
+
     inline void IncSeqID(bool err_free_exec) {
-      seq_end_++; // reinit at failure
-      seq_max_ = (seq_end_ > seq_max_)? seq_end_ : seq_max_; 
       if(err_free_exec) {
+        seq_end_++; // reinit at failure
         seq_acc_++; // no reinit
-      } else { // during rollback
-        seq_acc_rb_++; // no reinit
       }
+      seq_acc_rb_++; // total count
+      seq_max_ = (seq_end_ > seq_max_)? seq_end_ : seq_max_; 
     }
 
     inline void ResetSeqID(uint32_t rollback_lv) {

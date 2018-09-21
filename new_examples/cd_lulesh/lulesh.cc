@@ -3676,7 +3676,7 @@ int main(int argc, char *argv[])
         begn_end += MPI_Wtime() - ts2;
         if(IsReexec() && myRank == 0) {printf("Before Child %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         prv_len += cd_child_loop->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "ChildLoopDomain");
-        if(IsReexec() && myRank == 0) {printf("After Child %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+        if(IsReexec() && myRank == 0) {printf("After Child  %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         double dump_start = MPI_Wtime();
         // Preserve read-only data
         prv_len += cd_child_loop->Preserve(locDom->SetOp(prvec_readonly_all), kRef, "ReadOnlyData-Leaf", "ReadOnlyData");
@@ -3700,9 +3700,9 @@ int main(int argc, char *argv[])
         double ts2 = MPI_Wtime();
         CD_Begin(leaf_lv, "CalcPos");
         begn_end += MPI_Wtime() - ts2;
-        if(IsReexec() && myRank == 0) {printf("Before Leaf %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+        if(IsReexec() && myRank == 0) {printf("Before Leaf  %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         prv_len += leaf_lv->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "LeafLoopDomain");
-        if(IsReexec() && myRank == 0) {printf("After Leaf %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+        if(IsReexec() && myRank == 0) {printf("After Leaf   %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         double dump_start = MPI_Wtime();
         // Preserve read-only data
         prv_len += leaf_lv->Preserve(locDom->SetOp(prvec_readonly_all), kRef, "ReadOnlyData-Leaf", "ReadOnlyData");
@@ -3920,11 +3920,11 @@ int main(int argc, char *argv[])
    double recvbufmin[prof_elems] = { 0, 0, 0, 0 };
    double recvbufavg[prof_elems] = { 0, 0, 0, 0 };
    double recvbufstd[prof_elems] = { 0, 0, 0, 0 };
-   MPI_Reduce(totl_phase, aggregated_phase, 5, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-   MPI_Reduce(sendbuf, recvbufmax, prof_elems, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-   MPI_Reduce(sendbuf, recvbufmin, prof_elems, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
-   MPI_Reduce(sendbuf, recvbufavg, prof_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-   MPI_Reduce(sendbufstd, recvbufstd, prof_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+   PMPI_Reduce(totl_phase, aggregated_phase, 5, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+   PMPI_Reduce(sendbuf, recvbufmax, prof_elems, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+   PMPI_Reduce(sendbuf, recvbufmin, prof_elems, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+   PMPI_Reduce(sendbuf, recvbufavg, prof_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+   PMPI_Reduce(sendbufstd, recvbufstd, prof_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
    for(int i=0; i<prof_elems; i++) { 
      recvbufavg[i] /= numRanks; // avg
      recvbufstd[i] /= numRanks; // avg of 2nd momentum
@@ -3963,9 +3963,9 @@ int main(int argc, char *argv[])
        total_dump = (double *)malloc(total_stat_cnt * sizeof(double));
        total_wait = (double *)malloc(total_stat_cnt * sizeof(double));
      }
-     MPI_Gather(local_loop.data(), total_its, MPI_FLOAT, total_loop, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
-     MPI_Gather(local_dump.data(), total_its, MPI_FLOAT, total_dump, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
-     MPI_Gather(local_wait.data(), total_its, MPI_FLOAT, total_wait, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
+     PMPI_Gather(local_loop.data(), total_its, MPI_FLOAT, total_loop, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
+     PMPI_Gather(local_dump.data(), total_its, MPI_FLOAT, total_dump, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
+     PMPI_Gather(local_wait.data(), total_its, MPI_FLOAT, total_wait, total_its, MPI_FLOAT, 0, MPI_COMM_WORLD);
      if(myRank == 0) {
        char tmpfile[128];
        
@@ -4132,7 +4132,7 @@ int main(int argc, char *argv[])
    assert(global_counter >= local_wait.size());
    assert(global_counter >= local_begn.size());
    assert(global_counter >= local_cmpl.size());
-   MPI_Allreduce(&global_counter, &min_global_counter, 1, MPI_UNSIGNED, MPI_MIN, MPI_COMM_WORLD);
+   PMPI_Allreduce(&global_counter, &min_global_counter, 1, MPI_UNSIGNED, MPI_MIN, MPI_COMM_WORLD);
 //   printf("[%d] min %u < %u\n", myRank, min_global_counter, global_counter);
    global_counter = min_global_counter;
    int tot_elems = global_counter * numRanks;
@@ -4151,18 +4151,18 @@ int main(int argc, char *argv[])
      total_dump4 = (float *)malloc(tot_elems * sizeof(float));
 #endif
    }
-   MPI_Gather(local_loop.data(), global_counter, MPI_FLOAT, total_loop, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Gather(local_dump.data(), global_counter, MPI_FLOAT, total_dump, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Gather(local_wait.data(), global_counter, MPI_FLOAT, total_wait, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Gather(local_begn.data(), global_counter, MPI_FLOAT, total_begn, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Gather(local_cmpl.data(), global_counter, MPI_FLOAT, total_cmpl, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   PMPI_Gather(local_loop.data(), global_counter, MPI_FLOAT, total_loop, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   PMPI_Gather(local_dump.data(), global_counter, MPI_FLOAT, total_dump, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   PMPI_Gather(local_wait.data(), global_counter, MPI_FLOAT, total_wait, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   PMPI_Gather(local_begn.data(), global_counter, MPI_FLOAT, total_begn, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   PMPI_Gather(local_cmpl.data(), global_counter, MPI_FLOAT, total_cmpl, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
 #if _CD && _CD_CDRT
-   MPI_Gather(local_dump0.data(), global_counter, MPI_FLOAT, total_dump0, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Gather(local_dump1.data(), global_counter, MPI_FLOAT, total_dump1, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Gather(local_dump2.data(), global_counter, MPI_FLOAT, total_dump2, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Gather(local_dump3.data(), global_counter, MPI_FLOAT, total_dump3, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
-   MPI_Gather(local_dump4.data(), global_counter, MPI_FLOAT, total_dump4, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   PMPI_Gather(local_dump0.data(), global_counter, MPI_FLOAT, total_dump0, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   PMPI_Gather(local_dump1.data(), global_counter, MPI_FLOAT, total_dump1, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   PMPI_Gather(local_dump2.data(), global_counter, MPI_FLOAT, total_dump2, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   PMPI_Gather(local_dump3.data(), global_counter, MPI_FLOAT, total_dump3, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
+   PMPI_Gather(local_dump4.data(), global_counter, MPI_FLOAT, total_dump4, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
 #endif
 
    if(myRank == 0) {

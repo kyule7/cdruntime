@@ -395,7 +395,7 @@ void HandleErrorOccurred::HandleEvent(void)
   if(ptr_cd_->task_size() == 1) return;
 
 //  int task_id = task_id_;
-  CD_DEBUG("\n[HandleErrorOccurred::HandleEvent]\n");
+  CD_DEBUG("[%s %s]\n", ptr_cd_->label(), ptr_cd_->IsFailed() ? "REEX" : "EXEC");
 
   CDEventT all_reexecute = kAllReexecute;
   //if(CDPath::GetCurrentCD()->level() > ptr_cd_->level()) {
@@ -524,7 +524,9 @@ void HandleAllReexecute::HandleEvent(void)
   uint32_t rollback_lv  = ptr_cd_->level();
   uint32_t current_lv   = CDPath::GetCurrentCD()->level();
   uint32_t rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local
-  CD_DEBUG("[%s] kAllReexecute need reexec from %u (orig rollback_point:%u) (cur %u)\n", 
+  CD_DEBUG("[%s %s] %s kAllReexecute need reexec from %u (orig rollback_point:%u) (cur %u)\n", 
+           ptr_cd_->label(),
+           ptr_cd_->IsFailed() ? "REEX" : "EXEC",
            ptr_cd_->cd_id_.GetStringID().c_str(), 
            rollback_lv, rollback_point, current_lv);
 

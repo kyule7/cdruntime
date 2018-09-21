@@ -704,7 +704,7 @@ public:
     uint32_t SetRollbackPoint(const uint32_t &rollback_lv, bool remote);
     uint32_t CheckRollbackPoint(bool remote);
 #if CD_MPI_ENABLED
-    CDErrT CheckMailBox(void);
+    CDErrT CheckMailBox(bool not_print=false);
     CDErrT SetMailBox(const CDEventT &event);
     CDInternalErrT RemoteSetMailBox(const CDEventT &event);
     CDEventHandleT ReadMailBox(const CDFlagT &event);
@@ -720,6 +720,8 @@ public:
     inline bool GetBegin() const { return begin_; } 
     inline void SetBegin()       { CD_ASSERT_STR(begin_ == false, "Lv%u: %s\n", level(), label()); begin_ = true; } 
     inline void UnsetBegin()     { CD_ASSERT_STR(begin_ == true, "Lv%u: %s\n", level(), label()); begin_ = false; } 
+    inline bool IsFailed(void) const { return (failed_phase != HEALTHY); }
+    inline bool IsGood(void) const { return (failed_phase == HEALTHY); }
   public:
     int  BlockUntilValid(MPI_Request *request, MPI_Status *status);
     int  BlockallUntilValid(int count, MPI_Request array_of_request[], MPI_Status array_of_status[]);

@@ -211,7 +211,9 @@ struct CDEntry {
 
     void Print(const char *str="", std::function<const char *(uint64_t)> hash=DefaultHash) const
     { printf("%s (%24s %16lx %3lx %10lx %10lx %p)\n", str, hash(id_), id_, attr(), size(), offset(), src()); }
-    inline uint64_t size(void)   const { return size_.attr_.size_; }
+    inline uint64_t size(void)   const { 
+//      assert(size_.attr_.size_ < 2000000000);
+      return size_.attr_.size_; }
     inline uint64_t invalid(void)  const { return size_.attr_.invalid_; }
     inline uint64_t attr(void)   const { return size_.code_ >> 48; }
     inline uint64_t offset(void) const { return offset_; }

@@ -574,7 +574,13 @@ void CD::InternalInitialize(CDHandle *cd_parent)
 
 }
 
+static inline
+bool IsFailed(void)
+{ return (failed_phase != HEALTHY); }
 
+static inline
+bool IsGood(void)
+{ return (failed_phase == HEALTHY); }
 
 inline
 void CD::Init()
@@ -998,8 +1004,13 @@ static inline
 void CompletePhase(uint32_t phase, bool is_reexec=false)
 {
   CD_ASSERT(phaseTree.current_);
-  if(is_reexec == false)
-    phaseTree.current_->IncSeqID(failed_phase == HEALTHY);
+  CD_DEBUG("%s (%ld, %ld, %ld) -> "
+          , phaseNodeCache[phase]->label_.c_str()
+          , phaseNodeCache[phase]->seq_begin_
+          , phaseNodeCache[phase]->seq_end_
+          , phaseNodeCache[phase]->seq_acc_rb_);
+
+  phaseTree.current_->IncSeqID(IsGood() && is_reexec == false);
 //  phaseTree.current_->seq_end_++; // reinit at failure
 //  if(failed_phase == HEALTHY) {
 //    phaseTree.current_->seq_acc_++; // no reinit
@@ -1007,7 +1018,7 @@ void CompletePhase(uint32_t phase, bool is_reexec=false)
 //    phaseTree.current_->seq_acc_rb_++; // no reinit
 //  }
   if(tuned::tuning_enabled == false) {
-    if(failed_phase != HEALTHY) { // reexecution
+    if ( IsFailed() ) { // reexecution
       CD_ASSERT(failed_phase >= 0);
       // Set failed state in phaseTree
       phaseTree.current_->state_ = kReexecution;
@@ -1022,6 +1033,10 @@ void CompletePhase(uint32_t phase, bool is_reexec=false)
       ERROR_MESSAGE("NULL phase is completed.\n");
     }
   }
+  CD_DEBUG("(%ld, %ld, %ld)\n"
+          , phaseNodeCache[phase]->seq_begin_
+          , phaseNodeCache[phase]->seq_end_
+          , phaseNodeCache[phase]->seq_acc_rb_);
 }
 
 /* CD::Begin()
@@ -1061,7 +1076,7 @@ CDErrT CD::Begin(const char *label, bool collective)
   if(prev_phase != current_phase) 
   {
     prev_phase = current_phase;
-    if(failed_phase == HEALTHY) {
+    if ( IsGood() ) {
       phaseTree.current_->MarkSeqID(cd_id_.sequential_id_); // set seq_begin_ = seq_end_
 //      phaseTree.current_->seq_end_ = cd_id_.sequential_id_;
     } else {
@@ -1073,15 +1088,12 @@ CDErrT CD::Begin(const char *label, bool collective)
     }
   }
 
-  if(prv_phase_chk == -1U || prv_phase_chk != current_phase) {
-    if(myTaskID == 4)  {
-//      printf("[%s] lv:%u, %s, %s, bitvec:%lx, %ld(%ld), %ld~%ld\n", 
-//        __func__, level, name_.c_str(), label_.c_str(), sys_detect_bit_vector_, 
-//        current_phase, failed_phase, phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_);
-    }
-      CD_DEBUG("[%s] lv:%u, %s, %s, bitvec:%lx, %ld(fphase:%ld), %ld~%ld\n", 
-        __func__, level, name_.c_str(), label_.c_str(), sys_detect_bit_vector_, 
-        current_phase, failed_phase, phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_);
+//  if(prv_phase_chk == -1U || prv_phase_chk != current_phase) 
+  {
+    CD_DEBUG("%s lv:%u, %s, %s, (%ld, %u), bitvec:%lx, (curr:%ld,fphase:%ld), %ld~%ld\n", 
+      IsFailed()? "REEX" : "EXEC",
+      level, name_.c_str(), label_.c_str(), phaseTree.current_->seq_acc_rb_, cd_id_.sequential_id_, sys_detect_bit_vector_, 
+      current_phase, failed_phase, phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_);
   }
 
 
@@ -1182,6 +1194,8 @@ CDErrT CD::Begin(const char *label, bool collective)
 
   CD_DEBUG("Sync \n");
   if(cd_exec_mode_ == kReexecution || collective) {
+    MYDBG("[Begin] Reexecution\n");
+    SetRollbackPoint(INVALID_ROLLBACK_POINT, false);
 //FIXME 0324 Kyushick    
 //    SyncCDs(this);
   }
@@ -1192,7 +1206,7 @@ CDErrT CD::Begin(const char *label, bool collective)
 //    SyncCDs(this);
   }
 #if CD_LIBC_LOGGING
-  if(failed_phase == HEALTHY) {
+  if ( IsGood() ) {
     assert(cd_exec_mode_ == kExecution);
     libc_log_id_ = logger::GetLogger()->Set(libc_log_begin_);
     libc_log_end_ = libc_log_begin_;
@@ -1343,9 +1357,14 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
     sync_time += CD_CLOCK() - begin_here;
   #endif
 
+//    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
     cd_lv_to_sync->CheckMailBox();
-
+//    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
+//    cd_lv_to_sync->CheckMailBox();
+    //new_rollback_point = cd_lv_to_sync->CheckRollbackPoint(true);
+    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
     new_rollback_point = cd_lv_to_sync->CheckRollbackPoint(false);
+
     CD_DEBUG("rollback point from head:%u (headID:%d at lv#%u)\n", 
               new_rollback_point, cd_lv_to_sync->head(), cd_lv_to_sync->level());
 
@@ -1421,7 +1440,7 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 static inline 
 void SetFailure(uint32_t phase, const char *label) 
 {
-  if(failed_phase == HEALTHY) {
+  if ( IsGood() ) {
     
     const int64_t curr_seqID = phaseTree.current_->seq_end_;
     const int64_t curr_begID = phaseTree.current_->seq_begin_;
@@ -1629,9 +1648,12 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
   const int64_t now_phase = phase();
   const int64_t now_seqID = phaseNodeCache[now_phase]->seq_end_;
   const int64_t now_begID = phaseNodeCache[now_phase]->seq_begin_;
-  CD_DEBUG("%s %s %ld->%ld\t Reexec from %u (Before Sync)\n", 
+  const int64_t seq_tot = phaseNodeCache[now_phase]->seq_acc_rb_;
+  CD_DEBUG("%s %s %s (%ld, %u) %ld->%ld\t Reexec from %u (Before Sync)\n", 
           GetCDName().GetString().c_str(), 
           GetNodeID().GetString().c_str(), 
+          IsFailed()? "REEX" : "EXEC",
+          seq_tot, cd_id_.sequential_id_,
           now_begID, now_seqID,
           orig_rollback_point);
 //  printf("%s check this out\n", __func__);
@@ -1765,7 +1787,7 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
     //    curr_phase, curr_seqID, failed_phase, failed_seqID, phaseTree.current_->seq_begin_); }
 
 //    if(level() == 1) { cd::first_complete = true;   printf("first complete\n");   }
-    if(failed_phase != HEALTHY) {
+    if (IsFailed()) {
       if(failed_phase == curr_phase) {
         if(failed_seqID == curr_seqID) {
           SetHealthy();
@@ -1779,10 +1801,10 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
 //          phaseTree.current_->FinishRecovery(now);
 //          reex_elapsed_time += now - global_reex_clk;
 //          global_reex_clk = now;
-          if(myTaskID == 0) {printf(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
-              level(), label_.c_str(), curr_phase, curr_seqID, curr_begID); }
+          if(myTaskID == 0) { printf(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
+                                     level(), label_.c_str(), curr_phase, curr_seqID, curr_begID); }
           CD_DEBUG(">>> Reached failure point Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
-              level(), label_.c_str(), curr_phase, curr_seqID, curr_begID);
+                   level(), label_.c_str(), curr_phase, curr_seqID, curr_begID);
         } else if(failed_seqID > curr_seqID) {
           PRINT_MPI(">>> No error Lv#%u (%s) but it was in recovery, phase:%ld==%lu, seqID:%ld==%lu (beg:%lu) <<<\n", 
               level(), label_.c_str(), failed_phase, curr_phase, failed_seqID, curr_seqID, curr_begID);
