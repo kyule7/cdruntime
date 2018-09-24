@@ -259,10 +259,18 @@ struct PhaseNode {
     // seq_begin_ preverves sequential_id_.
     // Its purpose is to reinit seq_end_
     inline void MarkSeqID(int64_t seq_id) { 
-      seq_begin_ = seq_id; 
-      seq_end_   = seq_id;
+//      if (seq_id > 0) {
+//        PrintDetails(); 
+//        if (cd::myTaskID == 0) printf("MarkSeqID : %ld\n", seq_id);
+//      }
+      if (left_ == NULL) {
+        seq_begin_ = 0; 
+        seq_end_   = 0;
+      } else {
+        seq_begin_ = left_->seq_begin_;
+        seq_end_   = left_->seq_begin_;
+      }
     }
-
     inline void IncSeqID(bool err_free_exec) {
       if(err_free_exec) {
         seq_end_++; // reinit at failure

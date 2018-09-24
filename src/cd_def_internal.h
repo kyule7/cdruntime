@@ -122,6 +122,7 @@ typedef uint32_t      CDFlagT;
 typedef MPI_Win       CDMailBoxT;
 typedef MPI_Offset    COMMLIB_Offset;
 typedef MPI_File      COMMLIB_File;
+typedef MPI_Request  *MsgFlagT;
 #define INVALID_COLOR MPI_COMM_NULL
 
 #else
@@ -552,7 +553,7 @@ extern void GatherProfile(void);
       uint32_t taskID_;
       uint32_t tag_;
       ColorT   comm_;
-      int64_t flag_;
+      MsgFlagT flag_;
       bool     complete_;
       bool     isrecv_;
       bool     intra_cd_msg_;
@@ -580,20 +581,20 @@ extern void GatherProfile(void);
                          uint32_t taskID, 
                          uint32_t tag, 
                          const ColorT &comm, 
-                         int64_t flag, 
+                         MsgFlagT flag, 
                          bool complete,
-                         bool irecv) 
+                         bool irecv,
+                         void *p=NULL) 
         : addr_(const_cast<void *>(addr)), length_(length), taskID_(taskID), tag_(tag), 
-          comm_(comm), flag_(flag), complete_(complete), isrecv_(irecv)
+          comm_(comm), flag_(flag), complete_(complete), isrecv_(irecv), p_(p)
       {
-        p_ = NULL;
         pushed_ = 0;
         level_ = 0;
         intra_cd_msg_ = false;
       }
       std::string Print(void) {
         char buf[256];
-        sprintf(buf, "\n== Incomplete Log Entry ==\ntaskID:%u\nlength:%lu\naddr:%p\ntag:%u\nflag:%ld\ncomplete:%d\nisrecv:%d\nintra_msg:%d\np:%p\npushed:%d\nlevel:%u\n==========================\n", taskID_, length_, addr_, tag_, flag_, complete_, isrecv_, intra_cd_msg_, p_, pushed_, level_);
+        sprintf(buf, "\n== Incomplete Log Entry ==\ntaskID:%u\nlength:%lu\naddr:%p\ntag:%u\nflag:%p\ncomplete:%d\nisrecv:%d\nintra_msg:%d\np:%p\npushed:%d\nlevel:%u\n==========================\n", taskID_, length_, addr_, tag_, flag_, complete_, isrecv_, intra_cd_msg_, p_, pushed_, level_);
         return std::string(buf);
       }
     };
@@ -602,13 +603,16 @@ extern void GatherProfile(void);
       uint32_t unit_size_;
     public:
       IncompleteLogStore(){}
+
       IncompleteLogStore(uint32_t unit_size) : unit_size_(unit_size) {}
-      std::vector<IncompleteLogEntry>::iterator find(int64_t flag) {
+
+      std::vector<IncompleteLogEntry>::iterator find(MsgFlagT flag) {
         std::vector<IncompleteLogEntry>::iterator it = begin();
         for(; it!=end(); ++it) {
-          if(it->flag_ == flag) 
-            break;
+          if(it->flag_ == flag) return it;
+            //break;
         }
+        assert(it == end());
         return it;
       }
     };

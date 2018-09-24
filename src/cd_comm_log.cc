@@ -235,7 +235,7 @@ CommLogErrT CommLog::Realloc()
 
 bool CommLog::ProbeAndLogData(void *addr, 
                               uint64_t length,
-                              int64_t flag,
+                              MsgFlagT flag,
                               bool isrecv)
 {
   uint64_t pos;
@@ -247,7 +247,7 @@ bool CommLog::ProbeAndLogData(void *addr,
   // and associate it with the data
   for (pos=0; pos<log_table_.cur_pos_; pos++)
   {
-    if (log_table_.base_ptr_[pos].flag_ == flag)
+    if (log_table_.base_ptr_[pos].flag_ == (uint64_t)flag)
     {
       // change log table
       // length stored is length from isend/irecv, so length should match here...
@@ -272,7 +272,7 @@ bool CommLog::ProbeAndLogData(void *addr,
 
 bool CommLog::ProbeAndLogDataPacked(void *addr, 
                                     uint64_t length,
-                                    int64_t flag,
+                                    MsgFlagT flag,
                                     bool isrecv)
 {
   if(isrecv) {
@@ -303,7 +303,7 @@ bool CommLog::ProbeAndLogDataPacked(void *addr,
     tmp_table_ptr = (struct LogTableElement *) (child_log_.base_ptr_+inner_index);
     while (tmp_index < tmp_log_table.cur_pos_)
     {
-      if (tmp_table_ptr->flag_ == flag){
+      if (tmp_table_ptr->flag_ == (uint64_t)flag){
         // if found the corresponding log entry
         assert(tmp_table_ptr->length_ == length);
         found = true;
@@ -338,7 +338,7 @@ bool CommLog::ProbeAndLogDataPacked(void *addr,
 }
 
 bool CommLog::FoundRepeatedEntry(const void *data_ptr, uint64_t data_length, 
-                                 bool completed, int64_t flag)
+                                 bool completed, MsgFlagT flag)
 {
   //LOG_DEBUG("Inside FoundRepeatedEntry:\n");
   //LOG_DEBUG("isrepeated_=%d\n", log_table_.base_ptr_[log_table_.cur_pos_-1].isrepeated_);
@@ -349,13 +349,13 @@ bool CommLog::FoundRepeatedEntry(const void *data_ptr, uint64_t data_length,
   return log_table_.base_ptr_[log_table_.cur_pos_-1].isrepeated_ &&
       log_table_.base_ptr_[log_table_.cur_pos_-1].length_ == data_length &&
       log_table_.base_ptr_[log_table_.cur_pos_-1].completed_ == completed &&
-      log_table_.base_ptr_[log_table_.cur_pos_-1].flag_ == flag;
+      log_table_.base_ptr_[log_table_.cur_pos_-1].flag_ == (uint64_t)flag;
 
 }
 
 
 CommLogErrT CommLog::LogData(const void *data_ptr, uint64_t data_length, uint32_t taskID,
-                          bool completed, int64_t flag, 
+                          bool completed, MsgFlagT flag, 
                           bool isrecv, bool isrepeated, 
                           bool intra_cd_msg, int tag, ColorT comm)
 {
@@ -427,7 +427,7 @@ CommLogErrT CommLog::LogData(const void *data_ptr, uint64_t data_length, uint32_
 
 
 CommLogErrT CommLog::WriteLogTable (uint32_t taskID, const void *data_ptr, uint64_t data_length, 
-                                  bool completed, int64_t flag, bool isrepeated)
+                                  bool completed, MsgFlagT flag, bool isrepeated)
 {
   CommLogErrT ret;
   if (log_table_.cur_pos_ >= log_table_.table_size_) 
@@ -443,7 +443,7 @@ CommLogErrT CommLog::WriteLogTable (uint32_t taskID, const void *data_ptr, uint6
   log_table_.base_ptr_[log_table_.cur_pos_].pos_ = log_queue_.cur_pos_;
   log_table_.base_ptr_[log_table_.cur_pos_].length_ = data_length;
   log_table_.base_ptr_[log_table_.cur_pos_].completed_ = completed;
-  log_table_.base_ptr_[log_table_.cur_pos_].flag_ = flag;
+  log_table_.base_ptr_[log_table_.cur_pos_].flag_ = (uint64_t)flag;
   log_table_.base_ptr_[log_table_.cur_pos_].counter_ = 1;
   log_table_.base_ptr_[log_table_.cur_pos_].reexec_counter_ = 0;
   log_table_.base_ptr_[log_table_.cur_pos_].isrepeated_ = isrepeated;

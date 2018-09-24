@@ -208,7 +208,7 @@ void HandleEntrySearch::HandleEvent(void)
     }
 
 //    ptr_cd_->event_flag_[entry_requester_id] &= ~kEntrySearch;
-//    IncHandledEventCounter();
+//    IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
   }
   else {
     // failed to search the entry at this level of CD.
@@ -240,12 +240,12 @@ void HandleEntrySearch::HandleEvent(void)
                &(parent->ptr_cd()->entry_request_req_[tag_to_search].req_));
 
 //    ptr_cd_->event_flag_[entry_requester_id] &= ~kEntrySearch;
-//    IncHandledEventCounter();
+//    IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
 
   }
 
 //  ptr_cd_->event_flag_[entry_requester_id] &= ~kEntrySearch;
-  IncHandledEventCounter();
+  IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
 
 #endif
 
@@ -381,7 +381,7 @@ void HandleEntrySend::HandleEvent(void)
 //    else {
 //      *(ptr_cd_->event_flag_) &= ~kEntrySend;
 //    }
-    IncHandledEventCounter();
+    IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
   }
 #endif
 }
@@ -413,7 +413,7 @@ void HandleErrorOccurred::HandleEvent(void)
   // Resume
   CD_DEBUG("\n== HandleErrorOccurred::HandleEvent HeadCD Event kErrorOccurred is handled!!\n");
 //  ptr_cd_->event_flag_[task_id] &= ~kErrorOccurred;
-  IncHandledEventCounter();
+  IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
 
   // reset this flag for the next error
   // This will be invoked after CheckMailBox is done, 
@@ -445,7 +445,7 @@ void HandleAllResume::HandleEvent(void)
 
 //  *(ptr_cd_->event_flag_) &= ~kAllResume;
 
-  IncHandledEventCounter();
+  IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
 
 //  PMPI_Barrier(ptr_cd_->color());
 //  cout << "\n\n[Barrier] HandleAllResume::HandleEvent "<< ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl; //getchar();
@@ -464,7 +464,7 @@ void HandleAllPause::HandleEvent(void)
   
   cddbg << "CD Event kAllPause\t\t\t";
   *(ptr_cd_->event_flag_) &= ~kAllPause;
-  IncHandledEventCounter();
+  IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
   cddbg << "Barrier resolved" << endl;
   PMPI_Barrier(ptr_cd_->color());
   cout << "\n\n[Barrier] HandleAllPause::HandleEvent " << ptr_cd_->GetCDName() <<" / " << ptr_cd_->GetNodeID() << "\n\n" << endl;
@@ -476,7 +476,7 @@ void HandleAllPause::HandleEvent(void)
   }
 #else
 //  *(ptr_cd_->event_flag_) &= ~kAllPause;
-  IncHandledEventCounter();
+  IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
 #endif
 
 #endif
@@ -602,7 +602,7 @@ void HandleAllReexecute::HandleEvent(void)
 
 //  *(ptr_cd_->event_flag_) &= ~kAllReexecute;
 
-  IncHandledEventCounter();
+  IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
 
 //  rollback_point = ptr_cd_->CheckRollbackPoint(false); // false means local
   CD_DEBUG("[%s] kAllReexecute need reexec from %u (new rollback_point:%u) (cur %u)\n", 
@@ -661,12 +661,12 @@ void HandleAllReexecute::HandleEvent(void)
 //  }
 
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
-  IncHandledEventCounter();
+  IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
 
   CD_DEBUG("[%s] need reexec (%d) O-->%u (cur %u)\n", __func__, CD::need_reexec, CD::*rollback_point_, ptr_cd_->level());
 #else
   *(ptr_cd_->event_flag_) &= ~kAllReexecute;
-  IncHandledEventCounter();
+  IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
 #endif
 
 #endif
@@ -731,7 +731,7 @@ void HandleErrorOccurred::HandleEvent(void)
     // Resume
     cddbg << "HeadCD Event kErrorOccurred";
     ptr_cd_->event_flag_[task_id] &= ~kErrorOccurred;
-    IncHandledEventCounter();
+    IncHandledEventCounter(*(ptr_cd_->pendingFlag_));
 
     // reset this flag for the next error
     // This will be invoked after CheckMailBox is done, 

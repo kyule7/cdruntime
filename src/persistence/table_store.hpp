@@ -537,6 +537,8 @@ class TableStore : public BaseTable {
     void PrintEntry(const char *str="", std::function<const char *(uint64_t)> hash=DefaultHash, uint64_t print_upto=0)
     {
       if(print_upto == 0) print_upto = tail_;
+      printf("Total:%lu (%lu) ,              entry name,        ID,attr,      size,     offset, source (grow:%lu, alloc:%u)\n", 
+              print_upto, tail_, grow_unit_, allocated_); 
       for(uint64_t i=0; i<print_upto; i++) {
         ptr_[i].Print(str, hash);
       }

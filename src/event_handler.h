@@ -58,7 +58,7 @@ public:
   EventHandler() {}
   virtual ~EventHandler(void) {}
   virtual void HandleEvent(void) {}
-  static inline void IncHandledEventCounter(void) { handled_event_count++; }
+  static inline void IncHandledEventCounter(uint32_t pending) { handled_event_count++; CD_DEBUG("handled:%d, pending:%u\n", handled_event_count, pending); }
 };
 
 class CDEventHandler : public EventHandler {

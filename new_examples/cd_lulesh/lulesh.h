@@ -1512,7 +1512,6 @@ class Domain : public Internal {
       LULESH_PRINT("====================\npreservation size: %lu == %lu ~= %lu, (w/ table: %lu)\n======================\n", prv_size, preserved_size_only, preserved_size, total_size_);
       PrintDebugDetail(true);
 
-
       return prv_size; 
    }
 
@@ -1543,6 +1542,13 @@ class Domain : public Internal {
       } // while ends
 //      LULESH_PRINT("------------ Done -----------\n");
       PrintDebugDetail(false);
+
+      // Initialize requests 6 faces + 12 edges + 8 corners 
+//      printf("[%s %d] Init requests \n", __func__, myRank);
+//      for (Index_t ii=0; ii<26; ++ii) {
+//        sendRequest[ii] = MPI_REQUEST_NULL;
+//        recvRequest[ii] = MPI_REQUEST_NULL;
+//      }
       return rst_size;
    }
 

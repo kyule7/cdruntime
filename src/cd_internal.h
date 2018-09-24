@@ -655,7 +655,7 @@ public:
 #if CD_COMM_LOG_ENABLED
 public:
     //KL
-    bool DeleteIncompleteLog(int64_t flag);
+    bool DeleteIncompleteLog(MsgFlagT flag);
     //bool DeleteIncompleteLog(void* request);
     CommLogErrT InvalidateIncompleteLogs(void);
     CommLogErrT ProbeIncompleteLogs(void);
@@ -667,12 +667,12 @@ public:
     //SZ
     CDHandle *GetParentHandle();
     //SZ
-    CommLogErrT ProbeAndLogData(int64_t flag);
+    CommLogErrT ProbeAndLogData(MsgFlagT flag);
     //SZ
     CommLogErrT LogData(const void *data_ptr, 
                         unsigned long length, 
                         uint32_t task_id=0,
-                        bool completed=true, int64_t flag=0,
+                        bool completed=true, MsgFlagT flag=0,
                         bool isrecv=0, bool isrepeated=0, 
                         // KL : added these three things
                         bool intra_cd_msg=false, 
@@ -720,9 +720,9 @@ public:
     inline bool GetBegin() const { return begin_; } 
     inline void SetBegin()       { CD_ASSERT_STR(begin_ == false, "Lv%u: %s\n", level(), label()); begin_ = true; } 
     inline void UnsetBegin()     { CD_ASSERT_STR(begin_ == true, "Lv%u: %s\n", level(), label()); begin_ = false; } 
+  public:
     inline bool IsFailed(void) const { return (failed_phase != HEALTHY); }
     inline bool IsGood(void) const { return (failed_phase == HEALTHY); }
-  public:
     int  BlockUntilValid(MPI_Request *request, MPI_Status *status);
     int  BlockallUntilValid(int count, MPI_Request array_of_request[], MPI_Status array_of_status[]);
     bool CheckIntraCDMsg(int target_id, MPI_Group &target_group);

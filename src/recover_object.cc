@@ -38,12 +38,16 @@ using namespace cd;
 
 void RecoverObject::Recover(CD* cd, uint64_t error_name_mask, uint64_t error_location_mask, std::vector<SysErrT> errors) 
 {
+  cd->cd_exec_mode_ = kReexecution; 
+  cd->reexecuted_ = true;
   cd->RestoreAll();
   cd->Reexecute();
 }
 
 void RecoverObject::Recover(CD* cd, uint64_t error_name_mask, uint64_t error_location_mask)
 {
+  cd->cd_exec_mode_ = kReexecution; 
+  cd->reexecuted_ = true;
   cd->RestoreAll();
   cd->Reexecute();
 }

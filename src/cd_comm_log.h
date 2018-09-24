@@ -100,11 +100,11 @@ class CommLog {
 
     bool ProbeAndLogData(void* addr, 
                          uint64_t length, 
-                         int64_t flag,
+                         MsgFlagT flag,
                          bool isrecv);
     bool ProbeAndLogDataPacked(void* addr, 
                                uint64_t length, 
-                               int64_t flag,
+                               MsgFlagT flag,
                                bool isrecv);
     // log new data into the queue
     // need to check if running out queues
@@ -112,7 +112,7 @@ class CommLog {
                         uint64_t data_length, 
                         uint32_t taskID=0,
                         bool completed=true,
-                        int64_t flag=0,
+                        MsgFlagT flag=0,
                         bool isrecv=0,
                         bool isrepeated=0,
                         bool intra_cd_msg=false,
@@ -187,13 +187,13 @@ class CommLog {
     bool FoundRepeatedEntry(const void *data_ptr, 
                             uint64_t data_length, 
                             bool completed, 
-                            int64_t flag);
+                            MsgFlagT flag);
 
     CommLogErrT WriteLogTable (uint32_t thread,
                               const void *data_ptr, 
                               uint64_t data_length, 
                               bool completed,
-                              int64_t flag,
+                              MsgFlagT flag,
                               bool isrepeated);
     CommLogErrT WriteLogQueue (const void *data_ptr, 
                                uint64_t data_length,

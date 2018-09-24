@@ -52,6 +52,10 @@ using namespace ::interface;
 using namespace cd::logging;
 using namespace std;
 
+#define BUGFIX_0327 1
+#define _LOG_PROFILING 0
+#define USE_ALLOC_SHM 1
+
 
 ProfMapType   common::profMap;
 bool tuned::tuning_enabled = false;
@@ -59,13 +63,6 @@ uint32_t cd::new_phase = 0;
 bool cd::just_reexecuted;
 bool cd::first_complete = false;
 
-// serializable
-//uint64_t cd::PackerSerializable::gen_id = 0;
-
-//#define INVALID_ROLLBACK_POINT 0xFFFFFFFF
-#define BUGFIX_0327 1
-#define _LOG_PROFILING 0
-#define USE_ALLOC_SHM 1
 CD_CLOCK_T cd::log_begin_clk;
 CD_CLOCK_T cd::log_end_clk;
 CD_CLOCK_T cd::log_elapsed_time;
@@ -1359,10 +1356,10 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 
 //    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
     cd_lv_to_sync->CheckMailBox();
-//    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
+    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
 //    cd_lv_to_sync->CheckMailBox();
     //new_rollback_point = cd_lv_to_sync->CheckRollbackPoint(true);
-    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
+    //MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
     new_rollback_point = cd_lv_to_sync->CheckRollbackPoint(false);
 
     CD_DEBUG("rollback point from head:%u (headID:%d at lv#%u)\n", 
@@ -1475,8 +1472,9 @@ void CD::Escalate(CDHandle *leaf, bool need_sync_to_reexec) {
 // routine and reach this SyncCDs() boundary to rollback together.
 CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 {
-  PRINT_BOTH("#########%s level : %d (rollback_point: %d, failed_phase: %ld/%ld) (%s)\n", __func__, 
-              target->level(), *rollback_point_, cd::failed_phase, cd::failed_seqID, target->label().c_str());
+  PRINT_BOTH("######### %s lv %u seq:%ld->%ld (rollback_point: %d, failed_phase: %ld) (%s)\n", __func__, 
+              target->level(), cd::phaseTree.current_->seq_end_, cd::failed_seqID,
+              *rollback_point_, cd::failed_phase, target->label().c_str());
   
 #if 0//CD_PROFILER_ENABLED
   static bool check_sync_clk = false;
@@ -1509,6 +1507,10 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
   phaseTree.current_->ResetSeqID(rollback_lv);
   CD_DEBUG("[%s] level : %u (current) == %u (rollback_point)\n", 
             target->ptr_cd()->cd_id_.GetStringID().c_str(), level, rollback_lv);
+
+  // Should be done before sync
+  target->ptr_cd_->CompleteLogs(true);
+
   if(level == rollback_lv) {
     // for tasks that detect error at completion point or collective create point.
     // It already called SyncCDs() at that point,
@@ -1559,9 +1561,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
 
       // In GetCDToRecover
       phaseTree.current_->profile_.RecordRollback(false); // measure timer and calculate sync time.
-//      CompletePhase(target->phase(), true);
-//      target->ptr_cd_->UnsetBegin();
-      target->ptr_cd_->CompleteLogs(true);
+      //target->ptr_cd_->CompleteLogs(true);
       target->ptr_cd_->DeleteEntryDirectory();
       CompletePhase(target->phase(), true);
       target->ptr_cd_->UnsetBegin();
@@ -1581,7 +1581,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
       recovery_sync_smpl += CD_CLOCK() - prof_sync_clk;
 //      check_sync_clk = false;
 #endif
-      target->ptr_cd_->CompleteLogs(true);
+      //target->ptr_cd_->CompleteLogs(true);
       CompletePhase(target->phase(), true);
       target->ptr_cd_->UnsetBegin();
       return target;
@@ -1616,7 +1616,7 @@ CDHandle *CD::GetCDToRecover(CDHandle *target, bool collective)
     phaseTree.current_->profile_.RecordRollback(false); // measure timer and calculate sync time.
 //    CompletePhase(target->phase(), true);
 //    target->ptr_cd_->UnsetBegin();
-    target->ptr_cd_->CompleteLogs(true);
+    //target->ptr_cd_->CompleteLogs(true);
     target->ptr_cd_->DeleteEntryDirectory();
     CompletePhase(target->phase(), true);
     target->ptr_cd_->UnsetBegin();
@@ -1649,13 +1649,13 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
   const int64_t now_seqID = phaseNodeCache[now_phase]->seq_end_;
   const int64_t now_begID = phaseNodeCache[now_phase]->seq_begin_;
   const int64_t seq_tot = phaseNodeCache[now_phase]->seq_acc_rb_;
-  CD_DEBUG("%s %s %s (%ld, %u) %ld->%ld\t Reexec from %u (Before Sync)\n", 
+  CD_DEBUG("%s %s %s (%ld, %u) %ld->%ld\t Reexec from %d (Before Sync), incomplete logs:%zu\n", 
           GetCDName().GetString().c_str(), 
           GetNodeID().GetString().c_str(), 
           IsFailed()? "REEX" : "EXEC",
           seq_tot, cd_id_.sequential_id_,
           now_begID, now_seqID,
-          orig_rollback_point);
+          (int)orig_rollback_point, incomplete_log_.size());
 //  printf("%s check this out\n", __func__);
 
 #if CD_MPI_ENABLED
@@ -2499,8 +2499,11 @@ CDErrT CD::Preserve(void *data,
   CDErrT ret = CDErrT::kOK;
 //  uint64_t tag = cd_hash(my_name);
 //  tag2str[tag] = my_name;
-  CD_DEBUG("LV%u data addr: %p, len: %lu, entry name : %s, ref name: %s, ref_offset:%lu, [cd_exec_mode : %d]\n", level(),
-           data, len_in_bytes, my_name.c_str(), ref_name.c_str(), ref_offset, cd_exec_mode_); 
+  if (IsFailed() && phase() != failed_phase) return ret;
+  CD_DEBUG("LV%u data addr: %p, len: %lu, entry name : %s, ref name: %s, ref_offset:%lu, [cd_exec_mode : %d] rstr:%u < prsv:%u (fail:%u->%ld|%ld->%ld)\n", level(),
+           data, len_in_bytes, my_name.c_str(), ref_name.c_str(), ref_offset, cd_exec_mode_, 
+           restore_count_, preserve_count_, 
+           this->phase(), cd::failed_phase, cd::phaseTree.current_->seq_end_, cd::failed_seqID);
 //  printf("\n\n[CD::Preserve] data addr: %p, len: %lu, entry name : %s, ref name: %s, [cd_exec_mode : %d]\n", 
 //           data, len_in_bytes, my_name, ref_name, cd_exec_mode_); 
 
@@ -2511,6 +2514,7 @@ CDErrT CD::Preserve(void *data,
 //           CHECK_PRV_TYPE(preserve_mask, kRegen),
 //           CHECK_PRV_TYPE(preserve_mask, kCoop));
 //  printf("%s %s\n", my_name.c_str(), ref_name.c_str());
+
 
   if( CHECK_PRV_TYPE(preserve_mask, kOutput) ) { 
 
@@ -2573,6 +2577,21 @@ CDErrT CD::Preserve(void *data,
       }
   
     }
+    // FIXME: 09.21.2019
+    // App data is restored when preserve call is invoked during re-execution. 
+    // However, this becomes problemetic when we allow parent-level preservation 
+    // inside child-level CD. 
+    // This preserve call boundary indicates that the latest time when the user 
+    // data must be preserved/restored. 
+    // The earliest time for restoring the data is beginning of a CD and
+    // that for preserving the data is when the data is the latest point when
+    // the data is updated.
+    //
+    // New suggestion is to start restoring in the beginning of CDs with preservation
+    // table, and wait for restoring the data when re-execution encounters
+    // the preserve call (restore call internally). 
+    // The initiation of restoration is performed at InternalReexecute() 
+    // See also RestoreAll()
     else if(cd_exec_mode_ == kReexecution) { // Re-execution mode -> Restoration
       assert(dont_preserve == false);
       
@@ -2640,6 +2659,7 @@ CDEntry *CD::PreserveCopy(void *data,
                           CDPrvType preserve_mask, 
                           const std::string &my_name, uint64_t id)
 {
+  CD_DEBUG("data:%p len:%lu mask:%x name:%s, id:%lu\n", data, len_in_bytes, preserve_mask, my_name.c_str(), id);
   CDEntry *pEntry = NULL;
   uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
   attr = (CHECK_PRV_TYPE(preserve_mask, kOutput))? (Attr::koutput | attr) : attr;
@@ -2901,8 +2921,8 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
                                const string &my_name, const string &ref_name)
 {
   CD::CDInternalErrT ret = kOK; 
-  CD_DEBUG("\t\t\tNow reexec %s!!! %d rstr:%u < prsv:%u (fail:%u->%ld/%ld->%ld)\n\n\n", 
-      my_name.c_str(), level(), iterator_entry_count++, restore_count_, preserve_count_, this->phase(), cd::failed_phase, 
+  CD_DEBUG("\t\t\tNow reexec %s!!! rstr:%u < prsv:%u (fail:%u->%ld/%ld->%ld)\n", 
+      my_name.c_str(), level(), restore_count_, preserve_count_, this->phase(), cd::failed_phase, 
       cd::phaseTree.current_->seq_end_, cd::failed_seqID);
   const bool is_ref = CHECK_PRV_TYPE(preserve_mask, kRef);
   uint32_t found_level = INVALID_NUM32;
@@ -3060,29 +3080,87 @@ CD::CDInternalErrT CD::Restore(const string &entry_name) {
  **********************************************************************************/
 CDErrT CD::RestoreAll()
 {
-  //assert(0);
-  //Jinsuk: Side question: how do we know if the recovery was successful or not? 
-  //It seems like this is very important topic, we could think the recovery was successful, 
-  //but we still can miss, or restore with wrong data and the re-execute, 
-  //for such cases, do we have a good detection mechanisms?
-  // Jinsuk: 02092014 are we going to leave this function? 
-  //It seems like this may not be required. Or for optimization, we can do this. 
-  //Bulk restoration might be more efficient than fine grained restoration for each block.
-  // this code section is for restoring all the cd entries at once. 
-  // Now this is defunct. 
-
-  //iterator_entry_ = entry_directory_.begin();
-  //FIXME
+  const int64_t current_phase = cd_id_.cd_name_.phase_;
+  int64_t seq_begin = phaseNodeCache[current_phase]->seq_begin_;
+  int64_t seq_end = phaseNodeCache[current_phase]->seq_end_;
+  int64_t seq_acc_rb = phaseNodeCache[current_phase]->seq_acc_rb_;
+  PRINT_BOTH("%s lv:%u, %s, %s, (%ld, %u), bitvec:%lx, (curr:%ld,fphase:%ld), %ld~%ld->%ld\n", 
+      IsFailed()? "REEX" : "EXEC",
+      level(), name_.c_str(), label_.c_str(), 
+      seq_acc_rb, cd_id_.sequential_id_, sys_detect_bit_vector_, 
+      current_phase, failed_phase, seq_begin, seq_end, cd::failed_seqID);
   restore_count_ = 0;
+  char tmp[64];
+  sprintf(tmp, "%s %u %ld->%ld", label_.c_str(), level(), seq_end, cd::failed_seqID);
+  if (myTaskID == 0)
+    entry_directory_.table_->PrintEntry(tmp, GetCDEntryStr);
 
-  //TODO currently we only have one iterator. This should be maintined to figure out the order. 
-  // In case we need to find reference name quickly we will maintain seperate structure such as binary search tree and each item will have CDEntry *.
 
-  //YKWON
-  //if(myTaskID == 4) printf("[%d %s at lv#%u] Reset to false at begin!\n", myTaskID, label_.c_str(), level());
-  //GONG
- // begin_ = false;
-
+#if 0
+  entry = entry_directory_.table_->FindReverse(tag, attr);
+  
+  const bool is_ref = CHECK_PRV_TYPE(preserve_mask, kRef);
+  uint32_t found_level = INVALID_NUM32;
+  uint64_t ref_id = 0; //cd_hash(ref_name);
+  uint64_t entry_id = cd_hash(my_name);
+  if(ref_name.empty()) { 
+    ref_id = entry_id;
+  } else {
+    ref_id = cd_hash(ref_name);
+  }
+  uint64_t search_tag = (is_ref)? ref_id : entry_id;
+  
+  // Search the preservation entry which is not krefer.
+  // It tries to search until it finds the entry without krefer.
+  CDEntry *src = SearchEntry(search_tag, found_level, Attr::koutput);
+  if(src == NULL) {
+    CDHandle *parent_cd = GetCurrentCD();
+    while( parent_cd != NULL ) {
+      CD *ptr_cd = parent_cd->ptr_cd();
+      if(myTaskID == 0) {
+        char tmp[16];
+        sprintf(tmp, "Restore %u", ptr_cd->level());
+        ptr_cd->entry_directory_.table_->PrintEntry(tmp, GetCDEntryStr);
+      }
+      uint64_t tag = search_tag;
+      src = ptr_cd->entry_directory_.table_->FindReverse(tag, Attr::koutput);
+      parent_cd = CDPath::GetParentCD(ptr_cd->level());
+    }
+  }
+  CD_ASSERT_STR(src != NULL, "Failed to search %s %lx=%lx %s (%x) lv:%u, entry #:%ld\n", 
+                     tag2str[search_tag].c_str(),
+                     (is_ref)? ref_id : entry_id, search_tag,
+                     (is_ref)? ref_name.c_str() : my_name.c_str(), preserve_mask, 
+                     level(),
+                     entry_directory_.table_->tablesize());
+  assert(src);
+  CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
+  if( CHECK_PRV_TYPE(preserve_mask, kSerdes) ) {
+    PackerSerializable *serializer = reinterpret_cast<PackerSerializable *>(data);
+    // It is very important to pass entry_directory_ of CD level that has search_tag.
+    PRINT_MPI("%p, %p, %p, %s, %s\n", ptr_cd->entry_directory_.table_, serializer, ptr_cd, ptr_cd->label_.c_str(), (is_ref)? ref_name.c_str() : my_name.c_str());
+#if CD_DEBUG_ENABLED_INTERNAL
+    serializer->Print();
+#endif
+    //if( CHECK_PRV_TYPE(preserve_mask, kIgnore) == false ) 
+    {
+      uint64_t restored_len = serializer->Deserialize(ptr_cd->entry_directory_, (is_ref)? ref_name.c_str() : my_name.c_str());
+      if(restored_len == -1UL) {
+        
+        PRINT_MPI("Print Entries at %s (#%u)\n", ptr_cd->label_.c_str(), ptr_cd->level());
+          CD_ASSERT_STR(0, "Not deserialized %s %u / %u\n", name_.c_str(), level(), ptr_cd->level());
+      }
+    }
+  } else {
+    // This will fetch from disk to memory
+    // Potential benefit from prefetching app data from preserved data in
+    // disk, overlapping reexecution of application.
+    CD_ASSERT_STR(src->size() == len_in_bytes, "%s len: %lu==%lu ", 
+        (is_ref)? ref_name.c_str() : my_name.c_str(), src->size(), len_in_bytes);
+    ptr_cd->entry_directory_.data_->GetData(src->src(), len_in_bytes, src->offset());
+    
+  }
+#endif
   return CDErrT::kOK;
 }
 
@@ -3226,7 +3304,7 @@ CDErrT CD::InternalReexecute(void)
   //            we need to change the cd_exec_mode_ and comm_log_mode_ outside this function.
   // KL: I think it should be here, because recovery action might not be reexecution, but something else.
 
-  CD_DEBUG("reexecuted : %d, reexecution # : %d\n", reexecuted_, num_reexecution_);
+  PRINT_BOTH("reexecuted : %d, reexecution # : %d\n", reexecuted_, num_reexecution_);
   // This is very very tricky!!
   // non-head task will get the rollback_level_ of head task,
   // but if head already finished GetCDToRecover routine, then
@@ -3256,8 +3334,6 @@ CDErrT CD::InternalReexecute(void)
 //    *rollback_point_ = INVALID_ROLLBACK_POINT;        
 //  }
 
-  cd_exec_mode_ = kReexecution; 
-  reexecuted_ = true;
 
   // This is a flag to differentiate the case 
   // beween recreated begin and escalated begin.
@@ -3790,7 +3866,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
   //printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
   //if(incomplete_log_.size()!=0) 
   {
-    PRINT_BOTH("### [%s] Incomplete log size: %zu at level #%u\n", label_.c_str(), incomplete_log_.size(), level());
+    PRINT_BOTH("### [%s] incomplete logs: %zu at level #%u\n", label_.c_str(), incomplete_log_.size(), level());
 //    if(myTaskID ==7) printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
   }
 // FIXME: 20180212 
@@ -3799,53 +3875,67 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
 // http://mpi-forum.org/docs/mpi-1.1/mpi-11-html/node50.html
 // http://mpi-forum.org/docs/mpi-1.1/mpi-11-html/node47.html
 //
+// FIXME: 20180921
+// Also consider to use MPI_Request_get_status.
+// Unlike MPI_Test, MPI_Request_get_status does not deallocate or deactivate the
+// request. A call to one of the test/wait routines or MPI_Request_free should
+// be made to release the request object.
+// http://mpi.deino.net/mpi_functions/MPI_Request_get_status.html
+//
+//
 #if 1
   for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end();) {
+    bool handled = true;
+    char err_msg[256];
     //printf("[%d] Trying to test %p (#:%zu)...", myTaskID, it->flag_, incomplete_log_.size());
-    PRINT_BOTH("[%d] Invalidate ptr:%ld (#:%zu) Probe...", myTaskID, it->flag_, incomplete_log_.size());
+    sprintf(err_msg, "[%d] Invalidate ptr:0x%lx (#:%zu) Test...", myTaskID, it->flag_, incomplete_log_.size());
+    std::string err_str(err_msg);
+    //PRINT_BOTH("[%d] Invalidate ptr:0x%lx (#:%zu) Test...", myTaskID, it->flag_, incomplete_log_.size());
     MPI_Status status;
 //    int is_probed = -1;
 //    MPI_Iprobe(it->taskID_, it->tag_, it->comm_, &is_probed, &status);
 //    if(is_probed < 1) 
-    MPI_Request t_req = (MPI_Request)(it->flag_);
-    if(1)
-    {
-      int done = -1;
-      PRINT_BOTH("Failed...Test...");
+    MPI_Request &t_req = *(MPI_Request *)(it->flag_);
+    int done = -1;
+#if 1
+    if(t_req != MPI_REQUEST_NULL) {
+      //PRINT_BOTH("Failed...Test...");
       PMPI_Test(&t_req, &done, &status);
-      if(done) 
-//      if(0)
-      {
-        PRINT_BOTH("SUCCESS\n");
-        it = incomplete_log_.erase(it);
+      if(done > 0) {
+        err_str.append("SUCCESS");
+        //PRINT_BOTH("SUCCESS\n");
       } else {
-        if(t_req != MPI_REQUEST_NULL) {
-          int is_cancelled = -1;
-          PMPI_Cancel(&t_req);
-          PMPI_Test_cancelled(&status, &is_cancelled);
-          PRINT_BOTH("Failed...Cancel request:%ld ...", it->flag_);
-          if(is_cancelled <= 0) {
-            PRINT_BOTH("FAILED TO CANCEL\n");
-            it = incomplete_log_.erase(it);
-            //assert(0);
-          } else {
-            PRINT_BOTH("SUCCESS...");
-            PMPI_Test(&t_req, &done, &status);
-            if(done) {
-              PRINT_BOTH("TESTED\n");
-            } else {
-              PRINT_BOTH("WAITED\n");
-              PMPI_Wait(&t_req, &status);
-            }
-            //PMPI_Request_free((MPI_Request *)(it->flag_));
-            it = incomplete_log_.erase(it);
-          }
+#if 0
+        err_str.append("FAILED >>> Try Wait...");
+        PMPI_Wait(&t_req, &status);
+        err_str.append("SUCCESS");
+#else
+        err_str.append("FAILED");
+        handled = false;
+/*
+        err_str.append("FAILED >>> Try Cancel...");
+        int is_cancelled = -1;
+        PMPI_Cancel(&t_req);
+        PMPI_Test_cancelled(&status, &is_cancelled);
+        if(is_cancelled <= 0) {
+          err_str.append("FAILED TO CANCEL");
+          handled = false;
         } else {
-          PRINT_BOTH("DELETE NULL REQ\n");
-          it = incomplete_log_.erase(it);
+          err_str.append("SUCCESS");
         }
+*/
+#endif
       } 
-    } else {
+    } else { // MPI_REQUEST_NULL
+      err_str.append("DELETE NULL REQ");
+      //PRINT_BOTH("DELETE NULL REQ\n");
+    }
+    PRINT_BOTH("%s\n", err_str.c_str());
+    if (handled)
+      it = incomplete_log_.erase(it);
+    else
+      ++it;
+#else
       PRINT_BOTH("SUCCESS\n");
       PRINT_BOTH("Probed?\n");
       assert(0);
@@ -3853,11 +3943,42 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
       PMPI_Test(&t_req, &done, &status);
       it = incomplete_log_.erase(it);
       assert(done);
-    }
+#endif
   }
 #else
 #endif
-
+  // blocking until all incomplete logs are handled
+  PRINT_BOTH("Testing %zu\n", incomplete_log_.size());
+  uint64_t iters = 0;
+  while(incomplete_log_.size() > 0) {
+    for (auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ) {
+      MPI_Request &t_req = *(MPI_Request *)(it->flag_);
+      MPI_Status status;
+      int flag = -1;
+      PMPI_Test(&t_req, &flag, &status);
+      if (flag > 0 || t_req == MPI_REQUEST_NULL) it = incomplete_log_.erase(it);
+      else ++it;
+    }
+    if (iters++ > 1000000) break;
+  }
+  PRINT_BOTH("Canceling %zu\n", incomplete_log_.size());
+  iters = 0;
+  while(incomplete_log_.size() > 0) {
+    for (auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ) {
+      MPI_Request &t_req = *(MPI_Request *)(it->flag_);
+      MPI_Status status;
+      int is_cancelled = -1;
+      PMPI_Cancel(&t_req);
+      PMPI_Test_cancelled(&status, &is_cancelled);
+      if(is_cancelled > 0 || t_req == MPI_REQUEST_NULL) it = incomplete_log_.erase(it);
+      else ++it;
+    }
+    if (iters++ > 1000000) break;
+  }
+  for (auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ) {
+    it = incomplete_log_.erase(it);
+  }
+  PRINT_BOTH("Done\n");
   LogEpilogue();
   return kCommLogOK;
 }
@@ -3896,7 +4017,7 @@ CommLogErrT CD::ProbeIncompleteLogs(void)
   return kCommLogOK;
 }
 
-bool CD::DeleteIncompleteLog(int64_t flag)
+bool CD::DeleteIncompleteLog(MsgFlagT flag)
 {
   bool deleted = false;
 //  for(auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ++it) {
@@ -3911,7 +4032,7 @@ bool CD::DeleteIncompleteLog(int64_t flag)
   if(it != incomplete_log_.end()) {
     incomplete_log_.erase(it);
     deleted = true;
-    CD_DEBUG("FIND flag %ld\n", flag);
+    CD_DEBUG("FIND flag 0x%lx, incomplete logs:%zu\n", flag, incomplete_log_.size());
   }
   
   return deleted;
@@ -3919,7 +4040,7 @@ bool CD::DeleteIncompleteLog(int64_t flag)
 
 
 //SZ
-CommLogErrT CD::ProbeAndLogData(int64_t flag)
+CommLogErrT CD::ProbeAndLogData(MsgFlagT flag)
 {
   LogPrologue();
   // look for the entry in incomplete_log_
@@ -4036,7 +4157,7 @@ CommLogErrT CD::ProbeAndLogData(int64_t flag)
 
 //SZ
 CommLogErrT CD::LogData(const void *data_ptr, unsigned long length, uint32_t task_id, 
-                      bool completed, int64_t flag, bool isrecv, bool isrepeated, 
+                      bool completed, MsgFlagT flag, bool isrecv, bool isrepeated, 
                       bool intra_cd_msg, int tag, ColorT comm)
 {
   LogPrologue();
@@ -4135,6 +4256,8 @@ CD::CDInternalErrT CD::InvokeAllErrorHandler(void) {
   CDInternalErrT err = kOK;
   CDHandle *cdp = CDPath::GetCoarseCD(CDPath::GetCurrentCD());
   while(cdp != NULL) {
+    CD_DEBUG("=========== %16s lv %u events: %zu pending counter:%u, mailbox:%lx\n", cdp->GetLabel(), cdp->level(), cd_event_.size(), *pendingFlag_, IsHead() ? event_flag_[task_in_color()] : *event_flag_);
+
     err = cdp->ptr_cd_->InvokeErrorHandler();
     cdp = CDPath::GetParentCD(cdp->level());
   }
@@ -4146,18 +4269,19 @@ CD::CDInternalErrT CD::InvokeErrorHandler(void)
 {
 //  CD_DEBUG("\n[CD::InvokeErrorHandler] event queue size : %zu\n", cd_event_.size());
   CDInternalErrT cd_err = kOK;
+  CD_DEBUG("====================================== events: %zu pending counter:%u, mailbox:%lx\n", cd_event_.size(), *pendingFlag_, IsHead() ? event_flag_[task_in_color()] : *event_flag_);
 
   while(!cd_event_.empty()) {
-    CD_DEBUG("\n\n==============================\ncd event size : %zu\n", cd_event_.size());
+    CD_DEBUG("==== cd event size : %zu ====\n", cd_event_.size());
 
     EventHandler *cd_event_handler = cd_event_.front();
     cd_event_handler->HandleEvent();
 //    delete cd_event_handler;
-    CD_DEBUG("before pop #%zu\n", cd_event_.size());
+    CD_DEBUG("before pop events:%zu\n", cd_event_.size());
     cd_event_.pop_front();
-    CD_DEBUG("after  pop #%zu\n", cd_event_.size());
-    if(cd_event_.empty()) break;
+    CD_DEBUG("after  pop events:%zu\n", cd_event_.size());
   }
+  CD_DEBUG("================================================== pending counter:%u, mailbox:%lx\n", *pendingFlag_, IsHead() ? event_flag_[task_in_color()] : *event_flag_);
   
 #if _MPI_VER
 //  CD_DEBUG("Handled : %d, current pending flag (# pending events) : %d\n", handled_event_count, *pendingFlag_);

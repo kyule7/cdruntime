@@ -1707,9 +1707,14 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
     const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
 
     PRINT_MPI("** [Begin] %s %s (%s) " 
-             "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+             "fphase:%ld==%lu, (%lu~%lu->%lu)\n", 
              ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
-             cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
+             cd::failed_phase, curr_phase, curr_begID, curr_seqID, cd::failed_seqID);
+    if (cd::myTaskID == 0) 
+      printf("** [Begin] %s %s (%s) " 
+             "fphase:%ld==%lu, (%lu~%lu->%lu)\n", 
+             ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
+             cd::failed_phase, curr_phase, curr_begID, curr_seqID, cd::failed_seqID);
   }
   const bool is_reexecution = (GetExecMode() == kReexecution);
   cd::phaseTree.current_->profile_.RecordBegin(is_reexec, need_sync);
@@ -1730,7 +1735,6 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
   CD_DEBUG("%s %s at level %u (reexecInfo %d (%u))\n", ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
 
-
 //  printf("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
 //                                                                      level(), need_reexec(), *CD::rollback_point_);
   // Call internal Complete routine
@@ -1745,7 +1749,17 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
   // This part may be a bit tricky. failed_phase is reset to HEALTHY
   // in the case that current phase of CD is the end of the last failed point.
   // Otherwise failed_phase is not healthy and increment reexec_
-  bool is_reexec = (failed_phase != HEALTHY);
+  const bool is_reexec = (failed_phase != HEALTHY);
+  if(is_reexec && IsHead()) {
+    const uint64_t curr_phase = ptr_cd_->phase();
+    const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
+    const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
+    printf(">>> [%s %d] %s (%s) " 
+             "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+             __func__,
+             cd::myTaskID, ptr_cd_->cd_id_.GetStringID().c_str(), GetLabel(),
+             cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
+  }
   // Profile will be acquired inside CD::Complete()
   CDErrT ret = ptr_cd_->Complete(update_preservations, collective);
 
@@ -2572,7 +2586,9 @@ void CDHandle::RegisterErrorInjector(CDErrorInjector *cd_error_injector)
 
 int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
 {
+  bool during_rollback = ptr_cd_->IsFailed() ? true : false;
   uint64_t sys_err_vec = system_error_injector_->Inject();
+  if (during_rollback) sys_err_vec = 0;
   bool found = false;
   CD_DEBUG("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
   if(sys_err_vec == NO_ERROR_INJECTED) {

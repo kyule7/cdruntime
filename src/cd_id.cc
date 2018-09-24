@@ -180,5 +180,5 @@ string CDID::GetStringID(void) const
   return ( cd_name_.GetString()
          + string("-") + node_id_.GetStringID() 
          + string("-") + to_string(object_id_) 
-         + string("_") + to_string(sequential_id_) );
+         + string("-") + to_string(sequential_id_) );
 }
