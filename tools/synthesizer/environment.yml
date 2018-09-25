@@ -1,0 +1,19 @@
+name: cd_synthesizer
+channels:
+  - cqwz
+  - conda-forge
+  - anaconda
+  - defaults
+dependencies:
+  - scons=3.1.0=py36_1
+  - gmp=6.1.2=hfc679d8_0
+  - libgcc-ng=7.2.0=hdf63c60_3
+  - libstdcxx-ng=7.2.0=hdf63c60_3
+  - gcc-5=5.2.0=0
+  - cloog=0.18.0=0
+  - gcc=4.8.5=7
+  - isl=0.12.2=0
+  - mpc=1.0.3=hec55b23_5
+  - mpfr=3.1.5=h11a74b3_2
+prefix: /home1/03341/kyushick/anaconda3/envs/cd_synthesizer
+

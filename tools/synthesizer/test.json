@@ -1,0 +1,123 @@
+{
+	// global parameters
+	"global param" : {
+		"max error" : 20
+	},
+
+	// CD hierarchy
+	"CD info" : {
+		"root CD" : {
+			"iterations" : 2,
+      "label" : "Very Root",
+			"type" : "hmcd", // homogeneous CDs
+			"child siblings" : 64, // number of parallel CDs 
+			"fault rate" : 0.0, // not used
+      "exec time" : 0.5,
+      "exec time std" : 0.05, 
+      "preserve vol" : 10,
+      "comm payload" : 2,
+      "comm type" : "reduction",
+			"rd_bw" : 0.0, // not used
+			"wr_bw" : 0.0, // not used
+			
+			"child CDs" : {
+
+				"CD1" : {
+					"iterations" : 5, 
+          "label" : "MainLoop",
+					"type" : "htcd", // heterogeneous CDs
+					"child siblings" : 64, 
+					"fault rate" : 0.00000001,
+          "exec time" : 1,
+          "exec time std" : 0.2, 
+          "preserve vol" : 500,
+          "comm payload" : 50,
+          "comm type" : "reduction",
+					"rd_bw" : 10,
+					"wr_bw" : 10,
+
+					"child CDs" : {
+
+						"CD1_1" : {
+
+              "label" : "CalcForce",
+							"type" : "leaf",
+							"iterations" : 2,
+							"fault rate" : 0.000001,
+              "exec time" : 1,
+              "exec time std" : 0.08, 
+              "preserve vol" : 100,
+              "comm payload" : 10,
+              "comm type" : "sendrecv",
+							"rd_bw" : 100,
+							"wr_bw" : 100,
+
+							"cons" : {
+								// name : size
+								"a" : 1000,
+								"b" : 2000
+							},
+							"prod" : {
+								"c" : 3000
+							},
+							"execution time" : 1000
+						},
+
+						"CD1_2" : {
+							"type" : "leaf",
+              "label" : "CalcTemp",
+							"iterations" : 4,
+							"fault rate" : 0.000001,
+              "exec time" : 2,
+              "exec time std" : 0.3, 
+              "preserve vol" : 200,
+              "comm payload" : 20,
+              "comm type" : "nonblocking",
+							"rd_bw" : 100,
+							"wr_bw" : 100,
+
+							"cons" : {
+								"a" : 1000,
+								"c" : 3000
+							},
+							"prod" : {
+								"d" : 4000
+							},
+							"execution time" : 3000
+						},
+
+						"CD1_3" : {
+							"type" : "leaf",
+              "label" : "CalcTime",
+							"iterations" : 3,
+							"fault rate" : 0.000001,
+              "exec time" : 1,
+              "exec time std" : 0.3, 
+              "preserve vol" : 300,
+              "comm payload" : 30,
+              "comm type" : "blocking",
+							"rd_bw" : 100,
+							"wr_bw" : 100,
+
+							"cons" : {
+								"d" : 4000,
+								"e" : 5000
+							},
+							"prod" : {
+								"f" : 6000
+							},
+							"execution time" : 2000
+						}
+					} // child CDs
+				} // CD1
+			} // child CDs
+		} // root C
+	}, // CD info
+  "sweep" : {
+		"global param.max error" : {
+			"sweep_type" : "list",
+			"data_type" : "uint",
+			"space" : [30]
+		}
+	}
+}
