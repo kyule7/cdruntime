@@ -15,23 +15,23 @@ struct CommStat {
     : send_buf_(nullptr)  
     , recv_buf_(nullptr)  
     , rank_(0) 
-  { printf("CommStat Default Constructed\n"); }
+  { SYN_PRINT("CommStat Default Constructed\n"); }
   CommStat(const CommStat &that)
     : send_buf_(that.send_buf_)  
     , recv_buf_(that.recv_buf_)  
     , rank_(that.rank_) 
-  { printf("CommStat Copy Constructed\n"); }
+  { SYN_PRINT("CommStat Copy Constructed\n"); }
   CommStat(int rank, int count)
     : rank_(rank)
     , send_buf_(new int[count]()) 
     , recv_buf_(new int[count]())
   {
-    printf("[%d] create %p %p\n", rank_, send_buf_, recv_buf_);
+    SYN_PRINT("[%d] create %p %p\n", rank_, send_buf_, recv_buf_);
   }
 
   ~CommStat(void) 
   { 
-    printf("[%d] delete %p %p\n", rank_, send_buf_, recv_buf_);
+    SYN_PRINT("[%d] delete %p %p\n", rank_, send_buf_, recv_buf_);
     delete [] send_buf_;
     delete [] recv_buf_;
   }
@@ -48,7 +48,7 @@ struct AppComm {
   MPI_Datatype datatype_;
   MPI_Comm comm_;
   void Print(const char *func) {
-    printf(">> Comm: %s %d %d %zu %zu (Type) %x %x (MPI_INT)\n", func, rank_, size_, src_.size(), dst_.size(), datatype_, MPI_INT);
+    SYN_PRINT(">> Comm: %s %d %d %zu %zu (Type) %x %x (MPI_INT)\n", func, rank_, size_, src_.size(), dst_.size(), datatype_, MPI_INT);
   }
   void Init(void) {
     // set up src and dst for each rank
@@ -58,8 +58,14 @@ struct AppComm {
     int target = (rank_ % 2 == 0) ? rank_ + 1 : rank_ - 1;
     src_.push_back(new CommStat(target, count_));
     dst_.push_back(new CommStat(target, count_));
-    printf("AppComm %s\n", __func__); 
+    SYN_PRINT("AppComm %s\n", __func__); 
   }
+
+  ~AppComm(void) {
+    for (auto &src : src_) delete src;
+    for (auto &dst : dst_) delete dst;
+  }
+
   AppComm(void)
     : count_(0)
     , tag_(0)
@@ -76,7 +82,7 @@ struct AppComm {
     comm_type_ = that.comm_type_;
     datatype_  = that.datatype_;
     comm_  =     that.comm_;
-    printf("datatype:%d\n", that.datatype_);
+    SYN_PRINT("datatype:%d\n", that.datatype_);
     that.Print("that"); Print("Copy"); 
     //getchar();
   }
@@ -122,7 +128,7 @@ struct AppComm {
     if (count_ > 0) {
       for (auto &dst : dst_) { ret = MPI_Send(dst->send_buf_, count_, datatype_, dst->rank_, tag_, comm_); }
     } else {
-      printf("count is zero\n"); assert(0);
+      SYN_PRINT("count is zero\n"); assert(0);
     }
     return ret;
   }

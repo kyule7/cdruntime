@@ -1,5 +1,5 @@
 # Declaration of variables
-CDPATH := /home/kyushick/Work/CDs/stampede2
+CDPATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../..
 CC = mpicxx
 # LIBS = -static -Ljsoncpp/libs -ljson
 #LIBS = -static

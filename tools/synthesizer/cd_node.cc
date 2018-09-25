@@ -12,7 +12,11 @@ std::map<std::string, CommType> CDNodeInfo::map2id = {
   { "blocking",    kBlockingP2P   },
   { "nonblocking", kNonBlockingP2P},
   { "reduction",   kReduction     },
-  { "sendrecv",    kSendRecv      }
+  { "sendrecv",    kSendRecv      },
+  { "GlobakDisk",   kGlobalDisk   },
+  { "LocalDisk",    kLocalDisk    },
+  { "RemoteMemory", kRemoteMemory },
+  { "LocalMemory",  kLocalMemory  },
 };
 
 CommType commtype2id(const std::string &str) 
@@ -36,24 +40,60 @@ CDNodeInfo::CDNodeInfo(const Param &param)
     , fault_rate_(param["fault rate"].asDouble())
     , prsv_vol_(param["preserve vol"].asDouble())
     , comm_payload_(param["comm payload"].asDouble()) 
+    , error_vector_(param["error vector"].asUInt64()) 
+    , prsv_type_(param["prsv type"].asString())
     , comm_type_(param["comm type"].asString())
     , distribution_(exec_time_avg_, exec_time_std_)
 { 
-  printf("CDNodeInfo created\n");
+  SYNO(std::cout << "cons : ";)
+  if (param.isMember("cons")) {
+    for (auto varname : param["cons"].getMemberNames()) {
+      double sz = param["cons"][varname].asUInt64();
+      cons_.push_back( new MemoryInfo(malloc(sz), sz, varname) );
+      SYNO(std::cout << varname << " : " << sz << std::endl;)
+    }
+  }
+  SYNO(std::cout << "\nprod : ";)
+  if (param.isMember("prod")) {
+    for (auto varname : param["prod"].getMemberNames()) {
+      double sz = param["prod"][varname].asUInt64(); 
+      prod_.push_back( new MemoryInfo(malloc(sz), sz, varname) );
+      SYNO(std::cout << varname << " : " << sz << std::endl;)
+    }
+  }
+  SYNO(std::cout << "\n";)
+
+  SYN_PRINT("CDNodeInfo created\n");
+}
+
+CDNodeInfo::~CDNodeInfo(void)
+{
+  for (auto &cons : cons_) { 
+    std::cout << cd::myTaskID << ", ptr: " << cons->ptr_ << ", size: " << cons->size_ << ", name:" << cons->name_ << std::endl;
+    std::cout.flush();
+    delete cons; 
+  }
+  for (auto &prod : prod_) { 
+    std::cout << cd::myTaskID <<  ", ptr: " << prod->ptr_ << ", size: " << prod->size_ << ", name:" << prod->name_ << std::endl;
+    std::cout.flush();
+    delete prod; 
+  }
 }
 
 double CDNodeInfo::GetExecTime(void) { return distribution_(generator); }
 
 void CDNodeInfo::Print(void) 
 {
-  printf("*************************************\n"
-         "%lf %lf %lf %lf %lf %s (%lf)\n" 
+  SYN_PRINT("*************************************\n"
+         "%lf %lf %lf %lf %lf %x %s %s (%lf)\n" 
          "*************************************\n"
          , exec_time_avg_
          , exec_time_std_
          , fault_rate_
          , prsv_vol_
          , comm_payload_
+         , error_vector_
+         , prsv_type_.c_str()
          , comm_type_.c_str()
          , GetExecTime()
          );
@@ -63,58 +103,58 @@ void CDNodeInfo::Print(void)
 void CDNode::ComputePre() 
 {
   const unsigned long compute_time = info_.GetExecTime() * 1000000;
-  std::cout << std::string(level_ << 1, ' ') << "Compute Pre " << compute_time << std::endl;
+  SYNO(std::cout << std::string(level_ << 1, ' ') << "Compute Pre " << compute_time << std::endl;)
   usleep(compute_time);
 }
 
 void CDNode::ComputePost() 
 {
-  std::cout << std::string(level_ << 1, ' ') << "Compute Post " << std::endl;
+  SYNO(std::cout << std::string(level_ << 1, ' ') << "Compute Post " << std::endl;)
 }
 
 void CDNode::CommPre() 
 {
-  std::cout << std::string(level_ << 1, ' ') << "Comm Pre  ";
+  SYNO(std::cout << std::string(level_ << 1, ' ') << "Comm Pre  ";)
   switch (CDNodeInfo::map2id[info_.comm_type_]) {
     case kBlockingP2P    :
-      std::cout << "blocking p2p" << std::endl;
+      SYNO(std::cout << "blocking p2p" << std::endl;)
       comm_.Send();
       break;
     case kNonBlockingP2P :
-      std::cout << "non-blocking p2p" << std::endl;
+      SYNO(std::cout << "non-blocking p2p" << std::endl;)
       break;
     case kReduction      :
-      std::cout << "reduction" << std::endl;
+      SYNO(std::cout << "reduction" << std::endl;)
       break;
     case kSendRecv       :
-      std::cout << "send receive p2p" << std::endl;
+      SYNO(std::cout << "send receive p2p" << std::endl;)
       break;
     default         :
-      std::cout << "unsupported communication type" << std::endl;
+      SYNO(std::cout << "unsupported communication type" << std::endl;)
       break;
   }
 }
 
 void CDNode::CommPost() 
 {
-  std::cout << std::string(level_ << 1, ' ') << "Comm Post ";
+  SYNO(std::cout << std::string(level_ << 1, ' ') << "Comm Post ";)
   switch (CDNodeInfo::map2id[info_.comm_type_]) {
 
     case kBlockingP2P    : 
-      std::cout << "blocking p2p" << std::endl;
+      SYNO(std::cout << "blocking p2p" << std::endl;)
       comm_.Recv();
       break;
     case kNonBlockingP2P :
-      std::cout << "non-blocking p2p" << std::endl;
+      SYNO(std::cout << "non-blocking p2p" << std::endl;)
       break;
     case kReduction      :
-      std::cout << "reduction" << std::endl;
+      SYNO(std::cout << "reduction" << std::endl;)
       break;
     case kSendRecv       :
-      std::cout << "send receive p2p" << std::endl;
+      SYNO(std::cout << "send receive p2p" << std::endl;)
       break;
     default         :
-      std::cout << "unsupported communication type" << std::endl;
+      SYNO(std::cout << "unsupported communication type" << std::endl;)
       break;
   }
 }
@@ -123,25 +163,34 @@ void CDNode::operator()(void)
 {
   Print();
   CDHandle *cdh = GetLeafCD();
-  CD_Begin(cdh, label_.c_str());
   //getchar();
   for (uint32_t i=0; i < iter_; i++) {
+    CD_Begin(cdh, label_.c_str());
+    uint64_t prv_len = 0;
+    for (auto &cons : info_.cons_) {
+      if (cd::myTaskID == 0) std::cout << std::string(level_ << 1, ' ') << label_ << ", ptr: " << cons->ptr_ << ", size: " << cons->size_ << ", name:" << cons->name_ << std::endl;
+      prv_len += cdh->Preserve(cons->ptr_, cons->size_, kCopy, cons->name_.c_str());
+    }
     CommPre();
     ComputePre();
-    cdh->Create(name_.c_str(), kStrict|kPFS, 0xF);
+    if (children_.size() > 0) {
+      if (cd::myTaskID == 0) std::cout << children_[0]->info_.prsv_type_ << "errvec:"<< children_[0]->info_.error_vector_ << std::endl;
+      cdh->Create(name_.c_str(), kStrict|CDNodeInfo::map2id[children_[0]->info_.prsv_type_], children_[0]->info_.error_vector_);
+    }
     for (auto &c : children_) { (*c)(); }
-    cdh->Destroy();
+    if (children_.size() > 0)
+      cdh->Destroy();
     ComputePost();
     CommPost();
-    printf("%sDone %u-th iteration at %s (comm:%s)\n\n"
+    SYN_PRINT("%sDone %u-th iteration at %s (comm:%s)\n\n"
         , std::string(level_ << 1, ' ').c_str()
         , i
         , label_.c_str()
         , info_.comm_type_.c_str()
     );
+    cdh->Detect();
+    cdh->Complete();
   }
-  cdh->Detect();
-  cdh->Complete();
 }
 
 CDNode::CDNode(Param &&param, const char *name, CDNode *parent, unsigned level)
@@ -155,7 +204,7 @@ CDNode::CDNode(Param &&param, const char *name, CDNode *parent, unsigned level)
     , level_(level) {
   if (param.isMember("child CDs")) {
     for (auto child_name : param["child CDs"].getMemberNames()) {
-      printf("%sParent %s -> %s\n"
+      SYN_PRINT("%sParent %s -> %s\n"
           , std::string(level_ << 1, ' ').c_str()
           , name_.c_str()
           , child_name.c_str()
@@ -163,14 +212,14 @@ CDNode::CDNode(Param &&param, const char *name, CDNode *parent, unsigned level)
       children_.push_back(new CDNode(Param(param["child CDs"][child_name]), child_name.c_str(), this, level+1));
     }
   } else {
-    printf("%sLeaf %s (%s)\n", std::string(level_ << 1, ' ').c_str(), name_.c_str(), label_.c_str());
+    SYN_PRINT("%sLeaf %s (%s)\n", std::string(level_ << 1, ' ').c_str(), name_.c_str(), label_.c_str());
   }
   //getchar();
 }
 
 void CDNode::Print(void) 
 {
-  std::cout << '\n' << std::string(level_ << 1, ' ');
-  printf("%s (%s)\n", name_.c_str(), label_.c_str());
+  SYNO(std::cout << '\n' << std::string(level_ << 1, ' '));
+  SYN_PRINT("%s (%s)\n", name_.c_str(), label_.c_str());
   info_.Print();
 }

@@ -971,21 +971,32 @@ void SetHealthy(void)
 //{
 //  cd_name_.phase_ = cd::phaseTree->target_->GetPhaseNode(level(), label_);
 //}
-static inline 
-uint32_t BeginPhase(uint32_t level, const string &label) {
+inline
+uint32_t CD::BeginPhase(uint32_t level, const string &label) {
   uint32_t phase = -1;
   if(tuned::tuning_enabled == false) {
     if(phaseTree.current_ != NULL) {
       phase = phaseTree.current_->GetPhaseNode(level, label);
+      if (tuned::phaseNodeCache.find(phase) == tuned::phaseNodeCache.end()) {
+        assert(tuned::phaseNodeCache.size() == 0);
+        phaseTree.current_->medium_ = prv_medium_;
+        phaseTree.current_->errortype_ = sys_detect_bit_vector_;
+      }
     } else { // when root_ is activated for the first time
       if(phaseTree.root_ == NULL)
         phase = phaseTree.Init(level, label);
       else 
         phase = phaseTree.ReInit();
       PhaseNode *pn = phaseTree.current_;
-      PhaseNode *tn = tuned::phaseNodeCache[pn->phase_];
-      pn->errortype_= tn->errortype_;
-      pn->medium_   = tn->medium_;
+      if (tuned::phaseNodeCache.find(pn->phase_) != tuned::phaseNodeCache.end()) {
+        PhaseNode *tn = tuned::phaseNodeCache[pn->phase_];
+        pn->errortype_= tn->errortype_;
+        pn->medium_   = tn->medium_;
+      } else {
+        // root case
+        pn->medium_ = prv_medium_;
+        pn->errortype_ = sys_detect_bit_vector_;
+      }
 //      printf("(%s, %lx) <- (%s, %lx)\n", 
 //          GetMedium(pn->medium_),
 //          pn->errortype_, 
@@ -1049,6 +1060,7 @@ CDErrT CD::Begin(const char *label, bool collective)
   //printf("[%s] not here? \n", __func__);
   label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label; 
   const uint32_t level = cd_id_.cd_name_.level_;
+  PRINT_BOTH("lv:%u, %s, %s, bitvec:%lx, media:%x\n", level, name_.c_str(), label_.c_str(), sys_detect_bit_vector_, prv_medium_);
   if(tuned::tuning_enabled == false) {
     cd_id_.cd_name_.phase_ = BeginPhase(level, label_);
     sys_detect_bit_vector_ = phaseTree.current_->errortype_;
@@ -1064,6 +1076,7 @@ CDErrT CD::Begin(const char *label, bool collective)
   }
   // Overwrite medium
   prv_medium_ = phaseTree.current_->medium_;
+  PRINT_BOTH("lv:%u, %s, %s, bitvec:%lx, media:%x\n", level, name_.c_str(), label_.c_str(), sys_detect_bit_vector_, prv_medium_);
   const int64_t current_phase = cd_id_.cd_name_.phase_;
   profMap[current_phase] = &cd::phaseTree.current_->profile_; //getchar();
 
@@ -1087,7 +1100,7 @@ CDErrT CD::Begin(const char *label, bool collective)
 
 //  if(prv_phase_chk == -1U || prv_phase_chk != current_phase) 
   {
-    CD_DEBUG("%s lv:%u, %s, %s, (%ld, %u), bitvec:%lx, (curr:%ld,fphase:%ld), %ld~%ld\n", 
+    PRINT_BOTH("%s lv:%u, %s, %s, (%ld, %u), bitvec:%lx, (curr:%ld,fphase:%ld), %ld~%ld\n", 
       IsFailed()? "REEX" : "EXEC",
       level, name_.c_str(), label_.c_str(), phaseTree.current_->seq_acc_rb_, cd_id_.sequential_id_, sys_detect_bit_vector_, 
       current_phase, failed_phase, phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_);

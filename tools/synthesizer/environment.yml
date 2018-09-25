@@ -5,11 +5,9 @@ channels:
   - anaconda
   - defaults
 dependencies:
-  - scons=3.1.0=py36_1
   - gmp=6.1.2=hfc679d8_0
   - libgcc-ng=7.2.0=hdf63c60_3
   - libstdcxx-ng=7.2.0=hdf63c60_3
-  - gcc-5=5.2.0=0
   - cloog=0.18.0=0
   - gcc=4.8.5=7
   - isl=0.12.2=0

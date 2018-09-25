@@ -537,16 +537,17 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
       if(pt->second->label_ == label) break;
     }
 
-    if(pt == tuned::phaseNodeCache.end()) {
+    if(pt != tuned::phaseNodeCache.end()) {
+      const PhaseNode *pn = pt->second;
+      cd::phaseTree.current_->errortype_ = pn->errortype_;
+      cd::phaseTree.current_->medium_    = pn->medium_;
+    } else {
       for(auto it=tuned::phaseNodeCache.begin(); it!=tuned::phaseNodeCache.end(); ++it) {
-        printf("[%d] phase %u \n", cd::myTaskID, it->first);
+        PRINT_BOTH("[%d] phase %u \n", cd::myTaskID, it->first);
       }
-      ERROR_MESSAGE("Phase %u is missing in tuned::phaseNodeCache (%zu)\n", 
+      PRINT_BOTH("Phase %u is missing in tuned::phaseNodeCache (%zu)\n", 
           phase, tuned::phaseNodeCache.size());
     }
-    const PhaseNode *pn = pt->second;
-    cd::phaseTree.current_->errortype_ = pn->errortype_;
-    cd::phaseTree.current_->medium_    = pn->medium_;
 //    if(cd::myTaskID == 1) {
 //      printf("%s (%s, %lx) <- (%s, %lx)\n", pn->label_.c_str(),
 //          GetMedium(cd::phaseTree.current_->medium_),

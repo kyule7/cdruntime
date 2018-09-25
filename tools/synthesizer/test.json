@@ -14,27 +14,45 @@
 			"fault rate" : 0.0, // not used
       "exec time" : 0.5,
       "exec time std" : 0.05, 
+      "prsv type" : "GlobalDisk",
       "preserve vol" : 10,
       "comm payload" : 2,
       "comm type" : "reduction",
+      "error vector" : 15,
 			"rd_bw" : 0.0, // not used
 			"wr_bw" : 0.0, // not used
+			"cons" : {
+				"a" : 4000,
+				"b" : 5000
+			},
+			"prod" : {
+				"c" : 6000
+			},
 			
 			"child CDs" : {
 
 				"CD1" : {
-					"iterations" : 5, 
+					"iterations" : 2, 
           "label" : "MainLoop",
 					"type" : "htcd", // heterogeneous CDs
 					"child siblings" : 64, 
 					"fault rate" : 0.00000001,
           "exec time" : 1,
-          "exec time std" : 0.2, 
+          "exec time std" : 0.02, 
+          "prsv type" : "GlobalDisk",
           "preserve vol" : 500,
           "comm payload" : 50,
           "comm type" : "reduction",
+          "error vector" : 3,
 					"rd_bw" : 10,
 					"wr_bw" : 10,
+					"cons" : {
+						"a" : 4000,
+						"b" : 5000
+					},
+					"prod" : {
+						"c" : 6000
+					},
 
 					"child CDs" : {
 
@@ -46,9 +64,11 @@
 							"fault rate" : 0.000001,
               "exec time" : 1,
               "exec time std" : 0.08, 
+              "prsv type" : "LocalMemory",
               "preserve vol" : 100,
               "comm payload" : 10,
               "comm type" : "sendrecv",
+              "error vector" : 1,
 							"rd_bw" : 100,
 							"wr_bw" : 100,
 
@@ -66,13 +86,15 @@
 						"CD1_2" : {
 							"type" : "leaf",
               "label" : "CalcTemp",
-							"iterations" : 4,
+							"iterations" : 2,
 							"fault rate" : 0.000001,
               "exec time" : 2,
-              "exec time std" : 0.3, 
+              "exec time std" : 0.03, 
+              "prsv type" : "LocalMemory",
               "preserve vol" : 200,
               "comm payload" : 20,
               "comm type" : "nonblocking",
+              "error vector" : 1,
 							"rd_bw" : 100,
 							"wr_bw" : 100,
 
@@ -89,13 +111,15 @@
 						"CD1_3" : {
 							"type" : "leaf",
               "label" : "CalcTime",
-							"iterations" : 3,
+							"iterations" : 1,
 							"fault rate" : 0.000001,
               "exec time" : 1,
-              "exec time std" : 0.3, 
+              "exec time std" : 0.03, 
+              "prsv type" : "LocalMemory",
               "preserve vol" : 300,
               "comm payload" : 30,
               "comm type" : "blocking",
+              "error vector" : 1,
 							"rd_bw" : 100,
 							"wr_bw" : 100,
 

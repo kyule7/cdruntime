@@ -401,6 +401,7 @@ update the preserved data.
     void FinalizeMailBox(void);
 #endif
     inline void Init(void);
+    inline uint32_t BeginPhase(uint32_t level, const string &label);
 
     virtual CDHandle *Create(CDHandle *parent, 
                      const char *name, 

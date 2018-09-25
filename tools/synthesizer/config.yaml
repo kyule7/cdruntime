@@ -1,28 +1,28 @@
-- CD_0_0 :
-  - label    : Very Root
-    interval : -1
-    errortype: 0xF
-    medium: GlobalDisk
-  - CD_1_1 :
-    - label    : MainLoop
-      interval : -1
-      errortype: 0x3
-      medium: LocalMemory
-    - CD_2_2 :
-      - label    : CalcForce
-        interval : -1
-        errortype: 0x1
-        medium: LocalMemory
-    - CD_2_3 :
-      - label    : CalcTemp
-        interval : -1
-        errortype: 0x1
-        medium: LocalMemory
-    - CD_2_4 :
-      - label    : CalcTime
-        interval : -1
-        errortype: 0x1
-        medium: LocalMemory
+#- CD_0_0 :
+#  - label    : Very Root
+#    interval : -1
+#    errortype: 0xF
+#    medium: GlobalDisk
+#  - CD_1_1 :
+#    - label    : MainLoop
+#      interval : -1
+#      errortype: 0x3
+#      medium: LocalMemory
+#    - CD_2_2 :
+#      - label    : CalcForce
+#        interval : -1
+#        errortype: 0x1
+#        medium: LocalMemory
+#    - CD_2_3 :
+#      - label    : CalcTemp
+#        interval : -1
+#        errortype: 0x1
+#        medium: LocalMemory
+#    - CD_2_4 :
+#      - label    : CalcTime
+#        interval : -1
+#        errortype: 0x1
+#        medium: LocalMemory
 #- FAILURE_Ftype0 :
 #  - F1 : 0.0133
 #  - F2 : 0.00267

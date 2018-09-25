@@ -17,7 +17,7 @@ using namespace synthesizer;
  * Communication
  * Failure rate (defined in config.yaml?)
  *******************************************************************/
-void ComputeBody() { cout << __func__ << endl; }
+void ComputeBody() { SYNO(cout << __func__ << endl;) }
 
 template <typename T>
 T GetPhaseList(void) { return T(10, ComputeBody); }
@@ -30,14 +30,14 @@ void NestCDs(void) {
   uint32_t iteration = GetIter();
   for (uint32_t i=0; i < iteration; i++) {
     for (auto &pl : phase_list) { pl(); }
-    cout << "Done " << i << "-th iteration" << endl;
+    SYNO(cout << "Done " << i << "-th iteration" << endl;)
   }
 
 }
 
 struct A {
   void operator()(int n) {
-    std::cout << n << std::endl;
+    SYNO(std::cout << n << std::endl;)
   }
 };
 
@@ -52,9 +52,9 @@ Param ReadParam(const char *param_file) {
 
     std::string type_str = cdparam["type"].asString();
 //    cdparam["global param"] = params["global param"];
-    cout << "CD type: " << type_str << endl;
+    SYNO(cout << "CD type: " << type_str << endl;)
   } else {
-    cout << "no CD info" << endl;
+    SYNO(cout << "no CD info" << endl;)
   }
   return params["CD info"]["root CD"];
 }
@@ -70,10 +70,10 @@ int main(int argc, char* argv[]) {
   function<void()> f = bind<void>(a, 1);
   f(); // prints 1
 
-  cout << "Nest CD begin" << endl;
+  SYNO(cout << "Nest CD begin" << endl;)
   NestCDs();
 
-  cout << "\n\n Start \n\n" << endl;
+  SYNO(cout << "\n\n Start \n\n" << endl;)
 
 //  Param param = ReadParam("test.json");
   CDNode cd_tree(ReadParam("test.json"), "root");
