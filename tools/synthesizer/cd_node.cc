@@ -204,15 +204,22 @@ void CDNode::operator()(void)
 }
 
 CDNode::CDNode(Param &&param, const char *name, CDNode *parent, unsigned level)
-    : iter_((param.isMember("iterations")) ? param["iterations"].asUInt64() : 0)
-    , label_((param.isMember("label")) ? param["label"].asString() : "no label")
-    , name_(name)
-    , info_(param)
+    : name_(name)
+    , info_(param.isMember("profile")? param["profile"] : param)
     , comm_(info_.comm_payload_, CDNodeInfo::map2id[info_.comm_type_], false,
         ((parent != nullptr)? parent->comm_ : AppComm(info_.comm_payload_, MPI_COMM_WORLD)))
     , parent_(parent)
     , level_(level) 
 {
+  bool new_format = param.isMember("profile");
+  if (new_format) {
+    auto &profile = param["profile"];
+    iter_ = profile.isMember("iterations") ? profile["iterations"].asUInt64() : 0;
+    label_= profile.isMember("label") ? profile["label"].asString() : "no label";
+  } else {
+    iter_ = param.isMember("iterations") ? param["iterations"].asUInt64() : 0;
+    label_= param.isMember("label") ? param["label"].asString() : "no label";
+  }
   if (param.isMember("child CDs")) {
     for (auto child_name : param["child CDs"].getMemberNames()) {
       SYN_PRINT("%sParent %s -> %s\n"
@@ -231,6 +238,6 @@ CDNode::CDNode(Param &&param, const char *name, CDNode *parent, unsigned level)
 void CDNode::Print(void) 
 {
   SYNO(std::cout << '\n' << std::string(level_ << 1, ' '));
-  SYN_PRINT("%s (%s)\n", name_.c_str(), label_.c_str());
+  SYN_PRINT("CDNode:%s (%s), lv:%u, iter:%u\n", name_.c_str(), label_.c_str(), level_, iter_);
   info_.Print();
 }
