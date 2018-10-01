@@ -426,6 +426,7 @@ extern CD_CLOCK_T begin_clk;
 //
 //extern CD_CLOCK_T mailbox_elapsed_time;
 //
+extern std::vector<uint32_t> total_errors;
 extern uint64_t state;
 extern int64_t failed_phase;
 extern int64_t failed_seqID;
@@ -436,9 +437,9 @@ extern bool orig_app_side;
 extern bool orig_disabled;
 extern bool orig_msg_app_side;
 extern bool orig_msg_disabled;
-//extern bool dont_preserve;
-//extern bool dont_cdop;
-//extern bool dont_error;
+extern bool dont_preserve;
+extern bool dont_cdop;
+extern bool dont_error;
 extern void GatherProfile(void);
 /**@addtogroup runtime_logging 
  * @{
@@ -477,15 +478,14 @@ extern void GatherProfile(void);
   orig_disabled = logger::disabled; \
   app_side = false; \
   logger::disabled = true; \
-  begin_clk = CD_CLOCK(); \
-  if (cd::dont_cdop == false) {
+  begin_clk = CD_CLOCK(); 
+
 
 /**@brief Set current context as application side. 
  * @return true/false
  */
 
 #define CDEpilogue() \
-  } \
   end_clk = CD_CLOCK(); \
   cdr_elapsed_time += end_clk - begin_clk; \
   app_side = orig_app_side; \

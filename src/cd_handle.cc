@@ -524,7 +524,17 @@ void CD_MPI_ErrHandler(MPI_Comm *comm, int *err, ...)
 CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   CDPrologue();
+  
+  char *is_noprv  = getenv("CD_NO_PRESERVE");
+  char *is_nocd   = getenv("CD_NO_OPERATE");
+  char *is_noerror = getenv("CD_NO_ERROR");
+  cd::dont_preserve = (is_noprv != NULL)? true:false;
+  cd::dont_cdop     = (is_nocd != NULL)? true:false;
+  cd::dont_error    = (is_noerror != NULL)? true:false;
+  cd::dont_preserve |= cd::dont_cdop;
+  cd::dont_error |= cd::dont_preserve;
 
+  printf("cd no op:%d\n", cd::dont_cdop);
 #if CD_MPI_ENABLED
   MPI_Errhandler mpi_err_handler;
   // Define MPI error handler if necessary
@@ -552,12 +562,6 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   exec_iterations = getenv("CD_EXEC_ITERS");
   app_input_size  = (exec_iterations!=NULL)? atoi(exec_iterations) : 0;
 
-  char *is_noprv  = getenv("CD_NO_PRESERVE");
-  char *is_nocd   = getenv("CD_NO_OPERATE");
-  char *is_noerror = getenv("CD_NO_ERROR");
-  cd::dont_preserve = (is_noprv != NULL)? true:false;
-  cd::dont_cdop     = (is_nocd != NULL)? true:false;
-  cd::dont_error    = (is_noerror != NULL)? true:false;
 #if CD_TUNING_ENABLED == 0
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
@@ -983,7 +987,6 @@ void CD_Finalize(void)
 #endif
   // call packer finalization at the very last moment for safety
   //packer::Finalize();  
-  end_clk = CD_CLOCK();
   CDEpilogue();
 #if CD_LIBC_LOGGING
   logger::Fini();
@@ -1251,6 +1254,8 @@ CDHandle *CDHandle::Create(const char *name,
 {
   //GONG
   CDPrologue();
+  CDHandle *new_cd_handle = this;
+  if (cd::dont_cdop == false) {
   TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
 //  printf("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
   //CheckMailBox();
@@ -1276,7 +1281,7 @@ CDHandle *CDHandle::Create(const char *name,
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
-  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), 
+  new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), 
                                             static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
   CDPath::GetCDPath()->push_back(new_cd_handle);
@@ -1292,6 +1297,8 @@ CDHandle *CDHandle::Create(const char *name,
 //#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
+  }
+//cdcreate1_label:
   CDEpilogue();
   return new_cd_handle;
 }
@@ -1305,6 +1312,8 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
                            CDErrT *error)
 {
   CDPrologue();
+  CDHandle *new_cd_handle = this;
+  if (cd::dont_cdop == false) { //goto cdcreate2_label;
   TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
 #if CD_MPI_ENABLED
 
@@ -1387,7 +1396,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
 //  CD::CDInternalErrrT err = kOK;
-  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), 
+  new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), 
                                             static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
 
 
@@ -1414,6 +1423,8 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
 //#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
+  }
+//cdcreate2_label:
   CDEpilogue();
 
   return new_cd_handle;
@@ -1431,6 +1442,8 @@ CDHandle *CDHandle::Create(uint32_t color,
                            CDErrT *error )
 {
   CDPrologue();
+  CDHandle *new_cd_handle = this;
+  if (cd::dont_cdop == false) { // goto cdcreate3_label;
   TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
 #if CD_MPI_ENABLED
 
@@ -1458,7 +1471,7 @@ CDHandle *CDHandle::Create(uint32_t color,
   }
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
-  CDHandle *new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), 
+  new_cd_handle = ptr_cd_->Create(this, name, CDID(new_cd_name, new_node_id), 
                                             static_cast<CDType>(cd_type), sys_bit_vec, &internal_err);
   
   CDPath::GetCDPath()->push_back(new_cd_handle);
@@ -1482,6 +1495,8 @@ CDHandle *CDHandle::Create(uint32_t color,
 //#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cd_handle->ptr_cd_->name_.c_str(), new_cd_handle->level());
+  } 
+//cdcreate3_label:
   CDEpilogue();
   return new_cd_handle;
 }
@@ -1495,8 +1510,10 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
                                    CDErrT *error )
 {
   CDPrologue();
+  CDHandle *new_cdh = this;
+  if (cd::dont_cdop == false) { //goto cdcreate4_label;
   TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
-  CDHandle *new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
+  new_cdh = Create(num_children, name, static_cast<CDType>(cd_type), error_name_mask, error_loc_mask, error);
   CD_CLOCK_T clk = CD_CLOCK();
   const double elapsed = clk - begin_clk;
   cd::phaseTree.current_->profile_.RecordCreate(elapsed);
@@ -1519,6 +1536,8 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 //#endif
   PRINT_MPI("** [Create] %s at level %u \n", 
             new_cdh->ptr_cd_->name_.c_str(), new_cdh->level());
+  }
+//cdcreate4_end:
   CDEpilogue();
   return new_cdh;
 }
@@ -1527,6 +1546,7 @@ CDHandle *CDHandle::CreateAndBegin(uint32_t num_children,
 CDErrT CDHandle::Destroy(bool collective) 
 {
   CDPrologue();
+  if (cd::dont_cdop) goto cddestroy_label;
   CDErrT err;
   TUNE_DEBUG("[Real %s] %u %d\n", __func__, level(), phase());
 //  printf("[Real %s] %u %d\n", __func__, level(), phase()); STOPHANDLE;
@@ -1551,6 +1571,7 @@ CDErrT CDHandle::Destroy(bool collective)
 //    it->second->destroy_elapsed_time_ += end_clk - begin_clk;
 //#endif
   }
+cddestroy_label:
   CDEpilogue();
 
   return err;
@@ -1677,7 +1698,7 @@ CDErrT CDHandle::InternalDestroy(bool collective, bool need_destroy)
 CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_error_vec)
 {
   CDPrologue();
-
+  if (cd::dont_cdop) goto cdbegin_label;
   CD_ASSERT_STR(ptr_cd_ != 0, "[%d at lv %u] label %s of %p\n", myTaskID, level(), label, ptr_cd_);
 
   // sys_error_vec is zero, then do not update it in Begin.
@@ -1729,6 +1750,7 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
   }
   const bool is_reexecution = (GetExecMode() == kReexecution);
   cd::phaseTree.current_->profile_.RecordBegin(is_reexec, need_sync);
+cdbegin_label:
   CDEpilogue();
 #if CD_LIBC_LOGGING
   app_side = true;
@@ -1740,6 +1762,7 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
 CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 {
   CDPrologue();
+  if (cd::dont_cdop) goto cdcompl_label;
   TUNE_DEBUG("[Real %s lv:%u phase:%d]\n", __func__, level(), phase()); STOPHANDLE;
   PRINT_MPI("** [%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->label_.c_str(), 
                                                                       level(), need_reexec(), *CD::rollback_point_);
@@ -1791,6 +1814,7 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 //  bool is_reexec = (failed_phase != HEALTHY);
   //if(myTaskID == 0) printf("is reexec:%d\n", is_reexec);
   current->profile_.RecordComplete(is_reexec, level() == 1);
+cdcompl_label:
   CDEpilogue();
   //CDEpilogue();
 
@@ -1800,6 +1824,7 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 CDErrT CDHandle::Advance(bool collective)
 {
   CDPrologue();
+  if (cd::dont_cdop) goto cdadvance_label;
 
   CDErrT ret = ptr_cd_->Advance(collective);
 
@@ -1809,6 +1834,7 @@ CDErrT CDHandle::Advance(bool collective)
 #if CD_PROFILER_ENABLED
   profMap[phase()]->advance_elapsed_time_ += end_clk - begin_clk;
 #endif
+cdadvance_label:
   CDEpilogue();
   return ret;
 };
@@ -1823,6 +1849,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
                           PreserveUseT data_usage)
 {
   CDPrologue();
+  if (cd::dont_cdop) goto cdprv1_label;
 
   /// Preserve meta-data
   /// Accumulated volume of data to be preserved for Sequential CDs. 
@@ -1864,6 +1891,7 @@ CDErrT CDHandle::Preserve(void *data_ptr,
                 (IsReexec())? "REEX":"EXEC",
                 cd::phaseNodeCache[cd::failed_phase]->label_.c_str(), cd::failed_seqID);
   }
+cdprv1_label:
   CDEpilogue();
   return CHECK_PRV_TYPE(preserve_mask, kRef)? (CDErrT)0 : (CDErrT)len;
 }
@@ -1877,7 +1905,8 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
                           PreserveUseT data_usage)
 {
   CDPrologue();
-  
+  if (cd::dont_cdop) goto cdprv2_label;
+
   /// Preserve meta-data
   /// Accumulated volume of data to be preserved for Sequential CDs. 
   /// It will be averaged out with the number of seq. CDs.
@@ -1916,6 +1945,7 @@ CDErrT CDHandle::Preserve(Serializable &serdes,
                 cd::phaseNodeCache[cd::failed_phase]->label_.c_str(), cd::failed_seqID);
   }
   
+cdprv2_label:
   CDEpilogue();
   return CHECK_PRV_TYPE(preserve_mask, kRef)? (CDErrT)0 : (CDErrT)len;
 }
@@ -1931,6 +1961,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
                           PreserveUseT data_usage )
 {
   CDPrologue();
+  if (cd::dont_cdop) goto cdprv3_label;
 
   assert(ptr_cd_ != 0);
   assert(len > 0);
@@ -1982,6 +2013,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
   cd::phaseNodeCache[phase]->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   //cd::phaseTree.current_->profile_.RecordData(entry_name, len, preserve_mask, is_reexec);
   }
+cdprv3_label:
   CDEpilogue();
   return err;
 }
@@ -1989,6 +2021,7 @@ CDErrT CDHandle::Preserve(CDEvent &cd_event,
 CDErrT CDHandle::CDAssert(bool test, const SysErrT *error_to_report)
 {
   CDPrologue();
+  if (cd::dont_cdop) goto cdassert_label;
 //  CD_DEBUG("Assert : %d at level %u\n", ptr_cd()->cd_exec_mode_, ptr_cd()->level());
 
   assert(ptr_cd_ != 0);
@@ -2014,7 +2047,7 @@ CDErrT CDHandle::CDAssert(bool test, const SysErrT *error_to_report)
   if(internal_err == CD::CDInternalErrT::kErrorReported)
     err = kAppError;
 
-  end_clk = CD_CLOCK();
+cdassert_label:
   CDEpilogue();
   return err;
 }
@@ -2022,6 +2055,8 @@ CDErrT CDHandle::CDAssert(bool test, const SysErrT *error_to_report)
 CDErrT CDHandle::CDAssertFail (bool test_true, const SysErrT *error_to_report)
 {
   CDPrologue();
+  if (cd::dont_cdop) goto cdassert2_label;
+
   if( IsHead() ) {
 
   }
@@ -2029,7 +2064,7 @@ CDErrT CDHandle::CDAssertFail (bool test_true, const SysErrT *error_to_report)
     // It is at remote node so do something for that.
   }
 
-  end_clk = CD_CLOCK();
+cdassert2_label:
   CDEpilogue();
   return common::kOK;
 }
@@ -2037,6 +2072,7 @@ CDErrT CDHandle::CDAssertFail (bool test_true, const SysErrT *error_to_report)
 CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 {
   CDPrologue();
+  if (cd::dont_cdop) goto cdassert3_label;
   if( IsHead() ) {
     // STUB
   }
@@ -2044,7 +2080,7 @@ CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
     // It is at remote node so do something for that.
   }
 
-  end_clk = CD_CLOCK();
+cdassert3_label:
   CDEpilogue();
   return common::kOK;
 }
@@ -2052,12 +2088,13 @@ CDErrT CDHandle::CDAssertNotify(bool test_true, const SysErrT *error_to_report)
 std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 {
   CDPrologue();
+  std::vector<SysErrT> ret_prepare;
+  if (cd::dont_cdop) goto cddetect_label;
   CD_DEBUG("[%s] check mode : %d at %s %s level %u (reexecInfo %d (%u))\n", 
       ptr_cd_->cd_id_.GetString().c_str(), ptr_cd()->cd_exec_mode_, 
       ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
       level(), need_reexec(), *CD::rollback_point_);
 
-  std::vector<SysErrT> ret_prepare;
   CDErrT err = common::kOK;
   uint32_t rollback_point = INVALID_ROLLBACK_POINT;
 
@@ -2200,7 +2237,7 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 #if CD_DEBUG_DEST == 1
   fflush(cdout);
 #endif
-  end_clk = CD_CLOCK();
+cddetect_label:
   CDEpilogue();
   return ret_prepare;
 
@@ -2500,13 +2537,15 @@ std::vector<SysErrT> CDHandle::Detect(CDErrT *err_ret_val)
 CDErrT CDHandle::RegisterRecovery (uint32_t error_name_mask, uint32_t error_loc_mask, RecoverObject *recover_object)
 {
   CDPrologue();
+  if (cd::dont_cdop) goto cdregister1_label;
+
   if( IsHead() ) {
     // STUB
   }
   else {
     // It is at remote node so do something for that.
   }
-  end_clk = CD_CLOCK();
+cdregister1_label:
   CDEpilogue();
   return common::kOK;
 }
@@ -2514,6 +2553,7 @@ CDErrT CDHandle::RegisterRecovery (uint32_t error_name_mask, uint32_t error_loc_
 CDErrT CDHandle::RegisterDetection (uint32_t system_name_mask, uint32_t system_loc_mask)
 {
   CDPrologue();
+  if (cd::dont_cdop) goto cdregister2_label;
   if( IsHead() ) {
     // STUB
   }
@@ -2521,7 +2561,7 @@ CDErrT CDHandle::RegisterDetection (uint32_t system_name_mask, uint32_t system_l
     // It is at remote node so do something for that.
 
   }
-  end_clk = CD_CLOCK();
+cdregister2_label:
   CDEpilogue();
 
   return common::kOK;
@@ -2531,7 +2571,6 @@ float CDHandle::GetErrorProbability (SysErrT error_type, uint32_t error_num)
 {
 
   CDPrologue();
-  end_clk = CD_CLOCK();
   CDEpilogue();
   return 0;
 }
@@ -2540,7 +2579,6 @@ float CDHandle::RequireErrorProbability (SysErrT error_type, uint32_t error_num,
 {
 
   CDPrologue();
-  end_clk = CD_CLOCK();
   CDEpilogue();
 
   return 0;
@@ -2706,7 +2744,6 @@ void CDHandle::CommitPreserveBuff()
 //    ptr_cd_->ctxt_ = this->ctxt_;
   }
 //  }
-  end_clk = CD_CLOCK();
   CDEpilogue();
   */
 }
