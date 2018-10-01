@@ -69,18 +69,24 @@ CDNodeInfo::CDNodeInfo(const Param &param)
 CDNodeInfo::~CDNodeInfo(void)
 {
   for (auto &cons : cons_) { 
-    std::cout << cd::myTaskID << ", ptr: " << cons->ptr_ << ", size: " << cons->size_ << ", name:" << cons->name_ << std::endl;
-    std::cout.flush();
+    //std::cout << cd::myTaskID << ", ptr: " << cons->ptr_ << ", size: " << cons->size_ << ", name:" << cons->name_ << std::endl;
+    //std::cout.flush();
     delete cons; 
   }
   for (auto &prod : prod_) { 
-    std::cout << cd::myTaskID <<  ", ptr: " << prod->ptr_ << ", size: " << prod->size_ << ", name:" << prod->name_ << std::endl;
-    std::cout.flush();
+    //std::cout << cd::myTaskID <<  ", ptr: " << prod->ptr_ << ", size: " << prod->size_ << ", name:" << prod->name_ << std::endl;
+    //std::cout.flush();
     delete prod; 
   }
 }
 
-double CDNodeInfo::GetExecTime(void) { return distribution_(generator); }
+double CDNodeInfo::GetExecTime(void) { 
+  const double exec_time = distribution_(generator); 
+  if (exec_time > 0) 
+    return exec_time;
+  else
+    return 0.000001;
+}
 
 void CDNodeInfo::Print(void) 
 {
@@ -122,6 +128,7 @@ void CDNode::CommPre()
       break;
     case kNonBlockingP2P :
       SYNO(std::cout << "non-blocking p2p" << std::endl;)
+      comm_.Irecv();   
       break;
     case kReduction      :
       SYNO(std::cout << "reduction" << std::endl;)
@@ -146,9 +153,12 @@ void CDNode::CommPost()
       break;
     case kNonBlockingP2P :
       SYNO(std::cout << "non-blocking p2p" << std::endl;)
+      comm_.Send();   
+      comm_.Wait();   
       break;
     case kReduction      :
       SYNO(std::cout << "reduction" << std::endl;)
+      comm_.Reduce(); 
       break;
     case kSendRecv       :
       SYNO(std::cout << "send receive p2p" << std::endl;)
@@ -168,13 +178,13 @@ void CDNode::operator()(void)
     CD_Begin(cdh, label_.c_str());
     uint64_t prv_len = 0;
     for (auto &cons : info_.cons_) {
-      if (cd::myTaskID == 0) std::cout << std::string(level_ << 1, ' ') << label_ << ", ptr: " << cons->ptr_ << ", size: " << cons->size_ << ", name:" << cons->name_ << std::endl;
+      //if (cd::myTaskID == 0) std::cout << std::string(level_ << 1, ' ') << label_ << ", ptr: " << cons->ptr_ << ", size: " << cons->size_ << ", name:" << cons->name_ << std::endl;
       prv_len += cdh->Preserve(cons->ptr_, cons->size_, kCopy, cons->name_.c_str());
     }
     CommPre();
     ComputePre();
     if (children_.size() > 0) {
-      if (cd::myTaskID == 0) std::cout << children_[0]->info_.prsv_type_ << "errvec:"<< children_[0]->info_.error_vector_ << std::endl;
+      //if (cd::myTaskID == 0) std::cout << children_[0]->info_.prsv_type_ << "errvec:"<< children_[0]->info_.error_vector_ << std::endl;
       cdh->Create(name_.c_str(), kStrict|CDNodeInfo::map2id[children_[0]->info_.prsv_type_], children_[0]->info_.error_vector_);
     }
     for (auto &c : children_) { (*c)(); }
@@ -201,7 +211,8 @@ CDNode::CDNode(Param &&param, const char *name, CDNode *parent, unsigned level)
     , comm_(info_.comm_payload_, CDNodeInfo::map2id[info_.comm_type_], false,
         ((parent != nullptr)? parent->comm_ : AppComm(info_.comm_payload_, MPI_COMM_WORLD)))
     , parent_(parent)
-    , level_(level) {
+    , level_(level) 
+{
   if (param.isMember("child CDs")) {
     for (auto child_name : param["child CDs"].getMemberNames()) {
       SYN_PRINT("%sParent %s -> %s\n"

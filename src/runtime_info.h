@@ -666,7 +666,7 @@ struct RuntimeInfo : public CDOverhead {
       for(;jt!=max_cdrt_.end(); ++jt) {
         fprintf(fout, ",%f", *jt);
       }
-      fprintf(fout, "],\n");
+      fprintf(fout, "]\n");
     }
   }
 

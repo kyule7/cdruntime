@@ -233,6 +233,7 @@ struct ConfigEntry {
   PrvMediumT medium_;
   ConfigEntry(void) : interval_(-1), failure_type_(-1), medium_(kUndefined) {}
   void Print(int64_t level, int64_t phase);
+  void Init(void) { interval_ = -1; failure_type_ = -1; medium_ = kUndefined; }
 };
 
 // mapping[level][phase]
@@ -252,6 +253,13 @@ struct SystemConfig {
 public:
   void UpdateSwitchParams(char *str);
   void LoadConfig(const char *config, int myTask);
+  void Init(void) {
+    for (auto &v : mapping_)
+      for (auto &m : v.second)
+        m.second.Init();
+    for (auto &v : failure_rate_) v.second = 0.;
+    for (auto &v : error_count_)  v.second = 0;
+  }
 };
 
 extern SystemConfig config;

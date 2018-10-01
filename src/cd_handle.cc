@@ -91,6 +91,7 @@ char end_date[64] = "NoNamed";
 char *exec_details = NULL;
 char *exec_iterations = NULL;
 int cd::app_input_size = 0;
+std::vector<uint32_t> cd::total_errors;
 
 bool cd::is_koutput_disabled = false;
 bool cd::is_error_free = false;
@@ -105,6 +106,8 @@ bool packer::orig_appside = true;
 bool tuned::orig_disabled = false;
 bool tuned::orig_appside = true;
 bool cd::dont_preserve = false;
+bool cd::dont_cdop = false;
+bool cd::dont_error = false;
 double cd::tot_rtov[4];
 CD_CLOCK_T cd::cdr_elapsed_time=0;
 CD_CLOCK_T cd::global_reex_clk=0;
@@ -550,7 +553,11 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   app_input_size  = (exec_iterations!=NULL)? atoi(exec_iterations) : 0;
 
   char *is_noprv  = getenv("CD_NO_PRESERVE");
+  char *is_nocd   = getenv("CD_NO_OPERATE");
+  char *is_noerror = getenv("CD_NO_ERROR");
   cd::dont_preserve = (is_noprv != NULL)? true:false;
+  cd::dont_cdop     = (is_nocd != NULL)? true:false;
+  cd::dont_error    = (is_noerror != NULL)? true:false;
 #if CD_TUNING_ENABLED == 0
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
   if(cd_config_file != NULL) {
@@ -561,6 +568,10 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
     //printf("load??\n");
   }
 #endif
+  if (cd::dont_error) {
+      config.Init();
+      is_error_free = true;
+  }
 /*
   // Initialize static vars
   myTaskID      = myTask;
@@ -667,17 +678,17 @@ void CD_Finalize(void)
 
   // Get total aggregated errors
   std::map<int64_t, uint32_t> &error_count = CDHandle::system_error_injector_->sc_.error_count_;
-  uint32_t errors[error_count.size()];
-  uint32_t total_errors[error_count.size()];
   int idx = 0;
   uint32_t error_cnt = 0;
   uint32_t error_cnt_loc = error_count.size();
+  uint32_t errors[error_cnt_loc];
   for (auto &v : error_count) {
     errors[idx++] = v.second;
   }
   PMPI_Allreduce(&error_cnt_loc, &error_cnt, 1, MPI_UNSIGNED, MPI_MAX, MPI_COMM_WORLD);
-  assert(error_cnt_loc == error_cnt);
-  PMPI_Reduce(errors, total_errors, error_count.size(), MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD);
+  assert(error_cnt_loc <= error_cnt);
+  total_errors.resize(error_cnt);
+  PMPI_Allreduce(errors, total_errors.data(), error_cnt, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
   if (myTaskID == 0) {
     for (int i=0; i<idx; i++) {
       printf("errors : %u %u\n", total_errors[i], errors[i]);
@@ -838,8 +849,8 @@ void CD_Finalize(void)
                          compl_elapsed
   };
 #if CD_MPI_ENABLED  
-  MPI_Reduce(sendbuf_min, recvmin, PROF_GLOBAL_STATISTICS_NUM, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
-  MPI_Reduce(sendbuf_min, recvmax, PROF_GLOBAL_STATISTICS_NUM, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  PMPI_Reduce(sendbuf_min, recvmin, PROF_GLOBAL_STATISTICS_NUM, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+  PMPI_Reduce(sendbuf_min, recvmax, PROF_GLOBAL_STATISTICS_NUM, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 #endif
 
 //  std::map<uint32_t, CDOverheadVar> lv_runtime_info;
@@ -860,7 +871,7 @@ void CD_Finalize(void)
 //                          };
 //    double recvbuf_lv[PROF_LEVEL_STATISTICS_NUM] = {0.0,};
 //#if CD_MPI_ENABLED  
-//    MPI_Reduce(sendbuf_lv, recvbuf_lv, PROF_LEVEL_STATISTICS_NUM, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+//    PMPI_Reduce(sendbuf_lv, recvbuf_lv, PROF_LEVEL_STATISTICS_NUM, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 //#endif
 //    lv_runtime_info[it->first].prv_elapsed_time_ = recvbuf_lv[LV_PRV_AVG]/cd::totalTaskSize;
 //    lv_runtime_info[it->first].prv_elapsed_time_var_ = (recvbuf_lv[LV_PRV_VAR] - recvbuf_lv[LV_PRV_AVG]*recvbuf_lv[LV_PRV_AVG]/cd::totalTaskSize)/cd::totalTaskSize;

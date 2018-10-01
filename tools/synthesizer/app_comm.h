@@ -48,7 +48,7 @@ struct AppComm {
   MPI_Datatype datatype_;
   MPI_Comm comm_;
   void Print(const char *func) {
-    SYN_PRINT(">> Comm: %s %d %d %zu %zu (Type) %x %x (MPI_INT)\n", func, rank_, size_, src_.size(), dst_.size(), datatype_, MPI_INT);
+    SYN_PRINT_ONE(">> Comm: %s cnt:%d rank:%d size:%d src:%zu dst:%zu (Type) %x %x (MPI_INT)\n", func, count_, rank_, size_, src_.size(), dst_.size(), datatype_, MPI_INT);
   }
   void Init(void) {
     // set up src and dst for each rank
@@ -186,7 +186,19 @@ struct AppComm {
     }
     return ret;
   }
-
+  
+  int SendRecv(void) 
+  {
+    Print(__func__);
+    int ret = 0;
+    if (count_ > 0) {
+      for (int i=0; i<src_.size(); i++) {
+        ret = MPI_Sendrecv(dst_[0]->send_buf_, count_, datatype_, dst_[0]->rank_, tag_,
+                           src_[0]->recv_buf_, count_, datatype_, src_[0]->rank_, tag_, 
+                           comm_, &src_[0]->stat_);
+      }
+    }
+  }
 };
 
 }

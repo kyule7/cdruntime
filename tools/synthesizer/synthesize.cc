@@ -9,6 +9,8 @@
 using namespace cd;
 using namespace std;
 using namespace synthesizer;
+int synthesizer::numRanks = 1;
+int synthesizer::myRank = 0;
 /*******************************************************************
  * Compute body 
  * 
@@ -61,10 +63,15 @@ Param ReadParam(const char *param_file) {
 
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
-  int numRanks = 1;
-  int myRank = 0;
-  MPI_Comm_size(MPI_COMM_WORLD, &numRanks);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  std::string inputfile("test.json");
+  if (argc > 1) {
+    inputfile = argv[1];
+  }
+
+  //std::cout << inputfile << std::endl;
+    
+  MPI_Comm_size(MPI_COMM_WORLD, &synthesizer::numRanks);
+  MPI_Comm_rank(MPI_COMM_WORLD, &synthesizer::myRank);
   CD_Init(numRanks, myRank, kPFS);
   A a;
   function<void()> f = bind<void>(a, 1);
@@ -76,7 +83,7 @@ int main(int argc, char* argv[]) {
   SYNO(cout << "\n\n Start \n\n" << endl;)
 
 //  Param param = ReadParam("test.json");
-  CDNode cd_tree(ReadParam("test.json"), "root");
+  CDNode cd_tree(ReadParam(inputfile.c_str()), "root");
   cd_tree();
   CD_Finalize();
   MPI_Finalize();

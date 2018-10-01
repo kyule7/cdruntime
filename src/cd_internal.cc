@@ -972,7 +972,8 @@ void SetHealthy(void)
 //  cd_name_.phase_ = cd::phaseTree->target_->GetPhaseNode(level(), label_);
 //}
 inline
-uint32_t CD::BeginPhase(uint32_t level, const string &label) {
+uint32_t CD::BeginPhase(uint32_t level, const string &label) 
+{
   uint32_t phase = -1;
   if(tuned::tuning_enabled == false) {
     if(phaseTree.current_ != NULL) {

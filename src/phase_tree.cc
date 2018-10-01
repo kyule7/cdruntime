@@ -131,21 +131,23 @@ void PhaseNode::PrintOutputYAML(bool first)
 //TODO: check interval, reex_cnt, error_vec 
 void PhaseNode::PrintOutputJson(PhaseNode *root) 
 {
-//<<<<<<< HEAD
-//  //FIXME(YKWON): Better to have different file handler
-//  assert(outYAML == NULL);
-//  assert(parent_ == NULL);
-//  sprintf(output_filepath, "%s%s", cd::output_basepath.c_str(), CD_DEFAULT_CONFIG_JSON);
-//  printf("Output File:%s\n", output_filepath);
-//  //outYAML = fopen(output_filepath, "a");
-//  outYAML = fopen(output_filepath, "w+");
-//=======
+  // Specify the type of CD-enabled execution 
+  char ftypestr[64];
+  if (cd::dont_cdop) {
+    strcpy(ftypestr, "orign");
+  } else if (cd::dont_preserve) {
+    strcpy(ftypestr, "noprv");
+  } else if (cd::dont_error) {
+    strcpy(ftypestr, "noerr");
+  } else {
+    strcpy(ftypestr, ftype_name);
+  }
+
   assert(outJSON == NULL);
-//  assert(parent_ == NULL);
   memset(output_filepath, '\0', 1024);
   sprintf(output_filepath, "%s/%s.%s.%s.%d.%s.%s.json", output_basepath, CD_DEFAULT_CONFIG_JSON, 
       exec_name, (exec_details!=NULL)? exec_details : "NoInput", 
-      cd::totalTaskSize, ftype_name, start_date);
+      cd::totalTaskSize, ftypestr, start_date);
   printf("%s Output File: %s\n", __func__, output_filepath);
   outJSON = fopen(output_filepath, "a");
   
@@ -156,28 +158,37 @@ void PhaseNode::PrintOutputJson(PhaseNode *root)
                    "  \"iterations\" : %d,\n"
                    "  \"ftype\"      : \"%s\",\n"
                    "  \"start_time\" : \"%s\",\n"
-                   "  \"end_time\"   : \"%s\",\n",
+                   "  \"end_time\"   : \"%s\",\n"
+                   "  \"total profile\" : {\n",
             exec_name, (exec_details!=NULL)? exec_details : "NoInput", 
-            cd::totalTaskSize, cd::app_input_size, ftype_name, start_date, end_date
+            cd::totalTaskSize, cd::app_input_size, ftypestr, start_date, end_date
          );
-  fprintf(outJSON, "  \"total time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::TOTAL_PRF], cd::recvstd[cd::TOTAL_PRF], cd::recvmin[cd::TOTAL_PRF], cd::recvmax[cd::TOTAL_PRF]);
-  fprintf(outJSON, "  \"reex time\"     : [%le, %le, %le, %le],\n", cd::recvavg[cd::REEX_PRF], cd::recvstd[cd::REEX_PRF], cd::recvmin[cd::REEX_PRF], cd::recvmax[cd::REEX_PRF]);
-  fprintf(outJSON, "  \"preserve time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::PRV_PRF]  , cd::recvstd[cd::PRV_PRF]  , cd::recvmin[cd::PRV_PRF]  , cd::recvmax[cd::PRV_PRF]  ); 
-  fprintf(outJSON, "  \"restore time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::RST_PRF]  , cd::recvstd[cd::RST_PRF]  , cd::recvmin[cd::RST_PRF]  , cd::recvmax[cd::RST_PRF]  ); 
-  fprintf(outJSON, "  \"CD body\"       : [%le, %le, %le, %le],\n", cd::recvavg[cd::CDOVH_PRF], cd::recvstd[cd::CDOVH_PRF], cd::recvmin[cd::CDOVH_PRF], cd::recvmax[cd::CDOVH_PRF]); 
-  fprintf(outJSON, "  \"CD overhead\"   : [%le, %le, %le, %le],\n", cd::tot_rtov[0], cd::tot_rtov[1], cd::tot_rtov[2], cd::tot_rtov[3]); 
-  fprintf(outJSON, "  \"messaging time\": [%le, %le, %le, %le],\n", cd::recvavg[cd::MSG_PRF]  , cd::recvstd[cd::MSG_PRF]  , cd::recvmin[cd::MSG_PRF]  , cd::recvmax[cd::MSG_PRF]  );
-  fprintf(outJSON, "  \"sync time exec\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_NS_PRF], cd::recvstd[cd::CD_NS_PRF], cd::recvmin[cd::CD_NS_PRF], cd::recvmax[cd::CD_NS_PRF]); 
-  fprintf(outJSON, "  \"sync time reex\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_RS_PRF], cd::recvstd[cd::CD_RS_PRF], cd::recvmin[cd::CD_RS_PRF], cd::recvmax[cd::CD_RS_PRF]); 
-  fprintf(outJSON, "  \"sync time recr\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_ES_PRF], cd::recvstd[cd::CD_ES_PRF], cd::recvmin[cd::CD_ES_PRF], cd::recvmax[cd::CD_ES_PRF]); 
-  fprintf(outJSON, "  \"create time\"   : [%le, %le, %le, %le],\n", cd::recvavg[cd::CREAT_PRF], cd::recvstd[cd::CREAT_PRF], cd::recvmin[cd::CREAT_PRF], cd::recvmax[cd::CREAT_PRF]); 
-  fprintf(outJSON, "  \"destory time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::DSTRY_PRF], cd::recvstd[cd::DSTRY_PRF], cd::recvmin[cd::DSTRY_PRF], cd::recvmax[cd::DSTRY_PRF]); 
-  fprintf(outJSON, "  \"begin time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::BEGIN_PRF], cd::recvstd[cd::BEGIN_PRF], cd::recvmin[cd::BEGIN_PRF], cd::recvmax[cd::BEGIN_PRF]); 
-  fprintf(outJSON, "  \"complete time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::COMPL_PRF], cd::recvstd[cd::COMPL_PRF], cd::recvmin[cd::COMPL_PRF], cd::recvmax[cd::COMPL_PRF]); 
-  fprintf(outJSON, "  \"libc logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::LOG_PRF]  , cd::recvstd[cd::LOG_PRF]  , cd::recvmin[cd::LOG_PRF]  , cd::recvmax[cd::LOG_PRF]  );
+  fprintf(outJSON, "    \"total time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::TOTAL_PRF], cd::recvstd[cd::TOTAL_PRF], cd::recvmin[cd::TOTAL_PRF], cd::recvmax[cd::TOTAL_PRF]);
+  fprintf(outJSON, "    \"reex time\"     : [%le, %le, %le, %le],\n", cd::recvavg[cd::REEX_PRF], cd::recvstd[cd::REEX_PRF], cd::recvmin[cd::REEX_PRF], cd::recvmax[cd::REEX_PRF]);
+  fprintf(outJSON, "    \"preserve time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::PRV_PRF]  , cd::recvstd[cd::PRV_PRF]  , cd::recvmin[cd::PRV_PRF]  , cd::recvmax[cd::PRV_PRF]  ); 
+  fprintf(outJSON, "    \"restore time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::RST_PRF]  , cd::recvstd[cd::RST_PRF]  , cd::recvmin[cd::RST_PRF]  , cd::recvmax[cd::RST_PRF]  ); 
+  fprintf(outJSON, "    \"CD body\"       : [%le, %le, %le, %le],\n", cd::recvavg[cd::CDOVH_PRF], cd::recvstd[cd::CDOVH_PRF], cd::recvmin[cd::CDOVH_PRF], cd::recvmax[cd::CDOVH_PRF]); 
+  fprintf(outJSON, "    \"CD overhead\"   : [%le, %le, %le, %le],\n", cd::tot_rtov[0], cd::tot_rtov[1], cd::tot_rtov[2], cd::tot_rtov[3]); 
+  fprintf(outJSON, "    \"messaging time\": [%le, %le, %le, %le],\n", cd::recvavg[cd::MSG_PRF]  , cd::recvstd[cd::MSG_PRF]  , cd::recvmin[cd::MSG_PRF]  , cd::recvmax[cd::MSG_PRF]  );
+  fprintf(outJSON, "    \"sync time exec\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_NS_PRF], cd::recvstd[cd::CD_NS_PRF], cd::recvmin[cd::CD_NS_PRF], cd::recvmax[cd::CD_NS_PRF]); 
+  fprintf(outJSON, "    \"sync time reex\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_RS_PRF], cd::recvstd[cd::CD_RS_PRF], cd::recvmin[cd::CD_RS_PRF], cd::recvmax[cd::CD_RS_PRF]); 
+  fprintf(outJSON, "    \"sync time recr\": [%le, %le, %le, %le],\n", cd::recvavg[cd::CD_ES_PRF], cd::recvstd[cd::CD_ES_PRF], cd::recvmin[cd::CD_ES_PRF], cd::recvmax[cd::CD_ES_PRF]); 
+  fprintf(outJSON, "    \"create time\"   : [%le, %le, %le, %le],\n", cd::recvavg[cd::CREAT_PRF], cd::recvstd[cd::CREAT_PRF], cd::recvmin[cd::CREAT_PRF], cd::recvmax[cd::CREAT_PRF]); 
+  fprintf(outJSON, "    \"destory time\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::DSTRY_PRF], cd::recvstd[cd::DSTRY_PRF], cd::recvmin[cd::DSTRY_PRF], cd::recvmax[cd::DSTRY_PRF]); 
+  fprintf(outJSON, "    \"begin time\"    : [%le, %le, %le, %le],\n", cd::recvavg[cd::BEGIN_PRF], cd::recvstd[cd::BEGIN_PRF], cd::recvmin[cd::BEGIN_PRF], cd::recvmax[cd::BEGIN_PRF]); 
+  fprintf(outJSON, "    \"complete time\" : [%le, %le, %le, %le],\n", cd::recvavg[cd::COMPL_PRF], cd::recvstd[cd::COMPL_PRF], cd::recvmin[cd::COMPL_PRF], cd::recvmax[cd::COMPL_PRF]); 
+  fprintf(outJSON, "    \"libc logging\"  : [%le, %le, %le, %le],\n", cd::recvavg[cd::LOG_PRF]  , cd::recvstd[cd::LOG_PRF]  , cd::recvmin[cd::LOG_PRF]  , cd::recvmax[cd::LOG_PRF]  );
+  fprintf(outJSON, "    \"total errors\"  : [");
+  bool first = true;
+  for (auto &e : cd::total_errors) {
+    if (first) { first = false; fprintf(outJSON, "%u", e); }
+    else fprintf(outJSON, ", %u", e);
+  }
+  fprintf(outJSON, "],\n");
 #if CD_PROFILER_ENABLED & CD_MPI_ENABLED
-  fprintf(outJSON, "  \"mailbox overhead\": %lf,\n", cd::mailbox_elapsed_time_in_sec); 
+  fprintf(outJSON, "    \"mailbox overhead\": %lf\n", cd::mailbox_elapsed_time_in_sec); 
 #endif
+  fprintf(outJSON, "  },");
 
   if(root != NULL) {
     fprintf(outJSON, "  \"global param\" : {\n"
@@ -185,17 +196,14 @@ void PhaseNode::PrintOutputJson(PhaseNode *root)
                      "  },\n"
                      "  \"CD info\" : {\n");
     root->PrintOutputJsonInternal();
-    fprintf(outJSON, "\n  }\n"
-                     "}\n"
-           );
+    fprintf(outJSON, "\n  } // CD info ends\n");
   } else {
     fprintf(outJSON, "  \"global param\" : {\n"
                      "    \"max error\" : 20\n"
                      "  },\n"
-                     "  \"CD info\" : {}\n"
-                     "}\n"
-                     );
+                     "  \"CD info\" : {} // CD info ends\n");
   }
+  fprintf(outJSON, "}\n");
   fclose(outJSON);
   outJSON = NULL;
   
@@ -207,7 +215,8 @@ void PhaseNode::PrintOutputJsonInternal(void)
   int tabsize = level_ * 2  + adjust_tab;
   std::string indent((tabsize)<<1, ' ');
   std::string one_more_indent((tabsize+1)<<1, ' ');
-  std::string two_more_indent((tabsize+2)<<1, ' ');
+  std::string two_more_indent((tabsize+3)<<1, ' ');
+  std::string kind_indent((tabsize+2)<<1, ' ');
 //<<<<<<< HEAD
 //  //TODO: lable may be better for CD name instead of level and phase
 //  fprintf(outYAML, "%s\"CD_%u_%u\" : {\n",               indent.c_str(), level_, phase_);
@@ -230,6 +239,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
   } else if(level_ == 0) {
     fprintf(outJSON, "%s\"root CD\" : {\n",      one_more_indent.c_str());
   } 
+  fprintf(outJSON,   "%s\"profile\"         : {\n",    kind_indent.c_str());
   fprintf(outJSON,   "%s\"label\"         : \"%s\",\n",    two_more_indent.c_str(), label_.c_str());
   if(children_.empty()) {
     fprintf(outJSON, "%s\"type\"          : \"leaf\",\n", two_more_indent.c_str());
@@ -336,19 +346,20 @@ void PhaseNode::PrintOutputJsonInternal(void)
   profile_.GetPrvDetails(oss, two_more_indent); // print cons prod
   cd_prof_map[phase_].PrintJSON(oss, two_more_indent);
   fprintf(outJSON, "%s", oss.str().c_str());
-  profile_.PrintTraces(outJSON, two_more_indent.c_str());
   fprintf(outJSON, "%s\"max prv only bw\": %le,\n",  two_more_indent.c_str(), vol_in_check/preserve_time_per_cd);
   fprintf(outJSON, "%s\"loc prv only bw\": %le,\n",  two_more_indent.c_str(), vol_in_check/loc_prsv_time_per_cd);
   fprintf(outJSON, "%s\"loc cdrt time\": %lf,\n",  two_more_indent.c_str(), loc_cdrt_ovhd_per_cd);
   fprintf(outJSON, "%s\"max cdrt time\": %lf,\n",  two_more_indent.c_str(), max_cdrt_ovhd_per_cd);
-  fprintf(outJSON, "%s\"loc prv time\": %lf",  two_more_indent.c_str(), loc_prsv_time_per_cd);
+  fprintf(outJSON, "%s\"loc prv time\": %lf\n",  two_more_indent.c_str(), loc_prsv_time_per_cd);
+  
+  fprintf(outJSON,   "%s},\n",    kind_indent.c_str()); // profile ends
+  // print trace
+  fprintf(outJSON, "%s\"trace\": {\n", kind_indent.c_str());
+  profile_.PrintTraces(outJSON, two_more_indent.c_str());
+  fprintf(outJSON, "%s},\n", kind_indent.c_str());
 
   //fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
-  if(children_.size() > 0) {
-    fprintf(outJSON, ",\n%s\"child CDs\" : {\n", two_more_indent.c_str());
-  } else {
-    fprintf(outJSON, "\n");
-  }
+  fprintf(outJSON, "%s\"child CDs\" : {\n", kind_indent.c_str());
   for(auto it=children_.begin(); it!=children_.end();) {
     (*it)->PrintOutputJsonInternal();
     ++it;
@@ -357,9 +368,9 @@ void PhaseNode::PrintOutputJsonInternal(void)
     else
       fprintf(outJSON, "\n");
   }
-  if(children_.size() > 0) 
-    fprintf(outJSON, "%s}\n", two_more_indent.c_str());
-  fprintf(outJSON, "%s}", one_more_indent.c_str());
+
+  fprintf(outJSON, "%s} // child CDs ends\n", kind_indent.c_str());
+  fprintf(outJSON, "%s} // CD_%u_%u ends\n", one_more_indent.c_str(), level_, phase_);
 }
 
 //void PhaseNode::Print(void) 
@@ -740,9 +751,16 @@ void PhaseNode::GatherStats(void)
       rt_info_avg_sqsum.DoSq();
      //sprintf(buf, "Task %d 2nd", cd::myTaskID);
      //rt_info_std.Print(std::cout, buf);
+
       rt_info_std -= rt_info_avg_sqsum;
-      rt_info_std.DoSqrt();
-     //sprintf(buf, "Task %d Avg", cd::myTaskID);
+      /*********************************************
+       * keep variance to sum other variances from different measurements. 
+       * Post-process will squar-rooted it for std.
+      rt_info_std.DoSqrt(); 
+       */
+      rt_info_std.HandleNaN();
+
+      //sprintf(buf, "Task %d Avg", cd::myTaskID);
      //rt_info_avg.Print(std::cout, buf);
      //sprintf(buf, "Task %d Std", cd::myTaskID);
      //rt_info_std.Print(std::cout, buf);

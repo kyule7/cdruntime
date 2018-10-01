@@ -438,7 +438,7 @@ struct RTInfo {
     sync_time_              += that.sync_time_;
     prv_elapsed_time_       += that.prv_elapsed_time_;
     max_prv_elapsed_time_   += that.max_prv_elapsed_time_;
-    max_cdrt_elapsed_time_   += that.max_cdrt_elapsed_time_;
+    max_cdrt_elapsed_time_  += that.max_cdrt_elapsed_time_;
     rst_elapsed_time_       += that.rst_elapsed_time_;
     create_elapsed_time_    += that.create_elapsed_time_;
     destroy_elapsed_time_   += that.destroy_elapsed_time_;
@@ -448,6 +448,27 @@ struct RTInfo {
     return *this;
   }
 
+  void HandleNaN(void) 
+  {
+    if (std::isnan(exec_cnt_))              { exec_cnt_              = 0;}
+    if (std::isnan(reex_cnt_))              { reex_cnt_              = 0;}
+    if (std::isnan(prv_copy_))              { prv_copy_              = 0;}
+    if (std::isnan(prv_ref_))               { prv_ref_               = 0;}
+    if (std::isnan(restore_))               { restore_               = 0;}
+    if (std::isnan(msg_logging_))           { msg_logging_           = 0;}
+    if (std::isnan(total_time_))            { total_time_            = 0;}          
+    if (std::isnan(reex_time_))             { reex_time_             = 0;}
+    if (std::isnan(sync_time_))             { sync_time_             = 0;}
+    if (std::isnan(prv_elapsed_time_))      { prv_elapsed_time_      = 0;}
+    if (std::isnan(max_prv_elapsed_time_))  { max_prv_elapsed_time_  = 0;}
+    if (std::isnan(max_cdrt_elapsed_time_)) { max_cdrt_elapsed_time_ = 0;}
+    if (std::isnan(rst_elapsed_time_))      { rst_elapsed_time_      = 0;}
+    if (std::isnan(create_elapsed_time_))   { create_elapsed_time_   = 0;}
+    if (std::isnan(destroy_elapsed_time_))  { destroy_elapsed_time_  = 0;}
+    if (std::isnan(begin_elapsed_time_))    { begin_elapsed_time_    = 0;}
+    if (std::isnan(compl_elapsed_time_))    { compl_elapsed_time_    = 0;}
+    if (std::isnan(advance_elapsed_time_))  { advance_elapsed_time_  = 0;}
+  }
   size_t Length(void) { return sizeof(RTInfo<T>) / sizeof(T); }
 };
 
@@ -465,7 +486,7 @@ std::ostream &operator<<(std::ostream &os, const RTInfo<T> &info)
      << "\n - sync_time : "            << info.sync_time_
      << "\n - prv_elapsed_time : "     << info.prv_elapsed_time_
      << "\n - max_prv_elapsed_time : " << info.max_prv_elapsed_time_
-     << "\n - max_cdrt_elapsed_time : " << info.max_cdrt_elapsed_time_
+     << "\n - max_cdrt_elapsed_time : "<< info.max_cdrt_elapsed_time_
      << "\n - rst_elapsed_time : "     << info.rst_elapsed_time_
      << "\n - create_elapsed_time : "  << info.create_elapsed_time_
      << "\n - destroy_elapsed_time : " << info.destroy_elapsed_time_

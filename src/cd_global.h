@@ -61,6 +61,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include <sstream>
 #include <string>
 #include <list>
+#include <vector>
 #include "cd_features.h"
 #include "cd_def_common.h"
 #include "libc_wrapper.h" // defined here due to tuned
@@ -294,6 +295,10 @@ namespace cd {
   extern bool app_side;
   extern bool is_koutput_disabled;
   extern bool runtime_activated;
+  extern std::vector<uint32_t> total_errors;
+  extern bool dont_preserve;
+  extern bool dont_cdop;
+  extern bool dont_error;
 
   enum {
     TOTAL_PRF=0,
