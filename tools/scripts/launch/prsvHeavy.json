@@ -1,0 +1,112 @@
+{
+	// global parameters
+	"global param" : {
+		"max error" : 20
+	},
+
+	// CD hierarchy
+	"CD info" : {
+		"root CD" : {
+      "profile": {
+  			"iterations" : 30,
+        "label" : "Very Root",
+  			"type" : "hmcd", // homogeneous CDs
+  			"child siblings" : 64, // number of parallel CDs 
+  			"fault rate" : 0.0, // not used
+        "exec time" : 0.5,
+        "exec time std" : 0.005, 
+        "prsv type" : "GlobalDisk",
+        "preserve vol" : 10,
+        "comm payload" : 2,
+        "comm type" : "reduction",
+        "error vector" : 15,
+  			"rd_bw" : 0.0, // not used
+  			"wr_bw" : 0.0, // not used
+  			"cons" : {
+  				"a0" : 100000000,
+  				"b0" : 200000000,
+  				"c0" : 150000000,
+  				"d0" : 100000000,
+  				"e0" : 30000000,
+  				"f0" : 500000000,
+  				"g0" : 400000000,
+  				"h0" : 25000000,
+  				"i0" : 12000000,
+  				"j0" : 10000000,
+  				"k0" : 100000000,
+  				"a1" : 10000000,
+  				"b1" : 20000000,
+  				"c1" : 15000000,
+  				"d1" : 10000000,
+  				"e1" : 3000000,
+  				"f1" : 50000000,
+  				"g1" : 40000000,
+  				"h1" : 2500000,
+  				"i1" : 1200000,
+  				"j1" : 1000000,
+  				"k1" : 10000000
+  			},
+  			"prod" : {
+  				"c" : 6000
+  			}
+      },
+			
+			"child CDs" : {
+
+				"CD1" : {
+          "profile": {
+  					"iterations" : 8, 
+            "label" : "MainLoop",
+  					"type" : "htcd", // heterogeneous CDs
+  					"child siblings" : 64, 
+  					"fault rate" : 0.00000001,
+            "exec time" : 0.1,
+            "exec time std" : 0.001, 
+            "prsv type" : "LocalMemory",
+            "preserve vol" : 500,
+            "comm payload" : 50,
+            "comm type" : "nonblocking",
+            "error vector" : 3,
+  					"rd_bw" : 10,
+  					"wr_bw" : 10,
+  					"cons" : {
+      				"a2" : 100,
+      				"b2" : 200,
+      				"c2" : 150,
+      				"d2" : 100,
+      				"e2" : 30,
+      				"f2" : 500,
+      				"g2" : 400,
+      				"h2" : 25,
+      				"i2" : 12,
+      				"j2" : 10,
+      				"k2" : 100,
+      				"a3" : 100,
+      				"b3" : 200,
+      				"c3" : 150,
+      				"d3" : 100,
+      				"e3" : 30,
+      				"f3" : 500,
+      				"g3" : 400,
+      				"h3" : 25,
+      				"i3" : 12,
+      				"j3" : 10,
+      				"k3" : 100
+  					},
+  					"prod" : {
+  						"c" : 6000
+  					}
+          },
+			    "child CDs" : {}
+        }
+			} // child CDs
+		} // root C
+	}, // CD info
+  "sweep" : {
+		"global param.max error" : {
+			"sweep_type" : "list",
+			"data_type" : "uint",
+			"space" : [30]
+		}
+	}
+}
