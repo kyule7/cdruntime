@@ -182,9 +182,11 @@ void cd::internal::Initialize(void)
 //                             &CD::rollback_point_, &CD::rollbackWindow_);
 //    MPI_Win_shared_query(CD::rollbackWindow_, head_in_node, &rp_size, &rp_dist, &CD::rollback_point_);
 //  }
-  printf("[%s %3d] node:%2d/%2d (%3d), rp:%3ld,%3d,%p, pd:%p\n", cd::node_name, cd::myTaskID, 
-          cd::node_rank, cd::node_size, head_in_node,
-          rp_size, rp_dist, CD::rollback_point_, CD::pendingFlag_);
+
+//  printf("[%s %3d] node:%2d/%2d (%3d), rp:%3ld,%3d,%p, pd:%p\n", cd::node_name, cd::myTaskID, 
+//          cd::node_rank, cd::node_size, head_in_node,
+//          rp_size, rp_dist, CD::rollback_point_, CD::pendingFlag_);
+
 //  PMPI_Win_allocate_shared(sizeof(CDFlagT), sizeof(CDFlagT), 
 //                           MPI_INFO_NULL, GetRootCD()->color(), 
 //                           CD::pendingFlag_, &CD::pendingWindow_);
@@ -333,7 +335,7 @@ CD::CD(CDHandle *cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
- :  cd_id_(cd_id), entry_directory_(32, NULL, NULL, DATA_GROW_UNIT, kMPIFile)
+ :  cd_id_(cd_id), entry_directory_(32, NULL, NULL, DATA_GROW_UNIT/64, kMPIFile)
     //,
 //    file_handle_(prv_medium, 
 //                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
@@ -1255,6 +1257,8 @@ CDErrT CD::Begin(const char *label, bool collective)
       }
     } else if(prv_medium_ == kLocalMemory) {
       entry_directory_.data_->SetMode(kVolatile);
+    } else {
+      entry_directory_.data_->SetMode(kBoundedMode);
     }
     entry_directory_.data_->ReInit();
   }

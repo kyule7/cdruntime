@@ -16,7 +16,7 @@ def getJsonString(json_file):
         else:
 #            print 'splt:',splitted[0]
             json_str += splitted[0] + '\n'
-    print json_str
+#    print json_str
     return json_str
 
 def makeFlatCDs(profile, cdtrace, cds_list):
@@ -25,9 +25,86 @@ def makeFlatCDs(profile, cdtrace, cds_list):
             profile[cds] = []
         if cds not in cdtrace:
             cdtrace[cds] = []
-        print 'CD:', cds
-        profile[cds].append(cds_list[cds]['profile'])
-        cdtrace[cds].append(cds_list[cds]['trace'])
+        #print 'CD:', cds
+        if 'profile' in cds_list[cds]:
+          profile[cds].append(cds_list[cds]['profile'])
+        else:
+          print cds
+          if "child siblings" in cds_list[cds]:
+            children = cds_list[cds]["child siblings"]
+            iter_begin = cds_list[cds]["iter begin" ]
+            iter_end = cds_list[cds]["iter end"   ]
+            child_cnt = cds_list[cds]["child counts"]
+            child_iter = cds_list[cds]["iterations" ]
+          else:
+            children    = 0
+            iter_begin  = 0
+            iter_end    = 0
+            child_cnt   = 0
+            child_iter  = 0
+          profile[cds].append( {
+                     "label"           : cds_list[cds]["label"         ]
+                   , "type"            : cds_list[cds]["type"          ]
+                   , "child siblings"  : children   
+                   , "iter begin"      : iter_begin 
+                   , "iter end"        : iter_end   
+                   , "child counts"    : child_cnt  
+                   , "iterations"      : child_iter 
+                   , "current counts"  : cds_list[cds]["current counts"]
+                   , "execution time"  : cds_list[cds]["execution time"]
+                   , "per-CD overhead" : cds_list[cds]["per-CD overhead"]
+                   , "CDrt overhead"   : cds_list[cds]["CDrt overhead" ]
+                   , "preserve time"   : cds_list[cds]["preserve time" ]
+                   , "total preserve"  : cds_list[cds]["total preserve"]
+                   , "input volume"    : cds_list[cds]["input volume"  ]
+                   , "output volume"   : cds_list[cds]["output volume" ]
+                   , "rd_bw"           : cds_list[cds]["rd_bw"         ]
+                   , "wr_bw"           : cds_list[cds]["wr_bw"         ]
+                   , "eff_bw"          : cds_list[cds]["eff_bw"        ]
+                   , "rd_bw_mea"       : cds_list[cds]["rd_bw_mea"     ]
+                   , "wr_bw_mea"       : cds_list[cds]["wr_bw_mea"     ]
+                   , "fault rate"      : cds_list[cds]["fault rate"    ]
+                   , "interval"        : cds_list[cds]["interval"      ]
+                   , "errortype"       : cds_list[cds]["errortype"     ]
+                   , "medium"          : cds_list[cds]["medium"        ]
+                   , "tasksize"        : cds_list[cds]["tasksize"      ]
+                   , "siblingID"       : cds_list[cds]["siblingID"     ]
+                   , "sibling #"       : cds_list[cds]["sibling #"     ]
+                   , "cons" : cds_list[cds]["cons"]
+                   , "prod" : cds_list[cds]["prod"]
+                   , "exec" : cds_list[cds]["exec"]
+                   , "reexec"         : cds_list[cds]["reexec"       ]
+                   , "prv_copy"       : cds_list[cds]["prv_copy"     ]
+                   , "prv_ref"        : cds_list[cds]["prv_ref"      ]
+                   , "restore"        : cds_list[cds]["restore"      ]
+                   , "msg_log"        : cds_list[cds]["msg_log"      ]
+                   , "total_time"     : cds_list[cds]["total_time"   ]
+                   , "reex_time"      : cds_list[cds]["reex_time"    ]
+                   , "sync_time"      : cds_list[cds]["sync_time"    ]
+                   , "prv_time"       : cds_list[cds]["prv_time"     ]
+                   , "rst_time"       : cds_list[cds]["rst_time"     ]
+                   , "create_time"    : cds_list[cds]["create_time"  ]
+                   , "destroy_time"   : cds_list[cds]["destroy_time" ]
+                   , "begin_time"     : cds_list[cds]["begin_time"   ]
+                   , "compl_time"     : cds_list[cds]["compl_time"   ]
+                   , "advance_time"   : cds_list[cds]["advance_time" ]
+                   , "max prv only bw" : cds_list[cds]["max prv only bw"]
+                   , "loc prv only bw" : cds_list[cds]["loc prv only bw"]
+                   , "loc cdrt time"   : cds_list[cds]["loc cdrt time"  ]
+                   , "max cdrt time"   : cds_list[cds]["max cdrt time"  ]
+                   , "loc prv time"    : cds_list[cds]["loc prv time"   ]
+                  } )
+        if 'trace' in cds_list[cds]:
+          cdtrace[cds].append(cds_list[cds]['trace'])
+        else:
+          cdtrace[cds].append( {
+                      "exec_trace" : cds_list[cds]["exec_trace"]
+                   ,  "cdrt_trace" : cds_list[cds]["cdrt_trace"]
+                   ,  "prsv_trace" : cds_list[cds]["prsv_trace"]
+                   ,  "max_prsv"   : cds_list[cds]["max_prsv"  ]
+                   ,  "max_cdrt"   : cds_list[cds]["max_cdrt"  ]
+                  } )
+
         if 'child CDs' in cds_list[cds] and len(cds_list[cds]['child CDs']) > 0 :
             makeFlatCDs(profile, cdtrace, cds_list[cds]['child CDs'])
 
@@ -55,7 +132,7 @@ def checkJSONObj(result):
                     print result[exec_name][fail_type][numTasks][input_size]['total profile']
 #                            for meas in result[exec_name][fail_type][numTasks][input_size][elem]:
 #                                print meas
-                    raw_input('\n\n----------------------------------------------\n\n')
+                    #raw_input('\n\n----------------------------------------------\n\n')
 
 def gatherJSONObj(filelist):
     newfile = open(filelist, 'r')
@@ -79,9 +156,32 @@ def gatherJSONObj(filelist):
             numTasks  = eachjson['numTasks' ]
             input_size= eachjson['input'    ]
             cd_info   = eachjson['CD info'  ]
-            profile   = eachjson['total profile']
+            if 'total profile' in eachjson:
+              profile   = eachjson['total profile']
+            else:
+              profile   = { "total time"       : eachjson["total time"      ]
+                           ,"reex time"        : eachjson["reex time"       ]
+                           ,"preserve time"    : eachjson["preserve time"   ]
+                           ,"restore time"     : eachjson["restore time"    ]
+                           ,"CD body"          : eachjson["CD body"         ]
+                           ,"CD overhead"      : eachjson["CD overhead"     ]
+                           ,"messaging time"   : eachjson["messaging time"  ]
+                           ,"sync time exec"   : eachjson["sync time exec"  ]
+                           ,"sync time reex"   : eachjson["sync time reex"  ]
+                           ,"sync time recr"   : eachjson["sync time recr"  ]
+                           ,"create time"      : eachjson["create time"     ]
+                           ,"destory time"     : eachjson["destory time"    ]
+                           ,"begin time"       : eachjson["begin time"      ]
+                           ,"complete time"    : eachjson["complete time"   ]
+                           ,"libc logging"     : eachjson["libc logging"    ]
+                           ,"mailbox overhead" : eachjson["mailbox overhead"]
+                           ,"total errors"  : [0, 0, 0, 0]
+                            }
+
+
+
             print exec_name, fail_type, numTasks, input_size
-            raw_input('check cdinfo')
+            #raw_input('check cdinfo')
             if exec_name not in gathered:
                 gathered[exec_name] = {}
             if fail_type not in gathered[exec_name]:
@@ -93,14 +193,14 @@ def gatherJSONObj(filelist):
             flattened = {}
             trace = {}
             makeFlatCDs(flattened, trace, cd_info)
-            for each in flattened:
-                print each, flattened[each]
-                print '--'
-            for each in trace:
-                print each, trace[each]
-            print '\n-- profile --'
-            print profile
-            print '--- So far --', exec_name, fail_type, numTasks, input_size
+            #for each in flattened:
+            #    print each, flattened[each]
+            #    print '--'
+            #for each in trace:
+            #    print each, trace[each]
+            #print '\n-- profile --'
+            #print profile
+            #print '--- So far --', exec_name, fail_type, numTasks, input_size
             gathered[exec_name][fail_type][numTasks][input_size]['total profile'].append(profile)
             for pid in flattened:
                 if pid not in gathered[exec_name][fail_type][numTasks][input_size]['CD info']:
@@ -108,13 +208,13 @@ def gatherJSONObj(filelist):
                     gathered[exec_name][fail_type][numTasks][input_size]['trace'][pid] = []
                 gathered[exec_name][fail_type][numTasks][input_size]['CD info'][pid].extend(flattened[pid])
                 gathered[exec_name][fail_type][numTasks][input_size]['trace'][pid].extend(trace[pid])
-            print gathered[exec_name][fail_type][numTasks][input_size]['total profile']
-            for pid in gathered[exec_name][fail_type][numTasks][input_size]['CD info']:
-                print 'cd phase:', pid, len(gathered[exec_name][fail_type][numTasks][input_size]['CD info'][pid]) 
-            for pid in gathered[exec_name][fail_type][numTasks][input_size]['trace']:
-                print 'cd phase:', pid, len(gathered[exec_name][fail_type][numTasks][input_size]['trace'][pid])
-            print 'cd phase:', gathered[exec_name][fail_type][numTasks][input_size]['trace']
-            raw_input('\n\n-------- done ---------------------')
+            #print gathered[exec_name][fail_type][numTasks][input_size]['total profile']
+            #for pid in gathered[exec_name][fail_type][numTasks][input_size]['CD info']:
+            #    print 'cd phase:', pid, len(gathered[exec_name][fail_type][numTasks][input_size]['CD info'][pid]) 
+            #for pid in gathered[exec_name][fail_type][numTasks][input_size]['trace']:
+            #    print 'cd phase:', pid, len(gathered[exec_name][fail_type][numTasks][input_size]['trace'][pid])
+            #print 'cd phase:', gathered[exec_name][fail_type][numTasks][input_size]['trace']
+            #raw_input('\n\n-------- done ---------------------')
     return gathered
 
 def extractLatencies(cd_tree):
@@ -139,9 +239,9 @@ def extractLatencies(cd_tree):
                     print item, jtem, len(new_tree[item][jtem]) #new_tree[item]#, len(new_tree[item][jtem])
             else:
                 print "detail trace:", jtem, new_tree[item]
-        raw_input('trace done')
+        #raw_input('trace done')
     print '[]done'
-    raw_input('--------------[]------------[]---------')
+    #raw_input('--------------[]------------[]---------')
     return new_tree
 
 def removeLatencies(cd_tree):
@@ -192,7 +292,7 @@ def removeLatencies(cd_tree):
                     print item, jtem, ktem #new_tree[item]#, len(new_tree[item][jtem])
             else:
                 print "detail:", jtem, new_tree[item][jtem], new_tree[item][jtem][ktem]
-        raw_input('trace done')
+        #raw_input('trace done')
     print '[]done'
     raw_input('--------------[]------------[]---------')
     return new_tree
@@ -201,14 +301,14 @@ def mergeCDInfo(samples):
     new_tree = {}
     num_samples = {}
     for pid in samples:
-        print '\n\n\n', pid, samples[pid], type(samples[pid][0])
+        #print '\n\n\n', pid, samples[pid], type(samples[pid][0])
         new_tree[pid] = copy.deepcopy(samples[pid][0])
         for each in samples[pid][1:]:
             for elem in new_tree[pid]:
                 elemtype = type(new_tree[pid][elem])
                 if elemtype is dict:
                     for e in new_tree[pid][elem]:
-                       # print '\n\ncheck:', elem, type(each[elem][e]), each[elem]
+                        #print '\n\ncheck:', new_tree[pid][elem], elem, each, each[elem], type(each[elem][e])
                         new_tree[pid][elem][e]      += float(each[elem][e]     )
                         new_tree[pid][elem][e]      += float(each[elem][e]     )
                         new_tree[pid][elem][e]      += float(each[elem][e]     )
@@ -547,7 +647,7 @@ def mergeTraces(samples):
     new_tree = {}
     num_samples = {}
     for pid in samples:
-        print '\n\n\n', pid, samples[pid], type(samples[pid][0])
+        #print '\n\n\n', pid, samples[pid], type(samples[pid][0])
         new_tree[pid] = copy.deepcopy(samples[pid][0])
         for each in samples[pid][1:]:
             new_tree[pid]["exec_trace"].extend(each["exec_trace"])
@@ -562,7 +662,7 @@ def mergeProfiles(cd_profile):
     cdinfo = mergeCDInfo(cd_profile['CD info'])
     trace  = mergeTraces(cd_profile['trace'])
     tot_prof = mergeTotalProf(cd_profile['total profile'])
-    raw_input('-----------[]---------------[]-----------------')
+    #raw_input('-----------[]---------------[]-----------------')
     return  cdinfo, trace, tot_prof 
 #    for elem in cd_profile['total profile']:
 #        print type(elem)
@@ -621,7 +721,7 @@ def averageCDTree(cdtree_list, trace_infos):
         result["mailbox overhead"] = copy.deepcopy(np.mean(cdtree_list["mailbox overhead"]))
         result_infos = result['CD info']
         print 'result_infos:', type(result_infos)
-        raw_input('1111111111111111111')
+        #raw_input('1111111111111111111')
         num_meas = len(result['CD info'])
         if len(result_infos) == 0:
             raise SystemExit
@@ -642,7 +742,7 @@ def averageCDTree(cdtree_list, trace_infos):
                             print item, jtem, ktem #result_infos[item]#, len(result_infos[item][jtem])
                     else:
                         print "detail:", jtem, result_infos[item][jtem]
-                raw_input('extract info done')
+                #raw_input('extract info done')
             print 'trace'
             for item in trace_infos:
                 print "trace:", item, len(trace_infos[item])
@@ -656,7 +756,7 @@ def averageCDTree(cdtree_list, trace_infos):
                             print 'len:', item, jtem, len(trace_infos[item][jtem]) #trace_infos[item]#, len(trace_infos[item][jtem])
                     else:
                         print "detail:", jtem, trace_infos[item][jtem]
-                raw_input('trace done')
+                #raw_input('trace done')
             print 'done'
         for cdtree in cdtree_list['CD info'][1:]:
             cdtree_infos = cdtree

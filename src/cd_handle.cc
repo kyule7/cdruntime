@@ -527,14 +527,13 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   
   char *is_noprv  = getenv("CD_NO_PRESERVE");
   char *is_nocd   = getenv("CD_NO_OPERATE");
-  char *is_noerror = getenv("CD_NO_ERROR");
+  char *is_noerror= getenv("CD_NO_ERROR");
   cd::dont_preserve = (is_noprv != NULL)? true:false;
   cd::dont_cdop     = (is_nocd != NULL)? true:false;
   cd::dont_error    = (is_noerror != NULL)? true:false;
-  cd::dont_preserve |= cd::dont_cdop;
-  cd::dont_error |= cd::dont_preserve;
+  cd::dont_preserve|= cd::dont_cdop;
+  cd::dont_error   |= cd::dont_preserve;
 
-  printf("cd no op:%d\n", cd::dont_cdop);
 #if CD_MPI_ENABLED
   MPI_Errhandler mpi_err_handler;
   // Define MPI error handler if necessary

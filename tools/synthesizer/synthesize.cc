@@ -50,15 +50,12 @@ Param ReadParam(const char *param_file) {
   params.check_params();
 
   if (params.isMember("CD info")) { // sweep CD level
-    Param cdparam = params["CD info"]["root CD"];
-
-    std::string type_str = cdparam["type"].asString();
-//    cdparam["global param"] = params["global param"];
     SYNO(cout << "CD type: " << type_str << endl;)
   } else {
     SYNO(cout << "no CD info" << endl;)
   }
-  return params["CD info"]["root CD"];
+  std::string child_name = params["CD info"].getMemberNames()[0];
+  return params["CD info"][child_name];
 }
 
 int main(int argc, char* argv[]) {

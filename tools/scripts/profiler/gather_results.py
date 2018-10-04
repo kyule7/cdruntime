@@ -9,8 +9,8 @@ import pickle
 
 
 result = gatherJSONObj('file_list.txt')
-checkJSONObj(result)
-raw_input('Got results\n')
+#checkJSONObj(result)
+#raw_input('Got results\n')
 #df = pd.DataFrame.from_dict(result, orient='index')
 #
 # ###############################################################################
@@ -91,6 +91,7 @@ raw_input('Got results\n')
 # Average and merge estimations for the same measurements (same est.json files)
 ###############################################################################
 merged = { 'CD info' : {}, 'trace' : {}, 'total profile' : {} }
+trace_dict = {}
 for app in result:
     merged['CD info'][app] = {}
     merged['trace'][app] = {}
@@ -104,21 +105,25 @@ for app in result:
             merged['trace'][app][ftype][nTask] = {}
             merged['total profile'][app][ftype][nTask] = {}
             for inputsize in result[app][ftype][nTask]:
-                print "\n\n\n Final %s %s %s, merging:%d %s ~~~~~~~~~~~~~" % \
-                        (app, nTask, inputsize, 
-                        len(result[app][ftype][nTask][inputsize]['CD info']), 
-                        type(result[app][ftype][nTask][inputsize]))
+                #print "\n\n\n Final %s %s %s, merging:%d %s ~~~~~~~~~~~~~" % \
+                #        (app, nTask, inputsize, 
+                #        len(result[app][ftype][nTask][inputsize]['CD info']), 
+                #        type(result[app][ftype][nTask][inputsize]))
                 merged['CD info'][app][ftype][nTask][inputsize], merged['trace'][app][ftype][nTask][inputsize], merged['total profile'][app][ftype][nTask][inputsize],= mergeProfiles(result[app][ftype][nTask][inputsize])
-                raw_input('averageCDTree')
+                for pid in merged['trace'][app][ftype][nTask][inputsize]:
+                    trace_dict[(app,ftype,nTask,inputsize,pid)] = merged['trace'][app][ftype][nTask][inputsize][pid]
+                #raw_input('averageCDTree')
                 #print "\n\n\n Final %s %s %s~~~~~~~~~~~~~" % (app, nTask, inputsize)
 #                printResults(avg_result['CD info'])
 
-raw_input('-------')
+#raw_input('-------')
 
 with open('cdinfo.pickle', 'wb') as handle:
     pickle.dump(merged['CD info'], handle, protocol=pickle.HIGHEST_PROTOCOL)
 with open('trace.pickle', 'wb') as handle:
     pickle.dump(merged['trace'], handle, protocol=pickle.HIGHEST_PROTOCOL)
+with open('trace_dict.pickle', 'wb') as handle:
+    pickle.dump(trace_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 with open('tot_prof.pickle', 'wb') as handle:
     pickle.dump(merged['total profile'], handle, protocol=pickle.HIGHEST_PROTOCOL)
 

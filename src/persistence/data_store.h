@@ -220,9 +220,9 @@ class DataStore {
     inline bool IsEmpty(void)  { PACKER_ASSERT(buf_used() >= 0); return (buf_used() < chunksize_); }
     inline bool IsFull(void) { 
       bool is_full = (buf_used() > (int64_t)(size_ - chunksize_)); 
-      if(packerTaskID == 0) {
-        printf("%s head:%lu tail:%lu\n", (is_full)? "Full":"NotFull", head_, tail_); 
-      }
+//      if(packerTaskID == 0) {
+//        printf("%s head:%lu tail:%lu\n", (is_full)? "Full":"NotFull", head_, tail_); 
+//      }
       PACKER_ASSERT(buf_used() >= 0);
       PACKER_ASSERT(size_ != 0);
       return is_full; 

@@ -18,12 +18,14 @@ color_map = { 1000:'red', 512:'blue', 216:'c', 64:'green', 8:'m'}
 
 class ProfInfo:
     ''' Data structure that captures data to represent histogram of CD profile '''
-    def __init__(self, samples, app, ftype, tasks, inputs, profname):
+    def __init__(self, samples, app, ftype, tasks, inputs, phase, fixed, profname):
         self.name_ = profname
+        self.phase_ = phase
         self.app_ = app
         self.type_ = ftype
         self.input_ = inputs
         self.nTask_ = tasks
+        self.fixed_ = fixed
         self.avg_ = np.mean(samples)
         self.std_ = np.std(samples)
         self.min_ = min(samples)
@@ -36,19 +38,40 @@ class ProfInfo:
         return self.avg_ + self.std_*3
     def GetLegend(self, mylegend):
         if mylegend == '':
-            return self.app_ + ' ' + self.name_ + ' ' + self.type_ + ' ' + str(self.nTask_)
+            if self.fixed_   == 'app':
+                legend = self.app_
+            elif self.fixed_ == 'type':
+                legend = self.type_
+            elif self.fixed_ == 'task':
+                legend = self.nTask_
+            elif self.fixed_ == 'size':
+                legend = self.input_
+            elif self.fixed_ == 'phase':
+                legend = self.phase_
+            return legend
         else:
-            return self.app_ + ' ' + mylegend
+            return self.app_ + ' ' + self.name_ + ' ' + self.type_ + ' ' + str(self.nTask_) + ' ' + str(self.input_)
     def GetColor(self, mycolor):
         if mycolor == '':
             return color_map[self.nTask_]
         else:
             return mycolor
     def GetTitle(self, mytitle=''):
+        if self.fixed_   == 'app':
+            title_post = 'tasks:' + self.nTask_ + ', size:' + self.input_
+        elif self.fixed_ == 'type':
+            title_post = 'tasks:' + self.nTask_ + ', size:' + self.input_
+        elif self.fixed_ == 'task':
+            title_post = 'size:' + self.input_
+        elif self.fixed_ == 'size':
+            title_post = 'tasks:' + self.nTask_
+        elif self.fixed_ == 'phase':
+            title_post = 'tasks:' + self.nTask_ + ', size:' + self.input_
+
         if mytitle == '':
             return 'Histogram of Latency with ' + self.app_ + ' (' + str(self.input_) + ')'
         else:
-            return 'Histogram of Latency with ' + self.app_ + ' (' + mytitle + ')'
+            return 'Histogram of Latency with ' + self.app_ + ' (' + title_post + ')'
     def GetHistogram(self, binsize, maxtime):
         if binsize == 0:
            bin_size = self.max_
@@ -117,16 +140,22 @@ def GetLatencyHist(prof_info_list, save_file=True, mytitle='', filename='latency
     raw_input("\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
     
     bins_for_all = np.linspace(0, maxsize, int(maxsize/binsize))
-    
+    fixed_param = ''
     for prof_info in prof_info_list:
         plt.plot(prof_info.bars_, prof_info.hist_, \
                 label=prof_info.GetLegend(mylegend))
+        fixed_param = prof_info.fixed_
         print prof_info.bars_
     plt.xlim(left=0) 
     plt.ylim(bottom=0) 
     plt.xlabel('Preservation Latency [s]') 
     plt.ylabel('Probability Density') 
-    plt.legend()
+    legend = plt.legend(title=fixed_param, 
+                        fancybox=True, 
+                        #ncol=2, loc=3,
+                        columnspacing=0.5
+                        )
+
     plt.title(prof_info_list[0].GetTitle(mytitle))
     plt.draw()
     plt.show()
