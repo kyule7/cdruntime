@@ -3688,21 +3688,21 @@ int main(int argc, char *argv[])
 //        if(myRank==0) printf("Parent Begin:cycle:%d == %d (cycle)\n", locDom->cycle(), cycle);
       }
 
-      if (myRank == 0) {
-          int cycle = locDom->cycle();
-          printf("\t** After Parent, [%d] interval check:%s %s \n", cycle, (cycle % 9 == 0)? "PARENT" : "NO", (cycle % 3 == 0)? "CHILD" : "NO"); 
-      }
+//      if (myRank == 0) {
+//          int cycle = locDom->cycle();
+//          printf("\t** After Parent, [%d] interval check:%s %s \n", cycle, (cycle % 9 == 0)? "PARENT" : "NO", (cycle % 3 == 0)? "CHILD" : "NO"); 
+//      }
   #if _CD_CDRT && _CD_CHILD
       if(locDom->check_begin(intvl1)) {
         is_child_loop_complete = false;
         double ts2 = MPI_Wtime();
         CD_Begin(cd_child_loop, "LoopChild");
         begn_end += MPI_Wtime() - ts2;
-        if(myRank == 0) {printf("\n\t** Before Child %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+        if(myRank == 0) {printf("\n\t\t** Before Child %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         //if(IsReexec() && myRank == 0) {printf("Before Child %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         prv_len += cd_child_loop->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "ChildLoopDomain");
         if(IsReexec() && myRank == 0) {
-          printf("\t\t** Before Child  %4d, %6.3le %6.3le, %le \n\n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+          printf("\t\t** After Child  %4d, %6.3le %6.3le, %le \n\n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         double dump_start = MPI_Wtime();
         // Preserve read-only data
         prv_len += cd_child_loop->Preserve(locDom->SetOp(prvec_readonly_all), kRef, "ReadOnlyData-Leaf", "ReadOnlyData");
@@ -3721,20 +3721,20 @@ int main(int argc, char *argv[])
 //        if(myRank==0) printf("Child Begin :cycle:%d == %d (cycle)\n", locDom->cycle(), cycle);
       }
   #endif // _CD_CHILD ends
-      if (myRank == 0) {
-          int cycle = locDom->cycle();
-          printf("\t\t** After Child, [%d] interval check:%s %s \n", cycle,  (cycle % 9 == 0)? "PARENT" : "NO", (cycle % 3 == 0)? "CHILD" : "NO"); 
-      }
+//      if (myRank == 0) {
+//          int cycle = locDom->cycle();
+//          printf("\t\t** After Child, [%d] interval check:%s %s \n", cycle,  (cycle % 9 == 0)? "PARENT" : "NO", (cycle % 3 == 0)? "CHILD" : "NO"); 
+//      }
   #if _CD_CDRT && _LEAF_LV && _SCR
       if(locDom->check_begin(intvl2)) {
         double ts2 = MPI_Wtime();
         CD_Begin(leaf_lv, "CalcPos");
         begn_end += MPI_Wtime() - ts2;
-        if(myRank == 0) {printf("\n\t** Before Leaf  %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+        if(myRank == 0) {printf("\n\t\t\t** Before Leaf  %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         //if(IsReexec() && myRank == 0) {printf("Before Leaf  %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         prv_len += leaf_lv->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "LeafLoopDomain");
         if(IsReexec() && myRank == 0) {
-          printf("\t\t\t** Before Leaf   %4d, %6.3le %6.3le, %le \n\n", 
+          printf("\t\t\t** After Leaf   %4d, %6.3le %6.3le, %le \n\n", 
               locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         double dump_start = MPI_Wtime();
         // Preserve read-only data
@@ -3745,10 +3745,10 @@ int main(int argc, char *argv[])
   #endif // _LEAF_LV && _SCR ends
 
 #endif // _CD ends
-      if (myRank == 0) {
-          int cycle = locDom->cycle();
-          printf("\t\t\t** After Leaf, [%d] interval check:%s %s \n", cycle, (cycle % 9 == 0)? "PARENT" : "NO", (cycle % 3 == 0)? "CHILD" : "NO"); 
-      }
+//      if (myRank == 0) {
+//          int cycle = locDom->cycle();
+//          printf("\t\t\t** After Leaf, [%d] interval check:%s %s \n", cycle, (cycle % 9 == 0)? "PARENT" : "NO", (cycle % 3 == 0)? "CHILD" : "NO"); 
+//      }
       LagrangeLeapFrog(*locDom) ;
 //      locDom->CheckUpdate("After LagrangeLeapFrog");
 

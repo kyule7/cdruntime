@@ -56,7 +56,7 @@ using namespace std;
 #define _LOG_PROFILING 0
 #define USE_ALLOC_SHM 1
 
-#include "lulesh.h"
+#include "debug_user_data.h"
 
 ProfMapType   common::profMap;
 bool tuned::tuning_enabled = false;
