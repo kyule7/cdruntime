@@ -50,6 +50,7 @@ class DataStore {
     uint32_t allocated_;
     uint64_t written_len_;
     uint32_t mode_; // state
+    uint32_t ftype_; // 
     uint32_t chunksize_;
     char    *ptr_;
     char    *buf_preserved_;
@@ -170,9 +171,9 @@ class DataStore {
     ///@brief Total size of buffer (buffer limit).
     inline uint64_t size(void)      const { return size_; }
     ///@brief Buffer state.
-    inline uint32_t mode(void)      const { return GET_BUFF_MODE(mode_); }
+    inline uint32_t mode(void)      const { return mode_; }
     ///@brief File type that buffer writes data to.
-    inline uint32_t ftype(void)     const { return GET_FILE_TYPE(mode_); }
+    inline uint32_t ftype(void)     const { return ftype_; }
     ///@brief The size of chunk to write at a time.
     inline uint32_t chunksize(void) const { return chunksize_; }
     ///@brief Pointer that data store allocated.
@@ -198,8 +199,7 @@ class DataStore {
                                            }
     inline void SetGrowUnit(uint32_t grow_unit) { grow_unit_ = grow_unit; }
     inline uint32_t SetMode(uint32_t mode) { uint32_t orig_mode = mode_; mode_ = mode; return orig_mode; }
-    inline uint32_t SetFileType(uint32_t mode) { uint32_t orig_type = GET_FILE_TYPE(mode_); 
-                                                 SET_FILE_TYPE(mode_, mode);  return orig_type; }
+    inline uint32_t SetFileType(uint32_t ftype) { uint32_t orig_type = ftype; ftype_ = ftype;  return orig_type; }
     void SetFileOffset(uint64_t offset);
 
     inline void Print(void) const

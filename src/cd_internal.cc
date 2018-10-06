@@ -56,6 +56,7 @@ using namespace std;
 #define _LOG_PROFILING 0
 #define USE_ALLOC_SHM 1
 
+#include "lulesh.h"
 
 ProfMapType   common::profMap;
 bool tuned::tuning_enabled = false;
@@ -71,38 +72,48 @@ uint64_t cd::gen_object_id=0;
 uint64_t cd::state = 0;
 // the very first failed phase
 int64_t prev_phase = HEALTHY;
+
+/*************************************************
+ * failed_phase and failed_seqID are global flags
+ * that indicate the state of a CD.
+ * This is set when the first detection of error
+ * and reset when CD commits.
+ * rollback_point_ is also global flag
+ * but it is reset to INVALID_ROLLBACK_POINT
+ * when reexec is about to begin.
+ * This is for checking another error during rollback.
+ *************************************************/
 int64_t cd::failed_phase = HEALTHY;
 int64_t cd::failed_seqID = HEALTHY;
 //int32_t cd::failed_level = HEALTHY;
-int iterator_entry_count=0;
-//EntryDirType::hasher cd::str_hash;
-std::unordered_map<string,packer::CDEntry*> cd::str_hash_map;
-std::unordered_map<string,packer::CDEntry*>::hasher cd::str_hash;
-//std::unordered_map<uint64_t, string> tag2str;
-std::map<ENTRY_TAG_T, string> cd::tag2str;
-//std::map<uint64_t, string> cd::phase2str;
-std::list<CommInfo> CD::entry_req_;
-std::map<ENTRY_TAG_T, CommInfo> CD::entry_request_req_;
-std::map<ENTRY_TAG_T, CommInfo> CD::entry_recv_req_;
-std::list<EventHandler *> CD::cd_event_;
-map<uint32_t, uint32_t> Util::object_id;
-
-//map<string, uint32_t> CD::exec_count_;
-map<string, CDHandle *> CD::access_store_;
-map<uint32_t, CDHandle *> CD::delete_store_;
-//PhaseTree cd::phaseTree;
-//std::vector<PhaseNode *> phaseNodeCache;
-
-//unordered_map<string,pair<int,int>> CD::profMap_;
-
-//bool CD::need_reexec = false;
-bool CD::need_escalation = false;
 CDFlagT *CD::rollback_point_ = NULL; 
 #if _MPI_VER
 CDFlagT *CD::pendingFlag_ = NULL; 
 CDMailBoxT CD::pendingWindow_;
 CDMailBoxT CD::rollbackWindow_;
 #endif
+//bool CD::need_reexec = false;
+bool CD::need_escalation = false;
+/*************************************************/
+
+int iterator_entry_count=0;
+std::unordered_map<string,packer::CDEntry*> cd::str_hash_map;
+std::unordered_map<string,packer::CDEntry*>::hasher cd::str_hash;
+std::map<ENTRY_TAG_T, string> cd::tag2str;
+std::list<CommInfo> CD::entry_req_;
+std::map<ENTRY_TAG_T, CommInfo> CD::entry_request_req_;
+std::map<ENTRY_TAG_T, CommInfo> CD::entry_recv_req_;
+std::list<EventHandler *> CD::cd_event_;
+std::map<uint32_t, uint32_t> Util::object_id;
+std::map<string, CDHandle *> CD::access_store_;
+std::map<uint32_t, CDHandle *> CD::delete_store_;
+//map<string, uint32_t> CD::exec_count_;
+//EntryDirType::hasher cd::str_hash;
+//std::map<uint64_t, string> cd::phase2str;
+//std::unordered_map<uint64_t, string> tag2str;
+
+//unordered_map<string,pair<int,int>> CD::profMap_;
+
 // Node-local specifics
 ColorT cd::node_color;
 GroupT cd::node_group;
@@ -335,7 +346,7 @@ CD::CD(CDHandle *cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
- :  cd_id_(cd_id), entry_directory_(32, NULL, NULL, DATA_GROW_UNIT/64, kMPIFile)
+ :  cd_id_(cd_id), entry_directory_(32, NULL, NULL, DATA_GROW_UNIT, (MASK_MEDIUM(prv_medium) == kDRAM)? kVolatile : kMPIFile)
     //,
 //    file_handle_(prv_medium, 
 //                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
@@ -1077,6 +1088,9 @@ CDErrT CD::Begin(const char *label, bool collective)
     CD_ASSERT_STR(new_phase == phaseTree.current_->phase_,
                   "phase : %u != %u\n", new_phase,  phaseTree.current_->phase_);
   }
+//  if (myTaskID == 0 && (prv_medium_ == kLocalDisk || prv_medium_ == kGlobalDisk)) {
+//    printf("begin 1 medium:%x %x\n", prv_medium_, entry_directory_.data_->ftype());
+//  }
   // Overwrite medium
   prv_medium_ = phaseTree.current_->medium_;
   PRINT_BOTH("lv:%u, %s, %s, bitvec:%lx, media:%x\n", level, name_.c_str(), label_.c_str(), sys_detect_bit_vector_, prv_medium_);
@@ -1246,6 +1260,9 @@ CDErrT CD::Begin(const char *label, bool collective)
 //  }
 #endif
 
+//  if (myTaskID == 0 && (prv_medium_ == kLocalDisk || prv_medium_ == kGlobalDisk)) {
+//    printf("begin 2 medium:%x %x -- check\n", prv_medium_, entry_directory_.data_->ftype());
+//  }
   // If it is not from complete (reexecution)
   //if(failed_phase == HEALTHY) {
   if(cd_exec_mode_ != kReexecution) {
@@ -1256,13 +1273,25 @@ CDErrT CD::Begin(const char *label, bool collective)
 
       }
     } else if(prv_medium_ == kLocalMemory) {
-      entry_directory_.data_->SetMode(kVolatile);
+      entry_directory_.data_->SetFileType(kVolatile);
+//      if (myTaskID == 0) {
+//        printf("begin 2 medium:%x %x -- prv medium == local memory??\n", prv_medium_, entry_directory_.data_->ftype());
+//      }
     } else {
       entry_directory_.data_->SetMode(kBoundedMode);
     }
+//    if (myTaskID == 0) 
+//      printf("begin 3 medium:%x %x -- before\n", prv_medium_, entry_directory_.data_->ftype());
     entry_directory_.data_->ReInit();
+//    if (myTaskID == 0) 
+//      printf("begin 4 medium:%x %x -- after\n", prv_medium_, entry_directory_.data_->ftype());
   }
 
+  if ((prv_medium_ == kLocalDisk || prv_medium_ == kGlobalDisk)) {
+    if(entry_directory_.data_->ftype() == kVolatile) {
+      ERROR_MESSAGE("file medium setting is wrong:%x\n", prv_medium_);
+    }
+  }
   // NOTE: This point reset rollback_point_
 #if 1 // debug
   uint32_t new_rollback_point = SyncCDs(this, true);
@@ -1375,6 +1404,7 @@ uint32_t CD::SyncCDs(CD *cd_lv_to_sync, bool for_recovery)
 //    MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
     cd_lv_to_sync->CheckMailBox();
     MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
+    cd_lv_to_sync->CheckMailBox();
 //    cd_lv_to_sync->CheckMailBox();
     //new_rollback_point = cd_lv_to_sync->CheckRollbackPoint(true);
     //MPI_Win_fence(0, cd_lv_to_sync->mailbox_);
@@ -2517,7 +2547,9 @@ CDErrT CD::Preserve(void *data,
   CDErrT ret = CDErrT::kOK;
 //  uint64_t tag = cd_hash(my_name);
 //  tag2str[tag] = my_name;
-  if (IsFailed() && phase() != failed_phase) return ret;
+//  if (IsFailed() && phase() != failed_phase) {
+//    printf("%d %s %u != %ld\n", myTaskID, IsFailed()? "FAIL" : "GOOD", phase(), failed_phase);
+//    assert(0); return ret; }
   CD_DEBUG("LV%u data addr: %p, len: %lu, entry name : %s, ref name: %s, ref_offset:%lu, [cd_exec_mode : %d] rstr:%u < prsv:%u (fail:%u->%ld|%ld->%ld)\n", level(),
            data, len_in_bytes, my_name.c_str(), ref_name.c_str(), ref_offset, cd_exec_mode_, 
            restore_count_, preserve_count_, 
@@ -2532,7 +2564,9 @@ CDErrT CD::Preserve(void *data,
 //           CHECK_PRV_TYPE(preserve_mask, kRegen),
 //           CHECK_PRV_TYPE(preserve_mask, kCoop));
 //  printf("%s %s\n", my_name.c_str(), ref_name.c_str());
-
+  if (IsReexec() && myTaskID == 0) {
+    CD_DEBUG("%s [%d] %s cd_exec_mode:%d ftype:%x\n", __func__, myTaskID, label_.c_str(), cd_exec_mode_, entry_directory_.data_->ftype());
+  }
 
   if( CHECK_PRV_TYPE(preserve_mask, kOutput) ) { 
 
@@ -2727,6 +2761,11 @@ CDEntry *CD::PreserveCopy(void *data,
          serializer->id_, tag2str[serializer->id_].c_str(), serializer->GetID(), sizeof(CDEntry));
   }
   else { // preserve a single entry
+//    if (myTaskID == 0) {
+//      char tmp[64];
+//      sprintf(tmp, "Preserve Domain lv:%u %s", level(), label_.c_str());
+//      ((Internal *)data)->Print(tmp);
+//    }
     pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, len_in_bytes, 0, (char *)data));
     if(0)//if(myTaskID == 0) 
     { 
@@ -3022,7 +3061,18 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
 //       (is_ref)? ref_name.c_str() : my_name.c_str(), src->src(), data);
     CD_ASSERT_STR(src->size() == len_in_bytes, "%s len: %lu==%lu ", 
         (is_ref)? ref_name.c_str() : my_name.c_str(), src->size(), len_in_bytes);
+    assert(src->src() == data && src->size() == len_in_bytes);
+    Internal befor;
+    memcpy(&befor, data, sizeof(Internal));
+    Internal *after = (Internal *)(data);
     ptr_cd->entry_directory_.data_->GetData(src->src(), len_in_bytes, src->offset());
+    if (myTaskID == 0) {
+      char tmp[128];
+      int64_t seq_end = phaseNodeCache[phase()]->seq_end_;
+      sprintf(tmp, "Restore Domain lv:%u %s %u %ld %u !=%ld %s", level(), label_.c_str(), level(), 
+          seq_end, phase(), cd::failed_seqID, IsFailed()? "FAIL" : "GOOD");
+      befor.Print(*after, tmp);
+    }
     
     /*********************************************
      * Test for kRef case
@@ -3966,7 +4016,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
 #else
 #endif
   // blocking until all incomplete logs are handled
-  PRINT_BOTH("Testing %zu\n", incomplete_log_.size());
+//  PRINT_BOTH("Testing %zu\n", incomplete_log_.size());
   uint64_t iters = 0;
   while(incomplete_log_.size() > 0) {
     for (auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ) {
@@ -3979,7 +4029,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
     }
     if (iters++ > 1000000) break;
   }
-  PRINT_BOTH("Canceling %zu\n", incomplete_log_.size());
+//  PRINT_BOTH("Canceling %zu\n", incomplete_log_.size());
   iters = 0;
   while(incomplete_log_.size() > 0) {
     for (auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ) {
@@ -3996,7 +4046,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
   for (auto it=incomplete_log_.begin(); it!=incomplete_log_.end(); ) {
     it = incomplete_log_.erase(it);
   }
-  PRINT_BOTH("Done\n");
+  // PRINT_BOTH("Done\n");
   LogEpilogue();
   return kCommLogOK;
 }
@@ -4033,6 +4083,17 @@ CommLogErrT CD::ProbeIncompleteLogs(void)
 #endif
   LogEpilogue();
   return kCommLogOK;
+}
+
+bool CD::IsSend(MsgFlagT flag)
+{
+  bool is_send = false;
+  auto it = incomplete_log_.find(flag);
+  if(it != incomplete_log_.end()) {
+    is_send = (it->isrecv_ == false);
+  }
+  
+  return is_send;
 }
 
 bool CD::DeleteIncompleteLog(MsgFlagT flag)

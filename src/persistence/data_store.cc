@@ -48,7 +48,7 @@ static uint64_t chunk_mask = CHUNK_ALIGNMENT - 1;
 //}
 DataStore::DataStore(void)
   : size_(DATA_GROW_UNIT), head_(0), tail_(0), grow_unit_(DATA_GROW_UNIT), allocated_(0), 
-    written_len_(0), mode_(kGrowingMode|DEFAULT_FILEMODE), chunksize_(CHUNK_ALIGNMENT), 
+    written_len_(0), mode_(kGrowingMode), ftype_(DEFAULT_FILEMODE), chunksize_(CHUNK_ALIGNMENT), 
     ptr_(NULL), buf_preserved_(NULL),  tail_preserved_(0), head_preserved_(0),
     fh_(NULL), r_tail_(0), r_head_(0)
 {
@@ -61,7 +61,7 @@ DataStore::DataStore(void)
 
 DataStore::DataStore(char *ptr, uint64_t init_size, int filemode)
   : size_(init_size), head_(0), tail_(0), grow_unit_(init_size), allocated_(0), 
-    written_len_(0), mode_(kGrowingMode|filemode), chunksize_(CHUNK_ALIGNMENT), 
+    written_len_(0), mode_(kGrowingMode), ftype_(filemode), chunksize_(CHUNK_ALIGNMENT), 
     ptr_(NULL), buf_preserved_(NULL),  tail_preserved_(0), head_preserved_(0),
     fh_(NULL), r_tail_(0), r_head_(0)
 {
@@ -77,7 +77,8 @@ void DataStore::InitFile(uint32_t filetype)
 {
   // if it is kVolatile, do not overwrite file mode
   if(filetype != kVolatile) {
-    SET_FILE_TYPE(mode_, filetype);
+    //SET_FILE_TYPE(ftype_, filetype);
+    ftype_ = filetype;
   }
   MYDBG("BeforeWrite ft:%u fh:%p ptralloc:%p magic:%lu\n",
         ftype(), fh_, ptr_ - sizeof(MagicStore), sizeof(MagicStore));
@@ -128,7 +129,8 @@ void DataStore::Init(char *ptr, uint64_t init_size, int filemode)
   tail_ = head_;//sizeof(MagicStore);
   allocated_ = 0;
   //mode_ = kBoundedMode | filemode;
-  mode_ = kGrowingMode | filemode;
+  mode_  = kGrowingMode;
+  ftype_ = filemode;
   r_tail_ = 0;
   r_head_ = 0;
   if(ptr == NULL) 
@@ -151,7 +153,10 @@ void DataStore::Init(char *ptr, uint64_t init_size, int filemode)
 
 void DataStore::ReInit(void)
 {
-  buf_preserved_ = NULL;
+  if (buf_preserved_ != NULL) {
+    free(buf_preserved_);
+    buf_preserved_ = NULL;
+  }
   tail_preserved_ = 0;
   tail_ = 0;
   head_ = 0;
@@ -178,6 +183,8 @@ CDErrType DataStore::Free(char *ptr)
 CDErrType DataStore::Alloc(void **ptr, uint64_t size)
 { 
   MYDBG("%lu\n", size);
+//  if (size > 500000000)
+//    printf("size:%lu\n", size);
   int ret = posix_memalign(ptr, CHUNK_ALIGNMENT, size + sizeof(MagicStore)); 
   if( ret != 0 ) { 
     perror("posix_memalign:");
@@ -205,6 +212,8 @@ CDErrType DataStore::Copy(void *dst, char *src, int64_t len)
 CDErrType DataStore::AllocateData(void)
 {
   CDErrType err = kOK;
+  if (size_ > 500000000)
+    printf("size..:%lu\n", size_);
   MYDBG("grow:%lu ptr:%p, used:%ld | ", grow_unit_, ptr_, buf_used());
   if(ptr_ == NULL) {
     MYDBG("alloc\n");
@@ -229,6 +238,8 @@ CDErrType DataStore::Reallocate(uint64_t len)
 {
   CDErrType err = kOK;
   MYDBG("data_size:%ld/%lu   (%lu, %lu)\n", buf_used(), size_, head_, tail_);
+//  if (packerTaskID == 0)
+//    printf("data_size:%ld/%lu   (%lu, %lu)\n", buf_used(), size_, head_, tail_);
   uint64_t orig_size = size_;
   while( len + buf_used() > size_ ) {
     if( size_ > TWO_GIGABYTE ) {
@@ -1366,6 +1377,7 @@ CDErrType DataStore::WriteFile(int64_t len)
 {
 
   PACKER_ASSERT(len > 0);
+  //if (packerTaskID == 0) printf("%s len:%lx %x %x\n", __func__, len, ftype_, mode_);
   CDErrType ret = CopyBufferToFile(head_, len, head_ + written_len_);
   head_ += ~chunk_mask & len; 
 #if 0
@@ -1432,6 +1444,8 @@ CDErrType DataStore::Flush(void)
   CDErrType ret = kOK;
   if(buf_used() > 0) {
     MYDBG("\n\n##### [%s] %ld %zu ###\n", __func__, buf_used(), sizeof(MagicStore));
+    
+//    if (packerTaskID == 0) printf("\n\n##### [%s] %ld %zu ###\n", __func__, buf_used(), sizeof(MagicStore));
 //    if(packerTaskID == 4) printf("\n\n##### [%s] %ld %zu ###\n", __func__, buf_used(), sizeof(MagicStore));
     ret = WriteFile(buf_used());
     FileSync();

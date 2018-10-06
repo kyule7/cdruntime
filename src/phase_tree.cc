@@ -510,7 +510,10 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
   uint32_t phase = -1;
   std::string phase_path = GetPhasePath(label);
   auto it = cd::phasePath.find(phase_path);
-
+  //tmp
+  if (cd::myTaskID == 0 && phase_path.compare("Root_MainLoop_CalcPos") == 0) {
+    assert(0);
+  }
   // If there is no label before, it is a new phase!
   if(it == cd::phasePath.end()) {
     // Parent's state is inherited to its child
@@ -518,6 +521,12 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label)
     // it must be kExecution. 
     // Before reaching a new phase node, it tries to reach it with reexecution
     // mode, resetting execution mode may be missed!!
+    if (state_ != kExecution && (cd::myTaskID == 0 || cd::myTaskID == 4|| cd::myTaskID == 8|| cd::myTaskID == 15) ) {
+      printf("%u %s (%s) state:%d, failed:\n", 
+          level, phase_path.c_str(), label.c_str(), state_);//, cd::failed_phase, cd::failed_seqID);
+      for (auto &v : cd::phasePath) 
+        printf("phase:%s\n", v.first.c_str());
+    }
     CD_ASSERT(state_ == kExecution);
     cd::phaseTree.current_ = new PhaseNode(cd::phaseTree.current_, level, label, state_);
     phase        = cd::phaseTree.current_->phase_;

@@ -656,6 +656,7 @@ public:
 #if CD_COMM_LOG_ENABLED
 public:
     //KL
+    bool IsSend(MsgFlagT flag);
     bool DeleteIncompleteLog(MsgFlagT flag);
     //bool DeleteIncompleteLog(void* request);
     CommLogErrT InvalidateIncompleteLogs(void);

@@ -197,7 +197,8 @@ void BoundedBufferTest(int elemsize, int chunksize) {
   //MyStore table;
   TableStore<BaseEntry> table;
   DataStore data(NULL, 32*1024*1024, kPosixFile);
-//  data.SetMode(kBoundedMode|kPosixFile);
+//  data.SetMode(kBoundedMode);
+//  data.SetFileType(kPosixFile);
 //  FileHandle fh;
 //  char filepath[64];
  // sTEST_PRINT(filepath, "./bounded.%d.%d", elemsize, chunksize);

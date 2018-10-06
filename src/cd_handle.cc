@@ -1770,6 +1770,7 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
 
 //  printf("[%s] %s %s at level %u (reexecInfo %d (%u))\n", __func__, ptr_cd_->name_.c_str(), ptr_cd_->name_.c_str(), 
 //                                                                      level(), need_reexec(), *CD::rollback_point_);
+  if (cd::dont_cdop) assert(0);
   // Call internal Complete routine
   assert(ptr_cd_ != 0);
   CD_ASSERT_STR(GetCurrentCD()->ptr_cd() == ptr_cd_, "Level %u is not complete before completing %u\n",
@@ -2636,7 +2637,7 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
 {
   bool during_rollback = ptr_cd_->IsFailed() ? true : false;
   uint64_t sys_err_vec = system_error_injector_->Inject();
-  if (during_rollback) sys_err_vec = 0;
+  //if (during_rollback) sys_err_vec = 0; // FIXME
   bool found = false;
   CD_DEBUG("[%s] sys_err_vec : %lx\n", ptr_cd_->cd_id_.GetStringID().c_str(), sys_err_vec);
   if(sys_err_vec == NO_ERROR_INJECTED) {

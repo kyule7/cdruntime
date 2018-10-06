@@ -1663,14 +1663,22 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
   
   int flag = 0, ret = 0;
   uint64_t iters = 0;
+  bool is_wait_for_send = IsSend(request);
   while(1) {
     iters++; 
     ret = PMPI_Test(request, &flag, status);
-    if(flag > 0) {
+    if(flag > 0 /*|| IsFailed()*/) {
+//      if (IsFailed()) {
+//        ret = MPI_ERR_NEED_ESCALATE;
+//        //SetRollbackPoint(level(), false);
+//        //SetRollbackPoint(phaseNodeCache[failed_phase]->level_, false);
+//      }
       printed = false;
       DeleteIncompleteLog(request);
       break;
-    } else {
+    } 
+    
+    if (is_wait_for_send == false) {
 //      assert(need_reexec == false); // should be false at this point.
       CheckMailBox(true);
       //uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
@@ -1682,7 +1690,22 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
         double tick = MPI_Wtime();
         double elapsed_time = tick - now;
         now = tick;
-        printf("\t\t\t **************** [%d] Check time %lf %lu **********************\n", cd::myTaskID, elapsed_time, iters); }
+        auto it = incomplete_log_.find(request);
+        int target = -1;
+        if(it != incomplete_log_.end()) {
+          target = it->taskID_;
+        }
+//        PMPI_Win_lock(MPI_LOCK_SHARED, global_head_id, 0, rollbackWindow_);
+//        // Update *rollback_point__ from head
+//        PMPI_Get(&rollback_lv, 1, MPI_UNSIGNED, 
+//                global_head_id, 0,     1, MPI_UNSIGNED,
+//                rollbackWindow_); // Read *rollback_point_ from head.
+//        PMPI_Win_unlock(global_head_id, rollbackWindow_);
+        printf("\t\t\t **************** [%d %c] Check time %lf %lu (%d->%d, %d) fail:%ld %ld rb:%u pending:%d %x *********************\n", 
+            cd::myTaskID, IsHead()? '*' : ' ', elapsed_time, iters, 
+            cd::myTaskID, target, status->MPI_SOURCE, 
+            cd::failed_phase, cd::failed_seqID, *rollback_point_,
+            *pendingFlag_, IsHead()? event_flag_[task_in_color()] : *event_flag_); }
       if (iters > 10000000) { 
         double elapsed_time = MPI_Wtime() - then;
         rollback_point = level(); printf("\t\t\t **************** [%d] Force to rollback %lf **********************\n", cd::myTaskID, elapsed_time); 
@@ -1736,6 +1759,12 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
   int ret = -1;
   //PMPI_Testall(count, array_of_requests, &flag, array_of_statuses);
   std::vector<int> valid_reqs;
+  bool is_wait_for_send[count];
+  bool is_all_wait_for_recv = false;
+  for (int ii=0;ii<count;ii++) { 
+    is_wait_for_send[ii] = IsSend(&array_of_requests[ii]);
+    is_all_wait_for_recv |= (is_wait_for_send[ii] == false);
+  }
   for (int ii=0;ii<count;ii++) {
     if (array_of_requests[ii] != MPI_REQUEST_NULL) {
       PMPI_Test(&array_of_requests[ii], &flag, &array_of_statuses[ii]);
@@ -1764,7 +1793,7 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
         if (flag > 0) it = valid_reqs.erase(it);
         else ++it;
       }
-      if(valid_reqs.size() == 0) {
+      if(valid_reqs.size() == 0 /* FIXME: || IsFailed() */) {
         CD_DEBUG("Tested all requests. Now delete %d requests\n", count);
         for (int ii=0;ii<count;ii++) {
           bool deleted = DeleteIncompleteLog(&array_of_requests[ii]);
@@ -1774,8 +1803,12 @@ int CD::BlockallUntilValid(int count, MPI_Request array_of_requests[], MPI_Statu
                    array_of_statuses[ii].MPI_SOURCE, array_of_statuses[ii].MPI_TAG); 
         }
         printed = false;
+        // FIXME ret = (IsFailed()) ? MPI_ERR_NEED_ESCALATE : ret;
         break;
-      } else {
+      }
+
+      if (is_all_wait_for_recv) {
+        printf("is_all_recv\n");
   //      assert(need_reexec == false); // should be false at this point.
         CheckMailBox(true);
         //uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
