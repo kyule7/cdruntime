@@ -1266,25 +1266,18 @@ CDErrT CD::Begin(const char *label, bool collective)
   // If it is not from complete (reexecution)
   //if(failed_phase == HEALTHY) {
   if(cd_exec_mode_ != kReexecution) {
-    if(prv_medium_ == kLocalDisk) {
-      if(entry_directory_.data_->ftype() != kPosixFile) {
-        entry_directory_.data_->InitFile(kPosixFile);
-      } else {
-
-      }
-    } else if(prv_medium_ == kLocalMemory) {
+    if(prv_medium_ == kLocalMemory) {
       entry_directory_.data_->SetFileType(kVolatile);
-//      if (myTaskID == 0) {
-//        printf("begin 2 medium:%x %x -- prv medium == local memory??\n", prv_medium_, entry_directory_.data_->ftype());
-//      }
-    } else {
+    } 
+    else {
+      if(prv_medium_ == kLocalDisk) {
+        if(entry_directory_.data_->ftype() != kPosixFile) {
+          entry_directory_.data_->InitFile(kPosixFile);
+        }
+      }
       entry_directory_.data_->SetMode(kBoundedMode);
     }
-//    if (myTaskID == 0) 
-//      printf("begin 3 medium:%x %x -- before\n", prv_medium_, entry_directory_.data_->ftype());
     entry_directory_.data_->ReInit();
-//    if (myTaskID == 0) 
-//      printf("begin 4 medium:%x %x -- after\n", prv_medium_, entry_directory_.data_->ftype());
   }
 
   if ((prv_medium_ == kLocalDisk || prv_medium_ == kGlobalDisk)) {

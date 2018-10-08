@@ -313,6 +313,15 @@ void Release(T **ptr)
 /******************************************/
 
 /* Work Routines */
+struct TimeRecord {
+  Real_t gnewdt_;
+  Real_t targetdt_;
+  Real_t olddt_;
+  Real_t glbdt_;
+};
+
+TimeRecord tr;
+std::vector<TimeRecord> trs(1000);
 
 static inline
 void TimeIncrement(Domain& domain)
@@ -332,7 +341,9 @@ void TimeIncrement(Domain& domain)
       if (domain.dthydro() < gnewdt) {
          gnewdt = domain.dthydro() * Real_t(2.0) / Real_t(3.0) ;
       }
-
+      // kyushick
+      tr.gnewdt_ = gnewdt;
+      tr.olddt_ = olddt;
 #if USE_MPI      
       MPI_Allreduce(&gnewdt, &newdt, 1,
                     ((sizeof(Real_t) == 4) ? MPI_FLOAT : MPI_DOUBLE),
@@ -340,7 +351,9 @@ void TimeIncrement(Domain& domain)
 #else
       newdt = gnewdt;
 #endif
-      
+      // kyushick
+      tr.glbdt_ = newdt;
+
       ratio = newdt / olddt ;
       if (ratio >= Real_t(1.0)) {
          if (ratio < domain.deltatimemultlb()) {
@@ -367,6 +380,9 @@ void TimeIncrement(Domain& domain)
       domain.deltatime() = targetdt ;
    }
 
+   // kyushick
+   tr.targetdt_ = targetdt;
+   trs[domain.cycle()] = tr;
    domain.time() += domain.deltatime() ;
 
    ++domain.cycle() ;
@@ -3862,6 +3878,15 @@ int main(int argc, char *argv[])
     //leaf_first = false;
    } // while ends
 
+  if (myRank == 0) {
+     FILE *lfp = fopen("time_debug.csv", "w"); 
+     fprintf(lfp, "loc"); for (auto &v:trs) { fprintf(lfp, ",%le", v.gnewdt_); } fprintf(lfp, "\n");
+     fprintf(lfp, "tar"); for (auto &v:trs) { fprintf(lfp, ",%le", v.targetdt_); } fprintf(lfp, "\n");
+     fprintf(lfp, "old"); for (auto &v:trs) { fprintf(lfp, ",%le", v.olddt_ ); } fprintf(lfp, "\n");
+     fprintf(lfp, "glb"); for (auto &v:trs) { fprintf(lfp, ",%le", v.glbdt_ ); } fprintf(lfp, "\n");
+     fclose(lfp);
+  }
+
 
 #if _CD && _CD_ROOT
    if(is_main_loop_complete == false) {
@@ -3891,7 +3916,7 @@ int main(int argc, char *argv[])
    }
    cd_main_loop->Destroy();
 #endif
-
+  
 
 #if _CD 
   #if _CD_ROOT
@@ -3904,7 +3929,6 @@ int main(int argc, char *argv[])
      printf("\n\n ***** END ***** cycle = %d (%u), t=%5.4e<%5.4e, dt=%5.4e\n",
             locDom->cycle(), global_counter, double(locDom->time()), locDom->stoptime(), double(locDom->deltatime()));
   }
-
 
    // Use reduced max elapsed time
    double elapsed_time;
