@@ -163,7 +163,10 @@ void DataStore::ReInit(void)
   allocated_ = 0;
   r_tail_ = 0;
   r_head_ = 0;
-  BufferConsumer::Get()->InsertBuffer(this);
+  // FIXME: Only need buffer consumer when
+  // data_store is associated with a file?
+  if (ftype_ != kVolatile)
+    BufferConsumer::Get()->InsertBuffer(this);
 }
 
 DataStore::~DataStore(void)
@@ -328,7 +331,8 @@ CDErrType DataStore::FreeData(bool reuse)
     if(fh_ != NULL)
       fh_->Truncate(written_len_);
   } else {
-    BufferConsumer::Get()->RemoveBuffer(this); 
+    if (ftype_ != kVolatile)
+      BufferConsumer::Get()->RemoveBuffer(this); 
   }
   pthread_mutex_unlock(&mutex);
   /*****************************************/

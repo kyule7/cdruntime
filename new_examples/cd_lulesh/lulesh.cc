@@ -3645,7 +3645,7 @@ int main(int argc, char *argv[])
         begn_end += MPI_Wtime() - ts0;
 //        if(myRank == 0) printf("0 Before Prsv:cycle:%d == %d, %lx\n", cycle, locDom->cycle(), prvec_readonly_all);
         //if(IsReexec() && myRank == 0) {printf(">> Before Parent %4d, %6.3le %6.3le, %le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->PrintDomain();}
-        if(myRank == 0) {printf("\n\t**  Before Parent %4d, %6.3le %6.3le, %le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->PrintDomain();}
+        if(myRank == 0) {printf("\n\t**  Before Parent %4d, %4.1le %4.1le, dthydro:%le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->PrintDomain();}
         int old_cycle = locDom->cycle();
         prv_len += cd_main_loop->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "MainLoopDomain");
 //        if (IsReexec() && old_cycle == locDom->cycle()) {
@@ -3654,7 +3654,7 @@ int main(int argc, char *argv[])
 //        }
         //main_domain_preserved = true;
 //        cd_main_loop->Preserve(&(locDom->cycle()), sizeof(locDom->cycle()), kCopy, "MainLoopDomain");
-        if(IsReexec() && myRank == 0) {printf("\n\t** After Parent %4d, %6.3le %6.3le, %le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->PrintDomain();}
+        if(IsReexec() && myRank == 0) {printf("\n\t** After Parent %4d, %4.1le %4.1le, dthydro:%le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->PrintDomain();}
         double dump_start = MPI_Wtime();
   #if _CD_CDRT
         prv_len += cd_main_loop->Preserve(locDom->SetOp(prvec_readonly_all), kRef, "ReadOnlyData-Main", "ReadOnlyData");
@@ -3698,11 +3698,11 @@ int main(int argc, char *argv[])
         double ts2 = MPI_Wtime();
         CD_Begin(cd_child_loop, "LoopChild");
         begn_end += MPI_Wtime() - ts2;
-        if(myRank == 0) {printf("\n\t\t** Before Child %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+        if(myRank == 0) {printf("\n\t\t** Before Child %4d, %4.1le %4.1le, dthydro:%le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); }
         //if(IsReexec() && myRank == 0) {printf("Before Child %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         prv_len += cd_child_loop->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "ChildLoopDomain");
         if(IsReexec() && myRank == 0) {
-          printf("\t\t** After Child  %4d, %6.3le %6.3le, %le \n\n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+          printf("\t\t** After Child  %4d, %4.1le %4.1le, dthydro:%le \n\n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); }
         double dump_start = MPI_Wtime();
         // Preserve read-only data
         prv_len += cd_child_loop->Preserve(locDom->SetOp(prvec_readonly_all), kRef, "ReadOnlyData-Leaf", "ReadOnlyData");
@@ -3730,12 +3730,12 @@ int main(int argc, char *argv[])
         double ts2 = MPI_Wtime();
         CD_Begin(leaf_lv, "CalcPos");
         begn_end += MPI_Wtime() - ts2;
-        if(myRank == 0) {printf("\n\t\t\t** Before Leaf  %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+        if(myRank == 0) {printf("\n\t\t\t** Before Leaf  %4d, %4.1le %4.1le, dthydro:%le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); }
         //if(IsReexec() && myRank == 0) {printf("Before Leaf  %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
         prv_len += leaf_lv->Preserve(dynamic_cast<Internal *>(locDom), sizeof(Internal), kCopy, "LeafLoopDomain");
         if(IsReexec() && myRank == 0) {
-          printf("\t\t\t** After Leaf   %4d, %6.3le %6.3le, %le \n\n", 
-              locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}
+          printf("\t\t\t** After Leaf   %4d, %4.1le %4.1le, dthydro:%le \n\n", 
+              locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); }
         double dump_start = MPI_Wtime();
         // Preserve read-only data
         prv_len += leaf_lv->Preserve(locDom->SetOp(prvec_readonly_all), kRef, "ReadOnlyData-Leaf", "ReadOnlyData");
@@ -3843,8 +3843,8 @@ int main(int argc, char *argv[])
 #endif
       if (myRank == 7) {
 //      if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) 
-         printf("cycle = %d (%u), t=%5.4e, dt=%5.4e, loop=%5.3e, dump=%5.3e, wait=%5.3e, begin=%5.3e, complete=%5.3e, vol=%lfMB (%5.3e, %5.3e, %5.3e, %5.3e, %5.3e),phase(%4.3f(%4.3f,%4.3f,%4.3f,%4.3f),%4.3f,%4.3f,%4.3f,%4.3f),dump(%4.3f,%4.3f,%4.3f,%4.3f,%4.3f)\n",
-                locDom->cycle(), global_counter, double(locDom->time()), double(locDom->deltatime()), 
+         printf("cycle = %d (%u), t=%5.4e<%5.4e, dt=%5.4e, loop=%5.3e, dump=%5.3e, wait=%5.3e, begin=%5.3e, complete=%5.3e, vol=%lfMB (%5.3e, %5.3e, %5.3e, %5.3e, %5.3e),phase(%4.3f(%4.3f,%4.3f,%4.3f,%4.3f),%4.3f,%4.3f,%4.3f,%4.3f),dump(%4.3f,%4.3f,%4.3f,%4.3f,%4.3f)\n",
+                locDom->cycle(), global_counter, double(locDom->time()), locDom->stoptime(), double(locDom->deltatime()), 
                 loop_end, dump_end, wait_end, begn_end, cmpl_end, (double)prv_len/1000000,
                 loop_time/global_counter, dump_time/global_counter, wait_time/global_counter, begn_time/global_counter, cmpl_time/global_counter, 
                 exec_phase[0], 
@@ -3899,6 +3899,11 @@ int main(int argc, char *argv[])
   #endif
   CD_Finalize();
 #endif
+  if (myRank == 7) {
+//  if ((opts.showProg != 0) && (opts.quiet == 0) && (myRank == 0)) 
+     printf("\n\n ***** END ***** cycle = %d (%u), t=%5.4e<%5.4e, dt=%5.4e\n",
+            locDom->cycle(), global_counter, double(locDom->time()), locDom->stoptime(), double(locDom->deltatime()));
+  }
 
 
    // Use reduced max elapsed time
