@@ -1339,12 +1339,14 @@ uint32_t CD::SetRollbackPoint(const uint32_t &rollback_lv, bool remote)
     *rollback_point_ = INVALID_ROLLBACK_POINT;
     PMPI_Win_unlock(cd::myTaskID, rollbackWindow_);
 
-    PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
-    uint32_t event = *event_flag_;
-    *event_flag_ &= ~kAllReexecute;
-    PMPI_Win_unlock(task_in_color(), mailbox_);
-    if (event != 0) {
-      PRINT_BOTH("\t[%d %s] >> event <<\t :%x\n", cd::myTaskID, label(), event); }
+//    if(task_size() > 1) {
+//      PMPI_Win_lock(MPI_LOCK_EXCLUSIVE, task_in_color(), 0, mailbox_);
+//      uint32_t event = *event_flag_;
+//      *event_flag_ &= ~kAllReexecute;
+//      PMPI_Win_unlock(task_in_color(), mailbox_);
+//      if (event != 0) {
+//        PRINT_BOTH("\t[%d %s] >> event <<\t :%x\n", cd::myTaskID, label(), event); }
+//    }
   }
   return rbp_ret;
 }
