@@ -109,17 +109,21 @@ int ctxt_prv_mode(cd_handle_t *c_handle)
 
 jmp_buf *jmp_buffer(cd_handle_t *c_handle)
 {
-  return TO_CDHandle(c_handle)->jmp_buffer();
+
+  if (cd::dont_cdop) return NULL;
+  else return TO_CDHandle(c_handle)->jmp_buffer();
 }
 
 ucontext_t *ctxt(cd_handle_t *c_handle)
 {
-  return TO_CDHandle(c_handle)->ctxt();
+  if (cd::dont_cdop) return NULL;
+  else return TO_CDHandle(c_handle)->ctxt();
 }
 
 void commit_preserve_buff(cd_handle_t *c_handle)
 {
-  TO_CDHandle(c_handle)->CommitPreserveBuff();
+  if (cd::dont_cdop) return NULL;
+  else return TO_CDHandle(c_handle)->CommitPreserveBuff();
 }
 
 void cd_complete(cd_handle_t *c_handle)

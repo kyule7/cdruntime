@@ -109,6 +109,7 @@ float cd::err_scale = 0;
 bool cd::dont_preserve = false;
 bool cd::dont_cdop = false;
 bool cd::dont_error = false;
+int dont_cdop_int = 0;
 double cd::tot_rtov[4];
 CD_CLOCK_T cd::cdr_elapsed_time=0;
 CD_CLOCK_T cd::global_reex_clk=0;
@@ -537,6 +538,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   cd::dont_preserve|= cd::dont_cdop;
   cd::dont_error   |= cd::dont_preserve;
 
+  dont_cdop_int = (dont_cdop)? 1 : 0;
 #if CD_MPI_ENABLED
   MPI_Errhandler mpi_err_handler;
   // Define MPI error handler if necessary
