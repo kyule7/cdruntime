@@ -109,21 +109,17 @@ int ctxt_prv_mode(cd_handle_t *c_handle)
 
 jmp_buf *jmp_buffer(cd_handle_t *c_handle)
 {
-
-  if (cd::dont_cdop) return NULL;
-  else return TO_CDHandle(c_handle)->jmp_buffer();
+  return TO_CDHandle(c_handle)->jmp_buffer();
 }
 
 ucontext_t *ctxt(cd_handle_t *c_handle)
 {
-  if (cd::dont_cdop) return NULL;
-  else return TO_CDHandle(c_handle)->ctxt();
+  return TO_CDHandle(c_handle)->ctxt();
 }
 
 void commit_preserve_buff(cd_handle_t *c_handle)
 {
-  if (cd::dont_cdop) return NULL;
-  else return TO_CDHandle(c_handle)->CommitPreserveBuff();
+  TO_CDHandle(c_handle)->CommitPreserveBuff();
 }
 
 void cd_complete(cd_handle_t *c_handle)
@@ -156,7 +152,10 @@ int cd_preserve_serdes(cd_handle_t *c_handle,
 
 cd_handle_t *getcurrentcd(void)
 {
-  return TO_cdhandle(GetCurrentCD());
+  if (cd::dont_cdop)
+    return TO_cdhandle(GetLeafCD());
+  else
+    return TO_cdhandle(GetCurrentCD());
 }
 
 cd_handle_t *getleafcd(void)
