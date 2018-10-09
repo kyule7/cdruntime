@@ -224,9 +224,9 @@ void SystemConfig::ParseParam(char *key)
         float frate = (errortype > 2)? (atof(key) / cd::totalTaskSize) : (atof(key) / failure_div_factor);
         config.failure_rate_[errortype] = frate;
         config.failure_rate_record_[errortype] = frate; // overwrite
-      } else if(num_tasks == 1)
+      } else if(num_tasks == 1) {
         config.failure_rate_[errortype] = atof(key) / cd::totalTaskSize;
-      else if(num_tasks == 0) {
+      } else if(num_tasks == 0) {
         config.failure_rate_[errortype] = 0.0;
         is_error_free = true;
       } else {

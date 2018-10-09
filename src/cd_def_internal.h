@@ -437,9 +437,6 @@ extern bool orig_app_side;
 extern bool orig_disabled;
 extern bool orig_msg_app_side;
 extern bool orig_msg_disabled;
-extern bool dont_preserve;
-extern bool dont_cdop;
-extern bool dont_error;
 extern void GatherProfile(void);
 /**@addtogroup runtime_logging 
  * @{

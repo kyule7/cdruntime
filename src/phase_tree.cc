@@ -141,6 +141,11 @@ void PhaseNode::PrintOutputJson(PhaseNode *root)
     strcpy(ftypestr, "noerr");
   } else {
     strcpy(ftypestr, ftype_name);
+    if (cd::err_scale != 1.0) { // error scale case
+      char tmp[8];
+      sprintf(tmp, "_%d", (int)cd::err_scale);
+      strcat(ftypestr, tmp);
+    }
   }
 
   assert(outJSON == NULL);

@@ -296,6 +296,7 @@ namespace cd {
   extern bool is_koutput_disabled;
   extern bool runtime_activated;
   extern std::vector<uint32_t> total_errors;
+  extern float err_scale;
   extern bool dont_preserve;
   extern bool dont_cdop;
   extern bool dont_error;

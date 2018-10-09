@@ -105,6 +105,7 @@ bool packer::orig_disabled = false;
 bool packer::orig_appside = true;
 bool tuned::orig_disabled = false;
 bool tuned::orig_appside = true;
+float cd::err_scale = 0;
 bool cd::dont_preserve = false;
 bool cd::dont_cdop = false;
 bool cd::dont_error = false;
@@ -528,6 +529,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   char *is_noprv  = getenv("CD_NO_PRESERVE");
   char *is_nocd   = getenv("CD_NO_OPERATE");
   char *is_noerror= getenv("CD_NO_ERROR");
+  char *is_err_scale = getenv( "KEEP_TOTAL_FAILURE_RATE_SAME" );
+  cd::err_scale = (is_err_scale != NULL) ? atof(is_err_scale) : 0.;
   cd::dont_preserve = (is_noprv != NULL)? true:false;
   cd::dont_cdop     = (is_nocd != NULL)? true:false;
   cd::dont_error    = (is_noerror != NULL)? true:false;
@@ -1741,11 +1744,11 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
              "fphase:%ld==%lu, (%lu~%lu->%lu)\n", 
              ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
              cd::failed_phase, curr_phase, curr_begID, curr_seqID, cd::failed_seqID);
-    if (cd::myTaskID == 0) 
-      printf("** [Begin] %s %s (%s) " 
-             "fphase:%ld==%lu, (%lu~%lu->%lu)\n", 
-             ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
-             cd::failed_phase, curr_phase, curr_begID, curr_seqID, cd::failed_seqID);
+//    if (cd::myTaskID == 0) 
+//      printf("** [Begin] %s %s (%s) " 
+//             "fphase:%ld==%lu, (%lu~%lu->%lu)\n", 
+//             ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
+//             cd::failed_phase, curr_phase, curr_begID, curr_seqID, cd::failed_seqID);
   }
   const bool is_reexecution = (GetExecMode() == kReexecution);
   cd::phaseTree.current_->profile_.RecordBegin(is_reexec, need_sync);

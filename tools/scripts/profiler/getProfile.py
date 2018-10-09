@@ -584,9 +584,98 @@ if len(trace_list):
 
 if totalinfo_df:
     df = pd.read_pickle(totalinfo_df)
-    df2 = pd.DataFrame.from_dict(df)
     print(df)
-    print(df2)
+    raw_input('asdfsadf')
+    #df = pd.DataFrame.from_dict(mydict)
+    roi = ['preserve', 'rollback', 'runtime', 'bare', 'noprv', 'errfree', 'total']
+    filename_pre = 'total_info_'
+    for app, new_df in df.groupby(level=0):
+        print(new_df)
+        tg = new_df.loc[app]
+        tg.index.set_names(['size', 'task'], inplace=True)
+        tg2 = tg.copy()
+        tg2.rename(index={'prsvHeavy':'hierarchy'}, level='size', inplace=True)        
+        print(app, '\n\n')
+        print(tg)
+        print('\n------ *** app *** -----------\n')
+        print(tg2)
+        print('\n------ *** app 2 *** -----------\n')
+        tg.append(tg2)
+        print(tg2)
+        print('\n------ *** after merge *** -----------\n')
+        raw_input('\n------ *** app *** -----------\n')
+        frames = [tg, tg2]
+        tg = pd.concat(frames)
+        ax = tg.plot.bar(y=['preserve', 'rollback', 'runtime', 'bare'], stacked=True, 
+                    #bottom = margin_bottom, color=colors[num], label=month
+                    label=['preserve', 'rollback', 'runtime', 'original']
+                    )
+        
+#        patches, labels = ax.get_legend_handles_labels()
+#        ax.legend(patches, labels, ncol=len(df.index),
+#            fontsize='x-large',
+#            labelspacing=0.75, handlelength=1, columnspacing=0.75,
+#            handletextpad=0.25, loc=3,
+#            bbox_to_anchor=(0.55, 0.95),
+#            #loc=2,
+#            borderaxespad=0.)
+        plt.sca(ax)
+        plt.gca().yaxis.grid(True, ls='dotted')
+#        ax.set_xticklabels(tg.index, fontsize='large')
+        ax.set_ylabel('Execution Time', fontsize='large', labelpad=-1)
+        ax.set_xlabel('Scalability', fontsize='large')
+        #fig2 = plt.figure(figsize=(10,5))
+        fig = ax.get_figure()
+        #plt.show()
+        filename = filename_pre + app  
+        fig.savefig(filename + '.pdf', format='pdf', bbox_inches='tight')
+        fig.savefig(filename + '.svg', format='svg', bbox_inches='tight')
+#        for size, task_df in tg.groupby(level=0):
+#            print(size, '\n\n')
+#            df2 = task_df[roi].loc[size]
+#            #df2.index.name = 'task'
+#            print(df2)
+#            raw_input('\n------ *** size *** -----------\n')
+#            print(df2.unstack('task'))
+#            raw_input('\n------ *** unstack *** -----------\n')
+#            ax = df2.plot.bar(y=['preserve', 'rollback', 'runtime', 'bare'], stacked=True, 
+#                        #bottom = margin_bottom, color=colors[num], label=month
+#                        label=['preserve', 'rollback', 'runtime', 'original']
+#                        )
+#           
+##            patches, labels = ax.get_legend_handles_labels()
+##            ax.legend(patches, labels, ncol=len(df.index),
+##                fontsize='x-large',
+##                labelspacing=0.75, handlelength=1, columnspacing=0.75,
+##                handletextpad=0.25, loc=3,
+##                bbox_to_anchor=(0.55, 0.95),
+##                #loc=2,
+##                borderaxespad=0.)
+#            plt.sca(ax)
+#            plt.gca().yaxis.grid(True, ls='dotted')
+#            ax.set_xticklabels(df2.index, fontsize='large')
+#            ax.set_ylabel('Execution Time', fontsize='large', labelpad=-1)
+#            ax.set_xlabel('Scalability', fontsize='large')
+#            #fig2 = plt.figure(figsize=(10,5))
+#            fig = ax.get_figure()
+#            #plt.show()
+#            filename = filename_pre + app + '_' + size 
+#            fig.savefig(filename + '.pdf', format='pdf', bbox_inches='tight')
+#            fig.savefig(filename + '.svg', format='svg', bbox_inches='tight')
+
+ 
+        raw_input('\n------ *** app *** -----------\n')
+
+#    mytuple = apps,inputsz,tasks
+#    df['preserve'].loc[mytuple] = preserve_time
+#    df['rollback'].loc[mytuple] = rollback_loss
+#    df['runtime' ].loc[mytuple] = cdrt_overhead
+#    df['original'].loc[mytuple] = time_orign
+#    tot_prof['noprv'      ].loc[mytuple] = time_noprv 
+#    tot_prof['errfree'    ].loc[mytuple] = time_noerr
+#    tot_prof['total'      ].loc[mytuple] = time_error
+
+    raw_input('\ntotal info from data frame\n')
 #            sweep_param_str = ''
 #            while sweep_param_str not in param_list:
 #                sweep_param_str = raw_input('sweep: (app type task size phase) ')
@@ -601,3 +690,8 @@ if cdinfo_df:
     print(df)
     print(df2)
 
+    raw_input('\ncd info from data frame\n')
+#    tot_prof['preserve'   ].loc[mytuple] = preserve_time
+#    tot_prof['rollback'   ].loc[mytuple] = rollback_loss
+#    tot_prof['runtime'    ].loc[mytuple] = cdrt_overhead
+#    tot_prof['bare'   ].loc[mytuple] = time_orign
