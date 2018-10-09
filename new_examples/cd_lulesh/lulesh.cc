@@ -311,7 +311,8 @@ void Release(T **ptr)
 
 
 /******************************************/
-
+#undef DEBUG_TIMESTEP
+#ifdef DEBUG_TIMESTEP
 /* Work Routines */
 struct TimeRecord {
   Real_t gnewdt_;
@@ -322,7 +323,7 @@ struct TimeRecord {
 
 TimeRecord tr;
 std::vector<TimeRecord> trs(1000);
-
+#endif
 static inline
 void TimeIncrement(Domain& domain)
 {
@@ -341,9 +342,11 @@ void TimeIncrement(Domain& domain)
       if (domain.dthydro() < gnewdt) {
          gnewdt = domain.dthydro() * Real_t(2.0) / Real_t(3.0) ;
       }
+#ifdef DEBUG_TIMESTEP
       // kyushick
       tr.gnewdt_ = gnewdt;
       tr.olddt_ = olddt;
+#endif
 #if USE_MPI      
       MPI_Allreduce(&gnewdt, &newdt, 1,
                     ((sizeof(Real_t) == 4) ? MPI_FLOAT : MPI_DOUBLE),
@@ -351,9 +354,10 @@ void TimeIncrement(Domain& domain)
 #else
       newdt = gnewdt;
 #endif
+#ifdef DEBUG_TIMESTEP
       // kyushick
       tr.glbdt_ = newdt;
-
+#endif
       ratio = newdt / olddt ;
       if (ratio >= Real_t(1.0)) {
          if (ratio < domain.deltatimemultlb()) {
@@ -380,9 +384,11 @@ void TimeIncrement(Domain& domain)
       domain.deltatime() = targetdt ;
    }
 
+#ifdef DEBUG_TIMESTEP
    // kyushick
    tr.targetdt_ = targetdt;
    trs[domain.cycle()] = tr;
+#endif
    domain.time() += domain.deltatime() ;
 
    ++domain.cycle() ;
@@ -3631,7 +3637,9 @@ int main(int argc, char *argv[])
    dummy_cd = root_cd;
 #endif
    //printf("init ts:%d\n", locDom->cycle());
-   while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) {
+   //while((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) 
+   while(locDom->cycle() < opts.its)
+   {
       dump_end = 0.0;
       begn_end = 0.0;
       cmpl_end = 0.0;
@@ -3878,6 +3886,7 @@ int main(int argc, char *argv[])
     //leaf_first = false;
    } // while ends
 
+#ifdef DEBUG_TIMESTEP
   if (myRank == 0) {
      FILE *lfp = fopen("time_debug.csv", "w"); 
      fprintf(lfp, "loc"); for (auto &v:trs) { fprintf(lfp, ",%le", v.gnewdt_); } fprintf(lfp, "\n");
@@ -3886,7 +3895,7 @@ int main(int argc, char *argv[])
      fprintf(lfp, "glb"); for (auto &v:trs) { fprintf(lfp, ",%le", v.glbdt_ ); } fprintf(lfp, "\n");
      fclose(lfp);
   }
-
+#endif
 
 #if _CD && _CD_ROOT
    if(is_main_loop_complete == false) {
@@ -4230,7 +4239,7 @@ int main(int argc, char *argv[])
    PMPI_Gather(local_dump3.data(), global_counter, MPI_FLOAT, total_dump3, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
    PMPI_Gather(local_dump4.data(), global_counter, MPI_FLOAT, total_dump4, global_counter, MPI_FLOAT, 0, MPI_COMM_WORLD);
 #endif
-
+   if(myRank == 0) printf("Gather local dump ends\n");
    if(myRank == 0) {
      char tmpfile[256];
 //     sprintf(tmpfile, "time_trace.%s.%d.%d.%d", execname, numRanks, opts.nx, ((int)start) % 10000);
@@ -4283,6 +4292,7 @@ int main(int argc, char *argv[])
 
 #endif
    }
+   if(myRank == 0) printf("\nAll dump ends\n");
 //   free(local_loop);
 //   free(local_dump);
 //   free(local_wait);
