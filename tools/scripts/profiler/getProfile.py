@@ -342,8 +342,9 @@ for pkl in tot_info_files:
     elem = pd.read_pickle(pkl)
     input_list.append(elem)
     prof = elem
-    #processProf(elem)
-    #raw_input('\n--- total profile')
+#    raw_input('\n--- total profile')
+#    processProf(elem)
+#    raw_input('\n--- total profile')
 
 trace_list = []
 for pkl in trace_files:
@@ -369,6 +370,8 @@ for pkl in cdinfo_files:
 # such as app lulesh, task 512, input 80, 
 ######################################################################
 
+#processProf(prof)
+#raw_input('\n--- prof total profile')
 
 #########################################################
 # Get placeholders for ROI data
@@ -594,7 +597,7 @@ if totalinfo_df:
         tg = new_df.loc[app]
         tg.index.set_names(['size', 'task'], inplace=True)
         tg2 = tg.copy()
-        tg2.rename(index={'prsvHeavy':'hierarchy'}, level='size', inplace=True)        
+        #tg2.rename(index={'prsvHeavy':'hierarchy'}, level='size', inplace=True)        
         print(app, '\n\n')
         print(tg)
         print('\n------ *** app *** -----------\n')
