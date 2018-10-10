@@ -1382,3 +1382,242 @@ void destroy_level(level_type *level){
 
   if(level->my_rank==0){fprintf(stdout,"done\n");}
 }
+
+//#if CD 
+//size_t cd_preserve_box_type(cd_handle_t* cd_h, const box_type& box, const char* name){
+//  size_t size=0;
+//  char prv_name[100];
+//  sprintf(prv_name, "box_%s", name);
+//  size_t tmp_size = sizeof(box_type);
+//  cd_preserve(cd_h, (void*)&box, tmp_size, kCopy, prv_name, prv_name);
+//  size += tmp_size;
+//
+//  // preserve vectors
+//  sprintf(prv_name, "box_vectors_%s", name);
+//  size += cd_preserve_global_ptr(cd_h, box.vectors, prv_name);
+//  for (int ii=0; ii<box.numVectors; ii++){
+//    sprintf(prv_name, "box_vectors_%d_%s", ii, name);
+//    size += cd_preserve_global_ptr(cd_h, box.vectors[ii].get(), prv_name);
+//  }
+//
+//  // preserve vectors_base
+//  sprintf(prv_name, "box_vectors_base_%s", name);
+//  size += cd_preserve_global_ptr(cd_h, box.vectors_base, prv_name);
+//  uint64_t malloc_size = box.volume*box.numVectors + BOX_ALIGN_1ST_CELL/sizeof(double);
+//  cd_preserve(cd_h, box.vectors_base.raw_ptr(), malloc_size, kCopy, prv_name, prv_name);
+//  size += malloc_size;
+//  return size;
+//}
+//
+//size_t cd_preserve_communication_type_extra(cd_handle_t *cd_h, const communicator_type& comm, const char* name){
+//  size_t ret_size=0;
+//  char prv_name[100];
+//  size_t size=0;
+//
+//  sprintf(prv_name, "commtype_recvrank_%s", name);
+//  size=comm.num_recvs*sizeof(int);
+//  cd_preserve(cd_h, comm.recv_ranks, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//  sprintf(prv_name, "commtype_sendrank_%s", name);
+//  size=comm.num_sends*sizeof(int);
+//  cd_preserve(cd_h, comm.send_ranks, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//  sprintf(prv_name, "commtype_recvsize_%s", name);
+//  size=comm.num_recvs*sizeof(int);
+//  cd_preserve(cd_h, comm.recv_sizes, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//  sprintf(prv_name, "commtype_sendsize_%s", name);
+//  size=comm.num_sends*sizeof(int);
+//  cd_preserve(cd_h, comm.send_sizes, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//
+//  sprintf(prv_name, "commtype_rflag_%s", name);
+//  ret_size += cd_preserve_global_ptr(cd_h, comm.rflag, name);
+//
+//  sprintf(prv_name, "commtype_matchflag_%s", name);
+//  size = comm.num_sends*sizeof(global_ptr<int>);
+//  cd_preserve(cd_h, comm.match_rflag, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//  //for (int ii=0; ii<comm.num_sends; ii++){
+//  //  sprintf(prv_name, "commtype_matchflag_%d_%s", ii, name);
+//  //  ret_size += cd_preserve_global_ptr(cd_h, comm.match_rflag[ii], name);
+//  //}
+//
+//  sprintf(prv_name, "commtype_sblock2_%s", name);
+//  //size = (comm.num_recvs+2) * sizeof(int);
+//  size = comm.num_recvs * sizeof(int);
+//  cd_preserve(cd_h, comm.sblock2, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//
+//  // FIXME: comm.eblock2 is never used???
+//  //sprintf(prv_name, "commtype_eblock2_%s", name);
+//
+//  sprintf(prv_name, "commtype_sendmatchpos_%s", name);
+//  size = (comm.num_sends) * sizeof(int);
+//  cd_preserve(cd_h, comm.send_match_pos, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//
+//  // only need to preserve pointer information..
+//  sprintf(prv_name, "commtype_grecvbuffer_%s", name);
+//  size = comm.num_recvs*sizeof(global_ptr<double>);
+//  cd_preserve(cd_h, comm.global_recv_buffers, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//  sprintf(prv_name, "commtype_gsendbuffer_%s", name);
+//  size = comm.num_sends*sizeof(global_ptr<double>);
+//  cd_preserve(cd_h, comm.global_send_buffers, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//  sprintf(prv_name, "commtype_gmatchbuffer_%s", name);
+//  size = comm.num_sends*sizeof(global_ptr<double>);
+//  cd_preserve(cd_h, comm.global_match_buffers, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//
+//  // FIXME: how to preserve copy_e and data_e
+//
+//  sprintf(prv_name, "commtype_recvbuffer_%s", name);
+//  size=comm.num_recvs*sizeof(double*);
+//  cd_preserve(cd_h, comm.recv_buffers, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//  sprintf(prv_name, "commtype_sendbuffer_%s", name);
+//  size=comm.num_sends*sizeof(double*);
+//  cd_preserve(cd_h, comm.send_buffers, size, kCopy, prv_name, prv_name);
+//  ret_size += size;
+//
+//  for (int ii=0; ii<4; ii++){
+//    if (comm.blocks[ii]==NULL) continue;
+//    sprintf(prv_name, "commtype_blocks_%d_%s", ii, name);
+//    size = comm.num_blocks[ii]*sizeof(blockCopy_type);
+//    cd_preserve(cd_h, comm.blocks[ii], size, kCopy, prv_name, prv_name);
+//    ret_size += size;
+//  }
+//  return ret_size;
+//}
+//
+//size_t cd_preserve_level(cd_handle_t* cd_h, level_type *level, const char* name){
+//  size_t prv_size=0;
+//  char prv_name[100];
+//  sprintf(prv_name, "level_%s", name);
+//  size_t tmp_size = sizeof(level_type);
+//  cd_preserve(cd_h, level, tmp_size, kCopy, prv_name, prv_name);
+//  prv_size += tmp_size;
+//
+//  // preserve subteam information
+//  // FIXME: pointers inside subteam (e.g. ptrs to parent and child teams) may be wrong in recovery,
+//  //        because only the pointer data are preserved.
+//  //        So if we have node recovery in higher level, the pointers need to be fixed!
+//  sprintf(prv_name, "level_subteam_%s", name);
+//  tmp_size = sizeof(team);
+//  cd_preserve(cd_h, level->subteam, tmp_size, kCopy, prv_name, prv_name);
+//  prv_size += tmp_size;
+//
+//  // preserve rank_of_box
+//  sprintf(prv_name, "level_rankofbox_%s", name);
+//  size_t size = level->boxes_in.i*level->boxes_in.j*level->boxes_in.k*sizeof(int);
+//  cd_preserve(cd_h, level->rank_of_box, size, kCopy, prv_name, prv_name);
+//  prv_size += size;
+//
+//  // preserve my_boxes; place and T* should be preserved; need to preserve the allocated data
+//  sprintf(prv_name, "level_myboxes_%s", name);
+//  prv_size += cd_preserve_global_ptr(cd_h, level->my_boxes, prv_name);
+//  // preserve all pointers inside box_type
+//  for (int ii=0; ii<level->num_my_boxes; ii++){
+//    prv_size += cd_preserve_box_type(cd_h, level->my_boxes[ii].get(), prv_name);
+//  }
+//
+//  // preserve addr_of_box
+//  sprintf(prv_name, "level_aob_%s", name);
+//  size = level->boxes_in.i*level->boxes_in.j*level->boxes_in.k;
+//  tmp_size = size*sizeof(global_ptr<box_type>);
+//  cd_preserve(cd_h, level->addr_of_box, tmp_size, kCopy, prv_name, prv_name);
+//  prv_size += tmp_size;
+//  for (size_t ii=0; ii<size; ii++){
+//    prv_size += cd_preserve_global_ptr(cd_h, level->addr_of_box[ii], prv_name);
+//  }
+//
+//  // preserve my_local_boxes
+//  sprintf(prv_name, "level_mlb_%s", name);
+//  size = level->num_my_boxes * sizeof(box_type *);
+//  cd_preserve(cd_h, level->my_local_boxes, size, kCopy, prv_name, prv_name);
+//  prv_size += size;
+//
+//  // preserve my_blocks
+//  // SZNOTE: no need to do extra things for blockCopy_type, 
+//  //         because pointers are saved with blockCopy_type, while the contents have been preserved in preservations
+//  sprintf(prv_name, "level_myblocks_%s", name);
+//  size = level->num_my_boxes * sizeof(blockCopy_type);
+//  cd_preserve(cd_h, level->my_blocks, size, kCopy, prv_name, prv_name);
+//
+//  // preserve RedBlack_FP
+//  sprintf(prv_name, "level_rbfp_%s", name);
+//  size = sizeof(double*)*2;
+//  cd_preserve(cd_h, level->RedBlack_FP, size, kCopy, prv_name, prv_name);
+//  prv_size += size;
+//  if (level->my_boxes!=NULL){
+//    size = level->my_boxes[0].get().kStride*sizeof(double);
+//    for (int ii=0; ii<2; ii++){
+//      sprintf(prv_name, "level_rbfp_%d_%s", ii, name);
+//      cd_preserve(cd_h, level->RedBlack_FP[ii], size, kCopy, prv_name, prv_name);
+//      prv_size += size;
+//    }
+//  }
+//
+//  //std::cout << "before preserving exchange_ghosts\n";
+//  // preserve exchange_ghosts
+//  sprintf(prv_name, "level_eg_%s", name);
+//  size = 2*sizeof(communicator_type);
+//  cd_preserve(cd_h, level->exchange_ghosts, size, kCopy, prv_name, prv_name);
+//  prv_size += size;
+//  for (int ii=0; ii<2; ii++){
+//    sprintf(prv_name, "level_eg_%d_%s", ii, name);
+//    prv_size += cd_preserve_communication_type_extra(cd_h, level->exchange_ghosts[ii], prv_name);
+//  }
+//
+//  //std::cout << "before preserving restriction\n";
+//  // preserve restriction
+//  sprintf(prv_name, "level_restriction_%s", name);
+//  size = 4*sizeof(communicator_type);
+//  cd_preserve(cd_h, level->restriction, size, kCopy, prv_name, prv_name);
+//  prv_size += size;
+//  for (int ii=0; ii<4; ii++){
+//    sprintf(prv_name, "level_restriction_%d_%s", ii, name);
+//    prv_size += cd_preserve_communication_type_extra(cd_h, level->restriction[ii], prv_name);
+//  }
+//
+//  //std::cout << "before preserving interpolation\n";
+//  // preserve interpolation
+//  sprintf(prv_name, "level_interpolation_%s", name);
+//  size = sizeof(communicator_type);
+//  cd_preserve(cd_h, &(level->interpolation), size, kCopy, prv_name, prv_name);
+//  sprintf(prv_name, "level_interpolation_extra_%s", name);
+//  prv_size += cd_preserve_communication_type_extra(cd_h, level->interpolation, prv_name);
+//
+//  //std::cout << "before preserving boundary_condition\n";
+//  // preserve boundary_condition.blocks
+//  for (int ii=0; ii<2; ii++){
+//    if (level->boundary_condition.blocks[ii]==NULL) continue;
+//    sprintf(prv_name, "level_bc_blocks_%d_%s", ii, name);
+//    size = level->boundary_condition.num_blocks[ii]*sizeof(blockCopy_type);
+//    cd_preserve(cd_h, level->boundary_condition.blocks[ii], size, kCopy, prv_name, prv_name);
+//    prv_size += size;
+//  }
+//
+//  return prv_size;
+//}
+//
+//size_t cd_preserve_levels(cd_handle_t* cd_h, level_type **levels, int num_levels, const char* name){
+//  size_t prv_size=0;
+//  char prv_name[100];
+//  // preserve pointers to all levels; guarded by num_levels
+//  sprintf(prv_name, "level_type_ptr_%s", name);
+//  size_t tmp_size = sizeof(level_type*)*num_levels;
+//  cd_preserve(cd_h, levels, tmp_size, kCopy, prv_name, prv_name);
+//  prv_size += tmp_size;
+//
+//  // preserve each level
+//  for (int ii=0; ii<num_levels; ii++){
+//    //std::cout << "before preserving level::" << ii << "\n";
+//    prv_size += cd_preserve_level(cd_h, levels[ii], name);
+//  }
+//  return prv_size;
+//}
+//
+//#endif

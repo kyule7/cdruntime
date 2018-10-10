@@ -155,11 +155,11 @@ void rebuild_operator_blackbox(level_type * level, double a, double b, int color
     for(i=ilo;i<ihi;i++){
       int ijk = i + j*jStride + k*kStride;
 
-      // catch failure...
-      if(Aii[ijk]==0.0){
-        printf("Aii[%d,%d,%d]==0.0 !!!\n",i+level->my_boxes[box].low.i,j+level->my_boxes[box].low.j,k+level->my_boxes[box].low.k);
-        Aii[ijk] = a+b*h2inv; // FIX !!!
-      }
+      //// catch failure...
+      //if(Aii[ijk]==0.0){
+      //  printf("Aii[%d,%d,%d]==0.0 !!!\n",i+level->my_boxes[box].low.i,j+level->my_boxes[box].low.j,k+level->my_boxes[box].low.k);
+      //  Aii[ijk] = a+b*h2inv; // FIX !!!
+      //}
 
       // upper limit to Gershgorin disc == bound on dominant eigenvalue
       double Di = (Aii[ijk] + sumAbsAij[ijk])/Aii[ijk];if(Di>block_eigenvalue)block_eigenvalue=Di;

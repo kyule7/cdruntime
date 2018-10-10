@@ -196,4 +196,10 @@ void append_block_to_list(blockCopy_type ** blocks, int *allocated_blocks, int *
                           int subtype
                          );
 //------------------------------------------------------------------------------------------------------------------------------
+//#if CD
+//size_t cd_preserve_box_type(cd_handle_t* cd_h, const box_type& box, const char* name);
+//size_t cd_preserve_level(cd_handle_t* cd_h, level_type *level, const char* name);
+//size_t cd_preserve_levels(cd_handle_t* cd_h, level_type **levels, int num_levels, const char* name);
+//#endif
+
 #endif
