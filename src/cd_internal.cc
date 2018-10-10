@@ -56,7 +56,10 @@ using namespace std;
 #define _LOG_PROFILING 0
 #define USE_ALLOC_SHM 1
 
+#undef LULESH_DEBUG
+#ifdef LULESH_DEBUG
 #include "debug_user_data.h"
+#endif
 
 ProfMapType   common::profMap;
 bool tuned::tuning_enabled = false;
@@ -2754,11 +2757,13 @@ CDEntry *CD::PreserveCopy(void *data,
          serializer->id_, tag2str[serializer->id_].c_str(), serializer->GetID(), sizeof(CDEntry));
   }
   else { // preserve a single entry
-//    if (myTaskID == 0) {
-//      char tmp[64];
-//      sprintf(tmp, "Preserve Domain lv:%u %s", level(), label_.c_str());
-//      ((Internal *)data)->Print(tmp);
-//    }
+#ifdef LULESH_DEBUG
+    if (myTaskID == 0) {
+      char tmp[64];
+      sprintf(tmp, "Preserve Domain lv:%u %s", level(), label_.c_str());
+      ((Internal *)data)->Print(tmp);
+    }
+#endif
     pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, len_in_bytes, 0, (char *)data));
     if(0)//if(myTaskID == 0) 
     { 
@@ -2777,8 +2782,9 @@ CDEntry *CD::PreserveCopy(void *data,
   }
 #endif
     
-  if(prv_medium_ != kDRAM)
-    entry_directory_.data_->Flush();
+  if(prv_medium_ != kDRAM) {
+    entry_directory_.data_->Flush(); 
+  }
 //  if(myTaskID == 0) { printf("prv size:%lu, %lu\n", phaseTree.current_->profile_.prv_copy_ + len_in_bytes, packer::time_mpiio_write.size); }
   return pEntry;
 }
@@ -3055,10 +3061,13 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     CD_ASSERT_STR(src->size() == len_in_bytes, "%s len: %lu==%lu ", 
         (is_ref)? ref_name.c_str() : my_name.c_str(), src->size(), len_in_bytes);
     assert(src->src() == data && src->size() == len_in_bytes);
+#ifdef LULESH_DEBUG
     Internal befor;
     memcpy(&befor, data, sizeof(Internal));
     Internal *after = (Internal *)(data);
+#endif
     ptr_cd->entry_directory_.data_->GetData(src->src(), len_in_bytes, src->offset());
+#ifdef LULESH_DEBUG
     if (myTaskID == 0) {
       char tmp[128];
       int64_t seq_end = phaseNodeCache[phase()]->seq_end_;
@@ -3066,6 +3075,7 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
           seq_end, phase(), cd::failed_seqID, IsFailed()? "FAIL" : "GOOD");
       befor.Print(*after, tmp);
     }
+#endif
     
     /*********************************************
      * Test for kRef case
