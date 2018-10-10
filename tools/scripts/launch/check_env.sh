@@ -1,0 +1,12 @@
+#!/bin/bash
+echo "CD_NO_PRESERVE              :$CD_NO_PRESERVE"
+echo "CD_NO_OPERATE               :$CD_NO_OPERATE"
+echo "CD_NO_ERROR                 :$CD_NO_ERROR"
+echo "MPICH_ASYNC_PROGRESS        :$MPICH_ASYNC_PROGRESS"
+echo "I_MPICH_ASYNC_PROGRESS      :$I_MPICH_ASYNC_PROGRESS"
+echo "MPI_THREAD_MULTIPLE         :$MPI_THREAD_MULTIPLE"
+echo "KEEP_TOTAL_FAILURE_RATE_SAME:$KEEP_TOTAL_FAILURE_RATE_SAME"
+echo "CD_EXEC_NAME                :$CD_EXEC_NAME"
+echo "CD_EXEC_DETAILS             :$CD_EXEC_DETAILS"
+echo "CD_EXEC_ITERS               :$CD_EXEC_ITERS"
+
