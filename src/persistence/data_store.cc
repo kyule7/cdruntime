@@ -186,8 +186,9 @@ CDErrType DataStore::Free(char *ptr)
 CDErrType DataStore::Alloc(void **ptr, uint64_t size)
 { 
   MYDBG("%lu\n", size);
-//  if (size > 500000000)
-//    printf("size:%lu\n", size);
+  //if (size > 500000000)
+  if (packerTaskID == 0)
+    printf("size:%lu\n", size);
   int ret = posix_memalign(ptr, CHUNK_ALIGNMENT, size + sizeof(MagicStore)); 
   if( ret != 0 ) { 
     perror("posix_memalign:");

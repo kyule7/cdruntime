@@ -427,6 +427,7 @@ extern CD_CLOCK_T begin_clk;
 //extern CD_CLOCK_T mailbox_elapsed_time;
 //
 extern std::vector<uint32_t> total_errors;
+extern uint64_t data_grow_unit;
 extern uint64_t state;
 extern int64_t failed_phase;
 extern int64_t failed_seqID;

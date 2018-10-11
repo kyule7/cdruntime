@@ -565,7 +565,7 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label, PrvMediumT
     // Found matching label in the config.yaml.
     // Overwrite from that.
     if(pt != tuned::phaseNodeCache.end()) {
-      if (cd::myTaskID == 0) printf("\n\t%s>>valid config.yaml (%s)\n", std::string(2 << level_, ' ').c_str(), label.c_str());
+      //if (cd::myTaskID == 0) printf("\n\t%s>>valid config.yaml (%s)\n", std::string(2 << level_, ' ').c_str(), label.c_str());
       const PhaseNode *pn = pt->second;
       cd::phaseTree.current_->errortype_ = pn->errortype_;
       cd::phaseTree.current_->medium_    = pn->medium_;
@@ -578,7 +578,7 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label, PrvMediumT
       for(auto it=tuned::phaseNodeCache.begin(); it!=tuned::phaseNodeCache.end(); ++it) {
         PRINT_BOTH("[%d] phase %u \n", cd::myTaskID, it->first);
       }
-      if (cd::myTaskID == 0) printf("\n\t%s>>> yaml is set from source code (%s)\n", std::string(2 << level_, ' ').c_str(), label.c_str());
+      //if (cd::myTaskID == 0) printf("\n\t%s>>> yaml is set from source code (%s)\n", std::string(2 << level_, ' ').c_str(), label.c_str());
       PRINT_BOTH("Phase %u is missing in tuned::phaseNodeCache (%zu)\n", 
           phase, tuned::phaseNodeCache.size());
     }
@@ -592,7 +592,7 @@ uint32_t PhaseNode::GetPhaseNode(uint32_t level, const string &label, PrvMediumT
   } 
   // the config.yaml is missing
   else {
-    if (cd::myTaskID == 0) printf("\n\t%s>> config.yaml is missing.\n", std::string(2 << level_, ' ').c_str());
+    //if (cd::myTaskID == 0) printf("\n\t%s>> config.yaml is missing.\n", std::string(2 << level_, ' ').c_str());
     cd::phaseTree.current_->errortype_ = error_vec_from_api;
     cd::phaseTree.current_->medium_    = medium_from_api;
   }

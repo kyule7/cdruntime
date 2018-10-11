@@ -441,7 +441,7 @@ if len(input_list) > 0:
     result = input_list[0]
     tot_prof = GenEmptyDF(appls, sizes, tasks, [tot_labels])
     for app in result:
-        ftype = result[app].keys()[1]
+        ftype = result[app].keys()[0]
         for task in result[app][ftype]:
             for inputsz in result[app][ftype][task]:
                 missing, orign, noprv, noerr, error = CheckMissing(result[app], task, inputsz)

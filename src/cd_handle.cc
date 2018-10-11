@@ -111,6 +111,7 @@ bool cd::dont_cdop = false;
 bool cd::dont_error = false;
 int dont_cdop_int = 0;
 double cd::tot_rtov[4];
+uint64_t cd::data_grow_unit=DATA_GROW_UNIT;
 CD_CLOCK_T cd::cdr_elapsed_time=0;
 CD_CLOCK_T cd::global_reex_clk=0;
 CD_CLOCK_T cd::tot_begin_clk=0;
@@ -565,6 +566,8 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   exec_details    = getenv("CD_EXEC_DETAILS");
   exec_iterations = getenv("CD_EXEC_ITERS");
   app_input_size  = (exec_iterations!=NULL)? atoi(exec_iterations) : 0;
+  char *dgu = getenv("CD_DATA_GROW_UNIT");
+  data_grow_unit  = (dgu!=NULL)? atol(dgu) : data_grow_unit;
 
 #if CD_TUNING_ENABLED == 0
   char *cd_config_file = getenv("CD_CONFIG_FILENAME");
@@ -1269,7 +1272,7 @@ CDHandle *CDHandle::Create(const char *name,
   // and populate its data structure correctly (CDID, etc...)
   uint64_t sys_bit_vec = SetSystemBitVector(error_name_mask, error_loc_mask);
   bool is_reuse =  ptr_cd_->CheckToReuseCD(name);
-  NodeID new_node_id = GenNewNodeID(SelectHead(task_size()), node_id(), is_reuse);
+  NodeID new_node_id = GenNewNodeID(SelectHead(task_size()), node_id(), true/*is_reuse*/);
 
   if(is_reuse == false) {
     CollectHeadInfoAndEntry(new_node_id); 
@@ -1367,11 +1370,11 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   if(num_children > 1) {
     err = SplitCD(node_id().task_in_color(), node_id().size(), num_children, new_color, new_task);
     CD_DEBUG("[%s], GenNewNodeID\n", __func__);
-    new_node_id = GenNewNodeID(color(), new_color, new_task, SelectHead(new_size), is_reuse);
+    new_node_id = GenNewNodeID(color(), new_color, new_task, SelectHead(new_size), true /*is_reuse*/);
 //    assert(new_size == new_node_id.size());
   }
   else if(num_children == 1) {
-    new_node_id = GenNewNodeID(SelectHead(task_size()), node_id(), is_reuse);
+    new_node_id = GenNewNodeID(SelectHead(task_size()), node_id(), true /* is_reuse */);
   }
   else {
     ERROR_MESSAGE("Number of children to create is wrong.\n");
@@ -1457,7 +1460,7 @@ CDHandle *CDHandle::Create(uint32_t color,
   bool is_reuse = ptr_cd_->CheckToReuseCD(name);
 //  ColorT new_comm;
 //  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, num_children);
-  NodeID new_node_id = GenNewNodeID(this->color(), color, task_in_color, SelectHead(task_size()/num_children), is_reuse);
+  NodeID new_node_id = GenNewNodeID(this->color(), color, task_in_color, SelectHead(task_size()/num_children), true /*is_reuse*/);
 
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, color, name);

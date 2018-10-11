@@ -223,7 +223,7 @@ void logger::InitMallocPtr(void)
     LOGGER_PRINT("%s\n", __func__);
 //    INIT_FUNCPTR(calloc);
     INIT_FUNCPTR(malloc);
-    INIT_FUNCPTR(valloc);
+    //INIT_FUNCPTR(valloc); // FIXME:10112018
     INIT_FUNCPTR(realloc);
     INIT_FUNCPTR(memalign);
     INIT_FUNCPTR(posix_memalign);
@@ -446,7 +446,7 @@ EXTERNC void *malloc(size_t size)
   return ret;
   
 }
-
+/*
 EXTERNC void *valloc(size_t size)
 {
   void *ret = NULL;
@@ -470,7 +470,7 @@ EXTERNC void *valloc(size_t size)
   LOGGER_PRINT("%p = valloc(%zu)\n", ret, size);
   return ret;
 }
-
+*/
 
 EXTERNC void *realloc(void *ptr, size_t size)
 {

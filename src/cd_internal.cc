@@ -56,7 +56,8 @@ using namespace std;
 #define _LOG_PROFILING 0
 #define USE_ALLOC_SHM 1
 
-#define LULESH_DEBUG
+//#define LULESH_DEBUG
+#undef LULESH_DEBUG
 #ifdef LULESH_DEBUG
 #include "debug_user_data.h"
 #endif
@@ -349,7 +350,7 @@ CD::CD(CDHandle *cd_parent,
        CDType cd_type, 
        PrvMediumT prv_medium, 
        uint64_t sys_bit_vector)
- :  cd_id_(cd_id), entry_directory_(32, NULL, NULL, DATA_GROW_UNIT, (MASK_MEDIUM(prv_medium) == kDRAM)? kVolatile : kMPIFile)
+ :  cd_id_(cd_id), entry_directory_(32, NULL, NULL, cd::data_grow_unit, (MASK_MEDIUM(prv_medium) == kDRAM)? kVolatile : kMPIFile)
     //,
 //    file_handle_(prv_medium, 
 //                 ((cd_parent!=NULL)? cd_parent->ptr_cd_->file_handle_.GetBasePath() : FilePath::global_prv_path_), 
@@ -747,7 +748,7 @@ bool CD::CheckToReuseCD(const std::string &cd_obj_key)
   if (is_reuse == false)
   {
     if(task_size() > 1) {
-      uint32_t rollback_point = CheckRollbackPoint(true);
+      uint32_t rollback_point = CheckRollbackPoint(false);
       CheckMailBox();
       //uint32_t rollback_point = SyncCDs(this, false);
       if(rollback_point <= level()) {
@@ -940,7 +941,7 @@ CD::CDInternalErrT CD::InternalDestroy(bool collective, bool need_destroy)
 //      PMPI_Win_free(&pendingWindow_);
 //      PMPI_Win_free(&rollbackWindow_);
       PMPI_Group_free(&cd_id_.node_id_.task_group_);
-      PMPI_Comm_free(&cd_id_.node_id_.color_);
+      //PMPI_Comm_free(&cd_id_.node_id_.color_);
       PMPI_Win_free(&mailbox_);
   #if USE_ALLOC_SHM
   // Do nothing? 
