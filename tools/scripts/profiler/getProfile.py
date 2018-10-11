@@ -441,13 +441,15 @@ if len(input_list) > 0:
     result = input_list[0]
     tot_prof = GenEmptyDF(appls, sizes, tasks, [tot_labels])
     for app in result:
-        ftype = result[app].keys()[0]
+        ftype = result[app].keys()[1]
         for task in result[app][ftype]:
             for inputsz in result[app][ftype][task]:
                 missing, orign, noprv, noerr, error = CheckMissing(result[app], task, inputsz)
                 if missing:
                     print('missing', task, inputsz, ftype,  orign, noprv, noerr, error)
                     raise SystemExit
+                print('generating:', task, inputsz, ftype,  orign, noprv, noerr, error)
+                raw_input('----------')
                 GetTotProf(tot_prof, 
                            result[app][orign][task][inputsz], 
                            result[app][noprv][task][inputsz], 
@@ -596,19 +598,19 @@ if totalinfo_df:
         print(new_df)
         tg = new_df.loc[app]
         tg.index.set_names(['size', 'task'], inplace=True)
-        tg2 = tg.copy()
-        #tg2.rename(index={'prsvHeavy':'hierarchy'}, level='size', inplace=True)        
-        print(app, '\n\n')
-        print(tg)
-        print('\n------ *** app *** -----------\n')
-        print(tg2)
-        print('\n------ *** app 2 *** -----------\n')
-        tg.append(tg2)
-        print(tg2)
-        print('\n------ *** after merge *** -----------\n')
-        raw_input('\n------ *** app *** -----------\n')
-        frames = [tg, tg2]
-        tg = pd.concat(frames)
+#        tg2 = tg.copy()
+#        #tg2.rename(index={'prsvHeavy':'hierarchy'}, level='size', inplace=True)        
+#        print(app, '\n\n')
+#        print(tg)
+#        print('\n------ *** app *** -----------\n')
+#        print(tg2)
+#        print('\n------ *** app 2 *** -----------\n')
+#        tg.append(tg2)
+#        print(tg2)
+#        print('\n------ *** after merge *** -----------\n')
+#        raw_input('\n------ *** app *** -----------\n')
+#        frames = [tg, tg2]
+#        tg = pd.concat(frames)
         ax = tg.plot.bar(y=['preserve', 'rollback', 'runtime', 'bare'], stacked=True, 
                     #bottom = margin_bottom, color=colors[num], label=month
                     label=['preserve', 'rollback', 'runtime', 'original']

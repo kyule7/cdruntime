@@ -912,7 +912,7 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event)
   // The reason for this is that the head task's CheckMailBox is scheduled before non-head task's,
   // and after head's CheckMailBox associated with SetMailBox for some events such as kErrorOccurred,
   // (kErrorOccurred at head tast associates kAllReexecute for all task in the CD currently)
-  // head CD does not check mail box to invoke kAllRexecute for itself. 
+  // head CD does not check mail box to invoke kAllReexecute for itself. 
   // Therefore, it locally register the event handler right away, 
   // and all the tasks including head task can reexecute after the CheckMailBox.
   CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\n[HeadCD::SetMailBox] event %s at level #%u --------\n", event2str(event).c_str(), level());
@@ -1159,7 +1159,7 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event, int task_id)
       // The reason for this is that the head task's CheckMailBox is scheduled before non-head task's,
       // and after head's CheckMailBox associated with SetMailBox for some events such as kErrorOccurred,
       // (kErrorOccurred at head tast associates kAllReexecute for all task in the CD currently)
-      // head CD does not check mail box to invoke kAllRexecute for itself. 
+      // head CD does not check mail box to invoke kAllReexecute for itself. 
       // Therefore, it locally register the event handler right away, 
       // and all the tasks including head task can reexecute after the CheckMailBox.
       CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\nEven though it calls SetMailBox(%s, %d == %u), locally set/handle events\n", 
@@ -1185,7 +1185,7 @@ CDErrT HeadCD::SetMailBox(const CDEventT &event)
   // The reason for this is that the head task's CheckMailBox is scheduled before non-head task's,
   // and after head's CheckMailBox associated with SetMailBox for some events such as kErrorOccurred,
   // (kErrorOccurred at head tast associates kAllReexecute for all task in the CD currently)
-  // head CD does not check mail box to invoke kAllRexecute for itself. 
+  // head CD does not check mail box to invoke kAllReexecute for itself. 
   // Therefore, it locally register the event handler right away, 
   // and all the tasks including head task can reexecute after the CheckMailBox.
   CD_DEBUG_COND(DEBUG_OFF_MAILBOX, "\n[HeadCD::SetMailBox] event %s at level #%u --------\n", event2str(event).c_str(), level());
@@ -1240,7 +1240,7 @@ CD::CDInternalErrT HeadCD::LocalSetMailBox(const CDEventT &event)
       // it is not needed to register here. I will be registered by HandleErrorOccurred functor.
     }
     if( CHECK_EVENT(event, kAllReexecute) ) {
-      CD_DEBUG("kAllRexecute in HeadCD::SetMailBox\n");
+      CD_DEBUG("kAllReexecute in HeadCD::SetMailBox\n");
       IncPendingCounter();
       cd_event_.push_back(new HandleAllReexecute(this));
       // FIXME: It does not need lock.
@@ -1693,6 +1693,7 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
       CheckMailBox(true);
       //uint32_t rollback_point = *rollback_point_;//CheckRollbackPoint(false);
       uint32_t rollback_point = CheckRollbackPoint(false);
+
       //uint32_t rollback_point = CheckRollbackPoint((iters % 10000 == 0) ? true : false);
 //      uint32_t rollback_point = CheckRollbackPoint(false);
 //      if(rollback_point != INVALID_ROLLBACK_POINT) { // This could be set inside CD::CheckMailBox()
@@ -1721,6 +1722,15 @@ int CD::BlockUntilValid(MPI_Request *request, MPI_Status *status)
         rollback_point = level(); printf("\t\t\t **************** [%d] Force to rollback %lf **********************\n", cd::myTaskID, elapsed_time); 
         SetRollbackPoint(rollback_point, false);
       }
+
+      CDFlagT event = IsHead()? event_flag_[task_in_color()] : *event_flag_;
+      if( CHECK_EVENT(event, kAllReexecute) ) {
+        CD_DEBUG("ReadMailBox. push back HandleAllReexecute\n");
+        UnsetEventFlag(*event_flag_, kAllReexecute);
+        SetRollbackPoint(rollback_point, false);
+      }
+
+
       if(rollback_point <= level()){
         CD_DEBUG("\n[%s] Reexec is true, %u->%u, %s %s\n\n", 
             cd_id_.GetString().c_str(), level(), rollback_point, label_.c_str(), cd_id_.node_id().GetString().c_str());

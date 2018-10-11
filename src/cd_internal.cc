@@ -56,7 +56,7 @@ using namespace std;
 #define _LOG_PROFILING 0
 #define USE_ALLOC_SHM 1
 
-#undef LULESH_DEBUG
+#define LULESH_DEBUG
 #ifdef LULESH_DEBUG
 #include "debug_user_data.h"
 #endif
@@ -744,10 +744,12 @@ CDErrT CD::Destroy(bool collective, bool need_destroy)
 bool CD::CheckToReuseCD(const std::string &cd_obj_key) 
 {
   bool is_reuse = (access_store_.find(phaseTree.current_->GetPhasePath(cd_obj_key)) != access_store_.end());
-  if (false) //(is_reuse == false)
+  if (is_reuse == false)
   {
     if(task_size() > 1) {
-      uint32_t rollback_point = SyncCDs(this, false);
+      uint32_t rollback_point = CheckRollbackPoint(true);
+      CheckMailBox();
+      //uint32_t rollback_point = SyncCDs(this, false);
       if(rollback_point <= level()) {
         Escalate(CDPath::GetCurrentCD(), false);
       }
@@ -983,48 +985,90 @@ void SetHealthy(void)
   global_reex_clk = now;
 }
 
-//static inline void BeginPhase(const std::string &label)
-//{
-//  cd_name_.phase_ = cd::phaseTree->target_->GetPhaseNode(level(), label_);
-//}
+#if 0
 inline
 uint32_t CD::BeginPhase(uint32_t level, const string &label) 
 {
   uint32_t phase = -1;
   if(tuned::tuning_enabled == false) {
     if(phaseTree.current_ != NULL) {
-      phase = phaseTree.current_->GetPhaseNode(level, label);
-      if (tuned::phaseNodeCache.find(phase) == tuned::phaseNodeCache.end()) {
-        assert(tuned::phaseNodeCache.size() == 0);
-        phaseTree.current_->medium_ = prv_medium_;
-        phaseTree.current_->errortype_ = sys_detect_bit_vector_;
-      }
-    } else { // when root_ is activated for the first time
-      if(phaseTree.root_ == NULL)
+      phase = phaseTree.current_->GetPhaseNode(level, label, prv_medium_, sys_detect_bit_vector_);
+//      auto tp = tuned::phaseNodeCache.find(phase);
+      // overwrite from source code
+//      if (tp == tuned::phaseNodeCache.end()) {
+//        if (myTaskID == 0) printf("\n\t%s>>config.yaml is missing\n", std::string(2 << this->level(), ' ').c_str());
+//        assert(tuned::phaseNodeCache.size() == 0);
+//        phaseTree.current_->medium_ = prv_medium_;
+//        phaseTree.current_->errortype_ = sys_detect_bit_vector_;
+//      } else if (tp->second->label_ != label) {
+//        if (myTaskID == 0) printf("\n\t%s>>different config.yaml (%s != %s)\n", std::string(2 << this->level(), ' ').c_str(), tp->second->label_.c_str(), label.c_str());
+//        phaseTree.current_->medium_    = prv_medium_;
+//        phaseTree.current_->errortype_ = sys_detect_bit_vector_;
+//      } else {
+//        if (myTaskID == 0) printf("\n\t%s>>valid config.yaml\n", std::string(2 << this->level(), ' ').c_str());
+//      }
+    } 
+    // when root_ is activated for the first time
+    else { 
+      if(phaseTree.root_ == NULL) {
         phase = phaseTree.Init(level, label);
-      else 
-        phase = phaseTree.ReInit();
-      PhaseNode *pn = phaseTree.current_;
-      if (tuned::phaseNodeCache.find(pn->phase_) != tuned::phaseNodeCache.end()) {
-        PhaseNode *tn = tuned::phaseNodeCache[pn->phase_];
-        pn->errortype_= tn->errortype_;
-        pn->medium_   = tn->medium_;
+        phaseTree.root_->medium_    = kPFS;
+        phaseTree.root_->errortype_ = -1ULL;
       } else {
-        // root case
-        pn->medium_ = prv_medium_;
-        pn->errortype_ = sys_detect_bit_vector_;
+        phase = phaseTree.ReInit();
       }
-//      printf("(%s, %lx) <- (%s, %lx)\n", 
-//          GetMedium(pn->medium_),
-//          pn->errortype_, 
-//          GetMedium(tn->medium_), 
-//          tn->errortype_);
+      PhaseNode *current = phaseTree.current_;
+//      auto tp = tuned::phaseNodeCache.find(current->phase_);
+//      // if there is correct phase and label in phaseNodeCache,
+//      // use phase info there, instead of one from source code.
+//      if (tp != tuned::phaseNodeCache.end() && tp->second->label_ == label) {
+//        if (myTaskID == 0 && tp != tuned::phaseNodeCache.end()) printf("\n\t%s>>> [root] config.yaml is set by tuned::phaseNodeCache (%s != %s)\n", std::string(2 << this->level(), ' ').c_str(), tp->second->label_.c_str(), label.c_str());
+        PhaseNode *tn = tuned::phaseNodeCache[current->phase_];
+//        assert( tn == tp->second );
+//        current->medium_   = tn->medium_;
+//        current->errortype_= tn->errortype_;
+//      } 
+//      // otherwise, set it from source code
+//      else {
+//        if (myTaskID == 0) printf("\n\t%s>>[root] config.yaml is missing\n", std::string(2 << this->level(), ' ').c_str());
+//        current->medium_    = prv_medium_;
+//        current->errortype_ = sys_detect_bit_vector_;
+//      }
+      if(myTaskID == 0) printf("ROOT: (%x, %lx) <- (%x, %lx)\n", 
+          current->medium_,
+          current->errortype_, 
+          tn->medium_, 
+          tn->errortype_);
     }
 //    phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, just_reexecuted, );
   }
   return phase; 
 }
+#endif
 
+inline
+uint32_t CD::BeginPhase(uint32_t level, const string &label) 
+{
+  uint32_t phase = -1;
+  if (tuned::tuning_enabled == false) {
+    if (phaseTree.current_ != NULL) {
+      phase = phaseTree.current_->GetPhaseNode(level, label, prv_medium_, sys_detect_bit_vector_);
+    } 
+    // when root_ is activated for the first time
+    else { 
+      if (phaseTree.root_ == NULL) {
+        phase = phaseTree.Init(level, label);
+        phaseTree.root_->medium_    = kPFS;
+        phaseTree.root_->errortype_ = -1ULL;
+      } else {
+        phase = phaseTree.ReInit();
+      }
+      PhaseNode *current = phaseTree.current_;
+    }
+    /* phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, just_reexecuted, ); */
+  }
+  return phase; 
+}
 static inline 
 void CompletePhase(uint32_t phase, bool is_reexec=false)
 {
@@ -1077,7 +1121,8 @@ CDErrT CD::Begin(const char *label, bool collective)
   //printf("[%s] not here? \n", __func__);
   label_ = (strcmp(label, NO_LABEL) == 0)? name_ : label; 
   const uint32_t level = cd_id_.cd_name_.level_;
-  PRINT_BOTH("lv:%u, %s, %s, bitvec:%lx, media:%x\n", level, name_.c_str(), label_.c_str(), sys_detect_bit_vector_, prv_medium_);
+  if (myTaskID == 0) printf("\n[Before] lv:%u, %s, %s, bitvec:%lx, media:%x\n", 
+      level, name_.c_str(), label_.c_str(), sys_detect_bit_vector_, prv_medium_);
   if(tuned::tuning_enabled == false) {
     cd_id_.cd_name_.phase_ = BeginPhase(level, label_);
     sys_detect_bit_vector_ = phaseTree.current_->errortype_;
@@ -1096,7 +1141,8 @@ CDErrT CD::Begin(const char *label, bool collective)
 //  }
   // Overwrite medium
   prv_medium_ = phaseTree.current_->medium_;
-  PRINT_BOTH("lv:%u, %s, %s, bitvec:%lx, media:%x\n", level, name_.c_str(), label_.c_str(), sys_detect_bit_vector_, prv_medium_);
+  if (myTaskID == 0) printf("[After] lv:%u, %s, %s, bitvec:%lx, media:%x\n", 
+      level, name_.c_str(), label_.c_str(), sys_detect_bit_vector_, prv_medium_);
   const int64_t current_phase = cd_id_.cd_name_.phase_;
   profMap[current_phase] = &cd::phaseTree.current_->profile_; //getchar();
 
@@ -2758,20 +2804,16 @@ CDEntry *CD::PreserveCopy(void *data,
   }
   else { // preserve a single entry
 #ifdef LULESH_DEBUG
-    if (myTaskID == 0) {
       char tmp[64];
       sprintf(tmp, "Preserve Domain lv:%u %s", level(), label_.c_str());
-      ((Internal *)data)->Print(tmp);
-    }
+      ((Internal *)data)->Print(tmp, cdout);
 #endif
     pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, len_in_bytes, 0, (char *)data));
-    if(0)//if(myTaskID == 0) 
-    { 
-      printf("Preserve %s (%lx), size:%lx, at %p\n", my_name.c_str(), id, len_in_bytes, data);
-      char tmp[64];
+#ifdef LULESH_DEBUG
+      CD_DEBUG("Preserve %s (%lx), size:%lx, at %p\n", my_name.c_str(), id, len_in_bytes, data);
       sprintf(tmp, "Domain %s : ", my_name.c_str());
-      pEntry->Print(tmp);
-    }
+      pEntry->Print(cdout, tmp);
+#endif
   }
 //#ifdef _DEBUG_0402        
 #if 0
@@ -3001,7 +3043,7 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
       if(myTaskID == 0) {
         char tmp[16];
         sprintf(tmp, "Restore %u", ptr_cd->level());
-        ptr_cd->entry_directory_.table_->PrintEntry(tmp, GetCDEntryStr);
+        ptr_cd->entry_directory_.table_->PrintEntry(stdout, tmp, GetCDEntryStr);
       }
       uint64_t tag = search_tag;
       src = ptr_cd->entry_directory_.table_->FindReverse(tag, Attr::koutput);
@@ -3065,16 +3107,15 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     Internal befor;
     memcpy(&befor, data, sizeof(Internal));
     Internal *after = (Internal *)(data);
+    CD_DEBUG("GetData(%p == %p, %lx=%lx, %lx);\n", src->src(), data, len_in_bytes, sizeof(Internal), src->offset());
 #endif
     ptr_cd->entry_directory_.data_->GetData(src->src(), len_in_bytes, src->offset());
 #ifdef LULESH_DEBUG
-    if (myTaskID == 0) {
       char tmp[128];
       int64_t seq_end = phaseNodeCache[phase()]->seq_end_;
-      sprintf(tmp, "Restore Domain lv:%u %s %u %ld %u !=%ld %s", level(), label_.c_str(), level(), 
+      sprintf(tmp, "Restore Domain lv:%u %s seq:%ld phase:%u !=%ld(failed) %s", level(), label_.c_str(),  
           seq_end, phase(), cd::failed_seqID, IsFailed()? "FAIL" : "GOOD");
-      befor.Print(*after, tmp);
-    }
+      befor.Print(*after, tmp, cdout);
 #endif
     
     /*********************************************
@@ -3164,7 +3205,7 @@ CDErrT CD::RestoreAll()
   char tmp[64];
   sprintf(tmp, "%s %u %ld->%ld", label_.c_str(), level(), seq_end, cd::failed_seqID);
   if (myTaskID == 0)
-    entry_directory_.table_->PrintEntry(tmp, GetCDEntryStr);
+    entry_directory_.table_->PrintEntry(stdout, tmp, GetCDEntryStr);
 
 
 #if 0
@@ -4337,8 +4378,11 @@ void CD::PrintIncompleteLog()
 CD::CDInternalErrT CD::InvokeAllErrorHandler(void) {
   CDInternalErrT err = kOK;
   CDHandle *cdp = CDPath::GetCoarseCD(CDPath::GetCurrentCD());
+  CD *cd = cdp->ptr_cd();
   while(cdp != NULL) {
-    CD_DEBUG("=========== %16s lv %u events: %zu pending counter:%u, mailbox:%lx\n", cdp->GetLabel(), cdp->level(), cd_event_.size(), *pendingFlag_, IsHead() ? event_flag_[task_in_color()] : *event_flag_);
+    CD_DEBUG("=========== %16s lv %u events: %zu pending counter:%u, mailbox:%lx\n", 
+        cdp->GetLabel(), cd->level(), cd->cd_event_.size(), *(cd->pendingFlag_), 
+        cd->IsHead() ? (cd->event_flag_)[cd->task_in_color()] : *(cd->event_flag_));
 
     err = cdp->ptr_cd_->InvokeErrorHandler();
     cdp = CDPath::GetParentCD(cdp->level());

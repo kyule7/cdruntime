@@ -209,12 +209,12 @@ struct CDEntry {
       src_    = that.src_;
     }
 
-    void Print(const char *str="", std::function<const char *(uint64_t)> hash=DefaultHash) const
+    void Print(FILE *out=stdout, const char *str="", std::function<const char *(uint64_t)> hash=DefaultHash) const
     {
       if (size_.Check(Attr::krefer))
-        printf("%s (%24s %16lx %3lx %10lx %10lx %s) *\n", str, hash(id_), id_, attr(), size(), offset(), hash((uint64_t)src())); 
+        fprintf(out, "%s (%24s %16lx %3lx %10lx %10lx %s) *\n", str, hash(id_), id_, attr(), size(), offset(), hash((uint64_t)src())); 
       else
-        printf("%s (%24s %16lx %3lx %10lx %10lx %p)\n", str, hash(id_), id_, attr(), size(), offset(), src());
+        fprintf(out, "%s (%24s %16lx %3lx %10lx %10lx %p)\n", str, hash(id_), id_, attr(), size(), offset(), src());
     }
     inline uint64_t size(void)   const { 
 //      assert(size_.attr_.size_ < 2000000000);

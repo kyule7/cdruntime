@@ -173,7 +173,8 @@ struct PhaseNode {
       task_size_    = task_count;
     }
 
-    uint32_t GetPhaseNode(uint32_t level, const std::string &label);
+    uint32_t GetPhaseNode(uint32_t level, const std::string &label, PrvMediumT medium_from_api, uint64_t error_vec_from_api);
+    
     PhaseNode *GetLeftMostNode(void)
     {
       PhaseNode *leftmost = NULL;

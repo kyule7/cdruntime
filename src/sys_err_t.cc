@@ -217,9 +217,11 @@ void SystemConfig::ParseParam(char *key)
       char *keep_failure_rate_same = getenv( "KEEP_TOTAL_FAILURE_RATE_SAME" );
       config.failure_rate_record_[errortype] = atof(key);
       config.error_count_[errortype] = 0;
-      if(keep_failure_rate_same != NULL)
+      float failure_div_factor = 1.0;
+      if(keep_failure_rate_same != NULL) {
         num_tasks = atoi(keep_failure_rate_same);
-        float failure_div_factor = atof(keep_failure_rate_same);
+        failure_div_factor = atof(keep_failure_rate_same);
+      }
       if(num_tasks > 1) {
         float frate = (errortype > 2)? (atof(key) / cd::totalTaskSize) : (atof(key) / failure_div_factor);
         config.failure_rate_[errortype] = frate;

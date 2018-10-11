@@ -1637,7 +1637,7 @@ void LagrangeNodal(Domain& domain)
    
 #if _CD && _CD_CDRT
    // Out{XDD,YDD,ZDD} <- In{XDD,YDD,ZDD,FX,FY,FZ,SYMMX,SYMMY,SYMMZ}
-  #if _LEAF_LV && _POS_VEL_ACC && _SCR == 0
+  #if _LEAF_LV && _POS_VEL_ACC && (_SCR == 0)
   CDHandle *leaf_cd = GetLeafCD();
   double now = MPI_Wtime();
   CD_Begin(leaf_cd, "CalcPos");
@@ -3752,7 +3752,7 @@ int main(int argc, char *argv[])
   #if _CD_CDRT && _LEAF_LV && _SCR
       if(locDom->check_begin(intvl2)) {
         double ts2 = MPI_Wtime();
-        CD_Begin(leaf_lv, "CalcPos");
+        CD_Begin(leaf_lv, "CalcForce");
         begn_end += MPI_Wtime() - ts2;
         if(myRank == 0) {printf("\n\t\t\t** Before Leaf  %4d, %4.1le %4.1le, dthydro:%le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); }
         //if(IsReexec() && myRank == 0) {printf("Before Leaf  %4d, %6.3le %6.3le, %le ", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->Print();}

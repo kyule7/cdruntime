@@ -1251,10 +1251,10 @@ NodeID CDHandle::GenNewNodeID(int new_head, NodeID &node_id, bool is_reuse)
 
 // Non-collective
 CDHandle *CDHandle::Create(const char *name, 
-                                     int cd_type, 
-                                     uint32_t error_name_mask, 
-                                     uint32_t error_loc_mask, 
-                                     CDErrT *error )
+                           int cd_type, 
+                           uint32_t error_name_mask, 
+                           uint32_t error_loc_mask, 
+                           CDErrT *error )
 {
   //GONG
   CDPrologue();
@@ -1789,12 +1789,12 @@ CDErrT CDHandle::Complete(bool update_preservations, bool collective)
   // in the case that current phase of CD is the end of the last failed point.
   // Otherwise failed_phase is not healthy and increment reexec_
   const bool is_reexec = (failed_phase != HEALTHY);
-  if(is_reexec && IsHead()) {
+  if(is_reexec && IsHead() && myTaskID == 0) {
     const uint64_t curr_phase = ptr_cd_->phase();
     const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
     const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
-    printf(">>> [%s %d] %s (%s) " 
-             "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+    printf(">>> [%s %4d] %s (%s) " 
+             "fphase:%ld==%lu(cur), seqID:%ld==%lu(beg:%lu)\n", 
              __func__,
              cd::myTaskID, ptr_cd_->cd_id_.GetStringID().c_str(), GetLabel(),
              cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);

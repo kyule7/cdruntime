@@ -401,7 +401,7 @@ void HandleErrorOccurred::HandleEvent(void)
   //if(CDPath::GetCurrentCD()->level() > ptr_cd_->level()) {
   if(CDPath::GetCurrentCD()->level() >= ptr_cd_->level()) {
     for(int i=0; i<ptr_cd_->task_size(); i++) {
-      CD_DEBUG("SetMailBox(kAllRexecute) for error occurred of task #%d\n", i);
+      CD_DEBUG("SetMailBox(kAllReexecute) for error occurred of task #%d\n", i);
       ptr_cd_->SetMailBox(all_reexecute, i);
     }
   }

@@ -349,7 +349,7 @@ class CDHandle {
         if(count % interval == 0) { 
           cur->active_ = true;
           if(cd::phaseTree.current_ != NULL)
-            cd::new_phase = cd::phaseTree.current_->GetPhaseNode(cur->level_, cur->label_);
+            cd::new_phase = cd::phaseTree.current_->GetPhaseNode(cur->level_, cur->label_, kUndefined/*FIXME*/, sys_err_vec);
           else 
             cd::new_phase = cd::phaseTree.Init(cur->level_, cur->label_);
 //          printf("new phase:%u\n", cd::new_phase); 
