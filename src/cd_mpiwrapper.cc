@@ -2606,6 +2606,7 @@ int MPI_Init(int *argc, char ***argv)
   } else {
     strcpy(exec_name, cd_exec_name);
   }
+
   bool orig_disabled = logger::disabled; 
   logger::disabled = true; 
   int mpi_ret = 0;
@@ -2625,6 +2626,25 @@ int MPI_Init_thread(int *argc, char ***argv, int required, int *provided)
 {
 //  printf("[%s]\n", __func__); getchar();
   app_side = false; 
+  char *cd_exec_name = getenv( "CD_EXEC_NAME" );
+  if(cd_exec_name == NULL) {
+    if(argv != NULL && (*argv)[0] != NULL) {
+      char tmp_name[128];
+      strcpy(tmp_name, (*argv)[0]);
+      char *ex_name = strtok(tmp_name, "/");
+      char *pt_name = tmp_name;
+      while(ex_name != NULL) {
+        pt_name = ex_name;
+        ex_name = strtok(NULL, "/");
+      }
+  //    printf("exec:%s, %s\n", pt_name, tmp_name);
+      strcpy(exec_name, pt_name);
+  
+    }
+  } else {
+    strcpy(exec_name, cd_exec_name);
+  }
+
   bool orig_disabled = logger::disabled; 
   logger::disabled = true; 
   int mpi_ret = 0;
