@@ -7,6 +7,7 @@ export MPI_THREAD_MULTIPLE=1
 export KEEP_TOTAL_FAILURE_RATE_SAME=0
 export CD_EXEC_NAME=synthetic
 export CD_EXEC_DETAILS=init
+#export IBRUN_TASKS_PER_NODE=48
 #########################################
 MAX_RUNS=10
 NUM_MEASURE=$(seq 1 $MAX_RUNS)
