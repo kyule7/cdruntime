@@ -25,19 +25,15 @@
         "wr_bw" : 0.0, // not used
         "cons" : {
             "a0" : 1000000,
-            "k1" : 5000000
+            "b0" : 2000000
         },
         "prod" : {
-            "c" : 6000
+            "c" : 600000
         }
       }, // profile ends
       "child CDs" : { // child
 
-      "CD1_1" : {
-        
-        "child CDs" : { // child
-
-        "CD2_2" : {
+        "CD1_1" : {
           "profile": {
              "iterations" : 1, 
              "label" : "MainLoop",

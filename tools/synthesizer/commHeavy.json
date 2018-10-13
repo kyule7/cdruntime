@@ -15,7 +15,7 @@
         "child siblings" : 64, // number of parallel CDs 
         "fault rate" : 0.0, // not used
         "exec time" : 0.25,
-        "exec time std" : 0.000005, 
+        "exec time std" : 0.25, 
         "prsv type" : "GlobalDisk",
         "preserve vol" : 10,
         "comm payload" : 2,
@@ -36,13 +36,13 @@
         "CD1_1" : {
           
           "profile": {
-             "iterations" : 5, 
+             "iterations" : 10, 
              "label" : "MainLoop",
              "type" : "hmcd", // heterogeneous CDs
              "child siblings" : 1, 
              "fault rate" : 0.00000001,
-             "exec time" : 0.05,
-             "exec time std" : 0.000001, 
+             "exec time" : 0.025,
+             "exec time std" : 0.025, 
              "prsv type" : "LocalMemory",
              "preserve vol" : 500,
              "comm payload" : 50,
