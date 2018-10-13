@@ -3,14 +3,15 @@ CD_EXEC=./synthesize
 export MPICH_ASYNC_PROGRESS=1
 export I_MPICH_ASYNC_PROGRESS=1
 export CD_EXEC_ITERS=0
+export MPI_THREAD_MULTIPLE=1
 export KEEP_TOTAL_FAILURE_RATE_SAME=0
 export CD_EXEC_NAME=synthetic
 export CD_EXEC_DETAILS=init
 #########################################
-MAX_RUNS=3
+MAX_RUNS=10
 NUM_MEASURE=$(seq 1 $MAX_RUNS)
 #########################################
-INPUT_LIST=( "prsvHeavy" "hierarchy" )
+INPUT_LIST=( "baseline" "commHeavy" "hetero" "hierarchy" "prsvHeavy" )
 
 
 for COUNT in ${NUM_MEASURE}
@@ -86,3 +87,4 @@ echo "Iter:$COUNT, time:$duration"
   done
 
 done
+
