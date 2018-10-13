@@ -50,7 +50,7 @@ Param ReadParam(const char *param_file) {
   params.check_params();
 
   if (params.isMember("CD info")) { // sweep CD level
-    SYNO(cout << "CD type: " << type_str << endl;)
+    SYNO(cout << "CD type: " <<  endl;)
   } else {
     SYNO(cout << "no CD info" << endl;)
   }

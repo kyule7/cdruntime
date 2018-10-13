@@ -24,6 +24,7 @@ enum CommType {
 #define SYN_PRINT_ONE(...) if (synthesizer::myRank == 0) printf(__VA_ARGS__);
 
 //#define SYN_DEBUG
+#undef SYN_DEBUG
 #ifndef SYN_DEBUG
   #define SYNO(...)
   #define SYN_PRINT(...) 

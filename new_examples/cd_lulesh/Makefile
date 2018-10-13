@@ -9,8 +9,8 @@ CD_ENABLED = 1
 #LULESH_EXEC = lulesh_bare
 #LULESH_EXEC = lulesh_noprv
 #LULESH_EXEC = lulesh_opt
-LULESH_EXEC = lulesh_fgcd
-#LULESH_EXEC = lulesh_scr
+#LULESH_EXEC = lulesh_fgcd
+LULESH_EXEC = lulesh_scr
 #LULESH_EXEC = lulesh_lv2
 #LULESH_EXEC = lulesh_cdrt
 #LULESH_EXEC = lulesh_main
@@ -31,9 +31,9 @@ CD_OPS = -D_CD_CDRT=${CD_CDRT} \
   			 -D_LAGRANGE_ELEM=0 \
   			 -D_CALC_FOR_ELEM=0 \
   			 -D_MATERIAL_PROP=0 \
-				 -D_SCR=0 \
+				 -D_SCR=1 \
 				 -D_CD_DUMMY=0 \
-				 -D_FGCD=1
+				 -D_FGCD=0
 CD_FLAGS = -D_MPI_VER=1 -D_SINGLE_VER=0 -D_CD=${CD_ENABLED} -D_DEBUG=0 ${CD_OPS} 
 CD_CFLAGS = -std=gnu++0x -fmax-errors=1 -fPIC -I${CDPATH}/include -I${CDPATH}/src -I${CDPATH}/src/persistence -I${CDPATH}/plugin/wrapper
 #WRAPPER_LFLAGS = -lwrapLibc -L${CDPATH}/plugin/wrapper -Wl,-rpath=${CDPATH}/plugin/wrapper -lc 

@@ -4319,6 +4319,9 @@ int main(int argc, char *argv[])
 #if USE_MPI
    MPI_Finalize() ;
 #endif
+   if(myRank == 0) {
+     printf("MPI Finalize\n");
+   }
 
    return 0 ;
 }

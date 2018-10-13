@@ -207,7 +207,9 @@ CDNode::CDNode(Param &&param, const char *name, CDNode *parent, unsigned level)
     : name_(name)
     , info_(param.isMember("profile")? param["profile"] : param)
     , comm_(info_.comm_payload_, CDNodeInfo::map2id[info_.comm_type_], false,
-        ((parent != nullptr)? parent->comm_ : AppComm(info_.comm_payload_, MPI_COMM_WORLD)))
+        ((parent != nullptr)? parent->comm_ : AppComm(info_.comm_payload_, 
+                                                      param.isMember("comm count")? param["comm count"].asInt() : 1,
+                                                      MPI_COMM_WORLD)))
     , parent_(parent)
     , level_(level) 
 {

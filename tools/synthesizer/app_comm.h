@@ -9,8 +9,8 @@ struct CommStat {
   int *send_buf_;
   int *recv_buf_;
   int rank_;
-  MPI_Status stat_;
-  MPI_Request mreq_;
+  MPI_Status *stat_;
+  MPI_Request *mreq_;
   CommStat(void)
     : send_buf_(nullptr)  
     , recv_buf_(nullptr)  
@@ -20,11 +20,15 @@ struct CommStat {
     : send_buf_(that.send_buf_)  
     , recv_buf_(that.recv_buf_)  
     , rank_(that.rank_) 
+    , stat_(that.stat_)  
+    , mreq_(that.mreq_) 
   { SYN_PRINT("CommStat Copy Constructed\n"); }
-  CommStat(int rank, int count)
+  CommStat(int rank, int count, int tags)
     : rank_(rank)
     , send_buf_(new int[count]()) 
     , recv_buf_(new int[count]())
+    , stat_(new MPI_Status[tags])  
+    , mreq_(new MPI_Request[tags]) 
   {
     SYN_PRINT("[%d] create %p %p\n", rank_, send_buf_, recv_buf_);
   }
@@ -34,6 +38,8 @@ struct CommStat {
     SYN_PRINT("[%d] delete %p %p\n", rank_, send_buf_, recv_buf_);
     delete [] send_buf_;
     delete [] recv_buf_;
+    delete [] stat_;
+    delete [] mreq_;
   }
 };
 
@@ -56,8 +62,8 @@ struct AppComm {
     //
     //assert(size_ % 2 == 0);
     int target = (rank_ % 2 == 0) ? rank_ + 1 : rank_ - 1;
-    src_.push_back(new CommStat(target, count_));
-    dst_.push_back(new CommStat(target, count_));
+    src_.push_back(new CommStat(target, count_, tag_));
+    dst_.push_back(new CommStat(target, count_, tag_));
     SYN_PRINT("AppComm %s\n", __func__); 
   }
 
@@ -87,9 +93,9 @@ struct AppComm {
     //getchar();
   }
   
-  AppComm(double payload, const MPI_Comm &comm) 
+  AppComm(double payload, int tags, const MPI_Comm &comm) 
     : count_(static_cast<int>(payload / sizeof(int)))
-    , tag_(0)
+    , tag_(tags)
     , datatype_(MPI_INT)
     , comm_(comm) 
   {
@@ -126,7 +132,9 @@ struct AppComm {
     Print(__func__);
     int ret = 0;
     if (count_ > 0) {
-      for (auto &dst : dst_) { ret = MPI_Send(dst->send_buf_, count_, datatype_, dst->rank_, tag_, comm_); }
+      for (auto &dst : dst_) { 
+        for (int i=0; i<tag_; i++) {
+          ret = MPI_Send(dst->send_buf_, count_, datatype_, dst->rank_, i, comm_); } }
     } else {
       SYN_PRINT("count is zero\n"); assert(0);
     }
@@ -138,7 +146,9 @@ struct AppComm {
     Print(__func__);
     int ret = 0;
     if (count_ > 0) {
-      for (auto &src : src_) { ret = MPI_Recv(src->recv_buf_, count_, datatype_, src->rank_, tag_, comm_, &src->stat_); }
+      for (auto &src : src_) { 
+        for (int i=0; i<tag_; i++) {
+          ret = MPI_Recv(src->recv_buf_, count_, datatype_, src->rank_, i, comm_, &(src->stat_[i])); } }
     }
     return ret;
   }
@@ -148,7 +158,9 @@ struct AppComm {
     Print(__func__);
     int ret = 0;
     if (count_ > 0) {
-      for (auto &dst : dst_) { ret = MPI_Isend(dst->send_buf_, count_, datatype_, dst->rank_, tag_, comm_, &dst->mreq_); }
+      for (auto &dst : dst_) { 
+        for (int i=0; i<tag_; i++) {
+          ret = MPI_Isend(dst->send_buf_, count_, datatype_, dst->rank_, i, comm_, &(dst->mreq_[i])); } }
     }
     return ret;
   }
@@ -158,7 +170,12 @@ struct AppComm {
     Print(__func__);
     int ret = 0;
     if (count_ > 0) {
-      for (auto &src : src_) { ret = MPI_Irecv(src->recv_buf_, count_, datatype_, src->rank_, tag_, comm_, &src->mreq_); }
+      for (auto &src : src_) { 
+        for (int i=0; i<tag_; i++) {
+          if (myRank == 0) printf("MPI_Irecv(%p, %d, %d, %d, %d, %lx, %d)\n", 
+              src->recv_buf_, count_, datatype_, src->rank_, i, comm_, &(src->mreq_[i])); 
+
+          ret = MPI_Irecv(src->recv_buf_, count_, datatype_, src->rank_, i, comm_, &(src->mreq_[i])); } }
     }
     return ret;
   }
@@ -167,8 +184,10 @@ struct AppComm {
   { 
     Print(__func__);
     int ret = 0;
-    if (count_ > 0) {
-      ret = MPI_Reduce(dst_[0]->send_buf_, src_[0]->recv_buf_, count_, datatype_, MPI_SUM, 0, comm_); 
+    if (count_ > 0) { 
+      for (int i=0; i<tag_; i++) {
+        ret = MPI_Reduce(dst_[0]->send_buf_, src_[0]->recv_buf_, count_, datatype_, MPI_SUM, 0, comm_); 
+      }
     }
     return ret;
   }
@@ -179,9 +198,13 @@ struct AppComm {
     int ret = 0;
     if (count_ > 0) {
       if (for_recv) {
-        for (auto &src : src_) { ret = MPI_Wait(&src->mreq_, &src->stat_); }
+        for (auto &src : src_) { 
+          for (int i=0; i<tag_; i++) {
+            ret = MPI_Wait(&(src->mreq_[i]), &(src->stat_[i])); } }
       } else {
-        for (auto &dst : dst_) { ret = MPI_Wait(&dst->mreq_, &dst->stat_); }
+        for (auto &dst : dst_) { 
+          for (int i=0; i<tag_; i++) {
+            ret = MPI_Wait(&(dst->mreq_[i]), &(dst->stat_[i])); } }
       }
     }
     return ret;
@@ -195,7 +218,7 @@ struct AppComm {
       for (int i=0; i<src_.size(); i++) {
         ret = MPI_Sendrecv(dst_[0]->send_buf_, count_, datatype_, dst_[0]->rank_, tag_,
                            src_[0]->recv_buf_, count_, datatype_, src_[0]->rank_, tag_, 
-                           comm_, &src_[0]->stat_);
+                           comm_, &(src_[0]->stat_[i]));
       }
     }
   }

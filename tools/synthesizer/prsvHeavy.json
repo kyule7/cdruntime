@@ -1,0 +1,94 @@
+{
+    // global parameters
+    "global param" : {
+        "max error" : 20
+    },
+
+    // CD hierarchy
+    "CD info" : {
+        "root CD" : {
+            "profile": {
+            "iterations" : 25,
+            "label" : "Very Root",
+            "type" : "hmcd", // homogeneous CDs
+            "child siblings" : 64, // number of parallel CDs 
+            "fault rate" : 0.0, // not used
+            "exec time" : 0.25,
+            "exec time std" : 0.000005, 
+            "prsv type" : "GlobalDisk",
+            "preserve vol" : 10,
+            "comm payload" : 2,
+            "comm type" : "reduction",
+            "error vector" : 15,
+            "rd_bw" : 0.0, // not used
+            "wr_bw" : 0.0, // not used
+            "cons" : {
+                "a0" : 100000000,
+                "b0" : 200000000,
+                "c0" : 150000000,
+                "d0" : 100000000,
+                "e0" : 30000000,
+                "f0" : 500000000,
+                "g0" : 400000000,
+                "h0" : 25000000,
+                "i0" : 12000000,
+                "j0" : 10000000,
+                "k0" : 100000000,
+                "a1" : 10000000,
+                "b1" : 20000000,
+                "c1" : 15000000,
+                "d1" : 10000000,
+                "e1" : 3000000,
+                "f1" : 50000000,
+                "g1" : 40000000,
+                "h1" : 2500000,
+                "i1" : 1200000,
+                "j1" : 1000000,
+                "k1" : 10000000
+            },
+            "prod" : {
+                "c" : 6000
+            }
+        },
+        "child CDs" : {
+            "CD1_1" : {
+                "profile": {
+                "iterations" : 5, 
+                "label" : "MainLoop",
+                "type" : "htcd", // heterogeneous CDs
+                "child siblings" : 64, 
+                "fault rate" : 0.00000001,
+                "exec time" : 0.05,
+                "exec time std" : 0.000001, 
+                "prsv type" : "LocalMemory",
+                "preserve vol" : 500,
+                "comm payload" : 50,
+                "comm type" : "nonblocking",
+                "error vector" : 3,
+                "rd_bw" : 10,
+                "wr_bw" : 10,
+                "cons" : {
+                     "a2" : 100000,
+                     "b2" : 20000,
+                     "c2" : 1500000,
+                     "j3" : 10000,
+                     "k3" : 1000000
+                },
+                "prod" : {
+                    "c" : 6000
+                }
+              },
+                "child CDs" : {}
+            }
+            } // child CDs
+        } // root C
+    }, // CD info
+    "sweep" : {
+        "global param.max error" : {
+            "sweep_type" : "list",
+            "data_type" : "uint",
+            "space" : [30]
+        }
+    }
+}
+
