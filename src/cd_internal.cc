@@ -2998,11 +2998,13 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     CDHandle *parent_cd = GetCurrentCD();
     while( parent_cd != NULL ) {
       CD *ptr_cd = parent_cd->ptr_cd();
+#if CD_DEBUG_ENABLED
       if(myTaskID == 0) {
         char tmp[16];
         sprintf(tmp, "Restore %u", ptr_cd->level());
         ptr_cd->entry_directory_.table_->PrintEntry(tmp, GetCDEntryStr);
       }
+#endif
       uint64_t tag = search_tag;
       src = ptr_cd->entry_directory_.table_->FindReverse(tag, Attr::koutput);
       parent_cd = CDPath::GetParentCD(ptr_cd->level());
@@ -3163,8 +3165,10 @@ CDErrT CD::RestoreAll()
   restore_count_ = 0;
   char tmp[64];
   sprintf(tmp, "%s %u %ld->%ld", label_.c_str(), level(), seq_end, cd::failed_seqID);
+#if CD_DEBUG_ENABLED
   if (myTaskID == 0)
     entry_directory_.table_->PrintEntry(tmp, GetCDEntryStr);
+#endif
 
 
 #if 0
