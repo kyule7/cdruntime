@@ -379,12 +379,12 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                                                   0, // from
                                                   s->boxes->nLocalBoxes, // to
                                                   0, "Local");
-    computeForce_pre_lv2combined_size = preserveAtomsInLocalBox(lv2_cd, 
-                                    kCopy, s->atoms, s->boxes->nLocalBoxes, 0);
+//    computeForce_pre_lv2combined_size = preserveAtomsInLocalBox(lv2_cd, 
+//                                    kCopy, s->atoms, s->boxes->nLocalBoxes, 0);
                                                       
-    computeForce_pre_lv2combined_size +=
-        preserveAtomsInHaloBox(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
-                               s->boxes->nTotalBoxes, 0);
+//    computeForce_pre_lv2combined_size +=
+//        preserveAtomsInHaloBox(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
+//                               s->boxes->nTotalBoxes, 0);
     // FIXME: not verified
     computeForce_pre_lv2combined_size =
         preserveLinkCell(lv2_cd, kCopy, s->boxes, 1 /*all*/, 0 /*nAtoms*/,
