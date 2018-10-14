@@ -29,7 +29,7 @@ def makeFlatCDs(profile, cdtrace, cds_list):
         if 'profile' in cds_list[cds]:
           profile[cds].append(cds_list[cds]['profile'])
         else:
-          print cds
+          print(cds)
           if "child siblings" in cds_list[cds]:
             children = cds_list[cds]["child siblings"]
             iter_begin = cds_list[cds]["iter begin" ]
@@ -110,26 +110,26 @@ def makeFlatCDs(profile, cdtrace, cds_list):
 
 
 def checkJSONObj(result):
-    print 'check json obj'
+    print('check json obj')
     for exec_name in result:
-        print exec_name
+        print(exec_name)
         for fail_type in result[exec_name]:
-            print '\t', fail_type
+            print('\t', fail_type)
             for numTasks in result[exec_name][fail_type]:
-                print '\t\t', numTasks
+                print('\t\t', numTasks)
                 for input_size in result[exec_name][fail_type][numTasks]:
-                    #print 'Sample:', result[exec_name][fail_type][numTasks]
-                    print '\t\t\t', exec_name,fail_type,numTasks,input_size
-                    print '\t\t\t\t---- CD info:'
+                    #print('Sample:', result[exec_name][fail_type][numTasks]
+                    print('\t\t\t', exec_name,fail_type,numTasks,input_size)
+                    print('\t\t\t\t---- CD info:')
                     for ln in result[exec_name][fail_type][numTasks][input_size]['CD info']:
-                        print ln, len(result[exec_name][fail_type][numTasks][input_size]['CD info'][ln])
-                    print result[exec_name][fail_type][numTasks][input_size]['CD info']
-                    print '\t\t\t\t---- trace:'
+                        print(ln, len(result[exec_name][fail_type][numTasks][input_size]['CD info'][ln]))
+                    print(result[exec_name][fail_type][numTasks][input_size]['CD info'])
+                    print('\t\t\t\t---- trace:')
                     for ln in result[exec_name][fail_type][numTasks][input_size]['trace']:
-                        print ln, len(result[exec_name][fail_type][numTasks][input_size]['trace'][ln])
-                    print result[exec_name][fail_type][numTasks][input_size]['trace']
-                    print '\t\t\t\t---- total profile:', len(result[exec_name][fail_type][numTasks][input_size]['total profile'])
-                    print result[exec_name][fail_type][numTasks][input_size]['total profile']
+                        print(ln, len(result[exec_name][fail_type][numTasks][input_size]['trace'][ln]))
+                    print(result[exec_name][fail_type][numTasks][input_size]['trace'])
+                    print('\t\t\t\t---- total profile:', len(result[exec_name][fail_type][numTasks][input_size]['total profile']))
+                    print(result[exec_name][fail_type][numTasks][input_size]['total profile'])
 #                            for meas in result[exec_name][fail_type][numTasks][input_size][elem]:
 #                                print meas
                     #raw_input('\n\n----------------------------------------------\n\n')
@@ -139,11 +139,11 @@ def gatherJSONObj(filelist):
     for line in newfile:
         file_list = line.split(" ")
 
-    print file_list
+    print(file_list)
     gathered = {}
     tg = []
     for each_filename in file_list:
-        print each_filename
+        print(each_filename)
         with open(each_filename, 'r') as each:
             jsonfile = getJsonString(each)
 
@@ -180,7 +180,7 @@ def gatherJSONObj(filelist):
 
 
 
-            print exec_name, fail_type, numTasks, input_size
+            print(exec_name, fail_type, numTasks, input_size)
             #raw_input('check cdinfo')
             if exec_name not in gathered:
                 gathered[exec_name] = {}
@@ -219,7 +219,7 @@ def gatherJSONObj(filelist):
 
 def extractLatencies(cd_tree):
     new_tree = {} # flat tree with CD phases
-    print type(cd_tree)
+    print(type(cd_tree))
     for pid in cd_tree:
         new_tree[pid] = {}
         new_tree[pid]["exec_trace"] = cd_tree[pid]["exec_trace"]
@@ -228,19 +228,19 @@ def extractLatencies(cd_tree):
         new_tree[pid]["max_prsv"]   = cd_tree[pid]["max_prsv"]
         new_tree[pid]["max_cdrt"]   = cd_tree[pid]["max_cdrt"]
     for item in new_tree:
-        print "[]trace:", item, len(new_tree[item])
-        print "\n"
+        print("[]trace:", item, len(new_tree[item]))
+        print("\n")
         for jtem in new_tree[item]:
 #            for ktem in new_tree[item][jtem]:
-#                print "jnfo:", ktem#new_tree[item]#, len(new_tree[item][jtem])
+#                print("jnfo:", ktem#new_tree[item]#, len(new_tree[item][jtem])
             if type(new_tree[item]) is list or type(new_tree[item]) is dict:
-                print "trace detail:", item
+                print("trace detail:", item)
                 for ktem in new_tree[item][jtem]:
-                    print item, jtem, len(new_tree[item][jtem]) #new_tree[item]#, len(new_tree[item][jtem])
+                    print(item, jtem, len(new_tree[item][jtem])) #new_tree[item]#, len(new_tree[item][jtem]))
             else:
-                print "detail trace:", jtem, new_tree[item]
+                print("detail trace:", jtem, new_tree[item])
         #raw_input('trace done')
-    print '[]done'
+    print('[]done')
     #raw_input('--------------[]------------[]---------')
     return new_tree
 
@@ -281,20 +281,20 @@ def removeLatencies(cd_tree):
         new_tree[pid]["compl_time"  ]    = cd_tree[pid]["compl_time"  ]
         new_tree[pid]["advance_time"]    = cd_tree[pid]["advance_time"]
     for item in new_tree:
-        print "[]trace:", item, len(new_tree[item])
-        print "\n"
+        print("[]trace:", item, len(new_tree[item]))
+        print("\n")
         for jtem in new_tree[item]:
 #            for ktem in new_tree[item][jtem]:
 #                print "jnfo:", ktem#new_tree[item]#, len(new_tree[item][jtem])
             if type(new_tree[item][jtem]) is list or type(new_tree[item][jtem]) is dict:
-                print "trace detail:", item
+                print("trace detail:", item)
                 for ktem in new_tree[item][jtem]:
-                    print item, jtem, ktem #new_tree[item]#, len(new_tree[item][jtem])
+                    print(item, jtem, ktem) #new_tree[item]#, len(new_tree[item][jtem]))
             else:
-                print "detail:", jtem, new_tree[item][jtem], new_tree[item][jtem][ktem]
+                print("detail:", jtem, new_tree[item][jtem], new_tree[item][jtem][ktem])
         #raw_input('trace done')
-    print '[]done'
-    raw_input('--------------[]------------[]---------')
+    print('[]done')
+    input('--------------[]------------[]---------')
     return new_tree
 
 def mergeCDInfo(samples):
@@ -316,7 +316,7 @@ def mergeCDInfo(samples):
                 elif elemtype is float:
                     new_tree[pid][elem]      += float(each[elem]     )
                     if elem == 'preserve time' or elem == 'execution time':
-                        print '\n\ncheckf:', elem, type(each[elem]), each[elem], new_tree[pid][elem]
+                        print('\n\ncheckf:', elem, type(each[elem]), each[elem], new_tree[pid][elem])
                 elif elemtype is int:
 #                    print '\n\nchecki:', elem, type(each[elem]), each[elem]
                     new_tree[pid][elem]      += float(each[elem]     )
@@ -412,7 +412,7 @@ def mergeCDInfo(samples):
             elif elemtype is float :
                 new_tree[pid][elem]             /= num_sample
                 if elem == 'preserve time' or elem == 'execution time':
-                    print '\n\nfinal checkf:', pid, elem, new_tree[pid][elem]
+                    print('\n\nfinal checkf:', pid, elem, new_tree[pid][elem])
             elif elemtype is int :
                 new_tree[pid][elem]             /= num_sample
 #        new_tree[pid]["execution time"]      /= num_sample
@@ -499,7 +499,7 @@ def mergeCDInfo(samples):
 
 def mergeTotalProf(samples):
     num_sample = len(samples)
-    print '\n\n\n', num_sample, samples, type(samples[0])
+    print('\n\n\n', num_sample, samples, type(samples[0]))
     new_prof = copy.deepcopy(samples[0])
     for each in samples[1:]:
         for elem in new_prof:
@@ -679,7 +679,7 @@ reex_time = "reex time"
 def averageCDTree(cdtree_list, trace_infos):
 
     #print 'now start\n\n'
-    print 'cdtree_list type:', type(cdtree_list)
+    print('cdtree_list type:', type(cdtree_list))
     #print 'now start'
     if len(cdtree_list['CD info']) == 1:
         result = copy.deepcopy(copy.deepcopy(cdtree_list['CD info'][0]))
@@ -720,57 +720,57 @@ def averageCDTree(cdtree_list, trace_infos):
         result["libc logging"  ]   = copy.deepcopy(np.mean(cdtree_list["libc logging"  ]  ))
         result["mailbox overhead"] = copy.deepcopy(np.mean(cdtree_list["mailbox overhead"]))
         result_infos = result['CD info']
-        print 'result_infos:', type(result_infos)
+        print('result_infos:', type(result_infos))
         #raw_input('1111111111111111111')
         num_meas = len(result['CD info'])
         if len(result_infos) == 0:
             raise SystemExit
             return result
         else:
-            print 'extract info'
+            print('extract info')
             trace_infos = copy.deepcopy(result['CD info'])
             extractLatencies(trace_infos)
             removeLatencies(result_infos)
             for item in result_infos:
-                print "info:", item, len(result_infos[item])
-                print "\n"
+                print("info:", item, len(result_infos[item]))
+                print("\n")
                 for jtem in result_infos[item]:
-                    #print "detail:", result_infos[item]#, len(result_infos[item][jtem])
+                    #print("detail:", result_infos[item]#, len(result_infos[item][jtem])
                     if type(result_infos[item][jtem]) is list or type(result_infos[item][jtem]) is dict:
-                        print "detail:", item
+                        print("detail:", item)
                         for ktem in result_infos[item][jtem]:
-                            print item, jtem, ktem #result_infos[item]#, len(result_infos[item][jtem])
+                            print(item, jtem, ktem) #result_infos[item]#, len(result_infos[item][jtem])
                     else:
-                        print "detail:", jtem, result_infos[item][jtem]
+                        print("detail:", jtem, result_infos[item][jtem])
                 #raw_input('extract info done')
-            print 'trace'
+            print('trace')
             for item in trace_infos:
-                print "trace:", item, len(trace_infos[item])
-                print "\n"
+                print("trace:", item, len(trace_infos[item]))
+                print("\n")
                 for jtem in trace_infos[item]:
 #                    for ktem in trace_infos[item][jtem]:
-#                        print "jnfo:", ktem#trace_infos[item]#, len(trace_infos[item][jtem])
+#                        print("jnfo:", ktem#trace_infos[item]#, len(trace_infos[item][jtem])
                     if type(trace_infos[item][jtem]) is list or type(trace_infos[item][jtem]) is dict:
-                        print "trace detail:", item
+                        print("trace detail:", item)
                         for ktem in trace_infos[item][jtem]:
-                            print 'len:', item, jtem, len(trace_infos[item][jtem]) #trace_infos[item]#, len(trace_infos[item][jtem])
+                            print('len:', item, jtem, len(trace_infos[item][jtem])) #trace_infos[item]#, len(trace_infos[item][jtem])
                     else:
-                        print "detail:", jtem, trace_infos[item][jtem]
+                        print("detail:", jtem, trace_infos[item][jtem])
                 #raw_input('trace done')
-            print 'done'
+            print('done')
         for cdtree in cdtree_list['CD info'][1:]:
             cdtree_infos = cdtree
             for phase_id in cdtree_infos:
                 if phase_id == "CD_1_1" and cdtree_infos[phase_id]["tasksize"] == 1000 and cdtree_infos[phase_id]["label"] == "MainLoop":
-                    print "prv time: ", cdtree_infos[phase_id]["total preserve"], result_infos[phase_id]["total preserve"]
+                    print("prv time: ", cdtree_infos[phase_id]["total preserve"], result_infos[phase_id]["total preserve"])
 #                    raw_input("!!!!!!!!!!!!")
 
-                print "phase : ", phase_id, len(cdtree_list)
+                print("phase : ", phase_id, len(cdtree_list))
                 if phase_id not in result_infos:
 
-                    print "phase is not here: ", len(result_infos), len(result['CD info']), len(cdtree_list['CD info'][0])
+                    print("phase is not here: ", len(result_infos), len(result['CD info']), len(cdtree_list['CD info'][0]))
                     for phases in result_infos:
-                        print phases
+                        print(phases)
 
 #                raw_input("@@@@")
                 result_infos[phase_id]["execution time"] += float(cdtree_infos[phase_id]["execution time"] )
@@ -860,7 +860,7 @@ def averageCDTree(cdtree_list, trace_infos):
                 trace_infos[phase_id]["max_prsv"].extend(cdtree_infos[phase_id]["max_prsv"])
                 trace_infos[phase_id]["max_cdrt"].extend(cdtree_infos[phase_id]["max_cdrt"])
         num_results = len(cdtree_list['CD info'])
-        print 'num results:', num_results
+        print('num results:', num_results)
     
         for phase_id in result_infos:
             result_infos[phase_id]["execution time"] /= num_results
@@ -949,28 +949,28 @@ def averageCDTree(cdtree_list, trace_infos):
 
 def printResults(result):
     for phase_id in result:
-        print "%s         max    min    avg    std   "% phase_id
-        print "exec        %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["exec"        ]["max"], result[phase_id]["exec"        ]["min"], result[phase_id]["exec"        ]["avg"], result[phase_id]["exec"        ]["std"])
-        print "reexec      %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["reexec"      ]["max"], result[phase_id]["reexec"      ]["min"], result[phase_id]["reexec"      ]["avg"], result[phase_id]["reexec"      ]["std"])
-        print "prv_copy    %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["prv_copy"    ]["max"], result[phase_id]["prv_copy"    ]["min"], result[phase_id]["prv_copy"    ]["avg"], result[phase_id]["prv_copy"    ]["std"])
-        print "prv_ref     %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["prv_ref"     ]["max"], result[phase_id]["prv_ref"     ]["min"], result[phase_id]["prv_ref"     ]["avg"], result[phase_id]["prv_ref"     ]["std"])
-        print "restore     %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["restore"     ]["max"], result[phase_id]["restore"     ]["min"], result[phase_id]["restore"     ]["avg"], result[phase_id]["restore"     ]["std"])
-        print "msg_log     %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["msg_log"     ]["max"], result[phase_id]["msg_log"     ]["min"], result[phase_id]["msg_log"     ]["avg"], result[phase_id]["msg_log"     ]["std"])
-        print "total_time  %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["total_time"  ]["max"], result[phase_id]["total_time"  ]["min"], result[phase_id]["total_time"  ]["avg"], result[phase_id]["total_time"  ]["std"])
-        print "reex_time   %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["reex_time"   ]["max"], result[phase_id]["reex_time"   ]["min"], result[phase_id]["reex_time"   ]["avg"], result[phase_id]["reex_time"   ]["std"])
-        print "sync_time   %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["sync_time"   ]["max"], result[phase_id]["sync_time"   ]["min"], result[phase_id]["sync_time"   ]["avg"], result[phase_id]["sync_time"   ]["std"])
-        print "prv_time    %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["prv_time"    ]["max"], result[phase_id]["prv_time"    ]["min"], result[phase_id]["prv_time"    ]["avg"], result[phase_id]["prv_time"    ]["std"])
-        print "rst_time    %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["rst_time"    ]["max"], result[phase_id]["rst_time"    ]["min"], result[phase_id]["rst_time"    ]["avg"], result[phase_id]["rst_time"    ]["std"])
-        print "create_time %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["create_time" ]["max"], result[phase_id]["create_time" ]["min"], result[phase_id]["create_time" ]["avg"], result[phase_id]["create_time" ]["std"])
-        print "destroy_time %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["destroy_time"]["max"], result[phase_id]["destroy_time"]["min"], result[phase_id]["destroy_time"]["avg"], result[phase_id]["destroy_time"]["std"])
-        print "begin_time  %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["begin_time"  ]["max"], result[phase_id]["begin_time"  ]["min"], result[phase_id]["begin_time"  ]["avg"], result[phase_id]["begin_time"  ]["std"])
-        print "compl_time  %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["compl_time"  ]["max"], result[phase_id]["compl_time"  ]["min"], result[phase_id]["compl_time"  ]["avg"], result[phase_id]["compl_time"  ]["std"])
-        print "advance_time %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["advance_time"]["max"], result[phase_id]["advance_time"]["min"], result[phase_id]["advance_time"]["avg"], result[phase_id]["advance_time"]["std"])
+        print("%s         max    min    avg    std   "% phase_id)
+        print("exec        %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["exec"        ]["max"], result[phase_id]["exec"        ]["min"], result[phase_id]["exec"        ]["avg"], result[phase_id]["exec"        ]["std"]))
+        print("reexec      %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["reexec"      ]["max"], result[phase_id]["reexec"      ]["min"], result[phase_id]["reexec"      ]["avg"], result[phase_id]["reexec"      ]["std"]))
+        print("prv_copy    %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["prv_copy"    ]["max"], result[phase_id]["prv_copy"    ]["min"], result[phase_id]["prv_copy"    ]["avg"], result[phase_id]["prv_copy"    ]["std"]))
+        print("prv_ref     %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["prv_ref"     ]["max"], result[phase_id]["prv_ref"     ]["min"], result[phase_id]["prv_ref"     ]["avg"], result[phase_id]["prv_ref"     ]["std"]))
+        print("restore     %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["restore"     ]["max"], result[phase_id]["restore"     ]["min"], result[phase_id]["restore"     ]["avg"], result[phase_id]["restore"     ]["std"]))
+        print("msg_log     %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["msg_log"     ]["max"], result[phase_id]["msg_log"     ]["min"], result[phase_id]["msg_log"     ]["avg"], result[phase_id]["msg_log"     ]["std"]))
+        print("total_time  %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["total_time"  ]["max"], result[phase_id]["total_time"  ]["min"], result[phase_id]["total_time"  ]["avg"], result[phase_id]["total_time"  ]["std"]))
+        print("reex_time   %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["reex_time"   ]["max"], result[phase_id]["reex_time"   ]["min"], result[phase_id]["reex_time"   ]["avg"], result[phase_id]["reex_time"   ]["std"]))
+        print("sync_time   %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["sync_time"   ]["max"], result[phase_id]["sync_time"   ]["min"], result[phase_id]["sync_time"   ]["avg"], result[phase_id]["sync_time"   ]["std"]))
+        print("prv_time    %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["prv_time"    ]["max"], result[phase_id]["prv_time"    ]["min"], result[phase_id]["prv_time"    ]["avg"], result[phase_id]["prv_time"    ]["std"]))
+        print("rst_time    %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["rst_time"    ]["max"], result[phase_id]["rst_time"    ]["min"], result[phase_id]["rst_time"    ]["avg"], result[phase_id]["rst_time"    ]["std"]))
+        print("create_time %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["create_time" ]["max"], result[phase_id]["create_time" ]["min"], result[phase_id]["create_time" ]["avg"], result[phase_id]["create_time" ]["std"]))
+        print("destroy_time %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["destroy_time"]["max"], result[phase_id]["destroy_time"]["min"], result[phase_id]["destroy_time"]["avg"], result[phase_id]["destroy_time"]["std"]))
+        print("begin_time  %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["begin_time"  ]["max"], result[phase_id]["begin_time"  ]["min"], result[phase_id]["begin_time"  ]["avg"], result[phase_id]["begin_time"  ]["std"]))
+        print("compl_time  %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["compl_time"  ]["max"], result[phase_id]["compl_time"  ]["min"], result[phase_id]["compl_time"  ]["avg"], result[phase_id]["compl_time"  ]["std"]))
+        print("advance_time %6.3f %6.3f %6.3f %6.3f" % (result[phase_id]["advance_time"]["max"], result[phase_id]["advance_time"]["min"], result[phase_id]["advance_time"]["avg"], result[phase_id]["advance_time"]["std"]))
                                                                                        
                                                                                        
 def genEmptyDF(apps, inputs, nTasks, ftype):
-    print 'genDF'
-    print apps, inputs, nTasks, ftype
+    print('genDF')
+    print(apps, inputs, nTasks, ftype)
     miindex = pd.MultiIndex.from_product([apps,
                                           inputs,
                                           nTasks])
@@ -994,8 +994,8 @@ def genEmptyDF(apps, inputs, nTasks, ftype):
     return dfmi
 
 def genEmptyDF2(apps, inputs, nTasks, ftype, phase_list):
-    print 'genDF'
-    print apps, inputs, nTasks, ftype
+    print('genDF')
+    print(apps, inputs, nTasks, ftype)
     miindex = pd.MultiIndex.from_product([apps,
                                           inputs,
                                           nTasks])
@@ -1065,9 +1065,9 @@ def getEstInfo(result):
 #                                 header.append(phase)
 #                                 header.append(phase)
                             printed_head = True
-                        print app, nTask, inputsize, type(elem)#, header
+                        print(app, nTask, inputsize, type(elem))#, header
                         #print elem
-                        print 'cccccccccccccccccccccccccccccc'
+                        print('cccccccccccccccccccccccccccccc')
                         prof_list = [app, inputsize, nTask]
                         getLevelInfoFlattened(elem, prof_list)
                         per_est_file_info.append(prof_list)

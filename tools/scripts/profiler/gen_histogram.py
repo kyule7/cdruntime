@@ -116,7 +116,7 @@ def GetBinSize(prof_info_list):
     else:
         min_bin_precision = 10 ** bin_degree
         bin_size = round(binsize/min_bin_precision) * min_bin_precision
-    print binsize, bin_size, min_bin_precision
+    print(binsize, bin_size, min_bin_precision)
     return bin_size
 
 def GetMaxSize(prof_info_list):
@@ -132,12 +132,12 @@ def GetLatencyHist(prof_info_list, save_file=True, mytitle='', filename='latency
     ######################################################################
     binsize = GetBinSize(prof_info_list) 
     maxsize = GetMaxSize(prof_info_list)
-    print 'binsize:%f, max:%f, # prof:%d\n' % (binsize, maxsize, len(prof_info_list))
+    print('binsize:%f, max:%f, # prof:%d\n' % (binsize, maxsize, len(prof_info_list)))
     ######################################################################
 
     for prof_info in prof_info_list:
         prof_info.GetHistogram(binsize, maxsize)
-    raw_input("\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
+    input("\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n")
     
     bins_for_all = np.linspace(0, maxsize, int(maxsize/binsize))
     fixed_param = ''
@@ -145,7 +145,7 @@ def GetLatencyHist(prof_info_list, save_file=True, mytitle='', filename='latency
         plt.plot(prof_info.bars_, prof_info.hist_, \
                 label=prof_info.GetLegend(mylegend))
         fixed_param = prof_info.fixed_
-        print prof_info.bars_
+        print(prof_info.bars_)
     plt.xlim(left=0) 
     plt.ylim(bottom=0) 
     plt.xlabel('Preservation Latency [s]') 
@@ -159,7 +159,7 @@ def GetLatencyHist(prof_info_list, save_file=True, mytitle='', filename='latency
     plt.title(prof_info_list[0].GetTitle(mytitle))
     plt.draw()
     plt.show()
-    print filename
+    print(filename)
     if save_file:
         pdffig = plt.gcf()
         pdffig.savefig(filename+'.svg', format='svg', bbox_inches='tight')
