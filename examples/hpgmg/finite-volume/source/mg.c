@@ -26,7 +26,7 @@
 
 #if CD
 #include "cd.h"
-extern size_t cd_preserve_mgtype(cd_handle_t* cd_h, mg_type *all_grids, const char* name);
+extern size_t cd_preserve_mgtype(cd_handle_t* cd_h, mg_type *all_grids, const char* name, const int start_level);
 #elif SCR
 #include "scr.h"
 #endif
@@ -1180,18 +1180,20 @@ void MGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, doub
 
 //------------------------------------------------------------------------------------------------------------------------------
 #if CD
-//void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, double b, double dtol, double rtol, size_t* prv_size)
-void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, double b, double dtol, double rtol)
+void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, double b, double dtol, double rtol, size_t* prv_size)
+//void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, double b, double dtol, double rtol)
 #else
 void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, double b, double dtol, double rtol)
 #endif
 {
   #if CD
   cd_handle_t * cd_fmgsolve = getleafcd();
-  char cd_name[20] = "cd_fmgsolve";
-  cd_begin(cd_fmgsolve, cd_name);
-  //size_t prv_size = cd_preserve_mgtype(cd_fmgsolve, all_grids, cd_name);
-  //printf("CD \"%s\" preserved %f MB data.\n", cd_name, prv_size*1.0/1024/1024);
+  char cd_name[20];
+  //sprintf(cd_name, "cd_fmgsolve_%d", onLevel);
+  //cd_begin(cd_fmgsolve, cd_name);
+  ////size_t tmp_size = cd_preserve_mgtype(cd_fmgsolve, all_grids, cd_name, onLevel);
+  ////printf("Level %d: CD \"%s\" preserved %f MB data.\n", onLevel, cd_name, tmp_size*1.0/1024/1024);
+  ////if (prv_size != NULL) *prv_size += tmp_size;
   #endif
 
   // This FMGSolve will perform one F-Cycle, then iterate on V-cycles.  
@@ -1240,31 +1242,33 @@ void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, dou
     restriction(all_grids->levels[level+1],R_id,all_grids->levels[level],R_id,RESTRICT_CELL);
     all_grids->levels[level]->timers.Total += (double)(getTime()-_LevelStart);
   }
-  #if CD
-  cd_complete(cd_fmgsolve);
-  #endif
+  //#if CD
+  //cd_complete(cd_fmgsolve);
+  //#endif
 
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // solve coarsest grid...
-  #if CD
-  cd_begin(cd_fmgsolve, "cd_coarsest_grid");
-  #endif
+  //#if CD
+  //sprintf(cd_name, "cd_coarsest_grid_%d", onLevel);
+  //cd_begin(cd_fmgsolve, cd_name);
+  //#endif
     double _timeBottomStart = getTime();
     level = all_grids->num_levels-1;
     if(level>onLevel)zero_vector(all_grids->levels[level],e_id);//else use whatever was the initial guess
     //SZNOTE: lots of MPI_Allreduce, some to exchange boundaries, some just collect max information
     IterativeSolver(all_grids->levels[level],e_id,R_id,a,b,MG_DEFAULT_BOTTOM_NORM);  // -1 == exact solution
     all_grids->levels[level]->timers.Total += (double)(getTime()-_timeBottomStart);
-  #if CD
-  cd_complete(cd_fmgsolve);
-  #endif
+  //#if CD
+  //cd_complete(cd_fmgsolve);
+  //#endif
 
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // now do the F-cycle proper...
   #if CD
-  cd_begin(cd_fmgsolve, "cd_mgvcycle");
+  sprintf(cd_name, "cd_mgvcycle_%d", onLevel);
+  cd_begin(cd_fmgsolve, cd_name);
   #endif
   for(level=all_grids->num_levels-2;level>=onLevel;level--){
     // high-order interpolation
@@ -1280,15 +1284,16 @@ void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, dou
   }
 
   #if CD
+  cd_detect(cd_fmgsolve);
   cd_complete(cd_fmgsolve);
   #endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // now do the post-F V-cycles
-  #if CD
-  cd_begin(cd_fmgsolve, "cd_postf_vcycle");
-  //cd_preserve_mgtype(cd_fmgsolve, all_grids, "cd_fmgsolve");
-  #endif
+  //#if CD
+  //sprintf(cd_name, "cd_postvcycle_%d", onLevel);
+  //cd_begin(cd_fmgsolve, cd_name);
+  //#endif
   for(v=-1;v<maxVCycles;v++){
     int level = onLevel;
 
@@ -1319,9 +1324,10 @@ void FMGSolve(mg_type *all_grids, int onLevel, int u_id, int F_id, double a, dou
     if(norm_of_residual/norm_of_F < rtol)break;
     if(norm_of_residual           < dtol)break;
   }
-  #if CD
-  cd_complete(cd_fmgsolve);
-  #endif
+  //#if CD
+  //cd_detect(cd_fmgsolve);
+  //cd_complete(cd_fmgsolve);
+  //#endif
 
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
