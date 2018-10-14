@@ -1370,7 +1370,7 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   if(num_children > 1) {
     err = SplitCD(node_id().task_in_color(), node_id().size(), num_children, new_color, new_task);
     CD_DEBUG("[%s], GenNewNodeID\n", __func__);
-    new_node_id = GenNewNodeID(color(), new_color, new_task, SelectHead(new_size), true /*is_reuse*/);
+    new_node_id = GenNewNodeID(color(), new_color, new_task, SelectHead(new_size), is_reuse);
 //    assert(new_size == new_node_id.size());
   }
   else if(num_children == 1) {
@@ -1460,7 +1460,7 @@ CDHandle *CDHandle::Create(uint32_t color,
   bool is_reuse = ptr_cd_->CheckToReuseCD(name);
 //  ColorT new_comm;
 //  NodeID new_node_id(new_comm, INVALID_TASK_ID, INVALID_HEAD_ID, num_children);
-  NodeID new_node_id = GenNewNodeID(this->color(), color, task_in_color, SelectHead(task_size()/num_children), true /*is_reuse*/);
+  NodeID new_node_id = GenNewNodeID(this->color(), color, task_in_color, SelectHead(task_size()/num_children), is_reuse);
 
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, color, name);

@@ -262,7 +262,7 @@ struct PhaseNode {
     inline void MarkSeqID(int64_t seq_id) { 
 //      if (seq_id > 0) {
 //        PrintDetails(); 
-//        if (cd::myTaskID == 0) printf("MarkSeqID : %ld\n", seq_id);
+        if (cd::myTaskID == 0) printf("\n%sMarkSeqID : %ld, end:%ld %p\n",std::string(2 << level_, '\t').c_str(),  seq_id, seq_end_, left_);
 //      }
       if (left_ == NULL) {
         seq_begin_ = 0; 
@@ -273,16 +273,22 @@ struct PhaseNode {
       }
     }
     inline void IncSeqID(bool err_free_exec) {
+      if (cd::myTaskID == 0) printf("\n\n%s %s err free:%d, %ld~%ld upto:%ld %ld (Before)\n", 
+          std::string(2 << level_, '\t').c_str(), label_.c_str(), err_free_exec, seq_begin_, seq_end_, seq_max_, seq_acc_);
       if(err_free_exec) {
         seq_end_++; // reinit at failure
         seq_acc_++; // no reinit
       }
       seq_acc_rb_++; // total count
       seq_max_ = (seq_end_ > seq_max_)? seq_end_ : seq_max_; 
+      if (cd::myTaskID == 0) printf("%s %s err free:%d, %ld~%ld upto:%ld %ld (After) \n\n", 
+          std::string(2 << level_, '\t').c_str(), label_.c_str(), err_free_exec, seq_begin_, seq_end_, seq_max_, seq_acc_);
     }
 
     inline void ResetSeqID(uint32_t rollback_lv) {
       //PrintDetails();
+      if (cd::myTaskID == 0) printf("\n\n%sRESET??  %ld %ld %ld %ld\n\n", 
+          std::string(2 << level_, '\t').c_str(), seq_begin_, seq_end_, seq_acc_, seq_max_);
       if(rollback_lv < level_) {
         seq_end_ = seq_begin_; 
       }

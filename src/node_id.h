@@ -107,6 +107,7 @@ public:
   NodeID(int head); 
   NodeID(const ColorT &color, int task, int head, int size);
   NodeID(const NodeID &that);
+  NodeID(NodeID &&that);
   ~NodeID(void){}
 
   NodeID &operator=(const NodeID &that);

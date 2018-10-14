@@ -98,6 +98,14 @@ NodeID::NodeID(const NodeID& that)
   task_group_ = that.task_group_;
 }
 
+NodeID::NodeID(NodeID &&that)
+  : task_in_color_(std::move(that.task_in_color_))
+  , head_(std::move(that.head_))
+  , size_(std::move(that.size_))
+  , color_id_(std::move(that.color_id_))
+  , color_(std::move(that.color_))
+  , task_group_(std::move(that.task_group_))
+{}
 
 NodeID &NodeID::operator=(const NodeID& that) 
 {

@@ -84,6 +84,7 @@ NodeID CDHandle::GenNewNodeID(ColorT &my_color,
     PMPI_Comm_size(new_node_id.color_, &(new_node_id.size_));
     PMPI_Comm_rank(new_node_id.color_, &(new_node_id.task_in_color_));
   }
+//  CD_ASSERT_STR(new_node_id.color_id_ == new_color, "In case of reusing CD, color should be matched. %d != %d\n", new_node_id.color_id_ , new_color );
   new_node_id.color_id_ = new_color;
   return new_node_id;
 }

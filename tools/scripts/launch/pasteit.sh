@@ -19,6 +19,13 @@ for COUNT in ${NUM_MEASURE}
 do
   for INPUT in "${INPUT_LIST[@]}"
   do
+
+if [ "$INPUT" == "prsvHeavy" ]; then
+  export CD_DATA_GROW_UNIT=268435456
+else
+  export CD_DATA_GROW_UNIT=1048576
+fi
+
 start_time=$SECONDS
 
 export CD_EXEC_DETAILS=$INPUT

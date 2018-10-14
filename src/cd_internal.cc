@@ -56,8 +56,8 @@ using namespace std;
 #define _LOG_PROFILING 0
 #define USE_ALLOC_SHM 1
 
-//#define LULESH_DEBUG
-#undef LULESH_DEBUG
+#define LULESH_DEBUG
+//#undef LULESH_DEBUG
 #ifdef LULESH_DEBUG
 #include "debug_user_data.h"
 #endif
@@ -1068,11 +1068,20 @@ uint32_t CD::BeginPhase(uint32_t level, const string &label)
     }
     /* phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, just_reexecuted, ); */
   }
+
+  if(cd::myTaskID == 0) printf("\n%s[%16s] (%ld~%ld, acc:%ld)\n\n", std::string(2<<level, '\t').c_str(), __func__
+          , phaseNodeCache[phase]->seq_begin_
+          , phaseNodeCache[phase]->seq_end_
+          , phaseNodeCache[phase]->seq_acc_rb_);
   return phase; 
 }
 static inline 
 void CompletePhase(uint32_t phase, bool is_reexec=false)
 {
+  if(cd::myTaskID == 0) printf("\n%s[%16s] (%ld~%ld, acc:%ld)\n\n", std::string(2<<phaseNodeCache[phase]->level_, '\t').c_str(), __func__
+          , phaseNodeCache[phase]->seq_begin_
+          , phaseNodeCache[phase]->seq_end_
+          , phaseNodeCache[phase]->seq_acc_rb_);
   CD_ASSERT(phaseTree.current_);
   CD_DEBUG("%s (%ld, %ld, %ld) -> "
           , phaseNodeCache[phase]->label_.c_str()
@@ -1148,21 +1157,27 @@ CDErrT CD::Begin(const char *label, bool collective)
   profMap[current_phase] = &cd::phaseTree.current_->profile_; //getchar();
 
   // it is the first begin after Create()
+  // or it is the begin after leaf
+  // or it is the begin after the previous heterogeneous CD.
   // (sequential ID is initialized at Create())
   //if(cd_id_.sequential_id() == 0) 
   if(prev_phase != current_phase) 
   {
-    prev_phase = current_phase;
-    if ( IsGood() ) {
-      phaseTree.current_->MarkSeqID(cd_id_.sequential_id_); // set seq_begin_ = seq_end_
-//      phaseTree.current_->seq_end_ = cd_id_.sequential_id_;
-    } else {
-      phaseTree.current_->MarkSeqID(phaseTree.current_->seq_begin_); // set seq_begin_ = seq_end_
-      if(myTaskID == 0) {
-//        printf("[Begin In Rollback] ");
-//        phaseTree.current_->PrintDetails();
+    bool returned_from_child_lv = (prev_phase != HEALTHY) ? (phaseNodeCache[prev_phase]->level_ > this->level()) : false;
+    if (returned_from_child_lv == false) { 
+      if ( IsGood() ) {
+        if (myTaskID == 0 && prev_phase != HEALTHY) printf("(prev_phase = %ld) ? %u > %u\n", prev_phase, phaseNodeCache[prev_phase]->level_,this->level());
+        phaseTree.current_->MarkSeqID(cd_id_.sequential_id_); // set seq_begin_ = seq_end_
+  //      phaseTree.current_->seq_end_ = cd_id_.sequential_id_;
+      } else {
+        phaseTree.current_->MarkSeqID(phaseTree.current_->seq_begin_); // set seq_begin_ = seq_end_
+        if(myTaskID == 0) {
+  //        printf("[Begin In Rollback] ");
+  //        phaseTree.current_->PrintDetails();
+        }
       }
     }
+    prev_phase = current_phase;
   }
 
 //  if(prv_phase_chk == -1U || prv_phase_chk != current_phase) 
@@ -2802,6 +2817,9 @@ CDEntry *CD::PreserveCopy(void *data,
          label_.c_str(), my_name.c_str(),
          id, attr, packed_total_size, packed_offset, table_offset, packed_offset + packed_total_size - table_offset,
          serializer->id_, tag2str[serializer->id_].c_str(), serializer->GetID(), sizeof(CDEntry));
+    char tmp[128];
+    sprintf(tmp, "Domain %s : ", my_name.c_str());
+    pEntry->Print(cdout, tmp);
   }
   else { // preserve a single entry
 #ifdef LULESH_DEBUG

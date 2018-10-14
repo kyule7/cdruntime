@@ -1146,10 +1146,10 @@ int MPI_Wait(MPI_Request *request,
 //        }
 //        }
         // FIXME:03142018
-#ifdef DBG_09202018
-        mpi_ret = PMPI_Wait(request, status);
-#else        
+#ifndef DBG_09202018
         mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
+#else        
+        mpi_ret = PMPI_Wait(request, status);
 #endif
 #if 0
         bool deleted = cur_cdh->ptr_cd()->DeleteIncompleteLog(request);
@@ -1158,10 +1158,10 @@ int MPI_Wait(MPI_Request *request,
         break;
       }
       case kRelaxedCDGen: {
-#ifdef DBG_09202018
-        mpi_ret = PMPI_Wait(request, status);
-#else        
+#ifndef DBG_09202018
         mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(request, status);
+#else        
+        mpi_ret = PMPI_Wait(request, status);
 #endif
         assert(cur_cdh->need_reexec() == false);
         LOG_DEBUG("In kGenerateLog mode, generating new logs...\n");
@@ -1240,10 +1240,10 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
       case kStrictCD: {
         CD_DEBUG("total incmpl size : %lu\n", cur_cdh->ptr_cd()->incomplete_log_.size());
         // FIXME:03142018
-#ifdef DBG_09202018
-        mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
-#else
+#ifndef DBG_09202018
         mpi_ret = cur_cdh->ptr_cd()->BlockallUntilValid(count, array_of_requests, array_of_statuses);
+#else
+        mpi_ret = PMPI_Waitall(count, array_of_requests, array_of_statuses);
 #endif
         // If messages are received, incomplete logs are deleted inside
         // BlockallUntilValid(). Otherwise (rollback case), the incomplete logs
@@ -2099,7 +2099,14 @@ int MPI_Allreduce(const void *sendbuf,
   switch (cur_cdh->ptr_cd()->GetCDLoggingMode())
   {
     case kStrictCD:
+#ifndef DBG_09202018
+      MPI_Request req;
+      MPI_Status stat;
+      mpi_ret = PMPI_Iallreduce(sendbuf, recvbuf, count, datatype, op, comm, &req);
+      mpi_ret = cur_cdh->ptr_cd()->BlockUntilValid(&req, &stat);
+#else        
       mpi_ret = PMPI_Allreduce(sendbuf, recvbuf, count, datatype, op, comm);
+#endif
       break;
 
     case kRelaxedCDGen:
@@ -2127,6 +2134,9 @@ int MPI_Allreduce(const void *sendbuf,
   }
 
   MsgEpilogue();
+  if(mpi_ret == MPI_ERR_NEED_ESCALATE) {
+    cur_cdh->ptr_cd()->Escalate(cur_cdh, true); 
+  }
   return mpi_ret;
 }
 

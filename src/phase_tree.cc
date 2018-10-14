@@ -288,6 +288,7 @@ void PhaseNode::PrintOutputJsonInternal(void)
   fprintf(outJSON, "%s\"CDrt overhead\"  : %lf, // (loc:%lf) (max:%lf)\n",  
               two_more_indent.c_str(), cdrt_overhead, cdrt_overhead_loc, cdrt_overhead_max);
   double preserve_time        = profile_.GetPreserveTime();
+  preserve_time = (preserve_time == 0.0)? 0.00000000000001 : preserve_time;
   double preserve_time_per_cd = preserve_time / profile_.exec_cnt_;
   double loc_prsv_time_per_cd = profile_.prv_elapsed_time_ / profile_.exec_cnt_;
 //  fprintf(outJSON, "%s\"preserve time\" : %lf, // accumulated:%lf w/ dev, %lf w/o dev, cnt:%u, percd:%lf\n",  
