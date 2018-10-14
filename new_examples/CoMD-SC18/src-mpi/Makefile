@@ -29,14 +29,28 @@ CD_FLAGS :=
 # CD1 : timestep.c 
 # CD2 : ljForce.c
 
-# CD2_COMBINED
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_COMBINE -D_CD2_OUTPUT -D_CD3=1 -DDO_PRV
+###############################################################################
+# IPDPS'19 evaluation configurations
+###############################################################################
 
-# CD2: Heterogenous CDs
-CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT -D_CD3=1 -DDO_PRV
+# CD2: Homogeneous (all combined) ,CD3: fully fine grained (# silibings = # ranks)
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT -D_CD2_COMBINE -D_CD3=1 -DDO_PRV
 
-# CD3_NO_SPLIT
-#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT -D_CD3=1 -DDO_PRV -D_CD3_NO_SPLIT
+# CD2: Homogeneous (all combined) ,CD3: fully fine grained (# silibings = # ranks / 2)
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT -D_CD2_COMBINE -D_CD3=1 -DDO_PRV -D_CD3_HALF_SPLIT
+
+# CD2: Homogeneous (all combined) ,CD3: no split 
+CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT -D_CD2_COMBINE -D_CD3=1 -DDO_PRV -D_CD3_NO_SPLIT
+
+# CD2: Heterogenous ,CD3: fully fine grained (# silibings = # ranks)
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT                -D_CD3=1 -DDO_PRV
+
+# CD2: Heterogenouse ,CD3: fully fine grained (# silibings = # ranks / 2)
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT                -D_CD3=1 -DDO_PRV -D_CD3_HALF_SPLIT
+
+# CD2: Heterogenouse ,CD3: no split
+#CD_CFLAGS := -I$(CD_ROOT)/include -D_ROOTCD=1 -D_CD1=1 -D_CD1_OUTPUT -D_CD2=1 -D_CD2_OUTPUT                -D_CD3=1 -DDO_PRV -D_CD3_NO_SPLIT
+
 
 ###############################################################################
 # defalt fine grained mapping with all CDs enabled
