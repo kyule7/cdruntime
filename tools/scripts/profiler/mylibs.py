@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import re
 import copy
+import os
 
 def getJsonString(json_file):
     json_str = '\n'
@@ -93,6 +94,7 @@ def makeFlatCDs(profile, cdtrace, cds_list):
                    , "loc cdrt time"   : cds_list[cds]["loc cdrt time"  ]
                    , "max cdrt time"   : cds_list[cds]["max cdrt time"  ]
                    , "loc prv time"    : cds_list[cds]["loc prv time"   ]
+                   , "num_sample"       : cds_list[cds]["num_sample"]
                   } )
         if 'trace' in cds_list[cds]:
           cdtrace[cds].append(cds_list[cds]['trace'])
@@ -176,6 +178,7 @@ def gatherJSONObj(filelist):
                            ,"libc logging"     : eachjson["libc logging"    ]
                            ,"mailbox overhead" : eachjson["mailbox overhead"]
                            ,"total errors"  : [0, 0, 0, 0]
+                           ,"num_sample" : eachjson["num_sample"]
                             }
 
 
@@ -298,21 +301,25 @@ def removeLatencies(cd_tree):
     return new_tree
 
 def mergeCDInfo(samples):
+
     new_tree = {}
-    num_samples = {}
+    avg_tree = {}
+    std_tree = {}
     for pid in samples:
         #print '\n\n\n', pid, samples[pid], type(samples[pid][0])
         new_tree[pid] = copy.deepcopy(samples[pid][0])
         for each in samples[pid][1:]:
+            #if (avg_tree[pid]['total time'] - each['total time'])
             for elem in new_tree[pid]:
                 elemtype = type(new_tree[pid][elem])
                 if elemtype is dict:
                     for e in new_tree[pid][elem]:
                         #print '\n\ncheck:', new_tree[pid][elem], elem, each, each[elem], type(each[elem][e])
                         new_tree[pid][elem][e]      += float(each[elem][e]     )
-                        new_tree[pid][elem][e]      += float(each[elem][e]     )
-                        new_tree[pid][elem][e]      += float(each[elem][e]     )
-                        new_tree[pid][elem][e]      += float(each[elem][e]     )
+
+                        #new_tree[pid][elem][e]      += float(each[elem][e]     )
+                        #new_tree[pid][elem][e]      += float(each[elem][e]     )
+                        #new_tree[pid][elem][e]      += float(each[elem][e]     )
                 elif elemtype is float:
                     new_tree[pid][elem]      += float(each[elem]     )
                     if elem == 'preserve time' or elem == 'execution time':
@@ -320,181 +327,24 @@ def mergeCDInfo(samples):
                 elif elemtype is int:
 #                    print '\n\nchecki:', elem, type(each[elem]), each[elem]
                     new_tree[pid][elem]      += float(each[elem]     )
-#            new_tree[pid]["execution time"]      += float(each["execution time"]     )
-#            new_tree[pid]["current counts"]      += float(each["current counts"]     )
-#            new_tree[pid]["input volume"]        += float(each["input volume"]       )
-#            new_tree[pid]["output volume"]       += float(each["output volume"]      )
-#            new_tree[pid]["rd_bw"]               += float(each["rd_bw"]              )
-#            new_tree[pid]["wr_bw"]               += float(each["wr_bw"]              )
-#            new_tree[pid]["rd_bw_mea"]           += float(each["rd_bw_mea"]          )
-#            new_tree[pid]["wr_bw_mea"]           += float(each["wr_bw_mea"]          )
-#            new_tree[pid]["fault rate"]          += float(each["fault rate"]         )
-#            new_tree[pid]["tasksize"]            += float(each["tasksize"]           )
-#            new_tree[pid]["max prv only bw"]     += float(each["max prv only bw"]    )
-#            new_tree[pid]["loc prv only bw"]     += float(each["loc prv only bw"]    )
-#            new_tree[pid]["loc prv time"]        += float(each["loc prv time"]       )
-#            new_tree[pid]["CDrt overhead"]       += float(each["CDrt overhead"]      )
-#            new_tree[pid]["total preserve"]      += float(each["total preserve"]     )
-#            new_tree[pid]["preserve time"]       += float(each["preserve time"]      )
-#            new_tree[pid]["exec"        ]["max"] += float(each["exec"        ]["max"])
-#            new_tree[pid]["exec"        ]["min"] += float(each["exec"        ]["min"])
-#            new_tree[pid]["exec"        ]["avg"] += float(each["exec"        ]["avg"])
-#            new_tree[pid]["exec"        ]["std"] += float(each["exec"        ]["std"])
-#            new_tree[pid]["reexec"      ]["max"] += float(each["reexec"      ]["max"])
-#            new_tree[pid]["reexec"      ]["min"] += float(each["reexec"      ]["min"])
-#            new_tree[pid]["reexec"      ]["avg"] += float(each["reexec"      ]["avg"])
-#            new_tree[pid]["reexec"      ]["std"] += float(each["reexec"      ]["std"])
-#            new_tree[pid]["prv_copy"    ]["max"] += float(each["prv_copy"    ]["max"])
-#            new_tree[pid]["prv_copy"    ]["min"] += float(each["prv_copy"    ]["min"])
-#            new_tree[pid]["prv_copy"    ]["avg"] += float(each["prv_copy"    ]["avg"])
-#            new_tree[pid]["prv_copy"    ]["std"] += float(each["prv_copy"    ]["std"])
-#            new_tree[pid]["prv_ref"     ]["max"] += float(each["prv_ref"     ]["max"])
-#            new_tree[pid]["prv_ref"     ]["min"] += float(each["prv_ref"     ]["min"])
-#            new_tree[pid]["prv_ref"     ]["avg"] += float(each["prv_ref"     ]["avg"])
-#            new_tree[pid]["prv_ref"     ]["std"] += float(each["prv_ref"     ]["std"])
-#            new_tree[pid]["restore"     ]["max"] += float(each["restore"     ]["max"])
-#            new_tree[pid]["restore"     ]["min"] += float(each["restore"     ]["min"])
-#            new_tree[pid]["restore"     ]["avg"] += float(each["restore"     ]["avg"])
-#            new_tree[pid]["restore"     ]["std"] += float(each["restore"     ]["std"])
-#            new_tree[pid]["msg_log"     ]["max"] += float(each["msg_log"     ]["max"])
-#            new_tree[pid]["msg_log"     ]["min"] += float(each["msg_log"     ]["min"])
-#            new_tree[pid]["msg_log"     ]["avg"] += float(each["msg_log"     ]["avg"])
-#            new_tree[pid]["msg_log"     ]["std"] += float(each["msg_log"     ]["std"])
-#            new_tree[pid]["total_time"  ]["max"] += float(each["total_time"  ]["max"])
-#            new_tree[pid]["total_time"  ]["min"] += float(each["total_time"  ]["min"])
-#            new_tree[pid]["total_time"  ]["avg"] += float(each["total_time"  ]["avg"])
-#            new_tree[pid]["total_time"  ]["std"] += float(each["total_time"  ]["std"])
-#            new_tree[pid]["reex_time"   ]["max"] += float(each["reex_time"   ]["max"])
-#            new_tree[pid]["reex_time"   ]["min"] += float(each["reex_time"   ]["min"])
-#            new_tree[pid]["reex_time"   ]["avg"] += float(each["reex_time"   ]["avg"])
-#            new_tree[pid]["reex_time"   ]["std"] += float(each["reex_time"   ]["std"])
-#            new_tree[pid]["sync_time"   ]["max"] += float(each["sync_time"   ]["max"])
-#            new_tree[pid]["sync_time"   ]["min"] += float(each["sync_time"   ]["min"])
-#            new_tree[pid]["sync_time"   ]["avg"] += float(each["sync_time"   ]["avg"])
-#            new_tree[pid]["sync_time"   ]["std"] += float(each["sync_time"   ]["std"])
-#            new_tree[pid]["prv_time"    ]["max"] += float(each["prv_time"    ]["max"])
-#            new_tree[pid]["prv_time"    ]["min"] += float(each["prv_time"    ]["min"])
-#            new_tree[pid]["prv_time"    ]["avg"] += float(each["prv_time"    ]["avg"])
-#            new_tree[pid]["prv_time"    ]["std"] += float(each["prv_time"    ]["std"])
-#            new_tree[pid]["rst_time"    ]["max"] += float(each["rst_time"    ]["max"])
-#            new_tree[pid]["rst_time"    ]["min"] += float(each["rst_time"    ]["min"])
-#            new_tree[pid]["rst_time"    ]["avg"] += float(each["rst_time"    ]["avg"])
-#            new_tree[pid]["rst_time"    ]["std"] += float(each["rst_time"    ]["std"])
-#            new_tree[pid]["create_time" ]["max"] += float(each["create_time" ]["max"])
-#            new_tree[pid]["create_time" ]["min"] += float(each["create_time" ]["min"])
-#            new_tree[pid]["create_time" ]["avg"] += float(each["create_time" ]["avg"])
-#            new_tree[pid]["create_time" ]["std"] += float(each["create_time" ]["std"])
-#            new_tree[pid]["destroy_time"]["max"] += float(each["destroy_time"]["max"])
-#            new_tree[pid]["destroy_time"]["min"] += float(each["destroy_time"]["min"])
-#            new_tree[pid]["destroy_time"]["avg"] += float(each["destroy_time"]["avg"])
-#            new_tree[pid]["destroy_time"]["std"] += float(each["destroy_time"]["std"])
-#            new_tree[pid]["begin_time"  ]["max"] += float(each["begin_time"  ]["max"])
-#            new_tree[pid]["begin_time"  ]["min"] += float(each["begin_time"  ]["min"])
-#            new_tree[pid]["begin_time"  ]["avg"] += float(each["begin_time"  ]["avg"])
-#            new_tree[pid]["begin_time"  ]["std"] += float(each["begin_time"  ]["std"])
-#            new_tree[pid]["compl_time"  ]["max"] += float(each["compl_time"  ]["max"])
-#            new_tree[pid]["compl_time"  ]["min"] += float(each["compl_time"  ]["min"])
-#            new_tree[pid]["compl_time"  ]["avg"] += float(each["compl_time"  ]["avg"])
-#            new_tree[pid]["compl_time"  ]["std"] += float(each["compl_time"  ]["std"])
-#            new_tree[pid]["advance_time"]["max"] += float(each["advance_time"]["max"])
-#            new_tree[pid]["advance_time"]["min"] += float(each["advance_time"]["min"])
-#            new_tree[pid]["advance_time"]["avg"] += float(each["advance_time"]["avg"])
-#            new_tree[pid]["advance_time"]["std"] += float(each["advance_time"]["std"])
         num_sample = len(samples[pid])
         for elem in new_tree[pid]:
             elemtype = type(new_tree[pid][elem])
             if elemtype is dict:
                 for e in new_tree[pid][elem]:
                     new_tree[pid][elem][e]      /= num_sample
-                    new_tree[pid][elem][e]      /= num_sample
-                    new_tree[pid][elem][e]      /= num_sample
-                    new_tree[pid][elem][e]      /= num_sample
+                    #new_tree[pid][elem][e]      /= num_sample
+                    #new_tree[pid][elem][e]      /= num_sample
+                    #new_tree[pid][elem][e]      /= num_sample
             elif elemtype is float :
                 new_tree[pid][elem]             /= num_sample
                 if elem == 'preserve time' or elem == 'execution time':
                     print('\n\nfinal checkf:', pid, elem, new_tree[pid][elem])
             elif elemtype is int :
                 new_tree[pid][elem]             /= num_sample
-#        new_tree[pid]["execution time"]      /= num_sample
-#        new_tree[pid]["current counts"]      /= num_sample
-#        new_tree[pid]["input volume"]        /= num_sample
-#        new_tree[pid]["output volume"]       /= num_sample
-#        new_tree[pid]["rd_bw"]               /= num_sample
-#        new_tree[pid]["wr_bw"]               /= num_sample
-#        new_tree[pid]["rd_bw_mea"]           /= num_sample
-#        new_tree[pid]["wr_bw_mea"]           /= num_sample
-#        new_tree[pid]["fault rate"]          /= num_sample
-#        new_tree[pid]["tasksize"]            /= num_sample
-#        new_tree[pid]["max prv only bw"]     /= num_sample
-#        new_tree[pid]["loc prv only bw"]     /= num_sample
-#        new_tree[pid]["loc prv time"]        /= num_sample
-#        new_tree[pid]["CDrt overhead"]       /= num_sample
-#        new_tree[pid]["total preserve"]      /= num_sample
-#        new_tree[pid]["preserve time"]       /= num_sample
-#        new_tree[pid]["exec"        ]["max"] /= num_sample
-#        new_tree[pid]["exec"        ]["min"] /= num_sample
-#        new_tree[pid]["exec"        ]["avg"] /= num_sample
-#        new_tree[pid]["exec"        ]["std"] /= num_sample
-#        new_tree[pid]["reexec"      ]["max"] /= num_sample
-#        new_tree[pid]["reexec"      ]["min"] /= num_sample
-#        new_tree[pid]["reexec"      ]["avg"] /= num_sample
-#        new_tree[pid]["reexec"      ]["std"] /= num_sample
-#        new_tree[pid]["prv_copy"    ]["max"] /= num_sample
-#        new_tree[pid]["prv_copy"    ]["min"] /= num_sample
-#        new_tree[pid]["prv_copy"    ]["avg"] /= num_sample
-#        new_tree[pid]["prv_copy"    ]["std"] /= num_sample
-#        new_tree[pid]["prv_ref"     ]["max"] /= num_sample
-#        new_tree[pid]["prv_ref"     ]["min"] /= num_sample
-#        new_tree[pid]["prv_ref"     ]["avg"] /= num_sample
-#        new_tree[pid]["prv_ref"     ]["std"] /= num_sample
-#        new_tree[pid]["restore"     ]["max"] /= num_sample
-#        new_tree[pid]["restore"     ]["min"] /= num_sample
-#        new_tree[pid]["restore"     ]["avg"] /= num_sample
-#        new_tree[pid]["restore"     ]["std"] /= num_sample
-#        new_tree[pid]["msg_log"     ]["max"] /= num_sample
-#        new_tree[pid]["msg_log"     ]["min"] /= num_sample
-#        new_tree[pid]["msg_log"     ]["avg"] /= num_sample
-#        new_tree[pid]["msg_log"     ]["std"] /= num_sample
-#        new_tree[pid]["total_time"  ]["max"] /= num_sample
-#        new_tree[pid]["total_time"  ]["min"] /= num_sample
-#        new_tree[pid]["total_time"  ]["avg"] /= num_sample
-#        new_tree[pid]["total_time"  ]["std"] /= num_sample
-#        new_tree[pid]["reex_time"   ]["max"] /= num_sample
-#        new_tree[pid]["reex_time"   ]["min"] /= num_sample
-#        new_tree[pid]["reex_time"   ]["avg"] /= num_sample
-#        new_tree[pid]["reex_time"   ]["std"] /= num_sample
-#        new_tree[pid]["sync_time"   ]["max"] /= num_sample
-#        new_tree[pid]["sync_time"   ]["min"] /= num_sample
-#        new_tree[pid]["sync_time"   ]["avg"] /= num_sample
-#        new_tree[pid]["sync_time"   ]["std"] /= num_sample
-#        new_tree[pid]["prv_time"    ]["max"] /= num_sample
-#        new_tree[pid]["prv_time"    ]["min"] /= num_sample
-#        new_tree[pid]["prv_time"    ]["avg"] /= num_sample
-#        new_tree[pid]["prv_time"    ]["std"] /= num_sample
-#        new_tree[pid]["rst_time"    ]["max"] /= num_sample
-#        new_tree[pid]["rst_time"    ]["min"] /= num_sample
-#        new_tree[pid]["rst_time"    ]["avg"] /= num_sample
-#        new_tree[pid]["rst_time"    ]["std"] /= num_sample
-#        new_tree[pid]["create_time" ]["max"] /= num_sample
-#        new_tree[pid]["create_time" ]["min"] /= num_sample
-#        new_tree[pid]["create_time" ]["avg"] /= num_sample
-#        new_tree[pid]["create_time" ]["std"] /= num_sample
-#        new_tree[pid]["destroy_time"]["max"] /= num_sample
-#        new_tree[pid]["destroy_time"]["min"] /= num_sample
-#        new_tree[pid]["destroy_time"]["avg"] /= num_sample
-#        new_tree[pid]["destroy_time"]["std"] /= num_sample
-#        new_tree[pid]["begin_time"  ]["max"] /= num_sample
-#        new_tree[pid]["begin_time"  ]["min"] /= num_sample
-#        new_tree[pid]["begin_time"  ]["avg"] /= num_sample
-#        new_tree[pid]["begin_time"  ]["std"] /= num_sample
-#        new_tree[pid]["compl_time"  ]["max"] /= num_sample
-#        new_tree[pid]["compl_time"  ]["min"] /= num_sample
-#        new_tree[pid]["compl_time"  ]["avg"] /= num_sample
-#        new_tree[pid]["compl_time"  ]["std"] /= num_sample
-#        new_tree[pid]["advance_time"]["max"] /= num_sample
-#        new_tree[pid]["advance_time"]["min"] /= num_sample
-#        new_tree[pid]["advance_time"]["avg"] /= num_sample
 #        new_tree[pid]["advance_time"]["std"] /= num_sample
+        new_tree[pid]["num_sample"] = num_sample
+
     return new_tree
 
 def mergeTotalProf(samples):
@@ -641,6 +491,7 @@ def mergeTotalProf(samples):
 #    new_prof["libc logging"  ][2]   /= num_sample
 #    new_prof["libc logging"  ][3]   /= num_sample
 #    new_prof["mailbox overhead"]    /= num_sample
+    new_prof["num_sample"] = num_sample
     return new_prof
 
 def mergeTraces(samples):
