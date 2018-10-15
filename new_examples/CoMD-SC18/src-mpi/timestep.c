@@ -42,6 +42,9 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
   const int CD2_INTERVAL = s->preserveRateLevel2;
   unsigned int is_lv2_completed = 0;
 #endif
+#if _CD3 && _CD2
+    cd_handle_t *lv3_cd = NULL;
+#endif // _CD3 && _CD2
   // This will iterate as many as specified in "printRate (default:10)"
   for (int ii = 0; ii < nSteps; ++ii) { //nStesp <- printRate <- 100
 #if _CD2_COMBINE
@@ -198,20 +201,20 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // nothing to do
 #elif _CD2_COMBINE_HALF
 #if _CD2
-    lv2_first_pre_size =
-        preserveAtoms(lv2_cd, kCopy, s->atoms,
-                      0,                     // is_gid
-                      1,                     // is_r
-                      0,                     // is_p
-                      0,                     // is_f
-                      0,                     // is_U
-                      1,                     // is_iSpecies
-                      0,                     // from (entire atoms)
-                      s->boxes->nLocalBoxes, // to (entire atoms)
-                      0,                     // is_print
-                      "Local");
-
-
+    if (nSteps % CD2_INTERVAL == 0) {
+      lv2_first_pre_size =
+          preserveAtoms(lv2_cd, kCopy, s->atoms,
+                        0,                     // is_gid
+                        1,                     // is_r
+                        0,                     // is_p
+                        0,                     // is_f
+                        0,                     // is_U
+                        1,                     // is_iSpecies
+                        0,                     // from (entire atoms)
+                        s->boxes->nLocalBoxes, // to (entire atoms)
+                        0,                     // is_print
+                        "Local");
+    }
 #endif // _CD2
 #else // _CD2_COMBINE
 #if _CD2
@@ -293,31 +296,32 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     //lv2_first_pre_size = preserveAtomsInLocalBox(lv2_cd, kCopy, s->atoms,
     //                                              s->boxes->nLocalBoxes, 0);
     // Notice that r and iSpecies are already preserved
-    lv2_first_pre_size =
-        preserveAtoms(lv2_cd, kCopy, s->atoms,
-                      1,                     // is_gid
-                      0,                     // is_r
-                      1,                     // is_p
-                      1,                     // is_f
-                      1,                     // is_U
-                      0,                     // is_iSpecies
-                      0,                     // from (entire atoms)
-                      s->boxes->nLocalBoxes, // to (entire atoms)
-                      0,                     // is_print
-                      "Local");
+    if (nSteps % CD2_INTERVAL == 0) {
+      lv2_first_pre_size =
+          preserveAtoms(lv2_cd, kCopy, s->atoms,
+                        1,                     // is_gid
+                        0,                     // is_r
+                        1,                     // is_p
+                        1,                     // is_f
+                        1,                     // is_U
+                        0,                     // is_iSpecies
+                        0,                     // from (entire atoms)
+                        s->boxes->nLocalBoxes, // to (entire atoms)
+                        0,                     // is_print
+                        "Local");
 
-    lv2_first_pre_size +=
-        preserveAtomsInHaloBox(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
-                               s->boxes->nTotalBoxes, 0);
-    // Preserve (almost) all in boxes. Note that this is over-preservation
-    // because boxSize and nHaloBoxes are not required while tiny they are.
-    lv2_first_pre_size +=
-        preserveLinkCell(lv2_cd, kCopy, s->boxes, 1 /*all*/, 0 /*nAtoms*/,
-                         0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
-    // Preserve HaloAtom
-    lv2_first_pre_size += preserveHaloAtom(lv2_cd, kCopy, s->atomExchange->parms,
-                                        1 /*cellList*/, 1 /*pbcFactor*/);
-
+      lv2_first_pre_size +=
+          preserveAtomsInHaloBox(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
+                                 s->boxes->nTotalBoxes, 0);
+      // Preserve (almost) all in boxes. Note that this is over-preservation
+      // because boxSize and nHaloBoxes are not required while tiny they are.
+      lv2_first_pre_size +=
+          preserveLinkCell(lv2_cd, kCopy, s->boxes, 1 /*all*/, 0 /*nAtoms*/,
+                           0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
+      // Preserve HaloAtom
+      lv2_first_pre_size += preserveHaloAtom(lv2_cd, kCopy, s->atomExchange->parms,
+                                          1 /*cellList*/, 1 /*pbcFactor*/);
+    }
 #endif // _CD2
 #else // !_CD2_COMBINE && ! _CD2_COMBINE_HALF
 #if _CD2
@@ -389,27 +393,30 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #if _CD2_COMBINE
     // atoms->r needs to be preserved here via kCopy since it's referenced
     // in CD3
-    int computeForce_pre_lv2combined_size = preserveAtoms(lv2_cd, kCopy, s->atoms,
-                                                  1, // is_gid
-                                                  1, // is_r
-                                                  0, // is_p
-                                                  0, // is_f
-                                                  0, // is_U
-                                                  0, // is_iSpecies
-                                                  0, // from
-                                                  s->boxes->nLocalBoxes, // to
-                                                  0, "Local");
+#if _CD2
+    if (nSteps % CD2_INTERVAL == 0) {
+      int computeForce_pre_lv2combined_size = preserveAtoms(lv2_cd, kCopy, s->atoms,
+                                                    1, // is_gid
+                                                    1, // is_r
+                                                    0, // is_p
+                                                    0, // is_f
+                                                    0, // is_U
+                                                    0, // is_iSpecies
+                                                    0, // from
+                                                    s->boxes->nLocalBoxes, // to
+                                                    0, "Local");
 //    computeForce_pre_lv2combined_size = preserveAtomsInLocalBox(lv2_cd, 
-//                                    kCopy, s->atoms, s->boxes->nLocalBoxes, 0);
-                                                      
+//                                      kCopy, s->atoms, s->boxes->nLocalBoxes, 0);
+                                                        
 //    computeForce_pre_lv2combined_size +=
-//        preserveAtomsInHaloBox(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
-//                               s->boxes->nTotalBoxes, 0);
-    // FIXME: not verified
-    computeForce_pre_lv2combined_size =
-        preserveLinkCell(lv2_cd, kCopy, s->boxes, 1 /*all*/, 0 /*nAtoms*/,
-                         0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
-
+//          preserveAtomsInHaloBox(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
+//                                 s->boxes->nTotalBoxes, 0);
+      // FIXME: not verified
+      computeForce_pre_lv2combined_size =
+          preserveLinkCell(lv2_cd, kCopy, s->boxes, 1 /*all*/, 0 /*nAtoms*/,
+                           0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
+    }
+#endif // _CD2
 #else // _CD2_COMBINE
 #if _CD2
     if (nSteps % CD2_INTERVAL == 0) {
@@ -437,7 +444,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 
 // Note that we will creat CD3 for either when CD2 is combined or not
 #if _CD3 && _CD2
-    cd_handle_t *lv3_cd = NULL;
+    //cd_handle_t *lv3_cd = NULL;
     if (nSteps % CD2_INTERVAL == 0) {
       // FIXME: this can be either LJ potential or EAM potential
       // FIXME: eam force has cocmmunication in it so that we can't create
@@ -582,8 +589,13 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif // _CD2_COMBINE
   }    // ii < nSteps for loop
   if (is_lv2_completed == 0) { // safe guard for left over
+#if _CD3 && _CD2
+    cd_destroy(lv3_cd);
+#endif // _CD3 && _CD2
+#if _CD2
     cd_detect(lv2_cd);
     cd_complete(lv2_cd);
+#endif // _CD2 
   }
 
   // This is out of level 2 cd and a part of level 1 cd
