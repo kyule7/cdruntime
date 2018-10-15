@@ -7,6 +7,7 @@ import numpy as np
 from itertools import groupby
 #from cd_tools_msg import *
 from gen_histogram import *
+import sys
 
 pd.options.mode.chained_assignment = None
 def processProf(prof):
@@ -19,6 +20,39 @@ def processProf(prof):
                         print('----', elem, prof[exec_name][fail_type][numTasks][input_size][elem])
 #                        for tr in prof[exec_name][fail_type][numTasks][input_size][elem]:
 #                            print(elem, tr, prof[exec_name][fail_type][numTasks][input_size][elem][tr])
+
+
+def check_Existance(prof, app, ftype, task, size, phase, trace):
+    if app in prof.keys():
+        if ftype in prof[app].keys():
+            if task in prof[app][ftype].keys():
+                if size in prof[app][ftype][task].keys():
+                    if phase in prof[app][ftype][task][size].keys():
+                        if trace in prof[app][ftype][task][size][phase].keys():
+                            print('Existance check completed!')
+                        else:
+                            print(app+' '+ftype+' '+' '+str(task)+' '+size+' '+phase)
+                            print(trace+' is not in '+str(prof[app][ftype][task][size][phase].keys()))
+                            sys.exit(2)
+                    else:
+                        print(app+' '+ftype+' '+' '+str(task)+' '+size)
+                        print(phase+' is not in '+str(prof[app][ftype][task][size].keys()))
+                        sys.exit(2)
+                else:
+                    print(app+' '+ftype+' '+' '+str(task))
+                    print(size+' is not in '+str(prof[app][ftype][task].keys()))
+                    sys.exit(2)
+            else: 
+                print(app+' '+ftype)
+                print(task+' is not in '+str(prof[app][ftype].keys()))
+                sys.exit(2)
+        else:
+            print(app)
+            print(ftype+' is not in '+str(prof[app].keys()))
+            sys.exit(2)
+    else :
+        print(app+' is not in '+str(prof.keys()))
+        sys.exit(2)
 
 
 def add_line(ax, xpos, ypos):
@@ -293,24 +327,43 @@ def GetHistogram(params, fixed, fixed_item):
                         for trace in trace_param['trace']:
                             print('\t\t', appl, ftype, task, size)
                             plist = []
+                            if fixed_item == 'app':
+                                fixed = prof.keys()
+                            elif fixed_item == 'type':
+                                fixed = prof[app].keys()
+                            elif fixed_item == 'task':
+                                fixed = prof[app][ftype].keys()
+                            elif fixed_item == 'size':
+                                fixed = prof[app][ftype][task].keys()
+                            elif fixed_item == 'phase':
+                                fixed = prof[app][ftype][task][size].keys()
+                            fixed = list(fixed)
+                            fixed.sort()
+
+
                             for swpr in fixed:
                                 if fixed_item == 'app':
+                                    check_Existance(prof, swpr, ftype, task, size, phase, trace)
                                     target = prof[swpr][ftype][task][size][phase][trace]
                                     plist.append(ProfInfo(target, swpr, ftype, task, size, phase, fixed_item, trace))
                                     name = 'all_' + ftype + '_' + task + '_' + size + '_' + phase + '_' + trace
                                 elif fixed_item == 'type':
+                                    check_Existance(prof, app, swpr, task, size, phase, trace)
                                     target = prof[app][swpr][task][size][phase][trace]
                                     plist.append(ProfInfo(target, app, swpr, task, size, phase, fixed_item, trace))
                                     name = app + '_all_' + task + '_' + size + '_' + phase + '_' + trace
                                 elif fixed_item == 'task':
+                                    check_Existance(prof, app, ftype, swpr, size, phase, trace)
                                     target = prof[app][ftype][swpr][size][phase][trace]
                                     plist.append(ProfInfo(target, app, ftype, swpr, size, phase, fixed_item, trace))
                                     name = app + '_' + ftype + '_all_' + size + '_' + phase + '_' + trace
                                 elif fixed_item == 'size':
+                                    check_Existance(prof, app, ftype, task, swpr, phase, trace)
                                     target = prof[app][ftype][task][swpr][phase][trace]
                                     plist.append(ProfInfo(target, app, ftype, task, swpr, phase, fixed_item, trace))
                                     name = app + '_' + ftype + '_all_' + size + phase + trace
                                 elif fixed_item == 'phase':
+                                    check_Existance(prof, app, ftype, task, size, swpr, trace)
                                     target = prof[app][ftype][task][size][swpr][trace]
                                     plist.append(ProfInfo(target, app, ftype, task, size, swpr, fixed_item, trace))
                                     name = app + '_' + ftype + '_' + task + '_' + size + '_all_' + trace
@@ -481,6 +534,7 @@ if len(input_list) > 0:
     tot_prof = GenEmptyDF(appls, sizes, tasks, [tot_labels])
     for app in result:
         ftype = list(result[app].keys())[0] # in python3, it is not list.
+        print(ftype)
         for task in result[app][ftype]:
             for inputsz in result[app][ftype][task]:
                 missing, orign, noprv, noerr, error = CheckMissing(result[app], task, inputsz)
@@ -509,10 +563,10 @@ if len(cdinfo_list) > 0:
    #input('phase prof begin')
 
     for app in cdinfo:
-        ftype = 'Ftype0_64' #'Ftype0_64' list(result[app].keys())[0]
+        ftype = list(result[app].keys())[0]
         #cdinfo.find('noprv')
         ishere = 0
-        for a in cdinfo['synthetic'].keys():
+        for a in cdinfo[app].keys():
             if a == 'noprv' :
                 ishere = 1
         if ishere == 0:
@@ -667,10 +721,14 @@ if totalinfo_df:
        # input('\n------ *** app *** -----------\n')
         frames = [tg]
         tg = pd.concat(frames)
-        ax = tg.plot(kind = 'bar', y=['preserve', 'rollback', 'runtime', 'bare'], stacked=True, 
+        ax = tg.plot(kind = 'bar', y=['bare','runtime','preserve', 'rollback'], stacked=True, 
                     #bottom = margin_bottom, color=colors[num], label=month
-                    label=['preserve', 'rollback', 'runtime', 'original'], width =0.75
+                    label=['original','runtime','preserve', 'rollback'], width =0.75
                     )
+#        ax = tg.plot(kind = 'bar', y=['preserve', 'rollback', 'runtime', 'bare'], stacked=True, 
+#                    #bottom = margin_bottom, color=colors[num], label=month
+#                    label=['preserve', 'rollback', 'runtime', 'original'], width =0.75
+#                    )
         
 #        patches, labels = ax.get_legend_handles_labels()
 #        ax.legend(patches, labels, ncol=len(df.index),
@@ -780,7 +838,7 @@ if cdinfo_df:
     tmpdf = pd.DataFrame(np.random.rand(len(cdarr), len(pickup_array)),columns=pickup_array,index=cdarr)
     for idx1 in cdarr: 
         for idx2 in pickup_array: 
-            tmpdf[idx2][idx1] = df[idx1][idx2][10] #only use first task
+            tmpdf[idx2][idx1] = df[idx1][idx2][0] #only use first task
     for idx1 in cdarr:
         if tmpdf['CD Lv'][idx1] != 'leaf':
             tmpdf['execution time'][idx1] = max(0,tmpdf['execution time'][idx1]-tmpdf['rollback'][idx1]-tmpdf['preserve'][idx1]-tmpdf['rtov max'][idx1])
@@ -788,13 +846,14 @@ if cdinfo_df:
 
     pickup_array.remove('CD Lv')
     sum=np.zeros(len(cdarr))
-    i=0
+    
     for idx1 in cdarr:
+        i = int(idx1[3:5].replace('_','').replace('t','').replace(' ','0'))
         for idx2 in pickup_array:
             sum[i] = tmpdf[idx2][idx1] + sum[i]
         if tmpdf['CD Lv'][idx1] == 'leaf':
             sum[i] = sum[i] - tmpdf['rtov max'][idx1]
-        i=i+1
+        
     
     
     prev = 0
@@ -822,22 +881,13 @@ if cdinfo_df:
 #            bbox_to_anchor=(0.55, 0.95),
 #            #loc=2,
 #            borderaxespad=0.)
-    plt.sca(ax)
-    plt.gca().yaxis.grid(True, ls='dotted')
-#        ax.set_xticklabels(tg.index, fontsize='large')
-    ax.set_ylabel('Execution Time', fontsize='large', labelpad=-1)
-    ax.set_xlabel('Scalability', fontsize='large')
-        #fig2 = plt.figure(figsize=(10,5))
-    fig = ax.get_figure()
-        #plt.show()
-    filename = filename_pre + app
 
 
 #added by jeageun -------------------------------------------
-    labels = ['' for item in ax.get_xticklabels()]
-    ax.set_xticklabels(labels)
-    ax.set_xlabel('')
-    label_group_bar_table(ax, tg)
+#    labels = ['' for item in ax.get_xticklabels()]
+#    ax.set_xticklabels(labels)
+#    ax.set_xlabel('')
+#    label_group_bar_table(ax, tg)
 
 
 
