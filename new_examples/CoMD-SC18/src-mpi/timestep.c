@@ -437,22 +437,25 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 
 // Note that we will creat CD3 for either when CD2 is combined or not
 #if _CD3 && _CD2
-    // FIXME: this can be either LJ potential or EAM potential
-    // FIXME: eam force has cocmmunication in it so that we can't create
-    // parallel children there
-    // TODO: add switch to choose right CD either of LJ or EAM, depending on
-    // doeam
+    cd_handle_t *lv3_cd = NULL;
+    if (nSteps % CD2_INTERVAL == 0) {
+      // FIXME: this can be either LJ potential or EAM potential
+      // FIXME: eam force has cocmmunication in it so that we can't create
+      // parallel children there
+      // TODO: add switch to choose right CD either of LJ or EAM, depending on
+      // doeam
 
-    // TODO(estimator): will determine the optimal number of parallel children
-    cd_handle_t *lv3_cd =
+      // TODO(estimator): will determine the optimal number of parallel children
+      lv3_cd =
 #if _CD3_NO_SPLIT
-        cd_create(getcurrentcd(), 1 /*getNRanks(),*/, "computeForce_loop",
+          cd_create(getcurrentcd(), 1 /*getNRanks(),*/, "computeForce_loop",
 #elif _CD3_HALF_SPLIT
-        cd_create(getcurrentcd(), /*1,*/ getNRanks()*0.5, "computeForce_loop",
+          cd_create(getcurrentcd(), /*1,*/ getNRanks()*0.5, "computeForce_loop",
 #else
-        cd_create(getcurrentcd(), /*1,*/ getNRanks(), "computeForce_loop",
+          cd_create(getcurrentcd(), /*1,*/ getNRanks(), "computeForce_loop",
 #endif
-                  kStrict | kLocalMemory, 0x1);
+                    kStrict | kLocalMemory, 0x1);
+      }
 #endif // _CD3 && _CD2
     startTimer(computeForceTimer);
     // call either eamForce or ljForce
