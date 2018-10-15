@@ -6,15 +6,18 @@ export MPICH_ASYNC_PROGRESS=1
 export I_MPICH_ASYNC_PROGRESS=1
 export MPI_THREAD_MULTIPLE=1
 export KEEP_TOTAL_FAILURE_RATE_SAME=1
-export CD_EXEC_NAME=lulesh_fgcd
-export CD_EXEC_DETAILS=80
-export CD_EXEC_ITERS=50
+export CD_EXEC_NAME=synthetic
+export CD_EXEC_DETAILS=baseline
+export CD_EXEC_ITERS=1
 export LULESH_LV0=9
 export LULESH_LV1=3
 export LULESH_LV2=1
+export CD_DATA_GROW_UNIT=1048576
+export CD_MAX_LEVEL_PRINT=5
+export IBRUN_TASKS_PER_NODE=48
 #export CD_NO_PRESERVE=1
 #export CD_NO_OPERATE=1
-#export CD_NO_ERROR=1
+export CD_NO_ERROR=1
 
 if [ "$#" -gt 0 ]; then
   if [[ -n "$1" ]]; then
