@@ -379,12 +379,12 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                                                   0, // from
                                                   s->boxes->nLocalBoxes, // to
                                                   0, "Local");
-    computeForce_pre_lv2combined_size = preserveAtomsInLocalBox(lv2_cd, 
-                                    kCopy, s->atoms, s->boxes->nLocalBoxes, 0);
+//    computeForce_pre_lv2combined_size = preserveAtomsInLocalBox(lv2_cd, 
+//                                    kCopy, s->atoms, s->boxes->nLocalBoxes, 0);
                                                       
-    computeForce_pre_lv2combined_size +=
-        preserveAtomsInHaloBox(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
-                               s->boxes->nTotalBoxes, 0);
+//    computeForce_pre_lv2combined_size +=
+//        preserveAtomsInHaloBox(lv2_cd, kCopy, s->atoms, s->boxes->nLocalBoxes,
+//                               s->boxes->nTotalBoxes, 0);
     // FIXME: not verified
     computeForce_pre_lv2combined_size =
         preserveLinkCell(lv2_cd, kCopy, s->boxes, 1 /*all*/, 0 /*nAtoms*/,
@@ -422,8 +422,10 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 
     // TODO(estimator): will determine the optimal number of parallel children
     cd_handle_t *lv3_cd =
-#if _CD2_NO_SPLIT
+#if _CD3_NO_SPLIT
         cd_create(getcurrentcd(), 1 /*getNRanks(),*/, "computeForce_loop",
+#elif _CD3_HALF_SPLIT
+        cd_create(getcurrentcd(), /*1,*/ getNRanks()*0.5, "computeForce_loop",
 #else
         cd_create(getcurrentcd(), /*1,*/ getNRanks(), "computeForce_loop",
 #endif
