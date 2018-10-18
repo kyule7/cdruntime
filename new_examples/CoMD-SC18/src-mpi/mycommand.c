@@ -301,6 +301,9 @@ void printCmdYaml(FILE *file, Command *cmd) {
 #if _CD1
           "  Level1 CD Interval: %d\n"
 #endif
+#if _CD2
+          "  Level2 CD Interval: %d\n"
+#endif
 #if _CD3
           "  Level3 CD Interval: %d\n"
 #endif
@@ -313,6 +316,9 @@ void printCmdYaml(FILE *file, Command *cmd) {
           cmd->printRate,
 #if _CD1
           cmd->preserveRateLevel1,
+#endif
+#if _CD2
+          cmd->preserveRateLevel2,
 #endif
 #if _CD3
           cmd->preserveRateLevel3,
