@@ -33,26 +33,27 @@ def check_Existance(prof, app, ftype, task, size, phase, trace):
                         else:
                             print(app+' '+ftype+' '+' '+str(task)+' '+size+' '+phase)
                             print(trace+' is not in '+str(prof[app][ftype][task][size][phase].keys()))
-                            sys.exit(2)
+                            return False
                     else:
                         print(app+' '+ftype+' '+' '+str(task)+' '+size)
                         print(phase+' is not in '+str(prof[app][ftype][task][size].keys()))
-                        sys.exit(2)
+                        return False
                 else:
                     print(app+' '+ftype+' '+' '+str(task))
                     print(size+' is not in '+str(prof[app][ftype][task].keys()))
-                    sys.exit(2)
+                    return False
             else: 
                 print(app+' '+ftype)
                 print(task+' is not in '+str(prof[app][ftype].keys()))
-                sys.exit(2)
+                return False
         else:
             print(app)
             print(ftype+' is not in '+str(prof[app].keys()))
-            sys.exit(2)
+            return False
     else :
         print(app+' is not in '+str(prof.keys()))
-        sys.exit(2)
+        return False
+    return True
 
 
 def add_line(ax, xpos, ypos):
@@ -343,30 +344,30 @@ def GetHistogram(params, fixed, fixed_item):
 
                             for swpr in fixed:
                                 if fixed_item == 'app':
-                                    check_Existance(prof, swpr, ftype, task, size, phase, trace)
-                                    target = prof[swpr][ftype][task][size][phase][trace]
-                                    plist.append(ProfInfo(target, swpr, ftype, task, size, phase, fixed_item, trace))
-                                    name = 'all_' + ftype + '_' + task + '_' + size + '_' + phase + '_' + trace
+                                    if check_Existance(prof, swpr, ftype, task, size, phase, trace):
+                                        target = prof[swpr][ftype][task][size][phase][trace]
+                                        plist.append(ProfInfo(target, swpr, ftype, task, size, phase, fixed_item, trace))
+                                        name = 'all_' + ftype + '_' + task + '_' + size + '_' + phase + '_' + trace
                                 elif fixed_item == 'type':
-                                    check_Existance(prof, app, swpr, task, size, phase, trace)
-                                    target = prof[app][swpr][task][size][phase][trace]
-                                    plist.append(ProfInfo(target, app, swpr, task, size, phase, fixed_item, trace))
-                                    name = app + '_all_' + task + '_' + size + '_' + phase + '_' + trace
+                                    if check_Existance(prof, app, swpr, task, size, phase, trace):
+                                        target = prof[app][swpr][task][size][phase][trace]
+                                        plist.append(ProfInfo(target, app, swpr, task, size, phase, fixed_item, trace))
+                                        name = app + '_all_' + task + '_' + size + '_' + phase + '_' + trace
                                 elif fixed_item == 'task':
-                                    check_Existance(prof, app, ftype, swpr, size, phase, trace)
-                                    target = prof[app][ftype][swpr][size][phase][trace]
-                                    plist.append(ProfInfo(target, app, ftype, swpr, size, phase, fixed_item, trace))
-                                    name = app + '_' + ftype + '_all_' + size + '_' + phase + '_' + trace
+                                    if check_Existance(prof, app, ftype, swpr, size, phase, trace):
+                                        target = prof[app][ftype][swpr][size][phase][trace]
+                                        plist.append(ProfInfo(target, app, ftype, swpr, size, phase, fixed_item, trace))
+                                        name = app + '_' + ftype + '_all_' + size + '_' + phase + '_' + trace
                                 elif fixed_item == 'size':
-                                    check_Existance(prof, app, ftype, task, swpr, phase, trace)
-                                    target = prof[app][ftype][task][swpr][phase][trace]
-                                    plist.append(ProfInfo(target, app, ftype, task, swpr, phase, fixed_item, trace))
-                                    name = app + '_' + ftype + '_all_' + size + phase + trace
+                                    if check_Existance(prof, app, ftype, task, swpr, phase, trace):
+                                        target = prof[app][ftype][task][swpr][phase][trace]
+                                        plist.append(ProfInfo(target, app, ftype, task, swpr, phase, fixed_item, trace))
+                                        name = app + '_' + ftype + '_all_' + size + phase + trace
                                 elif fixed_item == 'phase':
-                                    check_Existance(prof, app, ftype, task, size, swpr, trace)
-                                    target = prof[app][ftype][task][size][swpr][trace]
-                                    plist.append(ProfInfo(target, app, ftype, task, size, swpr, fixed_item, trace))
-                                    name = app + '_' + ftype + '_' + task + '_' + size + '_all_' + trace
+                                    if check_Existance(prof, app, ftype, task, size, swpr, trace):
+                                        target = prof[app][ftype][task][size][swpr][trace]
+                                        plist.append(ProfInfo(target, app, ftype, task, size, swpr, fixed_item, trace))
+                                        name = app + '_' + ftype + '_' + task + '_' + size + '_all_' + trace
                                 else:
                                     assert False
                             GetLatencyHist(plist, False,

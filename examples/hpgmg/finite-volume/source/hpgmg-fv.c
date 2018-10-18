@@ -436,8 +436,8 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
 #if CD
   //int num_tasks;
   //MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
-  //cd_handle_t * cd_bench = cd_create(cd_bench, num_tasks, "cd_bench", kRelaxed | kDRAM, 0x0000FFFF);
-  cd_handle_t * cd_bench = cd_create(getcurrentcd(), 1, "cd_bench_hpgmg", kStrict | kDRAM, 0x1);
+  cd_handle_t * cd_bench = cd_create(getcurrentcd(), 1, "cd_l2", kStrict | kDRAM, 0x3);
+  //cd_handle_t * cd_bench = cd_create(getcurrentcd(), 1, "cd_l2", kStrict | kDRAM, 0xF);
 #endif
   for(doTiming=0;doTiming<=1;doTiming++){ // first pass warms up, second pass times
 
@@ -504,7 +504,7 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
       zero_vector(all_grids->levels[onLevel],VECTOR_U);
       #ifdef USE_FCYCLES
       #if CD
-      FMGSolve(all_grids,onLevel,VECTOR_U,VECTOR_F,a,b,dtol,rtol,prv_size);
+      FMGSolve(all_grids,onLevel,VECTOR_U,VECTOR_F,a,b,dtol,rtol,prv_size,&numSolves);
       #else
       FMGSolve(all_grids,onLevel,VECTOR_U,VECTOR_F,a,b,dtol,rtol);
       #endif
@@ -685,7 +685,10 @@ int main(int argc, char **argv){
   size_t prv_size = 0;
   char cd_name[50];
   cd_handle_t* root_cd = cd_init(num_tasks, my_rank, kGlobalDisk);
-  cd_begin(root_cd, "root");
+  sprintf(cd_name, "root");
+  cd_begin(root_cd, cd_name);
+  cd_preserve(root_cd, &num_tasks, sizeof(num_tasks), kCopy, cd_name, NULL);
+  cd_preserve(root_cd, &my_rank, sizeof(my_rank), kCopy, cd_name, NULL);
 #elif SCR
   SCR_Init();
 #endif
@@ -715,12 +718,19 @@ int main(int argc, char **argv){
   fprintf(stdout,"\n\n===== Benchmark setup ==========================================================\n");
   }
 
-  #if CD
+#if CD
+  cd_handle_t * cd_l1 = cd_create(getcurrentcd(), 1, "cd_l1", kStrict | kGlobalDisk, 0x7);
   //cd_handle_t * cd_l1 = cd_create(getcurrentcd(), 1, "cd_l1", kStrict | kGlobalDisk, 0xF);
-  cd_handle_t * cd_l1 = cd_create(getcurrentcd(), 1, "cd_l1", kStrict | kDRAM, 0x3);
   sprintf(cd_name, "cd_l1_mgbuild");
+  #ifdef HMCD
+  cd_begin(cd_l1);
+  #else
   cd_begin(cd_l1, cd_name);
   #endif
+  cd_preserve(cd_l1, &my_rank, sizeof(my_rank), kCopy, cd_name, NULL);
+
+  cd_handle_t *cd_build_inner = cd_create(cd_l1, 1, "cd_l2", kStrict | kDRAM, 0x3);
+#endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // create the fine level...
@@ -734,8 +744,18 @@ int main(int argc, char **argv){
   level_type level_h;
   int ghosts=stencil_get_radius();
   
+#if CD
+  cd_begin(cd_build_inner, "cd_build_cl");
+  cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
+#endif
+
   //SZNOTE: two MPI_Allreduce to gather information...
   create_level(&level_h,boxes_in_i,box_dim,ghosts,VECTORS_RESERVED,bc,my_rank,num_tasks);
+
+#if CD
+  cd_complete(cd_build_inner);
+#endif
+
   #ifdef USE_HELMHOLTZ
   double a=1.0;double b=1.0; // Helmholtz
   if(my_rank==0)fprintf(stdout,"  Creating Helmholtz (a=%f, b=%f) test problem\n",a,b);
@@ -744,10 +764,29 @@ int main(int argc, char **argv){
   if(my_rank==0)fprintf(stdout,"  Creating Poisson (a=%f, b=%f) test problem\n",a,b);
   #endif
   double h=1.0/( (double)boxes_in_i*(double)box_dim );  // [0,1]^3 problem
+
+#if CD
+  cd_begin(cd_build_inner, "cd_build_ip");
+  cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
+#endif
+
   initialize_problem(&level_h,h,a,b);                   // initialize VECTOR_ALPHA, VECTOR_BETA*, and VECTOR_F
+
+#if CD
+  cd_complete(cd_build_inner);
+  cd_begin(cd_build_inner, "cd_build_ro");
+  cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
+#endif
   
   //SZNOTE: restriction and exchange boundaries within, lots of MPI non-blocking communications
   rebuild_operator(&level_h,NULL,a,b);                  // calculate Dinv and lambda_max
+
+#if CD
+  cd_complete(cd_build_inner);
+  cd_begin(cd_build_inner, "cd_build_bcp");
+  cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
+#endif
+
   if(level_h.boundary_condition.type == BC_PERIODIC){   // remove any constants from the RHS for periodic problems
     double average_value_of_f = mean(&level_h,VECTOR_F);
     if(average_value_of_f!=0.0){
@@ -756,6 +795,11 @@ int main(int argc, char **argv){
     }
   }
 
+#if CD
+  cd_complete(cd_build_inner);
+  cd_begin(cd_build_inner, "cd_build_mgb");
+  cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
+#endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // create the MG hierarchy...
@@ -763,11 +807,13 @@ int main(int argc, char **argv){
   //SZNOTE: MPI_Comm_split inside and MPI_Allreduce on splitted communicators
   MGBuild(&MG_h,&level_h,a,b,minCoarseDim);             // build the Multigrid Hierarchy 
 
-  #if CD
+#if CD
+  cd_complete(cd_build_inner);
+  cd_destroy(cd_build_inner);
   cd_preserve_mgtype(cd_l1, &MG_h, cd_name, 0, kOutput);
-  cd_detect(cd_l1);
+  //cd_detect(cd_l1);
   cd_complete(cd_l1);
-  #endif
+#endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // HPGMG-500 benchmark proper
@@ -779,14 +825,20 @@ int main(int argc, char **argv){
   #ifndef TEST_ERROR
 
   double AverageSolveTime[3];
-  for(l=0;l<1;l++){
+  for(l=0;l<3;l++){
   #if CD
     sprintf(cd_name, "cd_l1_bench_l%d", l);
+#ifdef HMCD
+    cd_begin(cd_l1);
+#else
     cd_begin(cd_l1, cd_name);
+#endif
+    cd_preserve(cd_l1, &l, sizeof(l), kCopy, cd_name, NULL);
     size_t tmp_size = cd_preserve_mgtype(cd_l1, &MG_h, cd_name, l, kCopy);
     printf("Level %d: CD \"%s\" preserved %f MB data.\n", l, cd_name, tmp_size*1.0/1024/1024);
     prv_size += tmp_size;
   #endif
+
     if(l>0)restriction(MG_h.levels[l],VECTOR_F,MG_h.levels[l-1],VECTOR_F,RESTRICT_CELL);
     //SZNOTE: actual solver, lots of MPI communications
   #if CD
@@ -805,33 +857,34 @@ int main(int argc, char **argv){
   #endif
   }
 
-  ////////////////////// solve 2h and 4h problem ///////////////////////////
-  #if CD
-    sprintf(cd_name, "cd_l1_bench_l%d", l);
-    cd_begin(cd_l1, cd_name);
-    size_t tmp_size = cd_preserve_mgtype(cd_l1, &MG_h, cd_name, l, kCopy);
-    printf("Level %d: CD \"%s\" preserved %f MB data.\n", l, cd_name, tmp_size*1.0/1024/1024);
-    prv_size += tmp_size;
-  #endif
+  //////////////////////// solve 2h and 4h problem ///////////////////////////
+  //#if CD
+  //sprintf(cd_name, "cd_l1_bench_l%d", l);
+  //cd_begin(cd_l1, cd_name);
+  //cd_preserve(cd_l1, &l, sizeof(l), kCopy, cd_name, NULL);
+  //tmp_size = cd_preserve_mgtype(cd_l1, &MG_h, cd_name, l, kCopy);
+  //printf("Level %d: CD \"%s\" preserved %f MB data.\n", l, cd_name, tmp_size*1.0/1024/1024);
+  //prv_size += tmp_size;
+  //#endif
 
-  for(;l<3;l++){
-    if(l>0)restriction(MG_h.levels[l],VECTOR_F,MG_h.levels[l-1],VECTOR_F,RESTRICT_CELL);
-    //SZNOTE: actual solver, lots of MPI communications
-  #if CD
-    bench_hpgmg(&MG_h,l,a,b,dtol,rtol,&prv_size);
-  #else
-    bench_hpgmg(&MG_h,l,a,b,dtol,rtol);
-  #endif
-    AverageSolveTime[l] = (double)MG_h.timers.MGSolve / (double)MG_h.MGSolves_performed;
-    if(my_rank==0){fprintf(stdout,"\n\n===== Timing Breakdown =========================================================\n");}
-    MGPrintTiming(&MG_h,l);
-  }
+  //for(;l<3;l++){
+  //  if(l>0)restriction(MG_h.levels[l],VECTOR_F,MG_h.levels[l-1],VECTOR_F,RESTRICT_CELL);
+  //  //SZNOTE: actual solver, lots of MPI communications
+  //#if CD
+  //  bench_hpgmg(&MG_h,l,a,b,dtol,rtol,&prv_size);
+  //#else
+  //  bench_hpgmg(&MG_h,l,a,b,dtol,rtol);
+  //#endif
+  //  AverageSolveTime[l] = (double)MG_h.timers.MGSolve / (double)MG_h.MGSolves_performed;
+  //  if(my_rank==0){fprintf(stdout,"\n\n===== Timing Breakdown =========================================================\n");}
+  //  MGPrintTiming(&MG_h,l);
+  //}
 
-  #if CD
-    cd_preserve_mgtype(cd_l1, &MG_h, cd_name, 1/*l*/, kOutput);
-    cd_detect(cd_l1);
-    cd_complete(cd_l1);
-  #endif
+  //#if CD
+  //cd_preserve_mgtype(cd_l1, &MG_h, cd_name, 1/*l*/, kOutput);
+  //cd_detect(cd_l1);
+  //cd_complete(cd_l1);
+  //#endif
 
   if(my_rank==0){
     #ifdef CALIBRATE_TIMER
@@ -861,16 +914,22 @@ int main(int argc, char **argv){
   MGResetTimers(&MG_h);
   #if CD
   sprintf(cd_name, "cd_l1_richerr");
+#ifdef HMCD
+  cd_begin(cd_l1);
+#else
   cd_begin(cd_l1, cd_name);
+#endif
   prv_size += cd_preserve_mgtype(cd_l1, &MG_h, cd_name, 0, kCopy);
-  cd_handle_t *cd_richerr = cd_create(cd_l1, 1, "cd_richerr", kStrict | kDRAM, 0x1);
+  cd_handle_t *cd_richerr = cd_create(cd_l1, 1, "cd_l2", kStrict | kDRAM, 0x3);
+  //cd_handle_t *cd_richerr = cd_create(cd_l1, 1, "cd_l2", kStrict | kDRAM, 0xF);
   #endif
   for(l=0;l<3;l++){
     if(l>0)restriction(MG_h.levels[l],VECTOR_F,MG_h.levels[l-1],VECTOR_F,RESTRICT_CELL);
            zero_vector(MG_h.levels[l],VECTOR_U);
     #ifdef USE_FCYCLES
     #if CD
-    FMGSolve(&MG_h,l,VECTOR_U,VECTOR_F,a,b,dtol,rtol,&prv_size);
+    int numsolves = 0;
+    FMGSolve(&MG_h,l,VECTOR_U,VECTOR_F,a,b,dtol,rtol,&prv_size,&numsolves);
     #else
     FMGSolve(&MG_h,l,VECTOR_U,VECTOR_F,a,b,dtol,rtol);
     #endif
