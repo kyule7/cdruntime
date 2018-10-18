@@ -745,7 +745,11 @@ int main(int argc, char **argv){
   int ghosts=stencil_get_radius();
   
 #if CD
+  #ifdef HMCD
+  cd_begin(cd_build_inner);
+  #else
   cd_begin(cd_build_inner, "cd_build_cl");
+  #endif
   cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
 #endif
 
@@ -766,7 +770,11 @@ int main(int argc, char **argv){
   double h=1.0/( (double)boxes_in_i*(double)box_dim );  // [0,1]^3 problem
 
 #if CD
+  #ifdef HMCD
+  cd_begin(cd_build_inner);
+  #else
   cd_begin(cd_build_inner, "cd_build_ip");
+  #endif
   cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
 #endif
 
@@ -774,7 +782,11 @@ int main(int argc, char **argv){
 
 #if CD
   cd_complete(cd_build_inner);
+  #ifdef HMCD
+  cd_begin(cd_build_inner);
+  #else
   cd_begin(cd_build_inner, "cd_build_ro");
+  #endif
   cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
 #endif
   
@@ -783,7 +795,11 @@ int main(int argc, char **argv){
 
 #if CD
   cd_complete(cd_build_inner);
+  #ifdef HMCD
+  cd_begin(cd_build_inner);
+  #else
   cd_begin(cd_build_inner, "cd_build_bcp");
+  #endif
   cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
 #endif
 
@@ -797,7 +813,11 @@ int main(int argc, char **argv){
 
 #if CD
   cd_complete(cd_build_inner);
+  #ifdef HMCD
+  cd_begin(cd_build_inner);
+  #else
   cd_begin(cd_build_inner, "cd_build_mgb");
+  #endif
   cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
 #endif
 
