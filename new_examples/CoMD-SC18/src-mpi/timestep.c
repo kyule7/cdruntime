@@ -52,7 +52,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 //*****************************************************************************
 //            cd boundary: (1) velocity (0.08%) (for both)
 //*****************************************************************************
-    if (nSteps % CD2_INTERVAL == 0) {
+    if (ii % CD2_INTERVAL == 0) {
       cd_begin(lv2_cd, "lv2_combined");
       is_lv2_completed = 0;
       // For debugging, preserve all data structures
@@ -86,7 +86,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 //*****************************************************************************
 //            cd boundary: (1) velocity (0.08%) (for both)
 //*****************************************************************************
-    if (nSteps % CD2_INTERVAL == 0) {
+    if (ii % CD2_INTERVAL == 0) {
       // There are two phase, first and second
       // "first" includes velocity, position, and redistributation and
       // "second" contains force and velocity.
@@ -115,25 +115,25 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 //*****************************************************************************
 //            cd boundary: (1) velocity (0.08%) (for both)
 //*****************************************************************************
-    if (nSteps % CD2_INTERVAL == 0) {
+    if (ii % CD2_INTERVAL == 0) {
       cd_begin(lv2_cd,
-          "advanceVelocity_start"); // lv2_cd starts ( 1 / 5 sequential CDs)
+               "advanceVelocity_start"); // lv2_cd starts ( 1 / 5 sequential CDs)
       is_lv2_completed = 0;
       // FIXME: should this be kRef for the first iteration?
       // Note that we need to preserv atoms-> p as well
       // Preserve local atoms->f (force) and atoms->p (momentum) (read and
       // written)
       int velocity_pre_size = preserveAtoms(lv2_cd, kCopy, s->atoms,
-          0, // is_gid
-          0, // is_r
-          1, // is_p
-          1, // is_f
-          0, // is_U
-          0, // is_iSpecies
-          0, // from (entire atoms)
-          s->boxes->nLocalBoxes, // to (Local)
-          0,                     // is_print
-          "Local");
+                                            0, // is_gid
+                                            0, // is_r
+                                            1, // is_p
+                                            1, // is_f
+                                            0, // is_U
+                                            0, // is_iSpecies
+                                            0, // from (entire atoms)
+                                            s->boxes->nLocalBoxes, // to (Local)
+                                            0,                     // is_print
+                                            "Local");
       // Preserve boxes->nLocalBoxes and boxes->nAtoms[0:nLocalBoxes-1]
       // TODO: this doesn't gets changed until redistribtueAtoms below.
       //       so that can be preserved via reference before it
@@ -141,7 +141,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
       //        in a box. But still we need nAtoms for each box?
       velocity_pre_size +=
         preserveLinkCell(lv2_cd, kCopy, s->boxes, 0 /*all*/, 1 /*nAtoms*/,
-            1 /*local*/, 1 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
+                         1 /*local*/, 1 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
       // dt is ignored since it's tiny and not changing. (assumed to be preserved
       // via Reference)
 
@@ -170,7 +170,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // nothing to do
 #else  // !(_CD2_COMBINE || _CD2_COMBINE_HALF) (= ALL SPLIT)
 #if _CD2
-    if (nSteps % CD2_INTERVAL == CD2_INTERVAL - 1) {
+    if (ii % CD2_INTERVAL == CD2_INTERVAL - 1) {
 #if _CD2_OUTPUT
       int velocity_pre_out_size =
           preserveAtoms(lv2_cd, kOutput, s->atoms,
@@ -185,7 +185,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                         0,                     // is_print
                         "Local");
 #endif // _CD2_OUTPUT
-      is_lv2_completed = 0;
+      is_lv2_completed = 1;
       cd_detect(lv2_cd);
       cd_complete(lv2_cd);
     }
@@ -201,7 +201,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // nothing to do
 #elif _CD2_COMBINE_HALF
 #if _CD2
-    if (nSteps % CD2_INTERVAL == 0) {
+    if (ii % CD2_INTERVAL == 0) {
       lv2_first_pre_size =
           preserveAtoms(lv2_cd, kCopy, s->atoms,
                         0,                     // is_gid
@@ -218,7 +218,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif // _CD2
 #else // _CD2_COMBINE
 #if _CD2
-    if (nSteps % CD2_INTERVAL == 0) {
+    if (ii % CD2_INTERVAL == 0) {
       cd_begin(lv2_cd, "advancePosition"); //  2nd (/ 5 sequential lv2_cd s)
       is_lv2_completed = 0;
       // Preserve atoms->p (momenta of local atoms) and atoms->r
@@ -261,7 +261,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // nothing to do
 #else // _CD2_COMBINE
 #if _CD2
-    if (nSteps % CD2_INTERVAL == CD2_INTERVAL - 1) {
+    if (ii % CD2_INTERVAL == CD2_INTERVAL - 1) {
 #if _CD2_OUTPUT
       int position_pre_out_size =
           preserveAtoms(lv2_cd, kOutput, s->atoms,
@@ -276,7 +276,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                         0,                     // is_print
                         "Local");
 #endif // _CD2_OUTPUT
-      is_lv2_completed = 0;
+      is_lv2_completed = 1;
       cd_detect(lv2_cd);
       cd_complete(lv2_cd);
     }
@@ -296,7 +296,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     //lv2_first_pre_size = preserveAtomsInLocalBox(lv2_cd, kCopy, s->atoms,
     //                                              s->boxes->nLocalBoxes, 0);
     // Notice that r and iSpecies are already preserved
-    if (nSteps % CD2_INTERVAL == 0) {
+    if (ii % CD2_INTERVAL == 0) {
       lv2_first_pre_size =
           preserveAtoms(lv2_cd, kCopy, s->atoms,
                         1,                     // is_gid
@@ -325,7 +325,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif // _CD2
 #else // !_CD2_COMBINE && ! _CD2_COMBINE_HALF
 #if _CD2
-    if (nSteps % CD2_INTERVAL == 0) {
+    if (ii % CD2_INTERVAL == 0) {
       cd_begin(lv2_cd, "redistributeAtoms"); //  3rd (/ 5 sequential lv2_cd s)
       is_lv2_completed = 0;
 
@@ -364,7 +364,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // nothing to do
 #else // _CD2_COMBINE
 #if _CD2
-    if (nSteps % CD2_INTERVAL == CD2_INTERVAL - 1) {
+    if (ii % CD2_INTERVAL == CD2_INTERVAL - 1) {
 #if _CD2_OUTPUT
     // FIXME: not verified
       int redist_pre_out_size = preserveAtomsInLocalBox(lv2_cd, kOutput, s->atoms,
@@ -377,7 +377,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
           preserveLinkCell(lv2_cd, kOutput, s->boxes, 1 /*all*/, 0 /*nAtoms*/,
                            0 /*local*/, 0 /*nLocalBoxes*/, 0 /*nTotalBoxes*/);
 #endif // _CD2_OUTPUT
-      is_lv2_completed = 0;
+      is_lv2_completed = 1;
       cd_detect(lv2_cd);
       cd_complete(lv2_cd);
     }
@@ -394,7 +394,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // atoms->r needs to be preserved here via kCopy since it's referenced
     // in CD3
 #if _CD2
-    if (nSteps % CD2_INTERVAL == 0) {
+    if (ii % CD2_INTERVAL == 0) {
       int computeForce_pre_lv2combined_size = preserveAtoms(lv2_cd, kCopy, s->atoms,
                                                     1, // is_gid
                                                     1, // is_r
@@ -419,7 +419,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #endif // _CD2
 #else // _CD2_COMBINE
 #if _CD2
-    if (nSteps % CD2_INTERVAL == 0) {
+    if (ii % CD2_INTERVAL == 0) {
       cd_begin(lv2_cd, "computeForce"); // 4th (/ 5 sequential lv2_cd s)
       is_lv2_completed = 0;
 
@@ -445,7 +445,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 // Note that we will creat CD3 for either when CD2 is combined or not
 #if _CD3 && _CD2
     //cd_handle_t *lv3_cd = NULL;
-    if (nSteps % CD2_INTERVAL == 0) {
+    if (ii % CD2_INTERVAL == 0) {
       // FIXME: this can be either LJ potential or EAM potential
       // FIXME: eam force has cocmmunication in it so that we can't create
       // parallel children there
@@ -469,9 +469,10 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     computeForce(s); // s->pot->force(s)
     stopTimer(computeForceTimer);
 #if _CD3 && _CD2 
-    if (nSteps % CD2_INTERVAL == CD2_INTERVAL - 1) {
+    if (ii % CD2_INTERVAL == CD2_INTERVAL - 1) {
       // cd_detect(lv3_cd);
       // cd_complete(lv3_cd);
+      //is_lv2_completed = 1;
       cd_destroy(lv3_cd);
     }
 #endif // _CD3 && _CD2
@@ -481,7 +482,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // nothing to do
 #else // _CD2_COMBINE
 #if _CD2
-    if (nSteps % CD2_INTERVAL == CD2_INTERVAL - 1) {
+    if (ii % CD2_INTERVAL == CD2_INTERVAL - 1) {
       // Do I need cd_detect here when level2 is enabled? Yes, it won't
       // double detect here and in level3.
 #if _CD2_OUTPUT
@@ -500,7 +501,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                         0,                     // is_print
                         "Local");
 #endif // _CD2_OUTPUT
-      is_lv2_completed = 0;
+      is_lv2_completed = 1;
       cd_detect(lv2_cd);
       cd_complete(lv2_cd);
     }
@@ -513,7 +514,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
     // nothing to do
 #else // _CD2_COMBINE
 #if _CD2
-    if (nSteps % CD2_INTERVAL == 0) {
+    if (ii % CD2_INTERVAL == 0) {
       cd_begin(lv2_cd, "advanceVelocity_end"); // 5th (/ 5 sequential lv2_cd s)
       is_lv2_completed = 0;
       // Preserve local atoms->f (force) and atoms->p (momentum) (read and
@@ -544,7 +545,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
 #if _CD2_COMBINE
     // same thing when not CD2 combined
 #if _CD2
-    if (nSteps % CD2_INTERVAL == CD2_INTERVAL - 1) {
+    if (ii % CD2_INTERVAL == CD2_INTERVAL - 1) {
 #if _CD2_OUTPUT
       int velocity_end_pre_out_size =
           preserveAtoms(lv2_cd, kOutput, s->atoms,
@@ -559,14 +560,14 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                         0,                     // is_print
                         "Local");
 #endif // _CD2_OUTPUT
-      is_lv2_completed = 0;
+      is_lv2_completed = 1;
       cd_detect(lv2_cd);
       cd_complete(lv2_cd);
     }
 #endif // _CD2
 #else  // _CD2_COMBINE
 #if _CD2
-    if (nSteps % CD2_INTERVAL == CD2_INTERVAL - 1) {
+    if (ii % CD2_INTERVAL == CD2_INTERVAL - 1) {
 #if _CD2_OUTPUT
       int velocity_end_pre_out_size =
           preserveAtoms(lv2_cd, kOutput, s->atoms,
@@ -581,7 +582,7 @@ double timestep(SimFlat *s, int nSteps, real_t dt) {
                         0,                     // is_print
                         "Local");
 #endif // _CD2_OUTPUT
-      is_lv2_completed = 0;
+      is_lv2_completed = 1;
       cd_detect(lv2_cd);
       cd_complete(lv2_cd);
     }
