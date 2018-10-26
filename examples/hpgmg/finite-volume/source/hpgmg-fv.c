@@ -790,6 +790,7 @@ int main(int argc, char **argv){
   cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
 #endif
   
+  ////FIXME: [Song] need to refine mapping inside this function..
   //SZNOTE: restriction and exchange boundaries within, lots of MPI non-blocking communications
   rebuild_operator(&level_h,NULL,a,b);                  // calculate Dinv and lambda_max
 
