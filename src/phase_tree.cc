@@ -19,7 +19,7 @@ std::map<uint32_t, PhaseNode *> tuned::phaseNodeCache;
 uint32_t common::PhaseNode::phase_gen = 0;
 uint32_t common::PhaseNode::max_phase = 0;
 int64_t common::PhaseNode::last_completed_phase = HEALTHY;
-
+static int max_level_print = 6;
 static FILE *inYAML = NULL;
 static FILE *outYAML = NULL;
 static FILE *outJSON = NULL;
@@ -147,7 +147,8 @@ void PhaseNode::PrintOutputJson(PhaseNode *root)
       strcat(ftypestr, tmp);
     }
   }
-
+  char *cd_max_level_print = getenv("CD_MAX_LEVEL_PRINT");
+  max_level_print = (cd_max_level_print != NULL) ? atoi(cd_max_level_print) : max_level_print;
   assert(outJSON == NULL);
   memset(output_filepath, '\0', 1024);
   sprintf(output_filepath, "%s/%s.%s.%s.%d.%s.%s.json", output_basepath, CD_DEFAULT_CONFIG_JSON, 
@@ -367,6 +368,8 @@ void PhaseNode::PrintOutputJsonInternal(void)
   //fprintf(outJSON, "%s", profile_.GetRTInfoStr(tabsize + 1).c_str());
   fprintf(outJSON, "%s\"child CDs\" : {\n", kind_indent.c_str());
   for(auto it=children_.begin(); it!=children_.end();) {
+    if (level_ > max_level_print)
+      break;
     (*it)->PrintOutputJsonInternal();
     ++it;
     if(it != children_.end())

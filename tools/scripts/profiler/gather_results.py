@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 import csv
 import copy
 import pickle
-
-
+import os
 
 result = gatherJSONObj('file_list.txt')
 #checkJSONObj(result)
@@ -117,6 +116,107 @@ for app in result:
 #                printResults(avg_result['CD info'])
 
 #raw_input('-------')
+if os.path.isfile('cdinfo.pickle'):
+    filetmp = pd.read_pickle('cdinfo.pickle')
+    for app in filetmp.keys():
+        for ftype in filetmp[app].keys():  
+            for nTask in filetmp[app][ftype].keys():
+                for inputsize in filetmp[app][ftype][nTask].keys():
+                    for phase in filetmp[app][ftype][nTask][inputsize].keys():
+                        tnum = filetmp[app][ftype][nTask][inputsize][phase]['num_sample']
+                        if app not in merged['CD info'].keys():
+                            merged['CD info'][app] = filetmp[app]
+                        elif ftype not in merged['CD info'][app].keys():
+                            merged['CD info'][app][ftype] = filetmp[app][ftype]
+                        elif nTask not in merged['CD info'][app][ftype].keys():
+                            merged['CD info'][app][ftype][nTask] = filetmp[app][ftype][nTask]
+                        elif inputsize not in merged['CD info'][app][ftype][nTask].keys():
+                            merged['CD info'][app][ftype][nTask][inputsize] = filetmp[app][ftype][nTask][inputsize]
+                        elif phase not in merged['CD info'][app][ftype][nTask][inputsize].keys():
+                            merged['CD info'][app][ftype][nTask][inputsize][phase] = filetmp[app][ftype][nTask][inputsize][phase]
+                        else :
+                            mnum=merged['CD info'][app][ftype][nTask][inputsize][phase]['num_sample']
+                            for ls in filetmp[app][ftype][nTask][inputsize][phase].keys():
+                                elem = filetmp[app][ftype][nTask][inputsize][phase][ls]
+                                elemtype = type(elem)
+                                if elemtype is dict:
+                                    for e in elem:
+                                         merged['CD info'][app][ftype][nTask][inputsize][phase][ls][e] = (mnum*merged['CD info'][app][ftype][nTask][inputsize][phase][ls][e]+ tnum *filetmp[app][ftype][nTask][inputsize][phase][ls][e]) / (tnum+mnum)
+                                elif elemtype is float:
+                                    merged['CD info'][app][ftype][nTask][inputsize][phase][ls]= (mnum*merged['CD info'][app][ftype][nTask][inputsize][phase][ls]+ tnum *filetmp[app][ftype][nTask][inputsize][phase][ls]) / (tnum+mnum)
+                                elif elemtype is int :
+                                    merged['CD info'][app][ftype][nTask][inputsize][phase][ls]= (mnum*merged['CD info'][app][ftype][nTask][inputsize][phase][ls]+ tnum *filetmp[app][ftype][nTask][inputsize][phase][ls]) / (tnum+mnum)
+                            merged['CD info'][app][ftype][nTask][inputsize][phase]['num_sample'] = tnum+mnum
+
+if os.path.isfile('tot_prof.pickle'):
+    filetmp = pd.read_pickle('tot_prof.pickle')
+    for app in filetmp.keys():
+        if app not in merged['total profile'].keys():
+             merged['total profile'][app] = filetmp[app]
+        else:
+            for ftype in filetmp[app].keys():  
+                if ftype not in merged['total profile'][app].keys():
+                    merged['total profile'][app][ftype] = filetmp[app][ftype]
+                else :
+                    for nTask in filetmp[app][ftype].keys():
+                        if nTask not in merged['total profile'][app][ftype].keys():
+                            merged['total profile'][app][ftype][nTask]= filetmp[app][ftype][nTask]
+                    else :
+                        for inputsize in filetmp[app][ftype][nTask].keys():
+                            if inputsize not in merged['total profile'][app][ftype][nTask].keys():
+                                merged['total profile'][app][ftype][nTask][inputsize]= filetmp[app][ftype][nTask][inputsize]
+                            else :
+                                tnum = filetmp[app][ftype][nTask][inputsize]['num_sample']
+                                mnum=merged['total profile'][app][ftype][nTask][inputsize]['num_sample']
+                                for phase in filetmp[app][ftype][nTask][inputsize].keys():
+                                    elem = filetmp[app][ftype][nTask][inputsize][phase]
+                                    elemtype = type(elem)
+                                    if elemtype is dict:
+                                        for e in elem:
+                                            merged['total profile'][app][ftype][nTask][inputsize][phase][e] = (mnum*merged['total profile'][app][ftype][nTask][inputsize][phase][e]+ tnum *filetmp[app][ftype][nTask][inputsize][phase][e]) / (tnum+mnum)
+                                    elif elemtype is float:
+                                        merged['total profile'][app][ftype][nTask][inputsize][phase]= (mnum*merged['total profile'][app][ftype][nTask][inputsize][phase]+ tnum *filetmp[app][ftype][nTask][inputsize][phase]) / (tnum+mnum)
+                                    elif elemtype is int :
+                                        merged['total profile'][app][ftype][nTask][inputsize][phase]= (mnum*merged['total profile'][app][ftype][nTask][inputsize][phase]+ tnum *filetmp[app][ftype][nTask][inputsize][phase]) / (tnum+mnum)
+                                    elif elemtype is list:
+                                        for e in range(4):
+                                            merged['total profile'][app][ftype][nTask][inputsize][phase][e] = (mnum*merged['total profile'][app][ftype][nTask][inputsize][phase][e]+ tnum *filetmp[app][ftype][nTask][inputsize][phase][e]) / (tnum+mnum)
+
+
+                                merged['total profile'][app][ftype][nTask][inputsize]['num_sample'] = tnum+mnum
+
+
+if os.path.isfile('trace.pickle') :
+    filetmp = pd.read_pickle('trace.pickle')
+    for app in filetmp.keys():
+        if app not in merged['trace'].keys():
+            merged['trace'][app] = filetmp[app]
+        else:
+            for ftype in filetmp[app].keys():
+                if ftype not in merged['trace'][app].keys():
+                    merged['trace'][app][ftype] = filetmp[app][ftype]
+                else:    
+                    for nTask in filetmp[app][ftype].keys():
+                        if nTask not in merged['trace'][app][ftype].keys():
+                            merged['trace'][app][ftype][nTask] = filetmp[app][ftype][nTask]
+                        else:
+                            for inputsize in filetmp[app][ftype][nTask].keys():
+                                if inputsize not in merged['trace'][app][ftype][nTask].keys():
+                                    merged['trace'][app][ftype][nTask][inputsize] = filetmp[app][ftype][nTask][inputsize]
+                                else:
+                                    for phase in filetmp[app][ftype][nTask][inputsize].keys():
+                                        if phase not in merged['trace'][app][ftype][nTask][inputsize].keys():
+                                             merged['trace'][app][ftype][nTask][inputsize][phase] = filetmp[app][ftype][nTask][inputsize][phase]
+                                        else:
+                                            for ls in filetmp[app][ftype][nTask][inputsize][phase].keys():
+                                                merged['trace'][app][ftype][nTask][inputsize][phase][ls].extend(filetmp[app][ftype][nTask][inputsize][phase][ls])
+
+    for app in result:                                                            
+        for ftype in result[app]:                                                 
+            for nTask in result[app][ftype]:                                      
+                for inputsize in result[app][ftype][nTask]:                       
+                    for pid in merged['trace'][app][ftype][nTask][inputsize]:
+                        trace_dict[(app,ftype,nTask,inputsize,pid)] = merged['trace'][app][ftype][nTask][inputsize][pid]
 
 with open('cdinfo.pickle', 'wb') as handle:
     pickle.dump(merged['CD info'], handle, protocol=pickle.HIGHEST_PROTOCOL)

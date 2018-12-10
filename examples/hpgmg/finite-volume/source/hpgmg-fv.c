@@ -56,86 +56,142 @@
 
 #if CD
 /****************** preservation of all_grids by manually listing all allocated spaces inside all_grids ********************/
-void cd_preserve_mgtype(cd_handle_t* cd_h, mg_type *all_grids){
+//// [Song] FIXME: functionalized preservation copied from PGAS preservation; need to modify to fit MPI data structure
+//size_t cd_preserve_mgtype(cd_handle_t* cd_h, mg_type *all_grids, const char* name, const int start_level){
+//  size_t prv_size=0;
+//  char prv_name[100];
+//  sprintf(prv_name, "mg_type_%s", name);
+//  size_t tmp_size = sizeof(mg_type);
+//  cd_preserve(cd_h, all_grids, tmp_size, kCopy, prv_name, prv_name);
+//  prv_size += tmp_size;
+//  // traverse all pointers to preserve all data
+//  prv_size += cd_preserve_levels(cd_h, all_grids->levels, all_grids->num_levels, name);
+//  return prv_size;
+//}
+
+size_t cd_preserve_mgtype(cd_handle_t* cd_h, mg_type *all_grids, const char* name_in, const int start_level, uint32_t prv_mask){
+  size_t prv_size=0;
+  size_t tmp_size;
   int maxLevel = 100;
-  cd_preserve(cd_h, all_grids, sizeof(mg_type), kCopy, "all_grids", NULL);
-  cd_preserve(cd_h, all_grids->levels, maxLevel*sizeof(level_type*)/*100 is hard-coded maxLevel*/, kCopy, "levels", NULL);
-  int i=0;
-  char name[50];
+
+  cd_preserve(cd_h, all_grids, sizeof(mg_type), prv_mask, "all_grids", NULL);
+  prv_size += sizeof(mg_type);
+  tmp_size = maxLevel*sizeof(level_type*)/*100 is hard-coded maxLevel*/;
+  cd_preserve(cd_h, all_grids->levels, tmp_size, prv_mask, "levels", NULL);
+  prv_size += tmp_size;
+
+  //int i=0;
+  int i=start_level;
+  char name[100];
   while (i<all_grids->num_levels){
     //if (all_grids->levels[i] == NULL) break;
-    sprintf(name, "level_%d", i);
-    cd_preserve(cd_h, all_grids->levels[i], sizeof(level_type), kCopy, name, NULL);
-    cd_preserve(cd_h, all_grids->levels[i]->rank_of_box, 
-             all_grids->levels[i]->boxes_in.i*all_grids->levels[i]->boxes_in.j*all_grids->levels[i]->boxes_in.k*sizeof(int), 
-             kCopy, strcat(name,"_rank_of_box"), NULL);
-    cd_preserve(cd_h, all_grids->levels[i]->my_boxes, all_grids->levels[i]->num_my_boxes*sizeof(box_type), 
-             kCopy, strcat(name,"_my_boxes"), NULL);
-    cd_preserve(cd_h, all_grids->levels[i]->vectors_base, 
-             ((uint64_t)(all_grids->levels[i]->numVectors)*all_grids->levels[i]->num_my_boxes*all_grids->levels[i]->box_volume*sizeof(double)+4096),
-             kCopy, strcat(name,"_vector_base"), NULL);
-    cd_preserve(cd_h, all_grids->levels[i]->vectors,
-            all_grids->levels[i]->numVectors*sizeof(double*), kCopy, strcat(name,"_vectors"), NULL);
-    cd_preserve(cd_h, all_grids->levels[i]->my_blocks,
-            all_grids->levels[i]->num_my_blocks*sizeof(blockCopy_type), kCopy, strcat(name,"_myblocks"), NULL);
-    cd_preserve(cd_h, all_grids->levels[i]->RedBlack_base, (2*all_grids->levels[i]->my_boxes[0].kStride*sizeof(double)+256),
-            kCopy, strcat(name,"_RedBlack_base"), NULL);
+    sprintf(name, "%s_level_%d", name_in, i);
+    tmp_size = sizeof(level_type);
+    cd_preserve(cd_h, all_grids->levels[i], tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
+    tmp_size = all_grids->levels[i]->boxes_in.i*all_grids->levels[i]->boxes_in.j*all_grids->levels[i]->boxes_in.k*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->rank_of_box, tmp_size, prv_mask, strcat(name,"_rank_of_box"), NULL);
+    prv_size += tmp_size;
+
+    tmp_size = all_grids->levels[i]->num_my_boxes*sizeof(box_type);
+    cd_preserve(cd_h, all_grids->levels[i]->my_boxes, tmp_size, prv_mask, strcat(name,"_my_boxes"), NULL);
+    prv_size += tmp_size;
+
+    tmp_size = ((uint64_t)(all_grids->levels[i]->numVectors)*all_grids->levels[i]->num_my_boxes*all_grids->levels[i]->box_volume*sizeof(double)+4096);
+    cd_preserve(cd_h, all_grids->levels[i]->vectors_base, tmp_size, prv_mask, strcat(name,"_vector_base"), NULL);
+    prv_size += tmp_size;
+
+    tmp_size = all_grids->levels[i]->numVectors*sizeof(double*);
+    cd_preserve(cd_h, all_grids->levels[i]->vectors, tmp_size, prv_mask, strcat(name,"_vectors"), NULL);
+    prv_size += tmp_size;
+
+    tmp_size = all_grids->levels[i]->num_my_blocks*sizeof(blockCopy_type);
+    cd_preserve(cd_h, all_grids->levels[i]->my_blocks, tmp_size, prv_mask, strcat(name,"_myblocks"), NULL);
+    prv_size += tmp_size;
+
+    tmp_size = 2*all_grids->levels[i]->my_boxes[0].kStride*sizeof(double)+256;
+    cd_preserve(cd_h, all_grids->levels[i]->RedBlack_base, tmp_size, prv_mask, strcat(name,"_RedBlack_base"), NULL);
+    prv_size += tmp_size;
 
     int j=0;
     while(j<all_grids->levels[i]->num_my_boxes){
       sprintf(name, "level_%d_box_%d", i, j);
-      cd_preserve(cd_h, all_grids->levels[i]->my_boxes[j].vectors, all_grids->levels[i]->numVectors*sizeof(double*), kCopy, name, NULL);
+      tmp_size = all_grids->levels[i]->numVectors*sizeof(double*);
+      cd_preserve(cd_h, all_grids->levels[i]->my_boxes[j].vectors, tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
       j++;
     }
     j=0;
     while(j<STENCIL_MAX_SHAPES){
       sprintf(name, "level_%d_shape_%d_send_ranks", i, j);
-      cd_preserve(cd_h, all_grids->levels[i]->exchange_ghosts[j].send_ranks, (all_grids->levels[i]->exchange_ghosts[j].num_sends*sizeof(int)),
-              kCopy, name, NULL);
+      tmp_size = all_grids->levels[i]->exchange_ghosts[j].num_sends*sizeof(int);
+      cd_preserve(cd_h, all_grids->levels[i]->exchange_ghosts[j].send_ranks, tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
+
       sprintf(name, "level_%d_shape_%d_send_sizes", i, j);
-      cd_preserve(cd_h, all_grids->levels[i]->exchange_ghosts[j].send_sizes, (all_grids->levels[i]->exchange_ghosts[j].num_sends*sizeof(int)),
-              kCopy, name, NULL);
+      tmp_size = all_grids->levels[i]->exchange_ghosts[j].num_sends*sizeof(int);
+      cd_preserve(cd_h, all_grids->levels[i]->exchange_ghosts[j].send_sizes, tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
+
       sprintf(name, "level_%d_shape_%d_send_buffers", i, j);
-      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].send_buffers,all_grids->levels[i]->exchange_ghosts[j].num_sends*sizeof(double*),
-              kCopy, name, NULL);
+      tmp_size = all_grids->levels[i]->exchange_ghosts[j].num_sends*sizeof(double*);
+      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].send_buffers, tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
+
       sprintf(name, "level_%d_shape_%d_recv_ranks", i, j);
-      cd_preserve(cd_h, all_grids->levels[i]->exchange_ghosts[j].recv_ranks, (all_grids->levels[i]->exchange_ghosts[j].num_recvs*sizeof(int)),
-              kCopy, name, NULL);
+      tmp_size = all_grids->levels[i]->exchange_ghosts[j].num_recvs*sizeof(int);
+      cd_preserve(cd_h, all_grids->levels[i]->exchange_ghosts[j].recv_ranks, tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
+
       sprintf(name, "level_%d_shape_%d_recv_sizes", i, j);
-      cd_preserve(cd_h, all_grids->levels[i]->exchange_ghosts[j].recv_sizes, (all_grids->levels[i]->exchange_ghosts[j].num_recvs*sizeof(int)),
-              kCopy, name, NULL);
+      tmp_size = all_grids->levels[i]->exchange_ghosts[j].num_recvs*sizeof(int);
+      cd_preserve(cd_h, all_grids->levels[i]->exchange_ghosts[j].recv_sizes, tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
+
       sprintf(name, "level_%d_shape_%d_recv_buffers", i, j);
-      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].recv_buffers,all_grids->levels[i]->exchange_ghosts[j].num_recvs*sizeof(double*),
-              kCopy, name, NULL);
+      tmp_size = all_grids->levels[i]->exchange_ghosts[j].num_recvs*sizeof(double*);
+      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].recv_buffers, tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
+
       sprintf(name, "level_%d_shape_%d_block0", i, j);
-      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].blocks[0],
-              all_grids->levels[i]->exchange_ghosts[j].num_blocks[0]*sizeof(blockCopy_type), kCopy, name, NULL);
+      tmp_size = all_grids->levels[i]->exchange_ghosts[j].num_blocks[0]*sizeof(blockCopy_type);
+      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].blocks[0], tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
+
       sprintf(name, "level_%d_shape_%d_block1", i, j);
-      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].blocks[1],
-              all_grids->levels[i]->exchange_ghosts[j].num_blocks[1]*sizeof(blockCopy_type), kCopy, name, NULL);
+      tmp_size = all_grids->levels[i]->exchange_ghosts[j].num_blocks[1]*sizeof(blockCopy_type);
+      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].blocks[1], tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
+
       sprintf(name, "level_%d_shape_%d_block2", i, j);
-      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].blocks[2],
-              all_grids->levels[i]->exchange_ghosts[j].num_blocks[2]*sizeof(blockCopy_type), kCopy, name, NULL);
+      tmp_size = all_grids->levels[i]->exchange_ghosts[j].num_blocks[2]*sizeof(blockCopy_type);
+      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].blocks[2], tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
 
       sprintf(name, "level_%d_shape_%d_boundary_blocks", i, j);
-      cd_preserve(cd_h,all_grids->levels[i]->boundary_condition.blocks[j],
-              all_grids->levels[i]->boundary_condition.num_blocks[j]*sizeof(blockCopy_type), kCopy, name, NULL);
+      tmp_size = all_grids->levels[i]->boundary_condition.num_blocks[j]*sizeof(blockCopy_type);
+      cd_preserve(cd_h,all_grids->levels[i]->boundary_condition.blocks[j], tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
+
       #ifdef USE_MPI
       sprintf(name, "level_%d_shape_%d_mpi_requests", i, j);
-      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].requests,
-              (all_grids->levels[i]->exchange_ghosts[j].num_sends+all_grids->levels[i]->exchange_ghosts[j].num_recvs)*sizeof(MPI_Request), 
-              kCopy, name, NULL);
+      tmp_size = (all_grids->levels[i]->exchange_ghosts[j].num_sends+all_grids->levels[i]->exchange_ghosts[j].num_recvs)*sizeof(MPI_Request);
+      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].requests, tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
+
       sprintf(name, "level_%d_shape_%d_mpi_status", i, j);
-      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].status,
-              (all_grids->levels[i]->exchange_ghosts[j].num_sends+all_grids->levels[i]->exchange_ghosts[j].num_recvs)*sizeof(MPI_Status), 
-              kCopy, name, NULL);
+      tmp_size = (all_grids->levels[i]->exchange_ghosts[j].num_sends+all_grids->levels[i]->exchange_ghosts[j].num_recvs)*sizeof(MPI_Status);
+      cd_preserve(cd_h,all_grids->levels[i]->exchange_ghosts[j].status, tmp_size, prv_mask, name, NULL);
+      prv_size += tmp_size;
       #endif
 
       int k=0;
       while(k<all_grids->levels[i]->exchange_ghosts[j].num_sends){
         sprintf(name, "level_%d_shape_%d_send_buffer_%d", i, j, k);
-        cd_preserve(cd_h, all_grids->levels[i]->exchange_ghosts[j].send_buffers[k],
-                all_grids->levels[i]->exchange_ghosts[j].send_sizes[k]*sizeof(double), kCopy, name, NULL);
+        tmp_size = all_grids->levels[i]->exchange_ghosts[j].send_sizes[k]*sizeof(double);
+        cd_preserve(cd_h, all_grids->levels[i]->exchange_ghosts[j].send_buffers[k], tmp_size, prv_mask, name, NULL);
+        prv_size += tmp_size;
         k++;
       }
       j++;
@@ -144,160 +200,234 @@ void cd_preserve_mgtype(cd_handle_t* cd_h, mg_type *all_grids){
     //build_restriction 
     j=RESTRICT_CELL; 
     sprintf(name, "level_%d_restriction_%d_send_ranks", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_ranks, (all_grids->levels[i]->restriction[j].num_sends*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_ranks, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_send_sizes", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_sizes, (all_grids->levels[i]->restriction[j].num_sends*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_sizes, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_send_buffers", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].send_buffers,all_grids->levels[i]->restriction[j].num_sends*sizeof(double*),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(double*);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].send_buffers, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_ranks", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_ranks, (all_grids->levels[i]->restriction[j].num_recvs*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_ranks, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_sizes", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_sizes, (all_grids->levels[i]->restriction[j].num_recvs*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_sizes, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_buffers", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].recv_buffers,all_grids->levels[i]->restriction[j].num_recvs*sizeof(double*),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(double*);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].recv_buffers, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     #ifdef USE_MPI
     sprintf(name, "level_%d_restriction_%d_mpi_requests", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].requests,
-            (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Request), 
-            kCopy, name, NULL);
+    tmp_size = (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Request);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].requests, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_mpi_status", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].status,
-            (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Status), 
-            kCopy, name, NULL);
+    tmp_size = (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Status);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].status, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
     #endif
 
     j=RESTRICT_FACE_I; 
     sprintf(name, "level_%d_restriction_%d_send_ranks", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_ranks, (all_grids->levels[i]->restriction[j].num_sends*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_ranks, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_send_sizes", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_sizes, (all_grids->levels[i]->restriction[j].num_sends*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_sizes, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_send_buffers", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].send_buffers,all_grids->levels[i]->restriction[j].num_sends*sizeof(double*),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(double*);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].send_buffers, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_ranks", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_ranks, (all_grids->levels[i]->restriction[j].num_recvs*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_ranks, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_sizes", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_sizes, (all_grids->levels[i]->restriction[j].num_recvs*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_sizes, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_buffers", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].recv_buffers,all_grids->levels[i]->restriction[j].num_recvs*sizeof(double*),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(double*);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].recv_buffers, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     #ifdef USE_MPI
     sprintf(name, "level_%d_restriction_%d_mpi_requests", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].requests,
-            (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Request), 
-            kCopy, name, NULL);
+    tmp_size = (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Request);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].requests, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_mpi_status", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].status,
-            (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Status), 
-            kCopy, name, NULL);
+    tmp_size = (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Status);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].status, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
     #endif
 
     j=RESTRICT_FACE_J; 
     sprintf(name, "level_%d_restriction_%d_send_ranks", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_ranks, (all_grids->levels[i]->restriction[j].num_sends*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_ranks, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_send_sizes", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_sizes, (all_grids->levels[i]->restriction[j].num_sends*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_sizes, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_send_buffers", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].send_buffers,all_grids->levels[i]->restriction[j].num_sends*sizeof(double*),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(double*);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].send_buffers, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_ranks", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_ranks, (all_grids->levels[i]->restriction[j].num_recvs*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_ranks, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_sizes", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_sizes, (all_grids->levels[i]->restriction[j].num_recvs*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_sizes, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_buffers", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].recv_buffers,all_grids->levels[i]->restriction[j].num_recvs*sizeof(double*),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(double*);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].recv_buffers, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     #ifdef USE_MPI
     sprintf(name, "level_%d_restriction_%d_mpi_requests", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].requests,
-            (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Request), 
-            kCopy, name, NULL);
+    tmp_size = (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Request);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].requests, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_mpi_status", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].status,
-            (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Status), 
-            kCopy, name, NULL);
+    tmp_size = (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Status);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].status, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
     #endif
 
     j=RESTRICT_FACE_K; 
     sprintf(name, "level_%d_restriction_%d_send_ranks", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_ranks, (all_grids->levels[i]->restriction[j].num_sends*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_ranks, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_send_sizes", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_sizes, (all_grids->levels[i]->restriction[j].num_sends*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].send_sizes, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_send_buffers", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].send_buffers,all_grids->levels[i]->restriction[j].num_sends*sizeof(double*),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_sends*sizeof(double*);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].send_buffers, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_ranks", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_ranks, (all_grids->levels[i]->restriction[j].num_recvs*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_ranks, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_sizes", i, j);
-    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_sizes, (all_grids->levels[i]->restriction[j].num_recvs*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->restriction[j].recv_sizes, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_recv_buffers", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].recv_buffers,all_grids->levels[i]->restriction[j].num_recvs*sizeof(double*),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->restriction[j].num_recvs*sizeof(double*);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].recv_buffers, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     #ifdef USE_MPI
     sprintf(name, "level_%d_restriction_%d_mpi_requests", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].requests,
-            (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Request), 
-            kCopy, name, NULL);
+    tmp_size = (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Request);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].requests, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_restriction_%d_mpi_status", i, j);
-    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].status,
-            (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Status), 
-            kCopy, name, NULL);
+    tmp_size = (all_grids->levels[i]->restriction[j].num_sends+all_grids->levels[i]->restriction[j].num_recvs)*sizeof(MPI_Status);
+    cd_preserve(cd_h,all_grids->levels[i]->restriction[j].status, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
     #endif
 
     //build interpolation
     sprintf(name, "level_%d_interpolation_send_ranks", i);
-    cd_preserve(cd_h, all_grids->levels[i]->interpolation.send_ranks, (all_grids->levels[i]->interpolation.num_sends*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->interpolation.num_sends*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->interpolation.send_ranks, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_interpolation_send_sizes", i);
-    cd_preserve(cd_h, all_grids->levels[i]->interpolation.send_sizes, (all_grids->levels[i]->interpolation.num_sends*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->interpolation.num_sends*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->interpolation.send_sizes, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_interpolation_send_buffers", i);
-    cd_preserve(cd_h,all_grids->levels[i]->interpolation.send_buffers,all_grids->levels[i]->interpolation.num_sends*sizeof(double*),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->interpolation.num_sends*sizeof(double*);
+    cd_preserve(cd_h,all_grids->levels[i]->interpolation.send_buffers, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_interpolation_recv_ranks", i);
-    cd_preserve(cd_h, all_grids->levels[i]->interpolation.recv_ranks, (all_grids->levels[i]->interpolation.num_recvs*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->interpolation.num_recvs*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->interpolation.recv_ranks, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_interpolation_recv_sizes", i);
-    cd_preserve(cd_h, all_grids->levels[i]->interpolation.recv_sizes, (all_grids->levels[i]->interpolation.num_recvs*sizeof(int)),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->interpolation.num_recvs*sizeof(int);
+    cd_preserve(cd_h, all_grids->levels[i]->interpolation.recv_sizes, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_interpolation_recv_buffers", i);
-    cd_preserve(cd_h,all_grids->levels[i]->interpolation.recv_buffers,all_grids->levels[i]->interpolation.num_recvs*sizeof(double*),
-            kCopy, name, NULL);
+    tmp_size = all_grids->levels[i]->interpolation.num_recvs*sizeof(double*);
+    cd_preserve(cd_h,all_grids->levels[i]->interpolation.recv_buffers, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     #ifdef USE_MPI
     sprintf(name, "level_%d_interpolation_mpi_requests", i);
-    cd_preserve(cd_h,all_grids->levels[i]->interpolation.requests,
-            (all_grids->levels[i]->interpolation.num_sends+all_grids->levels[i]->interpolation.num_recvs)*sizeof(MPI_Request), 
-            kCopy, name, NULL);
+    tmp_size = (all_grids->levels[i]->interpolation.num_sends+all_grids->levels[i]->interpolation.num_recvs)*sizeof(MPI_Request);
+    cd_preserve(cd_h,all_grids->levels[i]->interpolation.requests, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
+
     sprintf(name, "level_%d_interpolation_mpi_status", i);
-    cd_preserve(cd_h,all_grids->levels[i]->interpolation.status,
-            (all_grids->levels[i]->interpolation.num_sends+all_grids->levels[i]->interpolation.num_recvs)*sizeof(MPI_Status), 
-            kCopy, name, NULL);
+    tmp_size = (all_grids->levels[i]->interpolation.num_sends+all_grids->levels[i]->interpolation.num_recvs)*sizeof(MPI_Status);
+    cd_preserve(cd_h,all_grids->levels[i]->interpolation.status, tmp_size, prv_mask, name, NULL);
+    prv_size += tmp_size;
     #endif
 
+    //printf("After level %d: prv_size = %f MB\n", i, prv_size*1.0/1024/1024);
     i++;
   }
+
+  return prv_size;
 }
 #endif
+
 //------------------------------------------------------------------------------------------------------------------------------
-void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dtol, double rtol){
+#if CD
+void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dtol, double rtol, size_t* prv_size)
+#else
+void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dtol, double rtol)
+#endif
+{
 
      int     doTiming;
      int    minSolves = 10; // do at least minSolves MGSolves
@@ -306,8 +436,8 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
 #if CD
   //int num_tasks;
   //MPI_Comm_size(MPI_COMM_WORLD, &num_tasks);
-  //cd_handle_t * cd_mgsolve = cd_create(cd_bench, num_tasks, "cd_mgsolve", kRelaxed | kDRAM, 0x0000FFFF);
-  cd_handle_t * cd_mgsolve = cd_create(getcurrentcd(), 1, "cd_mgsolve", kStrict | kDRAM, 0x0000FFFF);
+  cd_handle_t * cd_bench = cd_create(getcurrentcd(), 1, "cd_l2", kStrict | kDRAM, 0x3);
+  //cd_handle_t * cd_bench = cd_create(getcurrentcd(), 1, "cd_l2", kStrict | kDRAM, 0xF);
 #endif
   for(doTiming=0;doTiming<=1;doTiming++){ // first pass warms up, second pass times
 
@@ -333,7 +463,10 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
     MGResetTimers(all_grids);
     while( (numSolves<minSolves) ){
       //#if CD
-      //cd_begin(cd_mgsolve, "cd_mgsolve");
+      //char cd_name[50]="cd_bench";
+      //cd_begin(cd_bench, cd_name);
+      //size_t prv_size = cd_preserve_mgtype(cd_bench, all_grids, cd_name, onLevel, kCopy);
+      //printf("CD \"%s\" preserved %f MB data.\n", cd_name, prv_size*1.0/1024/1024);
       ////#elif SCR
       ////int need_checkpoint;
       ////SCR_Need_checkpoint(&need_checkpoint);
@@ -341,20 +474,16 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
       ////  SCR_Start_checkpoint();
       ////  int rank;
       ////  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
       ////  char checkpoint_file[256];
       ////  sprintf(checkpoint_file, "scr_ckpt_files/rank_%d.ckpt", rank);
-
       ////  char scr_file[SCR_MAX_FILENAME];
       ////  SCR_Route_file(checkpoint_file, scr_file);
       ////  //printf("%d: scr_file:%s\n", rank, scr_file);
-
       ////  /*each process opens scr_file, takes checkpoints, and closes the file*/
       ////  FILE *fs = fopen(scr_file, "w");
       ////  int valid=0;
       ////  if (fs != NULL){
       ////    valid = 1;
-
       ////    // take checkpoints
       ////    size_t nwrites=0;
       ////    nwrites+=fwrite(all_grids, sizeof(mg_type), 1, fs);
@@ -363,28 +492,29 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
       ////    nwrites+=fwrite(&dtol, sizeof(dtol), 1, fs);
       ////    nwrites+=fwrite(&rtol, sizeof(rtol), 1, fs);
       ////    nwrites+=fwrite(&onLevel, sizeof(onLevel), 1, fs);
-
       ////    //if (nwrites != (sizeof(mg_type)+sizeof(a)+sizeof(b)+sizeof(dtol)+sizeof(rtol)+sizeof(onLevel)))
       ////    if (nwrites != 6)
       ////      valid = 0;
-
       ////    if (fclose(fs)!=0) valid=0;
       ////  }
-
       ////  SCR_Complete_checkpoint(valid);
       ////}
       //#endif
 
       zero_vector(all_grids->levels[onLevel],VECTOR_U);
       #ifdef USE_FCYCLES
+      #if CD
+      FMGSolve(all_grids,onLevel,VECTOR_U,VECTOR_F,a,b,dtol,rtol,prv_size,&numSolves);
+      #else
       FMGSolve(all_grids,onLevel,VECTOR_U,VECTOR_F,a,b,dtol,rtol);
+      #endif
       #else
        MGSolve(all_grids,onLevel,VECTOR_U,VECTOR_F,a,b,dtol,rtol);
       #endif
       numSolves++;
 
       //#if CD
-      //cd_complete(cd_mgsolve);
+      //cd_complete(cd_bench);
       //#endif
     }
 
@@ -401,7 +531,7 @@ void bench_hpgmg(mg_type *all_grids, int onLevel, double a, double b, double dto
     #endif
   }
 #if CD
-  cd_destroy(cd_mgsolve);
+  cd_destroy(cd_bench);
 #endif
 }
 
@@ -450,7 +580,7 @@ int main(int argc, char **argv){
   // parse the arguments...
   int     log2_box_dim           =  6; // 64^3
   int     target_boxes_per_rank  =  1;
-//int64_t target_memory_per_rank = -1; // not specified
+  //int64_t target_memory_per_rank = -1; // not specified
   int64_t box_dim                = -1;
   int64_t boxes_in_i             = -1;
   int64_t target_boxes           = -1;
@@ -552,8 +682,13 @@ int main(int argc, char **argv){
 
 
 #if CD
-  cd_handle_t* root_cd = cd_init(num_tasks, my_rank, kHDD);
-  cd_begin(root_cd, "root");
+  size_t prv_size = 0;
+  char cd_name[50];
+  cd_handle_t* root_cd = cd_init(num_tasks, my_rank, kGlobalDisk);
+  sprintf(cd_name, "root");
+  cd_begin(root_cd, cd_name);
+  cd_preserve(root_cd, &num_tasks, sizeof(num_tasks), kCopy, cd_name, NULL);
+  cd_preserve(root_cd, &my_rank, sizeof(my_rank), kCopy, cd_name, NULL);
 #elif SCR
   SCR_Init();
 #endif
@@ -583,10 +718,19 @@ int main(int argc, char **argv){
   fprintf(stdout,"\n\n===== Benchmark setup ==========================================================\n");
   }
 
-  #if CD
-  cd_handle_t * cd_l1 = cd_create(getcurrentcd(), 1, "cd_l1", kStrict | kHDD, 0xFFFFFFFF);
-  cd_begin(cd_l1, "cd_l1_mgbuild");
+#if CD
+  cd_handle_t * cd_l1 = cd_create(getcurrentcd(), 1, "cd_l1", kStrict | kGlobalDisk, 0x7);
+  //cd_handle_t * cd_l1 = cd_create(getcurrentcd(), 1, "cd_l1", kStrict | kGlobalDisk, 0xF);
+  sprintf(cd_name, "cd_l1_mgbuild");
+  #ifdef HMCD
+  cd_begin(cd_l1);
+  #else
+  cd_begin(cd_l1, cd_name);
   #endif
+  cd_preserve(cd_l1, &my_rank, sizeof(my_rank), kCopy, cd_name, NULL);
+
+  cd_handle_t *cd_build_inner = cd_create(cd_l1, 1, "cd_l2", kStrict | kDRAM, 0x3);
+#endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // create the fine level...
@@ -600,8 +744,22 @@ int main(int argc, char **argv){
   level_type level_h;
   int ghosts=stencil_get_radius();
   
+#if CD
+  #ifdef HMCD
+  cd_begin(cd_build_inner);
+  #else
+  cd_begin(cd_build_inner, "cd_build_cl");
+  #endif
+  cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
+#endif
+
   //SZNOTE: two MPI_Allreduce to gather information...
   create_level(&level_h,boxes_in_i,box_dim,ghosts,VECTORS_RESERVED,bc,my_rank,num_tasks);
+
+#if CD
+  cd_complete(cd_build_inner);
+#endif
+
   #ifdef USE_HELMHOLTZ
   double a=1.0;double b=1.0; // Helmholtz
   if(my_rank==0)fprintf(stdout,"  Creating Helmholtz (a=%f, b=%f) test problem\n",a,b);
@@ -610,10 +768,42 @@ int main(int argc, char **argv){
   if(my_rank==0)fprintf(stdout,"  Creating Poisson (a=%f, b=%f) test problem\n",a,b);
   #endif
   double h=1.0/( (double)boxes_in_i*(double)box_dim );  // [0,1]^3 problem
+
+#if CD
+  #ifdef HMCD
+  cd_begin(cd_build_inner);
+  #else
+  cd_begin(cd_build_inner, "cd_build_ip");
+  #endif
+  cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
+#endif
+
   initialize_problem(&level_h,h,a,b);                   // initialize VECTOR_ALPHA, VECTOR_BETA*, and VECTOR_F
+
+#if CD
+  cd_complete(cd_build_inner);
+  #ifdef HMCD
+  cd_begin(cd_build_inner);
+  #else
+  cd_begin(cd_build_inner, "cd_build_ro");
+  #endif
+  cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
+#endif
   
+  ////FIXME: [Song] need to refine mapping inside this function..
   //SZNOTE: restriction and exchange boundaries within, lots of MPI non-blocking communications
   rebuild_operator(&level_h,NULL,a,b);                  // calculate Dinv and lambda_max
+
+#if CD
+  cd_complete(cd_build_inner);
+  #ifdef HMCD
+  cd_begin(cd_build_inner);
+  #else
+  cd_begin(cd_build_inner, "cd_build_bcp");
+  #endif
+  cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
+#endif
+
   if(level_h.boundary_condition.type == BC_PERIODIC){   // remove any constants from the RHS for periodic problems
     double average_value_of_f = mean(&level_h,VECTOR_F);
     if(average_value_of_f!=0.0){
@@ -622,6 +812,15 @@ int main(int argc, char **argv){
     }
   }
 
+#if CD
+  cd_complete(cd_build_inner);
+  #ifdef HMCD
+  cd_begin(cd_build_inner);
+  #else
+  cd_begin(cd_build_inner, "cd_build_mgb");
+  #endif
+  cd_preserve(cd_build_inner, &my_rank, sizeof(my_rank), kCopy, "cd_build_inner", NULL);
+#endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // create the MG hierarchy...
@@ -629,9 +828,13 @@ int main(int argc, char **argv){
   //SZNOTE: MPI_Comm_split inside and MPI_Allreduce on splitted communicators
   MGBuild(&MG_h,&level_h,a,b,minCoarseDim);             // build the Multigrid Hierarchy 
 
-  #if CD
+#if CD
+  cd_complete(cd_build_inner);
+  cd_destroy(cd_build_inner);
+  cd_preserve_mgtype(cd_l1, &MG_h, cd_name, 0, kOutput);
+  //cd_detect(cd_l1);
   cd_complete(cd_l1);
-  #endif
+#endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   // HPGMG-500 benchmark proper
@@ -641,27 +844,68 @@ int main(int argc, char **argv){
   double dtol=  0.0;double rtol=1e-10; // converged if ||b-Ax|| / ||b|| < rtol
   int l;
   #ifndef TEST_ERROR
-  #if CD
-  cd_begin(cd_l1, "cd_l1_mgsolve");
-  cd_preserve_mgtype(cd_l1, &MG_h);
-  cd_preserve(cd_l1, &dtol, sizeof(dtol), kCopy, "dtol", NULL);
-  cd_preserve(cd_l1, &rtol, sizeof(rtol), kCopy, "rtol", NULL);
-  cd_preserve(cd_l1, &a, sizeof(a), kCopy, "a", NULL);
-  cd_preserve(cd_l1, &b, sizeof(b), kCopy, "b", NULL);
-
-  //cd_handle_t *cd_l2 = cd_create(cd_l1, num_tasks, "cd_l2", kRelaxed | kDRAM, 0x0000FFFF);
-  //cd_handle_t *cd_l2 = cd_create(cd_l1, 1, "cd_l2", kStrict | kDRAM, 0x0000FFFF);
-  #endif
 
   double AverageSolveTime[3];
   for(l=0;l<3;l++){
+  #if CD
+    sprintf(cd_name, "cd_l1_bench_l%d", l);
+#ifdef HMCD
+    cd_begin(cd_l1);
+#else
+    cd_begin(cd_l1, cd_name);
+#endif
+    cd_preserve(cd_l1, &l, sizeof(l), kCopy, cd_name, NULL);
+    size_t tmp_size = cd_preserve_mgtype(cd_l1, &MG_h, cd_name, l, kCopy);
+    printf("Level %d: CD \"%s\" preserved %f MB data.\n", l, cd_name, tmp_size*1.0/1024/1024);
+    prv_size += tmp_size;
+  #endif
+
     if(l>0)restriction(MG_h.levels[l],VECTOR_F,MG_h.levels[l-1],VECTOR_F,RESTRICT_CELL);
     //SZNOTE: actual solver, lots of MPI communications
+  #if CD
+    bench_hpgmg(&MG_h,l,a,b,dtol,rtol,&prv_size);
+  #else
     bench_hpgmg(&MG_h,l,a,b,dtol,rtol);
+  #endif
     AverageSolveTime[l] = (double)MG_h.timers.MGSolve / (double)MG_h.MGSolves_performed;
     if(my_rank==0){fprintf(stdout,"\n\n===== Timing Breakdown =========================================================\n");}
     MGPrintTiming(&MG_h,l);
+
+  #if CD
+    cd_preserve_mgtype(cd_l1, &MG_h, cd_name, l, kOutput);
+    cd_detect(cd_l1);
+    cd_complete(cd_l1);
+  #endif
   }
+
+  //////////////////////// solve 2h and 4h problem ///////////////////////////
+  //#if CD
+  //sprintf(cd_name, "cd_l1_bench_l%d", l);
+  //cd_begin(cd_l1, cd_name);
+  //cd_preserve(cd_l1, &l, sizeof(l), kCopy, cd_name, NULL);
+  //tmp_size = cd_preserve_mgtype(cd_l1, &MG_h, cd_name, l, kCopy);
+  //printf("Level %d: CD \"%s\" preserved %f MB data.\n", l, cd_name, tmp_size*1.0/1024/1024);
+  //prv_size += tmp_size;
+  //#endif
+
+  //for(;l<3;l++){
+  //  if(l>0)restriction(MG_h.levels[l],VECTOR_F,MG_h.levels[l-1],VECTOR_F,RESTRICT_CELL);
+  //  //SZNOTE: actual solver, lots of MPI communications
+  //#if CD
+  //  bench_hpgmg(&MG_h,l,a,b,dtol,rtol,&prv_size);
+  //#else
+  //  bench_hpgmg(&MG_h,l,a,b,dtol,rtol);
+  //#endif
+  //  AverageSolveTime[l] = (double)MG_h.timers.MGSolve / (double)MG_h.MGSolves_performed;
+  //  if(my_rank==0){fprintf(stdout,"\n\n===== Timing Breakdown =========================================================\n");}
+  //  MGPrintTiming(&MG_h,l);
+  //}
+
+  //#if CD
+  //cd_preserve_mgtype(cd_l1, &MG_h, cd_name, 1/*l*/, kOutput);
+  //cd_detect(cd_l1);
+  //cd_complete(cd_l1);
+  //#endif
 
   if(my_rank==0){
     #ifdef CALIBRATE_TIMER
@@ -679,10 +923,7 @@ int main(int argc, char **argv){
     }
   }
 
-  #if CD
-  //cd_destroy(cd_l2);
-  cd_complete(cd_l1);
-  #endif
+
   #endif
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -692,11 +933,27 @@ int main(int argc, char **argv){
   // solve A^4h u^4h = f^4h
   // error analysis...
   MGResetTimers(&MG_h);
+  #if CD
+  sprintf(cd_name, "cd_l1_richerr");
+#ifdef HMCD
+  cd_begin(cd_l1);
+#else
+  cd_begin(cd_l1, cd_name);
+#endif
+  prv_size += cd_preserve_mgtype(cd_l1, &MG_h, cd_name, 0, kCopy);
+  cd_handle_t *cd_richerr = cd_create(cd_l1, 1, "cd_l2", kStrict | kDRAM, 0x3);
+  //cd_handle_t *cd_richerr = cd_create(cd_l1, 1, "cd_l2", kStrict | kDRAM, 0xF);
+  #endif
   for(l=0;l<3;l++){
     if(l>0)restriction(MG_h.levels[l],VECTOR_F,MG_h.levels[l-1],VECTOR_F,RESTRICT_CELL);
            zero_vector(MG_h.levels[l],VECTOR_U);
     #ifdef USE_FCYCLES
+    #if CD
+    int numsolves = 0;
+    FMGSolve(&MG_h,l,VECTOR_U,VECTOR_F,a,b,dtol,rtol,&prv_size,&numsolves);
+    #else
     FMGSolve(&MG_h,l,VECTOR_U,VECTOR_F,a,b,dtol,rtol);
+    #endif
     #else
      MGSolve(&MG_h,l,VECTOR_U,VECTOR_F,a,b,dtol,rtol);
     #endif
@@ -704,6 +961,9 @@ int main(int argc, char **argv){
   richardson_error(&MG_h,0,VECTOR_U);
 
   #if CD
+  cd_destroy(cd_richerr);
+  cd_detect(cd_l1);
+  cd_complete(cd_l1);
   cd_destroy(cd_l1);
   #endif
 
@@ -717,6 +977,7 @@ int main(int argc, char **argv){
   if(my_rank==0){fprintf(stdout,"\n\n===== Done =====================================================================\n");}
 
 #if CD
+  cd_detect(root_cd);
   cd_complete(root_cd);
   cd_finalize();
 #elif SCR

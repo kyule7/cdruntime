@@ -1,51 +1,41 @@
 ######################################
 # Root CD and Level 1 CD
 ######################################
-- CD_0_0 :
-  - label : root_cd
-    interval : 1
-    errortype : 0xF
-    medium: GlobalDisk
-  - CD_1_1 :
-    - label : cd_l1
-      interval : 1
-      errortype : 0xE
-      medium: LocalMemory
-    - CD_2_2 :
-      - label : cd_sampleongrid
-        interval : 1
-        errortype : 0xE
-        medium: LocalMemory
-      - CD_3_3 :
-        - label : cd_mgfcycle_l0
-          interval : 1
-          errortype : 0xE
-          medium: LocalMemory
-        - CD_4_4 :
-          - label : cd_mgfcycle_l1
-            interval : 1
-            errortype : 0xE
-            medium: LocalMemory
-          - CD_5_5 :
-            - label : cd_mgfcycle_l2
-              interval : 1
-              errortype : 0xE
-              medium: LocalMemory
-            - CD_6_6 :
-              - label : cd_mgfcycle_l3
-                interval : 1
-                errortype : 0xE
-                medium: LocalMemory
-              - CD_7_7 :
-                - label : cd_mgfcycle_l4
-                  interval : 1
-                  errortype : 0xE
-                  medium: LocalMemory
-                - CD_8_8 :
-                  - label : cd_mgfcycle_l5
-                    interval : 1
-                    errortype : 0xE
-                    medium: LocalMemory
+#- CD_0_0 :
+#  - label : root_cd
+#    interval : 1
+#    errortype : 0xF
+#    medium: GlobalDisk
+#  - CD_1_1 :
+#    - label : cd_l1_mgbuild
+#      interval : 1
+#      errortype : 0xF
+#      medium: GlobalDisk
+#  - CD_1_2 :
+#    - label : cd_l1
+#      interval : 1
+#      errortype : 0xF
+#      medium: GlobalDisk
+#    - CD_2_2 :
+#      - label : cd_fmgsolve
+#        interval : 1
+#        errortype : 0x3
+#        medium: LocalMemory
+#    - CD_2_3 :
+#      - label : cd_coarsest_grid
+#        interval : 1
+#        errortype : 0x3
+#        medium: LocalMemory
+#    - CD_2_4 :
+#      - label : cd_mgvcycle
+#        interval : 1
+#        errortype : 0x3
+#        medium: LocalMemory
+#    - CD_2_5 :
+#      - label : cd_postf_vcycle
+#        interval : 1
+#        errortype : 0x3
+#        medium: LocalMemory
 
 ######################################
 # Root:   0xF and KHDD
@@ -53,8 +43,9 @@
 # Level2: 0xC and kDRAM
 ######################################
 
-#- FAILURE_Ftype0 :
-#  - F1 : 0.000
-#  - F2 : 0.000
-#  - F4 : 0.00 
-#  - F8 : 0.05
+- FAILURE_Ftype0 :
+  - F1 : 0.0133
+  - F2 : 0.00267
+  - F4 : 0.000197
+  - F8 : 0.0001053
+
