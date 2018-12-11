@@ -998,7 +998,7 @@ class Domain : public Internal {
    Int_t&  cycle()                { return m_cycle ; }
 #if _CD
    bool    check_begin(int intvl) { 
-                                      //printf("\t>> cycle:%d - 1 = %d\n", m_cycle, intvl); fflush(stdout);
+                                      printf("\t>> cycle:%d - 1 = %d\n", m_cycle, intvl); fflush(stdout);
                                       if(intvl > 1) {
                                       const Int_t cycle = m_cycle - 1; 
                                       if(cycle < 0) { PrintDomain(); assert(0); }

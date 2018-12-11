@@ -1406,6 +1406,7 @@ void CalcVolumeForceForElems(Domain& domain)
 
 static inline void CalcForceForNodes(Domain& domain)
 {
+  CD_DEBUG("[LULESH] %s\n", __func__);
   Index_t numNode = domain.numNode() ;
 
 #if USE_MPI  
@@ -1614,7 +1615,7 @@ void LagrangeNodal(Domain& domain)
 #ifdef SEDOV_SYNC_POS_VEL_EARLY
    Domain_member fieldData[6] ;
 #endif
-
+   CD_DEBUG("[LULESH] %s\n", __func__);
    const Real_t delt = domain.deltatime() ;
    Real_t u_cut = domain.u_cut() ;
 
@@ -2442,6 +2443,7 @@ void CalcMonotonicQForElems(Domain& domain, Real_t vnew[])
 static inline
 void CalcQForElems(Domain& domain, Real_t vnew[])
 {
+   CD_DEBUG("[LULESH] %s\n", __func__);
    //
    // MONOTONIC Q option
    //
@@ -3398,6 +3400,7 @@ void CalcTimeConstraintsForElems(Domain& domain) {
 static inline
 void LagrangeLeapFrog(Domain& domain)
 {
+   CD_DEBUG("[LULESH] %s\n", __func__);
 #ifdef SEDOV_SYNC_POS_VEL_LATE
    Domain_member fieldData[6] ;
 #endif
