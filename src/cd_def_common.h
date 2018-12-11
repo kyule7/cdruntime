@@ -266,6 +266,7 @@
 //extern uint64_t GetCDEntryID(const char *str);
 extern const char *GetCDEntryStr(uint64_t id);
 extern int      IsReexec(void);
+extern char host_name[64];
 extern char exec_name[64];
 extern char ftype_name[64];
 extern char start_date[64];
@@ -274,4 +275,6 @@ extern char *exec_details;
 extern char *exec_iterations;
 extern void cd_update_profile(void);
 extern int dont_cdop_int;
+extern int cd_task_id;
+extern int cd_task_sz;
 #endif

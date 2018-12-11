@@ -498,6 +498,11 @@ struct RuntimeInfo : public CDOverhead {
     if(is_reexec == false) {
       exec_trace_.push_back((float)cd_total_time);
       prsv_trace_.push_back((float)prsv_time_smpl_);
+//      if (id_ == 2) {
+//        if (prsv_time_smpl_ > 0.027) {
+//          printf("*****************************************************************************[%s %d] prsv time: %lf\n", host_name, cd_task_id, prsv_time_smpl_);
+//        }
+//      }
       cdrt_trace_.push_back((float)(cdrt_time_smpl_ + prsv_time_smpl_));
       prsv_time_smpl_ = 0.0;
       cdrt_time_smpl_ = 0.0;

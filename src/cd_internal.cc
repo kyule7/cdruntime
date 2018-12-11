@@ -670,7 +670,7 @@ CDHandle *CD::Create(CDHandle *parent,
   /// Create CD object with new CDID
   CDHandle *new_cd_handle = NULL;
 
-  CD_DEBUG("CD::Create %s\n", name);
+  //CD_DEBUG("CD::Create %s\n", name);
   CD_ASSERT(GetBegin());
   // NOTE
   // Order b/w flush and creation is important!!!!
@@ -683,7 +683,7 @@ CDHandle *CD::Create(CDHandle *parent,
   *cd_internal_err = InternalCreate(parent, name, child_cd_id, cd_type, sys_bit_vector, &new_cd_handle);
   assert(new_cd_handle != NULL);
 
-  CD_DEBUG("CD::Create done\n");
+  //CD_DEBUG("CD::Create done\n");
 
   // FIXME: flush before child execution
 //  packer::CDPacker &child_entry_dir = new_cd_handle->ptr_cd_->entry_directory_;
@@ -1069,19 +1069,19 @@ uint32_t CD::BeginPhase(uint32_t level, const string &label)
     /* phaseTree.current_->profile_.RecordBegin(failed_phase != HEALTHY, just_reexecuted, ); */
   }
 
-  if(cd::myTaskID == 0) printf("\n%s[%16s] (%ld~%ld, acc:%ld)\n\n", std::string(2<<level, '\t').c_str(), __func__
-          , phaseNodeCache[phase]->seq_begin_
-          , phaseNodeCache[phase]->seq_end_
-          , phaseNodeCache[phase]->seq_acc_rb_);
+//  if(cd::myTaskID == 0) printf("\n%s[%16s] (%ld~%ld, acc:%ld)\n\n", std::string(2<<level, '\t').c_str(), __func__
+//          , phaseNodeCache[phase]->seq_begin_
+//          , phaseNodeCache[phase]->seq_end_
+//          , phaseNodeCache[phase]->seq_acc_rb_);
   return phase; 
 }
 static inline 
 void CompletePhase(uint32_t phase, bool is_reexec=false)
 {
-  if(cd::myTaskID == 0) printf("\n%s[%16s] (%ld~%ld, acc:%ld)\n\n", std::string(2<<phaseNodeCache[phase]->level_, '\t').c_str(), __func__
-          , phaseNodeCache[phase]->seq_begin_
-          , phaseNodeCache[phase]->seq_end_
-          , phaseNodeCache[phase]->seq_acc_rb_);
+//  if(cd::myTaskID == 0) printf("\n%s[%16s] (%ld~%ld, acc:%ld)\n\n", std::string(2<<phaseNodeCache[phase]->level_, '\t').c_str(), __func__
+//          , phaseNodeCache[phase]->seq_begin_
+//          , phaseNodeCache[phase]->seq_end_
+//          , phaseNodeCache[phase]->seq_acc_rb_);
   CD_ASSERT(phaseTree.current_);
   CD_DEBUG("%s (%ld, %ld, %ld) -> "
           , phaseNodeCache[phase]->label_.c_str()
@@ -2771,7 +2771,7 @@ CDEntry *CD::PreserveCopy(void *data,
                           CDPrvType preserve_mask, 
                           const std::string &my_name, uint64_t id)
 {
-  CD_DEBUG("data:%p len:%lu mask:%x name:%s, id:%lu\n", data, len_in_bytes, preserve_mask, my_name.c_str(), id);
+  CD_DEBUG("data:%p len:%lu mask:%x name:%s, id:%lx\n", data, len_in_bytes, preserve_mask, my_name.c_str(), id);
   CDEntry *pEntry = NULL;
   uint64_t attr = (CHECK_PRV_TYPE(preserve_mask, kCoop))? Attr::kremote : 0;
   attr = (CHECK_PRV_TYPE(preserve_mask, kOutput))? (Attr::koutput | attr) : attr;
@@ -2824,16 +2824,22 @@ CDEntry *CD::PreserveCopy(void *data,
     pEntry->Print(cdout, tmp);
   }
   else { // preserve a single entry
+    attr |= Attr::karray;
 #ifdef LULESH_DEBUG
-      char tmp[64];
-      sprintf(tmp, "Preserve Domain lv:%u %s", level(), label_.c_str());
-      ((Internal *)data)->Print(tmp, cdout);
+    char tmp[64];
+    sprintf(tmp, "Preserve Domain lv:%u %s", level(), label_.c_str());
+    ((Internal *)data)->Print(tmp, cdout);
 #endif
+
+//    CD_CLOCK_T then = CD_CLOCK();
     pEntry = entry_directory_.AddEntry((char *)data, CDEntry(id, attr, len_in_bytes, 0, (char *)data));
+//    CD_CLOCK_T now = CD_CLOCK();
+//    double elapsed = now - then;
+//    printf("################# \t Preserve %s (%lx), size:%lx, at %p, time:%lf\n", my_name.c_str(), id, len_in_bytes, data, elapsed);
 #ifdef LULESH_DEBUG
-      CD_DEBUG("Preserve %s (%lx), size:%lx, at %p\n", my_name.c_str(), id, len_in_bytes, data);
-      sprintf(tmp, "Domain %s : ", my_name.c_str());
-      pEntry->Print(cdout, tmp);
+    CD_DEBUG("Preserve %s (%lx), size:%lx, at %p\n", my_name.c_str(), id, len_in_bytes, data);
+    sprintf(tmp, "Domain %s : ", my_name.c_str());
+    pEntry->Print(cdout, tmp);
 #endif
   }
 //#ifdef _DEBUG_0402        
@@ -3060,17 +3066,18 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
   if(src == NULL) {
     CDHandle *parent_cd = GetCurrentCD();
     while( parent_cd != NULL ) {
-      CD *ptr_cd = parent_cd->ptr_cd();
+      CD *pcd = parent_cd->ptr_cd();
 #if CD_DEBUG_ENABLED
       if(myTaskID == 0) {
         char tmp[16];
-        sprintf(tmp, "Restore %u", ptr_cd->level());
-        ptr_cd->entry_directory_.table_->PrintEntry(stdout, tmp, GetCDEntryStr);
+        sprintf(tmp, "Restore %u", pcd->level());
+        pcd->entry_directory_.table_->PrintEntry(stdout, tmp, GetCDEntryStr);
       }
 #endif
       uint64_t tag = search_tag;
-      src = ptr_cd->entry_directory_.table_->FindReverse(tag, Attr::koutput);
-      parent_cd = CDPath::GetParentCD(ptr_cd->level());
+      src = pcd->entry_directory_.table_->FindReverse(tag, Attr::koutput);
+      if (src != NULL) { found_level = pcd->level(); break; }
+      parent_cd = CDPath::GetParentCD(pcd->level());
     }
   }
   CD_ASSERT_STR(src != NULL, "Failed to search %s %lx=%lx %s (%x) lv:%u, entry #:%ld\n", 
@@ -3113,10 +3120,15 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
 //    CD_ASSERT_STR(restored_len == len_in_bytes, "restored len:%lu==%lu\n", restored_len, len_in_bytes);
 //    if(prv_medium_ != kDRAM)
 //      entry_directory_.data_->Flush();
-  } else {
+  } else { // serdes ends
     // This will fetch from disk to memory
     // Potential benefit from prefetching app data from preserved data in
     // disk, overlapping reexecution of application.
+    char tmp[128];
+    int64_t seq_end = phaseNodeCache[phase()]->seq_end_;
+    sprintf(tmp, "Restore Domain lv:%u %s seq:%ld phase:%u !=%ld(failed) %s", level(), label_.c_str(),  
+        seq_end, phase(), cd::failed_seqID, IsFailed()? "FAIL" : "GOOD");
+    src->Print(cdout, tmp, GetCDEntryStr);
 //    if(myTaskID ==0) { 
 //      printf("[%s, %s] It is not a serdes obj(%s,%s)\n", __func__, ptr_cd->label(), my_name.c_str(), ref_name.c_str());
 //      entry_directory_.table_->PrintEntry();
@@ -3130,14 +3142,15 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     Internal befor;
     memcpy(&befor, data, sizeof(Internal));
     Internal *after = (Internal *)(data);
-    CD_DEBUG("GetData(%p == %p, %lx=%lx, %lx);\n", src->src(), data, len_in_bytes, sizeof(Internal), src->offset());
+    CD_DEBUG("GetData(%p == %p, %lx=%lx, %lx); %s==%s\n", src->src(), data, len_in_bytes, sizeof(Internal), src->offset(), this->label(), ptr_cd->label());
 #endif
-    ptr_cd->entry_directory_.data_->GetData(src->src(), len_in_bytes, src->offset());
+    ptr_cd->entry_directory_.data_->GetData(data /*src->src() FIXME*/, len_in_bytes, src->offset());
+//    entry_directory_.data_->GetData((char *)&domain_obj, domain_entry.size(), domain_entry.offset());
 #ifdef LULESH_DEBUG
-      char tmp[128];
-      int64_t seq_end = phaseNodeCache[phase()]->seq_end_;
-      sprintf(tmp, "Restore Domain lv:%u %s seq:%ld phase:%u !=%ld(failed) %s", level(), label_.c_str(),  
-          seq_end, phase(), cd::failed_seqID, IsFailed()? "FAIL" : "GOOD");
+//      char tmp[128];
+//      int64_t seq_end = phaseNodeCache[phase()]->seq_end_;
+//      sprintf(tmp, "Restore Domain lv:%u %s seq:%ld phase:%u !=%ld(failed) %s", level(), label_.c_str(),  
+//          seq_end, phase(), cd::failed_seqID, IsFailed()? "FAIL" : "GOOD");
       befor.Print(*after, tmp, cdout);
 #endif
     
@@ -3226,12 +3239,25 @@ CDErrT CD::RestoreAll()
       current_phase, failed_phase, seq_begin, seq_end, cd::failed_seqID);
   restore_count_ = 0;
   char tmp[64];
-  sprintf(tmp, "%s %u %ld->%ld", label_.c_str(), level(), seq_end, cd::failed_seqID);
+  sprintf(tmp, "RollbackAll %s %u %ld->%ld", label_.c_str(), level(), seq_end, cd::failed_seqID);
 #if CD_DEBUG_ENABLED
   if (myTaskID == 0)
     entry_directory_.table_->PrintEntry(stdout, tmp, GetCDEntryStr);
+  entry_directory_.table_->PrintEntry(cdout, tmp, GetCDEntryStr);
 #endif
-
+  TableStore<CDEntry> obj_entries;
+  uint64_t entry_num = entry_directory_.table_->FindWithAttr(Attr::karray, 0, &obj_entries, true);
+  sprintf(tmp, "Rollback %lu %s %u %ld->%ld", entry_num, label_.c_str(), level(), seq_end, cd::failed_seqID);
+  obj_entries.PrintEntry(cdout, tmp, GetCDEntryStr);
+  for(uint32_t i=0; i<entry_num; i++) {
+    CDEntry domain_entry = obj_entries[i];
+    Internal domain_obj;
+    domain_entry.Print(cdout, tmp, GetCDEntryStr);
+    if (myTaskID == 0)
+      domain_entry.Print(stdout, tmp, GetCDEntryStr);
+    entry_directory_.data_->GetData((char *)&domain_obj, domain_entry.size(), domain_entry.offset());
+    domain_obj.Print(tmp, cdout);
+  }
 
 #if 0
   entry = entry_directory_.table_->FindReverse(tag, attr);
@@ -4492,7 +4518,7 @@ void HeadCD::Deserialize(void *object)
 
 CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, uint16_t attr)
 {
-  CD_DEBUG("Search Entry at Lv%u (%s): %lx (%s) at level #%u \n", level(), name_.c_str(), tag_to_search, tag2str[tag_to_search].c_str(), level());
+  CD_DEBUG("Search Entry at Lv%u (%s): %lx (tag:%s) at level #%u \n", level(), name_.c_str(), tag_to_search, tag2str[tag_to_search].c_str(), level());
 
   CDHandle *parent_cd = CDPath::GetCurrentCD();
   CDEntry *entry = NULL;

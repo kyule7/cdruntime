@@ -87,6 +87,7 @@ struct AttrInternal {
 
 union Attr {
     enum {
+      karray     = 0x200, // differentiate members within nested obj
       koutput    = 0x100,
       ktable     = 0x080,
       knested    = 0x040,  

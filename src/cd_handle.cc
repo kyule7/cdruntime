@@ -84,6 +84,7 @@ SystemErrorInjector *CDHandle::system_error_injector_ = NULL;
   (((X) & (Y)) == (X))
 
 #endif
+char host_name[64] = "NoNamed";
 char exec_name[64] = "NoNamed";
 char ftype_name[64] = "NoNamed";
 char start_date[64] = "NoNamed";
@@ -91,6 +92,8 @@ char end_date[64] = "NoNamed";
 char *exec_details = NULL;
 char *exec_iterations = NULL;
 int cd::app_input_size = 0;
+int cd_task_id = 0;
+int cd_task_sz = 1;
 std::vector<uint32_t> cd::total_errors;
 
 bool cd::is_koutput_disabled = false;
@@ -528,6 +531,7 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
 {
   CDPrologue();
   
+  gethostname(host_name, 64);
   char *is_noprv  = getenv("CD_NO_PRESERVE");
   char *is_nocd   = getenv("CD_NO_OPERATE");
   char *is_noerror= getenv("CD_NO_ERROR");
@@ -551,6 +555,9 @@ CDHandle *CD_Init(int numTask, int myTask, PrvMediumT prv_medium)
   logger::taskID = myTask;
   myTaskID      = myTask;
   totalTaskSize = numTask;
+
+  cd_task_id = myTask;
+  cd_task_sz = numTask;
 
   cd::tot_begin_clk = CD_CLOCK();
 //  char *cd_config_file = getenv("CD_OUTPUT_BASE");
@@ -1284,7 +1291,7 @@ CDHandle *CDHandle::Create(const char *name,
 
   // Generate CDID
   CDNameT new_cd_name(ptr_cd_->GetCDName(), 1, 0, name);
-  CD_DEBUG("New CD Name : %s\n", new_cd_name.GetString().c_str());
+  //CD_DEBUG("New CD Name : %s\n", new_cd_name.GetString().c_str());
 
   // Then children CD get new MPI rank ID. (task ID) I think level&taskID should be also pair.
   CD::CDInternalErrT internal_err;
@@ -1324,7 +1331,6 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   TUNE_DEBUG("[Real %s %s lv:%u phase:%d\n", __func__, name, level(), phase()); STOPHANDLE;
 #if CD_MPI_ENABLED
 
-  CD_DEBUG("CDHandle::Create Node ID : %s\n", node_id().GetString().c_str());
   // Create a new CDHandle and CD object
   // and populate its data structure correctly (CDID, etc...)
   //  This is an extremely powerful mechanism for dividing a single communicating group of processes into k subgroups, 
@@ -1350,7 +1356,6 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   //  one doesn't really care about the rank-order of the processes in the new communicator.  
 
   // Create CDHandle for multiple tasks (MPI rank or threads)
-  CD_DEBUG("check mode : %d at level %d\n", ptr_cd()->cd_exec_mode_,  ptr_cd()->level());
 
   //CheckMailBox();
 
@@ -1369,7 +1374,6 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   bool is_reuse = ptr_cd_->CheckToReuseCD(name);
   if(num_children > 1) {
     err = SplitCD(node_id().task_in_color(), node_id().size(), num_children, new_color, new_task);
-    CD_DEBUG("[%s], GenNewNodeID\n", __func__);
     new_node_id = GenNewNodeID(color(), new_color, new_task, SelectHead(new_size), is_reuse);
 //    assert(new_size == new_node_id.size());
   }
@@ -1381,11 +1385,11 @@ CDHandle *CDHandle::Create(uint32_t  num_children,
   }
 
   // Generate CDID
-  CD_DEBUG("new_color : %d in %s\n", new_color, node_id().GetString().c_str());
   CDNameT new_cd_name(ptr_cd_->GetCDName(), num_children, new_color, name);
-  CD_DEBUG("New CD Name : %s\n", new_cd_name.GetString().c_str());
-
-  CD_DEBUG("Remote Entry Dir size: %lu", ptr_cd_->remote_entry_directory_map_.size());
+  CD_DEBUG("%s #: %u (%s) Mode:%d, Lv:%d, Name:%s, RemoteEntries:%zu\n", 
+      name, num_children, node_id().GetString().c_str(), ptr_cd()->cd_exec_mode_, 
+      ptr_cd()->level(), new_cd_name.GetString().c_str(),
+      ptr_cd_->remote_entry_directory_map_.size());
 
   // Sync buffer with file to prevent important metadata 
   // or preservation file at buffer in parent level from being lost.
@@ -1733,11 +1737,11 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
     const uint64_t curr_seqID = cd::phaseTree.current_->seq_end_;
     const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
     CD_DEBUG("[REEXEC]%s (%s) " 
-             "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+             "fphase:%ld<-%lu, seqID:%ld<-%lu(beg:%lu)\n", 
              ptr_cd_->cd_id_.GetStringID().c_str(), label,
              cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
     PRINT_MPI("** [REEXEC] %s %s (%s) " 
-               "fphase:%ld==%lu, seqID:%ld==%lu(beg:%lu)\n", 
+               "fphase:%ld<-%lu, seqID:%ld<-%lu(beg:%lu)\n", 
                ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
                cd::failed_phase, curr_phase, cd::failed_seqID, curr_seqID, curr_begID);
   } else {
@@ -1746,7 +1750,7 @@ CDErrT CDHandle::Begin(const char *label, bool collective, const uint64_t &sys_e
     const uint64_t curr_begID = cd::phaseTree.current_->seq_begin_;
 
     PRINT_MPI("** [Begin] %s %s (%s) " 
-             "fphase:%ld==%lu, (%lu~%lu->%lu)\n", 
+             "fphase:%ld<-%lu, (%lu~%lu->%lu)\n", 
              ptr_cd_->name_.c_str(), ptr_cd_->cd_id_.GetStringID().c_str(), label,
              cd::failed_phase, curr_phase, curr_begID, curr_seqID, cd::failed_seqID);
 //    if (cd::myTaskID == 0) 

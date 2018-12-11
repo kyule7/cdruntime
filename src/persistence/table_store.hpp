@@ -185,13 +185,13 @@ class TableStore : public BaseTable {
     // Find an entry with kNeedPushed from the offset, 
     // and copy the entry at the dst offset to the offset.
     // return the dst offset for the next search.
-    virtual uint64_t FindWithAttr(uint16_t attr, uint64_t begin, TableStore<EntryT> *table=NULL)
+    virtual uint64_t FindWithAttr(uint16_t attr, uint64_t begin, TableStore<EntryT> *table=NULL, bool is_true=true)
     {
       if(table == NULL) { // Insert entries with the attr to this table from begin offset
 //        uint64_t orig_tail = tail_;
 //        uint64_t orig_begin = begin;
         for(uint32_t i=begin; i<tail_; i++) {
-          if(ptr_[i].size_.CheckAny(attr)) {
+          if(ptr_[i].size_.CheckAny(attr) == is_true) {
             ptr_[begin++] = ptr_[i];
           }
         }
@@ -202,7 +202,7 @@ class TableStore : public BaseTable {
                // Insert those entries with the attr to target table. 
 //        uint64_t orig_tail = table->tail_;
         for(uint32_t i=begin; i<tail_; i++) {
-          if(ptr_[i].size_.CheckAny(attr)) {
+          if(ptr_[i].size_.CheckAny(attr) == is_true) {
             table->Insert(ptr_[i]);
           }
         }
@@ -248,7 +248,7 @@ class TableStore : public BaseTable {
       return ret;
     }
 
-    EntryT *FindReverse(uint64_t &id, uint16_t attr, uint64_t start=INVALID_NUM, uint64_t finish=0)
+    EntryT *FindReverse(uint64_t &id, uint64_t tag, uint16_t attr, uint64_t start=INVALID_NUM, uint64_t finish=0)
     {
       PACKER_ASSERT(head_ == 0);
       EntryT *ret = NULL; 
@@ -259,40 +259,58 @@ class TableStore : public BaseTable {
       assert(end == 0); // for now
       
 //      if(packerTaskID == 0 && attr != 0) {printf("findreverse(%x): id:%lx > ", attr, id); }
-      if(begin >= 0) {
-        for(int64_t i=begin; i>=end; i--) {
+      if (begin >= 0) 
+      {
+        for (int64_t i=begin; i>=end; i--) 
+        {
           // The rule for entry is that the first element in object layout is always ID.
-          if( ptr_[i].id_ == id ) {
-            MYDBG("%lu == %lu\n", ptr_[i].id_, id);
-            //if(ptr_[i].size_.CheckAny(attr) && attr != Attr::koutput) 
+          if ( ptr_[i].id_ == tag ) {
+            MYDBG("%lu == %lu\n", ptr_[i].id_, tag);
+            //if (ptr_[i].size_.CheckAny(attr) && attr != Attr::koutput) 
             //CDEntry tentry = ptr_[i];
-//            if(packerTaskID == 0) {printf("%lx,", tentry.attr());}
-            if(ptr_[i].size_.Check(attr) && attr != Attr::knoattr) {
-              continue;
+//            if (packerTaskID == 0) {printf("%lx,", tentry.attr());}
+#if 0            
+            if (ptr_[i].size_.Check(attr)) {
+              char tmp[32];
+              if (attr != Attr::knoattr) {
+                sprintf(tmp, "ENTRY_CHECK %x", attr);
+                ptr_[i].Print(stdout, tmp); 
+                continue;
+              } else {
+                ret = &(ptr_[i]);
+                id = i;
+                if (attr != Attr::knoattr) {
+                  sprintf(tmp, "ENTRY_ERROR %x", attr);
+                  ret = NULL;
+                } else {
+                  sprintf(tmp, "ENTRY_FOUND %x", attr);
+                }
+                ptr_[i].Print(stdout, tmp); 
+                break;
+              }
+            }
+#else
+            id = i;
+            if (ptr_[i].size_.Check(Attr::krefer)) {
+              ret = NULL;
             } else {
               ret = &(ptr_[i]);
-              id = i;
-              if(ptr_[i].size_.Check(attr) && attr != Attr::knoattr) {
-//                char tmp[32];
-//                sprintf(tmp, "ERROR %x", attr);
-//                ptr_[i].Print(tmp); 
-                ret = NULL;
-              }
-              break;
             }
-          }
-        }
+            break;
+#endif
+          } // else tag not matched 
+        } // loop ends
     
         // check
-        if(ret == NULL) {
-          if(packerTaskID == 0) {
-            MYDBG("[FindReverse] Find %lu, tail:%lu\n", id, tail_); //getchar();
-            for(int64_t i=0; i<tail; i++) {
-    //        for(int64_t i=begin; i>=0; i--) {
+        if (ret == NULL) {
+          if (packerTaskID == 0) {
+            MYDBG("[FindReverse] Find %lu, tail:%lu\n", tag, tail_); //getchar();
+            for (int64_t i=0; i<tail; i++) {
+    //        for (int64_t i=begin; i>=0; i--) {
               // The rule for entry is that the first element in object layout is always ID.
-              MYDBG("TEST %lu == %lu\n", ptr_[i].id_, id);
-              if( ptr_[i].id_ == id ) {
-                MYDBG("TEST %lu == %lu\n", ptr_[i].id_, id);
+              MYDBG("TEST %lu == %lu\n", ptr_[i].id_, tag);
+              if ( ptr_[i].id_ == tag ) {
+                MYDBG("TEST %lu == %lu\n", ptr_[i].id_, tag);
               }
             }
           } 
@@ -304,6 +322,13 @@ class TableStore : public BaseTable {
       }
 //      if(packerTaskID == 0) {printf(" ret:%p\n", ret); }
       return ret;
+    }
+
+    EntryT *FindReverse(uint64_t &id, uint16_t attr, uint64_t start=INVALID_NUM, uint64_t finish=0)
+    {
+      uint64_t tag = id;
+      EntryT *entry = FindReverse(id, tag, attr, start, finish);
+      return entry;
     }
 
     EntryT *Find(uint64_t id)
