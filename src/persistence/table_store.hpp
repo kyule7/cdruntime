@@ -248,7 +248,7 @@ class TableStore : public BaseTable {
       return ret;
     }
 
-    EntryT *FindReverse(uint64_t &id, uint64_t tag, uint16_t attr, uint64_t start=INVALID_NUM, uint64_t finish=0)
+    EntryT *FindReverseOrder(uint64_t &id, uint64_t tag, uint16_t attr=Attr::knoattr, uint64_t start=INVALID_NUM, uint64_t finish=0)
     {
       PACKER_ASSERT(head_ == 0);
       EntryT *ret = NULL; 
@@ -257,14 +257,17 @@ class TableStore : public BaseTable {
       const int64_t end   = (finish <= head_)? head_   : end;
       const int64_t tail  = tail_;
       assert(end == 0); // for now
-      
+      int64_t tbl_size = used();
 //      if(packerTaskID == 0 && attr != 0) {printf("findreverse(%x): id:%lx > ", attr, id); }
       if (begin >= 0) 
       {
+        char tmpstr[64];
         for (int64_t i=begin; i>=end; i--) 
         {
           // The rule for entry is that the first element in object layout is always ID.
           if ( ptr_[i].id_ == tag ) {
+            sprintf(tmpstr, "ENTRY_MATCH*%3ld/%ld %lx %x", i, tbl_size, tag, attr);
+            ptr_[i].Print(packer_stream, tmpstr); 
             MYDBG("%lu == %lu\n", ptr_[i].id_, tag);
             //if (ptr_[i].size_.CheckAny(attr) && attr != Attr::koutput) 
             //CDEntry tentry = ptr_[i];
@@ -290,15 +293,38 @@ class TableStore : public BaseTable {
               }
             }
 #else
-            id = i;
-            if (ptr_[i].size_.Check(Attr::krefer)) {
-              ret = NULL;
-            } else {
+            if (attr == Attr::knoattr) {
+              CD_PACKER_DEBUG("**** ENTRY FOUND **** id:%4ld tag:%lx, attr:%x\n", i, tag, attr);
+              id = i;
               ret = &(ptr_[i]);
+              break;
             }
-            break;
+            if (ptr_[i].size_.Check(attr)) {
+              assert(0);  // FIXME
+              id = i;
+              if (ptr_[i].size_.Check(Attr::krefer)) {
+                // in most case, preservation entry with reference
+                // (ref-ref case)
+                char tmp[64];
+                sprintf(tmp, "ENTRY_ERROR id:%4ld tag:%lx, attr:%x", i, tag, attr);
+                tag = ptr_[i].ref();
+                PrintEntry(packer_stream, tmp);
+                assert(0); // FIXME
+              } else {
+                CD_PACKER_DEBUG("**** ENTRY FOUND **** id:%4ld tag:%lx, attr:%x\n", i, tag, attr);
+                ret = &(ptr_[i]);
+                break;
+              }
+            } else {
+              CD_PACKER_DEBUG("**** ATTR NOT MATCHED **** id:%4ld tag:%lx, attr:%x\n", i, tag, attr);
+            }
 #endif
           } // else tag not matched 
+          else 
+          {
+            sprintf(tmpstr, "NOT_MATCHED %3ld/%ld %lx %x", i, tbl_size, tag, attr);
+            ptr_[i].Print(packer_stream, tmpstr); 
+          }
         } // loop ends
     
         // check
@@ -324,10 +350,10 @@ class TableStore : public BaseTable {
       return ret;
     }
 
-    EntryT *FindReverse(uint64_t &id, uint16_t attr, uint64_t start=INVALID_NUM, uint64_t finish=0)
+    EntryT *FindReverse(uint64_t &id, uint16_t attr=Attr::knoattr, uint64_t start=INVALID_NUM, uint64_t finish=0)
     {
       uint64_t tag = id;
-      EntryT *entry = FindReverse(id, tag, attr, start, finish);
+      EntryT *entry = FindReverseOrder(id, tag, attr, start, finish);
       return entry;
     }
 
@@ -561,8 +587,9 @@ class TableStore : public BaseTable {
 
     void PrintEntry(FILE *out=stdout, const char *str="", std::function<const char *(uint64_t)> hash=DefaultHash, uint64_t print_upto=0)
     {
-      if(print_upto == 0) print_upto = tail_;
-      printf("Total:%lu (%lu) ,              entry name,              ID,attr,      size,    offset, source (grow:%lu, alloc:%u)\n", 
+      if(print_upto == 0) 
+        print_upto = tail_;
+      fprintf(out, "Total:%5lu (%5lu),                  entry name,              ID, attr,      size,    offset, source (grow:%lu, alloc:%u)\n", 
               print_upto, tail_, grow_unit_, allocated_); 
       for(uint64_t i=0; i<print_upto; i++) {
         ptr_[i].Print(out, str, hash);

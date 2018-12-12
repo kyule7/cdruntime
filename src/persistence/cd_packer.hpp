@@ -1,5 +1,4 @@
 #include "packer.hpp"
-#define CD_PACKER_PRINT(...)
 
 #define CDPACKER_FILEMODE kPosixFile
 //#define CDPACKER_FILEMODE DEFAULT_FILEMODE

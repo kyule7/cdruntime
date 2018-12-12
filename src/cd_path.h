@@ -219,6 +219,8 @@ public:
   */
   static CDHandle *GetCDLevel(uint32_t level)
   { 
+    for (auto &cdh : *uniquePath_) 
+      CD_DEBUG("CD Path Check: %s %s Lv#u\n", cdh->GetName(), cdh->GetLabel(), cdh->level());
     if(uniquePath_ != NULL) {
       size_t num_levels = uniquePath_->size();
       if( num_levels > 0 ) {

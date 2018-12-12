@@ -87,6 +87,7 @@ struct AttrInternal {
 
 union Attr {
     enum {
+      kempty     = 0x400,
       karray     = 0x200, // differentiate members within nested obj
       koutput    = 0x100,
       ktable     = 0x080,
@@ -224,6 +225,7 @@ struct CDEntry {
     inline uint64_t attr(void)   const { return size_.code_ >> 48; }
     inline uint64_t offset(void) const { return offset_; }
     inline char    *src(void)    const { return src_; }
+    inline uint64_t ref(void)    const { return (uint64_t)src_; }
 };
 
 //extern uint32_t entry_type[ENTRY_TYPE_CNT];

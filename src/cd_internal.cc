@@ -2952,7 +2952,7 @@ CD::InternalPreserve(void *data,
         pEntry = entry_directory_.table_->InsertEntry(CDEntry(id, attr, size, ref_offset, (char *)ref_id));
       } else {
         uint32_t found_level = INVALID_NUM32;
-        CDEntry *src = SearchEntry(ref_id, found_level, Attr::knoattr);
+        CDEntry *src = SearchEntry(ref_id, found_level, Attr::knoattr /* Attr::kempty FIXME 12112018 */ );
 //        CDEntry *src = entry_directory_.table_->FindReverse(ref_id, 0);
         if(src != NULL) { // found entry
 //          CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
@@ -3062,21 +3062,29 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
   
   // Search the preservation entry which is not krefer.
   // It tries to search until it finds the entry without krefer.
-  CDEntry *src = SearchEntry(search_tag, found_level, Attr::koutput);
+  CDEntry *src = SearchEntry(search_tag, found_level, Attr::knoattr /* Attr::koutput FIXME 12102018 */);
+  assert(src != NULL);
   if(src == NULL) {
+    assert(0);
     CDHandle *parent_cd = GetCurrentCD();
     while( parent_cd != NULL ) {
       CD *pcd = parent_cd->ptr_cd();
 #if CD_DEBUG_ENABLED
       if(myTaskID == 0) {
         char tmp[16];
-        sprintf(tmp, "Restore %u", pcd->level());
+        sprintf(tmp, "Restore Lv%u", pcd->level());
         pcd->entry_directory_.table_->PrintEntry(stdout, tmp, GetCDEntryStr);
       }
 #endif
       uint64_t tag = search_tag;
-      src = pcd->entry_directory_.table_->FindReverse(tag, Attr::koutput);
+      src = pcd->entry_directory_.table_->FindReverse(tag, Attr::knoattr /* Attr::koutput FIXME 12102018 */);
       if (src != NULL) { found_level = pcd->level(); break; }
+      else { 
+        CD_DEBUG("Not found %lx (%s) in level %u", tag, pcd->label(), pcd->level()); 
+        char tmp[16];
+        sprintf(tmp, "Restore Lv%u", pcd->level());
+        pcd->entry_directory_.table_->PrintEntry(cdout, tmp, GetCDEntryStr);
+      }
       parent_cd = CDPath::GetParentCD(pcd->level());
     }
   }
@@ -3088,6 +3096,7 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
                      entry_directory_.table_->tablesize());
   assert(src);
   CD *ptr_cd = CDPath::GetCDLevel(found_level)->ptr_cd();
+  assert(ptr_cd->level() == found_level);
 
 //  PRINT_BOTH("  ** Restore %18s ** at %10s Lv%u %lu-%lu, (found at %10s Lv%u %lu-%lu) prvcnt:%lu==rstcnt:%lu\n", 
 //             tag2str[search_tag].c_str(),
@@ -3142,7 +3151,9 @@ CD::CDInternalErrT CD::Restore(char *data, uint64_t len_in_bytes, CDPrvType pres
     Internal befor;
     memcpy(&befor, data, sizeof(Internal));
     Internal *after = (Internal *)(data);
-    CD_DEBUG("GetData(%p == %p, %lx=%lx, %lx); %s==%s\n", src->src(), data, len_in_bytes, sizeof(Internal), src->offset(), this->label(), ptr_cd->label());
+    CD_DEBUG("GetData(%p == %p, %lx=%lx, %lx); %s==%s %p==%p\n", 
+        src->src(), data, len_in_bytes, sizeof(Internal), src->offset(), 
+        this->label(), ptr_cd->label(), this, ptr_cd);
 #endif
     ptr_cd->entry_directory_.data_->GetData(data /*src->src() FIXME*/, len_in_bytes, src->offset());
 //    entry_directory_.data_->GetData((char *)&domain_obj, domain_entry.size(), domain_entry.offset());
@@ -3239,7 +3250,7 @@ CDErrT CD::RestoreAll()
       current_phase, failed_phase, seq_begin, seq_end, cd::failed_seqID);
   restore_count_ = 0;
   char tmp[64];
-  sprintf(tmp, "RollbackAll %s %u %ld->%ld", label_.c_str(), level(), seq_end, cd::failed_seqID);
+  sprintf(tmp, "RollbackAll %s Lv%u %ld->%ld", label_.c_str(), level(), seq_end, cd::failed_seqID);
 #if CD_DEBUG_ENABLED
   if (myTaskID == 0)
     entry_directory_.table_->PrintEntry(stdout, tmp, GetCDEntryStr);
@@ -3247,7 +3258,7 @@ CDErrT CD::RestoreAll()
 #endif
   TableStore<CDEntry> obj_entries;
   uint64_t entry_num = entry_directory_.table_->FindWithAttr(Attr::karray, 0, &obj_entries, true);
-  sprintf(tmp, "Rollback %lu %s %u %ld->%ld", entry_num, label_.c_str(), level(), seq_end, cd::failed_seqID);
+  sprintf(tmp, "Rollback %lu %s Lv%u %ld->%ld", entry_num, label_.c_str(), level(), seq_end, cd::failed_seqID);
   obj_entries.PrintEntry(cdout, tmp, GetCDEntryStr);
   for(uint32_t i=0; i<entry_num; i++) {
     CDEntry domain_entry = obj_entries[i];
@@ -4534,10 +4545,10 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, uint1
       assert(entry->size_.Check(Attr::krefer) == 0);
       found_level = ptr_cd->level();
        
-      CD_DEBUG("Finally Found %s (%lx) at level #%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
-          ptr_cd->GetCDID().level(), ptr_cd->label_.c_str());
-      PRINT_MPI("Finally Found %s (%lx) at level #%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
-          ptr_cd->GetCDID().level(), ptr_cd->label_.c_str());
+      CD_DEBUG("Finally Found %s (%lx) at level #%u=%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
+          ptr_cd->GetCDID().level(), found_level, ptr_cd->label_.c_str());
+      PRINT_MPI("Finally Found %s (%lx) at level #%u=%u (%s)\n", tag2str[tag_to_search].c_str(), tag_to_search,
+          ptr_cd->GetCDID().level(), found_level, ptr_cd->label_.c_str());
       break;
     }
     else {
@@ -4551,9 +4562,9 @@ CDEntry *CD::SearchEntry(ENTRY_TAG_T tag_to_search, uint32_t &found_level, uint1
     }
   } 
 
-  CD_DEBUG("\n[CD::SearchEntry] %s. Check entry %lx at Node ID %s, CDName %s\n", 
+  CD_DEBUG("%s. Check entry %lx at Node ID %s, CDName %s Lv%u\n", 
            (entry != NULL)? "Found":"NotFound",
-           tag_to_search, GetNodeID().GetString().c_str(), GetCDName().GetString().c_str());
+           tag_to_search, GetNodeID().GetString().c_str(), GetCDName().GetString().c_str(), found_level);
   
 //  if(entry == NULL) {
 //    if(cd::failed_phase != HEALTHY && myTaskID == 0) {

@@ -124,8 +124,6 @@ extern FILE *packer_stream;
 
 } // namespace packer ends
 
-
-#ifdef _DEBUG_ENABLED
 #include <map>
 #include <string>
 #include <cstdarg>
@@ -140,7 +138,7 @@ int packer_debug_trace(FILE *stream,
 {
     int bytes;
     va_list argp;
-    bytes = fprintf(stream, "%s[%s:%d] ", indent, function, line_num);
+    bytes = fprintf(stream, "[Packer]%s[%s:%d] ", indent, function, line_num);
     va_start(argp, fmt);
     bytes += vfprintf(stream, fmt, argp);
     va_end(argp);
@@ -150,6 +148,8 @@ int packer_debug_trace(FILE *stream,
 
 #define PACKER_DEBUG_TRACE_INFO(stream, indent, ...) \
   packer_debug_trace(stream, indent, __FUNCTION__, __LINE__, __VA_ARGS__);
+
+#ifdef _DEBUG_ENABLED
 
 #define MYDBG(...) { \
   pthread_t cur_thread = pthread_self(); \
@@ -161,9 +161,17 @@ int packer_debug_trace(FILE *stream,
   PACKER_DEBUG_TRACE_INFO(packer_stream, indent.c_str(), __VA_ARGS__); \
 }
 
+#define CD_PACKER_PRINT(...) 
+
+#define CD_PACKER_DEBUG(...) \
+  packer_debug_trace(packer_stream, "", __FUNCTION__, __LINE__, __VA_ARGS__);
+
 #else
 
 #define MYDBG(...) 
+#define CD_PACKER_PRINT(...) 
+#define CD_PACKER_DEBUG(...) \
+  packer_debug_trace(packer_stream, "", __FUNCTION__, __LINE__, __VA_ARGS__);
 
 #endif
 
