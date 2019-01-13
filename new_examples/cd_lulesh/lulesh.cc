@@ -1380,7 +1380,7 @@ void CalcVolumeForceForElems(Domain& domain)
       for ( Index_t k=0 ; k<numElem ; ++k ) {
          if (determ[k] <= Real_t(0.0)) {
           if (k % 10000 == 0)
-            printf("determ[%d]: %lf\n", k, determ[k]);
+//            printf("determ[%d]: %lf\n", k, determ[k]);
 #if USE_MPI            
   #ifdef CHECK_ABORT          // FIXME 09212018
             MPI_Abort(MPI_COMM_WORLD, VolumeError) ;
@@ -1435,12 +1435,12 @@ static inline void CalcForceForNodes(Domain& domain)
   CD_Begin(leaf_cd, "CalcForce");
   double prv_start = MPI_Wtime();
   begn_end += prv_start - now;
-  #else
+  #else // LEAF_LV && SCR
   CDHandle *leaf_cd = GetCurrentCD();
   double prv_start = MPI_Wtime();
   #endif
 
-  #if _LEAF_LV  && _SCR == 0
+  #if _LEAF_LV && _SCR == 0
     prv_len += leaf_cd->Preserve(dynamic_cast<Internal *>(&domain), sizeof(Internal), kCopy, "LeafDomain");
   #endif
 
@@ -1448,7 +1448,7 @@ static inline void CalcForceForNodes(Domain& domain)
   if(domain.check_begin(intvl0) || domain.check_begin(intvl1)) { // leaf always preserve per loop 
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); 
     PRINT_ONE("%d Prv LeafCD       CalcForce %luMB (Ref) dummy leaf\n", domain.cycle(), prv_len/1000000); }
-  #else
+  #else /* non-dummy case */
   if(domain.check_begin(intvl0)) {
     prv_len += cd_main_loop->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
     #if _CD_CHILD
@@ -1464,7 +1464,7 @@ static inline void CalcForceForNodes(Domain& domain)
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kRef, "CalcForceCopy"); 
     #endif
     PRINT_ONE("%d Prv Child        CalcForce %luMB parent-leaf\n", domain.cycle(), prv_len/1000000); }
-  #endif
+  #endif /* non-dummy case done */
   else if(domain.check_begin(intvl2) || (_LEAF_LV && _SCR == 0)) { // leaf always preserve per loop 
     prv_len += leaf_cd->Preserve(domain.SetOp(prvec_f), kCopy, "CalcForceCopy");
     PRINT_ONE("%d Prv LeafCD       CalcForce %luMB leaf\n", domain.cycle(), prv_len/1000000); }
@@ -3788,6 +3788,7 @@ int main(int argc, char *argv[])
       if(locDom->check_end(intvl2)) {
         is_leaf_complete = true;
         leaf_lv->Detect();
+        if(IsReexec() && myRank == 0) {printf("\n\t** Compl Leaf %4d, %4.1le %4.1le, dthydro:%le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->PrintDomain();}
         leaf_lv->Complete();
       }
     #endif
@@ -3805,6 +3806,7 @@ int main(int argc, char *argv[])
       #endif
         cd_child_loop->Detect();
 //        if(myRank==0) printf("child end:cycle:%d == %d\n", cycle, locDom->cycle());
+        if(IsReexec() && myRank == 0) {printf("\n\t** Compl Child %4d, %4.1le %4.1le, dthydro:%le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->PrintDomain();}
         cd_child_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
         is_child_loop_complete = true;
       }
@@ -3828,6 +3830,7 @@ int main(int argc, char *argv[])
         cd_main_loop->Detect();
         //printf("0 complete:cycle:%d == %d\n", cycle, locDom->cycle());
         //main_domain_preserved = false;
+        if(IsReexec() && myRank == 0) {printf("\n\t** Compl Parent %4d, %4.1le %4.1le, dthydro:%le \n", locDom->cycle(), locDom->time(), locDom->deltatime(), locDom->dthydro()); locDom->PrintDomain();}
         cd_main_loop->Complete( /*((locDom->time() < locDom->stoptime()) && (locDom->cycle() < opts.its)) == false*/ );
         is_main_loop_complete = true;
       }

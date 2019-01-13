@@ -2683,14 +2683,14 @@ int CDHandle::CheckErrorOccurred(uint32_t &rollback_point)
       cdh = CDPath::GetParentCD(cdh->level());
     }
     if(rollback_point < level()) {
-      printf("\n[%d] >>>> Escalation %u (%lu-%lu)->%u during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+      printf("\n[%d] >>>> Escalation Lv%u (%lu-%lu)->Lv%u during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
           cd::myTaskID, level(), phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_, 
           rollback_point, 
           (IsReexec())? "REEX" : "EXEC",
           sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_, 
           CHECK_SYS_ERR_VEC(sys_err_vec, cdh->ptr_cd_->sys_detect_bit_vector_),
           cdh->level(), cdh->GetLabel());
-      CD_DEBUG("\n>>>> Escalation %u (%lu-%lu)->%u during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
+      CD_DEBUG("\n>>>> Escalation Lv%u (%lu-%lu)->Lv%u during %s (syndrom:%lx == vec:%lx) = %d, lv:%u, %s\n", 
           level(), phaseTree.current_->seq_begin_, phaseTree.current_->seq_end_, 
           rollback_point, 
           (IsReexec())? "REEX" : "EXEC",

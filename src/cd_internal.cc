@@ -1896,6 +1896,9 @@ CDErrT CD::Complete(bool update_preservations, bool collective)
 
 //    if(level() == 1) { cd::first_complete = true;   printf("first complete\n");   }
     if (IsFailed()) {
+      if(myTaskID == 0) { printf(">>> Complete during rollback! Lv#%u (%s), phase:%lu, seqID:%lu (beg:%lu) <<<\n", 
+                                     level(), label_.c_str(), curr_phase, curr_seqID, curr_begID); }
+
       if(failed_phase == curr_phase) {
         if(failed_seqID == curr_seqID) {
           SetHealthy();
@@ -2822,6 +2825,11 @@ CDEntry *CD::PreserveCopy(void *data,
     char tmp[128];
     sprintf(tmp, "Domain %s : ", my_name.c_str());
     pEntry->Print(cdout, tmp);
+    sprintf(tmp, "Prsv %s Lv%u %s ", my_name.c_str(), level(), IsFailed()? "REEX" : "EXEC");
+
+    entry_directory_.table_->PrintEntry(cdout, tmp, GetCDEntryStr); /* FIXME: turn on for debug */
+    if (myTaskID == 0)
+      entry_directory_.table_->PrintEntry(stdout, tmp, GetCDEntryStr); /* FIXME: turn on for debug */
   }
   else { // preserve a single entry
     attr |= Attr::karray;
@@ -3243,7 +3251,7 @@ CDErrT CD::RestoreAll()
   int64_t seq_begin = phaseNodeCache[current_phase]->seq_begin_;
   int64_t seq_end = phaseNodeCache[current_phase]->seq_end_;
   int64_t seq_acc_rb = phaseNodeCache[current_phase]->seq_acc_rb_;
-  PRINT_BOTH("%s lv:%u, %s, %s, (%ld, %u), bitvec:%lx, (curr:%ld,fphase:%ld), %ld~%ld->%ld\n", 
+  PRINT_BOTH("RestoreAll: %s lv:%u, %s, %s, (%ld, %u), bitvec:%lx, (curr:%ld,fphase:%ld), %ld~%ld->%ld\n", 
       IsFailed()? "REEX" : "EXEC",
       level(), name_.c_str(), label_.c_str(), 
       seq_acc_rb, cd_id_.sequential_id_, sys_detect_bit_vector_, 
@@ -3478,7 +3486,7 @@ CDErrT CD::InternalReexecute(void)
   //            we need to change the cd_exec_mode_ and comm_log_mode_ outside this function.
   // KL: I think it should be here, because recovery action might not be reexecution, but something else.
 
-  PRINT_BOTH("reexecuted : %d, reexecution # : %d\n", reexecuted_, num_reexecution_);
+  PRINT_BOTH("    (( NOW ROLLBACK )) Lv%u %s reexecuted : %d, reexecution # : %d\n", level(), label(), reexecuted_, num_reexecution_);
   // This is very very tricky!!
   // non-head task will get the rollback_level_ of head task,
   // but if head already finished GetCDToRecover routine, then
@@ -4039,6 +4047,7 @@ CommLogErrT CD::InvalidateIncompleteLogs(void)
   LogPrologue();
   //printf("### [%s] %s at level #%u\n", __func__, label_.c_str(), level());
   //if(incomplete_log_.size()!=0) 
+  if (0)
   {
     PRINT_BOTH("### [%s] incomplete logs: %zu at level #%u\n", label_.c_str(), incomplete_log_.size(), level());
 //    if(myTaskID ==7) printf("### [%s] %s Incomplete log size: %lu at level #%u\n", __func__, label_.c_str(), incomplete_log_.size(), level());
